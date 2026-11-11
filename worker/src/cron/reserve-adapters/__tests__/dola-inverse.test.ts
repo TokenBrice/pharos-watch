@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import firmMarketsCapture from "./fixtures/dola-fixed-markets-2026-09-29.json";
@@ -11,7 +11,7 @@ import {
   listUnexpectedDolaAssets,
   type FirmMarket,
 } from "../dola-inverse";
-import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, installAdapterNetwork, runAdapter, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
 
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, dolaLiquidity: 0, borrowPaused: false };
@@ -436,10 +436,6 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("publishes the measured zero capacity without claiming the route is open", async () => {
-    // The canonical PSM has read supply() = 0 at every Pharos pin since its
-    // 2025-12-20 activation, and sell() reverts while supply() is zero. It is
-    // not paused — it has no accounted supply to pay out — so neither "open"
-    // nor "paused" is an honest claim.
     const { result } = await runDola({ supply: 0n, maxWithdraw: 0n });
 
     expect(result.metadata).toMatchObject({
@@ -497,8 +493,6 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("withholds the whole redemption block when fed() names a retired PSM Fed generation", async () => {
-    // The drained original PSM 0x4dfd… still answers vault()/collateral()/DOLA()
-    // with the pinned identities, so fed() is the pin that separates generations.
     const { result } = await runDola({
       fed: word("0x400510611bcbf9171f0e548f1c3dca7159e60d28"),
       supply: 5_000n * 10n ** 18n,
@@ -592,20 +586,23 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 });
 
-describe("listUnexpectedDolaAssets", () => {
-  it("returns empty array when all assets are known", () => {
-    const result = listUnexpectedDolaAssets({
-      markets: [makeMarket("wstETH"), makeMarket("USDC")],
-      timestamp: 1000,
+describe("FiRM request budget", () => {
+  it("labels a stalled request before the adapter wall and bounds retries", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(ms => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new Error("timed out")), ms);
+      return controller.signal;
     });
-    expect(result).toEqual([]);
+    const network = installAdapterNetwork({ json: {
+      [DOLA_ENDPOINT]: (request: Request) => new Promise((_resolve, reject) => request.signal.addEventListener("abort", () => reject(request.signal.reason))),
+    } });
+    try {
+      await expect(runAdapterWithFakeTimers(() => runAdapter("dola-inverse", "dola-inverse-finance", { network, signal: AbortSignal.timeout(20_000) }), 25_000))
+        .rejects.toThrow(`dola-inverse firm-markets fetch timed out after 16000ms: ${DOLA_ENDPOINT}`);
+      expect(network.requests.filter(r => r.url === DOLA_ENDPOINT)).toHaveLength(2);
+    } finally { timeout.mockRestore(); }
   });
-
-  it("ignores zero-debt markets", () => {
-    const result = listUnexpectedDolaAssets({
-      markets: [makeMarket("MAGIC_TOKEN", 0)],
-      timestamp: 1000,
-    });
-    expect(result).toEqual([]);
-  });
+});
+it.each([[makeMarket("wstETH"), makeMarket("USDC")], [makeMarket("MAGIC_TOKEN", 0)]])("ignores known and zero-debt assets %#", (...markets) => {
+  expect(listUnexpectedDolaAssets({ markets, timestamp: 1000 })).toEqual([]);
 });
