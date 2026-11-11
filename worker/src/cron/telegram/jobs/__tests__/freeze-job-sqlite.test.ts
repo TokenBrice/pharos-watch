@@ -89,7 +89,6 @@ describe("freeze job detection", () => {
     ]);
     const cursor = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(FREEZE_CURSOR_KEY) as { value: string };
     expect(Number(cursor.value)).toBeGreaterThan(1);
-    // Nothing new: no duplicate jobs.
     expect(await detectTelegramFreezeJobs(db, NOW + 2)).toMatchObject({ jobsCreated: 0 });
   });
 

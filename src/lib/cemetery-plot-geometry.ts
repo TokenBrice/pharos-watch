@@ -66,10 +66,6 @@ export const PLOT_PROJECTIONS: Readonly<Record<PlotProjectionName, PlotProjectio
   portrait: { name: "portrait", A: [S * 0.07, S * 0.9], B: [-S, 0], C: [0, -S * 1.0], shadow: [-0.45, 0.4] },
 };
 
-// ---------------------------------------------------------------------------
-// Marks
-// ---------------------------------------------------------------------------
-
 export interface PlotMedallionMark {
   kind: "medallion";
   /** Disc centre and radius; the cause-colour ring is its stroke of width `ring`. */
@@ -115,10 +111,6 @@ function columnFractureTop(opts: { phase: number; amp: number; drop?: number }):
  * falls left → right on screen and its cross-section (`brk`) faces the light, the lightest face of the column.
  */
 const PLOT_FRACTURE_PHASE = Math.atan2(-0.383, 0.924);
-
-// ---------------------------------------------------------------------------
-// Graves
-// ---------------------------------------------------------------------------
 
 export type PlotArchetype = "pillow" | "split-arch" | "urn" | "broken-column" | "sealed-tablet";
 /**
@@ -617,10 +609,6 @@ export function graveHitHull(p: PlotProjection, geo: PlotGraveGeometry, cell: Pl
   const cellPts = boxPoints(p, cell.i0 + 0.04, cell.j0 + 0.04, 0, cell.i1 - cell.i0 - 0.08, cell.j1 - cell.j0 - 0.08, 0.01);
   return hull(geo.pts.concat(cellPts));
 }
-
-// ---------------------------------------------------------------------------
-// Scenery objects
-// ---------------------------------------------------------------------------
 
 /** Cypress: height ∝ deaths that calendar year; an empty year stays a bare planting bed. */
 export function cypressGeometry(p: PlotProjection, i: number, j: number, h: number): PlotObjectGeometry & { top: PlotPoint } {

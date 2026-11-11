@@ -1,6 +1,3 @@
-// Depeg Early Warning Score (DEWS) threat bands
-// ---------------------------------------------------------------------------
-
 export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
 
 const THREAT_BAND_DESCRIPTORS = {
@@ -110,11 +107,6 @@ export function getDewsRiskLevel(bands: ThreatBand[]): DewsRiskLevel {
   return "calm";
 }
 
-// ---------------------------------------------------------------------------
-// Cron status badge colors (status page cron cards)
-// ---------------------------------------------------------------------------
-
-/** Badge class strings keyed by cron run status. */
 export const CRON_STATUS_COLORS: Record<
   "ok" | "degraded" | "skipped_locked" | "skipped_neutral" | "error",
   string
@@ -125,10 +117,6 @@ export const CRON_STATUS_COLORS: Record<
   skipped_neutral: "bg-muted text-muted-foreground",
   error: "bg-state-danger-solid/15 text-state-danger-strong",
 };
-
-// ---------------------------------------------------------------------------
-// Query error notice tone styles
-// ---------------------------------------------------------------------------
 
 interface NoticeToneStyle {
   readonly title: string;
@@ -165,11 +153,6 @@ export const NOTICE_TONE_COLORS: Record<"unavailable" | "network" | "error", Not
   },
 };
 
-// ---------------------------------------------------------------------------
-// Price transparency confidence level colors
-// ---------------------------------------------------------------------------
-
-/** Text color classes keyed by price-source confidence level. */
 export const CONFIDENCE_LEVEL_COLORS: Record<"high" | "single-source" | "low" | "fallback", string> = {
   high: "text-emerald-700 dark:text-emerald-400",
   "single-source": "text-amber-700 dark:text-amber-400",
@@ -177,11 +160,6 @@ export const CONFIDENCE_LEVEL_COLORS: Record<"high" | "single-source" | "low" | 
   fallback: "text-muted-foreground",
 };
 
-// ---------------------------------------------------------------------------
-// Data health banner state styles
-// ---------------------------------------------------------------------------
-
-/** Border/bg/text class strings keyed by data health state. */
 export const DATA_HEALTH_COLORS: Record<"degraded" | "stale" | "unavailable" | "error", string> = {
   degraded: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   stale: "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300",
@@ -189,20 +167,11 @@ export const DATA_HEALTH_COLORS: Record<"degraded" | "stale" | "unavailable" | "
   error: "border-destructive/50 bg-destructive/10 text-destructive",
 };
 
-// ---------------------------------------------------------------------------
-// Balance bar ratio quality colors
-// ---------------------------------------------------------------------------
-
-/** Background color classes for ratio quality segments in BalanceBar. */
 export const RATIO_QUALITY_COLORS: Record<"healthy" | "caution" | "critical", string> = {
   healthy: "bg-emerald-500",
   caution: "bg-amber-500",
   critical: "bg-red-500",
 };
-
-// ---------------------------------------------------------------------------
-// DEWS card-edge accents and row tints (WARNING / DANGER only)
-// ---------------------------------------------------------------------------
 
 export const THREAT_BAND_ACCENT_CLASSES = {
   WARNING: { borderL: "border-l-2 border-l-orange-500", rowTint: "bg-orange-500/[0.05]" },

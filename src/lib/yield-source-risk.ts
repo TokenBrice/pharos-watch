@@ -419,7 +419,6 @@ export function projectYieldSourceDisplayDrivers(
   return index === -1 ? [...rest, STALE_SOURCE_DRIVER] : [...rest.slice(0, index), STALE_SOURCE_DRIVER, ...rest.slice(index)];
 }
 
-/** Whether the source's own observation age is publicly stale. */
 export function isYieldSourceDisplayStale(
   input: YieldSourceClockInput,
   clock: YieldSourceDisplayClock | null | undefined,

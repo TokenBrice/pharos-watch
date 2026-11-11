@@ -33,10 +33,8 @@ import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
   return [...events].sort((a, b) => {
-    // Ongoing events first
     if (!a.endedAt && b.endedAt) return -1;
     if (a.endedAt && !b.endedAt) return 1;
-    // Then by start date descending
     return b.startedAt - a.startedAt;
   });
 }

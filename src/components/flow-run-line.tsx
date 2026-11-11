@@ -101,7 +101,6 @@ function placeLabels(
       placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4, anchor: side, level: -1 });
       continue;
     }
-    // Edge labels hang inward; labels beside the rule hang away from it.
     const anchor = pct < 4 ? "left" : pct > 96 ? "right" : !nearRule ? "center" : pct >= rulePct ? "left" : "right";
     placed.push({ id: tick.id, symbol: tick.symbol, pct, bottomPx: tickTopPx + 4 + level * LABEL_LINE_PX, anchor, level });
   }
@@ -306,7 +305,6 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
                   </line>
                 </g>
               ))}
-              {/* The gauge: one ink rule across the full plot height. */}
               {score != null ? (
                 <line
                   x1={score + 100}
@@ -360,7 +358,6 @@ export function FlowRunLine({ model, className }: { model: RunLineModel; classNa
             ))}
           </div>
 
-          {/* Band zones from the shared thresholds, tinted by the published band tones. */}
           <div className="flex h-6" aria-hidden="true">
             {GAUGE_BAND_RANGES.map((range) => (
               <div

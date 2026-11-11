@@ -23,10 +23,6 @@ import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { PlotFlowers, PlotGraveBody, PlotMarks, plotCauseClass, plotGraveClass, plotMedallionFace } from "./plot-map-shapes";
 import styles from "./plot-map.module.css";
 
-// ---------------------------------------------------------------------------
-// Static layout (pure)
-// ---------------------------------------------------------------------------
-
 /**
  * Viewport bands the header sky, the chips and the beam's rest angle are solved for (min-widths match the CSS
  * module's band media queries). The frame is the page content box: viewport − 2 × page padding (px-4 / lg:px-5 /
@@ -306,7 +302,6 @@ export function desktopPlotLayout(map: DesktopPlotMap): PlotDesktopLayout {
       }
       return [...out];
     };
-    // depth-first: the first candidate combination (in preference order) with no conflict for any chip
     const solve = (ci: number, placed: readonly Placed[]): Placed[] | null => {
       if (ci === chipGeo.length) return [];
       for (const [dx, dy] of chipGeo[ci].cands) {
@@ -363,10 +358,6 @@ export function desktopLayoutStyle(layout: PlotDesktopLayout): CSSProperties {
   return vars as CSSProperties;
 }
 
-// ---------------------------------------------------------------------------
-// Labels
-// ---------------------------------------------------------------------------
-
 /** "May 2022" (month precision) or "Aug 27, 2026" (day precision), as the register prints it. */
 export function plotDeathDateLabel(deathDate: string): string {
   const parsed = parseCemeteryDeathDate(deathDate);
@@ -380,10 +371,6 @@ export function plotGraveLabel(g: PlotGrave): string {
   const archive = g.archived ? ", Pharos archive page" : "";
   return `${g.name} (${g.symbol}), ${CAUSE_META[g.cause].label.toLowerCase()}, died ${plotDeathDateLabel(g.deathDate)}, peak ${peak}${archive}`;
 }
-
-// ---------------------------------------------------------------------------
-// Scene
-// ---------------------------------------------------------------------------
 
 function bandVars(prefix: readonly string[], rows: readonly (readonly (string | number)[])[]): Record<string, string | number> {
   const out: Record<string, string | number> = {};

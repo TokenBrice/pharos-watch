@@ -792,7 +792,6 @@ describe("telegram job fan-out", () => {
       const selections = recordSelections(sqlite);
       const first = await fanOutPlanningTelegramJobs(db, NOW);
       expect(first).toMatchObject({ jobsFailedClosed: 1, jobsReady: 1, deliveriesPlanned: 1 });
-      // bad, later, then the empty end of the queue.
       expect(selections).toEqual([1, 1, 0]);
       const second = await fanOutPlanningTelegramJobs(db, NOW + 300);
       expect(second).toMatchObject({ jobsFailedClosed: 1, deliveriesPlanned: 0 });

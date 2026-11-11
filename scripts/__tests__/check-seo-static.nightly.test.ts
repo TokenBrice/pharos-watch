@@ -1114,7 +1114,6 @@ describe("safety scores dated preview", () => {
       .toEqual({ status: "unavailable", reason: "completeness-mismatch" });
     expect(await buildExpectation(dataset([row("coin-a", { safetyGrade: "B+" })])))
       .toEqual({ status: "unavailable", reason: "no-eligible-rated-rows" });
-    // A dataset smaller than the row bound yields a smaller expectation.
     const notRated = row("coin-b", { ratingStatus: "not-rated", safetyScore: null, safetyGrade: "NR" });
     const small = await buildExpectation(dataset([row("coin-a"), notRated], {
       completeness: { expectedCount: 2, ratedCount: 1, notRatedCount: 1, pipelineGapCount: 0 },

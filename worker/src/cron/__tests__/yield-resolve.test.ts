@@ -27,7 +27,6 @@ import { loadOndoOracleAnchorRow } from "../yield-sync/sources-optional";
 import { loadTier1PrevRateRows } from "../yield-sync/resolve";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
-// --- Full-sync publication sentinels ---
 
 describe("syncYieldData publication sentinels", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -131,7 +130,6 @@ describe("syncYieldData publication sentinels", () => {
   });
 });
 
-// --- Tracked-source query contracts ---
 
 describe("tracked optional source anchors", () => {
   it("loads deterministic on-chain anchors with one batched query", async () => {
@@ -269,7 +267,6 @@ describe("tracked optional source anchors", () => {
   });
 });
 
-// --- Direct resolve-helper contracts ---
 
 describe("auto-lending safety availability", () => {
   const usdcPool = makeDlYieldPool({

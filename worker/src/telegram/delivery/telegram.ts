@@ -83,7 +83,6 @@ export function renderTelegramDigestBody(extended: string): { bodyHtml: string; 
   };
 }
 
-/** Build the full Telegram message for a digest. */
 export function buildTelegramMessage(
   title: string,
   extended: string,

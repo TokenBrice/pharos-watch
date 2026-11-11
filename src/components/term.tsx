@@ -20,7 +20,6 @@ export function Term({ slug, children }: TermProps) {
     );
   }
 
-  // 2. DeFi jargon path: existing Popover.
   const entry = (GLOSSARY as Record<string, GlossaryEntry>)[slug];
   if (!entry) return <>{children}</>;
   return (

@@ -83,9 +83,6 @@ function extractPriceObservations(
   );
 }
 
-// ---------------------------------------------------------------------------
-// convertToGtNewPools
-// ---------------------------------------------------------------------------
 describe("convertToGtNewPools", () => {
   it("matches pool token address to stablecoin ID", () => {
     const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
@@ -498,9 +495,6 @@ describe("convertToGtNewPools", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// extractPriceObservations
-// ---------------------------------------------------------------------------
 describe("extractPriceObservations", () => {
   it("extracts observations for matched tokens above TVL threshold", () => {
     // USDC is token[0], USDT (token[1]) is a USD reference via address lookup
@@ -673,9 +667,6 @@ describe("extractPriceObservations", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// normalizeDexApiPoolsForMerge
-// ---------------------------------------------------------------------------
 describe("normalizeDexApiPoolsForMerge", () => {
   it("drops pools with invalid USD TVL units", () => {
     const result = normalizeDexApiPoolsForMerge([
@@ -722,4 +713,3 @@ describe("normalizeDexApiPoolsForMerge", () => {
     });
   });
 });
-

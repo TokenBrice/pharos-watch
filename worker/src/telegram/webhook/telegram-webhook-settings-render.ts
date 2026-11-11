@@ -156,8 +156,6 @@ export function buildCoinKeyboard(
   return { inline_keyboard: rows };
 }
 
-// ---------- Row builders ----------
-
 function buildCoinOpenRows(subscriptions: SubscriptionRow[], page: number): SettingsButton[][] {
   if (subscriptions.length === 0) return [];
   const sorted = sortSubscriptions(subscriptions);
@@ -230,8 +228,6 @@ function buildDepegRow(
   });
   return row;
 }
-
-// ---------- Small helpers ----------
 
 function labelForType(type: GlobalAlertType): string {
   return TELEGRAM_ALERT_FAMILY_SHORT_LABELS[type];

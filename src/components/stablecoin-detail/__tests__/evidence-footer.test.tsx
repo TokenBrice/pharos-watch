@@ -9,7 +9,6 @@ const SOURCES = [
   { label: "Custody agreement", url: "https://example.com/custody" },
 ];
 
-/** The summary's accessible text: rendered text minus `aria-hidden` subtrees. */
 function accessibleText(node: Node): string {
   if (node instanceof Element && node.getAttribute("aria-hidden") === "true") return "";
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";

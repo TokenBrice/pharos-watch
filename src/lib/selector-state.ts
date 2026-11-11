@@ -26,9 +26,6 @@ import {
   type SelectorVenuePreference,
 } from "@shared/lib/selector/types";
 
-// ---------------------------------------------------------------------------
-// Vocabularies
-// ---------------------------------------------------------------------------
 
 // Venue admission is profile-specific; option labels/order remain UI-owned.
 const SELECTOR_VENUE_VALUES = [
@@ -45,9 +42,6 @@ const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue
 
 export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
 
-// ---------------------------------------------------------------------------
-// Wizard state shape
-// ---------------------------------------------------------------------------
 
 export interface SelectorWizardState {
   profile: SelectorProfile | null;
@@ -73,9 +67,6 @@ export const SELECTOR_STATE_DEFAULTS: SelectorWizardState = {
   ev: null,
 };
 
-// ---------------------------------------------------------------------------
-// Codec — pure
-// ---------------------------------------------------------------------------
 
 function decodeEnum<T extends string>(
   raw: string | null,
@@ -338,9 +329,6 @@ function previousStep(state: SelectorWizardState): SelectorStep {
   return PREVIOUS_STEP_BY_STEP[state.step];
 }
 
-// ---------------------------------------------------------------------------
-// Selector input adapter
-// ---------------------------------------------------------------------------
 
 export function toSelectorInput(state: SelectorWizardState): SelectorInput | null {
   if (

@@ -240,7 +240,6 @@ export function diffReplayArtifacts(baseline: unknown, candidate: unknown): Repl
   for (const id of [...new Set([...mapA.keys(), ...mapB.keys()])].sort()) {
     walkDiff(id, `cards[${id}]`, mapA.get(id), mapB.get(id), entries);
   }
-  // Diff everything outside the card array too (aggregates, dependency graph).
   walkDiff(null, "$", stripCards(a), stripCards(b), entries);
   return { equal: entries.length === 0, entries };
 }

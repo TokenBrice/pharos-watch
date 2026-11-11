@@ -182,7 +182,6 @@ describe("syncMintBurn", () => {
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
-    // The paired insert/debt batch observes one new row and one ignored replay.
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       if (statements.some((statement) => (statement as unknown as { sql: string }).sql.includes("INSERT OR IGNORE INTO mint_burn_events"))) {

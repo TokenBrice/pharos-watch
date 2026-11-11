@@ -119,9 +119,6 @@ function ogSourceAsOf(source: string, timestamp: number | null | undefined, now:
   return `${source} ${label} UTC`;
 }
 
-// ---------------------------------------------------------------------------
-// Shared constants
-// ---------------------------------------------------------------------------
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 628;
@@ -512,7 +509,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     ? (TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf)
     : null;
 
-  // Calculate 24h price change
   let change24h: number | null = null;
   const pricePairAge = assessFreshnessTimestamp(now, price24hRow?.current_date);
   const pricePairUnavailableReason = pricePairAge.reason != null ? pricePairAge.reason :
@@ -1048,9 +1044,6 @@ async function handleOgPage(db: D1Database, slug: string): Promise<Response> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main OG route dispatcher
-// ---------------------------------------------------------------------------
 
 const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
 const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;

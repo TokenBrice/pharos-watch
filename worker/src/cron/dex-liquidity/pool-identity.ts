@@ -370,7 +370,6 @@ export function getIdentityDedupReason(
     }
   }
   if (identity.derivedMatchKey && incomingCounts.derived === 1) {
-    // Primary derived-unique match.
     const knownCount = known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0;
     if (knownCount === 1) {
       const knownExactCount = known.derivedToExactKeys.get(identity.derivedMatchKey)?.size ?? 0;
@@ -386,7 +385,6 @@ export function getIdentityDedupReason(
     // Format: chain|protocol|tokens|shape|feeBucket|stability
     const parts = identity.derivedMatchKey.split("|");
     if (parts.length === 6 && parts[4] !== "na") {
-      // Incoming has concrete fee; try matching known rows with fee=na.
       const naVariant = [...parts.slice(0, 4), "na", parts[5]].join("|");
       const knownNaCount = known.derivedKeyCounts.get(naVariant) ?? 0;
       if (knownNaCount === 1) {

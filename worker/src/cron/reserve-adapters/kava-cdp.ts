@@ -141,7 +141,6 @@ interface PricedCollateralDenom {
 export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
 
-  // ── Block pinning (freshness anchor) ─────────────────────────────────────
   const { header } = state.block.block;
   const blockPin = validateKavaBlockHeader(header, state.nowSec);
   if (blockPin == null) {
@@ -149,7 +148,6 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
   }
   const { blockHeight } = blockPin;
 
-  // ── Price map (one entry per live pricefeed market) ──────────────────────
   const priceMap = new Map<string, number>();
   for (const market of state.prices.prices) {
     const price = parseFinitePositiveDecimal(market.price);
@@ -191,7 +189,6 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
     principalTokens += tokens;
   }
 
-  // ── Collateral valuation ─────────────────────────────────────────────────
   const pricedByDenom = new Map<string, PricedCollateralDenom>();
   const unpricedTypes: string[] = [];
   let unpricedPrincipalTokens = 0;
@@ -266,7 +263,6 @@ export function adaptKavaCdpState(state: KavaCdpState): AdapterResult {
     throw new Error(`${ADAPTER_KEY}: no priced collateral value could be measured`);
   }
 
-  // ── Supply and ratios ────────────────────────────────────────────────────
   const supplyRow = state.supply.amount;
   if (supplyRow.denom !== USDX_DENOM) {
     throw new Error(`${ADAPTER_KEY}: bank supply row is denominated in ${supplyRow.denom}, expected ${USDX_DENOM}`);

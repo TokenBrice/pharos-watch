@@ -53,7 +53,6 @@ export async function handleBackfillStabilityIndex({
     const now = Math.floor(Date.now() / 1000);
     const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
-    // Determine backfill window: find earliest depeg event
     const earliest = await db
       .prepare("SELECT MIN(started_at) as earliest FROM depeg_events")
       .first<{ earliest: number | null }>();

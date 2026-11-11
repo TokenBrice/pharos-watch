@@ -23,7 +23,6 @@ vi.mock("../../lib/abort", async () => {
   };
 });
 
-// Mock global fetch
 let mockFetch = createFetchMock([], { requireMatch: true });
 
 function mockJsonFetch(body: unknown, status = 200): void {
@@ -468,7 +467,6 @@ describe("fetchBalancerPools", () => {
 
     const pools = await fetchBalancerPools();
     expect(pools.pools.length).toBe(1001);
-    // Pagination uses two list requests.
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 

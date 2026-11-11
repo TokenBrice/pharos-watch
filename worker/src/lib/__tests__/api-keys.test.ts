@@ -429,7 +429,6 @@ describe("api key helpers", () => {
     const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
     const prefix = "aabbccddeeff0011";
 
-    // First call: prefix not found (miss)
     const dbMiss = mockD1(
       [makeApiKeyPrefixLookup({ prefix })],
     );
@@ -630,7 +629,6 @@ describe("api key helpers", () => {
 
     expect(result).toMatchObject({ kind: "valid" });
 
-    // Verify the re-hash UPDATE was issued
     const rehashQuery = db.getHistory().find((entry) => entry.sql.includes("UPDATE api_keys SET secret_hash"));
     expect(rehashQuery).toBeDefined();
     expect(rehashQuery?.binds[0]).toBe(await hmacSha256Hex(newPepper, secret));

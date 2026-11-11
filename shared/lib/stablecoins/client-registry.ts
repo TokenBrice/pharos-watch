@@ -24,7 +24,6 @@ const registry = buildStablecoinRegistryIndexes(clientListAsset as StablecoinCli
 /** Tracked stablecoins in canonical market-cap order (compact list projection). */
 export const CLIENT_TRACKED_STABLECOINS: readonly StablecoinClientListMeta[] = registry.tracked.stablecoins;
 
-/** Map of stablecoin ID -> compact client metadata. */
 export const CLIENT_TRACKED_META_BY_ID: ReadonlyMap<string, StablecoinClientListMeta> = registry.tracked.metaById;
 
 /** Set of all tracked stablecoin IDs, across every lifecycle state. */
@@ -33,10 +32,8 @@ export const CLIENT_TRACKED_IDS: ReadonlySet<string> = registry.tracked.ids;
 /** Active stablecoins (excludes every non-active lifecycle state). */
 export const CLIENT_ACTIVE_STABLECOINS: readonly StablecoinClientListMeta[] = registry.active.stablecoins;
 
-/** Set of active stablecoin IDs. */
 export const CLIENT_ACTIVE_IDS: ReadonlySet<string> = registry.active.ids;
 
-/** Map of active stablecoin ID -> compact client metadata. */
 export const CLIENT_ACTIVE_META_BY_ID: ReadonlyMap<string, StablecoinClientListMeta> = registry.active.metaById;
 
 

@@ -1,9 +1,6 @@
 import type { BackingType, GovernanceType, Infrastructure, StablecoinStatus } from "../../types";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
-// Governance (Type) labels
-// ---------------------------------------------------------------------------
-
 /** Full labels used in metadata, descriptions, and structured data. */
 export const GOVERNANCE_LABELS = projectDescriptors(GOVERNANCE_DESCRIPTORS, (descriptor) => descriptor.label);
 
@@ -19,20 +16,12 @@ export const GOVERNANCE_PROSE_LABELS = projectDescriptors(
   (descriptor) => descriptor.proseLabel,
 );
 
-// ---------------------------------------------------------------------------
-// Filter option tuples — used by heatmap and depeg filter UIs
-// ---------------------------------------------------------------------------
-
 export const GOVERNANCE_FILTER_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
   { value: "all", label: "All Types" },
   { value: "centralized", label: GOVERNANCE_LABELS_SHORT.centralized },
   { value: "centralized-dependent", label: GOVERNANCE_LABELS_SHORT["centralized-dependent"] },
   { value: "decentralized", label: GOVERNANCE_LABELS_SHORT.decentralized },
 ];
-
-// ---------------------------------------------------------------------------
-// Backing labels
-// ---------------------------------------------------------------------------
 
 /** Full labels used in metadata and descriptions. */
 export const BACKING_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.label);
@@ -56,8 +45,6 @@ export function getGovernanceLabelShort(value: string): string {
   }
   return value;
 }
-
-// ---------------------------------------------------------------------------
 
 export const INFRASTRUCTURE_LABELS = {
   "liquity-v1": "Liquity v1",

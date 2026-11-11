@@ -16,9 +16,6 @@ if (existsSync(ENV_FILE)) {
   process.loadEnvFile(ENV_FILE);
 }
 
-// ------------------------------------------------------------------
-// Precondition: out/ must exist
-// ------------------------------------------------------------------
 try {
   await access(OUT_DIR);
 } catch {
@@ -26,9 +23,6 @@ try {
   process.exit(1);
 }
 
-// ------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------
 function firstNonEmpty(...values) {
   return values.map((value) => value?.trim()).find(Boolean);
 }
@@ -42,9 +36,6 @@ function buildBaseUrl(host, port) {
   return `http://${hostname}:${port}`;
 }
 
-// ------------------------------------------------------------------
-// Server lifecycle
-// ------------------------------------------------------------------
 const apiKey = firstNonEmpty(process.env.STATIC_EXPORT_API_KEY, process.env.SMOKE_API_KEY, process.env.PHAROS_API_KEY);
 const siteProxySecret = firstNonEmpty(
   process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET,
@@ -88,7 +79,6 @@ async function dumpLog() {
     const log = await readFile(SERVER_LOG, "utf8");
     if (log.trim()) process.stderr.write(log);
   } catch {
-    /* ignore */
   }
 }
 
@@ -111,12 +101,10 @@ async function cleanup() {
   try {
     if (logFd) await logFd.close();
   } catch {
-    /* ignore */
   }
   try {
     await rm(SERVER_LOG, { force: true });
   } catch {
-    /* ignore */
   }
 }
 
@@ -141,9 +129,6 @@ try {
 }
 console.log("[pages-smoke] Server ready. Running smoke ...");
 
-// ------------------------------------------------------------------
-// Smoke run
-// ------------------------------------------------------------------
 const smokeEnv = { ...process.env };
 let smokeExit = 1;
 

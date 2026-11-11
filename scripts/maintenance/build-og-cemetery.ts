@@ -107,10 +107,6 @@ export const OG_CEMETERY_FILES = {
   },
 } as const;
 
-// ---------------------------------------------------------------------------
-// Document (server render, no browser)
-// ---------------------------------------------------------------------------
-
 export interface OgCemeteryDocument {
   html: string;
   summary: {
@@ -231,10 +227,6 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Signature, check, render and build (the kit pipeline, cemetery parameters)
-// ---------------------------------------------------------------------------
 
 export interface OgCemeterySignature {
   generatedBy: string;

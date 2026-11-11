@@ -100,7 +100,6 @@ function supplyChangeRatio(current: number, previous: number): Ratio | null {
 export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   const { peggedAssets, safetyScores, pegRates } = input;
 
-  // Phase 1: accumulate per-chain data
   const accumulators = new Map<string, ChainAccumulator>();
   let aggregateTotalUsd = 0;
   let aggregatePrevDayUsd = 0;
@@ -199,7 +198,6 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     }
   }
 
-  // Phase 2: compute summaries
   let rawChainAttributedTotalUsd = 0;
   let chainPairedCurrent24hUsd = 0;
   let chainPairedCurrent7dUsd = 0;
@@ -244,12 +242,10 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     const meta = CHAIN_META[chainId];
     if (!meta) continue;
 
-    // Deltas
     const change24h = acc.has24hHistory ? acc.pairedCurrent24h - acc.prevDay : null;
     const change7d = acc.has7dHistory ? acc.pairedCurrent7d - acc.prevWeek : null;
     const change30d = acc.has30dHistory ? acc.pairedCurrent30d - acc.pairedPrevMonth : null;
 
-    // Dominant stablecoin
     const sorted = [...acc.coins].sort((a, b) => b.supplyUsd - a.supplyUsd);
     const dominant = sorted[0];
     const topStablecoins = sorted.slice(0, 5).map((coin) => ({
@@ -259,10 +255,8 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       supplyUsd: coin.supplyUsd,
     }));
 
-    // Supply shares for concentration
     const shares = acc.coins.map((c) => c.supplyUsd / acc.totalUsd);
 
-    // Backing distribution
     const backingTotals: Record<string, number> = Object.fromEntries(
       ACTIVE_BACKING_DIVERSITY_TYPES.map((type) => [type, 0]),
     );
@@ -284,13 +278,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         supplyUsd: c.supplyUsd,
       })));
 
-    // Quality
     const qualityCoins = acc.coins.map((c) => ({
       safetyScore: c.safetyScore,
       supplyUsd: c.supplyUsd,
     }));
 
-    // Chain environment
     const resilienceTier = getChainResilienceTier(chainId);
     const chainEnvironmentEvidence = computeChainEnvironmentAssessment(resilienceTier, chainId);
 

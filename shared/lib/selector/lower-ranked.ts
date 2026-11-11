@@ -86,7 +86,6 @@ export function selectLowerRanked(
   const out: SelectorLowerRanked[] = [];
   const profile = input.profile;
 
-  // --- Slot A -------------------------------------------------------------
   const profileDefining = PROFILE_DEFINING_EXCLUSIONS[profile];
   const priorityOrder: readonly string[] =
     profile === "yield"
@@ -137,7 +136,6 @@ export function selectLowerRanked(
     out.push({ ...entry, ...getLowerRankedText(entry) });
   }
 
-  // --- Slot B -------------------------------------------------------------
   const dim = userEmphasizedDimension(input);
   if (dim == null || scored.length < 5) {
     return out;

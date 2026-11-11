@@ -159,7 +159,6 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   const options = parseDigestSyncArgs(argv);
   if (writeCliHelpIfRequested(options, USAGE)) return;
 
-  // --check mode is a smoke test for the script's own wiring (no network).
   if (options.check) {
     console.log("[sync-digests] --check mode: helpers wired OK.");
     return;

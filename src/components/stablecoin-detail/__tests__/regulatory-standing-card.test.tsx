@@ -52,7 +52,6 @@ function terms(): HTMLElement[] {
   return Array.from(document.body.querySelectorAll<HTMLElement>("dt"));
 }
 
-/** The term/description pair whose term names `label`, in whichever description list holds it. */
 function definition(label: string): { term: HTMLElement; value: HTMLElement } {
   const term = terms().find((candidate) => candidate.textContent?.includes(label));
   expect(term).toBeDefined();

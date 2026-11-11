@@ -42,10 +42,6 @@ export function deviationIconName(absBps: number): SeverityIcon {
   return "CircleX";
 }
 
-// ---------------------------------------------------------------------------
-// Score tier system (used by liquidity, bluechip, peg components)
-// ---------------------------------------------------------------------------
-
 type ScoreTier = "green" | "blue" | "amber" | "red";
 
 export const TIER_TEXT: Record<ScoreTier, string> = {

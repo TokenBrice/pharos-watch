@@ -149,7 +149,6 @@ describe("hypothetical V9 contagion reruns", () => {
 
   it("retires evidence cited only by a retired control gap and keeps every still-cited row", () => {
     const input = fixtureWithControlGapEvidence();
-    // Strict admission proves the augmented fixture is valid before any shock.
     expect(() => evaluateV9ContagionScenario(input, { id: "control-baseline", shocks: [] })).not.toThrow();
     // The control assumption retires the control gap. Admission then passes only
     // when the gap-only row is gone and the surviving gap's row is kept: either

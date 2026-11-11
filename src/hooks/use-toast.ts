@@ -55,7 +55,6 @@ export function useToast(): ToastState {
     setToasts([]);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     const timeouts = timeoutsRef.current;
     return () => {

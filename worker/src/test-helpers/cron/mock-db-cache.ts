@@ -25,9 +25,7 @@ export interface MockDbCacheOptions {
   setCacheManyFn?: Mock;
   /** Optional pre-built spy for `deleteCache`. Defaults to `vi.fn(async () => {})`. */
   deleteCacheFn?: Mock;
-  /** Optional pre-built spy for `setCacheIfNewer`. */
   setCacheIfNewerFn?: Mock;
-  /** Optional pre-built spy for `writeFreshnessSentinel`. */
   writeFreshnessSentinelFn?: Mock;
 }
 

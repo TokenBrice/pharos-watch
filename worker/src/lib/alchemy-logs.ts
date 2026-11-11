@@ -14,8 +14,6 @@ const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
 const TRANSACTION_CONTEXT_MAX_MEMBER_RETRIES = 8;
 const ALCHEMY_RPC_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
-// --- Types ---
-
 export interface AlchemyLogEntry {
   address: string;
   topics: string[];
@@ -110,15 +108,12 @@ export function blockHashesForLogs(logs: readonly Pick<AlchemyLogEntry, "blockNu
   return hashes;
 }
 
-// --- URL builder ---
-
 export function buildAlchemyUrl(chainId: string, apiKey: string): string | null {
   const slug = ALCHEMY_CHAINS[chainId];
   if (!slug) return null;
   return buildAlchemyRpcUrl(slug, apiKey);
 }
 
-// --- Helpers ---
 function isAlchemyLogEntry(value: unknown): value is AlchemyLogEntry {
   if (!value || typeof value !== "object") return false;
   const log = value as Record<string, unknown>;
@@ -274,8 +269,6 @@ async function jsonRpcCall<T>(
     transientHttpError: false,
   };
 }
-
-// --- Block number ---
 
 export async function getAlchemyBlockNumber(
   alchemyUrl: string,
@@ -456,8 +449,6 @@ export async function getAlchemyTransactionContextBatchMany(
 
   return results;
 }
-
-// --- Log fetching ---
 
 export async function fetchAlchemyLogs(
   alchemyUrl: string,
@@ -717,8 +708,6 @@ async function fetchAlchemyLogsRange(
     };
   }
 }
-
-// --- Block timestamps ---
 
 const TIMESTAMP_BATCH_SIZE = 50;
 // D1 enforces a relatively low SQL variable cap in some environments; keep this conservative.

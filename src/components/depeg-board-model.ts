@@ -7,10 +7,6 @@ import {
 } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 
-// ---------------------------------------------------------------------------
-// Pure status / tone helpers
-// ---------------------------------------------------------------------------
-
 export function statusLabel(row: DepegTrackerRow): string {
   if (row.coin.activeDepeg) return "open";
   if (row.pendingIncident) return "pending";

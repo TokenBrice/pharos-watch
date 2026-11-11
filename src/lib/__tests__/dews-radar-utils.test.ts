@@ -1,4 +1,3 @@
-// src/lib/__tests__/dews-radar-utils.test.ts
 import { describe, it, expect } from "vitest";
 import {
   deterministicRadiusOffset,
@@ -45,4 +44,3 @@ describe("highestBand", () => {
     expect(highestBand(["WATCH", "DANGER", "ALERT"])).toBe("DANGER");
   });
 });
-

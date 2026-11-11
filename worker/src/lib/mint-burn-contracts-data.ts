@@ -155,7 +155,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
 ];
 
 export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
-  // --- Safe havens ---
   {
     chain: ETHEREUM,
     stablecoinId: "usdt-tether",
@@ -246,7 +245,6 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
 
-  // --- Risky / crypto-backed ---
   {
     // 3Jane USD3 TransparentUpgradeableProxy, verified Blockscout deployment tx
     // 0xa50b1bacaceebe52c33a9815fa9e0eb8549f2c38218f41745647b881a7008243.

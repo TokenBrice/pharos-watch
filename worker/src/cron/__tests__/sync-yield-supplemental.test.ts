@@ -188,7 +188,6 @@ describe("syncYieldSupplemental", () => {
       // run-outcome row, so the run document must not contradict that row.
       const outcome = JSON.parse(vi.mocked(setCache).mock.calls[0]![2]);
       expect(outcome.familyCacheResults.beefy).toBe("published");
-      // The document itself says this invocation executed a single family.
       expect(metadata.sourceCoverage.supplementalSourceAccounting.familyExecution.familyCount).toBe(1);
       expect(metadata.sourceCoverage.sourceFamilySummaries.aaveV3).toMatchObject({ status: "ok" });
       for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter((key) => key !== "aaveV3")) {

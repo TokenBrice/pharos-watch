@@ -67,10 +67,6 @@ import {
   fetchAggregateData,
 } from "./mint-burn-flows/aggregate";
 
-// ---------------------------------------------------------------------------
-// Handler
-// ---------------------------------------------------------------------------
-
 export const handleMintBurnFlows = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
@@ -89,10 +85,6 @@ export const handleMintBurnFlows = async (db: D1Database, url: URL): Promise<Res
     }
     return handleAggregate(db, hours);
   };
-
-// ---------------------------------------------------------------------------
-// Aggregate mode (no stablecoin param)
-// ---------------------------------------------------------------------------
 
 export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: number): Promise<Response> {
   const cacheKey = aggregateFlowCacheKey(hours);
@@ -380,10 +372,6 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Per-coin mode (with stablecoin param)
-// ---------------------------------------------------------------------------
-
 async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number): Promise<Response> {
   const nowSec = Math.floor(Date.now() / 1000);
   const configured = getMintBurnConfigsForStablecoin(stablecoinId);
@@ -435,7 +423,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     const scanCoverage = mintBurnWindowCoverage(configs, scanSegments, context.legacy, window.start, window.end, context.watermark);
-    // Per-chain breakdown
     const chainMap = aggregateHourlyRowsByChain(rows);
 
     // Signed nets of a partial window are unavailable; volumes stay known subtotals.
@@ -463,7 +450,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       window, new Set(hourlyConfigs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
         .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
 
-    // Totals
     let totalMint = 0;
     let totalBurn = 0;
     let totalMintCount = 0;

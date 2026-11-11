@@ -53,7 +53,6 @@ function makeDbForTimestampCache(
   });
 }
 
-// --- buildAlchemyUrl ---
 
 describe("buildAlchemyUrl", () => {
 
@@ -63,7 +62,6 @@ describe("buildAlchemyUrl", () => {
   });
 });
 
-// --- getAlchemyBlockNumber ---
 
 describe("getAlchemyBlockNumber", () => {
   beforeEach(() => {
@@ -308,7 +306,6 @@ describe("fetchAlchemyLogs runtime deadline", () => {
   });
 });
 
-// --- getAlchemyTransactionContextBatchMany ---
 
 describe("getAlchemyTransactionContextBatchMany", () => {
   beforeEach(() => {
@@ -443,7 +440,6 @@ describe("getAlchemyTransactionContextBatchMany", () => {
   });
 });
 
-// --- fetchAlchemyLogs ---
 
 describe("fetchAlchemyLogs", () => {
   beforeEach(() => {
@@ -684,7 +680,6 @@ describe("fetchAlchemyLogs", () => {
   });
 });
 
-// --- resolveBlockTimestamps ---
 
 describe("resolveBlockTimestamps", () => {
   beforeEach(() => {

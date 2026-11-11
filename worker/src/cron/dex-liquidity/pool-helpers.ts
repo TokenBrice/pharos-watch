@@ -65,15 +65,12 @@ export function initLiquidityFallbackCounters(): LiquidityFallbackCounters {
   };
 }
 
-/** Parse pool symbol string into constituent token symbols */
 export function parsePoolSymbols(symbol: string): string[] {
-  // Handle known composite names first
   for (const [name, symbols] of Object.entries(COMPOSITE_POOL_NAMES)) {
     if (symbol === name || symbol.startsWith(`${name}-`)) {
       return symbols.map((sym) => normalizeDexSymbol(sym));
     }
   }
-  // Split on common delimiters: "-", "/", "+", " "
   return symbol
     .split(/[-/+ ]+/)
     .map((s) => normalizeDexSymbol(s))
@@ -175,11 +172,9 @@ export function computeDurabilityScore(
   if (counters && tvlStability == null) counters.durabilityTvlStabilityDefault++;
   const tvlStabilityScore = tvlStability != null ? tvlStability * 100 : 50;
 
-  // Volume consistency sub-score
   if (counters && volumeStability == null) counters.durabilityVolumeConsistencyDefault++;
   const volumeConsistencyScore = volumeStability != null ? volumeStability * 100 : 50;
 
-  // Maturity sub-score
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
   return clampScore(
@@ -214,7 +209,6 @@ export function computeLiquidityScore(
   let tvlDepth: number;
   if (circulatingUsd != null && circulatingUsd > 0) {
     if (counters) counters.tvlDepthRelative++;
-    // Size-aware relative formula: depth ratio vs circulating supply
     const depthRatio = tvlInput / circulatingUsd;
     tvlDepth = computeTvlDepthScore(depthRatio);
   } else {

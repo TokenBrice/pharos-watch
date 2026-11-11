@@ -508,7 +508,6 @@ describe("publishYieldCoordinatorResults", () => {
         rankings: Array<{ id: string; rankChangeAttribution: unknown }>;
       };
       const attributionById = new Map(published.rankings.map((row) => [row.id, row.rankChangeAttribution]));
-      // coin-a rose 2 -> 1 and coin-b fell 1 -> 2 under the served comparator.
       expect(attributionById.get("coin-a")).toMatchObject({ previousRank: 2, rankDelta: 1 });
       expect(attributionById.get("coin-b")).toMatchObject({ previousRank: 1, rankDelta: -1 });
       // coin-c did not move, so nothing is attributed.

@@ -4,7 +4,6 @@ import { createSlotDeadline } from "../lib/cron-timeouts";
 import { createWorkerEnv } from "./__shared/worker-env";
 import { makeNoopD1 } from "./noop-d1";
 
-/** Build the common environment used by scheduled-handler tests. */
 export function makeScheduledEnv(
   overrides: Parameters<typeof createWorkerEnv>[0] = {},
 ): ReturnType<typeof createWorkerEnv> {
@@ -32,7 +31,6 @@ export function mockSuccessfulCronLease(
   }));
 }
 
-/** Build the stable runtime context used by scheduled-handler unit tests. */
 export function makeScheduledRuntime(
   overrides: Partial<ScheduledRuntimeContext> = {},
 ): ScheduledRuntimeContext {

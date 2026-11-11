@@ -118,7 +118,6 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
         mcapByDate.set(snapshotDate, mcap);
       }
 
-      // Query existing rows for this coin
       const existing = await db
         .prepare("SELECT snapshot_date, price, circulating_usd FROM supply_history WHERE stablecoin_id = ?")
         .bind(meta.id)
@@ -149,7 +148,6 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
         const existingRow = existingDates.get(date);
 
         if (existingRow) {
-          // Existing row with NULL price -> fill it
           if (existingRow.price === null) {
             stmts.push(
               db

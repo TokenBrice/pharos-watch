@@ -77,7 +77,6 @@ const COIN_PAYLOAD_PREFIX = "coin_";
 const WHY_PAYLOAD_PREFIX = "why_";
 const COVERAGE_PAYLOAD_PREFIX = "coverage_";
 
-/** Discriminated union of all recognized Mini App payloads. */
 export type TelegramMiniAppPayload =
   | { kind: "named"; name: MiniAppPayloadName }
   | { kind: "adoption"; destination: "miniapp_home" | "miniapp_watchlist" }
@@ -85,7 +84,6 @@ export type TelegramMiniAppPayload =
   | { kind: "why"; coinId: string }
   | { kind: "coverage"; coinId: string };
 
-/** Extracts the stablecoin id from a prefixed payload, or null. */
 function parsePrefixedPayload(payload: string, prefix: string): string | null {
   if (!payload.startsWith(prefix) || payload.length <= prefix.length) return null;
   return payload.slice(prefix.length);

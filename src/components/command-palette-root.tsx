@@ -61,8 +61,6 @@ function PaletteLogo({ src, label }: { src: string; label: string }) {
   );
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
-
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -125,8 +123,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     clearWatchlist,
   });
 
-  // ── Restore focus on close and auto-focus input when open ────────────────────
-
   useEffect(() => {
     const wasOpen = wasOpenRef.current;
     wasOpenRef.current = open;
@@ -153,8 +149,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       inputRef.current?.focus();
     });
   }, [open]);
-
-  // ── Build results ──────────────────────────────────────────────────────
 
   const results = useMemo(() => {
     return buildCommandPaletteSearchResults({
@@ -191,20 +185,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     runVerb,
   ]);
 
-  // ── Grouped results for rendering ──────────────────────────────────────
-
   const groupedResults = useMemo(() => {
     return groupCommandPaletteResults(results);
   }, [results]);
-
-  // ── Flat list for keyboard navigation indexing ─────────────────────────
 
   const flatResults = useMemo(
     () => groupedResults.flatMap((g) => g.items),
     [groupedResults]
   );
-
-  // ── Clamp selected index when results change ──────────────────────────
 
   const selectedIndex = clampCommandPaletteSelectedIndex(rawSelectedIndex, flatResults.length);
 
@@ -248,8 +236,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     };
   }, [open, query, flatResults.length]);
 
-  // ── Scroll selected item into view ─────────────────────────────────────
-
   useEffect(() => {
     if (!listRef.current) return;
     const selected = listRef.current.querySelector(
@@ -259,8 +245,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       selected.scrollIntoView({ block: "nearest" });
     }
   }, [selectedIndex]);
-
-  // ── Keyboard navigation inside palette ─────────────────────────────────
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
@@ -286,8 +270,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   if (!open) return null;
 
-  // ── Track flat index across grouped rendering ──────────────────────────
-
   let flatIndex = 0;
 
   return (
@@ -305,7 +287,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <DialogDescription className="sr-only">
           Search stablecoins, pages, chains, recent depegs, and command verbs.
         </DialogDescription>
-        {/* Search input */}
         <div className="relative shrink-0">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -335,7 +316,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </button>
         </div>
 
-        {/* Results */}
         <div
           ref={listRef}
           id="command-palette-results"
@@ -406,7 +386,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     onClick={() => selectResult(currentIndex)}
                     onMouseEnter={() => setSelectedIndex(currentIndex)}
                   >
-                    {/* Icon or logo */}
                     {item.logoUrl ? (
                       <PaletteLogo src={item.logoUrl} label={item.label} />
                     ) : item.imagePath ? (
@@ -486,7 +465,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           ))}
         </div>
 
-        {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:hidden">
           <button
             type="button"

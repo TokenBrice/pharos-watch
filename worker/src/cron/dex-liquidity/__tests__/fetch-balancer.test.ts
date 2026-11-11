@@ -78,12 +78,10 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
       ],
     }], { requireMatch: true });
     const result = await fetchBalancerPools();
-    // Junk row must be dropped
     expect(result.pools.find((p) => p.tvlUsd > 2_000_000_000)).toBeUndefined();
     expect(
       result.pools.some((p) => p.poolAddress.toLowerCase() === "0x4e415957aa4fd703ad701e43ee5335d1d7891d83"),
     ).toBe(false);
-    // Clean row survives
     expect(result.pools.length).toBeGreaterThanOrEqual(1);
   });
 

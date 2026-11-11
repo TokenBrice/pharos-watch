@@ -159,7 +159,6 @@ export function buildStablecoinClientProjections({
     activeVariantStablecoinCount: activeVariants.length,
     activeStableValueInvestmentCount: activeStableValueInvestments.length,
     preLaunchStablecoinCount: preLaunch.length,
-    // Public cemetery copy includes both curated obituaries and frozen profiles.
     deadStablecoinCount: dead.length + tracked.filter((coin) => coin.status === "frozen").length,
     activePegCurrencyCounts,
     activePegCurrencies,

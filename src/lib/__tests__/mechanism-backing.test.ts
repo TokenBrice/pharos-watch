@@ -83,7 +83,6 @@ describe("buildMechanismBackingView", () => {
     const view = buildMechanismBackingView("nbasis-nest");
     const note = view?.notes.find((entry) => entry.key === "metric:marginBufferPct");
     expect(note?.state).toBe("unavailable");
-    // A gap reads under the same name the measured metric carries elsewhere.
     useOverlay({ archetype: "synthetic-delta-neutral", metrics: { marginBufferPct: 1 } });
     const measured = buildMechanismBackingView("controlled")?.metrics.find((metric) => metric.key === "marginBufferPct");
     expect(measured).toBeDefined();

@@ -139,6 +139,6 @@ describe("fetchRealtimeFxRates", () => {
     const result = await fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
     expect(result.completed).toBe(true);
     expect(result.observation?.rates.has("peggedJPY")).toBe(false); // rejected by bounds
-    expect(result.observation?.rates.has("peggedEUR")).toBe(true);   // accepted
+    expect(result.observation?.rates.has("peggedEUR")).toBe(true);
   });
 });

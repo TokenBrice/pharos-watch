@@ -298,8 +298,6 @@ export function collectRepositoryProcessArgvFiles(cwd = process.cwd()): string[]
     .sort(compareCodeUnits);
 }
 
-/**
- */
 export function checkCliArgsPolicy({
   cwd = process.cwd(),
   policy = CLI_ARGV_POLICY,

@@ -190,10 +190,6 @@ export function describeLaunchWindow(clock: LaunchClock, precision: FuzzyPrecisi
   return point ? `Passed ${clock.windowDays} d ago` : `Window closed ${clock.windowDays} d ago`;
 }
 
-// ---------------------------------------------------------------------------
-// Launch path chart model
-// ---------------------------------------------------------------------------
-
 export interface LaunchPathTick {
   pct: number;
   label: string;

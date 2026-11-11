@@ -13,7 +13,6 @@ interface PegStabilityMetrics {
   trackingSpan: string;
   /** Whether tracking history is < 7 days */
   limited: boolean;
-  /** Total number of depeg events */
   eventCount: number;
   /** Worst (most extreme) peak deviation in bps, signed */
   worstDeviationBps: number | null;
@@ -21,7 +20,6 @@ interface PegStabilityMetrics {
   currentStreakDays: number | null;
   /** Latest terminal boundary, including non-recovery tracking closures */
   latestClosure: DepegClosureClassification | null;
-  /** Whether there is an ongoing depeg event right now */
   depeggedNow: boolean;
 }
 

@@ -205,7 +205,6 @@ const TICK_CLASS: Record<GaugeMarkerKind, string> = {
   shutdown: "w-0 border-l border-dashed border-foreground/85",
 };
 
-/** Greedy lanes: the first lane with room, else the least-crowded one. */
 function assignLanes(items: readonly GaugeLabelItem[]): GaugeLabel[] {
   const lanes: { spacingLeft: number; gap: number }[][] = [];
   return items.map((item) => {
@@ -404,7 +403,6 @@ export function ThresholdGauge({
       </div>
       <div aria-hidden="true" className={cn("relative mt-1", LANE_HEIGHT_CLASS[laneCount - 1])}>
         {labels.map((label) => {
-          // A marker label is keyed by the kinds it names: "par", or "par threshold" when merged.
           const labelKey = label.kind === "markers" ? label.markers.map((marker) => marker.kind).join(" ") : label.kind;
           return (
             <span

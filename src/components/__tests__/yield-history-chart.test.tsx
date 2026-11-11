@@ -142,7 +142,6 @@ describe("YieldHistoryChart", () => {
       />,
     );
 
-    // The publish-time PYS strip now rides the breakdown toggle.
     expect(screen.queryByTestId("pys-sparkline")).toBeNull();
     fireEvent.click(screen.getByLabelText("Show APY and PYS breakdown detail"));
     expect(screen.getByTestId("pys-sparkline")).toBeTruthy();

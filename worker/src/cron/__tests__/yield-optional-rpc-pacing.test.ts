@@ -189,7 +189,6 @@ describe("optional RPC family endpoint pacing", () => {
     expect(ethereumCalls[1]).toBe("https://rpc.ethereum.example.com");
     expect((callsByUrl.get("https://rpc.ethereum.example.com") ?? 0))
       .toBeGreaterThanOrEqual(callsByUrl.get("https://fallback.ethereum.example.com") ?? 0);
-    // The remaining targets were probed on their own chains.
     expect(callsByUrl.has("https://fallback.base.example.com")).toBe(true);
     expect(callsByUrl.has("https://rpc.arbitrum.example.com")).toBe(true);
     expect(elapsedMs).toBeLessThan(FAMILY_BUDGET_MS);

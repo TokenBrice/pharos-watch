@@ -1219,7 +1219,6 @@ function toBaselineRow(value: unknown): YieldRanking | null {
   return row as YieldRanking;
 }
 
-/** The published row fields publish-time attribution reads and writes. */
 interface AttributableRankingRow {
   id: string;
   name: string;

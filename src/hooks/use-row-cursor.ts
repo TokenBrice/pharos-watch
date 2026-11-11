@@ -73,7 +73,6 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
     [enabled, setCursorIndex],
   );
 
-  // Scroll virtualizer to the cursor when it moves.
   useEffect(() => {
     if (!cursorActive) return;
     if (!virtualizer) return;
@@ -87,7 +86,6 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
     virtualizer.scrollToIndex(cursorIndexBounded);
   }, [cursorActive, cursorIndexBounded, rowsLength, virtualizer]);
 
-  // Keyboard handler
   useEffect(() => {
     if (!enabled) return;
     if (rowsLength === 0) return;

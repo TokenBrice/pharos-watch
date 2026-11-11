@@ -366,10 +366,8 @@ describe("MintAuthoritySection", () => {
   it("draws the mint rail and band ladder when a symbol is provided, absorbing the path and posture chips", () => {
     const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
 
-    // Band ladder lights the published band; the standalone band text goes.
     expect(html).toContain("Hardened");
     expect(html).toContain("Exposed");
-    // Rail stations: issuer path, control glyph row, supply symbol + posture.
     expect(html).toContain("Facilitator");
     expect(html).toContain("3/5");
     expect(html).toContain("GHO");

@@ -131,10 +131,6 @@ export function derivePsiBeaconState(input: PsiBeaconStateInput): PsiBeaconState
   };
 }
 
-// ---------------------------------------------------------------------------
-// Ruler model
-// ---------------------------------------------------------------------------
-
 export interface PsiBeaconSpan {
   /** Exact extent on the 0–100 ruler. */
   from: number;
@@ -224,7 +220,6 @@ function signed(value: number): string {
   return fmt(value);
 }
 
-/** Decomposes the instant sample into lit length, fog banks, trend and unknown spans. */
 function decompose(reading: PsiBeaconReading): Pick<PsiBeaconModel, "gain" | "drag" | "fog" | "unknown" | "clamp"> & { dashedTip: boolean } {
   const { score, components } = reading;
   const missing = reading.unavailableComponents;

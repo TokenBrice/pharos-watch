@@ -24,7 +24,6 @@ export const SUPPLY_INTEGRITY_CONFIRM_KEY = "cron-staleness-watchdog:supply-conf
 const SUPPLY_INTEGRITY_CONFIRM_RUNS = 2;
 const MAX_REPORTED_IDS = 20;
 const CHARTS_PUBLICATION_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoin-charts"];
-/** Bound the held drift baselines kept in confirmation state. */
 const MAX_HELD_DRIFT_BASELINES = 50;
 /** Reviewed levels move daily inside this band; anything wider is an ordinary finding. */
 const REVIEWED_REBASELINE_TOLERANCE = 0.02;

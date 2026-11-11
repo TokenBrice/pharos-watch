@@ -155,7 +155,6 @@ type DexPriceReadResult =
   | { kind: "degraded"; reason: "dex-prices-read-failed"; results: DexPriceRow[] };
 
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
-  // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     if (stablecoinsCache.reason === "missing-cache") {
@@ -243,7 +242,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // successful empty result so consumers can distinguish absence from outage.
   const dexPrices = selectCurrentPegDexPrices(dexPriceResult.results, now);
 
-  // 3. Build lookup maps
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
   const { sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
   const currentObservations = deriveCurrentPegObservationMap({
@@ -255,7 +253,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   });
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
 
-  // 4. Compute per-coin data
   const coins: PegSummaryCoin[] = [];
 
   let activeDepegCount = 0;
@@ -323,7 +320,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       dexPriceCheck: observation?.dexPriceCheck ?? undefined,
     });
 
-    // Summary aggregation
     if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
     if (currentBps !== null) {
       // Keep summary aggregates aligned to rows with a live peg status.
@@ -338,7 +334,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     }
   }
 
-  // Median deviation
   const medianBps = medianOfRounded(allAbsBps);
 
   // Flag peg types using fallback rates so frontend can signal stale data

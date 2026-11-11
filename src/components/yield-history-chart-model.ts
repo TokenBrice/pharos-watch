@@ -171,7 +171,6 @@ export function deriveYieldSourceSegments(
     .sort((a, b) => a.ts - b.ts);
   if (sorted.length === 0) return [];
 
-  /* First pass — group consecutive points with the same sourceKey into raw segments. */
   type RawSegment = { startTs: number; endTs: number; sourceKey: string; sourceLabel: string };
   const raw: RawSegment[] = [];
   for (const point of sorted) {
@@ -185,7 +184,6 @@ export function deriveYieldSourceSegments(
   }
 
 
-  /* Determine top-N sources by first-appearance order. */
   const firstAppearance = new Map<string, number>();
   raw.forEach((segment, index) => {
     if (!firstAppearance.has(segment.sourceKey)) {

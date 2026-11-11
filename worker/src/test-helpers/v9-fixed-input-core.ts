@@ -40,10 +40,6 @@ export function v9NotApplicableStatus(
   };
 }
 
-// --------------------------------------------------------------------------
-// Route / review fixtures
-// --------------------------------------------------------------------------
-
 /** A measured DEX exit-route observation. */
 export function v9ExitRouteObservation(
   routeId = "dex:primary",
@@ -131,10 +127,6 @@ export function v9RouteReview(routeId = "dex:primary", observedAt = V9_FIXTURE_O
   };
 }
 
-// --------------------------------------------------------------------------
-// Fixed input
-// --------------------------------------------------------------------------
-
 type FixedDexRow = ReportCardsFixedInputDraft["dexLiqMap"][string];
 
 export interface V9FixedInputOptions {
@@ -143,7 +135,6 @@ export interface V9FixedInputOptions {
   /** Identity strings the V9 suites vary to keep independent captures distinct. */
   sourceGeneration?: string;
   registryRevision?: string;
-  // DEX row
   liquidityScore?: number;
   routeChain?: string;
   routeContractOrPoolId?: string;
@@ -152,7 +143,6 @@ export interface V9FixedInputOptions {
   dexCapabilityMatrixVersion?: string;
   dexMethodologyVersion?: string;
   dexOverrides?: Partial<FixedDexRow>;
-  // Peg row
   omitPegRow?: boolean;
   pegMethodologyVersion?: string;
   pegScore?: number | null;
@@ -169,11 +159,9 @@ export interface V9FixedInputOptions {
   activeDepegPeakBps?: number;
   /** Optional v10.42 directional peg input, passed through as captured. */
   safetyScoreV9DirectionalPeg?: ReportCardsFixedInputDraft["safetyScoreV9DirectionalPeg"];
-  // Reserves
   classifiedReserve?: boolean;
   omitLiveReserve?: boolean;
   reserves?: readonly ReserveSlice[];
-  // Supply
   chainSupplyByChain?: Record<
     string,
     {

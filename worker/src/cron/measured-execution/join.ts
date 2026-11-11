@@ -738,7 +738,6 @@ export function joinDexMeasuredExecutionEvidence(input: {
         quote.resolution === "last-known-good"
           ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
           : undefined;
-      // Resolve the current exact NG/composite policy as well as shared lifecycle.
       const activationPending = !isDexMeasuredExecutionTargetScoreEligible(target);
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");

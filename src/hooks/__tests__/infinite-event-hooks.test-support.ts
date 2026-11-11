@@ -48,7 +48,6 @@ export interface InfiniteQueryOptionsLike {
   getNextPageParam: (lastPage: { data: { nextCursor?: string | null } }) => string | null | undefined;
 }
 
-/** Options object from the most recent mocked `useInfiniteQuery` call. */
 export function latestInfiniteQueryOptions(mock: Mock): InfiniteQueryOptionsLike {
   const latest = mock.mock.calls.at(-1);
   if (!latest) throw new Error("useInfiniteQuery was never called");

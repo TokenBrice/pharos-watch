@@ -204,7 +204,6 @@ describe("adaptChainlinkNavResponse", () => {
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239, chain: "ethereum", tokenAddress: params.tokenAddress },
       params,
     );
-    // NAV = 1.119, Supply = 500
     expect(result.metadata?.navPerToken).toBe("1.119");
     expect(result.metadata?.totalSupplyFormatted).toBe("500");
     // The supply read is one deployment, never the token's cross-chain total.

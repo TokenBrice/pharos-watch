@@ -23,19 +23,11 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { MintBurnEvent } from "@shared/types";
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 interface FlowEventFeedProps {
   stablecoinId: string;
   limit?: number;
   scope?: "all" | "counted";
 }
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
 
 const DEFAULT_PAGE_SIZE = 25;
 // The fetched page opens truncated so the history module stays glanceable.
@@ -47,10 +39,6 @@ const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
   { id: "chain", label: "Chain", className: "hidden sm:table-cell" },
   { id: "tx", label: "Tx", className: "text-center" },
 ] as const;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function chainName(chainId: string): string {
   return CHAIN_META[chainId]?.name ?? chainId;
@@ -101,14 +89,6 @@ function getEventBadge(event: MintBurnEvent): {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Error state
-// ---------------------------------------------------------------------------
-
 function FeedError({ message }: { message: string }) {
   return (
     <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
@@ -116,10 +96,6 @@ function FeedError({ message }: { message: string }) {
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
 
 export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventFeedProps) {
   const pageSize = limit ?? DEFAULT_PAGE_SIZE;

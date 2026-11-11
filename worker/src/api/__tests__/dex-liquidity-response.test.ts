@@ -47,7 +47,6 @@ describe("normalizeTopPools", () => {
     const result = normalizeTopPools(json);
     expect(result).toHaveLength(1);
     const pool = result[0] as Record<string, unknown>;
-    // Allowed top-level keys present
     expect(pool.project).toBe("uniswap-v3");
     expect(pool.poolType).toBe("generic");
     expect(pool.tvlUsd).toBe(100_000);
@@ -55,14 +54,11 @@ describe("normalizeTopPools", () => {
     expect(pool.volumeUsd7d).toBe(300_000);
     expect(pool.price).toBe(1.0001);
     expect(pool.source).toBe("dl");
-    // Dead top-level keys stripped
     expect(pool).not.toHaveProperty("poolId");
-    // Allowed extra keys present
     const extra = pool.extra as Record<string, unknown>;
     expect(extra.balanceRatio).toBe(0.5);
     expect(extra.feeTier).toBe(100);
     expect(extra.organicFraction).toBe(0.9);
-    // Dead extra keys stripped
     expect(extra).not.toHaveProperty("qualityAdjustedTvl");
     expect(extra).not.toHaveProperty("hasMeasuredOrganicFraction");
     expect(extra).not.toHaveProperty("measuredExecution");

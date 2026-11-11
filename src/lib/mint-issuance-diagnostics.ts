@@ -82,7 +82,6 @@ function processReasonLabel(code: string): string {
     : sentenceCase(code.split(/[-_]+/).filter(Boolean));
 }
 
-/** Reader status for the same published reason taxonomy used by reason labels. */
 export function processReasonStatus(code: ProcessReasonCode): MintIssuanceDiagnosticStatus {
   if (code === "external-accounting-trust") return "Analytical note";
   if (code === "operational-screen-failed") return "Failed screen";
@@ -159,7 +158,6 @@ export function humanizeDiagnosticField(field: string): string | null {
 
 export type MintIssuanceDiagnosticStatus = MintAuthorityProcessDiagnosticViewModel["statusLabel"];
 
-/** Failures first, then missing proof, then analytical notes. */
 const STATUS_ORDER: Record<MintIssuanceDiagnosticStatus, number> = {
   "Failed gate": 0,
   "Failed screen": 1,

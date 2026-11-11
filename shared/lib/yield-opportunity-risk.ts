@@ -51,7 +51,6 @@ import {
  */
 const OPPORTUNITY_VENUE_SAFETY_SLOPE = 5;
 
-/** Magnitude profiles for the shared penalty terms, external-opportunity engine. */
 const OPPORTUNITY_VENUE_PROFILE: VenuePenaltyProfile = {
   kind: "continuous",
   threshold: PYS_VENUE_PENALTY_THRESHOLD,

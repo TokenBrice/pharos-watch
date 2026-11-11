@@ -60,7 +60,6 @@ export function DepegFeed({
   const visible = sorted.slice(0, visibleCount);
   const hasMoreLoaded = visibleCount < sorted.length;
 
-  // Pre-compute new-event animation index (capped at 3 animated entries).
   const newIndexMap = useMemo(() => {
     const map = new Map<number, number>();
     let idx = 0;

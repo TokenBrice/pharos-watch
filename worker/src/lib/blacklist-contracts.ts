@@ -413,8 +413,6 @@ const ADDED_REMOVED_BLACKLIST_EVENT_FAMILY: readonly BlacklistEventDef[] = [
   },
 ];
 
-// --- Deny-list batch events ---
-
 const ADDED_TO_DENY_LIST_TOPIC = "0x02dd2f2ab1d45714c6f178e8ff8c5594023ec5d134bb99bbb230adabdb718c05"; // AddedToDenyList(address[])
 const REMOVED_FROM_DENY_LIST_TOPIC = "0xfe849628f690f8527fe506998b4ddf44a5b11ecb3ec64257db0951b62d9a4f38"; // RemovedFromDenyList(address[])
 
@@ -637,8 +635,6 @@ function resolveBlacklistContractConfig(
     events: [...spec.events],
   };
 }
-
-// --- Contract addresses per chain ---
 
 /**
  * Deferred-chain note (referenced inline as "deferred — see consolidated

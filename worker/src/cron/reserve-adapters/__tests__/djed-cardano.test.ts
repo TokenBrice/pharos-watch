@@ -124,10 +124,6 @@ function djedCacheDb(circulating: number | null, price: number | null = 1) {
   }]);
 }
 
-// ---------------------------------------------------------------------------
-// djed-cardano binding through the real catalog config
-// ---------------------------------------------------------------------------
-
 describe("djed-cardano", () => {
   it("publishes the recorded bank census with a market-valued collateralization ratio", async () => {
     const run = await runDjed();

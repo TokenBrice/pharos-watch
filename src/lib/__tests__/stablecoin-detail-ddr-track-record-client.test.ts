@@ -1,4 +1,3 @@
-// src/lib/__tests__/stablecoin-detail-ddr-track-record-client.test.ts
 import { describe, expect, it } from "vitest";
 import { DDRR_PUBLIC_WARNING, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";

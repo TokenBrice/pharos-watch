@@ -24,7 +24,6 @@ export {
   DDR_METHODOLOGY_VERSION_LABEL,
 } from "./constants";
 
-/** Reconstructed changelog data. */
 export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 
 export const getDepegResolverMethodologyVersionAt = ddr.getVersionAt;

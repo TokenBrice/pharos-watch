@@ -97,7 +97,6 @@ export function PreLaunchLaunchPath({ coin }: { coin: LaunchPathCoin }) {
           />
         ))}
 
-        {/* Retired targets lane. */}
         {model.retired.map((band) => (
           <div
             key={band.key}
@@ -116,7 +115,6 @@ export function PreLaunchLaunchPath({ coin }: { coin: LaunchPathCoin }) {
           </span>
         ) : null}
 
-        {/* Current target lane: label, then the window. */}
         {model.current ? (
           <>
             <span
@@ -147,7 +145,6 @@ export function PreLaunchLaunchPath({ coin }: { coin: LaunchPathCoin }) {
           </>
         )}
 
-        {/* Activity lane. */}
         {model.markers.map((marker) => (
           <div
             key={marker.key}
@@ -169,7 +166,6 @@ export function PreLaunchLaunchPath({ coin }: { coin: LaunchPathCoin }) {
           </div>
         ))}
 
-        {/* Axis, announcement mark and ticks. */}
         <div className="absolute inset-x-0 top-[7rem] h-px bg-border" />
         {model.announcedPct != null ? (
           <span

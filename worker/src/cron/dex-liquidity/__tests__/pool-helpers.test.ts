@@ -375,7 +375,6 @@ describe("dex-liquidity pool helpers", () => {
     const healthyLiquidity = computeLiquidityScore(withCompleteVolume(rich), 90);
     expect(healthyLiquidity.score).toBeGreaterThan(60);
     expect(healthyLiquidity.components.pairDiversity).toBe(40);
-    // crossChain should not be present
     expect("crossChain" in healthyLiquidity.components).toBe(false);
   });
 

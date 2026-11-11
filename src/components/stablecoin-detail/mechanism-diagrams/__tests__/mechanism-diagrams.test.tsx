@@ -192,7 +192,6 @@ describe("mechanismDiagramFor", () => {
     const desktopNodes = textNodes(diagram.desktopSvg);
     const mobileNodes = textNodes(diagram.mobileSvg);
 
-    // One accessible description, shared by both variants.
     const ariaLabel = diagram.desktopSvg.getAttribute("aria-label");
     expect(ariaLabel).toContain(testCase.ariaPhrase);
     expect(diagram.mobileSvg.getAttribute("aria-label")).toBe(ariaLabel);

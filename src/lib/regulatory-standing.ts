@@ -1,4 +1,3 @@
-// src/lib/regulatory-standing.ts
 import type {
   GeniusAuthorizationStatus,
   GeniusProfile,

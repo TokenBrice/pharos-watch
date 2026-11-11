@@ -37,18 +37,12 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
-// ---------------------------------------------------------------------------
-// Sub-components (unexported)
-// ---------------------------------------------------------------------------
-
 function DEWSCalmDot({ x, y }: CalmDot) {
   const cx = x.toFixed(1);
   const cy = y.toFixed(1);
   return (
     <g>
-      {/* Bloom halo */}
       <circle cx={cx} cy={cy} r={5} fill="var(--dews-radar-calm-dot-bloom)" />
-      {/* Core */}
       <circle cx={cx} cy={cy} r={2} fill="var(--dews-radar-calm-dot-core)" />
     </g>
   );
@@ -140,7 +134,6 @@ function DEWSDot({
     >
       {/* Touch-friendly hit area to improve mobile targeting precision */}
       <circle r={18} fill="transparent" stroke="transparent" />
-      {/* Visual selection ring for touch devices */}
       {isSelected && (
         <>
           <circle
@@ -170,7 +163,6 @@ function DEWSDot({
           />
         </>
       )}
-      {/* Animated glow ring */}
       <circle
         r={glowR}
         fill={hex}
@@ -465,12 +457,10 @@ function DEWSRadar({
         </radialGradient>
       </defs>
 
-      {/* Spokes */}
       {SPOKES.map((s, i) => (
         <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="var(--dews-radar-spoke)" strokeWidth={1} />
       ))}
 
-      {/* Band ring boundaries */}
       {RING_BANDS.map((band) => (
         <circle
           key={band}
@@ -505,7 +495,6 @@ function DEWSRadar({
         strokeDasharray="4 6"
       />
 
-      {/* Sweep group — wake arc + line, rotates together */}
       <g
         className="dews-sweep-g"
         style={{
@@ -526,12 +515,10 @@ function DEWSRadar({
         />
       </g>
 
-      {/* Calm ambient starfield — non-interactive, beneath elevated coins */}
       {calmDots.map((dot, i) => (
         <DEWSCalmDot key={i} x={dot.x} y={dot.y} />
       ))}
 
-      {/* Coin dots */}
       {elevated.map((coin) => (
         <DEWSDot
           key={coin.id}
@@ -567,10 +554,6 @@ function DEWSRadar({
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// DEWSLegend
-// ---------------------------------------------------------------------------
 
 function DEWSLegend({
   bandCounts,
@@ -613,10 +596,6 @@ function DEWSLegend({
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Public component
-// ---------------------------------------------------------------------------
 
 interface DEWSRadarPanelProps {
   logos?: Record<string, string>;

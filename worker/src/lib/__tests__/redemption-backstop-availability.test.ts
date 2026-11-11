@@ -281,7 +281,6 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
       observations([["not-a-tracked-dependency", -4000]]),
     );
 
-    // The direct row itself is preserved, but nothing inherits it
     expect(result.get("not-a-tracked-dependency")?.routeStatus).toBe("degraded");
     expect(result.size).toBe(1);
   });

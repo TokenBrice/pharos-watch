@@ -593,9 +593,6 @@ export function buildPageMetadata({
     robots: robots ?? INDEXABLE_ROBOTS,
   };
 }
-// ---------------------------------------------------------------------------
-// JSON-LD helpers for the mechanism explainer hub and per-archetype pages.
-// ---------------------------------------------------------------------------
 
 /**
  * Build a `DefinedTermSet` document describing the tracked mechanism

@@ -703,7 +703,6 @@ async function writeStaleSlotEventMarker(
   });
 }
 
-/** Reconcile durable child artifacts and record the corresponding operator event as one internal stage. */
 export async function reconcileStaleSlotArtifactsAndRecordEvent(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,

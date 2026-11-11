@@ -197,7 +197,6 @@ export function FeedbackModal({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Type selector */}
             <div className="flex gap-1 rounded-lg bg-muted p-1">
               {FEEDBACK_TYPES.map((t) => (
                 <button
@@ -215,7 +214,6 @@ export function FeedbackModal({
               ))}
             </div>
 
-            {/* Context banner */}
             {(stablecoinName || displayPageUrl) && (
               <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
                 {stablecoinName && (
@@ -236,7 +234,6 @@ export function FeedbackModal({
               </div>
             )}
 
-            {/* Title field (bug + feature-request) */}
             {needsTitle && (
               <div className="space-y-1.5">
                 <Label htmlFor="fb-title">Title</Label>
@@ -251,7 +248,6 @@ export function FeedbackModal({
               </div>
             )}
 
-            {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="fb-desc">{type === "data-correction" ? "What is wrong?" : "Description"}</Label>
               <Textarea
@@ -268,7 +264,6 @@ export function FeedbackModal({
               <p className="text-xs text-muted-foreground text-right">{description.length}/2000</p>
             </div>
 
-            {/* Expected value (data-correction only) */}
             {type === "data-correction" && (
               <div className="space-y-1.5">
                 <Label htmlFor="fb-expected">
@@ -300,7 +295,6 @@ export function FeedbackModal({
               <p className="text-xs text-muted-foreground">This handle will be included publicly on GitHub issues.</p>
             </div>
 
-            {/* Honeypot */}
             <input
               type="text"
               name="website"
@@ -312,10 +306,8 @@ export function FeedbackModal({
               onChange={(event) => setWebsite(event.target.value)}
             />
 
-            {/* Error */}
             {status === "error" && errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
-            {/* Submit */}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={status === "loading"}>
                 Cancel

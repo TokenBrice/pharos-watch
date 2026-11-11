@@ -73,8 +73,6 @@ function buildObservationCensus(
   return census;
 }
 
-// --- Depeg event detection ---
-
 export async function detectDepegEvents(
   db: D1Database,
   assets: PegAssetBase[],

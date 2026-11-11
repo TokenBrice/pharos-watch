@@ -353,7 +353,6 @@ export function YieldHistoryChart({
                   />
                 );
               })}
-              {/* Overlay lines for multi-source comparison */}
               {model.overlaySeriesKeys.map((dataKey, i) => (
                 <Line
                   key={dataKey}

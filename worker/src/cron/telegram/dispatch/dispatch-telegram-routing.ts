@@ -213,7 +213,6 @@ export interface PlannedSubscriberAlert {
   estimatedChunks: number;
 }
 
-/** Total alert lines queued for one chat (cheap; no formatting). */
 function countChatAlerts(alerts: ConsolidatedAlerts): number {
   return (
     alerts.dews.length +

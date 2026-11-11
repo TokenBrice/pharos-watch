@@ -149,7 +149,6 @@ export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?:
     }
   }
 
-  // Reverse check: flag runnable scripts that nothing references (dead scripts).
   const reverseCandidates = collectSourceFilesUnderRoots(REVERSE_ENTRYPOINT_DIRS, root, {
     extensions: REVERSE_ENTRYPOINT_EXTENSIONS,
     excludedDirs: SKIP_DIRS,

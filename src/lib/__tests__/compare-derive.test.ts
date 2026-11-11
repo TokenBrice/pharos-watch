@@ -18,10 +18,6 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 
-// ---------------------------------------------------------------------------
-// Minimal fixture helpers
-// ---------------------------------------------------------------------------
-
 function makeAsset(id: string, symbol = id.toUpperCase()): StablecoinData {
   return makeStablecoin({
     id,
@@ -126,10 +122,6 @@ function makeSelectedRadarCards(
   }));
 }
 
-// ---------------------------------------------------------------------------
-// buildCompareRadarCohortBaseline
-// ---------------------------------------------------------------------------
-
 describe("buildCompareRadarCohortBaseline", () => {
   it("falls back past NR and incomplete cohort members to all usable rated medians", () => {
     const response = makeReportCardsV9Response({
@@ -202,10 +194,6 @@ describe("buildCompareRadarCohortBaseline", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// deriveComparisonCoins
-// ---------------------------------------------------------------------------
-
 describe("deriveComparisonCoins", () => {
   it.each([
     { name: "absent", bluechipMap: undefined, available: false },
@@ -271,10 +259,6 @@ describe("deriveComparisonCoins", () => {
     expect(result[0].safetyCard?.grade).toBe("A");
   });
 });
-
-// ---------------------------------------------------------------------------
-// deriveSupplySeries
-// ---------------------------------------------------------------------------
 
 describe("deriveSupplySeries", () => {
   it("returns empty array when no histories provided", () => {
@@ -367,10 +351,6 @@ describe("deriveSupplySeries", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// deriveFlowSeries
-// ---------------------------------------------------------------------------
-
 describe("deriveFlowSeries", () => {
   it.each<{ name: string; flowDetails: (MintBurnPerCoinResponse | undefined)[] }>([
     { name: "returns empty array when all flow details are undefined", flowDetails: [undefined] },
@@ -453,10 +433,6 @@ describe("deriveFlowSeries", () => {
     expect(series.unknownCoverageHours).toBe(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// deriveFlowCardData
-// ---------------------------------------------------------------------------
 
 describe("deriveFlowCardData", () => {
   it("maps flow coin fields correctly", () => {

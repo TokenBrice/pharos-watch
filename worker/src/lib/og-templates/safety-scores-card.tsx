@@ -6,7 +6,6 @@ export interface SafetyScoresCardData {
   pulseScore: number | null;
   coverageRatio: number | null; // 0-1; null when the safety source is unavailable
   totalCoins: number;
-  // New fields
   topPerformers: Array<{ symbol: string; grade: string; score: number }>;
   bottomPerformers: Array<{ symbol: string; grade: string; score: number }>;
   safetyModel?: "v8" | "v9" | null;
@@ -93,7 +92,6 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
       subtitle={data.safetyModel ? `${data.safetyModel.toUpperCase()} Report Card Overview` : "Report Card Overview"}
       lastUpdated={data.lastUpdated}
     >
-      {/* Grade distribution - horizontal layout */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <MetricLabel>
           {data.safetyModel ? `${data.safetyModel.toUpperCase()} GRADE DISTRIBUTION` : "GRADE DISTRIBUTION"}
@@ -131,7 +129,6 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
         </div>
       </div>
 
-      {/* Middle section: Average score + Coverage */}
       <div style={{ display: "flex", gap: 60, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>AVERAGE SCORE</MetricLabel>
@@ -153,7 +150,6 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
         </div>
       </div>
 
-      {/* Bottom section: Top and Bottom performers */}
       <div style={{ display: "flex", gap: 80 }}>
         <PerformerList
           title="TOP 3 SAFEST"

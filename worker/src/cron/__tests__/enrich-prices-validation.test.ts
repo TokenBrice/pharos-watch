@@ -79,7 +79,6 @@ describe("isReasonablePrice", () => {
     expect(isReasonablePrice(price, `pegged${currency}`)).toBe(expected);
   });
 
-  // --- FX-rate-aware bounds ---
 
   describe("FX-rate-aware bounds", () => {
     it("uses dynamic bounds when fxRates provided for EUR", () => {

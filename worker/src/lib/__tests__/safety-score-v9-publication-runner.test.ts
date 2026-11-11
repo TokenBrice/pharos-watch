@@ -535,7 +535,6 @@ describe("Safety Score V9 publication runner", () => {
           } as unknown as SafetyScoreV9CompilerInput),
         },
       });
-      // Print the complete result (including abortCause) when the status differs.
       expect(result, JSON.stringify(result)).toMatchObject({ status: "published" });
       expect(evaluate).toHaveBeenCalledTimes(2);
       const pipeline = mocks.build.mock.results[0]!.value;

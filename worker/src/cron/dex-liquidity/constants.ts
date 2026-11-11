@@ -292,7 +292,6 @@ export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
   CBBTC: 0.6,
 };
 
-/** Symbol → governance type lookup from the active Worker runtime registry. */
 export const SYMBOL_GOVERNANCE = new Map<string, string>();
 for (const meta of WORKER_ACTIVE_STABLECOINS) {
   SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.governance);

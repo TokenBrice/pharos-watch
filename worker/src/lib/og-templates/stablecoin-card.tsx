@@ -18,7 +18,6 @@ export interface StablecoinCardData {
   flow7dSource: "mint-burn" | "mint-burn-coverage-unknown" | "mint-burn-partial-gross" | "supply-delta" | null;
   sparklineData: number[] | null;
   hasActiveDepeg: boolean;
-  // Fields
   pegScore: number | null;
   backing: string | null;
   governance: string | null;
@@ -160,7 +159,6 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
     { label: "LIQUIDITY", value: data.liquidityScore != null ? data.liquidityScore.toFixed(0) : "—", color: TEXT_SECONDARY },
   ];
 
-  // Build secondary metrics row (5 items)
   const secondaryMetrics: Metric[] = [
     { 
       label: "MARKET CAP", 
@@ -190,7 +188,6 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       badge={treatment.badge}
       lastUpdated={data.lastUpdated}
     >
-      {/* Top section: metrics */}
       <div style={{ display: "flex", flexDirection: "column" }}>
         {data.isFrozen ? (
           <div
@@ -229,14 +226,11 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
             {data.variantLabel} of {data.variantParentSymbol}
           </div>
         ) : null}
-        {/* Primary metrics row - 5 items */}
         <MetricRow metrics={primaryMetrics} valueFontSize={32} marginBottom={32} />
 
-        {/* Secondary metrics row - 5 items */}
         <MetricRow metrics={secondaryMetrics} valueFontSize={24} />
       </div>
 
-      {/* Sparkline — pushed to bottom by space-between */}
       {data.sparklineData != null ? (
         <Sparkline data={data.sparklineData} color={FROST_BLUE} />
       ) : (

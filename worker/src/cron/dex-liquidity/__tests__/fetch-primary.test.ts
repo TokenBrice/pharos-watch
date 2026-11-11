@@ -1,12 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock circuit breaker module
 vi.mock("../../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
 }));
 
-// Mock fetch-retry
 vi.mock("../../../lib/fetch-retry", () => ({
   fetchJsonWithRetry: vi.fn(async () => ({
     response: new Response("{}", { status: 200 }),
@@ -14,7 +12,6 @@ vi.mock("../../../lib/fetch-retry", () => ({
   })),
 }));
 
-// Mock db-cache
 vi.mock("../../../lib/db-cache", () => ({
   setCache: vi.fn(async () => {}),
   getCache: vi.fn(async () => null),
@@ -24,7 +21,6 @@ vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: vi.fn(),
 }));
 
-// Mock yield cache builder
 vi.mock("../../yield-sync/cache", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../yield-sync/cache")>();
 

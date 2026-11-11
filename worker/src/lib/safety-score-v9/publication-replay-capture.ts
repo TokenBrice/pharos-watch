@@ -147,7 +147,6 @@ export function parseSafetyScoreV9ReplayLaneScreening(value: unknown): SafetySco
   return block;
 }
 
-/** Rehydrate the evaluator's certificate map from a captured block. */
 export function replayLaneIncidentCertificates(
   block: SafetyScoreV9ReplayLaneScreening | null | undefined,
 ): Map<string, LaneIncidentCertificateView> {

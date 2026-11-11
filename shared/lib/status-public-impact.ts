@@ -61,7 +61,6 @@ function causeIsPublicImpacting(cause: StatusCause): boolean {
   return PUBLIC_IMPACT_CODES.has(cause.code);
 }
 
-/** A transition has public impact when at least one of its causes does. */
 export function transitionHasPublicImpact(causes: StatusCause[]): boolean {
   return causes.some(causeIsPublicImpacting);
 }

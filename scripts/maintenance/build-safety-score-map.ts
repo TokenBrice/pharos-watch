@@ -106,7 +106,6 @@ const INK_DECK = "#c3ccda";
 const FIELD = "#0a1220";
 const NAME_CHIP = "#e8eef6";
 
-// Letter-tier hex tokens come from the shared classification palette.
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
 type Tier = (typeof TIER_ORDER)[number];
 const TIER_COLORS = GRADE_RADAR_COLORS;
@@ -239,7 +238,6 @@ const HERO_CHIP_MIN_R = 30;
 const HERO_CHIP_GAP = 5;
 const SLOT_GAP = 3;
 const CORE_LABEL_CLEARANCE = 6;
-// Clearance kept between a label pill and its guide's edges.
 const LABEL_GUIDE_MARGIN = 6;
 const MONO_ADVANCE = 0.6;
 
@@ -661,7 +659,6 @@ export async function loadLogoDataUri(publicLogoPath: string, sizePx: number): P
   }
 }
 
-// --- Bubble layout --------------------------------------------------------
 
 interface Bubble {
   coin: MapCoin;
@@ -996,7 +993,6 @@ export function centerHeroPair(leftRadius: number, rightRadius: number): readonl
   ];
 }
 
-// --- In-map type ----------------------------------------------------------
 
 // Deterministic advance estimates; the browser measures the real glyphs and
 // fails the build if any text escapes its pill (`validateRenderedAnnotations`).
@@ -1062,7 +1058,6 @@ function rectFitsOrbit(zone: OrbitZone, rect: Rect): boolean {
   return true;
 }
 
-// --- The A core -----------------------------------------------------------
 
 interface CoreLayout {
   zone: OrbitZone;
@@ -1119,7 +1114,6 @@ export function layoutCore(coins: readonly MapCoin[], radii: readonly number[]):
   const cone = 0.5;
   const span = Math.PI * 2 - cone * 2;
   for (let i = 0; i < satellites; i++) {
-    // Rank 0 just right of the label, rank 1 just left, and so on round.
     const step = Math.floor(i / 2);
     const fromRight = i % 2 === 0;
     const pairs = Math.ceil(satellites / 2);
@@ -1678,7 +1672,6 @@ function intersects(a: { x: number; y: number; w: number; h: number }, b: { x: n
   return a.x < b.x + b.w + 1 && b.x < a.x + a.w + 1 && a.y < b.y + b.h + 1 && b.y < a.y + a.h + 1;
 }
 
-// --- Composition linter ---------------------------------------------------
 
 export interface CompositionRect {
   id: string;
@@ -1888,7 +1881,6 @@ export function annotationSceneForBands(bands: readonly BandLayout[], annotation
   };
 }
 
-// --- SVG assembly ---------------------------------------------------------
 
 function svgText(opts: {
   x: number;
@@ -2246,8 +2238,6 @@ function buildSvg({
   }
   parts.push(bands.flatMap((band) => band.slots).map(renderSlot).join(""));
 
-  // Top-left masthead: brand eyebrow, then a two-line serif title stepped to
-  // the ellipse curve, then the deck.
   parts.push(`<g data-masthead-eyebrow="true">`);
   parts.push(`<image href="${brandMark}" x="${MARGIN_X}" y="18" width="26" height="26"/>`);
   parts.push(svgText({ x: MARGIN_X + 34, y: 37, size: 14, text: "PHAROS", font: "sans", weight: 700, spacing: "2.4" }));
@@ -2346,7 +2336,6 @@ async function validateRenderedAnnotations(
   }
 }
 
-// --- Emitted numbers ------------------------------------------------------
 
 interface TierSummary {
   tier: Tier;
@@ -2507,7 +2496,6 @@ function buildTierTable(tiers: readonly TierSummary[]): string {
   return ["| Tier | Score | Coins | Known supply subtotal | Share of known supply | Largest |", "| --- | --- | --- | --- | --- | --- |", ...rows].join("\n");
 }
 
-// --- Main -----------------------------------------------------------------
 
 interface PreparedMapData {
   reportCardsResult: FetchJsonResult;

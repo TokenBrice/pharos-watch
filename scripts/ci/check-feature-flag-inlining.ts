@@ -54,7 +54,6 @@ export function runFeatureFlagInlining({
   const stderr: string[] = [];
   let errored = false;
 
-  // ---------- Tier 1: source-level scan ----------------------------------
   let sourceFile: ts.SourceFile;
   try {
     ({ sourceFile } = parseSourceFile(resolve(cwd, FLAGS_SOURCE)));

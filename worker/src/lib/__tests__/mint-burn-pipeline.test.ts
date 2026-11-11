@@ -688,7 +688,6 @@ describe("mint-burn shared pipeline modules", () => {
       "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'").get();
     await insertMintBurnRows(db, [burn]);
 
-    // An unchanged re-observed row is not rewritten.
     expect(await updateEventClassifications(db, [{ ...burn }]))
       .toEqual({ flowTypeChanges: 0, burnTypeChanges: 1, rowsUpdated: 0 });
     expect(stored()).toEqual({ burn_type: "effective_burn", burn_review_reason: null, flow_type: "standard" });

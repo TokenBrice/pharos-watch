@@ -7,10 +7,6 @@ import {
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
-// ---------------------------------------------------------------------------
-// Fixture helpers
-// ---------------------------------------------------------------------------
-
 const MS_PER_HOUR = 3_600_000;
 // Pick `nowMs` deep inside a UTC day so the "today"/"yesterday" boundaries
 // don't shift when we offset events by a few hours.
@@ -57,10 +53,6 @@ function digestByDayForTest(events: readonly TapeEvent[], nowMs: number): Digest
   return mergeDigestedPages([digestPage(events, nowMs)]);
 }
 
-// ---------------------------------------------------------------------------
-// single-page digest
-// ---------------------------------------------------------------------------
-
 describe("single-page digest", () => {
   it("buckets events by UTC day, newest day first", () => {
     const events = sortDesc([
@@ -96,10 +88,6 @@ describe("single-page digest", () => {
     expect(depegClass.useDigestWrapper).toBe(true);
   });
 });
-
-// ---------------------------------------------------------------------------
-// class summaries
-// ---------------------------------------------------------------------------
 
 describe("freeze class summary", () => {
   function recap(entries: Array<[string, number | null]>) {
@@ -192,10 +180,6 @@ describe("yield class summary", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// digestPage raw-event preservation
-// ---------------------------------------------------------------------------
-
 describe("digestPage", () => {
   it("carries raw events on each PageDigestedDay", () => {
     const events = sortDesc([
@@ -207,10 +191,6 @@ describe("digestPage", () => {
     expect(day!.events.map((e) => e.id)).toEqual(events.map((e) => e.id));
   });
 });
-
-// ---------------------------------------------------------------------------
-// mergeDigestedPages
-// ---------------------------------------------------------------------------
 
 function asPlain(days: DigestedDay[]): DigestedDay[] {
   // mergeDigestedPages output omits `events`; ensure direct shape comparison
@@ -306,7 +286,6 @@ describe("mergeDigestedPages", () => {
     expect(today!.dayKey).toBe(TODAY_KEY);
     const depeg = today!.classes.find((c) => c.classSlug === "depeg")!;
 
-    // Two collapsed entries: USDC ×3 and DAI ×1.
     expect(depeg.collapsed).toHaveLength(2);
     const usdc = depeg.collapsed.find((c) => c.event.coinId === "usdc")!;
     const dai = depeg.collapsed.find((c) => c.event.coinId === "dai")!;

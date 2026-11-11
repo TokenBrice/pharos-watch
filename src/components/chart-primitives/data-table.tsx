@@ -23,7 +23,6 @@ interface ChartDataTableProps<T> {
   caption: string;
   /** Rows to render. Pass a summarised subset for long series. */
   data: ReadonlyArray<T>;
-  /** Column descriptors. */
   columns: ReadonlyArray<ChartDataTableColumn<T>>;
   /**
    * When true (default) the table is `sr-only` and not visible to sighted

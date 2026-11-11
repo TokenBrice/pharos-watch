@@ -673,7 +673,6 @@ describe("handleStressSignals contract tests", () => {
     };
     const entry = body.signals["usdt-tether"];
     expect(entry.amplifiers).toEqual({ psi: 1.08, contagion: 1.15 });
-    // signals map is unwrapped — no leftover envelope keys.
     expect(entry.signals).toEqual({
       supply: { value: 10, available: true },
       pool: { value: 20, available: true },
@@ -742,7 +741,6 @@ describe("handleStressSignals contract tests", () => {
     expect(body.current?.signals).toEqual({ supply: { value: 5, available: true } });
     // history[0] legacy flat row defaults to {1,1}
     expect(body.history[0].amplifiers).toEqual({ psi: 1, contagion: 1 });
-    // history[1] wrapped row surfaces the persisted amplifiers.
     expect(body.history[1].amplifiers).toEqual({ psi: 1.05, contagion: 1.2 });
   });
 

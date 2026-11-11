@@ -116,7 +116,6 @@ export const handleDexLiquidity = async (
     ? '199 - "DEX producer advisory unavailable (dex-advisory-read-failed)"'
     : null;
 
-  // Build DEX price lookup
   const dexPriceById = new Map<string, DexPriceRow>();
   for (const row of priceResult.results ?? []) {
     dexPriceById.set(row.stablecoin_id, row);
@@ -183,7 +182,6 @@ export const handleDexLiquidity = async (
     const id = row.stablecoin_id;
     const currentTvl = row.total_tvl_usd;
 
-    // Compute trend changes from history
     const history = histByCoin.get(id) ?? [];
     const baseline24h = selectTrendBaseline(history, oneDayAgo, trend24hToleranceSec, row.methodology_version);
     const baseline7d = selectTrendBaseline(history, sevenDaysAgo, trend7dToleranceSec, row.methodology_version);
@@ -282,7 +280,6 @@ export const handleDexLiquidity = async (
         null,
         `dex-liquidity:${id}:price_sources_json`,
       )) as DexLiquidityData["priceSources"],
-      // v2 fields
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,

@@ -51,7 +51,6 @@ export const CHART_SLATE_STRONG = "#64748b";
 export const CHART_AMBER = TOKEN.amber;
 export const CHART_TEAL = TOKEN.teal;
 
-/** Standard responsive chart container height */
 export const CHART_HEIGHT = "h-[250px] sm:h-[350px]";
 
 export { THREAT_BAND_HEX } from "@shared/lib/classification";

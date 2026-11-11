@@ -9,21 +9,17 @@ import type { TableDensity } from "@/hooks/use-table-density";
 import type { ColumnId } from "@/hooks/use-preferences";
 
 interface TableToolbarProps {
-  // Density
   density: TableDensity;
   onDensityChange: (density: TableDensity) => void;
 
-  // Columns
   visibleColumns: ColumnId[];
   onVisibleColumnsChange: (value: ColumnId[] | ((prev: ColumnId[]) => ColumnId[])) => void;
   onResetColumns: () => void;
   defaultColumns: ColumnId[];
 
-  // Export
   onExport: () => void;
   exportDisabled?: boolean;
 
-  // Additional actions
   additionalActions?: React.ReactNode;
 
   // Search — when `onSearchChange` is supplied the toolbar renders a rounded

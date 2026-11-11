@@ -291,13 +291,11 @@ function YieldInstrumentRowBase({
           rowToneClass(warningCount, sourceRiskMaterial),
         )}
       >
-        {/* Rank */}
         <div className="hidden pt-1 text-right font-mono text-xs tabular-nums text-muted-foreground md:block">
           <span className="sr-only">{row.rankLabel}</span>
           <span aria-hidden="true">{rank}</span>
         </div>
 
-        {/* Coin: compare + logo + symbol + star + name, then type badge + warnings */}
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <input
@@ -329,7 +327,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* APY (gauged) */}
         <div className="min-w-0">
           <MetricLabel>APY 30d</MetricLabel>
           <div className="font-mono text-lg font-semibold leading-none tabular-nums">
@@ -350,7 +347,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* Safety (gauged) */}
         <div className="min-w-0">
           <MetricLabel>Safety</MetricLabel>
           <div className="leading-none">
@@ -374,7 +370,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* PYS (gauged, hero) */}
         <div className="min-w-0">
           <MetricLabel>PYS</MetricLabel>
           <div>
@@ -409,7 +404,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* Source */}
         <div className="min-w-0">
           <MetricLabel>Source</MetricLabel>
           <div className="mt-0.5">
@@ -422,7 +416,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* TVL (plain, lg+) */}
         <div className="hidden min-w-0 lg:block">
           <MetricLabel>TVL</MetricLabel>
           <div
@@ -437,7 +430,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* Stability (plain, lg+) */}
         <div className="hidden min-w-0 lg:block">
           <MetricLabel>Stability</MetricLabel>
           <div className="font-mono text-sm font-medium tabular-nums">
@@ -462,7 +454,6 @@ function YieldInstrumentRowBase({
           </div>
         </div>
 
-        {/* Actions: deep dive + expand */}
         <div className="flex items-center justify-end gap-1 md:pt-0.5">
           <Link
             href={workbenchLink.href}
@@ -592,7 +583,6 @@ export function YieldInstrumentBoard({
 }: YieldInstrumentBoardProps) {
   return (
     <div data-testid="yield-instrument-board" className="pharos-table-shell">
-      {/* Sort pills + range summary */}
       <div className="pharos-table-toolbar flex-row flex-wrap items-center justify-between">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Sort yield leaderboard">
           {SORT_PILLS.map((pill) => {
@@ -651,7 +641,6 @@ export function YieldInstrumentBoard({
         <HeaderCell label="" className="justify-end" />
       </div>
 
-      {/* Rows */}
       {rows.length === 0 ? (
         <div className="col-span-full px-3 py-12 text-center text-sm text-muted-foreground">
           {emptyMessage ?? "No yield data available."}

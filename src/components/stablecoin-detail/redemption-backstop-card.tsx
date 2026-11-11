@@ -462,7 +462,6 @@ export function RedemptionRouteSection({
   );
 }
 
-/** The view-model labels the route inputs read. */
 interface RouteInputLabels {
   routeFamilyLabel: string;
   accessLabel: string;
@@ -761,7 +760,6 @@ function RedemptionBackstopCard({
               </div>
             </div>
 
-            {/* Route notes, filtered for redundancy with the capacity detail. */}
             {viewModel.filteredNotes.length > 0 ? (
               <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
                 {viewModel.filteredNotes.join(". ")}

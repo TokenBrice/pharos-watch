@@ -15,7 +15,6 @@ export interface DepegCardData {
     watch: number;
     normal: number;
   } | null;
-  // New fields
   activeDepegs: Array<{
     symbol: string;
     name: string;
@@ -33,7 +32,6 @@ const WARNING_HEX = THREAT_BAND_HEX.WARNING;
 const WATCH_HEX = THREAT_BAND_HEX.WATCH;
 const NORMAL_HEX = THREAT_BAND_HEX.CALM;
 
-/** Get color based on deviation severity */
 function getDeviationColor(bps: number): string {
   const absBps = Math.abs(bps);
   if (absBps > 200) return SEMANTIC_COLORS.negative; // Severe
@@ -51,7 +49,6 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       borderTopColor={depegColor}
       lastUpdated={data.lastUpdated}
     >
-      {/* Top row: active depegs + PSI score + At Peg */}
       <div
         style={{
           display: "flex",
@@ -64,7 +61,6 @@ export function DepegCard({ data }: { data: DepegCardData }) {
           <span style={{ fontSize: 64, fontWeight: 700, color: depegColor }}>
             {data.activeDepegCount}
           </span>
-          {/* Recovery stats */}
           <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
             <span style={{ color: SEMANTIC_COLORS.positive }}>
               ↑ {data.recoveredToday} recovered
@@ -136,7 +132,6 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         </div>
       )}
 
-      {/* DEWS distribution */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <MetricLabel>DEWS DISTRIBUTION</MetricLabel>
         {data.dewsDistribution == null && (

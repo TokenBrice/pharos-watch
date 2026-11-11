@@ -91,7 +91,6 @@ export function useCommandPaletteHistory() {
     try {
       historyStore.remove();
     } catch {
-      // Ignore
     }
   }, []);
 

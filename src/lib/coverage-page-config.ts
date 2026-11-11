@@ -392,7 +392,6 @@ const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   ...COVERAGE_FEATURES.map((feature) => feature.key),
 ] as const;
 
-// Assembled at module load from the feature registry, preserving the public LegendItem shape.
 const LEGEND_ITEMS: readonly LegendItem[] = [
   ...GENERAL_LEGEND_ITEMS,
   ...LEGEND_CATEGORY_ORDER.filter((category): category is CoverageFeatureKey => category !== "general").flatMap(

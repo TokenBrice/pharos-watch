@@ -492,7 +492,6 @@ export function buildCemeteryStats(entries: readonly CemeteryStatsInput[]): Ceme
   const dayPreciseCount = rows.filter((row) => row.day !== null).length;
   const datePrecision = { day: dayPreciseCount, month: total - dayPreciseCount };
 
-  // Recorded peaks
   const known = rows.filter((row) => row.peak !== null).sort(byPeakDesc);
   const knownPeaks = known.map((row) => row.peak as number);
   const recordedTotal = known.length > 0 ? sum(knownPeaks) : null;
@@ -508,7 +507,6 @@ export function buildCemeteryStats(entries: readonly CemeteryStatsInput[]): Ceme
     atLeastOneBillionCount,
   };
 
-  // Key facts
   const asOfIndex = asOf.year * 12 + asOf.month - 1;
   const trailing12 = windowCounts(rows, asOfIndex - CEMETERY_TRAILING_WINDOW_MONTHS + 1, asOfIndex);
   const prior12 = windowCounts(rows, asOfIndex - 2 * CEMETERY_TRAILING_WINDOW_MONTHS + 1, asOfIndex - CEMETERY_TRAILING_WINDOW_MONTHS);
@@ -544,7 +542,6 @@ export function buildCemeteryStats(entries: readonly CemeteryStatsInput[]): Ceme
     trackedCount,
   };
 
-  // Causes and chart C lanes
   const labelledIds = known.slice(0, LABELLED_DOT_COUNT).map((row) => row.entry.id);
   const labelledSet = new Set(labelledIds);
   const causes: CemeteryCauseStats[] = [];
@@ -617,7 +614,6 @@ export function buildCemeteryStats(entries: readonly CemeteryStatsInput[]): Ceme
     });
   }
 
-  // Mechanisms
   const mechanismCounts = Object.fromEntries(MECHANISM_ARCHETYPE_VALUES.map((archetype) => [archetype, 0])) as Record<MechanismArchetype, number>;
   let mappedCount = 0;
   for (const { entry } of rows) {
@@ -628,7 +624,6 @@ export function buildCemeteryStats(entries: readonly CemeteryStatsInput[]): Ceme
     mappedCount += 1;
   }
 
-  // Era comparisons behind the trend patterns
   const curatedRows = rows.filter((row) => !row.tracked);
   const cutoffYear = CEMETERY_ALGORITHMIC_ERA_END_YEAR;
   const throughCutoff = (row: ParsedEntry) => row.year <= cutoffYear;

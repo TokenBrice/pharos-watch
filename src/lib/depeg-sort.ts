@@ -11,7 +11,6 @@ export interface DepegTrackerRow {
 
 /** Composite sort for default "needs attention" ordering */
 export function attentionScore(row: DepegTrackerRow): number {
-  // Active depeg = huge boost (1_000_000)
   let score = row.coin.activeDepeg ? 1_000_000 : 0;
   // Pending confirmation should stay ahead of ordinary warning rows.
   if (row.pendingIncident) score += 500_000;
@@ -19,7 +18,6 @@ export function attentionScore(row: DepegTrackerRow): number {
   const band = row.dews?.band;
   const bandOrder = band && isThreatBand(band) ? THREAT_BAND_ORDER[band] : THREAT_BAND_ORDER.CALM;
   score += bandOrder * 10_000;
-  // Absolute deviation for fine-grained ordering
   score += Math.abs(row.coin.currentDeviationBps ?? 0);
   return score;
 }

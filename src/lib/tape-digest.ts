@@ -240,7 +240,6 @@ function digestEvents(events: readonly TapeEvent[]): DigestedClass[] {
       useDigestWrapper,
     });
   }
-  // Sort: highest severity first, then by raw count desc, then alpha.
   out.sort((a, b) => {
     const sevDelta = SEVERITY_RANK[b.maxSeverity] - SEVERITY_RANK[a.maxSeverity];
     if (sevDelta !== 0) return sevDelta;

@@ -125,10 +125,9 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
       statSync(pagePath);
     } catch (error) {
       if (!isMissingPathError(error)) throw error;
-      hasPage = false; // no page.tsx in this directory
+      hasPage = false;
     }
     if (hasPage) dates[routePath] = getLastModified(pagePath);
-    // Recurse into subdirectories for nested routes
     walkPages(subDir, routePath, dates);
   }
 }

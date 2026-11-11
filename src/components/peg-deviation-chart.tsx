@@ -151,7 +151,6 @@ export function PegDeviationChart({
     };
   }, [filteredData]);
 
-  // The dot marks the last observation inside the brushed window.
   const dot = useMemo(() => {
     if (visibleData.length === 0) return null;
     const last = visibleData[visibleData.length - 1];

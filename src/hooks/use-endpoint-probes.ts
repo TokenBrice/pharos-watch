@@ -19,7 +19,6 @@ import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
 import { CRON_1MIN, CRON_15MIN } from "@/lib/cron-intervals";
 
-/** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
   public: getProbePaths("public").filter(isSiteDataAllowedApiPath),
   admin: getProbePaths("admin"),

@@ -54,10 +54,6 @@ import {
 } from "@/lib/cemetery-plot-geometry";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 
-// ---------------------------------------------------------------------------
-// Input, presets, encodings
-// ---------------------------------------------------------------------------
-
 /** Structural input: satisfied by `CemeteryEntry`. */
 export interface CemeteryPlotMapInput {
   readonly id: string;
@@ -211,10 +207,6 @@ function plotWeatherOf(years: number): PlotWeather {
   for (let k = 0; k < PLOT_WEATHER_BOUNDS_YEARS.length; k++) if (years < PLOT_WEATHER_BOUNDS_YEARS[k]) return k as PlotWeather;
   return 4;
 }
-
-// ---------------------------------------------------------------------------
-// Output types
-// ---------------------------------------------------------------------------
 
 export interface PlotGraveScreen {
   /** Stone centre on the ground. */
@@ -467,10 +459,6 @@ export interface BuildCemeteryPlotMapOptions<P extends PlotMapPresetName = PlotM
   asOf?: string;
   preset: P;
 }
-
-// ---------------------------------------------------------------------------
-// Build
-// ---------------------------------------------------------------------------
 
 /** Integer hundredths of a world unit (`+ 0` folds −0 into 0 so the model survives a JSON round trip exactly). */
 const hundredths = (n: number) => Math.round(n * 100) + 0;
@@ -867,7 +855,6 @@ export function buildCemeteryPlotMap(entries: readonly CemeteryPlotMapInput[], o
     return { cause: L.cause, depth: L.depth, maxEmptyRowsInBed: inBed, lawnRowsBeforeBed: beforeBed };
   });
 
-  // ---- screen geometry of every grave
   const geo = new Map(graves.map((g) => [g.id, graveGeometry(proj, g)]));
   for (const g of graves) {
     const art = geo.get(g.id)!;
@@ -1113,10 +1100,6 @@ function buildDesktop(
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Section zoom
-// ---------------------------------------------------------------------------
-
 export interface PlotCameraViewport {
   /** Frame width in CSS px (the frame follows the container width). */
   frameWidth: number;
@@ -1196,10 +1179,6 @@ export function fitSectionCamera(
     ids: shown.map((g) => g.id),
   };
 }
-
-// ---------------------------------------------------------------------------
-// Capacity
-// ---------------------------------------------------------------------------
 
 export type PlotCapacityIssueKind = "overlap" | "lane-overflow" | "block-overflow" | "lot-rows" | "lot-search" | "empty-run" | "face-floor" | "zoom-floor";
 

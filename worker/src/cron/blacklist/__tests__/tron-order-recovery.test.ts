@@ -219,7 +219,6 @@ describe("resolveTronBlacklistOrder candidate selection", () => {
     expect(result).toEqual({ blocksAttempted: 1, positionsResolved: 2, blocksDeferred: 0 });
     expect(transactionIndexOf(sqlite, `tron-${TX_A}-100-0`)).toBe(1);
     expect(transactionIndexOf(sqlite, `tron-${TX_B}-100-0`)).toBe(0);
-    // No row outside the one qualifying block was written.
     const untouched = sqlite
       .prepare("SELECT id FROM blacklist_events WHERE block_number NOT IN (100, 300) AND transaction_index IS NOT NULL")
       .all() as unknown[];
@@ -262,7 +261,6 @@ describe("resolveTronBlacklistOrder candidate selection", () => {
     expect(transactionIndexOf(sqlite, `tron-${TX_B}-300-0`)).toBe(1);
     expect(orderRetryKeys(sqlite)).toEqual([]);
 
-    // Another writer re-opens one row and pins the other to a foreign position.
     sqlite.prepare("UPDATE blacklist_events SET transaction_index = NULL WHERE id = ?").run(`tron-${TX_A}-300-0`);
     sqlite.prepare("UPDATE blacklist_events SET transaction_index = 7 WHERE id = ?").run(`tron-${TX_B}-300-0`);
 

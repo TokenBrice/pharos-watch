@@ -85,10 +85,6 @@ import type {
   YieldType,
 } from "../../types";
 
-// ---------------------------------------------------------------------------
-// Inputs
-// ---------------------------------------------------------------------------
-
 export type SelectorProfile = (typeof SELECTOR_PROFILES)[number];
 
 // Initial non-USD rollout: pegs with enough active rows and live signal
@@ -123,10 +119,6 @@ export type SelectorVenuePreference =
 
 export type SelectorInput = z.output<typeof SelectorInputSchema>;
 
-// ---------------------------------------------------------------------------
-// Scoring vocabulary
-// ---------------------------------------------------------------------------
-
 /**
  * Every weight slot the engine has ever emitted.
  *
@@ -155,10 +147,6 @@ export type WeightVector<P extends SelectorProfile = SelectorProfile> = Readonly
 
 export type SelectorComponent = z.output<typeof SelectorComponentSchema>;
 
-// ---------------------------------------------------------------------------
-// Lowest sub-dimension
-// ---------------------------------------------------------------------------
-
 /**
  * Every "what to watch" axis the engine has ever emitted. Retired axes stay
  * listed for the same stored-snapshot reason as `WEIGHT_KEYS`; the live
@@ -171,15 +159,7 @@ export type ContextKey = (typeof CONTEXT_KEYS)[number];
 
 export type LowestSubDimension = z.output<typeof LowestSubDimensionSchema>;
 
-// ---------------------------------------------------------------------------
-// Why-keys (canonical reason vocabulary)
-// ---------------------------------------------------------------------------
-
 export type WhyKey = (typeof WHY_KEYS)[number];
-
-// ---------------------------------------------------------------------------
-// Recommendation
-// ---------------------------------------------------------------------------
 
 export type RecommendedSource = z.output<typeof RecommendedSourceSchema>;
 export type SelectorChainHints = z.output<typeof SelectorChainHintsSchema>;
@@ -194,10 +174,6 @@ export type YieldRecommendation = z.output<typeof YieldRecommendationSchema>;
 export type TradingRecommendation = z.output<typeof TradingRecommendationSchema>;
 export type SelectorRecommendation = z.output<typeof SelectorRecommendationSchema>;
 
-// ---------------------------------------------------------------------------
-// Exclusions
-// ---------------------------------------------------------------------------
-
 export type ExclusionReason = (typeof EXCLUSION_REASONS)[number];
 
 export interface ExclusionRecord {
@@ -207,28 +183,12 @@ export interface ExclusionRecord {
   detail?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Lower-ranked
-// ---------------------------------------------------------------------------
-
 export type SelectorLowerRanked = z.output<typeof SelectorLowerRankedSchema>;
-
-// ---------------------------------------------------------------------------
-// Coverage warnings
-// ---------------------------------------------------------------------------
 
 export type SkippedCoin = z.output<typeof SkippedCoinSchema>;
 export type SelectorCoverageWarnings = z.output<typeof SelectorCoverageWarningsSchema>;
 
-// ---------------------------------------------------------------------------
-// Methodology versions
-// ---------------------------------------------------------------------------
-
 export type MethodologyVersions = z.output<typeof MethodologyVersionsSchema>;
-
-// ---------------------------------------------------------------------------
-// Screener handoff
-// ---------------------------------------------------------------------------
 
 export interface ScreenerDivergenceWarning {
   /** Canonical exclusion reason or input key the Screener cannot express. */
@@ -265,10 +225,6 @@ export interface SelectorScreenerFilterProjection {
   blacklistable?: readonly ("no" | "possible")[];
 }
 
-// ---------------------------------------------------------------------------
-// Engine-owned empty-state diagnostics
-// ---------------------------------------------------------------------------
-
 export type SelectorExclusionSummaryItem = z.output<typeof SelectorExclusionSummaryItemSchema>;
 export type SelectorClosestSurvivor = z.output<typeof SelectorClosestSurvivorSchema>;
 export type SelectorRelaxableConstraint = z.output<typeof SelectorRelaxableConstraintSchema>;
@@ -277,15 +233,7 @@ export type SelectorCanonicalSourceEvidence = z.output<typeof SelectorCanonicalS
 
 export type SelectorSnapshotVerification = z.output<typeof SelectorSnapshotVerificationSchema>;
 
-// ---------------------------------------------------------------------------
-// Output
-// ---------------------------------------------------------------------------
-
 export type SelectorOutput = z.output<typeof SelectorOutputSchema>;
-
-// ---------------------------------------------------------------------------
-// Engine-internal: merged row + data + dataset metadata
-// ---------------------------------------------------------------------------
 
 /**
  * @internal

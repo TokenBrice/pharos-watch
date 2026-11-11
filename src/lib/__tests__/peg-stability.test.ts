@@ -48,7 +48,6 @@ describe("computePegStability", () => {
   });
 
   it("returns null when historySpanSec <= 0", () => {
-    // earliestDate is in the future
     const futureDate = NOW + 1000;
     const result = computeStability([], futureDate);
     expect(result).toBeNull();

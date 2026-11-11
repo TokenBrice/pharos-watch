@@ -18,7 +18,6 @@ export function DEWSBadge({
   compact,
   signals,
 }: DEWSBadgeProps) {
-  // Suppress CALM badges to reduce noise
   if (band === "CALM") return null;
 
   const colorClasses = THREAT_BAND_STYLES[band]?.cls ?? "";

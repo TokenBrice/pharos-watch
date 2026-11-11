@@ -402,7 +402,6 @@ describe("isDewsDeescalation", () => {
 
 describe("splitMessage HTML safety", () => {
   it("does not break HTML tags at character boundaries", () => {
-    // Build a long line with an HTML tag near the split boundary
     const longText = "<b>" + "x".repeat(3990) + "</b>" + "\n\n" + "<b>second</b>";
     const chunks = splitMessage(longText, 4000);
     expect(chunks.map((chunk) => chunk.replace(/<\/?b>/g, "")).join(""))

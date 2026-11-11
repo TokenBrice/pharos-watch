@@ -166,7 +166,6 @@ export function stagedPoolMaturityDays(discoveredAt: number, now: number): numbe
   return Math.min(Math.max(0, days), 30);
 }
 
-/** Tier thresholds for discovery priority. */
 export const DISCOVERY_TIERS = {
   // Sentinel: coins with zero discovered pools get the highest crawl cadence (t1).
   T1_ZERO_POOL_SENTINEL: 0,

@@ -441,10 +441,6 @@ describe("evidence family boundary parity with production resolvers (canonical r
   });
 });
 
-// ---------------------------------------------------------------------------
-// Renewal calendar (--by-week) and absolute horizon (--horizon)
-// ---------------------------------------------------------------------------
-
 function certifiedReview(assetId: string, boundarySec: number) {
   const review = executionReview(assetId, isoSec(CLOCK_SEC - 20 * DAY), isoSec(boundarySec));
   return {

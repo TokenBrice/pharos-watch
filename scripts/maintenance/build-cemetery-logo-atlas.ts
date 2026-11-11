@@ -98,7 +98,6 @@ export const ATLAS_IMAGE_PUBLIC_PATH = "/logos/atlas/cemetery-atlas.webp";
  */
 export const PIXEL_ART_LOGO_URLS: readonly string[] = ["/logos/10-mim.png"];
 
-/** The cemetery atlas's kit parameters, with the manifest's public image path. */
 function atlasParams(image = ATLAS_IMAGE_PUBLIC_PATH, cellSize = ATLAS_CELL_SIZE, gutter = ATLAS_CELL_GUTTER): SceneAtlasParams {
   return { generatedBy: GENERATED_BY, generatorVersion: ATLAS_GENERATOR_VERSION, cellSize, gutter, webp: ATLAS_WEBP_OPTIONS, byteBudget: ATLAS_BYTE_BUDGET, image };
 }

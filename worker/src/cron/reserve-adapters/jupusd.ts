@@ -189,7 +189,6 @@ export function adaptJupUsdData(
   // True assets ÷ liability: never clamped, so genuine overcollateralization
   // shows and a shortfall degrades per the undercollateralization policy.
   const collateralizationRatio = totalReserveUsd / totalSupply;
-  // Redemption capacity is clamped to the supply that can actually be redeemed.
   const capacityUsd = Math.min(totalReserveUsd, totalSupply);
   const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = (unknownValue / totalReserveUsd) * 100;

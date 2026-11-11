@@ -96,7 +96,6 @@ export function CoinFlowCard({
         />
       </div>
 
-      {/* Pressure description */}
       {pressureDisplay != null && (
         <p className="text-3xs text-muted-foreground truncate">
           {buildFlowSummaryNarrative(netFlowDirection24h, pressureShiftState)}

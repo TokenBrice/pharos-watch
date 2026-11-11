@@ -269,9 +269,7 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
         onKeyDown={handleKeyDown}
         style={{ touchAction: "none" }}
       >
-        {/* Background track */}
         <rect x={0} y={height / 2 - 2} width={width} height={4} rx={2} fill="var(--color-border)" fillOpacity={0.4} />
-        {/* Click-to-create capture layer */}
         <rect
           x={0}
           y={0}
@@ -283,7 +281,6 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
         />
         {value ? (
           <>
-            {/* Selection body */}
             <rect
               x={Math.min(fromPx, toPx)}
               y={height / 2 - 6}
@@ -298,7 +295,6 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
               cursor="grab"
               onPointerDown={(e) => handlePointerDown(e, "move")}
             />
-            {/* Edge handles */}
             <rect
               x={fromPx - 4}
               y={height / 2 - 8}

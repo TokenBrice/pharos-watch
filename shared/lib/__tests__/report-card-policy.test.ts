@@ -106,6 +106,6 @@ describe("computeCollateralQualityFromReserves", () => {
     ];
     const score = computeCollateralQualityFromReserves(slices);
     expect(Number.isFinite(score)).toBe(true);
-    expect(score).toBe(Math.round((50 * 75 + 50 * 0) / 100)); // 38
+    expect(score).toBe(Math.round((50 * 75 + 50 * 0) / 100));
   });
 });

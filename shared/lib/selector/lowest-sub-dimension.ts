@@ -90,7 +90,6 @@ function profileWeightFor(
   key: LowestSubDimensionKey,
 ): number {
   const vector = WEIGHT_VECTORS[profile];
-  // Map sub-dimension key → closest weight slot in the profile vector.
   const slot: WeightKey | null = (() => {
     switch (key) {
       case "pegStability":

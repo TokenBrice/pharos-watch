@@ -104,7 +104,6 @@ describe("LiquidityHero", () => {
     expect(container.querySelector('image[href="/dexes/curve.png"]')).toBeTruthy();
     expect(screen.getByTestId("chain-lane-ethereum").querySelector("image")?.getAttribute("href"))
       .toBe(resolveCompactLogoSrc("/chains/ethereum.png", 16));
-    // No legacy card chrome or side metric cards.
     expect(screen.queryByText("Open routes")).toBeNull();
     expect(screen.queryByText("Leading door:")).toBeNull();
 

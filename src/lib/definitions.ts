@@ -659,11 +659,9 @@ export const PEG_SCORE_HEADER_TITLE = `${DEFINITIONS.pegScore.label}: ${DEFINITI
 export type DefinitionKey = keyof typeof DEFINITIONS;
 
 type Defs = typeof DEFINITIONS;
-/** Keys of Pharos metric definitions (carry a methodology deep link). */
 export type MethodologyDefinitionKey = {
   [K in DefinitionKey]: Defs[K] extends { methodologyPath: string } ? K : never;
 }[DefinitionKey];
-/** Keys of DeFi-jargon definitions (no methodology deep link). */
 export type JargonDefinitionKey = Exclude<DefinitionKey, MethodologyDefinitionKey>;
 
 export const DEFINITIONS_SECTION_ID = "definitions";

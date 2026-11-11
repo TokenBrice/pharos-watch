@@ -86,7 +86,6 @@ describe("PR test plans", () => {
       ["src/a.test.ts"],
       ["src/b.test.ts", "src/c.test.ts", "src/d.test.ts", "src/e.test.ts"],
     ]);
-    // Input order does not change the partition.
     expect(partitionTestFilesByDuration([...files].reverse(), 2, durations)).toEqual(shards);
     expect(shards.flat().sort()).toEqual(files);
     const load = (shard: readonly string[]) => shard.reduce((sum, file) => sum + (durations.get(file) ?? 0) + PR_TEST_FILE_OVERHEAD_MS, 0);

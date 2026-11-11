@@ -206,7 +206,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
         )}
 
-        {/* ── Zone 1: Health Summary ── */}
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="col-span-2 min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
@@ -283,7 +282,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           }
         >
         <div className="mt-3 space-y-4">
-          {/* Health indicators — grouped into a cohesive block */}
             <div className="rounded-lg bg-muted/20 px-3 py-2.5 space-y-1.5">
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   {(() => {
@@ -334,7 +332,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               )}
             </div>
 
-          {/* DEX-Implied Price — anchors the bottom of the summary zone */}
           {liq.dexPriceUsd != null && (
             <div className="space-y-1">
               <p className="pharos-label">DEX-implied price</p>

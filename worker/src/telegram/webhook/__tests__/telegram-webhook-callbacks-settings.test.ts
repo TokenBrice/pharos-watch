@@ -87,7 +87,6 @@ describe("handleCallbackQuery", () => {
       });
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:home", { id: "cb-settings", from: { id: 1 } }));
 
-      // editMessageText was called, not sendMessage.
       const edits = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("editMessageText"));
       expect(edits.length).toBe(1);
     });
@@ -205,7 +204,6 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:1h", { from: { username: "alice" }, message: { chat: { id: 42 }, message_id: 999 } }));
 
-      // One INSERT ... ON CONFLICT with the snooze timestamp bound in position 3.
       const history = db.getHistory();
       const upsert = history.find(
         (h) =>
@@ -217,7 +215,6 @@ describe("handleCallbackQuery", () => {
       expect(until).toBeGreaterThanOrEqual(before + 3599);
       expect(until).toBeLessThanOrEqual(before + 3700);
 
-      // answerCallbackQuery should have been invoked.
       const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(ackCall).toBeDefined();
     });
@@ -238,7 +235,6 @@ describe("handleCallbackQuery", () => {
       const db = mockTelegramD1([]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("garbage:whatever", { id: "cb2", from, message: { chat: { id: 42 }, message_id: 999 } }));
 
-      // No subscriber writes on unknown action.
       const history = db.getHistory();
       expect(history).toHaveLength(1);
       const usageRow = history.find((h) => h.sql.includes("INSERT INTO telegram_usage_daily"));

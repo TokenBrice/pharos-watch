@@ -16,7 +16,6 @@ export const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 2;
 
 export type V9RatedGrade = Exclude<V9Grade, "NR">;
 
-/** Minimal card projection the anchor gate evaluates. */
 export interface V9AnchorGateCard {
   id: string;
   score: number | null;

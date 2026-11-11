@@ -504,7 +504,6 @@ describe("SEO render audit sentinels", { tags: ["nightly"] }, () => {
     ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "deployment-fold-lost-after-hydration" });
     expect(byId(evaluate(makeSnapshot(profile()), { expectations }), "profile.deployment-facts"))
       .toMatchObject({ status: "not-observed", reason: "raw-snapshot-unavailable" });
-    // A different fold label is not the contract fold.
     expect(makeSnapshot(profile({ label: "Review notes" })).deploymentFold.folds).toBe(0);
   });
 

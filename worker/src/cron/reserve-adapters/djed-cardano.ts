@@ -165,7 +165,6 @@ function adaptDjedCardanoState(
     ));
   }
 
-  // ── Valuation ─────────────────────────────────────────────────────────────
   if (state.adaPriceUsd == null) {
     throw new Error(`${ADAPTER_KEY}: no live ADA/USD price could be fetched`);
   }

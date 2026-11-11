@@ -18,10 +18,8 @@ import {
 } from "./constants";
 import { buildTelegramMiniAppUrl } from "./mini-app-url";
 
-// Expose chunking constants alongside the formatter that consumes them.
 export { TELEGRAM_MESSAGE_CHUNK_LIMIT, TELEGRAM_SPLIT_VERSION };
 
-// ---------- Alert Message Formatting ----------
 
 export interface DewsChange {
   stablecoinId: string;
@@ -407,7 +405,6 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
   }),
 ];
 
-/** Sentence-case group labels for batches that span several families. */
 const FAMILY_GROUP_LABEL: Record<AlertFamilyKey, string> = {
   depeg: "Depeg",
   dews: "Early-warning stress",
@@ -550,7 +547,6 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
     }
   }
 
-  // Stable sort: severity desc, falling back to insertion order on ties.
   return [...byId.values()]
     .map((coin, index) => ({ coin, index }))
     .sort((a, b) => b.coin.severity - a.coin.severity || a.index - b.index)
@@ -825,9 +821,7 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
   return chunks;
 }
 
-// ---------- DEWS Alert Band Filter ----------
 
-/** Returns true if a DEWS band change should trigger a notification. */
 export function isDewsAlertable(newBand: string): boolean {
   return isDewsAlertBand(newBand);
 }

@@ -241,7 +241,6 @@ function resolveClImpliedOutputPrice(input: {
   inputIndex: number;
   inputPrice: number;
   outputPrice: number | null;
-  /** Counter-asset id when the output resolves to a tracked stablecoin. */
   outputStablecoinId: string | undefined;
   rejectionEvent: string;
   source: string;

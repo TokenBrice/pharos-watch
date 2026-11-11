@@ -134,7 +134,6 @@ describe("store-history-read", () => {
       }
       insertAttempt(sqlite, { stablecoinId: "coin-s1", attemptedAt: 2000, adapterKey: "adapter-b", status: "skipped" });
       insertAttempt(sqlite, { stablecoinId: "coin-s2", attemptedAt: 2000, adapterKey: "adapter-b", status: "skipped" });
-      // Outside the window: excluded.
       insertAttempt(sqlite, { stablecoinId: "coin-old", attemptedAt: 999, adapterKey: "adapter-c", status: "ok" });
 
       const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);

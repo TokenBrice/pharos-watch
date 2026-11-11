@@ -30,7 +30,6 @@ export function ColumnVisibilityDropdown({
   compactOnMobile = false,
 }: ColumnVisibilityDropdownProps) {
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
-  // Count how many default columns are currently hidden (user has disabled them)
   const hiddenCount = useMemo(
     () => defaultColumns.filter((id) => !visibleSet.has(id)).length,
     [defaultColumns, visibleSet],

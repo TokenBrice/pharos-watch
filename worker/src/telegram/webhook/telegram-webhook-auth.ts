@@ -216,7 +216,6 @@ export async function getCachedChatAdministrators(
         return parsed;
       }
     } catch {
-      /* fall through to refresh */
     }
   }
 

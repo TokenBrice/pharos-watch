@@ -281,7 +281,6 @@ describe("prepareSafetyScoreV9Input", () => {
       /^report-cards-input:v1:[a-f0-9]{64}$/,
     );
 
-    // The seed carries the same identity object, so both rows are one capture.
     expect(mockBuildV9PegProvenanceSeed).toHaveBeenCalledTimes(1);
     expect(mockBuildV9PegProvenanceSeed.mock.calls[0]![0].safetyScoreIdentity).toEqual(
       envelope.safetyScoreIdentity,

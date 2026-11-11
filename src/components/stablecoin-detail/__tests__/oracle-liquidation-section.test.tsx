@@ -267,7 +267,6 @@ describe("OracleLiquidationSection", () => {
     const oracleModule = container.querySelector("section#oracle")!;
     expect(oracleModule.getAttribute("data-evidence-state")).toBe("not-applicable");
     expect(within(oracleModule as HTMLElement).getByRole("heading", { level: 3, name: NOT_APPLICABLE.title })).toBeTruthy();
-    // Nothing to draw: no ladder, no price path, no module body.
     expect(ladder(container)).toBeNull();
     expect(pricePath(container)).toBeNull();
     expect(oracleModule.querySelector("[data-evidence-module]")).toBeNull();

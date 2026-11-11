@@ -460,7 +460,6 @@ export function CompareClient() {
         <div className="space-y-6 animate-fade-in">
           <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
 
-          {/* Live Flow Signals */}
           {flowErrorNotice ? <QueryErrorNotice {...flowErrorNotice} /> : null}
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
             <div className="pharos-card-shell space-y-4 p-4">
@@ -475,7 +474,6 @@ export function CompareClient() {
                 )}
               </div>
 
-              {/* Per-coin flow cards */}
               {flowCardData.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {flowCardData.map((card) => (
@@ -484,7 +482,6 @@ export function CompareClient() {
                 </div>
               )}
 
-              {/* Net flow chart */}
               {flowSeries.length >= 2 && (
                 <FlowComparisonChart
                   series={flowSeries}
@@ -493,7 +490,6 @@ export function CompareClient() {
                 />
               )}
 
-              {/* Coverage note */}
               {flowCoverageCount === null ? (
                 <p className="text-xs text-muted-foreground">
                   Issuance-flow tracking coverage is unavailable.

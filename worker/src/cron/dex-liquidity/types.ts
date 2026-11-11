@@ -11,7 +11,6 @@ export interface LlamaPool {
   volumeUsd7d: number | null;
   stablecoin: boolean;
   underlyingTokens: string[] | null;
-  // v2 fields
   apyBase: number | null;
   apyReward: number | null;
   apy: number;
@@ -43,7 +42,6 @@ export interface CurvePool {
   isMetaPool: boolean;
   assetTypeName: string;
   totalSupply: number;
-  // v2 fields
   registryId: string;
   isBroken: boolean;
   virtualPrice: string;
@@ -77,7 +75,6 @@ export interface LiquidityMetrics {
   chainTvl: Record<string, number>;
   qualityAdjustedTvl: number;
   topPools: PoolEntry[];
-  // v2 fields
   effectiveTvl: number;
   organicTvlWeightedSum: number;
   totalTvlForOrganic: number;
@@ -470,7 +467,6 @@ export interface GtNewPool {
   orderbookDepthUsd?: number | null;
   /** CoinGecko 2% upside orderbook depth when available. */
   orderbookDepthUpUsd?: number | null;
-  /** How synthetic orderbook TVL was derived. */
   orderbookTvlBasis?: "volume-derived" | "coingecko-depth-2pct-capped-by-volume";
 }
 

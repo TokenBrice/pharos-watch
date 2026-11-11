@@ -69,9 +69,6 @@ import { abortResult, returnIfAborted } from "./runtime";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
-// ---------------------------------------------------------------------------
-// Input / output interfaces
-// ---------------------------------------------------------------------------
 
 export interface PostEnrichmentInput {
   assets: PeggedAsset[];
@@ -122,10 +119,6 @@ export interface DepegPipelineResult {
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
-
-// ---------------------------------------------------------------------------
-// Stage 1: Post-enrichment price validation + price cache
-// ---------------------------------------------------------------------------
 
 /**
  * Runs the shared post-enrichment price pipeline:
@@ -352,7 +345,6 @@ export async function runPostEnrichmentPricePipeline(
     consensusSources: asset.consensusSources ?? [],
   }));
 
-  // --- Apply cached fallback prices for assets still missing ---
   const now = Math.floor(Date.now() / 1000);
   const stillMissing = assets.filter(
     (asset) => hasMissingPrice(asset),
@@ -504,10 +496,6 @@ export async function runSharedPriceCompletion(
   };
 }
 
-
-// ---------------------------------------------------------------------------
-// Stage 2: Depeg detection + confirmation
-// ---------------------------------------------------------------------------
 
 /**
  * Runs depeg detection and pending depeg confirmation. Errors are caught

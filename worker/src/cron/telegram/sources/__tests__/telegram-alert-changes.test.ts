@@ -25,7 +25,6 @@ const noSuppression = {
   suppressedCooldownSafetyChanges: 0,
 };
 
-/** Replays dispatch runs: detect against the baseline, then persist the next baseline. */
 function runSafety(baseline: SafetySnapshot, current: SafetySnapshot, nowSec: number) {
   const summary = buildSafetyChanges(current, baseline, (id) => id.toUpperCase(), nowSec);
   return { summary, baseline: holdSuppressedSafetyBaselines(current, baseline, nowSec) };

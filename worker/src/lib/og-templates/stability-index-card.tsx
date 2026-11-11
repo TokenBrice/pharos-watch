@@ -8,7 +8,6 @@ export interface StabilityIndexCardData {
   delta24h: number | null;
   sparklineData: number[] | null;
   bands: Array<{ name: string; active: boolean }>;
-  // New fields
   avg7d: number | null;
   retainedSampleHigh: number | null;
   retainedSampleLow: number | null;
@@ -37,7 +36,6 @@ export function StabilityIndexCard({
   // Higher PSI = healthier conditions, so positive delta = green (improving), negative = red (worsening)
   const deltaSign = data.delta24h != null && data.delta24h > 0 ? "+" : "";
   
-  // Calculate position for thermometer
   const thermoPosition = getThermometerPosition(data.psiScore);
 
   return (
@@ -47,9 +45,7 @@ export function StabilityIndexCard({
       borderTopColor={bandColor}
       lastUpdated={data.lastUpdated}
     >
-      {/* Top section: score + context */}
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {/* Score + band row */}
         <div
           style={{
             display: "flex",
@@ -77,13 +73,11 @@ export function StabilityIndexCard({
           </span>
         </div>
 
-        {/* Larger Sparkline */}
         {data.sparklineData ? <Sparkline data={data.sparklineData} color={bandColor} /> : (
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>History unavailable · fewer than two observations</span>
         )}
       </div>
 
-      {/* Context row: retained sample bounds */}
       <div
         style={{
           display: "flex",
@@ -103,13 +97,10 @@ export function StabilityIndexCard({
         </div>
       </div>
 
-      {/* Thermometer-style band visualization */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <MetricLabel fontSize={12}>MARKET CONDITION</MetricLabel>
         
-        {/* Thermometer bar */}
         <div style={{ display: "flex", position: "relative", height: 32, width: "100%" }}>
-          {/* Gradient background bar */}
           <div
             style={{
               position: "absolute",
@@ -122,7 +113,6 @@ export function StabilityIndexCard({
             }}
           />
           
-          {/* Position indicator */}
           <div
             style={{
               position: "absolute",
@@ -137,7 +127,6 @@ export function StabilityIndexCard({
             }}
           />
           
-          {/* Value label at position */}
           <div
             style={{
               position: "absolute",
@@ -154,7 +143,6 @@ export function StabilityIndexCard({
           </div>
         </div>
 
-        {/* Band labels */}
         <div
           style={{
             display: "flex",

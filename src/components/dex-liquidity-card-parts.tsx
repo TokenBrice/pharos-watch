@@ -406,7 +406,6 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   );
 }
 
-/** 5-bar horizontal breakdown of score components */
 export function ScoreBreakdown({ components }: { components: DexLiquidityData["scoreComponents"] }) {
   if (!components) return null;
   const bars = LIQUIDITY_SCORE_WEIGHTS.map((w) => ({

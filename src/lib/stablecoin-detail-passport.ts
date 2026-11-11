@@ -199,8 +199,6 @@ export function buildHeroPassportItems({
     : (BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? coin.flags.backing);
   const jurisdictionCountry = coin.jurisdiction?.country ?? null;
 
-  // Cluster 1 — how the token works: mechanism, exit path, supply controls,
-  // freeze powers, track record, footprint.
   const items: HeroPassportItemViewModel[] = [
     {
       key: "mechanism",
@@ -275,8 +273,6 @@ export function buildHeroPassportItems({
     });
   }
 
-  // Cluster 2 — who stands behind it: jurisdiction, its regulatory visas,
-  // reserve attestor, date of issue.
   const jurisdictionTooltipLines = jurisdictionCountry
     ? [jurisdictionCountry, coin.jurisdiction?.regulator, coin.jurisdiction?.license].filter((line): line is string =>
         Boolean(line),

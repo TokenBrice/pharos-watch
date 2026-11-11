@@ -164,7 +164,6 @@ async function loadPulseHeavySectionsUpdatedAt(
     const parsed = Number(cached?.value);
     if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
   } catch {
-    // Fall back to the pulse cache timestamp below.
   }
   return cachedPulse?.updatedAt ?? null;
 }

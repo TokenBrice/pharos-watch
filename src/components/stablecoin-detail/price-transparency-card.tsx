@@ -358,7 +358,6 @@ export function PriceTransparencyCard({
       ? [...knownConsensusSources, "dex-promoted"]
       : knownConsensusSources;
 
-  // Group sources by status
   const sources: SourceInfo[] = sourceProvenanceUnread ? [] : PRICE_TRANSPARENCY_SOURCE_KEYS.map((key) => ({
     key,
     status: resolvePriceTransparencySourceStatus(key, observed ? knownAgreeSources : [], effectiveConsensusSources, isProtocolRedeem),
@@ -501,7 +500,6 @@ export function PriceTransparencyCard({
       title={<MethodologyLabel topic="priceTransparency">Price Transparency</MethodologyLabel>}
       bodyClassName="space-y-4"
     >
-        {/* Summary Bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2">
             <span className={cn("text-2xl font-bold font-mono tabular-nums", hasNoPrice && "text-muted-foreground")}>

@@ -124,10 +124,6 @@ export function resolveYieldScatterBenchmarkFrame(params: {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Benchmark staleness (E9)
-// ---------------------------------------------------------------------------
-
 export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD;
 
 export interface YieldBenchmarkAgeEvidence {
@@ -264,10 +260,6 @@ export function resolveYieldDisplayRebaseReferenceRate(
   if (!usdBenchmark || resolveYieldBenchmarkAge(usdBenchmark).stale) return null;
   return riskFreeRate != null && Number.isFinite(riskFreeRate) ? riskFreeRate : null;
 }
-
-// ---------------------------------------------------------------------------
-// Per-row benchmark resolution (E5)
-// ---------------------------------------------------------------------------
 
 export interface YieldResolvedRowBenchmark {
   /** Display comparison rate; not a replacement for the published PYS hurdle. */

@@ -92,7 +92,6 @@ export const TEST_CORPUS_SLACK: TestCorpusMetrics = {
   fixtureBytes: 65_536,
 };
 
-/** What an over-budget metric asks the author to do. */
 const METRIC_HINTS: Record<TestCorpusMetricKey, string> = {
   testFiles: "add cases to the owning suite instead of a new file; retire tests this change replaces",
   testBytes: "trim or retire tests; move corpus-wide cases to the nightly tier",

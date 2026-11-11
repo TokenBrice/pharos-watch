@@ -39,9 +39,6 @@ interface BlockAnaliticaGroupsResponse {
   results: SkyGroupResult[];
 }
 
-// ---------------------------------------------------------------------------
-// Module → slice mapping
-// ---------------------------------------------------------------------------
 
 interface ModuleSpec {
   name: string;
@@ -128,9 +125,6 @@ function parseSkyCollateral(group: SkyGroupResult): number {
 }
 
 
-// ---------------------------------------------------------------------------
-// Pure helpers (exported for tests)
-// ---------------------------------------------------------------------------
 function reconcileSkyPsm(groups: ParsedSkyGroup[], measuredUsdcUsd: number | null) {
   const totalDebt = groups.reduce((sum, group) => sum + group.debtValue, 0);
   const groupDebt = groups.filter((group) => group.group === "stablecoins")
@@ -335,9 +329,6 @@ async function fetchSkyLitePsmUsdcCapacity(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Adapter entry point
-// ---------------------------------------------------------------------------
 
 export async function fetchSkyMakercoreReserves(
   _coin: ReserveAdapterCoin,

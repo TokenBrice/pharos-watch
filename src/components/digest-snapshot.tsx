@@ -23,7 +23,6 @@ function formatDigestScore(score: number | null | undefined): string {
   return score == null ? "—" : formatScore(score, { trimInteger: true });
 }
 
-/* ---------- sub-section wrapper ---------- */
 
 function SnapshotCard({
   title,
@@ -249,7 +248,6 @@ function ActiveDepegsCard({
   );
 }
 
-/* ---------- main component ---------- */
 
 export function DigestSnapshot({ date }: { date: string }) {
   return (
@@ -359,7 +357,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </p>
         </SnapshotCard>
 
-        {/* 2. Stability Index */}
         {inputData.stabilityIndex && (
           <SnapshotCard
             title="Stability Index"
@@ -397,7 +394,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 3. Biggest Supply Mover */}
         {inputData.biggestSupplyChange && (
           <SnapshotCard
             title="Biggest Supply Mover"
@@ -425,7 +421,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 4. Active Depegs */}
         <ActiveDepegsCard inputData={inputData} depegEvents={depegEvents} />
 
         {/* 5. Blacklist Activity — spans full width since it's a list */}
@@ -473,7 +468,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </div>
         )}
 
-        {/* 6. Safety Scores */}
         {inputData.safetyScores && (
           <SnapshotCard
             title="Safety Scores"
@@ -551,7 +545,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 7. Yield Anomalies */}
         {investmentYieldAnomalies.length > 0 && (
           <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}>
             {investmentYieldAnomalies.map((y, index) => (
@@ -568,7 +561,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 8. Liquidity Shifts */}
         {inputData.liquidityShifts && inputData.liquidityShifts.length > 0 && (
           <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}>
             {inputData.liquidityShifts.map((l, index) => (
@@ -585,7 +577,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 9. Supply Velocity */}
         {inputData.supplyVelocity && inputData.supplyVelocity.length > 0 && (
           <SnapshotCard
             title="Supply Velocity"
@@ -608,7 +599,6 @@ function DigestSnapshotContent({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 10. Resolved Depegs */}
         {inputData.resolvedDepegs && inputData.resolvedDepegs.length > 0 && (
           <SnapshotCard
             title="Resolved Depegs"

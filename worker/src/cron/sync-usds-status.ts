@@ -133,7 +133,6 @@ export async function syncUsdsStatus(
 
   let freezeCapabilityPresent = false;
   if (!NO_FREEZE_IMPLS.has(implementationAddress)) {
-    // Implementation is not in the known-safe set — probe for freeze function
     const probeResult = await probeFreezeCapability(etherscanApiKey, signal);
     if (probeResult === null) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);

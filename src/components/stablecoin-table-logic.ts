@@ -140,19 +140,16 @@ export function buildTrackedIdSet(
     return eligibleIds;
   }
 
-  // Separate grade filters from regular filters
   const regularFilters = activeFilters.filter((f) => !GRADE_FILTER_TAGS.includes(f));
   const gradeFilters = activeFilters.filter((f) => GRADE_FILTER_TAGS.includes(f));
 
   return new Set(
     ACTIVE_STABLECOINS.filter((stablecoin) => {
       if (!eligibleIds.has(stablecoin.id)) return false;
-      // Check regular filters (from metadata tags)
       const tags = getFilterTags(stablecoin);
       const regularMatch = regularFilters.every((filter) => tags.includes(filter));
       if (!regularMatch) return false;
 
-      // Check grade filters (from reportCards)
       if (gradeFilters.length > 0) {
         const grade = reportCards?.[stablecoin.id]?.grade;
         const gradeMatch = grade != null && gradeFilters.every((filter) => gradeMatchesFilter(grade, filter));

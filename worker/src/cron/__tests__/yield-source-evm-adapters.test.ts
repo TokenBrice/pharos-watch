@@ -100,7 +100,6 @@ describe("fetchCompoundV3SupplyRates", () => {
     expect(Number.isFinite(results[0].yield.sourceObservedAt)).toBe(true);
     expect(results[0].yield.sourceObservedAt).toBeGreaterThan(nowSec - 60);
     expect(results[0].yield.sourceObservedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
-    // No comparison anchor is used for this adapter.
     expect(results[0].yield.comparisonAnchorObservedAt).toBeNull();
     expect(telemetry.resolvedTargetCount).toBe(1);
     expect(telemetry.emittedCount).toBe(1);

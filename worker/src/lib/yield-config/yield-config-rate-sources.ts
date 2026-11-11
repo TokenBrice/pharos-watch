@@ -313,9 +313,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   },
 };
 
-/**
- * Manifest rationale copy projected from the typed lifecycle evidence.
- */
 export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntries(
   Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
 );

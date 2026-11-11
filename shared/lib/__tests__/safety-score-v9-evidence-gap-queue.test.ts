@@ -668,7 +668,6 @@ describe("Safety Score v9 evidence-gap queue", () => {
     expect(entry.reasonCode).toBe("unresolved-control-identity");
     // (a) the producer's diagnostics now reach the terse queue verbatim.
     expect(entry.bridgeJoin?.diagnostics).toEqual(diagnostics);
-    // (b) the completeness proof names the row it failed on.
     expect(entry.bridgeJoin?.subthresholdUnresolvedJoin).toEqual({
       complete: false,
       cause: {

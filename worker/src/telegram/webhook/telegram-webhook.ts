@@ -176,7 +176,6 @@ export const handleTelegramWebhook = withErrorHandler(
     }
 
     const updateType = resolveUpdateType(update);
-    // Unsupported updates have no work to claim.
     if (updateType === "unknown") return ok();
 
     const nowSec = unixNow();

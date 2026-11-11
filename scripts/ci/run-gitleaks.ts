@@ -527,7 +527,6 @@ export async function ensurePinnedGitleaks({
         return binaryPath;
       }
     } catch {
-      // Replace incomplete or unverified cache entries below.
     }
   }
 
@@ -839,8 +838,6 @@ export function runGitleaksConfigSelfTest(
   }
 }
 
-/**
- */
 export async function runGitleaks({
   argv = process.argv.slice(2),
   buildMergeResolutionInput = buildGitleaksMergeResolutionInput,

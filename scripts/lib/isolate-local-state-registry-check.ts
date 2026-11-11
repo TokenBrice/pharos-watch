@@ -131,7 +131,6 @@ export function matchesCandidatePrefilter(text: string): boolean {
     const start = /^[;{}]/.test(match[0]) ? match.index + 1 : match.index;
     const statement = source.slice(start, moduleStatementEnd(source, start));
     if (MUTABLE_CONSTRUCTOR.test(statement) || RECORDER_FACTORY.test(statement)) return true;
-    // A `let` declaration is a candidate whatever its initializer looks like.
     if (match[0].endsWith("let") && statement.includes("=")) return true;
     // A literal candidate always names a stateful container, so the cheap
     // vocabulary screens statements before the annotated-match regex runs.

@@ -3,7 +3,6 @@ import { attentionScore } from "@/lib/depeg-sort";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 
-/** Helper to build a minimal DepegTrackerRow for testing */
 function mockRow(opts: {
   activeDepeg: boolean;
   band: string;

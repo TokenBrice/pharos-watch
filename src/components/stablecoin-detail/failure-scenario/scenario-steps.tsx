@@ -163,7 +163,6 @@ function StepRow({
           />
         </summary>
 
-        {/* Wide rows split: explanation and evidence left, facts right. */}
         <div className="grid gap-3 px-2 pb-4 pt-1 @lg/steps:pl-[2.75rem] @lg/steps:pr-8 @2xl/steps:grid-cols-2 @2xl/steps:gap-x-8">
           <div className="min-w-0 space-y-3">
             <p className="text-sm leading-relaxed text-foreground/85 text-pretty">{stage.explanation}</p>

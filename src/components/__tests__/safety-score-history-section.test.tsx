@@ -80,7 +80,6 @@ describe("SafetyScoreHistorySection", () => {
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
 
-    // Summary stats strip
     expect(html).toContain("Best grade");
     expect(html).toContain("Lowest grade");
     // The oldest required lane (legacy, 2h old) bounds the dated streak.
@@ -89,7 +88,6 @@ describe("SafetyScoreHistorySection", () => {
     // The dated streak spans both mobile columns so its label fits on one line at 390px.
     expect(html).toContain('class="pharos-inset px-3 py-1.5 col-span-2 sm:col-span-1"><p class="pharos-label">Streak as of');
 
-    // Upgrade indicator (B -> B+ is an upgrade)
     expect(html).toContain("Upgraded from B");
 
     // Initial grade still present

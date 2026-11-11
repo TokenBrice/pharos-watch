@@ -286,9 +286,7 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
 
     expect(snapshot.perFeedOutcomes.peggedEUR).toBe("success");
     expect(snapshot.perFeedOutcomes.peggedGBP).toBe("failure");
-    // Success resets counter to zero.
     expect(snapshot.failingRuns.peggedEUR).toBe(0);
-    // Failure increments from prior.
     expect(snapshot.failingRuns.peggedGBP).toBe(1);
   });
 

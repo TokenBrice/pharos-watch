@@ -4,10 +4,6 @@ import type { DexLiquidityData, DexLiquidityPool } from "@shared/types";
 
 type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["balanceDetails"]>;
 
-// ---------------------------------------------------------------------------
-// Pure helpers
-// ---------------------------------------------------------------------------
-
 export function getConcentrationLabel(hhi: number | null | undefined): { label: string; color: string } | null {
   const band = getHhiBand(hhi);
   return band ? { label: band.concentrationLabel, color: band.color } : null;

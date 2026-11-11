@@ -18,7 +18,6 @@ describe("buildMechanismCollateralizationView", () => {
     // JPYm is backed by the resolved Mento CDP deployment, not a conversion token.
     const view = buildMechanismCollateralizationView("jpym-mento");
     expect(view).not.toBeNull();
-    // The projection carries the reviewed overlay value without rewriting it.
     expect(view?.ratio).toBe(getMechanismReviewOverlay("jpym-mento")?.metrics["collateralizationRatio"]);
     expect(view?.notApplicableRationale).toBeNull();
     expect(view?.sourceLabel).toMatch(/Mento deployments/i);

@@ -914,11 +914,9 @@ describe("CI workflow scope", () => {
       return readFileSync(log, "utf8");
     };
     try {
-      // One red leaf is enough to open the issue, even with no previous issue.
       const red = run({ FULL_TESTS_RESULT: "failure" });
       expect(red).toContain("issue create --title Nightly validation is red");
       expect(red).not.toContain("issue close");
-      // A cancelled leaf neither opens nor closes and does not comment.
       const cancelled = run({ FULL_TESTS_RESULT: "cancelled", OPEN_ISSUE: "7" });
       expect(cancelled).not.toContain("issue close");
       expect(cancelled).not.toContain("issue create");

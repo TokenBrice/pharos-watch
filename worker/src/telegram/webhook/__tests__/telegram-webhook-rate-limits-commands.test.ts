@@ -384,7 +384,6 @@ describe("handleTelegramWebhook", () => {
       const res = await handleTelegramWebhook(db, makeWebhookRequest(123, `/start ${payload}`), "test-secret", "bot-token");
 
       expect(res.status).toBe(200);
-      // Status handler did not run.
       const history = db.getHistory();
       expect(history.some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
       expect(history.some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);

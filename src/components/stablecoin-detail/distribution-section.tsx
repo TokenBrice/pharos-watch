@@ -24,8 +24,6 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
-/* ── Types ── */
-
 interface DonutDatum {
   name: string;
   value: number;
@@ -33,8 +31,6 @@ interface DonutDatum {
   logoPath?: string;
   darkInvert?: boolean;
 }
-
-/* ── Data preparation ── */
 
 const OTHER_THRESHOLD = 0.02;
 
@@ -81,8 +77,6 @@ function buildDonutData(
 
   return { data, total, categoryCount };
 }
-
-/* ── Donut card ── */
 
 function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
   return (
@@ -222,7 +216,6 @@ function DonutCard({
               ) : null}
             </div>
 
-            {/* Legend */}
             <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
               {data.map((d) => {
                 const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
@@ -264,8 +257,6 @@ function DonutCardSkeleton({ title }: { title: ReactNode }) {
     </DetailModuleCard>
   );
 }
-
-/* ── Main section ── */
 
 function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useStablecoins();

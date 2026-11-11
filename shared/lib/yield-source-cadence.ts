@@ -26,7 +26,6 @@ export function isSupplementalOnchainSource(sourceKey: string | null | undefined
   return sourceKey?.startsWith("aave-v3-onchain:") === true || sourceKey?.startsWith("compound-v3:") === true;
 }
 
-/** Observation cadence for a ranking source class. */
 export function getYieldSourceProducerCadenceMs(dataSource: string, sourceKey?: string | null): number {
   if (
     dataSource === "price-derived" ||

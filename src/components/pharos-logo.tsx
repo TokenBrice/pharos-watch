@@ -9,10 +9,6 @@ interface PharosLogoProps {
   priority?: boolean;
 }
 
-/**
- * Standardized Pharos logo component.
- * Ensures consistent treatment across all surfaces.
- */
 export function PharosLogo({ size = 32, className, priority = false }: PharosLogoProps) {
   // The emblem carries its own disc and paints its own field, so there is no plate or ring
   // here. Theme selection swaps the file via static `dark:` utilities rather than `useTheme()`:

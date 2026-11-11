@@ -14,7 +14,6 @@ export function computeChartYDomain(
   return [Math.max(0, min - padding), max + padding];
 }
 
-/** Merge multiple time series into a flat array keyed by timestamp. */
 export function mergeSeriesByTimestamp<D extends { ts: number }>(
   series: { id: string; data: D[] }[],
   getValue: (d: D) => number,

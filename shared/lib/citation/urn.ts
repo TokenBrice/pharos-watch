@@ -9,7 +9,6 @@
  * Runtime-neutral. Do not import from `@/` or `worker/` in this file.
  */
 
-/** Closed enum of entity classes recognised by the Pharos URN scheme. */
 const PHAROS_URN_ENTITY_CLASSES = [
   "coin",
   "depeg-event",

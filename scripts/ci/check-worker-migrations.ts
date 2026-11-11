@@ -145,10 +145,6 @@ export function parseRolloutSafetyPolicy(manifestText: string): RolloutSafetyPol
   };
 }
 
-/**
- * @param {string} manifestText
- * @param {{ sectionHeading?: string, nextHeading?: string, allowEmpty?: boolean }} [options]
- */
 export function parseManifestMigrationRows(
   manifestText: string,
   { sectionHeading, nextHeading, allowEmpty = false }: ManifestMigrationRowOptions = {},

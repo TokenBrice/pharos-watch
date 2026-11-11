@@ -202,8 +202,6 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
   return record;
 }
 
-// --- Cron run logging types ---
-
 
 /** A completed run's terminal row outlasts one spent D1 resource window instead of misreporting the run. */
 const TERMINAL_ACCOUNTING_RETRY = { waitOutResourceWindow: true } as const;
@@ -314,7 +312,6 @@ export function resolveCronDegradedReason(
   return status;
 }
 
-// --- Internal helpers ---
 
 function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined, job: string): string | null {
   if (!metadata || Object.keys(metadata).length === 0) return null;
@@ -398,7 +395,6 @@ async function clearCronProgress(
   );
 }
 
-// --- Main cron run logger ---
 
 /**
  * Wraps a cron job function with execution logging and an AbortController timeout.

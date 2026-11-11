@@ -85,10 +85,8 @@ export async function buildBackfillPlan(opts: {
     }
   }
 
-  // Filter to processable coins (skip NAV tokens)
   const processable = coins.filter((m) => !m.flags.navToken);
 
-  // Collect coin details and historical FX currencies needed by this batch
   const neededFxCurrencies = new Set<string>();
   const neededSecondaryFxCurrencies = new Set<string>();
   const neededCommodityPegs = new Set<CommodityPeg>();

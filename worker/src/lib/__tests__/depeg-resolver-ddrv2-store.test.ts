@@ -124,7 +124,6 @@ describe("DDRv2 storage contract cases", () => {
     expect(row(db, "SELECT event_id, checkpoint, peg_currency FROM depeg_resolver_assessments WHERE id = ?", sealed.assessmentId))
       .toEqual({ event_id: 90801, checkpoint: "public_prediction", peg_currency: pegCurrency });
     expect(rows(db, "SELECT * FROM depeg_resolver_lock_opportunity_audit WHERE event_id = 90801")).toHaveLength(1);
-    // Reloading preserves the same exposure and its single linked assessment.
     const again = await loadSealedPublicPredictions(db, { incidentKeys: [incident.incidentKey] });
     expect(again.map((prediction) => prediction.id)).toEqual([sealed.id]);
     expect(rows(db, "SELECT * FROM depeg_resolver_assessments WHERE event_id = 90801")).toHaveLength(1);

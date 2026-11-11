@@ -221,7 +221,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       </div>
 
       <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">
-        {/* Minting Pressure quadrant */}
         <div className="flex flex-col border-b border-border/40 lg:border-b-0">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 px-4 py-2.5 sm:px-5">
             <p className="text-sm font-medium text-foreground">
@@ -305,7 +304,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       </div>
 
       <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-border/40">
-        {/* Pressure Shift quadrant */}
         <div className="border-b border-border/40 px-4 py-4 sm:px-5 lg:border-b-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">
@@ -338,7 +336,6 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           </p>
         </div>
 
-        {/* Average Daily Net quadrant */}
         <div className="px-4 py-4 sm:px-5">
           <p className="text-sm font-medium text-foreground">
             Average Daily Net <span className="text-muted-foreground">· 30d</span>

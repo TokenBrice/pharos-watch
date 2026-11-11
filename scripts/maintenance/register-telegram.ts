@@ -163,7 +163,6 @@ function buildCommandPayloads(
   if (scope === "default") {
     return [{ commands: TELEGRAM_BOT_COMMANDS, scope: { type: "default" } }];
   }
-  // scope === "chat"
   const numericChatId = parseCliInteger(chatId, {
     name: "--chat-id",
     min: Number.MIN_SAFE_INTEGER,

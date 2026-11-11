@@ -178,7 +178,6 @@ function addComparatorRef(refs: RpcParityComparatorRef[], ref: RpcParityComparat
   refs.push(ref);
 }
 
-/** Builds one chain's window summary from the retained samples for that chain. */
 export function buildRpcParityChainSummary(input: {
   chainId: string;
   runs: readonly RpcParityStoredRun[];
@@ -311,7 +310,6 @@ export function buildRpcParityChainSummary(input: {
     if (sample.stateChecked) {
       stateChecked += 1;
       if (sample.stateMatched) {
-        // matched
       } else {
         stateMismatched += 1;
         if (sample.commonBlock !== null) lastMismatch = { atSec, block: sample.commonBlock, comparator: sample.comparator };

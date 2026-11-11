@@ -138,8 +138,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputDecimals: 18, hop: { viaStablecoinId: "fxusd-f-x-protocol" }, routeType: "one-hop",
   }),
 
-  // ── Explicit chained-hop pools ──
-
   // frxUSD/msUSD (factory-stable-ng, ~$14.3M TVL)
   priceRoute("msusd-metronome", "0x9A9e2e70919c75D80aAaA1D483c46CdBb8ac4d1b", {
     inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },

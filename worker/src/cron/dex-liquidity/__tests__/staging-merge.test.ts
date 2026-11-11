@@ -1510,7 +1510,6 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
 
-    // But price observation WAS extracted
     const obs = result.priceObservations.get("usdt-tether");
     expect(obs).toHaveLength(1);
     expect(obs![0].price).toBe(0.9998);
@@ -1557,7 +1556,6 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
 
-    // Price observation WAS extracted
     const obs = result.priceObservations.get("usdt-tether");
     expect(obs).toHaveLength(1);
     expect(obs![0].price).toBe(1.0001);

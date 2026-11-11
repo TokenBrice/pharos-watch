@@ -41,7 +41,6 @@ describe("OverviewDirectory", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Sort by MiCA status" }));
     expect(new URLSearchParams(window.location.search).get("sort")).toBe("mica-asc");
-    // A new sort order starts from the first page.
     expect(new URLSearchParams(window.location.search).get("page")).toBeNull();
     expect(screen.getByRole("columnheader", { name: /MiCA/ }).getAttribute("aria-sort")).toBe("ascending");
   });

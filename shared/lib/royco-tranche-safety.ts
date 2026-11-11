@@ -50,7 +50,6 @@ interface TranchePenaltyProfile {
   firstLoss: number;
 }
 
-/** Tranche-side magnitude profiles for the shared penalty terms. */
 const TRANCHE_PENALTY_PROFILES: Record<YieldTrancheSide, TranchePenaltyProfile> = {
   senior: {
     utilization: { missing: 2, bands: [[1, 8], [0.85, 5], [0.65, 3]] },
@@ -101,7 +100,6 @@ function coveragePenalty(params: {
   return 0;
 }
 
-// Slope and cap constants for the drawdown penalty curve, asymmetric by tranche side.
 const DRAWDOWN_SENIOR_SLOPE = 0.6;
 const DRAWDOWN_JUNIOR_SLOPE = 1.2;
 const DRAWDOWN_SENIOR_CAP = 20;

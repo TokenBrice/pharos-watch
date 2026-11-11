@@ -807,15 +807,12 @@ describe("handleStatus", () => {
     });
 
     const db = fixtureMockD1([
-      // buildCacheStatuses queries the cache table
       {
         match: "cache WHERE key IN",
         rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")],
       },
-      // Table freshness queries (dex-liquidity, yield-data, dews)
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
-      // cron_runs query
       {
         match: "cron_runs",
         rows: [
@@ -861,11 +858,8 @@ describe("handleStatus", () => {
           makeCronRow("sync-blacklist"),
         ],
       },
-      // Data quality: stablecoins cache for missing prices
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
-      // Data quality: blacklist totals
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 2 } },
-      // Data quality: active depegs
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
     ]);
 

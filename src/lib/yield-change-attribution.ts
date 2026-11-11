@@ -269,7 +269,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 1: high-confidence source-switch attribution from BE ledger.
   if (
     ledger?.sourceSwitch === true &&
     typeof ledger.apy30dDeltaFromPrevious === "number" &&
@@ -282,7 +281,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
       previousSourceLabel: ledger.previousSourceLabel ?? switchContext?.previousSourceLabel ?? undefined,
       apy30dDelta: ledger.apy30dDeltaFromPrevious,
     };
-    // If we ALSO have an organic-sized drift in the window, flag as mixed (lower confidence).
     if (largestDelta && Math.abs(largestDelta.value) >= ORGANIC_DELTA_THRESHOLD_PP) {
       // If the largest move correlates with the switch timing (same calendar day), keep source-switch.
       const overlapsSwitch =
@@ -306,7 +304,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 2/4: history-driven attribution.
   if (!largestDelta) {
     return {
       largestDelta: null,
@@ -316,7 +313,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 2: organic drift attribution.
   if (Math.abs(largestDelta.value) > ORGANIC_DELTA_THRESHOLD_PP && sameSource && !nearbySwitch) {
     return {
       largestDelta,
@@ -326,7 +322,6 @@ export function classifyApyChange(input: YieldChangeAttributionInput): YieldChan
     };
   }
 
-  // Step 4: nothing significant.
   return {
     largestDelta,
     attribution: "insufficient-data",

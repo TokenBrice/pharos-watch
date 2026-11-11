@@ -447,7 +447,6 @@ export function OracleLiquidationSection({
             notesCount={notes.length}
             sources={sources}
             reviewed={reviewed}
-            // An opened fold takes the whole strip width below the state line.
             className="min-w-0 flex-1 has-open:basis-full"
           />
         </div>

@@ -132,7 +132,6 @@ export function selectorComponentReadingLabel(key: string): string | undefined {
 }
 
 export function selectorComponentLowestSubDimensionLabel(key: string): string | undefined {
-  // Identical to the reading labels except safetyOverall ("Safety" vs "Safety Score").
   if (key === "safetyOverall") return "Safety";
   return lookupSelectorLabel(SELECTOR_COMPONENT_READING_LABELS, key);
 }

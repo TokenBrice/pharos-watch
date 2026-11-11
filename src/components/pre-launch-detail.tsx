@@ -84,10 +84,6 @@ function chainName(chain: string): string {
   return CHAIN_META[chain]?.name ?? chain;
 }
 
-// ---------------------------------------------------------------------------
-// Identity header and hero
-// ---------------------------------------------------------------------------
-
 /** The dossier identity header (`HeroIdentityHeader` grammar); the visible `h1` lives here. */
 function PreLaunchIdentityHeader({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc: string | undefined }) {
   const links = (coin.links ?? []).slice(0, 3);
@@ -178,10 +174,6 @@ function PreLaunchChipRail({ coin }: { coin: StablecoinMeta }) {
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Launch path and activity
-// ---------------------------------------------------------------------------
 
 function LaunchPathModule({ coin }: { coin: StablecoinMeta }) {
   const history = describeTargetHistory(coin.dateHistory);
@@ -329,10 +321,6 @@ function ActivityModule({ coin }: { coin: StablecoinMeta }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Featured coverage
-// ---------------------------------------------------------------------------
-
 function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
   return (
     <section aria-labelledby="featured-coverage-title" className="space-y-3">
@@ -341,7 +329,6 @@ function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
         {items.map((item) => {
           const tweetId = item.type === "tweet" ? extractTweetId(item.url) : null;
 
-          /* ── Tweet embed ─────────────────────────────────── */
           if (tweetId) {
             return (
               <div key={item.url} className="overflow-hidden rounded-xl [&_.react-tweet-theme]:!my-0">
@@ -358,7 +345,6 @@ function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
             );
           }
 
-          /* ── Rich card (blog / article / video) ─────────── */
           return (
             <a
               key={item.url}
@@ -396,10 +382,6 @@ function FeaturedCoverage({ items }: { items: FeaturedContent[] }) {
     </section>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Rail
-// ---------------------------------------------------------------------------
 
 function PlannedProfileCard({ coin }: { coin: StablecoinMeta }) {
   const launched = isLaunchedAwaitingData(coin);
@@ -475,10 +457,6 @@ function RelatedCard({ coin }: { coin: StablecoinMeta }) {
     </RailCard>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 
 interface PreLaunchDetailProps {
   coin: StablecoinMeta;

@@ -25,8 +25,6 @@ import {
   sourceKeySlug,
 } from "./helpers";
 
-/* ---------- v2 balance-sheet API types ---------- */
-
 interface BalanceSheetAsset {
   tokenSymbol: string;
   totalValueUsd: number;
@@ -60,8 +58,6 @@ export interface FraxFpiCollateralResponse {
   assets?: FraxFpiCollateralRow[];
   liabilities?: FraxFpiCollateralRow[];
 }
-
-/* ---------- token → display / risk / coinId map ---------- */
 
 interface TokenDisplayConfig {
   label: string;
@@ -165,8 +161,6 @@ const FPI_COLLATERAL_NAME_ONLY_DISPLAY: Record<string, TokenDisplayConfig> = {
     sourceKey: "frax-fpi-collateral:ethereum:0x56695c26b3cdb528815cd22ff7b47510ab821efd",
   },
 };
-
-/* ---------- v2 balance-sheet adapter ---------- */
 
 export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subjectId?: string): AdapterResult {
   const assets = payload.assets;
@@ -599,8 +593,6 @@ export function adaptFraxFpiCollateral(
     },
   };
 }
-
-/* ---------- fetch entrypoint ---------- */
 
 function isBalanceSheetResponse(payload: unknown): payload is FraxBalanceSheetResponse {
   return Array.isArray((payload as FraxBalanceSheetResponse)?.assets);

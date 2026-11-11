@@ -210,7 +210,6 @@ export function Header() {
               // prefers-reduced-motion — kept local so ui/sheet stays stock.
               className="w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card p-0 ease-[var(--motion-ease-standard)] data-[state=open]:duration-[220ms] data-[state=closed]:duration-[220ms] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
                 <Link
                   prefetch={false}
@@ -230,7 +229,6 @@ export function Header() {
                 </Button>
               </div>
 
-              {/* Navigation */}
               <nav ref={navRef} className="flex-1 overflow-y-auto px-4 py-4" aria-label="Main navigation">
                 {activeCategory ? (
                   <div
@@ -303,7 +301,6 @@ export function Header() {
                       })}
                     </div>
 
-                    {/* Category drill-down rows. */}
                     {mobileCategories.map((category, categoryIndex) => {
                       const categoryIsActive = category.items.some((item) => isNavItemActive(pathname, item));
                       return (
@@ -343,7 +340,6 @@ export function Header() {
                 )}
               </nav>
 
-              {/* Footer */}
               <div className="border-t border-border/70 bg-muted/20 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center justify-between shrink-0">
                 <Button
                   variant="ghost"

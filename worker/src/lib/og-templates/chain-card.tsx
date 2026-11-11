@@ -61,7 +61,6 @@ export function ChainCard({ data }: { data: ChainCardData }) {
         </div>
       </div>
 
-      {/* Secondary metrics */}
       <div style={{ display: "flex", gap: 48, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <MetricLabel fontSize={13}>STABLECOINS</MetricLabel>
@@ -90,7 +89,6 @@ export function ChainCard({ data }: { data: ChainCardData }) {
         </div>
       </div>
 
-      {/* Top stablecoins with share bars */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <MetricLabel fontSize={13}>TOP STABLECOINS ON CHAIN</MetricLabel>
         {data.topStablecoins.length === 0 && (

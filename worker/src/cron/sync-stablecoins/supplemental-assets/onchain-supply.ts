@@ -149,7 +149,6 @@ export async function fetchPinnedNativeShares(
   }
 }
 
-/** Convert an internal on-chain result into the stable public chain row shape. */
 export function toPublicChainCirculating(
   record: OnChainMcapResult["chainCirculating"],
 ): NonNullable<PeggedAsset["chainCirculating"]> {

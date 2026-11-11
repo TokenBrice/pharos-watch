@@ -32,14 +32,12 @@ const HEALTHY_HEALTH_BAND_MIN = 60;
 const MIXED_HEALTH_BAND_MIN = 40;
 const FRAGILE_HEALTH_BAND_MIN = 20;
 
-/** Chain environment scores by resilience tier. */
 export const CHAIN_ENVIRONMENT_SCORES: Record<ChainResilienceTier, number> = {
   1: 100,  // Battle-tested, highly decentralized (Ethereum)
   2: 60,   // Established chains with some centralization
   3: 20,   // Unproven or problematic chains
 };
 
-// --- Sub-factor computations ---
 
 /** Concentration: 100 * (1 - HHI). Single coin = 0, even N-way split = 100*(1-1/N). */
 export function computeConcentrationScore(shares: number[]): number {
@@ -201,8 +199,6 @@ export function computeChainEnvironmentAssessment(
   };
 }
 
-
-// --- Composite ---
 
 /**
  * Composite Chain Health requires sufficient rated supply (quality non-null), a rated peg factor, and peg

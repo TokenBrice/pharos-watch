@@ -170,7 +170,6 @@ describe("BridgingDeploymentsModule", () => {
     expect(container.querySelector("[data-band-outlined]")).toBeNull();
     expect(container.querySelector(`[data-cell="${optimism.key}"]`)?.getAttribute("data-role")).toBe("diagnostic");
     expect(container.querySelector(`[data-cell="${NATIVE.key}"]`)?.hasAttribute("data-role")).toBe(false);
-    // The verdict names the limiting route.
     expect(buildBridgingDeploymentsVerdict(summary, null, roles)).toMatch(/Arbitrum/);
   });
 
@@ -394,7 +393,6 @@ describe("BridgingDeploymentsModule", () => {
       expect.stringMatching(/Solana.*10\.3%.*external lock & mint/),
       expect.stringMatching(/Domain-wide.*share unquantified.*214 reviewed paths/),
     ]);
-    // A single-member domain carries its reason on the row, without a member list.
     expect(container.querySelector('#failure-domains ul[aria-label="Plasma members"]')).toBeNull();
     expect(container.querySelector("#failure-domains")?.textContent).toContain("Deployed on Plasma.");
   });

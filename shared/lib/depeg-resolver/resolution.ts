@@ -301,7 +301,6 @@ function killSignals(
     out.push({ code: "K1_supply_weaponization", kind: "kill", severity: sev, label });
   }
 
-  // K2 — backing impairment
   const veryHigh = sumReserveRisk(coin, ["very-high"]);
   const highish = sumReserveRisk(coin, ["high", "very-high"]);
   const staticReserveRiskApplies = !STATIC_K2_EXEMPT_ARCHETYPES.has(coin.mechanismArchetype ?? "");
@@ -330,7 +329,6 @@ function killSignals(
     });
   }
 
-  // K3 — freeze / seizure
   const freezable = coin.canBeBlacklisted === true || coin.canBeBlacklisted === "inherited";
   if ((freezable && live.blacklistSurge === true) || coin.custodyModel === "institutional-sanctioned") {
     out.push({
@@ -353,7 +351,6 @@ function killSignals(
     out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "elevated", label: "Reserves custodied on a CEX" });
   }
 
-  // K4 — reflexive death-spiral
   if (coin.mechanismArchetype === "algorithmic" && below && supplyExpanding) {
     const sev = deep ? "severe" : "elevated";
     out.push({
@@ -377,7 +374,6 @@ function killSignals(
     });
   }
 
-  // K5 — exit collapse
   const liq = live.liquidityScore;
   const rcr = live.redemptionCapacityRatio;
   const v9Exit = identifiedV9Exit(live);
@@ -419,7 +415,6 @@ function killSignals(
     });
   }
 
-  // K6 — issuer wind-down
   const windDownDate = announcedWindDownDate(coin, asOfSec);
   const fingerprintEvidence = windDownFingerprintEvidence(active, supply, live);
   if (windDownDate != null) {
@@ -477,7 +472,6 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
     });
   }
 
-  // R2 — hard collateral + redemption
   const veryLow = sumReserveRisk(coin, ["very-low", "low"]);
   const rcr = live.redemptionCapacityRatio;
   const hardCollateral = coin.collateralQuality === "native" || veryLow >= HARD_COLLATERAL_RESERVE_PCT;
@@ -504,7 +498,6 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
     });
   }
 
-  // R3 — no supply anomaly
   if (supply.covered && supply.mintSurge === false && supply.change7dPct != null && Number.isFinite(supply.change7dPct)) {
     if (Math.abs(supply.change7dPct) < 10) {
       out.push({
@@ -523,7 +516,6 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
     }
   }
 
-  // R4 — no single freeze point
   if (coin.governance === "decentralized" && coin.custodyModel === "onchain" && coin.canBeBlacklisted === false) {
     out.push({
       code: "R4_no_freeze_point",

@@ -15,7 +15,6 @@ import { type ApiMeta } from "@/lib/api";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { type NonUsdSharePoint, type StablecoinChartPoint } from "@shared/types/market";
 
-// Stub modules that are not relevant to what we're testing here.
 vi.mock("@shared/lib/site-data-lane", () => ({
   isSiteDataAllowedUiHostname: () => false,
   resolveSiteDataProxyPath: (p: string) => p,
@@ -111,9 +110,6 @@ describe("use-api-query", () => {
     }
   });
 
-  // ------------------------------------------------------------------
-  // createApiPollingQueryOptions
-  // ------------------------------------------------------------------
   describe("createApiPollingQueryOptions", () => {
 
     it("respects enabled=false and retry override", () => {
@@ -145,9 +141,6 @@ describe("use-api-query", () => {
   });
 
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — schema-mismatch strict mode (default)
-  // ------------------------------------------------------------------
   describe("createApiQueryFn — schema mismatch in strict mode", () => {
     it("throws SchemaValidationError when required field is missing (default strict)", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ wrong: "field" }));
@@ -157,9 +150,6 @@ describe("use-api-query", () => {
     });
   });
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — schema-mismatch warn mode
-  // ------------------------------------------------------------------
   describe("createApiQueryFn — schema mismatch in warn mode", () => {
     it("resolves with raw data and logs a warning when contractMode=warn", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ wrong: "field" }));
@@ -168,9 +158,7 @@ describe("use-api-query", () => {
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema, undefined, "warn");
       const result = await fn();
 
-      // The raw (invalid) payload comes through
       expect(result).toEqual({ wrong: "field" });
-      // A console.warn was emitted with the contract failure context
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("[API contract]"),
         expect.objectContaining({ endpoint: "/api/test" }),
@@ -178,9 +166,6 @@ describe("use-api-query", () => {
     });
   });
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — network failure
-  // ------------------------------------------------------------------
   describe("createApiQueryFn — network failure", () => {
     it("propagates fetch rejection as-is", async () => {
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Network error"));
@@ -191,9 +176,6 @@ describe("use-api-query", () => {
   });
 
 
-  // ------------------------------------------------------------------
-  // createApiQueryFn — abort signal forwarding
-  // ------------------------------------------------------------------
   describe("createApiQueryFn — abort signal", () => {
     it("aborts the in-flight fetch when the context signal is aborted", async () => {
       const controller = new AbortController();
@@ -256,9 +238,6 @@ describe("use-api-query", () => {
     });
   });
 
-  // ------------------------------------------------------------------
-  // createApiPollingQueryOptions — key transitions and queryFn wiring
-  // ------------------------------------------------------------------
   describe("createApiPollingQueryOptions — key transitions", () => {
     function installPendingFetch() {
       const pending = new Map<string, (payload: SomeData) => void>();

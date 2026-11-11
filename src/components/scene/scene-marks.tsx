@@ -14,7 +14,6 @@ import { formatMatrix, formatPoints } from "@shared/lib/scene/projection";
 /** Class tokens → `className` (a CSS-module lookup that falls back to the token itself is typical). */
 export type SceneClassOf = (tokens: string) => string;
 
-/** One kit mark as one SVG element. */
 function sceneMarkElement(mark: SceneMark, key: number, classOf: SceneClassOf): ReactElement {
   switch (mark.kind) {
     case "polygon":

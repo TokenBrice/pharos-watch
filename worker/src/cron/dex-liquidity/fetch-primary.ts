@@ -553,7 +553,6 @@ export async function buildCurveLookups(
         const metapoolAdjustedTvl =
           pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0 ? pool.usdTotalExcludingBasePool : pool.usdTotal;
 
-        // Build a key from pool coins for matching
         const coinSymbols = pool.coins
           .map((c) => normalizeDexSymbol(c.symbol))
           .sort()
@@ -713,7 +712,6 @@ export async function buildCurveLookups(
           else candidates.push(entry);
           curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
         }
-        // Also store by symbol combo for fallback matching
         curvePoolMap.set(`${chain}:${coinSymbols}`, entry);
 
         // Extract per-token price observations for DEX cross-validation

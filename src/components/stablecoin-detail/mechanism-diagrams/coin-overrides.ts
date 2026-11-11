@@ -104,10 +104,6 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   },
 };
 
-/**
- * Returns the coin-specific diagram override for `coinId`, or `undefined`
- * when no override exists for that coin.
- */
 export function getCoinOverride(coinId: string): CoinOverride | undefined {
   return COIN_OVERRIDES[coinId];
 }

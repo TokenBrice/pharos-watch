@@ -265,7 +265,6 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
       SEVERITY_TONE_CLASS.alert.text,
     );
   }
-  // yield.warning_emitted
   const signals = Array.isArray(p?.newSignals) ? p.newSignals : Array.isArray(p?.signals) ? p.signals : null;
   if (!signals || signals.length === 0) return null;
   const visible = signals.slice(0, 3).filter((s): s is string => typeof s === "string");

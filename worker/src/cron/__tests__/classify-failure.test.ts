@@ -9,7 +9,6 @@ interface Case {
 }
 
 const CASES: Case[] = [
-  // adapter-config
   { name: "unknown-adapter reason", reason: "unknown-adapter", lastError: null, expected: "adapter-config" },
   {
     name: "zod adapter params invalid",
@@ -24,10 +23,8 @@ const CASES: Case[] = [
     expected: "adapter-config",
   },
 
-  // circuit-open
   { name: "circuit-open reason", reason: "circuit-open", lastError: null, expected: "circuit-open" },
 
-  // storage-write
   { name: "storage-write-timeout reason", reason: "storage-write-timeout", lastError: null, expected: "storage-write" },
   {
     name: "success-finalize-rejected reason",
@@ -54,7 +51,6 @@ const CASES: Case[] = [
     expected: "storage-write",
   },
 
-  // validation
   { name: "validation-failed reason", reason: "validation-failed", lastError: null, expected: "validation" },
   { name: "fatal-warning reason", reason: "fatal-warning", lastError: null, expected: "validation" },
   { name: "empty-slices reason", reason: "empty-slices", lastError: null, expected: "validation" },
@@ -71,7 +67,6 @@ const CASES: Case[] = [
     expected: "schema-shape",
   },
 
-  // parser-drift
   {
     name: "layout-changed error",
     reason: "adapter-exception",
@@ -79,7 +74,6 @@ const CASES: Case[] = [
     expected: "parser-drift",
   },
 
-  // parse-failure
   {
     name: "parse-failed error",
     reason: "adapter-exception",
@@ -93,7 +87,6 @@ const CASES: Case[] = [
     expected: "parse-failure",
   },
 
-  // upstream-http
   {
     name: "http 503",
     reason: "adapter-exception",
@@ -113,7 +106,6 @@ const CASES: Case[] = [
     expected: "upstream-http",
   },
 
-  // network
   {
     name: "fetch failed",
     reason: "adapter-exception",
@@ -161,7 +153,6 @@ const CASES: Case[] = [
     expected: "network",
   },
 
-  // geo-restricted-egress
   {
     name: "200 redirect to a /restricted geo-gate page",
     reason: "adapter-exception",
@@ -175,7 +166,6 @@ const CASES: Case[] = [
     expected: "parse-failure",
   },
 
-  // unknown
   {
     name: "unrecognised error",
     reason: "adapter-exception",

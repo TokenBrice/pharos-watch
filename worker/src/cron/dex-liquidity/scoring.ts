@@ -503,16 +503,13 @@ export async function computeStablecoinScores(
     globalTotalTvl += globalDelta.totalTvl;
     globalPoolCount += globalDelta.poolCount;
 
-    // v2: Compute durability score
     const tvlStab = tvlStabilityMap.get(id) ?? null;
     const volStab = volumeStabilityMap.get(id) ?? null;
     const durability = computeDurabilityScore(m, tvlStab, volStab, fallbackCounters);
 
-    // v2: Compute 6-component score
     const circulatingUsd = mcapById?.get(id);
     const { score, unavailableReason, components } = computeLiquidityScore(m, durability, circulatingUsd, fallbackCounters);
 
-    // v2: Compute aggregate metrics
     const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
     const organicFrac = weightedRatio(m.organicTvlWeightedSum, m.totalTvlForOrganic);
     // Stored diagnostic only: stress-unmeasured TVL contributes zero stress under the current methodology.

@@ -36,7 +36,6 @@ const REGISTER_COLUMNS: readonly DataTableColumn<CemeteryRegisterSortKey>[] = [
   { id: "coin", label: "Coin", sortKey: "name", className: "w-full px-2 sm:px-3" },
   { id: "cause", label: "Cause", sortKey: "cause", className: "hidden md:table-cell" },
   { id: "died", label: "Died", sortKey: "died", className: "px-2 sm:px-3" },
-  // One sortable Peak column with a compact header below `md`; exactly one of the pair is displayed.
   { id: "peak", label: "Peak market cap", sortKey: "peak", className: "hidden text-right md:table-cell" },
   { id: "peak-compact", label: "Peak", sortKey: "peak", className: "px-2 text-right md:hidden" },
   { id: "peg", label: "Peg", className: "hidden md:table-cell" },

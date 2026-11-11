@@ -64,7 +64,6 @@ function parseRiskBudgetParam(value: string | null | undefined): YieldRiskBudget
     : YIELD_LANDING_RISK_BUDGET;
 }
 
-/** URL tokens that parse to a risk-budget band, including the neutral aliases. */
 function isKnownRiskBudgetParam(value: string): boolean {
   return value === YIELD_RISK_ANY_PARAM || value === "all"
     || YIELD_RISK_BUDGET_SPECS.some((spec) => spec.key === value);

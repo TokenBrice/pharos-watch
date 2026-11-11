@@ -169,8 +169,6 @@ const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
 /** Bounded DOM and keyboard-traversal contract for every palette section. */
 const SECTION_RESULT_CAP = 5;
 
-// ── Static palette content sources ──────────────────────────────────────────
-
 interface PaletteChain {
   id: string;
   name: string;
@@ -584,7 +582,6 @@ export function buildCommandPaletteResultDescriptors({
       }
     }
 
-    // Chains
     appendMatches(PALETTE_CHAINS,
       (chain) => fuzzyMatch(searchQuery, chain.name) || fuzzyMatch(searchQuery, chain.id),
       (chain) => ({
@@ -616,7 +613,6 @@ export function buildCommandPaletteResultDescriptors({
         href: peg.href,
       }), (peg) => peg.shortLabel);
 
-    // Both symbols in any order, or an explicit "vs"/"versus" plus one side.
     const queryLower = searchQuery.toLowerCase();
     const hasVsToken = queryTokens.includes("vs") || queryTokens.includes("versus") || queryTokens.includes("vs.");
     appendMatches(PALETTE_COMPARISONS,
@@ -634,7 +630,6 @@ export function buildCommandPaletteResultDescriptors({
         href: pair.href,
       }), "Comparison");
 
-    // Case studies (generated title, slug words, symbols and keywords)
     appendMatches(CASE_STUDY_CLIENT_LIST,
       (study) => {
         const titleScore = scorePageSearchMatch(searchQuery, { label: study.title, keywords: study.keywords });
@@ -652,7 +647,6 @@ export function buildCommandPaletteResultDescriptors({
         href: `/learn/case-studies/${study.slug}/`,
       }), "Case study");
 
-    // Mechanism archetypes
     appendMatches(PALETTE_MECHANISMS,
       (mech) => fuzzyMatch(searchQuery, mech.label) || fuzzyMatch(searchQuery, mech.id) || fuzzyMatch(searchQuery, mech.oneLiner),
       (mech) => ({
@@ -701,7 +695,6 @@ export function buildCommandPaletteResultDescriptors({
         href: `/docs/${doc.slug}/`,
       }), "Docs");
 
-    // Blog metadata
     appendMatches(BLOG_POSTS,
       (post) => scorePageSearchMatch(searchQuery, { label: post.title, description: post.description }) > 0,
       (post) => ({

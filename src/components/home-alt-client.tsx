@@ -142,7 +142,6 @@ function RankingsSectionFallback() {
           </TableBody>
         </TableFrame>
       </div>
-      {/* Peg browse strip placeholder */}
       <div className="flex flex-wrap gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-24 rounded-full" />
@@ -310,7 +309,6 @@ export function HomeAltClient({ children }: { children?: ReactNode }) {
         </BelowFold>
       </div>
 
-      {/* Saved shortcuts sit between the pulse band and the directory table. */}
       <div className="mt-5 sm:mt-6">
         <ShortcutsSection />
       </div>

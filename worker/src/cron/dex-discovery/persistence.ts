@@ -561,9 +561,6 @@ export async function readDiscoveryDeploymentOutcomes(
   }));
 }
 
-/**
- * Read current discovery meta for all stablecoins.
- */
 export async function readDiscoveryMeta(db: D1Database, signal?: AbortSignal): Promise<Map<string, DiscoveryMeta>> {
   throwIfAborted(signal);
   const rows = await runWithOverloadRetry(() =>

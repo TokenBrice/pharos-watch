@@ -8,10 +8,6 @@ import {
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestoneType, LaunchPhase } from "@shared/types";
 
-// ---------------------------------------------------------------------------
-// Launch-phase display constants
-// ---------------------------------------------------------------------------
-
 /** Phase → solid accent dot class (static for Tailwind scanner). */
 export const PHASE_DOT: Record<LaunchPhase, string> = {
   announced: PRE_LAUNCH_PHASE_CLASSES.announced.dot,
@@ -41,16 +37,8 @@ export function isLaunchedAwaitingData(coin: { launchPhase?: LaunchPhase }): boo
   return coin.launchPhase === "launched";
 }
 
-// ---------------------------------------------------------------------------
-// Milestone display constants
-// ---------------------------------------------------------------------------
-
 /** Milestone type → badge class string (static for Tailwind scanner). */
 export const MILESTONE_TYPE_BADGE: Record<LaunchMilestoneType, string> = PRE_LAUNCH_MILESTONE_BADGE_CLASSES;
-
-// ---------------------------------------------------------------------------
-// Date drift display
-// ---------------------------------------------------------------------------
 
 export type DriftStatus = PreLaunchDriftStatus;
 

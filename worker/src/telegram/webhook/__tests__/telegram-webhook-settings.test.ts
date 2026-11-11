@@ -124,7 +124,6 @@ describe("handleSettingsCommand", () => {
     };
     expect(body.text).toContain("USDC settings");
     const callbacks = body.reply_markup.inline_keyboard.flat().map((b) => b.callback_data);
-    // db / sm / ds / lc + home back button
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:db:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:sm:"))).toBe(true);
     expect(callbacks.some((c) => c.startsWith("settings:c:usdc-circle:ds:"))).toBe(true);

@@ -132,7 +132,6 @@ describe("Safety Score V9 directional peg capture", () => {
     expect(directionalPeg.pegScoreById[ASSET_ID]).toBe(
       computePremiumWeightedPegScore(captureEvents, TRACKING_START_SEC, CLOCK_SEC, PREMIUM_WEIGHT),
     );
-    // Weighting really moved the score off the public row.
     expect(directionalPeg.pegScoreById[ASSET_ID]).not.toBe(fixture.publicScore);
   });
 

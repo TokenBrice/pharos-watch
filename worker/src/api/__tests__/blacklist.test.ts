@@ -90,7 +90,6 @@ describe("handleBlacklist", () => {
     expect(event).toHaveProperty("explorerTxUrl");
     expect(event).toHaveProperty("explorerAddressUrl");
     expect(event).toHaveProperty("methodologyVersion");
-    // Should NOT have snake_case keys
     expect(event).not.toHaveProperty("chain_id");
     expect(event).not.toHaveProperty("event_type");
     expect(event).not.toHaveProperty("methodology_version");

@@ -41,7 +41,6 @@ function ShortcutLink({ item, className }: { item: NavItem; className?: string }
   );
 }
 
-// Edit chip: reorder + remove controls, no navigation.
 function EditableShortcut({
   item,
   index,

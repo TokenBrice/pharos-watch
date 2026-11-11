@@ -13,7 +13,6 @@ describe("Term", () => {
     render(<Term slug="cdp">CDP</Term>);
     const entry = GLOSSARY.cdp;
 
-    // Closed popover -> no popover content in the document yet.
     expect(screen.queryByText(entry.term)).toBeNull();
     expect(screen.queryByText(entry.short)).toBeNull();
 
@@ -37,7 +36,6 @@ describe("Term", () => {
     expect(triggers.length).toBeGreaterThan(0);
     expect(triggers[0].textContent).toBe("DEWS");
 
-    // No glossary popover trigger should be present.
     expect(screen.queryByRole("button", { name: /Definition:/i })).toBeNull();
 
     // Opening the mobile Sheet surfaces the methodology summary text.

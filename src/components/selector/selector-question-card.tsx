@@ -114,7 +114,6 @@ function SelectorQuestionCardInner<TValue extends string>(
     }
     if (isMulti(value)) {
       if (option === ("all" as TValue)) {
-        // "All of the above" — replaces selection
         onChange([option]);
         return;
       }

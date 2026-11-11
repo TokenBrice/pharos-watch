@@ -173,12 +173,10 @@ describe("PriceTransparencyCard", () => {
       />,
     );
 
-    // Check summary shows correct counts
     expect(screen.getByText("3 used")).toBeTruthy();
     expect(screen.getByText("1 available")).toBeTruthy();
     expect(screen.getByText("Sources 3+/3")).toBeTruthy();
 
-    // Check used sources are displayed with "Used" badges
     const krakenRow = screen.getByText("Kraken").closest("div");
     expect(krakenRow).not.toBeNull();
     expect(within(krakenRow as HTMLElement).getByText("Used")).toBeTruthy();
@@ -187,7 +185,6 @@ describe("PriceTransparencyCard", () => {
     expect(bitstampRow).not.toBeNull();
     expect(within(bitstampRow as HTMLElement).getByText("Used")).toBeTruthy();
 
-    // Check available source is displayed with "Available" badge
     const jupiterRow = screen.getByText("Jupiter").closest("div");
     expect(jupiterRow).not.toBeNull();
     expect(within(jupiterRow as HTMLElement).getByText("Available")).toBeTruthy();

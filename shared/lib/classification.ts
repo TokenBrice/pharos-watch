@@ -430,7 +430,6 @@ export const PEG_BAND_LABELS = {
 const LIMITED_EVIDENCE_BADGE_CLASS =
   "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
 
-/** One label and badge palette for the screener's V9 evidence states. */
 export const SAFETY_EVIDENCE_LABELS = {
   strong: "Strong",
   adequate: "Adequate",

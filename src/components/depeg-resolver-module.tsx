@@ -24,8 +24,6 @@ interface DepegResolverModuleProps {
  */
 const DEFAULT_VISIBLE_ROWS = 4;
 
-// --- module header ---------------------------------------------------------
-
 function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summary: ReactNode }) {
   const lineage = data?._meta.lineage ?? null;
   const versionLabel = data?.methodology.currentVersionLabel ?? DDR_METHODOLOGY_VERSION_LABEL;
@@ -84,8 +82,6 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
     </div>
   );
 }
-
-// --- public component -------------------------------------------------------
 
 export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
   const [showAll, setShowAll] = useState(false);

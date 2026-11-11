@@ -56,8 +56,6 @@ const ROW_DISPLAY_LIMIT = 8;
 /** Track-record timeline node cap — enough to read the streak without clutter. */
 const TIMELINE_NODE_LIMIT = 36;
 
-// --- track-record timeline -------------------------------------------------
-
 /**
  * Vertical seat encodes outcome: correct calls ride above the rail, misses drop
  * below it, risk-noted sits just above, maturing/unscored stay on the line. So the
@@ -82,9 +80,7 @@ function TrackRecordTimeline({ rows }: { rows: DdrrResponseRow[] }) {
       role="img"
       aria-label={`Track record across ${ordered.length} graded DDR outcomes: ${correct} correct, ${miss} missed, ${pending} still maturing, oldest left, most recent right.`}
     >
-      {/* the rail */}
       <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" aria-hidden="true" />
-      {/* now cap */}
       <span className="absolute right-0 top-1/2 h-3 w-px -translate-y-1/2 bg-foreground/40" aria-hidden="true" />
       <span className="pharos-meta pharos-numeric absolute -top-0.5 right-0">
         now
@@ -110,8 +106,6 @@ function TrackRecordTimeline({ rows }: { rows: DdrrResponseRow[] }) {
     </div>
   );
 }
-
-// --- primitives ------------------------------------------------------------
 
 function Kicker({ children }: { children: ReactNode }) {
   return <p className="pharos-label">{children}</p>;
@@ -537,8 +531,6 @@ function ReviewLegend() {
   );
 }
 
-// --- module header ---------------------------------------------------------
-
 function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: DdrrResponse | undefined }) {
   const meta = data?._meta;
   const assessed = data?._meta.assessedEventCount ?? 0;
@@ -593,8 +585,6 @@ function ReviewerNote({ text }: { text: string }) {
     </p>
   );
 }
-
-// --- public component -------------------------------------------------------
 
 export function DepegResolverReviewerModule({ data, error, logos }: DepegResolverReviewerModuleProps) {
   if (!isDepegResolverReviewerEnabled()) return null;
@@ -653,7 +643,6 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             </div>
           </div>
 
-          {/* The record itself, row by row */}
           <div className="space-y-2.5">
             <Kicker>Reviewed readouts</Kicker>
             <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/40">

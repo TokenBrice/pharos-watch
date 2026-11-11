@@ -229,7 +229,6 @@ describe("ChainsResponseSchema", () => {
       expect(typeof parsed.chains[0][key]).toBe("number");
       expect(parsed.chains[0][key]).toBe(validChainsPayload.chains[0][key]);
     }
-    // Round-trips through JSON unchanged — no wrapper object, no string coercion.
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(validChainsPayload)));
   });
 });
