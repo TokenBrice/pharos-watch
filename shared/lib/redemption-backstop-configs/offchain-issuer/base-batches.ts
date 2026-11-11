@@ -157,7 +157,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       holderEligibility: "verified-customer",
       outputAssets: ["usdc-circle"],
       capacityModel: { kind: "unquantified" },
-      costModel: documentedVariableFee("Brale's MXNe-specific all-in redemption and currency-conversion fee ceiling is not publicly disclosed; service fees are specified in the customer's Services Agreement."),
+      costModel: documentedVariableFee("Brale's MXNe-specific all-in redemption and currency-conversion fee ceiling is not publicly disclosed; service fees are specified in the customer's Services Agreement.", "documented-variable"),
       docs: [
         sourceRef("Brale MXNe exact deployment inventory (retrieved 2026-10-20)", "https://brale.xyz/stablecoins/MXNe", ["route"]),
         sourceRef("Brale MXNe launch and approved-business USDC/USDP route (retrieved 2026-10-20)", "https://brale.xyz/blog/introducing-mxne", ["route", "access"]),
@@ -319,7 +319,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               "The documented supply-full bound is eventual issuer redemption only. Public Teller totalAssets(address(0)) and default-account redemption limits are diagnostics, not capacity for any actual holder: authority, receiver eligibility, account quota and the treasury's payout-plus-fee budget must all be proved by an exact holder-scoped Teller observer before a measured branch is admitted.",
             ],
             costModel: {
-              ...documentedVariableFee("Redemption fee 0.03%"),
+              ...documentedVariableFee("Redemption fee 0.03%", "documented-variable"),
               feeBpsMax: 3,
             },
           }
@@ -328,13 +328,11 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
               ...entry.config,
               ...documentedBoundSupplyFull("2026-08-18"),
               outputAssets: ["usdc-circle"],
-              // Keep this wording clear of the `feeDescriptionLooksUndisclosed`
-              // trigger list in ../shared.ts. The fee-free quota makes the
-              // charge variable, so the model stays `documented-variable` with
-              // Gate's published fast-redemption fee as the ceiling.
+              // The fee-free quota makes the charge variable, with Gate's
+              // published fast-redemption fee as the ceiling.
               costModel: {
                 ...documentedVariableFee(
-                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote",
+                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote", "documented-variable",
                 ),
                 feeBpsMin: 0,
                 feeBpsMax: 10,

@@ -28,7 +28,7 @@ import * as activeSafetyScoreSource from "../../../lib/safety-score-active-sourc
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../../test-helpers/report-cards-v9";
 import { toStructural } from "../utils";
 import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../../lib/mint-burn-contract-identity";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
 import * as mintBurnFlowsService from "../../../lib/mint-burn-flows-service";
 

@@ -6,6 +6,8 @@ import {
   resetSiteDataRateLimitStateForTests,
 } from "../site-data-rate-limit";
 
+import { isSlidingWindowRateLimited } from "../sliding-window-rate-limit";
+
 const env = { SITE_API_SHARED_SECRET: "shared-secret" };
 
 function request(ip: string | null): Request {
@@ -55,5 +57,17 @@ describe("site-data per-source read ceiling", () => {
 
     expect(await isSiteDataRateLimited(request(null), env)).toBe(false);
     expect(await isSiteDataRateLimited(request("203.0.113.77"), {})).toBe(false);
+  });
+});
+
+describe("bounded sliding-window operation", () => {
+  it("prunes the strict cutoff on rejection and evicts by insertion order only for new keys", () => {
+    const timestamps = new Map<string, number[]>([["first", [0, 1]], ["second", [1]]]);
+    expect(isSlidingWindowRateLimited(timestamps, "first", 10, 10, 1, 2)).toBe(true);
+    expect([...timestamps]).toEqual([["first", [1]], ["second", [1]]]);
+    expect(isSlidingWindowRateLimited(timestamps, "second", 11, 10, 1, 2)).toBe(false);
+    expect([...timestamps]).toEqual([["first", [1]], ["second", [11]]]);
+    expect(isSlidingWindowRateLimited(timestamps, "third", 11, 10, 1, 2)).toBe(false);
+    expect([...timestamps]).toEqual([["second", [11]], ["third", [11]]]);
   });
 });

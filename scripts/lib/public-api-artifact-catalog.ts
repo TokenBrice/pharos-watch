@@ -17,6 +17,8 @@ export interface PublicApiArtifactParameter {
 }
 
 export interface PublicApiArtifactEndpoint {
+  operationId: string;
+  referenceOrder: number;
   key: string;
   path: string;
   summary: string;
@@ -238,6 +240,7 @@ const DATE_PATH_PARAM = {
 const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "health",
+    referenceOrder: 25,
     summary: "Health check",
     description: "No-key availability canary for the public API host; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Adds `headline`/`components`.",
     tags: ["Health"],
@@ -248,6 +251,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoins",
+    referenceOrder: 1,
     summary: "List stablecoins",
     description: "Current stablecoin list with supply, price, same-observation current peg deviation/trust, chain distribution, FX context, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway. Optional `peggedAssets[].currentPeg` contains `currentDeviationBps`, `pegReference`, `pegReferenceUnavailable`, `currentPriceUnavailable`, `primaryTrust`, and nullable `dexPriceCheck`, derived with peg-summary from the same admitted observation as that row's `price`. Agreement and provenance reuse that row's existing `consensusSources`, `agreeSources`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceUpdatedAt`, and `priceSyncedAt`; consumers need no second payload or duplicate identity. `dexPriceCheck` retains the existing DEX cross-check shape and is null when its evidence is unavailable. Optional nullable `dexPriceCheckExpiresAt` is an exclusive Unix-second expiry: the older DEX publication/aggregate-observation clock plus the existing DEX UI evidence budget. Readers suppress the DEX check at or after expiry, or when an older block lacks this clock, while keeping price and deviation. Deviation is null for missing/rejected live prices, unavailable authoritative references, NAV tokens and nominal references; nominal par is never an observed market quote. Explicit null stays unavailable, not zero or a fallback to another generation. The block is additive and optional: when absent on an old Worker/cached row, readers fall back to the existing peg-summary behavior. Worker and Pages may deploy in either order; the same-row guarantee starts when a reader receives the block, while old readers ignore it. Peg-summary retains its existing current fields and historical analytics. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation. A price derived from a tracked parent quote may carry optional `priceDerivation` (`inheritedFrom`, the parent's source/confidence/clock and replay safety, `navMethod` for a successful live vault read, or `cachedVaultRate` with its original `rateObservedAt`). It is attribution only: `priceSource` and `priceConfidence` remain the trust fields, and the field is absent for direct quotes.",
     tags: ["Stablecoins"],
@@ -258,6 +262,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-detail",
+    referenceOrder: 2,
     responseSchema: "StablecoinDetailResponse",
     summary: "Stablecoin detail",
     description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins); optional `priceDerivation` accompanies only an overlaid canonical quote.",
@@ -266,6 +271,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-summary",
+    referenceOrder: 3,
     responseSchema: "StablecoinSummaryResponse",
     summary: "Stablecoin summary",
     description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins); optional `priceDerivation` accompanies only an observed price.",
@@ -274,6 +280,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-reserves",
+    referenceOrder: 6,
     summary: "Stablecoin reserves",
     description: "Live or fallback reserve composition and reviewed provenance for live-reserve-enabled assets. Since 2026-09-27 the freshness verdict carries its policy values: `sync.freshness` publishes the assessment clock (`assessedAt`), judged generation (`fetchedAt`, `attemptId`), fetch age against the route's fetch budget, and, for verified source timestamps, source age against the effective source budget with the cap that set it; `provenance.scoringRejectionReasons` lists the admission gates behind `scoringEligible`. Both are additive optional fields, and unjudged or legacy values are `null`. Also since 2026-09-27, supply-comparing reserve snapshots publish `metadata.liabilityScope` (reviewed included/excluded chains with reasons), `supplyCoverageComplete`, `reserveObservedAt`, `supplyObservedAt`, and `ratioSkewSec`, and `metadata.collateralizationRatio` is omitted with `metadata.ratioUnavailableReason` when liability coverage or reserve/supply time identity is not established. USD1 now publishes `collateralizationRatio` over its reviewed issuer-native perimeter; the former USD1 `fundBackingTotalRatio` and `details.fundScope` fields are removed.",
     tags: ["Stablecoins", "Reserves"],
@@ -285,6 +292,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-charts",
+    referenceOrder: 7,
     summary: "Stablecoin charts",
     description: "Historical total supply chart data.",
     tags: ["Stablecoins", "History"],
@@ -292,6 +300,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "peg-summary",
+    referenceOrder: 13,
     summary: "Peg summary",
     description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary. Since v6.31, `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps. Optional nullable `price`: the live quote behind `currentDeviationBps` and its provenance, null when that observation is unavailable.",
     tags: ["Peg Monitoring"],
@@ -299,6 +308,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "depeg-events",
+    referenceOrder: 10,
     summary: "Depeg incidents",
     description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by asset, state, and review verdict. `total` counts every pageable row under the same filters, including reviewed disputed/false_positive provenance rows; separate event statistics exclude reviewed disputes. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals, excluding reviewed disputes. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.",
     tags: ["Peg Monitoring"],
@@ -333,6 +343,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "events",
+    referenceOrder: 0,
     summary: "Tape events",
     description: "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination; cursor pagination is preferred for long result sets. `droppedRows` is the number of queried database rows rejected because they did not match the response schema; a non-zero value means the returned event set is incomplete, while `total` still counts those queried rows.",
     tags: ["Risk"],
@@ -418,6 +429,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "usds-status",
+    referenceOrder: 14,
     summary: "USDS freeze status",
     description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
     tags: ["Risk"],
@@ -425,6 +437,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "bluechip-ratings",
+    referenceOrder: 15,
     summary: "Bluechip ratings",
     description: "Safety ratings from bluechip.org joined to Pharos identities for covered stablecoins.",
     tags: ["Risk"],
@@ -432,6 +445,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dex-liquidity",
+    referenceOrder: 16,
     summary: "DEX liquidity",
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata. Volume, activity and NR follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability). Empty datasets retain the confirmed producer output clock; absent authority publishes unavailable freshness, never request time.",
     tags: ["Liquidity"],
@@ -439,6 +453,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dex-liquidity-history",
+    referenceOrder: 17,
     summary: "DEX liquidity history",
     description: "Bounded historical liquidity-score data for a stablecoin. `volume24h` and `score` follow the [liquidity v6.9 volume contract](https://pharos.watch/docs/dex-liquidity/#measured-volume-availability).",
     tags: ["Liquidity", "History"],
@@ -452,6 +467,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "report-cards-v9",
+    referenceOrder: 29,
     summary: "Safety Score V9 report cards",
     description: "Canonical API schema-8 Safety Score report cards from the accepted internal schema-7 publication. Public cards carry resolved witness text without card-local witness tables. Rated partial cards retain excluded-pillar diagnostics; pipeline-gap is a null score and null grade, distinct from NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
     tags: ["Risk"],
@@ -463,6 +479,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "safety-grades",
+    referenceOrder: 30,
     anonymousThrottle: true,
     summary: "Safety Score grades (no key)",
     description:
@@ -475,6 +492,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dependency-graph-v1",
+    referenceOrder: 31,
     anonymousThrottle: true,
     summary: "Dependency graph (no key)",
     description:
@@ -485,6 +503,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dependency-scenarios",
+    referenceOrder: 32,
     anonymousThrottle: true,
     summary: "Modeled dependency scenarios (no key)",
     description:
@@ -495,6 +514,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "depeg-resolver",
+    referenceOrder: 11,
     summary: "Depeg Duration Resolver",
     description:
       "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood. Since 2026-09-28, unknown audit verdicts fail closed; DDR excludes false_positive/disputed/no_data, PegScore only false_positive/disputed. Null keeps legacy eligibility.",
@@ -503,6 +523,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "depeg-resolver-review",
+    referenceOrder: 12,
     summary: "Depeg Duration Resolver Reviewer",
     description:
       "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
@@ -511,6 +532,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "redemption-backstops",
+    referenceOrder: 33,
     summary: "Redemption backstops",
     description: "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets.",
     tags: ["Risk", "Reserves"],
@@ -518,6 +540,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stress-signals",
+    referenceOrder: 41,
     summary: "Stress signals",
     description: "DEWS-style stress signals for the stablecoin universe or one selected asset. Each current row publishes assessedAt, freshBudgetSec, degradedBudgetSec and newestReturnedComputedAt alongside its generation and ageClassification. Aggregate retainedLastValid compares against the newest returned generation; single-asset rows publish a null comparison basis.",
     tags: ["Risk", "Peg Monitoring"],
@@ -529,6 +552,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stability-index",
+    referenceOrder: 28,
     summary: "Pharos Stability Index",
     description: "PSI and history. Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `carriedSupplyIds` / `trendUnavailableIds`. A DefiLlama-outage carry (`supplyRestored` with `supplyRestoreMode: \"outage-fallback\"`) remains an index weight but is excluded from `universeCoverage.admittedSupply` and never claimed as an observation; routine main-path carries keep their existing treatment. Unavailable supply is excluded from denominators and contributors, and unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
     tags: ["Risk"],
@@ -554,6 +578,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "blacklist",
+    referenceOrder: 8,
     summary: "Blacklist events",
     description: "Normalized issuer freeze, unfreeze, blacklist, and destruction events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based. To continue, pass nextCursor URL-encoded as cursor with the same filters, sortBy, sortDirection and limit, and omit offset. Stop when nextCursor is null. The maximum offset is 25,000, and totalExact: false means total is a lower bound.",
     tags: ["Blacklist"],
@@ -623,6 +648,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "blacklist-summary",
+    referenceOrder: 9,
     summary: "Blacklist summary",
     description: "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
     tags: ["Blacklist"],
@@ -630,6 +656,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "mint-burn-flows",
+    referenceOrder: 39,
     summary: "Mint and burn flows",
     description: "Mint/burn flow aggregates and pressure for closed UTC hours, with token-bound bridge exclusions and a dense `hourly` series: proven quiet hours are zero, while unproved gaps carry `netFlowUsd: null` and incomplete `scanCoverage`. Bridge exclusions require token-bound per-movement receipt evidence for CCTP v1/v2, reviewed CCIP pools and LayerZero OFT; unrelated rows in the same transaction remain economic candidates, and forward decoding does not repair historical classification. `window` publishes `[start,end)` boundaries and `semantics: closed-utc-hours`; `end` is the current UTC hour boundary, excluding the open hour. The `hourly` series is dense: every closed UTC hour in `[window.start,window.end)` appears (current request limit: 720 hours). An absent stored row becomes net zero only with per-hour scan proof and complete classification; otherwise `netFlowUsd` is null and `scanCoverage.complete` is false. Zero gross values in an unproved hour are empty observed subtotals, never proof of quiet. Aggregate and per-coin responses add optional `hourlyScope: {chainIds, label}` describing the hourly constituents, including proven isolated legs. `scope` retains admitted totals and gauge scope; chart and hourly-volume disclosures use `hourlyScope`, while net and leader disclosures use `scope`. Readers predating the optional field ignore it. Daily nets and rolling means require every included hour; cumulative net stops at the first unavailable hour. Requested `hours` controls the aggregate series or per-coin totals; aggregate coin interpretation stays 24h, and 7d/30d/90d nets share that end. Signed nets are `null` when matching `valuation` is `partial`; gross volumes remain known-valuation lower bounds. Direction is withheld unless missing valuation cannot change it; pressure requires a complete 24h window and non-partial baseline. `gauge.score` re-weights over published pressures; `partialValuationInputs`, `partialValuationMcapUsd` and `scoredMcapUsd` disclose withheld weighted inputs and bound the full-cohort score by `(scoredMcapUsd·score ± 100·partialValuationMcapUsd) / (scoredMcapUsd + partialValuationMcapUsd)`. Flight-to-quality is withheld unless exact or provably inactive. Legacy `unknown` valuation keeps labelled nets until those buckets age out.",
     tags: ["Flows"],
@@ -641,6 +668,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "mint-burn-events",
+    referenceOrder: 40,
     summary: "Mint and burn events",
     description: "Normalized issuance event stream for supported stablecoins with cursor or offset pagination. Since 2026-09-28 (mint-burn-flow v6.23) `amountUsd` is set only from a price whose actual observation time is within 24 hours either side of the event, and `priceTimestamp` is that observation time: `priceSource` `supply-history-daily` / `supply-history-heal` for a daily snapshot price with a recorded observation clock (never its day label; nominal par is never stored), `price-cache-event-window` / `price_cache_heal` for a replay-safe observed cache price (never a legacy `protocol-redeem` par row of a nominal-par route); the candidate observed closest to the event wins. Events without such evidence keep `amountUsd: null`; this includes NAV tokens whose latest observation is more than 24 hours from the event (for example over weekends). Older rows may still carry `price-cache-current` with a run-time `priceTimestamp`, or `supply-history-daily` with the snapshot day as `priceTimestamp`.",
     tags: ["Flows"],
@@ -708,6 +736,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "yield-rankings",
+    referenceOrder: 36,
     summary: "Yield rankings",
     description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields. `?projection=summary` returns the compact workbench contract instead of the detailed rows.",
     tags: ["Yield"],
@@ -727,6 +756,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "yield-adapter-manifest",
+    referenceOrder: 37,
     summary: "Yield adapter manifest",
     description:
       "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
@@ -735,6 +765,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "yield-history",
+    referenceOrder: 38,
     summary: "Yield history",
     description: "Historical yield observations for a stablecoin, with optional publication/source-risk metadata fields.",
     tags: ["Yield", "History"],
@@ -774,6 +805,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "chains",
+    referenceOrder: 5,
     summary: "Chains",
     description: "Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for full per-chain coin detail rows. `_meta` discloses assessment time and the route's 1800/3600-second freshness bands; an unavailable or degraded Safety Score dependency can also downgrade the verdict. Cache lifetime is bounded by remaining fresh runway. Since 2026-09-27 chain accounting is raw: `chainAttributedTotalUsd` is the unclamped sum of the published chain rows (previously capped at `globalTotalUsd`), each `dominanceShare` is `totalUsd / globalTotalUsd` without rescaling (shares can sum above 1 when chain rows over-attribute supply), `attributionDiscrepancyUsd` is the signed `chainAttributedTotalUsd - globalTotalUsd`, `unattributedTotalUsd` is its positive residual, and `dominanceGeometryTotalUsd` (`max(global, attributed)`) is a bar-geometry denominator, never a share label. `supplyCoverage` and per-chain `unavailableSupplyObservationCount` count unobserved aggregate and chain supply excluded from those totals. Since Chain Health v1.6, zero peg coverage publishes `healthFactors.pegStability: null`; partial coverage publishes the observed-only factor with `pegStabilityCoverage`. Since v1.7, `healthScore`/`healthBand` also publish for partial coverage with `pegStabilityCoverage.coverage >= " + PEG_COVERAGE_COMPOSITE_MIN + "`; below that they are null. `neutralImputedSupplyUsd` is zero for new payloads; old cached payloads retain their original methodology. Since 2026-09-28 the unused V8 fields `_meta.dependencies.reportCards.inputsStale` and `_meta.dependencies.reportCards.staleInputs` are removed from the public contract; dependency status, age, and reason are unchanged.",
     tags: ["Chains"],
@@ -782,6 +814,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "non-usd-share",
+    referenceOrder: 4,
     responseSchema: "NonUsdShareResponse",
     summary: "Non-USD share",
     description: "Current and historical market share of tracked non-USD peg groups for market-structure views.",
@@ -793,6 +826,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "supply-history",
+    referenceOrder: 18,
     summary: "Supply history",
     description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved. Each row carries nullable supplyProvenance (v6.59): null means chain coverage was not recorded, never complete.",
     tags: ["History"],
@@ -812,6 +846,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "safety-score-history",
+    referenceOrder: 34,
     summary: "Safety score history",
     description: "Legacy bounded long-range safety-score history for a stablecoin.",
     tags: ["Risk", "History"],
@@ -825,6 +860,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "safety-score-history-v2",
+    referenceOrder: 35,
     summary: "Safety score history (identity-aware)",
     description:
       "Boundary-aware safety-score history with full score-model identity and transition kinds; the legacy endpoint remains the V8 compatibility projection.",
@@ -839,6 +875,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "daily-digest",
+    referenceOrder: 19,
     summary: "Daily digest",
     description: "Latest AI-generated stablecoin market digest. With no eligible edition, all eleven response fields are explicitly null.",
     tags: ["Digest"],
@@ -849,6 +886,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "digest-archive",
+    referenceOrder: 20,
     summary: "Digest archive",
     description: "Daily and weekly digest archive. The default response is bounded to the latest 365 rows. Use history=all and follow pagination.nextCursor until null for complete history within a captured insertion horizon; edition numbers are assigned before pagination.",
     tags: ["Digest"],
@@ -865,6 +903,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "digest-snapshot",
+    referenceOrder: 21,
     summary: "Digest snapshot",
     description: "Build-time digest context snapshot for a specific digest date. An elapsed UTC day is archive data; an in-progress day omits `blacklistSummary` and uses the standard 5-minute profile because its cohort is not complete.",
     tags: ["Digest"],
@@ -885,6 +924,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "snapshots-index",
+    referenceOrder: 22,
     responseSchema: "SnapshotsIndexResponse",
     summary: "Public snapshot index",
     description:
@@ -908,6 +948,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "snapshot-day",
+    referenceOrder: 23,
     summary: "Public snapshot for a single day",
     description:
       "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served unchanged with identity, ETag, and public, immutable, max-age=1y cache headers. Archive validation also applies to coin projections; live producers remain strict. Pre-9.15 cards may retain nullable `stressStateDigest`. Report7 uses recorded pre-10.11 routes and methodology-specific witness/obligation counts; see [historical contracts](https://pharos.watch/docs/report-cards/#report-schema-v8).",
@@ -923,6 +964,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "snapshot-coin",
+    referenceOrder: 24,
     responseSchema: "SnapshotCoinResponse",
     summary: "Public snapshot projection for a single coin",
     description:
@@ -946,6 +988,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "public-status-history",
+    referenceOrder: 26,
     summary: "Public status history",
     description: "Bounded, public-safe status timeline for the Pharos system.",
     tags: ["Status"],
@@ -965,6 +1008,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "telegram-pulse",
+    referenceOrder: 27,
     summary: "Telegram pulse",
     description: "Lightweight public Telegram adoption and delivery-health aggregates.",
     tags: ["Status"],

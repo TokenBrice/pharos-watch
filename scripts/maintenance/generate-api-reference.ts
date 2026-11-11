@@ -22,6 +22,7 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import { RedemptionCapacityConfidenceSchema } from "@shared/types/redemption";
 import { isRecord } from "@shared/lib/type-guards";
+import { PUBLIC_API_ARTIFACT_ENDPOINTS } from "../lib/public-api-artifact-catalog";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../../..");
 const OPENAPI_PATH = resolve(ROOT, "public/openapi.json");
@@ -35,15 +36,6 @@ interface OpenApiRoute {
   parameters: string; responseCodes: string; responseSchemaRefs: readonly string[]; definition: EndpointDefinition;
 }
 
-const PUBLIC_OPERATION_ORDER = [
-  "events", "stablecoins", "stablecoinStablecoinId", "stablecoinSummaryStablecoinId", "nonUsdShare", "chains",
-  "stablecoinReservesStablecoinId", "stablecoinCharts", "blacklist", "blacklistSummary", "depegEvents",
-  "depegResolver", "depegResolverReview", "pegSummary", "usdsStatus", "bluechipRatings", "dexLiquidity",
-  "dexLiquidityHistory", "supplyHistory", "dailyDigest", "digestArchive", "digestSnapshot", "snapshotsIndex",
-  "snapshotsDateJson", "snapshotDateStablecoinStablecoinId", "health", "publicStatusHistory", "telegramPulse",
-  "stabilityIndex", "reportCardsV9", "safetyGrades", "dependencyGraphV1", "dependencyScenariosV1", "redemptionBackstops", "safetyScoreHistory", "safetyScoreHistoryV2",
-  "yieldRankings", "yieldAdapterManifest", "yieldHistory", "mintBurnFlows", "mintBurnEvents", "stressSignals",
-] as const;
 const SUPPLEMENTAL_ENDPOINT_ORDER = [
   "donor-key-claim", "feedback", "telegram-mini-app-session", "telegram-mini-app-mutation", "telegram-webhook",
 ] as const;
@@ -128,7 +120,7 @@ export function collectOpenApiRoutes(spec: OpenApiSpec): OpenApiRoute[] {
       });
     }
   }
-  const order = new Map<string, number>(PUBLIC_OPERATION_ORDER.map((operationId, index) => [operationId, index]));
+  const order = new Map<string, number>(PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => [endpoint.operationId, endpoint.referenceOrder]));
   return routes.sort((a, b) => (order.get(a.operationId) ?? 999) - (order.get(b.operationId) ?? 999));
 }
 function authLabel(definition: EndpointDefinition): string {
@@ -293,7 +285,7 @@ function renderOgRoute(): string {
 }
 export function renderGeneratedBlock(spec: OpenApiSpec): string {
   const routes = collectOpenApiRoutes(spec);
-  if (routes.length !== PUBLIC_OPERATION_ORDER.length) throw new Error(`Expected ${PUBLIC_OPERATION_ORDER.length} OpenAPI operations, found ${routes.length}`);
+  if (routes.length !== PUBLIC_API_ARTIFACT_ENDPOINTS.length) throw new Error(`Expected ${PUBLIC_API_ARTIFACT_ENDPOINTS.length} OpenAPI operations, found ${routes.length}`);
   const supplemental = SUPPLEMENTAL_ENDPOINT_ORDER.map((key) => {
     const definition = ENDPOINT_DEFINITIONS.find((candidate) => candidate.key === key);
     if (!definition || definition.adminRequired) throw new Error(`Missing public endpoint definition ${key}`);

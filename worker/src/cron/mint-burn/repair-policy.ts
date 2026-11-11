@@ -1,0 +1,1 @@
+export const COVERAGE_REPAIR_MAX_BLOCKS = 10_000;

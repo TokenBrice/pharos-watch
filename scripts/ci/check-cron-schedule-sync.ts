@@ -9,7 +9,6 @@ import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
 import {
-  OFF_SLOT_SCHEDULED_PRODUCERS,
   SCHEDULED_SLOT_PLANS,
   type ScheduledWorkerRole,
 } from "@shared/lib/scheduled-runner-registry";
@@ -175,20 +174,17 @@ export function evaluateCronScheduleSync(input: {
   const missingPlanKeys = Object.keys(cronSchedules).filter((key) => !planKeys.has(key));
   const extraPlanKeys = [...planKeys].filter((key) => !(key in cronSchedules));
 
-  // Producers executed off the slot chain (a Workflow instance writes their
-  // run) are declared in the registry, not planned as chain members.
-  const offSlotProducers = new Set(Object.keys(OFF_SLOT_SCHEDULED_PRODUCERS));
   const runtimeJobs = new Set(Object.values(scheduledSlotPlans).flatMap(flattenScheduledJobs));
   const expectedCronJobs = new Set(cronJobDefinitions.map((definition) => definition.job));
   const missingRuntimeJobs = [...expectedCronJobs].filter(
-    (job) => !runtimeJobs.has(job) && !offSlotProducers.has(job),
+    (job) => !runtimeJobs.has(job),
   );
   const unknownRuntimeJobs = [...runtimeJobs].filter((job) => !expectedCronJobs.has(job));
 
   const scheduledBudgetJobs = new Set(Object.values(scheduledSlotPlans).flatMap(getScheduledBudgetEntries));
   const expectedBudgetJobs = new Set(cronConnectionBudgetEntries.map((definition) => definition.job));
   const missingBudgetJobs = [...expectedBudgetJobs].filter(
-    (job) => !scheduledBudgetJobs.has(job) && !offSlotProducers.has(job),
+    (job) => !scheduledBudgetJobs.has(job),
   );
   const unknownBudgetJobs = [...scheduledBudgetJobs].filter((job) => !expectedBudgetJobs.has(job));
   const physicalTriggerLimitExceeded = wranglerCrons.size > growthPolicy.maxPhysicalTriggersBeforeRebalance;

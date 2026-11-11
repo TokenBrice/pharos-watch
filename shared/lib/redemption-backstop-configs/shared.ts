@@ -6,7 +6,7 @@ import { allocationReviewClockSec as reviewAdmissionClockSec } from "../../types
 import type {
   RedemptionDocSource,
   RedemptionDocSourceSupport,
-  RedemptionFeeConfidence,
+  RedemptionFeeModelKind,
   RedemptionHolderEligibility,
 } from "../../types";
 import type {
@@ -179,29 +179,10 @@ export function documentedBoundSupplyFull(
 
 export function documentedVariableFee(
   feeDescription: string,
-  confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
+  feeModelKind: Exclude<RedemptionFeeModelKind, "fixed-bps">,
 ): RedemptionCostModel {
-  const resolvedFeeModelKind =
-    confidence === "formula"
-      ? "formula"
-      : feeDescriptionLooksUndisclosed(feeDescription)
-        ? "undisclosed-reviewed"
-        : "documented-variable";
-  return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind: resolvedFeeModelKind };
-}
-
-function feeDescriptionLooksUndisclosed(feeDescription: string): boolean {
-  const normalized = feeDescription.toLowerCase();
-  return (
-    normalized.includes("not disclosed") ||
-    normalized.includes("not publish") ||
-    normalized.includes("not published") ||
-    normalized.includes("do not publish") ||
-    normalized.includes("does not publish") ||
-    normalized.includes("no separate fixed") ||
-    normalized.includes("no fixed") ||
-    normalized.includes("not identified")
-  );
+  const confidence = feeModelKind === "formula" ? "formula" : "undisclosed-reviewed";
+  return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind };
 }
 
 export function undisclosedReviewedFee(feeDescription: string = NO_PUBLIC_NUMERIC_REDEMPTION_FEE): RedemptionCostModel {

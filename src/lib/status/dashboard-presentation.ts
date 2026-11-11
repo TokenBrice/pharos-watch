@@ -1,10 +1,11 @@
+import { getStatusSeverity } from "@shared/lib/public-health";
 import type { StatusCause, StatusResponse } from "@shared/types";
 import type { StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { DashboardNotice } from "@/lib/status/dashboard-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { STATUS_TONE } from "@shared/lib/classification";
 
-export const STATUS_PRIORITY = { healthy: 0, degraded: 1, stale: 2 } as const;
+export const STATUS_PRIORITY = { healthy: getStatusSeverity("healthy"), degraded: getStatusSeverity("degraded"), stale: getStatusSeverity("stale") } as const;
 export const STATUS_PAGE_RISK_LABELS: Record<StatusPageActionRisk, string> = {
   "read-only": "Read only",
   low: "Low risk",

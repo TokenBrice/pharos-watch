@@ -4,7 +4,7 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
 import { rethrowIfAborted } from "../../lib/abort";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey as configKey } from "../../lib/mint-burn-contract-identity";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
@@ -31,9 +31,6 @@ function configCoverageRatio(summary: MintBurnConfigSummary): number | null {
   return okCount / summary.eventCoverage.length;
 }
 
-export function configKey(config: MintBurnContractConfig): string {
-  return mintBurnConfigKey(config);
-}
 
 export function configTier(config: MintBurnContractConfig): MintBurnTier {
   return config.tier ?? "critical";

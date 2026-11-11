@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/public-health";
 import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { formatProseList } from "@shared/lib/format";
-import { projectPublicStatus, type PublicStatusProjection } from "@shared/lib/public-status-components";
+import { getPublicAgeBandState, projectPublicStatus, type PublicStatusProjection } from "@shared/lib/public-status-components";
 import type { PublicComponentState, PublicHeadlineState } from "@shared/types";
 import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
@@ -220,10 +220,11 @@ export function resolvePublicProjection(health: HealthResponse): PublicStatusPro
  * is Degraded, past the outage grace multiple of that is Outage.
  */
 export function getAgeBandState(ageSeconds: number, delayedAfterSec: number, degradedAfterSec: number): PublicComponentState {
-  if (ageSeconds > degradedAfterSec * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER) return "outage";
-  if (ageSeconds > degradedAfterSec) return "degraded";
-  if (ageSeconds > delayedAfterSec) return "delayed";
-  return "operational";
+  return getPublicAgeBandState(ageSeconds, {
+    delayedAfterSec,
+    degradedAfterSec,
+    outageAfterSec: degradedAfterSec * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
+  });
 }
 
 export interface PublicHeadlineSummary {

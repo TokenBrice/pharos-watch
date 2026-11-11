@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
-import { guardPublishedYieldCoverage, summarizeYieldPublicationQualityMix } from "../coordinator";
+import { guardPublishedYieldCoverage, summarizeYieldPublicationQualityMix } from "../health-policy";
 import { pruneYieldTables } from "../history";
 import { repairPublishedYieldGenerationFromCache } from "../publication";
 import type { PreviousYieldPublicationSnapshot } from "../publication";

@@ -152,7 +152,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     },
     routeStatus: "open",
     costModel: documentedVariableFee(
-      "Crown terms describe standard and instant BRL redemption routes, but public materials reviewed do not expose a machine-readable fixed fee schedule",
+      "Crown terms describe standard and instant BRL redemption routes, but public materials reviewed do not expose a machine-readable fixed fee schedule", "documented-variable",
     ),
     docs: [
       sourceRef("Crown BRLV website", "https://www.crown-brlv.com/en/", ["route"]),
@@ -229,7 +229,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "eurc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
+    costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary", "documented-variable"),
     v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
       sourceRef("Circle Mint", "https://www.circle.com/circle-mint", ["route", "capacity", "access", "settlement"]),
@@ -249,7 +249,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.07, confidence: "documented-bound", basis: "hot-buffer" },
     reviewedAt: "2026-05-17",
-    costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
+    costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary", "documented-variable"),
     v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
       sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
@@ -352,7 +352,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       ],
     },
     costModel: documentedVariableFee(
-      "StraitsX terms require the prevailing website redemption fee plus an S$1 administrative fee and applicable network fees",
+      "StraitsX terms require the prevailing website redemption fee plus an S$1 administrative fee and applicable network fees", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacityFees(
@@ -364,7 +364,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "xsgd-straitsx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply"),
+    costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply", "documented-variable"),
     docs: [
       sourceRefRouteCapacityFees(
         "StraitsX XSGD overview",

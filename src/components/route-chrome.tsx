@@ -2,29 +2,19 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { isOpsPath } from "@/lib/admin-workspaces";
-import { isChromelessPath } from "@/lib/chromeless-routes";
-
-function isDigestPath(pathname: string | null): boolean {
-  return pathname === "/digest" || pathname?.startsWith("/digest/") === true;
-}
-
-// Exact public workspaces whose content owns the focusable #data target.
-const DATA_TABLE_PATHS = new Set([
-  "/", "/liquidity", "/screener", "/flows", "/timeline", "/safety-scores",
-  "/freezewatch", "/depeg", "/compliance", "/yield",
-]);
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 export function RouteChrome({ children, dataTableOnly = false }: { children: ReactNode; dataTableOnly?: boolean }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname) || isOpsPath(pathname)) return null;
-  if (dataTableOnly && (!pathname || !DATA_TABLE_PATHS.has(pathname.replace(/\/$/, "") || "/"))) return null;
+  const capabilities = getRouteCapabilities(pathname);
+  if (capabilities.chrome !== "public") return null;
+  if (dataTableOnly && !capabilities.dataAnchor) return null;
   return children;
 }
 
 export function RegimeBarChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname) || isOpsPath(pathname) || pathname === "/") return null;
+  if (!getRouteCapabilities(pathname).regimeBar) return null;
   return children;
 }
 
@@ -35,8 +25,9 @@ export function RegimeBarChrome({ children }: { children: ReactNode }) {
  */
 export function GlobalFooterChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isChromelessPath(pathname) || isOpsPath(pathname) || isDigestPath(pathname)) return null;
-  if (pathname === "/") {
+  const { footer } = getRouteCapabilities(pathname);
+  if (footer === "route") return null;
+  if (footer === "home") {
     return <div className="pharos-home-footer">{children}</div>;
   }
   return children;
@@ -44,12 +35,11 @@ export function GlobalFooterChrome({ children }: { children: ReactNode }) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (isOpsPath(pathname)) return children;
-
-  const chromeless = isChromelessPath(pathname);
+  const { chrome, chromeless, home } = getRouteCapabilities(pathname);
+  if (chrome === "ops") return children;
   const className = chromeless
     ? "flex-1 min-w-0"
-    : pathname === "/"
+    : home
       ? "flex-1 w-full px-4 pt-6 pb-2 md:pt-7 md:pb-3 lg:px-5 xl:px-9"
       : "pharos-mobile-utility-safe flex-1 mx-auto w-full max-w-[120rem] px-4 py-6 md:py-7 lg:px-5 xl:px-9";
 

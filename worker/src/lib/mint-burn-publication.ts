@@ -1,7 +1,7 @@
 import type { MintBurnPublication } from "@shared/types/mint-burn";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { MintBurnContractConfig } from "./mint-burn-contracts";
-import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
 import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-keys.json";
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";

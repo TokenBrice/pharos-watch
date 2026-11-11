@@ -1,3 +1,4 @@
+import { isSlidingWindowRateLimited } from "./sliding-window-rate-limit";
 import { hashClientIp } from "@shared/lib/client-ip-hash";
 
 export interface SiteDataRateLimitEnv {
@@ -53,22 +54,8 @@ export async function isSiteDataRateLimited(
   if (!ip || !secret) return false;
 
   const key = await hashClientIp(ip, secret);
-  const now = Date.now();
-  const cutoff = now - SITE_DATA_RATE_LIMIT_WINDOW_MS;
-  const recent = (siteDataRequestTimestampsByIpHash.get(key) ?? []).filter((ts) => ts > cutoff);
-  if (recent.length >= SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW) {
-    siteDataRequestTimestampsByIpHash.set(key, recent);
-    return true;
-  }
-
-  recent.push(now);
-  if (
-    !siteDataRequestTimestampsByIpHash.has(key) &&
-    siteDataRequestTimestampsByIpHash.size >= SITE_DATA_RATE_LIMIT_MAX_TRACKED_IPS
-  ) {
-    const oldest = siteDataRequestTimestampsByIpHash.keys().next().value;
-    if (oldest !== undefined) siteDataRequestTimestampsByIpHash.delete(oldest);
-  }
-  siteDataRequestTimestampsByIpHash.set(key, recent);
-  return false;
+  return isSlidingWindowRateLimited(
+    siteDataRequestTimestampsByIpHash, key, Date.now(),
+    SITE_DATA_RATE_LIMIT_WINDOW_MS, SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW, SITE_DATA_RATE_LIMIT_MAX_TRACKED_IPS,
+  );
 }

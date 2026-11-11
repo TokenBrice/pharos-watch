@@ -6,7 +6,6 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   applyYieldCoverageReviewDispositions,
   buildYieldCoverageEvidenceFingerprint,
-  upsertYieldCoverageReviewDisposition,
   type YieldCoverageReviewQueue,
   type YieldCoverageReviewableQueueItem,
 } from "../yield-coverage-review-dispositions";
@@ -21,6 +20,27 @@ function createDispositionDb(): { sqlite: DatabaseSync; db: D1Database } {
   sqlite.exec(readFileSync(resolve(migrationsDir, "0193_yield_coverage_review_dispositions.sql"), "utf8"));
   openDatabases.push(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };
+}
+
+function seedDisposition(
+  sqlite: DatabaseSync,
+  input: {
+    item: YieldCoverageReviewableQueueItem;
+    disposition?: string;
+    reviewedAt?: number;
+    nextReviewAt: number;
+    expiresAt?: number;
+  },
+  nowSec: number,
+): void {
+  sqlite.prepare(`INSERT INTO yield_coverage_review_dispositions (
+    queue_item_id, queue_item_kind, evidence_fingerprint, disposition,
+    evidence, review_owner, reviewed_at, next_review_at, expires_at, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    input.item.id, input.item.kind, buildYieldCoverageEvidenceFingerprint(input.item),
+    input.disposition ?? "watch", "historical evidence", "reviewer", input.reviewedAt ?? nowSec,
+    input.nextReviewAt, input.expiresAt ?? 0, nowSec, nowSec,
+  );
 }
 
 function item(
@@ -58,60 +78,10 @@ afterEach(() => {
 });
 
 describe("yield coverage review dispositions", () => {
-  it("persists the disposition, evidence, owner, fingerprint, and review bounds", async () => {
-    const { sqlite, db } = createDispositionDb();
-    const candidate = item("new-lender");
-
-    const stored = await upsertYieldCoverageReviewDisposition(db, {
-      item: candidate,
-      disposition: "dismiss",
-      evidence: "Pool belongs to a different wrapped asset.",
-      reviewOwner: "yield-review@example.com",
-      reviewedAt: 1_000,
-      nextReviewAt: 2_000,
-      expiresAt: 3_000,
-    }, 1_100);
-
-    expect(stored).toMatchObject({
-      queueItemId: "new-lender",
-      disposition: "dismiss",
-      evidence: "Pool belongs to a different wrapped asset.",
-      reviewOwner: "yield-review@example.com",
-      reviewedAt: 1_000,
-      nextReviewAt: 2_000,
-      expiresAt: 3_000,
-    });
-    expect(sqlite.prepare(
-      `SELECT disposition, evidence, review_owner, reviewed_at, next_review_at,
-              expires_at, evidence_fingerprint, created_at, updated_at
-         FROM yield_coverage_review_dispositions
-        WHERE queue_item_id = ?`,
-    ).get("new-lender")).toEqual({
-      disposition: "dismiss",
-      evidence: "Pool belongs to a different wrapped asset.",
-      review_owner: "yield-review@example.com",
-      reviewed_at: 1_000,
-      next_review_at: 2_000,
-      expires_at: 3_000,
-      evidence_fingerprint: buildYieldCoverageEvidenceFingerprint(candidate),
-      created_at: 1_100,
-      updated_at: 1_100,
-    });
-
-    const defaultWindow = await upsertYieldCoverageReviewDisposition(db, {
-      item: item("monthly-default"),
-      reviewedAt: 10_000,
-    }, 10_000);
-    expect(defaultWindow).toMatchObject({
-      nextReviewAt: 10_000 + 31 * 24 * 60 * 60,
-      expiresAt: 0,
-    });
-  });
-
   it("suppresses unchanged evidence only until review or expiry becomes due", async () => {
-    const { db } = createDispositionDb();
+    const { sqlite, db } = createDispositionDb();
     const candidate = item("reviewed");
-    await upsertYieldCoverageReviewDisposition(db, {
+    seedDisposition(sqlite, {
       item: candidate,
       disposition: "watch",
       reviewedAt: 1_000,
@@ -128,12 +98,17 @@ describe("yield coverage review dispositions", () => {
     });
     expect(current.summary).toMatchObject({ suppressedItemCount: 1, visibleItemCount: 0 });
 
+    const changed = { ...candidate, pool: "new-pool" };
+    const evidenceChanged = await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 1_500 });
+    expect(evidenceChanged.queue.headlineGaps).toEqual([changed]);
+    expect(evidenceChanged.summary.evidenceChangedCount).toBe(1);
+
     const reviewDue = await applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 2_000 });
     expect(reviewDue.queue.headlineGaps).toEqual([candidate]);
     expect(reviewDue.summary.reviewDueCount).toBe(1);
 
     const expiringCandidate = item("expiring");
-    await upsertYieldCoverageReviewDisposition(db, {
+    seedDisposition(sqlite, {
       item: expiringCandidate,
       reviewedAt: 1_000,
       nextReviewAt: 4_000,
@@ -145,10 +120,10 @@ describe("yield coverage review dispositions", () => {
   });
 
   it("suppresses before truncation so later unreviewed candidates backfill the published queue", async () => {
-    const { db } = createDispositionDb();
+    const { sqlite, db } = createDispositionDb();
     const candidates = Array.from({ length: 25 }, (_, index) => item(`candidate-${index}`));
     for (const candidate of candidates.slice(0, 3)) {
-      await upsertYieldCoverageReviewDisposition(db, {
+      seedDisposition(sqlite, {
         item: candidate,
         disposition: "accept",
         nextReviewAt: 5_000,
@@ -175,37 +150,16 @@ describe("yield coverage review dispositions", () => {
     });
   });
 
-  it("updates review evidence and windows without replacing creation time", async () => {
-    const { sqlite, db } = createDispositionDb();
-    const candidate = item("updated");
-    await upsertYieldCoverageReviewDisposition(db, { item: candidate, evidence: "old", nextReviewAt: 2_000 }, 1_000);
-    const changed = { ...candidate, pool: "new-pool" };
-    await upsertYieldCoverageReviewDisposition(db, {
-      item: changed, disposition: "accept", evidence: "new", reviewOwner: "reviewer",
-      reviewedAt: 1_500, nextReviewAt: 4_000, expiresAt: 5_000,
-    }, 1_600);
-    expect(sqlite.prepare("SELECT evidence, disposition, review_owner, reviewed_at, next_review_at, expires_at, created_at, updated_at FROM yield_coverage_review_dispositions").all()).toEqual([{
-      evidence: "new", disposition: "accept", review_owner: "reviewer", reviewed_at: 1_500,
-      next_review_at: 4_000, expires_at: 5_000, created_at: 1_000, updated_at: 1_600,
-    }]);
-    expect((await applyYieldCoverageReviewDispositions(db, queue([changed]), { nowSec: 2_000 })).queue.headlineGaps).toEqual([]);
-    expect((await applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 2_000 })).queue.headlineGaps).toEqual([candidate]);
-  });
-
-  it("rejects invalid epochs, limits and inverted windows without changing durable evidence", async () => {
+  it("rejects invalid reader epochs and limits without changing durable evidence", async () => {
     const { sqlite, db } = createDispositionDb();
     const candidate = item("validated");
-    await upsertYieldCoverageReviewDisposition(db, { item: candidate, nextReviewAt: 5_000 }, 1_000);
+    seedDisposition(sqlite, { item: candidate, nextReviewAt: 5_000 }, 1_000);
     const before = sqlite.prepare("SELECT * FROM yield_coverage_review_dispositions").all();
     for (const invalid of [NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
-      await expect(upsertYieldCoverageReviewDisposition(db, { item: candidate, reviewedAt: invalid }, 1_000)).rejects.toBeInstanceOf(RangeError);
       await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: invalid })).rejects.toBeInstanceOf(RangeError);
       await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 1_000, publishedItemLimit: invalid })).rejects.toBeInstanceOf(RangeError);
     }
     await expect(applyYieldCoverageReviewDispositions(db, queue([candidate]), { nowSec: 1_000, publishedItemLimit: 0 })).rejects.toBeInstanceOf(RangeError);
-    for (const window of [{ nextReviewAt: 999 }, { expiresAt: 999 }]) {
-      await expect(upsertYieldCoverageReviewDisposition(db, { item: candidate, reviewedAt: 1_000, ...window }, 1_000)).rejects.toBeInstanceOf(RangeError);
-    }
     expect(sqlite.prepare("SELECT * FROM yield_coverage_review_dispositions").all()).toEqual(before);
   });
 });

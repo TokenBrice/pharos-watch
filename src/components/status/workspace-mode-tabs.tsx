@@ -5,7 +5,9 @@ import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
-export type WorkspaceModeSeverity = "healthy" | "watch" | "critical" | "unknown";
+import type { WorkspaceSeverity } from "@/lib/status/workspace-mode";
+
+export type WorkspaceModeSeverity = WorkspaceSeverity;
 
 export interface WorkspaceModeSummary<TMode extends string> {
   id: TMode;

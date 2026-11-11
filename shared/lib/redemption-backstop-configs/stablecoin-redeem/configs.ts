@@ -420,7 +420,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       basis: "live-direct-telemetry",
     },
     costModel: {
-      ...documentedVariableFee("$5K, Instant Redemption, 0% Fee"),
+      ...documentedVariableFee("$5K, Instant Redemption, 0% Fee", "documented-variable"),
       feeBpsMax: 0,
     },
     docs: [
@@ -846,7 +846,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
-      "United Stables terms state that redemption fees are disclosed before the transaction and may change; the terms publish no fixed fee schedule",
+      "United Stables terms state that redemption fees are disclosed before the transaction and may change; the terms publish no fixed fee schedule", "undisclosed-reviewed",
     ),
     docs: [
       sourceRef("United Stables", "https://www.u.tech/", ["capacity"]),
@@ -1215,7 +1215,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ],
     },
     costModel: documentedVariableFee(
-      "Apyx docs describe mint and redeem against approved assets for whitelisted participants, with offchain execution spreads and expenses reflected in the price rather than a fixed protocol fee",
+      "Apyx docs describe mint and redeem against approved assets for whitelisted participants, with offchain execution spreads and expenses reflected in the price rather than a fixed protocol fee", "documented-variable",
     ),
     docs: [
       sourceRef(
@@ -1755,7 +1755,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     capacityModel: { kind: "unquantified" },
     costModel: documentedVariableFee(
-      "No current all-in legacy USDv redemption fee bound is published; the former mint-fee disclosure is not a redemption quote and current documentation describes the separate replacement token",
+      "No current all-in legacy USDv redemption fee bound is published; the former mint-fee disclosure is not a redemption quote and current documentation describes the separate replacement token", "documented-variable",
     ),
     reviewedAt: "2026-10-20",
     docs: [

@@ -65,7 +65,7 @@ describe("redemption backstop config helpers", () => {
     const expanded = expandIds(["alpha", "beta"], {
       ...baseConfig,
       capacityModel: { kind: "supply-ratio", ratio: 0.1 },
-      costModel: documentedVariableFee("Variable fee schedule"),
+      costModel: documentedVariableFee("Variable fee schedule", "documented-variable"),
       v9RouteCostTerms: { minFeeUsd: 1_000 },
       v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
       unresolvedOutputAssetKeys: ["asset:untracked"],
@@ -257,7 +257,7 @@ describe("redemption backstop config helpers", () => {
       confidence: "fixed",
     });
 
-    const documented = documentedVariableFee("Variable redemption fee schedule");
+    const documented = documentedVariableFee("Variable redemption fee schedule", "documented-variable");
     expect(documented).toMatchObject({
       kind: "dynamic-or-unclear",
       feeDescription: "Variable redemption fee schedule",
@@ -266,6 +266,8 @@ describe("redemption backstop config helpers", () => {
     });
     expect(resolveFeeConfidence(documented)).toBe("undisclosed-reviewed");
     expect(resolveFeeModelKind(documented)).toBe("documented-variable");
+    expect(resolveFeeModelKind(documentedVariableFee("Public fee schedule not disclosed", "documented-variable")))
+      .toBe("documented-variable");
 
     const formula = documentedVariableFee("Minimum 50 bps plus base rate", "formula");
     expect(formula).toMatchObject({
@@ -274,7 +276,7 @@ describe("redemption backstop config helpers", () => {
     });
     expect(resolveFeeModelKind(formula)).toBe("formula");
 
-    const legacyUndisclosed = documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed");
+    const legacyUndisclosed = documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed", "undisclosed-reviewed");
     expect(legacyUndisclosed).toMatchObject({
       confidence: "undisclosed-reviewed",
       feeModelKind: "undisclosed-reviewed",
@@ -293,7 +295,7 @@ describe("redemption backstop config helpers", () => {
 
   it("projects percentage, minimum, and fixed redemption terms at each notional", () => {
     const reviewedSchedule = {
-      ...documentedVariableFee("10 bps with a $1,000 minimum"),
+      ...documentedVariableFee("10 bps with a $1,000 minimum", "documented-variable"),
       feeBpsMax: 10,
       minFeeUsd: 1_000,
     };
@@ -323,8 +325,8 @@ describe("redemption backstop config helpers", () => {
   });
 
   it("requires a ceiling or exact quote instead of treating fee floors as complete costs", () => {
-    const minimumBps = { ...documentedVariableFee("Minimum plus unbounded haircut"), feeBpsMin: 25 };
-    const minimumUsd = { ...documentedVariableFee("Minimum dollar charge"), minFeeUsd: 100 };
+    const minimumBps = { ...documentedVariableFee("Minimum plus unbounded haircut", "documented-variable"), feeBpsMin: 25 };
+    const minimumUsd = { ...documentedVariableFee("Minimum dollar charge", "documented-variable"), minFeeUsd: 100 };
     expect(resolveRedemptionCostBpsAtNotional(minimumBps, 1_000_000)).toBeNull();
     expect(resolveRedemptionCostBpsAtNotional(minimumUsd, 1_000_000)).toBeNull();
     expect(resolveRedemptionCostBpsAtNotional({ ...minimumUsd, gasOrBridgeCostUsd: 10 }, 1_000_000)).toBeNull();
@@ -344,7 +346,7 @@ describe("redemption backstop config helpers", () => {
     const config: RedemptionBackstopConfig = {
       ...createBaseConfig(),
       costModel: {
-        ...documentedVariableFee("10 bps with a $1,000 minimum"),
+        ...documentedVariableFee("10 bps with a $1,000 minimum", "documented-variable"),
         feeBpsMax: 10,
       },
       v9RouteCostTerms: { minFeeUsd: 1_000 },

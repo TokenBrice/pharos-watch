@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateSitemapDates } from "../maintenance/generate-sitemap-dates.ts";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { collectStablecoinDetailDates, STABLECOIN_DETAIL_CONTENT_REVISED_AT } from "../lib/sitemap-detail-dates";
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
+import { GIT_DATE_SCAN_PATHS, SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
 import { BLOG_POSTS } from "../../src/data/blog";
 import { getIndexableChainIds } from "../../src/lib/chain-indexing";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
@@ -187,6 +187,10 @@ describe("generated sitemap dates are independent of checkout time", () => {
     expect(SITEMAP_COMMIT_DERIVED_SOURCE_PATHS).toContain(SCHEMA_PATH);
     expect(files).toContain(SCHEMA_PATH);
     expect(generator.gitLogArgs).toContain(SCHEMA_PATH);
+    for (const root of GIT_DATE_SCAN_PATHS) {
+      expect(SITEMAP_COMMIT_DERIVED_SOURCE_PATHS.some((source) => source === root || source === `${root}/**`)).toBe(true);
+      expect(generator.gitLogArgs).toContain(root);
+    }
   });
 
   it("produces identical output for two different checkout times", async () => {

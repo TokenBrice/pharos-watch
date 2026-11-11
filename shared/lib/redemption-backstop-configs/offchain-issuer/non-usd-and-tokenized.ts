@@ -149,7 +149,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "BiLira Kripto's published deposit/withdrawal tariff lists Banka Transferi as Ücretsiz (free) for both directions, reviewed 2026-10-05. The known zero applies only to that issuer-platform bank-transfer leg, not the complete TRYB redemption: crypto withdrawal charges vary by network, and holder gas, conversion applicability, third-party commissions and taxes remain separate and unquantified. No all-in zero fee or route-wide ceiling is asserted.",
+      "BiLira Kripto's published deposit/withdrawal tariff lists Banka Transferi as Ücretsiz (free) for both directions, reviewed 2026-10-05. The known zero applies only to that issuer-platform bank-transfer leg, not the complete TRYB redemption: crypto withdrawal charges vary by network, and holder gas, conversion applicability, third-party commissions and taxes remain separate and unquantified. No all-in zero fee or route-wide ceiling is asserted.", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacity("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin"),
@@ -413,7 +413,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: {
-      ...documentedVariableFee("Swap from Cash account into other stablecoins on Solana (USDT, USDG, PYUSD): 0.85%"),
+      ...documentedVariableFee("Swap from Cash account into other stablecoins on Solana (USDT, USDG, PYUSD): 0.85%", "documented-variable"),
       feeBpsMax: 85,
     },
     docs: [
@@ -454,7 +454,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "MXON's public service terms require separate written counterparty agreements, and M0's primary-market liquidity guide requires issuer onboarding; neither retrieved disclosure publishes a binding direct M institutional redemption fee or all-in cost maximum. SwapFacility no-trading-fee extension conversions and onchain minter-debt burns are different routes",
+      "MXON's public service terms require separate written counterparty agreements, and M0's primary-market liquidity guide requires issuer onboarding; neither retrieved disclosure publishes a binding direct M institutional redemption fee or all-in cost maximum. SwapFacility no-trading-fee extension conversions and onchain minter-debt burns are different routes", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacityAccess("M0 FAQ", "https://www.m0.org/faq"),
@@ -626,7 +626,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     outputAssets: ["usdon-ondo"],
     capacityModel: { kind: "unquantified" },
     costModel: documentedVariableFee(
-      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.",
+      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.", "documented-variable",
     ),
     v9RouteReviewTerms: {
       settlementModel: "immediate",
@@ -665,7 +665,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     outputAssets: ["usdon-ondo"],
     capacityModel: { kind: "unquantified" },
     costModel: documentedVariableFee(
-      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.",
+      "Ondo Stocks retains the difference between its investor quote and underlying execution price, plus any fees; holders also pay gas. No numeric all-in spread or fee ceiling is published.", "documented-variable",
     ),
     v9RouteReviewTerms: {
       settlementModel: "immediate",
@@ -713,7 +713,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: documentedVariableFee(
-      "KYC/KYB-gated redemption pays USDC or USDT; current thBILL documents do not establish an all-in numeric redemption fee",
+      "KYC/KYB-gated redemption pays USDC or USDT; current thBILL documents do not establish an all-in numeric redemption fee", "documented-variable",
     ),
     docs: [
       sourceRef("Theo thBILL payout documentation (reviewed 2026-09-30)", "https://docs.theo.xyz/products/thbill/mint-and-redeem.md", ["route", "access"]),

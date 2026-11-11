@@ -15,6 +15,7 @@ import {
   renderOperatorOriginAccessEnvBlock,
   renderWorkerInfrastructureEnvBlock,
 } from "@shared/lib/env-contract";
+import { SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { ENV_BINDINGS } from "@shared/lib/env-contract/registry";
 import type { EnvBindingDefinition, EnvRuntimeName } from "@shared/lib/env-contract/types";
 
@@ -153,7 +154,7 @@ const REQUIRED_ENV_EXAMPLE_KEYS = [
 /** The example must show the canonical origin, not a placeholder that a copied
  * `.env.local` could turn into a silent upstream. */
 const REQUIRED_ENV_EXAMPLE_VALUES: Readonly<Record<string, string>> = {
-  SITE_API_ORIGIN: "https://site-api.pharos.watch",
+  SITE_API_ORIGIN,
 };
 
 export function findEnvExamplePolicyErrors(text: string): string[] {

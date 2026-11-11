@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { scheduleIdle } from "@/lib/browser-utils";
-import { isChromelessPath } from "@/lib/chromeless-routes";
-import { isEditorialPath } from "@/lib/editorial-routes";
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 // Keep tape queries, logos and event formatting outside the eager root shell.
 const HomepageTape = dynamic(
@@ -21,8 +20,7 @@ export function CoreTopRail() {
   const pathname = usePathname();
   const isBelowDesktop = useIsMobile(1024, true);
   const [readyEditorialPath, setReadyEditorialPath] = useState<string | null>(null);
-  const editorial = isEditorialPath(pathname);
-  const chromeless = isChromelessPath(pathname);
+  const { editorial, chromeless, home } = getRouteCapabilities(pathname);
 
   useEffect(() => {
     if (!editorial || chromeless || isBelowDesktop) return;
@@ -39,13 +37,13 @@ export function CoreTopRail() {
   }, [pathname, editorial, chromeless, isBelowDesktop]);
 
   if (chromeless) return null;
-  if (pathname !== "/" && isBelowDesktop) {
+  if (!home && isBelowDesktop) {
     return <div data-testid="core-top-rail-placeholder" aria-hidden="true" className="hidden min-h-10 lg:block" />;
   }
   const ready = !editorial || readyEditorialPath === pathname;
 
   return (
-    <div className={pathname === "/" ? "min-h-10" : "hidden min-h-10 lg:block"}>
+    <div className={home ? "min-h-10" : "hidden min-h-10 lg:block"}>
       {ready ? <HomepageTape placement="top" /> : null}
     </div>
   );

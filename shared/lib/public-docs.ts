@@ -18,50 +18,50 @@ export interface PublicDoc {
   group: DocGroup;
 }
 
-const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
-  {
+const PUBLIC_DOC_METADATA: Readonly<Record<string, Omit<PublicDoc, "source">>> = {
+  "classification.md": {
     slug: "classification",
     title: "Classification",
     summary:
       "Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.",
     group: "methodology",
   },
-  {
+  "listing-policy.md": {
     slug: "listing-policy",
     title: "Stablecoin Listing Policy",
     summary:
       "How Pharos admits, classifies, quarantines, delists, and preserves stablecoin records while separating catalog policy from runtime pricing failures.",
     group: "methodology",
   },
-  {
+  "pricing-pipeline.md": {
     slug: "pricing-pipeline",
     title: "Pricing Pipeline",
     summary:
       "How Pharos computes stablecoin prices: source consensus, peg-aware validation, fallback enrichment, stale-data handling, and override policy.",
     group: "methodology",
   },
-  {
+  "depeg-detection.md": {
     slug: "depeg-detection",
     title: "Depeg Detection",
     summary:
       "Depeg detection methodology covering two-stage confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.",
     group: "methodology",
   },
-  {
+  "dews.md": {
     slug: "dews",
     title: "DEWS",
     summary:
       "Depeg Early Warning System methodology: DEWS formula, stress sub-signals, bands, downgrade gates, and API response contract.",
     group: "methodology",
   },
-  {
+  "blacklist-tracker.md": {
     slug: "blacklist-tracker",
     title: "Blacklist Tracker",
     summary:
       "Blacklist Tracker methodology for stablecoin freezes, releases, wipes, event coverage, frozen-balance valuation, and direct versus upstream exposure.",
     group: "methodology",
   },
-  {
+  "dex-liquidity.md": {
     slug: "dex-liquidity",
     title: "DEX Liquidity",
     seoTitle: "DEX Liquidity Score Methodology for Stablecoins",
@@ -69,7 +69,7 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
       "DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.",
     group: "methodology",
   },
-  {
+  "stability-index.md": {
     slug: "stability-index",
     title: "Pharos Stability Index",
     seoTitle: "Stablecoin Stability Index (PSI) Methodology",
@@ -77,35 +77,35 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
       "Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.",
     group: "methodology",
   },
-  {
+  "report-cards.md": {
     slug: "report-cards",
     title: "Report Cards",
     summary:
       "Stablecoin V9 report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.",
     group: "methodology",
   },
-  {
+  "redemption-backstops.md": {
     slug: "redemption-backstops",
     title: "Redemption Backstops",
     summary:
       "Redemption Backstops methodology for standalone route scoring, redemption terms, V9 Exit evidence, operational disclosures, and stored review evidence.",
     group: "methodology",
   },
-  {
+  "chain-health.md": {
     slug: "chain-health",
     title: "Chain Health",
     summary:
       "Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.",
     group: "methodology",
   },
-  {
+  "mint-burn-flows.md": {
     slug: "mint-burn-flows",
     title: "Mint Burn Flows",
     summary:
       "Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.",
     group: "methodology",
   },
-  {
+  "yield-intelligence.md": {
     slug: "yield-intelligence",
     title: "Yield Intelligence",
     seoTitle: "Stablecoin Yield Score: How APY Risk Is Rated",
@@ -113,22 +113,23 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
       "Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.",
     group: "methodology",
   },
-  {
+  "shadow-stablecoins.md": {
     slug: "shadow-stablecoins",
     title: "PSI Historical Assets",
     summary:
       "Off-catalog PSI historical assets: authoritative continuity, monitoring eligibility, public listing exclusions and unavailable source history.",
     group: "methodology",
   },
-] as const;
+} as const;
 
-if (PUBLIC_DOC_SOURCE_FILES.length !== PUBLIC_DOC_METADATA.length) {
-  throw new Error("Public doc source and metadata manifests must have the same length");
+if (PUBLIC_DOC_SOURCE_FILES.length !== Object.keys(PUBLIC_DOC_METADATA).length ||
+    PUBLIC_DOC_SOURCE_FILES.some((source) => !PUBLIC_DOC_METADATA[source])) {
+  throw new Error("Public doc source and metadata manifests must have the same sources");
 }
 
-export const PUBLIC_DOCS: readonly PublicDoc[] = PUBLIC_DOC_SOURCE_FILES.map((source, index) => ({
+export const PUBLIC_DOCS: readonly PublicDoc[] = PUBLIC_DOC_SOURCE_FILES.map((source) => ({
   source,
-  ...PUBLIC_DOC_METADATA[index],
+  ...PUBLIC_DOC_METADATA[source],
 }));
 
 export const PUBLIC_DOC_BY_SLUG = new Map(PUBLIC_DOCS.map((doc) => [doc.slug, doc]));

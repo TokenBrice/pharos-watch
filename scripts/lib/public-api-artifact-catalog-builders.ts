@@ -29,7 +29,7 @@ export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
 ]);
 
 export type PublicArtifactInput<Key extends EndpointKey> =
-  Omit<PublicApiArtifactEndpoint, "path" | "security" | "postman"> & {
+  Omit<PublicApiArtifactEndpoint, "path" | "security" | "postman" | "operationId"> & {
     key: Key;
     postman?: PostmanRequestInput | readonly PostmanRequestInput[];
   };
@@ -58,7 +58,7 @@ type MaterializedPostman<T> = T extends { readonly postman: readonly PostmanRequ
 type DefinedPublicArtifact<T> = T extends PublicArtifactInput<EndpointKey>
   ? Omit<T, "postman"> & {
       postman: MaterializedPostman<T>;
-    } & Pick<PublicApiArtifactEndpoint, "path" | "security">
+    } & Pick<PublicApiArtifactEndpoint, "path" | "security" | "operationId">
   : never;
 
 export function definePublicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
@@ -87,13 +87,18 @@ export function definePublicArtifact<const T extends PublicArtifactInput<Endpoin
     }
     return withFolder(postman);
   })();
+  const path = definition.path.replace(
+    /:([A-Za-z][A-Za-z0-9]*)/g,
+    (_match, name: string) => `{${name === "id" ? "stablecoinId" : name}}`,
+  );
   return {
     ...artifact,
     postman: materializedPostman,
-    path: definition.path.replace(
-      /:([A-Za-z][A-Za-z0-9]*)/g,
-      (_match, name: string) => `{${name === "id" ? "stablecoinId" : name}}`,
-    ),
+    path,
+    operationId: path
+      .replace(/^\/api\//, "")
+      .replace(/[{}]/g, "")
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_, char: string) => char.toUpperCase()),
     ...(definition.publicApiAccess === "exempt" ? { security: "none" } : {}),
   } as unknown as DefinedPublicArtifact<T>;
 }

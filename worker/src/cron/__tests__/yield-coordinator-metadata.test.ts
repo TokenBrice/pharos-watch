@@ -1,7 +1,8 @@
+import { buildYieldDegradationReasons } from "../yield-sync/health-policy";
 import { describe, expect, it } from "vitest";
 import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
-import { buildComparisonAnchorFreshnessMeta, buildYieldDegradationReasons, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator";
+import { buildComparisonAnchorFreshnessMeta, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/run-result";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";

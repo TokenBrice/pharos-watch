@@ -542,7 +542,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "asset:ygamiusdc",
       ],
       costModel: documentedVariableFee(
-        "Proportional basket redemption has no fixed fee: fair value at collateral ratio >=100%, with a dynamic penalty on top of the lower ratio below 100%. Adaptive mint/burn fees are separate operations. The illustrative 10 x 0.985 x 0.98 example is not a current same-notional quote or a maximum cost bound.",
+        "Proportional basket redemption has no fixed fee: fair value at collateral ratio >=100%, with a dynamic penalty on top of the lower ratio below 100%. Adaptive mint/burn fees are separate operations. The illustrative 10 x 0.985 x 0.98 example is not a current same-notional quote or a maximum cost bound.", "undisclosed-reviewed",
       ),
       docs: [
         sourceRefRouteCapacityFees(
@@ -822,7 +822,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
-        "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
+        "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs", "documented-variable",
       ),
       docs: [
         sourceRefRouteCapacity(

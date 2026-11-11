@@ -1,6 +1,6 @@
 import { executeAtomicBatch } from "../db";
 import { throwIfAborted } from "../abort";
-import { mintBurnHourlyBucketAggregatesSql } from "./persistence";
+import { mintBurnHourlyBucketAggregatesSql } from "./hourly-aggregates";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
 import type { MintBurnAffectedHour } from "./types";
 

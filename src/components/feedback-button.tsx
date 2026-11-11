@@ -1,5 +1,6 @@
 "use client";
 
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquarePlus } from "lucide-react";
@@ -7,7 +8,7 @@ import { FeedbackModal } from "@/components/feedback-modal-lazy";
 
 /** Routes without the floating feedback entry. `/api/` keeps key requests off the public-GitHub feedback modal. */
 export function isFeedbackHiddenPath(pathname: string | null): boolean {
-  return pathname === "/" || pathname === "/api" || pathname === "/api/" || pathname === "/api/reference" || pathname === "/api/reference/";
+  return !getRouteCapabilities(pathname).feedback;
 }
 
 export function FeedbackButton() {

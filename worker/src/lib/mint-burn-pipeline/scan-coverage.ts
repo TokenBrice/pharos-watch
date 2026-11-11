@@ -1,7 +1,7 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
-import { mintBurnConfigKey } from "./sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import legacyFingerprints from "./legacy-cutover-fingerprints.json";
 
 /** Last closed hour before T1 deployed at 12:03Z; remove after 2027-01-18T12:00Z

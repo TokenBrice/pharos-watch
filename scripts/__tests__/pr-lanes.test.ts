@@ -19,6 +19,7 @@ const stepSchema = z.object({
 });
 const workflowSchema = z.object({ jobs: z.record(z.string(), z.object({
   steps: z.array(stepSchema),
+  "timeout-minutes": z.union([z.number(), z.string()]).optional(),
   needs: z.union([z.string(), z.array(z.string())]).optional(),
   outputs: z.record(z.string(), z.string()).optional(),
   strategy: z.object({ matrix: z.string() }).passthrough().optional(),
@@ -122,6 +123,10 @@ describe("PR lane manifest", () => {
       "pages-artifact": 250,
       gate: null,
     });
+    expect(PR_LANES.map((lane) => lane.timeoutMinutes)).toEqual([15, 8, 20, 15, 20, 20, 5]);
+    for (const [lane, job] of [["preflight", "secrets"], ["pages-artifact", "pages-artifact"], ["gate", "pr-gate"]] as const) {
+      expect(getPrLane(lane).timeoutMinutes).toBe(WORKFLOW.jobs[job]["timeout-minutes"]);
+    }
     for (const lane of PR_LANES) {
       if (lane.budgetSeconds === undefined) continue;
       // A budget is reporting evidence, not a kill switch: an over-budget lane

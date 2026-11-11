@@ -1,3 +1,14 @@
+import {
+  CASE_STUDY_DETAIL_SHARED_SOURCES,
+  BLOG_DETAIL_SHARED_SOURCES,
+  METHODOLOGY_CHANGELOG_SHARED_SOURCES,
+  METHODOLOGY_CHANGELOG_ENTRY_SOURCES,
+  SCORING_CHANGELOG_CONTENT_SOURCES,
+  CHAIN_PROFILE_SOURCES,
+  PEG_HUB_SOURCES,
+  TAXONOMY_SOURCES,
+  GIT_DATE_SCAN_PATHS,
+} from "../lib/sitemap-source-paths.mts";
 import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
@@ -5,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { loadPerCoinStablecoinEntries, STABLECOIN_DOMAIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
+import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import {
   collectStablecoinDetailDates,
   latestIso,
@@ -18,7 +29,6 @@ import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
 import {
   METHODOLOGY_CHANGELOG_REGISTRY,
-  type MethodologyChangelogRegistryKey,
 } from "../../shared/lib/methodology-versions/registry";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,72 +39,7 @@ const BLOG_POSTS_DIR = join(__dirname, "../../src/data/blog/posts");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
 
-const CASE_STUDY_DETAIL_SHARED_SOURCES = [
-  join(__dirname, "../../src/app/learn/case-studies/[slug]/page.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/case-study-body.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/case-study-chart.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/case-study-json-ld.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/case-study-page-shell.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/case-study-timeline.tsx"),
-  join(__dirname, "../../shared/types/editorial-content.ts"),
-];
-const BLOG_DETAIL_SHARED_SOURCES = [
-  // Per-post dates must not move with the post registry or a site-wide
-  // metadata module: only the renderer every article body shares.
-  join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
-];
-const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
-  // This route owns the shared display config as well as dynamic route metadata.
-  join(__dirname, "../../src/app/methodology/[slug]/page.tsx"),
-];
-const METHODOLOGY_CHANGELOG_ENTRY_SOURCES: Record<MethodologyChangelogRegistryKey, string> = {
-  "safety-score": join(__dirname, "../../shared/data/methodology-changelogs/safety-score"),
-  "depeg-dews": join(__dirname, "../../shared/data/methodology-changelogs/depeg-dews"),
-  "depeg-resolver": join(__dirname, "../../shared/data/methodology-changelogs/depeg-resolver"),
-  "liquidity-score": join(__dirname, "../../shared/data/methodology-changelogs/liquidity-score"),
-  "stability-index": join(__dirname, "../../shared/data/methodology-changelogs/stability-index"),
-  "chain-health": join(__dirname, "../../shared/data/methodology-changelogs/chain-health"),
-  yield: join(__dirname, "../../shared/data/methodology-changelogs/yield-methodology"),
-  "blacklist-tracker": join(__dirname, "../../shared/data/methodology-changelogs/blacklist-tracker"),
-  "mint-burn-flow": join(__dirname, "../../shared/data/methodology-changelogs/mint-burn-flow"),
-  "pricing-pipeline": join(__dirname, "../../shared/data/methodology-changelogs/pricing-pipeline"),
-  "redemption-backstop": join(__dirname, "../../shared/data/methodology-changelogs/redemption-backstop"),
-};
-const SCORING_CHANGELOG_CONTENT_SOURCES = [
-  join(__dirname, "../../src/app/methodology/changelog-content/scoring"),
-];
-const CHAIN_PROFILE_SOURCES = [
-  join(APP_DIR, "chains/[chain]"),
-  join(APP_DIR, "chains/static-chain-content.ts"),
-];
-const PEG_HUB_SOURCES = [
-  join(APP_DIR, "stablecoins/[peg]"),
-  join(__dirname, "../../src/lib/peg-hub-content.ts"),
-  join(__dirname, "../../src/lib/peg-landing.ts"),
-  join(__dirname, "../../src/lib/peg-taxonomy.ts"),
-];
-const TAXONOMY_SOURCES = [
-  join(APP_DIR, "stablecoins/taxonomy-page.tsx"),
-  join(__dirname, "../../src/lib/stablecoin-taxonomy-urls.ts"),
-  join(__dirname, "../../src/lib/stablecoin-taxonomy.ts"),
-];
-
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
-const GIT_DATE_SCAN_PATHS = [
-  "src/app",
-  "src/lib/case-studies",
-  "src/lib/chain-indexing.ts",
-  "src/lib/peg-hub-content.ts",
-  "src/lib/peg-landing.ts",
-  "src/lib/peg-taxonomy.ts",
-  "src/lib/stablecoin-taxonomy-urls.ts",
-  "src/lib/stablecoin-taxonomy.ts",
-  "src/data/blog",
-  "shared/types/editorial-content.ts",
-  "shared/data/stablecoins/coins",
-  STABLECOIN_DOMAIN_SOURCE_DIR,
-  "shared/data/methodology-changelogs",
-];
 
 interface GitDateIndex {
   fileDates: Map<string, string>;
@@ -204,7 +149,7 @@ function addStablecoinDetailDates(
 }
 
 function addCaseStudyDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...CASE_STUDY_DETAIL_SHARED_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...CASE_STUDY_DETAIL_SHARED_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
 
   for (const study of CASE_STUDY_LIST) {
     const contentPath = join(CASE_STUDY_CONTENT_DIR, `${study.slug}.json`);
@@ -218,7 +163,7 @@ function addCaseStudyDates(dates: Record<string, string>): void {
 }
 
 function addBlogDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...BLOG_DETAIL_SHARED_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...BLOG_DETAIL_SHARED_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
 
   for (const post of BLOG_POSTS) {
     const contentPath = join(BLOG_POSTS_DIR, `${post.slug}.md`);
@@ -227,24 +172,24 @@ function addBlogDates(dates: Record<string, string>): void {
 }
 
 function addMethodologyChangelogDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...METHODOLOGY_CHANGELOG_SHARED_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...METHODOLOGY_CHANGELOG_SHARED_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
 
   for (const changelog of METHODOLOGY_CHANGELOG_REGISTRY) {
     const sources = [METHODOLOGY_CHANGELOG_ENTRY_SOURCES[changelog.key]];
     if (changelog.key === "safety-score") sources.push(...SCORING_CHANGELOG_CONTENT_SOURCES);
-    dates[changelog.publicPath] = latestIso(sharedLastModified, ...sources.map(getLastModified));
+    dates[changelog.publicPath] = latestIso(sharedLastModified, ...sources.map((path) => getLastModified(join(REPO_ROOT, path))));
   }
 }
 
 function addChainProfileDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...CHAIN_PROFILE_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...CHAIN_PROFILE_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
   for (const chainId of getIndexableChainIds()) {
     dates[`/chains/${chainId}/`] = sharedLastModified;
   }
 }
 
 function addPegHubDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...PEG_HUB_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...PEG_HUB_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
   for (const peg of PEG_HUB_PEGS) {
     const slug = PEG_HUB_SLUGS[peg];
     if (slug) dates[`/stablecoins/${slug}/`] = sharedLastModified;
@@ -252,7 +197,7 @@ function addPegHubDates(dates: Record<string, string>): void {
 }
 
 function addTaxonomyDates(dates: Record<string, string>): void {
-  const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map(getLastModified));
+  const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map((path) => getLastModified(join(REPO_ROOT, path))));
   for (const page of ALL_STABLECOIN_TAXONOMY_PAGES) {
     const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", page.kind, `[${page.kind}]`));
     dates[page.href] = latestIso(sharedLastModified, routeLastModified);

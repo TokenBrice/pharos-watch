@@ -20,7 +20,7 @@ import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "..
 import { PhysicalCommoditySchema } from "../../types/exit-route";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
 import { formatUtcDateOnly } from "../format";
-import { isRedemptionSettlementFaster } from "./settlement";
+import { isRedemptionSettlementFaster } from "./settlement-order";
 import { LiveReserveRedemptionTelemetrySchema } from "../../types/live-reserves";
 
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;

@@ -15,16 +15,7 @@ import { coerceFiniteNumber, readRecord as readMetadataRecord } from "./type-gua
  * read. Keep aligned with `CACHE_FRESHNESS_THRESHOLDS` in
  * `worker/src/lib/constants.ts`.
  */
-export const CACHE_UPSTREAM_PROVIDER: Record<string, string> = {
-  stablecoins: "DefiLlama",
-  "stablecoin-charts": "DefiLlama",
-  "usds-status": "Etherscan",
-  "fx-rates": "Frankfurter",
-  "bluechip-ratings": "Bluechip",
-  "dex-liquidity": "DefiLlama",
-  "yield-data": "DefiLlama",
-  dews: "Internal compute",
-};
+export { CACHE_UPSTREAM_PROVIDER } from "./data-surface-descriptors";
 
 export { readMetadataRecord };
 

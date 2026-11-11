@@ -1,3 +1,5 @@
+import { CACHE_FRESHNESS_LANES, type CacheFreshnessLaneConfig } from "@shared/lib/data-surface-descriptors";
+import { getStatusSeverity } from "@shared/lib/public-health";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -126,17 +128,11 @@ export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
 const PROBE_TIMEOUT_MS = 10_000;
 const OPS_API_ACCESS_GATE_EXPECTED_STATUSES = [302, 403] as const;
 const SITE_API_ACCESS_GATE_EXPECTED_STATUSES = [401, 403] as const;
-const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
-  "/api/usds-status": "sync-usds-status",
-  "/api/bluechip-ratings": "sync-bluechip",
-  "/api/yield-rankings": "sync-yield-data",
-};
-const PROBE_STATUS_SEVERITY: Record<StatusHealthValue, number> = {
-  healthy: 0,
-  degraded: 1,
-  stale: 2,
-};
-
+const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = Object.fromEntries(
+  (Object.values(CACHE_FRESHNESS_LANES) as CacheFreshnessLaneConfig[]).flatMap((lane) =>
+    lane.bootstrapProbePath ? [[lane.bootstrapProbePath, lane.producerJob]] : [],
+  ),
+);
 const UNKNOWN_PROBE_SEVERITY = -1;
 
 /**
@@ -245,7 +241,7 @@ function toProbeRow(probe: ProbeResult): ProbeRow {
 
 function probeSummarySeverity(summary: StatusProbePlaneSummary | null): number {
   if (!summary || summary.status === "unknown") return UNKNOWN_PROBE_SEVERITY;
-  return PROBE_STATUS_SEVERITY[summary.status];
+  return getStatusSeverity(summary.status);
 }
 
 function buildInternalExternalDiscrepancy(
@@ -329,7 +325,7 @@ export function classifyProbeStatus(sampleCount: number, failCount: number, late
 }
 
 function maxProbeStatus(left: StatusHealthValue, right: StatusHealthValue): StatusHealthValue {
-  return PROBE_STATUS_SEVERITY[left] >= PROBE_STATUS_SEVERITY[right] ? left : right;
+  return getStatusSeverity(left) >= getStatusSeverity(right) ? left : right;
 }
 
 function resolveProbeBaseUrl(selfUrl?: string): URL {
