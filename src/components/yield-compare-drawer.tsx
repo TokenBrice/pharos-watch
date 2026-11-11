@@ -20,7 +20,8 @@ import {
 } from "@/lib/yield-source-risk";
 import { getYieldDecisionReasonLine, getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
-import { formatYieldSafetySrLabel, YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
+import { YieldSafetyBadge } from "@/components/yield-row-metrics";
+import { formatYieldSafetySrLabel } from "@/lib/yield-row-display";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";

@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
+import { YieldSafetyBadge } from "@/components/yield-row-metrics";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";

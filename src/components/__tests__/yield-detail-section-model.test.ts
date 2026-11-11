@@ -4,8 +4,8 @@ import {
   type YieldDetailModelMode,
   type YieldDetailRegistryStatus,
 } from "@/components/yield-detail-section-model";
-import { deriveYieldRowDisplay } from "@/components/yield-leaderboard-row-parts";
-import { resolveYieldDisplayRebaseReferenceRate } from "@/lib/yield-benchmark";
+import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
+import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 import { makeYieldViewModelRow, REGISTRY_WITH_EUR } from "./yield-test-support";
@@ -217,8 +217,12 @@ describe("display breakdown reference evidence", () => {
     expect(model.status).toBe("ready");
     if (model.status !== "ready") throw new Error("Expected detail breakdown");
     expect(model.pysBreakdown.effectiveYield).toBeCloseTo(expected, 4);
-    const board = deriveYieldRowDisplay(makeYieldViewModelRow(ranking), response.scalingFactor,
-      resolveYieldDisplayRebaseReferenceRate(version, response.riskFreeRate, response.benchmarks.USD));
+    const board = deriveYieldRowDisplay(makeYieldViewModelRow(ranking), buildYieldPresentationContext({
+      methodologyVersion: version,
+      riskFreeRate: response.riskFreeRate,
+      benchmarks: response.benchmarks,
+      scalingFactor: response.scalingFactor,
+    }));
     expect(board.breakdown.effectiveYield).toBeCloseTo(expected, 4);
   });
 });

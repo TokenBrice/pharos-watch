@@ -41,10 +41,11 @@ import {
   YieldRankChangeChip,
   YieldSafetyBadge,
   YieldSignalsIndicator,
-  deriveYieldRowDisplay,
-} from "@/components/yield-leaderboard-row-parts";
+} from "@/components/yield-row-metrics";
+import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
 import { trackEvent } from "@/lib/analytics";
-import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -535,10 +536,7 @@ export function YieldMobileCard({
     () =>
       deriveYieldRowDisplay(
         row,
-        scalingFactor,
-        // Version-gated: pre-8.43 payloads were scored without the re-base.
-        resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
-        sourceClock,
+        buildYieldPresentationContext({ methodologyVersion, riskFreeRate, benchmarks, scalingFactor, sourceClock }),
       ),
     [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks, sourceClock],
   );

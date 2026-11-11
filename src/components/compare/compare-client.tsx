@@ -22,7 +22,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { CompareEmptyState } from "@/components/compare-empty-state";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
-import type { CompareRadarCohort } from "@/components/radar-chart-v9";
+import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import {

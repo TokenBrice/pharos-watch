@@ -27,11 +27,6 @@ const HOMEPAGE_BANNED_COMPONENTS =
   /^src\/components\/(?:stale-data-banner|query-freshness-notices|query-error-notice|data-health-banner|query-state-notice|yield\/yield-data-health|safety-score-v9-status-notice|ops-status-chip|section-error-boundary)\.tsx$/;
 /** Reviewed importers reachable from the homepage: importer -> banned targets it may import. */
 const HOMEPAGE_REVIEWED_IMPORTS: Readonly<Record<string, ReadonlySet<string>>> = {
-  // Expanded yield rows only; the homepage renders YieldSafetyBadge from yield-leaderboard-row-parts.
-  "src/components/yield-history-chart.tsx": new Set([
-    "src/components/data-health-banner.tsx",
-    "src/components/query-error-notice.tsx",
-  ]),
   // The homepage wrapper that supplies the neutral crash fallback.
   "src/components/home-section-error-boundary.tsx": new Set(["src/components/section-error-boundary.tsx"]),
 };
