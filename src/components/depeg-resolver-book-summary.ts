@@ -7,7 +7,6 @@ import {
 import type { DdrTierVocabulary } from "@shared/lib/classification";
 import {
   DDR_RESOLUTION_TIER_VALUES,
-  type DdrResponse,
   type DdrResolutionTier,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
@@ -19,8 +18,11 @@ import {
 const PAST_PEAK_FLOOR_BPS = 25;
 
 /** Keep headline claims and forecast cards behind the same fail-closed gate. */
-export function isResolverBookAvailable(data: DdrResponse | undefined): data is DdrResponse {
-  return data != null && (!data._meta.degraded
+export function isResolverBookAvailable<T extends {
+  _meta?: { degraded: boolean; degradedReason?: string | null };
+  rows: readonly unknown[];
+}>(data: T | undefined): data is T {
+  return data != null && (!data._meta?.degraded
     || (data._meta.degradedReason === "stale-cache" && data.rows.length > 0));
 }
 

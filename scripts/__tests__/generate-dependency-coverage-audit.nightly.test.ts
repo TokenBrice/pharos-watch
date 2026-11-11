@@ -18,8 +18,8 @@ import { dependencyReview, reserveReview, targetDisposition } from "./generate-d
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageStructure,
-  runCli,
-} from "../maintenance/generate-dependency-coverage-audit";
+} from "../lib/dependency-coverage-audit";
+import { runCli } from "../maintenance/generate-dependency-coverage-audit";
 import {
   reconcileDependencyGraph, renderDependencyGraphReconciliationMarkdown,
 } from "../maintenance/reconcile-dependency-graph";

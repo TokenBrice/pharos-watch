@@ -1012,7 +1012,7 @@ export function selectV9ExitCirculatingUsd(supply: V9AssetFactsBase["supply"]): 
 }
 
 /** Retain the original amount evidence clock even when it cannot size the request. */
-export function resolveV9ExitSupplySizing(
+function resolveV9ExitSupplySizing(
   asset: Pick<V9AssetFactsBase, "supply"> & Partial<Pick<V9AssetFactsBase, "evidence">>,
 ): {
   circulatingUsd: number | null;
@@ -1033,26 +1033,28 @@ export function resolveV9ExitSupplySizing(
   };
 }
 
-export function evaluateV9ExitAssetFacts(
+export function projectV9ExitAssetFacts(
   asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes"> & Partial<Pick<V9AssetFactsBase, "evidence" | "exitCoverage">> & { gaps?: readonly V9FactGapV3[] },
+) {
+  return {
+    ...resolveV9ExitSupplySizing(asset),
+    gaps: asset.gaps,
+    portfolioFactStatus: asset.exitStatus,
+    verifiedNoPoolsSupplyShare: asset.exitCoverage?.verifiedNoPoolsSupplyShare,
+    portfolioStatus:
+      asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
+        ? "reviewed-complete" as const
+        : "incomplete" as const,
+    routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+  };
+}
+
+export function evaluateV9ExitAssetFacts(
+  asset: Parameters<typeof projectV9ExitAssetFacts>[0],
   envelope: V9ValidatedPolicyEnvelope,
   executionContext?: { assetId: string; clockSec: number },
 ): V9ExitEvaluationResult {
-  return evaluateV9Exit(
-    {
-      ...executionContext,
-      ...resolveV9ExitSupplySizing(asset),
-      gaps: asset.gaps,
-      portfolioFactStatus: asset.exitStatus,
-      verifiedNoPoolsSupplyShare: asset.exitCoverage?.verifiedNoPoolsSupplyShare,
-      portfolioStatus:
-        asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"
-          ? "reviewed-complete"
-          : "incomplete",
-      routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
-    },
-    envelope,
-  );
+  return evaluateV9Exit({ ...executionContext, ...projectV9ExitAssetFacts(asset) }, envelope);
 }
 
 function disjoint(left: readonly string[], right: readonly string[]): boolean {

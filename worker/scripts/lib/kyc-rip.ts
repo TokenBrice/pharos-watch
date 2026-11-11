@@ -1,6 +1,7 @@
 import { isRecord } from "@shared/lib/type-guards";
 import { assertCliUsage } from "../../../scripts/lib/cli-args.mjs";
 import { parseDestructiveOperationArgs } from "./destructive-operation-guard";
+import { tronBase58ToHex } from "../../src/lib/tron-address";
 
 const DEFAULT_PROVIDER_URL = "https://api.kyc.rip/v1/tools/ban-list";
 const DEFAULT_LIMIT = 1000;
@@ -12,6 +13,17 @@ export const KYC_RIP_DEFAULT_DATABASE = "stablecoin-db";
 
 export type KycRipAsset = "USDT" | "USDC";
 export type KycRipChain = "ETH" | "TRON";
+
+const normalizeEthereumAddress = (address: string) => address.toLowerCase();
+const PAIR_ADAPTERS = [
+  { asset: "USDT", chain: "ETH", chainId: "ethereum", events: true, normalizeAddress: normalizeEthereumAddress },
+  { asset: "USDC", chain: "ETH", chainId: "ethereum", events: true, normalizeAddress: normalizeEthereumAddress },
+  { asset: "USDT", chain: "TRON", chainId: "tron", events: false, normalizeAddress: tronBase58ToHex },
+] as const;
+
+export function getKycRipPairAdapter(asset: KycRipAsset, chain: KycRipChain) {
+  return PAIR_ADAPTERS.find((adapter) => adapter.asset === asset && adapter.chain === chain);
+}
 
 export type KycRipCurrentBalanceRow = {
   address: string;
@@ -202,15 +214,6 @@ async function fetchJsonWithRetry(
   throw lastError;
 }
 
-function isSupportedPair(mode: KycRipValidationMode, asset: KycRipAsset, chain: KycRipChain): boolean {
-  if (mode === "events") return chain === "ETH" && (asset === "USDT" || asset === "USDC");
-  return (
-    (asset === "USDT" && chain === "ETH") ||
-    (asset === "USDC" && chain === "ETH") ||
-    (asset === "USDT" && chain === "TRON")
-  );
-}
-
 function validateRow(
   raw: unknown,
   mode: KycRipValidationMode,
@@ -232,7 +235,8 @@ function validateRow(
   if (!isSupportedAsset(asset) || !isSupportedChain(chain)) {
     return { type: "skipped" };
   }
-  if (!isSupportedPair(mode, asset, chain)) {
+  const adapter = getKycRipPairAdapter(asset, chain);
+  if (!adapter || (mode === "events" && !adapter.events)) {
     return { type: "skipped" };
   }
 

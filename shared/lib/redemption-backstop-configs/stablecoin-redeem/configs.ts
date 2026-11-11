@@ -3,6 +3,7 @@ import {
   documentedVariableFee,
   fixedFee,
   type RedemptionBackstopConfig,
+  type ReviewedRedemptionTerms,
   sourceRef,
   sourceRefFull,
   sourceRefRouteCapacity,
@@ -136,6 +137,42 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
       ...row,
     }),
 );
+
+// Compact semantic projection of the reviewed USDe fee description.
+export const USDE_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
+  compactFeeBasis: {
+    feeBasis: "10 bps for USDT/USDC redemption under the reviewed USDe terms",
+    termsClock: "config",
+  },
+  config: defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle"],
+    accessModel: "whitelisted-onchain",
+    settlementModel: "immediate",
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      fallbackRatio: 0.005,
+      basis: "hot-buffer",
+    },
+    costModel: fixedFee(
+      10,
+      "Ethena's public fees API reports mint_fee_bps/redeem_fee_bps = 10 for USDT/USDC benefactors, and the USDe terms and conditions cite a reimbursement charge of 10 basis points",
+    ),
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    docs: [
+      sourceRefRouteCapacityAccess("Ethena peg arbitrage mechanism", "https://docs.ethena.fi/solution-overview/peg-arbitrage-mechanism"),
+      sourceRef("USDe terms and conditions", "https://docs.ethena.fi/resources/usde-terms-and-conditions", [
+        "route",
+        "fees",
+        "access",
+      ]),
+      sourceRef("Ethena API documentation overview", "https://docs.ethena.fi/api-documentation/overview", ["fees"]),
+    ],
+    notes: [
+      "Ethena's collateral API does not isolate immediately liquid assets within Liquid Cash, so live reserve metadata does not override the reviewed 0.5% hot-buffer fallback",
+    ],
+  }),
+};
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...DISCOVERY_STABLECOIN_REDEEM_CONFIGS,
@@ -498,34 +535,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Recipients and signers must be whitelisted and not blacklisted. Theo quotes collateral amounts; the contract enforces an upper bound rather than an at-par quote guarantee. Platform terms permit account-specific limits and suspension.",
     ],
   }),
-  "usde-ethena": defineStablecoinRedeemConfig({
-    outputAssetType: "stable-basket",
-    outputAssets: ["usdt-tether", "usdc-circle"],
-    accessModel: "whitelisted-onchain",
-    settlementModel: "immediate",
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      fallbackRatio: 0.005,
-      basis: "hot-buffer",
-    },
-    costModel: fixedFee(
-      10,
-      "Ethena's public fees API reports mint_fee_bps/redeem_fee_bps = 10 for USDT/USDC benefactors, and the USDe terms and conditions cite a reimbursement charge of 10 basis points",
-    ),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-    docs: [
-      sourceRefRouteCapacityAccess("Ethena peg arbitrage mechanism", "https://docs.ethena.fi/solution-overview/peg-arbitrage-mechanism"),
-      sourceRef("USDe terms and conditions", "https://docs.ethena.fi/resources/usde-terms-and-conditions", [
-        "route",
-        "fees",
-        "access",
-      ]),
-      sourceRef("Ethena API documentation overview", "https://docs.ethena.fi/api-documentation/overview", ["fees"]),
-    ],
-    notes: [
-      "Ethena's collateral API does not isolate immediately liquid assets within Liquid Cash, so live reserve metadata does not override the reviewed 0.5% hot-buffer fallback",
-    ],
-  }),
+  "usde-ethena": USDE_REVIEWED_REDEMPTION_TERMS.config,
   "zchf-frankencoin": defineStablecoinRedeemConfig({
     outputAssets: ["chfau-allunity"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0085 },

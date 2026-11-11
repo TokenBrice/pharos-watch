@@ -3,9 +3,9 @@ import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
 import { applyBlacklistCurrentBalanceMaintenance } from "./lib/blacklist-current-balance-maintenance";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { tronBase58ToHex } from "../src/lib/tron-address";
 import {
   fetchKycRipRows,
+  getKycRipPairAdapter,
   formatKycRipCliUsage,
   parseKycRipCliArgs,
   type KycRipCliOptions,
@@ -71,23 +71,11 @@ export function parseCurrentBalanceArgs(argv: string[]): CurrentBalanceCliOption
 export async function normalizeCurrentBalanceRows(rows: KycRipCurrentBalanceRow[]): Promise<SnapshotRow[]> {
   const snapshots: SnapshotRow[] = [];
   for (const row of rows) {
-    if (row.chain === "ETH" && row.asset === "USDT") {
-      const address = row.address.toLowerCase();
-      snapshots.push(buildSnapshotRow("USDT", "ethereum", address, Number(row.frozen_balance)));
-      continue;
-    }
-
-    if (row.chain === "ETH" && row.asset === "USDC") {
-      const address = row.address.toLowerCase();
-      snapshots.push(buildSnapshotRow("USDC", "ethereum", address, Number(row.frozen_balance)));
-      continue;
-    }
-
-    if (row.chain === "TRON" && row.asset === "USDT") {
-      const address = await tronBase58ToHex(row.address);
-      if (!address) continue;
-      snapshots.push(buildSnapshotRow("USDT", "tron", address, Number(row.frozen_balance)));
-    }
+    const adapter = getKycRipPairAdapter(row.asset, row.chain);
+    if (!adapter) continue;
+    const address = await adapter.normalizeAddress(row.address);
+    if (address == null) continue;
+    snapshots.push(buildSnapshotRow(adapter.asset, adapter.chainId, address, Number(row.frozen_balance)));
   }
 
   return snapshots;

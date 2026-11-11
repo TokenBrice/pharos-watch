@@ -20,7 +20,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("peg-summary", () => import("../api/peg-summary").then(({ handlePegSummary }) => handlePegSummary)),
   defineLazyDbRoute("health", () => import("../api/health").then(({ handleHealth }) => handleHealth)),
   defineLazyDbRoute("usds-status", () => import("../api/cache-handlers").then(({ handleUsdsStatus }) => handleUsdsStatus)),
-  defineLazyDbRoute("bluechip-ratings", () => import("../api/cache-handlers").then(({ handleBluechipRatings }) => handleBluechipRatings)),
+  defineLazyDbRoute("bluechip-ratings", () => import("../lib/bluechip-cache").then(({ handleBluechipRatings }) => handleBluechipRatings)),
   defineLazyDbRoute("dex-liquidity", () => import("../api/dex-liquidity").then(({ handleDexLiquidity }) => handleDexLiquidity)),
   // Projection handlers stay lazy to preserve the Worker module-initialization boundary.
   defineLazyDbUrlRoute("dex-liquidity-coin", () => import("../api/dex-liquidity").then(({ handleDexLiquidityCoin }) => handleDexLiquidityCoin)),

@@ -202,11 +202,11 @@ vi.mock("../lib/budget-surface-telemetry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/budget-surface-telemetry")>();
   return { ...actual, recordBudgetSurfaceTelemetry: vi.fn(async () => undefined) };
 });
-vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/scheduled-recovery-checkpoint")>();
+vi.mock("../cron/reserve-adapters/reserve-checkpoint", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../cron/reserve-adapters/reserve-checkpoint")>();
   // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
   const { makeLiveReserveCheckpoint } = await import("../lib/__tests__/scheduled-recovery-checkpoint.test-support");
-  let latestCheckpoint: import("../lib/scheduled-recovery-checkpoint").ScheduledRecoveryCheckpoint | null = null;
+  let latestCheckpoint: import("../cron/reserve-adapters/reserve-checkpoint").ScheduledRecoveryCheckpoint | null = null;
   return {
     ...actual,
     beginLiveReserveCheckpoint: vi.fn(async (_db: D1Database, input: Record<string, unknown>) => {
@@ -315,7 +315,7 @@ vi.mock("../cron/mint-burn-growth-watchdog", () => ({
 }));
 vi.mock("../cron/cron-duration-watchdog", () => ({ runCronDurationWatchdog: cronMocks.runCronDurationWatchdog }));
 vi.mock("../cron/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
-vi.mock("../api/mint-burn-flows", () => ({
+vi.mock("../lib/mint-burn-pipeline/flow-aggregate", () => ({
   refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
 }));
 

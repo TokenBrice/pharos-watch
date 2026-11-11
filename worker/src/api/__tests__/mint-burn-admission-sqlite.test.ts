@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
-import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../mint-burn-flows/aggregate";
+import { ACTIVE_MINT_BURN_CONFIGS, buildAggregateQueryParams, buildCoinSummaries, fetchAggregateData } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { sumMcapForTrackedChains } from "../../lib/mint-burn-mcap-weighting";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";

@@ -4,7 +4,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { computeReserveCompositionOverview } from "../../lib/live-reserves/store";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
-import { beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint } from "../reserve-adapters/reserve-checkpoint";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import {
   recordDeferredTail,

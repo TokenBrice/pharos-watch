@@ -107,7 +107,7 @@ vi.mock("../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { resolveTrackedYieldSources } from "../yield-sync/resolve";
+import { resolveTrackedYieldSources } from "../yield-sync/resolve-observations";
 import { fetchOnChainRates } from "../yield-sync/sources-rpc";
 import type { DlPool } from "../yield-sync/types";
 

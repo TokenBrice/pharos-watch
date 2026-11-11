@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../reserve-continuation-fence";
-import { beginLiveReserveCheckpoint, continueLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery, loadLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint, continueLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery, loadLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { acquireCronLease, runCronWithLease } from "../cron-lease-primitives";
 import { createSlotDeadline } from "../cron-timeouts";
 import { markScheduledChildStarted, writeScheduledChildTerminal } from "../scheduled-child-terminal";

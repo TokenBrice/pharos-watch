@@ -6,11 +6,11 @@ import {
   getSupplementalFamilyStaleThresholdSec,
   resolveYieldSourceKeyRoute,
 } from "../family-registry";
-import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../evaluation";
+import { buildYieldSourceRisk, resolveYieldVenueProtocol } from "../source-risk";
 import type { EvaluatedYieldSource } from "../evaluation";
 import { getSupplementalCandidateFamily } from "../sources-supplemental";
 import { DIRECT_PROTOCOL_API_STRATEGIES } from "../../../lib/yield-config/yield-config-rate-sources";
-import { resolveEvidenceClass } from "../evaluation";
+import { resolveEvidenceClass } from "../candidate-assessment";
 
 /**
  * Audit R-080: the prefix-routing consumers (the venue resolver,

@@ -70,18 +70,61 @@ function resolveUpstream(coin: StablecoinMeta, parentById?: ReadonlyMap<string, 
   return stringValue(parentById?.get(upstreamId)?.name);
 }
 
-function buildStatusNote(status: BlacklistabilityClientStatus, upstreamLabel: string | null): string {
-  switch (status) {
+interface FreezeControlDescriptor {
+  status: BlacklistabilityClientStatus | null;
+  deploymentScope: "material-deployments" | null;
+  inheritedSource: { label: string | null } | null;
+}
+
+export function buildFreezeControlDescriptor(
+  coin: StablecoinMeta,
+  value: unknown,
+  parentById?: ReadonlyMap<string, StablecoinMeta>,
+): FreezeControlDescriptor {
+  const status = statusValue(value);
+  return {
+    status,
+    deploymentScope: status === "possible" || status === "not-freezable" ? "material-deployments" : null,
+    inheritedSource: status === "inherited" ? { label: resolveUpstream(coin, parentById) } : null,
+  };
+}
+
+/** Static sentence/FAQ, compact safety fact and live note share one interpretation. */
+export function describeFreezeControl(descriptor: FreezeControlDescriptor) {
+  const scope = descriptor.deploymentScope === "material-deployments" ? "material deployments" : "deployments";
+  switch (descriptor.status) {
     case "freezable":
-      return "A reviewed issuer or protocol control can freeze or seize this token in holders' wallets.";
+      return {
+        sentence: "issuer or admin freeze controls are recorded",
+        compact: "the issuer or an admin can freeze individual holders' balances",
+        note: "A reviewed issuer or protocol control can freeze or seize this token in holders' wallets.",
+      };
     case "not-freezable":
-      return "Under the reviewed deployment-materiality scope, no issuer freeze, seizure, or holder blacklist path sets the verdict. Peripheral deployment controls, if any, are described in the review notes.";
+      return {
+        sentence: "no direct freeze-control path sets the verdict under the reviewed deployment-materiality scope",
+        compact: `no direct power to freeze holders was found on its ${scope}`,
+        note: "Under the reviewed deployment-materiality scope, no issuer freeze, seizure, or holder blacklist path sets the verdict. Peripheral deployment controls, if any, are described in the review notes.",
+      };
     case "possible":
-      return "An admin control could restrict holders, but the review found no active power to freeze or seize a specific holder's balance on its material deployments. Typical cases are a global transfer pause, an upgradeable token contract, or a blacklist role that exists but is unassigned.";
+      return {
+        sentence: `admin controls such as a global pause or an upgradeable contract are recorded, but the review found no active power to freeze or seize a specific holder's balance on ${scope}`,
+        compact: `admin controls such as a pause or an upgradeable contract exist, though no power to freeze a specific holder was found on its ${scope}`,
+        note: `An admin control could restrict holders, but the review found no active power to freeze or seize a specific holder's balance on its ${scope}. Typical cases are a global transfer pause, an upgradeable token contract, or a blacklist role that exists but is unassigned.`,
+      };
     case "inherited":
-      return upstreamLabel
-        ? `Freeze power sits upstream with ${upstreamLabel} rather than in this token's own contract.`
-        : "Freeze power sits upstream in the assets this token depends on rather than in its own contract.";
+      return {
+        sentence: "freeze exposure is inherited through upstream collateral, custody, or wrapper dependencies",
+        compact: "freeze exposure is inherited through upstream collateral, custody or wrappers",
+        note: descriptor.inheritedSource?.label
+          ? `Freeze power sits upstream with ${descriptor.inheritedSource.label} rather than in this token's own contract.`
+          : "Freeze power sits upstream in the assets this token depends on rather than in its own contract.",
+      };
+    default:
+      return {
+        sentence: "freeze-control coverage is not conclusive from static metadata alone",
+        compact: null,
+        note: "freeze-control coverage is not conclusive from static metadata alone",
+      };
   }
 }
 
@@ -92,19 +135,20 @@ export function projectBlacklistabilityClientSummary(
   const review = isRecord(coin.blacklistabilityReview) ? coin.blacklistabilityReview : null;
   if (!review) return null;
 
-  const status = statusValue(review.reviewedStatus);
+  const descriptor = buildFreezeControlDescriptor(coin, review.reviewedStatus, parentById);
+  const { status } = descriptor;
   const evidence = stringValue(review.evidence);
   if (!status || !evidence) return null;
 
   const sources = readStablecoinLinks(review.sources);
   const sourceFreeRationale = stringValue(review.sourceFreeRationale);
-  const upstreamLabel = status === "inherited" ? resolveUpstream(coin, parentById) : null;
+  const upstreamLabel = descriptor.inheritedSource?.label ?? null;
 
   return {
     status,
     statusLabel: STATUS_LABELS[status],
     statusToneClass: SEVERITY_TONE_CLASS[STATUS_TONES[status]].pill,
-    statusNote: buildStatusNote(status, upstreamLabel),
+    statusNote: describeFreezeControl(descriptor).note,
     evidence,
     basisLabel: sources.length > 0 ? "Sourced review" : sourceFreeRationale ? "Rationale only" : "Unsourced",
     sourceFreeRationale,

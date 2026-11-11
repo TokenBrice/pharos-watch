@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildWeightedYieldPoolGroupSource,
-  enforceExternalOpportunityTvlEligibility,
-  getLendingOpportunityAbsoluteTvlFloor,
-  getRequiredLendingOpportunityTvlUsd,
-  scanForNewVariants,
-} from "../yield-sync/resolve";
-import { resolveYieldRewardShare } from "../yield-sync/evaluation";
+import { buildWeightedYieldPoolGroupSource } from "../yield-sync/resolve-returns";
+import { enforceExternalOpportunityTvlEligibility, getLendingOpportunityAbsoluteTvlFloor, getRequiredLendingOpportunityTvlUsd, scanForNewVariants } from "../yield-sync/resolve-pools";
+import { resolveYieldRewardShare } from "../yield-sync/source-risk";
 import type { DlPool, ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
 import type { YieldType } from "@shared/types/core";

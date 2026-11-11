@@ -57,7 +57,7 @@ export function computeSourceRiskScoreFromPenalty(
  * Yearn-style venue-risk rubric (yield v8.292). Five category sub-scores, each an
  * integer 1..5 where higher = riskier, weighted into a 1..5 venue-risk score that
  * derives the coarse {@link YieldVenueRiskTier} and a continuous PYS penalty.
- * See `worker/src/cron/yield-sync/evaluation.ts` for the scored venue registry.
+ * See `shared/lib/yield-source-risk-registry.ts` for the scored venue registry.
  */
 const VENUE_RISK_CATEGORY_WEIGHTS = {
   audits: 0.2,
@@ -209,6 +209,19 @@ export function resolvePysSourceRiskPenalty(
   return { penalty: sourceRiskPenalty, reason: "provided", provided: true };
 }
 
+export function isRewardHeavyYieldSource(rewardShare: number | null | undefined): rewardShare is number {
+  return typeof rewardShare === "number" && Number.isFinite(rewardShare) && rewardShare > 0.5;
+}
+
+export function isThinYieldSourceDepth(sourceDepthRatio: number | null | undefined): boolean {
+  return typeof sourceDepthRatio === "number" && Number.isFinite(sourceDepthRatio) && sourceDepthRatio < 0.001;
+}
+
+export function hasLimitedYieldObservationHistory(observationCount30d: number | null | undefined): boolean {
+  return typeof observationCount30d === "number" && Number.isFinite(observationCount30d)
+    && observationCount30d > 0 && observationCount30d < 7;
+}
+
 export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): number {
   let penalty = 0;
   const rewardShare = numberValue(input.rewardShare);
@@ -217,10 +230,10 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   const sourceSwitchCount30d = numberValue(input.sourceSwitchCount30d);
   const observationCount30d = numberValue(input.observationCount30d);
 
-  if (rewardShare != null && rewardShare > 0.5) {
+  if (isRewardHeavyYieldSource(rewardShare)) {
     penalty += Math.min(0.5, rewardShare - 0.5);
   }
-  if (sourceDepthRatio != null && sourceDepthRatio < 0.001) {
+  if (isThinYieldSourceDepth(sourceDepthRatio)) {
     penalty += 0.35;
   }
   if (sourceAgeSeconds != null && sourceAgeSeconds > 6 * 60 * 60) {
@@ -229,7 +242,7 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   if (sourceSwitchCount30d != null && sourceSwitchCount30d > 0) {
     penalty += Math.min(0.3, sourceSwitchCount30d * 0.1);
   }
-  if (observationCount30d != null && observationCount30d > 0 && observationCount30d < 7) {
+  if (hasLimitedYieldObservationHistory(observationCount30d)) {
     penalty += 0.2;
   }
   const venueRiskWeighted = numberValue(input.venueRiskWeighted);

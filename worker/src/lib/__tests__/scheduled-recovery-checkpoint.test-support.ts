@@ -1,4 +1,4 @@
-import type { ScheduledRecoveryCheckpoint } from "../scheduled-recovery-checkpoint";
+import type { ScheduledRecoveryCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 
 /** Canonical running live-reserve checkpoint for scheduled-handler tests (WK-2 service). */
 export function makeLiveReserveCheckpoint(

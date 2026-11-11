@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { PHASE_DOT, formatFuzzyDate, isLaunchedAwaitingData, type DriftDisplayStatus } from "@/lib/pre-launch";
-import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
+import { PHASE_DOT, formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
+import { DRIFT_STATUS_LABEL, PRE_LAUNCH_DRIFT_READINESS_TEXT } from "@shared/lib/classification/pre-launch";
 import {
   computeLaunchClock,
   describeLaunchWindow,
@@ -23,19 +23,6 @@ import type { StablecoinMeta } from "@shared/types";
 export function usePreLaunchNowMs(): number | null {
   return useUtcDayNowMs();
 }
-
-/**
- * Drift tone follows the drift badges: a push is amber, red is reserved for
- * overdue. A retired target with none set is neutral: Pharos retired it in
- * curation, which says nothing about the issuer.
- */
-const DRIFT_TONE: Record<DriftDisplayStatus, string> = {
-  "on-track": "text-foreground",
-  "pushed-once": "text-state-warn-strong",
-  "pushed-multiple": "text-state-warn-strong",
-  "no-current-target": "text-muted-foreground",
-  overdue: "text-state-danger-strong",
-};
 
 const FIGURE_CLASS = "pharos-numeric text-[2rem] font-semibold leading-none tracking-tight";
 const WORD_CLASS = "text-2xl font-semibold leading-none tracking-tight";
@@ -161,7 +148,7 @@ export function PreLaunchReadiness({ coin }: { coin: ReadinessCoin }) {
         }
       >
         {drift ? (
-          <span className={cn(WORD_CLASS, DRIFT_TONE[drift])}>{DRIFT_STATUS_LABEL[drift]}</span>
+          <span className={cn(WORD_CLASS, PRE_LAUNCH_DRIFT_READINESS_TEXT[drift])}>{DRIFT_STATUS_LABEL[drift]}</span>
         ) : (
           PLACEHOLDER
         )}

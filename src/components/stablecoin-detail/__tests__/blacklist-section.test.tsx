@@ -280,5 +280,18 @@ it("ages the saved blacklist generation without a query update", () => {
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
+  expect(container.querySelector("time")?.getAttribute("data-state")).toBe("stale");
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
+});
+
+it("uses the served blacklist budget for both the notice and freshness chip", () => {
+  const receipt = Date.now();
+  vi.mocked(useBlacklistSummary).mockReturnValue({
+    ...summaryStub(), dataUpdatedAt: receipt, error: null,
+    meta: { updatedAt: Math.floor(receipt / 1000) - 180, ageSeconds: 180, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
+  });
+  const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+  expect(container.querySelector('[data-health-state="stale"]')).toBeTruthy();
+  expect(container.querySelector("time")?.getAttribute("data-state")).toBe("stale");
+  expect(container.querySelector("time")?.getAttribute("data-stale-after-ms")).toBe("120000");
 });

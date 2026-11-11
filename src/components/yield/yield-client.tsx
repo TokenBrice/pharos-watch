@@ -9,7 +9,7 @@ import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-ho
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { YieldLeaderboard } from "@/components/yield-leaderboard";
+import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
@@ -323,9 +323,9 @@ export function YieldClient() {
   const topPysRows = useMemo<YieldViewModelRow[]>(() => selectTopPysRows(visibleRows), [visibleRows]);
   const topPysRow = topPysRows[0] ?? null;
 
+  const leaderboardRef = useRef<YieldLeaderboardHandle>(null);
   const handleScrollToRow = useCallback((id: string) => {
-    const el = document.getElementById(`yield-row-${id}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    leaderboardRef.current?.revealRow(id);
   }, []);
   const sourceBoardRows = useMemo(
     () => selectVisibleYieldRows(yieldUniverse, { ...urlParams, depth: null, sourceConfidence: null, sourcePosture: null }),
@@ -665,6 +665,7 @@ export function YieldClient() {
         <section id="data" tabIndex={-1} aria-labelledby="leaderboard-heading" className="order-4">
           <div className="space-y-3">
             <YieldLeaderboard
+              ref={leaderboardRef}
               rows={visibleRows}
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}

@@ -8,7 +8,7 @@ import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC, isBluechipRatingCurrent } from "@shared/lib/bluechip-freshness";
-import { handleBluechipRatings } from "../../api/cache-handlers";
+import { handleBluechipRatings } from "../../lib/bluechip-cache";
 import type * as FetchRetry from "../../lib/fetch-retry";
 
 const fixtures = createLatestSchemaFixtureTracker();

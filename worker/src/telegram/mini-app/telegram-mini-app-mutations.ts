@@ -15,7 +15,7 @@ import {
   type TelegramAlertSettingCode,
 } from "@shared/lib/telegram-alert-families";
 import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
-import { isTelegramAlertType, isTelegramRetiredAlertType } from "@shared/types/status";
+import { TELEGRAM_LIVE_ALERT_TYPES, isTelegramAlertType, isTelegramRetiredAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../lib/db";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
 import {
@@ -195,10 +195,8 @@ async function sourceImpactAfter(
   const result = new Map(uniqueIds.map((stablecoinId) => [stablecoinId, [] as Array<"preset" | "global">]));
   if (uniqueIds.length === 0) return result;
   const subscriber = await loadSubscriberByChat(db, chatId);
-  const hasGlobal = Boolean(
-    subscriber?.global_alert_dews || subscriber?.global_alert_depeg || subscriber?.global_alert_safety
-    || subscriber?.global_alert_reserve || subscriber?.global_alert_freeze,
-  );
+  const hasGlobal = TELEGRAM_LIVE_ALERT_TYPES.some((type) =>
+    subscriber?.[TELEGRAM_ALERT_PERSISTENCE[type].globalColumn]);
   if (hasGlobal) {
     for (const stablecoinId of uniqueIds) result.get(stablecoinId)?.push("global");
   }

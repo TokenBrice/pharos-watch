@@ -636,7 +636,7 @@
         { "sources": ["worker/src/api/yield-rankings*.ts", "worker/src/api/__tests__/yield-rankings*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-rankings" }] },
         { "sources": ["worker/src/api/yield-adapter-manifest.ts", "worker/src/api/__tests__/yield-adapter-manifest*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-adapter-manifest" }] },
         { "sources": ["worker/src/api/yield-history.ts", "worker/src/api/__tests__/yield-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiyield-history" }] },
-        { "sources": ["worker/src/api/mint-burn-flows.ts", "worker/src/api/mint-burn-flows/**", "worker/src/api/__tests__/mint-burn-flows*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apimint-burn-flows" }] },
+        { "sources": ["worker/src/api/mint-burn-flows.ts", "worker/src/lib/mint-burn-pipeline/flow-aggregate.ts", "worker/src/api/__tests__/mint-burn-flows*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apimint-burn-flows" }] },
         { "sources": ["worker/src/api/mint-burn-events.ts", "worker/src/api/__tests__/mint-burn-events*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apimint-burn-events" }] },
         { "sources": ["worker/src/api/stress-signals.ts", "worker/src/api/__tests__/stress-signals*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistress-signals" }] },
         { "sources": ["worker/src/api/donor-key-claims.ts", "worker/src/api/__tests__/donor-key-claims*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "post-apidonor-key-claims" }] },

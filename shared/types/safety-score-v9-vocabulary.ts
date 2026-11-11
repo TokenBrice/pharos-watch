@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const V9EvidenceLevelSchema = z.enum(["strong", "adequate", "limited", "insufficient"]);
+export type V9EvidenceLevel = z.infer<typeof V9EvidenceLevelSchema>;
+
 // Public fact tuple references bind this append-only order; never reorder or remove an owner.
 const V9_EVIDENCE_RESPONSIBILITIES = [
   "measured-adverse", "issuer-undisclosed", "integration-missing",

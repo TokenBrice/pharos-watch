@@ -5,11 +5,10 @@ import bc3mSource from "@shared/data/stablecoins/coins/bc3m-backed.json";
 
 import {
   adaptBackedCirculationResponse,
-  adaptChainlinkPorResponse,
   parseBackedRawUnits,
   type ChainlinkPorIssuerCirculationProbe,
-  type ChainlinkPorParams,
-} from "../chainlink-por";
+} from "../backed-liabilities";
+import { adaptChainlinkPorResponse, type ChainlinkPorParams } from "../chainlink-por";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import {
   expectWarnings,

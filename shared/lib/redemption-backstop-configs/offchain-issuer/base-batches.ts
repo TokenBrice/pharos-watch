@@ -1,4 +1,4 @@
-import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
+import { defineBatch, defineRecordEntries, type RedemptionBackstopRegistryEntry } from "../factory";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -148,6 +148,16 @@ function addDocumentedBoundSourceRefs(entries: RedemptionBackstopRegistryEntry[]
   });
 }
 
+const nonUsdDocumentedBoundBase = {
+  ...issuerBase,
+  ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
+};
+
+const reviewedDirectRedemptionBase = {
+  ...issuerBase,
+  ...reviewedDirectRedemptionSupplyFull,
+};
+
 export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
   ...defineBatch(
     ["mxne-real-mxn"],
@@ -248,102 +258,95 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       { sourceFilePath: SOURCE_FILE_PATH },
     ),
   ),
-  ...addDocumentedBoundSourceRefs(
-    defineBatch(
-      [
-        "audx-aussie-dollar-token",
-        "brl1-brl1",
-        "cngn-compliant-naira",
-        "reur-royal-euro",
-        "wars-argentine-peso",
-        "eusd-telcoin",
-        "rusd-royal-dollar",
-      ],
-      {
-        ...issuerBase,
-        ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
+  ...defineRecordEntries(
+    {
+      "audx-aussie-dollar-token": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["audx-aussie-dollar-token"],
+        costModel: fixedFee(100, "AUDX Terms of Token Sale specify a 1% redemption fee"),
+        v9RouteReviewTerms: { settlementModel: "days" },
       },
-      { sourceFilePath: SOURCE_FILE_PATH },
-    ),
-  ).map((entry) => ({
-    ...entry,
-    config:
-      entry.id === "audx-aussie-dollar-token"
-        ? {
-            ...entry.config,
-            costModel: fixedFee(100, "AUDX Terms of Token Sale specify a 1% redemption fee"),
-            v9RouteReviewTerms: { settlementModel: "days" as const },
-          }
-        : entry.id === "wars-argentine-peso"
-          ? {
-              ...entry.config,
-              capacityModel: { kind: "unquantified" as const },
-              holderEligibility: "unknown" as const,
-              settlementModel: "days" as const,
-              v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
-            }
-          : entry.id === "eusd-telcoin"
-            ? {
-                ...entry.config,
-                costModel: fixedFee(
-                  0,
-                  "Telcoin Digital Asset Bank terms (dated 2026-06-15; reviewed 2026-10-03): no TDAB fee per eUSD redemption to third-party institutions. This is the issuer fee only; the receiving institutions may impose their own unquantified fees",
-                ),
-              }
-            : entry.config,
-  })),
-  ...addDocumentedBoundSourceRefs(
-    defineBatch(
-      ["usyc-hashnote", "a7a5-old-vector", "gusd-gate"],
-      {
-        ...issuerBase,
-        ...reviewedDirectRedemptionSupplyFull,
+      "brl1-brl1": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["brl1-brl1"],
       },
-      { sourceFilePath: SOURCE_FILE_PATH },
-    ),
-  ).map((entry) => ({
-    ...entry,
-    config:
-      entry.id === "usyc-hashnote"
-        ? {
-            ...entry.config,
-            outputAssets: ["usdc-circle"],
-            reviewedAt: "2026-10-07",
-            docs: [
-              ...entry.config.docs!,
-              sourceRef("Circle USYC smart contracts (reviewed 2026-10-07)", "https://developers.circle.com/tokenized/usyc/smart-contracts", ["route", "access"]),
-              sourceRef("USYC Teller verified implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0xb69ecb156Dc0028198028c501340d5367845ca72", ["route", "access", "fees"]),
-            ],
-            notes: [
-              "Payout identity reviewed 2026-09-30: https://usyc.docs.hashnote.com/overview/subscription-and-redemption specifies that the modeled USYC Teller burns USYC and returns USDC; Private Liquidity Teller terms are separate.",
-              "The documented supply-full bound is eventual issuer redemption only. Public Teller totalAssets(address(0)) and default-account redemption limits are diagnostics, not capacity for any actual holder: authority, receiver eligibility, account quota and the treasury's payout-plus-fee budget must all be proved by an exact holder-scoped Teller observer before a measured branch is admitted.",
-            ],
-            costModel: {
-              ...documentedVariableFee("Redemption fee 0.03%", "documented-variable"),
-              feeBpsMax: 3,
-            },
-          }
-        : entry.id === "gusd-gate"
-          ? {
-              ...entry.config,
-              ...documentedBoundSupplyFull("2026-08-18"),
-              outputAssets: ["usdc-circle"],
-              // The fee-free quota makes the charge variable, with Gate's
-              // published fast-redemption fee as the ceiling.
-              costModel: {
-                ...documentedVariableFee(
-                  "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote", "documented-variable",
-                ),
-                feeBpsMin: 0,
-                feeBpsMax: 10,
-              },
-              notes: [
-                "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
-                "Gate's July 16, 2026 zero-fee quota applies only to redemption in the original subscription currency. Per-currency eligibility is cumulative minted minus cumulative redeemed in that currency, not an unlimited zero-fee entitlement; excess is charged under the standard schedule. This cost quota is not funded redemption capacity or a speed guarantee.",
-                "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
-                "Fee provenance reviewed 2026-10-07 against Gate's July 16 zero-quota announcement and Gate Learn's 0.05% standard (D+3) / 0.1% fast terms. Pharos retains the 0–10 bps issuer range and does not pair the cheaper standard fee with same-day settlement.",
-              ],
-            }
-        : entry.config,
-  })),
+      "cngn-compliant-naira": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["cngn-compliant-naira"],
+      },
+      "reur-royal-euro": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["reur-royal-euro"],
+      },
+      "wars-argentine-peso": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["wars-argentine-peso"],
+        capacityModel: { kind: "unquantified" },
+        holderEligibility: "unknown",
+        settlementModel: "days",
+        v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
+      },
+      "eusd-telcoin": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["eusd-telcoin"],
+        costModel: fixedFee(
+          0,
+          "Telcoin Digital Asset Bank terms (dated 2026-06-15; reviewed 2026-10-03): no TDAB fee per eUSD redemption to third-party institutions. This is the issuer fee only; the receiving institutions may impose their own unquantified fees",
+        ),
+      },
+      "rusd-royal-dollar": {
+        ...nonUsdDocumentedBoundBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["rusd-royal-dollar"],
+      },
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
+  ...defineRecordEntries(
+    {
+      "usyc-hashnote": {
+        ...reviewedDirectRedemptionBase,
+        docs: [
+          ...DOCUMENTED_BOUND_SOURCE_REFS["usyc-hashnote"]!,
+          sourceRef("Circle USYC smart contracts (reviewed 2026-10-07)", "https://developers.circle.com/tokenized/usyc/smart-contracts", ["route", "access"]),
+          sourceRef("USYC Teller verified implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0xb69ecb156Dc0028198028c501340d5367845ca72", ["route", "access", "fees"]),
+        ],
+        outputAssets: ["usdc-circle"],
+        reviewedAt: "2026-10-07",
+        notes: [
+          "Payout identity reviewed 2026-09-30: https://usyc.docs.hashnote.com/overview/subscription-and-redemption specifies that the modeled USYC Teller burns USYC and returns USDC; Private Liquidity Teller terms are separate.",
+          "The documented supply-full bound is eventual issuer redemption only. Public Teller totalAssets(address(0)) and default-account redemption limits are diagnostics, not capacity for any actual holder: authority, receiver eligibility, account quota and the treasury's payout-plus-fee budget must all be proved by an exact holder-scoped Teller observer before a measured branch is admitted.",
+        ],
+        costModel: {
+          ...documentedVariableFee("Redemption fee 0.03%", "documented-variable"),
+          feeBpsMax: 3,
+        },
+      },
+      "a7a5-old-vector": {
+        ...reviewedDirectRedemptionBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["a7a5-old-vector"],
+      },
+      "gusd-gate": {
+        ...reviewedDirectRedemptionBase,
+        docs: DOCUMENTED_BOUND_SOURCE_REFS["gusd-gate"],
+        ...documentedBoundSupplyFull("2026-08-18"),
+        outputAssets: ["usdc-circle"],
+        // The fee-free quota makes the charge variable, with Gate's
+        // published fast-redemption fee as the ceiling.
+        costModel: {
+          ...documentedVariableFee(
+            "Gate Learn (last updated 2026-03-29) prices GUSD redemption to USDC at 0.05% for standard redemption (credited D+3) and 0.1% for fast redemption (typically within 10 minutes). The modeled same-day route is the fast path, so 10 bps remains the ceiling. Gate's July 16, 2026 announcement makes the zero-fee quota original-currency-specific and calculated from cumulative minted minus cumulative redeemed in that currency; excess follows standard fees, and the authenticated redemption page controls the actual quote", "documented-variable",
+          ),
+          feeBpsMin: 0,
+          feeBpsMax: 10,
+        },
+        notes: [
+          "Gate's 2026-07-27 GUSD upgrade announcement advertises instant credit, and the help centre states fast redemption is typically credited within 5 minutes. Settlement is nonetheless retained at same-day because the current product-page FAQ defers the actual arrival time to the authenticated redemption page and documents a standard redemption path credited on D+3, so no public SLA bounds the full-supply capacity this route models.",
+          "Gate's July 16, 2026 zero-fee quota applies only to redemption in the original subscription currency. Per-currency eligibility is cumulative minted minus cumulative redeemed in that currency, not an unlimited zero-fee entitlement; excess is charged under the standard schedule. This cost quota is not funded redemption capacity or a speed guarantee.",
+          "Access is Gate-account-internal and jurisdiction-gated: the announcement states that users in the UK and other restricted regions cannot access the service.",
+          "Fee provenance reviewed 2026-10-07 against Gate's July 16 zero-quota announcement and Gate Learn's 0.05% standard (D+3) / 0.1% fast terms. Pharos retains the 0–10 bps issuer range and does not pair the cheaper standard fee with same-day settlement.",
+        ],
+      },
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
 ];

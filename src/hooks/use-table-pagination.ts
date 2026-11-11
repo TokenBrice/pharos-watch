@@ -15,6 +15,7 @@ interface UseTablePaginationReturn<T> {
   rangeStart: number;
   rangeEnd: number;
   totalRows: number;
+  onPageChange: (page: number) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
 }
@@ -110,6 +111,13 @@ export function useTablePagination<T>(
     });
   }, [effectivePage, totalPages, totalRows]);
 
+  const onPageChange = useCallback((page: number) => {
+    setPageState({
+      page: Math.min(totalPages - 1, Math.max(0, page)),
+      totalRowsSnapshot: totalRows,
+    });
+  }, [totalPages, totalRows]);
+
   return {
     effectivePage,
     totalPages,
@@ -118,6 +126,7 @@ export function useTablePagination<T>(
     rangeStart,
     rangeEnd,
     totalRows,
+    onPageChange,
     onPreviousPage,
     onNextPage,
   };

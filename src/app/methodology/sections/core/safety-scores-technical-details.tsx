@@ -1,5 +1,6 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
+import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 import { MethodologyDetails, MethodologyFacts } from "../../methodology-shared";
 import { SafetyScoresDimensionDetails } from "./safety-scores-dimension-details";
 import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
@@ -7,6 +8,8 @@ import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
 export function SafetyScoresTechnicalDetails() {
   const { releaseVersion, semantic } = V9_CANDIDATE_POLICY_V1.policy;
   const { formula } = semantic;
+  const { authorityLadder } = semantic.control;
+  const { stressRequest } = semantic.exit;
   const gradeThresholds = formula.gradeThresholds
     .map((threshold) => `${threshold.grade} ${threshold.minScore}+`)
     .join(", ");
@@ -41,16 +44,10 @@ export function SafetyScoresTechnicalDetails() {
           and accepted-state holds remain separate from rating availability.
         </p>
         <p>
-          Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers
-          its authority base from 60 to 50. Unknown is priced as uncertainty, not as safety. Research can lower a score.
-          The overall Economic Control pillar is clamped at 90, including non-authority paths; supervision is not
-          required above 80.
+          {`Verified worse facts score lower than unresolved ones: proving an opaque controller is a single key lowers its authority base from ${authorityLadder.opaqueController} to ${authorityLadder.singleSigner}. Unknown is priced as uncertainty, not as safety. Research can lower a score. The overall Economic Control pillar is clamped at ${authorityLadder.maxComponentQuality}, including non-authority paths; supervision is not required above 80.`}
         </p>
         <p>
-          Provisional labels identify rated cards with more than 50% of original scoring weight priced at unknown
-          constants. They disclose uncertainty without changing the score, grade or availability. Older archives
-          without the fields remain unlabelled. Exit sizes a continuous 5% of usable supply within $1m–$25m; smaller
-          execution receipts remain lower bounds, not proof of full-request completion.
+          {`Provisional labels identify rated cards with more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of original scoring weight priced at unknown constants. They disclose uncertainty without changing the score, grade or availability. Older archives without the fields remain unlabelled. Exit sizes a continuous ${stressRequest.supplyRatio * 100}% of usable supply within $${stressRequest.floorUsd / 1_000_000}m–$${stressRequest.capUsd / 1_000_000}m; smaller execution receipts remain lower bounds, not proof of full-request completion.`}
         </p>
         <p className="pharos-numeric">
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
@@ -58,7 +55,7 @@ export function SafetyScoresTechnicalDetails() {
         </p>
         <MethodologyFacts
           facts={[
-            { label: "Pillar weights", value: "40/35/25 across all three priced pillars; no missing-pillar renormalization" },
+            { label: "Pillar weights", value: `${formula.pillarWeights.backing * 100}/${formula.pillarWeights.exit * 100}/${formula.pillarWeights.control * 100} across all three priced pillars; no missing-pillar renormalization` },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
             { label: "Peg premium weight", value: `${formula.pegPremiumWeight}× on premium off-peg time, severity and active penalty; spread below-only` },
             { label: "Active-depeg caps (open below-peg peak)", value: activeDepegCaps },
@@ -70,13 +67,13 @@ export function SafetyScoresTechnicalDetails() {
             { label: "Publication", value: "Global failures hold; proven local technical gaps preserve pipeline-gap status" },
             { label: "Unknown Backing / Exit / Control (C)", value: `${semantic.unknownQuality.backing.C} / ${semantic.unknownQuality.exit.C} / ${semantic.unknownQuality.control.C}` },
             { label: "Unknown Backing / Exit / Control (U or unclassified)", value: `${semantic.unknownQuality.backing.U} / ${semantic.unknownQuality.exit.U} / ${semantic.unknownQuality.control.U}` },
-            { label: "Exit unknown cause labels", value: "Presentation-only C/U labels; both price uncertainty at 50, never overwrite measured Exit" },
-            { label: "Wrapper form deductions", value: "Pure 3 · native-staked 5 · strategy-vault 10; applied to the premium-free parent limit" },
+            { label: "Exit unknown cause labels", value: `Presentation-only C/U labels; both price uncertainty at ${semantic.unknownQuality.exit.C}, never overwrite measured Exit` },
+            { label: "Wrapper form deductions", value: `Pure ${formula.wrapperStrategyCap.pure} · native-staked ${formula.wrapperStrategyCap.staked} · strategy-vault ${formula.wrapperStrategyCap.vault}; applied to the premium-free parent limit` },
             { label: "Realized holder loss", value: `≥${DEPEG_SEVERITY_BPS.severe / 100}% → ${formula.realizedHolderLoss.initialLimits.severe}; ≥${DEPEG_SEVERITY_BPS.offPeg / 100}% → ${formula.realizedHolderLoss.initialLimits.offPeg}; hold ${formula.realizedHolderLoss.holdDays} days, then linear recovery to 100 over ${formula.realizedHolderLoss.recoveryDays} days` },
             { label: "Speculative-credit residual", value: `High admitted reserve/global-claim measured-adverse credit signal → ${formula.speculativeCreditResidualLimit}; admitted legacy unscoped proof retained; no deployment/access-only cap` },
             {
               label: "Policy provenance",
-              value: `Policy v${releaseVersion}; authority maximum ${semantic.control.authorityLadder.maxComponentQuality}; material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
+              value: `Policy v${releaseVersion}; authority maximum ${authorityLadder.maxComponentQuality}; material-bridge share ${semantic.control.materialBridgeHighShareThreshold * 100}%`,
             },
           ]}
         />

@@ -1,3 +1,4 @@
+import { projectTopDriver } from "../safety-score-v9/public-top-driver";
 import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -16,7 +17,6 @@ import {
   buildSafetyScoreV9Response,
   createSafetyScoreV9ResponseProjector,
   projectSafetyScoreV9Card,
-  projectTopDriver,
   V9PublicCardProjectionError,
 } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";

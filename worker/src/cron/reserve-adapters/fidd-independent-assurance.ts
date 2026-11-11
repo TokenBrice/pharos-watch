@@ -4,7 +4,8 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { fetchTextResponseWithRetry } from "./request";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
-import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
+import type { AdapterContext, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 
 const WIDEN_HOST = "fwc.widen.net";
 

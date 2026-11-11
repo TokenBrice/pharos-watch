@@ -8,7 +8,7 @@ import { renderMarkdownRows } from "../lib/markdown-report";
 import {
   DependencyCoverageProvenanceSchema, readDependencyCheckoutRevision,
   type DependencyCoverageAudit, type DependencyPublicationProvenance,
-} from "./generate-dependency-coverage-audit";
+} from "../lib/dependency-coverage-audit";
 
 type Edge = { from: string; to: string; kind: "basket" | "serial"; weight: number | null };
 export interface DependencyGraphReconciliation {

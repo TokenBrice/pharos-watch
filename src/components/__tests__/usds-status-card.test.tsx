@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UsdsStatusCard } from "@/components/usds-status-card";
+import { UsdsStatusCard } from "@/components/freezewatch/usds-status-card";
 
 const { useUsdsStatusMock } = vi.hoisted(() => ({
   useUsdsStatusMock: vi.fn(),

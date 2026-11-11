@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import {
+  CRITICAL_COVERAGE_LINE_FLOORS,
   CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
   collectCriticalCoverageWaiverReviewQueue,
@@ -94,21 +95,6 @@ export function parseCoveragePercentage(env: NodeJS.ProcessEnv, name: string, fa
   }
   return value;
 }
-
-// Explicit per-file minimums for critical reliability paths.
-export const CRITICAL_COVERAGE_LINE_FLOORS: Record<string, number> = {
-  "worker/src/lib/stablecoins-cache.ts": 50,
-  "worker/src/lib/auth.ts": 70,
-  "worker/src/lib/evm-rpc.ts": 70,
-  "worker/src/lib/safety-scores.ts": 40,
-  "worker/src/handlers/scheduled.ts": 40,
-  "worker/src/cron/daily-digest.ts": 40,
-  "worker/src/api/stablecoin-detail.ts": 30,
-  "worker/src/api/health.ts": 60,
-  "worker/src/api/status.ts": 40,
-  "worker/src/cron/dex-liquidity/orchestrator.ts": 55,
-  "worker/src/lib/api-pagination.ts": 70,
-};
 
 export function parseChangedFilesFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   const raw = env.CRITICAL_COVERAGE_CHANGED_FILES;

@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache, type StablecoinDetailSnapshot } from "@/lib/api";
+import { type StablecoinDetailSnapshot } from "@/lib/api";
+import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache } from "@/lib/detail-snapshot";
 
 const key = ["supply-history", "usdt-tether", 90];
 const snapshot: StablecoinDetailSnapshot = {

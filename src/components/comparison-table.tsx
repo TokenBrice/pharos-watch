@@ -26,7 +26,7 @@ import { getPegReference } from "@shared/lib/peg-rates";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel } from "@shared/lib/variant-display";
-import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
+import { projectTopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
 import {
   getCirculatingRawOrNull,
   getPrevDayRawOrNull,

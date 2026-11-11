@@ -14,6 +14,8 @@ import {
   getPegScoreTier,
   PEG_DEVIATION_TONE_CLASSES,
   QUALITY_TIER_3_CLASSES,
+  resolveScoreTier4,
+  SCORE_TIER_4_CLASSES,
 } from "@shared/lib/classification";
 
 /** Severity border class with accent opacity — suitable for outlined badges. */
@@ -42,69 +44,9 @@ export function deviationIconName(absBps: number): SeverityIcon {
   return "CircleX";
 }
 
-type ScoreTier = "green" | "blue" | "amber" | "red";
-
-export const TIER_TEXT: Record<ScoreTier, string> = {
-  green: SEVERITY_TONE_CLASS.ok.text,
-  blue: SEVERITY_TONE_CLASS.info.text,
-  amber: SEVERITY_TONE_CLASS.watch.text,
-  red: SEVERITY_TONE_CLASS.alert.text,
-};
-
-/**
- * Outlined-pill twin of `TIER_TEXT`, for score tiers rendered through
- * `ScorePill` rather than as bare tinted text. Composed from
- * `SEVERITY_TONE_CLASS` instead of respelling the hues — this engine picks a
- * tier, the token module owns what the tier looks like.
- */
-export const TIER_PILL: Record<ScoreTier, string> = {
-  green: SEVERITY_TONE_CLASS.ok.pill,
-  blue: SEVERITY_TONE_CLASS.info.pill,
-  amber: SEVERITY_TONE_CLASS.watch.pill,
-  red: SEVERITY_TONE_CLASS.alert.pill,
-};
-
-interface ScoreColorThreshold {
-  min: number;
-  className: string;
-}
-
-function scoreToColorClass(
-  score: number | null | undefined,
-  thresholds: readonly ScoreColorThreshold[],
-  fallbackClass = "text-muted-foreground",
-): string {
-  if (score == null) return fallbackClass;
-  for (const threshold of thresholds) {
-    if (score >= threshold.min) return threshold.className;
-  }
-  return fallbackClass;
-}
-export const SCORE_TIER_CUTOFFS = {
-  red: 0,
-  amber: 40,
-  blue: 60,
-  green: 80,
-} as const;
-
-const SCORE_TEXT_THRESHOLDS = [
-  { min: SCORE_TIER_CUTOFFS.green, className: TIER_TEXT.green },
-  { min: SCORE_TIER_CUTOFFS.blue, className: TIER_TEXT.blue },
-  { min: SCORE_TIER_CUTOFFS.amber, className: TIER_TEXT.amber },
-  { min: Number.NEGATIVE_INFINITY, className: TIER_TEXT.red },
-] as const;
-
-/** Map a 0-100 liquidity/durability score to a tier */
-export function getScoreTier(score: number): ScoreTier {
-  if (score >= SCORE_TIER_CUTOFFS.green) return "green";
-  if (score >= SCORE_TIER_CUTOFFS.blue) return "blue";
-  if (score >= SCORE_TIER_CUTOFFS.amber) return "amber";
-  return "red";
-}
-
 /** Map a 0-100 liquidity/durability score to a Tailwind text color class */
 export function getScoreColor(score: number): string {
-  return scoreToColorClass(score, SCORE_TEXT_THRESHOLDS);
+  return score == null || Number.isNaN(score) ? "text-muted-foreground" : SCORE_TIER_4_CLASSES[resolveScoreTier4(score)].scoreText;
 }
 
 /** Map a peg score (0-100, null) to a Tailwind text color class */
@@ -115,7 +57,7 @@ export function pegScoreColor(score: number | null): string {
 
 // ---------------------------------------------------------------------------
 // Durability score color helpers (70/40 thresholds — intentionally different
-// from the generic 80/60/40 score tier thresholds above)
+// from the generic 80/60/40 score tier thresholds)
 // ---------------------------------------------------------------------------
 
 /** Map a 0-100 durability score to a Tailwind text color class */

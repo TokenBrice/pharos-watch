@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public";
+import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 
 const CHIP_CLASS =

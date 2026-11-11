@@ -6,16 +6,15 @@ import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../../lib/yield-history-ownership-handoffs";
-import {
-  buildYieldHistoryEvaluationInputsCooperative,
-  loadYieldHistorySnapshots,
-  purgeYieldHistoryOwnershipHandoffs,
-} from "../yield-sync/history";
-import type { YieldHistorySnapshotRow } from "../yield-sync/history";
+import { buildYieldHistoryEvaluationInputsCooperative } from "../yield-sync/history-evidence";
+import { loadYieldHistorySnapshots } from "../yield-sync/history-repository";
+import { purgeYieldHistoryOwnershipHandoffs } from "../yield-sync/history-repair";
+import type { YieldHistorySnapshotRow } from "../yield-sync/history-repository";
 import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesResult } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
-import { cleanupFalseLinkedVariantSourceSwitches, drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
-import { classifyDecisionRetention } from "../yield-sync/publication";
+import { cleanupFalseLinkedVariantSourceSwitches } from "../yield-sync/history-repair";
+import { drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
+import { classifyDecisionRetention } from "../yield-sync/publication-decisions";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {

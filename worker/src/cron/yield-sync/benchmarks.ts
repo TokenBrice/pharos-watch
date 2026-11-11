@@ -1,3 +1,4 @@
+import { YIELD_BENCHMARK_DEFINITIONS, YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/registry";
@@ -28,101 +29,17 @@ export interface ParsedYieldBenchmarkMeta extends YieldBenchmarkMeta {
   lastRejectedMarketFetchedAt?: number | null;
 }
 
-export interface ParsedYieldBenchmarkRegistry {
+export type ParsedYieldBenchmarkRegistry = {
   USD: ParsedYieldBenchmarkMeta;
   USD_EFFR?: ParsedYieldBenchmarkMeta | null;
-  EUR: ParsedYieldBenchmarkMeta | null;
-  CHF: ParsedYieldBenchmarkMeta | null;
-  GBP: ParsedYieldBenchmarkMeta | null;
-  JPY: ParsedYieldBenchmarkMeta | null;
-  MXN: ParsedYieldBenchmarkMeta | null;
-  BRL: ParsedYieldBenchmarkMeta | null;
-  AUD: ParsedYieldBenchmarkMeta | null;
-  CAD: ParsedYieldBenchmarkMeta | null;
-  RUB: ParsedYieldBenchmarkMeta | null;
-  TRY: ParsedYieldBenchmarkMeta | null;
-  SGD: ParsedYieldBenchmarkMeta | null;
-}
+} & Record<Exclude<YieldBenchmarkKey, "USD" | "USD_EFFR">, ParsedYieldBenchmarkMeta | null>;
 
-const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency: string; isProxy: boolean }> = {
-  USD: {
-    label: "USD 3M T-Bill",
-    currency: "USD",
-    isProxy: false,
-  },
-  USD_EFFR: {
-    label: "USD effective federal funds rate",
-    currency: "USD",
-    isProxy: false,
-  },
-  EUR: {
-    label: "EUR 3M compounded €STR",
-    currency: "EUR",
-    isProxy: false,
-  },
-  CHF: {
-    label: "CHF 3M compounded SARON",
-    currency: "CHF",
-    isProxy: false,
-  },
-  GBP: {
-    // Bank of England IADB IUDZOS2 SONIA Compounded Index, annualized over a trailing 3M window.
-    label: "GBP 3M compounded SONIA",
-    currency: "GBP",
-    isProxy: false,
-  },
-  JPY: {
-    // Bank of Japan STRDCLUCON uncollateralized overnight call rate (TONA-equivalent proxy).
-    label: "JPY overnight call (TONA proxy)",
-    currency: "JPY",
-    isProxy: true,
-  },
-  MXN: {
-    // Banxico SF43936 — CETES 28-day primary auction yield.
-    label: "MXN CETES 28d",
-    currency: "MXN",
-    isProxy: false,
-  },
-  BRL: {
-    // Effective SELIC over: SGS11 daily compounded over 252 days, or SGS1178 already annualized.
-    label: "BRL SELIC over",
-    currency: "BRL",
-    isProxy: false,
-  },
-  AUD: {
-    // Reserve Bank of Australia F1 cash-rate target.
-    label: "AUD cash-rate target",
-    currency: "AUD",
-    isProxy: false,
-  },
-  CAD: {
-    // BoC Valet V122530 is the Bank of Canada's administered Bank rate, announced
-    // monthly on a policy-decision date — not a daily overnight repo (CORRA)
-    // series. Its monthly print is why CAD carries a 45-day observation bound in
-    // YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.
-    label: "CAD Bank rate (policy, monthly)",
-    currency: "CAD",
-    isProxy: true,
-  },
-  RUB: {
-    // CBR DailyInfo KeyRateXML — Central Bank of Russia key rate.
-    label: "RUB CBR key rate",
-    currency: "RUB",
-    isProxy: false,
-  },
-  TRY: {
-    // CBRT EVDS TP.BISTTLREF.ORAN — BIST Turkish Lira Overnight Reference Rate.
-    label: "TRY BIST TLREF overnight",
-    currency: "TRY",
-    isProxy: false,
-  },
-  SGD: {
-    // TODO: wire MAS SORA feed when a stable public endpoint is identified.
-    label: "SGD SORA (unavailable)",
-    currency: "SGD",
-    isProxy: false,
-  },
-};
+const BENCHMARK_META_BY_KEY = Object.fromEntries(
+  YIELD_BENCHMARK_KEY_VALUES.map((key) => {
+    const { label, currency, isProxy } = YIELD_BENCHMARK_DEFINITIONS[key];
+    return [key, { label, currency, isProxy }];
+  }),
+) as Record<YieldBenchmarkKey, { label: string; currency: string; isProxy: boolean }>;
 
 export function getYieldBenchmarkStaticMeta(key: YieldBenchmarkKey) {
   return BENCHMARK_META_BY_KEY[key];
@@ -168,19 +85,9 @@ export function buildHardcodedUsdBenchmark(fallbackMode: string): ParsedYieldBen
 
 // Pegs supported by a native benchmark fetcher. SGD is intentionally excluded — its fetcher is
 // a TODO and SGD-pegged rows fall back to USD until a stable SORA feed is wired.
-const NATIVE_BENCHMARK_PEG_CURRENCIES = new Set<YieldBenchmarkKey>([
-  "USD",
-  "EUR",
-  "CHF",
-  "GBP",
-  "JPY",
-  "MXN",
-  "BRL",
-  "AUD",
-  "CAD",
-  "RUB",
-  "TRY",
-]);
+const NATIVE_BENCHMARK_PEG_CURRENCIES = new Set<YieldBenchmarkKey>(
+  YIELD_BENCHMARK_KEY_VALUES.filter((key) => YIELD_BENCHMARK_DEFINITIONS[key].nativePeg),
+);
 
 export function getBenchmarkKeyForPegCurrency(
   pegCurrency: string | null | undefined,
@@ -243,17 +150,8 @@ export function toYieldBenchmarkRegistry(
 ): YieldBenchmarkRegistry {
   return {
     USD: parsed.USD,
-    USD_EFFR: parsed.USD_EFFR ?? null,
-    EUR: parsed.EUR,
-    CHF: parsed.CHF,
-    GBP: parsed.GBP,
-    JPY: parsed.JPY,
-    MXN: parsed.MXN,
-    BRL: parsed.BRL,
-    AUD: parsed.AUD,
-    CAD: parsed.CAD,
-    RUB: parsed.RUB,
-    TRY: parsed.TRY,
-    SGD: parsed.SGD,
+    ...Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES
+      .filter((key) => key !== "USD")
+      .map((key) => [key, key === "USD_EFFR" ? parsed[key] ?? null : parsed[key]])),
   };
 }

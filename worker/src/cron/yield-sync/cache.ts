@@ -1,3 +1,4 @@
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
@@ -339,21 +340,12 @@ export function parseRiskFreeRatesCacheDetailed(
     if (!usd) invalidKeys.push("USD");
 
     return {
-      registry: {
-        USD: usd ?? buildHardcodedUsdBenchmark(usdEntry == null ? "missing-usd-entry" : "invalid-usd-entry"),
-        USD_EFFR: parseOptional("USD_EFFR"),
-        EUR: parseOptional("EUR"),
-        CHF: parseOptional("CHF"),
-        GBP: parseOptional("GBP"),
-        JPY: parseOptional("JPY"),
-        MXN: parseOptional("MXN"),
-        BRL: parseOptional("BRL"),
-        AUD: parseOptional("AUD"),
-        CAD: parseOptional("CAD"),
-        RUB: parseOptional("RUB"),
-        TRY: parseOptional("TRY"),
-        SGD: parseOptional("SGD"),
-      },
+      registry: Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.map((key) => [
+        key,
+        key === "USD"
+          ? usd ?? buildHardcodedUsdBenchmark(usdEntry == null ? "missing-usd-entry" : "invalid-usd-entry")
+          : parseOptional(key),
+      ])) as ParsedYieldBenchmarkRegistry,
       invalidKeys,
     };
   } catch (err) {

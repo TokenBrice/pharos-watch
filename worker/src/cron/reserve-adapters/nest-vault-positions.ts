@@ -2,6 +2,7 @@ import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import { addValueToBucket } from "./classification";
 import {
   buildCoverageShortfallWarnings,
   fetchJsonWithRetry,
@@ -312,12 +313,7 @@ function mergeSliceValues(values: SliceValue[]): SliceValue[] {
       value.coinId ?? "",
       value.depType ?? "",
     ].join("|");
-    const existing = merged.get(key);
-    if (existing) {
-      existing.value += value.value;
-    } else {
-      merged.set(key, { ...value });
-    }
+    addValueToBucket(merged, key, value);
   }
   return [...merged.values()];
 }

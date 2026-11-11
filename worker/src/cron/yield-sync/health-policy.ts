@@ -8,11 +8,7 @@ import {
   type StablecoinSupplyMapState,
   type YieldSupplementalCacheMeta,
 } from "./state";
-import {
-  derivePreviousYieldRankingsCount,
-  type PreviousYieldPublicationRanking,
-  type PreviousYieldPublicationSnapshot,
-} from "./publication";
+import { derivePreviousYieldRankingsCount, type PreviousYieldPublicationRanking, type PreviousYieldPublicationSnapshot } from "./publication-admission";
 import { REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "./family-registry";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import type { CronResult } from "../../lib/cron-logger";

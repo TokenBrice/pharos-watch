@@ -1,5 +1,5 @@
 import type { RedemptionDocSource } from "../../../types";
-import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms } from "../shared";
+import type { RedemptionBackstopConfig, RedemptionV9RouteReviewTerms, ReviewedRedemptionTerms } from "../shared";
 import { defineConfigFamily } from "../factory";
 import {
   documentedBoundSupplyFull,
@@ -520,8 +520,14 @@ const backedRedemptionRef = () =>
 const backedProductStructureRef = () =>
   sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]);
 
-export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  "usdt-tether": {
+// Keep the percentage distinct from its fee minimum, and that minimum
+// distinct from the $100,000 redemption minimum.
+export const USDT_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
+  compactFeeBasis: {
+    feeBasis: "0.10%, with a minimum fee of $1,000",
+    termsClock: "config",
+  },
+  config: {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
@@ -542,6 +548,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       sourceRef("Tether fees", "https://tether.to/en/fees/", ["fees", "access"]),
     ],
   },
+};
+
+export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "usdt-tether": USDT_REVIEWED_REDEMPTION_TERMS.config,
   "pathusd-bridge": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),

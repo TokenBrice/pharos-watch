@@ -1,4 +1,4 @@
-import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_PRESET_ALERT_TYPES, TELEGRAM_ROLLUP_ALERT_TYPES } from "@shared/lib/telegram-alert-families";
 import { buildInClause, chunkArray } from "../../../lib/db";
 import {
   resolveTelegramPresetTargets,
@@ -7,9 +7,9 @@ import {
 } from "../../../telegram/common/presets";
 
 /** Families the roll-up reports. Presets carry only safety and DEWS. */
-const ROLLUP_FAMILIES = ["safety", "dews", "freeze", "reserve"] as const;
+const ROLLUP_FAMILIES = TELEGRAM_ROLLUP_ALERT_TYPES;
 export type RollupFamily = (typeof ROLLUP_FAMILIES)[number];
-const PRESET_FAMILIES = new Set<RollupFamily>(["safety", "dews"]);
+const PRESET_FAMILIES = new Set<RollupFamily>(ROLLUP_FAMILIES.filter((family) => (TELEGRAM_PRESET_ALERT_TYPES as readonly string[]).includes(family)));
 
 /** What a chat follows per family: explicit coins, or every coin (global opt-in). */
 export interface ChatRollupCoverage {
@@ -38,8 +38,8 @@ interface PresetRow {
 }
 
 function emptyCoverage(): ChatRollupCoverage {
-  const sets = () => ({ safety: new Set<string>(), dews: new Set<string>(), freeze: new Set<string>(), reserve: new Set<string>() });
-  return { coins: sets(), excluded: sets(), global: { safety: false, dews: false, freeze: false, reserve: false } };
+  const sets = () => Object.fromEntries(ROLLUP_FAMILIES.map((family) => [family, new Set<string>()])) as Record<RollupFamily, Set<string>>;
+  return { coins: sets(), excluded: sets(), global: Object.fromEntries(ROLLUP_FAMILIES.map((family) => [family, false])) as Record<RollupFamily, boolean> };
 }
 
 export function coversCoin(coverage: ChatRollupCoverage, family: RollupFamily, stablecoinId: string): boolean {
@@ -84,10 +84,9 @@ export async function loadRollupCoverage(
     for (const row of subscribers.results ?? []) {
       const chat = coverage.get(row.chat_id);
       if (!chat) continue;
-      chat.global.safety = row.global_alert_safety === 1;
-      chat.global.dews = row.global_alert_dews === 1;
-      chat.global.freeze = row.global_alert_freeze === 1;
-      chat.global.reserve = row.global_alert_reserve === 1;
+      for (const family of ROLLUP_FAMILIES) {
+        chat.global[family] = row[TELEGRAM_ALERT_PERSISTENCE[family].globalColumn] === 1;
+      }
     }
     for (const row of subscriptions.results ?? []) {
       const chat = coverage.get(row.chat_id);
@@ -114,7 +113,7 @@ export async function loadRollupCoverage(
       const members = membersByPreset.get(row.preset_id) ?? [];
       if (!chat) continue;
       for (const family of PRESET_FAMILIES) {
-        if (Number(row[family === "safety" ? "alert_safety" : "alert_dews"]) !== 1) continue;
+        if (Number(row[TELEGRAM_ALERT_PERSISTENCE[family].subscriptionColumn as keyof PresetRow]) !== 1) continue;
         for (const coinId of members) chat.coins[family].add(coinId);
       }
     }

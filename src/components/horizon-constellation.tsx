@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PHASE_DOT, type DriftDisplayStatus } from "@/lib/pre-launch";
-import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL, PRE_LAUNCH_DRIFT_RING_CLASSES, PRE_LAUNCH_DRIFT_SHORT_LABELS } from "@shared/lib/classification/pre-launch";
 import {
   HORIZON_COINS_BY_PHASE,
   HORIZON_CONSTELLATION_LAYOUT,
@@ -31,19 +31,6 @@ const DOT_LINK_CLASS =
 
 const DOT_CLASS =
   "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-3xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-white/90 dark:text-black/75 dark:group-hover:bg-white";
-
-/** Slippage mark: a hairline halo, amber once the target moved, red once it expired. */
-const SLIPPAGE_RING_CLASS: Partial<Record<DriftDisplayStatus, string>> = {
-  "pushed-once": "ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background",
-  "pushed-multiple": "ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background",
-  overdue: "ring-[1.5px] ring-state-danger-solid/85 ring-offset-1 ring-offset-background",
-};
-
-const SLIPPAGE_LABEL: Partial<Record<DriftDisplayStatus, string>> = {
-  "pushed-once": "target pushed",
-  "pushed-multiple": "target pushed",
-  overdue: "target overdue",
-};
 
 const UNPHASED_FIELD_CLASS = "border-dashed border-border bg-muted/20";
 const UNPHASED_DOT_CLASS = "border border-dashed border-muted-foreground/60 bg-transparent";
@@ -88,7 +75,7 @@ function HorizonLogoDot({ coin, drift }: { coin: HorizonCellCoin; drift?: DriftD
   return (
     <span
       aria-hidden="true"
-      className={cn(DOT_CLASS, drift ? SLIPPAGE_RING_CLASS[drift] : undefined)}
+      className={cn(DOT_CLASS, drift ? PRE_LAUNCH_DRIFT_RING_CLASSES[drift] : undefined)}
       style={{ width: DOT, height: DOT }}
     >
       {logoSrc ? (
@@ -109,7 +96,7 @@ function HorizonLogoDot({ coin, drift }: { coin: HorizonCellCoin; drift?: DriftD
 }
 
 function dotAriaLabel(coin: HorizonCellCoin, cell: HorizonCell, drift?: DriftDisplayStatus): string {
-  const slippage = drift ? SLIPPAGE_LABEL[drift] : undefined;
+  const slippage = drift ? PRE_LAUNCH_DRIFT_SHORT_LABELS[drift] : undefined;
   return `${coin.name} (${coin.symbol}) — ${cell.srLabel}${slippage ? `, ${slippage}` : ""}`;
 }
 

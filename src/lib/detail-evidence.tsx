@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { isDetailSnapshotQuery, type ApiMeta } from "@/lib/api";
+import type { ApiMeta } from "@/lib/api";
+import { isDetailSnapshotQuery } from "@/lib/detail-snapshot";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { selectDetailEvidence, type DetailEvidence } from "@/lib/detail-evidence-selection";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";

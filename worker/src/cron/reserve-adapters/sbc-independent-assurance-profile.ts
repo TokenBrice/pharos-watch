@@ -1,5 +1,5 @@
 import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 
 // Brale publishes MCCPA's monthly SBC reserve attestations on

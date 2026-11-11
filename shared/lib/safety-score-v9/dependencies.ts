@@ -1,3 +1,4 @@
+import type { V9QualityPillar } from "../../types/safety-score-v9-quality-pillars";
 import {
   V9_DEPENDENCY_ECONOMIC_ROLE_VALUES,
   type DependencyType,
@@ -70,7 +71,7 @@ export interface V9SuppressedDependencyRole {
 
 export interface V9CommonModeMember {
   assetId: string;
-  owner: "backing" | "exit" | "control" | "dependency" | "peg" | "supply";
+  owner: V9QualityPillar | "dependency" | "peg" | "supply";
   pathKey: string;
 }
 

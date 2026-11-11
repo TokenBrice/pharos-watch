@@ -400,7 +400,19 @@ it("ages both distribution notices in place under their served budgets", () => {
   act(() => vi.advanceTimersByTime(60_000));
   expect(container.querySelectorAll('[data-health-state="stale"]')).toHaveLength(2);
   for (const chip of container.querySelectorAll("time")) {
+    expect(chip.getAttribute("data-state")).toBe("stale");
     expect(chip.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
+  }
+});
+
+it("uses served budgets for both distribution notices and freshness chips", () => {
+  const receipt = Date.now();
+  mockDistributions({ updatedAt: Math.floor(receipt / 1000) - 180, ageSeconds: 180, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, receipt);
+  const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
+  expect(container.querySelectorAll('[data-health-state="stale"]')).toHaveLength(2);
+  for (const chip of container.querySelectorAll("time")) {
+    expect(chip.getAttribute("data-state")).toBe("stale");
+    expect(chip.getAttribute("data-stale-after-ms")).toBe("120000");
   }
 });
 

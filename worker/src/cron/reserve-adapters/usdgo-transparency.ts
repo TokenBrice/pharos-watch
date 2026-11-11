@@ -3,7 +3,8 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import type { AdapterContext, AdapterResult, IndependentAssuranceProfile } from "./types";
+import type { AdapterContext, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { fetchJsonWithRetry, reserveInfoWarning } from "./helpers";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { anchorageReportDate } from "./anchorage-independent-assurance-profile";

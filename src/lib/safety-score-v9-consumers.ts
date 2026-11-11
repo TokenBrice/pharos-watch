@@ -1,13 +1,10 @@
 import { ReportCardsV9BrowserResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9TableResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
-import type {
-  SafetyScorePublicationIdentity,
-  SafetyScoreV9Card,
-  SafetyScoreV9CurrentCard,
-  V9Grade,
-  V9QualityPillar,
-} from "@shared/types";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScoreV9Card, SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { ReportCardGrade as V9Grade } from "@shared/types/report-card-grade";
+import type { V9QualityPillar } from "@shared/types/safety-score-v9-quality-pillars";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
 import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9-public-breakdowns";

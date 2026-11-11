@@ -18,6 +18,7 @@ import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "@
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { SITE_ALTERNATE_NAMES, SITE_NAME, SITE_OPEN_GRAPH_IDENTITY, SITE_TWITTER_IDENTITY } from "@/lib/site-identity";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
 import { bricolageDisplay, jetbrainsMono } from "@/lib/fonts/redesign";
@@ -27,7 +28,7 @@ import {
   DEAD_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
-const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} active stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
+const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} active stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every ${CRON_INTERVALS["sync-stablecoins"] / 60} minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",

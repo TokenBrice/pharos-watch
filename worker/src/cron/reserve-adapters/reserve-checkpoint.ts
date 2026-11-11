@@ -9,22 +9,22 @@ import {
   LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
   type LiveReserveCohortGrading,
-} from "../cron/sync-live-reserves-shared";
-import { runWithOverloadRetry } from "./d1-overload-retry";
-import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
-import { parseJsonObject } from "./json-parse";
+} from "../sync-live-reserves-shared";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { hasActiveChildLeaseForScheduledSlot } from "../../lib/scheduled-slot-reconciliation";
+import { parseJsonObject } from "../../lib/json-parse";
 import {
   getReserveProducerPriority,
   reserveRecoveryAdmissionSql,
   type ReserveProducerPriority,
-} from "./reserve-producer-priority";
+} from "../../lib/reserve-producer-priority";
 import {
   buildLiveReserveCheckpointItemStartedStatement,
   identityBinds,
   identityWhereSql,
   ScheduledCheckpointOwnershipLostError,
   type ScheduledCheckpointIdentity,
-} from "./scheduled-checkpoint-primitives";
+} from "../../lib/scheduled-checkpoint-primitives";
 
 export type ScheduledCheckpointState =
   | "running"

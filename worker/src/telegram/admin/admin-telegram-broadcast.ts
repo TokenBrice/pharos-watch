@@ -25,20 +25,18 @@ import { splitMessage } from "../common/alerts-formatting";
 import {
   loadBroadcastTargetChatIds,
   type TelegramBroadcastJobPayload,
-  type TelegramBroadcastScope,
 } from "../delivery/broadcast-targets";
 import { sendToChat } from "../delivery/telegram";
-import { z } from "zod";
+import {
+  TelegramBroadcastRequestSchema,
+  type TelegramBroadcastRequest,
+} from "@shared/lib/telegram-broadcast-contract";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { sha256Hex } from "../../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
-const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
-type BroadcastScope = TelegramBroadcastScope;
-
 const SAMPLE_SIZE = 5;
-const MESSAGE_HTML_MAX_LENGTH = 16_000;
 const TELEGRAM_HTML_ALLOWED_TAGS = new Set([
   "a",
   "b",
@@ -57,33 +55,12 @@ const TELEGRAM_HTML_ALLOWED_TAGS = new Set([
 ]);
 const TELEGRAM_HTML_VOID_TAGS = new Set<string>();
 
-interface BroadcastRequestBody {
-  messageHtml: string;
-  scope: BroadcastScope;
-  dryRun: boolean;
-  acknowledgeBacklogRisk: boolean;
-  canaryChatId?: string;
-}
-
 interface BroadcastContext extends AdminRouteContext {
   telegramBotToken?: string;
 }
 
-const BroadcastRequestBodySchema = z.object({
-  messageHtml: z.string()
-    .refine((value) => value.trim().length > 0, "messageHtml must be a non-empty string")
-    .max(MESSAGE_HTML_MAX_LENGTH, `messageHtml must be ${MESSAGE_HTML_MAX_LENGTH.toLocaleString("en-US")} characters or fewer`),
-  scope: z.enum(SCOPES, { message: `scope must be one of: ${SCOPES.join(", ")}` }),
-  dryRun: z.boolean({ message: "dryRun must be a boolean" }),
-  acknowledgeBacklogRisk: z
-    .boolean({ message: "acknowledgeBacklogRisk must be a boolean when provided" })
-    .optional()
-    .default(false),
-  canaryChatId: z.string().regex(/^[1-9]\d*$/, "canaryChatId must identify a private Telegram chat").optional(),
-});
-
-async function parseBody(request: Request): Promise<BroadcastRequestBody | Response> {
-  return parseRequestJsonWithSchema(request, BroadcastRequestBodySchema, {
+async function parseBody(request: Request): Promise<TelegramBroadcastRequest | Response> {
+  return parseRequestJsonWithSchema(request, TelegramBroadcastRequestSchema, {
     formatSchemaError: (issues) => {
       const first = issues[0];
       return first?.path.length === 0

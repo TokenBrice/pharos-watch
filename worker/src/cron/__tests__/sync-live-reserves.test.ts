@@ -34,7 +34,7 @@ import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { breakerKeyForConfig, CONFIGURED_COINS, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
-import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
+import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../reserve-adapters/reserve-checkpoint";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";

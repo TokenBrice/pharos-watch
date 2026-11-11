@@ -9,7 +9,7 @@
  * both authority and real-time urgency — core to the Pharos brand personality.
  */
 
-import { formatLongDate, formatShortDate } from "@shared/lib/format";
+import { formatLongDate, formatPercentFromRatio, formatShortDate } from "@shared/lib/format";
 import { isRecord } from "@shared/lib/type-guards";
 import type { DigestArchiveEntry, DigestForwardLookOutcome, DigestNextTrigger } from "@shared/types/digest";
 
@@ -258,5 +258,5 @@ export function buildDigestTriggerRecord(
 }
 
 export function formatDigestTriggerRate(rate: number | null): string {
-  return rate == null ? "—" : `${(rate * 100).toFixed(1)}%`;
+  return rate == null ? "—" : Number.isFinite(rate) ? formatPercentFromRatio(rate, 1) : `${rate}%`;
 }

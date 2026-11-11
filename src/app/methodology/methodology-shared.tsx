@@ -6,25 +6,6 @@ import { cn } from "@/lib/utils";
 export const METHODOLOGY_LINK_CLASS =
   "text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors";
 
-export const METHODOLOGY_SECTIONS = [
-  { id: "lifecycle-phases-methodology", label: "Lifecycle Phases" },
-  { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
-  { id: "stability-index-methodology", label: "Stability Index" },
-  { id: "safety-scores-methodology", label: "Safety Scores" },
-  { id: "dependency-exposure-methodology", label: "Exposure Mode" },
-  { id: "mint-authority-score", label: "Mint Authority Score" },
-  { id: "infrastructure-methodology", label: "Infrastructure" },
-  { id: "liquidity-methodology", label: "Liquidity Score" },
-  { id: "redemption-backstop-methodology", label: "Redemption Backstop" },
-  { id: "mint-burn-flow-methodology", label: "Mint/Burn Flow" },
-  { id: "yield-intelligence-methodology", label: "Yield Intelligence" },
-  { id: "pegscore-dews-methodology", label: "PegScore + DEWS" },
-  { id: "depeg-resolver-methodology", label: "Depeg Duration Resolver" },
-  { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
-  { id: "chain-health-score", label: "Chain Health Score" },
-  { id: "definitions", label: "Definitions" },
-] as const;
-
 export const METHODOLOGY_READING_STEPS = [
   {
     label: "Summary",

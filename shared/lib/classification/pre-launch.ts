@@ -90,3 +90,32 @@ export const DRIFT_STATUS_LABEL = {
   overdue: "Overdue",
   "no-current-target": "No current target",
 } as const satisfies Record<PreLaunchDriftStatus | "no-current-target", string>;
+
+/**
+ * Drift tone follows the drift badges: a push is amber, red is reserved for
+ * overdue. A retired target with none set is neutral: Pharos retired it in
+ * curation, which says nothing about the issuer.
+ */
+export const PRE_LAUNCH_DRIFT_READINESS_TEXT = {
+  "on-track": "text-foreground",
+  "pushed-once": "text-state-warn-strong",
+  "pushed-multiple": "text-state-warn-strong",
+  "no-current-target": "text-muted-foreground",
+  overdue: "text-state-danger-strong",
+} as const satisfies Record<PreLaunchDriftStatus | "no-current-target", string>;
+
+/** Slippage mark: a hairline halo, amber once the target moved, red once it expired. */
+export const PRE_LAUNCH_DRIFT_RING_CLASSES: Partial<Record<PreLaunchDriftStatus | "no-current-target", string>> = {
+  "pushed-once": "ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background",
+  "pushed-multiple": "ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background",
+  overdue: "ring-[1.5px] ring-state-danger-solid/85 ring-offset-1 ring-offset-background",
+} as const satisfies Partial<Record<PreLaunchDriftStatus | "no-current-target", string>>;
+
+export const PRE_LAUNCH_DRIFT_SHORT_LABELS: Partial<Record<PreLaunchDriftStatus | "no-current-target", string>> = {
+  "pushed-once": "target pushed",
+  "pushed-multiple": "target pushed",
+  overdue: "target overdue",
+} as const satisfies Partial<Record<PreLaunchDriftStatus | "no-current-target", string>>;
+
+export const PRE_LAUNCH_SLIPPAGE_SWATCH_PUSHED = "inline-block h-2.5 w-2.5 rounded-full ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background";
+export const PRE_LAUNCH_SLIPPAGE_SWATCH_OVERDUE = "inline-block h-2.5 w-2.5 rounded-full ring-[1.5px] ring-state-danger-solid/85 ring-offset-1 ring-offset-background";

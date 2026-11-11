@@ -28,7 +28,7 @@ import {
   isCurrentForecast,
   NOW_DOT_TONE,
 } from "@/components/depeg-resolver-row-card-model";
-import { groupTiersByVocabulary } from "@/components/depeg-resolver-book-summary";
+import { groupTiersByVocabulary, isResolverBookAvailable } from "@/components/depeg-resolver-book-summary";
 import { DDR_VERDICT_CLASSES, type DdrTierVocabulary } from "@shared/lib/classification";
 
 // Above this many open depegs the board splits into two balanced columns so all
@@ -385,14 +385,8 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
 
   if (!resolverEnabled && !resolverReviewerEnabled) return null;
 
-  const ddrDegraded = resolverData?._meta.degraded === true;
-  const ddrUsable =
-    resolverEnabled && !!resolverData && (!ddrDegraded || resolverData?._meta.degradedReason === "stale-cache");
-  const ddrrDegraded = resolverReviewData?._meta.degraded === true;
-  const ddrrUsable =
-    resolverReviewerEnabled &&
-    !!resolverReviewData &&
-    (!ddrrDegraded || resolverReviewData?._meta.degradedReason === "stale-cache");
+  const ddrUsable = resolverEnabled && isResolverBookAvailable(resolverData);
+  const ddrrUsable = resolverReviewerEnabled && isResolverBookAvailable(resolverReviewData);
 
   const loading =
     (resolverEnabled && !resolverData && !resolverError) ||

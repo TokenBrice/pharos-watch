@@ -149,7 +149,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
     status: "ready" as const,
     id: coin.id,
     coin,
-    summary: null, logoSrc: undefined, reportCard: null, reportCardsResponse: undefined, reportCardUpdatedAt: null,
+    summary: null, logoSrc: undefined, reportCard: null, reportCardsResponse: undefined, reportCardUpdatedAt: null, gradeRead: "settled" as const,
     variantParent: null, variantSiblings: [],
     coinData: {
       pegType: `pegged${coin.flags.pegCurrency}`, price: 1, priceSource: "coingecko",

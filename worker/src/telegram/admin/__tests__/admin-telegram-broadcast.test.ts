@@ -164,6 +164,17 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("ignores a non-boolean legacy acknowledgeBacklogRisk field", async () => {
+    const { db } = latestDb();
+    const response = await handleAdminTelegramBroadcast({
+      db,
+      request: request({ messageHtml: "ok", scope: "all", dryRun: true, acknowledgeBacklogRisk: "legacy" }),
+      trustedAdmin: true,
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ targetChatCount: 0, htmlPreflight: "ok" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("rejects a live fanout that cannot retain the non-overridable TTL reserve", async () => {
     const db = mockD1([
       { match: "FROM telegram_subscribers ORDER BY chat_id", rows: [{ chat_id: "20" }] },

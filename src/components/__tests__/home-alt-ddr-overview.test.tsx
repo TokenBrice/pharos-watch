@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
 import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
+import { predictionRow } from "@/components/depeg-resolver-review-test-support";
 
 const { useDepegResolverSurfacesMock } = vi.hoisted(() => ({
   useDepegResolverSurfacesMock: vi.fn(),
@@ -34,8 +35,9 @@ const forecast = {
   live: { currentDeviationBps: -45, peakDeviationBps: -300, stale: false, degradedReason: null },
 };
 
-function setSources({ rows = [forecast], stale = false, resolverError = null, reviewerError = null, unavailable = false }: {
+function setSources({ rows = [forecast], reviewRows = [predictionRow], stale = false, resolverError = null, reviewerError = null, unavailable = false }: {
   rows?: typeof forecast[];
+  reviewRows?: typeof predictionRow[];
   stale?: boolean;
   resolverError?: Error | null;
   reviewerError?: Error | null;
@@ -51,6 +53,7 @@ function setSources({ rows = [forecast], stale = false, resolverError = null, re
     resolverReview: {
       data: unavailable ? undefined : {
         _meta: { ...meta, computedAt: COMPUTED_AT - 60 },
+        rows: reviewRows,
         summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 10,
           recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9,
           lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
@@ -170,11 +173,25 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText(/live forecasts|1 live/i)).toBeNull();
   });
 
-  it.each([false, true])("scopes empty forecast copy to its snapshot (stale-cache: %s)", (stale) => {
-    setSources({ rows: [], stale });
+  it("scopes empty forecast copy to its fresh snapshot", () => {
+    setSources({ rows: [] });
     render(<HomeAltDdrOverview />);
     expect(screen.getByText(/No published active forecasts/)).toBeTruthy();
     expect(screen.queryByText(/all clear|every monitored coin is on peg/i)).toBeNull();
+  });
+
+  it("withholds empty stale-cache snapshots independently for the resolver and reviewer", () => {
+    setSources({ rows: [], stale: true });
+    const view = render(<HomeAltDdrOverview />);
+    expect(screen.getByText("Resolver · Updating")).toBeTruthy();
+    expect(screen.queryByText(/No published active forecasts/)).toBeNull();
+    expect(screen.getByText("80.0%")).toBeTruthy();
+
+    setSources({ reviewRows: [], stale: true });
+    view.rerender(<HomeAltDdrOverview />);
+    expect(screen.getByText("TUSD")).toBeTruthy();
+    expect(screen.getByText("Reviewer · Updating")).toBeTruthy();
+    expect(screen.queryByText("80.0%")).toBeNull();
   });
 
   it("keeps retained values after refetch errors without failure notices or retry actions", () => {

@@ -18,7 +18,7 @@ Capture the full production JSON and a readable report, then reconcile that JSON
 npm run audit:coverage -- --domain=dependency-coverage --prod --json --report .tmp/dependency-coverage/audit.json
 node --import tsx --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from "node:fs";
-import { renderDependencyCoverageAuditMarkdown } from "./scripts/maintenance/generate-dependency-coverage-audit.ts";
+import { renderDependencyCoverageAuditMarkdown } from "./scripts/lib/dependency-coverage-audit.ts";
 const audit = JSON.parse(readFileSync(".tmp/dependency-coverage/audit.json", "utf8"));
 writeFileSync(".tmp/dependency-coverage/audit.md", renderDependencyCoverageAuditMarkdown(audit));
 JS

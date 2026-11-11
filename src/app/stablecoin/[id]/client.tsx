@@ -27,11 +27,8 @@ import type { TransferReviewView } from "@/lib/transfer-review";
 import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import {
-  readSavedSafetyAssessment,
-  seedStablecoinDetailQueryCache,
-  type StablecoinDetailSnapshot,
-} from "@/lib/api";
+import type { StablecoinDetailSnapshot } from "@/lib/api";
+import { readSavedSafetyAssessment, seedStablecoinDetailQueryCache } from "@/lib/detail-snapshot";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { hasDataBootstrap } from "@/lib/data-bootstrap";
 import { DetailEvidenceProvider } from "@/lib/detail-evidence";

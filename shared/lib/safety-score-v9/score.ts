@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS as PILLAR_KEYS } from "../../types/safety-score-v9-quality-pillars";
 import {
   type V9AssetPremiumPolicy,
   type V9EvidenceLevel,
@@ -121,7 +122,6 @@ export function projectV9DependencyScore(
   return trace.inheritableScore;
 }
 
-const PILLAR_KEYS = ["backing", "exit", "control"] as const;
 
 const parentAdverseKey = (item: V9ParentAdverseAttribution) => `${item.path}\u0000${item.message}`;
 const compareParentAdverse = (left: V9ParentAdverseAttribution, right: V9ParentAdverseAttribution) =>

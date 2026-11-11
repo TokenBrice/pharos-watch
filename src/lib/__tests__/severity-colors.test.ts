@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  TIER_TEXT,
   deviationBgClass,
   deviationColorClass,
   deviationIconName,
   getDurabilityBgColor,
   getDurabilityColor,
   getScoreColor,
-  getScoreTier,
   pegScoreColor,
 } from "../severity-colors";
-import { getDexDurabilityStyle, getPegScoreTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { getDexDurabilityStyle, getPegScoreTier, QUALITY_TIER_3_CLASSES, resolveScoreTier4, SCORE_TIER_4_CLASSES } from "@shared/lib/classification";
 import { metricTone } from "@/components/depeg-board-model";
 import * as featureFlags from "@/lib/feature-flags";
 
@@ -38,15 +36,15 @@ describe("severity-colors", () => {
   });
 
   it("maps score tiers and tier color constants", () => {
-    expect(getScoreTier(80)).toBe("green");
-    expect(getScoreTier(60)).toBe("blue");
-    expect(getScoreTier(40)).toBe("amber");
-    expect(getScoreTier(39)).toBe("red");
+    expect(resolveScoreTier4(80)).toBe("t80");
+    expect(resolveScoreTier4(60)).toBe("t60");
+    expect(resolveScoreTier4(40)).toBe("t40");
+    expect(resolveScoreTier4(39)).toBe("t0");
 
-    expect(getScoreColor(85)).toBe(TIER_TEXT.green);
-    expect(getScoreColor(65)).toBe(TIER_TEXT.blue);
-    expect(getScoreColor(45)).toBe(TIER_TEXT.amber);
-    expect(getScoreColor(5)).toBe(TIER_TEXT.red);
+    expect(getScoreColor(85)).toBe(SCORE_TIER_4_CLASSES.t80.scoreText);
+    expect(getScoreColor(65)).toBe(SCORE_TIER_4_CLASSES.t60.scoreText);
+    expect(getScoreColor(45)).toBe(SCORE_TIER_4_CLASSES.t40.scoreText);
+    expect(getScoreColor(5)).toBe(SCORE_TIER_4_CLASSES.t0.scoreText);
   });
 
   it.each([

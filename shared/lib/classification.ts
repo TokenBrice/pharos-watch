@@ -15,6 +15,7 @@ export * from "./classification/pegs";
 export * from "./classification/badges";
 export * from "./classification/risk";
 export * from "./classification/liquidity-concentration";
+export * from "./classification/liquidity";
 export * from "./classification/control-posture";
 export * from "./classification/grades";
 export * from "./classification/yield";

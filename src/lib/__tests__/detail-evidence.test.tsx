@@ -8,7 +8,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DetailEvidenceProvider, useDetailEvidence } from "@/lib/detail-evidence";
 import type { DetailEvidence } from "@/lib/detail-evidence-selection";
-import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache } from "@/lib/api";
+import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache } from "@/lib/detail-snapshot";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { DETAIL_EVIDENCE_TEST_NOW as now, makeDetailEvidence } from "@/test/fixtures/detail-evidence";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";

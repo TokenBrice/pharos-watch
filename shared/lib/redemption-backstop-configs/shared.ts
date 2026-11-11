@@ -21,6 +21,14 @@ import type {
  */
 export type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel, RedemptionV9RouteReviewTerms } from "./schema";
 
+export interface ReviewedRedemptionTerms {
+  config: RedemptionBackstopConfig;
+  compactFeeBasis: {
+    feeBasis: string;
+    termsClock: "config" | "route-review-terms" | "physical";
+  };
+}
+
 export {
   resolveMoreConservativeRedemptionSettlement,
   resolveReviewedRedemptionSettlement,

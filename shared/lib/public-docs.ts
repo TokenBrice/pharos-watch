@@ -197,13 +197,22 @@ function redactRunbookText(text: string): string {
   );
 }
 
+/**
+ * HTML comments are authoring metadata (generated-block markers, generator
+ * banners). The public renderers print one that sits inside a sentence or a
+ * table cell as literal text, so published pages never receive them.
+ */
+export function stripMarkdownComments(markdown: string): string {
+  return markdown.replace(/<!--[\s\S]*?-->/g, "");
+}
+
 function redactPublicDocSource(markdown: string): string {
   const withoutRunbookLinks = markdown.replace(
     /\[([^\]]+)\]\((?:\.\/)?runbooks\/[^)]+\)/gi,
     (_full, label: string) => redactRunbookText(label),
   );
   return replaceOutsideProtectedSegments(redactRunbookText(withoutRunbookLinks), (segment) =>
-    segment
+    stripMarkdownComments(segment)
       .replace(/agents\/[^\s)`]+/g, "internal working notes")
       .replace(/AGENTS\.md/g, "agent instructions"),
   );

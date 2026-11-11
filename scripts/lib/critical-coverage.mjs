@@ -13,6 +13,7 @@ const HIGH_STAKES_COVERAGE_SCAN_ROOTS = [
   "worker/src/lib",
   "shared/lib",
   "worker/src/api",
+  "worker/src/handlers",
   "functions/lib",
 ];
 const HIGH_STAKES_COVERAGE_SCAN_EXTENSIONS = new Set([".ts"]);
@@ -50,6 +51,23 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|publication|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
+
+// Named reliability minima also enroll their sources in discovery and measurement.
+/** @type {Record<string, number>} */
+export const CRITICAL_COVERAGE_LINE_FLOORS = {
+  "worker/src/lib/stablecoins-cache.ts": 50,
+  "worker/src/lib/auth.ts": 70,
+  "worker/src/lib/evm-rpc.ts": 70,
+  "worker/src/lib/safety-scores.ts": 40,
+  "worker/src/handlers/scheduled.ts": 40,
+  "worker/src/cron/daily-digest.ts": 40,
+  "worker/src/api/stablecoin-detail.ts": 30,
+  "worker/src/api/health.ts": 60,
+  "worker/src/api/status.ts": 40,
+  "worker/src/cron/dex-liquidity/orchestrator.ts": 55,
+  "worker/src/lib/api-pagination.ts": 70,
+};
+
 // Reviewed denominator exclusions, not a backlog of substantive untested logic.
 // Every facade names an enrolled implementation and its executable importing
 // contract. Runtime decisions belong in coverage even when extracted from a
@@ -84,6 +102,15 @@ export const CRITICAL_COVERAGE_WAIVERS = {
 export const CRITICAL_OWNERSHIP = deriveCriticalOwnership();
 export const CRITICAL_FILES = collectCriticalCoverageCandidates()
   .filter((file) => (CRITICAL_OWNERSHIP.get(file)?.length ?? 0) > 0 && !Object.hasOwn(CRITICAL_COVERAGE_WAIVERS, file));
+assertCriticalCoverageLineFloorsEnrolled(CRITICAL_FILES);
+
+/** @param {readonly string[]} criticalFiles @param {Record<string, number>} [lineFloors] */
+export function assertCriticalCoverageLineFloorsEnrolled(criticalFiles, lineFloors = CRITICAL_COVERAGE_LINE_FLOORS) {
+  const unenrolled = Object.keys(lineFloors).filter((file) => !criticalFiles.includes(file));
+  if (unenrolled.length > 0) {
+    throw new Error(`Named critical coverage floors outside the enrolled universe: ${unenrolled.join(", ")}`);
+  }
+}
 
 /**
  * @param {readonly string[]} changedFiles
@@ -340,6 +367,7 @@ function shouldSkipCriticalCoverageScanFile(relPath) {
 
 function isHighStakesCoverageCandidate(file) {
   return (
+    Object.hasOwn(CRITICAL_COVERAGE_LINE_FLOORS, file) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_FILES.has(file) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS.some((pattern) => pattern.test(file))

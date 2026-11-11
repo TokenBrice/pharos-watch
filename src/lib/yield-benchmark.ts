@@ -69,14 +69,14 @@ export function getYieldBenchmarkReferenceText(
 
 export function getYieldBenchmarkGapReferenceText(
   value: YieldBenchmarkLike | YieldBenchmarkMeta | null | undefined,
-  opts: { includePeriod?: boolean; periodLabel?: string } = {},
+  opts: { includePeriod?: boolean } = {},
 ): string {
-  const prefix = opts.includePeriod === false ? "" : `${opts.periodLabel ?? "30d"} `;
+  const prefix = opts.includePeriod === false ? "" : "30d ";
   return `${prefix}${getYieldBenchmarkReferenceText(value)}`;
 }
 
-export function getYieldBenchmarkGapUnavailableText(periodLabel = "30d"): string {
-  return `No ${periodLabel} benchmark gap`;
+export function getYieldBenchmarkGapUnavailableText(): string {
+  return "No 30d benchmark gap";
 }
 
 export function getYieldRankingBenchmarkKey(ranking: YieldWorkbenchRanking): YieldBenchmarkKey {

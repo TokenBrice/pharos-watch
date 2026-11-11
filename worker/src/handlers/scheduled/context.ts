@@ -26,7 +26,7 @@ import { createDwellirNativeCapability, type DwellirNativeCapability } from "../
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, parseDwellirRoutingDisabledChains, type ScheduledEnv } from "../../lib/env";
-import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
+import type { ScheduledRecoveryCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 import {

@@ -1,6 +1,6 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import { LIVE_RESERVE_QUEUE_HASH } from "../cron/sync-live-reserves-shared";
-import { loadLiveReserveCheckpoint, type ScheduledRecoveryCheckpoint } from "./scheduled-recovery-checkpoint";
+import { loadLiveReserveCheckpoint, type ScheduledRecoveryCheckpoint } from "../cron/reserve-adapters/reserve-checkpoint";
 import { reserveRecoveryAdmissionSql, RESERVE_RECOVERY_CLAIM_SEC } from "./reserve-producer-priority";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import type { ScheduledExecutionFence } from "./scheduled-execution-contract";

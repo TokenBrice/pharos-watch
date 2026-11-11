@@ -172,6 +172,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/build-ai-summary-staleness-candidates.ts", "build"),
     exempt("scripts/maintenance/build-annotation-candidates.ts", "build"),
     exempt("scripts/maintenance/build-l2beat-bridge-route-candidates.ts", "build"),
+    exempt("scripts/maintenance/build-og-route-timeless.ts", "build"),
     exempt("scripts/maintenance/build-safety-score-map.ts", "build"),
     exempt("scripts/maintenance/build-world-map-svg.ts", "build"),
     exempt("scripts/maintenance/generate-api-reference.ts", "build"),

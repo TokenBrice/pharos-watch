@@ -15,35 +15,34 @@ import {
 } from "@/components/status/admin-mutation-intent";
 import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
+import {
+  TELEGRAM_BROADCAST_MESSAGE_HTML_MAX_LENGTH,
+  TELEGRAM_BROADCAST_SCOPES,
+  TELEGRAM_PRIVATE_CHAT_ID_PATTERN,
+  type TelegramBroadcastRequest,
+  type TelegramBroadcastScope,
+} from "@shared/lib/telegram-broadcast-contract";
 
 const BROADCAST_PATH = "/api/admin-telegram-broadcast";
 const DRY_RUN_LANE = "telegram-broadcast:dry-run";
 const LIVE_LANE = "telegram-broadcast:live";
-const MESSAGE_HTML_MAX_LENGTH = 16_000;
 
 const FIELD_CLASS_NAME =
   "min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 
-const SCOPE_OPTIONS = [
-  { value: "all", label: "All subscribers" },
-  { value: "deliverable-watchers", label: "Deliverable watchers (any alert or preset follow)" },
-  { value: "global-subscribers", label: "Global subscribers (global alert flags only)" },
-] as const;
-
-type BroadcastScope = (typeof SCOPE_OPTIONS)[number]["value"];
+const SCOPE_LABELS: Record<TelegramBroadcastScope, string> = {
+  all: "All subscribers",
+  "deliverable-watchers": "Deliverable watchers (any alert or preset follow)",
+  "global-subscribers": "Global subscribers (global alert flags only)",
+};
 
 interface BroadcastFormState {
   messageHtml: string;
-  scope: BroadcastScope;
+  scope: TelegramBroadcastScope;
   canaryChatId: string;
 }
 
-interface BroadcastRequestBody extends Pick<BroadcastFormState, "messageHtml" | "scope"> {
-  dryRun: boolean;
-  canaryChatId?: string;
-}
-
-function buildBody(state: BroadcastFormState, dryRun: boolean): BroadcastRequestBody {
+function buildBody(state: BroadcastFormState, dryRun: boolean): TelegramBroadcastRequest {
   const canaryChatId = state.canaryChatId.trim();
   return {
     messageHtml: state.messageHtml,
@@ -60,7 +59,7 @@ export function TelegramBroadcastPanel() {
     canaryChatId: "",
   });
   const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
-  const [previewedDraft, setPreviewedDraft] = useState<{ messageHtml: string; scope: BroadcastScope } | null>(null);
+  const [previewedDraft, setPreviewedDraft] = useState<{ messageHtml: string; scope: TelegramBroadcastScope } | null>(null);
   const { executions, runIntent } = useAdminMutationIntents();
 
   const dryRunExecution = executions[DRY_RUN_LANE];
@@ -69,9 +68,9 @@ export function TelegramBroadcastPanel() {
 
   const trimmedMessage = state.messageHtml.trim();
   const canaryChatId = state.canaryChatId.trim();
-  const messageTooLong = state.messageHtml.length > MESSAGE_HTML_MAX_LENGTH;
+  const messageTooLong = state.messageHtml.length > TELEGRAM_BROADCAST_MESSAGE_HTML_MAX_LENGTH;
   const canPreview = trimmedMessage.length > 0 && !messageTooLong;
-  const canaryValid = /^[1-9]\d*$/.test(canaryChatId);
+  const canaryValid = TELEGRAM_PRIVATE_CHAT_ID_PATTERN.test(canaryChatId);
   // A lane-level success alone would let an edited message/audience go out
   // unreviewed: the live send may only transmit the exact draft that was
   // previewed.
@@ -103,7 +102,7 @@ export function TelegramBroadcastPanel() {
       // Same-intent retries replay the original request, even if the form
       // changed after an uncertain outcome. Certify only that executed body.
       if (dryRun) {
-        const body = execution.request.body as BroadcastRequestBody;
+        const body = execution.request.body as TelegramBroadcastRequest;
         setPreviewedDraft({ messageHtml: body.messageHtml, scope: body.scope });
       }
       setReceipt({
@@ -144,7 +143,7 @@ export function TelegramBroadcastPanel() {
             />
           </label>
           <p className="pharos-numeric text-2xs text-muted-foreground">
-            {state.messageHtml.length.toLocaleString()} / {MESSAGE_HTML_MAX_LENGTH.toLocaleString()} characters
+            {state.messageHtml.length.toLocaleString()} / {TELEGRAM_BROADCAST_MESSAGE_HTML_MAX_LENGTH.toLocaleString()} characters
             {messageTooLong ? " — too long" : ""}. Only Telegram-supported tags are accepted; raw {"<"} must be escaped
             as &amp;lt;.
           </p>
@@ -155,11 +154,11 @@ export function TelegramBroadcastPanel() {
               <select
                 className={FIELD_CLASS_NAME}
                 value={state.scope}
-                onChange={(event) => patch({ scope: event.target.value as BroadcastScope })}
+                onChange={(event) => patch({ scope: event.target.value as TelegramBroadcastScope })}
               >
-                {SCOPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {TELEGRAM_BROADCAST_SCOPES.map((scope) => (
+                  <option key={scope} value={scope}>
+                    {SCOPE_LABELS[scope]}
                   </option>
                 ))}
               </select>

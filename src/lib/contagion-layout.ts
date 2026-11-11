@@ -10,7 +10,7 @@ import {
 } from "d3-force";
 import { percentileLinear } from "@shared/lib/stats";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import type { V9Grade } from "@shared/types/safety-score-v9";
+import type { ReportCardGrade as V9Grade } from "@shared/types/report-card-grade";
 import { buildDirectHubExposures, v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@shared/lib/dependency-exposure";
 import { deterministicHash } from "@/lib/layout-utils";
 import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";

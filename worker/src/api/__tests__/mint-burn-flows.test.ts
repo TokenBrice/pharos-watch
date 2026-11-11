@@ -8,7 +8,8 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import { mintBurnScenario } from "../../test-helpers/__shared/mint-burn";
 import { flowResponse, makeFlowHourlyRow, makeFlowFallbackScenario, makeValidCachedAggregateFixture } from "./mint-burn-flows.test-support";
-import { handleMintBurnFlows, refreshAggregateMintBurnFlowCache } from "../mint-burn-flows";
+import { handleMintBurnFlows } from "../mint-burn-flows";
+import { refreshAggregateMintBurnFlowCache } from "../../lib/mint-burn-pipeline/flow-aggregate";
 import { MintBurnFlowsResponseSchema, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 
 function flowHour(now: number, overrides: Partial<ReturnType<typeof makeFlowHourlyRow>> & Record<string, unknown> = {}) {

@@ -4,6 +4,8 @@ import { RailSafetySummary } from "../rail-safety-summary";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import * as blacklistStatus from "@shared/lib/blacklist-status";
+import { projectBlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -71,6 +73,21 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
+  it("scopes Possible freeze controls to material deployments in both FAQ variants and the live note", () => {
+    const status = vi.spyOn(blacklistStatus, "getResolvedBlacklistStatus").mockReturnValue("possible");
+    const reviewed = { ...coin, blacklistabilityReview: {
+      reviewedStatus: "possible" as const, evidence: "Reviewed controls", reviewer: "test", reviewedAt: "2026-10-19",
+    } };
+    try {
+      const items = buildStablecoinFaqItems(reviewed);
+      expect(items[1].answer).toContain("on its material deployments");
+      expect(items[3].answer).toContain("on material deployments");
+      expect(projectBlacklistabilityClientSummary(reviewed)?.statusNote).toContain("on its material deployments");
+    } finally {
+      status.mockRestore();
+    }
+  });
+
   it("withholds assertive live-claim prose while retaining summary provenance and profile facts", () => {
     const { container } = render(<StablecoinDetailSeoContent coin={coin} summary={{
       ...summary,

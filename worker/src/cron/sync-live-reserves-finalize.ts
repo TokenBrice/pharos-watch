@@ -32,7 +32,7 @@ import {
 } from "./sync-live-reserves-shared";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
 import type { AdapterLatencySummary, AdapterTelemetryProgress } from "./sync-live-reserves-core";
-import { setLiveReserveCheckpointCohortGrading } from "../lib/scheduled-recovery-checkpoint";
+import { setLiveReserveCheckpointCohortGrading } from "./reserve-adapters/reserve-checkpoint";
 import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 
 export interface ReserveSyncAttemptFailureGroup {

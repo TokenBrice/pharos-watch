@@ -57,7 +57,7 @@ Selector scoring, grade exclusions and recommendations admit only within-budget 
 
 ## API Contract
 
-`GET /api/bluechip-ratings` is implemented by `handleBluechipRatings` in `worker/src/api/cache-handlers.ts`.
+`GET /api/bluechip-ratings` is implemented by `handleBluechipRatings` in `worker/src/lib/bluechip-cache.ts`.
 
 - Reads the `bluechip-ratings` cache key directly.
 - Starts from the `slow` cache profile (`public, s-maxage=3600, max-age=300`); freshness headers clamp TTLs to the remaining fresh runway and force `no-store` for stale or invalid future-clock responses.

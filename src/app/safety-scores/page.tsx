@@ -14,6 +14,7 @@ import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld"
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
@@ -21,6 +22,8 @@ import {
 
 const reportCardsDescription =
   "Compare active Safety Score V10 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
+
+const SAFETY_REFRESH_HOURS = CRON_INTERVALS["compute-safety-score-v9"] / 3600;
 
 const FAQ_ITEMS = [
   {
@@ -36,7 +39,7 @@ const FAQ_ITEMS = [
   {
     question: "How often do safety grades change?",
     answer:
-      "Pharos evaluates safety grades every hour. If an update cannot be verified, the last verified ratings remain visible with their publication time and an update notice.",
+      `Pharos evaluates safety grades every ${SAFETY_REFRESH_HOURS === 1 ? "hour" : `${SAFETY_REFRESH_HOURS} hours`}. If an update cannot be verified, the last verified ratings remain visible with their publication time and an update notice.`,
   },
   {
     question: "What should I do with this information?",

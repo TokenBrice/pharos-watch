@@ -12,7 +12,7 @@ import {
   resolveReserveProducerAdmission,
 } from "../reserve-producer-priority";
 import { runCronWithLease } from "../cron-lease-primitives";
-import { beginLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery } from "../scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint, claimNextLiveReserveCheckpointRecovery } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { SCHEDULED_SLOT_JOB_BUDGET_MS } from "../cron-timeouts";
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { mockD1 } from "@shared/test-utils/mock-d1";

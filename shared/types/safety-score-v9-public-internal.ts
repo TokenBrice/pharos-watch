@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS, type V9QualityPillar } from "./safety-score-v9-quality-pillars";
 import { issue } from "./safety-schema-primitives";
 import type { z } from "zod";
 import {
@@ -12,7 +13,6 @@ import { scoreToGrade, V9_PILLAR_WEIGHTS } from "./safety-score-v9-grade";
 import { iterateEvidenceResponsibilityFacts, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
 import { resolveV9EffectiveScoringWeight } from "./safety-score-v9-public-causes";
 import type { SafetyScoreV9BackingBreakdown } from "./safety-score-v9-public-breakdowns";
-import type { V9QualityPillar } from "./safety-score-v9";
 import type { SafetyScoreV9HistoricalScoreTraceSchema } from "./safety-score-v9-public-trace";
 const EVIDENCE_FACT_PATH = ["scoreTrace", "evidenceResponsibility"] as const;
 
@@ -187,9 +187,9 @@ export function refineCard(
     }
     if (scoreTrace.aggregation !== null) {
       const aggregation = scoreTrace.aggregation;
-      const included = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") === "included").sort();
+      const included = V9_QUALITY_PILLARS.filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") === "included").sort();
       const pricedUnknowns = aggregation.pricedUnknownPillars;
-      const scoringPillars: readonly V9QualityPillar[] = pricedUnknowns === undefined ? included : ["backing", "exit", "control"];
+      const scoringPillars: readonly V9QualityPillar[] = pricedUnknowns === undefined ? included : V9_QUALITY_PILLARS;
       const weightSum = scoringPillars.reduce<number>((sum, pillar) => sum + V9_PILLAR_WEIGHTS[pillar], 0);
       const price = (pillar: V9QualityPillar): number | null =>
         pricedUnknowns?.find((item) => item.pillar === pillar)?.score ?? card.pillars[pillar].score;
@@ -247,7 +247,7 @@ export function refineCard(
         const pillarScore =
           match === null
             ? null
-            : card.pillars[match[1] as "backing" | "exit" | "control"].score;
+            : card.pillars[match[1] as V9QualityPillar].score;
         if (
           match === null ||
           pillarScore === null ||

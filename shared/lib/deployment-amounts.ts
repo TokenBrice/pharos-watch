@@ -1,12 +1,18 @@
 import { XrplIssuedCurrencyAmountSchema, type ExactIssuedCurrencyAmount, type DeploymentAmountEncoding } from "../types/deployment-amounts";
-import { V9_CANDIDATE_POLICY_V1 } from "./safety-score-v9/policy";
+
+const XRPL_ISSUED_CURRENCY_AMOUNT_LIMITS = {
+  significantDigits: 16,
+  minExponent: -96,
+  maxExponent: 80,
+  maxInputLength: 256,
+} as const;
 
 export function isFixedDecimalDeployment<T extends { chain: string; decimals: number | null; amountEncoding?: DeploymentAmountEncoding }>(deployment: T): deployment is T & { decimals: number } {
   return deployment.chain !== "xrpl" && deployment.amountEncoding?.kind !== "xrpl-issued-currency" && deployment.decimals !== null && Number.isInteger(deployment.decimals) && deployment.decimals >= 0;
 }
 export function parseXrplIssuedCurrencyAmount(input: unknown, expected?: { issuer: string; currency: string }): ExactIssuedCurrencyAmount {
   const amount = XrplIssuedCurrencyAmountSchema.parse(input);
-  const contract = V9_CANDIDATE_POLICY_V1.policy.semantic.control.exactScope.issuedCurrencyAmount;
+  const contract = XRPL_ISSUED_CURRENCY_AMOUNT_LIMITS;
   if (expected && (expected.issuer !== amount.issuer || expected.currency !== amount.currency)) throw new Error("xrpl-issued-identity-mismatch");
   if (amount.value.length > contract.maxInputLength) throw new Error("xrpl-issued-input-too-long");
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear decimal shape over input already capped at maxInputLength.

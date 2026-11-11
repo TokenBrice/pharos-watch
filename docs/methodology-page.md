@@ -10,7 +10,7 @@ The title names the current Safety Score version (`SAFETY_SCORE_METHODOLOGY_VERS
 
 ## Route & Structure
 
-`MethodologySections` in `sections/methodology-sections.tsx` owns ordered composition. `src/lib/methodology-content.ts` owns non-React IDs/titles/markdown summaries; `METHODOLOGY_SECTIONS` in `methodology-shared.tsx` owns navigation. Keep them coherent with public fragments and export.
+`METHODOLOGY_SECTION_ROSTER` in `src/lib/methodology-content.ts` owns reading order, navigation labels and Markdown inclusion. `MethodologySections` in `sections/methodology-sections.tsx` binds its keys to components; navigation and Markdown project the same roster. Lifecycle remains HTML-only and Definitions retains its separate Markdown appendix. Metric fragments come from `METHODOLOGY_METRIC_SECTION_IDS` in `src/lib/methodology-anchors.ts`.
 
 Methodology and changelog navigation use the shared horizontal sticky banner. Active pills stay visible as the reader scrolls; hash jumps retain disclosure reveal and sticky-offset alignment. The methodology banner keeps its overflow fade and reader/input controls.
 

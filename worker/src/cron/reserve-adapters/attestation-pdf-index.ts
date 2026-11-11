@@ -13,7 +13,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
-import { fetchWithBrowserFallback, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { fetchWithBrowserFallback, HTML_ACCEPT_HEADER } from "./request";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import {
   parseReportDateCandidates,
@@ -28,36 +28,11 @@ const COMPOSITION_NOTE =
 // Reviewed issuer indexes run under 300 KB; bound the anchor parser's input far
 // below the shared 16 MiB transport default.
 const MAX_INDEX_BYTES = 1024 * 1024;
-const NEUTRAL_FIRST_HTML_HOSTS = new Set(["schuman.io", "www.schuman.io"]);
-
-function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
-  try {
-    return NEUTRAL_FIRST_HTML_HOSTS.has(new URL(url).hostname.toLowerCase());
-  } catch {
-    return false;
-  }
-}
-
-
-function buildNeutralHtmlHeaders(): HeadersInit {
-  return {
-    Accept: HTML_ACCEPT_HEADER,
-    ...NEUTRAL_ADAPTER_HEADERS,
-  };
-}
-
 async function fetchAttestationIndexHtml(
   inputUrl: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<string> {
-  if (shouldUseNeutralHtmlHeadersFirst(inputUrl)) {
-    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, {
-      headers: buildNeutralHtmlHeaders(),
-      maxResponseBytes: MAX_INDEX_BYTES,
-    });
-  }
-
   return fetchWithBrowserFallback(
     new URL(inputUrl).origin,
     inputUrl,

@@ -30,7 +30,7 @@ import {
   releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
   type ScheduledRecoveryCheckpoint,
-} from "../../lib/scheduled-recovery-checkpoint";
+} from "../../cron/reserve-adapters/reserve-checkpoint";
 import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";

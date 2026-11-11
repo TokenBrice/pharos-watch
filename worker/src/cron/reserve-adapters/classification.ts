@@ -1,6 +1,19 @@
 import type { ReserveSlice } from "@shared/types/core";
 import { assertFiniteNonNegativeReserveRows, computeUnknownExposurePct, slicesFromValues } from "./slice-math";
 
+export function addValueToBucket<Key, Row extends { value: number }>(
+  buckets: Map<Key, Row>,
+  key: Key,
+  row: Row,
+): void {
+  const existing = buckets.get(key);
+  if (existing) {
+    existing.value += row.value;
+  } else {
+    buckets.set(key, { ...row });
+  }
+}
+
 interface BucketedExposureOptions<Item, Bucket extends string> {
   items: Item[];
   getValue: (item: Item) => number;

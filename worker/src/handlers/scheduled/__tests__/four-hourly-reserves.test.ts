@@ -35,7 +35,7 @@ vi.mock("../../../lib/db-cache", () => ({
     return { written: true, skippedBecauseNewer: false };
   }),
 }));
-vi.mock("../../../lib/scheduled-recovery-checkpoint", async () => {
+vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", async () => {
   // vi.mock factories are hoisted above static imports; the fixture must load inside the factory.
   const { makeLiveReserveCheckpoint } = await import("../../../lib/__tests__/scheduled-recovery-checkpoint.test-support");
   return {
@@ -73,7 +73,7 @@ import {
   releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
   type ScheduledRecoveryCheckpoint,
-} from "../../../lib/scheduled-recovery-checkpoint";
+} from "../../../cron/reserve-adapters/reserve-checkpoint";
 
 const completedChildren = {
   "sync-live-reserves": "completed", "sync-redemption-backstops": "completed",

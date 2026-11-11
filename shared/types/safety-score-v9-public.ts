@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
 import { z } from "zod";
 import { issue } from "./safety-schema-primitives";
 import { scoreToGrade } from "./safety-score-v9-grade";
@@ -35,6 +36,8 @@ import {
   V9PublicWitnessTextTableSchema,
   V9WitnessTextIdentityArraySchema,
 } from "./safety-score-v9-public-witness-texts";
+
+export const V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD = 0.5;
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
   source: V9EffectiveDependenciesV3Schema.shape.source,
@@ -285,7 +288,7 @@ const SafetyScoreV9CardShape = {
   gradeHold: SafetyScoreV9GradeHoldSchema.optional(),
   /** Display-only; older archived publications omit both fields. */
   provisional: z.literal(true).optional(),
-  unknownPricedWeightShare: z.number().finite().gt(0.5).max(1).optional(),
+  unknownPricedWeightShare: z.number().finite().gt(V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD).max(1).optional(),
   localAuthorityExposure: V9LocalAuthorityExposureSchema.optional(),
   ratingStatus: V9RatingStatusSchema,
   partialEvidence: V9PartialEvidenceSchema.nullable(),
@@ -323,7 +326,7 @@ function refineCardBase(
   if (card.localAuthorityExposure !== undefined && card.ratingStatus !== "rated") {
     ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
   }
-  const excludedPillars = (["backing", "exit", "control"] as const).filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
+  const excludedPillars = V9_QUALITY_PILLARS.filter((pillar) => (card.pillars[pillar].aggregationDisposition ?? "included") !== "included").sort();
   if (JSON.stringify(excludedPillars) !== JSON.stringify(card.partialEvidence?.excludedPillars ?? [])) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Partial evidence must reconcile excluded pillars" });
   }
@@ -443,7 +446,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
     if (card.provisional !== undefined || card.unknownPricedWeightShare !== undefined) {
       const share = computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation);
       if (card.ratingStatus !== "rated" || card.provisional !== true ||
-          card.unknownPricedWeightShare === undefined || share <= 0.5 ||
+          card.unknownPricedWeightShare === undefined || share <= V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD ||
           !numbersAgree(card.unknownPricedWeightShare, share)) {
         issue(ctx, ["provisional"], "Provisional labels require more than half the scoring weight to be priced as unknown, with its reconciled share");
       }
@@ -457,7 +460,7 @@ function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx, reso
       issue(ctx, ["breakdowns"], "V9 component breakdowns are required exactly when a card is rateable");
     }
     if (card.breakdowns !== null) {
-      for (const pillar of ["backing", "exit", "control"] as const) {
+      for (const pillar of V9_QUALITY_PILLARS) {
         if ((card.breakdowns[pillar].aggregationDisposition ?? "included") !== (card.pillars[pillar].aggregationDisposition ?? "included") ||
             !numbersAgree(card.breakdowns[pillar].aggregationWeight,
               (card.pillars[pillar].aggregationDisposition ?? "included") === "included"

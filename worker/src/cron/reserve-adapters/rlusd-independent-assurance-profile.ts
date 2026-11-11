@@ -1,5 +1,5 @@
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { decodeHtmlEntities } from "./helpers";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 

@@ -1,5 +1,8 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import dependencyExposureContent from "./dependency-exposure-content.json";
+import { DEFINITIONS_SECTION_ID } from "./definitions";
+import { METHODOLOGY_METRIC_SECTION_IDS } from "./methodology-anchors";
+import { V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD } from "@shared/types/safety-score-v9-public";
 
 export type MethodologySectionContent = {
   id: string;
@@ -81,7 +84,7 @@ export const PRICING_PIPELINE_SECTION_CONTENT = defineMethodologySectionContent(
 });
 
 export const STABILITY_INDEX_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "stability-index-methodology",
+  id: METHODOLOGY_METRIC_SECTION_IDS.stability,
   title: "Stability Index Methodology",
   markdownParagraphs: [
     "The Pharos Stability Index (PSI) compresses stress across active core stablecoins and cash equivalents into a 0-100 condition score. Tracked variants and stable-value investments stay browsable but are excluded from the monetary aggregate. PSI starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.",
@@ -92,7 +95,7 @@ export const STABILITY_INDEX_SECTION_CONTENT = defineMethodologySectionContent({
 });
 
 export const SAFETY_SCORES_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "safety-scores-methodology",
+  id: METHODOLOGY_METRIC_SECTION_IDS.safety,
   title: "Safety Scores Grading Methodology",
   markdownParagraphs: [
     "Safety Score V10 evaluates Backing, Exit and Economic Control at original weights 40%, 35% and 25%. At least two pillars need usable evidence; an unavailable third is explicitly priced at its cause-keyed unknown quality (U when unclassified), not dropped or renormalized. Compute Q = m + 20 × tanh((M − m)/20), where m is the weakest of all three priced pillars and M their weighted mean. Keep peg exponent 0.4 and nearest-integer own-score rounding. Missing subfactors are bounded uncertainty, not measured failure; pricing a missing pillar does not make it usable evidence.",
@@ -100,7 +103,7 @@ export const SAFETY_SCORES_SECTION_CONTENT = defineMethodologySectionContent({
     "Raw grade cutoffs after nearest-integer own-score rounding are A+ ≥87, A ≥83, A− ≥80, B+ ≥75, B ≥70, B− ≥65, C+ ≥60, C ≥55, C− ≥50, D ≥40 and F <40. A held letter can differ from the current raw band; the numeric score and gradeHold make that distinction explicit.",
     "Unknown pricing is keyed by responsibility for Backing and Control: researched issuer non-disclosure (C) uses Backing 35, Exit 50 and Control 50; Pharos research/infrastructure uncertainty (U or unclassified) uses 50, 50 and 60. Exit's published C/U cause label is presentation-only: both price uncertainty at 50, avoiding the Exit-35 plateau revived when priced and published causes were aligned. Apply this to genuinely missing subfactors and unavailable pillars on otherwise rateable cards, retaining known components, measured adverse values and source witnesses. Missing reconciliation or supervision earns no assurance credit.",
     "Verified worse facts score lower than unresolved ones: proving that an opaque controller is a single key lowers its authority base from 60 to 50. Unknown is priced as uncertainty, not as safety; research can lower a score.",
-    "A rated card is Provisional when more than 50% of its original scoring weight is priced at unknown constants. The public provisional flag and unknownPricedWeightShare disclose that share, computed from cause-bearing components and effective weights, mixed reserve subfactors, controlling paths and a priced unavailable third pillar. Measured adverse facts, excluded factors and verified pool-less Exit supply are not unknown weight. The label changes no score, grade or availability; older archives without the fields remain unlabelled. No new ±1-point boundary hold is introduced; existing publication-grade hysteresis remains.",
+    `A rated card is Provisional when more than ${V9_PROVISIONAL_UNKNOWN_WEIGHT_THRESHOLD * 100}% of its original scoring weight is priced at unknown constants. The public provisional flag and unknownPricedWeightShare disclose that share, computed from cause-bearing components and effective weights, mixed reserve subfactors, controlling paths and a priced unavailable third pillar. Measured adverse facts, excluded factors and verified pool-less Exit supply are not unknown weight. The label changes no score, grade or availability; older archives without the fields remain unlabelled. No new ±1-point boundary hold is introduced; existing publication-grade hysteresis remains.`,
     "One economic-authority ladder replaces D33, D29, D30, H, seasoning and the separate verified fallback. The weakest effective mint, upgrade, fee/accountant, allocator, curator, custody-transfer or parameter path competes: single signer 50; opaque controller 60; verified quorum 65; quorum with unavoidable delay 70; public governance/minority veto with unavoidable delay 75; reviewed immutable execution without discretionary economic power 90. An enforceable bound preserved by every bypass and upgrade adds 10. Reconciliation adds at most 15; prudential supervision adds 15 or attestation-only 10, never both; assurance is at most 30. Clamp each authority component after credits at 90 and the overall Control pillar at 90, including non-authority paths; this is not another whole-score cap. Control above 80 does not require supervision. Proven compromised/exploited authority remains 25 without credits. A contract address, deposit gate or immutable proxy does not prove controller topology, bounded accountant powers or immutable economic logic.",
     "Safety Score v10.31 prices known-share local mint/admin/upgrade authority, including bounded powers and local active incidents, without a materiality threshold. The Control pillar retains global paths; local-admin deployment rows disclose quality and supply share. For disjoint deployment/liability slices take the worst quality q per slice: preCap = R(B) − Σ s × (R(B) − R(B_q)), where B is priced-unknown aggregation times peg, B_q uses resolved Control min(C,q), and R resolves non-authority deployment risk. Caps, rounding and the USDT premium apply afterward once. Dominated paths cost zero; 100% local exposure equals global pricing even with infrastructure siblings. Shared controller identity does not suppress a worse local power. Null-share binding, bridges (including bridge mint authority) and oracle behavior remain unchanged.",
     "Local-authority shares are neither normalized nor trimmed. Every slice keeps its own share; total authority loss is the smaller of the share-weighted sum and the worst global-equivalent loss. Totals through 1.001 are tolerated rounding noise; larger totals emit an explicit overlap diagnostic. Fully supported local-only inventories use neutral pre-authority Control90, not missing evidence. Exact mint/upgrade controller common-mode rows owned by the authority lane remain diagnostic; independent chain, bridge and oracle infrastructure stays priced. Infrastructure facts and policy qualities are unchanged, though deductions may change after authority leaves their allocation pool.",
@@ -247,7 +250,7 @@ export const INFRASTRUCTURE_SECTION_CONTENT = defineMethodologySectionContent({
 });
 
 export const LIQUIDITY_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "liquidity-methodology",
+  id: METHODOLOGY_METRIC_SECTION_IDS.liquidity,
   title: "Liquidity Score",
   markdownParagraphs: [
     "The Liquidity Score measures how safely a stablecoin can exit through decentralized markets. It combines TVL depth, volume activity, pool quality, durability, and pair diversity into a 0-100 score.",
@@ -328,7 +331,7 @@ export const YIELD_SECTION_CONTENT = defineMethodologySectionContent({
 });
 
 export const PEGSCORE_DEWS_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "pegscore-dews-methodology",
+  id: METHODOLOGY_METRIC_SECTION_IDS.pegDews,
   title: "PegScore and Depeg Early Warning Score (DEWS)",
   markdownParagraphs: [
     "PegScore measures historical peg quality from time-at-peg and event severity. The tracking window starts at a reviewed replay-coverage date when one exists, otherwise it is capped by asset age or the earliest durable observation. Pharos also publishes a coverage-aware recent 90-day companion without treating unobserved days as stable.",
@@ -375,7 +378,7 @@ export const DEPEG_RESOLVER_SECTION_CONTENT = defineMethodologySectionContent({
 });
 
 export const CHAIN_HEALTH_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "chain-health-score",
+  id: METHODOLOGY_METRIC_SECTION_IDS.chainHealth,
   title: "Chain Health Score",
   markdownParagraphs: [
     "Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines supply-weighted Safety Score quality, chain environment, stablecoin concentration, peg stability, and RWA/crypto backing diversity.",
@@ -384,19 +387,31 @@ export const CHAIN_HEALTH_SECTION_CONTENT = defineMethodologySectionContent({
   ],
 });
 
-export const METHODOLOGY_INDEX_SECTION_CONTENT = [
-  PRICING_PIPELINE_SECTION_CONTENT,
-  STABILITY_INDEX_SECTION_CONTENT,
-  SAFETY_SCORES_SECTION_CONTENT,
-  DEPENDENCY_EXPOSURE_SECTION_CONTENT,
-  MINT_AUTHORITY_SCORE_SECTION_CONTENT,
-  INFRASTRUCTURE_SECTION_CONTENT,
-  LIQUIDITY_SECTION_CONTENT,
-  REDEMPTION_BACKSTOP_SECTION_CONTENT,
-  MINT_BURN_FLOW_SECTION_CONTENT,
-  YIELD_SECTION_CONTENT,
-  PEGSCORE_DEWS_SECTION_CONTENT,
-  DEPEG_RESOLVER_SECTION_CONTENT,
-  BLACKLIST_SECTION_CONTENT,
-  CHAIN_HEALTH_SECTION_CONTENT,
+/** Published reading order; Definitions has its own Markdown appendix. */
+export const METHODOLOGY_SECTION_ROSTER = [
+  { key: "lifecycle", section: LIFECYCLE_PHASES_SECTION_CONTENT, label: "Lifecycle Phases", markdown: false },
+  { key: "pricing", section: PRICING_PIPELINE_SECTION_CONTENT, label: "Pricing Pipeline", markdown: true },
+  { key: "stability", section: STABILITY_INDEX_SECTION_CONTENT, label: "Stability Index", markdown: true },
+  { key: "safety", section: SAFETY_SCORES_SECTION_CONTENT, label: "Safety Scores", markdown: true },
+  { key: "exposure", section: DEPENDENCY_EXPOSURE_SECTION_CONTENT, label: "Exposure Mode", markdown: true },
+  { key: "mint-authority", section: MINT_AUTHORITY_SCORE_SECTION_CONTENT, label: "Mint Authority Score", markdown: true },
+  { key: "infrastructure", section: INFRASTRUCTURE_SECTION_CONTENT, label: "Infrastructure", markdown: true },
+  { key: "liquidity", section: LIQUIDITY_SECTION_CONTENT, label: "Liquidity Score", markdown: true },
+  { key: "redemption", section: REDEMPTION_BACKSTOP_SECTION_CONTENT, label: "Redemption Backstop", markdown: true },
+  { key: "mint-burn", section: MINT_BURN_FLOW_SECTION_CONTENT, label: "Mint/Burn Flow", markdown: true },
+  { key: "yield", section: YIELD_SECTION_CONTENT, label: "Yield Intelligence", markdown: true },
+  { key: "peg-dews", section: PEGSCORE_DEWS_SECTION_CONTENT, label: "PegScore + DEWS", markdown: true },
+  { key: "resolver", section: DEPEG_RESOLVER_SECTION_CONTENT, label: "Depeg Duration Resolver", markdown: true },
+  { key: "blacklist", section: BLACKLIST_SECTION_CONTENT, label: "Blacklist Tracker", markdown: true },
+  { key: "chain-health", section: CHAIN_HEALTH_SECTION_CONTENT, label: "Chain Health Score", markdown: true },
+  { key: "definitions", section: { id: DEFINITIONS_SECTION_ID }, label: "Definitions", markdown: false },
 ] as const;
+
+export const METHODOLOGY_SECTIONS = METHODOLOGY_SECTION_ROSTER.map(({ section, label }) => ({
+  id: section.id,
+  label,
+}));
+
+export const METHODOLOGY_INDEX_SECTION_CONTENT = METHODOLOGY_SECTION_ROSTER.flatMap(({ section, markdown }) =>
+  markdown ? [section] : [],
+);

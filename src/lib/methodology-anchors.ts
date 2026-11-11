@@ -16,18 +16,26 @@ export type MetricKey =
   | "redemption-backstop"
   | "report-card";
 
-const ANCHORS: Record<MetricKey, string> = {
-  "safety-score": "/methodology/#safety-scores-methodology",
-  dews: "/methodology/#pegscore-dews-methodology",
-  "peg-score": "/methodology/#pegscore-dews-methodology",
-  psi: "/methodology/#stability-index-methodology",
-  "liquidity-score": "/methodology/#liquidity-methodology",
-  "chain-health": "/methodology/#chain-health-score",
-  bluechip: "/methodology/#safety-scores-methodology",
-  "redemption-backstop": "/methodology/#safety-scores-methodology",
-  "report-card": "/methodology/#safety-scores-methodology",
+export const METHODOLOGY_METRIC_SECTION_IDS = {
+  safety: "safety-scores-methodology",
+  pegDews: "pegscore-dews-methodology",
+  stability: "stability-index-methodology",
+  liquidity: "liquidity-methodology",
+  chainHealth: "chain-health-score",
+} as const;
+
+const ANCHORS: Record<MetricKey, keyof typeof METHODOLOGY_METRIC_SECTION_IDS> = {
+  "safety-score": "safety",
+  dews: "pegDews",
+  "peg-score": "pegDews",
+  psi: "stability",
+  "liquidity-score": "liquidity",
+  "chain-health": "chainHealth",
+  bluechip: "safety",
+  "redemption-backstop": "safety",
+  "report-card": "safety",
 };
 
 export function methodologyAnchorFor(metric: MetricKey): string {
-  return ANCHORS[metric];
+  return `/methodology/#${METHODOLOGY_METRIC_SECTION_IDS[ANCHORS[metric]]}`;
 }

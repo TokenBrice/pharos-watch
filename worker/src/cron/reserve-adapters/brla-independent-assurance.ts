@@ -12,7 +12,8 @@ import {
   verifyAssurancePdf,
 } from "./independent-assurance";
 import { fetchJsonPostWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, AdapterResult, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
+import type { AdapterContext, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile, NewerUnreviewedReport } from "./independent-assurance-types";
 import { reserveDegradedWarning } from "./warnings";
 
 const ADAPTER_KEY = "brla-independent-assurance";

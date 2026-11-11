@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { isDetailSnapshotQuery, type SavedSafetyAssessment } from "@/lib/api";
+import { type SavedSafetyAssessment } from "@/lib/api";
+import { isDetailSnapshotQuery } from "@/lib/detail-snapshot";
 import { trackFreshDataReady } from "@/lib/analytics";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
@@ -30,7 +31,7 @@ import {
   type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
-import { isAnnualUsdPerformanceEligible } from "@/lib/stablecoin-detail-query-view-model";
+import { isAnnualUsdPerformanceEligible, resolveDetailGradeRead, type DetailGradeRead } from "@/lib/stablecoin-detail-query-view-model";
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
@@ -63,6 +64,7 @@ interface UseStablecoinDetailViewModelParams {
 export type StablecoinDetailViewModel =
   | Exclude<BaseStablecoinDetailViewModel, { status: "ready" }>
   | (Extract<BaseStablecoinDetailViewModel, { status: "ready" }> & {
+      gradeRead: DetailGradeRead;
       refetchReserves: QueryRefetchFn | null;
       isFetchingReserves: boolean;
     });
@@ -334,7 +336,8 @@ export function useStablecoinDetailViewModel({
 
   return useMemo(() => viewModel.status === "ready" ? {
     ...viewModel,
+    gradeRead: resolveDetailGradeRead(viewModel.reportCard, reportCards),
     refetchReserves: reservesEnabled ? liveReserves.refetch : null,
     isFetchingReserves: liveReserves.isFetching,
-  } : viewModel, [viewModel, reservesEnabled, liveReserves.refetch, liveReserves.isFetching]);
+  } : viewModel, [viewModel, reportCards, reservesEnabled, liveReserves.refetch, liveReserves.isFetching]);
 }

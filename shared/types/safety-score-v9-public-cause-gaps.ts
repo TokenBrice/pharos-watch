@@ -16,3 +16,8 @@ export function resolveCauseGapId(response: V9PublicCauseGapContext, card: V9Pub
   }
   return response.foreignCauseGaps[globalRef]!;
 }
+
+export function readV9PublicCausePathReference(path: string): { basePath: string; ref: number } | null {
+  const suffix = /:cause:(\d+)$/u.exec(path);
+  return suffix ? { basePath: path.slice(0, suffix.index), ref: Number(suffix[1]) } : null;
+}

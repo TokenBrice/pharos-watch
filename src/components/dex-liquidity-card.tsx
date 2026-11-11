@@ -16,13 +16,10 @@ import { formatCurrency, formatPercentFromRatio, formatUsdPriceAdaptive } from "
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { getScoreTier, SCORE_TIER_CUTOFFS, TIER_PILL } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import {
-  buildLiquidityVerdictLine,
   getConcentrationLabel,
   getLiquidityEvidenceLabel,
-  getOrganicFractionTier,
   isLiquidityActivityNotRated,
 } from "@/components/dex-liquidity-card-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -43,7 +40,7 @@ import {
 } from "@/components/dex-liquidity-card-parts";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { cn } from "@/lib/utils";
-import { SCORE_TIER_4_CLASSES } from "@shared/lib/classification";
+import { buildLiquidityVerdictLine, getAggregateOrganicFractionTier, resolveScoreTier4, SCORE_TIER_4_CLASSES, SCORE_TIER_4_POLICY } from "@shared/lib/classification";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -58,22 +55,14 @@ export function hasMeaningfulDexData(liq: DexLiquidityData | undefined): liq is 
   return liq.poolCount > 0 || liq.totalTvlUsd > 0;
 }
 
-/** `getScoreTier`'s real cutoffs (80/60/40) as an unlabeled score track —
- *  the tiers are color keys, not published vocabulary. Worst → best. */
-const DEX_SCORE_BANDS: readonly SpectrumBand[] = [
-  { key: "t0", label: "", fillClass: SCORE_TIER_4_CLASSES.t0.fill, textClass: SCORE_TIER_4_CLASSES.t0.text },
-  { key: "t40", label: "", fillClass: SCORE_TIER_4_CLASSES.t40.fill, textClass: SCORE_TIER_4_CLASSES.t40.text },
-  { key: "t60", label: "", fillClass: SCORE_TIER_4_CLASSES.t60.fill, textClass: SCORE_TIER_4_CLASSES.t60.text },
-  { key: "t80", label: "", fillClass: SCORE_TIER_4_CLASSES.t80.fill, textClass: SCORE_TIER_4_CLASSES.t80.text },
-];
-const DEX_SCORE_CUTOFFS = Object.values(SCORE_TIER_CUTOFFS);
-
-function dexScoreBandKey(score: number): string {
-  if (score >= SCORE_TIER_CUTOFFS.green) return "t80";
-  if (score >= SCORE_TIER_CUTOFFS.blue) return "t60";
-  if (score >= SCORE_TIER_CUTOFFS.amber) return "t40";
-  return "t0";
-}
+/** Unlabeled liquidity score track, worst → best. */
+const DEX_SCORE_BANDS: readonly SpectrumBand[] = SCORE_TIER_4_POLICY.map(({ key }) => ({
+  key,
+  label: "",
+  fillClass: SCORE_TIER_4_CLASSES[key].fill,
+  textClass: SCORE_TIER_4_CLASSES[key].text,
+}));
+const DEX_SCORE_CUTOFFS = SCORE_TIER_4_POLICY.map(({ min }) => min);
 
 export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useDexLiquidityCoin(stablecoinId);
@@ -119,7 +108,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const score = liq.liquidityScore ?? 0;
-  const tier = getScoreTier(score);
+  const tier = resolveScoreTier4(score);
   const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass, liq.unavailableReason);
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
@@ -149,7 +138,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 {/* `ScorePill`, not bare tinted text: this module and Mint
                     Authority were rendering the same "N/100" fact in two
                     different formats. */}
-                <ScorePill label={`${score}/100`} toneClass={TIER_PILL[tier]} />
+                <ScorePill label={`${score}/100`} toneClass={SCORE_TIER_4_CLASSES[tier].pill} />
               </ScoreBadgeWrapper>
             ) : (
               <ScorePill label="NR" />
@@ -170,7 +159,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               mode="range"
               bands={DEX_SCORE_BANDS}
               cutoffs={DEX_SCORE_CUTOFFS}
-              activeKey={dexScoreBandKey(score)}
+              activeKey={tier}
               score={score}
               ariaLabel={`Liquidity score ${score} of 100 on the score track.`}
               className="max-w-md"
@@ -322,7 +311,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                     <div>
                       <span className="text-muted-foreground">Organic: </span>
                       <span
-                        className={`font-mono tabular-nums ${getOrganicFractionTier(liq.organicFraction).summaryColor}`}
+                        className={`font-mono tabular-nums ${getAggregateOrganicFractionTier(liq.organicFraction).summaryColor}`}
                       >
                         {formatPercentFromRatio(liq.organicFraction, 0)}
                       </span>

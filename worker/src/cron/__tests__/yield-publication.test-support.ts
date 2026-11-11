@@ -1,9 +1,10 @@
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { buildHistoryKey } from "../yield-sync/history";
+import { buildHistoryKey } from "../yield-sync/history-evidence";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
-import { buildYieldPublicationViews, buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
+import { buildYieldPublicationViews } from "../yield-sync/publication-decisions";
+import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication-rankings";
 
 export const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 

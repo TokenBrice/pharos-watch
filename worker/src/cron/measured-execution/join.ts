@@ -3,12 +3,12 @@ import {
   CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
   CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES,
   CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
+  isMatureFreshCurveHistory,
 } from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import {
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   type DexNativeExecutionDiagnostic,
-  getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
@@ -315,14 +315,11 @@ function isMatureFreshCurveQuote(
     quote.quotedTarget.adapterProfileId !== adapterProfileId ||
     history == null
   ) return false;
-  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
-    quote.quotedTarget.adapterProfileId,
-  );
-  return (
-    history.completeProducerCycleCount >= minCompleteCycles &&
-    history.successfulObservationCount >= minSuccessfulObservations &&
-    nowSec - history.observationWindowEndedAt <= freshnessMaxSec &&
-    history.observationWindowEndedAt <= nowSec + 60
+  return isMatureFreshCurveHistory(
+    history,
+    nowSec,
+    minCompleteCycles,
+    minSuccessfulObservations,
   );
 }
 

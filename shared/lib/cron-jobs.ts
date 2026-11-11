@@ -28,9 +28,18 @@ interface CronScheduleDefinition {
   triggerSchedules?: readonly string[];
   intervalSec: number;
   offsetSec: number;
+  calendarIdentity?: "utc-month";
+  recoveryOpportunity?: { trigger: string; offsetSec: number };
   // Existing measured placement policy; reclassification requires workload review.
   cpuPlacement: "hourly-physical-required" | "sub-hourly-allowed";
 }
+
+/** Conditional publication recovery has its own fenced slot, while cadence stays hourly. */
+export const V9_PUBLICATION_SECOND_CHANCE = {
+  scheduleKey: "v9PublicationOffset",
+  trigger: "52 * * * *",
+  offsetSec: CRON_SCHEDULE_CADENCES.v9PublicationOffset.offsetSec + 30 * 60,
+} as const;
 
 /**
  * Cron expression + trigger topology for each lane. Cadence lengths and slot
@@ -93,7 +102,8 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   v9PublicationOffset: {
     cpuPlacement: "hourly-physical-required",
     schedule: "22 * * * *",
-    triggerSchedules: ["22 * * * *", "52 * * * *"],
+    triggerSchedules: ["22 * * * *", V9_PUBLICATION_SECOND_CHANCE.trigger],
+    recoveryOpportunity: V9_PUBLICATION_SECOND_CHANCE,
     ...CRON_SCHEDULE_CADENCES.v9PublicationOffset,
   },
   // Paired hourly physical triggers for the hourly Cron CPU class. status-self-check
@@ -192,7 +202,10 @@ export const CRON_SCHEDULE_DEFINITIONS = {
   daily0800Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
   daily0805Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
   daily0810Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },
-  monthlyYieldAudit: { cpuPlacement: "sub-hourly-allowed", schedule: "0 6 1 * *", ...CRON_SCHEDULE_CADENCES.monthlyYieldAudit },
+  monthlyYieldAudit: {
+    cpuPlacement: "sub-hourly-allowed", schedule: "0 6 1 * *", calendarIdentity: "utc-month",
+    ...CRON_SCHEDULE_CADENCES.monthlyYieldAudit,
+  },
 } as const satisfies Record<keyof typeof CRON_SCHEDULE_CADENCES, CronScheduleDefinition>;
 
 export const CRON_CONNECTION_BUDGET = {
@@ -1034,12 +1047,6 @@ function normalizeCronSlotStartedAt(timestampSec: number, intervalSec: number, o
  * `:22` row cannot deduplicate it and its delivery lag is measured from :52.
  * The logical cadence (and every pinned evidence budget) stays hourly.
  */
-export const V9_PUBLICATION_SECOND_CHANCE = {
-  scheduleKey: "v9PublicationOffset",
-  trigger: "52 * * * *",
-  offsetSec: CRON_SCHEDULE_CADENCES.v9PublicationOffset.offsetSec + 30 * 60,
-} as const;
-
 export function isV9PublicationSecondChanceTrigger(cron: string | null | undefined): boolean {
   return cron === V9_PUBLICATION_SECOND_CHANCE.trigger;
 }
@@ -1050,14 +1057,16 @@ export function getCronSlotStartedAtForTrigger(
   cron: string,
   scheduledTimeMs?: number | null,
 ): number {
-  if (scheduleKey !== V9_PUBLICATION_SECOND_CHANCE.scheduleKey || !isV9PublicationSecondChanceTrigger(cron)) {
+  const definition: CronScheduleDefinition = CRON_SCHEDULE_DEFINITIONS[scheduleKey];
+  const opportunity = definition.recoveryOpportunity;
+  if (!opportunity || opportunity.trigger !== cron) {
     return getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
   }
   const rawTimestampSec = Number.isFinite(scheduledTimeMs)
     ? Math.floor(Number(scheduledTimeMs) / 1000)
     : Math.floor(Date.now() / 1000);
   return normalizeCronSlotStartedAt(
-    rawTimestampSec, CRON_SCHEDULE_DEFINITIONS[scheduleKey].intervalSec, V9_PUBLICATION_SECOND_CHANCE.offsetSec,
+    rawTimestampSec, definition.intervalSec, opportunity.offsetSec,
   );
 }
 
@@ -1065,8 +1074,9 @@ export function getCronSlotStartedAtForSchedule(
   scheduleKey: CronScheduleKey | null | undefined,
   scheduledTimeMs?: number | null,
 ): number {
-  const intervalSec = scheduleKey ? CRON_SCHEDULE_DEFINITIONS[scheduleKey].intervalSec : null;
-  const offsetSec = scheduleKey ? CRON_SCHEDULE_DEFINITIONS[scheduleKey].offsetSec : 0;
+  const definition: CronScheduleDefinition | null = scheduleKey ? CRON_SCHEDULE_DEFINITIONS[scheduleKey] : null;
+  const intervalSec = definition?.intervalSec;
+  const offsetSec = definition?.offsetSec ?? 0;
   const rawTimestampSec = Number.isFinite(scheduledTimeMs)
     ? Math.floor(Number(scheduledTimeMs) / 1000)
     : Math.floor(Date.now() / 1000);
@@ -1075,7 +1085,7 @@ export function getCronSlotStartedAtForSchedule(
     return rawTimestampSec;
   }
 
-  if (scheduleKey === "monthlyYieldAudit") {
+  if (definition?.calendarIdentity === "utc-month") {
     const shiftedTimestampSec = rawTimestampSec - offsetSec;
     const shiftedDate = new Date(shiftedTimestampSec * 1000);
     const shiftedMonthStartSec = Math.floor(Date.UTC(

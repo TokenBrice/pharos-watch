@@ -65,3 +65,15 @@ export const CONTROL_POSTURE_STYLES: Record<GovernanceQuality, ControlPostureSty
     iconClassName: "text-muted-foreground",
   },
 };
+
+export const TRANSFER_REVIEW_POSTURE_LABELS: Record<string, string> = {
+  permissionless: "Permissionless",
+  restrictable: "Restrictable",
+  permissioned: "Permissioned",
+};
+
+export const TRANSFER_REVIEW_SCOPE_LABELS: Record<string, string> = {
+  canonical: "Canonical",
+  "material-bridge": "Bridged",
+  additional: "Additional",
+};

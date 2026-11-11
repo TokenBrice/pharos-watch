@@ -5,7 +5,7 @@ import type { EvaluatedYieldSource } from "./evaluation";
 import type { YieldEnvelopeRejection } from "./types";
 import type { StablecoinSupplyMapState, YieldSupplementalCacheMeta } from "./state";
 import type { YieldOptionalSourceOutcome } from "./sources-rpc";
-import type { YieldRowsWriteStats } from "./publication";
+import type { YieldRowsWriteStats } from "./publication-storage";
 import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 

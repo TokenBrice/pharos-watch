@@ -211,7 +211,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/live-reserves/store-shared.ts",
       "worker/src/lib/db.ts",
       "worker/src/lib/d1-overload-retry.ts",
-      "worker/src/lib/scheduled-recovery-checkpoint.ts",
+      "worker/src/cron/reserve-adapters/reserve-checkpoint.ts",
       "worker/src/lib/scheduled-slot-reconciliation.ts",
       "worker/src/lib/cron-logger.ts",
       "shared/lib/scheduled-runner-registry.ts",

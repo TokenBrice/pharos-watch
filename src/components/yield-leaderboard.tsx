@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import Link from "next/link";
 import { ArrowUpRight, DownloadIcon } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
@@ -25,9 +25,8 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
 import { getYieldRankingSourceClockInputs } from "@/lib/yield-source-explorer-model";
 import { resolveYieldSourceAssessedAt, type YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
-import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { TABLE_PAGE_SIZE } from "@/lib/constants";
-import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
+import { useYieldLeaderboardController } from "@/hooks/use-yield-leaderboard-controller";
+import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
@@ -195,7 +194,12 @@ const MOBILE_SORT_OPTIONS: Array<{ key: YieldTableSortKey; label: string }> = [
   { key: "yieldStability", label: "Stability" },
 ];
 
+export interface YieldLeaderboardHandle {
+  revealRow: (id: string) => void;
+}
+
 interface YieldLeaderboardProps {
+  ref?: Ref<YieldLeaderboardHandle>;
   rows: YieldViewModelRow[];
   logos: Record<string, string>;
   riskFreeRate: number;
@@ -219,6 +223,7 @@ interface YieldLeaderboardProps {
 }
 
 export function YieldLeaderboard({
+  ref,
   rows,
   logos,
   riskFreeRate,
@@ -271,13 +276,9 @@ export function YieldLeaderboard({
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<YieldViewModelRow, YieldTableSortKey>(rows, {
-    defaultKey: "pys",
-    defaultDirection: "desc",
-    compareRows: compareYieldRows,
-    pageSize: TABLE_PAGE_SIZE,
-    resetPageOnTotalChange: true,
-  });
+    revealRow,
+  } = useYieldLeaderboardController(rows);
+  useImperativeHandle(ref, () => ({ revealRow }), [revealRow]);
   const prefetch = usePrefetchStablecoin();
   const visibleExpandedId = useMemo(
     () => (expandedId !== null && paginated.some((row) => row.id === expandedId) ? expandedId : null),

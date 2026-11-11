@@ -18,7 +18,7 @@ import {
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
   fetchIndependentAssuranceAdapter,
   fetchIndependentAssuranceReserves,
-  INDEPENDENT_ASSURANCE_PROFILES,
+  INDEPENDENT_ASSURANCE_ADAPTERS,
   straitsxIndependentAssuranceProfile,
   verifyIndependentAssuranceReport,
 } from "../independent-assurance";
@@ -34,7 +34,7 @@ import {
 import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "../cadd-independent-assurance-profile";
 import { collectPdfAnchors } from "../helpers";
 import { getReserveAdapter } from "../index";
-import type { IndependentAssuranceProfile } from "../types";
+import type { IndependentAssuranceProfile } from "../independent-assurance-types";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
@@ -861,7 +861,7 @@ function minorUnitsSum(values: readonly string[]): bigint {
 describe("assurance adapter descriptor provenance", () => {
   it("derives evidence and origin classes from every bound assurance manifest tier", () => {
     const products = new Set<IndependentAssuranceProduct>();
-    for (const adapterKey of Object.keys(INDEPENDENT_ASSURANCE_PROFILES)) {
+    for (const adapterKey of Object.keys(INDEPENDENT_ASSURANCE_ADAPTERS)) {
       const definition = adapters.getLiveReserveAdapterDefinition(adapterKey);
       expect(definition, `missing descriptor for ${adapterKey}`).not.toBeNull();
       let boundCoins = 0;

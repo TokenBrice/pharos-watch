@@ -11,9 +11,9 @@ import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v
 import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
+import type { RedemptionCapacityTelemetry } from "../erc4626-capacity-observation";
 import {
   finalizeErc4626RedemptionCapacity, projectErc4626RedemptionMetadata, projectErc4626RedemptionTelemetry,
-  type RedemptionCapacityTelemetry,
 } from "../erc4626-redemption-capacity";
 import {
   getErc4626Network,

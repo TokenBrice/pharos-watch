@@ -4,6 +4,7 @@ import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
 import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
+  TELEGRAM_PRESET_ALERT_TYPES,
 } from "@shared/lib/telegram-alert-families";
 import { type TelegramAlertType } from "@shared/types/status";
 import { TELEGRAM_LIVE_ALERT_TYPES } from "@shared/types/status/telegram";
@@ -186,7 +187,8 @@ function hasOnlyMarkedOffFamilies(row: SubscriptionRow): boolean {
 
 /** True when the chat follows nothing: no preset, no active coin, no global family. */
 export function followsNothing(input: Pick<ListMessageInput, "subscriber" | "subscriptions" | "presetSubscriptions">): boolean {
-  const activePreset = input.presetSubscriptions.some((row) => row.alert_dews || row.alert_depeg || row.alert_safety);
+  const activePreset = input.presetSubscriptions.some((row) =>
+    TELEGRAM_PRESET_ALERT_TYPES.some((type) => row[TELEGRAM_ALERT_PERSISTENCE[type].subscriptionColumn]));
   return !input.subscriptions.some(hasActiveFamily) && !activePreset && describeGlobalAlertSettings(input.subscriber) === "None";
 }
 

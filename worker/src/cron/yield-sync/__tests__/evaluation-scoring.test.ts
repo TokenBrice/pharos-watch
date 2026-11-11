@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePenaltyDerivedFields } from "../evaluation";
+import { resolvePenaltyDerivedFields } from "../candidate-scoring";
 import { resolveEvidenceNullReason } from "../../../lib/yield-ranking-helpers";
 
 const base = {

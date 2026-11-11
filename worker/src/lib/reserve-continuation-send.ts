@@ -1,6 +1,6 @@
 import type { ReserveContinuationMessage } from "@shared/types/reserve-continuation";
 import type { ScheduledEnv } from "./env";
-import { loadLiveReserveCheckpoint } from "./scheduled-recovery-checkpoint";
+import { loadLiveReserveCheckpoint } from "../cron/reserve-adapters/reserve-checkpoint";
 import { settleAfterAbort } from "./cron-abort-settlement";
 import { SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS, type SlotDeadline } from "./cron-timeouts";
 import { logWorkerEventArgs } from "./structured-log";

@@ -155,3 +155,10 @@ export const OPERATOR_VERDICT_TONE = {
     text: "text-muted-foreground",
   },
 } as const satisfies Record<OperatorVerdict, StateToneClasses>;
+
+export const PIPELINE_STATE_META: Record<"healthy" | "watch" | "critical" | "unknown", { label: string; className: string }> = {
+  healthy: { label: "Healthy", className: "bg-state-positive-solid/15 text-state-positive-bright" },
+  watch: { label: "Watch", className: "bg-state-warn-solid/15 text-state-warn-strong" },
+  critical: { label: "Critical", className: "bg-state-danger-solid/15 text-state-danger-bright" },
+  unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
+};

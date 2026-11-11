@@ -1,3 +1,4 @@
+import { V9_QUALITY_PILLARS } from "../types/safety-score-v9-quality-pillars";
 // Verification seam (deliberate, keep): this module exists so replay/verification
 // suites can re-run V9 scoring against a validated policy envelope out of band.
 // It has no production consumer by design — do not delete it as "unused code"
@@ -37,7 +38,7 @@ export interface V9ResearchScenarioCap extends V9StructuralCap {
   pricedInPillar?: V9QualityPillar;
 }
 
-const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
+
 
 /** Phase-zero scenario adapter; arbitrary caps are never accepted by production scoring input. */
 export function scoreV9ResearchScenarioInput(

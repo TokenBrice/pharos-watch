@@ -1,4 +1,4 @@
-import type { RedemptionBackstopConfig } from "../shared";
+import type { RedemptionBackstopConfig, ReviewedRedemptionTerms } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -14,8 +14,14 @@ import {
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_COVERAGE_EXPANSION_AT } from "./shared";
 
-export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  "paxg-paxos": {
+// Compact standard tariff with the controlling private-pricing and
+// third-party-cost qualifications retained; never an all-in ceiling.
+export const PAXG_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
+  compactFeeBasis: {
+    feeBasis: "Standard tariff effective 2026-09-01: 12.5-50 bps on rolling-30-day net redemptions, plus 5 bps for in-kind gold conversion. Customer-specific pricing may override it; delivery, dealer, tax and bank costs are separate.",
+    termsClock: "route-review-terms",
+  },
+  config: {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: "2026-09-21",
@@ -80,7 +86,15 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ),
     ],
   },
-  "xaut-tether": {
+};
+
+// The physical issuer fee, never the delivery model's default zeros.
+export const XAUT_REVIEWED_REDEMPTION_TERMS: ReviewedRedemptionTerms = {
+  compactFeeBasis: {
+    feeBasis: "25 bps issuer redemption fee, plus delivery and applicable fees",
+    termsClock: "physical",
+  },
+  config: {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: "2026-09-21",
@@ -130,6 +144,11 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "430 XAUt is the documented conservative deposit threshold, not a fixed delivered bar weight: full bars vary and excess tokens are returned. Switzerland delivery is additional and unpriced.",
     ],
   },
+};
+
+export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "paxg-paxos": PAXG_REVIEWED_REDEMPTION_TERMS.config,
+  "xaut-tether": XAUT_REVIEWED_REDEMPTION_TERMS.config,
   "xnk-kinka": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull("2026-05-14"),

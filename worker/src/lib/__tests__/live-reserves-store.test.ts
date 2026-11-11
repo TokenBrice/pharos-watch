@@ -34,7 +34,7 @@ import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserve
 import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { beginLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 
 function pendingCheckpoint(overrides: Record<string, unknown> = {}) {
   return {

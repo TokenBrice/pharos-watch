@@ -9,14 +9,15 @@ import {
 
 import {
   CRITICAL_COVERAGE_BRANCH_FLOORS,
-  CRITICAL_COVERAGE_LINE_FLOORS,
   getChangedFilesFromGit,
   runCriticalCoverageCheck,
   runCriticalCoverageCompletenessCheck,
   runCriticalCoverageCompletenessGuard,
 } from "../ci/check-critical-coverage.ts";
 import {
+  CRITICAL_COVERAGE_LINE_FLOORS,
   CRITICAL_FILES,
+  assertCriticalCoverageLineFloorsEnrolled,
   collectCriticalCoverageCandidates,
   collectCriticalCoverageWaiverReviewQueue,
   parseLcov,
@@ -108,6 +109,7 @@ describe("critical coverage changed-file detection", () => {
       "functions/lib/upstream-proxy.ts",
       "shared/lib/peg-score.ts",
       "worker/src/api/safety-score-history.ts",
+      "worker/src/cron/daily-digest.ts",
       "worker/src/cron/depeg-detection/new-decision-helper.ts",
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
@@ -454,6 +456,11 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/dex-liquidity/orchestrator.ts": 55,
       "worker/src/lib/api-pagination.ts": 70,
     });
+    const sources = Object.keys(CRITICAL_COVERAGE_LINE_FLOORS);
+    expect(collectCriticalCoverageCandidates({ sourceFiles: sources })).toEqual([...sources].sort());
+    expect(() => assertCriticalCoverageLineFloorsEnrolled(CRITICAL_FILES)).not.toThrow();
+    const missing = sources[0];
+    expect(() => assertCriticalCoverageLineFloorsEnrolled(CRITICAL_FILES.filter((file) => file !== missing))).toThrow(missing);
   });
 
   it("enforces fixed line and branch floors despite retired per-file environment settings", () => {
