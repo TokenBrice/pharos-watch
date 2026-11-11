@@ -45,4 +45,3 @@ export function safeFailure(
     ).slice(0, 500),
   };
 }
-

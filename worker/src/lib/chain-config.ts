@@ -16,4 +16,3 @@ export function requireChainConfig(chainId: string): ChainConfig {
     type: meta.type,
   };
 }
-

@@ -506,4 +506,3 @@ export async function observeHoneyFactoryRedemptionCapacity(
     };
   }
 }
-

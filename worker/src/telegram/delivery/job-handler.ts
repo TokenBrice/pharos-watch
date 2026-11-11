@@ -39,4 +39,3 @@ export interface TelegramJobKindHandler<P = unknown, K extends TelegramJobRow["k
   buildPage?: (ctx: TelegramJobPageContext<P>) => Promise<TelegramJobPage>;
   onDone?: (ctx: TelegramJobDoneContext<P>) => Promise<void>;
 }
-

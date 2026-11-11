@@ -50,4 +50,3 @@ export interface CronProgressUpdate {
 }
 
 export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>;
-

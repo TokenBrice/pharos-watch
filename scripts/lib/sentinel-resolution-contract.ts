@@ -191,4 +191,3 @@ export interface SentinelResolutionReport {
   };
   groups: SentinelResolutionRow[];
 }
-

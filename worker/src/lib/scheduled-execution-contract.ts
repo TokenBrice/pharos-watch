@@ -13,4 +13,3 @@ export type ScheduledExecutionFence = ExecutionFenceIdentity & (
   | { readonly kind?: "scheduled"; readonly deliveryId?: never }
   | { readonly kind: "reserve-continuation"; readonly deliveryId: string }
 );
-

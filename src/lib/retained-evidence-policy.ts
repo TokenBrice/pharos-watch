@@ -7,4 +7,3 @@ export function isRetainableHomepageLane(meta: HomepageLaneMeta, nowMs: number):
     && nowMs >= meta.updatedAt * 1000
     && nowMs - meta.updatedAt * 1000 <= RETAINED_EVIDENCE_MAX_AGE_MS;
 }
-

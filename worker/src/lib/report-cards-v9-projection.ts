@@ -101,4 +101,3 @@ export function projectSafetyScoreV9PublicationForMaterialization(
       card !== null && typeof card === "object" && admitted.has(card))),
   }).parse(buildPublicProjection(publication, publicationHealth, publication.cards));
 }
-

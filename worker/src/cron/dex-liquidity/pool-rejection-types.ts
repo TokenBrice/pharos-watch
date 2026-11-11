@@ -33,4 +33,3 @@ export interface PoolProcessingRejection {
   unavailableTvlCount?: number;
   details?: PoolRejectionDetail[];
 }
-

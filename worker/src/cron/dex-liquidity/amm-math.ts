@@ -57,4 +57,3 @@ export function q64TokenDelta(a: bigint, b: bigint, liquidity: bigint, tokenA: b
   const denominator = tokenA ? a * b : Q64;
   return roundUp ? ceilDiv(numerator, denominator) : numerator / denominator;
 }
-

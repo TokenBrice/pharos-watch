@@ -221,4 +221,3 @@ export const STABLECOIN_MARKET_HOURS_CALENDARS = [{
     { stablecoinId: "jpym-mento", lane: "mento-fpmm" },
   ],
 }] as const;
-

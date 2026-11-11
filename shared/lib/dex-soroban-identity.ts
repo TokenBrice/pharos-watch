@@ -14,4 +14,3 @@ export function canonicalSorobanTokenId(address: string): string | null {
   const match = SOROBAN_IDENTITY_RE.exec(normalized);
   return match?.[1] ?? null;
 }
-
