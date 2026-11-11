@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { withSqliteD1, insertLiveEvent, sealPublicFixture, insertPredictionErratum } from "./depeg-resolver-ddrv2-store.test-support";
+import { ensureCanonicalIncidents } from "../depeg-resolver-incident-store";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_METHODOLOGY_CHANGELOG_PATH,
@@ -64,18 +66,35 @@ function errataDb() {
 }
 
 describe("loadPredictionErrata", () => {
-  it.each([
-    ["public prediction", { publicPredictionIds: [77, 77, 78] }, "public_prediction_id", [77, 78]],
-    ["incident", { incidentKeys: ["ddr:usdc:below", "ddr:usdc:below"] }, "incident_key", ["ddr:usdc:below"]],
-    ["event", { eventIds: [42, 43, 42] }, "event_id", [42, 43]],
-  ] as const)("deduplicates the %s filter before binding", async (_label, filters, column, binds) => {
-    const db = errataDb();
-
-    await loadPredictionErrata(db, filters as LoadPredictionErrataFilters);
-
-    expect(db.getHistory()[0]?.sql).toContain(`WHERE ${column} IN`);
-    expect(db.getHistory()[0]?.binds).toEqual(binds);
-  });
+  it.each(["publicPredictionIds", "incidentKeys", "eventIds"] as const)(
+    "filters %s with repeated identities without duplicate or unrelated errata", async (filter) => withSqliteD1(async (db) => {
+      const identities = [];
+      for (const [eventId, stablecoinId] of [[1, "lusd-liquity"], [2, "usdc-circle"]] as const) {
+        insertLiveEvent(db, { eventId, stablecoinId, startedAt: 100000 });
+        const [incident] = await ensureCanonicalIncidents(db, [{
+          eventId, stablecoinId, pegCurrency: "USD", direction: "below", startedAt: 100000,
+          peakDeviationBps: -300, source: "live",
+        }], { nowSec: 200000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" });
+        const prediction = await sealPublicFixture(db, incident!.incidentKey, "prediction", {
+          payload: { eventId, stablecoinId },
+        });
+        insertPredictionErratum(db, {
+          publicPredictionId: prediction.id, incidentKey: incident!.incidentKey, eventId,
+          assessmentId: prediction.assessmentId, reason: "input_corruption", operatorNote: "invalid source payload",
+          createdAt: 200001, createdBy: "operator",
+        });
+        identities.push({ publicPredictionIds: prediction.id, incidentKeys: incident!.incidentKey, eventIds: eventId });
+      }
+      const identity = identities[0]![filter];
+      const absent = filter === "incidentKeys" ? "missing" : 999;
+      const rows = await loadPredictionErrata(db, { [filter]: [...Array.from({ length: 101 }, () => identity), absent] });
+      expect(rows.map(({ id, publicPredictionId, incidentKey, eventId, state }) => ({
+        id, publicPredictionId, incidentKey, eventId, state,
+      }))).toEqual([{
+        id: 1, publicPredictionId: 1, incidentKey: identities[0]!.incidentKeys, eventId: 1, state: "invalidated",
+      }]);
+    }),
+  );
 
   it.each([
     { publicPredictionIds: [] },

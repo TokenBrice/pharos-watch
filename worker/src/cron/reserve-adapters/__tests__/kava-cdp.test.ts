@@ -33,25 +33,8 @@ function makeCoin(): StablecoinMeta {
   return { id: "usdx-kava", name: "USDX", symbol: "USDX", liveReservesConfig: structuredClone(usdx.liveReservesConfig) } as unknown as StablecoinMeta;
 }
 
-const PRICE = (marketId: string): number => Number(PRICEFEED_PRICES.prices.find((p) => p.market_id === marketId)!.price);
-
-function expectedDenomValueUsd(denom: string): number {
-  const rows = TOTAL_COLLATERAL.total_collateral.filter((row) => row.amount.denom === denom);
-  const param = CDP_PARAMS.params.collateral_params.find((row) => row.denom === denom)!;
-  const priceMicros = Math.round(PRICE(param.spot_market_id) * 1_000_000);
-  const scale = 10n ** BigInt(Number(param.conversion_factor));
-  return rows.reduce((sum, row) => sum
-    + Number((BigInt(row.amount.amount) * BigInt(priceMicros) + scale / 2n) / scale) / 1_000_000, 0);
-}
-
-const expectedTotalCollateralUsd = ["bnb", "btcb", "busd", "hbtc", "ukava", "erc20/tether/usdt", "xrpb"]
-  .reduce((sum, denom) => sum + expectedDenomValueUsd(denom), 0);
-
-const expectedPrincipalTokens = TOTAL_PRINCIPAL.total_principal
-  .reduce((sum, row) => sum + Number(BigInt(row.amount.amount)) / 1e6, 0);
-
-const USDX_PRICE = PRICE("usdx:usd");
-
+const expectedTotalCollateralUsd = 63_740_454.117967;
+const expectedPrincipalTokens = 7_488_272.868217;
 
 describe("adaptKavaCdpState", () => {
   it("publishes one slice per priced collateral denom with market-valued liability metrics", () => {
@@ -66,19 +49,19 @@ describe("adaptKavaCdpState", () => {
     expect(byName.get("BNB")!.risk).toBe("high");
     expect(byName.get("BUSD")!.risk).toBe("low");
     expect(byName.get("USDT")!.risk).toBe("low");
-    expect(byName.get("BUSD")!.pct).toBeCloseTo(((expectedDenomValueUsd("busd") / expectedTotalCollateralUsd) * 100), 9);
-    expect(byName.get("HBTC")!.pct).toBeCloseTo(((expectedDenomValueUsd("hbtc") / expectedTotalCollateralUsd) * 100), 9);
-    expect(byName.get("USDT")!.pct).toBeCloseTo(((expectedDenomValueUsd("erc20/tether/usdt") / expectedTotalCollateralUsd) * 100), 9);
+    expect(byName.get("BUSD")!.pct).toBeCloseTo(1.352638150398699, 9);
+    expect(byName.get("HBTC")!.pct).toBeCloseTo(80.21670453644833, 9);
+    expect(byName.get("USDT")!.pct).toBeCloseTo(0.161275069344107, 9);
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 9);
     expect(byName.get("HBTC")!.sourceKey).toBe("kava-cdp:hbtc");
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalReserveUsd: expect.closeTo(expectedTotalCollateralUsd, 6),
-      totalLiabilitiesUsd: expect.closeTo(expectedPrincipalTokens * USDX_PRICE, 6),
-      supplyTokens: expect.closeTo(10001377482335 / 1e6, 6),
-      supplyUsd: expect.closeTo((10001377482335 / 1e6) * USDX_PRICE, 6),
-      collateralizationRatio: expect.closeTo(expectedTotalCollateralUsd / (expectedPrincipalTokens * USDX_PRICE), 6),
+      totalLiabilitiesUsd: expect.closeTo(4_942_260.09302322, 6),
+      supplyTokens: expect.closeTo(10_001_377.482335, 6),
+      supplyUsd: expect.closeTo(6_600_909.1383411, 6),
+      collateralizationRatio: expect.closeTo(12.897025433353196, 6),
       details: expect.objectContaining({
         proofKind: "kava-cdp-module-totals",
         chainId: "kava_2222-10",
@@ -98,7 +81,6 @@ describe("adaptKavaCdpState", () => {
     state.collateral.total_collateral.find((row) => row.collateral_type === "swp-a")!.amount.amount = "1000000000";
     state.principal.total_principal.find((row) => row.collateral_type === "swp-a")!.amount.amount = "750000000000";
     const result = adaptKavaCdpState(state);
-    const expectedPct = (750000 / (expectedPrincipalTokens - 4889684 / 1e6 + 750000)) * 100;
     expect(result.slices).toEqual([]);
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
@@ -106,7 +88,7 @@ describe("adaptKavaCdpState", () => {
     expect(result.metadata?.details).toMatchObject({
       measuredCollateralUsd: expect.closeTo(expectedTotalCollateralUsd, 6),
       unpricedCollateralTypes: ["swp-a"], unpricedPrincipalTokens: 750000,
-      unpricedPrincipalPct: expect.closeTo(expectedPct, 6),
+      unpricedPrincipalPct: expect.closeTo(9.103855348652467, 6),
     });
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "collateral-coverage-incomplete", effect: "fatal",

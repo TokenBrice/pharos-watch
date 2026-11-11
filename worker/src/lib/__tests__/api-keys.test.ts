@@ -4,7 +4,6 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
 import {
-  makeApiKeyMutationTables,
   makeApiKeyPrefixLookup,
   makeApiKeyPrefixLookupError,
   makeAuthenticatedApiKeyRow,
@@ -236,30 +235,21 @@ describe("api key helpers", () => {
   });
 
   it("updates only the requested columns and preserves explicit null on update", async () => {
-    const db = mockD1(
-      [
-        ...makeApiKeyMutationTables({
-          existingRow: {
-            owner_email: "ops@pharos.watch",
-            expires_at: 1_800,
-          },
-          postMutationRow: {
-            owner_email: "ops@pharos.watch",
-            expires_at: null,
-            updated_at: 2_000,
-          },
-        }),
-      ],
-    );
-
-    const updated = await updateApiKey(db, 7, { expiresAt: null }, 2_000);
-    const write = db.getHistory().find((entry) => entry.sql.includes("UPDATE api_keys"));
-
-    expect(updated).not.toBeInstanceOf(Response);
-    expect((updated as Exclude<typeof updated, Response>).key.expiresAt).toBeNull();
-    expect(write?.sql).toContain("expires_at = ?");
-    expect(write?.sql).not.toContain("is_active = ?");
-    expect(write?.binds).toEqual([null, 2_000, 7, "0123456789abcdef"]);
+    const { db, sqlite } = createLatestSchemaSqlite();
+    const original = makeApiKeyRow({ owner_email: "ops@pharos.watch", expires_at: 1_800,
+      last_used_at: 900, last_used_route: "/api/stablecoins", pepper_version: 2 });
+    sqlite.prepare(`INSERT INTO api_keys (${Object.keys(original).join(",")})
+      VALUES (${Object.keys(original).map(() => "?").join(",")})`).run(...Object.values(original) as (string | number | null)[]);
+    try {
+      const updated = await updateApiKey(db, 7, { expiresAt: null }, 2_000);
+      expect(updated).not.toBeInstanceOf(Response);
+      expect((updated as Exclude<typeof updated, Response>).key.expiresAt).toBeNull();
+      expect(sqlite.prepare("SELECT * FROM api_keys").all()).toEqual([
+        { ...original, expires_at: null, updated_at: 2_000 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("keeps a key deactivated when a name-only update races the deactivation", async () => {
