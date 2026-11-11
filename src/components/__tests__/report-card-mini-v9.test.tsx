@@ -3,13 +3,13 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ReportCardMiniV9 } from "../report-card-mini-v9";
+import { ReportCardMiniV9 } from "../safety-scores/report-card-mini-v9";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
-vi.mock("@/components/radar-chart-v9", () => ({
+vi.mock("@/components/compare/radar-chart-v9", () => ({
   CompareRadarV9: () => <div data-testid="mini-radar" style={{ height: 140 }}>Radar</div>,
 }));
 

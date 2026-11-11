@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
+import { MethodologyChangelogPage } from "@/components/methodology-history/methodology-changelog-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 import { ScoringChangelogContent } from "../../../changelog-content/scoring/content";

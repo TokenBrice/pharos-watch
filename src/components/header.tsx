@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import { RegimeBarToggle } from "@/components/regime-bar";
+import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";

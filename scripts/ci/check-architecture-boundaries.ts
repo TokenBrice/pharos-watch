@@ -28,7 +28,7 @@ const HOMEPAGE_BANNED_COMPONENTS =
 /** Reviewed importers reachable from the homepage: importer -> banned targets it may import. */
 const HOMEPAGE_REVIEWED_IMPORTS: Readonly<Record<string, ReadonlySet<string>>> = {
   // The homepage wrapper that supplies the neutral crash fallback.
-  "src/components/home-section-error-boundary.tsx": new Set(["src/components/section-error-boundary.tsx"]),
+  "src/components/homepage/home-section-error-boundary.tsx": new Set(["src/components/section-error-boundary.tsx"]),
 };
 const HOMEPAGE_MIN_REACHABLE_MODULES = 100;
 /** Failure-scenario leaves are registry-free: they import only `./context`, and

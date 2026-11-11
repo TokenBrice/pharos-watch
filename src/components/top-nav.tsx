@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
-import { RegimeBarToggle } from "@/components/regime-bar";
+import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import {
   DropdownMenu,

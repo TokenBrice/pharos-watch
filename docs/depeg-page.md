@@ -59,7 +59,7 @@ softening rules for discovery surfaces do not apply here.
 With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 
 1. `QueryFreshnessNotices`
-2. **`DepegOutlookHero`** (`src/components/depeg-outlook-hero.tsx`) — the signature hero
+2. **`DepegOutlookHero`** (`src/components/depeg/depeg-outlook-hero.tsx`) — the signature hero
 3. `DepegResolverModule` — bounded recovery-forecast worklist
 4. `DepegControlBoard` — the universe workbench
 5. Forecast-grading section (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
@@ -89,7 +89,7 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   `see the grading` link beneath the figure (see [Forecast Grading](#forecast-grading)); then
   the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail layer. Supporting
   figures stay neutral.
-- **Right field:** `DEWSRadarPanel` (`src/components/dews-summary.tsx`) fills the full column height
+- **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`) fills the full column height
   beside the rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
   band, and a **double-ring halo marks an elevated coin that also has an open confirmed incident**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
@@ -161,7 +161,7 @@ behind an explicit toggle that mounts them only when opened.
   `{N} at a new worst`. DDR rows are not control-board
   rows, so the board's `__attention` comparator does not apply; this is the route's own policy.
 - **Shared derivation:** `summarizeResolverBook()` in
-  `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
+  `src/components/depeg/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
   new-worst count and forecast total; `rowCount` separately counts incident browsing rows.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
 - **Tier vocabulary:** rows predicted under DDR 5.0+ read as evidence classes (No break

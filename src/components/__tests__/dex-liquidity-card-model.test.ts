@@ -4,8 +4,8 @@ import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import {
   getConcentrationLabel,
   getLiquidityEvidenceLabel,
-} from "@/components/dex-liquidity-card-model";
-import { crowdingBand, throatLabelForCrowding } from "@/components/exit-route-model";
+} from "@/components/liquidity/dex-liquidity-card-model";
+import { crowdingBand, throatLabelForCrowding } from "@/components/liquidity/exit-route-model";
 
 describe("DEX liquidity verdict bands", () => {
   it.each([0, 0.1799, 0.18, 0.3499, 0.35, 1])(

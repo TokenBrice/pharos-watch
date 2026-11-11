@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock(),
 }));
 
-vi.mock("@/components/homepage-tape", () => ({
+vi.mock("@/components/homepage/homepage-tape", () => ({
   HomepageTape: ({ placement }: { placement: string }) => (
     <div data-testid="core-top-tape" data-placement={placement} />
   ),

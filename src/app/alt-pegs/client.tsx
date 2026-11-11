@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { NonUsdShareChart } from "@/components/non-usd-share-chart";
+import { NonUsdShareChart } from "@/components/chart-primitives/non-usd-share-chart";
 import { useDexLiquidityTable, useNonUsdShare, usePegSummary, useReportCardsV9Table, useStablecoinCharts } from "@/hooks/api-hooks";
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";

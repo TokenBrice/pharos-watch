@@ -1,7 +1,7 @@
 "use client";
 
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
-import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { PegDeviationChart } from "@/components/chart-primitives/peg-deviation-chart";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import type {

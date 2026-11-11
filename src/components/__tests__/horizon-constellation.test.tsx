@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { HorizonConstellation } from "@/components/horizon-constellation";
+import { HorizonConstellation } from "@/components/upcoming/horizon-constellation";
 import type { DriftDisplayStatus } from "@/lib/pre-launch";
 
 const fixture = vi.hoisted(() => [

@@ -90,7 +90,7 @@ vi.mock("recharts", () => ({
   YAxis: () => null,
 }));
 
-vi.mock("@/components/psi-history-chart", () => ({
+vi.mock("@/components/psi-beacon/psi-history-chart", () => ({
   ScoreChart: ({ data, initialRange, onRangeChange }: {
     data: unknown[];
     initialRange?: string;
@@ -165,7 +165,7 @@ describe("StabilityIndexClient", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([false, true])("serializes PNG captures and allows retry after success=%s", async (success) => {
-    const { ScoreChart } = await vi.importActual<typeof import("@/components/psi-history-chart")>("@/components/psi-history-chart");
+    const { ScoreChart } = await vi.importActual<typeof import("@/components/psi-beacon/psi-history-chart")>("@/components/psi-beacon/psi-history-chart");
     let finish!: (success: boolean) => void;
     vi.mocked(downloadChartPng).mockReset().mockReturnValue(new Promise<boolean>((resolve) => {
       finish = resolve;

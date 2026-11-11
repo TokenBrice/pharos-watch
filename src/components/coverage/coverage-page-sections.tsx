@@ -2,7 +2,7 @@
 
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
-import { CoverageLensSummary } from "@/components/coverage-lens-summary";
+import { CoverageLensSummary } from "@/components/coverage/coverage-lens-summary";
 import { SafetyScoreDataCoverage } from "@/components/safety-scores/data-coverage-module";
 import { ReferenceTable } from "@/components/reference-table";
 import { TableCell, TableHead, TableRow } from "@/components/table";

@@ -2,7 +2,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
+import type { LiquidityStatsData } from "@/components/liquidity/liquidity-stats-types";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { LiquidityStatusChip } from "./status-chip";

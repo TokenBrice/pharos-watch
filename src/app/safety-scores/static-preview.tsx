@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SafetyScoresPreview, SafetyScoresPreviewRow } from "@/lib/safety-grade-snapshot";
 

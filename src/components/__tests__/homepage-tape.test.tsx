@@ -23,7 +23,7 @@ vi.mock("@/lib/logos", () => ({
   getLogoSrc: () => undefined,
 }));
 
-import { HomepageTape } from "@/components/homepage-tape";
+import { HomepageTape } from "@/components/homepage/homepage-tape";
 
 afterEach(() => {
   vi.clearAllMocks();

@@ -1,5 +1,5 @@
-import { StablecoinTaxonomyHub } from "@/components/stablecoin-taxonomy-hub";
-import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
+import { StablecoinTaxonomyHub } from "@/components/taxonomy/stablecoin-taxonomy-hub";
+import { StablecoinTaxonomyPage } from "@/components/taxonomy/stablecoin-taxonomy-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import {

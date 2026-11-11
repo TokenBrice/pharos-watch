@@ -3,7 +3,7 @@ import {
   DEPENDENCY_TYPE_PRESENTATION,
   TYPE_COLORS,
   TYPE_DASH,
-} from "@/components/contagion-graph-model";
+} from "@/components/contagion-graph/contagion-graph-model";
 import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 
 const GRADE_LEGEND_ITEMS = [

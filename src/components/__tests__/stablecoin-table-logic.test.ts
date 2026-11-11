@@ -8,7 +8,7 @@ import {
   prioritizePinnedStablecoins,
   resolveDisplayedNativePrice,
   type StablecoinTableSortKey,
-} from "@/components/stablecoin-table-logic";
+} from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";

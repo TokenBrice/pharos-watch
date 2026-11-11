@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
-import { FlowTable } from "@/components/flow-table";
+import { FlowTable } from "@/components/mint-burn/flow-table";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 vi.mock("next/link", async () => (await import("@/test-utils/frontend")).createNextLinkMock());

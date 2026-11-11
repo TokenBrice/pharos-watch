@@ -2,7 +2,7 @@
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
+import { HomeAltHeroChartGate } from "@/components/homepage/home-alt-hero-chart-gate";
 
 const readiness = vi.hoisted(() => ({ hydrated: false, near: false }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => readiness.hydrated }));
@@ -10,7 +10,7 @@ vi.mock("@/hooks/use-near-viewport", () => ({
   useNearViewport: () => ({ ref: () => {}, near: readiness.near }),
 }));
 vi.mock("next/dynamic", () => ({ default: () => () => <div data-testid="live-chart" /> }));
-vi.mock("@/components/home-alt-hero-chart-fallback", () => ({
+vi.mock("@/components/homepage/home-alt-hero-chart-fallback", () => ({
   HomeAltHeroChartFallback: () => <div data-testid="chart-fallback" />,
 }));
 

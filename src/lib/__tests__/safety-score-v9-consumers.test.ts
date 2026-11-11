@@ -23,7 +23,7 @@ import {
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard, makeReportCardsV9PricedExcludedCard } from "@shared/test-utils/report-cards-v9";
 import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
-import { buildV9RadarDataset } from "@/components/radar-chart-v9";
+import { buildV9RadarDataset } from "@/components/compare/radar-chart-v9";
 import { buildV9GradeCounts, buildV9PillarAverages, buildV9HeadlineStats, filterAndSortV9Cards } from "@/app/safety-scores/v9-view-model";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "../api-query-descriptors";
 import { buildDetailDependencyContext } from "@/components/stablecoin-detail/dependency-context-model";

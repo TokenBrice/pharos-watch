@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NonUsdShareChart } from "@/components/non-usd-share-chart";
+import { NonUsdShareChart } from "@/components/chart-primitives/non-usd-share-chart";
 import { formatChartDate } from "@shared/lib/format";
 
 const { useNonUsdShareMock, handleAnimationEndMock } = vi.hoisted(() => ({

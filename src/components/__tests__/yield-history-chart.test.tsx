@@ -3,10 +3,10 @@
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
-import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
-import { useYieldHistoryChartQueries } from "@/components/yield-history-chart-queries";
-import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield-history-chart-ui";
+import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
+import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield/yield-history-chart-model";
+import { useYieldHistoryChartQueries } from "@/components/yield/yield-history-chart-queries";
+import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield/yield-history-chart-ui";
 
 const { useYieldHistoryMock } = vi.hoisted(() => ({
   useYieldHistoryMock: vi.fn(),

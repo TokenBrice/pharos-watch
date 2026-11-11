@@ -2,7 +2,7 @@
 
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DigestArchiveClient } from "@/components/digest-archive-client";
+import { DigestArchiveClient } from "@/components/digest/digest-archive-client";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import type { DailyDigestResponse, DigestContentEntry } from "@shared/types/digest";

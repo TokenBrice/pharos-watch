@@ -1,12 +1,12 @@
-import { FormerPegCoinsSection, PegAtAGlanceSection, UpcomingPegCoinsSection } from "@/components/peg-hub-sections";
-import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
-import { TaxonomyHeaderActions } from "@/components/taxonomy-header-actions";
+import { FormerPegCoinsSection, PegAtAGlanceSection, UpcomingPegCoinsSection } from "@/components/taxonomy/peg-hub-sections";
+import { StablecoinTaxonomyShell } from "@/components/taxonomy/stablecoin-taxonomy-shell";
+import { TaxonomyHeaderActions } from "@/components/taxonomy/taxonomy-header-actions";
 import { buildFormerPegCoinEntries, buildPegAtAGlanceRows, buildUpcomingPegCoinEntries } from "@/lib/peg-hub-content";
 import { PEG_HUB_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { PegLandingClient } from "./client";
-import { PhysicalDeliveryTermsTable } from "@/components/physical-delivery-terms-table";
+import { PhysicalDeliveryTermsTable } from "@/components/liquidity/physical-delivery-terms-table";
 
 const route = createStaticSlugRoute({
   paramKey: "peg",

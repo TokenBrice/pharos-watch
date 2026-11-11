@@ -9,7 +9,7 @@ import {
   type EdgeTypeFilter,
   type FocusMode,
   type ResolvedLink,
-} from "@/components/contagion-graph-graph";
+} from "@/components/contagion-graph/contagion-graph-graph";
 import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 import {
   buildGraphData,

@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UpcomingPegCoinsSection } from "@/components/peg-hub-sections";
+import { UpcomingPegCoinsSection } from "@/components/taxonomy/peg-hub-sections";
 import type { UpcomingPegCoinEntry } from "@/lib/peg-hub-content";
 
 vi.mock("next/link", async () => {

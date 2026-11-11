@@ -4,7 +4,7 @@ import { Download, Equal, Menu, Search } from "lucide-react";
 import { TableToolbarFrame } from "@/components/table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";
+import { ColumnVisibilityDropdown } from "./stablecoin-directory/stablecoin-table-column-visibility";
 import type { TableDensity } from "@/hooks/use-table-density";
 import type { ColumnId } from "@/hooks/use-preferences";
 

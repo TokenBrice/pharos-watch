@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { HomeAltHeroChart } from "@/components/home-alt-hero-chart";
+import { HomeAltHeroChart } from "@/components/homepage/home-alt-hero-chart";
 
 vi.mock("@/hooks/use-chart-shell", () => ({
   useChartShell: () => ({

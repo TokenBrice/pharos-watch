@@ -92,13 +92,13 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
   useBlacklistEventsPage: () => ({ data: { events: [], total: 0 }, isLoading: false, isError: false }),
 }));
 
-vi.mock("@/components/ai-summary", () => ({
+vi.mock("@/components/ai-summary/ai-summary", () => ({
   AiSummary: () => <div data-testid="ai-summary" />,
 }));
 
 vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices"));
 
-vi.mock("@/components/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
+vi.mock("@/components/tape/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
 
 vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 

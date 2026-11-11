@@ -31,14 +31,14 @@ The current metadata lives in `shared/lib/psi-historical-assets.ts`. Canonical I
 PSI historical assets are not part of public tracked metadata used for counts, filters or table inclusion:
 
 - `ACTIVE_STABLECOIN_COUNT` remains the technical live-listing count, while `CORE_AGGREGATE_STABLECOIN_COUNT` drives market-aggregate copy; both static projections are kept in sync with their shared registries by tests
-- `src/components/stablecoin-table-logic.ts` uses the client registry projection (`CLIENT_ACTIVE_IDS` / `CLIENT_ACTIVE_STABLECOINS` from `shared/lib/stablecoins/client-registry.ts`) as its default inclusion set
+- `src/components/stablecoin-directory/stablecoin-table-logic.ts` uses the client registry projection (`CLIENT_ACTIVE_IDS` / `CLIENT_ACTIVE_STABLECOINS` from `shared/lib/stablecoins/client-registry.ts`) as its default inclusion set
 - taxonomy/filter pages derive their selectable universe from tracked metadata, not historical metadata
 
 Operational consequence:
 
 - raw cache-backed surfaces can contain a historical asset if upstream sync emits it
 - public list/table UX filters those assets out by tracked ID
-- public DEWS/radar alerts can render these assets through `shared/lib/psi-eligible-client.ts` and `src/components/dews-alert-feed.tsx`; that does not promote them into the catalog or Bank-Run-Gauge universe
+- public DEWS/radar alerts can render these assets through `shared/lib/psi-eligible-client.ts` and `src/components/dews/dews-alert-feed.tsx`; that does not promote them into the catalog or Bank-Run-Gauge universe
 
 ---
 

@@ -360,13 +360,13 @@ The prices-only CoinGecko backfill transport shares request/validation handling,
 
 ### McapChart
 
-**File:** `src/components/mcap-chart.tsx`
+**File:** `src/components/chart-primitives/mcap-chart.tsx`
 
 Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, 1y, all). Observed zero remains visible. The header labels a change `24h` only with the previous UTC-day observation inside the visible/brush window; sparse pairs and zero baselines withhold that percentage.
 
 ### HomeAltHero Market-Cap Chart
 
-**File:** `src/components/home-alt-hero.tsx`
+**File:** `src/components/homepage/home-alt-hero.tsx`
 
 Aggregated homepage market-cap breakdown. `GET /api/stablecoin-charts` serves cached DefiLlama aggregate history plus structural supplemental D1 `supply_history`, without a live trailing point; its last point can trail the KPI until `sync-stablecoin-charts` runs. Provider buckets retain malformed values as `null`; omission is not observed zero. The hero reads the site-only `GET /api/homepage-history` joined view; its Worker-side `buildTotalMcapChartRows(...)` authority lives in `shared/lib/total-mcap-chart.ts`. Cohorts and supplemental overlays use shared `findAsOfSnapshot` semantics with `MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC` (14 days): no future rows or unbounded carry. Only nonempty observed history plus an authored launch date establishes pre-existence zero; an archive start alone does not. An unobserved/over-budget structural contributor withholds its peg bucket; missing cohort history withholds dependent `USDS + DAI` and `Others`. Unavailable aggregate buckets withhold total/residual and affected non-USD values. The chart shows gaps and an unavailable-history notice, with a gray total envelope, zero-baselined USDT area (not stacked), and USDC, Sky, Others and dashed non-USD lines. [Homepage](./homepage.md#loading-strategy) owns the one-read transport and bounded dated preview.
 

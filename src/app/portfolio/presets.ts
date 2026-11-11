@@ -1,4 +1,4 @@
-import type { PortfolioPreset } from "@/components/portfolio-empty-state";
+import type { PortfolioPreset } from "@/components/portfolio/portfolio-empty-state";
 
 export const PORTFOLIO_PRESETS: readonly PortfolioPreset[] = [
   {

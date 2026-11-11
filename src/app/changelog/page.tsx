@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { ChangelogTimeline } from "@/components/changelog-timeline";
-import { EditorialMasthead } from "@/components/editorial-masthead";
+import { ChangelogTimeline } from "@/components/methodology-history/changelog-timeline";
+import { EditorialMasthead } from "@/components/digest/editorial-masthead";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";

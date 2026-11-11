@@ -6,7 +6,7 @@ import { Hourglass, Sparkles } from "lucide-react";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
-import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
+import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import {
   BlacklistHistorySection,

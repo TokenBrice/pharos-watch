@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { PegDeviationChart } from "@/components/chart-primitives/peg-deviation-chart";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 const START = Date.UTC(2026, 0, 1) / 1000;

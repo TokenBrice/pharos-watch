@@ -17,7 +17,7 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-import { HomeAltHeroLiveChart } from "@/components/home-alt-hero-live-chart";
+import { HomeAltHeroLiveChart } from "@/components/homepage/home-alt-hero-live-chart";
 
 afterEach(() => {
   cleanup();

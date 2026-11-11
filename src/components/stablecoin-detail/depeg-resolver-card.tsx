@@ -1,7 +1,7 @@
 "use client";
 
-import { isResolverBookAvailable } from "@/components/depeg-resolver-book-summary";
-import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
+import { isResolverBookAvailable } from "@/components/depeg/depeg-resolver-book-summary";
+import { StablecoinDepegResolverRows } from "@/components/depeg/depeg-resolver-row-card-parts";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useDepegResolver } from "@/hooks/api-hooks";

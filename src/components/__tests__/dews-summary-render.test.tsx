@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
-import { DEWSRadarPanel } from "@/components/dews-summary";
+import { DEWSRadarPanel } from "@/components/dews/dews-summary";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { ApiFetchError } from "@/lib/api";

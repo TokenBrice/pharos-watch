@@ -9,10 +9,10 @@ import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-ho
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield-leaderboard";
-import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
-import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
-import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield/yield-leaderboard";
+import { YieldLeaderboardControls } from "@/components/yield/yield-leaderboard-controls";
+import { YieldRiskBudgetSlider } from "@/components/yield/yield-risk-budget-slider";
+import { YieldScatterPlot } from "@/components/yield/yield-scatter-plot";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { UniverseChip } from "@/components/universe-chip";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";

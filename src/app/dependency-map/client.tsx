@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
-import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
+import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";

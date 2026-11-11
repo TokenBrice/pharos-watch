@@ -85,7 +85,7 @@ function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): 
         if (!ts.isJsxAttribute(attr)) continue;
         const value = attr.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : attr.initializer;
         // Only the directory's active virtual cursor gets a roving row tab stop.
-        const roving = sourceFile.fileName === "src/components/stablecoin-table-row.tsx" &&
+        const roving = sourceFile.fileName === "src/components/stablecoin-directory/stablecoin-table-row.tsx" &&
           node.tagName.getText(sourceFile) === "TableRow" && isRovingTabIndex(value);
         inspectProp(attr.name.getText(sourceFile), value, roving);
       }

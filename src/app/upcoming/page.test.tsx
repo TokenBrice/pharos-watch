@@ -7,7 +7,7 @@ import { PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import UpcomingPage, { metadata } from "./page";
 
-vi.mock("@/components/upcoming-client", () => ({ UpcomingClient: () => <div data-testid="upcoming-client" /> }));
+vi.mock("@/components/upcoming/upcoming-client", () => ({ UpcomingClient: () => <div data-testid="upcoming-client" /> }));
 vi.mock("@/components/share-button", () => ({ ShareButton: () => null }));
 
 describe("UpcomingPage", () => {

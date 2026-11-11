@@ -4,7 +4,7 @@ import { fireEvent, render as rtlRender, screen, waitFor } from "@testing-librar
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { StablecoinTable } from "@/components/stablecoin-table";
+import { StablecoinTable } from "@/components/stablecoin-directory/stablecoin-table";
 import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";

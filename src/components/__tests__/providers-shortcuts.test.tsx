@@ -31,7 +31,7 @@ vi.mock("@/components/keyboard-shortcuts", () => ({
     open ? <div data-testid="keyboard-shortcuts-dialog" /> : null,
 }));
 
-vi.mock("@/components/command-palette-root", () => ({
+vi.mock("@/components/command-palette/command-palette-root", () => ({
   CommandPalette: ({ open }: { open: boolean }) =>
     open ? <div data-testid="command-palette" /> : null,
 }));

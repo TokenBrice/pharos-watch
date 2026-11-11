@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import YieldDetailSection from "@/components/yield-detail-section";
+import YieldDetailSection from "@/components/yield/yield-detail-section";
 import {
   buildSourceRiskGoldenFixture,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
@@ -32,7 +32,7 @@ vi.mock("@/hooks/use-is-mobile", () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock("@/components/yield-history-chart", () => ({
+vi.mock("@/components/yield/yield-history-chart", () => ({
   YieldHistoryChart: ({
     availableSources,
     hideSourceSelector,

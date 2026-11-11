@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { DepegHistory } from "@/components/depeg-history";
+import { DepegHistory } from "@/components/depeg/depeg-history";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types/peg";
 import { makeEvent } from "./depeg.test-support";
 

@@ -12,7 +12,7 @@ vi.mock("@shared/lib/redemption-backstop-configs", () => ({
   REDEMPTION_BACKSTOP_CONFIGS: mockRedemptionConfigs,
 }));
 
-const { buildPhysicalDeliveryRows, PhysicalDeliveryTermsTable } = await import("../physical-delivery-terms-table");
+const { buildPhysicalDeliveryRows, PhysicalDeliveryTermsTable } = await import("../liquidity/physical-delivery-terms-table");
 
 const delivery = (commodity: "XAU" | "XAG", minimumDeliveryTokens: number) => ({
   commodity, deliverableOuncesPerToken: 1, minimumDeliveryTokens, deliveryTermsUnbounded: true,

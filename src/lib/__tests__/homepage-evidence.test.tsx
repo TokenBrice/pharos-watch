@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import type { HomepageSnapshot } from "@shared/types/homepage";
 import { HomepageEvidenceProvider } from "@/lib/homepage-evidence";
-import { HomeAltHero } from "@/components/home-alt-hero";
+import { HomeAltHero } from "@/components/homepage/home-alt-hero";
 import { HOMEPAGE_EVIDENCE_TEST_NOW as now, makeHomepageEvidence } from "@/test/fixtures/homepage-evidence";
 
 const { restore, persist, liveRead } = vi.hoisted(() => ({ restore: vi.fn(), persist: vi.fn(), liveRead: vi.fn() }));
@@ -18,7 +18,7 @@ vi.mock("@/lib/homepage-evidence-persistence", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   useHomepageSnapshot: () => useQuery({ queryKey: ["homepage-snapshot"], queryFn: liveRead, retry: false }),
 }));
-vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
+vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 
 let disk: PromiseWithResolvers<HomepageSnapshot | null>;

@@ -12,8 +12,8 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { PysBreakdown } from "@/components/pys-breakdown";
-import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
+import { PysBreakdown } from "@/components/yield/pys-breakdown";
+import { YieldSourceRiskCard } from "@/components/yield/yield-source-risk-card";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
@@ -25,7 +25,7 @@ import {
   buildYieldDetailModel,
   useYieldCoinSourceClock,
   type YieldDetailReadyModel,
-} from "@/components/yield-detail-section-model";
+} from "@/components/yield/yield-detail-section-model";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
@@ -52,14 +52,14 @@ import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signal
 // Keep each chart-bearing piece behind its own client import boundary. The
 // shared Webpack recharts-vendor group deduplicates charts across these loaders.
 const YieldHistoryChart = dynamic(
-  () => import("@/components/yield-history-chart").then((mod) => mod.YieldHistoryChart),
+  () => import("@/components/yield/yield-history-chart").then((mod) => mod.YieldHistoryChart),
   {
     loading: () => <Skeleton className="h-[360px] w-full rounded-xl" />,
   },
 );
 
 const YieldChangeAttributionCard = dynamic(
-  () => import("@/components/yield-change-attribution-card").then((mod) => mod.YieldChangeAttributionCard),
+  () => import("@/components/yield/yield-change-attribution-card").then((mod) => mod.YieldChangeAttributionCard),
   {
     loading: () => <Skeleton className="h-[120px] w-full rounded-xl" />,
   },

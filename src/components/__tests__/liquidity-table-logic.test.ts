@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareLiquidityRows, type LiquidityRow } from "@/components/liquidity-table-logic";
+import { compareLiquidityRows, type LiquidityRow } from "@/components/liquidity/liquidity-table-logic";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";

@@ -8,16 +8,14 @@
  * and `home-*` wrappers the matrix does not mount directly.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { globSync, readFileSync, statSync } from "node:fs";
+import { basename, matchesGlob, relative, resolve } from "node:path";
 import { formatScannedOk } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
+import { HOMEPAGE_COPY_GLOBS, HOMEPAGE_COPY_IGNORES } from "../lib/homepage-copy-policy.mjs";
 
-const PAGE = "src/app/page.tsx";
-const COMPONENTS = "src/components";
-const MINI_CARDS = "src/components/home-alt-mini-cards";
+// This wrapper supplies the neutral fallback and may use the shared error boundary.
 const EXCLUDED_COMPONENTS = new Set(["home-section-error-boundary.tsx"]);
-const HOME_COMPONENT = /^home(page)?-.*\.tsx$/;
 
 /** Literal warning copy, plus the shared error boundary that renders a notice. */
 const BANNED_PHRASES =
@@ -38,27 +36,18 @@ interface HomepageCopyOptions {
 
 /** The authored homepage surfaces the guard reads; used for PR selection too. */
 export function isHomepageCopyPath(file: string): boolean {
-  if (file === PAGE || file === "scripts/ci/check-homepage-health-copy.ts") return true;
-  if (file.startsWith(`${MINI_CARDS}/`)) return file.endsWith(".tsx");
-  const name = file.slice(COMPONENTS.length + 1);
-  return file.startsWith(`${COMPONENTS}/`) && !file.slice(COMPONENTS.length + 1).includes("/")
-    && HOME_COMPONENT.test(name) && !EXCLUDED_COMPONENTS.has(name);
+  if (file === "scripts/ci/check-homepage-health-copy.ts" || file === "scripts/lib/homepage-copy-policy.mjs") return true;
+  return HOMEPAGE_COPY_GLOBS.some((glob) => matchesGlob(file, glob))
+    && !HOMEPAGE_COPY_IGNORES.some((glob) => matchesGlob(file, glob))
+    && !EXCLUDED_COMPONENTS.has(basename(file));
 }
 
 export function collectHomepageCopyFiles(cwd = process.cwd()): string[] {
-  const files = [PAGE];
-  for (const name of readdirSync(resolve(cwd, COMPONENTS))) {
-    if (HOME_COMPONENT.test(name) && !EXCLUDED_COMPONENTS.has(name)) {
-      files.push(join(COMPONENTS, name));
-    }
+  if (!statSync(resolve(cwd, "src/components/homepage")).isDirectory()) {
+    throw new Error("Required homepage component directory is missing");
   }
-  const miniCards = resolve(cwd, MINI_CARDS);
-  if (existsSync(miniCards)) {
-    for (const name of readdirSync(miniCards)) {
-      if (name.endsWith(".tsx")) files.push(join(MINI_CARDS, name));
-    }
-  }
-  return files;
+  return [...new Set(["src/app/page.tsx", ...globSync(HOMEPAGE_COPY_GLOBS, { cwd })])]
+    .filter(isHomepageCopyPath).sort();
 }
 
 export function findHomepageHealthCopy(

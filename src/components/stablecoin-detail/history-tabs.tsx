@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import type { DepegHistory as DepegHistoryComponent } from "@/components/depeg-history";
+import type { DepegHistory as DepegHistoryComponent } from "@/components/depeg/depeg-history";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverReview, useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
 import { TAB_PANEL_REVEAL_EVENT } from "@/lib/anchor-reveal";
@@ -50,14 +50,14 @@ const LiveSafetyScoreHistorySection = dynamic(
 );
 
 const LiveDepegHistory = dynamic(
-  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
+  () => import("@/components/depeg/depeg-history").then((mod) => mod.DepegHistory),
   { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
 );
 
 // With a retained ledger preview the shell already fills the panel, so a
 // chunk-load skeleton would stack a second loading surface under it.
 const PreviewedLiveDepegHistory = dynamic(
-  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
+  () => import("@/components/depeg/depeg-history").then((mod) => mod.DepegHistory),
   { loading: () => null },
 );
 

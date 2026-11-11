@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
+import { PendingApiKeyRecovery } from "@/components/api-access/pending-api-key-recovery";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
@@ -11,7 +11,7 @@ import { JsonLdScript } from "@/components/json-ld-script";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { RegimeBar } from "@/components/regime-bar";
+import { RegimeBar } from "@/components/psi-beacon/regime-bar";
 import { CoreTopRail } from "@/components/core-top-rail";
 import { TopNav } from "@/components/top-nav";
 import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "@/components/route-chrome";

@@ -12,7 +12,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { buildV9RadarDataset } from "@/components/radar-chart-v9";
+import { buildV9RadarDataset } from "@/components/compare/radar-chart-v9";
 import type { MintBurnCoinFlow, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { StablecoinData, SupplyHistoryPoint } from "@shared/types/supply";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";

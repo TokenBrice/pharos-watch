@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { ChangelogTimeline } from "@/components/changelog-timeline";
+import { ChangelogTimeline } from "@/components/methodology-history/changelog-timeline";
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
 import { buildPageMetadata } from "@/lib/page-metadata";
 

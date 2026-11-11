@@ -5,7 +5,7 @@ import { formatCurrency } from "@shared/lib/format";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { computeDependencyExposure } from "@/hooks/use-dependency-exposure-mode";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph/contagion-graph-model";
 import type { WatershedReadyModel } from "./watershed-stage";
 
 type SortState<K extends string> = { key: K; desc: boolean };

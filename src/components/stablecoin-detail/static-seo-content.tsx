@@ -33,7 +33,7 @@ import {
   hasAvailableAiSummaryClaims,
   resolveAiSummaryClaims,
 } from "@shared/lib/ai-summary-claims";
-import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
+import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-summary/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildFreezeControlDescriptor, describeFreezeControl } from "@/lib/stablecoin-detail-blacklistability-client";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";

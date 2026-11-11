@@ -15,7 +15,7 @@ vi.mock("@/components/lazy-section", () => ({
   LazySection: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/mcap-chart", () => ({
+vi.mock("@/components/chart-primitives/mcap-chart", () => ({
   McapChart: ({ data }: { data: Array<{ date: number }> }) => (
     <output data-testid="market-cap-domain">
       {data.length > 0 ? `${data[0].date}-${data[data.length - 1].date}` : "empty"}
@@ -23,7 +23,7 @@ vi.mock("@/components/mcap-chart", () => ({
   ),
 }));
 
-vi.mock("@/components/peg-deviation-chart", () => ({
+vi.mock("@/components/chart-primitives/peg-deviation-chart", () => ({
   PegDeviationChart: () => <div />,
 }));
 

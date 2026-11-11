@@ -9,7 +9,7 @@ import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 // Keep tape queries, logos and event formatting outside the eager root shell.
 const HomepageTape = dynamic(
-  () => import("@/components/homepage-tape").then((mod) => mod.HomepageTape),
+  () => import("@/components/homepage/homepage-tape").then((mod) => mod.HomepageTape),
   { loading: () => null },
 );
 

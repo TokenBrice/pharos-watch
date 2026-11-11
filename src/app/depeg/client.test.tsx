@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
-import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
+import type { ResolverBookSummary } from "@/components/depeg/depeg-resolver-book-summary";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 import type { ApiMeta } from "@/lib/api";
 
@@ -75,7 +75,7 @@ vi.mock("@/components/section-error-boundary", () => ({
 
 // Heavyweight leaf: the hero's own rendering is covered by its suite. This stand-in
 // exposes the figures the client derives and whether the client passed a footer.
-vi.mock("@/components/depeg-outlook-hero", () => ({
+vi.mock("@/components/depeg/depeg-outlook-hero", () => ({
   DepegOutlookHero: (props: {
     activeDepegIds?: ReadonlySet<string>;
     pendingCount?: number | null;
@@ -97,11 +97,11 @@ vi.mock("@/components/depeg-outlook-hero", () => ({
   ),
 }));
 
-vi.mock("@/components/dews-alert-feed", () => ({
+vi.mock("@/components/dews/dews-alert-feed", () => ({
   DEWSAlertFeed: () => <div data-testid="dews-alert-feed" />,
 }));
 
-vi.mock("@/components/depeg-control-board", () => ({
+vi.mock("@/components/depeg/depeg-control-board", () => ({
   DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown; openIncidentEvidence?: string | null }> }) => (
     <div
       data-testid="depeg-control-board"
@@ -114,17 +114,17 @@ vi.mock("@/components/depeg-control-board", () => ({
   ),
 }));
 
-vi.mock("@/components/depeg-feed", () => ({
+vi.mock("@/components/depeg/depeg-feed", () => ({
   DepegFeed: ({ title = "Recent depeg events", events }: { title?: string; events: unknown[] }) => (
     <div data-testid={`feed-${title}`}>{events.length}</div>
   ),
 }));
 
-vi.mock("@/components/depeg-resolver-module", () => ({
+vi.mock("@/components/depeg/depeg-resolver-module", () => ({
   DepegResolverModule: () => <div data-testid="depeg-resolver" />,
 }));
 
-vi.mock("@/components/depeg-resolver-reviewer-module", () => ({
+vi.mock("@/components/depeg/depeg-resolver-reviewer-module", () => ({
   DepegResolverReviewerModule: () => <div data-testid="depeg-resolver-reviewer" />,
 }));
 

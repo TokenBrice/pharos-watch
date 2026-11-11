@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   PysHistorySparkline,
   type PysHistorySparklinePoint,
-} from "@/components/pys-history-sparkline";
+} from "@/components/yield/pys-history-sparkline";
 import { CHART_GREEN } from "@/lib/chart-colors";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

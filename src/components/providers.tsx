@@ -31,7 +31,7 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
 
 
 const CommandPalette = lazy(() =>
-  import("./command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
+  import("./command-palette/command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
 );
 
 const KeyboardShortcuts = lazy(() =>

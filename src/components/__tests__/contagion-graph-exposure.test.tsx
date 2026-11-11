@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ContagionGraph } from "@/components/contagion-graph-root";
+import { ContagionGraph } from "@/components/contagion-graph/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { footprintViewBox, upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";

@@ -8,8 +8,8 @@ import { CemeteryDatasetCopyCitation } from "@/components/cemetery/cemetery-data
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
-import { ApiReferenceLayout } from "@/components/api-reference-layout";
-import type { SidebarSection } from "@/components/api-reference-sidebar";
+import { ApiReferenceLayout } from "@/components/api-reference/api-reference-layout";
+import type { SidebarSection } from "@/components/api-reference/api-reference-sidebar";
 import {
   TableBody,
   TableCell,

@@ -37,7 +37,7 @@ import {
 } from "./v9-view-model";
 
 // Live cards need charts; the first-paint hero and dated preview do not.
-const ReportCardMiniV9 = dynamic(() => import("@/components/report-card-mini-v9").then((m) => m.ReportCardMiniV9), {
+const ReportCardMiniV9 = dynamic(() => import("@/components/safety-scores/report-card-mini-v9").then((m) => m.ReportCardMiniV9), {
   loading: () => <Skeleton className="h-[274px] w-full rounded-xl" aria-label="Loading safety card" />,
 });
 

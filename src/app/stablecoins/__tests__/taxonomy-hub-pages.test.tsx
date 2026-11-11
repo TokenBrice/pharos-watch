@@ -12,7 +12,7 @@ import {
   INFRASTRUCTURE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
 
-vi.mock("@/components/stablecoin-filtered-table", () => ({ StablecoinFilteredTable: () => <div /> }));
+vi.mock("@/components/stablecoin-directory/stablecoin-filtered-table", () => ({ StablecoinFilteredTable: () => <div /> }));
 
 describe("stablecoin taxonomy hub pages", () => {
   it.each([

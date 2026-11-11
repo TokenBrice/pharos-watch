@@ -10,7 +10,7 @@ import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-toolti
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
-import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
+import { hasMeaningfulDexData } from "@/components/liquidity/dex-liquidity-card";
 import { canonicalizeChainCirculating, chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";

@@ -19,7 +19,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useSupplyHistory: mocks.useSupplyHistory,
 }));
 
-vi.mock("@/components/peg-deviation-chart", () => ({
+vi.mock("@/components/chart-primitives/peg-deviation-chart", () => ({
   PegDeviationChart: (props: { data: readonly unknown[] }) => {
     mocks.pegDeviationChart(props);
     return <output data-testid="case-study-peg-chart">{props.data.length}</output>;

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PreLaunchAlertAction } from "@/components/pre-launch-alert-action";
+import { PreLaunchAlertAction } from "@/components/upcoming/pre-launch-alert-action";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -12,8 +12,8 @@ import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { UPCOMING_LAUNCH_PHASE_VALUES, type UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { UpcomingClient } from "@/components/upcoming-client";
-import { UpcomingLaunchedSection, UpcomingStaticSections } from "@/components/upcoming-static-sections";
+import { UpcomingClient } from "@/components/upcoming/upcoming-client";
+import { UpcomingLaunchedSection, UpcomingStaticSections } from "@/components/upcoming/upcoming-static-sections";
 import { buildLatestLaunchNews, buildLaunchedUntrackedRows, buildUpcomingCurrencyGroups } from "@/lib/upcoming-static-content";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { getLogoSrc, logosById } from "@/lib/logos";

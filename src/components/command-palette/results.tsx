@@ -28,10 +28,10 @@ import {
   type CommandPaletteStablecoinHealth,
   type CommandPaletteStablecoinLiveMetadata,
   type CommandPaletteHistoryItem,
-} from "@/components/command-palette-model";
+} from "@/components/command-palette/command-palette-model";
 import { buildCompareHrefFromCoinIds } from "@/lib/command-palette-verbs";
 import { copyText } from "@/lib/clipboard";
-import type { CommandPaletteVerbPreview } from "@/components/command-palette-actions";
+import type { CommandPaletteVerbPreview } from "@/components/command-palette/command-palette-actions";
 
 export interface CommandPaletteSearchResult extends CommandPaletteSectionedItem {
   id: string;

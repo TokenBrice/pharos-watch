@@ -3,7 +3,7 @@
 import { createElement, isValidElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/blacklist-chart";
+import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/freezewatch/blacklist-chart";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
 import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 

@@ -11,7 +11,7 @@ import type {
   CommandPalettePegStatus,
   CommandPaletteStablecoinHealth,
   CommandPaletteStablecoinLiveMetadata,
-} from "@/components/command-palette-model";
+} from "@/components/command-palette/command-palette-model";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { deriveDataHealth } from "@/lib/data-health";

@@ -2,10 +2,10 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { YieldAccessStructure } from "@/components/yield-access-structure";
-import { YieldChangeAttributionCard } from "@/components/yield-change-attribution-card";
-import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
-import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
+import { YieldAccessStructure } from "@/components/yield/yield-access-structure";
+import { YieldChangeAttributionCard } from "@/components/yield/yield-change-attribution-card";
+import { YieldSourceRiskBar } from "@/components/yield/yield-source-risk-bar";
+import { YieldWatchlistStar } from "@/components/yield/yield-watchlist-star";
 import { YieldApiWarnings } from "@/components/yield/yield-data-health";
 
 describe("YieldApiWarnings", () => {

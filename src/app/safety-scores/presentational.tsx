@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   SafetyGradeDistributionBar,
   type SafetyGradeSupplyMix,
-} from "@/components/safety-grade-distribution-bar";
+} from "@/components/safety-scores/safety-grade-distribution-bar";
 import { UniverseChip } from "@/components/universe-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";

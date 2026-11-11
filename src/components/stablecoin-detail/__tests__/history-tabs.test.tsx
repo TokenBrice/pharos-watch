@@ -17,7 +17,7 @@ vi.mock("@/hooks/api-hooks", () => ({
   useSafetyScoreHistoryV2: hooks.v2,
   useDepegResolverReview: hooks.ddr,
 }));
-vi.mock("@/components/depeg-history", () => ({ DepegHistory: () => <div data-testid="depeg-panel" /> }));
+vi.mock("@/components/depeg/depeg-history", () => ({ DepegHistory: () => <div data-testid="depeg-panel" /> }));
 vi.mock("@/components/stablecoin-detail/safety-score-history-section", () => ({
   SafetyScoreHistorySection: () => <div data-testid="grade-panel" />,
 }));

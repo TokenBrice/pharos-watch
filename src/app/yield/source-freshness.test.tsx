@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { useMemo } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import { YieldSourceSheet } from "@/components/yield/yield-source-sheet";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
@@ -22,9 +22,9 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   SheetFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock("@/components/yield-history-chart", () => ({ YieldHistoryChart: () => <div /> }));
+vi.mock("@/components/yield/yield-history-chart", () => ({ YieldHistoryChart: () => <div /> }));
 vi.mock("@/components/stablecoin-logo", () => ({ StablecoinLogo: () => <div /> }));
-vi.mock("@/components/yield-source-risk-bar", () => ({ YieldSourceRiskBar: () => <div /> }));
+vi.mock("@/components/yield/yield-source-risk-bar", () => ({ YieldSourceRiskBar: () => <div /> }));
 
 const HOUR = 3600;
 const ASSESSED_AT = 1_793_000_000;

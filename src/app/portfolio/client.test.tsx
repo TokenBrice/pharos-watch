@@ -89,7 +89,7 @@ vi.mock("@/components/query-error-notice", () => ({
   QueryErrorNotice: () => null,
 }));
 
-vi.mock("@/components/portfolio-empty-state", () => ({
+vi.mock("@/components/portfolio/portfolio-empty-state", () => ({
   PortfolioEmptyState: () => <div>portfolio-empty-state</div>,
 }));
 
@@ -130,7 +130,7 @@ describe("PortfolioClient URL sync", () => {
     render(<PortfolioClient />);
     expect(screen.getByText("Economic Control")).toBeTruthy();
 
-    const { PortfolioEmptyState } = await vi.importActual<typeof import("@/components/portfolio-empty-state")>("@/components/portfolio-empty-state");
+    const { PortfolioEmptyState } = await vi.importActual<typeof import("@/components/portfolio/portfolio-empty-state")>("@/components/portfolio/portfolio-empty-state");
     const preview = renderToStaticMarkup(<PortfolioEmptyState presets={[]} onApplyPreset={() => {}} />);
     expect(preview).toContain(">Economic Control</span>");
     expect(preview).toContain("Backing, Exit and Economic Control subtotals");

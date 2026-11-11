@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { DepegOutlookHero } from "../depeg-outlook-hero";
+import { DepegOutlookHero } from "../depeg/depeg-outlook-hero";
 import type { PegSummaryStats } from "@shared/types/peg";
-import { summarizeResolverBook } from "../depeg-resolver-book-summary";
+import { summarizeResolverBook } from "../depeg/depeg-resolver-book-summary";
 import { makeDdrSourceRow, makeFrozenDdrV2Row } from "../depeg-resolver-test-support";
 import { DdrV2ResponseRowSchema } from "@shared/types/depeg-resolver";
 
-vi.mock("@/components/dews-summary", () => ({ DEWSRadarPanel: () => null }));
+vi.mock("@/components/dews/dews-summary", () => ({ DEWSRadarPanel: () => null }));
 vi.mock("@/components/methodology-hint", () => ({ MethodologyLabel: ({ children }: { children: string }) => children }));
 
 const observedZero: PegSummaryStats = {

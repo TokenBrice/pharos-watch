@@ -3,13 +3,13 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { buildDependencyHubsModel, type DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
-import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
+import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
 
-vi.mock("@/components/contagion-graph-root", () => ({ ContagionGraph: () => <div /> }));
+vi.mock("@/components/contagion-graph/contagion-graph-root", () => ({ ContagionGraph: () => <div /> }));
 const cards = [
   { id: "usds-sky", name: "USDS", symbol: "USDS", grade: "A" as const },
   { id: "susds-sky", name: "Savings USDS", symbol: "sUSDS", grade: "A" as const },

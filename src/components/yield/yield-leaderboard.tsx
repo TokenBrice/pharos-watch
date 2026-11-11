@@ -1,0 +1,762 @@
+"use client";
+
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
+import Link from "next/link";
+import { ArrowUpRight, DownloadIcon } from "lucide-react";
+import { YieldCompareDrawer } from "@/components/yield/yield-compare-drawer";
+import { YieldCompareTray } from "@/components/yield/yield-compare-tray";
+import { YieldSourceSheet } from "@/components/yield/yield-source-sheet";
+import { MobileMetricPill, MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
+import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
+import { YieldInstrumentBoard } from "@/components/yield/yield-instrument-board";
+import { TablePagination } from "@/components/table-pagination";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
+import { TableSourceLink } from "@/components/table/client";
+import { YieldSourceRiskBar } from "@/components/yield/yield-source-risk-bar";
+import { YieldFreshnessLabel } from "@/components/yield/yield-freshness-label";
+import { YieldWatchlistStar } from "@/components/yield/yield-watchlist-star";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { getLogoSrc } from "@/lib/logos";
+import { useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
+import { getYieldRankingSourceClockInputs } from "@/lib/yield-source-explorer-model";
+import { resolveYieldSourceAssessedAt, type YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
+import { useYieldLeaderboardController } from "@/hooks/use-yield-leaderboard-controller";
+import type { YieldTableSortKey } from "@/components/yield/yield-table-logic";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
+import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { formatPercent, formatScore } from "@shared/lib/format";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { YieldCohortChip } from "@/components/yield/yield-cohort-chip";
+import { YieldZoneChip } from "@/components/yield/yield-zone-chip";
+import { YieldWhyPysStrip } from "@/components/yield/yield-why-pys-strip";
+import {
+  YieldRankChangeChip,
+  YieldSafetyBadge,
+  YieldSignalsIndicator,
+} from "@/components/yield/yield-row-metrics";
+import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
+import { trackEvent } from "@/lib/analytics";
+import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
+import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
+import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { YIELD_LEADERBOARD_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+
+const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
+  pys: "PYS",
+  apy30d: "APY (30d)",
+  safetyScore: "Safety",
+  tvl: "TVL",
+  yieldStability: "Stability",
+  yieldType: "Type",
+  sourceCount: "Sources",
+};
+
+export interface YieldLeaderboardFilterSummary {
+  visibleCount: number;
+  totalCount: number;
+  comparisonLabel: string;
+  activeFilters: ReadonlyArray<{ key: string; label: string }>;
+}
+
+function LeaderboardHeading({
+  summary,
+  sortKey,
+  sortDirection,
+  exportRows,
+  updatedAt,
+  sourceClock,
+  methodologyLabel,
+}: {
+  summary: YieldLeaderboardFilterSummary;
+  sortKey: YieldTableSortKey;
+  sortDirection: "asc" | "desc";
+  exportRows: readonly YieldViewModelRow[];
+  updatedAt: number;
+  sourceClock: YieldSourceDisplayClock | null;
+  methodologyLabel: string;
+}) {
+  const { copied, copy } = useCopyToClipboard();
+  const sourceAssessedAt = sourceClock?.assessedAt;
+  const sourceAssessedISO =
+    typeof sourceAssessedAt === "number" && Number.isFinite(sourceAssessedAt) && sourceAssessedAt > 0
+      ? new Date(sourceAssessedAt * 1000).toISOString()
+      : undefined;
+  const sortLabel = SORT_KEY_LABELS[sortKey] ?? sortKey;
+  const arrow = sortDirection === "asc" ? "↑" : "↓";
+  const appended = summary.comparisonLabel ? `, ${summary.comparisonLabel} rows` : "";
+  const sentence = `Showing ${summary.visibleCount} of ${summary.totalCount} rows · sorted by ${sortLabel}${arrow}${appended}`;
+
+  const handleCopy = useCallback(async () => {
+    await copy(window.location.href);
+  }, [copy]);
+  const handleExport = useCallback(() => {
+    const exportData = exportRows.map((row) => ({ rank: row.viewRank, row }));
+    downloadCsvWithPreamble(exportData, YIELD_EXPORT_COLUMNS, "pharos-yield-rankings", {
+      endpoint: "yield-rankings",
+      asOfISO: new Date(updatedAt * 1000).toISOString(),
+      ...(sourceAssessedISO ? { sourceAssessedISO } : {}),
+      sourceUrl: window.location.href,
+      methodologyLabel,
+    });
+    trackEvent("yield_exported", { scope: "ranking", row_count: exportData.length });
+  }, [exportRows, methodologyLabel, sourceAssessedISO, updatedAt]);
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+      <div className="space-y-1">
+        <p className="pharos-label">Leaderboard</p>
+        <h2 id="leaderboard-heading" className="pharos-section-title">
+          Yield Leaderboard
+        </h2>
+      </div>
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="pharos-focus-ring inline-flex min-h-11 min-w-0 items-center rounded-md py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-8 sm:py-1"
+              aria-label="Filter summary; click for details"
+            >
+              <span className="truncate">{sentence}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[320px] border border-border bg-popover p-3 text-foreground">
+            <p className="pharos-label">
+              Active filters
+            </p>
+            {summary.activeFilters.length > 0 ? (
+              <ul className="mt-1 space-y-0.5 text-2xs text-foreground">
+                {summary.activeFilters.map((filter) => (
+                  <li key={filter.key}>{filter.label}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-2xs text-muted-foreground">No filters applied.</p>
+            )}
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-2xs font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
+            >
+              <span
+                className={`pharos-copy-icon ${copied ? "text-state-positive" : ""}`}
+                aria-live="polite"
+              >
+                {copied ? "Copied!" : "Copy URL"}
+              </span>
+              {copied ? <span key="copy-ring" className="pharos-copy-ring" aria-hidden="true" /> : null}
+            </button>
+          </TooltipContent>
+        </Tooltip>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exportRows.length === 0}
+          className="pharos-focus-ring inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8 sm:py-1"
+          aria-label={`Export ${exportRows.length} yield rows as CSV`}
+        >
+          <DownloadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>CSV</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface YieldExportRow {
+  rank: number;
+  row: YieldViewModelRow;
+}
+
+const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
+  { header: "Rank", accessor: (entry) => entry.rank },
+  ...YIELD_LEADERBOARD_CSV_COLUMNS.map((column): CsvColumn<YieldExportRow> => ({
+    header: column.header,
+    accessor: (entry, index) => column.accessor(entry.row, index),
+  })),
+];
+
+const MOBILE_SORT_OPTIONS: Array<{ key: YieldTableSortKey; label: string }> = [
+  { key: "pys", label: "PYS" },
+  { key: "apy30d", label: "APY" },
+  { key: "safetyScore", label: "Safety" },
+  { key: "tvl", label: "TVL" },
+  { key: "yieldStability", label: "Stability" },
+];
+
+export interface YieldLeaderboardHandle {
+  revealRow: (id: string) => void;
+}
+
+interface YieldLeaderboardProps {
+  ref?: Ref<YieldLeaderboardHandle>;
+  rows: YieldViewModelRow[];
+  logos: Record<string, string>;
+  riskFreeRate: number;
+  medianApy: number | null;
+  scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
+  emptyMessage?: string;
+  filterSummary?: YieldLeaderboardFilterSummary;
+  comparisonRows?: readonly YieldViewModelRow[];
+  updatedAt?: number;
+  methodologyLabel?: string;
+}
+
+export function YieldLeaderboard({
+  ref,
+  rows,
+  logos,
+  riskFreeRate,
+  medianApy,
+  scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
+  sourceClock = null,
+  emptyMessage,
+  filterSummary,
+  comparisonRows = rows,
+  updatedAt,
+  methodologyLabel = "Pharos Yield Score current",
+}: YieldLeaderboardProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
+  const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
+  const compare = useYieldCompareSelection();
+  const initialCompareDeepLink = useRef(compare.ids.length >= 2);
+  const initialCompareProcessed = useRef(false);
+  const rowsById = useMemo(() => new Map(comparisonRows.map((row) => [row.id, row] as const)), [comparisonRows]);
+  const detailedRankings = useYieldRankings({ enabled: sheetRankingId !== null });
+  const effectiveUpdatedAt = updatedAt ?? Math.floor(detailedRankings.dataUpdatedAt / 1000);
+  const sheetRanking = useMemo(
+    () => (sheetRankingId ? (detailedRankings.data?.rankings.find((row) => row.id === sheetRankingId) ?? null) : null),
+    [detailedRankings.data?.rankings, sheetRankingId],
+  );
+  // The sheet's sources come from a separate detailed fetch, so they get their
+  // own clock: that response's assessment, never the summary publication.
+  const sheetSourceClockInputs = useMemo(
+    () => (sheetRanking ? getYieldRankingSourceClockInputs(sheetRanking) : []),
+    [sheetRanking],
+  );
+  const sheetSourceClock = useYieldSourceClock(
+    sheetSourceClockInputs,
+    resolveYieldSourceAssessedAt(detailedRankings.meta, detailedRankings.dataUpdatedAt),
+  );
+
+  const {
+    sortKey,
+    sortDirection,
+    toggleSort,
+    sortedRows: sorted,
+    effectivePage,
+    totalPages,
+    paginatedRows: paginated,
+    pageStartIndex,
+    rangeStart,
+    rangeEnd,
+    totalRows,
+    onPreviousPage,
+    onNextPage,
+    revealRow,
+  } = useYieldLeaderboardController(rows);
+  useImperativeHandle(ref, () => ({ revealRow }), [revealRow]);
+  const prefetch = usePrefetchStablecoin();
+  const visibleExpandedId = useMemo(
+    () => (expandedId !== null && paginated.some((row) => row.id === expandedId) ? expandedId : null),
+    [expandedId, paginated],
+  );
+  const handleToggleExpanded = useCallback(
+    (stablecoinId: string) => {
+      if (expandedId !== stablecoinId) {
+        const row = rowsById.get(stablecoinId);
+        trackEvent("yield_row_action", {
+          action: "history_opened",
+          coin_id: stablecoinId,
+          warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
+        });
+      }
+      setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
+    },
+    [expandedId, rowsById],
+  );
+  const handleOpenSourceSheet = useCallback(
+    (stablecoinId: string) => {
+      const row = rowsById.get(stablecoinId);
+      trackEvent("yield_row_action", {
+        action: "source_opened",
+        coin_id: stablecoinId,
+        warning_count: selectInvestmentWarningSignals(row?.warningSignals).length,
+      });
+      setSheetRankingId(stablecoinId);
+    },
+    [rowsById],
+  );
+  const handleToggleSort = useCallback(
+    (key: YieldTableSortKey) => {
+      const direction = sortKey === key && sortDirection === "desc" ? "asc" : "desc";
+      trackEvent("yield_sort_changed", { sort_by: key, direction });
+      toggleSort(key);
+    },
+    [sortDirection, sortKey, toggleSort],
+  );
+  const handleOpenCompare = useCallback(() => {
+    setCompareDrawerOpen(true);
+    trackEvent("yield_compare_opened", { source: "tray", coin_count: compare.ids.length });
+  }, [compare.ids.length]);
+
+  useEffect(() => {
+    if (initialCompareProcessed.current) return;
+    initialCompareProcessed.current = true;
+    if (!initialCompareDeepLink.current) return;
+    queueMicrotask(() => setCompareDrawerOpen(true));
+    trackEvent("yield_compare_opened", { source: "deep_link", coin_count: compare.ids.length });
+  }, [compare.ids.length]);
+
+  return (
+    <TooltipProvider>
+      {filterSummary ? (
+        <LeaderboardHeading
+          summary={filterSummary}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          exportRows={sorted}
+          updatedAt={effectiveUpdatedAt}
+          sourceClock={sourceClock}
+          methodologyLabel={methodologyLabel}
+        />
+      ) : null}
+      <div className="space-y-3 md:hidden">
+        <MobileSortPanel kicker="Sort leaderboard">
+          <MobileSortPills
+            options={MOBILE_SORT_OPTIONS}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={handleToggleSort}
+            ariaLabel="Sort yield leaderboard"
+          />
+        </MobileSortPanel>
+
+        {sorted.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">
+            {emptyMessage ?? "No yield data available."}
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {paginated.map((row) => {
+                const isCompared = compare.has(row.id);
+                const compareDisabled = !isCompared && !compare.canAdd;
+                return (
+                  <YieldMobileCard
+                    key={row.id}
+                    row={row}
+                    logo={getLogoSrc(logos, row.id)}
+                    riskFreeRate={riskFreeRate}
+                    medianApy={medianApy}
+                    scalingFactor={scalingFactor}
+                    benchmarks={benchmarks}
+                    methodologyVersion={methodologyVersion}
+                    sourceClock={sourceClock}
+                    expanded={visibleExpandedId === row.id}
+                    isCompared={isCompared}
+                    compareDisabled={compareDisabled}
+                    onToggleExpanded={handleToggleExpanded}
+                    onOpenSourceSheet={handleOpenSourceSheet}
+                    onToggleCompare={compare.toggle}
+                  />
+                );
+              })}
+            </div>
+            <TablePagination
+              page={effectivePage}
+              totalPages={totalPages}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              total={totalRows}
+              onPrevious={onPreviousPage}
+              onNext={onNextPage}
+              noun="coins"
+              className="pharos-table-shell"
+              bordered={false}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <YieldInstrumentBoard
+          rows={paginated}
+          logos={logos}
+          riskFreeRate={riskFreeRate}
+          medianApy={medianApy}
+          scalingFactor={scalingFactor}
+          benchmarks={benchmarks}
+          methodologyVersion={methodologyVersion}
+          sourceClock={sourceClock}
+          pageStartIndex={pageStartIndex}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onToggleSort={handleToggleSort}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalRows}
+          pagination={
+            sorted.length > 0
+              ? {
+                  page: effectivePage,
+                  totalPages,
+                  rangeStart,
+                  rangeEnd,
+                  total: totalRows,
+                  onPrevious: onPreviousPage,
+                  onNext: onNextPage,
+                  noun: "coins",
+                }
+              : undefined
+          }
+          expandedId={visibleExpandedId}
+          compareHas={compare.has}
+          compareCanAdd={compare.canAdd}
+          onPrefetch={prefetch}
+          onToggleExpanded={handleToggleExpanded}
+          onOpenSourceSheet={handleOpenSourceSheet}
+          onToggleCompare={compare.toggle}
+          emptyMessage={emptyMessage}
+        />
+      </div>
+      <YieldSourceSheet
+        ranking={sheetRanking}
+        loading={detailedRankings.isLoading}
+        error={detailedRankings.error}
+        onRetry={() => { void detailedRankings.refetch(); }}
+        logo={sheetRankingId ? getLogoSrc(logos, sheetRankingId) : undefined}
+        riskFreeRate={riskFreeRate}
+        medianApy={medianApy}
+        benchmarks={benchmarks}
+        sourceClock={sheetSourceClock}
+        open={sheetRankingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSheetRankingId(null);
+        }}
+      />
+      <YieldCompareTray rows={comparisonRows} logos={logos} onOpenDrawer={handleOpenCompare} />
+      {compare.ids.length > 0 ? <div className="h-20 sm:hidden" aria-hidden="true" /> : null}
+      <YieldCompareDrawer
+        open={compareDrawerOpen}
+        onOpenChange={setCompareDrawerOpen}
+        rows={comparisonRows}
+        logos={logos}
+        updatedAt={effectiveUpdatedAt}
+        methodologyLabel={methodologyLabel}
+      />
+    </TooltipProvider>
+  );
+}
+
+export function YieldMobileCard({
+  row,
+  logo,
+  riskFreeRate,
+  medianApy,
+  scalingFactor,
+  benchmarks = null,
+  methodologyVersion = null,
+  sourceClock = null,
+  expanded,
+  isCompared,
+  compareDisabled,
+  onToggleExpanded,
+  onOpenSourceSheet,
+  onToggleCompare,
+}: {
+  row: YieldViewModelRow;
+  logo?: string;
+  riskFreeRate: number;
+  medianApy: number | null;
+  /** Payload scaling factor; threaded so any PYS reuse matches the board. */
+  scalingFactor: number;
+  /**
+   * Benchmark registry from the payload. Lets a row with no published rate
+   * resolve its zone-chip benchmark from its own benchmarkKey instead of the
+   * chart-wide USD frame.
+   */
+  benchmarks?: YieldBenchmarkRegistry | null;
+  /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
+  methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
+  expanded: boolean;
+  isCompared: boolean;
+  compareDisabled: boolean;
+  onToggleExpanded: (stablecoinId: string) => void;
+  onOpenSourceSheet: (stablecoinId: string) => void;
+  onToggleCompare: (stablecoinId: string) => void;
+}) {
+  const {
+    pysColor,
+    grade,
+    safetyScore,
+    stabilityPct,
+    safetySrLabel,
+    tvlIsNative,
+    tvlLabel,
+    depthDisplay,
+    warningCount,
+    sourceRiskSummary,
+    confidenceStyle,
+    confidenceLabel,
+    freshness,
+    sourceRiskScore,
+    sourceRiskDrivers,
+    rankChip,
+    pysNullReasonText,
+    availableSources,
+    altSourceCount,
+    benchmarkReferenceText,
+    breakdown: { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult },
+  } = useMemo(
+    () =>
+      deriveYieldRowDisplay(
+        row,
+        buildYieldPresentationContext({ methodologyVersion, riskFreeRate, benchmarks, scalingFactor, sourceClock }),
+      ),
+    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks, sourceClock],
+  );
+  const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
+  const workbenchLink = getYieldWorkbenchLink(row.id);
+  // A default-safety score is a scoring input, not a measured Safety Score.
+  const usedDefaultSafety = row.provenance?.usedDefaultSafety === true;
+
+  return (
+    <article
+      data-yield-row-display={row.id}
+      data-yield-grade={grade ?? "NR"}
+      data-yield-safety-score={safetyScore ?? ""}
+      data-yield-pys={row.pharosYieldScore ?? ""}
+      data-yield-source-risk={sourceRiskScore ?? ""}
+      data-yield-freshness={freshness?.displayText ?? ""}
+      data-yield-warning-count={warningCount}
+      data-yield-benchmark={benchmarkReferenceText}
+      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-state-warn-solid/60" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={buildStablecoinUrl(row.id)}
+            className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md"
+          >
+            <StablecoinLogo src={logo} name={row.name} size={30} />
+            <span className="min-w-0">
+              <span className="flex items-baseline gap-2">
+                <span className="font-semibold text-foreground">{row.symbol}</span>
+                <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+              </span>
+            </span>
+          </Link>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="font-mono text-lg font-semibold leading-none tabular-nums text-foreground">
+            {formatPercent(row.apy30d)}
+          </p>
+          <p className={`mt-1 inline-flex items-center justify-end gap-1 font-mono text-xs tabular-nums ${pysColor}`}>
+            {row.pharosYieldScore !== null ? (
+              <>
+                <span>PYS {formatScore(row.pharosYieldScore)}</span>
+                {rankChip ? <YieldRankChangeChip rankChip={rankChip} compact /> : null}
+                <YieldCohortChip cohort={row.cohortPercentile} />
+              </>
+            ) : pysNullReasonText ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">PYS —</span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[220px] text-2xs">{pysNullReasonText}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span>PYS —</span>
+            )}
+          </p>
+        </div>
+      </div>
+      <p className="mt-1.5 truncate text-2xs text-muted-foreground">{row.yieldSource}</p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
+        <YieldSafetyBadge
+          grade={grade}
+          safetyScore={safetyScore}
+          safetySrLabel={safetySrLabel}
+          opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+          usedDefaultSafety={usedDefaultSafety}
+          compact
+        />
+        <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
+          {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
+        </Badge>
+        <YieldZoneChip
+          safetyScore={usedDefaultSafety ? null : safetyScore}
+          apy30d={row.apy30d}
+          benchmarkRate={resolvedBenchmark.rate}
+        />
+        <MobileMetricPill>
+          TVL{" "}
+          <span className={tvlIsNative ? "text-muted-foreground" : "font-mono tabular-nums text-foreground"}>
+            {tvlLabel}
+          </span>
+        </MobileMetricPill>
+        {stabilityPct !== null ? (
+          <MobileMetricPill>
+            Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span>
+          </MobileMetricPill>
+        ) : null}
+        {freshness ? (
+          <YieldFreshnessLabel
+            freshness={freshness}
+            render={({ className, label }) => <MobileMetricPill className={className}>{label}</MobileMetricPill>}
+          />
+        ) : null}
+        <YieldSignalsIndicator
+          row={row}
+          sourceRiskSummary={sourceRiskSummary}
+          variant="mobile"
+        />
+      </div>
+
+      <div className="mt-3 pharos-inset px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <p>{benchmarkReferenceText}</p>
+          <YieldSourceRiskBar score={sourceRiskScore} compact tooltip />
+        </div>
+        <p className="mt-1" title={depthDisplay.description}>
+          {depthDisplay.isNativeUnmeasured ? depthDisplay.phrase : `Depth: ${depthDisplay.label}`}
+        </p>
+        {sourceRiskSummary ? (
+          <p className="mt-1 font-mono text-2xs tabular-nums text-state-warn-bright">
+            {sourceRiskSummary}
+          </p>
+        ) : null}
+      </div>
+
+      {warningCount > 0 ? (
+        <ul className="mt-3 space-y-1 text-xs text-state-warn-bright">
+          {selectInvestmentWarningSignals(row.warningSignals).slice(0, 2).map((signal) => (
+            <li key={signal}>{formatYieldWarningSignal(signal)}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-11 w-11 min-w-11" />
+        <button
+          type="button"
+          aria-pressed={isCompared}
+          disabled={compareDisabled}
+          onClick={() => onToggleCompare(row.id)}
+          aria-label={`Add ${row.symbol} to compare`}
+          className="pharos-focus-ring inline-flex h-11 w-11 min-w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-4 w-4 rounded-sm border ${
+              isCompared
+                ? "border-foreground bg-foreground ring-2 ring-inset ring-background"
+                : "border-border/70 bg-background/60"
+            }`}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => onToggleExpanded(row.id)}
+          className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+          aria-expanded={expanded}
+        >
+          {expanded ? "Hide history" : "Show history"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenSourceSheet(row.id)}
+          className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+        >
+          {altSourceCount > 0 ? `${1 + altSourceCount} sources` : "Source"}
+        </button>
+        <TableSourceLink
+          href={row.yieldSourceUrl}
+          onClick={() => {
+            trackEvent("yield_row_action", {
+              action: "provider_opened",
+              coin_id: row.id,
+              warning_count: warningCount,
+            });
+          }}
+          className="min-h-11 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium"
+          iconClassName="h-3.5 w-3.5"
+        >
+          Provider
+        </TableSourceLink>
+        <Link
+          href={workbenchLink.href}
+          prefetch={false}
+          onClick={() => {
+            trackEvent("yield_row_action", {
+              action: "deep_dive_opened",
+              coin_id: row.id,
+              warning_count: warningCount,
+            });
+          }}
+          aria-label={`${workbenchLink.label} for ${row.symbol}`}
+          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+        >
+          <span>{workbenchLink.isWorkbench ? "Deep dive" : workbenchLink.label}</span>
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </div>
+
+      {expanded ? (
+        <div className="mt-4 pharos-inset px-3 py-3">
+          {row.pharosYieldScore !== null ? (
+            <YieldWhyPysStrip
+              benchmarkSpread={benchmarkSpread}
+              benchmarkLabel={row.benchmarkLabel}
+              benchmarkRate={resolvedBenchmark.publishedRate}
+              stabilityPct={stabilityPct}
+              sustainabilityMult={sustainabilityMult}
+              grade={grade}
+              safetyScore={safetyScore}
+              adjustedRiskPenalty={adjustedRiskPenalty}
+              sourceRiskPenalty={sourceRiskPenalty}
+              sourceRiskDriverLabel={sourceRiskDrivers[0]?.label ?? null}
+            />
+          ) : null}
+          <YieldHistoryChart
+            stablecoinId={row.id}
+            benchmarkRate={resolvedBenchmark.rate}
+            benchmarkLabel={resolvedBenchmark.label}
+            benchmarkIsFallback={resolvedBenchmark.isFallback}
+            medianApy={medianApy}
+            compact
+            availableSources={availableSources}
+          />
+        </div>
+      ) : null}
+    </article>
+  );
+}

@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DependencyWatershed } from "@/components/dependency-watershed/dependency-watershed";
-import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
+import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";

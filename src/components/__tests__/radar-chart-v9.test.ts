@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { cleanup, render } from "@testing-library/react";
-import { CompareRadarV9, buildV9RadarDataset } from "@/components/radar-chart-v9";
+import { CompareRadarV9, buildV9RadarDataset } from "@/components/compare/radar-chart-v9";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";

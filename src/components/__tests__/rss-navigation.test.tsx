@@ -12,7 +12,7 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/components/intent-link", async () => ({ IntentLink: (await import("next/link")).default }));
 
-import { DigestColophon } from "../digest-colophon";
+import { DigestColophon } from "../digest/digest-colophon";
 import ComparePairPage from "@/app/compare/[slug]/page";
 import { StablecoinDetailSeoContent } from "../stablecoin-detail/static-seo-content";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";

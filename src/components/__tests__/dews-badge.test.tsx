@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { DEWSBadge } from "@/components/dews-badge";
+import { DEWSBadge } from "@/components/dews/dews-badge";
 
 
 describe("DEWSBadge", () => {

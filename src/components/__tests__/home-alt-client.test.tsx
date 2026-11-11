@@ -3,7 +3,7 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HomeAltClient } from "@/components/home-alt-client";
+import { HomeAltClient } from "@/components/homepage/home-alt-client";
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<ComponentType>) => {
@@ -13,23 +13,23 @@ vi.mock("next/dynamic", () => ({
     };
   },
 }));
-vi.mock("@/components/home-alt-mini-card-grid", () => ({ HomeAltMiniCardGrid: () => <div data-testid="mini-cards" /> }));
-vi.mock("@/components/home-alt-rankings-section", () => ({
+vi.mock("@/components/homepage/home-alt-mini-card-grid", () => ({ HomeAltMiniCardGrid: () => <div data-testid="mini-cards" /> }));
+vi.mock("@/components/homepage/home-alt-rankings-section", () => ({
   HomeAltRankingsSection: ({ titleId }: { titleId: string }) => <h2 id={titleId}>Loaded rankings</h2>,
 }));
-vi.mock("@/components/home-alt-ddr-overview", () => ({
+vi.mock("@/components/homepage/home-alt-ddr-overview", () => ({
   HomeAltDdrOverview: () => <h2 id="ddr-overview-title" data-testid="ddr">DDR overview</h2>,
 }));
-vi.mock("@/components/home-alt-yield-overview", () => ({
+vi.mock("@/components/homepage/home-alt-yield-overview", () => ({
   HomeAltYieldOverview: () => <h2 id="yield-overview-title" data-testid="yield">Yield overview</h2>,
 }));
-vi.mock("@/components/home-alt-status-telegram", () => ({
+vi.mock("@/components/homepage/home-alt-status-telegram", () => ({
   HomeAltStatusTelegram: () => <h2 id="home-alt-status-telegram-title" data-testid="status">Status</h2>,
 }));
-vi.mock("@/components/home-alt-upcoming-horizon-constellation", () => ({
+vi.mock("@/components/homepage/home-alt-upcoming-horizon-constellation", () => ({
   HomeAltUpcomingHorizonConstellation: () => <h2 id="upcoming-horizon-constellation-title" data-testid="horizon">Horizon</h2>,
 }));
-vi.mock("@/components/shortcuts-section", () => ({ ShortcutsSection: () => null }));
+vi.mock("@/components/homepage/shortcuts-section", () => ({ ShortcutsSection: () => null }));
 
 const intersections: Array<() => void> = [];
 const scrollIntoView = vi.fn();

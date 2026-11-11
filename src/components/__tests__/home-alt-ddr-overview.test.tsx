@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
+import { HomeAltDdrOverview } from "@/components/homepage/home-alt-ddr-overview";
 import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import { predictionRow } from "@/components/depeg-resolver-review-test-support";

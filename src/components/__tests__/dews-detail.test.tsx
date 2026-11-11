@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ApiFetchError } from "@/lib/api";
 
-import { DEWSDetail } from "@/components/dews-detail";
+import { DEWSDetail } from "@/components/dews/dews-detail";
 import type { ReactNode } from "react";
 
 const { useDetailMock, chartMock, areaMock, tooltipMock } = vi.hoisted(() => ({

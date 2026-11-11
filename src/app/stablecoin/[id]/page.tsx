@@ -19,7 +19,7 @@ import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loa
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
-import { PreLaunchDetail } from "@/components/pre-launch-detail";
+import { PreLaunchDetail } from "@/components/upcoming/pre-launch-detail";
 import aiSummaries from "@data/ai-summaries.json";
 import failureScenarios from "@data/failure-scenarios.json";
 import { getLogoSrc, logosById } from "@/lib/logos";

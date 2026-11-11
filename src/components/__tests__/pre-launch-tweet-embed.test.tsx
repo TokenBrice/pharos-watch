@@ -12,7 +12,7 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
+import { PreLaunchTweetEmbed } from "@/components/upcoming/pre-launch-tweet-embed";
 
 describe("PreLaunchTweetEmbed", () => {
   it("omits an unresolved build-time tweet instead of baking in a not-found card", () => {

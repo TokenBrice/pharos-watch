@@ -81,7 +81,7 @@ function ChartStub({
   );
 }
 
-vi.mock("@/components/non-usd-share-chart", () => ({
+vi.mock("@/components/chart-primitives/non-usd-share-chart", () => ({
   NonUsdShareChart: (props: Omit<Parameters<typeof ChartStub>[0], "kind">) => <ChartStub {...props} kind="share" />,
 }));
 

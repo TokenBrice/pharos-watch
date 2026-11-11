@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
+import { MethodologyChangelogPage } from "@/components/methodology-history/methodology-changelog-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {

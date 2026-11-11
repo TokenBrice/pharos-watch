@@ -16,7 +16,7 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
-import { HomeAltYieldOverview } from "@/components/home-alt-yield-overview";
+import { HomeAltYieldOverview } from "@/components/homepage/home-alt-yield-overview";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";

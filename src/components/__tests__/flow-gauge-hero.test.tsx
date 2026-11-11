@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FlowGaugeHero } from "@/components/flow-gauge-hero";
+import { FlowGaugeHero } from "@/components/mint-burn/flow-gauge-hero";
 import { makeMintBurnCoinValuation, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 import type { MintBurnFlowsResponse, MintBurnGauge } from "@shared/types/mint-burn";
 

@@ -143,7 +143,7 @@ Runtime-only palettes need not acquire a CSS twin without a CSS consumer.
 ### Don't
 
 - Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
-- Hardcode hex values in chart components — use the runtime maps (`PEG_BAND_HEX` belongs to `shared/lib/classification.ts`). The market-cap delta colors in `src/components/mcap-chart.tsx` are an intentional local exception.
+- Hardcode hex values in chart components — use the runtime maps (`PEG_BAND_HEX` belongs to `shared/lib/classification.ts`). The market-cap delta colors in `src/components/chart-primitives/mcap-chart.tsx` are an intentional local exception.
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files. Exception: isometric scenes keep a local atmospheric layer in `src/components/scene/scene-tokens.module.css` (sea, earth, rock, the lighthouse, hairlines, light and dark), plus each scene's art direction. These tokens encode materials, never data ([Data Visualization: Scene Kit](./data-visualization.md#scene-kit)).
 

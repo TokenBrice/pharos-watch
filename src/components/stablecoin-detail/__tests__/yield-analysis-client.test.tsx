@@ -59,13 +59,13 @@ vi.mock("@/hooks/use-url-filters", () => ({
   }),
 }));
 
-vi.mock("@/components/pys-breakdown", () => ({
+vi.mock("@/components/yield/pys-breakdown", () => ({
   PysBreakdown: ({ scalingFactor }: { scalingFactor: number }) => (
     <div data-testid="pys-breakdown" data-scaling-factor={scalingFactor} />
   ),
 }));
 
-vi.mock("@/components/yield-source-risk-card", () => ({
+vi.mock("@/components/yield/yield-source-risk-card", () => ({
   YieldSourceRiskCard: () => <div data-testid="yield-source-risk-card" />,
 }));
 

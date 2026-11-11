@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import { YieldSourceSheet } from "@/components/yield/yield-source-sheet";
 
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking } from "@shared/types/yield";
@@ -21,7 +21,7 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@/components/yield-history-chart", () => ({
+vi.mock("@/components/yield/yield-history-chart", () => ({
   YieldHistoryChart: ({
     externalSourceKey,
     benchmarkRate,
@@ -42,7 +42,7 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
-vi.mock("@/components/yield-source-risk-bar", () => ({
+vi.mock("@/components/yield/yield-source-risk-bar", () => ({
   YieldSourceRiskBar: ({ score }: { score: number | null }) => (
     <div data-testid="yield-source-risk-bar">{score == null ? "unavailable" : String(score)}</div>
   ),

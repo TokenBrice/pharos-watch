@@ -2,8 +2,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { LiquidityTable } from "@/components/liquidity-table";
-import type { LiquidityRow } from "@/components/liquidity-table-logic";
+import { LiquidityTable } from "@/components/liquidity/liquidity-table";
+import type { LiquidityRow } from "@/components/liquidity/liquidity-table-logic";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";

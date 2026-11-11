@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { HomeAltHeroStaticChart } from "@/components/home-alt-hero-static-chart";
+import { HomeAltHeroStaticChart } from "@/components/homepage/home-alt-hero-static-chart";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import type { HomepageHistory, HomepageLaneMeta } from "@shared/types/homepage";
 

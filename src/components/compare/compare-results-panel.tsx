@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { CoinFlowCard } from "@/components/coin-flow-card";
+import { CoinFlowCard } from "@/components/mint-burn/coin-flow-card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
@@ -13,20 +13,20 @@ import { stablecoinLabel } from "@/lib/stablecoin-label";
 import { formatCurrency } from "@shared/lib/format";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
 
-const ComparisonTable = dynamic(() => import("@/components/comparison-table").then((m) => m.ComparisonTable), {
+const ComparisonTable = dynamic(() => import("@/components/compare/comparison-table").then((m) => m.ComparisonTable), {
   loading: () => <ChartSkeleton className="h-[340px] rounded-xl" />,
 });
 
-const ComparisonChart = dynamic(() => import("@/components/comparison-chart").then((m) => m.ComparisonChart), {
+const ComparisonChart = dynamic(() => import("@/components/compare/comparison-chart").then((m) => m.ComparisonChart), {
   loading: () => <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />,
 });
 
-const CompareRadarV9 = dynamic(() => import("@/components/radar-chart-v9").then((m) => m.CompareRadarV9), {
+const CompareRadarV9 = dynamic(() => import("@/components/compare/radar-chart-v9").then((m) => m.CompareRadarV9), {
   loading: () => <ChartSkeleton className="h-[420px] rounded-xl" />,
 });
 
 const FlowComparisonChart = dynamic(
-  () => import("@/components/flow-comparison-chart").then((m) => ({ default: m.FlowComparisonChart })),
+  () => import("@/components/compare/flow-comparison-chart").then((m) => ({ default: m.FlowComparisonChart })),
   { loading: () => <div className="h-[280px] rounded-xl animate-pulse bg-muted/20" /> },
 );
 

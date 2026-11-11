@@ -1,7 +1,7 @@
 "use client";
 
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
+import { BlacklistMetricCardSkeletonGrid } from "@/components/freezewatch/blacklist-metric-card-skeleton-grid";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
 

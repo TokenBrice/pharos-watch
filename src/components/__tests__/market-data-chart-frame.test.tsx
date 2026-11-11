@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { McapChart } from "@/components/mcap-chart";
+import { McapChart } from "@/components/chart-primitives/mcap-chart";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const START = Date.UTC(2026, 0, 1) / 1000;

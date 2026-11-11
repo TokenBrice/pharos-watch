@@ -13,11 +13,11 @@ vi.mock("@/hooks/use-mint-burn-flows", () => ({
   useMintBurnFlows: vi.fn(),
 }));
 
-vi.mock("@/components/flow-chart", () => ({
+vi.mock("@/components/mint-burn/flow-chart", () => ({
   FlowChart: () => <div>chart</div>,
 }));
 
-vi.mock("@/components/flow-table", () => ({
+vi.mock("@/components/mint-burn/flow-table", () => ({
   FlowTable: ({ coins }: { coins: Array<{
     pressureShiftScore: number | null;
     pressureShiftState: string;

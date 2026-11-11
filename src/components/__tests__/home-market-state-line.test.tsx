@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HomeMarketStateLine } from "@/components/home-market-state-line";
+import { HomeMarketStateLine } from "@/components/homepage/home-market-state-line";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const { useHomepageSnapshotMock } = vi.hoisted(() => ({ useHomepageSnapshotMock: vi.fn() }));

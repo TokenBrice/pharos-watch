@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb } from "@/components/command-palette-actions";
+import { buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb } from "@/components/command-palette/command-palette-actions";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
 
 describe("command palette action helpers", () => {

@@ -5,9 +5,9 @@ import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { PreLaunchDetail } from "@/components/pre-launch-detail";
-import { PreLaunchReadiness, usePreLaunchNowMs } from "@/components/pre-launch-readiness";
-import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";
+import { PreLaunchDetail } from "@/components/upcoming/pre-launch-detail";
+import { PreLaunchReadiness, usePreLaunchNowMs } from "@/components/upcoming/pre-launch-readiness";
+import { PreLaunchLaunchPath } from "@/components/upcoming/pre-launch-launch-path";
 import { resolveDriftDisplay } from "@/lib/pre-launch";
 import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
 

@@ -5,13 +5,13 @@ import { act, cleanup, render as rtlRender, waitFor } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HomeAltDdrOverview } from "@/components/home-alt-ddr-overview";
-import { HomeAltHero } from "@/components/home-alt-hero";
-import { HomeAltHeroLiveChart } from "@/components/home-alt-hero-live-chart";
-import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
-import { HomeAltStatusTelegram } from "@/components/home-alt-status-telegram";
-import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
-import { HomeAltYieldOverview } from "@/components/home-alt-yield-overview";
+import { HomeAltDdrOverview } from "@/components/homepage/home-alt-ddr-overview";
+import { HomeAltHero } from "@/components/homepage/home-alt-hero";
+import { HomeAltHeroLiveChart } from "@/components/homepage/home-alt-hero-live-chart";
+import { HomeAltRankingsSection } from "@/components/homepage/home-alt-rankings-section";
+import { HomeAltStatusTelegram } from "@/components/homepage/home-alt-status-telegram";
+import { HomeAltUpcomingHorizonConstellation } from "@/components/homepage/home-alt-upcoming-horizon-constellation";
+import { HomeAltYieldOverview } from "@/components/homepage/home-alt-yield-overview";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import { DailyDigestCard } from "@/components/home-alt-mini-cards/daily-digest-card";
 import { MintBurnCard } from "@/components/home-alt-mini-cards/mint-burn-card";
@@ -19,8 +19,8 @@ import { PegHealthCard } from "@/components/home-alt-mini-cards/peg-health-card"
 import { PsiBandCard } from "@/components/home-alt-mini-cards/psi-band-card";
 import { RecentFreezesCard } from "@/components/home-alt-mini-cards/recent-freezes-card";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
-import { HomeSectionErrorBoundary } from "@/components/home-section-error-boundary";
-import { RegimeBar } from "@/components/regime-bar";
+import { HomeSectionErrorBoundary } from "@/components/homepage/home-section-error-boundary";
+import { RegimeBar } from "@/components/psi-beacon/regime-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { ApiMeta } from "@/lib/api";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
@@ -74,7 +74,7 @@ vi.mock("@/hooks/use-home-alt-filters", () => ({
 }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: () => ({ pinnedIds: [], togglePinned: vi.fn() }) }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
-vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
+vi.mock("@/components/homepage/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
 vi.mock("@/lib/analytics", () => ({ trackFreshDataReady: vi.fn() }));
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
@@ -255,7 +255,7 @@ async function settleLazyChildren() {
 }
 
 beforeAll(async () => {
-  await Promise.all([import("@/components/stablecoin-table"), import("@/components/home-alt-hero-chart")]);
+  await Promise.all([import("@/components/stablecoin-directory/stablecoin-table"), import("@/components/homepage/home-alt-hero-chart")]);
   globalThis.ResizeObserver ??= class {
     observe() {}
     unobserve() {}

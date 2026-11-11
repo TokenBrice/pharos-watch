@@ -1,10 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/home-alt-client", () => ({ HomeAltClient: () => null }));
-vi.mock("@/components/home-alt-hero", () => ({ HomeAltHero: () => null }));
-vi.mock("@/components/home-blog-banner", () => ({ HomeBlogBanner: () => null }));
-vi.mock("@/components/home-media-strip", () => ({ HomeMediaStrip: () => null }));
+vi.mock("@/components/homepage/home-alt-client", () => ({ HomeAltClient: () => null }));
+vi.mock("@/components/homepage/home-alt-hero", () => ({ HomeAltHero: () => null }));
+vi.mock("@/components/homepage/home-blog-banner", () => ({ HomeBlogBanner: () => null }));
+vi.mock("@/components/homepage/home-media-strip", () => ({ HomeMediaStrip: () => null }));
 vi.mock("@/lib/homepage-static-snapshot", () => ({ getHomepageHeroSnapshot: vi.fn(async () => null) }));
 vi.mock("@/lib/homepage-evidence", () => ({
   HomepageEvidenceProvider: ({ children }: { children: React.ReactNode }) => children,

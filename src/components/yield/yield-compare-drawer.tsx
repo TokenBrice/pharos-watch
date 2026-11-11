@@ -1,0 +1,484 @@
+"use client";
+
+import { CheckIcon, DownloadIcon, Share2Icon, XIcon } from "lucide-react";
+import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
+import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import {
+  formatYieldWarningSignal,
+  resolveYieldScoreQualification,
+} from "@/lib/yield-constants";
+import {
+  YIELD_SOURCE_POSTURE_DEFINITIONS,
+  formatYieldSourceRiskSummary,
+  getYieldSourceDepthDisplay,
+  isNativeYieldSource,
+} from "@/lib/yield-source-risk";
+import { getYieldDecisionReasonLine, getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { YieldSafetyBadge } from "@/components/yield/yield-row-metrics";
+import { formatYieldSafetySrLabel } from "@/lib/yield-row-display";
+import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
+import { trackEvent } from "@/lib/analytics";
+import { copyText } from "@/lib/clipboard";
+import { isRequestCancellation, RequestSequence } from "@/lib/request";
+import { downloadCsvWithPreamble } from "@/lib/exports/csv";
+import { getLogoSrc, type LogoMap } from "@/lib/logos";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
+import { PYS_NULL_REASON_TEXT, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+
+interface YieldCompareDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rows: readonly YieldViewModelRow[];
+  logos: LogoMap;
+  updatedAt?: number;
+  methodologyLabel?: string;
+}
+
+interface CompareColumn {
+  id: string;
+  row: YieldViewModelRow | null;
+}
+
+interface CompareRowDescriptor {
+  key: string;
+  label: string;
+  align: "left" | "right";
+  render: (row: YieldViewModelRow) => ReactNode;
+}
+
+function formatSourcePosture(row: YieldViewModelRow): string {
+  return row.sourcePosture ? (YIELD_SOURCE_POSTURE_DEFINITIONS[row.sourcePosture]?.label ?? row.sourcePosture) : "—";
+}
+
+function formatMaterialSourceRisk(row: YieldViewModelRow): string {
+  const summary = formatYieldSourceRiskSummary(row.sourceRisk);
+  return summary ? summary.replace(/^Source risk\s+/u, "") : "—";
+}
+
+function formatVenueTier(row: YieldViewModelRow): string {
+  const tier = row.sourceRisk?.venueRiskTier ?? null;
+  if (!tier) return "—";
+  const label = tier.charAt(0).toUpperCase() + tier.slice(1);
+  const weighted = row.sourceRisk?.venueRiskWeighted;
+  const weightedLabel = typeof weighted === "number" && Number.isFinite(weighted) ? ` (${weighted.toFixed(1)}/5)` : "";
+  const confidence = row.sourceRisk?.venueRiskConfidence;
+  const confidenceLabel = confidence && confidence !== "verified" ? `, ${confidence} confidence` : "";
+  return `${label}${weightedLabel}${confidenceLabel}`;
+}
+
+/** Same native/not-applicable TVL read the board and mobile card use. */
+function formatTvlDisplay(row: YieldViewModelRow): string {
+  if (row.sourceTvlUsd !== null) return formatCurrency(row.sourceTvlUsd);
+  return isNativeYieldSource(getYieldWorkbenchSourceRole(row), row.yieldType) ? "Native" : "—";
+}
+
+function formatEvidenceQualification(row: YieldViewModelRow): string {
+  const qualification = resolveYieldScoreQualification(row);
+  const completeness = row.provenance?.evidenceCompleteness;
+  return typeof completeness === "number"
+    ? `${qualification} (${Math.round(completeness * 100)}% complete)`
+    : qualification;
+}
+
+const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
+  {
+    key: "apy30d",
+    label: "APY (30d)",
+    align: "right",
+    render: (row) => formatPercent(row.apy30d),
+  },
+  {
+    key: "pys",
+    label: "PYS",
+    align: "right",
+    render: (row) => {
+      if (row.pharosYieldScore !== null) return formatScore(row.pharosYieldScore);
+      const reason = row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
+      if (!reason) return "—";
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{"—"}</span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[220px] text-2xs">{reason}</TooltipContent>
+        </Tooltip>
+      );
+    },
+  },
+  {
+    key: "qualification",
+    label: "PYS qualification",
+    align: "left",
+    render: formatEvidenceQualification,
+  },
+  {
+    key: "safety",
+    label: "Safety",
+    align: "right",
+    // WHY: routed through YieldSafetyBadge so an opportunity-derived grade
+    // carries the same † provenance marker as the board and mobile card.
+    render: (row) => (
+      <YieldSafetyBadge
+        grade={row.safetyGrade}
+        safetyScore={row.safetyScore}
+        safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
+        opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+        usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
+        compact
+      />
+    ),
+  },
+  {
+    key: "source",
+    label: "Source",
+    align: "left",
+    render: (row) => row.yieldSource,
+  },
+  {
+    key: "sourcePosture",
+    label: "Source posture",
+    align: "left",
+    render: formatSourcePosture,
+  },
+  {
+    key: "sourceRisk",
+    label: "Source risk",
+    align: "right",
+    render: formatMaterialSourceRisk,
+  },
+  {
+    key: "venueTier",
+    label: "Venue tier",
+    align: "left",
+    render: formatVenueTier,
+  },
+  {
+    key: "decisionReason",
+    label: "Decision reason",
+    align: "left",
+    render: (row) => getYieldDecisionReasonLine(row) ?? "—",
+  },
+  {
+    key: "depth",
+    label: "Depth",
+    align: "left",
+    // Same display lens as the board and mobile card: a native row with no
+    // venue TVL is "not applicable", not an unclassified measurement.
+    render: (row) => getYieldSourceDepthDisplay({
+      depthLens: row.sourceDepthLens,
+      yieldType: row.yieldType,
+      sourceRole: getYieldWorkbenchSourceRole(row),
+      sourceTvlUsd: row.sourceTvlUsd,
+    }).label,
+  },
+  {
+    key: "stability",
+    label: "Stability",
+    align: "right",
+    render: (row) => (row.yieldStability !== null ? `${Math.round(row.yieldStability * 100)}%` : "—"),
+  },
+  {
+    key: "warnings",
+    label: "Investment warnings",
+    align: "left",
+    render: (row) =>
+      selectInvestmentWarningSignals(row.warningSignals).length === 0
+        ? "None"
+        : selectInvestmentWarningSignals(row.warningSignals).map((signal) => formatYieldWarningSignal(signal)).join(", "),
+  },
+  {
+    key: "benchmark",
+    label: "Benchmark",
+    align: "left",
+    render: (row) => (row.benchmarkLabel ? getYieldBenchmarkDisplayLabel(row) : "—"),
+  },
+];
+
+const PLACEHOLDER = "Coin not in current view";
+
+export function YieldCompareDrawer({
+  open,
+  onOpenChange,
+  rows,
+  logos,
+  updatedAt: updatedAtProp,
+  methodologyLabel = "Pharos Yield Score current",
+}: YieldCompareDrawerProps) {
+  const { ids, toggle } = useYieldCompareSelection();
+  const [openedAt] = useState(() => Math.floor(Date.now() / 1000));
+  const updatedAt = updatedAtProp ?? openedAt;
+  const [shareStatus, setShareStatus] = useState<"shared" | "copied" | "failed" | null>(null);
+  const [shareSequence] = useState(() => new RequestSequence());
+  useLayoutEffect(() => () => shareSequence.cancel(), [ids, open, shareSequence]);
+  // A stale Shared/copied/failed state must never survive a different
+  // selection or a reopen: reset on ids change and whenever the drawer opens.
+  const [shareContext, setShareContext] = useState({ ids, open });
+  if (shareContext.ids !== ids || shareContext.open !== open) {
+    setShareContext({ ids, open });
+    setShareStatus(null);
+  }
+  const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row] as const)), [rows]);
+  const columns: CompareColumn[] = useMemo(
+    () => ids.map((id) => ({ id, row: rowsById.get(id) ?? null })),
+    [ids, rowsById],
+  );
+  const shareHref = useMemo(
+    () => (ids.length > 0 ? `/yield/?compare=${encodeURIComponent(ids.join(","))}` : "/yield/"),
+    [ids],
+  );
+  const handleShare = useCallback(() => shareSequence.run(async (signal) => {
+    const url = new URL(shareHref, window.location.origin).href;
+    const payload = {
+      title: "Pharos Yield comparison",
+      text: `Compare ${ids.length} stablecoin yield opportunities on Pharos.`,
+      url,
+    };
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share(payload);
+        if (!signal.aborted) setShareStatus("shared");
+        trackEvent("yield_comparison_shared", {
+          method: "web_share",
+          coin_count: ids.length,
+          success: true,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          trackEvent("yield_comparison_shared", {
+            method: "web_share",
+            coin_count: ids.length,
+            success: false,
+          });
+          return;
+        }
+      }
+    }
+
+    const result = await copyText(url);
+    if (result.ok) {
+      if (!signal.aborted) setShareStatus("copied");
+      trackEvent("yield_comparison_shared", {
+        method: "clipboard",
+        coin_count: ids.length,
+        success: true,
+      });
+    } else {
+      if (!signal.aborted) setShareStatus("failed");
+      trackEvent("yield_comparison_shared", {
+        method: "clipboard",
+        coin_count: ids.length,
+        success: false,
+      });
+    }
+  }).catch((error: unknown) => {
+    if (!isRequestCancellation(error)) throw error;
+  }), [ids.length, shareHref, shareSequence]);
+  const handleExport = useCallback(() => {
+    const selectedRows = columns.flatMap((column) => (column.row ? [column.row] : []));
+    if (selectedRows.length === 0) return;
+    downloadCsvWithPreamble(selectedRows, YIELD_COMPARE_CSV_COLUMNS, "pharos-yield-comparison", {
+      endpoint: "yield-rankings comparison",
+      asOfISO: new Date(updatedAt * 1000).toISOString(),
+      sourceUrl: new URL(shareHref, window.location.origin).href,
+      methodologyLabel,
+    });
+    trackEvent("yield_exported", { scope: "comparison", row_count: selectedRows.length });
+  }, [columns, methodologyLabel, shareHref, updatedAt]);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Compare yield sources</SheetTitle>
+          <SheetDescription>Side-by-side metrics for the {ids.length} coins you selected.</SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-3 px-4 pb-2 sm:hidden" data-testid="yield-compare-mobile-list">
+          {columns.map((column) => {
+            const row = column.row;
+            const symbol = row?.symbol ?? column.id;
+            const name = row?.name ?? column.id;
+            return (
+              <article key={column.id} className="rounded-lg border border-border/70 bg-background/45 p-3">
+                <header className="flex items-center gap-2 border-b border-border/60 pb-2">
+                  <StablecoinLogo src={getLogoSrc(logos, column.id)} name={name} size={24} />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-foreground">{symbol}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{name}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggle(column.id)}
+                    className="pharos-focus-ring ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label={`Remove ${symbol} from compare`}
+                  >
+                    <XIcon className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </header>
+                {row ? (
+                  <dl className="divide-y divide-border/40">
+                    {COMPARE_ROW_DESCRIPTORS.map((descriptor) => (
+                      <div
+                        key={descriptor.key}
+                        className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 py-2 text-xs"
+                      >
+                        <dt className="text-muted-foreground">{descriptor.label}</dt>
+                        <dd
+                          className={
+                            descriptor.align === "right"
+                              ? "break-words text-right font-mono tabular-nums text-foreground"
+                              : "break-words text-right text-foreground"
+                          }
+                        >
+                          {descriptor.render(row)}
+                        </dd>
+                      </div>
+                    ))}
+                    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 py-2 text-xs">
+                      <dt className="text-muted-foreground">TVL</dt>
+                      <dd className="text-right font-mono tabular-nums text-foreground">
+                        {formatTvlDisplay(row)}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p className="py-4 text-xs italic text-muted-foreground">{PLACEHOLDER}</p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+
+        <TableFrame
+          tableId="yield-compare-drawer"
+          testId="yield-compare-drawer-table"
+          chrome="bare"
+          density="compact"
+          className="hidden px-4 pb-2 sm:block"
+          tableClassName="min-w-[360px] sm:min-w-[480px] border-collapse text-sm"
+          tableProps={{ "aria-label": "Yield source comparison" }}
+          viewportProps={{ mobileScrollHint: false, compactBottomPadding: false }}
+        >
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead
+                scope="col"
+                className="h-auto border-b border-border/60 px-0 py-2 pr-3 text-left pharos-label"
+              >
+                Metric
+              </TableHead>
+              {columns.map((column) => {
+                const row = column.row;
+                const symbol = row?.symbol ?? column.id;
+                const name = row?.name ?? column.id;
+                return (
+                  <TableHead
+                    key={column.id}
+                    scope="col"
+                    className="h-auto border-b border-border/60 px-2 py-2 text-left align-bottom"
+                  >
+                    <div className="flex items-center gap-2">
+                      <StablecoinLogo src={getLogoSrc(logos, column.id)} name={name} size={20} />
+                      <span className="font-medium text-foreground">{symbol}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggle(column.id)}
+                        className="pharos-focus-ring ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label={`Remove ${symbol} from compare`}
+                      >
+                        <XIcon className="h-3 w-3" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {COMPARE_ROW_DESCRIPTORS.map((descriptor) => (
+              <TableRow key={descriptor.key} className="border-b border-border/30 last:border-b-0">
+                <TableHead
+                  scope="row"
+                  className="h-auto px-0 py-2 pr-3 text-left text-xs font-medium text-muted-foreground"
+                >
+                  {descriptor.label}
+                </TableHead>
+                {columns.map((column) => {
+                  if (!column.row) {
+                    return (
+                      <TableCell key={column.id} className="px-2 py-2 text-left text-xs italic text-muted-foreground">
+                        {PLACEHOLDER}
+                      </TableCell>
+                    );
+                  }
+                  const value = descriptor.render(column.row);
+                  const cellClass =
+                    descriptor.align === "right"
+                      ? "px-2 py-2 text-right font-mono tabular-nums text-foreground"
+                      : "px-2 py-2 text-left text-foreground";
+                  return (
+                    <TableCell key={column.id} className={cellClass}>
+                      {value}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+            <TableRow className="hover:bg-transparent">
+              <TableHead
+                scope="row"
+                className="h-auto px-0 py-2 pr-3 text-left text-xs font-medium text-muted-foreground"
+              >
+                TVL
+              </TableHead>
+              {columns.map((column) => (
+                <TableCell key={column.id} className="px-2 py-2 text-right font-mono tabular-nums text-foreground">
+                  {column.row ? formatTvlDisplay(column.row) : ""}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableBody>
+        </TableFrame>
+
+        <SheetFooter className="items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={columns.every((column) => column.row === null)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <DownloadIcon className="h-4 w-4" aria-hidden="true" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            disabled={ids.length === 0}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {shareStatus === "shared" || shareStatus === "copied" ? (
+              <CheckIcon className="h-4 w-4 text-state-positive" aria-hidden="true" />
+            ) : (
+              <Share2Icon className="h-4 w-4" aria-hidden="true" />
+            )}
+            <span>
+              {shareStatus === "shared" ? "Shared" : shareStatus === "copied" ? "Link copied" : "Share comparison"}
+            </span>
+          </button>
+          <span className="text-xs text-muted-foreground" aria-live="polite">
+            {shareStatus === "failed" ? "Sharing failed. Check browser permissions and try again." : ""}
+          </span>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}

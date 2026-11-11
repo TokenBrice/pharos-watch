@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { StablecoinFilteredTable } from "../stablecoin-filtered-table";
+import { StablecoinFilteredTable } from "../stablecoin-directory/stablecoin-filtered-table";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 const mocks = vi.hoisted(() => ({ stablecoins: vi.fn(), peg: vi.fn(), liquidity: vi.fn(), ratings: vi.fn() }));
@@ -14,7 +14,7 @@ vi.mock("@/lib/stablecoin-table-inputs", () => ({
     pegRateSources: {}, pegScores: pegSummaryCoins, reportCards: reportCardsV9.cards,
   }),
 }));
-vi.mock("@/components/stablecoin-table", () => ({
+vi.mock("@/components/stablecoin-directory/stablecoin-table", () => ({
   StablecoinTable: (props: Record<string, unknown>) => <div data-testid="saved-table">{JSON.stringify(props)}</div>,
 }));
 vi.mock("next/link", async () => {
