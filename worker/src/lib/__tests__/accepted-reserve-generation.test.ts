@@ -4,7 +4,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { beginLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 import { ACCEPTED_RESERVE_GENERATION_KEY, acceptedReserveMetadataMap, assessConsumedRedemptionReserves, CONSUMED_RESERVE_CARRY_FORWARD_SEC, consumedReserveInput, loadAcceptedReserveGeneration, sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
 import { assessReserveSnapshotFreshness, evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 

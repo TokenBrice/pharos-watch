@@ -1,7 +1,8 @@
 import type { IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { AdapterFn, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
+import type { AdapterFn } from "./types";
+import type { IndependentAssuranceProfile, NewerUnreviewedReport } from "./independent-assurance-types";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { monthNumberFromLabel } from "./report-date";
 

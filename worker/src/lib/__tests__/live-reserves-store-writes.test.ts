@@ -20,7 +20,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createD1CostTracker } from "../d1-cost";
-import { beginLiveReserveCheckpoint, loadLiveReserveCheckpoint } from "../scheduled-recovery-checkpoint";
+import { beginLiveReserveCheckpoint, loadLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
 
 describe("live-reserves-store", () => {
   it("requires a pending attempt and records repeated finalization exactly once", async () => {

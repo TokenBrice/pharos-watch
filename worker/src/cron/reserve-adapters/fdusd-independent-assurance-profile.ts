@@ -1,4 +1,4 @@
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 
 const ADAPTER_KEY = "fdusd-independent-assurance";

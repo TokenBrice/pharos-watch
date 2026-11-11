@@ -5,7 +5,7 @@ import {
   prepareEligibleLiveReserveCheckpointRecoveries,
   releaseUnstartedLiveReserveRecoveryClaim,
   retireSupersededLiveReserveCheckpoints,
-} from "../../lib/scheduled-recovery-checkpoint";
+} from "../../cron/reserve-adapters/reserve-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";

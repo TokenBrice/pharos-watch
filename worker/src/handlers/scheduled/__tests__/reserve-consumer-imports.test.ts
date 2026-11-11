@@ -7,7 +7,7 @@ vi.mock("../../../cron/sync-live-reserves", () => {
   return { syncLiveReserves: vi.fn() };
 });
 vi.mock("../../../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: vi.fn() }));
-vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
+vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", () => ({
   beginLiveReserveCheckpoint: vi.fn(),
   finishLiveReserveCheckpoint: vi.fn(),
   continueLiveReserveCheckpoint: vi.fn(),

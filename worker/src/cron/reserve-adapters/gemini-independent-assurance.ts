@@ -3,7 +3,8 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getIndependentAssuranceManifest, type IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { fetchIndependentAssuranceReserves } from "./independent-assurance";
-import type { AdapterContext, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
+import type { AdapterContext } from "./types";
+import type { IndependentAssuranceProfile, NewerUnreviewedReport } from "./independent-assurance-types";
 
 // Reviewed 2026-11-03: Gemini's /dollar attestation list loads from the public
 // Contentful delivery collection below (space jg6lo9a2ukvr,

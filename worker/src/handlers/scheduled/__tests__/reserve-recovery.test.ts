@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   configRecoveryInitialized: false,
 }));
 
-vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
+vi.mock("../../../cron/reserve-adapters/reserve-checkpoint", () => ({
   claimNextLiveReserveCheckpointRecovery: mocks.claim,
   prepareEligibleLiveReserveCheckpointRecoveries: mocks.prepare,
   retireSupersededLiveReserveCheckpoints: mocks.retire,

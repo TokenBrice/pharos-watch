@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   calculateRawPercentageSumDeviation,
-  escapeRegExp,
   extractAnchorWindow,
   extractTagById,
   fetchPrimaryHtmlInput,
@@ -54,9 +53,9 @@ function extractAttrValue(html: string, attr: string): number | null {
 
 function extractReserveCanvas(html: string, coinType: string): string {
   // Both identities are captured independently on Circle's transparency page.
-  const canvasId = coinType === "eurc" ? "eurocoin_chartjs_canvas" : "usdc_chartjs_canvas";
-  // eslint-disable-next-line security/detect-non-literal-regexp -- canvasId is adapter-owned and escaped.
-  const re = new RegExp(`<[^>]*\\sid\\s*=\\s*["']${escapeRegExp(canvasId)}["'][^>]*>`, "gi");
+  const re = coinType === "eurc"
+    ? /<[^>]*\sid\s*=\s*["']eurocoin_chartjs_canvas["'][^>]*>/gi
+    : /<[^>]*\sid\s*=\s*["']usdc_chartjs_canvas["'][^>]*>/gi;
   const tags = html.match(re);
   if (tags?.length !== 1 || !/^<canvas\b/i.test(tags[0])) {
     throw htmlLayoutChangedError("circle-transparency", `missing or ambiguous reserve canvas for ${coinType}`);
@@ -71,12 +70,11 @@ function extractDisplayAmount(html: string, coinType: string): number | null {
 }
 
 function extractReserveSectionHtml(html: string, coinType: string): string | null {
-  const displayId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
-  const escapedId = escapeRegExp(displayId);
   // Circle places the disclosure near the circulation total, not on the
   // composition canvas. Keep the reviewed ±1500-character date window.
-  // eslint-disable-next-line security/detect-non-literal-regexp -- displayId is escaped before interpolation.
-  const anchorRe = new RegExp(`\\sid\\s*=\\s*["']${escapedId}["']`, "i");
+  const anchorRe = coinType === "eurc"
+    ? /\sid\s*=\s*["']euro-in-circulation["']/i
+    : /\sid\s*=\s*["']usdc-in-circulation["']/i;
   return extractAnchorWindow(html, anchorRe, 1_500);
 }
 

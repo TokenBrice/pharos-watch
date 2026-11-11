@@ -6,7 +6,8 @@ import { fetchIndependentAssuranceReserves } from "./independent-assurance";
 import { readHtmlAttribute } from "./helpers";
 import { PAXOS_REVIEWED_REPORT_ARCHIVE } from "./paxos-reviewed-report-archive";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
+import type { AdapterContext } from "./types";
+import type { IndependentAssuranceProfile, NewerUnreviewedReport } from "./independent-assurance-types";
 
 type PaxosProduct = LiveReserveAdapterParamsByKey["paxos-independent-assurance"]["product"];
 

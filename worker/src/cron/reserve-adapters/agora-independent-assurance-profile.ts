@@ -1,6 +1,6 @@
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 
 const ADAPTER_KEY = "agora-independent-assurance";

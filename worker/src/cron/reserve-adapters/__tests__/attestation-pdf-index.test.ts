@@ -543,7 +543,7 @@ describe("fetchAttestationPdfIndexReserves", () => {
     });
   });
 
-  it("fetches Schuman reserve-attestation HTML with the neutral network route", async () => {
+  it("fetches dated report HTML through the common network route", async () => {
     const html = '<a href="/reports/EUROP_Reserve_Report_31_05_2026.pdf">May 2026 report</a>';
     const network = installAdapterNetwork({
       html: {

@@ -35,15 +35,13 @@ import {
   makeContractRawCaller,
   multicallResultOrNull,
 } from "./erc4626";
+import type { Erc4626CapacityPauseProbe, RedemptionCapacityTelemetry, Erc4626CapacityObservation } from "./erc4626-capacity-observation";
 import {
   buildExecutableRedemptionCapacityTelemetry,
   finalizeErc4626RedemptionCapacity,
   observeConfiguredErc4626Capacity,
   projectErc4626RedemptionMetadata,
   projectErc4626RedemptionTelemetry,
-  type Erc4626CapacityObservation,
-  type Erc4626CapacityPauseProbe,
-  type RedemptionCapacityTelemetry,
 } from "./erc4626-redemption-capacity";
 import {
   hasExecutableRedemptionObserver,

@@ -16,7 +16,8 @@ import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { collectPdfAnchors, normalizeSlices } from "./helpers";
 import { fetchBinaryResponseWithRetry, fetchTextResponseWithRetry } from "./request";
-import type { AdapterContext, AdapterFn, AdapterResult, IndependentAssuranceProfile, NewerUnreviewedReport } from "./types";
+import type { AdapterContext, AdapterFn, AdapterResult } from "./types";
+import type { IndependentAssuranceProfile, NewerUnreviewedReport } from "./independent-assurance-types";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import { NEWER_UNREVIEWED_REPORT_WARNING_CODE } from "../../lib/live-reserves/store-shared";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
@@ -226,23 +227,43 @@ export const AUDM_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   reportDateFromCandidate: audmReportDate,
 };
 
-export const INDEPENDENT_ASSURANCE_PROFILES = {
-  "agora-independent-assurance": AGORA_INDEPENDENT_ASSURANCE_PROFILE,
-  "anchorage-independent-assurance": ANCHORAGE_ASSURANCE_PROFILES,
-  "audd-independent-assurance": AUDD_INDEPENDENT_ASSURANCE_PROFILE,
-  "cadd-independent-assurance": CADD_INDEPENDENT_ASSURANCE_PROFILE,
-  "fdusd-independent-assurance": FDUSD_INDEPENDENT_ASSURANCE_PROFILE,
-  "rlusd-independent-assurance": RLUSD_INDEPENDENT_ASSURANCE_PROFILE,
-  "sbc-independent-assurance": SBC_INDEPENDENT_ASSURANCE_PROFILE,
-  "audx-independent-assurance": AUDX_INDEPENDENT_ASSURANCE_PROFILE,
-  "europ-independent-assurance": EUROP_INDEPENDENT_ASSURANCE_PROFILE,
-  "straitsx-independent-assurance": straitsxIndependentAssuranceProfile,
+type AssuranceParams = Parameters<typeof fetchIndependentAssuranceReserves>[4];
+type AssuranceAdapterKey = {
+  [K in keyof LiveReserveAdapterParamsByKey]: LiveReserveAdapterParamsByKey[K] extends AssuranceParams ? K : never;
+}[keyof LiveReserveAdapterParamsByKey];
+
+function bindAssuranceProfile<K extends AssuranceAdapterKey>(
+  adapter: K,
+  resolveProfile: (params: LiveReserveAdapterParamsByKey[K]) => IndependentAssuranceProfile,
+): AdapterFn {
+  return (coin, config, signal, ctx) => {
+    const params = parseLiveReserveAdapterParams(adapter, config.params);
+    return fetchIndependentAssuranceReserves(coin, config, signal, resolveProfile(params), params, ctx);
+  };
+}
+
+export const INDEPENDENT_ASSURANCE_ADAPTERS = {
+  "agora-independent-assurance": bindAssuranceProfile("agora-independent-assurance", () => AGORA_INDEPENDENT_ASSURANCE_PROFILE),
+  "anchorage-independent-assurance": bindAssuranceProfile("anchorage-independent-assurance", (params) => ANCHORAGE_ASSURANCE_PROFILES[params.product]),
+  "audd-independent-assurance": bindAssuranceProfile("audd-independent-assurance", () => AUDD_INDEPENDENT_ASSURANCE_PROFILE),
+  "cadd-independent-assurance": bindAssuranceProfile("cadd-independent-assurance", () => CADD_INDEPENDENT_ASSURANCE_PROFILE),
+  "fdusd-independent-assurance": bindAssuranceProfile("fdusd-independent-assurance", () => FDUSD_INDEPENDENT_ASSURANCE_PROFILE),
+  "rlusd-independent-assurance": bindAssuranceProfile("rlusd-independent-assurance", () => RLUSD_INDEPENDENT_ASSURANCE_PROFILE),
+  "sbc-independent-assurance": bindAssuranceProfile("sbc-independent-assurance", () => SBC_INDEPENDENT_ASSURANCE_PROFILE),
+  "audx-independent-assurance": bindAssuranceProfile("audx-independent-assurance", () => AUDX_INDEPENDENT_ASSURANCE_PROFILE),
+  "europ-independent-assurance": bindAssuranceProfile("europ-independent-assurance", () => EUROP_INDEPENDENT_ASSURANCE_PROFILE),
+  "straitsx-independent-assurance": bindAssuranceProfile("straitsx-independent-assurance", (params) => straitsxIndependentAssuranceProfile(params.product)),
 } as const;
 
-export const ISSUER_ATTESTED_REPORT_PROFILES = {
+const ISSUER_ATTESTED_REPORT_PROFILES = {
   BRLV: BRLV_INDEPENDENT_ASSURANCE_PROFILE,
   AUDM: AUDM_INDEPENDENT_ASSURANCE_PROFILE,
 } as const;
+
+const ASSURANCE_ADAPTERS: Partial<Record<LiveReservesConfig["adapter"], AdapterFn>> = {
+  ...INDEPENDENT_ASSURANCE_ADAPTERS,
+  "issuer-attested-report": bindAssuranceProfile("issuer-attested-report", (params) => ISSUER_ATTESTED_REPORT_PROFILES[params.product]),
+};
 
 interface ReportCandidate {
   url: string;
@@ -727,35 +748,7 @@ export async function fetchIndependentAssuranceReserves(
 }
 
 export const fetchIndependentAssuranceAdapter: AdapterFn = async (coin, config, signal, ctx) => {
-  const adapter = config.adapter;
-  if (adapter === "straitsx-independent-assurance") {
-    const params = parseLiveReserveAdapterParams("straitsx-independent-assurance", config.params) as
-      LiveReserveAdapterParamsByKey["straitsx-independent-assurance"];
-    return fetchIndependentAssuranceReserves(coin, config, signal, INDEPENDENT_ASSURANCE_PROFILES["straitsx-independent-assurance"](params.product), params, ctx);
-  }
-  if (adapter === "anchorage-independent-assurance") {
-    const params = parseLiveReserveAdapterParams(adapter, config.params) as
-      LiveReserveAdapterParamsByKey["anchorage-independent-assurance"];
-    return fetchIndependentAssuranceReserves(coin, config, signal, INDEPENDENT_ASSURANCE_PROFILES[adapter][params.product], params, ctx);
-  }
-  if (
-    adapter === "agora-independent-assurance" ||
-    adapter === "audd-independent-assurance" ||
-    adapter === "cadd-independent-assurance" ||
-    adapter === "fdusd-independent-assurance" ||
-    adapter === "rlusd-independent-assurance" ||
-    adapter === "sbc-independent-assurance" ||
-    adapter === "audx-independent-assurance" ||
-    adapter === "europ-independent-assurance"
-  ) {
-    const params = parseLiveReserveAdapterParams(adapter, config.params) as
-      LiveReserveAdapterParamsByKey[typeof adapter];
-    return fetchIndependentAssuranceReserves(coin, config, signal, INDEPENDENT_ASSURANCE_PROFILES[adapter], params, ctx);
-  }
-  if (adapter === "issuer-attested-report") {
-    const params = parseLiveReserveAdapterParams("issuer-attested-report", config.params) as
-      LiveReserveAdapterParamsByKey["issuer-attested-report"];
-    return fetchIndependentAssuranceReserves(coin, config, signal, ISSUER_ATTESTED_REPORT_PROFILES[params.product], params, ctx);
-  }
-  throw new Error(`independent-assurance: unsupported adapter ${adapter}`);
+  const fetch = Object.prototype.hasOwnProperty.call(ASSURANCE_ADAPTERS, config.adapter) ? ASSURANCE_ADAPTERS[config.adapter] : undefined;
+  if (!fetch) throw new Error(`independent-assurance: unsupported adapter ${config.adapter}`);
+  return fetch(coin, config, signal, ctx);
 };

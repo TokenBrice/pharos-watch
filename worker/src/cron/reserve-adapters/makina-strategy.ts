@@ -6,6 +6,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import usdcSource from "@shared/data/stablecoins/coins/usdc-circle.json";
 import usdcRiskReview from "@shared/data/stablecoins/domains/risk-review/usdc-circle.json";
 import type { AdapterContext, AdapterResult } from "./types";
+import { addValueToBucket } from "./classification";
 import { rethrowIfAborted } from "../../lib/abort";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { parseDecimalNumber, parseDigitString } from "./strict-amount";
@@ -601,12 +602,7 @@ function pushBucket(
   amount: number,
 ): void {
   if (!Number.isFinite(amount) || amount === 0) return;
-  const existing = buckets.get(value.key);
-  if (existing) {
-    existing.value += amount;
-    return;
-  }
-  buckets.set(value.key, { ...value, value: amount });
+  addValueToBucket(buckets, value.key, { ...value, value: amount });
 }
 
 function isKnownAccountingToken(token: MakinaToken | undefined): boolean {

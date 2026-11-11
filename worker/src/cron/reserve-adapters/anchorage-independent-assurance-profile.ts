@@ -1,4 +1,4 @@
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate } from "./report-date";
 
 // Anchorage publishes Deloitte's monthly USAT and USDPT examinations on

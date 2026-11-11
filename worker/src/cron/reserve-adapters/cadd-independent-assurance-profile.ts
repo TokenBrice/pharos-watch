@@ -1,4 +1,4 @@
-import type { IndependentAssuranceProfile } from "./types";
+import type { IndependentAssuranceProfile } from "./independent-assurance-types";
 import { formatValidIsoDate, lastDayOfMonth, monthNumberFromLabel } from "./report-date";
 
 // CAD Digital publishes Baker Tilly WM LLP's monthly CSAE 3000 reasonable

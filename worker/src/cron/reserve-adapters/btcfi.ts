@@ -3,6 +3,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
+import { addValueToBucket } from "./classification";
 import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
@@ -100,12 +101,7 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
       continue;
     }
 
-    const existing = symbolValues.get(normalized);
-    if (existing) {
-      existing.value += value;
-    } else {
-      symbolValues.set(normalized, { value, risk });
-    }
+    addValueToBucket(symbolValues, normalized, { value, risk });
   }
 
   if (total <= 0) return { slices: [] };

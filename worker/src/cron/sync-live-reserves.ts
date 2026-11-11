@@ -43,7 +43,7 @@ import {
 import {
   advanceLiveReserveCheckpoint,
   loadLiveReserveCheckpoint,
-} from "../lib/scheduled-recovery-checkpoint";
+} from "./reserve-adapters/reserve-checkpoint";
 import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 import {
   didReserveSyncAttemptBecomeAuthoritative,
