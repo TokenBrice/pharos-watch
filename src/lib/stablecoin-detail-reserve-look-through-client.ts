@@ -1,5 +1,5 @@
 import type { ReserveRisk, StablecoinLink, StablecoinMeta } from "@shared/types";
-import { projectReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
+import { projectReserveQualityClientSummary, resolveReserveEvidenceBasis } from "@/lib/stablecoin-detail-reserve-quality-client";
 
 /** One reviewed slice of the wrapped parent's basket, bounded to what the look-through visual draws. */
 export interface ReserveLookThroughSliceClientRow {
@@ -39,7 +39,7 @@ export function projectReserveLookThroughClientSummary(
   parentById: ReadonlyMap<string, StablecoinMeta> | undefined,
 ): ReserveLookThroughClientSummary | null {
   const slices = coin.reserves ?? [];
-  if (coin.reserveReview?.scope != null && coin.reserveReview.scope !== "full-composition") return null;
+  if (resolveReserveEvidenceBasis(coin) === "contextual") return null;
   const slice = slices.length === 1 ? slices[0] : undefined;
   if (!slice || !parentById) return null;
   if (slice.depType !== "wrapper" || !slice.coinId || slice.coinId === coin.id) return null;
@@ -47,10 +47,10 @@ export function projectReserveLookThroughClientSummary(
   const parent = parentById.get(slice.coinId);
   const parentSlices = parent?.reserves ?? [];
   if (!parent || !parentSlices.some((row) => Number.isFinite(row.pct) && row.pct > 0)) return null;
-  if (parent.reserveReview?.scope != null && parent.reserveReview.scope !== "full-composition") return null;
+  if (resolveReserveEvidenceBasis(parent) === "contextual") return null;
 
   const quality = projectReserveQualityClientSummary(parent);
-  const rows: ReserveLookThroughSliceClientRow[] = quality && !quality.provenanceOnly
+  const rows: ReserveLookThroughSliceClientRow[] = quality && quality.evidenceBasis !== "provenance-only"
     ? quality.slices.map((row) => ({
         key: row.key,
         name: row.name,

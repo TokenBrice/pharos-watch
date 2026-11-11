@@ -397,6 +397,25 @@ export function FreezeSeizureModule({
           {summary.basisLabel}
         </Badge>
       }
+      folds={
+        transferReview && transferReview.deployments.length > 0 ? (
+          <ModuleDisclosure label="Reviewed deployments" count={transferReview.deployments.length}>
+            <div className="mt-2 space-y-2 pb-1 text-xs">
+              <ul className="divide-y divide-border/40">
+                {transferReview.deployments.map((deployment) => (
+                  <li key={deployment.key} className="flex items-baseline justify-between gap-3 py-1.5">
+                    <span className="min-w-0 truncate text-foreground">{deployment.chainName}</span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {deployment.scopeLabel} · {deployment.postureLabel}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground">Transfer posture reviewed {transferReview.reviewedAt}.</p>
+            </div>
+          </ModuleDisclosure>
+        ) : null
+      }
       footer={
         <EvidenceFooter
           foldId="freeze-seizure-notes"
@@ -417,23 +436,6 @@ export function FreezeSeizureModule({
       }
     >
       {usedStation ? <StaleDataBanner queries={[healthInput]} /> : null}
-      {transferReview && transferReview.deployments.length > 0 ? (
-        <ModuleDisclosure label="Reviewed deployments" count={transferReview.deployments.length}>
-          <div className="mt-2 space-y-2 pb-1 text-xs">
-            <ul className="divide-y divide-border/40">
-              {transferReview.deployments.map((deployment) => (
-                <li key={deployment.key} className="flex items-baseline justify-between gap-3 py-1.5">
-                  <span className="min-w-0 truncate text-foreground">{deployment.chainName}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {deployment.scopeLabel} · {deployment.postureLabel}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-muted-foreground">Transfer posture reviewed {transferReview.reviewedAt}.</p>
-          </div>
-        </ModuleDisclosure>
-      ) : null}
     </EvidenceModule>
   );
 }

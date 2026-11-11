@@ -2,10 +2,12 @@
 import { RailSafetySummary } from "../rail-safety-summary";
 
 import { render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import * as blacklistStatus from "@shared/lib/blacklist-status";
 import { projectBlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
+import { STABLECOIN_HISTORICAL_CONTEXT } from "@/lib/stablecoin-detail-historical-context";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -73,6 +75,30 @@ const summary: StablecoinAiSummary = {
 };
 
 describe("StablecoinDetailSeoContent", () => {
+  it("keeps historical editorial answers and references in the profile and FAQ JSON-LD", () => {
+    const usdc = { ...coin, id: "usdc-circle", name: "USD Coin", symbol: "USDC" };
+    const context = STABLECOIN_HISTORICAL_CONTEXT[usdc.id]!;
+    const items = buildStablecoinFaqItems(usdc);
+    expect(items.at(-1)).toEqual({
+      question: "Has USDC depegged?",
+      answer: "Yes. USDC traded below its $1 target in March 2023 after Silicon Valley Bank failed and Circle disclosed reserve exposure to the bank. It recovered after authorities announced protection for SVB depositors. This historical recovery is not a guarantee of future peg stability.",
+    });
+    const html = renderToString(<StablecoinDetailSeoContent coin={usdc} />);
+    expect(html).toContain(`<p class="mt-2 text-sm leading-relaxed text-muted-foreground">${context.faq.answer}</p>`);
+    expect(html).toContain('href="/depeg/usdc-2023-03-11/"');
+    expect(html).toContain('href="/learn/case-studies/usdc-svb-2023/"');
+    const faqHtml = renderToString(<FaqSection items={items} includeJsonLd collapsed />);
+    const jsonLd = JSON.parse(faqHtml.match(/<script[^>]*>(.*?)<\/script>/)![1]);
+    expect(jsonLd.mainEntity.at(-1)).toEqual({
+      "@type": "Question",
+      name: context.faq.question,
+      acceptedAnswer: { "@type": "Answer", text: context.faq.answer },
+    });
+    expect(renderToString(<StablecoinDetailSeoContent coin={usdc} afterDossier />)).not.toContain(context.profileHeading);
+    expect(buildStablecoinFaqItems(coin).some((item) => item.question === context.faq.question)).toBe(false);
+    expect(renderToString(<StablecoinDetailSeoContent coin={coin} />)).not.toContain(context.profileHeading);
+  });
+
   it("scopes Possible freeze controls to material deployments in both FAQ variants and the live note", () => {
     const status = vi.spyOn(blacklistStatus, "getResolvedBlacklistStatus").mockReturnValue("possible");
     const reviewed = { ...coin, blacklistabilityReview: {

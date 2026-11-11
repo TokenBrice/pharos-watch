@@ -66,7 +66,7 @@ describe("projectReserveQualityClientSummary", () => {
     "preserves contextual 100-total slices without whole-basket quality claims (%s)",
     (scope) => {
       const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, { ...USDC_LIKE_REVIEW, scope }))!;
-      expect(summary.contextual).toBe(true);
+      expect(summary.evidenceBasis).toBe("contextual");
       expect(summary.slices).toHaveLength(2);
       expect(summary.liquidWithinOneDayPct).toBeNull();
       expect(summary.unknownHorizonPct).toBeNull();
@@ -79,7 +79,7 @@ describe("projectReserveQualityClientSummary", () => {
   );
   it("retains the legacy reviewless curated-book quality contract", () => {
     expect(projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES))).toMatchObject({
-      contextual: false, liquidWithinOneDayPct: 100, chipLabel: "Highly liquid",
+      evidenceBasis: "legacy-curated", populationId: "test-coin", liquidWithinOneDayPct: 100, chipLabel: "Highly liquid",
     });
   });
   it("preserves a positive sub-display-precision asset instead of publishing zero exposure", () => {
@@ -155,7 +155,7 @@ describe("projectReserveQualityClientSummary", () => {
     const summary = projectReserveQualityClientSummary(
       coinWith([{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash" }], USDC_LIKE_REVIEW),
     )!;
-    expect(summary.provenanceOnly).toBe(true);
+    expect(summary.evidenceBasis).toBe("provenance-only");
     expect(summary.chipLabel).toBeNull();
     expect(summary.lede).toBeNull();
     expect(summary.ladder).toEqual([]);
@@ -180,7 +180,7 @@ describe("projectReserveQualityClientSummary", () => {
       const coin = TRACKED_META_BY_ID.get(id)!;
       const review = coin.reserveReview!;
       const summary = projectReserveQualityClientSummary(coin)!;
-      expect(summary.provenanceOnly).toBe(true);
+      expect(summary.evidenceBasis).toBe("provenance-only");
       expect(summary.chipLabel).toBeNull();
       expect(summary.lede).toBeNull();
       expect(summary.ladder).toEqual([]);
@@ -205,6 +205,8 @@ describe("projectReserveQualityClientSummary", () => {
   it("projects the ladder, review aggregates, and slice detail", () => {
     const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW));
     expect(summary).not.toBeNull();
+    expect(summary!.evidenceBasis).toBe("full-composition");
+    expect(summary!.populationId).toBe("test-coin");
     expect(summary!.chipLabel).toBe("Highly liquid");
     expect(summary!.chipToneClass).toContain("state-positive");
     expect(summary!.lede).toBe("2 reviewed reserve slices — 100% convertible within one day.");

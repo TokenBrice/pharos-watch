@@ -1,6 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ComponentProps } from "react";
+import { LazySection } from "@/components/lazy-section";
+import { HistoryTabs as HistoryTabsShell } from "@/components/stablecoin-detail/history-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Each literal client import is a section boundary: requesting one section must
@@ -32,15 +35,21 @@ export const ReservesSection = dynamic(
   () => import("@/components/stablecoin-detail/reserves-section").then((mod) => mod.ReservesSection),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
 );
-export const HistoryTabs = dynamic(
+const DeferredHistoryTabs = dynamic(
   () => import("@/components/stablecoin-detail/history-tabs").then((mod) => mod.HistoryTabs),
   { loading: () => <Skeleton className="h-[360px] w-full rounded-xl" /> },
 );
-// C1: pilot profiles mount the synchronous shell so its retained-ledger
-// preview is part of the initial HTML. Non-pilot profiles keep the lazy
-// placeholder above; the shell's live modules are dynamic imports behind the
-// viewport and active-tab gates either way.
-export { HistoryTabs as HistoryTabsShell } from "@/components/stablecoin-detail/history-tabs";
+// Keep the pilot's static slot synchronous and the other profiles' existing
+// lazy boundary. The shell owns every live module's viewport and tab gates.
+export function HistoryTabs(props: ComponentProps<typeof HistoryTabsShell>) {
+  return props.depegHistoryPreview ? (
+    <HistoryTabsShell {...props} />
+  ) : (
+    <LazySection minHeight={390}>
+      <DeferredHistoryTabs {...props} />
+    </LazySection>
+  );
+}
 export const FlowsSection = dynamic(
   () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },

@@ -3,6 +3,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HistoryTabs } from "../history-tabs";
+import { renderToString } from "react-dom/server";
+import { HistoryTabs as DetailHistoryTabs } from "@/app/stablecoin/[id]/detail-lazy-sections";
 
 const hooks = vi.hoisted(() => ({
   legacy: vi.fn(),
@@ -52,6 +54,17 @@ describe("HistoryTabs", () => {
   afterEach(() => {
     window.history.replaceState(null, "", "#");
     vi.clearAllMocks();
+  });
+
+  it("preserves the server-rendered pilot shell and the live-only profile's reserved lazy boundary", () => {
+    const props = { stablecoinId: "usdc-circle", isNavToken: false, historyActive: false, depegHistoryPreview: preview, ...depegProps };
+    expect(renderToString(<DetailHistoryTabs {...props} />)).toBe(renderToString(<HistoryTabs {...props} />));
+    expect(renderToString(<DetailHistoryTabs {...props} depegHistoryPreview={null} />)).toBe(
+      '<div data-lazy-section="" style="min-height:390px"></div>',
+    );
+    expect(hooks.legacy).not.toHaveBeenCalled();
+    expect(hooks.v2).not.toHaveBeenCalled();
+    expect(hooks.ddr).not.toHaveBeenCalled();
   });
 
   it("keeps the retained preview in the inactive Depeg panel before the live gate opens", () => {

@@ -40,7 +40,7 @@ import {
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { DetailContent } from "./detail-content";
-import { HistoryTabsShell } from "./detail-lazy-sections";
+import { HistoryTabs } from "./detail-lazy-sections";
 
 function DetailLoadingShell({
   id,
@@ -105,7 +105,7 @@ function DetailLoadingShell({
           Depeg is the selected view because Grade has no source to read yet. */}
       {depegHistoryPreview ? (
         <div className="mt-12">
-          <HistoryTabsShell
+          <HistoryTabs
             stablecoinId={id}
             isNavToken={coin.flags.navToken === true}
             historyActive={false}
@@ -281,7 +281,7 @@ function StablecoinDetailClientContent({
             Depeg selected because the Grade tab cannot resolve here. */}
         {depegHistoryPreview ? (
           <div className="mt-8">
-            <HistoryTabsShell
+            <HistoryTabs
               stablecoinId={id}
               isNavToken={coin.flags.navToken === true}
               historyActive={false}

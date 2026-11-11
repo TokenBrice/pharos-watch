@@ -40,6 +40,7 @@ import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
 import { getSnapshotSafetyAssessment, type SnapshotReleasePin } from "@/lib/safety-grade-snapshot";
 import { getCurrentRedemptionConfig } from "@/lib/redemption-review-currency";
+import { STABLECOIN_HISTORICAL_CONTEXT } from "@/lib/stablecoin-detail-historical-context";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -74,13 +75,6 @@ const FACT_LABEL_CLASS = "pharos-label";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
-
-// Historical context from the existing USDC/SVB case study, not a live peg verdict.
-const USDC_DEPEG_HISTORY_FAQ: FaqItem = {
-  question: "Has USDC depegged?",
-  answer:
-    "Yes. USDC traded below its $1 target in March 2023 after Silicon Valley Bank failed and Circle disclosed reserve exposure to the bank. It recovered after authorities announced protection for SVB depositors. This historical recovery is not a guarantee of future peg stability.",
-};
 
 function summarizeText(text: string, maxLength = 280): string {
   const normalized = normalizeWhitespace(stripTermMarkup(text));
@@ -489,6 +483,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
   ].join(" ");
 
   const redemptionAnswer = buildRedemptionAnswer(coin);
+  const historicalContext = STABLECOIN_HISTORICAL_CONTEXT[coin.id];
 
   const freezeAnswer = [
     `Based on tracked contract metadata and blacklist coverage, ${describeFreezeControl(buildFreezeControlDescriptor(coin, getResolvedBlacklistStatus(coin.id))).sentence}.`,
@@ -514,7 +509,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
     { question: `What backs ${coin.symbol}?`, answer: buildBackingAnswer(coin) },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
     ...(redemptionAnswer ? [{ question: `How do you redeem ${coin.symbol}?`, answer: redemptionAnswer }] : []),
-    ...(coin.id === "usdc-circle" ? [USDC_DEPEG_HISTORY_FAQ] : []),
+    ...(historicalContext ? [historicalContext.faq] : []),
   ];
 }
 
@@ -567,6 +562,7 @@ export function StablecoinDetailSeoContent({
   const compareHref = buildStaticCompareHref([coin.id]);
   const alertCommand = buildAlertCommand(coin);
   const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
+  const historicalContext = STABLECOIN_HISTORICAL_CONTEXT[coin.id];
 
   return (
     <div className="mb-6 space-y-4">
@@ -595,17 +591,16 @@ export function StablecoinDetailSeoContent({
           <h2 className="text-lg font-semibold tracking-tight text-foreground">{safetyAnswer.question}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{safetyAnswer.answer}</p>
         </div>
-        {coin.id === "usdc-circle" ? (
+        {historicalContext ? (
           <div className="mt-4 border-t border-border/50 pt-4">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">USDC depeg history</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{USDC_DEPEG_HISTORY_FAQ.answer}</p>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">{historicalContext.profileHeading}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{historicalContext.faq.answer}</p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-              <IntentLink href="/depeg/usdc-2023-03-11/" className={INLINE_LINK_CLASS}>
-                March 2023 USDC depeg timeline
-              </IntentLink>
-              <IntentLink href="/learn/case-studies/usdc-svb-2023/" className={INLINE_LINK_CLASS}>
-                Why USDC depegged during the SVB crisis
-              </IntentLink>
+              {historicalContext.references.map((reference) => (
+                <IntentLink key={reference.url} href={reference.url} className={INLINE_LINK_CLASS}>
+                  {reference.label}
+                </IntentLink>
+              ))}
             </div>
           </div>
         ) : null}

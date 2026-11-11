@@ -205,7 +205,7 @@ function buildFacts(
   }
 
   const top = slices[0];
-  if (top && slices.length > 1 && !summary?.contextual) {
+  if (top && slices.length > 1 && summary?.evidenceBasis !== "contextual") {
     facts.push({
       key: "top-position",
       label: "Top position",
@@ -469,7 +469,7 @@ export function ReservesSection({
   // A provenance-only summary projects the review's chip/footer evidence
   // without quality slices, so the visual falls back to the curated basket.
   const reviewedSlices = useMemo(
-    () => (qualitySummary && !qualitySummary.provenanceOnly
+    () => (qualitySummary && qualitySummary.evidenceBasis !== "provenance-only"
       ? reviewedCompositionSlices(qualitySummary)
       : compositionSlices(coin.reserves ?? [])),
     [qualitySummary, coin.reserves],
@@ -504,7 +504,8 @@ export function ReservesSection({
   // A look-through draws the parent's basket. The wrapper's one-slice quality
   // summary describes a different population, so its header chip, whole-basket
   // facts and liquidity ladder never label the parent's slices (R7/ADR-34).
-  const wholeBasketSummary = lookThroughView ? null : qualitySummary;
+  const populationId = lookThroughView?.parent.parentId ?? coin.id;
+  const wholeBasketSummary = qualitySummary?.populationId === populationId ? qualitySummary : null;
   const feedStatus = buildReserveFeedStatus(reserves, reserveFetchError);
   const sourceChip = buildReserveSourceChip(reserves);
   const footnote = reserves
@@ -623,7 +624,7 @@ export function ReservesSection({
           />
         </div>
       ) : hasReviewedBasis ? (
-        <CondensedReserveVisual slices={reviewedSlices} subject={qualitySummary?.contextual ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
+        <CondensedReserveVisual slices={reviewedSlices} subject={qualitySummary?.evidenceBasis === "contextual" ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
@@ -663,7 +664,7 @@ export function ReservesSection({
                 </ul>
               </ModuleDisclosure>
             ) : null}
-            {qualitySummary && !qualitySummary.provenanceOnly ? <SliceDetail summary={qualitySummary} /> : null}
+            {qualitySummary && qualitySummary.evidenceBasis !== "provenance-only" ? <SliceDetail summary={qualitySummary} /> : null}
             {showLiveFeed ? (
               <LiveFeedDetail
                 slices={liveSlices}

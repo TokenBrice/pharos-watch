@@ -2,12 +2,16 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import type { ReactNode } from "react";
 import {
   EvidenceModule,
   EvidenceStateStrip,
   expandEvidenceModuleFor,
 } from "../evidence-module";
 import { StablecoinDetailIdentityProvider } from "../module-title";
+import { EvidenceFooter } from "../evidence-footer";
+import { ModuleDisclosure } from "../module-disclosure";
 
 function setHash(hash: string) {
   act(() => {
@@ -42,6 +46,28 @@ describe("EvidenceModule", () => {
   afterEach(() => {
     window.location.hash = "";
     Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  it("keeps explicit disclosures and evidence full-width when extracted or wrapped in fragments", () => {
+    const disclosure = <ModuleDisclosure label="Providers"><p>Provider evidence.</p></ModuleDisclosure>;
+    const evidence = <EvidenceFooter reviewed="2026-11-01">Review basis.</EvidenceFooter>;
+    const Disclosures = () => disclosure;
+    const Evidence = () => evidence;
+    const shell = (folds: ReactNode, footer: ReactNode) => (
+      <EvidenceModule id="explicit-slots" title="Custody" variant="module" bodyLayout="split"
+        visual={<div>Visual summary.</div>} folds={folds} footer={footer}>
+        <p>Current state.</p>
+      </EvidenceModule>
+    );
+    const original = renderToString(shell(disclosure, evidence));
+    expect(renderToString(shell(<>{disclosure}</>, <>{evidence}</>))).toBe(original);
+    expect(renderToString(shell(<Disclosures />, <Evidence />))).toBe(original);
+    const { container } = render(shell(<Disclosures />, <Evidence />));
+    const body = container.querySelector("#explicit-slots-body")!;
+    expect(body.children[0]?.textContent).toBe("Visual summary.Current state.");
+    expect(body.children[1]?.tagName).toBe("DETAILS");
+    expect(body.children[1]?.textContent).toContain("Provider evidence.");
+    expect(body.lastElementChild?.textContent).toContain("Review basis.");
   });
 
   it("folds a tile below md as an accordion whose button controls the body", () => {

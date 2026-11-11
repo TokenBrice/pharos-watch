@@ -75,7 +75,7 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     const clientCoin = buildStablecoinDetailClientCoin(
       coinWith({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }], reserveReview: RESERVE_REVIEW }),
     );
-    expect(clientCoin.reserveQualitySummary?.provenanceOnly).toBe(true);
+    expect(clientCoin.reserveQualitySummary?.evidenceBasis).toBe("provenance-only");
     expect(clientCoin.reserveQualitySummary?.chipLabel).toBeNull();
     expect(clientCoin.reserveQualitySummary?.reviewedAt).toBe("2026-07-18");
     expect("reserveReview" in clientCoin).toBe(false);

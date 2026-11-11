@@ -351,35 +351,36 @@ export function CustodyModule({
           Confidence: {summary.confidenceLabel}
         </Badge>
       }
+      folds={
+        summary.providers.length > 0 ? (
+          <ModuleDisclosure label="Providers" count={summary.providers.length}>
+            <ul aria-label="All custody providers" className="mt-2 divide-y divide-border/50 pb-1">
+              {summary.providers.map((provider) => (
+                <li key={provider.key} className="flex items-baseline justify-between gap-3 py-1.5">
+                  <div className="min-w-0">
+                    <p className="break-words text-xs text-foreground">{provider.name}</p>
+                    <p className="text-2xs text-muted-foreground">
+                      {provider.roleLabel}
+                      {provider.jurisdiction ? ` · ${provider.jurisdiction}` : ""}
+                    </p>
+                  </div>
+                  {provider.sharePct != null ? (
+                    <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
+                      {formatCustodySharePct(provider.sharePct)}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-2xs text-muted-foreground">
+                      <span aria-hidden="true">–</span>
+                      <span className="sr-only">Share not disclosed</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </ModuleDisclosure>
+        ) : null
+      }
       footer={<EvidenceFooter {...footerProps} inline={stripForm} />}
-    >
-      {summary.providers.length > 0 ? (
-        <ModuleDisclosure label="Providers" count={summary.providers.length}>
-          <ul aria-label="All custody providers" className="mt-2 divide-y divide-border/50 pb-1">
-            {summary.providers.map((provider) => (
-              <li key={provider.key} className="flex items-baseline justify-between gap-3 py-1.5">
-                <div className="min-w-0">
-                  <p className="break-words text-xs text-foreground">{provider.name}</p>
-                  <p className="text-2xs text-muted-foreground">
-                    {provider.roleLabel}
-                    {provider.jurisdiction ? ` · ${provider.jurisdiction}` : ""}
-                  </p>
-                </div>
-                {provider.sharePct != null ? (
-                  <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
-                    {formatCustodySharePct(provider.sharePct)}
-                  </span>
-                ) : (
-                  <span className="shrink-0 text-2xs text-muted-foreground">
-                    <span aria-hidden="true">–</span>
-                    <span className="sr-only">Share not disclosed</span>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </ModuleDisclosure>
-      ) : null}
-    </EvidenceModule>
+    />
   );
 }

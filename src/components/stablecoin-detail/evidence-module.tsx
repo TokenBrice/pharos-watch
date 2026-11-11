@@ -2,7 +2,6 @@
 
 import { Children, Fragment, isValidElement, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, CircleDashed, CircleSlash, Hourglass } from "lucide-react";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
@@ -105,11 +104,8 @@ export interface EvidenceModuleProps {
    * Summary-layer content after the chips: facts (`FactGrid`) and
    * current-state callouts. In a split body it sits beside the visual.
    *
-   * A `ModuleDisclosure` or `EvidenceFooter` passed directly as a child is
-   * lifted out of the summary layer into the fold run (disclosures first,
-   * the footer last). A fold rendered by any other component or nested in a
-   * wrapper is not recognised and stays in the summary layer: pass it, with
-   * every other domain fold, through `folds`.
+   * This slot is always summary content. Domain disclosures belong in
+   * `folds` and provenance in `footer`, including when wrapped or extracted.
    */
   children?: ReactNode;
   /**
@@ -143,23 +139,6 @@ export interface EvidenceModuleProps {
  */
 const METHODOLOGY_SLOT_CLASS =
   "relative inline-flex shrink-0 items-center [&_button]:relative [&_button]:h-6 [&_button]:w-6 [&_button]:after:absolute [&_button]:after:-inset-2.5";
-
-/**
- * Sorts `children` into the summary layer and the fold run, keeping each
- * group's own order: summary content, then disclosures, then provenance.
- */
-function partitionBodyChildren(children: ReactNode) {
-  const summary: ReactNode[] = [];
-  const domainFolds: ReactNode[] = [];
-  const provenance: ReactNode[] = [];
-  for (const child of Children.toArray(children)) {
-    const type = isValidElement(child) ? child.type : null;
-    if (type === EvidenceFooter) provenance.push(child);
-    else if (type === ModuleDisclosure) domainFolds.push(child);
-    else summary.push(child);
-  }
-  return { summary, domainFolds, provenance };
-}
 
 /**
  * The first header chip is the module's status; the rest (ops, role tag) are
@@ -312,7 +291,7 @@ export function EvidenceModule({
     </div>
   );
 
-  const { summary, domainFolds, provenance } = partitionBodyChildren(children);
+  const summary = Children.toArray(children);
   const visualFoldNode = visualFold && visual != null && visual !== false ? (
     // The visual is the module's recap, so its fold starts open; readers can
     // still collapse it.
@@ -367,9 +346,7 @@ export function EvidenceModule({
       {/* One fold run, in fixed order, as direct children of the body so
           `MODULE_FOLD_RHYTHM_CLASS` closes the gaps between them. */}
       {visualFoldNode}
-      {domainFolds}
       {folds}
-      {provenance}
       {footer}
     </div>
   );
