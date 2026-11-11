@@ -3,13 +3,13 @@
     "version": "6.46",
     "title": "Lone Mento Broker quotes cannot establish DEWS escalation evidence",
     "date": "2026-11-11",
-    "effectiveAt": 1794358800,
+    "effectiveAt": 1794357060,
     "summary": "A spread-bearing Mento Broker observation without independent confirmation retains its raw price and divergence but cannot alone release the existing DEWS WATCH cap.",
     "impact": [
       "The live DEWS projection preserves primary source and agreeing-source provenance. Any mento-broker-priced asset without a registered independent observed agreeing source uses only individually admitted, registered non-Mento DEX protocol marks for market-price escalation evidence. Same-family Mento observations, cached/search/nominal references and protocol overrides do not establish independent primary confirmation; an opaque aggregate, at-par DEX or previous mixed divergence cannot authenticate Broker spread. Protocol marks retain their original clocks and existing source-age/TVL gates.",
       "The published quote, deviation, raw divergence sub-signal and preliminary weighted score remain unchanged. The existing WATCH_MAX_SCORE authority caps the final score when this removes the only qualifying escalation evidence; independently stressed admitted DEX evidence or an independent agreeing primary source restores ordinary behaviour. Lone Broker rows without other qualifying evidence serialize their evidence limit even when already at or below WATCH, preserving the numerical score. Telegram honors every serialized producer evidence cap before exit hysteresis, so capped WATCH35 cannot inherit a prior ALERT and complete a pending escalation. Uncapped hysteresis, the two-computation persistence, liquidity and severe issuer-control bypasses, weights, thresholds and depeg confirmation are unchanged. Other source classes retain their DEWS scoring treatment.",
       "The rule is source-wide, including existing AUDm/CADm/COPm Broker routes as well as XOFm/ZARm. Reviewed-fee fixtures change XOFm from ALERT39 to WATCH35 while retaining the other twelve Mento bands. At the admitted 200-bps envelope, existing AUDm/CADm/COPm and XOFm/ZARm change from ALERT39 to WATCH35 with calm supply and no other evidence. These are deterministic source-route fixtures, not current production-band claims.",
-      "Provisional activation is 2026-11-11 01:00 UTC (1794358800), provisional until re-dated after activation. Pricing remains v6.76; production acceptance requires a new affected DEWS publication and Telegram evaluation."
+      "Activation is 2026-11-11 00:31 UTC (1794357060), rounded up to the next whole minute from the public Worker activation. Pricing remains v6.76; production acceptance requires a new affected DEWS publication and Telegram evaluation."
     ],
     "commits": [],
     "reconstructed": false
@@ -18,13 +18,13 @@
     "version": "6.45",
     "title": "Independently proven isolated flow legs may raise DEWS stress",
     "date": "2026-11-11",
-    "effectiveAt": 1794355200,
+    "effectiveAt": 1794357060,
     "summary": "DEWS may use an established isolated canonical leg's independently proven outflow as stress-only evidence, without treating partial flow as a full-coin net or letting it dilute other stress.",
     "impact": [
       "A published reactivation-pending leg must match an enabled current configuration. DEWS keeps its canonical-chain scope and proves that canonical bucket's full 30-day window, including the latest 24 hours, using current-fingerprint durable scan evidence in the same batch as hourly rows and materialization debt. This also permits a proven admitted canonical leg when a different established chain is isolated. Pending first admissions and disabled legs remain excluded; missing or failed proof never establishes quiet zero.",
       "Both windows retain complete classification, 24-hour valuation, burn-baseline valuation and original published-watermark freshness gates. An isolated leg contributes only for net outflow, when the other signals already satisfy the minimum available weight and its stress exceeds their weighted mean. Otherwise flow is unavailable and its weight stays redistributed, so isolated evidence never lowers stress or creates a score from insufficient coverage. Contagion eligibility uses the no-isolated-flow band and the multiplier excludes self, preserving peer amplification across a WARNING crossing.",
       "Isolated evidence carries flowScope isolated-canonical-leg and isolatedNet24hUsd rather than a full-coin net24hUsd. Full-coin flow direction, pressure, Bank Run Gauge and flight-to-quality remain governed by Mint/Burn publication gates. Weights, signal curves and evidence caps are unchanged; retained scores and sealed history are not relabeled.",
-      "Provisional activation is 2026-11-11 00:00 UTC (1794355200), provisional until re-dated after activation. Production-history replay, owner review, fresh affected executions and production resource evidence remain unverified release prerequisites."
+      "Activation is 2026-11-11 00:31 UTC (1794357060), rounded up to the next whole minute from the public Worker activation. Production-history replay, owner review, fresh affected executions and production resource evidence remain unverified release prerequisites."
     ],
     "commits": [],
     "reconstructed": false
