@@ -1,3 +1,4 @@
+import { CRON_EVENT_CACHE_PREFIX, BUDGET_SURFACE_CACHE_PREFIX, D1_CAPACITY_CACHE_KEY, D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY } from "./operational-cache-keys";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "./request-attribution";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "./safety-score-capture-archive";
 import { MINT_BURN_RECONCILIATION_POLICY } from "./mint-burn-reconciliation-policy";
@@ -155,10 +156,10 @@ export interface CacheRetentionPolicy {
 // No global cache TTL: product snapshots, provider ledgers and frozen detail
 // rows must not be swept. These are telemetry-only namespaces and exact ops keys.
 export const CACHE_RETENTION_POLICIES: readonly CacheRetentionPolicy[] = [
-  { name: "cronEvents", match: "prefix", key: "cron:event:", windowSec: 30 * DAY, owner: "prune-detail-cache" },
-  { name: "budgetSurfaceTelemetry", match: "prefix", key: "cron:budget-surface:", windowSec: 30 * DAY, owner: "prune-detail-cache" },
-  { name: "d1CapacityTelemetry", match: "exact", key: "ops:d1-capacity:v1", windowSec: 30 * DAY, owner: "prune-detail-cache" },
-  { name: "d1GrowthTelemetry", match: "exact", key: "ops:d1-table-growth:v1", windowSec: 30 * DAY, owner: "prune-detail-cache" },
+  { name: "cronEvents", match: "prefix", key: `${CRON_EVENT_CACHE_PREFIX}:`, windowSec: 30 * DAY, owner: "prune-detail-cache" },
+  { name: "budgetSurfaceTelemetry", match: "prefix", key: BUDGET_SURFACE_CACHE_PREFIX, windowSec: 30 * DAY, owner: "prune-detail-cache" },
+  { name: "d1CapacityTelemetry", match: "exact", key: D1_CAPACITY_CACHE_KEY, windowSec: 30 * DAY, owner: "prune-detail-cache" },
+  { name: "d1GrowthTelemetry", match: "exact", key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY, windowSec: 30 * DAY, owner: "prune-detail-cache" },
   { name: "retiredMintBurnV1", match: "prefix", key: "mint-burn-flows:v1:", windowSec: null, owner: "prune-detail-cache" },
   { name: "retiredMintBurnV2", match: "prefix", key: "mint-burn-flows:v2:", windowSec: null, owner: "prune-detail-cache" },
   { name: "retiredMintBurnV3", match: "prefix", key: "mint-burn-flows:v3:", windowSec: null, owner: "prune-detail-cache" },

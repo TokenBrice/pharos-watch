@@ -7,7 +7,7 @@ import type {
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
-import type { ChainConfig } from "../blacklist-contracts";
+import type { ChainConfig } from "../chain-config";
 import { blacklistCanonicalEventFilterSql } from "@shared/lib/blacklist-event-order";
 
 export const BLACKLIST_PUBLIC_EVENT_SQL = blacklistCanonicalEventFilterSql();

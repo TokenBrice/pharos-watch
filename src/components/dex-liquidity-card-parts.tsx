@@ -31,7 +31,7 @@ import {
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
-import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { getDexDurabilityStyle, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 export function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -438,7 +438,7 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
 
 export function DurabilityBadge({ score }: { score: number | null }) {
   if (score == null) return null;
-  const label = score >= 70 ? "Durable" : score >= 40 ? "Moderate" : "Fragile";
+  const { label } = getDexDurabilityStyle(score);
   return (
     <span className={`text-xs font-medium ${getDurabilityColor(score)}`}>
       {label} ({score})

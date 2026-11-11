@@ -165,8 +165,39 @@ export const MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC =
  * An attempted config that failed to advance its frontier this many times is
  * stuck: repeated attempts without progress cannot be explained by rotation.
  */
-export const MINT_BURN_EXTENDED_STUCK_STREAK = 2;
+const MINT_BURN_EXTENDED_STUCK_STREAK = 2;
 const STUCK_CONFIG_SAMPLE_LIMIT = 8;
+
+function mintBurnAttemptStateKey(jobName: string): string {
+  return `mint-burn:attempt-state:${jobName}`;
+}
+
+export const MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY = mintBurnAttemptStateKey("sync-mint-burn-extended");
+
+/** Read the full stuck population; diagnostic samples are deliberately capped. */
+export async function loadMintBurnStuckConfigs(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<{ configs: Array<{ configKey: string; streak: number }>; readFailed: boolean }> {
+  try {
+    const cached = await getCache(db, MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY, signal);
+    if (!cached) return { configs: [], readFailed: true };
+    const parsed = JSON.parse(cached.value) as Partial<MintBurnAttemptState>;
+    if (!parsed || typeof parsed !== "object" || !parsed.entries || typeof parsed.entries !== "object") {
+      return { configs: [], readFailed: true };
+    }
+    const configs: Array<{ configKey: string; streak: number }> = [];
+    for (const [configKey, rawEntry] of Object.entries(parsed.entries)) {
+      const streak = rawEntry?.consecutiveIncomplete;
+      if (typeof streak !== "number" || !Number.isSafeInteger(streak)
+        || streak < MINT_BURN_EXTENDED_STUCK_STREAK) continue;
+      configs.push({ configKey, streak });
+    }
+    return { configs, readFailed: false };
+  } catch {
+    return { configs: [], readFailed: true };
+  }
+}
 
 interface MintBurnAttemptStateEntry {
   firstObservedAt: number;
@@ -279,7 +310,7 @@ export async function updateMintBurnAttemptState(input: {
   activeProviderDeferrals: ReadonlyMap<string, number>;
   nowSec: number;
 }): Promise<MintBurnAttemptStateUpdate> {
-  const stateCacheKey = `mint-burn:attempt-state:${input.jobName}`;
+  const stateCacheKey = mintBurnAttemptStateKey(input.jobName);
   let state: MintBurnAttemptState = {
     version: ATTEMPT_STATE_VERSION,
     updatedAt: input.nowSec,

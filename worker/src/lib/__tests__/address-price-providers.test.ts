@@ -240,6 +240,34 @@ describe("address price providers", () => {
     expect(result.rejectedTargets).toEqual({ "missing-liquidity": 1 });
   });
 
+  it.each([[undefined, 1], ["100", 0]] as const)("prioritizes the reviewed deployment and keeps its liquidity permission bounded (%s)", async (liquidity, acceptedCount) => {
+    const reviewed = makeTarget({
+      stablecoinId: "vusd-virtue",
+      chain: "iota-evm",
+      providerChainId: "iota-evm",
+      address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
+    });
+    const ordinary = makeTarget({ chain: "iota-evm", providerChainId: "iota-evm" });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: { data: [{ attributes: {
+        address: reviewed.address,
+        price_usd: "1.001",
+        total_reserve_in_usd: liquidity,
+      } }] },
+    }]);
+
+    const result = await runCoingeckoOnchainAddressProvider(
+      [ordinary, reviewed], "cg-key", undefined, 1_800_000_000, Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain(`/tokens/multi/${reviewed.address},${ordinary.address}`);
+    expect(result.quotes).toHaveLength(acceptedCount);
+    if (acceptedCount > 0) expect(result.quotes[0].stablecoinId).toBe(reviewed.stablecoinId);
+    else expect(result.rejectedTargets["price-rejected"]).toBe(1);
+  });
+
   it("tracks resolved and request-cap-skipped live targets through the adapter", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000_000);

@@ -1,4 +1,4 @@
-import type { ChainConfig } from "./blacklist-contracts";
+import type { ChainConfig } from "./chain-config";
 
 export type MintBurnDirection = "mint" | "burn";
 export type MintBurnTier = "critical" | "extended";

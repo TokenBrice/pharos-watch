@@ -1,20 +1,7 @@
-import { getCache } from "../lib/db-cache";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
 import type { OperatorWatchCondition } from "./operator-watch-types";
-import { MINT_BURN_EXTENDED_STUCK_STREAK } from "./mint-burn/run-state";
-
-export const MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY =
-  "mint-burn:attempt-state:sync-mint-burn-extended";
-
-interface MintBurnAttemptStateEntry {
-  lastDisposition?: unknown;
-  consecutiveIncomplete?: unknown;
-}
-
-interface MintBurnAttemptState {
-  entries?: unknown;
-}
+import { loadMintBurnStuckConfigs } from "./mint-burn/run-state";
 
 export interface MintBurnConfigWatchResult {
   conditions: OperatorWatchCondition[];
@@ -31,18 +18,11 @@ export async function loadMintBurnStuckConfigWatchConditions(
   signal?: AbortSignal,
 ): Promise<MintBurnConfigWatchResult> {
   try {
-    const cached = await getCache(db, MINT_BURN_EXTENDED_ATTEMPT_STATE_KEY, signal);
-    if (!cached) return { conditions: [], readFailed: true };
-    const parsed = JSON.parse(cached.value) as MintBurnAttemptState;
-    if (!parsed || typeof parsed !== "object" || !parsed.entries || typeof parsed.entries !== "object") {
-      return { conditions: [], readFailed: true };
-    }
+    const result = await loadMintBurnStuckConfigs(db, signal);
+    if (result.readFailed) return { conditions: [], readFailed: true };
     const labels = configLabels();
     const conditions: OperatorWatchCondition[] = [];
-    for (const [configKey, rawEntry] of Object.entries(parsed.entries as Record<string, MintBurnAttemptStateEntry>)) {
-      const streak = rawEntry?.consecutiveIncomplete;
-      if (typeof streak !== "number" || !Number.isSafeInteger(streak)
-        || streak < MINT_BURN_EXTENDED_STUCK_STREAK) continue;
+    for (const { configKey, streak } of result.configs) {
       conditions.push({
         // Only stuck configs have a condition, so this cohort needs its own
         // section: an absent key is reported as recovered, not silently dropped.

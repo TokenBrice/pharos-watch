@@ -8,11 +8,15 @@ interface AddressPriceDeploymentLike {
 
 interface ReviewedAddressPriceTargetOverride extends AddressPriceDeploymentLike {
   stablecoinId: string;
+  prioritizeRequests: boolean;
+  allowMissingLiquidity: boolean;
 }
 
 const REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES = [
   {
     stablecoinId: "vusd-virtue",
+    prioritizeRequests: true,
+    allowMissingLiquidity: true,
     chain: "iota-evm",
     address: "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
   },
@@ -27,13 +31,13 @@ function matchesDeployment(
     normalizeAddressForKey(deployment.address) === address;
 }
 
-export function isReviewedAddressPriceTargetOverride(
-  target: ReviewedAddressPriceTargetOverride,
-): boolean {
+export function getReviewedAddressPriceTargetOverride(
+  target: AddressPriceDeploymentLike & { stablecoinId: string },
+): ReviewedAddressPriceTargetOverride | undefined {
   const chain = resolveChainId(target.chain);
   const address = normalizeAddressForKey(target.address);
-  if (!chain || !address) return false;
-  return REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES.some(
+  if (!chain || !address) return undefined;
+  return REVIEWED_ADDRESS_PRICE_TARGET_OVERRIDES.find(
     (entry) => entry.stablecoinId === target.stablecoinId &&
       matchesDeployment(entry, chain, address),
   );

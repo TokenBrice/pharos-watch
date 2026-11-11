@@ -1,27 +1,14 @@
-import { CHAIN_META } from "@shared/types/chain-identity";
+import { requireChainConfig } from "./chain-config";
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfigSpec,
 } from "./mint-burn-contracts-types";
-import type { ChainConfig } from "./blacklist-contracts";
 import {
   ccipBridgeDetection,
   cctpBridgeDetection,
   layerZeroOftBridgeDetection,
   transferMintBurn,
 } from "./mint-burn-contracts-helpers";
-
-function requireChainConfig(chainId: string): ChainConfig {
-  const meta = CHAIN_META[chainId];
-  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
-  return {
-    chainId,
-    chainName: meta.name,
-    evmChainId: meta.evmChainId,
-    explorerUrl: meta.explorerUrl,
-    type: meta.type,
-  };
-}
 
 const ETHEREUM = requireChainConfig("ethereum");
 const ARBITRUM = requireChainConfig("arbitrum");

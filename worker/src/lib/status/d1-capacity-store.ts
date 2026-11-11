@@ -1,3 +1,4 @@
+import { D1_CAPACITY_CACHE_KEY } from "@shared/lib/operational-cache-keys";
 import {
   assessD1Capacity,
   D1_CAPACITY_FORECAST_WINDOW_SEC,
@@ -12,7 +13,7 @@ import { getCache, setCacheIfNewer } from "../db-cache";
 import { parseJsonObject } from "../json-parse";
 import { executeAtomicBatch } from "../db";
 
-export const D1_CAPACITY_CACHE_KEY = "ops:d1-capacity:v1";
+export { D1_CAPACITY_CACHE_KEY } from "@shared/lib/operational-cache-keys";
 const D1_CAPACITY_CACHE_VERSION = 1;
 const D1_CAPACITY_OBSERVATION_RETENTION_SEC = 180 * 24 * 60 * 60;
 

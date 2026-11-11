@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../../../lib/cron-logger";
 import { createCronResult } from "../../../lib/cron-result";
 import { throwIfAborted } from "../../../lib/abort";
@@ -29,7 +30,7 @@ import { mapWithConcurrency } from "../../../lib/concurrency";
  * users can create a fresh profile by interacting with the bot again.
  */
 const INACTIVE_RETENTION_SEC = 180 * 24 * 60 * 60;
-const RUN_INTERVAL_SEC = 7 * 24 * 60 * 60;
+const RUN_INTERVAL_SEC = CRON_INTERVALS["telegram-inactive-cleanup"];
 // Per-run caps keep a single weekly invocation inside D1's per-statement
 // budget; a larger backlog drains over successive weekly runs. When a pass
 // hits its cap the result metadata flags `cappedAtLimit` so the overflow is

@@ -10,7 +10,7 @@ import {
   getScoreTier,
   pegScoreColor,
 } from "../severity-colors";
-import { getPegScoreTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { getDexDurabilityStyle, getPegScoreTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { metricTone } from "@/components/depeg-board-model";
 import * as featureFlags from "@/lib/feature-flags";
 
@@ -65,6 +65,11 @@ describe("severity-colors", () => {
     expect(pegScoreColor(90)).toBe("text-emerald-700 dark:text-emerald-400");
     expect(pegScoreColor(70)).toBe("text-amber-700 dark:text-amber-400");
     expect(pegScoreColor(69)).toBe("text-red-700 dark:text-red-400");
+
+    for (const [score, label] of [[0, "Fragile"], [39.99, "Fragile"], [40, "Moderate"], [69.99, "Moderate"], [70, "Durable"], [100, "Durable"]] as const) {
+      expect(getDexDurabilityStyle(score).label).toBe(label);
+    }
+    expect(getDurabilityColor(Number.NaN)).toBe("text-muted-foreground");
 
     expect(getDurabilityColor(70)).toBe("text-emerald-700 dark:text-emerald-400");
     expect(getDurabilityColor(40)).toBe("text-amber-700 dark:text-amber-400");

@@ -1,3 +1,4 @@
+import { CRON_EVENT_CACHE_PREFIX } from "@shared/lib/operational-cache-keys";
 import { describeError } from "@shared/lib/error-utils";
 import type { ErrorDescriptor } from "@shared/types/error";
 import type { CronEvent, CronTerminalAccountingStage, ProducerOutcome, ResourcePressure } from "@shared/types/status/cron";
@@ -132,7 +133,6 @@ export type CronEventInput = Pick<CronEvent, "job" | "eventType" | "message" | "
 
 export type CronEventRecord = CronEvent;
 
-const CRON_EVENT_CACHE_PREFIX = "cron:event";
 const MAX_CRON_EVENT_MESSAGE_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_KEYS = 30;

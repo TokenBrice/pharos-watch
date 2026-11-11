@@ -1,3 +1,4 @@
+import { BUDGET_SURFACE_CACHE_PREFIX as CACHE_PREFIX } from "@shared/lib/operational-cache-keys";
 import { CRON_CONNECTION_BUDGET_ENTRIES } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
 import type { BudgetOnlySurfaceStatus } from "@shared/types/status";
@@ -8,7 +9,6 @@ import { logWorkerEvent } from "./structured-log";
 import { recordProducerOutcome, type ProducerIdentity } from "./producer-history";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
 
-const CACHE_PREFIX = "cron:budget-surface:";
 const CACHE_VERSION = 1;
 
 export type BudgetSurfaceOutcome = "ok" | "degraded" | "error" | "skipped";

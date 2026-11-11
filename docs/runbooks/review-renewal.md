@@ -31,7 +31,7 @@ These notices do not change health status, create a status transition, or enter 
 
 ### Price-gap reviews
 
-Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-coverage.ts`:
+Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-reviews.ts`:
 
 - Keep the exact active stablecoin identity and a nonblank accountable owner and reason.
 - Record fresh, relevant public evidence using HTTPS sources and a nonfuture `reviewedAt` (Unix seconds). The resolver enforces this: a review dated after the evaluation clock is reported in `invalidGapReviewIds` and acknowledges nothing.

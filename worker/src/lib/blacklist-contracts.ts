@@ -3,26 +3,9 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types/market";
-import { CHAIN_META, type ChainMeta } from "@shared/types/chain-identity";
+import { requireChainConfig, type ChainConfig } from "./chain-config";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
-
-export interface ChainConfig extends Pick<ChainMeta, "evmChainId" | "explorerUrl" | "type"> {
-  chainId: string;
-  chainName: string;
-}
-
-function requireChainConfig(chainId: string): ChainConfig {
-  const meta = CHAIN_META[chainId];
-  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
-  return {
-    chainId,
-    chainName: meta.name,
-    evmChainId: meta.evmChainId,
-    explorerUrl: meta.explorerUrl,
-    type: meta.type,
-  };
-}
 
 export interface ContractEventConfig {
   configKey: string;
