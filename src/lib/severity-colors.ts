@@ -129,8 +129,8 @@ export function getDurabilityBgColor(score: number): string {
 }
 
 /** Semantic color class for ratio-based quality (green/amber/red). */
-export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThreshold = 0.5): string {
-  if (ratio >= highThreshold) return SEVERITY_TONE_CLASS.ok.text;
-  if (ratio >= midThreshold) return SEVERITY_TONE_CLASS.watch.text;
+export function ratioQualityColor(ratio: number): string {
+  if (ratio >= 0.8) return SEVERITY_TONE_CLASS.ok.text;
+  if (ratio >= 0.5) return SEVERITY_TONE_CLASS.watch.text;
   return SEVERITY_TONE_CLASS.alert.text;
 }

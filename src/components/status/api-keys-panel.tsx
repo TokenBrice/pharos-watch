@@ -41,15 +41,16 @@ import {
   useAdminMutationIntents,
 } from "./admin-mutation-intent";
 import {
-  ApiKeyDetailEditor,
   ApiKeyInventoryControls,
   ApiKeyInventoryPagination,
   ApiKeyInventorySummary,
   ApiKeyTable,
-  CreateApiKeyForm,
+} from "./api-keys-panel-inventory";
+import { ApiKeyDetailEditor, CreateApiKeyForm } from "./api-keys-panel-editor";
+import {
   TokenRevealDialog,
   TokenUnavailableReplayDialog,
-} from "./api-keys-panel-parts";
+} from "./api-keys-panel-dialogs";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";

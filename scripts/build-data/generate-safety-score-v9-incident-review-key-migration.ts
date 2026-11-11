@@ -418,12 +418,6 @@ function stableReviewIdFor(
       reviewId,
     );
   }
-  if (row.resolution === "mint-control" && row.authored?.controlId !== undefined) {
-    return canonicalReviewId(
-      `mint:${canonicalKeySegment(assetId)}:${canonicalKeySegment(row.authored.controlId)}:${windowEndSec}`,
-      reviewId,
-    );
-  }
   return canonicalReviewId(reviewId, reviewId);
 }
 

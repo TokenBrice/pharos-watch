@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
@@ -13,6 +14,13 @@ import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 
 const push = vi.fn();
+function render(ui: React.ReactNode) {
+  const client = new QueryClient();
+  return rtlRender(ui, {
+    wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  });
+}
+
 const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
   scrollToIndexMock: vi.fn(),
   virtualItemsMock: [{ index: 0, start: 0, end: 40 }],

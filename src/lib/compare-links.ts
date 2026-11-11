@@ -127,11 +127,17 @@ export interface StaticComparisonLink {
   benchmarkSymbol: string | null;
 }
 
+// For USDe, explain the staking wrapper before the broader dollar benchmark.
+const PREFERRED_COMPARISON_BENCHMARKS: ReadonlyMap<string, string> = new Map([
+  ["usde-ethena", "susde-ethena"],
+]);
+
 export function getPrimaryStaticComparisonLinkForCoin(coinId: string): StaticComparisonLink | null {
-  // For USDe, explain the staking wrapper before the broader dollar benchmark.
-  const pair = (coinId === "usde-ethena"
-    ? STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId && rightId === "susde-ethena")
-    : undefined) ?? STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId || rightId === coinId);
+  const preferredBenchmark = PREFERRED_COMPARISON_BENCHMARKS.get(coinId);
+  const pair = (preferredBenchmark === undefined
+    ? undefined
+    : STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId && rightId === preferredBenchmark))
+    ?? STATIC_COMPARE_PAIRS.find(([leftId, rightId]) => leftId === coinId || rightId === coinId);
   if (!pair) return null;
 
   const [leftId, rightId] = pair;
