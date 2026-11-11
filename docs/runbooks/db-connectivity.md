@@ -10,7 +10,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. Data-quality loaders were skipped to avoid cascading failures; status persistence may also fail, leaving only the raw fallback rather than a durable transition.
+`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. Publicly this is an unreadable evaluation, not an outage: the self-check holds the published `/status/` state and `/api/health` answers 503 until a check reads the database. Data-quality loaders were skipped to avoid cascading failures; status persistence may also fail, leaving only the raw fallback rather than a durable transition.
 
 For storage warnings use [Capacity signals](#capacity-signals); for write-pressure shedding use [Telemetry kill switch](#telemetry-kill-switch). Compatibility-date qualification and retired replication research belong to [runtime experiments](../process/worker-runtime-experiments.md), not incident remediation.
 
@@ -28,7 +28,7 @@ For storage warnings use [Capacity signals](#capacity-signals); for write-pressu
 
 ## Prevention
 
-- A failed sentinel makes the raw availability verdict `stale`. When status persistence succeeds, a previously `healthy` state escalates on one stale reading (`escalateToStale = 1`); a previously `degraded` state requires two (`STATUS_DEGRADED_TO_STALE_THRESHOLD`). Recovery from `stale` to `healthy` requires three consecutive healthy readings (`recoverToHealthy = 3`) and the 180s minimum dwell, roughly 30–45 minutes after connectivity returns at the 15-minute cadence. Recovery to `degraded` instead requires two degraded readings and the same dwell.
+- A failed sentinel makes the raw availability verdict `stale`. When status persistence succeeds, the operator state escalates to `stale` after two consecutive stale readings from any state (`escalateToStale = 2`); one failed read is one sample. Recovery from `stale` to `healthy` requires three consecutive healthy readings (`recoverToHealthy = 3`) and the 180s minimum dwell, roughly 30–45 minutes after connectivity returns at the 15-minute cadence. Recovery to `degraded` instead requires two degraded readings and the same dwell.
 - Long-running migrations should be batched so each statement stays under D1's 30s per-statement limit.
 
 ## Capacity signals
