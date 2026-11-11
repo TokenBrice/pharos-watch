@@ -7,8 +7,10 @@ import type {
   BlacklistAmountSource,
   BlacklistAmountStatus,
   BlacklistStablecoin,
+} from "@shared/types/blacklist";
+import type {
   StablecoinData,
-} from "@shared/types/market";
+} from "@shared/types/supply";
 import type { DexLiquidityRow } from "../../lib/dex-liquidity";
 import type { ApiKeyRow } from "../../lib/api-key-core";
 import type { ReconciliationRunRow as BlacklistReconciliationStatusRow } from "../../lib/blacklist-reconciliation-status";

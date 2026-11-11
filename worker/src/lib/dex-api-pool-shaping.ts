@@ -11,7 +11,7 @@ import type {
   DexAmmExecutionModel,
   DexAmmExecutionToken,
   DexExecutionCapabilityGate,
-} from "@shared/types/market";
+} from "@shared/types/dex-execution";
 import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {

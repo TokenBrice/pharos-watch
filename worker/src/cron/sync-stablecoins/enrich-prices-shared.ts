@@ -1,5 +1,7 @@
-import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
-import type { ChainPartitionProvenance, PriceDerivation, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/market";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/price";
+import type { ChainPartitionProvenance, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/supply";
+import type { PriceDerivation } from "@shared/types/price";
 import type { DefiLlamaListFillDefaultQuote } from "@shared/lib/pricing-source-policy";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { stampPriceMetadata } from "./shared";

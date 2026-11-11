@@ -12,7 +12,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
-import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types";
+import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types/digest";
 import {
   buildDigestTriggerRecord,
   digestMonthKey,

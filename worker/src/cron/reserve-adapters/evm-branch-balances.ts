@@ -2,7 +2,7 @@ import { pinnedBlockPlan } from "./evm-observation-plan";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { MATERIAL_UNKNOWN_EXPOSURE_PCT } from "@shared/types/live-reserve-adapter-policy";
 import { createAdapterIoLimiter } from "./concurrency";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeAddressCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";

@@ -21,7 +21,7 @@ import type {
   YieldWarningsFilter,
   YieldFilterOption,
 } from "@/lib/yield-view-config";
-import type { YieldType } from "@shared/types";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 
 interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];

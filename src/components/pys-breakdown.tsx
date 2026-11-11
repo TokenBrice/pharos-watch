@@ -23,7 +23,7 @@ import {
   neutralizePysFactorAndRescore,
 } from "@/lib/yield-presentation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
+import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types/yield-vocabulary";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 
 export type PysBreakdownMode = "popover" | "inline";

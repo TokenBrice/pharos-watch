@@ -3,7 +3,7 @@ import { evaluateV9Backing } from "@shared/lib/safety-score-v9/archetypes";
 import { asset, exposure } from "@shared/lib/__tests__/safety-score-v9-backing.test-support";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
-import type { ProofOfReservesLatestReport } from "@shared/types/core";
+import type { ProofOfReservesLatestReport } from "@shared/types/stablecoin-meta-primitives";
 import type { ReviewedEconomicDeploymentPartition } from "@shared/types/safety-score-v9-supply-attribution";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";

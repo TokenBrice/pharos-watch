@@ -4,7 +4,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { resolveChainId } from "@shared/types/chain-identity";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   deploymentSupplyCensusRejectionCode,
   type SafetyScoreV9DeploymentSupplyCensus,

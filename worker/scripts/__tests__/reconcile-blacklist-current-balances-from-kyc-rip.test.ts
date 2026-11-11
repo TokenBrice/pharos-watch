@@ -2,7 +2,7 @@ import { runOperatorCli } from "./operator-cli.test-support";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import type { BlacklistSummaryResponse } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
 import { getBlacklistConfigsForSymbolAndChain } from "../../src/lib/blacklist-contracts";
 import {

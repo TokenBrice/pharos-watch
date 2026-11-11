@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { buildHeroPassportItems } from "@/lib/stablecoin-detail-passport";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import type { RedemptionBackstopEntry } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");

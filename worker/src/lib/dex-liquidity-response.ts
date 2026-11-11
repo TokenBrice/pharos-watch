@@ -4,15 +4,19 @@ import { CURRENT_DEPLOYMENT_KEYS, deploymentKey, normalizeDexLiquidityEvidence }
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   DexExitRouteObservationsSchema,
-  DexPoolVolumeObservationSchema,
-  DexRetiredSolidlyLegacyModelSchema,
   ExitRouteObservationCoverageSchema,
-  LiquidityScoreUnavailableReasonSchema,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
+} from "@shared/types/exit-route";
+import {
+  DexPoolVolumeObservationSchema,
+  LiquidityScoreUnavailableReasonSchema,
   type LiquidityPoolSourceFamily,
   type LiquidityScoreUnavailableReason,
-} from "@shared/types/market";
+} from "@shared/types/dex-liquidity";
+import {
+  DexRetiredSolidlyLegacyModelSchema,
+} from "@shared/types/dex-execution-legacy";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";

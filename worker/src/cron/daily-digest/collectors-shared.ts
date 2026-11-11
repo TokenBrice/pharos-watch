@@ -6,7 +6,7 @@ import type {
   DigestV9SafetyCap,
   DigestV9SafetyCoin,
 } from "@shared/types/digest";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestEvidence } from "./digest-evidence";

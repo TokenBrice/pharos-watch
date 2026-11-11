@@ -3,7 +3,7 @@ import { type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { defaultV9DependencyEconomicRole, type V9DependencyEconomicRole } from "@shared/types/dependency-types";
-import type { DependencyReview, DependencyWeight } from "@shared/types/core";
+import type { DependencyReview, DependencyWeight } from "@shared/types/stablecoin-meta-primitives";
 import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
 import { type ReserveSlice } from "@shared/types/reserves";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";

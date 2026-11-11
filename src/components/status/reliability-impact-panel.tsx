@@ -1,4 +1,5 @@
-import type { HealthResponse, StatusResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
+import type { StatusResponse } from "@shared/types/status/response";
 import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { TechnicalDetail, VerdictPill } from "@/components/status/page-primitives";
 import { RELIABILITY_KIND_VERDICT, type ReliabilityIssue } from "@/lib/reliability-workspace-model";

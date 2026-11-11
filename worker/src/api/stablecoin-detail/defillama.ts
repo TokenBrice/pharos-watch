@@ -6,7 +6,7 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import {
   type DetailResponseHelpers,
   DETAIL_UPSTREAM_MAX_RETRIES,

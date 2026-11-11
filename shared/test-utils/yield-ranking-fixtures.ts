@@ -1,4 +1,4 @@
-import type { AltYieldSource, YieldRanking, YieldRankingProvenance } from "@shared/types";
+import type { AltYieldSource, YieldRanking, YieldRankingProvenance } from "@shared/types/yield";
 
 export function makeYieldProvenance(
   overrides: Partial<YieldRankingProvenance> = {},

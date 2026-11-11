@@ -1,6 +1,7 @@
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type {
   LiveReserveRedemptionOutputValuation,
   LiveReserveRedemptionTelemetry,

@@ -2,7 +2,7 @@ import {
   BLACKLIST_STABLECOINS,
   type BlacklistAmountStatus,
   type BlacklistStablecoin,
-} from "../types/market";
+} from "../types/blacklist";
 import { canonicalBlacklistAddress } from "./tron-address";
 
 const BLACKLIST_STABLECOIN_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);

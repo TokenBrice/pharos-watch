@@ -40,7 +40,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import { formatUtcDateOnly } from "@shared/lib/format";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import { PublicSnapshotEnvelopeSchema } from "@shared/types/public-snapshot";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";

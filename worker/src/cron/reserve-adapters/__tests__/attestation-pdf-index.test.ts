@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import wars from "@shared/data/stablecoins/coins/wars-argentine-peso.json";

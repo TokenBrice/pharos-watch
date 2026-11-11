@@ -6,9 +6,11 @@ import type {
   YieldOpportunityClass,
   YieldOpportunityCriticalEvidence,
   YieldPysNullReason,
-  YieldRankChangeAttribution,
   YieldScoreQualification,
-} from "@shared/types";
+} from "@shared/types/yield-vocabulary";
+import type {
+  YieldRankChangeAttribution,
+} from "@shared/types/yield-evidence-schemas";
 import { computePYS } from "@shared/lib/yield-scoring";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";

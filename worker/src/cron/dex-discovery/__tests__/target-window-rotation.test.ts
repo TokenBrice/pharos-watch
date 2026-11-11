@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { mockRegistry } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 

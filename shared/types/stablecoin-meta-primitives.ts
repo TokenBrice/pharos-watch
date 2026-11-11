@@ -3,46 +3,59 @@ import { DeploymentAmountEncodingSchema } from "./deployment-amounts";
 import { CHAIN_META } from "./chain-identity";
 import { ReserveReportCoverageSchema, ReserveObservationEnvelopeSchema } from "./safety-score-v9-reserve-scope";
 import {
-  ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
-  COIN_NOTICE_TYPE_VALUES,
+  RESEARCH_REVIEW_CONFIDENCE_VALUES,
+  PEG_CURRENCY_VALUES,
+  type PegCurrency,
+  type BackingType,
+} from "./core";
+import {
   DEPENDENCY_TYPE_VALUES,
   V9_DEPENDENCY_ECONOMIC_ROLE_VALUES,
-  FEATURED_CONTENT_TYPE_VALUES,
+} from "./dependency-types";
+import {
   GOVERNANCE_TYPE_VALUES,
-  INFRASTRUCTURE_VALUES,
-  LAUNCH_MILESTONE_TYPE_VALUES,
-  LAUNCH_PHASE_VALUES,
-  MARKET_AVAILABILITY_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
-  MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES,
-  RESEARCH_REVIEW_CONFIDENCE_VALUES,
-  RESERVE_NON_LINK_DISPOSITION_VALUES,
-  RESERVE_REVIEW_SCOPE_VALUES,
-  PEG_CURRENCY_VALUES,
+  STABLECOIN_STATUS_VALUES,
+  STABLECOIN_EXIT_MECHANISM_VALUES,
+  STABLECOIN_PRICE_BASIS_VALUES,
+} from "./stablecoin-taxonomy";
+import {
+  ATTESTOR_TIER_VALUES,
   PROOF_OF_RESERVES_CADENCE_VALUES,
   PROOF_OF_RESERVES_TYPE_VALUES,
   PROOF_ASSURANCE_METHOD_VALUES,
   PROOF_ASSURANCE_SCOPE_VALUES,
   LIABILITY_RECONCILIATION_VALUES,
+} from "./reserve-assurance";
+import {
+  COIN_NOTICE_TYPE_VALUES,
+  FEATURED_CONTENT_TYPE_VALUES,
+  LAUNCH_MILESTONE_TYPE_VALUES,
+  LAUNCH_PHASE_VALUES,
+  MARKET_AVAILABILITY_VALUES,
+} from "./stablecoin-lifecycle";
+import {
+  INFRASTRUCTURE_VALUES,
+  MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES,
+  VARIANT_KIND_VALUES,
+  WRAPPER_OPERATOR_VALUES,
+  GovernanceQualitySchema,
+  type GovernanceType,
+  type Infrastructure,
+  type VariantKind,
+} from "./stablecoin-taxonomy";
+import { RESERVE_NON_LINK_DISPOSITION_VALUES, RESERVE_REVIEW_SCOPE_VALUES, CollateralQualitySchema } from "./reserves";
+import {
   CUSTODY_PROVIDER_ROLE_VALUES,
   CUSTODY_SEGREGATION_VALUES,
   CUSTODY_BANKRUPTCY_REMOTENESS_VALUES,
   CUSTODY_REHYPOTHECATION_VALUES,
-  STABLECOIN_STATUS_VALUES,
-  STABLECOIN_EXIT_MECHANISM_VALUES,
-  STABLECOIN_PRICE_BASIS_VALUES,
-  VARIANT_KIND_VALUES,
-  WRAPPER_OPERATOR_VALUES,
-  YIELD_TYPE_VALUES,
-} from "./core";
-import {
-  BridgeRouteRiskTierSchema,
-  CollateralQualitySchema,
   CustodyModelSchema,
-  GovernanceQualitySchema,
-  OracleRiskTierSchema,
-} from "./core";
+} from "./custody";
+import { YIELD_TYPE_VALUES } from "./yield-vocabulary";
+import { BridgeRouteRiskTierSchema } from "./bridge-risk";
+import { OracleRiskTierSchema } from "./oracle-risk";
 import { HttpUrlSchema } from "./validators";
 import { issue, StrictIsoDateSchema } from "./safety-schema-primitives";
 
@@ -449,3 +462,18 @@ export const StablecoinMetaEnumSchemas = {
   status: z.enum(STABLECOIN_STATUS_VALUES),
   mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES),
 } as const;
+
+type PegCurrencyFilterTag = `${Lowercase<PegCurrency>}-peg`;
+type InfrastructureFilterTag = `infrastructure-${Infrastructure}`;
+type VariantFilterTag = "variant-tracked" | `variant-${VariantKind}`;
+type PegGroupFilterTag = "fiat-non-usd-peg" | "commodity-peg";
+type GradeFilterTag = "grade-a" | "grade-ge-b" | "grade-ge-c" | "grade-ge-c-plus" | "grade-ge-c-minus" | "grade-le-d";
+
+export type FilterTag =
+  | PegCurrencyFilterTag
+  | PegGroupFilterTag
+  | GovernanceType
+  | BackingType
+  | InfrastructureFilterTag
+  | VariantFilterTag
+  | GradeFilterTag;

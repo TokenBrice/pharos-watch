@@ -11,7 +11,7 @@ import {
   MICA_STATUS_BADGE_STYLES,
   MICA_STATUS_DESCRIPTIONS,
 } from "@shared/lib/mica";
-import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
+import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types/compliance-vocabulary";
 import type { ComplianceOverviewRow } from "@/lib/compliance-model";
 
 export function complianceStatusMeta(

@@ -5,7 +5,7 @@ import type {
   BlacklistSortKey,
   BlacklistStablecoin,
   BlacklistSummaryRefresh,
-} from "@shared/types";
+} from "@shared/types/blacklist";
 import type { DataHealthCatchUp } from "@/lib/data-health";
 
 /** Names each config the producer reported behind its safe head for the freshness banner. */

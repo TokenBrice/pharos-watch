@@ -1,5 +1,5 @@
 import { batchExecute } from "./d1-primitives";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/price";
 import { parseJsonStringArray } from "./json-parse";
 import { logWorkerEvent } from "./structured-log";
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS } from "@/lib/peg-landing";
 
 const PEG_PILL_CLASS =

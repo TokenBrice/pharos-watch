@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
 import type { PricingProviderAttemptDiagnostic } from "../pricing-provider-diagnostics";
 import type { PricingSourceKey } from "@shared/lib/pricing-source-registry";
 

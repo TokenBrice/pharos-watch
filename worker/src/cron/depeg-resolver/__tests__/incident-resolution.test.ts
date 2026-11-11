@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";

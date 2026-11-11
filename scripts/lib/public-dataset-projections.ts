@@ -1,6 +1,7 @@
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import { isRecord } from "@shared/lib/type-guards";
-import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
+import type { SupplyObservationProvenance } from "@shared/types/supply";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";

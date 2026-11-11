@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { MechanismArchetype, StablecoinMeta } from "../../../types";
+import type { MechanismArchetype } from "../../../types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
 import {
   countActiveByArchetype,
   getActiveByArchetype,
   getCoinsByLifecycleStatus,
 } from "../by-mechanism";
-import { MECHANISM_ARCHETYPE_VALUES } from "../../../types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "../../../types/stablecoin-taxonomy";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, FROZEN_STABLECOINS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "../registry";
 import { resolveMechanismArchetype } from "../../classification/resolve-mechanism-archetype";
 import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";

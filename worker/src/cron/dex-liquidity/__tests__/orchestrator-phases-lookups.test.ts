@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 
 const loadStablecoinsCache = vi.hoisted(() => vi.fn());
 

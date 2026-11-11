@@ -1,8 +1,12 @@
 import type {
   FilterTag,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
   PegSummaryResponse,
+} from "@shared/types/peg";
+import type {
   StablecoinListResponse,
-} from "@shared/types";
+} from "@shared/types/supply";
 import type { ReportCardsV9TableResponse } from "@shared/types/report-cards-v9-projections";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";

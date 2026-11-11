@@ -1,4 +1,4 @@
-import type { SupplyRestoreMode } from "../types/market";
+import type { SupplyRestoreMode } from "../types/supply";
 
 /**
  * Carry-forward ceiling for last-known-good supplemental supply. Restores

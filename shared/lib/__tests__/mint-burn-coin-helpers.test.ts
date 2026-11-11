@@ -9,7 +9,7 @@ import {
   resolveBaselineDailyNetUsd,
 } from "@shared/lib/mint-burn-coin-helpers";
 import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
-import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types/mint-burn";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 

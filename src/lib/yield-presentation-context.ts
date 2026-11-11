@@ -1,4 +1,4 @@
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import { resolveYieldDisplayRebaseReferenceRate } from "@/lib/yield-benchmark";
 import { computePysBreakdown } from "@/lib/yield-constants";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getFilterTags } from "../../lib/filter-tags";
-import type { StablecoinMeta } from "../core";
+import type { StablecoinMeta } from "../stablecoin-meta-schemas";
 import { OracleRiskBranchSchema } from "../stablecoin-meta-control-schemas";
 import { StablecoinMetaSourceAssetSchema } from "@shared/lib/stablecoins/schema";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";

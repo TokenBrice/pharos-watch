@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { StatusCause, StatusResponse, StatusTransition } from "@shared/types";
+import type { StatusCause, StatusTransition } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { normalizeStatusIssues } from "@/lib/status/issue-evidence-model";
 import {

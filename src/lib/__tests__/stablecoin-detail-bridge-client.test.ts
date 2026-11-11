@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { BridgeRouteDeployment, BridgeRouteRiskProfile, BridgeRouteRiskTier, StablecoinMeta } from "@shared/types";
+import type { BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { BRIDGE_THIRD_PARTY_TIERS } from "@shared/lib/classification";
-import { BRIDGE_ROUTE_RISK_TIER_VALUES } from "@shared/types/core";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES } from "@shared/types/bridge-risk";
 import {
   BRIDGE_ROUTE_PROJECTION_LIMIT,
   bindBridgeRouteControlComponents,

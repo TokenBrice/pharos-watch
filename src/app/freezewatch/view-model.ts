@@ -15,9 +15,11 @@ import type {
   BlacklistEventType,
   BlacklistSortDirection,
   BlacklistSortKey,
+} from "@shared/types/blacklist";
+import type {
   StablecoinData,
-} from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+} from "@shared/types/supply";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { type BlacklistStatusBucketKey } from "@shared/lib/blacklist-status-buckets";
 
 const PAGE_SIZE = 50;

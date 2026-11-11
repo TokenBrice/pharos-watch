@@ -1,4 +1,5 @@
-import type { ReserveAdapterCoin, ReserveSlice } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchEvmStorageAtBlock } from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";

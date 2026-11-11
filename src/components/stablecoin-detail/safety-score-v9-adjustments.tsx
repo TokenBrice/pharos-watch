@@ -1,5 +1,5 @@
 import { Award, ShieldCheck } from "lucide-react";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 export function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   const adjustment = card.scoreTrace.scoreAdjustments[0];

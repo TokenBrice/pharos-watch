@@ -9,7 +9,7 @@
  */
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
-import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import type { LiquidityPoolSourceFamily } from "@shared/types/dex-liquidity";
 import { DEX_SUBGRAPH_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";

@@ -1,6 +1,6 @@
 import type {
   YieldType,
-} from "@shared/types/core";
+} from "@shared/types/yield-vocabulary";
 import type {
   YieldBenchmarkKey,
   YieldSourceRisk,

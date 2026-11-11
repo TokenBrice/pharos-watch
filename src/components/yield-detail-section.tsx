@@ -36,7 +36,7 @@ import {
   DIRECTION_TONE_CLASSES,
 } from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
-import type { YieldRankChangeAttribution } from "@shared/types";
+import type { YieldRankChangeAttribution } from "@shared/types/yield-evidence-schemas";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";

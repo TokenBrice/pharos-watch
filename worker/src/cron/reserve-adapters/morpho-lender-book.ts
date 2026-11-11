@@ -1,5 +1,5 @@
 import { keccak256, toFunctionSelector } from "viem/utils";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   LenderBookObservationSchema,

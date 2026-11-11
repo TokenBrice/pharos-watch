@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   isZephyrScannerSupplyId,
   ZEPHYR_ZSD_ASSET_ID,

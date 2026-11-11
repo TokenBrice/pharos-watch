@@ -3,7 +3,7 @@ import reviews from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
 import { unresolvedDeploymentCohort } from "@shared/lib/safety-score-v9/control-bridge-join";
 import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control-primitives";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";

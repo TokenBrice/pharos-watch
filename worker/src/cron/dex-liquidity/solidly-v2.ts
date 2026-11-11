@@ -1,5 +1,5 @@
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/types/exit-route-identity";
-import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import { quoteSolidlyV2Raw, solidlyUsdToRawAmount, type SolidlyV2QuoteState } from "@shared/lib/solidly-v2-math";
 import { SOLIDLY_V2_DEPLOYMENTS } from "@shared/lib/solidly-v2-deployments";

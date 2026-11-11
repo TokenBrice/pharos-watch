@@ -44,15 +44,27 @@ import { getVariantDisplay } from "@shared/lib/variant-display";
 import { roundForDisplay } from "@shared/lib/format";
 import type {
   DexLiquidityData,
+} from "@shared/types/dex-liquidity";
+import type {
   Infrastructure,
   MechanismArchetype,
-  PegSummaryCoin,
-  RedemptionBackstopEntry,
-  StablecoinMeta,
-  StressSignalEntry,
   VariantKind,
+} from "@shared/types/stablecoin-taxonomy";
+import type {
+  PegSummaryCoin,
+} from "@shared/types/peg";
+import type {
+  RedemptionBackstopEntry,
+} from "@shared/types/redemption";
+import type {
+  StablecoinMeta,
+} from "@shared/types/stablecoin-meta-schemas";
+import type {
+  StressSignalEntry,
+} from "@shared/types/stress";
+import type {
   YieldRanking,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export interface HeroTertiaryMetricViewModel {

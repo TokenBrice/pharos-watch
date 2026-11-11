@@ -3,7 +3,7 @@ import { MAX_OPEN_DEPEG_EVENTS } from "./depeg-threshold-policy";
 import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import { DEPEG_EVENT_CLOSE_REASON_VALUES, DepegPriceCoverageSchema } from "@shared/types/peg";
-import type { DepegEvent, DepegEventCloseReason } from "@shared/types/market";
+import type { DepegEvent, DepegEventCloseReason } from "@shared/types/peg";
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,

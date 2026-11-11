@@ -10,7 +10,8 @@ import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { SameTickerStablecoins } from "@/components/stablecoin-detail/same-ticker-stablecoins";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
-import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import type { StablecoinAiSummary } from "@shared/types/editorial";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 /** Live surfaces a pre-launch dossier gains at its first post-launch data sync. */
 const LIVE_SURFACES = "Price & peg · Supply & flows · Liquidity · Safety Score · DEWS";

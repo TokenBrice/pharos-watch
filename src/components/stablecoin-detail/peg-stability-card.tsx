@@ -18,7 +18,8 @@ import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
-import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { findSummaryBudgetViolations, SUMMARY_PROSE_MAX_WORDS } from "@shared/lib/summary-budget";
 import { deriveVerdictLine } from "@/components/stablecoin-detail/verdict-line";
 

@@ -1,7 +1,8 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { formatAddress } from "@shared/lib/format";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type {
   LiveReserveRedemptionOutputValuation,
   LiveReservesConfig,

@@ -133,7 +133,7 @@ import type {
   HistoricalMarketSourceDiagnostics,
   PricePoint,
 } from "../historical-market-prices";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { CircuitRecord } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
 import type {

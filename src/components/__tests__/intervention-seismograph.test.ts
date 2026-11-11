@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BlacklistSummaryResponse } from "@shared/types";
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/blacklist";
 import { buildQuarterPoints, InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 
 type QuarterlyEventPoint =

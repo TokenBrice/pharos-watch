@@ -4,7 +4,8 @@ import {
   YIELD_SOURCE_CONFIDENCE_TIER_VALUES,
   type YieldSourceConfidenceTier,
 } from "@shared/types/yield-vocabulary";
-import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
+import { type PegCurrency } from "@shared/types/core";
+import { type YieldBenchmarkKey, type YieldType } from "@shared/types/yield-vocabulary";
 import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
 
 export type YieldSourceConfidenceFilter = "all" | YieldSourceConfidenceTier;

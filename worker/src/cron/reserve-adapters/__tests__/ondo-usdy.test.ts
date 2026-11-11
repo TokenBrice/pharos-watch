@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import reserves from "@shared/data/stablecoins/domains/reserves/usdy-ondo-finance.json";
 import { adaptOndoUsdyPortfolio, fetchOndoUsdyReserves } from "../ondo-usdy";

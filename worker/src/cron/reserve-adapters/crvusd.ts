@@ -1,5 +1,6 @@
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveSnapshotMetadata, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";

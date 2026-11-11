@@ -2,7 +2,7 @@ import { ApiFetchError } from "@/lib/api";
 import type { ReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { ReserveRisk, ReserveSlice } from "@shared/types";
+import type { ReserveRisk, ReserveSlice } from "@shared/types/reserves";
 import { formatIsoDate, formatIsoTimestamp } from "@shared/lib/format";
 
 /** `neutral` is informational; `watch` is an active condition (amber). Nothing here is red. */

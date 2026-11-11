@@ -1,4 +1,4 @@
-import type { StablecoinChartPoint } from "@shared/types/market";
+import type { StablecoinChartPoint } from "@shared/types/supply";
 
 /**
  * Continuity budgets for the published stablecoin chart history. The producer

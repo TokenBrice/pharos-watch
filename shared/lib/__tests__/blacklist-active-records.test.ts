@@ -7,7 +7,7 @@ import {
   type BlacklistCurrentBalanceSnapshot,
   type BlacklistActiveRecord,
 } from "../blacklist-active-records";
-import type { BlacklistEvent } from "../../types/market";
+import type { BlacklistEvent } from "../../types/blacklist";
 
 function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
   return {

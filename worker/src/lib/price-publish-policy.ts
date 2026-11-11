@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/price";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
 const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;

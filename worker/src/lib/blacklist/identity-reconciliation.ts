@@ -1,6 +1,6 @@
 import { blacklistEventIdentity, blacklistEventIdentitySql } from "@shared/lib/blacklist-event-order";
 import { canonicalBlacklistAddress } from "@shared/lib/tron-address";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
 import { reconcileBlacklistTronBalance } from "../blacklist-current-balances";
 import { batchExecute } from "../db";
 import { throwIfAborted } from "../abort";

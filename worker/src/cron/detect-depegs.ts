@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
-import { NominalPriceReferenceSchema, type PegAssetBase } from "@shared/types/core";
+import { NominalPriceReferenceSchema, type PegAssetBase } from "@shared/types/price";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { rowPriceCoverage } from "../lib/depeg-helpers";

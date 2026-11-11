@@ -1,5 +1,5 @@
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
-import type { DepegPrimaryTrust } from "@shared/types/core";
+import type { DepegPrimaryTrust } from "@shared/types/price";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";

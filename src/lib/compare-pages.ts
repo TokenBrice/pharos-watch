@@ -13,7 +13,8 @@ import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
 import type { RedemptionBackstopConfig, ReviewedRedemptionTerms } from "@shared/lib/redemption-backstop-configs/shared";
 import { COMPACT_REDEMPTION_FEE_TERMS } from "@shared/lib/redemption-backstop-configs";
-import type { RedemptionDocSourceSupport, StablecoinMeta } from "@shared/types";
+import type { RedemptionDocSourceSupport } from "@shared/types/redemption";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { COMPARISON_EVIDENCE_PILOT_SLUGS } from "@/lib/presentation-pilots.mjs";

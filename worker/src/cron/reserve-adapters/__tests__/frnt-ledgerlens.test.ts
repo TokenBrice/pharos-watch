@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { adaptFrntLedgerlens, fetchFrntLedgerlensReserves, FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
 import reserveSidecar from "@shared/data/stablecoins/domains/reserves/frnt-wyoming.json";
 

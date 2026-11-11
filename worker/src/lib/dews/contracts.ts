@@ -1,5 +1,5 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSResult } from "../dews";

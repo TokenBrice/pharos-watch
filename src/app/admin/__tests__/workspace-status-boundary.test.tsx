@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkspaceStatusBoundary } from "@/app/admin/workspace-status-boundary";
 import { createStatusWorkspaceClient } from "@/app/admin/status-workspace-client";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 
 const { useStatusMock, sectionPropsMock } = vi.hoisted(() => ({
   useStatusMock: vi.fn(),

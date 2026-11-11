@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { makeReservesDb } from "./live-reserves-store.test-support";
 import { resolveReserveResult } from "../live-reserves/store-views";

@@ -7,7 +7,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import { buildAmmCapacityCurve } from "@shared/lib/p4-exit-route-amm-simulation";
-import type { DexAmmExecutionModel } from "@shared/types/market";
+import type { DexAmmExecutionModel } from "@shared/types/dex-execution";
 import { EVM_V2_EXECUTION_DEPLOYMENTS } from "../../constant-product-v2";
 import { buildPoolFingerprint } from "../../pool-helpers";
 import { buildDexMeasuredExecutionProfile } from "../../../measured-execution/profiles";

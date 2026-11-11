@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DepegEventStoredSnapshotSchema, type DepegEvent, type DepegEventEntry } from "@shared/types/market";
+import { DepegEventStoredSnapshotSchema, type DepegEvent, type DepegEventEntry } from "@shared/types/peg";
 import {
   assertStaticDepegArchivePreserved,
   assignSlugs,

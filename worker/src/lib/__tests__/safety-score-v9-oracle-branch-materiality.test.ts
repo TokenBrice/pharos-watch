@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { OracleRiskBranch, OracleRiskProfile, OracleRiskTier } from "@shared/types/core";
+import type { OracleRiskBranch, OracleRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { OracleRiskTier } from "@shared/types/oracle-risk";
 import type { LenderBookObservation, LenderMarketObservation } from "@shared/types/safety-score-v9-lender-book";
 import { deriveMorphoOracleBranchMateriality, deriveOracleBranchMateriality } from "../safety-score-v9/extension-oracle";
 import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";

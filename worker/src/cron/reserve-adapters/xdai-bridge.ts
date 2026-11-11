@@ -2,7 +2,8 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

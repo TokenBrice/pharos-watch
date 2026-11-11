@@ -680,19 +680,35 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("keeps refreshing readable state after the 5-minute edit window and routes edits to reopen", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
     const main = nativeButton();
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok(baseState)).mockResolvedValueOnce(ok(staleAuthState));
-    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, openTelegramLink: vi.fn() } });
-    hideFor(10 * 60 * 1000 + 1);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 3000 });
-    expect(await screen.findByRole("heading", { name: "Editing paused" })).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(baseState)).mockResolvedValue(ok(staleAuthState));
+    renderMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, openTelegramLink: vi.fn() } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    // Refresh once across the edit deadline, then again after the server confirms expiry.
+    for (const calls of [2, 3]) {
+      act(() => {
+        visibility.mockReturnValue("hidden");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60 * 1000 + 1); });
+      act(() => {
+        visibility.mockReturnValue("visible");
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+      expect(fetchMock).toHaveBeenCalledTimes(calls);
+      expect(screen.getByRole("heading", { name: "Editing paused" })).toBeTruthy();
+    }
 
     fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
     fireEvent.click(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }));
-    expect(await screen.findByText("Not saved: All stablecoins: Safety Score on. Reopen to edit.")).toBeTruthy();
-    await waitFor(() => expect(main.text).toBe("Reopen to edit"));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Not saved: All stablecoins: Safety Score on. Reopen to edit.")).toBeTruthy();
+    expect(main.text).toBe("Reopen to edit");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("ends the session when a signed preview read hits stale-auth", async () => {

@@ -5,7 +5,8 @@ import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { lenderBookAdmissionReason, lenderOracleBranchKey } from "@shared/lib/safety-score-v9/lender-book-registry";
 import type { LenderBookObservation } from "@shared/types/safety-score-v9-lender-book";
-import type { OracleRiskBranch, OracleRiskProfile, OracleRiskTier } from "@shared/types/core";
+import type { OracleRiskBranch, OracleRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
+import type { OracleRiskTier } from "@shared/types/oracle-risk";
 import {
   confidenceForResearch,
   requiredStatus,

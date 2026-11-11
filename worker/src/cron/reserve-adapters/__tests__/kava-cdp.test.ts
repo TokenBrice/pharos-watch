@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
 import { adaptKavaCdpState, type KavaCdpState } from "../kava-cdp";
 import {

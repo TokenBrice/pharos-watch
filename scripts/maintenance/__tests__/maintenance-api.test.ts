@@ -4,9 +4,13 @@ import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type {
   PegSummaryResponse,
+} from "@shared/types/peg";
+import type {
   StablecoinListResponse,
+} from "@shared/types/supply";
+import type {
   StressSignalsAllResponse,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import {
   buildCurrentMap,
   extractFindings,

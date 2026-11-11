@@ -3,7 +3,7 @@ import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import {
   isTezosDiscoveryDeployment,
 } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";

@@ -19,7 +19,7 @@ import {
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
 } from "./health";
-import type { BackingType } from "../../types";
+import type { BackingType } from "../../types/core";
 import type {
   ChainSummary,
   ChainsResponse,

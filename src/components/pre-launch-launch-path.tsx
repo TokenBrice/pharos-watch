@@ -12,7 +12,7 @@ import {
   type LaunchPathModel,
 } from "@/lib/pre-launch-dossier";
 import { usePreLaunchNowMs } from "@/components/pre-launch-readiness";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 type LaunchPathCoin = Pick<
   StablecoinMeta,

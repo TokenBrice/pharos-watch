@@ -7,17 +7,31 @@ import type { CompareRadarCohort } from "@/lib/compare-data-model-types";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   BluechipRating,
+} from "@shared/types/bluechip";
+import type {
   DexLiquidityData,
   DexLiquidityMap,
+} from "@shared/types/dex-liquidity";
+import type {
   MintBurnCoinFlow,
   MintBurnPerCoinResponse,
+} from "@shared/types/mint-burn";
+import type {
   PegSummaryCoin,
+} from "@shared/types/peg";
+import type {
   RedemptionBackstopEntry,
+} from "@shared/types/redemption";
+import type {
   StablecoinData,
-  StressSignalEntry,
   SupplyHistoryPoint,
+} from "@shared/types/supply";
+import type {
+  StressSignalEntry,
+} from "@shared/types/stress";
+import type {
   YieldRanking,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import type {
   V9ConsumerCard,

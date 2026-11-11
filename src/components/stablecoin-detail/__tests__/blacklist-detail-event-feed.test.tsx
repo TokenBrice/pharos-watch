@@ -12,7 +12,7 @@ vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: vi.fn()
 
 import { BlacklistDetailEventFeed } from "@/components/stablecoin-detail/blacklist-detail-event-feed";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
-import type { BlacklistEvent } from "@shared/types";
+import type { BlacklistEvent } from "@shared/types/blacklist";
 
 type EventsPageResult = ReturnType<typeof useBlacklistEventsPage>;
 

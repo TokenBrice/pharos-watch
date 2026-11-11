@@ -3,7 +3,7 @@ import {
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
 } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import type { PegAssetBase } from "@shared/types/core";
+import type { PegAssetBase } from "@shared/types/price";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";

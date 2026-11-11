@@ -1,6 +1,8 @@
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { TableDensity } from "@/hooks/use-table-density";
-import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 export type StablecoinTableRowVariant = "default" | "figmaOverview";

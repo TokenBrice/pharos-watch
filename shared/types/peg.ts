@@ -1,10 +1,7 @@
+import { type DepegAuditVerdict, DepegAuditVerdictSchema } from "./depeg-audit";
+import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { z } from "zod";
-import {
-  DepegPrimaryTrustSchema,
-  NominalPriceReferenceSchema,
-  PriceConfidenceSchema,
-  PriceObservedAtModeSchema,
-} from "./core";
+import { DepegPrimaryTrustSchema, NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
 
 export const DepegTimestampSchema = z.number().int().nonnegative();
 
@@ -152,3 +149,145 @@ export const PegSummaryCoinSchema = z.object({
     .optional(),
 });
 export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
+
+export type DepegDirection = "above" | "below";
+export const DepegDirectionSchema = z.enum(["above", "below"]);
+
+export interface DepegEventSearchEntry {
+  slug: string;
+  stablecoinId: DepegEvent["stablecoinId"];
+  symbol: DepegEvent["symbol"];
+  pegType: DepegEvent["pegType"];
+  direction: DepegDirection;
+  peakDeviationBps: DepegEvent["peakDeviationBps"];
+  startedAt: DepegEvent["startedAt"];
+  /** Reviewed audit verdict; absent when the ledger records none. */
+  auditVerdict?: DepegAuditVerdict;
+}
+
+export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
+export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
+
+const DepegEventObjectSchema = z.object({
+  id: z.number(),
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  pegType: z.string(),
+  direction: DepegDirectionSchema,
+  peakDeviationBps: z.number(),
+  startedAt: DepegTimestampSchema,
+  endedAt: DepegTimestampSchema.nullable(),
+  startPrice: z.number(),
+  peakPrice: z.number().nullable(),
+  recoveryPrice: z.number().nullable(),
+  pegReference: z.number(),
+  source: z.enum(["live", "backfill"]),
+  /** Raw threshold-crossing rows grouped into this public incident. */
+  constituentEventCount: z.number().int().positive().optional(),
+  confirmationSources: z.string().nullable().optional().default(null),
+  pendingReason: z.string().nullable().optional().default(null),
+  closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
+  /** Present when the event's coin is absent from the tracked catalog; the row keeps its history as a retired coin. */
+  retired: z.boolean().optional(),
+  priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
+  provenance: z
+    .object({
+      sourceKind: z.string().nullable().optional(),
+      replayRunId: z.string().nullable().optional(),
+      replayVersion: z.string().nullable().optional(),
+      sourcePriceProviders: z.array(z.string()).nullable().optional(),
+      quoteMode: z.string().nullable().optional(),
+      pegReferenceSource: z.string().nullable().optional(),
+      supplySource: z.string().nullable().optional(),
+      confirmationPolicy: z.string().nullable().optional(),
+      confirmationPointCount: z.number().nullable().optional(),
+      confidenceTier: z.string().nullable().optional(),
+      auditVerdict: DepegAuditVerdictSchema.nullable().optional(),
+      pegScoreEligible: z.boolean().nullable().optional(),
+      updatedAt: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .default(null),
+});
+export const DepegEventSchema = DepegEventObjectSchema.superRefine(refineDepegEventChronology);
+export type DepegEvent = z.infer<typeof DepegEventSchema>;
+
+/** Build-time depeg archive written to data/depeg-events/*.json. */
+export const DepegEventStoredSnapshotSchema = z.array(
+  DepegEventObjectSchema
+    .extend({
+      slug: z.string().min(1),
+    })
+    .superRefine(refineDepegEventChronology),
+);
+export type DepegEventEntry = z.infer<typeof DepegEventStoredSnapshotSchema>[number];
+
+export const DepegPendingIncidentSchema = z
+  .object({
+    stablecoinId: z.string(),
+    symbol: z.string(),
+    direction: DepegDirectionSchema,
+    firstSeenAt: DepegTimestampSchema,
+    lastSeenAt: DepegTimestampSchema,
+    firstSeenBps: z.number(),
+    lastSeenBps: z.number(),
+    peakSeenBps: z.number(),
+    reason: z.string(),
+    ageSec: z.number(),
+    expiresAt: DepegTimestampSchema,
+    availableConfirmationCategories: z.array(z.string()),
+    missingConfirmationCategories: z.array(z.string()),
+  })
+  .superRefine((incident, ctx) => {
+    if (incident.lastSeenAt < incident.firstSeenAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lastSeenAt"],
+        message: "A pending incident cannot be last seen before it is first seen",
+      });
+    }
+    // `expiresAt` is the effective expiry: `firstSeenAt` plus the base, extended
+    // or severe limit that applies to the row's current evidence.
+    if (incident.expiresAt <= incident.firstSeenAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expiresAt"],
+        message: "A pending incident's expiry must fall after it is first seen",
+      });
+    }
+  });
+
+export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
+
+export const DepegEventsResponseSchema = z.object({
+  events: z.array(DepegEventSchema),
+  total: z.number(),
+  totalExact: z.boolean().optional(),
+  nextCursor: z.string().nullable().optional(),
+  pending: z.array(DepegPendingIncidentSchema).optional(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
+
+export const PegSummaryStatsSchema = z.object({
+  activeDepegCount: z.number(),
+  medianDeviationBps: z.number().nullable(),
+  worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
+  coinsAtPeg: z.number(),
+  totalTracked: z.number(),
+  depegEventsToday: z.number(),
+  depegEventsYesterday: z.number(),
+  fallbackPegRates: z.array(z.string()).optional(),
+  fxPegRates: z.array(z.string()).optional(),
+});
+export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
+
+export const PegSummaryResponseSchema = z.object({
+  coins: z.array(PegSummaryCoinSchema),
+  summary: PegSummaryStatsSchema.nullable(),
+  methodology: MethodologyEnvelopeSchema,
+  /** Present when the 200 body carries retained analytics or missing cross-checks; names the reason. */
+  degradedReason: z.string().min(1).optional(),
+});
+export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;

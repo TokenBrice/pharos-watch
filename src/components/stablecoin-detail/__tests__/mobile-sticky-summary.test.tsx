@@ -5,7 +5,8 @@ import { createRef, type ImgHTMLAttributes, type RefObject } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
 const { isMobileStickySummaryEnabledMock } = vi.hoisted(() => ({

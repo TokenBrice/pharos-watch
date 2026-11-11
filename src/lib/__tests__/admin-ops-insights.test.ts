@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildActionReadinessChecks, buildReserveRecoveryForecast } from "@/lib/status/admin-ops-insights";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 

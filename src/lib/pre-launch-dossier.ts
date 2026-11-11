@@ -1,5 +1,6 @@
 import { formatUtcDayLabel } from "@shared/lib/format";
-import type { DateHistoryEntry, LaunchMilestone, StablecoinMeta } from "@shared/types";
+import type { DateHistoryEntry, LaunchMilestone } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   dateScore,

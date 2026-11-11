@@ -2,7 +2,7 @@ import {
   BLACKLIST_STABLECOINS,
   type BlacklistStablecoin,
   type BlacklistEventType,
-} from "@shared/types/market";
+} from "@shared/types/blacklist";
 import { requireChainConfig, type ChainConfig } from "./chain-config";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";

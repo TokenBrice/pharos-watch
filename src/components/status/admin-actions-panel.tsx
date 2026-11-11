@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getStatusPageActions, type StatusPageAction, type StatusPageActionRisk } from "@shared/lib/api-endpoints";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { useAdminActionExecutions } from "@/components/status/admin-action-execution-provider";

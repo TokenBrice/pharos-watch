@@ -38,7 +38,8 @@ import { YIELD_TYPE_LABELS, YIELD_ZONE_LABELS, YIELD_ZONE_OUTLIER_DOT_CLASS, YIE
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
-import type { YieldType, YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldType } from "@shared/types/yield-vocabulary";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 import { formatYieldApyDelta } from "@/lib/yield-presentation";
 import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";

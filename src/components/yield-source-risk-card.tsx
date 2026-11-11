@@ -21,7 +21,8 @@ import {
 } from "@/lib/yield-source-risk";
 import { formatCurrency } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
-import type { YieldRanking, YieldSourceRole, YieldType } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
+import type { YieldSourceRole, YieldType } from "@shared/types/yield-vocabulary";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 
 type YieldSourceRisk = YieldRanking["sourceRisk"];

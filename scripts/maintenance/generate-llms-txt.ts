@@ -11,7 +11,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import {
   DigestStoredSnapshotSchema,
   type DigestContentEntry,
@@ -21,7 +21,7 @@ import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { DEFINITIONS_PATH, getListedDefinitions } from "../../src/lib/definitions";
 import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
 import { formatSnapshotSafetyScoreLabel } from "../../src/lib/safety-grade-snapshot";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

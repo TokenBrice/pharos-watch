@@ -13,7 +13,7 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { deriveDataHealth } from "@/lib/data-health";
 import { type ApiMeta } from "@/lib/api";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { type NonUsdSharePoint, type StablecoinChartPoint } from "@shared/types/market";
+import { type NonUsdSharePoint, type StablecoinChartPoint } from "@shared/types/supply";
 
 vi.mock("@shared/lib/site-data-lane", () => ({
   isSiteDataAllowedUiHostname: () => false,

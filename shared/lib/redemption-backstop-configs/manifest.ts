@@ -1,4 +1,4 @@
-import type { RedemptionRouteFamily } from "../../types";
+import type { RedemptionRouteFamily } from "../../types/redemption";
 import type { RedemptionBackstopConfig } from "./shared";
 import { COLLATERAL_REDEEM_BACKSTOP_ENTRIES } from "./collateral-redeem";
 import { defineBackstopRegistry, type RedemptionBackstopRegistryEntry } from "./factory";

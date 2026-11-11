@@ -1,4 +1,5 @@
-import type { BackingType, GovernanceType, Infrastructure, StablecoinStatus } from "../../types";
+import type { BackingType } from "../../types/core";
+import type { GovernanceType, Infrastructure, StablecoinStatus } from "../../types/stablecoin-taxonomy";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
 /** Full labels used in metadata, descriptions, and structured data. */

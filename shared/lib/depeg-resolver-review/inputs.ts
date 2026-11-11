@@ -1,4 +1,4 @@
-import type { DepegDirection } from "../../types/market";
+import type { DepegDirection } from "../../types/peg";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "../../types/depeg-resolver";
 import type {
   DdrrActualEvent,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { MAX_MINT_AUTHORITY_DETAIL_CONTROLS } from "../stablecoin-detail-mint-authority-client";
 import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 

@@ -4,7 +4,7 @@ import {
   SOURCE_SWITCH_DELTA_THRESHOLD_PP,
   classifyApyChange,
 } from "@/lib/yield-change-attribution";
-import type { YieldHistoryPoint } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 
 const NOW_MS = Date.parse("2026-05-19T12:00:00Z");
 const DAY_MS = 24 * 60 * 60 * 1000;

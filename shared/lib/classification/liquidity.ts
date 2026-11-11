@@ -1,4 +1,4 @@
-import type { DexLiquidityData } from "../../types/market";
+import type { DexLiquidityData } from "../../types/dex-liquidity";
 import { LIQUIDITY_SCORE_WEIGHTS } from "../liquidity-score-weights";
 import { QUALITY_TIER_3_CLASSES } from "./peg-severity";
 

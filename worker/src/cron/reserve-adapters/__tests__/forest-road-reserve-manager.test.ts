@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { fetchForestRoadReserveManagerReserves } from "../forest-road-reserve-manager";

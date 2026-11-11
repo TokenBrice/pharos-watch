@@ -40,7 +40,7 @@ export type ExitRouteConfidence = z.infer<typeof ExitRouteConfidenceSchema>;
 export const ExitRouteCapacityEvidenceTierSchema = z.enum(["live-direct", "live-queue-proxy", "documented", "heuristic", "unknown"]);
 export type ExitRouteCapacityEvidenceTier = z.infer<typeof ExitRouteCapacityEvidenceTierSchema>;
 
-export const ExitRouteScopeSchema = z.discriminatedUnion("kind", [
+const ExitRouteScopeSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("chain-contract"),
     chain: z.string().min(1),
@@ -62,9 +62,8 @@ export const ExitRouteScopeSchema = z.discriminatedUnion("kind", [
     chain: z.string().min(1).optional(),
   }),
 ]);
-export type ExitRouteScope = z.infer<typeof ExitRouteScopeSchema>;
 
-export const ExitRouteOutputKindSchema = z.enum([
+const ExitRouteOutputKindSchema = z.enum([
   "tracked-stablecoin",
   "fiat",
   "collateral",
@@ -73,7 +72,6 @@ export const ExitRouteOutputKindSchema = z.enum([
   "unresolved-basket",
   "unknown",
 ]);
-export type ExitRouteOutputKind = z.infer<typeof ExitRouteOutputKindSchema>;
 
 export const PhysicalCommoditySchema = z.enum(["XAU", "XAG"]);
 const PHYSICAL_COMMODITY_ASSET_KEYS: Record<string, true> = Object.fromEntries(
@@ -178,7 +176,7 @@ export const ExitRouteObservationHistorySchema = z
   });
 export type ExitRouteObservationHistory = z.infer<typeof ExitRouteObservationHistorySchema>;
 
-export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
+const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
 /**
  * Bounded public route payload per surface.
  *
@@ -224,14 +222,14 @@ export const PhysicalToUsdTraceSchema = z.object({
 export type PhysicalToUsdTrace = z.infer<typeof PhysicalToUsdTraceSchema>;
 
 const ExitRawUnitsSchema = z.string().regex(/^(0|[1-9][0-9]*)$/);
-export const ExitExecutionIdentitySchema = z.object({
+const ExitExecutionIdentitySchema = z.object({
   assetId: z.string().min(1),
   deployment: z.string().min(1),
   endpoint: z.string().min(1),
   outputAssetKeys: z.array(z.string().min(1)).min(1).max(16),
   implementationIdentity: z.string().min(1),
 }).strict();
-export const ExitExecutionGateSchema = z.object({
+const ExitExecutionGateSchema = z.object({
   gateId: z.string().min(1),
   verdict: z.enum(["passed", "closed", "unsupported", "unavailable"]),
   evidenceId: z.string().min(1),
@@ -242,7 +240,7 @@ export const ExitExecutionGateSchema = z.object({
     ctx.addIssue({ code: "custom", path: ["reason"], message: "Non-success gate requires a machine reason" });
   }
 });
-export const ExitExecutionOutputLegSchema = z.object({
+const ExitExecutionOutputLegSchema = z.object({
   assetKey: z.string().min(1),
   deployment: z.string().min(1),
   rawUnits: ExitRawUnitsSchema,
@@ -254,7 +252,7 @@ export const ExitExecutionOutputLegSchema = z.object({
   observedAtSec: z.number().int().nonnegative(),
 }).strict();
 /** Diagnostic receipt from the original request; never a capacity estimate. */
-export const ExitExecutionCanonicalAttemptSchema = z.object({
+const ExitExecutionCanonicalAttemptSchema = z.object({
   outcome: z.enum(["completed", "accepted-but-unfunded", "reverted", "inconsistent-receipt"]),
   block: z.object({
     number: z.number().int().nonnegative(),

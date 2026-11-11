@@ -1,4 +1,4 @@
-import type { PegCurrency } from "../../types";
+import type { PegCurrency } from "../../types/core";
 import type { PegMetadata } from "./common";
 
 export const PEG_METADATA = {

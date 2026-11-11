@@ -27,7 +27,7 @@ import { IncidentProjectionUnavailableError } from "../../lib/depeg-event-projec
 import { derivePegAnalyticsSnapshot } from "../../lib/peg-analytics";
 import { publishPegAnalyticsCache } from "../../lib/peg-analytics-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";

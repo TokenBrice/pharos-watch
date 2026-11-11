@@ -1,4 +1,5 @@
-import type { DepegEvent, DepegPendingIncident, StressSignalEntry } from "@shared/types";
+import type { DepegEvent, DepegPendingIncident } from "@shared/types/peg";
+import type { StressSignalEntry } from "@shared/types/stress";
 
 export function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
   return {

@@ -1,6 +1,6 @@
 import { customObservation, executeEvmObservationPlan, pinnedBlockPlan } from "./evm-observation-plan";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { decodeAbiParameters } from "viem/utils";

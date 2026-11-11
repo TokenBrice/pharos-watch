@@ -3,7 +3,7 @@
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart as RechartsRadarChart } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import type { SafetyScorePublicationIdentity } from "@shared/types";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { median } from "@shared/lib/stats";
 import { ECONOMIC_CONTROL_SHORT_LABEL } from "@shared/lib/classification";

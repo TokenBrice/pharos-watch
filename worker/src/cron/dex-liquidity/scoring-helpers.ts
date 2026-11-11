@@ -8,7 +8,7 @@ import type {
   LiquiditySourceMixByFamily,
   PoolEntry,
 } from "./types";
-import type { DexVolumeAvailabilityRecord } from "@shared/types/market";
+import type { DexVolumeAvailabilityRecord } from "@shared/types/dex-liquidity";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
 import { clamp } from "@shared/lib/math";

@@ -1,5 +1,7 @@
-import type { MechanismArchetype, RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import {
   BACKING_BADGE_STYLES,

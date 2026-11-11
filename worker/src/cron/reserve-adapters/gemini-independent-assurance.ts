@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getIndependentAssuranceManifest, type IndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";

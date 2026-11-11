@@ -15,7 +15,8 @@ import {
   type YieldSourceFreshnessDisplay,
 } from "@/lib/yield-source-presentation";
 import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
-import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking, YieldSourceRole, YieldType } from "@shared/types";
+import type { AltYieldSource, YieldRanking } from "@shared/types/yield";
+import type { YieldDecisionRejectionReasonCode, YieldSourceRole, YieldType } from "@shared/types/yield-vocabulary";
 
 export interface YieldRejectionHint {
   code: YieldDecisionRejectionReasonCode;

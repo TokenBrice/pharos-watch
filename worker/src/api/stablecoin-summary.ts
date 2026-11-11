@@ -1,4 +1,4 @@
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";

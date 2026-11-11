@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildLiquidityExitRouteModel } from "@/components/exit-route-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import { DEX_GLOBAL_KEY } from "@shared/types/market";
+import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 
 describe("buildLiquidityExitRouteModel", () => {
   it.each([NaN, Infinity, -Infinity, -0.01, 1.01])("leaves invalid HHI %s unscored in the model interpretation", (concentrationHhi) => {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
-import { DetailProviderSchema } from "./core";
+import { DetailProviderSchema } from "./price";
 import { FullAuthoredReserveCompositionSchema } from "./reserves";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { baseLiveReserveConfigSchema, LiveReserveInputSchemaByKind } from "./live-reserve-core";
@@ -145,3 +145,9 @@ export const StablecoinMetaStructuralSchema = /* @__PURE__ */ (() => z.object({
 export type StablecoinMeta = z.output<typeof StablecoinMetaStructuralSchema>;
 export type StablecoinObituary = z.output<typeof StablecoinObituarySchema>;
 export type StablecoinListingStatusReview = z.output<typeof StablecoinListingStatusReviewSchema>;
+
+/** Lossless registry slice consumed by live-reserve adapters. */
+export type ReserveAdapterCoin = Pick<
+  StablecoinMeta,
+  "id" | "name" | "symbol" | "flags" | "contracts" | "reserves" | "reserveReview" | "liveReservesConfig"
+>;

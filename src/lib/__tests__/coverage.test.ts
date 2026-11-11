@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import { GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS } from "@shared/lib/genius";
 import { MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";

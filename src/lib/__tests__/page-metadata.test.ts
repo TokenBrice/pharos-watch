@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import {
   buildPageMetadata,

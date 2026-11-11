@@ -6,7 +6,7 @@ import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/p
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import type { StablecoinListResponse } from "@shared/types";
+import type { StablecoinListResponse } from "@shared/types/supply";
 import type {
   CommandPalettePegStatus,
   CommandPaletteStablecoinHealth,

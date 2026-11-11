@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 export function isActiveStablecoinMeta(meta: Pick<StablecoinMeta, "status">): boolean {
   return meta.status == null || meta.status === "active";

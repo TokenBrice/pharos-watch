@@ -1,5 +1,5 @@
 import { TelegramSendOriginatedError } from "../../../telegram/delivery/transport-errors";
-import type { TelegramDispatchCronResult } from "@shared/types";
+import type { TelegramDispatchCronResult } from "@shared/types/status/telegram";
 import type { PendingCapacitySnapshot, PendingDrainResult } from "../delivery/types";
 import {
   emptyPendingCapacitySnapshot,

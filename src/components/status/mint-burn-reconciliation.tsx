@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { MintBurnReconciliationSummary, MintBurnSupplyReconciliationLeg, StatusSectionError } from "@shared/types";
+import type { MintBurnReconciliationSummary, MintBurnSupplyReconciliationLeg } from "@shared/types/status/yield-liquidity";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { FLOW_COVERAGE_BADGE_CLASSES, FLOW_COVERAGE_LABELS } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import { CountValue, StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";

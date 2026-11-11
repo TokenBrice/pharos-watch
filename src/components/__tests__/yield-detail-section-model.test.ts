@@ -6,7 +6,8 @@ import {
 } from "@/components/yield-detail-section-model";
 import { deriveYieldRowDisplay } from "@/lib/yield-row-display";
 import { buildYieldPresentationContext } from "@/lib/yield-presentation-context";
-import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { StablecoinStatus } from "@shared/types/stablecoin-taxonomy";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 import { makeYieldViewModelRow, REGISTRY_WITH_EUR } from "./yield-test-support";
 

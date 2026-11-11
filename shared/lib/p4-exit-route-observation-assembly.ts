@@ -1,6 +1,6 @@
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { validateExitRouteCapacityCurve } from "./exit-route-capacity-point";
-import type { ExitRouteObservation, ExitRouteOutput } from "../types/market";
+import type { ExitRouteObservation, ExitRouteOutput } from "../types/exit-route";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,

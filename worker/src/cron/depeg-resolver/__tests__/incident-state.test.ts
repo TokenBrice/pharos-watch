@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import { DDR_LOCK_ON_TIME_GRACE_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import {

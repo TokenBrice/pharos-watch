@@ -24,7 +24,7 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 // BlacklistSection renders after the mocks are defined so the vi.mock hoists apply.
 import { BlacklistHistorySection, BlacklistSection } from "@/components/stablecoin-detail/blacklist-section";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import type { BlacklistEvent } from "@shared/types";
+import type { BlacklistEvent } from "@shared/types/blacklist";
 import type { ApiMeta } from "@/lib/api";
 
 type EventsPageResult = ReturnType<typeof useBlacklistEventsPage>;

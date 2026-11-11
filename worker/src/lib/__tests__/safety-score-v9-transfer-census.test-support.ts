@@ -1,5 +1,5 @@
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 

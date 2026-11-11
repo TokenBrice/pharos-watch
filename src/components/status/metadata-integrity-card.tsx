@@ -1,5 +1,6 @@
 import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
-import type { ReserveDriftEntry, StatusSectionError } from "@shared/types";
+import type { ReserveDriftEntry } from "@shared/types/status/yield-liquidity";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LazyDetails } from "@/components/status/lazy-details";
 import { getCoinLabel } from "@/components/status/page-primitives";

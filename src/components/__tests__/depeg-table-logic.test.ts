@@ -4,7 +4,8 @@ import {
   type DepegTableSortKey,
 } from "@/components/depeg-table-logic";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
-import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StressSignalEntry } from "@shared/types/stress";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDews } from "./depeg.test-support";

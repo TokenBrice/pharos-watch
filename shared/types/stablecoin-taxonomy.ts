@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
 export type GovernanceType = (typeof GOVERNANCE_TYPE_VALUES)[number];
 
@@ -24,7 +26,6 @@ export const STABLECOIN_PRICE_BASIS_VALUES = [
   "oracle-corroborated",
   "contractual-par",
 ] as const;
-export type StablecoinPriceBasis = (typeof STABLECOIN_PRICE_BASIS_VALUES)[number];
 
 export const STABLECOIN_EXIT_MECHANISM_VALUES = [
   "secondary-market",
@@ -32,7 +33,6 @@ export const STABLECOIN_EXIT_MECHANISM_VALUES = [
   "maturity-only",
   "discretionary",
 ] as const;
-export type StablecoinExitMechanism = (typeof STABLECOIN_EXIT_MECHANISM_VALUES)[number];
 
 export type ListingClass =
   | "core-stablecoin"
@@ -40,3 +40,30 @@ export type ListingClass =
   | "stablecoin-variant"
   | "stable-value-investment"
   | "excluded";
+
+export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
+
+const GOVERNANCE_QUALITY_VALUES = [
+  "immutable-code",
+  "dao-governance",
+  "multisig",
+  "regulated-entity",
+  "single-entity",
+  "wrapper",
+] as const;
+export type GovernanceQuality = (typeof GOVERNANCE_QUALITY_VALUES)[number];
+
+export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
+export type Infrastructure = (typeof INFRASTRUCTURE_VALUES)[number];
+
+export const VARIANT_KIND_VALUES = [
+  "pure-wrapper",
+  "savings-passthrough",
+  "strategy-vault",
+  "risk-absorption",
+  "bond-maturity",
+] as const;
+export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
+
+export const WRAPPER_OPERATOR_VALUES = ["parent-protocol", "third-party"] as const;
+export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);

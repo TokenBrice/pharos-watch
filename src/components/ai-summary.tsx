@@ -4,7 +4,7 @@ import { AiSummaryProse } from "@/components/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
-import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types";
+import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types/editorial";
 import {
   hasAvailableAiSummaryClaims,
   resolveAiSummaryClaims,

@@ -23,7 +23,7 @@ import {
   formatUtcDayLabel,
 } from "@shared/lib/format";
 import { median } from "@shared/lib/stats";
-import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES, type MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import {
   CEMETERY_PEAK_BUCKET_KEYS,
   peakBucketOf,

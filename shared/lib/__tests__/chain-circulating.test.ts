@@ -4,7 +4,7 @@ import {
   chainCirculatingForDisplay,
   type RawChainCirculating,
 } from "../chains/circulating";
-import type { SupplyChainGuardProvenance } from "../../types/market";
+import type { SupplyChainGuardProvenance } from "../../types/supply";
 
 describe("chain-circulating", () => {
   it("preserves unknown history when aliases mix observed and unobserved supply", () => {

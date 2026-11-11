@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { crawlCurvePoolsStage } from "../crawl-curve-pools";
 import { createCrawlStageContext } from "../staged-pool";

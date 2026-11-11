@@ -1,6 +1,6 @@
 import { isCanonicalStablecoinId } from "./stablecoin-id";
 import { hasStaticYieldWorkbench } from "./yield-auto-lending";
-import type { StablecoinStatus } from "../types";
+import type { StablecoinStatus } from "../types/stablecoin-taxonomy";
 
 export const YIELD_WORKBENCH_FALLBACK_PARAM = "workbenchFallback";
 export const MAX_YIELD_WORKBENCH_FALLBACK_ID_LENGTH = 64;

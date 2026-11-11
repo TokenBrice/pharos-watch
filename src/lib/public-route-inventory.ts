@@ -3,7 +3,7 @@ import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-ver
 import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
 import { getIndexableChainIds } from "@/lib/chain-indexing";

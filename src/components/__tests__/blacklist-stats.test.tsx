@@ -2,8 +2,8 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { BlacklistStats } from "@/components/blacklist-stats";
 import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { BlacklistDetailStats } from "@/components/stablecoin-detail/blacklist-detail-stats";

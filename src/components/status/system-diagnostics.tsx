@@ -1,5 +1,6 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { StatusDiscrepancyReason, StatusResponse, StatusSectionError } from "@shared/types";
+import type { StatusDiscrepancyReason } from "@shared/types/status/core";
+import type { StatusResponse, StatusSectionError } from "@shared/types/status/response";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { describeSelfCheck } from "@/lib/status/triage-inbox";
 

@@ -10,7 +10,7 @@ import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-s
 import { chainRpcs, installSupplyObservationClock } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const rpcMocks = vi.hoisted(() => ({

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LiquidityCoverageClassSchema } from "../market";
+import { LiquidityCoverageClassSchema } from "../dex-liquidity";
 import { MintBurnCoverageStatusSchema } from "../mint-burn";
 import { StatusHealthValueSchema } from "./core";
 import type { StatusHealthOrUnknown } from "./core";

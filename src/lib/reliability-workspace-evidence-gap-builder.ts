@@ -1,4 +1,4 @@
-import type { StatusResponse, StatusSectionKey } from "@shared/types";
+import type { StatusResponse, StatusSectionKey } from "@shared/types/status/response";
 import type {
   ReliabilityEvidenceGap,
   ReliabilityMode,

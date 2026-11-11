@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { ReserveDriftEntry } from "@shared/types";
+import type { ReserveDriftEntry } from "@shared/types/status/yield-liquidity";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { CircuitBreakerTable } from "../circuit-breaker-table";

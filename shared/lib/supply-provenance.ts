@@ -4,7 +4,7 @@ import {
   SupplyObservationProvenanceSchema,
   type SupplyChainGuardProvenance,
   type SupplyObservationProvenance,
-} from "../types/market";
+} from "../types/supply";
 
 /**
  * One coverage authority for recorded supply observations (K-031). `complete`: provenance was recorded and

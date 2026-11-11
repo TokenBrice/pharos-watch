@@ -3,7 +3,7 @@ import type { ApiMetaEnvelope } from "@pharos/contracts/api-meta";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema } from "@shared/types/supply";
 import { buildFreshnessMeta } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { handleStablecoinDetail } from "./stablecoin-detail";

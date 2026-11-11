@@ -18,7 +18,7 @@ import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import {
   getDexLiquidityTrendTolerances,
   selectLiquidityObservation,

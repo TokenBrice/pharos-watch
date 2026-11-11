@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DETAIL_PROVIDER_VALUES } from "../../types/core";
+import { DETAIL_PROVIDER_VALUES } from "../../types/price";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";

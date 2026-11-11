@@ -2,7 +2,8 @@ import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-card-policy";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves/store";
 
 const MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES = 2;

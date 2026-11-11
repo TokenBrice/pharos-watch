@@ -1,4 +1,4 @@
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
 
 export function buildPegSummaryCoinMap(
   coins: readonly PegSummaryCoin[] | null | undefined,

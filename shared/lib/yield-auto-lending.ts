@@ -34,4 +34,4 @@ export function hasStaticYieldWorkbench(coin: StaticYieldWorkbenchCoin): boolean
   );
 }
 import { isActiveStablecoinMeta } from "./stablecoins/status";
-import type { StablecoinStatus } from "../types";
+import type { StablecoinStatus } from "../types/stablecoin-taxonomy";

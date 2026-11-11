@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 
 /** Off-catalog historical assets preserving authoritative PSI/monitoring continuity.
  * May appear in public alerts, but not tracked listings or DDR first-seen eligibility. */

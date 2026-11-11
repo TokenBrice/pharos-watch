@@ -1,5 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { encodeUint256 } from "../../lib/evm-selectors";
 import {

@@ -2,7 +2,7 @@ import { DEPEG_PENDING_MIN_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { assertAllFetchRoutesUsed, mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { assertAllD1MatchesUsed, mockD1Strict, type MockD1Database } from "@shared/test-utils/mock-d1";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";

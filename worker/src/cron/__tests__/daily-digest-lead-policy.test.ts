@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { DigestEditorialCandidate, DigestInputData } from "@shared/types/digest";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   makeDigestSnapshotFixture,

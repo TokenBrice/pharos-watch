@@ -1,4 +1,5 @@
-import type { PegAssetBase, StablecoinMeta } from "../types";
+import type { PegAssetBase } from "../types/price";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
 import { PEG_TAXONOMY } from "./peg-taxonomy";

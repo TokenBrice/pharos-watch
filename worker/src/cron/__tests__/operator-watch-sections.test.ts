@@ -5,7 +5,7 @@ import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { BluechipRating } from "@shared/types/market";
+import type { BluechipRating } from "@shared/types/bluechip";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";

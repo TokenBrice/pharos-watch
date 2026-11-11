@@ -5,7 +5,7 @@ import {
   DepegDirectionSchema,
   DepegEventStoredSnapshotSchema,
   type DepegEventEntry,
-} from "@shared/types/market";
+} from "@shared/types/peg";
 
 export const DEPEG_EVENT_DATA_DIR = join(process.cwd(), "data/depeg-events");
 const DEPEG_EVENT_INDEX_PATH = join(DEPEG_EVENT_DATA_DIR, "index.json");

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AboutPageContent } from "@/components/about/about-page-content";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import { PRE_LAUNCH_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 vi.mock("next/link", async () => {

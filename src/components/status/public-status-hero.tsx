@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicStatusHeadline } from "@shared/types";
+import type { PublicStatusHeadline } from "@shared/types/status/public-health";
 import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { Button } from "@/components/ui/button";
 import { Timestamp } from "@/components/status/page-primitives";

@@ -2,8 +2,10 @@ import type {
   PublicComponentState,
   PublicHeadlineState,
   PublicStatusComponentId,
+} from "../../types/status/public-health";
+import type {
   StatusResponse,
-} from "../../types";
+} from "../../types/status/response";
 
 /** Dashboard badges and runway bars are intentional projections of one status vocabulary. */
 export const STATUS_TONE = {

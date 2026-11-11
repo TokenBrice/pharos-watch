@@ -9,7 +9,7 @@ import {
   type DexDeploymentOutcome,
 } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
 import { tryParseJson } from "../../lib/json-parse";
 import {

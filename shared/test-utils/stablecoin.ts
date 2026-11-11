@@ -1,4 +1,5 @@
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 export const TEST_STABLECOIN_TIMESTAMP_SEC = 1_700_000_000;
 

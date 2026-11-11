@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { safeJsonLd } from "@/lib/json-ld";
 import {

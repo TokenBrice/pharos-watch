@@ -27,7 +27,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { COLLATERAL_COVERAGE_LABELS, COLLATERAL_COVERAGE_PILL_CLASSES } from "@shared/lib/classification";
 import { timeAgo } from "@shared/lib/format";
-import type { LiveReserveSnapshotMetadata } from "@shared/types";
+import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 
 /** The in-flow copy owns this id; the `xl+` rail copy stands in for it. */
 export const BACKING_METRICS_ANCHOR_ID = "collateralization";

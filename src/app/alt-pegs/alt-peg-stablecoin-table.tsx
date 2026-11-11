@@ -8,10 +8,16 @@ import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
 import type { AltPegDistributionRow } from "@/lib/alt-peg-market";
 import type {
   DexLiquidityTableMap,
+} from "@shared/types/dex-liquidity";
+import type {
   PegCurrency,
+} from "@shared/types/core";
+import type {
   PegSummaryCoin,
+} from "@shared/types/peg";
+import type {
   StablecoinData,
-} from "@shared/types";
+} from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
 

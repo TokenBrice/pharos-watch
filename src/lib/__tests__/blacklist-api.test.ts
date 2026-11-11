@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBlacklistEventsPath } from "../blacklist-api";
-import { BLACKLIST_STABLECOINS, BlacklistSummaryResponseSchema } from "@shared/types/market";
-import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
+import { BLACKLIST_STABLECOINS, BlacklistSummaryResponseSchema } from "@shared/types/blacklist";
+import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types/blacklist";
 
 type QuarterlyEventPoint =
   BlacklistSummaryResponse["stats"]["perCoinQuarterlyEventTypes"][BlacklistStablecoin][number];

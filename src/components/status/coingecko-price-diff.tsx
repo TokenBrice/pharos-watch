@@ -2,7 +2,8 @@
 
 import { PRICE_DIVERGENCE_ELEVATED_PILL_CLASS } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { CoinGeckoPriceDiff, StatusSectionError } from "@shared/types";
+import type { CoinGeckoPriceDiff } from "@shared/types/status/yield-liquidity";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";

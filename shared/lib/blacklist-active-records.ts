@@ -3,7 +3,7 @@ import {
   buildBlacklistAddressCountKey,
   buildBlacklistContractBalanceKey,
 } from "./blacklist";
-import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
+import type { BlacklistEvent, BlacklistStablecoin } from "../types/blacklist";
 
 export interface BlacklistCurrentBalanceSnapshot {
   id?: string;

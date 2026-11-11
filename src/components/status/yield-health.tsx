@@ -3,12 +3,14 @@
 import { formatCompactUsd, formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
 import type {
   StatusSectionError,
+} from "@shared/types/status/response";
+import type {
   YieldCoverageAuditQueueItem,
   YieldHealthFieldStatus,
   YieldHealthSummary,
   YieldSourceRiskCoverageField,
   YieldSourceRiskFieldCoverage,
-} from "@shared/types";
+} from "@shared/types/status/yield-liquidity";
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";

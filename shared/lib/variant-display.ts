@@ -1,4 +1,4 @@
-import type { VariantKind } from "../types";
+import type { VariantKind } from "../types/stablecoin-taxonomy";
 
 const VARIANT_DISPLAY: Record<
   VariantKind,

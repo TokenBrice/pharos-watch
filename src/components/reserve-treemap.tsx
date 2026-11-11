@@ -6,7 +6,7 @@ import { useNearViewport } from "@/hooks/use-near-viewport";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
 import { RESERVE_TREEMAP_LABEL_COLOR } from "@/lib/chart-colors";
-import type { ReserveRisk } from "@shared/types";
+import type { ReserveRisk } from "@shared/types/reserves";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import {
   ReserveRiskSwatch,

@@ -6,8 +6,8 @@ import {
   normalizeChain,
   protocolLogo,
 } from "@/lib/dex-display-constants";
-import type { DexLiquidityData } from "@shared/types";
-import { DEX_GLOBAL_KEY } from "@shared/types/market";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
+import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import { getHhiBand } from "@shared/lib/classification";
 

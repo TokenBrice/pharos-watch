@@ -10,7 +10,8 @@ import {
 } from "@/components/empty-state-illustration";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { FilterTag, StablecoinData } from "@shared/types";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinData } from "@shared/types/supply";
 
 interface StablecoinTableEmptyStateProps {
   searchQuery?: string;

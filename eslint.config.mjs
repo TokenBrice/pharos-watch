@@ -231,7 +231,7 @@ const pharosBoundaryPlugin = {
         type: "problem",
         schema: [],
         messages: {
-          broad: "Import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
+          broad: "Import from @shared/types/<module>; the @shared/types barrel was removed and must not come back.",
           dependency: "shared/types and shared/contracts modules must not import shared/lib modules.",
         },
       },
@@ -244,11 +244,7 @@ const pharosBoundaryPlugin = {
         function check(node) {
           const specifier = staticImportSpecifier(node);
           if (!specifier) return;
-          if (node.type === "ImportDeclaration" && specifier === "@shared/types"
-            && node.importKind !== "type"
-            && node.specifiers.some((item) => item.type === "ImportSpecifier" && item.importKind !== "type")) {
-            context.report({ node, messageId: "broad" });
-          }
+          if (specifier === "@shared/types") context.report({ node, messageId: "broad" });
           if (inSharedTypes && (
             specifier === "@shared/lib" || specifier.startsWith("@shared/lib/")
             || (specifier.startsWith(".") && isWithinPath(resolve(process.cwd(), "shared/lib"), resolve(dirname(filename), specifier)))

@@ -1,4 +1,4 @@
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
 
 /** Canonical Worker peg-summary coin for view-model and table tests (AP-1 contract). */
 export function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {

@@ -1,4 +1,4 @@
-import type { V9ReasonCode } from "@shared/types";
+import type { V9ReasonCode } from "@shared/types/safety-score-v9";
 
 /**
  * Plain-English labels for the public V9 reason codes. The enum values are

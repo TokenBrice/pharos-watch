@@ -9,7 +9,7 @@ import {
   CONTROL_COMPONENT_ROLE_LABELS,
   getBridgeTierLabel,
 } from "@shared/lib/classification";
-import type { BridgeRouteRiskTier } from "@shared/types";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import {
   BridgingDeploymentsModule,

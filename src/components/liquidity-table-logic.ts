@@ -1,8 +1,8 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
-import type { DexLiquidityData } from "@shared/types";
-import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/dex-liquidity";
 import { DEX_VOLUME_BOUND_MIN_USD, dexVolumeToTvlRatio } from "@shared/lib/dex-volume-availability";
 
 export type LiquiditySortKey =

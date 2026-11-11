@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { content as fiatCash } from "./fiat-cash";
 import { content as tbill } from "./tbill";
 import { content as cdp } from "./cdp";

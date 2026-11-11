@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, type MockRoute } from "@shared/test-utils/mock-fetch";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type * as FetchRetry from "../../lib/fetch-retry";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
@@ -20,7 +20,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
-import { StablecoinDataSchema } from "@shared/types/market";
+import { StablecoinDataSchema } from "@shared/types/supply";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
 import type { CronProgressReporter, CronProgressUpdate } from "../../lib/cron-logger";

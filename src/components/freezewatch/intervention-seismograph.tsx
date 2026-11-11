@@ -6,7 +6,7 @@ import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 
 interface InterventionSeismographProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;

@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 vi.mock("next/image", () => ({
   default: ({ alt = "", ...props }: { alt?: string; [key: string]: unknown }) => (

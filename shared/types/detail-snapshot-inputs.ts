@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { StablecoinLiveSummarySchema } from "./stablecoin-live-summary";
-import { SupplyHistoryResponseSchema } from "./market";
+import { SupplyHistoryResponseSchema } from "./supply";
 // Wire-contract batch bound; producers and consumers import this same authority.
 export const DETAIL_SNAPSHOT_INPUT_BATCH_SIZE = 10;
 

@@ -2,7 +2,8 @@
 
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { LiquidityHealth, StatusSectionError } from "@shared/types";
+import type { LiquidityHealth } from "@shared/types/status/yield-liquidity";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { formatCurrency } from "@shared/lib/format";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
 

@@ -23,7 +23,7 @@ import {
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
 import { cn } from "@/lib/utils";
-import type { OracleRiskRole, OracleRiskTier } from "@shared/types";
+import type { OracleRiskRole, OracleRiskTier } from "@shared/types/oracle-risk";
 
 /** Branch rows beyond this count move into the disclosure, sorted forward. */
 const INLINE_BRANCH_LIMIT = 5;

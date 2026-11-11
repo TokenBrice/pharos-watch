@@ -1,7 +1,8 @@
 import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@shared/lib/yield-opportunity-risk";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, normalizeChainId } from "@shared/types/chain-identity";
-import type { StablecoinMeta, YieldType } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { logWorkerEventArgs, logWorkerEvent } from "../../lib/structured-log";

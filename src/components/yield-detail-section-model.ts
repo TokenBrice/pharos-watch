@@ -21,7 +21,8 @@ import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-so
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES, getPysColor } from "@shared/lib/classification";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { StablecoinStatus } from "@shared/types/stablecoin-taxonomy";
+import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 /** Parent-owned clock for one coin's selected and alternate sources. */

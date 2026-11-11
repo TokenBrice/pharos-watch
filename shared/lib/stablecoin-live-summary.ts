@@ -1,4 +1,4 @@
-import type { StablecoinDetailResponse } from "../types/market";
+import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
 import { admitSupplyBuckets, sumPegBucketsOrNull } from "./supply";

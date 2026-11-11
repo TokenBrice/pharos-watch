@@ -4,7 +4,7 @@ import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
   mergeSourceRiskGoldenFixtures,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
-import type { AltYieldSource, YieldRanking } from "@shared/types";
+import type { AltYieldSource, YieldRanking } from "@shared/types/yield";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 
 function ranking(overrides: Partial<YieldRanking> = {}): YieldRanking {

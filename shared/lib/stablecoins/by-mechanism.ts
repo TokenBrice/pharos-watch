@@ -1,5 +1,6 @@
-import type { MechanismArchetype, StablecoinMeta, StablecoinStatus } from "../../types";
-import { MECHANISM_ARCHETYPE_VALUES } from "../../types/core";
+import type { MechanismArchetype, StablecoinStatus } from "../../types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
+import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { resolveMechanismArchetype } from "../classification/resolve-mechanism-archetype";
 import { isIncludedInArchetype } from "./mechanism-membership";
 import {

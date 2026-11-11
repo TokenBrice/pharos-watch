@@ -2,7 +2,7 @@ import { stableJsonStringifyBatchChunksV1, stableJsonStringifyChunksV1 } from ".
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { compareText } from "./primitives";
 import type { V9PublishedEvidenceAttribution } from "./evidence";
-import type { StablecoinLink } from "../../types/core";
+import type { StablecoinLink } from "../../types/stablecoin-meta-primitives";
 import type { ResearchEvidence, ComponentEvidence } from "../../types/safety-score-v9-research-evidence";
 
 /** Compiler joins only; historical component-evidence intake retains its open string vocabulary. */

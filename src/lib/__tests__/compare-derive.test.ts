@@ -13,8 +13,9 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 import { makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
-import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData, SupplyHistoryPoint } from "@shared/types";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { MintBurnCoinFlow, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
+import type { StablecoinData, SupplyHistoryPoint } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 

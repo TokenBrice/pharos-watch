@@ -4,7 +4,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import { PreLaunchReadiness, usePreLaunchNowMs } from "@/components/pre-launch-readiness";
 import { PreLaunchLaunchPath } from "@/components/pre-launch-launch-path";

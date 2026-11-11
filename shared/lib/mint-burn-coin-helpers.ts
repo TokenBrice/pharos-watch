@@ -1,4 +1,4 @@
-import type { MintBurnCoinFlow, MintBurnValuationCompleteness } from "../types";
+import type { MintBurnCoinFlow, MintBurnValuationCompleteness } from "../types/mint-burn";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,

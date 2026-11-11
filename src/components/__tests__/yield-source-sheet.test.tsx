@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
 import { renderYieldSourceSheet } from "./yield-source-sheet-test-support";
 import { REGISTRY_WITH_EUR } from "./yield-test-support";
 

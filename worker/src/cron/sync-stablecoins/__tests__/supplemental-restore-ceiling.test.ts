@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {

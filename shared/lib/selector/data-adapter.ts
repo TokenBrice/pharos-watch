@@ -11,19 +11,35 @@ import { isObservedPrice } from "../pricing-source-policy";
 import { isBluechipRatingCurrent } from "../bluechip-freshness";
 import type {
   AltYieldSource,
-  BluechipRatingsMap,
-  DexLiquidityMap,
-  PegSummaryResponse,
-  ReportCardsV9CurrentResponse,
-  StablecoinListResponse,
-  StressSignalsAllResponse,
-  YieldDeploymentPlace,
   YieldRanking,
   YieldRankingsResponse,
-  YieldSourceRisk,
+} from "../../types/yield";
+import type {
+  BluechipRatingsMap,
+} from "../../types/bluechip";
+import type {
+  DexLiquidityMap,
+} from "../../types/dex-liquidity";
+import type {
+  PegSummaryResponse,
+} from "../../types/peg";
+import type {
+  ReportCardsV9CurrentResponse,
+} from "../../types/report-cards-v9-current";
+import type {
+  StablecoinListResponse,
+} from "../../types/supply";
+import type {
+  StressSignalsAllResponse,
+} from "../../types/stress";
+import type {
+  YieldDeploymentPlace,
   YieldType,
   YieldVenueRiskTier,
-} from "../../types";
+} from "../../types/yield-vocabulary";
+import type {
+  YieldSourceRisk,
+} from "../../types/yield-evidence-schemas";
 import type { ReportCardsV9TableResponse } from "../../types/report-cards-v9-projections";
 
 export interface BuildSelectorRowsArgs {

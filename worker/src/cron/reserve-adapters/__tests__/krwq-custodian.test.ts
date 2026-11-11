@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptKrwqCustodian,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
-import type { DexExitEvidenceKind } from "@shared/types/market";
+import type { DexExitEvidenceKind } from "@shared/types/exit-route";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { OPERATOR_ALERT_RECEIPT_KEYS } from "../../../lib/status/operator-alert-health";
 import { mockD1 } from "@shared/test-utils/mock-d1";

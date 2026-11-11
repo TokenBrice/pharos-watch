@@ -6,7 +6,7 @@ import type { TapeEvent } from "@shared/types/tape-event";
 import { renderToString } from "react-dom/server";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
 import { ApiFetchError, type ApiMeta } from "@/lib/api";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 type UseEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null };

@@ -16,7 +16,7 @@ import {
   DepegEventsResponseSchema,
   type DepegEvent,
   type DepegEventEntry,
-} from "@shared/types/market";
+} from "@shared/types/peg";
 import { formatIsoDate } from "@shared/lib/format";
 import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";

@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { useStablecoins } from "@/hooks/use-stablecoins";

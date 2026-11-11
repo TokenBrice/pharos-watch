@@ -15,7 +15,7 @@ import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
 import { apiFetchWithMeta } from "@/lib/api";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema } from "@shared/types/supply";
 
 interface CapturedResponse {
   body: unknown;

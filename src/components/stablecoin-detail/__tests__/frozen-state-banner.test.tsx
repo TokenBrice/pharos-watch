@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { StablecoinObituary } from "@shared/types";
+import type { StablecoinObituary } from "@shared/types/stablecoin-meta-schemas";
 import { FrozenDataNote } from "../frozen-data-note";
 
 vi.mock("next/link", async () => {

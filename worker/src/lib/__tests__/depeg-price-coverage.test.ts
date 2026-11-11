@@ -8,9 +8,9 @@ import { computePegScore, computeRecentPegStats } from "@shared/lib/peg-score";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { decideDepegAsset } from "../../cron/depeg-detection/decision-engine";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import type { DepegPriceCoverage } from "@shared/types/peg";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { persistDepegCommands } from "../../cron/depeg-detection/persistence";
 import { rowToDepegEvent, type DepegRow } from "../depeg-helpers";
 

@@ -15,7 +15,7 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth } from "@shared/types/status";
-import { NominalPriceReferenceSchema } from "@shared/types/core";
+import { NominalPriceReferenceSchema } from "@shared/types/price";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";

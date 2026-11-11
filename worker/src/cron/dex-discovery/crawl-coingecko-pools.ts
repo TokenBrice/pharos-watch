@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { getDexDiscoveryProviders, getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";

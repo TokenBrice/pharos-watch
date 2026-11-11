@@ -8,7 +8,7 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
 interface BlacklistStatsProps {

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { buildDashboardCronGroups } from "@/lib/status-dashboard-model";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { CronsSection } from "../sections/crons-section";
 import { createStatusWorkspaceClient } from "../status-workspace-client";
 

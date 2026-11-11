@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DexExitRouteObservationsSchema, MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../../types/market";
+import { DexExitRouteObservationsSchema, MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../../types/exit-route";
 import { FixedDexLiquidityRowSchema } from "../report-cards-fixed-input-identity";
 
 function placeholderObservations(count: number) {

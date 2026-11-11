@@ -2,7 +2,7 @@
 
 import { useRegisteredApiQuery } from "./api-hooks";
 import { buildBlacklistEventsPath, type FetchBlacklistEventsParams } from "@/lib/blacklist-api";
-import type { BlacklistResponse, BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistResponse, BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 
 export function useBlacklistSummary(options?: { enabled?: boolean }) {

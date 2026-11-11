@@ -47,7 +47,7 @@ import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { getVariantDisplay } from "@shared/lib/variant-display";
-import type { BackingType } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
 import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
 import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";

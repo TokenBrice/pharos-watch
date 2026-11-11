@@ -9,7 +9,7 @@
  * independently derived the same balances and debt from separate pinned reads.
  */
 import swanusdSource from "@shared/data/stablecoins/coins/swanusd-swan.json";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { AdapterNetworkSpec, AdapterRpcValue } from "./reserve-adapter.test-support";
 
 export const MONOLITH_LENDER_PIN = {

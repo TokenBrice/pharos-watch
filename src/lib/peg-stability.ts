@@ -1,4 +1,4 @@
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";

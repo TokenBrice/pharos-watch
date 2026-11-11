@@ -1,13 +1,23 @@
 import type {
   AttestorTier,
+} from "../../types/reserve-assurance";
+import type {
   BackingType,
+  PegCurrency,
+} from "../../types/core";
+import type {
   BlacklistEventType,
   BlacklistStablecoin,
+} from "../../types/blacklist";
+import type {
   GovernanceType,
-  PegCurrency,
+} from "../../types/stablecoin-taxonomy";
+import type {
   StablecoinMeta,
+} from "../../types/stablecoin-meta-schemas";
+import type {
   YieldType,
-} from "../../types";
+} from "../../types/yield-vocabulary";
 import type { BadgeStyle, PegChartColor, PegMetadata } from "./common";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 import { mapPegMetadata, PEG_METADATA } from "./pegs";

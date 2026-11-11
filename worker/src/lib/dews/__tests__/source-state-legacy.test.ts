@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { buildDewsScoringResult } from "../scoring";
 import { loadDewsSourceState } from "../source-state";
 import { CONTRACT_CONFIGS } from "../../blacklist-contracts";

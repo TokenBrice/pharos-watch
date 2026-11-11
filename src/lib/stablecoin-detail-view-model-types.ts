@@ -1,4 +1,4 @@
-import type { SupplyHistoryPoint } from "@shared/types";
+import type { SupplyHistoryPoint } from "@shared/types/supply";
 import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { ApiMeta, SavedSafetyAssessment } from "@/lib/api";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
@@ -11,20 +11,36 @@ import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-regist
 import type {
   BlacklistStablecoin,
   BlacklistSummaryResponse,
+} from "@shared/types/blacklist";
+import type {
   DexLiquidityData,
   DexLiquidityMap,
+} from "@shared/types/dex-liquidity";
+import type {
   MintBurnFlowsResponse,
+} from "@shared/types/mint-burn";
+import type {
   PegSummaryCoin,
   PegSummaryResponse,
+} from "@shared/types/peg";
+import type {
   RedemptionBackstopEntry,
   RedemptionBackstopsResponse,
+} from "@shared/types/redemption";
+import type {
   ReportCardsV9CurrentResponse,
+} from "@shared/types/report-cards-v9-current";
+import type {
   StablecoinAiSummary,
+} from "@shared/types/editorial";
+import type {
   StressSignalEntry,
   StressSignalsAllResponse,
+} from "@shared/types/stress";
+import type {
   YieldRanking,
   YieldRankingsResponse,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
 

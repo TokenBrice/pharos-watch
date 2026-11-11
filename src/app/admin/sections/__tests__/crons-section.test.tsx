@@ -5,7 +5,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import type { UseQueryResult } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import type { CronStatus, CronStatusDetail, StatusCronDetailResponse, StatusResponse } from "@shared/types";
+import type { CronStatus, CronStatusDetail, StatusCronDetailResponse } from "@shared/types/status/cron";
+import type { StatusResponse } from "@shared/types/status/response";
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
 import { CronDetailPanel } from "@/app/admin/sections/cron-detail-panel";
 import { buildCronWorkbenchModel } from "@/lib/cron-workbench-model";

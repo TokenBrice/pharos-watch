@@ -7,7 +7,7 @@ import type {
   DigestRiskTapeItem,
   DigestSignalChange,
   DigestStandingCondition,
-} from "@shared/types";
+} from "@shared/types/digest";
 import { DIGEST_FORWARD_LOOK_OUTCOME_STYLES, DIGEST_RISK_TAPE_TONE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 

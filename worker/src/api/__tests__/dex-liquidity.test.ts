@@ -6,7 +6,7 @@ import { handleDexLiquidity } from "../dex-liquidity";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
-import { DexLiquidityMapSchema } from "@shared/types/market";
+import { DexLiquidityMapSchema } from "@shared/types/dex-liquidity";
 
 function makeDexDeploymentOutcomeFallbackTable() {
   return { match: "FROM dex_deployment_outcomes", rows: [] };

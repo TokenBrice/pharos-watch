@@ -5,9 +5,13 @@ import type {
   ReserveRisk,
   ReserveRiskFactor,
   ReserveSlice,
+} from "@shared/types/reserves";
+import type {
   StablecoinLink,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
 import { round1 } from "@shared/lib/math";

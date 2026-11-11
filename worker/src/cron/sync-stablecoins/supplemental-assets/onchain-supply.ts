@@ -6,7 +6,7 @@ import { fetchStellarSupply } from "./stellar-supply";
 import { fetchNobleSupply } from "./noble-supply";
 import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
 import { logWorkerEventArgs } from "../../../lib/structured-log";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { PinnedNativeShareObservationSchema, type PinnedNativeShareObservation } from "@shared/types/reserve-nav-supply";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";

@@ -15,7 +15,7 @@ import {
   PYS_SUSTAINABILITY_FLOOR,
   computePYS,
 } from "@shared/lib/yield-scoring";
-import type { YieldPysNullReason } from "@shared/types";
+import type { YieldPysNullReason } from "@shared/types/yield-vocabulary";
 import { computePysBreakdown } from "@/lib/yield-constants";
 
 function baseProps(overrides: Partial<PysBreakdownProps> = {}): PysBreakdownProps {

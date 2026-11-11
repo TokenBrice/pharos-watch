@@ -1,4 +1,4 @@
-import type { YieldVenueRiskScoresPayload } from "@shared/types";
+import type { YieldVenueRiskScoresPayload } from "@shared/types/yield-evidence-schemas";
 import { cn } from "@/lib/utils";
 import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 

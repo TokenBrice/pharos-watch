@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { MechanismArchetype } from "@shared/types";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { getMechanismArchetypeLabel, getMechanismExplainerPath } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import {

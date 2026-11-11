@@ -56,7 +56,7 @@ import {
   parseYieldWorkbenchFallbackId,
   resolveYieldWorkbenchFallbackNotice,
 } from "@shared/lib/yield-workbench-fallback";
-import type { YieldBenchmarkRegistry } from "@shared/types";
+import type { YieldBenchmarkRegistry } from "@shared/types/yield";
 import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 

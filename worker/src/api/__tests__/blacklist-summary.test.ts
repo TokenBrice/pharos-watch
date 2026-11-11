@@ -5,7 +5,7 @@ import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import type { BlacklistSummaryResponse } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,

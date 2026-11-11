@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
+import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types/supply";
 import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
 import {
   asMetaQueryOptions,
@@ -12,7 +12,7 @@ import {
 import { unwrapApiQueryWithMetaResult } from "./use-api-query";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 
-export type { SupplyHistoryPoint } from "@shared/types";
+export type { SupplyHistoryPoint } from "@shared/types/supply";
 
 export function useStablecoins(overrides?: QueryControlOverrides) {
   return useRegisteredApiQuery<StablecoinListResponse>(

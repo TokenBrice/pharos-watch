@@ -38,7 +38,7 @@ import {
 } from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
+import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types/yield";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
 
 interface YieldSourceSheetProps {

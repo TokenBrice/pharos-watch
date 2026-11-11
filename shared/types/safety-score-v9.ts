@@ -3,7 +3,8 @@ import { z } from "zod";
 import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
-import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES } from "./bridge-risk";
+import { ORACLE_RISK_TIER_VALUES } from "./oracle-risk";
 import { issue, ScoreSchema } from "./safety-schema-primitives";
 import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
 import {

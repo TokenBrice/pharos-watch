@@ -10,7 +10,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";

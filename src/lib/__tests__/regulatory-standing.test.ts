@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
+import type { GeniusProfile, MicaProfile } from "@shared/types/stablecoin-meta-compliance-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES } from "@shared/lib/genius";
 import {

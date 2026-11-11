@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 type ImplementationDateMeta = Pick<StablecoinMeta, "id" | "implementationLaunchDate" | "launchDate" | "variantOf">;
 

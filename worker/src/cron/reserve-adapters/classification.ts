@@ -1,4 +1,4 @@
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 import { assertFiniteNonNegativeReserveRows, computeUnknownExposurePct, slicesFromValues } from "./slice-math";
 
 export function addValueToBucket<Key, Row extends { value: number }>(

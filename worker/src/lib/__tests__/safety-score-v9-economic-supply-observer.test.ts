@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256Hex } from "@shared/lib/sha256";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPendingRead, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";

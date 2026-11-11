@@ -20,12 +20,18 @@ import { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS, TRACKED_STABLECOINS } from "@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type {
   DependencyType,
+} from "@shared/types/dependency-types";
+import type {
   DependencyWeight,
-  ReserveNonLinkDisposition,
   ReserveNonLinkReview,
+} from "@shared/types/stablecoin-meta-primitives";
+import type {
+  ReserveNonLinkDisposition,
   ReserveSlice,
+} from "@shared/types/reserves";
+import type {
   StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/stablecoin-meta-schemas";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,

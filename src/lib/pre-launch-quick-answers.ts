@@ -1,6 +1,6 @@
 import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { FaqItem } from "@/lib/faq";
 import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { pluralize } from "@/lib/pre-launch-dossier";

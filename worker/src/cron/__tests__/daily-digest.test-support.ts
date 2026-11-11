@@ -3,7 +3,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { ActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import type { PreparedTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";

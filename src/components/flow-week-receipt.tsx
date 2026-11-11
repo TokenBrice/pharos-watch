@@ -10,7 +10,7 @@ import { formatCurrency, formatSignedCurrency } from "@shared/lib/format";
 import { getNetColor } from "@shared/lib/classification/flows";
 import { formatMintBurnVolume } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
-import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 
 interface FlowWeekReceiptProps {
   coins: MintBurnCoinFlow[];

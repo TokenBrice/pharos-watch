@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeCentralizedCustodyFraction } from "./classification-invariants.test-support";
-import { INFRASTRUCTURE_VALUES, LAUNCH_PHASE_VALUES, LAUNCH_MILESTONE_TYPE_VALUES } from "@shared/types/core";
+import { INFRASTRUCTURE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import { LAUNCH_PHASE_VALUES, LAUNCH_MILESTONE_TYPE_VALUES } from "@shared/types/stablecoin-lifecycle";
 import { ReserveRiskSchema } from "@shared/types/reserves";
 import { TAPE_EVENT_SEVERITY_VALUES, SEVERITY_RANK } from "@shared/types/tape-event-constants";
 import { INFRASTRUCTURE_LABELS } from "@shared/lib/classification/domain";

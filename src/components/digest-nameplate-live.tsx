@@ -2,7 +2,7 @@
 
 import { DigestNameplate } from "@/components/digest-nameplate";
 import { useDigestLead } from "@/hooks/use-digest-lead";
-import type { DigestContentEntry } from "@shared/types";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 /**
  * Masthead edition picked by the same rule as the archive lead, so the issue

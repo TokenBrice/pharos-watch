@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { WORKER_FROZEN_IDS as FROZEN_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,

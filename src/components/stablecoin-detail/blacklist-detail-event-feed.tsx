@@ -10,7 +10,7 @@ import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosu
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, timeAgo, formatEventDate } from "@shared/lib/format";
-import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
+import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types/blacklist";
 import {
   formatBlacklistAmountOrStatus,
   getBlacklistAmountSourceLabel,

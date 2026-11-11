@@ -1,6 +1,8 @@
 import { deriveEffectiveDependencies } from "./dependency-derivation";
 import { stronglyConnectedComponents } from "./strongly-connected-components";
-import type { DependencyType, ReserveSlice, StablecoinMeta } from "../types/core";
+import type { DependencyType } from "../types/dependency-types";
+import type { ReserveSlice } from "../types/reserves";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 
 export interface DependencyGraphEdge {
   from: string;

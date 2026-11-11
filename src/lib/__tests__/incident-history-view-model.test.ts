@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StatusTransition } from "@shared/types";
+import type { StatusTransition } from "@shared/types/status/core";
 import {
   DEFAULT_INCIDENT_HISTORY_QUERY,
   buildIncidentHistoryView,

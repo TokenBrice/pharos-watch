@@ -1,4 +1,4 @@
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACCESS_LOOKTHROUGH_CAPABILITY_LABELS, ACCESS_LOOKTHROUGH_COVERAGE_LABELS, ACCESS_LOOKTHROUGH_REASON_LABELS } from "@shared/lib/classification";
 import {

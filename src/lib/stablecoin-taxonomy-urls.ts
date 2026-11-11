@@ -1,4 +1,5 @@
-import type { BackingType, GovernanceType, Infrastructure } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
+import type { GovernanceType, Infrastructure } from "@shared/types/stablecoin-taxonomy";
 
 export type InfrastructureTaxonomyValue = Infrastructure;
 

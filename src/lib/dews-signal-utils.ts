@@ -4,7 +4,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
-import type { StressSignalEntry } from "@shared/types";
+import type { StressSignalEntry } from "@shared/types/stress";
 
 export interface DewsContributor {
   key: string;

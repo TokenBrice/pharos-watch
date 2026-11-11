@@ -7,7 +7,7 @@ import { MAX_LEGACY_EVM_REVIEW_ATTEMPTS } from "../../../lib/blacklist/amount-re
 import { getBlacklistConfigsForSymbolAndChain } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
-import type { BlacklistAmountStatus } from "@shared/types/market";
+import type { BlacklistAmountStatus } from "@shared/types/blacklist";
 import { insertBlacklistRows } from "../persistence";
 import { makePendingBlacklistRow } from "./blacklist.test-support";
 

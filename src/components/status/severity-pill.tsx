@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { StatusCause } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
 import { getSeverityBadgeClass } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 

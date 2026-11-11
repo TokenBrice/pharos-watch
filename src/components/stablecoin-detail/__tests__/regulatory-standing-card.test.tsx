@@ -2,7 +2,8 @@
 // src/components/stablecoin-detail/__tests__/regulatory-standing-card.test.tsx
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import type { GeniusProfile, MicaProfile, StablecoinMeta } from "@shared/types";
+import type { GeniusProfile, MicaProfile } from "@shared/types/stablecoin-meta-compliance-schemas";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { RegulatoryStandingCard } from "../regulatory-standing-card";
 import {
   buildRegulatoryStandingView,

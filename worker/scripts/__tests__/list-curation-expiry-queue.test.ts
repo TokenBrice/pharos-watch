@@ -13,7 +13,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { admitV10ReserveObservation, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ExitExecutionModelReviewSchema } from "@shared/types/exit-route";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildSafetyScoreV9ReserveBoundFacts } from "../../src/lib/safety-score-v9/extension-reserve-bounds";
 import {
   buildCurationExpiryQueue,

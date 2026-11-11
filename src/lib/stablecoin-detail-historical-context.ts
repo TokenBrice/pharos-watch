@@ -1,4 +1,4 @@
-import type { StablecoinLink } from "@shared/types";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
 import type { FaqItem } from "@/lib/faq";
 
 interface StablecoinHistoricalContext {

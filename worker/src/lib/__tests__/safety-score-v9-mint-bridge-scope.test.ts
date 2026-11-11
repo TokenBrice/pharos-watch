@@ -8,7 +8,7 @@ import type {
   BridgeRouteRiskProfile,
   MintAuthorityControl,
   MintAuthorityProfile,
-} from "@shared/types/core";
+} from "@shared/types/stablecoin-meta-control-schemas";
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
 import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";

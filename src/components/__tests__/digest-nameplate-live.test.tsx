@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DigestContentEntry } from "@shared/types";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 const { useDailyDigestMock, useDigestArchiveMock } = vi.hoisted(() => ({
   useDailyDigestMock: vi.fn(),

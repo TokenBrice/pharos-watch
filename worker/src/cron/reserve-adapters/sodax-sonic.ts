@@ -1,4 +1,5 @@
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";

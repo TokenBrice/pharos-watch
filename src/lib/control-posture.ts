@@ -1,5 +1,6 @@
 import { CONTROL_POSTURE_STYLES, GOVERNANCE_LABELS } from "@shared/lib/classification";
-import type { GovernanceQuality, StablecoinMeta } from "@shared/types";
+import type { GovernanceQuality } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 type ControlPostureCoin = Pick<
   StablecoinMeta,

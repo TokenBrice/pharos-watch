@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
 import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
-import { NonUsdShareResponseSchema } from "@shared/types/market";
+import { NonUsdShareResponseSchema } from "@shared/types/supply";
 import { buildAltPegSnapshot, buildAltPegTrendStats, parseAltPegParam } from "@/lib/alt-peg-market";
 
 

@@ -15,8 +15,10 @@ import type {
   GeniusAuthorizationStatus,
   MicaStatus,
   MicaTokenType,
+} from "@shared/types/compliance-vocabulary";
+import type {
   PegCurrency,
-} from "@shared/types";
+} from "@shared/types/core";
 import {
   COMPLIANCE_REGIME_FILTER_OPTIONS,
   COMPLIANCE_REGIME_VALUES,

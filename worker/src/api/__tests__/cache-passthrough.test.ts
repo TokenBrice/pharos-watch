@@ -6,7 +6,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { StablecoinChartPoint } from "@shared/types/market";
+import type { StablecoinChartPoint } from "@shared/types/supply";
 import {
   handleStablecoins,
   handleStablecoinCharts,

@@ -21,7 +21,7 @@ import {
   isYieldRankingSummary,
   type YieldWorkbenchRanking,
 } from "@/lib/yield-workbench-row";
-import type { YieldType } from "@shared/types";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
 export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;

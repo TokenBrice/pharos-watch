@@ -7,7 +7,7 @@ import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles
 import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import type { DependencyType } from "@shared/types";
+import type { DependencyType } from "@shared/types/dependency-types";
 import { DEPENDENCY_RELATIONSHIP_LABELS } from "@shared/lib/classification";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 

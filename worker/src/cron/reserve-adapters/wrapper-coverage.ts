@@ -1,4 +1,4 @@
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import { buildCoverageShortfallWarnings } from "./helpers";
 import { capacityFromTokenAmounts } from "./slice-math";

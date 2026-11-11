@@ -6,7 +6,7 @@
  * Binding: `agents/impl-plan-drafts/02-engine.md` §5.
  */
 import { clamp, hhiToDiversityScore } from "../math";
-import type { BluechipGrade } from "../../types";
+import type { BluechipGrade } from "../../types/bluechip";
 
 const BLUECHIP_LADDER: Record<BluechipGrade, number> = {
   "A+": 100,

@@ -13,7 +13,7 @@ import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/suppl
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 

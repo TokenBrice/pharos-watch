@@ -3,7 +3,7 @@ import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
-import type { StablecoinChartPoint } from "@shared/types";
+import type { StablecoinChartPoint } from "@shared/types/supply";
 
 interface StructuralSupplementalChartConfig {
   id: string;

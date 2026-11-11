@@ -4,7 +4,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import fixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
 import { buildLiveHomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 import { buildTotalMcapChartRows, TOTAL_MCAP_COHORT_IDS } from "@shared/lib/total-mcap-chart";
-import { StablecoinChartResponseSchema } from "@shared/types/market";
+import { StablecoinChartResponseSchema } from "@shared/types/supply";
 import { HomepageHistorySchema, HomepageSnapshotSchema } from "@shared/types/homepage";
 import { handleHomepageHistory, handleHomepageSnapshot } from "../homepage";
 import { conditionalGetResponse, scopeResponseEtag } from "../../lib/api-response";

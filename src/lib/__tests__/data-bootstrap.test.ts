@@ -16,7 +16,7 @@ import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 import { asMetaQueryOptions, createRegisteredApiPollingQueryOptions } from "@/hooks/api-hooks";
 import { reconcileStablecoinLiveSummary } from "@/lib/stablecoin-live-summary-query";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema } from "@shared/types/supply";
 
 const schema = z.object({ value: z.number() });
 const key = ["bootstrap-test"] as const;

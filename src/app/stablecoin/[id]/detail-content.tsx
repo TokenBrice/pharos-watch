@@ -42,7 +42,7 @@ import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroug
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
-import type { AiSummaryClaimValues } from "@shared/types";
+import type { AiSummaryClaimValues } from "@shared/types/editorial";
 import {
   buildDetailSharedModules,
   type DetailSharedModules,

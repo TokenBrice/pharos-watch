@@ -1,6 +1,6 @@
 
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
 import { runOracleRiskCoverageCheck } from "../ci/check-oracle-risk-coverage";
 

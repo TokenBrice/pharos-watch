@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import type { PublicStatusTransition } from "@shared/types";
+import type { PublicStatusTransition } from "@shared/types/status/public-health";
 import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ComponentStatePill, Timestamp } from "@/components/status/page-primitives";

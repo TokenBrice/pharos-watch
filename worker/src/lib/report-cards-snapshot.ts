@@ -7,7 +7,7 @@
  * DEX and redemption lanes each contribute exactly one published generation.
  */
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";

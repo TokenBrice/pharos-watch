@@ -1,4 +1,5 @@
-import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { V9QualityPillar } from "@shared/types/safety-score-v9";
 import {
   exitReasonFallback,
   pillarBreakdown,

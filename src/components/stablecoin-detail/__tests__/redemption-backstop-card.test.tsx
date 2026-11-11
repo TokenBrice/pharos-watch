@@ -8,7 +8,8 @@ import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-car
 import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus, resolveScoreTier5, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
-import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { composeExitComponentScore } from "@shared/lib/exit-route-scoring";
 import { REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS } from "@shared/lib/redemption-backstop-scoring";
 

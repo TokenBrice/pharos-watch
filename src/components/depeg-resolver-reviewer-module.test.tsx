@@ -11,7 +11,7 @@ import {
   predictionRow as row,
 } from "@/components/depeg-resolver-review-test-support";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
-import type { DdrrResponse, DdrrResponseRow, DdrrSummary } from "@shared/types";
+import type { DdrrResponse, DdrrResponseRow, DdrrSummary } from "@shared/types/depeg-resolver-review";
 import { RatioSchema } from "@shared/types/ratio";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 

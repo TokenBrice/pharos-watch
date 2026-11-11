@@ -15,7 +15,7 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatPercentTick } from "@/lib/chart-ticks";
-import type { NonUsdSharePoint } from "@shared/types/market";
+import type { NonUsdSharePoint } from "@shared/types/supply";
 
 // Commodities are dominated by gold: draw them in the gold peg hue the hero, ranking and atlas use.
 const COMMODITY_COLOR = PEG_CHART_COLORS.GOLD.hex;

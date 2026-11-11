@@ -22,8 +22,9 @@ import {
   QUALITY_WEIGHT,
 } from "@shared/lib/chains/health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
-import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
+import type { StressSignalEntry } from "@shared/types/stress";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";

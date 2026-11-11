@@ -2,7 +2,7 @@ import {
   buildBlacklistAddressCountKey,
   buildBlacklistContractBalanceKey,
 } from "@shared/lib/blacklist";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
 import type { D1Database } from "@cloudflare/workers-types";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { canonicalBlacklistAddress, canonicalTronAddress } from "@shared/lib/tron-address";

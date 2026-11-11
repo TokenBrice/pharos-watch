@@ -1,4 +1,5 @@
-import type { MechanismArchetype, OracleRiskRole, VariantKind } from "@shared/types";
+import type { MechanismArchetype, VariantKind } from "@shared/types/stablecoin-taxonomy";
+import type { OracleRiskRole } from "@shared/types/oracle-risk";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 
 import { isThreeStepArchetype, resolveThreeStepConfig, type ThreeStepConfig } from "./three-step-archetype-diagram";

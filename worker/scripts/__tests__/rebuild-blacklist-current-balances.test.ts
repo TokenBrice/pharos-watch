@@ -4,7 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { BLACKLIST_CURRENT_BALANCE_WRITER_PAUSE_KEY, upsertBlacklistCurrentBalance } from "../../src/lib/blacklist-current-balances";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../src/lib/blacklist-summary-service";
-import type { BlacklistSummaryResponse } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import {
   balanceId, derivedCacheRows, ledgerRows, observation, seedDerivedCaches, seedLedger, sqliteRemoteD1,
 } from "./blacklist-current-balance-maintenance.test-support";

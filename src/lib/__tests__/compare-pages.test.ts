@@ -12,9 +12,10 @@ import {
   LIABILITY_RECONCILIATION_VALUES,
   PROOF_ASSURANCE_METHOD_VALUES,
   PROOF_ASSURANCE_SCOPE_VALUES,
-} from "@shared/types/core";
+} from "@shared/types/reserve-assurance";
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
-import type { RedemptionDocSourceSupport, StablecoinMeta } from "@shared/types";
+import type { RedemptionDocSourceSupport } from "@shared/types/redemption";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 const mockGetCurrentRedemptionConfig = vi.hoisted(() =>
   vi.fn<(stablecoinId: string, nowSec?: number) => RedemptionBackstopConfig | null>(),

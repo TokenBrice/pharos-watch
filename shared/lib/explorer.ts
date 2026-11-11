@@ -1,5 +1,5 @@
 import { CHAIN_META } from "../types/chain-identity";
-import type { ContractDeployment } from "../types/core";
+import type { ContractDeployment } from "../types/stablecoin-meta-primitives";
 
 /**
  * Entity type for block-explorer URL construction.

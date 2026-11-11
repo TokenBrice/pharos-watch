@@ -24,7 +24,7 @@ import {
   type BlacklistQuarterlyEventTypePoint,
   type BlacklistRecentEventTypeCounts,
   type BlacklistStablecoin,
-} from "@shared/types/market";
+} from "@shared/types/blacklist";
 import { buildBlacklistAddressCountKey, isBlacklistStablecoin, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "./blacklist-api";
 import {

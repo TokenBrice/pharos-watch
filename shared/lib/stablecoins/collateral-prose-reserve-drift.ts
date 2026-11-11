@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 /**
  * Guardrail for one specific curation failure: a `collateral` prose field

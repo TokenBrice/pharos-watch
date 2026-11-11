@@ -1,4 +1,6 @@
-import type { EndpointProbeResult, StatusHealthValue, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
+import type { StatusHealthValue } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";

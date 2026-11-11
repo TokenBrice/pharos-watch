@@ -15,7 +15,7 @@ import {
   filterStablecoinsByBlacklistStatus,
   type BlacklistStatusBucketKey,
 } from "@shared/lib/blacklist-status-buckets";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildYieldDecisionLedgerDisplay, formatYieldDecisionReasonLine } from "@/lib/yield-decision-ledger";
-import type { YieldPublicDecisionLedger } from "@shared/types";
+import type { YieldPublicDecisionLedger } from "@shared/types/yield-evidence-schemas";
 
 const ledger: YieldPublicDecisionLedger = {
   selectedReasonCode: "curated-over-discovered",

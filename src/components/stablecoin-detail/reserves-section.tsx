@@ -42,7 +42,8 @@ import type { ReserveResult } from "@shared/lib/reserve-templates";
 
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { ReserveLiquidityHorizon, StablecoinMeta } from "@shared/types";
+import type { ReserveLiquidityHorizon } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 export interface ReservesSectionProps {
   coin: StablecoinMeta;

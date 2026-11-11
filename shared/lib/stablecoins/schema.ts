@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { DeadStablecoin, StablecoinMeta } from "../../types";
-import { DeadStablecoinSchema } from "../../types/market";
+import type { DeadStablecoin } from "../../types/cemetery";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
+import { DeadStablecoinSchema } from "../../types/cemetery";
 import { issue, StrictIsoDateSchema } from "../../types/safety-schema-primitives";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";

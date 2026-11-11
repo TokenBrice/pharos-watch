@@ -1,6 +1,6 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { HYPEREVM_HISTORY_RPC_URL } from "@shared/lib/evm-rpc-capabilities";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {

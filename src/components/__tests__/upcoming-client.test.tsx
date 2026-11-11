@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import type { StablecoinMeta } from "@shared/types";
-import type { UpcomingLaunchPhase } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
 import type { UpcomingCoin } from "../upcoming-client";
 
 vi.mock("next/link", async () => {

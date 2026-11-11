@@ -5,7 +5,7 @@ import { MethodologyLinkBadge } from "@/components/methodology-link-badge";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import type { ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 
 type SafetyGradeBadgeSize = "xs" | "sm" | "md" | "lg" | "defunct" | "hero";
 

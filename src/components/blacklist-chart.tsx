@@ -14,8 +14,8 @@ import {
   QuarterlyStackedBarChart,
   type QuarterlyStackedBarSeries,
 } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
-import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types/blacklist";
+import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 

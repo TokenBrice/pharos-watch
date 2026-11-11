@@ -3,7 +3,7 @@ import type {
   BlacklistAmountStatus,
   BlacklistEventType,
   BlacklistStablecoin,
-} from "@shared/types/market";
+} from "@shared/types/blacklist";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";

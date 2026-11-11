@@ -1,4 +1,5 @@
-import type { StatusCause, StatusResponse } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 
 export type DashboardSectionId =

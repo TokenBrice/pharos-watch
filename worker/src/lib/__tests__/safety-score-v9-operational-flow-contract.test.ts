@@ -8,7 +8,7 @@ import { makeEconomicControlArgs, makeReviewedMintInput } from "@shared/lib/__te
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
-import type { MintAuthorityProfile } from "@shared/types/core";
+import type { MintAuthorityProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import type { V1005ExecutionCertificates, V1005AuthorityGraph, V1005OperationalIssuance } from "@shared/types/safety-score-v9-control-scope";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";

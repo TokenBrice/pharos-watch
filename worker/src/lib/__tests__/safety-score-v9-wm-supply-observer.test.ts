@@ -2,7 +2,7 @@ import "../../test-helpers/reviewed-deployment-catalog.test-support";
 import { describe, expect, it, vi } from "vitest";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import currentWm from "@shared/data/stablecoins/coins/wm-m0.json";
 import currentWmRisk from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";

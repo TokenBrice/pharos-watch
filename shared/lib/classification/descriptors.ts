@@ -1,4 +1,5 @@
-import type { BackingType, GovernanceType } from "../../types";
+import type { BackingType } from "../../types/core";
+import type { GovernanceType } from "../../types/stablecoin-taxonomy";
 
 export const GOVERNANCE_DESCRIPTORS = {
   centralized: {

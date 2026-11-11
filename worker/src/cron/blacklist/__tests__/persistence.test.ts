@@ -12,7 +12,7 @@ import { handleBlacklist } from "../../../api/blacklist";
 import { materializeBlacklistSummarySnapshot, handleBlacklistSummary } from "../../../lib/blacklist-summary-service";
 import { loadBlacklistCurrentBalanceMap } from "../../../lib/blacklist-current-balances";
 import { reconcileBlacklistIdentities } from "../../../lib/blacklist/identity-reconciliation";
-import type { BlacklistSummaryResponse } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import {
   buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
   type BlacklistAmountSelectedState,

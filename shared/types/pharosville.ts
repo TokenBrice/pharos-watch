@@ -2,9 +2,13 @@ import { z } from "zod";
 import { ChainsResponseSchema } from "./chains";
 import {
   PegSummaryResponseSchema,
+} from "./peg";
+import {
   StablecoinListResponseSchema,
+} from "./supply";
+import {
   StressSignalsAllResponseSchema,
-} from "./market";
+} from "./stress";
 import { ReportCardsV9AcceptedResponseSchema } from "./report-cards-v9-accepted";
 import { StabilityIndexResponseSchema } from "./stability";
 

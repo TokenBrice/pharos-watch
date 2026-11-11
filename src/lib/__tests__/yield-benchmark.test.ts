@@ -10,7 +10,8 @@ import {
   resolveYieldRowBenchmark,
   resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
-import type { YieldBenchmarkKey, YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types";
+import type { YieldBenchmarkKey } from "@shared/types/yield-vocabulary";
+import type { YieldBenchmarkRegistry, YieldRanking, YieldRankingProvenance } from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";

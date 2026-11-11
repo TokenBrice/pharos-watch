@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { D1UsageSummary, StatusResponse } from "@shared/types";
+import type { D1UsageSummary } from "@shared/types/status/operational";
+import type { StatusResponse } from "@shared/types/status/response";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 import {
   buildPipelineIntegrityModel,

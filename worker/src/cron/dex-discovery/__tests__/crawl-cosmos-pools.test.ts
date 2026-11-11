@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { discoveryContext } from "./discovery.test-support";
 import {

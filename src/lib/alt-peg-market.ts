@@ -1,8 +1,9 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { buildNonUsdMarketSnapshot, type NonUsdMarketSnapshot } from "@shared/lib/alt-peg-snapshot";
-import type { PegCurrency, StablecoinData } from "@shared/types";
-import type { NonUsdSharePoint } from "@shared/types/market";
+import type { PegCurrency } from "@shared/types/core";
+import type { StablecoinData } from "@shared/types/supply";
+import type { NonUsdSharePoint } from "@shared/types/supply";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 

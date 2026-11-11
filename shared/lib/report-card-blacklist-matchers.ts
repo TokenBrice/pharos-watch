@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 
 export type BlacklistStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
 

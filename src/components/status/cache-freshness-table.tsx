@@ -3,7 +3,8 @@ import {
   STATUS_CACHE_RATIO_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
 import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
-import type { CacheStatus, PublicComponentState } from "@shared/types";
+import type { CacheStatus } from "@shared/types/status/core";
+import type { PublicComponentState } from "@shared/types/status/public-health";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { projectPublicCacheStatus } from "@shared/lib/public-status-components";

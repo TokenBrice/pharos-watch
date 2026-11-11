@@ -4,7 +4,7 @@ import {
   DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
   DEX_DISCOVERY_FAILED_CRAWL_REASON,
 } from "@shared/lib/dex-deployment-coverage";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import type { DiscoveryMeta } from "../types";
 import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";

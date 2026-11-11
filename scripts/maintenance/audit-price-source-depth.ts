@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";

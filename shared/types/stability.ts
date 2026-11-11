@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MethodologyEnvelopeSchema } from "./core";
+import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 
 import { PSI_CONDITION_BAND_VALUES } from "./stability-constants";
 

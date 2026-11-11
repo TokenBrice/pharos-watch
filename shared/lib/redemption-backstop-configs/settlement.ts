@@ -1,4 +1,4 @@
-import type { RedemptionSettlementModel } from "../../types";
+import type { RedemptionSettlementModel } from "../../types/redemption";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
 import { maximumBusinessDaySettlement } from "../business-calendars";
 import type { RedemptionV9RouteReviewTerms } from "./schema";

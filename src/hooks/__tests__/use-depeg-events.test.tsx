@@ -30,7 +30,7 @@ import { useActiveDepegEvents, useInfiniteDepegEvents } from "../use-depeg-event
 import { useEvents, useLatestEvents } from "../use-events";
 import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
 import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
-import { DepegEventsResponseSchema } from "@shared/types/market";
+import { DepegEventsResponseSchema } from "@shared/types/peg";
 
 /**
  * Cursor pages as the depeg-events endpoint serves them: the terminal page

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   PEG_METADATA,
 } from "@shared/lib/classification/pegs";
-import type { PegCurrency } from "../../types";
+import type { PegCurrency } from "../../types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 describe("classification-pegs", () => {

@@ -1,7 +1,7 @@
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import {

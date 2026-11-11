@@ -2,7 +2,8 @@
 
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import type { CustodyProfile, StablecoinMeta } from "@shared/types";
+import type { CustodyProfile } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { CustodyModule } from "../custody-card";
 import {
   isCustodyStructureUndisclosed,

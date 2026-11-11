@@ -29,7 +29,7 @@ import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@sh
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/market";
+import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
 
 export const handleDexLiquidity = async (

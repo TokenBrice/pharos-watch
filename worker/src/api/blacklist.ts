@@ -17,7 +17,7 @@ import {
   type BlacklistEvent,
   type BlacklistSortDirection,
   type BlacklistSortKey,
-} from "@shared/types/market";
+} from "@shared/types/blacklist";
 import { isBlacklistStablecoin } from "@shared/lib/blacklist";
 import { blacklistCanonicalEventCountSql } from "@shared/lib/blacklist-event-order";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "../lib/blacklist-api";

@@ -16,7 +16,7 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { installAdapterNetwork } from "../reserve-adapters/__tests__/reserve-adapter.test-support";
 import { fetchEscrowBalanceReserves } from "../reserve-adapters/escrow-balance";

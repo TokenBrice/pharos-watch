@@ -6,7 +6,7 @@ import type {
   ReserveProvenanceView,
   ReserveSyncStateView,
   ReserveDisplayBadgeView,
-} from "@shared/types";
+} from "@shared/types/live-reserves";
 import {
   condenseReserveSlices,
   buildReserveFetchNotice,

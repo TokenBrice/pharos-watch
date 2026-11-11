@@ -1,4 +1,5 @@
-import type { ContractDeployment, ReserveAdapterCoin } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";

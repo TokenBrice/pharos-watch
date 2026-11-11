@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CustodyProfile, StablecoinMeta } from "@shared/types";
+import type { CustodyProfile } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   formatCustodySharePct,
   isCustodyStructureUndisclosed,

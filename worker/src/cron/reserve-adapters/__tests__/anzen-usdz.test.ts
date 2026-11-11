@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { adapterCoins, expectValidAdapterOutput, installAdapterNetwork, runAdapter, type AdapterRpcCall, type AdapterRpcValue, type AdapterRpcWord } from "./reserve-adapter.test-support";
 
 const EXPECTED_HASHES: Record<string, string> = {

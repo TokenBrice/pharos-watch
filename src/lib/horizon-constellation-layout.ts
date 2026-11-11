@@ -1,7 +1,7 @@
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { PRE_LAUNCH_PHASE_CLASSES } from "@shared/lib/classification/pre-launch";
-import type { UpcomingLaunchPhase } from "@shared/types";
+import type { UpcomingLaunchPhase } from "@shared/types/stablecoin-lifecycle";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { dateScore } from "@/lib/pre-launch";
 

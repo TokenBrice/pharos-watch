@@ -1,8 +1,8 @@
 import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
 import {
   type BlacklistStablecoin,
-} from "@shared/types/market";
-import type { StablecoinMeta } from "@shared/types";
+} from "@shared/types/blacklist";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "./blacklist-contracts";
 
 // Runtime callers use the narrow accessors below. The full manifest builder is

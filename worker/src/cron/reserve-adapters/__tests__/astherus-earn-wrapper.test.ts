@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getErc4626Network, installErc4626Network } from "./erc4626-single-asset.test-support";
 

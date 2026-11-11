@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_DISCOVERY_PROVIDER_REGISTRY } from "@shared/lib/dex-deployment-coverage";
 import {
   classifyDexPlaceholderCoverage,

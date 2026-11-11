@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexMeasuredExecutionPublicProfile } from "@shared/types/measured-execution";
-import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/exit-route";
 import { selectDexRouteObservationPools } from "../scoring";
 import type { PoolEntry } from "../types";
 

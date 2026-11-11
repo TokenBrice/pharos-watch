@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import onedReserves from "@shared/data/stablecoins/domains/reserves/oned-gennius.json";
 import { defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";

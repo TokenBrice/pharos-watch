@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { adaptChainlinkPorResponse } from "../chainlink-por";
 
 type Supply = NonNullable<Parameters<typeof adaptChainlinkPorResponse>[2]>;

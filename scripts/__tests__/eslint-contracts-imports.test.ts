@@ -109,8 +109,6 @@ const sharedTypesFilename = resolve("shared/types/value.ts");
 
 tester.run("pharos/shared-types-imports", sharedTypesRule, {
   valid: [
-    { code: 'import type { StablecoinData } from "@shared/types";', filename: resolve("src/allowed.ts") },
-    { code: 'import { type StablecoinData as Row } from "@shared/types";', filename: resolve("src/allowed.ts") },
     { code: 'import { StablecoinListResponseSchema } from "@shared/types/core";', filename: resolve("src/allowed.ts") },
     { code: 'import type { Value } from "@shared/lib/value";', filename: resolve("shared/types/__tests__/value.ts") },
     { code: 'import type { Value } from "../lib/value";', filename: resolve("shared/types/value.test.ts") },
@@ -122,7 +120,8 @@ tester.run("pharos/shared-types-imports", sharedTypesRule, {
   invalid: [
     ...[
       'import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types";',
-      'import { StablecoinListResponseSchema as Schema } from "@shared/types";',
+      'import type { StablecoinData } from "@shared/types";',
+      'export * from "@shared/types";',
     ].map((code) => ({ code, filename: resolve("src/rejected.ts"), errors: [{ messageId: "broad" }] })),
     ...[
       'import type { PricingSourceKey } from "../lib/pricing-source-registry";',

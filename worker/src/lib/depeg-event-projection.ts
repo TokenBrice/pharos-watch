@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";

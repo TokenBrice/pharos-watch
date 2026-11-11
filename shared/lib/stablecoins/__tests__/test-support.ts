@@ -1,4 +1,5 @@
-import type { StablecoinFlags, StablecoinMeta } from "../../../types";
+import type { StablecoinFlags } from "../../../types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "../../../types/stablecoin-meta-schemas";
 
 export const CANONICAL_STABLECOIN_FLAGS: StablecoinFlags = {
   pegCurrency: "USD",

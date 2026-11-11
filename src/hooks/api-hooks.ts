@@ -3,18 +3,30 @@
 import { keepPreviousData, useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
 import {
   type DexLiquidityHistoryPoint,
+} from "@shared/types/dex-liquidity";
+import {
   type DigestArchiveResponse,
   type DigestSnapshotResponse,
+} from "@shared/types/digest";
+import {
   type ReportCardsV9CurrentResponse,
+} from "@shared/types/report-cards-v9-current";
+import {
   type SafetyScoreHistoryResponse,
   type SafetyScoreHistoryV2Response,
+} from "@shared/types/safety-score-history";
+import {
   type StabilityContributor,
+} from "@shared/types/stability";
+import {
   type StressSignalDetailResponse,
+} from "@shared/types/stress";
+import {
   type YieldAdapterManifestResponse,
   type YieldHistoryResponse,
-} from "@shared/types";
+} from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
-import type { DexLiquidityMap } from "@shared/types/market";
+import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
 import type { YieldRankingsCoinResponse } from "@shared/types/yield";
 import type { ReportCardsV9TableResponse, ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";

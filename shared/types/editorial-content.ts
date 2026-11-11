@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MECHANISM_ARCHETYPE_VALUES } from "./core";
+import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 
 const text = z.string().refine((value) => value.trim().length > 0, "Expected nonempty text");
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {

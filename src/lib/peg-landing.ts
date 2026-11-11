@@ -1,4 +1,4 @@
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { PEG_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import {
   ACTIVE_PEG_CURRENCIES,

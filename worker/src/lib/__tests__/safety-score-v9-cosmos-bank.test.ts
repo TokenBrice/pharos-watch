@@ -4,7 +4,7 @@ import { observeEconomicCosmosBank, pinEconomicCosmosBank } from "../safety-scor
 import { deriveReviewedEconomicDeploymentPartition, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
 import { observeReviewedEconomicDeploymentPartitionAttempt } from "../safety-score-v9/economic-supply-observer";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK = 1791184659;

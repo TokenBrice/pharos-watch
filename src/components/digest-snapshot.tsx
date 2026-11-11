@@ -9,7 +9,7 @@ import { parseDigestSafetyMapCapture, type DigestSafetyMapArchiveTier as StoredS
 import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
 import { getNetColor } from "@shared/lib/classification/flows";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
-import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
+import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types/digest";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";
 import { formatV9ReasonCodeLabel } from "@/lib/safety-score-reason-code-labels";

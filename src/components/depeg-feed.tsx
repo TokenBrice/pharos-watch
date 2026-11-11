@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatDuration, formatEventDate, formatBps } from "@shared/lib/format";
 import { deviationColorClass, deviationBorderClass } from "@/lib/severity-colors";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 interface DepegFeedProps {
   events: DepegEvent[];

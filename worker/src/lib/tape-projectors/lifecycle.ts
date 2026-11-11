@@ -7,7 +7,7 @@
  * observation.
  */
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 import { buildTapeEventId, parseDateStringToEpochSec, truncateSummary } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";

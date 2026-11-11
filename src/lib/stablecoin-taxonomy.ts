@@ -1,6 +1,9 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
-import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
+import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
+import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   BACKING_SLUGS,
   GOVERNANCE_SLUGS,

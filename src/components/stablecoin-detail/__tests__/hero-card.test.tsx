@@ -8,12 +8,22 @@ import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summar
 import type * as FeatureFlags from "@/lib/feature-flags";
 import type {
   DexLiquidityData,
+} from "@shared/types/dex-liquidity";
+import type {
   PegSummaryCoin,
+} from "@shared/types/peg";
+import type {
   StablecoinData,
+} from "@shared/types/supply";
+import type {
   StablecoinMeta,
+} from "@shared/types/stablecoin-meta-schemas";
+import type {
   StressSignalEntry,
+} from "@shared/types/stress";
+import type {
   YieldRanking,
-} from "@shared/types";
+} from "@shared/types/yield";
 
 const hydration = vi.hoisted(() => ({ hydrated: false }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => hydration.hydrated }));

@@ -4,7 +4,7 @@ import { DAY_MS } from "@/lib/constants";
 import { formatRelativeDurationSeconds, formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
 import { formatUtcDayLabel } from "@shared/lib/format";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 export const HIGHLIGHT_DURATION_MS = 2000;
 

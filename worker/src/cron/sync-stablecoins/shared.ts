@@ -1,5 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { ChainPartitionProvenanceSchema, PriceDerivationSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
+import { ChainPartitionProvenanceSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
+import { PriceDerivationSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";

@@ -10,7 +10,8 @@ import {
   TRACKED_SOURCE_COINS,
 } from "@shared/lib/stablecoins/registry";
 import { ReserveSyncStatusSchema, type LiveReserveEvidenceClass, type LiveReserveFreshnessMode, type ReserveSyncStatus } from "@shared/types/live-reserves";
-import type { ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   buildMarketCapMapFromStablecoins,
   formatUsd,

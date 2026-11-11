@@ -1,4 +1,4 @@
-import type { DepegEvent } from "../types/market";
+import type { DepegEvent } from "../types/peg";
 
 export type TestPegEvent = DepegEvent;
 

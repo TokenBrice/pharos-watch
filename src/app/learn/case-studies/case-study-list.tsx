@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { cn } from "@/lib/utils";
 import type { CaseStudyOutcome } from "@shared/types/editorial-content";
 import {

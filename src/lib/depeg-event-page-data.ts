@@ -1,4 +1,4 @@
-import type { DepegEventEntry } from "@shared/types/market";
+import type { DepegEventEntry } from "@shared/types/peg";
 import { buildNoindexDepegEventSlugs, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventPageEntries } from "@/lib/depeg-event-snapshot";
 import {
@@ -6,7 +6,7 @@ import {
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
 } from "@/lib/depeg-event-display";
 
-export type { DepegEventEntry } from "@shared/types/market";
+export type { DepegEventEntry } from "@shared/types/peg";
 
 function readDepegEventEntries(): readonly DepegEventEntry[] {
   try {

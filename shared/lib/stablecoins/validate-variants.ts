@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 

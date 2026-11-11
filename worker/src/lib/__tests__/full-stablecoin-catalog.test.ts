@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sourceAsset from "@shared/data/stablecoins/coins.generated.json";
 import * as canonicalRegistry from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import decodedAsset, { decodeWorkerStablecoinCatalog } from "../full-stablecoin-catalog";
 

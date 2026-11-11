@@ -1,4 +1,4 @@
-import type { StatusCause } from "@shared/types";
+import type { StatusCause } from "@shared/types/status/core";
 
 /**
  * Rank for `StatusCause["severity"]`, ordered **worst first** (`critical` = 0).

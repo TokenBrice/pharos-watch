@@ -6,7 +6,8 @@ import {
   orderDependencyGraphNodes,
 } from "../dependency-graph";
 import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
-import type { DependencyWeight, StablecoinMeta } from "../../types/core";
+import type { DependencyWeight } from "../../types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import { ReserveSliceSchema } from "../../types/reserves";
 import { StablecoinReservesResponseSchema } from "../../types/live-reserves";
 

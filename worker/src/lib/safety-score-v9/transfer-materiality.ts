@@ -1,7 +1,7 @@
 import { resolveChainId } from "@shared/types/chain-identity";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { safetyScoreV9TransferDeploymentKey, type SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";

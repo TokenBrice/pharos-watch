@@ -6,7 +6,7 @@ import {
 import { isThreatBand, type ThreatBand } from "@shared/lib/classification";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SAFETY_GRADE_VALUES, type SafetyGrade } from "@shared/types/report-card-grade";
 import { V9PublicationHealthSchema, type V9PublicationHealth } from "@shared/types/report-cards-v9";

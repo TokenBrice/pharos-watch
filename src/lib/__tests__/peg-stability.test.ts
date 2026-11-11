@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DAY_SECONDS } from "@/lib/constants";
 import { computePegStability } from "../peg-stability";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/peg";
 
 const NOW = 1_700_000_000;
 

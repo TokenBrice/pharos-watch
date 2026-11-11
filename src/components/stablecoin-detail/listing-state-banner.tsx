@@ -1,6 +1,6 @@
 import { Ban, PauseCircle } from "lucide-react";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 type ListingStateCoin = Pick<StablecoinMeta, "status" | "listingStatusReview" | "symbol">;
 

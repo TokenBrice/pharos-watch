@@ -31,7 +31,7 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
+import type { DepegEvent, DepegPendingIncident } from "@shared/types/peg";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";

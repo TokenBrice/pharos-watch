@@ -5,7 +5,7 @@ import type {
   MintBurnHourlyBucket,
   MintBurnSignedNetBound,
   MintBurnValuationCompleteness,
-} from "@shared/types";
+} from "@shared/types/mint-burn";
 import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,

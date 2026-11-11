@@ -11,7 +11,7 @@ import type { ChartDataTableColumn } from "@/components/chart-primitives/data-ta
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { PEG_CHART_COLORS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import type { PegCurrency } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { StaleDataBanner } from "@/components/stale-data-banner";

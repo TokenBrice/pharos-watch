@@ -1,4 +1,9 @@
-import type { BridgeRouteRiskTier, CollateralQuality, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { BridgeRouteRiskTier } from "../types/bridge-risk";
+import type { CollateralQuality } from "../types/reserves";
+import type { CustodyModel } from "../types/custody";
+import type { DependencyType } from "../types/dependency-types";
+import type { GovernanceType, MechanismArchetype } from "../types/stablecoin-taxonomy";
+import type { PegCurrency, ResearchReviewConfidence } from "../types/core";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
 import type { V9OpenQuestionBucket } from "../types/safety-score-v9-open-evidence";

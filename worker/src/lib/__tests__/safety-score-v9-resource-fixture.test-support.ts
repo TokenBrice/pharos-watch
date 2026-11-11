@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { StablecoinListResponseSchema } from "@shared/types/market";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";

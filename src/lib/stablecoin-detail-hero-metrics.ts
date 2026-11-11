@@ -1,9 +1,15 @@
 import type {
   DexLiquidityData,
+} from "@shared/types/dex-liquidity";
+import type {
   PegSummaryCoin,
+} from "@shared/types/peg";
+import type {
   StressSignalEntry,
+} from "@shared/types/stress";
+import type {
   YieldRanking,
-} from "@shared/types";
+} from "@shared/types/yield";
 import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatIsoDate, formatSignedPercent } from "@shared/lib/format";

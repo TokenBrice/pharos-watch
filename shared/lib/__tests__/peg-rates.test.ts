@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import type { PegAssetBase, StablecoinMeta } from "@shared/types";
+import type { PegAssetBase } from "@shared/types/price";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 function asset(
   id: string,

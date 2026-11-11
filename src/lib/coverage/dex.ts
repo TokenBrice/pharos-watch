@@ -1,4 +1,4 @@
-import type { LiquidityCoverageClass } from "@shared/types";
+import type { LiquidityCoverageClass } from "@shared/types/dex-liquidity";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createDataUnavailableStatus,

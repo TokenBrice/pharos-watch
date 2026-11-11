@@ -15,7 +15,7 @@
  *
  * @see docs/pricing-pipeline.md for pipeline-level context.
  */
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/price";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
 import { median } from "@shared/lib/stats";

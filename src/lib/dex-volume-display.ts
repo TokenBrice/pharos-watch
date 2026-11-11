@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { DEX_VOLUME_BOUND_MIN_USD, resolveDexVolumeView, type DexVolumeView } from "@shared/lib/dex-volume-availability";
-import type { DexVolumeAvailability, DexVolumeCompleteness } from "@shared/types/market";
+import type { DexVolumeAvailability, DexVolumeCompleteness } from "@shared/types/dex-liquidity";
 
 const COMPLETENESS_LABEL: Record<DexVolumeCompleteness, string> = {
   complete: "Measured",

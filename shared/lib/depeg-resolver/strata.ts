@@ -7,7 +7,7 @@
  * when support allows, and are dropped first under the "most-dependable" rule.
  */
 
-import type { DepegDirection } from "../../types/market";
+import type { DepegDirection } from "../../types/peg";
 import { isFragileMintPosture, isNoPrivilegedMintChainPosture } from "../safety-score-v9/mint-posture";
 import type { DdrCoinStructural } from "./inputs";
 

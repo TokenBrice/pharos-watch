@@ -1,7 +1,7 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
-import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
+import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/exit-route";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";

@@ -9,7 +9,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { DeadStablecoin } from "@shared/types";
+import type { DeadStablecoin } from "@shared/types/cemetery";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";

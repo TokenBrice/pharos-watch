@@ -6,7 +6,7 @@ import {
   PRE_LAUNCH_ACCENT_CLASSES,
   getHeroPegLabel,
 } from "@shared/lib/classification";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { cn } from "@/lib/utils";
 import { IntentLink } from "@/components/intent-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";

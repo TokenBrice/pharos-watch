@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import { DexAmmExecutionModelSchema } from "@shared/types/market";
+import { DexAmmExecutionModelSchema } from "@shared/types/dex-execution";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import {
   buildAmmCapacityCurve,

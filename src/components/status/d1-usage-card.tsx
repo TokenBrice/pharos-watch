@@ -1,5 +1,6 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { D1UsageSummary, StatusSectionError } from "@shared/types";
+import type { D1UsageSummary } from "@shared/types/status/operational";
+import type { StatusSectionError } from "@shared/types/status/response";
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";

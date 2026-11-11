@@ -3,10 +3,12 @@ import type {
   BridgeRouteControl,
   BridgeRouteDeployment,
   BridgeRouteRiskProfile,
-  ContractDeployment,
   MintAuthorityControl,
   MintAuthorityProfile,
-} from "../../../types/core";
+} from "../../../types/stablecoin-meta-control-schemas";
+import type {
+  ContractDeployment,
+} from "../../../types/stablecoin-meta-primitives";
 import { describe, expect, it } from "vitest";
 import { parseStablecoinMetaAssets } from "../schema";
 import {

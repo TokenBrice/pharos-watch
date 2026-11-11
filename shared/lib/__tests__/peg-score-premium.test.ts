@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import { makePegEvent } from "@shared/test-utils/peg-fixtures";
 import { computePegScore, computePremiumWeightedPegScore } from "../peg-score";
 

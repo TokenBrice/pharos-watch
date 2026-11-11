@@ -15,7 +15,7 @@ import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistabilityClientSummary } from "@/lib/stablecoin-detail-blacklistability-client";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import type { ApiQueryWithMetaResult } from "@/hooks/use-api-query";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import type { ApiMeta } from "@/lib/api";
 
 type UsageResult = ApiQueryWithMetaResult<BlacklistSummaryResponse>;

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import {
   type DepegEventEntry,
   type DepegEventSearchEntry,
-} from "@shared/types/market";
+} from "@shared/types/peg";
 import { selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
 import { readDepegEventPageEntries } from "../../src/lib/depeg-event-snapshot";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";

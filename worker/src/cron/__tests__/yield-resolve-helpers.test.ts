@@ -4,7 +4,7 @@ import { enforceExternalOpportunityTvlEligibility, getLendingOpportunityAbsolute
 import { resolveYieldRewardShare } from "../yield-sync/source-risk";
 import type { DlPool, ResolvedYield, ResolvedYieldEntry } from "../yield-sync/types";
 import type { WeightedYieldPoolGroupConfig } from "../../lib/yield-config/yield-config-weighted-pools";
-import type { YieldType } from "@shared/types/core";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 

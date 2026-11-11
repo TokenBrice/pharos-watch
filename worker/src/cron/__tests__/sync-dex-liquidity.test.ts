@@ -4,7 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";

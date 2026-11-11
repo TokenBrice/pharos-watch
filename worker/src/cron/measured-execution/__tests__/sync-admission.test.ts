@@ -6,7 +6,7 @@ import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import type { DexExitRouteObservation } from "@shared/types/market";
+import type { DexExitRouteObservation } from "@shared/types/exit-route";
 import {
   CONSERVATIVE_MULTICALL_BATCH_SIZE,
   MIN_MEASURED_EXECUTION_PACING_SAMPLES,

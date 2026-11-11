@@ -1,4 +1,4 @@
-import type { ReserveRisk } from "../../types";
+import type { ReserveRisk } from "../../types/reserves";
 
 export interface ReserveRiskPresentation {
   shortLabel: string;

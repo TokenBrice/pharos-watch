@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
-import type { PegAssetBase } from "@shared/types/core";
+import type { PegAssetBase } from "@shared/types/price";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { MAX_OPEN_DEPEG_EVENTS } from "../lib/depeg-threshold-policy";
 import { POOL_CHALLENGE_MIN_TVL } from "../lib/price-depeg-voting-policy";

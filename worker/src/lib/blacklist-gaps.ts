@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
-import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/market";
+import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/blacklist";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
 import {
   BLACKLIST_GAP_METRICS_CACHE_VERSION,

@@ -19,7 +19,7 @@ import { formatCurrency, formatElapsedSeconds, formatSignedCurrency } from "@sha
 import { getNetColor } from "@shared/lib/classification/flows";
 import { aggregateCoinFlows24h } from "@shared/lib/mint-burn-coin-helpers";
 import { formatBankRunGaugeScore } from "@shared/lib/mint-burn-signals";
-import type { MintBurnCoinFlow, MintBurnFlowsResponse, MintBurnGauge } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnFlowsResponse, MintBurnGauge } from "@shared/types/mint-burn";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 
 const SYNC_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {

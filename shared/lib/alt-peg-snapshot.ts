@@ -1,4 +1,4 @@
-import type { PegCurrency } from "../types";
+import type { PegCurrency } from "../types/core";
 import { isCommodityPeg } from "./filter-tags";
 import { compareFiniteDesc } from "./sort";
 import { getCirculatingRawOrNull } from "./supply";

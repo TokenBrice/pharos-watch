@@ -4,7 +4,7 @@ import {
   type ReportCardGradeRangeMetadata,
 } from "@shared/lib/classification";
 import { gradeRange, type ReportCardGradeRange } from "@shared/lib/report-card-core";
-import type { ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 
 export type SafetyGradeRange = ReportCardGradeRange;
 export type SafetyGradeRangeMetadata = ReportCardGradeRangeMetadata;

@@ -3,7 +3,7 @@
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { YieldAdapterManifestResponse } from "@shared/types";
+import type { YieldAdapterManifestResponse } from "@shared/types/yield";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";

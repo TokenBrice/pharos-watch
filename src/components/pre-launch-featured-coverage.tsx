@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Suspense } from "react";
 import { ExternalLink, BookOpen, Play } from "lucide-react";
-import type { FeaturedContent } from "@shared/types";
+import type { FeaturedContent } from "@shared/types/stablecoin-meta-primitives";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 

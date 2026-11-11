@@ -2,15 +2,21 @@ import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type {
   DexStoredAmmExecutionModel,
+} from "../types/dex-execution-legacy";
+import type {
   DexExecutionCapabilityGate,
+} from "../types/dex-execution";
+import type {
   ExitRouteCapacityPoint,
   ExitRouteConfidence,
   ExitRouteEvidenceKind,
   ExitRouteObservation,
   ExitRouteObservationCoverage,
   ExitRouteOutput,
+} from "../types/exit-route";
+import type {
   LiquidityPoolSourceFamily,
-} from "../types/market";
+} from "../types/dex-liquidity";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../types/exit-route";
 import {
   DEX_EXACT_QUOTE_ADAPTER_IDS,

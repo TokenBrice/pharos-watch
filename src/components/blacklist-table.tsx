@@ -13,7 +13,7 @@ import { getNextSortState } from "@/hooks/use-sort";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
-import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
+import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types/blacklist";
 import {
   formatBlacklistAmountOrStatus,
   getBlacklistAmountSourceLabel,

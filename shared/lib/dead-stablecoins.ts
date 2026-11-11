@@ -1,4 +1,4 @@
-import type { DeadStablecoin } from "../types";
+import type { DeadStablecoin } from "../types/cemetery";
 import deadStablecoinAsset from "../data/dead-stablecoins.json";
 import { parseDeadStablecoinAssets } from "./stablecoins/schema";
 

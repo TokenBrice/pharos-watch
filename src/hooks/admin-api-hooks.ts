@@ -2,7 +2,8 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ApiKeyAuditLogResponse } from "@pharos/contracts/api-keys";
-import type { StatusCronDetailResponse, StatusHistoryResponse } from "@shared/types";
+import type { StatusCronDetailResponse } from "@shared/types/status/cron";
+import type { StatusHistoryResponse } from "@shared/types/status/response";
 import {
   ADMIN_API_QUERY_DESCRIPTORS,
   type AdminApiQueryDescriptor,

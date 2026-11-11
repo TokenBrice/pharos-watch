@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { HealthResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status/public-health";
 import { buildPublicHealthStatusCauses, normalizeStatusIssues } from "@/lib/status/issue-evidence-model";
 import { countPublicImpactOpenCircuits, getCircuitImpactStatus, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { CIRCUIT_SOURCE_REGISTRY } from "@shared/lib/circuit-sources";

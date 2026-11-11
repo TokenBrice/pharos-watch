@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBucketSlices, compositionPctFromRaw, calculateRawPercentageSumDeviation, slicesFromPercentages, normalizeSlicesWithDiagnostics, normalizeSlices, parsePositiveNumericLike, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 
 describe("parsePositiveNumericLike", () => {
   it("keeps decimal amount units without accepting radix text", () => {

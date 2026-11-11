@@ -1,7 +1,7 @@
 import { startOfUtcDaySec } from "./time-buckets";
 import { CHAIN_META } from "../types/chain-identity";
-import type { StablecoinMeta } from "../types";
-import type { SupplyUnavailableReason } from "../types/market";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
+import type { SupplyUnavailableReason } from "../types/supply";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";

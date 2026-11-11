@@ -1,6 +1,6 @@
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 export function supplyMetadata(): StablecoinMeta[] {
   const contract = (chain: string, decimals: number) => ({

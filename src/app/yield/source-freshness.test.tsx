@@ -11,7 +11,7 @@ import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { getYieldRankingSourceClockInputs } from "@/lib/yield-source-explorer-model";
 import { deriveYieldRowPresentation } from "@/lib/yield-workbench-row";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import type { YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types/yield";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/components/ui/sheet", () => ({

@@ -9,7 +9,8 @@ import {
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import { numberValue } from "@shared/lib/type-guards";
-import type { DataQuality, StatusResponse } from "@shared/types";
+import type { DataQuality } from "@shared/types/status/core";
+import type { StatusResponse } from "@shared/types/status/response";
 import { formatAge } from "@/lib/pipeline-workspace-format";
 import { worstSeverity } from "@/lib/status/workspace-mode";
 import type { PipelineQualityModel, PipelineQualityRow, PipelineSeverity } from "@/lib/pipeline-workspace-model";

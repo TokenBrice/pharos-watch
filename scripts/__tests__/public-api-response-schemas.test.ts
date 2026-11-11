@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NonUsdShareResponseSchema } from "@shared/types/market";
+import { NonUsdShareResponseSchema } from "@shared/types/supply";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 import { TelegramPulseOutputSchema, TelegramPulseSchema } from "@shared/types/status/telegram";
 

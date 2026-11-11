@@ -1,6 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
-import type { ContractDeployment, ReserveAdapterCoin } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import { resolveChainId } from "@shared/types/chain-identity";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData } from "../../lib/evm-selectors";

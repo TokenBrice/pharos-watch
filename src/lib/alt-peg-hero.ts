@@ -3,7 +3,8 @@ import { buildNonUsdMarketSnapshot, getCoreNonUsdPeg, type NonUsdPegEntry } from
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
-import type { PegCurrency, StablecoinData } from "@shared/types";
+import type { PegCurrency } from "@shared/types/core";
+import type { StablecoinData } from "@shared/types/supply";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SHELF_SIZE_CEIL } from "@/lib/alt-peg-sizing";

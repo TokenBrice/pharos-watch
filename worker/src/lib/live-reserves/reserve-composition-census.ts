@@ -1,5 +1,5 @@
 import { STATUS_RESERVE_COMPOSITION_CENSUS_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 
 /**
  * Structural census retained between four-hourly watchdog runs. Each entry is

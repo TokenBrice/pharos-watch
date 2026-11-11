@@ -1,5 +1,5 @@
 import { vi, type Mock } from "vitest";
-import type { DepegPendingIncident } from "@shared/types";
+import type { DepegPendingIncident } from "@shared/types/peg";
 import type { ApiMeta } from "@/lib/api";
 
 /**

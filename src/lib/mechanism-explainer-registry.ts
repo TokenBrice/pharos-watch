@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 
 export const MECHANISM_EXPLAINER_TITLES: Readonly<Record<MechanismArchetype, string>> = {
   "fiat-cash": "Fiat-Backed Stablecoins, Explained",

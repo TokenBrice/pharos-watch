@@ -1,7 +1,7 @@
 import { resolveChainId } from "@shared/types/chain-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import type { BlacklistabilityReview } from "@shared/types/core";
+import type { BlacklistabilityReview } from "@shared/types/stablecoin-meta-compliance-schemas";
 import { providerRowExclusionShares } from "@shared/lib/safety-score-v9/control-bridge-join";
 import { resolveSafetyScoreV9ReviewedTransferFact, safetyScoreV9TransferDeploymentKey, type SafetyScoreV9ReviewedTransferFact, type SafetyScoreV9TransferMaterialScope } from "./extension-transfer";
 import { transferMaterialScopeFromOnchainGeneration, transferMaterialScopeFromSingleDeploymentAttribution, transferMaterialScopeFromEconomicDeploymentPartition, type SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";

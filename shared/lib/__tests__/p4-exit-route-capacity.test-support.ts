@@ -1,4 +1,4 @@
-import type { DexAmmExecutionModel } from "@shared/types/market";
+import type { DexAmmExecutionModel } from "@shared/types/dex-execution";
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,

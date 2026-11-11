@@ -46,7 +46,7 @@ import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
-import type { YieldHistoryPoint } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 // Keep each chart-bearing piece behind its own client import boundary. The

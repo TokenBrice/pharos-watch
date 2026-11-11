@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import coinsGeneratedAsset from "#pharos-full-catalog";
 import {

@@ -14,7 +14,7 @@ import {
   canonicalExitRouteScopedId,
 } from "@shared/types/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { batchExecute } from "../../lib/db";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import {

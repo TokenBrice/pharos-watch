@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ReserveReview, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { ReserveReview } from "@shared/types/stablecoin-meta-primitives";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   formatReserveQualityPct,
   projectReserveQualityClientSummary,

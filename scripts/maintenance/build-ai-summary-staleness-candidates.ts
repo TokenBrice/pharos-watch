@@ -30,7 +30,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
-import type { AiSummaryClaimToken } from "@shared/types";
+import type { AiSummaryClaimToken } from "@shared/types/editorial";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import currentMethodologyVersion from "@shared/lib/methodology-versions/current-version.json";
 import { type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -38,12 +38,16 @@ import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   PegSummaryResponseSchema,
-  StablecoinListResponseSchema,
-  StressSignalsAllResponseSchema,
   type PegSummaryResponse,
+} from "@shared/types/peg";
+import {
+  StablecoinListResponseSchema,
   type StablecoinListResponse,
+} from "@shared/types/supply";
+import {
+  StressSignalsAllResponseSchema,
   type StressSignalsAllResponse,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import {
   DEFAULT_MAINTENANCE_API_BASE_URL,
   buildMaintenanceApiRequest,

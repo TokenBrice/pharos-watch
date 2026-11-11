@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { DexLiquidityMap, DexLiquidityHistoryPoint, DepegEvent } from "@shared/types/market";
+import type { DexLiquidityMap, DexLiquidityHistoryPoint } from "@shared/types/dex-liquidity";
+import type { DepegEvent } from "@shared/types/peg";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";

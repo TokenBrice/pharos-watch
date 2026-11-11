@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import type { MintAuthorityControl, MintAuthorityProfile } from "@shared/types/core";
+import type { MintAuthorityControl, MintAuthorityProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import {
   V9AuthoredNegativeIncidentReviewSchema,
   V9NegativeIncidentReviewSchema,

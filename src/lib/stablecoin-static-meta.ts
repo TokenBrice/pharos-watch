@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 export type StablecoinStaticMeta = Pick<StablecoinMeta, "id" | "name" | "symbol" | "flags"> & {

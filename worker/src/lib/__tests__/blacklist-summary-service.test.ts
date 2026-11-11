@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import type { BlacklistSummaryResponse } from "@shared/types/market";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary-service";
 import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
 import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";

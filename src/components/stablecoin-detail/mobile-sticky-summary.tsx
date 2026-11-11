@@ -7,7 +7,7 @@ import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 

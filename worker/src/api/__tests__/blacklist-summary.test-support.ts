@@ -1,4 +1,4 @@
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistSummaryResponse } from "@shared/types/market";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistSummaryResponse } from "@shared/types/blacklist";
 
 type BalanceRow = {
   id: string;

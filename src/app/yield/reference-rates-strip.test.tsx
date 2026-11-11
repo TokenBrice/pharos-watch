@@ -8,7 +8,7 @@ import type {
   YieldBenchmarkRegistry,
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
-} from "@shared/types";
+} from "@shared/types/yield";
 
 // Every test pins fake timers, so hydration's animation frames would never settle.
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));

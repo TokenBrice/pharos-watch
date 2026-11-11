@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import { installMatchMediaMock } from "@/test-utils/frontend";
-import type { BlacklistSummaryResponse } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types/blacklist";
 
 const emptyCoverage: NonNullable<BlacklistSummaryResponse["coverage"]> = {
   supported: [], unsupportedDeferred: [],

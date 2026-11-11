@@ -2,7 +2,7 @@ import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { fnv1a32 } from "@shared/lib/fnv1a";
 import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 interface RankedRelatedCoin {
   coin: StablecoinClientListMeta;

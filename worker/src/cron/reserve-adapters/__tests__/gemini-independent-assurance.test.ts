@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import gusd from "@shared/data/stablecoins/coins/gusd-gemini.json";
 import {
   fetchGeminiIndependentAssuranceReserves,

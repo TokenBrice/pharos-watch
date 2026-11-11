@@ -1,6 +1,6 @@
 import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import { getReserves } from "@shared/lib/reserve-templates";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { CoverageStatus } from "@/lib/coverage-types";
 import {
   createDataUnavailableStatus,

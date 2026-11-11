@@ -2,7 +2,7 @@ import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
 } from "@shared/lib/live-reserve-adapters";
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { rethrowIfAborted } from "../../lib/abort";
 import {

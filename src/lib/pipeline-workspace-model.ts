@@ -1,4 +1,4 @@
-import type { StatusResponse, StatusSectionKey } from "@shared/types";
+import type { StatusResponse, StatusSectionKey } from "@shared/types/status/response";
 import { getPriceSourceHealthMissingCounts } from "@shared/lib/pricing-sources";
 import { getMissingPriceTileSeverity } from "@shared/lib/status-thresholds";
 import { numberValue } from "@shared/lib/type-guards";

@@ -3,7 +3,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { WORKER_ACTIVE_STABLECOINS, WORKER_TRACKED_META_BY_ID, type WorkerRuntimeStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";

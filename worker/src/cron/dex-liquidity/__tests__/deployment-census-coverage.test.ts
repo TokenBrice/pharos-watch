@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { isDexExitRouteCoverageComplete, isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import {

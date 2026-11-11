@@ -3,7 +3,7 @@ import { UsdsStatusResponseSchema } from "@shared/types/stability";
 import {
   STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
   StablecoinListResponseSchema,
-} from "@shared/types/market";
+} from "@shared/types/supply";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";

@@ -6,7 +6,7 @@ import {
 } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { dirname, resolve } from "node:path";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import {
   STABLECOIN_SOURCE_DOMAIN_FIELDS,
   STABLECOIN_SOURCE_DOMAIN_SCHEMAS,

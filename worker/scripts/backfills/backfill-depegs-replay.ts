@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { buildPriceReasonablenessOptions } from "../../src/lib/price-validation";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../../src/lib/authoritative-price-sources";

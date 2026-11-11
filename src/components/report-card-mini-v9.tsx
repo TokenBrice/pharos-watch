@@ -11,7 +11,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   SafetyScorePublicationIdentity,
-} from "@shared/types";
+} from "@shared/types/safety-score-publication";
 import { hasPlottableV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import { describePartialEvidence, formatPartialEvidenceHeadline } from "@/lib/safety-score-reason-labels";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import base from "@shared/data/stablecoins/coins/usdc-circle.json";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { computeDexDeploymentSupplyCoverage } from "../report-cards-snapshot-inputs";
 
 const native = "0xb6ceceab302e2e4948951ee7843fc24e92933061";

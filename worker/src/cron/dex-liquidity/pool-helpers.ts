@@ -11,8 +11,9 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
-import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
-import type { LiquidityScoreUnavailableReason } from "@shared/types/market";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/dex-liquidity";
 import {
   QUALITY_MULTIPLIERS,
   COMPOSITE_POOL_NAMES,

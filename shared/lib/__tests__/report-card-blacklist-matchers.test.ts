@@ -3,7 +3,7 @@ import {
   getBlacklistStatusLabel,
   resolveBlacklistStatus,
 } from "../report-card-blacklist-matchers";
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 function makeMeta(
   id: string,

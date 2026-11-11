@@ -1,5 +1,5 @@
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import type { StatusCause, StatusTransition } from "@shared/types";
+import type { StatusCause, StatusTransition } from "@shared/types/status/core";
 import type { StatusHistoryWindow } from "@/lib/admin-api-query-descriptors";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 import { getCausesVerdict } from "@/lib/status/triage-inbox";

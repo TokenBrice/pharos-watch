@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { ReserveAssetClass } from "@shared/types/reserves";
 

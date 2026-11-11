@@ -1,4 +1,4 @@
-import type { YieldType } from "@shared/types/core";
+import type { YieldType } from "@shared/types/yield-vocabulary";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
 import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";

@@ -5,7 +5,7 @@ import type {
   GeniusEnforcementStatus,
   GeniusForeignExceptionStatus,
   GeniusIssuerPathway,
-} from "../types/core";
+} from "../types/compliance-vocabulary";
 import type { BadgeStyle } from "./classification";
 import { projectDescriptors } from "./classification/descriptors";
 

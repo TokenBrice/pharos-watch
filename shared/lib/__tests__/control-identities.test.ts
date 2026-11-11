@@ -4,7 +4,7 @@ import {
   criticalControllerKey,
   findCommonCriticalControls,
 } from "../control-identities";
-import type { StablecoinMeta } from "../../types/core";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 
 describe("critical control identities", () => {
   it("derives a stable chain-scoped address identity", () => {

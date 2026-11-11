@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { YieldHistoryPoint } from "@shared/types";
+import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield-history-chart-model";
 import { useYieldHistoryChartQueries } from "@/components/yield-history-chart-queries";

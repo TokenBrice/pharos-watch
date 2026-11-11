@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/supply";
 import { buildPegDiversityHero, PEG_HOME_RADIUS_PX } from "@/lib/alt-peg-hero";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SHELF_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { CLIENT_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";

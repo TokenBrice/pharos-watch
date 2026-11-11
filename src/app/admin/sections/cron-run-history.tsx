@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { CronRunDetail, CronRunSummary, CronStaleArtifact } from "@shared/types";
+import type { CronRunDetail, CronRunSummary, CronStaleArtifact } from "@shared/types/status/cron";
 import { formatCronRunStatus, formatCronRunTiming, isCronRunNotStarted } from "@/lib/cron-workbench-model";
 import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import {

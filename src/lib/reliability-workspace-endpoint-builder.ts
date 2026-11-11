@@ -1,4 +1,4 @@
-import type { EndpointProbeResult } from "@shared/types";
+import type { EndpointProbeResult } from "@shared/types/status/public-health";
 import { getProbeDisplayStatus } from "@/lib/status-dashboard-model";
 import {
   RELIABILITY_ISSUE_KIND_RANK,

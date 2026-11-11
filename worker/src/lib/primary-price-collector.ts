@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";

@@ -26,7 +26,8 @@ import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/a
 
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import type { StablecoinAiSummary } from "@shared/types/editorial";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
 // Contract parity only needs text rows.

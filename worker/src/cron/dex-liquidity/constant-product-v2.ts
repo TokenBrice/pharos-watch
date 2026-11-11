@@ -4,7 +4,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
-import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 

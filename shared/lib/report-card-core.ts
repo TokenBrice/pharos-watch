@@ -1,4 +1,4 @@
-import type { ReportCardGrade } from "../types";
+import type { ReportCardGrade } from "../types/report-card-grade";
 import type { ReportCardGradeRange } from "../types/report-card-grade";
 
 export { V9_GRADE_THRESHOLDS, scoreToGrade } from "../types/safety-score-v9-grade";

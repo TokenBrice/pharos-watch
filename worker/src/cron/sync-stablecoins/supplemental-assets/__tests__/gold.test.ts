@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 

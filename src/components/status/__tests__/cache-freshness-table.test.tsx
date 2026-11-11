@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CacheFreshnessTable } from "../cache-freshness-table";
-import type { CacheStatus } from "@shared/types";
+import type { CacheStatus } from "@shared/types/status/core";
 
 
 describe("CacheFreshnessTable", () => {

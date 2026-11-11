@@ -4,7 +4,7 @@ import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { getMechanismExplainerPath } from "@shared/lib/classification";
 import { CaseStudyArticleJsonLd, CaseStudyListJsonLd } from "@/app/learn/case-studies/case-study-json-ld";

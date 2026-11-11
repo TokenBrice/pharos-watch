@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 
 import {
   ThreeStepMechanismDiagram,

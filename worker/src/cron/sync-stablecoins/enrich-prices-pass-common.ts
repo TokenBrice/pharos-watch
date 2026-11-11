@@ -3,7 +3,7 @@ import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
 } from "../../lib/price-validation";
-import type { PriceObservedAtMode } from "@shared/types/core";
+import type { PriceObservedAtMode } from "@shared/types/price";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";

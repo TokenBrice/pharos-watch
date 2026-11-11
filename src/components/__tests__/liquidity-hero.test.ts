@@ -7,7 +7,7 @@ import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { formatCurrency } from "@shared/lib/format";
-import { DEX_GLOBAL_KEY } from "@shared/types/market";
+import { DEX_GLOBAL_KEY } from "@shared/types/dex-liquidity";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 vi.mock("next/image", () => ({

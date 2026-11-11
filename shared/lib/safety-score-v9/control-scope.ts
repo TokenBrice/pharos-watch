@@ -1,7 +1,8 @@
 import { normalizeDeploymentId } from "../../types/deployment-id";
 import { V9ControlExecutionScopeSchema, isV9MaximalControlPathValid, V1005ExecutionMemberSchema, type V9ControlExecutionScope, type V9WeightedQuorum, type V9ModuleImpact, type V1005AuthorityGraph, type V1005ExecutionCertificates, type V1005ExecutionMember } from "../../types/safety-score-v9-control-scope";
 import type { V9DeploymentControlFactV2, V1005ProcessDiagnostic } from "../../types/safety-score-v9-facts";
-import type { MintAuthorityProfile, StablecoinMeta } from "../../types/core";
+import type { MintAuthorityProfile } from "../../types/stablecoin-meta-control-schemas";
+import type { StablecoinMeta } from "../../types/stablecoin-meta-schemas";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 

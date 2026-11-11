@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchLeverupLvusdReserves } from "../leverup-lvusd";
 import { installAdapterNetwork, type AdapterRpcValue } from "./reserve-adapter.test-support";

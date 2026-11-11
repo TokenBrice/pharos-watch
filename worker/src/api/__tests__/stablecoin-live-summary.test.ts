@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getPublicApiAccess, getSiteDataAccess } from "@shared/lib/api-endpoints";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
+import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/supply";
 import { StablecoinLiveSummarySchema } from "@shared/types/stablecoin-live-summary";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { resolveRoute } from "../../router";

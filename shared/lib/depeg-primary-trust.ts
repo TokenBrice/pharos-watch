@@ -1,4 +1,4 @@
-import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "../types/core";
+import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "../types/price";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "./depeg-config";
 import { normalizePricingSourceKeys } from "./pricing-sources";
 import { countDepegAuthoritativeSources, hasUpstreamCapableDepegAuthoritativeSource, isSingleSourceDepegAuthoritative, isObservedPrice } from "./pricing-source-policy";

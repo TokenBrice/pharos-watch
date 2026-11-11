@@ -8,7 +8,7 @@ import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { CoverageCoinIdentity } from "@/components/coverage/coverage-coin-identity";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";

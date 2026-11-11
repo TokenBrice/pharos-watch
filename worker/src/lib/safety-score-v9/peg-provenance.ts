@@ -11,7 +11,7 @@ import {
   refineDepegEventChronology,
   type PegSummaryCoin,
 } from "@shared/types/peg";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent } from "@shared/types/peg";
 import {
   SafetyScoreV9InputIdentitySchema,
   type SafetyScoreV9InputIdentity,

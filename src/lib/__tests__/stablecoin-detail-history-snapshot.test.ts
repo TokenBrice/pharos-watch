@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
-import type { DepegEventEntry } from "@shared/types/market";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { DepegEventEntry } from "@shared/types/peg";
 import {
   admitDepegLedger,
   buildStablecoinDetailHistorySnapshot,

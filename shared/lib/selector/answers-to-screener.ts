@@ -6,7 +6,7 @@
  *
  * Binding: `agents/impl-plan-drafts/02-engine.md` §11.
  */
-import type { ReportCardGrade } from "../../types";
+import type { ReportCardGrade } from "../../types/report-card-grade";
 import {
   tradingDewsCeiling,
   tradingPegScoreFloor,

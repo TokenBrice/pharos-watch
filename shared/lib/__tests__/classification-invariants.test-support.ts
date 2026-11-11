@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
 
 // The retired runtime warning no longer owns this data-only custody invariant.

@@ -2,7 +2,7 @@ import { DependencyScenariosResponseSchema } from "@shared/types/dependency-scen
 import { z } from "zod";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 
-import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
+import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/price";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import {
   DependencyGraphNodeSchema,
@@ -37,21 +37,33 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import {
   BlacklistResponseSchema,
   BlacklistSummaryResponseSchema,
+} from "@shared/types/blacklist";
+import {
   BluechipRatingSchema,
+} from "@shared/types/bluechip";
+import {
   DepegEventsResponseSchema,
+  PegSummaryResponseSchema,
+} from "@shared/types/peg";
+import {
   DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
+} from "@shared/types/dex-liquidity";
+import {
   NonUsdShareResponseSchema,
   PegBucketsSchema,
-  PegSummaryResponseSchema,
-  PriceDerivationSchema,
   StablecoinChartResponseSchema,
   StablecoinDetailResponseSchema,
   StablecoinListResponseSchema,
+  SupplyHistoryResponseSchema,
+} from "@shared/types/supply";
+import {
+  PriceDerivationSchema,
+} from "@shared/types/price";
+import {
   StressSignalDetailResponseSchema,
   StressSignalsAllResponseSchema,
-  SupplyHistoryResponseSchema,
-} from "@shared/types/market";
+} from "@shared/types/stress";
 import {
   MintBurnEventsResponseSchema,
   MintBurnFlowsResponseSchema,

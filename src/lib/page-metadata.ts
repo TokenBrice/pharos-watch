@@ -17,8 +17,9 @@ import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_ARCHIVE_PATHS } from "@shared/lib/methodology-versions/archives";
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";

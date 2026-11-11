@@ -2,10 +2,12 @@ import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import type {
   DexAmmExecutionModel,
   DexAmmExecutionToken,
+} from "../types/dex-execution";
+import type {
   ExitRouteCapacityPoint,
   ExitRouteObservation,
   ExitRouteOutput,
-} from "../types/market";
+} from "../types/exit-route";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteScopedId,

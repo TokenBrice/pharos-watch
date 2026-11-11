@@ -1,4 +1,4 @@
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status/response";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";

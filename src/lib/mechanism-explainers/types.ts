@@ -1,4 +1,4 @@
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 
 export interface ArchetypeStep {
   /** Kebab-case, unique within its array, and immutable after publication (editorial-selector identity). */

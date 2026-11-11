@@ -4,7 +4,7 @@ import { DigestSafetyMapCaptureSchema, type DigestSafetyMapCapture } from "@shar
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
-import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinData } from "@shared/types/supply";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";

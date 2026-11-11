@@ -9,7 +9,7 @@ import {
   CONTROL_COMPONENT_ROLE_LABELS,
   type ControlComponentRole,
 } from "@shared/lib/classification";
-import type { BridgeRouteRiskTier } from "@shared/types";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
 
 export type DeploymentCellRole = Extract<ControlComponentRole, "limiting" | "eligible" | "diagnostic">;
 

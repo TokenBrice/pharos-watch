@@ -4,15 +4,21 @@ import { describe, expect, it } from "vitest";
 import {
   BLACKLIST_STABLECOINS,
   BlacklistSummaryResponseSchema,
+} from "../blacklist";
+import {
   DepegEventSchema,
   DepegEventStoredSnapshotSchema,
   DepegPendingIncidentSchema,
-  DexLiquidityHistoryPointSchema,
   PegSummaryStatsSchema,
+} from "../peg";
+import {
+  DexLiquidityHistoryPointSchema,
+} from "../dex-liquidity";
+import {
   StablecoinDataSchema,
   StablecoinListResponseSchema,
   SupplyHistoryResponseSchema,
-} from "../market";
+} from "../supply";
 
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { isObservedPrice } from "../../lib/pricing-source-policy";

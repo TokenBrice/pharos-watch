@@ -1,9 +1,13 @@
 import type {
   BridgeRouteControlCapability,
+} from "../../types/bridge-risk";
+import type {
   BridgeRouteDeployment,
   MintAuthorityControl,
+} from "../../types/stablecoin-meta-control-schemas";
+import type {
   StablecoinMeta,
-} from "../../types";
+} from "../../types/stablecoin-meta-schemas";
 import { criticalControllerKey } from "../control-identities";
 import { isWellFormedDeploymentId, normalizeDeploymentId } from "../../types/deployment-id";
 import { BridgeRouteRiskProfileSchema } from "../../types/stablecoin-meta-control-schemas";

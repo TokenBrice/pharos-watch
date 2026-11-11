@@ -1,6 +1,7 @@
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
-import type { ExitRouteObservationCoverage, LiquidityScoreUnavailableReason } from "@shared/types/market";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ExitRouteObservationCoverage } from "@shared/types/exit-route";
+import type { LiquidityScoreUnavailableReason } from "@shared/types/dex-liquidity";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import {
   DEX_DISCOVERY_PROVIDER_REGISTRY,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MINT_AUTHORITY_POSTURE_VALUES,
   type MintAuthorityPosture,
-} from "../../types/core";
+} from "../../types/mint-authority-vocabulary";
 import { buildV9CuratedMintPostureQueue } from "../safety-score-v9/mint-posture-annotation";
 import {
   curatedMintPostureBand,

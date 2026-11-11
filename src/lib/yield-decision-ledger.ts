@@ -1,4 +1,4 @@
-import type { YieldPublicDecisionLedger } from "@shared/types";
+import type { YieldPublicDecisionLedger } from "@shared/types/yield-evidence-schemas";
 import { formatYieldApyDelta, YIELD_DECISION_REASON_LABELS, YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation";
 
 export interface YieldDecisionAlternativeDisplay {

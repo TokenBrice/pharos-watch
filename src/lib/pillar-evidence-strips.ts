@@ -1,4 +1,5 @@
-import type { BridgeRouteRiskTier, SafetyScoreV9CurrentCard } from "@shared/types";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { BRIDGE_TIER_LABELS, getBridgeTierLabel, type ControlComponentRole, type MintAuthorityScoreFilterValue } from "@shared/lib/classification";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay } from "@/lib/mint-authority-display";

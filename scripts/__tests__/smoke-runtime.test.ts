@@ -1,5 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { symlinkSync } from "node:fs";
 import { createServer } from "node:http";
+import { join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
@@ -10,6 +13,7 @@ import {
   retrySmokeOperation,
   waitForStaticExportServer,
 } from "../lib/smoke-runtime.mjs";
+import { withTempRepo } from "./helpers/test-state";
 
 describe("smoke-runtime CLI helpers", () => {
   it("rejects imports and missing argv paths", () => {
@@ -17,6 +21,20 @@ describe("smoke-runtime CLI helpers", () => {
 
     expect(isDirectRun("file:///tmp/pharos-watch/other.ts", argvPath)).toBe(false);
     expect(isDirectRun(pathToFileURL(argvPath).href, undefined)).toBe(false);
+  });
+
+  it("recognizes a CLI invoked through a symlink on either side", () => {
+    const runtimeUrl = pathToFileURL(resolve("scripts/lib/smoke-runtime.mjs")).href;
+    withTempRepo("pharos-smoke-runtime", {
+      "entry.mjs": `import { isDirectRun } from ${JSON.stringify(runtimeUrl)};\nconsole.log(isDirectRun(import.meta.url, process.argv[1]));\n`,
+    }, (cwd) => {
+      const entry = join(cwd, "entry.mjs");
+      const alias = join(cwd, "alias.mjs");
+      symlinkSync(entry, alias);
+      expect(execFileSync(process.execPath, [alias], { encoding: "utf8" })).toBe("true\n");
+      expect(isDirectRun(pathToFileURL(alias).href, entry)).toBe(true);
+      expect(isDirectRun(pathToFileURL(entry).href, alias)).toBe(true);
+    });
   });
 
   it("rejects an explicitly occupied port even when its unrelated listener serves successful HTTP", async () => {

@@ -1,4 +1,4 @@
-import type { ReserveRisk } from "@shared/types";
+import type { ReserveRisk } from "@shared/types/reserves";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatDecimal } from "@shared/lib/format";
 

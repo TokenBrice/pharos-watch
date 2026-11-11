@@ -2,7 +2,7 @@ import { DEAD_STABLECOINS } from "./dead-stablecoins";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "./psi-eligible";
 import { PSI_HISTORICAL_ASSETS } from "./psi-historical-assets";
 import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins/registry";
-import type { StablecoinMeta } from "../types";
+import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
 
 /** Cross-provider metadata seed: every tracked lifecycle plus PSI historical assets. Excludes cemetery assets. */
 const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...PSI_HISTORICAL_ASSETS];

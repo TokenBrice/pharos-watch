@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import type { ContractDeployment } from "@shared/types/core";
+import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { sleepWithSignal } from "../../lib/abort";
 import { CIRCUIT_SOURCE, STELLAR_HORIZON_API, USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";

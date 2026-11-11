@@ -1,4 +1,4 @@
-import type { BackingType } from "@shared/types";
+import type { BackingType } from "@shared/types/core";
 
 /**
  * Optional per-coin overrides applied on top of an archetype diagram.

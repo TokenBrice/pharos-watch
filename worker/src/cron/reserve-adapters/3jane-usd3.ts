@@ -1,4 +1,4 @@
-import type { ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";

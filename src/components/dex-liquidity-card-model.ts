@@ -1,5 +1,5 @@
 import { getHhiBand } from "@shared/lib/classification";
-import type { DexLiquidityData, DexLiquidityPool } from "@shared/types";
+import type { DexLiquidityData, DexLiquidityPool } from "@shared/types/dex-liquidity";
 
 type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["balanceDetails"]>;
 

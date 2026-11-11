@@ -3,7 +3,7 @@ import {
   buildBlacklistContractBalanceKey,
   getBlacklistPriceAssetId,
 } from "@shared/lib/blacklist";
-import type { BlacklistStablecoin } from "@shared/types/market";
+import type { BlacklistStablecoin } from "@shared/types/blacklist";
 import type { BlacklistRow } from "./shared";
 
 const BLACKLIST_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import { reviewedReserve } from "./generate-reserve-coverage-audit.test-support";

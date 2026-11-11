@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DexLiquidityHistoryPointSchema, StablecoinListResponseSchema } from "../market";
+import { DexLiquidityHistoryPointSchema } from "../dex-liquidity";
+import { StablecoinListResponseSchema } from "../supply";
 import { RedemptionCapacityProfileSchema } from "../redemption";
 
 function makeRawAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import type { BridgeRouteRiskProfile } from "@shared/types/stablecoin-meta-control-schemas";
 import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";

@@ -1,5 +1,6 @@
 import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
-import type { StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { StablecoinLink } from "@shared/types/stablecoin-meta-primitives";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isRecord, stringValue } from "@shared/lib/type-guards";
 import { readStablecoinLinks } from "@/lib/stablecoin-detail-links-client";
 

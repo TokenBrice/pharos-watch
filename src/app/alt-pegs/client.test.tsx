@@ -3,11 +3,12 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
 import { makeAltPegCoin, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const completeNonUsd = (caps: Record<string, number | null | "omit">) =>
   coreNonUsdRows((id, cap) => (cap === null ? { ...makeAltPegCoin(id, 0), circulating: {} } : makeAltPegCoin(id, cap)), caps);
@@ -97,6 +98,8 @@ function expectFocusSearch(expected: { view?: string | null; chart?: string | nu
 }
 
 describe("AltPegsClient", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("starts cohort history even while the independent current-market request is loading", () => {
     useStablecoinsMock.mockReturnValue({ data: undefined, isLoading: true });
     useStablecoinChartsMock.mockClear();
@@ -107,6 +110,7 @@ describe("AltPegsClient", () => {
 
 
   beforeEach(() => {
+    mockFetch([{ match: "/maps/world-countries.svg", body: '<svg xmlns="http://www.w3.org/2000/svg" />' }], { requireMatch: true });
     window.history.replaceState(null, "", "/alt-pegs/");
     refetchMock.mockReset();
     useStablecoinsMock.mockReturnValue({

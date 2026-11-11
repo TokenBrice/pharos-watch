@@ -31,7 +31,7 @@ import {
   type ControlComponentRole,
 } from "@shared/lib/classification";
 import { countSummaryWords, SUMMARY_VERDICT_MAX_WORDS } from "@shared/lib/summary-budget";
-import type { BridgeRouteRiskTier } from "@shared/types";
+import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
 
 /** Brackets stacked over the strip; the rest stay in the "Shared failure domains" fold. */
 const BRACKET_LIMIT = 4;

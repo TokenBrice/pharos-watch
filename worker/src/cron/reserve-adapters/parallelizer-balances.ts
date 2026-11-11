@@ -1,6 +1,7 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
+import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";

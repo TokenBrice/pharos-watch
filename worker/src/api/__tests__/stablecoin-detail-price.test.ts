@@ -3,7 +3,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { overlayCanonicalDetail } from "../stablecoin-detail/price";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
-import { StablecoinDetailResponseSchema } from "@shared/types/market";
+import { StablecoinDetailResponseSchema } from "@shared/types/supply";
 import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../stablecoin-detail";
 import { routeStablecoinDetail } from "../stablecoin-detail/router";
 import { handleStablecoinLiveSummary } from "../stablecoin-live-summary";

@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { MintBurnConservationRecord, MintBurnReconciliationSummary } from "@shared/types";
+import type { MintBurnConservationRecord, MintBurnReconciliationSummary } from "@shared/types/status/yield-liquidity";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 
 function makeSummary(rowCount = 1): MintBurnReconciliationSummary {
