@@ -1,4 +1,5 @@
 import type { V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
+import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
@@ -853,14 +854,8 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   const history = (historyRows.results ?? []).map((r) => r.score).filter(Number.isFinite).reverse();
   const sparklineData = history.length >= 2 ? history : null;
 
-  const allBands: Array<{ name: string; active: boolean }> = [
-    "BEDROCK",
-    "STEADY",
-    "TREMOR",
-    "FRACTURE",
-    "CRISIS",
-    "MELTDOWN",
-  ].map((name) => ({ name, active: name === psiBand }));
+  const allBands: Array<{ name: string; active: boolean }> =
+    PSI_CONDITION_BAND_VALUES.map((name) => ({ name, active: name === psiBand }));
 
   const data: StabilityIndexCardData = {
     psiScore,
