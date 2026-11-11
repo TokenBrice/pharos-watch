@@ -25,6 +25,7 @@ import {
   capabilityForPool,
   getDexExecutionCapabilityRegistration,
   isDexExecutionProfileAdmittedForScoring,
+  isMatureFreshCurveHistory,
   measuredExecutionProfilesForPool,
   normalizedKey,
   observationHistoryForProfile,
@@ -202,25 +203,15 @@ export function buildP4DexExitRouteObservations(params: {
         (isCurveStableSwapPacket || isCurveStableSwapNgProfile) &&
         measuredRows.every(({ profile }) => {
           const history = observationHistoryForProfile(profile);
-          const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
-            profile.adapterProfileId,
-          );
-          return (
-            history != null &&
-            params.observedAt - history.observationWindowEndedAt <= freshnessMaxSec &&
-            history.observationWindowEndedAt <= params.observedAt + 60 &&
-            history.completeProducerCycleCount >=
-              (
-                isCurveStableSwapNgProfile
-                  ? CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES
-                  : CURVE_STABLESWAP_MIN_COMPLETE_CYCLES
-              ) &&
-            history.successfulObservationCount >=
-              (
-                isCurveStableSwapNgProfile
-                  ? CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS
-                  : CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS
-              )
+          return isMatureFreshCurveHistory(
+            history,
+            params.observedAt,
+            isCurveStableSwapNgProfile
+              ? CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES
+              : CURVE_STABLESWAP_MIN_COMPLETE_CYCLES,
+            isCurveStableSwapNgProfile
+              ? CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS
+              : CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
           );
         });
       if (

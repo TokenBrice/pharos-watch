@@ -214,7 +214,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capability-policy.ts",
-      "sha256": "0d7c11f3cd133e031b7451ed4c4542b75cb1366fe26505c2ac97b44c886cc9de"
+      "sha256": "d9288c1fb315dc8abb7da03aaf54523aafab7548d06462463790be4bdf8893c6"
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
@@ -226,7 +226,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-observation-assembly.ts",
-      "sha256": "94261a9d515069b42691d906035447f4b39a51341a362f48ff6eeda71468e882"
+      "sha256": "01cb15c1089b0860d6f5ff79018822cc26068ed255a749b441eee3e10b16af44"
     },
     {
       "path": "shared/lib/peg-score.ts",
@@ -1259,7 +1259,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-09-block-26377132-shock-coverage.json.gz"
     }
   ],
-  "digest": "6e4cefc575b6b3d808f9f68aabf14d26da21533a0a67dae1de91f9b8ea59d2ea"
+  "digest": "b66cf4316336175cf1d9796621879c52885348227f46adcb3157d33f79f10a0a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

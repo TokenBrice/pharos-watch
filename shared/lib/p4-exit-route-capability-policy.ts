@@ -15,6 +15,7 @@ import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../types/exit-route";
 import {
   DEX_EXACT_QUOTE_ADAPTER_IDS,
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexExactQuoteAdapterId,
   type DexMeasuredExecutionObservationHistory,
@@ -35,6 +36,21 @@ export const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
+
+export function isMatureFreshCurveHistory(
+  history: DexMeasuredExecutionObservationHistory | null | undefined,
+  nowSec: number,
+  minCompleteCycles: number,
+  minSuccessfulObservations: number,
+): boolean {
+  return (
+    history != null &&
+    history.completeProducerCycleCount >= minCompleteCycles &&
+    history.successfulObservationCount >= minSuccessfulObservations &&
+    nowSec - history.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
+    history.observationWindowEndedAt <= nowSec + 60
+  );
+}
 
 export type DexExecutionCapabilityLifecycle = "shadow" | "active" | "disabled";
 export type DexExecutionProofKind =
