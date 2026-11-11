@@ -149,7 +149,7 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
         updated_at: now,
       },
     },
-    { match: "key LIKE 'circuit:%'", rows: [] },
+    { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [] },
     { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     { match: "depeg_events", rows: [], first: { cnt: 0 } },
     { match: "FROM status_state", rows: [], first: stateRow },

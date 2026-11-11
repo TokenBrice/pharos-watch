@@ -94,7 +94,7 @@ export async function healNullPrices(
 
   const coinRows = await db.prepare(
     `SELECT DISTINCT stablecoin_id
-     FROM mint_burn_events
+     FROM mint_burn_events INDEXED BY idx_mbe_null_price_ts
      WHERE amount_usd IS NULL AND timestamp >= ?`,
   ).bind(cutoff).all<{ stablecoin_id: string }>();
   const candidateCoins = [...new Set((coinRows.results ?? []).map((row) => row.stablecoin_id))];

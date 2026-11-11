@@ -241,8 +241,6 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("does not count a degraded attempt that wrote no snapshot toward the streak", () => {
-    // A withheld fallback records `degraded` with a failure category and leaves
-    // the retained snapshot untouched; it is not a degraded success.
     const withheld = (attemptedAt: number) =>
       attempt({ attemptedAt, status: "degraded", failureCategory: "upstream-http" });
     const result = evaluate(cycleTimes.map(withheld));
@@ -362,18 +360,16 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       nowSpy.mockReturnValue(t0 * 1000);
       mocks.drift.mockResolvedValue({ ...emptyDrift(), observedIds: [COIN] });
       await runReservePostSyncWatchdog(historyDb([]));
+      expect(mocks.overview.mock.calls[0].slice(3)).toEqual([undefined, { adapterReliability: false }]);
       const healthy = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
       expect(healthy.observedSince[COIN]).toBe(t0);
 
-      // The watchdog's own four-hourly slot runs, but no cohort member was observed.
       nowSpy.mockReturnValue((t0 + interval) * 1000);
       mocks.drift.mockResolvedValue({ ...emptyDrift(), fallbackCoins: [COIN] });
       const gapResult = await runReservePostSyncWatchdog(historyDb([]));
       const gapMetadata = JSON.parse(gapResult.metadata ?? "{}") as { degradedReasons: string[] };
       expect(gapMetadata.degradedReasons).toContain("reserve-drift-census-empty");
 
-      // An explicit gap replaces the retained healthy envelope: the census
-      // cannot certify a no-drift set, and the source must not look continuous.
       const gap = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as Record<string, unknown>;
       expect(gap).toMatchObject({
         continuous: false,
@@ -391,8 +387,6 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       });
       await runReservePostSyncWatchdog(historyDb([]));
       const recovery = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
-      // A single missed cycle must not inherit the pre-gap epoch: dispatch
-      // compares epochs to cold-seed a member returning from a blind interval.
       expect(recovery.observedSince[COIN]).toBe(t0 + 2 * interval);
     } finally {
       nowSpy.mockRestore();

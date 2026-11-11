@@ -48,7 +48,7 @@ function healthD1(tables: MockTableConfig[]) {
       { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null, allowUnused: true },
       { match: "FROM dex_liquidity", rows: [], first: { age: 60 }, allowUnused: true },
       { match: "FROM yield_data", rows: [], first: { age: 60 }, allowUnused: true },
-      { match: "key LIKE 'circuit:%'", rows: [], allowUnused: true },
+      { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [], allowUnused: true },
       { match: "blacklist-gap-metrics-cache-read", rows: [], first: null, allowUnused: true },
       { match: "blacklist-gap-metrics-cache-write", rows: [], allowUnused: true },
       {
@@ -643,7 +643,7 @@ describe("handleHealth", () => {
       const now = Math.floor(Date.now() / 1000);
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const open = (openedAt: number) => JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt - 30, lastSuccessAt: null, openedAt });
-      const db = makeHealthyHealthDb(now, { extras: [entry, { match: "key LIKE 'circuit:%'", rows: [
+      const db = makeHealthyHealthDb(now, { extras: [entry, { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [
         { key: "circuit:defillama-stablecoins", value: open(now - 600) },
         { key: "circuit:coingecko-prices", value: open(now - 540) },
         { key: "circuit:dexscreener-prices", value: open(now - 480) },
@@ -1383,7 +1383,7 @@ describe("handleHealth", () => {
     const db = makeHealthyHealthDb(now, {
       extras: [
         {
-          match: "key LIKE 'circuit:%'",
+          match: "key >= 'circuit:' AND key < 'circuit;'",
           rows: [
             { key: circuitKeys[0], value: openCircuitValue(now - 600) },
             { key: circuitKeys[1], value: openCircuitValue(now - 540) },
@@ -1466,7 +1466,7 @@ describe("handleHealth", () => {
     const db = makeHealthyHealthDb(now, {
       extras: [
         {
-          match: "key LIKE 'circuit:%'",
+          match: "key >= 'circuit:' AND key < 'circuit;'",
           rows: [
             { key: "circuit:live-reserves:pmusd-precious-metals", value: openCircuitValue(now - 600) },
             { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },

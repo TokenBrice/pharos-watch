@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { CircuitRecord } from "../circuit-breaker";
 import {
@@ -78,19 +79,11 @@ describe("circuit-breaker", () => {
   });
 
   describe("mapCronStatusToCircuitOutcome", () => {
-    it("maps ok and undefined statuses to success", () => {
-      expect(mapCronStatusToCircuitOutcome("ok")).toBe("success");
-      expect(mapCronStatusToCircuitOutcome(undefined)).toBe("success");
-    });
-
-    it("maps degraded and skipped statuses to neutral", () => {
-      expect(mapCronStatusToCircuitOutcome("degraded")).toBe("neutral");
-      expect(mapCronStatusToCircuitOutcome("skipped_locked")).toBe("neutral");
-      expect(mapCronStatusToCircuitOutcome("skipped_neutral")).toBe("neutral");
-    });
-
-    it("maps error to failure", () => {
-      expect(mapCronStatusToCircuitOutcome("error")).toBe("failure");
+    it.each([
+      ["ok", "success"], [undefined, "success"], ["degraded", "neutral"],
+      ["skipped_locked", "neutral"], ["skipped_neutral", "neutral"], ["error", "failure"],
+    ] as const)("maps %s to %s", (status, outcome) => {
+      expect(mapCronStatusToCircuitOutcome(status)).toBe(outcome);
     });
   });
 
@@ -106,10 +99,7 @@ describe("circuit-breaker", () => {
       });
       const db = mockDbWithCircuit("test-source", stored);
       const record = await getCircuitRecord(db, "test-source");
-      expect(record.state).toBe("open");
-      expect(record.consecutiveFailures).toBe(3);
-      expect(record.lastFailureAt).toBe(1000);
-      expect(record.openedAt).toBe(1000);
+      expect(record).toEqual(stored);
     });
 
     it("fails closed for malformed JSON instead of inventing a closed record", async () => {
@@ -237,7 +227,7 @@ describe("circuit-breaker", () => {
       const now = Math.floor(Date.now() / 1000);
       const db = mockDbWithCircuit("src", makeRecord({
         state: "open",
-        openedAt: now - 100, // only 100s ago, probe needs 1800s
+        openedAt: now - 100,
       }));
       expect(await shouldAttemptFetch(db, "src")).toBe(false);
     });
@@ -246,7 +236,7 @@ describe("circuit-breaker", () => {
       const now = Math.floor(Date.now() / 1000);
       const db = mockDbWithCircuit("src", makeRecord({
         state: "open",
-        openedAt: now - 1801, // 30min + 1s ago
+        openedAt: now - 1801,
       }));
       expect(await shouldAttemptFetch(db, "src")).toBe(true);
     });
@@ -427,26 +417,12 @@ describe("circuit-breaker", () => {
 
   describe("recordOutcome — failure", () => {
 
-    it("opens circuit at threshold (3 failures)", async () => {
-      const stored = makeRecord({ state: "closed", consecutiveFailures: 2 });
-      const db = mockDbWithCircuit("src", stored);
-      const outcome = await recordOutcome(db, "src", false);
-      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 3 });
-    });
-
-    it("does not open circuit before threshold", async () => {
-      const stored = makeRecord({ state: "closed", consecutiveFailures: 1 });
-      const db = mockDbWithCircuit("src", stored);
-      const outcome = await recordOutcome(db, "src", false);
-      expect(outcome.after).toMatchObject({ state: "closed", consecutiveFailures: 2 });
-    });
-
-    it("stays open on further failures after opening", async () => {
-      const now = Math.floor(Date.now() / 1000);
-      const stored = makeRecord({ state: "open", consecutiveFailures: 5, openedAt: now - 100 });
-      const db = mockDbWithCircuit("src", stored);
-      const outcome = await recordOutcome(db, "src", false);
-      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 6 });
+    it.each([
+      [2, "closed", "open", 3], [1, "closed", "closed", 2], [5, "open", "open", 6],
+    ] as const)("records failure %s/%s as %s/%s", async (failures, before, state, count) => {
+      const db = mockDbWithCircuit("src", makeRecord({ state: before, consecutiveFailures: failures }));
+      expect((await recordOutcome(db, "src", false)).after)
+        .toMatchObject({ state, consecutiveFailures: count });
     });
 
     it("half-open probe failure reopens circuit", async () => {
@@ -459,34 +435,22 @@ describe("circuit-breaker", () => {
 
 
   describe("getCircuitStates", () => {
-    it("returns all circuit records", async () => {
-      const db = mockD1([{
-        match: "circuit",
-        rows: [
-          { key: "circuit:source-a", value: JSON.stringify(makeRecord({ state: "closed" })) },
-          { key: "circuit:source-b", value: JSON.stringify(makeRecord({ state: "open", consecutiveFailures: 3 })) },
-        ],
-      }]);
+    it("seeks lowercase circuit keys and skips malformed records and neighbouring keys", async () => {
+      const { sqlite } = fixtures.open();
+      let sql = "";
+      const db = createSqliteD1(sqlite, { onAll: (query) => { sql = query; } });
+      const closed = makeRecord();
+      const open = makeRecord({ state: "open", consecutiveFailures: 3 });
+      for (const [key, value] of [
+        ["circuit:source-b", JSON.stringify(open)], ["circuit:source-a", JSON.stringify(closed)],
+        ["circuit:bad", "not-json"], ["circuit:invalid", "{}"],
+        ...["circuit9", "circuit;", "Circuit:upper"].map((key) => [key, JSON.stringify(closed)]),
+      ]) sqlite.prepare("INSERT INTO cache VALUES (?, ?, 100)").run(key!, value!);
       const states = await getCircuitStates(db);
-      expect(Object.keys(states)).toHaveLength(2);
-      expect(states["source-a"].state).toBe("closed");
-      expect(states["source-b"].state).toBe("open");
-      expect(states["source-b"].consecutiveFailures).toBe(3);
-    });
-
-
-    it("handles malformed JSON gracefully (skips bad entries)", async () => {
-      const db = mockD1([{
-        match: "circuit",
-        rows: [
-          { key: "circuit:good", value: JSON.stringify(makeRecord({ state: "closed" })) },
-          { key: "circuit:bad", value: "not-json" },
-        ],
-      }]);
-      const states = await getCircuitStates(db);
-      expect(Object.keys(states)).toHaveLength(1);
-      expect(states["good"].state).toBe("closed");
-      expect(states["bad"]).toBeUndefined();
+      expect(states).toEqual({ "source-a": closed, "source-b": open });
+      expect(Object.keys(states)).toEqual(["source-b", "source-a"]);
+      expect(sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map((row) => row.detail))
+        .toContain("SEARCH cache USING INDEX sqlite_autoindex_cache_1 (key>? AND key<?)");
     });
   });
 

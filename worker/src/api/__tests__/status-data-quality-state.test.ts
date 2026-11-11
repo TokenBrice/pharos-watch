@@ -453,7 +453,7 @@ describe("handleStatus", () => {
       });
     const db = fixtureMockD1([{ match: "cron_runs", rows: cronRows },
     {
-      match: "key LIKE 'circuit:%'",
+      match: "key >= 'circuit:' AND key < 'circuit;'",
       rows: [
         { key: circuitKeys[0], value: openCircuitValue(now - 600) },
         { key: circuitKeys[1], value: openCircuitValue(now - 540) },

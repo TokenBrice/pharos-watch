@@ -472,8 +472,19 @@ export async function persistDewsResults(params: {
 
   const oldSignals = await runWithOverloadRetry(() =>
     params.db
-      .prepare(`/* pharos:dews:stress-current-prune-old */ DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
-      .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
+      .prepare(`/* pharos:dews:stress-current-prune-old */
+        WITH RECURSIVE ids(stablecoin_id) AS (
+          SELECT MIN(stablecoin_id) FROM stress_signals
+          UNION ALL
+          SELECT (SELECT MIN(stablecoin_id) FROM stress_signals WHERE stablecoin_id > ids.stablecoin_id)
+            FROM ids WHERE ids.stablecoin_id IS NOT NULL
+        )
+        DELETE FROM stress_signals WHERE rowid IN (
+          SELECT s.rowid FROM ids CROSS JOIN stress_signals s
+           WHERE ids.stablecoin_id IS NOT NULL ${frozenClause.replace("AND stablecoin_id", "AND ids.stablecoin_id")}
+             AND s.stablecoin_id = ids.stablecoin_id AND s.computed_at < ?
+        )`)
+      .bind(...frozenIdsList, params.nowSec - 7 * DAY_SECONDS)
       .run(),
     3,
     params.signal,

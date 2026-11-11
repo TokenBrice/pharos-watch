@@ -236,7 +236,7 @@ function makeMintBurnAssessmentDb(
             } : null,
           }),
     },
-    { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [], ...(options.circuitError ? { throwError: options.circuitError } : {}) },
+    { match: "SELECT key, value FROM cache WHERE key >= 'circuit:' AND key < 'circuit;'", rows: [], ...(options.circuitError ? { throwError: options.circuitError } : {}) },
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
     {
       match: "GROUP BY job",
