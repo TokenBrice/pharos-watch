@@ -1,21 +1,10 @@
-import type {
-  PoolExecutionCapability,
-  PoolProcessingContext,
-  PoolProtocolEnrichment,
-  ResolvedPoolIdentity,
-} from "./process-pool-types";
 import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
 import { buildSuiClmmRegisteredExecutionTarget } from "./execution-targets/sui-clmm";
 
-export interface DexExecutionTargetFactoryInput {
-  context: PoolProcessingContext;
-  identity: ResolvedPoolIdentity;
-  enrichment: PoolProtocolEnrichment;
-  stablecoinId: string;
-}
-export type DexExecutionTargetFactoryOutput = Partial<PoolExecutionCapability>;
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./execution-targets/contract";
+export type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./execution-targets/contract";
 
 const SOLANA_PENDING_FAMILIES = [
   { protocol: "orca" },

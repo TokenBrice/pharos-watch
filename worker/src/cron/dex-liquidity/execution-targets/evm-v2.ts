@@ -1,4 +1,4 @@
-import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "../execution-target-registry";
+import type { DexExecutionTargetFactoryInput, DexExecutionTargetFactoryOutput } from "./contract";
 import { buildEvmV2ExecutionCandidate } from "../constant-product-v2";
 import { buildSolidlyV2RegisteredExecutionTarget } from "./solidly-v2";
 import {
@@ -9,23 +9,6 @@ import {
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 
 const EVM_V2_PROFILE_ID = "evm-v2-constant-product-v1";
-
-/**
- * Primary pool processing intentionally has no contract-metadata map. The
- * direct-API target context adds it structurally; without it this leaf must
- * stay empty rather than guessing token decimals or output identity.
- */
-type EvmV2ContextMetadata = {
-  contractMetaByChainAddress?: Map<
-    string,
-    {
-      stablecoinId: string;
-      symbol: string;
-      decimals: number | null;
-      source: "contract" | "tradedContract";
-    }
-  >;
-};
 
 function parsePoolSymbols(symbol: string): string[] | undefined {
   const symbols = symbol
@@ -53,8 +36,7 @@ function readTokenMetadata(
 ) {
   const assetKey = canonicalExitRouteAssetKey(chain, address);
   const stablecoinId = input.context.chainAddressToId.get(assetKey);
-  const metadata = (input.context as typeof input.context & EvmV2ContextMetadata)
-    .contractMetaByChainAddress?.get(assetKey);
+  const metadata = input.context.contractMetaByChainAddress?.get(assetKey);
   const decimals = metadata?.decimals;
   const metadataStablecoinId = metadata?.stablecoinId.trim();
 

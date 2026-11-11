@@ -1,4 +1,4 @@
-import type { PoolProcessingRejection } from "./process-pool-types";
+import type { PoolProcessingRejection } from "./pool-rejection-types";
 
 export interface LlamaPool {
   pool: string;
@@ -340,20 +340,7 @@ export interface CurvePoolEntry {
   }[];
 }
 
-export interface SymbolLookups {
-  symbolToIds: Map<string, string[]>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  chainAddressToId: Map<string, string>;
-  contractMetaByChainAddress: Map<
-    string,
-    {
-      stablecoinId: string;
-      symbol: string;
-      decimals: number | null;
-      source: "contract" | "tradedContract";
-    }
-  >;
-}
+export type { SymbolLookups } from "./token-resolution-types";
 
 export interface DataSources {
   pools: LlamaPool[];

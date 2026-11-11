@@ -108,10 +108,15 @@ export function classifyPoolType(project: string, poolMeta?: string | null): str
   return "generic";
 }
 
+export function classifyCurveStableSwapQuality(curveA: number) {
+  const resolvedPoolType = curveA >= 500 ? "curve-stableswap-high-a" : "curve-stableswap";
+  return { resolvedPoolType, qualityMultiplier: QUALITY_MULTIPLIERS[resolvedPoolType]! };
+}
+
 /** Get quality multiplier for a pool type, with Curve A-factor override */
 export function getQualityMultiplier(poolType: string, curveA?: number): number {
   if (poolType === "curve-stableswap" && curveA != null) {
-    return curveA >= 500 ? QUALITY_MULTIPLIERS["curve-stableswap-high-a"]! : QUALITY_MULTIPLIERS["curve-stableswap"]!;
+    return classifyCurveStableSwapQuality(curveA).qualityMultiplier;
   }
   return QUALITY_MULTIPLIERS[poolType] ?? QUALITY_MULTIPLIERS["generic"]!;
 }

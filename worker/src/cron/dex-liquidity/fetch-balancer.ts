@@ -1,3 +1,4 @@
+import { passesUsdVolumeSourcePreflight as shouldEnrichBalancerPool } from "./pool-volume-sanity";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { isDexApiRecord, parseStrictFiniteDecimal } from "./direct-api-json";
 import { DIRECT_API_DEFAULT_MAX_PAGES } from "./direct-api-policy";
@@ -69,22 +70,6 @@ const REVIEWED_POOL_TYPES = new Set([...STABLE_MATH_POOL_TYPES, ...REVIEWED_CUST
 // values (e.g. legacy Fantom multiUSDC/DEI pool reports $337B). Set conservatively below
 // the global DIRECT_API_MAX_POOL_TVL_USD ($10B) so obvious garbage is rejected at source.
 const BALANCER_MAX_POOL_TVL_USD = 2_000_000_000;
-const BALANCER_RETAINED_LARGE_POOL_TVL_USD = 100_000_000;
-const BALANCER_RETAINED_MAX_VOLUME_TO_TVL_RATIO = 50;
-const BALANCER_RETAINED_LARGE_POOL_MIN_VOLUME_USD = 50_000;
-
-function shouldEnrichBalancerPool(tvlUsd: number, volume24hUsd: number | null): boolean {
-  if (tvlUsd <= 0 || !Number.isFinite(tvlUsd)) return false;
-  // Liquidity 6.9 admission semantics: only a measured (finite, non-negative)
-  // reading participates. An absent reading is not a zero — it excludes
-  // nothing from the vol/TVL sanity check and never clears the large-pool
-  // volume floor, so small pools stay eligible without any volume evidence.
-  const measuredVolume = volume24hUsd != null && Number.isFinite(volume24hUsd) && volume24hUsd >= 0 ? volume24hUsd : null;
-  if (measuredVolume != null && measuredVolume / tvlUsd > BALANCER_RETAINED_MAX_VOLUME_TO_TVL_RATIO) return false;
-  return tvlUsd <= BALANCER_RETAINED_LARGE_POOL_TVL_USD ||
-    (measuredVolume != null && measuredVolume >= BALANCER_RETAINED_LARGE_POOL_MIN_VOLUME_USD);
-}
-
 const QUERY = `query($first: Int!, $skip: Int!) {
   poolGetPools(
     first: $first,

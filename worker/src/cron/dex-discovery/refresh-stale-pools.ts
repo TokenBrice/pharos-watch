@@ -1,10 +1,11 @@
+import { SLIPSTREAM_COLLECTION_DEPLOYMENTS } from "@shared/lib/dex-slipstream-deployments";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
-import { AERO_CHAINS } from "../dex-liquidity/aero-deployments";
+import { AERO_CHAINS } from "@shared/lib/dex-aero-deployments";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES,
@@ -145,8 +146,9 @@ interface StalePoolRefreshBackoffEntry {
  * refreshed through CoinGecko onchain so a same-id `cg_onchain` reading exists.
  */
 const SLIPSTREAM_REFRESH_SCOPES = [
-  { chain: "base", poolTypePrefix: "aerodrome-slipstream" },
-  { chain: "optimism", poolTypePrefix: "velodrome-slipstream" },
+  ...Object.entries(SLIPSTREAM_COLLECTION_DEPLOYMENTS).map(([poolTypePrefix, deployment]) => ({
+    chain: deployment.chain, poolTypePrefix,
+  })),
   // Aero Slipstream and basic pools (`aero-slipstream-*`, `aero-stable`, `aero-volatile`).
   ...AERO_CHAINS.map((chain) => ({ chain, poolTypePrefix: "aero-" })),
 ] as const;

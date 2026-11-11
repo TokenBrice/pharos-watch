@@ -1,3 +1,9 @@
+import {
+  CURVE_STABLESWAP_MIN_COMPLETE_CYCLES,
+  CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
+  CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES,
+  CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
+} from "@shared/lib/p4-exit-route-capability-policy";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import {
   DEX_MEASURED_FRESHNESS_MAX_SEC,
@@ -18,16 +24,12 @@ import {
 } from "./curve-cryptoswap";
 import {
   CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
-  CURVE_STABLESWAP_MIN_COMPLETE_CYCLES,
-  CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS,
   getCurveStableSwapPolicy,
   resolveCurveStableSwapTokenIndices,
   validateCurveStableSwapProfileProof,
 } from "./curve-stableswap";
 import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-  CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES,
-  CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
   getCurveStableSwapNgPolicy,
   validateCurveStableSwapNgProfileProof,
 } from "./curve-stableswap-ng";

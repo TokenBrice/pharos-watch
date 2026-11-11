@@ -21,9 +21,9 @@ import {
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 
-import { AERO_DEPLOYMENTS } from "./aero-deployments";
+import { AERO_DEPLOYMENTS } from "@shared/lib/dex-aero-deployments";
 
-export { AERO_CHAINS, AERO_DEPLOYMENTS } from "./aero-deployments";
+export { AERO_CHAINS, AERO_DEPLOYMENTS } from "@shared/lib/dex-aero-deployments";
 
 /**
  * Per-run read bound. A larger factory reads its oldest pools (where the

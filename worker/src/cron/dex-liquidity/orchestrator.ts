@@ -172,16 +172,18 @@ async function buildDexLiquidityScoringStageState(
 ): Promise<{
   scoringSourceState: DexLiquidityScoringSourceState;
   poolState: DexLiquidityPoolState;
+  sourceCommitPlan: { updates: PendingDexSourcePaginationUpdate[]; registryWriteback: "durable" | "failed" };
 }> {
   const sourceStartedAtMs = Date.now();
   const sourceState = await loadDexLiquiditySourceState(ctx);
   const poolsStartedAtMs = Date.now();
   if (ctx.phaseTimingsMs) ctx.phaseTimingsMs.sourceLoading = poolsStartedAtMs - sourceStartedAtMs;
-  const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
+  const { poolState, registryWriteback } = await buildDexLiquidityPoolState(ctx, sourceState);
   if (ctx.phaseTimingsMs) ctx.phaseTimingsMs.poolConstruction = Date.now() - poolsStartedAtMs;
   return {
     scoringSourceState: buildDexLiquidityScoringSourceState(sourceState),
     poolState,
+    sourceCommitPlan: { updates: sourceState.pendingPaginationUpdates, registryWriteback },
   };
 }
 
@@ -220,7 +222,7 @@ export async function stageDexLiquidityScoring(
     fallbackCounters,
     phaseTimingsMs,
   };
-  const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
+  const { scoringSourceState, poolState, sourceCommitPlan } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
   const persistenceStartedAtMs = Date.now();
   const stored = await persistDexLiquidityScoringStage(
@@ -241,7 +243,9 @@ export async function stageDexLiquidityScoring(
   );
   phaseTimingsMs.stagePersistence = Date.now() - persistenceStartedAtMs;
   throwIfAborted(signal);
-  const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
+  const cursorPersistence = await acknowledgeDexSourcePagination(
+    db, sourceCommitPlan.registryWriteback === "durable" ? sourceCommitPlan.updates : [],
+  );
   const targetEnrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
   const qualityReasons = getDexLiquiditySourceQualityReasons(scoringSourceState);
   const degradedReason = cursorPersistence.failures.length > 0
@@ -397,8 +401,6 @@ export interface DexLiquidityRunContext {
   reportDexProgress: DexProgressReporter;
   /** Report-only fallback/default counters shared across the run's pool-intake phases. */
   fallbackCounters?: LiquidityFallbackCounters;
-  /** In-memory until both registry writeback and scoring-stage finalization succeed. */
-  pendingPaginationUpdates?: PendingDexSourcePaginationUpdate[];
   phaseTimingsMs?: { sourceLoading: number; poolConstruction: number; stagePersistence: number };
 }
 
@@ -425,6 +427,7 @@ interface DexLiquiditySourceState {
   priceObservations: Awaited<ReturnType<typeof buildCurveLookups>>["priceObservations"];
   subgraphEnrichment: DexLiquiditySubgraphEnrichment;
   directApiPhase: DexLiquidityDirectApiPhase;
+  pendingPaginationUpdates: PendingDexSourcePaginationUpdate[];
   directApiPools: DexApiPool[];
   pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
   slipstreamMeasuredExecutionTargets: ReturnType<typeof buildSlipstreamMeasuredExecutionTargets>;
@@ -552,7 +555,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     counts: { sourceFamilies: directApiFetchers.length },
   });
   const directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, lookups, ctx.signal);
-  ctx.pendingPaginationUpdates = directApiPhase.results.flatMap((entry) => entry.result.pendingPaginationUpdates ?? []);
+  const pendingPaginationUpdates = directApiPhase.results.flatMap((entry) => entry.result.pendingPaginationUpdates ?? []);
   const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
   await ctx.reportDexProgress("direct-api-fetch-complete", {
     message: "Completed protocol-native DEX liquidity fetch", providerFamily: "protocol-native-dex",
@@ -738,6 +741,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     priceObservations,
     subgraphEnrichment,
     directApiPhase,
+    pendingPaginationUpdates,
     directApiPools: directApiPhase.pools,
     pancakeMeasuredExecutionTargets,
     slipstreamMeasuredExecutionTargets,
@@ -753,7 +757,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
 async function buildDexLiquidityPoolState(
   ctx: DexLiquidityRunContext,
   sourceState: DexLiquiditySourceState,
-): Promise<DexLiquidityPoolState> {
+): Promise<{ poolState: DexLiquidityPoolState; registryWriteback: "durable" | "failed" }> {
   await ctx.reportDexProgress("pool-processing", {
     message: "Merging primary, staged, direct, and fallback pools", providerFamily: "dex-liquidity",
     total: sourceState.primaryPoolCounts.rawPoolCount + sourceState.directApiPoolCounts.rawPoolCount,
@@ -892,13 +896,14 @@ async function buildDexLiquidityPoolState(
   staged.priceObservations.clear();
   // Best-effort memory only: publication depends on the merge above, so a D1
   // failure here costs durability, not this run's output.
+  let registryWriteback: "durable" | "failed" = "durable";
   try {
     await upsertStagedPools(ctx.db, stagedWriteback.pools, ctx.signal, {
       minRefreshGapSec: STAGED_WRITEBACK_MIN_REFRESH_GAP_SEC,
     });
   } catch (error) {
     // Even a completed scoring stage cannot acknowledge failed registry memory.
-    ctx.pendingPaginationUpdates = [];
+    registryWriteback = "failed";
     rethrowIfAborted(error, ctx.signal);
     logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
@@ -1029,7 +1034,7 @@ async function buildDexLiquidityPoolState(
     },
   });
 
-  return {
+  const poolState: DexLiquidityPoolState = {
     priceRefresh,
     registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
     targetEnrichment: [...(quoterEnrichment?.telemetry ?? []), ...(v4Enrichment ?? [])],
@@ -1054,6 +1059,7 @@ async function buildDexLiquidityPoolState(
     stagedWritebackSkippedUntrustedIds: stagedWriteback.skippedUntrustedIds,
     directApiIntegration,
   };
+  return { poolState, registryWriteback };
 }
 
 async function scoreDexLiquidityPoolState(

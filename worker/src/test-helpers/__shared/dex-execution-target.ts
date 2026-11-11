@@ -1,10 +1,10 @@
-import type { DexExecutionTargetFactoryInput } from "../../cron/dex-liquidity/execution-target-registry";
+import type { PoolProcessingContext, PoolProtocolEnrichment, ResolvedPoolIdentity } from "../../cron/dex-liquidity/process-pool-types";
 
 export function makeDexExecutionTargetFactoryInput(
   chainNorm: string,
   protocol: string,
   poolType = "",
-): DexExecutionTargetFactoryInput {
+): { context: PoolProcessingContext; identity: ResolvedPoolIdentity; enrichment: PoolProtocolEnrichment; stablecoinId: string } {
   return {
     stablecoinId: "usdc-circle",
     context: {

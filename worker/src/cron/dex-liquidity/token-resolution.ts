@@ -6,7 +6,7 @@ import {
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { DexApiPoolToken } from "../../lib/dex-api-types";
-import type { SymbolLookups } from "./types";
+import type { SymbolLookups } from "./token-resolution-types";
 
 export interface TokenResolutionResult {
   status: "matched" | "ambiguous" | "unresolved";

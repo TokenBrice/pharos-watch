@@ -1,3 +1,5 @@
+import { canonicalSorobanTokenId } from "@shared/lib/dex-soroban-identity";
+export { canonicalSorobanTokenId } from "@shared/lib/dex-soroban-identity";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { isAquariusSorobanDeployment } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
@@ -20,8 +22,6 @@ export const AQUARIUS_TICKERS_URL = "https://amm-api.aqua.network/api/tickers/";
 const AQUARIUS_REQUEST_TIMEOUT_MS = 8_000;
 const AQUARIUS_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const SOROBAN_CONTRACT_ID_RE = /^C[A-Z2-7]{55}$/;
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored bounded optional code prefix plus fixed-width base32 contract id; linear, no backtracking ambiguity.
-const SOROBAN_IDENTITY_RE = /^(?:[A-Z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
 /** A census row is not an exact-execution authorization for any AMM invariant. */
 const SOROBAN_UNREVIEWED_POOL_TYPE = "soroban-amm-unclassified";
@@ -47,20 +47,6 @@ interface AquariusTicker {
 export interface SorobanPoolsStageResult {
   providerChecks: DexDeploymentProviderCheck[];
   stoppedEarly?: boolean;
-}
-
-/**
- * Return the raw Soroban contract id used by Soroban-aware indexes.
- *
- * Registry deployments may be represented as either `C...` or
- * `CODE-C...`. The code prefix is a Pharos display/deployment identity, not
- * part of the on-chain contract address and must never be sent to a classic
- * Stellar/Horizon asset query.
- */
-export function canonicalSorobanTokenId(address: string): string | null {
-  const normalized = address.trim().toUpperCase();
-  const match = SOROBAN_IDENTITY_RE.exec(normalized);
-  return match?.[1] ?? null;
 }
 
 /** The shared registry owns the nine-token Aquarius scope; keep the re-export for stage callers. */

@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { parseDexVolumeAvailabilityRecord, readStoredDexTurnover24h } from "@shared/lib/dex-volume-availability";
-import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
+import { LIQUIDITY_STRONG_HISTORY_CONFIDENCE_MIN, liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { runCappedPruneFamily } from "../shared/capped-delete";
@@ -175,7 +175,6 @@ export async function flushScoringStatements(
   }
 }
 
-const HISTORY_CONFIDENCE_MIN = 0.75;
 const MIN_STABILITY_SAMPLES = 7;
 const HISTORY_STABILITY_BATCH_SIZE = 512;
 
@@ -306,7 +305,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
       cursorSnapshotDate = row.snapshot_date;
 
       try {
-        if (normalizeDexLiquidityEvidence(row).coverageConfidence < HISTORY_CONFIDENCE_MIN) continue;
+        if (normalizeDexLiquidityEvidence(row).coverageConfidence < LIQUIDITY_STRONG_HISTORY_CONFIDENCE_MIN) continue;
       } catch {
         continue;
       }

@@ -3,7 +3,6 @@ import { DEX_EXECUTION_CAPABILITY_REGISTRY } from "@shared/lib/p4-exit-route-cap
 import { DEX_EXACT_QUOTE_ADAPTER_IDS } from "@shared/types/measured-execution";
 
 import { buildRegisteredDexExecutionTarget, hasRegisteredDexExecutionTargetOutput } from "../../dex-liquidity/execution-target-registry";
-import type { DexExecutionTargetFactoryInput } from "../../dex-liquidity/execution-target-registry";
 import { makeDexExecutionTargetFactoryInput } from "../../../test-helpers/__shared/dex-execution-target";
 import { buildPoolExecutionCapability } from "../../dex-liquidity/process-pool-execution-capability";
 import { buildQuoterV2RegisteredExecutionTarget } from "../../dex-liquidity/execution-targets/quoter-v2";
@@ -35,7 +34,7 @@ const V4_POOL = computeUniswapV4PoolId({
 function factoryInput(
   protocol: "uniswap-v3" | "uniswap-v4",
   pool: string,
-): DexExecutionTargetFactoryInput {
+): ReturnType<typeof makeDexExecutionTargetFactoryInput> {
   const input = makeDexExecutionTargetFactoryInput("ethereum", protocol);
   return {
     ...input,
