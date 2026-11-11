@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { BridgeRouteRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
@@ -397,6 +398,16 @@ describe("reviewed bridge representation allocation identity", () => {
       implementation: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
       observedAtSec: CLOCK - 100, block: 456, sourceUrl: SOURCE.url,
     });
+  });
+
+  it("admits a reviewed representation only while its observation is current", () => {
+    const { meta } = fixture();
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec;
+    const admitsBridge = (clockSec: number) =>
+      buildAllocationScopeIdentityReview(meta, clockSec).deployments.some((deployment) => deployment.chain === "base");
+    // The route is observed at CLOCK and its identity 100 seconds earlier.
+    expect([CLOCK - 1, CLOCK, CLOCK - 100 + maxAgeSec, CLOCK - 99 + maxAgeSec].map(admitsBridge))
+      .toEqual([false, true, true, false]);
   });
 
   it("quarantines a route ID that contradicts its destination deployment", () => {
