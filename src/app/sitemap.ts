@@ -1,11 +1,7 @@
 import type { MetadataRoute } from "next";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
-import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
-import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
@@ -23,14 +19,13 @@ import aiSummaries from "../../data/ai-summaries.json";
 import type { StablecoinAiSummariesById } from "@shared/types";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
 import { changelogs } from "@/data/changelogs";
-import { BLOG_POSTS } from "@/data/blog";
 import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
   INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/lib/depeg-event-page-data";
-import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
+import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTES, PUBLIC_REFERENCE_ROUTES, PUBLIC_ROUTE_FAMILY_PATHS } from "@/lib/public-route-inventory";
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 
@@ -55,12 +50,6 @@ type StaticPageSpec = readonly [
   priority: number,
   resolveLastModified?: (path: string) => Date,
 ];
-type StaticPagePolicy = readonly [
-  changeFrequency: SitemapChangeFrequency,
-  priority: number,
-  resolveLastModified?: (path: string) => Date,
-];
-
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
 
@@ -172,50 +161,23 @@ function buildStaticSitemapEntries(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const primaryPagePolicy: Record<(typeof PUBLIC_PRIMARY_ROUTE_PATHS)[number], StaticPagePolicy> = {
-    "/": ["hourly", 1.0, () => homeLastModified()],
-    "/coverage/": ["weekly", 0.6],
-    "/alt-pegs/": ["daily", 0.7],
-    "/freezewatch/": ["daily", 0.85],
-    "/depeg/": ["daily", 0.8, depegIndexLastModified],
-    "/cemetery/": ["monthly", 0.7],
-    "/compare/": ["weekly", 0.7],
-    "/liquidity/": ["daily", 0.8],
-    "/upcoming/": ["daily", 0.6],
-    "/digest/": ["daily", 0.6, digestIndexLastModified],
-    "/safety-scores/": ["daily", 0.8, safetyScoresLastModified],
-    "/safety-scores/map/": ["daily", 0.6],
-    "/stability-index/": ["daily", 0.8],
-    "/dependency-map/": ["daily", 0.7],
-    "/yield/": ["daily", 0.7],
-    "/screener/": ["daily", 0.7],
-    "/funding/": ["weekly", 0.5, fundingLastModified],
-    "/status/": ["daily", 0.4],
-    "/flows/": ["daily", 0.7],
-    "/compliance/": ["weekly", 0.6],
-    "/pharoswatchbot/": ["weekly", 0.7],
-    "/methodology/": ["monthly", 0.6],
+  const staticDateResolvers: Record<string, (path: string) => Date> = {
+    "/": homeLastModified,
+    "/depeg/": depegIndexLastModified,
+    "/digest/": digestIndexLastModified,
+    "/safety-scores/": safetyScoresLastModified,
+    "/funding/": fundingLastModified,
+    "/changelog/": changelogLastModified,
+    "/depeg/archive/": (path) => lastEdited(path, "/depeg/"),
+    "/api/reference/": (path) => lastEdited(path, API_ACCESS_PAGE_PATH),
+    "/docs/": docsIndexLastModified,
   };
-  const referencePagePolicy: Record<(typeof PUBLIC_REFERENCE_ROUTE_PATHS)[number], StaticPagePolicy> = {
-    "/changelog/": ["weekly", 0.5, changelogLastModified],
-    "/blog/": ["weekly", 0.6],
-    "/about/": ["monthly", 0.5],
-    "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
-    [API_ACCESS_PAGE_PATH]: ["monthly", 0.5],
-    "/api/reference/": ["monthly", 0.5, (path) => lastEdited(path, API_ACCESS_PAGE_PATH)],
-    "/stablecoins/": ["weekly", 0.7],
-    "/stablecoins/backing/": ["weekly", 0.6],
-    "/stablecoins/governance/": ["weekly", 0.6],
-    "/stablecoins/infrastructure/": ["weekly", 0.6],
-    "/privacy/": ["yearly", 0.3],
-    "/docs/": ["monthly", 0.6, docsIndexLastModified],
-  };
-  const staticPageSpecs = PUBLIC_PRIMARY_ROUTE_PATHS.map(
-    (path) => [path, ...primaryPagePolicy[path]] as StaticPageSpec,
-  );
-  const referencePageSpecs = PUBLIC_REFERENCE_ROUTE_PATHS
-    .filter((path) => path !== "/docs/")
-    .map((path) => [path, ...referencePagePolicy[path]] as StaticPageSpec);
+  const withDateResolver = ([path, changeFrequency, priority]: readonly [string, SitemapChangeFrequency, number]): StaticPageSpec =>
+    [path, changeFrequency, priority, staticDateResolvers[path]];
+  const staticPageSpecs = PUBLIC_PRIMARY_ROUTES.map(withDateResolver);
+  const referencePageSpecs = PUBLIC_REFERENCE_ROUTES
+    .filter(([path]) => path !== "/docs/")
+    .map(withDateResolver);
 
   const staticPages: MetadataRoute.Sitemap = [
     ...buildStaticSitemapEntries(staticPageSpecs, lastEdited),
@@ -256,17 +218,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Chain pages move with their route's edit date, not the daily data
     // snapshot: the digest timestamp claimed 128 simultaneous changes a day.
-    ...getIndexableChainIds().map((chainId) => ({
-      url: `${SITE_URL}/chains/${chainId}/`,
-      lastModified: lastEdited(`/chains/${chainId}/`, "/chains/"),
+    ...PUBLIC_ROUTE_FAMILY_PATHS.chains.map((path) => ({
+      url: `${SITE_URL}${path}`,
+      lastModified: lastEdited(path, "/chains/"),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),
   ];
 
-  const pegPages: MetadataRoute.Sitemap = PEG_HUB_PEGS.map((peg) => ({
-    url: `${SITE_URL}/stablecoins/${PEG_HUB_SLUGS[peg]}/`,
-    lastModified: lastEdited(`/stablecoins/${PEG_HUB_SLUGS[peg]}/`, "/stablecoins/"),
+  const pegPages: MetadataRoute.Sitemap = PUBLIC_ROUTE_FAMILY_PATHS.pegHubs.map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: lastEdited(path, "/stablecoins/"),
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));
@@ -290,9 +252,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.55,
   }));
 
-  const taxonomyPages: MetadataRoute.Sitemap = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => ({
-    url: `${SITE_URL}${page.href}`,
-    lastModified: lastEdited(page.href, "/stablecoins/"),
+  const taxonomyPages: MetadataRoute.Sitemap = PUBLIC_ROUTE_FAMILY_PATHS.taxonomies.map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: lastEdited(path, "/stablecoins/"),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
@@ -304,9 +266,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    ...MECHANISM_ARCHETYPE_VALUES.map((archetype) => ({
-      url: `${SITE_URL}/learn/mechanisms/${archetype}/`,
-      lastModified: lastEdited(`/learn/mechanisms/${archetype}/`, "/learn/mechanisms/"),
+    ...PUBLIC_ROUTE_FAMILY_PATHS.mechanisms.map((path) => ({
+      url: `${SITE_URL}${path}`,
+      lastModified: lastEdited(path, "/learn/mechanisms/"),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
@@ -330,9 +292,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // /blog/ hub lives in referencePageSpecs above; these are the post detail
   // pages. Per-post lastmod comes from the git-derived sitemap-dates entry
   // (see addBlogDates in generate-sitemap-dates.ts).
-  const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
-    url: `${SITE_URL}/blog/${post.slug}/`,
-    lastModified: lastEdited(`/blog/${post.slug}/`),
+  const blogPages: MetadataRoute.Sitemap = PUBLIC_ROUTE_FAMILY_PATHS.blogPosts.map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: lastEdited(path),
     changeFrequency: "monthly" as const,
     priority: 0.5,
   }));
@@ -344,14 +306,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  const docsIndex: MetadataRoute.Sitemap = [
-    {
-      url: `${SITE_URL}/docs/`,
-      lastModified: docsIndexLastModified(),
-      changeFrequency: referencePagePolicy["/docs/"][0],
-      priority: referencePagePolicy["/docs/"][1],
-    },
-  ];
+  const docsIndex = buildStaticSitemapEntries(
+    PUBLIC_REFERENCE_ROUTES.filter(([path]) => path === "/docs/").map(withDateResolver),
+    lastEdited,
+  );
 
   const docsPages: MetadataRoute.Sitemap = PUBLIC_DOCS.map((doc) => {
     const meta = (docsMetadata as Record<string, { dateModified: string }>)[doc.slug];

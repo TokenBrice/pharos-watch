@@ -7,11 +7,9 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { useChainProfileData } from "@/hooks/use-chain-profile-data";
-import {
-  BackingBreakdown,
-  CompositionSection,
-  StablecoinTable,
-} from "./detail-sections";
+import { BackingBreakdown } from "./backing-breakdown";
+import { CompositionSection } from "./composition-section";
+import { StablecoinTable } from "./stablecoin-table";
 import { ChainHero } from "./chain-hero";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildChainRouteViewModel } from "./view-model";

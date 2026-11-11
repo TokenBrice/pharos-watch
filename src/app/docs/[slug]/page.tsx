@@ -32,10 +32,9 @@ interface MarkdownAstNode {
 }
 
 // The root "%s | Pharos" template already brands the title; never repeat "Pharos" here.
-function buildDocMetadataTitle(doc: { slug: string; title: string; seoTitle?: string; group: string }): string {
+function buildDocMetadataTitle(doc: { title: string; seoTitle?: string }): string {
   if (doc.seoTitle) return doc.seoTitle;
-  if (doc.slug === "api-reference") return "Stablecoin API Reference";
-  const base = doc.group === "methodology" ? `${doc.title} Methodology` : `${doc.title} Guide`;
+  const base = `${doc.title} Methodology`;
   // Short doc names ("DEWS Methodology") fall under the snippet minimum once
   // the duplicate " - Pharos Docs" suffix is gone; qualify them by topic.
   return base.length < DOC_TITLE_MIN_CORE_LENGTH ? `${base} for Stablecoins` : base;
