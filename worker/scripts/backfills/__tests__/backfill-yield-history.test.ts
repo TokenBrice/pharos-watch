@@ -1,13 +1,23 @@
-import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
+import { makeApiRequest, makeApiUrl, readJsonResponse, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 
 import { registerStablecoinParameterContract } from "../../../src/test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../../src/cron/yield-sync/types";
 
 stubCryptoForAuth();
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
+
+function yieldDb(sourceKey: string) {
+  const fixture = fixtures.open();
+  fixture.sqlite.prepare(`INSERT INTO yield_data
+    (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d, yield_source, yield_type, data_source, updated_at)
+    VALUES ('zys-zephyr-protocol', ?, 'ZYS', 4.5, 4.5, 4.5, 'Zephyr', 'nav-appreciation', 'protocol-api', 1730000000)`).run(sourceKey);
+  return fixture;
+}
 
 const mockSource: ResolvedYield = {
   currentApy: 4.5,
@@ -43,71 +53,43 @@ describe("handleBackfillYieldHistory", () => {
   });
 
   it("inserts Zephyr yield history row", async () => {
-    const db = mockD1([
-      { match: "source_key FROM yield_data", rows: [{ source_key: "protocol-api:zys-zephyr-protocol" }] },
-      { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
-    ]);
+    const { db, sqlite } = yieldDb("protocol-api:zys-zephyr-protocol");
 
     const res = await handleBackfillYieldHistory({ db, url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      coinsProcessed: number;
-      rowsInserted: number;
-      coinResults: Array<{ id: string; symbol: string; inserted: boolean }>;
-    };
-    expect(body.coinsProcessed).toBe(1);
-    expect(body.rowsInserted).toBe(1);
-    expect(body.coinResults[0]).toEqual({ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: true });
+    expect(await readJsonResponse(res, 200)).toEqual({
+      coinsProcessed: 1, rowsInserted: 1,
+      coinResults: [{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: true }],
+    });
 
-    const insertStmt = db.getHistory().find((stmt) =>
-      stmt.sql.includes("INSERT OR IGNORE INTO yield_history"),
-    );
-    expect(insertStmt?.binds).toEqual([
-      "zys-zephyr-protocol",
-      "protocol-api:zys-zephyr-protocol",
-      1_730_000_000,
-      1_730_000_000,
-      4.5,
-      4.5,
-      null,
-      null,
-      // B17 — the adapter's own lane and the coin's published selection, not an
-      // invented `protocol-api-backfill` label with a hardcoded best flag.
-      "protocol-api",
-      1,
-      "[]",
-    ]);
+    expect(sqlite.prepare("SELECT stablecoin_id, source_key, recorded_at, source_observed_at, apy, apy_base, apy_reward, source_tvl_usd, data_source, is_best, warning_signals FROM yield_history").get()).toEqual({
+      stablecoin_id: "zys-zephyr-protocol", source_key: "protocol-api:zys-zephyr-protocol",
+      recorded_at: 1_730_000_000, source_observed_at: 1_730_000_000,
+      apy: 4.5, apy_base: 4.5, apy_reward: null, source_tvl_usd: null,
+      data_source: "protocol-api", is_best: 1, warning_signals: "[]",
+    });
 
     expect(fetchZephyrZysSource).toHaveBeenCalledTimes(1);
   });
 
   it("reports per-row inserted from D1 changes and mirrors real arbitration", async () => {
-    // The coin's published best source is a different row and the primary key
-    // already holds this observation: `INSERT OR IGNORE` changes nothing.
-    const db = mockD1(
-      [
-        { match: "source_key FROM yield_data", rows: [{ source_key: "pool-other" }] },
-        { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
-      ],
-      { runChanges: (sql) => (sql.includes("INSERT OR IGNORE") ? 0 : 1) },
-    );
-
+    const { db, sqlite } = yieldDb("pool-other");
     const url = makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol");
-    const res = await handleBackfillYieldHistory({
+    const invoke = () => handleBackfillYieldHistory({
       db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }),
     });
+    expect(await readJsonResponse(await invoke(), 200)).toMatchObject({ rowsInserted: 1 });
+    const stored = sqlite.prepare("SELECT * FROM yield_history").all();
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({ is_best: 0, apy: 4.5, data_source: "protocol-api" });
+    const res = await invoke();
 
-    const body = (await readJsonResponse(res, 200)) as {
-      rowsInserted: number;
-      coinResults: Array<{ id: string; symbol: string; inserted: boolean }>;
-    };
-    expect(body.rowsInserted).toBe(0);
-    expect(body.coinResults).toEqual([{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: false }]);
+    expect(await readJsonResponse(res, 200)).toEqual({
+      coinsProcessed: 1, rowsInserted: 0,
+      coinResults: [{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: false }],
+    });
 
-    const insertStmt = db.getHistory().find((stmt) =>
-      stmt.sql.includes("INSERT OR IGNORE INTO yield_history"),
-    );
-    expect(insertStmt?.binds[9]).toBe(0);
+    expect(sqlite.prepare("SELECT * FROM yield_history").all()).toEqual(stored);
   });
 
   it("skips unavailable protocol observations without writing history", async () => {
@@ -118,8 +100,7 @@ describe("handleBackfillYieldHistory", () => {
       db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }),
     });
     expect(await readJsonResponse(res, 200)).toEqual({
-      coinsProcessed: 1,
-      rowsInserted: 0,
+      coinsProcessed: 1, rowsInserted: 0,
       coinResults: [{ id: "zys-zephyr-protocol", symbol: "ZYS", inserted: false }],
       skipped: ["ZYS: missing protocol response"],
     });

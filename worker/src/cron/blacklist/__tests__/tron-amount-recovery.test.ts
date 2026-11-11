@@ -37,7 +37,7 @@ import { getBlacklistConfigByKey } from "../../../lib/blacklist-contracts";
 import { refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../../lib/tron-address";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaSqlite, createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type * as TronReplayProvider from "../../../lib/blacklist/tron-replay-provider";
 import { makePendingBlacklistRow } from "./blacklist.test-support";
 
@@ -183,6 +183,18 @@ function makeRunBudget(overrides: { subrequestLimit?: number; deadlineMs?: numbe
   };
 }
 
+const fixtures = createLatestSchemaFixtureTracker();
+async function pendingDb() {
+  const row = await makeRow();
+  const fixture = fixtures.open();
+  fixture.sqlite.prepare(`INSERT INTO blacklist_events
+    (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+     timestamp, explorer_tx_url, explorer_address_url, contract_address, config_key)
+    VALUES (?, 'USDT', 'tron', 'Tron', 'blacklist', ?, ?, ?, ?, '', '', ?, ?)`)
+    .run(row.id, row.address, row.tx_hash, row.block_number, row.timestamp, config.contractAddress, TRON_USDT_CONFIG_ID);
+  return fixture;
+}
+
 const QUEUE_TABLES = [
   { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
   { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
@@ -200,6 +212,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -618,32 +632,39 @@ describe("backfillTronBlacklistAmounts", () => {
     expect(recordOutcomeSafe).not.toHaveBeenCalled();
   });
 
-  it("persists a derived replay with provenance, closes the queue row, and reports the circuit outcome", async () => {
-    const row = await makeRow();
-    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }]);
-    const db = mockD1([
-      { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
-      ...QUEUE_TABLES,
-      { match: "amount_native = ?", rows: [] },
-    ]);
-
+  it.each([
+    ["persists a derived replay with provenance, closes the queue row, and reports the circuit outcome", false],
+    ["records attempt bookkeeping, a bounded retry, and a provider failure outcome", true],
+  ])("%s", async (_title, mismatch) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_200_000_000);
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 4_500_000n, direction: "in" }],
+      mismatch ? { balance: 9_000_000n } : {});
+    const { sqlite, db } = await pendingDb();
     const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
+      trongridApiKey: "tron-key", limiter: provider().limiter, runBudget: makeRunBudget(),
     });
-
-    expect(result).toMatchObject({ attempted: 1, resolved: 1, retried: 0, parked: 0 });
-    const persistence = db.getHistory().find((entry) => entry.sql.includes("amount_native = ?"));
-    expect(persistence?.binds[0]).toBe(4.5);
-    expect(persistence?.binds[2]).toBe("derived");
-    expect(persistence?.binds).toContain("trongrid-transfer-replay");
-    // The write must not clobber a row resolved by another writer (operator CLI).
-    expect(persistence?.sql).toContain("amount_native IS NULL");
-    expect(persistence?.sql).toContain("suppression_reason IS NULL");
-    const queueFinish = db.getHistory().find((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"));
-    expect(queueFinish?.binds[0]).toBe("resolved");
-    expect(vi.mocked(recordOutcomeSafe)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.TRONGRID, true);
+    expect(result).toMatchObject(mismatch
+      ? { attempted: 1, resolved: 0, retried: 1, parked: 0 }
+      : { attempted: 1, resolved: 1, retried: 0, parked: 0 });
+    if (mismatch) {
+      expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_last_error_class,
+        amount_last_provider, amount_attempt_count FROM blacklist_events`).get()).toEqual({
+        amount_native: null, amount_status: "provider_failed", amount_last_error_class: "evidence_mismatch",
+        amount_last_provider: "trongrid", amount_attempt_count: 1,
+      });
+      expect(sqlite.prepare(`SELECT status, attempt_count, available_at - amount_last_attempted_at AS delay
+        FROM blacklist_amount_repair_queue JOIN blacklist_events ON id = event_id`).get())
+        .toEqual({ status: "retry", attempt_count: 1, delay: 300 });
+    } else {
+      expect(sqlite.prepare(`SELECT amount_native, amount_source, amount_status, provenance_source,
+        provenance_observed_at FROM blacklist_events`).get()).toEqual({
+        amount_native: 4.5, amount_source: "derived", amount_status: "resolved",
+        provenance_source: "trongrid-transfer-replay", provenance_observed_at: 1_790_200_000,
+      });
+      expect(sqlite.prepare("SELECT status, attempt_count FROM blacklist_amount_repair_queue").get())
+        .toEqual({ status: "resolved", attempt_count: 1 });
+    }
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.TRONGRID, true);
   });
 
   it("refreshes the repair queue before selecting candidates", async () => {
@@ -657,34 +678,6 @@ describe("backfillTronBlacklistAmounts", () => {
       runBudget: makeRunBudget(),
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-amount-repair-queue-enqueue"))).toBe(true);
-  });
-
-  it("records attempt bookkeeping, a bounded retry, and a provider failure outcome", async () => {
-    const row = await makeRow();
-    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }], {
-      balance: BigInt(9_000_000),
-    });
-    const db = mockD1([
-      { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
-      ...QUEUE_TABLES,
-      { match: "amount_attempt_count = COALESCE", rows: [] },
-    ]);
-
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
-
-    expect(result).toMatchObject({ attempted: 1, resolved: 0, retried: 1, parked: 0 });
-    expect(db.getHistory().some((entry) => entry.sql.includes("amount_native = ?"))).toBe(false);
-    const attempt = db.getHistory().find((entry) => entry.sql.includes("amount_attempt_count = COALESCE"));
-    expect(attempt?.binds[1]).toBe("evidence_mismatch");
-    expect(attempt?.binds[2]).toBe("trongrid");
-    expect(attempt?.binds[3]).toBe("provider_failed");
-    expect(attempt?.sql).toContain("amount_native IS NULL");
-    const queueFinish = db.getHistory().find((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"));
-    expect(queueFinish?.binds[0]).toBe("retry");
   });
 
   it("parks deterministic failures instead of retrying them every run", async () => {

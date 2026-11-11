@@ -16,6 +16,7 @@ import {
 } from "../persistence";
 import { STAGED_POOL_CONFIDENCE_HORIZON_HOURS, STAGED_POOL_MAX_TVL_USD, TEZOS_POOL_IDENTITY_REVIEW_VERSION, SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type DiscoveryRunCheckpoint } from "../types";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stagedPool } from "./discovery.test-support";
 import { mergeStagedPools } from "../../dex-liquidity/staging-merge";
@@ -263,43 +264,26 @@ describe("discovery persistence D1 retry coverage", () => {
 
   it("uses bounded oldest-first staging cleanup past the merge horizon and retries transient D1 overload", async () => {
     vi.useFakeTimers();
-    let attempts = 0;
-    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({
-          run: async () => {
-            prepared.push({ sql, binds });
-            attempts++;
-            if (attempts === 1) throw new Error("Requests queued for too long");
-            return { meta: { changes: sql.includes("DELETE FROM") ? 12 : 7 } };
-          },
-        }),
-        first: async () => ({
-          oldest_remaining_at: 1_709_900_000,
-          oldest_raw_json_remaining_at: 1_709_990_000,
-        }),
-      }),
-    });
-
+    const { sqlite } = fixtures.open();
+    await upsertStagedPools(createSqliteD1(sqlite), Array.from({ length: 2003 }, (_, i) => stagedPool({
+      poolId: `ethereum:${i}`, refreshedAt: i < 1001 ? 1 : i < 2002 ? 1_709_985_000 : 1_710_000_000,
+      rawJson: i < 1001 ? null : "{}",
+    })));
+    let runs = 0;
+    const db = createSqliteD1(sqlite, { onRun: () => {
+      if (++runs === 1) throw new Error("Requests queued for too long");
+    } });
     const pending = cleanupStaging(db, 1_710_000_000);
     await vi.runAllTimersAsync();
-    const cleanup = await pending;
-
-    expect(attempts).toBe(3);
-    expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
-    expect(prepared[0]?.binds).toEqual([1_710_000_000 - STAGING_DELETE_TTL_SEC, 1_000]);
-    expect(prepared[2]?.binds).toEqual([
-      1_710_000_000 - 4 * 60 * 60,
-      1_000,
-    ]);
-    expect(cleanup).toMatchObject({
-      deletedRows: 12,
-      rawJsonClearedRows: 7,
-      oldestRemainingAt: 1_709_900_000,
-      oldestRawJsonRemainingAt: 1_709_990_000,
-      error: null,
+    expect(await pending).toMatchObject({
+      deletedRows: 1000, rawJsonClearedRows: 1000,
+      oldestRemainingAt: 1, oldestRawJsonRemainingAt: 1_709_985_000, error: null,
     });
+    expect(runs).toBe(3);
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_registry WHERE refreshed_at = 1").all()).toEqual([{ pool_id: "ethereum:1000" }]);
+    expect(sqlite.prepare("SELECT pool_id FROM dex_pool_registry WHERE raw_json IS NOT NULL ORDER BY pool_id").all())
+      .toEqual([{ pool_id: "ethereum:2001" }, { pool_id: "ethereum:2002" }]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM dex_pool_registry").get()).toEqual({ n: 1003 });
   });
 
   it("keeps staging rows one hour inside the delete TTL and deletes rows one hour past it", async () => {

@@ -17,7 +17,6 @@ import {
   normalizeProtocol,
 } from "../pool-helpers";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../../lib/chain-registry";
-import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 import { initMetrics, withCompleteVolume } from "./scoring-test-builders";
 import { rebuildMetricsFromPools } from "../scoring-helpers";
 
@@ -309,17 +308,17 @@ describe("dex-liquidity pool helpers", () => {
     expect(classifyPoolType("orca-whirlpool")).toBe("orca-whirlpool");
     expect(classifyPoolType("mystery-dex")).toBe("generic");
 
-    expect(getQualityMultiplier("raydium-clmm")).toBe(QUALITY_MULTIPLIERS["raydium-clmm"]);
-    expect(getQualityMultiplier("raydium-amm")).toBe(QUALITY_MULTIPLIERS["raydium-amm"]);
-    expect(getQualityMultiplier("orca-whirlpool")).toBe(QUALITY_MULTIPLIERS["orca-whirlpool"]);
-    expect(getQualityMultiplier("curve-stableswap", 700)).toBe(QUALITY_MULTIPLIERS["curve-stableswap-high-a"]);
-    expect(getQualityMultiplier("curve-stableswap", 100)).toBe(QUALITY_MULTIPLIERS["curve-stableswap"]);
-    expect(getQualityMultiplier("uniswap-v3-30bp")).toBe(QUALITY_MULTIPLIERS["uniswap-v3-30bp"]);
-    expect(getQualityMultiplier("unknown-type")).toBe(QUALITY_MULTIPLIERS.generic);
+    expect(getQualityMultiplier("raydium-clmm")).toBe(0.85);
+    expect(getQualityMultiplier("raydium-amm")).toBe(0.4);
+    expect(getQualityMultiplier("orca-whirlpool")).toBe(0.85);
+    expect(getQualityMultiplier("curve-stableswap", 700)).toBe(1);
+    expect(getQualityMultiplier("curve-stableswap", 100)).toBe(0.85);
+    expect(getQualityMultiplier("uniswap-v3-30bp")).toBe(0.4);
+    expect(getQualityMultiplier("unknown-type")).toBe(0.3);
 
     expect(getGtDexQuality("balancer-v2")).toBe(0.7);
     expect(getGtDexQuality("pancakeswap-v3-arbitrum")).toBe(0.5);
-    expect(getGtDexQuality("unknown-dex")).toBe(QUALITY_MULTIPLIERS.generic);
+    expect(getGtDexQuality("unknown-dex")).toBe(0.3);
   });
 
   it("keeps provider-specific GT chain slugs separate from canonical chain ids", () => {

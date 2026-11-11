@@ -24,8 +24,7 @@ describe("handleYieldAdapterManifest", () => {
 
     const body = (await readJsonResponse(res, 200)) as YieldAdapterManifestResponse;
     expect(() => YieldAdapterManifestResponseSchema.parse(body)).not.toThrow();
-    // Plain `8.43`, the same format `/api/yield-rankings` publishes; the previous
-    // `v8.43` label made two endpoints describe one methodology differently.
+    // Same plain methodology version as yield rankings.
     expect(body.methodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
     expect(body.methodologyVersion).not.toContain("v");
     expect(typeof body.updatedAt).toBe("number");
@@ -52,8 +51,9 @@ describe("handleYieldAdapterManifest", () => {
   });
 
   it("serves freshness headers derived from the registry revision", async () => {
+    vi.useFakeTimers({ now: 1793750460000 });
     const res = await handleYieldAdapterManifest();
-    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThan(0);
+    expect(res.headers.get("X-Data-Age")).toBe("60");
     expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("Cache-Control")).toBe(CACHE_PROFILES.standard);
   });

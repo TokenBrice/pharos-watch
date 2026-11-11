@@ -108,12 +108,6 @@ function buildGetReserveDataHex(
 // RAY = 10^27
 const RAY = 10n ** 27n;
 
-// Helper: compute expected APY from a RAY-encoded rate
-function expectedApy(rateFraction: number): number {
-  const ratePerSecond = rateFraction / 31536000;
-  return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
-}
-
 function priceEvidence(price = 1): NonNullable<AaveV3RateTarget["usdPriceEvidence"]> {
   const observedAt = Math.floor(Date.now() / 1000);
   return { price, priceSource: "coingecko", priceObservedAt: observedAt, priceUpdatedAt: observedAt, priceObservedAtMode: "upstream" };
@@ -199,7 +193,7 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(results).toHaveLength(1);
     const apy = results[0]?.apy ?? 0;
     // Continuous compounding of 5%/yr ≈ 5.127%
-    expect(apy).toBeCloseTo(expectedApy(nominalRate), 2);
+    expect(apy).toBeCloseTo(5.1271, 2);
     expect(apy).toBeGreaterThan(5);
     expect(apy).toBeLessThan(6);
     expect(telemetry.resolvedTargetCount).toBe(1);

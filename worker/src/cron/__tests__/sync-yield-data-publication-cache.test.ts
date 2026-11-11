@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   mutableActiveStablecoins,
   makeStablecoinsCacheValue,
@@ -16,7 +17,7 @@ import {
   testSafetyScoresSnapshot,
 } from "./sync-yield-data.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { syncYieldData } from "../sync-yield-data";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
@@ -31,12 +32,24 @@ import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 
-function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
-  return mockD1WithYieldPruneTables(yieldFallbackTableMatches(
-    existingIds.length > 0
-      ? [{ match: "pharos:yield-sync:yield-data-existing-ids", rows: existingIds }]
-      : [],
-  ));
+function makePublicationCacheDb() {
+  return mockD1WithYieldPruneTables(yieldFallbackTableMatches());
+}
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); (FROZEN_IDS as Set<string>).delete("usr-resolv"); });
+function pruneDb(rows: [string, string, number][]) {
+  const fixture = fixtures.open();
+  (FROZEN_IDS as Set<string>).add("usr-resolv");
+  const insert = fixture.sqlite.prepare(`INSERT INTO yield_data
+    (stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d, yield_source, yield_type, data_source, updated_at)
+    VALUES (?, ?, 'T', 5, 5, 5, 'T', 'lending-vault', 'defillama', ?)`);
+  for (const row of rows) insert.run(...row);
+  mockHealthyRiskFreeRateCache();
+  mockFetch([{ match: "yields.llama.fi", body: { data: [
+    makeDlYieldPool({ pool: "pool-sdai-1", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
+  ] } }]);
+  return fixture;
 }
 
 describe("syncYieldData", () => {
@@ -292,70 +305,28 @@ describe("syncYieldData", () => {
   });
 
   it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
-    const db = makePublicationCacheDb();
-    mockHealthyRiskFreeRateCache();
-
-    mockFetch([
-      {
-        match: "yields.llama.fi",
-        body: {
-          data: [
-            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
-          ],
-        },
-      },
+    const { db, sqlite } = pruneDb([
+      ["100", "stale", 1749988799], ["usdc-circle", "stale", 1749988799],
+      ["u-united-stables", "stale", 1749988799], ["lusd-liquity", "stale", 1749988799],
+      ["usdc-circle", "current", 1749988800], ["usr-resolv", "frozen", 1749988799],
     ]);
-
-    await syncYieldData(db);
-
-    const deleteCall = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("stablecoin_id IN"));
-
-    expect(deleteCall).toBeDefined();
-    expect(deleteCall?.binds).toEqual(
-      expect.arrayContaining(["100", "usdc-circle", "u-united-stables", "lusd-liquity"]),
-    );
-    expect(deleteCall?.binds[deleteCall.binds.length - 1]).toBe(Math.floor(Date.now() / 1000));
+    expect((await syncYieldData(db)).itemCount).toBe(1);
+    expect(sqlite.prepare("SELECT stablecoin_id, source_key FROM yield_data ORDER BY stablecoin_id, source_key")
+      .all().map(Object.values)).toEqual([
+      ["100", "pool-sdai-1"], ["usdc-circle", "current"], ["usr-resolv", "frozen"],
+    ]);
   });
 
   it("purges orphan yield rows for coins outside the tracked stablecoin set", async () => {
-    const db = makePublicationCacheDb([
-      { stablecoin_id: "orphan-coin" },
-      { stablecoin_id: "legacy-coin" },
+    const { db, sqlite } = pruneDb([
+      ["orphan-coin", "orphan", 1749988800], ["legacy-coin", "legacy", 1749988800],
+      ["usdc-circle", "current", 1749988800], ["usr-resolv", "frozen", 1749988799],
     ]);
-    mockHealthyRiskFreeRateCache();
-
-    mockFetch([
-      {
-        match: "yields.llama.fi",
-        body: {
-          data: [
-            makeDlYieldPool({ pool: "pool-sdai-1", project: "maker", symbol: "sDAI", tvlUsd: 1_000_000_000, apy: 5.2, apyBase: 5.2, apyMean30d: 5.1 }),
-          ],
-        },
-      },
+    expect((await syncYieldData(db)).itemCount).toBe(1);
+    expect(sqlite.prepare("SELECT stablecoin_id, source_key FROM yield_data ORDER BY stablecoin_id, source_key")
+      .all().map(Object.values)).toEqual([
+      ["100", "pool-sdai-1"], ["usdc-circle", "current"], ["usr-resolv", "frozen"],
     ]);
-
-    await syncYieldData(db);
-
-    const orphanScanCall = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("pharos:yield-sync:yield-data-existing-ids"));
-
-    expect(orphanScanCall).toBeDefined();
-
-    const orphanDeleteCall = db
-      .getHistory()
-      .find(
-        (entry) =>
-          entry.sql.includes("DELETE FROM yield_data") &&
-          entry.sql.includes("stablecoin_id IN") &&
-          !entry.sql.includes("updated_at <"),
-      );
-
-    expect(orphanDeleteCall).toBeDefined();
-    expect(orphanDeleteCall?.binds).toEqual(expect.arrayContaining(["orphan-coin", "legacy-coin"]));
   });
 
   it("chunks stale-yield cleanup under the D1 bind limit", async () => {

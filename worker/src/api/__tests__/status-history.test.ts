@@ -224,34 +224,20 @@ describe("handleStatusHistoryRoute", () => {
   });
 
   it("returns one page plus truthful hasMore evidence", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const rows = Array.from({ length: 201 }, (_, index) => ({
-      id: index + 1,
-      scope: "global",
-      previous_status: "healthy",
-      next_status: "healthy",
-      raw_status: "healthy",
-      transition_type: "hold",
-      reason: "fixture",
-      confidence: 1,
-      causes_json: "[]",
-      created_at: now - index,
-    }));
-    const db = mockD1([
-      { match: "FROM status_state", rows: [], first: null },
-      { match: "FROM status_probe_runs", rows: [], first: null },
-      { match: "FROM status_discrepancy_state", rows: [], first: null },
-      { match: "FROM status_transitions", rows },
-    ]);
-
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO status_transitions
+      (id, scope, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+      VALUES (?, 'global', 'healthy', 'healthy', 'init', 'fixture', 1, '[]', ?)`);
+    for (let id = 1; id <= 201; id++) insert.run(id, 1700000000 + id);
     const request = makeApiRequest("/api/status-history?limit=200", { adminKey: "secret-key" });
-    const res = await handleStatusHistoryRoute({ db, trustedAdmin: true, request });
-    const body = (await res.json()) as { transitions: unknown[]; hasMore: boolean | null };
-    const transitionQuery = db.getHistory().find((entry) => entry.sql.includes("FROM status_transitions"));
-
-    expect(body.transitions).toHaveLength(200);
+    const read = async () => StatusHistoryResponseSchema.parse(await readJsonResponse(
+      await handleStatusHistoryRoute({ db, trustedAdmin: true, request }), 200,
+    ));
+    const body = await read();
+    expect(body.transitions.map((row) => row.id)).toEqual(Array.from({ length: 200 }, (_, i) => 201 - i));
     expect(body.hasMore).toBe(true);
-    expect(transitionQuery?.binds[transitionQuery.binds.length - 1]).toBe(201);
+    sqlite.prepare("DELETE FROM status_transitions WHERE id = 1").run();
+    expect((await read()).hasMore).toBe(false);
   });
 
   it("returns indeterminate completeness when the transition query fails", async () => {
