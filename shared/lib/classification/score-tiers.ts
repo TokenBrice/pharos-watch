@@ -58,11 +58,25 @@ export type ScoreTier4 = "t80" | "t60" | "t40" | "t0";
 
 /** Four-step score ramp (liquidity 80/60/40, Bluechip grade order). */
 export const SCORE_TIER_4_CLASSES = {
-  t80: { text: "text-emerald-700 dark:text-emerald-400", fill: "bg-emerald-500/70" },
-  t60: { text: "text-blue-700 dark:text-blue-400", fill: "bg-blue-500/70" },
-  t40: { text: "text-amber-700 dark:text-amber-400", fill: "bg-amber-500/70" },
-  t0: { text: "text-red-700 dark:text-red-400", fill: "bg-red-500/70" },
-} as const satisfies Record<ScoreTier4, { text: string; fill: string }>;
+  t80: { text: "text-emerald-700 dark:text-emerald-400", fill: "bg-emerald-500/70", scoreText: "text-state-positive", pill: "border-state-positive bg-state-positive-subtle text-state-positive" },
+  t60: { text: "text-blue-700 dark:text-blue-400", fill: "bg-blue-500/70", scoreText: "text-blue-700 dark:text-blue-400", pill: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+  t40: { text: "text-amber-700 dark:text-amber-400", fill: "bg-amber-500/70", scoreText: "text-state-warn", pill: "border-state-warn bg-state-warn-subtle text-state-warn" },
+  t0: { text: "text-red-700 dark:text-red-400", fill: "bg-red-500/70", scoreText: "text-state-danger", pill: "border-state-danger bg-state-danger-subtle text-state-danger" },
+} as const satisfies Record<ScoreTier4, { text: string; fill: string; scoreText: string; pill: string }>;
+
+export const SCORE_TIER_4_POLICY = [
+  { key: "t0", min: 0 },
+  { key: "t40", min: 40 },
+  { key: "t60", min: 60 },
+  { key: "t80", min: 80 },
+] as const satisfies readonly { key: ScoreTier4; min: number }[];
+
+export function resolveScoreTier4(score: number): ScoreTier4 {
+  for (let index = SCORE_TIER_4_POLICY.length - 1; index > 0; index--) {
+    if (score >= SCORE_TIER_4_POLICY[index].min) return SCORE_TIER_4_POLICY[index].key;
+  }
+  return "t0";
+}
 
 export type SeverityNamedTone = "info" | "rose";
 

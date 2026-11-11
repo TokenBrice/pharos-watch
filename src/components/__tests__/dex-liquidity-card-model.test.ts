@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getHhiBand } from "@shared/lib/classification";
+import { getAggregateOrganicFractionTier, getHhiBand, getPoolOrganicFractionTier } from "@shared/lib/classification";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import {
   getConcentrationLabel,
-  getOrganicFractionTier,
   getLiquidityEvidenceLabel,
 } from "@/components/dex-liquidity-card-model";
 import { crowdingBand, throatLabelForCrowding } from "@/components/exit-route-model";
@@ -42,13 +41,13 @@ describe("DEX liquidity verdict bands", () => {
   );
 
   it("uses the canonical organic tiers for thresholds and mature low-organic pools", () => {
-    expect(getOrganicFractionTier(0.7)).toMatchObject({ label: "Organic" });
-    expect(getOrganicFractionTier(0.3)).toMatchObject({ label: "Mixed" });
-    expect(getOrganicFractionTier(0.29)).toMatchObject({ label: "Incentivized" });
-    expect(getOrganicFractionTier(0.29, 365)).toMatchObject({ label: "Established" });
-    expect(getOrganicFractionTier(0.7).summaryColor).toContain("emerald");
-    expect(getOrganicFractionTier(0.3).summaryColor).toContain("amber");
-    expect(getOrganicFractionTier(0.29).summaryColor).toContain("red");
+    expect(getAggregateOrganicFractionTier(0.7)).toMatchObject({ label: "Organic" });
+    expect(getAggregateOrganicFractionTier(0.3)).toMatchObject({ label: "Mixed" });
+    expect(getAggregateOrganicFractionTier(0.29)).toMatchObject({ label: "Incentivized" });
+    expect(getPoolOrganicFractionTier(0.29, 365)).toMatchObject({ label: "Established" });
+    expect(getAggregateOrganicFractionTier(0.7).summaryColor).toContain("emerald");
+    expect(getAggregateOrganicFractionTier(0.3).summaryColor).toContain("amber");
+    expect(getAggregateOrganicFractionTier(0.29).summaryColor).toContain("red");
   });
 
   it("keeps unavailable partial-measured coverage distinct from observed zero", () => {

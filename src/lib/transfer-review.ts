@@ -68,7 +68,7 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 const REVIEWS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
-  Object.values(transferReviewOverlays.reviews as unknown as Record<string, OverlayEntryShape>)
+  Object.values(transferReviewOverlays.reviews)
     .map((review) => [review.assetId, review]),
 );
 

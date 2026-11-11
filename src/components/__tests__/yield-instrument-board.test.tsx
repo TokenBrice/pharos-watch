@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { YieldInstrumentBoard } from "@/components/yield-instrument-board";
+import { YieldLeaderboard, type YieldLeaderboardHandle } from "@/components/yield-leaderboard";
+import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -79,6 +83,46 @@ const rowRenderers = [
 ] as const;
 
 describe("YieldInstrumentBoard", () => {
+  it("reveals an off-page row through the visible mobile card or desktop row", () => {
+    const rows = Array.from({ length: TABLE_PAGE_SIZE * 2 + 1 }, (_, index) => makeYieldViewModelRow({
+      id: `row-${index}`,
+      symbol: `ROW${index}`,
+      pharosYieldScore: 100 - index,
+    }));
+    const target = rows[rows.length - 1]!;
+    const ref = createRef<YieldLeaderboardHandle>();
+    let mobile = true;
+    const rects = vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(function (this: HTMLElement) {
+      return Object.assign((this.tagName === "ARTICLE") === mobile ? [new DOMRect()] : [], { item: () => null });
+    });
+    const scroll = vi.fn();
+    const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    try {
+      const view = render(
+        <QueryClientProvider client={client}>
+          <YieldLeaderboard ref={ref} rows={rows} logos={{}} riskFreeRate={3.5} medianApy={4} scalingFactor={1} />
+        </QueryClientProvider>,
+      );
+      expect(view.container.querySelector(`[data-yield-row-display="${target.id}"]`)).toBeNull();
+      act(() => ref.current?.revealRow(target.id));
+      expect(scroll).toHaveBeenCalledTimes(1);
+      expect(scroll.mock.instances[0]).toBe(view.container.querySelector(`article[data-yield-row-display="${target.id}"]`));
+      expect(scroll).toHaveBeenLastCalledWith({ behavior: "smooth", block: "center" });
+
+      mobile = false;
+      act(() => ref.current?.revealRow(rows[0]!.id));
+      expect(scroll).toHaveBeenCalledTimes(2);
+      expect(scroll.mock.instances[1]).toBe(view.container.querySelector(`div[data-yield-row-display="${rows[0]!.id}"]`));
+    } finally {
+      rects.mockRestore();
+      if (originalScroll) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", originalScroll);
+      else Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+      client.clear();
+    }
+  });
+
   it.each([
     { apy30d: 4.3, spread: "+0.60 pp" },
     { apy30d: 2.5, spread: "-1.20 pp" },

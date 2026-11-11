@@ -210,6 +210,7 @@ function configure(c: HealthCase) {
     resolver: { ...query(c, { _meta: ddrMeta, rows: [] }) },
     resolverReview: { ...query(c, {
       _meta: ddrMeta,
+      rows: [],
       summary: { headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodAccuracyPct: 0.8,
         lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] } },
     }) },

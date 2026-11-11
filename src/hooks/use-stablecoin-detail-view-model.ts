@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { isDetailSnapshotQuery, type SavedSafetyAssessment } from "@/lib/api";
+import { type SavedSafetyAssessment } from "@/lib/api";
+import { isDetailSnapshotQuery } from "@/lib/detail-snapshot";
 import { trackFreshDataReady } from "@/lib/analytics";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";

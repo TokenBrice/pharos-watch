@@ -27,6 +27,7 @@ import {
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { StateOnlyCard } from "@/components/depeg-resolver-row-card-state";
+import { isResolverBookAvailable } from "@/components/depeg-resolver-book-summary";
 import { ForecastTimeline } from "@/components/depeg-resolver-row-card-timeline";
 import { DDR_KILL_SAVE_CLASSES } from "@shared/lib/classification";
 
@@ -448,10 +449,8 @@ interface StablecoinDepegResolverRowsProps {
 
 export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: StablecoinDepegResolverRowsProps) {
   const rows = data?.rows.filter((row) => row.stablecoinId === stablecoinId) ?? [];
-  const degraded = data?._meta?.degraded === true;
-  const showStaleRows = degraded && data?._meta?.degradedReason === "stale-cache" && rows.length > 0;
 
-  if (!data || (degraded && !showStaleRows) || rows.length === 0) {
+  if (!isResolverBookAvailable(data) || rows.length === 0) {
     return null;
   }
 

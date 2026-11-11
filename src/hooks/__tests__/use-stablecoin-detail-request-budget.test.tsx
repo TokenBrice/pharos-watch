@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { useStablecoinDetailViewModel } from "../use-stablecoin-detail-view-model";
 import { DISABLED_DETAIL_QUERY_CONTROLS } from "./use-stablecoin-detail-view-model.test-support";
-import { seedStablecoinDetailQueryCache, type ApiMeta, type StablecoinDetailSnapshot } from "@/lib/api";
+import { type ApiMeta, type StablecoinDetailSnapshot } from "@/lib/api";
+import { seedStablecoinDetailQueryCache } from "@/lib/detail-snapshot";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 

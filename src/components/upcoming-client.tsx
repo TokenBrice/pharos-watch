@@ -24,7 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL, PRE_LAUNCH_SLIPPAGE_SWATCH_PUSHED, PRE_LAUNCH_SLIPPAGE_SWATCH_OVERDUE } from "@shared/lib/classification/pre-launch";
 import {
   PHASE_DOT,
   dateScore,
@@ -220,9 +220,6 @@ function filterPillClass(active: boolean): string {
     : `pharos-toggle-pill ${FILTER_TOUCH} gap-1.5`;
 }
 
-const SLIPPAGE_SWATCH_PUSHED = "inline-block h-2.5 w-2.5 rounded-full ring-[1.5px] ring-state-warn-solid/80 ring-offset-1 ring-offset-background";
-const SLIPPAGE_SWATCH_OVERDUE = "inline-block h-2.5 w-2.5 rounded-full ring-[1.5px] ring-state-danger-solid/85 ring-offset-1 ring-offset-background";
-
 const UPCOMING_COLUMNS: readonly DataTableColumn<SortKey>[] = [
   { id: "coin", label: "Coin", sortKey: "alphabetical", sortLabel: "Coin" },
   { id: "phase", label: "Phase", sortKey: "phase", className: "hidden sm:table-cell" },
@@ -249,8 +246,8 @@ function SlippedSplit({ pushed, overdue }: { pushed: number; overdue: number }):
   );
   return (
     <span className="inline-flex items-center gap-2.5 font-sans">
-      {part(pushed, SLIPPAGE_SWATCH_PUSHED, "pushed")}
-      {part(overdue, SLIPPAGE_SWATCH_OVERDUE, "overdue")}
+      {part(pushed, PRE_LAUNCH_SLIPPAGE_SWATCH_PUSHED, "pushed")}
+      {part(overdue, PRE_LAUNCH_SLIPPAGE_SWATCH_OVERDUE, "overdue")}
     </span>
   );
 }

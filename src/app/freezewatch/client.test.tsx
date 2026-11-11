@@ -52,11 +52,11 @@ vi.mock("@/lib/analytics", () => ({
   trackSearch: vi.fn(),
 }));
 
-vi.mock("@/components/usds-status-card", () => ({
+vi.mock("@/components/freezewatch/usds-status-card", () => ({
   UsdsStatusCard: () => <div data-testid="usds-status-card" />,
 }));
 
-vi.mock("@/components/eurc-blacklist-card", () => ({
+vi.mock("@/components/freezewatch/eurc-blacklist-card", () => ({
   EurcBlacklistCard: () => <div data-testid="eurc-blacklist-card" />,
 }));
 

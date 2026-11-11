@@ -3,7 +3,8 @@
 import { renderHook as renderHookWithProvider } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache, type ApiMeta } from "@/lib/api";
+import { type ApiMeta } from "@/lib/api";
+import { isDetailSnapshotQuery, seedStablecoinDetailQueryCache } from "@/lib/detail-snapshot";
 import { FRONTEND_API_QUERY_DESCRIPTORS, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { buildDetailStaleQueries } from "@/lib/stablecoin-detail-query-view-model";
 import { StaleDataBanner } from "@/components/stale-data-banner";

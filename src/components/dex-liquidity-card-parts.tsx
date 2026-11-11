@@ -24,14 +24,13 @@ import { getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors"
 import { BalanceBar } from "@/components/balance-bar";
 import {
   formatFeeTierLabel,
-  getOrganicFractionTier,
   getPoolVariantLabel,
   formatBalanceDetails,
 } from "@/components/dex-liquidity-card-model";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
-import { getDexDurabilityStyle, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { getDexDurabilityStyle, getPoolOrganicFractionTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 export function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -447,7 +446,7 @@ export function DurabilityBadge({ score }: { score: number | null }) {
 
 function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined; maturityDays?: number }) {
   if (fraction == null) return null;
-  const tier = getOrganicFractionTier(fraction, maturityDays);
+  const tier = getPoolOrganicFractionTier(fraction, maturityDays);
   return (
     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tier.badgeClass}`}>
       {tier.label}
