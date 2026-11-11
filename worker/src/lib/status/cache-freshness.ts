@@ -172,7 +172,10 @@ async function readProducerCronHistory(
                             AND clean_run.output_at IS NOT NULL
                             AND COALESCE(clean_run.quality_degraded, 0) != 1), 0)
                       THEN 1 ELSE 0 END) as degraded_runs_since_ok,
-                (SELECT COALESCE(recent.quality_reason, recent.degraded_reason)
+                /* A degraded run names its own cause; advisory quality flags come second. */
+                (SELECT CASE WHEN recent.status = 'degraded'
+                          THEN COALESCE(recent.degraded_reason, recent.quality_reason)
+                          ELSE COALESCE(recent.quality_reason, recent.degraded_reason) END
                  FROM producer_runs recent
                  WHERE recent.job = producer_runs.job
                    AND recent.output_at IS NOT NULL

@@ -676,7 +676,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     }
   });
 
-  it("derives a cache-evidence floor that excludes only cache-owned age and quality verdicts", async () => {
+  it("names degraded cache quality without flooring status or the cache-evidence floor", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -685,11 +685,10 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         cacheError: new Error("cache unavailable"),
       }), nowSec, { logPrefix: "test" });
       const quality = getCacheQualityImpact(result.caches);
-      expect(result.cacheQualityImpactStatus).toBe("degraded");
-      expect(quality.status).toBe(result.cacheQualityImpactStatus);
+      expect(quality.warnings[0]).toMatch(/^cache-quality-degraded: /);
+      expect(result.cacheQualityImpactStatus).toBe("healthy");
       expect(result.warnings).toEqual(expect.arrayContaining(quality.warnings));
-      expect(result.statusExcludingCacheFreshness)
-        .toBe(maxPublicStatus(result.cacheQualityImpactStatus, result.statusExcludingCacheEvidence));
+      expect(result.statusExcludingCacheFreshness).toBe(result.statusExcludingCacheEvidence);
       expect(result.overallStatus).toBe(maxPublicStatus(result.cacheImpactStatus, result.statusExcludingCacheFreshness));
       // The same reads with clean sentinels leave the cache-evidence floor unchanged.
       const clean = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec), nowSec, { logPrefix: "test" });

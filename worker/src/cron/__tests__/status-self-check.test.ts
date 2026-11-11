@@ -243,8 +243,9 @@ describe("runStatusSelfCheck", () => {
 
     await runStatusSelfCheck({} as D1Database);
 
-    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), assessedAt);
-    expect(assessPublicHealthMock).toHaveBeenCalledWith(expect.anything(), assessedAt, expect.anything());
+    // One assessment per run, reused by the raw verdict.
+    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), assessedAt, undefined, expect.anything());
+    expect(assessPublicHealthMock).toHaveBeenCalledExactlyOnceWith(expect.anything(), assessedAt, expect.anything());
     expect(writeStatusRawSnapshotMock).toHaveBeenCalledWith(expect.anything(), assessedAt, expect.anything(), expect.anything());
     expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledWith(
       expect.anything(), assessedAt, expect.anything(), expect.anything(), expect.anything(),
@@ -528,7 +529,6 @@ describe("runStatusSelfCheck", () => {
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
-    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
     expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.any(String),
       expect.any(String),
@@ -674,11 +674,16 @@ describe("runStatusSelfCheck", () => {
     expect(discrepancyArgs[4]).toBe("status-unreadable");
   });
 
-  it("fails closed on a current evidence read rather than the observed service verdict", async () => {
+  it("holds the public state on a failed database check and fails the run closed", async () => {
+    assessPublicHealthMock.mockResolvedValueOnce(makePublicHealth("stale", { dbHealthy: false }));
     computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), dbHealthy: false });
     const result = await runStatusSelfCheck({} as D1Database);
     expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("status-self-check-evidence-read-failed");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "status-self-check-evidence-read-failed", failedOutputs: [], outputPublishedAt: null,
+    });
+    expect(reconcilePublicStatusStateMock).not.toHaveBeenCalled();
+    expect(writeStatusPublicHealthSnapshotMock).not.toHaveBeenCalled();
   });
 
   it.each(["cron-history:read-failed", "scheduler:read-failed", "data-quality:active-depegs:read-failed"])(

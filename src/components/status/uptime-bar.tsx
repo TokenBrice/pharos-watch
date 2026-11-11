@@ -25,7 +25,7 @@ function describeDayCell(cell: ComponentDayCell): string {
   return `${cell.date}: ${cellTone(cell.state).label}${brief}`;
 }
 
-/** Daily bar for one public component; each cell is the worst state held for at least 1 h that UTC day (any outage counts). */
+/** Daily bar for one public component; each cell is the worst state held for at least 1 h that UTC day. */
 export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]; label: string }) {
   return (
     <div className="flex h-5 items-stretch gap-px" role="img" aria-label={`${label}, last ${cells.length} days: ${summarizeDayCells(cells)}`}>

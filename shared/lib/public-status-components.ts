@@ -43,10 +43,13 @@ import type { StatusHealthValue } from "../types/status/core";
  *   state has persisted for a further full budget). Yield, Safety Scores and
  *   mint/burn use the producer grace rule (3×/6×/12× the producer interval).
  *   Every age verdict carries its budget (R3).
- * - quality and coverage inputs are `degraded` at most: the data is served,
- *   some of it is incomplete.
+ * - coverage inputs are `degraded` at most: the data is served, some of it is
+ *   incomplete. Producer input quality is a notice (ADR-42): the generation is
+ *   published and its age alone grades the component.
  * - unreadable evidence is `degraded` with a named reason, never operational (R2).
- * - a failed database sentinel is the only outage that needs no grace.
+ * - a failed database health check is an unreadable evaluation, never an
+ *   outage: the self-check holds the published state and `/api/health` answers
+ *   503. Every outage is age-graded.
  */
 
 const PUBLIC_CORE_COMPONENT_IDS: readonly PublicStatusComponentId[] = ["website-api", "stablecoin-data"];
@@ -165,9 +168,11 @@ function cacheFindings(key: string, cache: HealthResponse["caches"][string]): Co
     });
   }
   if (cache.degraded === true) {
+    // Owner rule (2026-11-11, ADR-42): producer input quality is a notice. The
+    // generation is published, so the age bands alone colour the component.
     findings.push({
-      state: "degraded",
-      summary: `${subject}: the latest update reported incomplete inputs.`,
+      state: "operational",
+      summary: `${subject}: the latest update reported incomplete inputs. The published data is current.`,
       reason: `cache:${key}:quality:${cache.degradedReason ?? "unknown"}`,
     });
   } else if (cache.degraded === null) {
@@ -208,14 +213,17 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
     if (finding) findings.get(id)!.push(finding);
   };
 
-  // A failed database sentinel means reads fail everywhere: no grace applies.
+  // A failed database health check read nothing, so nothing is confirmed (R2),
+  // and one failed read is not an outage: ten were published as major outages
+  // on 2026-11-03..11 while the API probes of the same runs passed. Callers
+  // hold the published state or answer 503 instead of projecting this payload.
   if (health.warnings.includes("db-unhealthy")) {
     for (const id of PUBLIC_STATUS_COMPONENT_IDS) {
       add(id, {
-        state: "outage",
+        state: "degraded",
         summary: id === "website-api"
-          ? "The primary database is not answering. Pages and API responses may fail."
-          : "Unavailable while the primary database is not answering.",
+          ? "The database health check failed. Pages and API responses may fail."
+          : "Cannot be confirmed while the database health check is failing.",
         reason: "db-unavailable",
       });
     }
@@ -531,8 +539,8 @@ export function projectPublicStatus(
 /**
  * Public transition hysteresis (WS1.2, 2026-10-23): a component's published
  * state changes only after this many consecutive evaluations agree on a
- * change in the same direction, entering or clearing. An outage (database
- * sentinel failure or age past the outage band) bypasses it on entry.
+ * change in the same direction, entering or clearing. An outage (age past the
+ * outage band, already a full further budget of grace) bypasses it on entry.
  */
 const PUBLIC_STATUS_HYSTERESIS_EVALUATIONS = 2;
 
@@ -568,6 +576,9 @@ export function applyPublicStatusHysteresis(
   const components = raw.components.map((component): PublicStatusComponent => {
     const prior = previous.get(component.id);
     if (!prior || prior.state === component.state) return component;
+    // A stored `db-unavailable` state was an unreadable evaluation, not a
+    // verdict to hold (written before 2026-11-11): this evaluation replaces it.
+    if (prior.reasons.includes("db-unavailable")) return component;
     if (component.state === "outage") return { ...component, since: now };
     const dir = direction(prior.state, component.state);
     const streak = prior.pending && direction(prior.state, prior.pending.state) === dir ? prior.pending : null;
@@ -619,6 +630,18 @@ export function toPublicTransitionComponents(
   return components
     .filter((component) => component.state !== "operational")
     .map((component) => ({ id: component.id, state: component.state, reasons: component.reasons }));
+}
+
+/**
+ * Stored public history is served under the current colouring rule (owner
+ * ruling 2026-11-11): a component whose every stored reason is producer input
+ * quality, a notice now, reads as operational and leaves the row.
+ */
+export function dropNoticeOnlyTransitionComponents(
+  components: readonly PublicStatusTransitionComponent[],
+): PublicStatusTransitionComponent[] {
+  return components.filter((component) => component.reasons.length === 0
+    || !component.reasons.every((reason) => /^cache:[^:]+:quality(?::|-unknown$)/.test(reason)));
 }
 
 /** Legacy three-level projection of a headline, for the `status_transitions` level columns. */

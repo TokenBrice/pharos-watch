@@ -298,13 +298,16 @@ describe("public status components", () => {
     expect(projectPublicStatus(health).headline.state).toBe("degraded");
   });
 
-  it("declares a major outage when the database sentinel fails", () => {
+  it("projects a failed database check as unconfirmed, never an outage (R2)", () => {
     const health = makeHealthyHealthResponse();
     health.status = "stale";
     health.warnings = ["db-unhealthy"];
     const projection = projectPublicStatus(health);
-    expect(projection.headline.state).toBe("major-outage");
-    expect(projection.components.every((item) => item.state === "outage")).toBe(true);
+    expect(projection.headline.state).toBe("degraded");
+    expect(projection.components.every((item) => item.state === "degraded")).toBe(true);
+    const stored = new Map(projection.components.map((item) => [item.id, { ...item, pending: null }]));
+    expect(applyPublicStatusHysteresis(projectPublicStatus(makeHealthyHealthResponse()), stored, NOW).projection.headline.state)
+      .toBe("operational");
   });
 
   it("names unreadable evidence instead of reporting it operational (R2)", () => {
@@ -374,15 +377,18 @@ describe("public status components", () => {
     },
   );
 
-  it("keeps unknown cache quality a notice while the age bands still grade real staleness", () => {
+  it.each([
+    [null, "quality-unknown", "unknown"],
+    [true, "quality:source-failed:x", "incomplete inputs"],
+  ] as const)("keeps cache quality (degraded: %s) a notice while the age bands still grade real staleness", (degraded, reason, text) => {
     const health = makeHealthyHealthResponse();
-    health.caches = { "dex-liquidity": { ...cache(60, 3600), healthy: false, degraded: null, degradedReason: "producer-history-unreadable" } };
+    health.caches = { "dex-liquidity": { ...cache(60, 3600), healthy: false, degraded, degradedReason: "source-failed:x" } };
     expect(component(health, "liquidity")).toMatchObject({
-      state: "operational", reasons: ["cache:dex-liquidity:quality-unknown"], summary: expect.stringContaining("unknown"),
+      state: "operational", reasons: [`cache:dex-liquidity:${reason}`], summary: expect.stringContaining(text),
     });
     health.caches["dex-liquidity"] = { ...health.caches["dex-liquidity"], ageSeconds: 3600 * 13 };
     expect(component(health, "liquidity")).toMatchObject({
-      state: "degraded", reasons: expect.arrayContaining(["cache:dex-liquidity:stale", "cache:dex-liquidity:quality-unknown"]),
+      state: "degraded", reasons: expect.arrayContaining(["cache:dex-liquidity:stale", `cache:dex-liquidity:${reason}`]),
     });
   });
 

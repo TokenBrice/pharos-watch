@@ -2,6 +2,8 @@ import { z } from "zod";
 import { tryParseJson } from "../json-parse";
 import {
   applyPublicStatusHysteresis,
+  buildPublicHeadline,
+  dropNoticeOnlyTransitionComponents,
   getPublicComponentStateRank,
   headlineToStatusLevel,
   projectPublicStatus,
@@ -253,7 +255,21 @@ interface PublicTransitionRow {
   created_at: number;
 }
 
-/** Persisted public-projection transitions in a window, newest first. Throws on read failure. */
+/**
+ * Owner ruling (2026-11-11): rows written when one failed database read was
+ * published as a ten-component outage are not served. The API probes of the
+ * same runs passed, and no later release writes this reason. The one row
+ * published straight out of such an outage from a single unreadable
+ * evaluation (2026-11-10T19:39:57Z) goes with them, by its exact clock.
+ * Removable once the rows leave the 30-day window (2026-12-11).
+ */
+const SERVED_ROW_SQL = `(causes_json IS NULL OR (causes_json NOT LIKE '%"db-unavailable"%' AND created_at != 1794339597))`;
+
+/**
+ * Persisted public-projection transitions in a window, newest first, served
+ * under the current colouring rule (`dropNoticeOnlyTransitionComponents`).
+ * Throws on read failure.
+ */
 export async function listPublicStatusTransitions(
   db: D1Database,
   limit: number,
@@ -263,7 +279,7 @@ export async function listPublicStatusTransitions(
     db.prepare(
       `/* pharos:public-status-transitions */ SELECT id, previous_status, next_status, transition_type, reason, causes_json, created_at
        FROM status_transitions
-       WHERE scope = ? AND created_at >= ?
+       WHERE scope = ? AND created_at >= ? AND ${SERVED_ROW_SQL}
        ORDER BY created_at DESC, id DESC
        LIMIT ?`,
     ).bind(PUBLIC_STATUS_SCOPE, from, limit + 1).all<PublicTransitionRow>(),
@@ -275,7 +291,7 @@ export async function listPublicStatusTransitions(
     db.prepare(
       `/* pharos:public-status-boundary */ SELECT causes_json, created_at
        FROM status_transitions
-       WHERE scope = ? AND created_at <= ?
+       WHERE scope = ? AND created_at <= ? AND ${SERVED_ROW_SQL}
        ORDER BY created_at DESC, id DESC
        LIMIT 1`,
     ).bind(PUBLIC_STATUS_SCOPE, from).first<Pick<PublicTransitionRow, "causes_json" | "created_at">>(),
@@ -283,15 +299,20 @@ export async function listPublicStatusTransitions(
   const results = rows.results ?? [];
   const transitions = results.slice(0, limit).map((row): PublicStatusTransition => {
     const parsed = PersistedTransitionSchema.safeParse(tryParseJson(row.causes_json));
+    const stored = parsed.success ? parsed.data : null;
+    const components = stored ? dropNoticeOnlyTransitionComponents(stored.components) : null;
+    // Only a row that lost a component is re-headlined; every other row is served as stored.
+    const headline = stored && components && components.length !== stored.components.length
+      ? buildPublicHeadline(components) : null;
     return {
       id: row.id,
       from: row.previous_status,
-      to: row.next_status,
+      to: headline ? headlineToStatusLevel(headline.state) : row.next_status,
       transitionType: row.transition_type,
       reason: row.reason,
       at: row.created_at,
       source: "public",
-      ...(parsed.success ? { headline: parsed.data.headline, components: parsed.data.components } : {}),
+      ...(stored && components ? { headline: headline ?? stored.headline, components } : {}),
     };
   });
   const state = PersistedStateSchema.safeParse(tryParseJson(first?.state_json ?? null));
@@ -304,7 +325,7 @@ export async function listPublicStatusTransitions(
   const boundaryState = PersistedTransitionSchema.safeParse(tryParseJson(boundaryRow?.causes_json ?? null));
   const boundary = !hasMore && boundaryState.success && boundaryRow != null
     && Number.isFinite(boundaryRow.created_at) && boundaryRow.created_at >= 0 && boundaryRow.created_at <= from
-    ? { at: boundaryRow.created_at, components: boundaryState.data.components }
+    ? { at: boundaryRow.created_at, components: dropNoticeOnlyTransitionComponents(boundaryState.data.components) }
     : null;
   return { transitions, startedAt: first?.started_at ?? null, componentHistoryStartedAt, boundary, hasMore };
 }

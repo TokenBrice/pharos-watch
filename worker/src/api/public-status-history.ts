@@ -95,7 +95,8 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
         transitionQueryFailed = true;
       });
 
-    if (transitionQueryFailed) {
+    // A failed database check assessed nothing: no current status to report (R2).
+    if (transitionQueryFailed || !publicHealth.dbHealthy) {
       return errorResponse(503, "Public status history unavailable", { noStore: true });
     }
 

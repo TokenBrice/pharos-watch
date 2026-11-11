@@ -1,6 +1,12 @@
 import { unavailableReserveComposition } from "@shared/lib/status-reserve-composition";
 import type { CronStatusDetail, StatusCause, StatusResponse } from "@shared/types/status";
-import { assessPublicHealth, capturePublicHealthRead, getPublicHealthEvidenceReadFailures, type PublicHealthReadResult } from "./public-health-assessment";
+import {
+  assessPublicHealth,
+  capturePublicHealthRead,
+  getPublicHealthEvidenceReadFailures,
+  type PublicHealthAssessment,
+  type PublicHealthReadResult,
+} from "./public-health-assessment";
 import { emptyDatasetFreshness } from "./status/derived-data";
 import { getDataQuality } from "./status/data-quality";
 import { loadSupplyIntegrityReport } from "./supply-integrity";
@@ -121,8 +127,11 @@ export async function computeRawStatus(
   db: D1Database,
   now: number,
   schedulerLiveness?: SchedulerLiveness,
+  /** The caller's own assessment for this clock, so one run reads public health once. */
+  assessedPublicHealth?: PublicHealthAssessment,
 ) {
-  const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status", schedulerLiveness });
+  const publicHealth = assessedPublicHealth
+    ?? await assessPublicHealth(db, now, { logPrefix: "status", schedulerLiveness });
   if (!publicHealth.dbHealthy) {
     return { ...buildDbUnavailableRawStatus(), schedulerLiveness: publicHealth.schedulerLiveness };
   }

@@ -404,7 +404,7 @@ describe("advancePublicHealthSnapshot generation-bound adoption", () => {
       generationId: "new-generation", ageSeconds: 30, healthy: false,
       degraded: true, degradedReason: "new-quality", streakDegradedRuns: 2, upstreamProvider: "defillama",
     });
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("healthy");
     expect(result.warnings).toEqual(["independent-notice", "cache-quality-degraded: yield-data:new-quality"]);
     expect(result.assessedAt).toBe(PUBLIC_HEALTH_ASSESSED_AT);
     expect(result.timestamp).toBe(PUBLIC_HEALTH_NOW);
@@ -438,9 +438,6 @@ describe("advancePublicHealthSnapshot generation-bound adoption", () => {
     // A legacy snapshot's floor still contains the stored quality verdict.
     expect(advance(snapshot(storedLane(true)), currentLane(false), { statusExcludingCacheFreshness: "degraded" }).status)
       .toBe("degraded");
-    // New degradation still escalates a legacy floor.
-    expect(advance(snapshot(storedLane(false)), currentLane(true), { statusExcludingCacheFreshness: "healthy" }).status)
-      .toBe("degraded");
   });
 
   it("replaces generation-bound diagnostics and removes absent ones", () => {
@@ -470,7 +467,7 @@ describe("advancePublicHealthSnapshot generation-bound adoption", () => {
     expect(result.caches["yield-data"]).toMatchObject({
       generationId: "old-generation", ageSeconds: 660, degraded: true, degradedReason: "old-quality", healthy: false,
     });
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("healthy");
     expect(result.warnings).toEqual(stored.warnings);
     expect(result.assessedAt).toBe(PUBLIC_HEALTH_ASSESSED_AT);
   });

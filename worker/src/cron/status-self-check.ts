@@ -16,7 +16,7 @@ import { evaluateStatusProbePayload, hasStatusProbePayloadContract } from "./sta
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import { computeRawStatus } from "../lib/status-evaluation";
-import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../lib/public-health-assessment";
+import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
 import { reconcilePublicStatusState } from "../lib/status/public-status-state";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, writeStatusPublicHealthSnapshot } from "../lib/status/public-health-snapshot";
@@ -867,7 +867,11 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   }, () => failedOutputs.add("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
-  const raw = await computeRawStatus(db, assessedAt);
+  // One assessment feeds the operator verdict and the public projection. A
+  // second one used to race the supplement reads, and its database check
+  // failed where the first had passed seconds earlier (2026-11-03..11).
+  const publicHealthAssessment = await assessPublicHealth(db, assessedAt, { logPrefix: "status-self-check" });
+  const raw = await computeRawStatus(db, assessedAt, undefined, publicHealthAssessment);
   let statusStateReadFailed = false;
   const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     (issue) => {
@@ -884,26 +888,31 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
         }
       : undefined);
   await options.reportProgress?.({ stage: "status-supplements" });
-  const [publicHealthAssessment, supplements] = await Promise.all([
-    assessPublicHealth(db, assessedAt, { logPrefix: "status-self-check" }),
-    loadStatusSupplements(
-      db,
-      assessedAt,
-      raw.crons,
-      options.coingeckoApiKey,
-      cloudflareD1StatusBindings,
-      options.workerCanaryMode ?? "off",
-    ),
-  ]);
+  const supplements = await loadStatusSupplements(
+    db,
+    assessedAt,
+    raw.crons,
+    options.coingeckoApiKey,
+    cloudflareD1StatusBindings,
+    options.workerCanaryMode ?? "off",
+  );
   await options.reportProgress?.({ stage: "snapshot-publication" });
-  const publicHealthBody = buildPublicHealthResponse(publicHealthAssessment, assessedAt);
-  const publicStatus = await reconcilePublicStatusState(db, assessedAt, publicHealthBody,
-    () => failedOutputs.add("status_state:public"));
-  if (!publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
+  // A failed database check read nothing, so it is an unreadable evaluation,
+  // not a public verdict: the published state and snapshot are held (R2) and
+  // `evidenceReadFailures` names the failure for operators.
+  const publicHealthBody = publicHealthAssessment.dbHealthy
+    ? buildPublicHealthResponse(publicHealthAssessment, assessedAt)
+    : null;
+  const publicStatus = publicHealthBody
+    ? await reconcilePublicStatusState(db, assessedAt, publicHealthBody, () => failedOutputs.add("status_state:public"))
+    : null;
+  if (publicStatus && !publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, assessedAt, raw, { supplements });
-  const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, assessedAt,
-    { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
-    publicHealthAssessment.statusExcludingCacheEvidence);
+  const publicHealthSnapshotPersistenceSucceeded = publicHealthBody && publicStatus
+    ? await writeStatusPublicHealthSnapshot(db, assessedAt,
+      { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
+      publicHealthAssessment.statusExcludingCacheEvidence)
+    : null;
   // An unreadable status_state cannot establish effective-vs-raw divergence.
   // The raw fallback is not the persisted authority, so observing it would
   // overwrite a real streak with an invented in-sync/zero verdict.
@@ -923,14 +932,14 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");
-  if (!publicHealthSnapshotPersistenceSucceeded) failedOutputs.add(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY);
+  if (publicHealthSnapshotPersistenceSucceeded === false) failedOutputs.add(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY);
   if (!discrepancyState.persistenceSucceeded) failedOutputs.add("status_discrepancy_state");
-  const evidenceReadFailures = [
+  // `raw.evidenceReadFailures` already names this run's public-health reads.
+  const evidenceReadFailures = [...new Set([
     ...(raw.dbHealthy === false ? ["db-unavailable"] : []),
     ...(raw.evidenceReadFailures ?? []),
-    ...getPublicHealthEvidenceReadFailures(publicHealthAssessment),
     ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
-  ];
+  ])];
   const evidenceReadFailed = evidenceReadFailures.length > 0;
   const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
   const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
@@ -942,7 +951,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     itemCount: sampleCount,
     metadata: JSON.stringify({
       d1Cost: d1Cost.snapshot(),
-      outputPublishedAt: failedOutputs.size === 0 ? now : null,
+      // A held public evaluation published no public snapshot this run.
+      outputPublishedAt: failedOutputs.size === 0 && publicHealthBody ? now : null,
       failedOutputs: [...failedOutputs],
       evidenceReadFailures,
       ...(reason ? { reason } : {}),
@@ -963,6 +973,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       statusPersistenceSucceeded,
       rawSnapshotPersistenceSucceeded,
       publicHealthSnapshotPersistenceSucceeded,
+      ...(publicHealthBody ? {} : { publicStatusHeldReason: "db-unavailable" }),
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
