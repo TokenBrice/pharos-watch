@@ -1,3 +1,4 @@
+import { logCronEvent } from "../../lib/cron-logger";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
@@ -56,6 +57,7 @@ import {
   getYieldSupplementalPendleBackoffCacheKey,
   parseYieldSupplementalPendleBackoff,
   parseYieldSupplementalSourcesCache,
+  type YieldSupplementalPendleBackoff,
 } from "./cache";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
@@ -94,6 +96,7 @@ export interface SupplementalSourceFamilyResult {
   skipReason?: "pendle-cadence-not-due" | "pendle-rate-limited-backoff";
   /** PENDLE-RL (R4): machine-readable cause carried into the run-outcome row when degraded. */
   degradedReason?: string;
+  backoff?: YieldSupplementalPendleBackoff | null;
   telemetry?: OptionalRpcFamilyTelemetry;
   provider?: unknown;
 }
@@ -490,6 +493,22 @@ async function runPendleFamily(
     if (db) {
       try {
         await setCache(db, backoffKey, buildYieldSupplementalPendleBackoff(backoff), signal);
+        await logCronEvent(db, {
+          job: "sync-yield-supplemental",
+          eventType: "pendle-rate-limited-backoff",
+          severity: "warning",
+          message: "Pendle returned HTTP 429; recorded its quota backoff window",
+          metadata: { ...backoff },
+        }).catch((error) => {
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-yield-supplemental",
+            level: "warn",
+            event: "pendle-backoff-event-failed",
+            message: "Pendle backoff was persisted but its cron event could not be recorded",
+            error,
+          });
+        });
       } catch (error) {
         logWorkerEvent({
           scope: "lib",
@@ -511,6 +530,7 @@ async function runPendleFamily(
     sourceFamilyCount: candidates.length,
     status: "ok",
     degraded: !fresh,
+    backoff: backoff ?? null,
     ...(fresh
       ? { skipReason: backoff ? "pendle-rate-limited-backoff" : "pendle-cadence-not-due" }
       : { degradedReason: PENDLE_RATE_LIMIT_BACKOFF_REASON }),

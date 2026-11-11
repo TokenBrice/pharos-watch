@@ -508,7 +508,9 @@ export async function syncYieldSupplemental(
   const familyPublished = Object.values(familyCacheResults).some(
     (status) => status === "published" || status === "empty-published",
   );
+  const pendleBackoff = familyResults.find((family) => family.key === "pendle")?.backoff;
   const metadata = JSON.stringify({
+    ...(pendleBackoff ? { pendleBackoff } : {}),
     ...(familyPublished ? { outputPublishedAt: startSec } : {}),
     rowsRead: rawCandidateCount,
     rowsWritten: supplementalCandidatesWritten,
