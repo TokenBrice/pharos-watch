@@ -4,7 +4,7 @@ import { getReserveAdapter } from "../../src/cron/reserve-adapters/index";
 import { createReserveAdapterRunner } from "../../src/cron/reserve-adapter-runner";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../../src/cron/sync-live-reserves-core";
 import { resolveLiveReserveSyncBudgetConfig } from "../../src/cron/sync-live-reserves-config";
-import { STAGED_BOOTSTRAP_COINS } from "../../src/lib/live-reserves/staged-capture-registry";
+import { STAGED_BOOTSTRAP_COINS } from "../../src/cron/sync-live-reserves-shared";
 import { getReserveCompositionRow, getReserveSyncState, didReserveSyncSuccessBecomeAuthoritative } from "../../src/lib/live-reserves/store";
 import { parseReserveCompositionRow } from "../../src/lib/live-reserves/store-row-decoding";
 import { decodeReserveNavPrice, reserveNavSupplyScopeReason } from "../../src/lib/reserve-nav-price";

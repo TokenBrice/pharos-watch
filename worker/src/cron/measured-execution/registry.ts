@@ -110,7 +110,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "base",
     endpointAddress: "0x254cf9e1e6e233aa1ac962cb9b05b2cfeaae15b0",
     expectedCodeHash: "0xfb0ab713266d089d5b6ac48d50455c4fadc9cd49a1efcc83a091e7c2e48dad0e",
-    factoryAddress: SLIPSTREAM_COLLECTION_DEPLOYMENTS["aerodrome-slipstream"].clFactoryAddress.toLowerCase(),
+    factoryAddress: SLIPSTREAM_COLLECTION_DEPLOYMENTS["aerodrome-slipstream"].clFactoryAddress.toLowerCase() as `0x${string}`,
     expectedFactoryCodeHash: "0x7340cf80843bd721bcaefbfc050e38304cb4174c239e6e914e3056f27f39b11c",
   },
   {

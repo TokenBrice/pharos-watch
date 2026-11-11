@@ -25,7 +25,7 @@ export function passesUsdVolumeSourcePreflight(tvlUsd: number, volume24hUsd: num
   return retainedPoolVolumeSanityRejection(tvlUsd, measuredVolume) == null;
 }
 
-export function passesRawTokenVolumeSourcePreflight(tvlUsd: number, tokenVolumes: number[] | undefined): boolean {
+export function passesRawTokenVolumeSourcePreflight(tvlUsd: number, tokenVolumes: number[] | null | undefined): boolean {
   if (tvlUsd <= LARGE_POOL_TVL_MIN_USD) return true;
   if (tokenVolumes == null) return false;
   return tokenVolumes.some((volume) => Number.isFinite(volume) && volume >= LARGE_POOL_MIN_VOLUME_USD);
