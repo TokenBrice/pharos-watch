@@ -8,30 +8,8 @@ import type {
   DigestSignalChange,
   DigestStandingCondition,
 } from "@shared/types";
+import { DIGEST_FORWARD_LOOK_OUTCOME_STYLES, DIGEST_RISK_TAPE_TONE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
-
-const RISK_TAPE_TONE_CLASSES: Record<DigestRiskTapeItem["tone"], string> = {
-  critical: "border-red-500/35 bg-red-500/10 text-red-800 dark:text-red-300",
-  warning: "border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  neutral: "border-border/70 bg-muted/40 text-foreground/80",
-  positive: "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
-};
-
-const OUTCOME_CLASSES: Record<DigestForwardLookOutcome["status"], string> = {
-  hit: "border-emerald-500/35 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
-  missed: "border-border/70 bg-muted/35 text-muted-foreground",
-  pending: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  expired: "border-border/70 bg-muted/35 text-muted-foreground",
-  unavailable: "border-border/70 bg-muted/35 text-muted-foreground",
-};
-
-const OUTCOME_LABELS: Record<DigestForwardLookOutcome["status"], string> = {
-  hit: "Hit",
-  missed: "Missed",
-  pending: "Pending",
-  expired: "Expired",
-  unavailable: "Unavailable",
-};
 
 /** Stored tape values glue units to figures ("5070bps"); print the house "5,070 bps" form. */
 function formatTapeValue(value: string): string {
@@ -86,7 +64,7 @@ function RiskTape({ items }: { items: DigestRiskTapeItem[] }) {
           title={item.detail}
           className={cn(
             "rounded-md border px-2 py-1 text-2xs",
-            RISK_TAPE_TONE_CLASSES[item.tone],
+            DIGEST_RISK_TAPE_TONE_CLASSES[item.tone],
           )}
         >
           <span className="mr-1 text-muted-foreground/80">{item.label}</span>
@@ -111,10 +89,10 @@ function OutcomeStrip({ outcomes }: { outcomes: DigestForwardLookOutcome[] }) {
             title={outcome.detail}
             className={cn(
               "rounded-full border px-2 py-1 text-2xs font-medium",
-              OUTCOME_CLASSES[outcome.status],
+              DIGEST_FORWARD_LOOK_OUTCOME_STYLES[outcome.status].className,
             )}
           >
-            {OUTCOME_LABELS[outcome.status]}: {outcome.label}
+            {DIGEST_FORWARD_LOOK_OUTCOME_STYLES[outcome.status].label}: {outcome.label}
           </span>
         ))}
       </div>

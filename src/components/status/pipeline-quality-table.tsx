@@ -1,6 +1,6 @@
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { StatusPill } from "@/components/status/severity-pill";
-import { PIPELINE_STATE_META } from "@/lib/pipeline-workspace-model";
+import { PIPELINE_STATE_META } from "@shared/lib/classification";
 import type { PipelineQualityModel } from "@/lib/pipeline-workspace-model";
 
 export function PipelineQualityTable({ model }: { model: PipelineQualityModel }) {

@@ -11,7 +11,8 @@ import {
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
-import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import type { RedemptionBackstopConfig, ReviewedRedemptionTerms } from "@shared/lib/redemption-backstop-configs/shared";
+import { COMPACT_REDEMPTION_FEE_TERMS } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionDocSourceSupport, StablecoinMeta } from "@shared/types";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
@@ -499,43 +500,6 @@ interface ComparisonReportEvidence {
   sources: ComparisonRowSource[];
 }
 
-/**
- * Audited display overrides for the pilot pairs. Each one only restates the
- * reviewed terms already carried by the redemption config: no new research
- * value or source authority enters here. `termsClock` names which reviewed
- * date the displayed terms actually belong to.
- */
-interface ComparisonFeeBasisOverride {
-  feeBasis: string;
-  termsClock: "config" | "route-review-terms" | "physical";
-}
-
-const COMPARISON_FEE_BASIS_OVERRIDES: Readonly<Record<string, ComparisonFeeBasisOverride>> = {
-  // Keep the percentage distinct from its fee minimum, and that minimum
-  // distinct from the $100,000 redemption minimum.
-  "usdt-tether": {
-    feeBasis: "0.10%, with a minimum fee of $1,000",
-    termsClock: "config",
-  },
-  // Compact standard tariff with the controlling private-pricing and
-  // third-party-cost qualifications retained; never an all-in ceiling.
-  "paxg-paxos": {
-    feeBasis:
-      "Standard tariff effective 2026-09-01: 12.5-50 bps on rolling-30-day net redemptions, plus 5 bps for in-kind gold conversion. Customer-specific pricing may override it; delivery, dealer, tax and bank costs are separate.",
-    termsClock: "route-review-terms",
-  },
-  // The physical issuer fee, never the delivery model's default zeros.
-  "xaut-tether": {
-    feeBasis: "25 bps issuer redemption fee, plus delivery and applicable fees",
-    termsClock: "physical",
-  },
-  // Compact semantic projection of the reviewed USDe fee description.
-  "usde-ethena": {
-    feeBasis: "10 bps for USDT/USDC redemption under the reviewed USDe terms",
-    termsClock: "config",
-  },
-};
-
 function isHttpSourceUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
@@ -711,7 +675,7 @@ function resolveRedemptionMinimum(
 }
 
 function resolveFeeBasisReviewedAt(
-  override: ComparisonFeeBasisOverride,
+  override: ReviewedRedemptionTerms["compactFeeBasis"],
   config: RedemptionBackstopConfig,
   today: string,
 ): string | null {
@@ -740,7 +704,7 @@ function resolveRedemptionFeeBasis(
     docsSupporting(config.v9RouteReviewTerms?.docs, "fees"),
   );
   if (sources.length === 0) return null;
-  const override = COMPARISON_FEE_BASIS_OVERRIDES[coinId];
+  const override = COMPACT_REDEMPTION_FEE_TERMS[coinId];
   if (override) {
     const reviewedAt = resolveFeeBasisReviewedAt(override, config, today);
     return reviewedAt ? { value: withReviewedDate(override.feeBasis, reviewedAt), sources } : null;

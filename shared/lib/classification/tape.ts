@@ -1,3 +1,4 @@
+import type { DigestForwardLookOutcome, DigestRiskTapeItem } from "../../types/digest";
 import type { TapeEventSeverity } from "../../types/tape-event-constants";
 import { projectDescriptors } from "./descriptors";
 
@@ -19,3 +20,18 @@ export const SEVERITY_LABEL_INCLUSIVE = projectDescriptors(
 );
 export const SEVERITY_TEXT_CLASS = projectDescriptors(TAPE_SEVERITY_PRESENTATION, (tier) => tier.textClass);
 export const SEVERITY_DOT_CLASS = projectDescriptors(TAPE_SEVERITY_PRESENTATION, (tier) => tier.dotClass);
+
+export const DIGEST_RISK_TAPE_TONE_CLASSES: Record<DigestRiskTapeItem["tone"], string> = {
+  critical: "border-red-500/35 bg-red-500/10 text-red-800 dark:text-red-300",
+  warning: "border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  neutral: "border-border/70 bg-muted/40 text-foreground/80",
+  positive: "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
+};
+
+export const DIGEST_FORWARD_LOOK_OUTCOME_STYLES: Record<DigestForwardLookOutcome["status"], { label: string; className: string }> = {
+  hit: { label: "Hit", className: "border-emerald-500/35 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300" },
+  missed: { label: "Missed", className: "border-border/70 bg-muted/35 text-muted-foreground" },
+  pending: { label: "Pending", className: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300" },
+  expired: { label: "Expired", className: "border-border/70 bg-muted/35 text-muted-foreground" },
+  unavailable: { label: "Unavailable", className: "border-border/70 bg-muted/35 text-muted-foreground" },
+};

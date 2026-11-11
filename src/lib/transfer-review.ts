@@ -1,3 +1,4 @@
+import { TRANSFER_REVIEW_POSTURE_LABELS, TRANSFER_REVIEW_SCOPE_LABELS } from "@shared/lib/classification";
 import transferReviewOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { titleCaseSlug } from "@/lib/title-case-slug";
@@ -55,18 +56,6 @@ interface OverlayEntryShape {
   deployments?: OverlayDeploymentShape[];
 }
 
-const POSTURE_LABELS: Record<string, string> = {
-  permissionless: "Permissionless",
-  restrictable: "Restrictable",
-  permissioned: "Permissioned",
-};
-
-const SCOPE_LABELS: Record<string, string> = {
-  canonical: "Canonical",
-  "material-bridge": "Bridged",
-  additional: "Additional",
-};
-
 const REVIEWS_BY_ASSET_ID: ReadonlyMap<string, OverlayEntryShape> = new Map(
   Object.values(transferReviewOverlays.reviews)
     .map((review) => [review.assetId, review]),
@@ -87,9 +76,9 @@ export function buildTransferReviewView(assetId: string): TransferReviewView | n
       chainId: deployment.chainId,
       chainName: CHAIN_META[deployment.chainId]?.name ?? titleCaseSlug(deployment.chainId),
       scope: deployment.scope,
-      scopeLabel: SCOPE_LABELS[deployment.scope] ?? titleCaseSlug(deployment.scope),
+      scopeLabel: TRANSFER_REVIEW_SCOPE_LABELS[deployment.scope] ?? titleCaseSlug(deployment.scope),
       posture: deployment.posture,
-      postureLabel: POSTURE_LABELS[deployment.posture] ?? titleCaseSlug(deployment.posture),
+      postureLabel: TRANSFER_REVIEW_POSTURE_LABELS[deployment.posture] ?? titleCaseSlug(deployment.posture),
       evidence,
       sources: (deployment.sources ?? []).filter((source) => source.label.trim() && source.url.trim()),
     });

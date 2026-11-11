@@ -72,7 +72,7 @@ function levenshtein(a: string, b: string): number {
  * - Otherwise, Levenshtein distance on normalized paths,
  *   filtered to within max(2, ceil(len/4)) edits.
  */
-export function guessRoute(failedPath: string, limit = 3): RouteSuggestion[] {
+export function guessRoute(failedPath: string): RouteSuggestion[] {
   if (!failedPath || failedPath === "/") return [];
 
   for (const alias of ALIASES) {
@@ -101,5 +101,5 @@ export function guessRoute(failedPath: string, limit = 3): RouteSuggestion[] {
 
   return Array.from(best.values())
     .sort((a, b) => a.distance - b.distance || a.href.localeCompare(b.href))
-    .slice(0, limit);
+    .slice(0, 3);
 }

@@ -12,6 +12,8 @@ import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEWS_SIGNAL_WEIGHTS } from "@shared/lib/dews-config";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -28,7 +30,7 @@ const FAQ_ITEMS = [
   {
     question: "What is the DEWS score?",
     answer:
-      "DEWS (Depeg Early Warning System) is a per-coin stress score from 0 to 100, computed every 30 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to surface pre-price and live-market stress signals, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI), plus a bounded same-peg contagion multiplier from current WARNING/DANGER peers (currently 1.08/1.15, capped at 1.2).",
+      `DEWS (Depeg Early Warning System) is a per-coin stress score from 0 to 100, computed every ${CRON_INTERVALS["compute-dews"] / 60} minutes from ${Object.keys(DEWS_SIGNAL_WEIGHTS).length} sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to surface pre-price and live-market stress signals, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI), plus a bounded same-peg contagion multiplier from current WARNING/DANGER peers (currently 1.08/1.15, capped at 1.2).`,
   },
   {
     question: "How is the peg score calculated?",

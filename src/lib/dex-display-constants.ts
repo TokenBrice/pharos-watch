@@ -53,40 +53,7 @@ export const EXTRA_COLORS = DEX_FALLBACK_SWATCH_CLASSES;
 
 const CHAIN_COLORS: Record<string, string> = CHAIN_SWATCH_CLASSES;
 
-/** Hex equivalents of CHAIN_COLORS for SVG fill attributes (Recharts) */
-export const CHAIN_HEX: Record<string, string> = {
-  ethereum: "#2563eb",
-  arbitrum: "#0ea5e9",
-  base: "#60a5fa",
-  polygon: "#8b5cf6",
-  bsc: "#f59e0b",
-  optimism: "#ef4444",
-  avalanche: "#dc2626",
-  solana: "#10b981",
-  gnosis: "#14b8a6",
-  fantom: "#93c5fd",
-};
-
-/** Hex equivalents of PROTOCOL_COLORS for SVG fill attributes (Recharts) */
-export const PROTOCOL_HEX: Record<string, string> = {
-  curve: "#3b82f6",
-  "uniswap-v2": "#f9a8d4",
-  "uniswap-v3": "#ec4899",
-  "uniswap-v4": "#f472b6",
-  fluid: "#06b6d4",
-  balancer: "#8b5cf6",
-  aerodrome: "#0ea5e9",
-  velodrome: "#ef4444",
-  aero: "#2563eb",
-  pancakeswap: "#f59e0b",
-  sushiswap: "#6366f1",
-  "trader-joe": "#f97316",
-  raydium: "#a855f7",
-  orca: "#2dd4bf",
-  meteora: "#0ea5e9",
-  quickswap: "#8b5cf6",
-  ekubo: "#f97316",
-};
+export { CHAIN_SWATCH_HEX as CHAIN_HEX, DEX_PROTOCOL_SWATCH_HEX as PROTOCOL_HEX } from "@shared/lib/classification";
 
 /** Normalize a chain name to lowercase for color lookup, returning a canonical display name. */
 export function normalizeChain(chain: string): string {

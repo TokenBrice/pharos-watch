@@ -7,7 +7,7 @@
    because Recharts then appends the raw domain end as an extra tick.
    ═══════════════════════════════════════════════════════════════════ */
 
-import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, roundForDisplay } from "@shared/lib/format";
 
 /**
  * - `number` / `currency`: any 1/2/2.5/5 step.
@@ -53,11 +53,6 @@ function decimalsOf(step: number): number {
   return 12;
 }
 
-function roundTo(value: number, decimals: number): number {
-  const rounded = Number(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
-
 /** Candidate 1/2/2.5/5 × 10^n steps around a rough step, ascending. */
 function candidateSteps(rough: number, integer: boolean): number[] {
   const exponent = Math.floor(Math.log10(rough));
@@ -65,8 +60,8 @@ function candidateSteps(rough: number, integer: boolean): number[] {
   for (let e = exponent - 1; e <= exponent + 1; e++) {
     for (const mantissa of STEP_MANTISSAS) {
       const step = mantissa * 10 ** e;
-      if (integer && !Number.isInteger(roundTo(step, 9))) continue;
-      steps.push(roundTo(step, Math.max(0, -e + 1)));
+      if (integer && !Number.isInteger(roundForDisplay(step, 9))) continue;
+      steps.push(roundForDisplay(step, Math.max(0, -e + 1)));
     }
   }
   return [...new Set(steps)].sort((a, b) => a - b);
@@ -105,8 +100,8 @@ export function niceTicks(min: number, max: number, options: NiceTicksOptions = 
   let best: { step: number; start: number; end: number; n: number; score: number } | null = null;
   for (const step of candidateSteps(rough, integer)) {
     const decimals = decimalsOf(step);
-    const start = roundTo(extend ? Math.floor(lo / step + 1e-9) * step : Math.ceil(lo / step - 1e-9) * step, decimals);
-    const end = roundTo(extend ? Math.ceil(hi / step - 1e-9) * step : Math.floor(hi / step + 1e-9) * step, decimals);
+    const start = roundForDisplay(extend ? Math.floor(lo / step + 1e-9) * step : Math.ceil(lo / step - 1e-9) * step, decimals);
+    const end = roundForDisplay(extend ? Math.ceil(hi / step - 1e-9) * step : Math.floor(hi / step + 1e-9) * step, decimals);
     const n = Math.round((end - start) / step) + 1;
     if (n < 2) continue;
     // Closest tick count wins, with a penalty for empty range an extension
@@ -120,7 +115,7 @@ export function niceTicks(min: number, max: number, options: NiceTicksOptions = 
   if (!best) return { domain: [lo, hi], ticks: [lo, hi], step: hi - lo };
 
   const decimals = decimalsOf(best.step);
-  const ticks = Array.from({ length: best.n }, (_, i) => roundTo(best.start + i * best.step, decimals));
+  const ticks = Array.from({ length: best.n }, (_, i) => roundForDisplay(best.start + i * best.step, decimals));
   let domain: [number, number] = extend ? [best.start, best.end] : [lo, hi];
 
   // Never let an extension invent a sign or a share beyond the whole.
@@ -161,7 +156,7 @@ export function logTicks(min: number, max: number, { extend = true }: { extend?:
   const ticks: number[] = [];
   for (let e = loExp; e <= Math.max(hiExp, loExp + 1); e++) {
     for (const mantissa of mantissas) {
-      const tick = roundTo(mantissa * 10 ** e, Math.max(0, -e));
+      const tick = roundForDisplay(mantissa * 10 ** e, Math.max(0, -e));
       if (tick >= domain[0] * (1 - 1e-9) && tick <= domain[1] * (1 + 1e-9)) ticks.push(tick);
     }
   }

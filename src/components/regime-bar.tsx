@@ -8,6 +8,7 @@ import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/l
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { PsiBeaconMicro } from "@/components/psi-beacon/psi-beacon-micro";
@@ -256,7 +257,7 @@ export function RegimeBarToggle({ className }: { className?: string }) {
   const model = useRegimeModel();
   const expanded = useRegimeExpanded();
   const pathname = usePathname();
-  if (!model || pathname === "/") return null;
+  if (!model || getRouteCapabilities(pathname).home) return null;
 
   return (
     <button

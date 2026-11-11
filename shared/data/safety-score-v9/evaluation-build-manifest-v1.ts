@@ -286,7 +286,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/index.ts",
-      "sha256": "33a54472f6442dedbeeabc537cf9f1e4aac4ef62e427335a3748af1748c3e658"
+      "sha256": "11a1f948660b5814138420f92817b65247f910acec1ac178fd7dc52033cca214"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/manifest.ts",
@@ -294,15 +294,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
-      "sha256": "3d1ba42861bca407861f5b74838b903bff4cda8f759cb802c6cc653c6abe139d"
+      "sha256": "9a2b50681c72088d086bf5b89473e38b9526f2a907262bc4c52c6d0330b93af0"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
-      "sha256": "e8c405e859c71f2b68ecc20d22c8790db6a629b5e2990edf978cae2d4bbeda4f"
+      "sha256": "87e92ad10b24541f4cd470698d174eebf022d6baad6325f0458239d35ad4d260"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
-      "sha256": "ef7e3fe4730c5f4792186d8784385bff0feb63ff857b1559a4347d25e88e3f91"
+      "sha256": "1cbbd27755abb8d7f2ddd6a02dcf55d7d5c11c0aedc4b6a7d9abf4fe1934db26"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/discovery.ts",
@@ -354,11 +354,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/shared.ts",
-      "sha256": "493f6325234ef62de1ccb4d8de43eac1abf798cce0cc6d9e5f9b34b7de12ccaf"
+      "sha256": "fac857bf989ddbac35468e5c040c85af378e7ca38b1bff3e16f4b5fed6958ef2"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "f6eddab1bf67928d3b85304fdf0223d47183bfd64d2e94128ee884ac567f5cac"
+      "sha256": "f7d9f17605a1549d5c918feae7112f73e2d61072c5dc2cae2ecff7651e44a5a3"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/discovery-wave.ts",
@@ -1259,7 +1259,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-09-block-26377132-shock-coverage.json.gz"
     }
   ],
-  "digest": "310334d48d5e0b4a34d9e3105273b6dfad26b35dbade7837714fd9296403ed1a"
+  "digest": "1298cc84c5f1af2b97e9bbb11c20c2dade33aea426e0b74bbfd210d185e144c5"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
