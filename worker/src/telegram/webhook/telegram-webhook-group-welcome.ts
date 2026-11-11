@@ -94,12 +94,6 @@ export async function handleMyChatMember(
   db: D1Database,
   botToken: string,
   payload: TelegramChatMemberUpdated,
-  options: {
-    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-    prepareMutationAppliedStatement?: () => D1PreparedStatement;
-    confirmAtomicMutationApplied?: () => void;
-    wasMutationApplied?: boolean;
-  } = {},
 ): Promise<void> {
   const chatType = payload.chat?.type;
   // `my_chat_member` for private/sender chats is emitted on /start, on
@@ -111,13 +105,7 @@ export async function handleMyChatMember(
   const chatIdStr = String(chatId);
   const botRemoved = isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status);
   if ((isGroupChatType(chatType) || isChannelChatType(chatType)) && botRemoved) {
-    if (!options.wasMutationApplied) {
-      const operationStatements = options.prepareMutationAppliedStatement
-        ? [options.prepareMutationAppliedStatement()]
-        : undefined;
-      await forgetSubscriber(db, chatIdStr, { operationStatements });
-      if (operationStatements) options.confirmAtomicMutationApplied?.();
-    }
+    await forgetSubscriber(db, chatIdStr, { operationStatements: undefined });
     await clearGroupLifecycleCache(db, chatIdStr);
     logTelegramEvent({
       level: "info",
@@ -154,7 +142,6 @@ export async function handleMyChatMember(
     .bind(cacheKey, owner).run());
   try {
     const adderMention = formatAdderMention(payload.from);
-    await options.beforeIrreversibleEffect?.("group-welcome");
     const sendStart = Math.floor(Date.now() / 1000);
     const started = await runWithOverloadRetry(() => db.prepare(`
       UPDATE cache SET updated_at = ? WHERE key = ? AND value = ? AND updated_at > ?

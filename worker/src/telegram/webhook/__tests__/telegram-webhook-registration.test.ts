@@ -2,11 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { buildTelegramMiniAppUrl, TELEGRAM_MINI_APP_URL } from "../../common/mini-app-url";
-import { COMMAND_HANDLERS } from "../../commands";
+import { COMMAND_HANDLERS, LEGACY_COMMAND_HANDLERS } from "../../commands";
 import { PRIVATE_HELP_MESSAGE, GROUP_HELP_MESSAGE } from "../../commands/help";
-import { LEGACY_COMMAND_HANDLERS } from "../../commands/legacy";
 import { TELEGRAM_COMMAND_NAMES } from "@shared/lib/telegram-bot-registration";
-import { TELEGRAM_COMMAND_POLICIES } from "../telegram-webhook-ingress-policy";
+import { TELEGRAM_COMMAND_POLICIES } from "../../commands/definitions";
 import {
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,

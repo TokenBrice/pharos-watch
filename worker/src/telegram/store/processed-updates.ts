@@ -9,20 +9,6 @@ import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
 const TELEGRAM_PROCESSED_UPDATE_BACKLOG_PROBE_LIMIT = TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT + 1;
 
-export const TELEGRAM_WEBHOOK_INTENT_VERSION = 1 as const;
-
-/**
- * Shape still accepted by the optional handler hooks (`planIntent`,
- * `storedIntent`). The webhook no longer records or replays intents, so these
- * hooks are never supplied and handlers run their direct path.
- */
-export interface TelegramWebhookOperationIntent {
-  version: typeof TELEGRAM_WEBHOOK_INTENT_VERSION;
-  kind: string;
-  mutation: "none" | "required";
-  payload: Record<string, unknown>;
-}
-
 export interface TelegramProcessedUpdateBacklog {
   count: number;
   exact: boolean;

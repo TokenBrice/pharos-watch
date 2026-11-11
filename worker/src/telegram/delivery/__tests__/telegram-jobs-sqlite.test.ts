@@ -8,7 +8,9 @@ import {
 } from "../jobs";
 import { drainTelegramDeliveries, TELEGRAM_DELIVERY_CLAIM_TTL_SEC } from "../job-drain";
 import type { SendToChatResult } from "../telegram";
-import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../../../cron/telegram/jobs/run-jobs";
+import { fanOutPlanningTelegramJobs } from "../../../cron/telegram/jobs/run-jobs";
+import { getTelegramJobKindHandler } from "../../../cron/telegram/jobs/registry";
+import { sweepTelegramJobs } from "../job-sweep";
 import { forgetSubscriber } from "../../store/subscriber-lifecycle";
 
 const NOW = 1_800_000_000;
@@ -111,7 +113,7 @@ describe("telegram delivery v2 queue", () => {
       ["sent", 1, null],
     ]);
 
-    const sweep = await sweepTelegramJobs(db, NOW + 1);
+    const sweep = await sweepTelegramJobs(db, NOW + 1, getTelegramJobKindHandler);
     expect(sweep.jobsDone).toBe(1);
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "done" });
   });
@@ -415,8 +417,8 @@ describe("telegram delivery v2 queue", () => {
         WHERE chat_id = '1'`,
     ).run(NOW, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC);
     const sendMessage = vi.fn(async () => ok);
-    expect(await sweepTelegramJobs(db, NOW + 61)).toMatchObject({ sendingToUnknown: 0, expired: 1 });
-    expect(await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC)).toMatchObject({ sendingToUnknown: 1, jobsDone: 1 });
+    expect(await sweepTelegramJobs(db, NOW + 61, getTelegramJobKindHandler)).toMatchObject({ sendingToUnknown: 0, expired: 1 });
+    expect(await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC, getTelegramJobKindHandler)).toMatchObject({ sendingToUnknown: 1, jobsDone: 1 });
     await drainTelegramDeliveries(db, "token", { nowSec: () => NOW + 700, sendMessage });
     expect(sendMessage).not.toHaveBeenCalled();
     expect(rows(sqlite).map((row) => [row.chat_id, row.state])).toEqual([["1", "unknown"], ["2", "expired"]]);
@@ -439,7 +441,7 @@ describe("telegram drain pre-send failures", () => {
       { chat_id: "1", seq: 0, state: "retry", attempts: 0, reason: "drain_aborted", claim_owner: null, has_body: 1 },
     ]);
     // Past the claim window the sweep finds nothing stranded to mark unknown.
-    expect(await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC + 1)).toMatchObject({ sendingToUnknown: 0 });
+    expect(await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC + 1, getTelegramJobKindHandler)).toMatchObject({ sendingToUnknown: 0 });
     await drainTelegramDeliveries(db, "token", { nowSec: () => NOW + 1, sendMessage });
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(rows(sqlite).map((row) => [row.state, row.attempts])).toEqual([["sent", 1]]);
@@ -523,7 +525,7 @@ describe("telegram drain pre-send failures", () => {
       .rejects.toThrow("D1 batch unavailable");
     // attempts is still 0, yet the send happened: only the invocation's attempt marker proves no-send.
     expect(claims(sqlite)[0]).toMatchObject({ state: "sending", attempts: 0 });
-    await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC);
+    await sweepTelegramJobs(db, NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC, getTelegramJobKindHandler);
     await drainTelegramDeliveries(db, "token", { nowSec: () => NOW + TELEGRAM_DELIVERY_CLAIM_TTL_SEC + 1, sendMessage });
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(rows(sqlite)[0]).toMatchObject({ state: "unknown", reason: "claim_expired", attempts: 0 });

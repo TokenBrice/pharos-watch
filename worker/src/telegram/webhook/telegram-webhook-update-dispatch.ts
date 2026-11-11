@@ -155,9 +155,7 @@ export async function handleCallbackQuery(
     cb,
     chatId,
     parsed: knownParsed,
-    beforeIrreversibleEffect: async () => undefined,
     answerCallback: answer,
-    markMutationApplied: async () => undefined,
   });
 }
 

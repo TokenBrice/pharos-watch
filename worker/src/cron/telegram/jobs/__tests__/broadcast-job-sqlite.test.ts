@@ -6,7 +6,9 @@ import { enqueueTelegramJob } from "../../../../telegram/delivery/jobs";
 import { drainTelegramDeliveries } from "../../../../telegram/delivery/job-drain";
 import type { SendToChatResult } from "../../../../telegram/delivery/telegram";
 import type { TelegramBroadcastJobPayload } from "../../../../telegram/delivery/broadcast-targets";
-import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../run-jobs";
+import { fanOutPlanningTelegramJobs } from "../run-jobs";
+import { getTelegramJobKindHandler } from "../registry";
+import { sweepTelegramJobs } from "../../../../telegram/delivery/job-sweep";
 
 const NOW = 1_900_000_000;
 const MESSAGE = "<b>Pharos maintenance</b> tonight at 02:00 UTC";
@@ -98,7 +100,7 @@ describe("broadcast job payload retention", () => {
     await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage: async () => ok });
     expect(sqlite.prepare("SELECT state, body FROM telegram_deliveries ORDER BY chat_id").all())
       .toEqual([{ state: "sent", body: null }, { state: "sent", body: null }]);
-    expect(await sweepTelegramJobs(db, NOW + 1)).toMatchObject({ jobsDone: 1 });
+    expect(await sweepTelegramJobs(db, NOW + 1, getTelegramJobKindHandler)).toMatchObject({ jobsDone: 1 });
 
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "done" });
     expect(storedMessageHtml(sqlite)).toEqual([null]);
@@ -131,7 +133,7 @@ describe("broadcast job payload retention", () => {
        VALUES ('broadcast:legacy', 'broadcast', ?, 'ready', 0, ?, ?)`,
     ).run(JSON.stringify({ messageHtml: MESSAGE, scope: "all" }), NOW, NOW + 2_700);
     expect(storedMessageHtml(sqlite)).toEqual([MESSAGE]);
-    expect(await sweepTelegramJobs(db, NOW + 1)).toMatchObject({ jobsDone: 1 });
+    expect(await sweepTelegramJobs(db, NOW + 1, getTelegramJobKindHandler)).toMatchObject({ jobsDone: 1 });
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "done" });
     expect(storedMessageHtml(sqlite)).toEqual([null]);
     expect(sqlite.prepare("SELECT json_extract(payload_json, '$.scope') AS scope FROM telegram_jobs").get())

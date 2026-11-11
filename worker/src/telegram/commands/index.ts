@@ -1,4 +1,5 @@
 import type { WebhookCommandHandler } from "./context";
+import type { TelegramCanonicalCommand } from "./definitions";
 import { handleStart } from "./start";
 import { handleHelp } from "./help";
 import { handleSample } from "./sample";
@@ -9,7 +10,7 @@ import { handleUnsubscribe } from "./unsubscribe";
 import { handleSettings } from "./settings";
 import { handlePause } from "./pause";
 import { handleForget } from "./forget";
-import { LEGACY_COMMAND_HANDLERS } from "./legacy";
+import { buildLegacyCommandHandlers } from "./legacy";
 
 export type { WebhookCommandContext, WebhookCommandHandler } from "./context";
 export { replyToUnknownCommand } from "./legacy";
@@ -20,8 +21,7 @@ export { replyToUnknownCommand } from "./legacy";
  * `?start=sample` alias); retired commands and aliases come from the legacy
  * map. Anything else gets `replyToUnknownCommand`.
  */
-export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
-  ...LEGACY_COMMAND_HANDLERS,
+const CANONICAL_COMMAND_HANDLERS: Record<TelegramCanonicalCommand, WebhookCommandHandler> = {
   "/start": handleStart,
   "/status": handleStatus,
   "/list": handleList,
@@ -32,4 +32,11 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/unsubscribe": handleUnsubscribe,
   "/forget": handleForget,
   "/sample": handleSample,
+};
+
+export const LEGACY_COMMAND_HANDLERS = buildLegacyCommandHandlers(CANONICAL_COMMAND_HANDLERS);
+
+export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
+  ...LEGACY_COMMAND_HANDLERS,
+  ...CANONICAL_COMMAND_HANDLERS,
 };

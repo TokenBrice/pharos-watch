@@ -2,10 +2,6 @@ import { WORKER_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/worker-runti
 import type { TelegramDewsBand, TelegramSafetyMode } from "@shared/types/status/telegram";
 import type { ResolvedCoin } from "../common/alerts-parser";
 import type { TelegramChatMemberUpdated } from "./telegram-webhook-group-welcome";
-import {
-  TELEGRAM_WEBHOOK_INTENT_VERSION,
-  type TelegramWebhookOperationIntent,
-} from "../store/processed-updates";
 
 export type ParsedSetCommand =
   | { ticker: string; setting: "dews"; enabled: boolean; minBand: TelegramDewsBand | null }
@@ -108,45 +104,3 @@ export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
     },
   ]),
 );
-
-// ---------- Legacy handler operation hooks ----------
-// Handlers may still accept these optional hooks; the webhook no longer
-// supplies any of them (update-id dedupe only), so every handler takes its
-// direct path. Removed once no handler references them.
-
-export function createTelegramWebhookIntent(
-  kind: string,
-  payload: Record<string, unknown>,
-  mutation: "none" | "required" = "none",
-): TelegramWebhookOperationIntent {
-  return { version: TELEGRAM_WEBHOOK_INTENT_VERSION, kind, mutation, payload };
-}
-
-export interface TelegramMutationOperations {
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
-  planIntent: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: (options?: { requirePreviousChange?: boolean }) => D1PreparedStatement;
-  preparePendingMutationAppliedStatement?: (input: {
-    chatId: string;
-    actionType: string;
-    actionPayload: string;
-    expiresAt: number;
-  }) => D1PreparedStatement;
-  prepareMutationOperationStatements?: () => D1PreparedStatement[];
-  confirmAtomicMutationApplied: () => void;
-  markMutationApplied: () => Promise<void>;
-  storedIntent: TelegramWebhookOperationIntent | null;
-  wasMutationApplied: boolean;
-}
-
-export type TelegramCallbackMutationContext = Pick<
-  TelegramMutationOperations,
-  "beforeIrreversibleEffect" | "markMutationApplied"
-> & Partial<Pick<
-  TelegramMutationOperations,
-  | "planIntent"
-  | "prepareMutationAppliedStatement"
-  | "confirmAtomicMutationApplied"
-  | "storedIntent"
-  | "wasMutationApplied"
->>;

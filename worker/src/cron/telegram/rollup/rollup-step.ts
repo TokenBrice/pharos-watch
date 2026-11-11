@@ -16,7 +16,7 @@ import {
   buildTelegramJobStatements,
   type TelegramDeliveryInput,
 } from "../../../telegram/delivery/jobs";
-import type { TelegramJobKindHandler, TelegramJobPage, TelegramJobPageContext } from "../jobs/registry";
+import type { TelegramJobKindHandler, TelegramJobPage, TelegramJobPageContext } from "../../../telegram/delivery/job-handler";
 import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import {
   loadCoinChanges,
@@ -186,7 +186,7 @@ export async function buildFreezeBatchJobPage(
   return { deliveries, nextCursor };
 }
 
-export const freezeBatchJobHandler: TelegramJobKindHandler<FreezeBatchJobPayload> = {
+export const freezeBatchJobHandler: TelegramJobKindHandler<FreezeBatchJobPayload, "freeze_batch"> = {
   kind: "freeze_batch",
   buildPage: buildFreezeBatchJobPage,
 };

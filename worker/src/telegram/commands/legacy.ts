@@ -3,8 +3,7 @@ import { escapeHtml } from "../delivery/telegram";
 import { resolveTicker, suggestClosestToken } from "../common/alerts-parser";
 import { buildManageAlertsKeyboard } from "../webhook/telegram-webhook-messages";
 import type { WebhookCommandContext, WebhookCommandHandler } from "./context";
-import { handleList } from "./list";
-import { handlePause } from "./pause";
+import { RETIRED_COMMAND_REPLIES, TELEGRAM_COMMAND_ALIASES, type TelegramCanonicalCommand } from "./definitions";
 import { handleStatus } from "./status";
 
 /**
@@ -13,50 +12,6 @@ import { handleStatus } from "./status";
  * landing somewhere useful. Aliases forward to the command that replaced them.
  * Mutating aliases must keep a mutating policy in the ingress policy table.
  */
-const SETTINGS_MOVED = {
-  private: "That setting moved to Manage Alerts.",
-  group: "Use /settings to change this chat's alerts.",
-};
-
-const RETIRED_COMMAND_REPLIES: Readonly<Record<string, { private: string; group: string }>> = {
-  "/set": SETTINGS_MOVED,
-  "/mute": SETTINGS_MOVED,
-  "/unmutehours": SETTINGS_MOVED,
-  "/timezone": SETTINGS_MOVED,
-  "/presets": {
-    private: "Follow a preset with /subscribe usd-top25, or browse presets in Manage Alerts.",
-    group: "Follow a preset with /subscribe usd-top25.",
-  },
-  "/top": {
-    private: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-    group: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-  },
-  "/brief": {
-    private: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-    group: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-  },
-  "/market": {
-    private: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-    group: "Rankings and the daily brief live on pharos.watch and in @pharoswatch.",
-  },
-  "/recap": {
-    private: "Daily recaps were retired. Your alerts are unchanged.",
-    group: "Daily recaps were retired. Your alerts are unchanged.",
-  },
-  "/cancel": { private: "Nothing to cancel.", group: "Nothing to cancel." },
-  "/export": {
-    private: "Watchlist export and import were retired. Add coins in Manage Alerts.",
-    group: "Watchlist export and import were retired.",
-  },
-  "/import": {
-    private: "Watchlist export and import were retired. Add coins in Manage Alerts.",
-    group: "Watchlist export and import were retired.",
-  },
-  "/add": {
-    private: "Use /subscribe followed by tickers, e.g. /subscribe USDC.",
-    group: "Use /subscribe followed by tickers, e.g. /subscribe USDC.",
-  },
-};
 
 async function replyWithManageAlerts(ctx: WebhookCommandContext, message: string): Promise<void> {
   if (ctx.chatType === "private") {
@@ -66,19 +21,23 @@ async function replyWithManageAlerts(ctx: WebhookCommandContext, message: string
   await ctx.replyToChat(escapeHtml(message));
 }
 
-function retiredCommandHandler(command: string): WebhookCommandHandler {
+function retiredCommandHandler(command: keyof typeof RETIRED_COMMAND_REPLIES): WebhookCommandHandler {
   const reply = RETIRED_COMMAND_REPLIES[command]!;
   return (ctx) => replyWithManageAlerts(ctx, ctx.chatType === "private" ? reply.private : reply.group);
 }
 
-export const LEGACY_COMMAND_HANDLERS: Readonly<Record<string, WebhookCommandHandler>> = {
-  ...Object.fromEntries(Object.keys(RETIRED_COMMAND_REPLIES).map((command) => [command, retiredCommandHandler(command)])),
-  "/unsnooze": (ctx) => handlePause(ctx, "off"),
-  "/health": handleList,
-  "/subscriptions": handleList,
-  "/why": handleStatus,
-  "/coverage": handleStatus,
-};
+export function buildLegacyCommandHandlers(
+  canonicalHandlers: Record<TelegramCanonicalCommand, WebhookCommandHandler>,
+): Readonly<Record<string, WebhookCommandHandler>> {
+  return {
+    ...Object.fromEntries((Object.keys(RETIRED_COMMAND_REPLIES) as Array<keyof typeof RETIRED_COMMAND_REPLIES>)
+      .map((command) => [command, retiredCommandHandler(command)])),
+    ...Object.fromEntries(Object.entries(TELEGRAM_COMMAND_ALIASES).map(([alias, binding]) => {
+      const handler = canonicalHandlers[binding.target];
+      return [alias, "args" in binding ? (ctx: WebhookCommandContext) => handler(ctx, binding.args) : handler];
+    })),
+  };
+}
 
 const SUGGESTABLE_COMMANDS = [
   ...TELEGRAM_COMMAND_NAMES,

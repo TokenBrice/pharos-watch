@@ -11,12 +11,12 @@ import { recordTelegramDeliveryOutcomes } from "../store/usage-analytics";
 import {
   flushChatSuccessResets,
   handleBlockedChat,
-} from "../../cron/telegram/delivery/lifecycle";
+} from "../store/blocked-subscribers";
 import {
   pendingBackoffSec,
   readTelegramGlobalBackoff,
   setTelegramGlobalBackoff,
-} from "../../cron/telegram/delivery/backoff";
+} from "./backoff";
 import {
   parseTelegramDeliveryOptions,
   parseTelegramFreezeSourceKeys,

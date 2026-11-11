@@ -1,6 +1,6 @@
-import { BLOCK_STRIKE_WINDOW_SEC } from "../../../telegram/common/constants";
-import { logTelegramEvent } from "../../../telegram/common/log";
-import { buildInClause, chunkArray, executeAtomicBatch } from "../../../lib/db";
+import { BLOCK_STRIKE_WINDOW_SEC } from "../common/constants";
+import { logTelegramEvent } from "../common/log";
+import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 
 /**
  * Two-strike gate for blocked or definitively unreachable chats. Increments

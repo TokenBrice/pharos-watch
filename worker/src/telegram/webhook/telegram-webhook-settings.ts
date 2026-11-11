@@ -45,8 +45,6 @@ import { isGlobalAlertType } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { TELEGRAM_ALERT_PERSISTENCE, TELEGRAM_LAUNCH_RETIRED_MESSAGE } from "@shared/lib/telegram-alert-families";
 import { isGroupChatType } from "./telegram-webhook-auth";
-import { createTelegramWebhookIntent } from "./telegram-webhook-shared";
-import type { TelegramWebhookOperationIntent } from "../store/processed-updates";
 
 type SettingsCallbackQuery = TelegramCallbackQuery;
 
@@ -54,16 +52,6 @@ type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
 interface SettingsRenderOptions {
   includeMiniAppButton?: boolean;
   subscriptionPage?: number;
-  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
-}
-
-export interface SettingsWebhookEffect {
-  beforeIrreversibleEffect: (kind: string) => Promise<void>;
-  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
-  prepareMutationAppliedStatement?: () => D1PreparedStatement;
-  confirmAtomicMutationApplied?: () => void;
-  storedIntent?: TelegramWebhookOperationIntent | null;
-  wasMutationApplied?: boolean;
 }
 
 /**
@@ -85,14 +73,12 @@ export async function handleSettingsCommand(
   }
   const resolution = resolveTicker(trimmed, "tracked");
   if (resolution.status === "not_found") {
-    await options.beforeIrreversibleEffect?.("settings-reply");
     await sendAuditedTelegramReply(db, chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken, {
       actionDetail: "settings",
     });
     return;
   }
   if (resolution.status === "ambiguous") {
-    await options.beforeIrreversibleEffect?.("settings-reply");
     await sendAuditedTelegramReply(db, chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken, {
       actionDetail: "settings",
     });
@@ -110,14 +96,8 @@ export async function handleSettingsCallback(
   cb: SettingsCallbackQuery,
   subAction: string,
   subArg: string,
-  effectInput: SettingsWebhookEffect | ((kind: string) => Promise<void>) = async () => undefined,
 ): Promise<void> {
-  const effect: SettingsWebhookEffect = typeof effectInput === "function"
-    ? { beforeIrreversibleEffect: effectInput }
-    : effectInput;
-  const { beforeIrreversibleEffect } = effect;
   const answer = async (options?: { text?: string }): Promise<void> => {
-    await beforeIrreversibleEffect("callback-ack");
     await answerCallbackQuery(cb.id, botToken, options);
   };
   const chatId = cb.message?.chat?.id?.toString();
@@ -129,26 +109,13 @@ export async function handleSettingsCallback(
   const chatType = cb.message?.chat?.type ?? "private";
   const username = isGroupChatType(chatType) ? null : cb.from?.username ?? null;
   const target: RenderTarget = { mode: "edit", messageId };
-  const prepareMutation = async (
-    kind: string,
-    payload: Record<string, unknown>,
-  ): Promise<{ operationStatements?: D1PreparedStatement[] }> => {
-    await effect.planIntent?.(createTelegramWebhookIntent(kind, payload, "required"));
-    return effect.prepareMutationAppliedStatement
-      ? { operationStatements: [effect.prepareMutationAppliedStatement()] }
-      : {};
-  };
-  const confirmMutation = (operation: { operationStatements?: D1PreparedStatement[] }): void => {
-    if (operation.operationStatements) effect.confirmAtomicMutationApplied?.();
-  };
-
   if (subAction === "home") {
     const subscriptionPage = parseSettingsHomePage(subArg);
     if (subscriptionPage == null) {
       await answer({ text: "Action not recognized." });
       return;
     }
-    await renderHome(db, chatId, botToken, target, { subscriptionPage, beforeIrreversibleEffect });
+    await renderHome(db, chatId, botToken, target, { subscriptionPage });
     await answer();
     return;
   }
@@ -167,7 +134,7 @@ export async function handleSettingsCallback(
     }
     if (nextCode === undefined) {
       // A pre-v2 toggle button has no target value; show the current state instead of guessing.
-      await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
+      await renderHome(db, chatId, botToken, target);
       await answer({ text: "Settings refreshed. Tap again to change." });
       return;
     }
@@ -182,7 +149,7 @@ export async function handleSettingsCallback(
       actionDetail: alertType,
       outcome: next ? "opt_in" : "opt_out",
     });
-    await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
+    await renderHome(db, chatId, botToken, target);
     await answer({ text: `Global ${alertType} ${next ? "on" : "off"}.` });
     return;
   }
@@ -193,17 +160,13 @@ export async function handleSettingsCallback(
       return;
     }
     const enabled = subArg === "1";
-    const operation = await prepareMutation("callback:settings-q", { enabled });
-    if (!effect.wasMutationApplied) {
-      await setQuietHours(db, chatId, username, enabled, operation);
-      confirmMutation(operation);
-    }
+    await setQuietHours(db, chatId, username, enabled, {});
     await recordTelegramUsageEvent(db, {
       eventType: "quiet_hours_change",
       actionDetail: "settings",
       outcome: enabled ? "enabled" : "disabled",
     });
-    await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
+    await renderHome(db, chatId, botToken, target);
     await answer({
       text: enabled ? "Quiet hours enabled." : "Quiet hours disabled.",
     });
@@ -215,17 +178,13 @@ export async function handleSettingsCallback(
       await answer({ text: "Action not recognized." });
       return;
     }
-    const operation = await prepareMutation("callback:settings-sc", { snoozeUntil: null });
-    if (!effect.wasMutationApplied) {
-      await clearAlertSnooze(db, chatId, username, operation);
-      confirmMutation(operation);
-    }
+    await clearAlertSnooze(db, chatId, username, {});
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "settings",
       outcome: "cleared",
     });
-    await renderHome(db, chatId, botToken, target, { beforeIrreversibleEffect });
+    await renderHome(db, chatId, botToken, target);
     await answer({ text: "Snooze cleared." });
     return;
   }
@@ -235,7 +194,7 @@ export async function handleSettingsCallback(
       await answer({ text: "Unknown coin." });
       return;
     }
-    await renderCoin(db, chatId, subArg, botToken, target, { beforeIrreversibleEffect });
+    await renderCoin(db, chatId, subArg, botToken, target);
     await answer();
     return;
   }
@@ -253,21 +212,17 @@ export async function handleSettingsCallback(
       return;
     }
     const { setting, value } = normalized;
-    const operation = await prepareMutation("callback:settings-c", { coinId, setting, value });
-    const applied = effect.wasMutationApplied
-      ? "Setting updated."
-      : await applyCoinSetting(db, chatId, username, coinId, setting, value, operation);
+    const applied = await applyCoinSetting(db, chatId, username, coinId, setting, value, {});
     if (!applied) {
       await answer({ text: "Unknown setting." });
       return;
     }
-    if (!effect.wasMutationApplied) confirmMutation(operation);
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: `settings_${setting}`,
       outcome: value === "0" ? "opt_out" : "opt_in",
     });
-    await renderCoin(db, chatId, coinId, botToken, target, { beforeIrreversibleEffect });
+    await renderCoin(db, chatId, coinId, botToken, target);
     await answer({ text: applied });
     return;
   }
@@ -293,7 +248,6 @@ async function renderHome(
     buildHomeKeyboard(subscriber, { ...options, subscriptions }),
     botToken,
     target,
-    options.beforeIrreversibleEffect,
   );
 }
 
@@ -320,7 +274,6 @@ async function renderCoin(
     buildCoinKeyboard(coinId, row, options),
     botToken,
     target,
-    options.beforeIrreversibleEffect,
   );
 }
 
@@ -331,10 +284,8 @@ async function deliver(
   replyMarkup: unknown,
   botToken: string,
   target: RenderTarget,
-  beforeIrreversibleEffect: (kind: string) => Promise<void> = async () => undefined,
 ): Promise<void> {
   if (target.mode === "edit") {
-    await beforeIrreversibleEffect("settings-edit");
     const ok = await editMessage(chatId, target.messageId, message, botToken, {
       disableWebPagePreview: true,
       replyMarkup,
@@ -343,7 +294,6 @@ async function deliver(
     // Edit failed (e.g. message too old / unchanged content). Fall back to a
     // fresh send so the user still sees the new state.
   }
-  await beforeIrreversibleEffect("settings-reply");
   await sendAuditedTelegramReply(db, chatId, message, botToken, {
     replyMarkup,
     actionDetail: "settings",

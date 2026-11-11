@@ -14,7 +14,6 @@ import { logTelegramEvent } from "../common/log";
 import { SNOOZE_SECONDS } from "../common/constants";
 import { isSubscribableCoin } from "../store/subscription-eligibility";
 import { requireGroupAdminForCallback } from "../webhook/telegram-webhook-auth";
-import type { TelegramCallbackMutationContext } from "../webhook/telegram-webhook-shared";
 
 export { SNOOZE_SECONDS };
 
@@ -103,7 +102,6 @@ export async function requireAdminForMutatingCallback(
   cb: TelegramCallbackQuery,
   chatId: string,
   denialText: string = "Only group admins can change alert settings.",
-  beforeIrreversibleEffect: (kind: string) => Promise<void> = async () => undefined,
 ): Promise<boolean> {
   const allowed = await requireGroupAdminForCallback(
     botToken,
@@ -112,7 +110,6 @@ export async function requireAdminForMutatingCallback(
     callbackChatType(cb),
     callbackActorUserId(cb),
     denialText,
-    beforeIrreversibleEffect,
   );
   if (!allowed) {
     await recordTelegramUsageEvent(db, {
@@ -184,7 +181,6 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
       context.cb,
       context.chatId,
       undefined,
-      context.beforeIrreversibleEffect,
     ))
   ) {
     return;
@@ -267,7 +263,7 @@ export interface TelegramCallbackQuery {
  * and validates `parsed.action` against the allowlist before dispatch, so
  * handlers can rely on both being well-formed.
  */
-export interface CallbackContext extends TelegramCallbackMutationContext {
+export interface CallbackContext {
   db: D1Database;
   botToken: string;
   cb: TelegramCallbackQuery;

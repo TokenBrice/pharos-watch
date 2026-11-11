@@ -1,3 +1,9 @@
+import {
+  TELEGRAM_COMMAND_POLICIES,
+  READ_COMMAND_POLICY,
+  START_MUTATION_POLICY,
+  type TelegramCommandPolicy,
+} from "../commands/definitions";
 import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../delivery/telegram";
 import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../common/constants";
@@ -16,56 +22,6 @@ export type ReplyFn = (message: string) => Promise<void>;
 
 export type TelegramGroupAdminGating = "soft" | "hard";
 export const TELEGRAM_GROUP_ADMIN_GATING: { mode: TelegramGroupAdminGating } = { mode: "hard" };
-
-/**
- * `requiresGroupAdmin` gates dispatch in groups. `mutation` records whether the
- * command changes chat state; mutating `/start` deep links authorize inside the
- * handler instead of here.
- */
-export interface TelegramCommandPolicy {
-  requiresGroupAdmin: boolean;
-  mutation: "none" | "required";
-}
-
-const READ_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: false, mutation: "none" };
-const MUTATING_COMMAND_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: true, mutation: "required" };
-const START_MUTATION_POLICY: Readonly<TelegramCommandPolicy> = { requiresGroupAdmin: false, mutation: "required" };
-
-// Explicit coverage is checked against COMMAND_HANDLERS, including retired
-// commands and aliases (commands/legacy.ts). An alias that forwards to a
-// mutating command keeps the mutating policy.
-export const TELEGRAM_COMMAND_POLICIES: Readonly<Record<string, Readonly<TelegramCommandPolicy>>> = {
-  "/start": READ_COMMAND_POLICY,
-  "/help": READ_COMMAND_POLICY,
-  "/sample": READ_COMMAND_POLICY,
-  "/list": READ_COMMAND_POLICY,
-  "/status": READ_COMMAND_POLICY,
-  "/subscribe": MUTATING_COMMAND_POLICY,
-  "/unsubscribe": MUTATING_COMMAND_POLICY,
-  "/settings": READ_COMMAND_POLICY,
-  "/pause": MUTATING_COMMAND_POLICY,
-  "/forget": MUTATING_COMMAND_POLICY,
-  // Legacy aliases.
-  "/unsnooze": MUTATING_COMMAND_POLICY,
-  "/health": READ_COMMAND_POLICY,
-  "/subscriptions": READ_COMMAND_POLICY,
-  "/why": READ_COMMAND_POLICY,
-  "/coverage": READ_COMMAND_POLICY,
-  // Retired commands answer with a pointer and change nothing.
-  "/set": READ_COMMAND_POLICY,
-  "/mute": READ_COMMAND_POLICY,
-  "/unmutehours": READ_COMMAND_POLICY,
-  "/timezone": READ_COMMAND_POLICY,
-  "/cancel": READ_COMMAND_POLICY,
-  "/presets": READ_COMMAND_POLICY,
-  "/top": READ_COMMAND_POLICY,
-  "/brief": READ_COMMAND_POLICY,
-  "/market": READ_COMMAND_POLICY,
-  "/recap": READ_COMMAND_POLICY,
-  "/export": READ_COMMAND_POLICY,
-  "/import": READ_COMMAND_POLICY,
-  "/add": READ_COMMAND_POLICY,
-};
 
 export function classifyTelegramCommand(command: string, args: string): Readonly<TelegramCommandPolicy> {
   if (command === "/start" && isMutatingTelegramStartPayload(args)) return START_MUTATION_POLICY;
