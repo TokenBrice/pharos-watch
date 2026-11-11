@@ -1,3 +1,4 @@
+import { SITE_API_ORIGIN } from "../runtime-origins";
 import type {
   EnvBindingDefinition,
   EnvRuntimeName,
@@ -752,7 +753,7 @@ const ENV_BINDING_DEFINITIONS = [
     valueType: "string",
     description: "Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`.",
     docs: { includeInOperatorOriginAccess: true },
-    example: { section: "pagesSiteDataRequired", value: "https://site-api.pharos.watch" },
+    example: { section: "pagesSiteDataRequired", value: SITE_API_ORIGIN },
     runtimes: {
       pagesSiteData: { status: "required" },
     },

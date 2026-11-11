@@ -20,7 +20,8 @@ import { classifyBridgeBurnRows, reconcileReviewedSupplyBurns } from "../mint-bu
 import { parseMintBurnLogs } from "../mint-burn-pipeline/parse";
 import { collectAffectedHours, insertMintBurnRows, persistMintBurnRows, recalcAffectedHours, updateEventClassifications } from "../mint-burn-pipeline/persistence";
 import { drainMintBurnMaterializationDebt } from "../mint-burn-pipeline/materialization-debt";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
+import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint, mintBurnScanCoverageAdmits, readMintBurnScanCoverage,
   type MintBurnScanCoverage } from "../mint-burn-pipeline/scan-coverage";
 import { abiWord, reviewedBurnFixture, reviewedFalseBurnEntries } from "./mint-burn-supply-proof.test-support";

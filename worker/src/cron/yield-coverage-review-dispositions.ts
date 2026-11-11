@@ -6,14 +6,7 @@ import type {
 import { runChunkedInRead } from "../lib/db";
 
 const DISPOSITION_TABLE = "yield_coverage_review_dispositions";
-const DEFAULT_REVIEW_OWNER = "unassigned";
-const DEFAULT_REVIEW_WINDOW_SEC = 31 * 24 * 60 * 60;
-const MAX_QUEUE_ITEM_ID_LENGTH = 512;
-const MAX_EVIDENCE_LENGTH = 4_000;
-const MAX_REVIEW_OWNER_LENGTH = 160;
 const DEFAULT_PUBLISHED_ITEM_LIMIT = 20;
-
-export type YieldCoverageReviewDisposition = YieldCoverageAuditQueueAction;
 
 export interface YieldCoverageReviewableQueueItem {
   id: string;
@@ -74,28 +67,6 @@ export interface YieldCoverageReviewDispositionSummary {
 export interface ApplyYieldCoverageReviewDispositionOptions {
   nowSec?: number;
   publishedItemLimit?: number;
-}
-
-export interface UpsertYieldCoverageReviewDispositionInput<T extends YieldCoverageReviewableQueueItem> {
-  item: T;
-  disposition?: YieldCoverageReviewDisposition;
-  evidence?: string;
-  reviewOwner?: string;
-  reviewedAt?: number;
-  nextReviewAt?: number;
-  expiresAt?: number;
-}
-
-export interface StoredYieldCoverageReviewDisposition {
-  queueItemId: string;
-  queueItemKind: YieldCoverageAuditQueueItemKind;
-  evidenceFingerprint: string;
-  disposition: YieldCoverageReviewDisposition;
-  evidence: string;
-  reviewOwner: string;
-  reviewedAt: number;
-  nextReviewAt: number;
-  expiresAt: number;
 }
 
 interface YieldCoverageReviewDispositionRow {
@@ -186,13 +157,6 @@ function requireEpochSeconds(value: number, field: string): number {
     throw new RangeError(`${field} must be a non-negative integer epoch second`);
   }
   return value;
-}
-
-function requireBoundedText(value: string, field: string, maxLength: number): string {
-  const normalized = value.trim();
-  if (normalized.length === 0) throw new Error(`${field} must not be empty`);
-  if (normalized.length > maxLength) throw new RangeError(`${field} exceeds ${maxLength} characters`);
-  return normalized;
 }
 
 function requirePublishedItemLimit(value: number): number {
@@ -310,86 +274,5 @@ export async function applyYieldCoverageReviewDispositions<
       recommendationCandidates,
     },
     summary,
-  };
-}
-
-/**
- * Persist review evidence only. Even an `accept` disposition does not change
- * adapter, pool, allowlist, or venue-risk configuration; promotion stays a
- * separate human-reviewed change.
- */
-export async function upsertYieldCoverageReviewDisposition<
-  T extends YieldCoverageReviewableQueueItem,
->(
-  db: D1Database,
-  input: UpsertYieldCoverageReviewDispositionInput<T>,
-  nowSec: number = Math.floor(Date.now() / 1_000),
-): Promise<StoredYieldCoverageReviewDisposition> {
-  const updatedAt = requireEpochSeconds(nowSec, "nowSec");
-  const queueItemId = requireBoundedText(input.item.id, "queue item id", MAX_QUEUE_ITEM_ID_LENGTH);
-  const reviewedAt = requireEpochSeconds(input.reviewedAt ?? updatedAt, "reviewedAt");
-  const nextReviewAt = requireEpochSeconds(
-    input.nextReviewAt ?? reviewedAt + DEFAULT_REVIEW_WINDOW_SEC,
-    "nextReviewAt",
-  );
-  const expiresAt = requireEpochSeconds(input.expiresAt ?? 0, "expiresAt");
-  if (nextReviewAt < reviewedAt) throw new RangeError("nextReviewAt must not precede reviewedAt");
-  if (expiresAt > 0 && expiresAt < reviewedAt) {
-    throw new RangeError("expiresAt must be zero or must not precede reviewedAt");
-  }
-
-  const disposition = input.disposition ?? "watch";
-  const evidence = input.evidence?.trim() ?? "";
-  if (evidence.length > MAX_EVIDENCE_LENGTH) {
-    throw new RangeError(`evidence exceeds ${MAX_EVIDENCE_LENGTH} characters`);
-  }
-  const reviewOwner = requireBoundedText(
-    input.reviewOwner ?? DEFAULT_REVIEW_OWNER,
-    "reviewOwner",
-    MAX_REVIEW_OWNER_LENGTH,
-  );
-  const evidenceFingerprint = buildYieldCoverageEvidenceFingerprint(input.item);
-
-  // SAFETY: DISPOSITION_TABLE is a module-private string literal constant, never request-derived.
-  await db.prepare(
-    `INSERT INTO ${DISPOSITION_TABLE} (
-       queue_item_id, queue_item_kind, evidence_fingerprint, disposition,
-       evidence, review_owner, reviewed_at, next_review_at, expires_at,
-       created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(queue_item_id) DO UPDATE SET
-       queue_item_kind = excluded.queue_item_kind,
-       evidence_fingerprint = excluded.evidence_fingerprint,
-       disposition = excluded.disposition,
-       evidence = excluded.evidence,
-       review_owner = excluded.review_owner,
-       reviewed_at = excluded.reviewed_at,
-       next_review_at = excluded.next_review_at,
-       expires_at = excluded.expires_at,
-       updated_at = excluded.updated_at`,
-  ).bind(
-    queueItemId,
-    input.item.kind,
-    evidenceFingerprint,
-    disposition,
-    evidence,
-    reviewOwner,
-    reviewedAt,
-    nextReviewAt,
-    expiresAt,
-    updatedAt,
-    updatedAt,
-  ).run();
-
-  return {
-    queueItemId,
-    queueItemKind: input.item.kind,
-    evidenceFingerprint,
-    disposition,
-    evidence,
-    reviewOwner,
-    reviewedAt,
-    nextReviewAt,
-    expiresAt,
   };
 }

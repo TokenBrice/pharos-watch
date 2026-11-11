@@ -8,7 +8,7 @@ import type { CacheStatus } from "@shared/types/status";
 import { getCache } from "../lib/db-cache";
 import { readBluechipRatingsCache } from "../lib/bluechip-cache";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
-import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
+import type { OperatorWatchCondition } from "./operator-watch-types";
 
 /**
  * Pricing and FX operator conditions for the freshness sentinel.
@@ -19,8 +19,6 @@ import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
  * coverage failure, so a failed read cannot page as if the producer failed (R2).
  */
 
-/** A daily lane gets this long past its slot before an absent publication is a miss. */
-export const DAILY_LANE_COMPLETION_GRACE_SEC = 2 * 3600;
 const BLUECHIP_COVERAGE_LABEL_LIMIT = 5;
 
 type CachedStatus = Pick<CacheStatus, "publishedAt"> & Partial<Pick<
@@ -64,7 +62,7 @@ function dailyLaneConditions(input: PricingOperatorWatchInput): OperatorWatchCon
   );
   const conditions: OperatorWatchCondition[] = [];
   for (const definition of CRON_JOB_DEFINITIONS) {
-    if (definition.scheduleKey !== "daily0800Utc" && definition.scheduleKey !== "daily0805Utc") continue;
+    if (definition.operatorCompletionGraceSec == null) continue;
     const lane = laneByProducer.get(definition.job);
     if (!lane) continue;
     const slotStartedAtSec = getCronSlotStartedAtForSchedule(definition.scheduleKey, input.nowSec * 1000);
@@ -76,7 +74,7 @@ function dailyLaneConditions(input: PricingOperatorWatchInput): OperatorWatchCon
         ? "unknown"
         : formatIsoDate(publishedAt)}, slot ${formatIsoDate(slotStartedAtSec)} missing)`,
       active: publishedAt != null
-        && input.nowSec > slotStartedAtSec + DAILY_LANE_COMPLETION_GRACE_SEC
+        && input.nowSec > slotStartedAtSec + definition.operatorCompletionGraceSec
         && publishedAt < slotStartedAtSec,
       unknown: publishedAt == null,
     });

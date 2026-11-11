@@ -119,7 +119,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       ],
     },
     costModel: documentedVariableFee(
-      "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
+      "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only", "documented-variable",
     ),
     docs: [
       sourceRefFull("Tether Gold RID: 430-token deposit and 25 bps redemption fee", "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf"),
@@ -314,7 +314,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     },
     unresolvedOutputDisposition: "issuer-undisclosed",
     costModel: documentedVariableFee(
-      "The historical VNX platform offered sell/redemption and physical collection or delivery from one-kilogram gold bars; current VNXAU-specific payout terms and a fixed redemption fee are not established after the platform suspension",
+      "The historical VNX platform offered sell/redemption and physical collection or delivery from one-kilogram gold bars; current VNXAU-specific payout terms and a fixed redemption fee are not established after the platform suspension", "documented-variable",
     ),
     docs: [
       sourceRef(
@@ -454,7 +454,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     routeStatus: "open",
     costModel: {
       ...documentedVariableFee(
-        "Current redemption app: minimum 1,000 GGBR, 3% redemption fee, additional shipping and insurance unpriced",
+        "Current redemption app: minimum 1,000 GGBR, 3% redemption fee, additional shipping and insurance unpriced", "documented-variable",
       ),
       feeBpsMin: 300,
       feeBpsMax: 300,
@@ -483,7 +483,7 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
     costModel: documentedVariableFee(
-      "EUROe is redeemable 1:1 through Membrane's verified-customer platform; public materials reviewed do not expose one global fixed redemption fee",
+      "EUROe is redeemable 1:1 through Membrane's verified-customer platform; public materials reviewed do not expose one global fixed redemption fee", "documented-variable",
     ),
     docs: [
       sourceRef("EUROe transparency", "https://www.euroe.com/transparency-and-regulation", ["capacity", "access"]),

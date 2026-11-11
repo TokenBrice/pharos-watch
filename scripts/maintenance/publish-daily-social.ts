@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { DailySocialSnapshotSchema, DailySocialTopicSchema, buildDailySocialAltText, buildDailySocialTweetText, type DailySocialSnapshot } from "@shared/lib/daily-social";
-import { DailySocialManifestSchema, dailySocialImageKey, type DailySocialManifest } from "@shared/lib/daily-social-manifest";
+import { DailySocialManifestSchema, dailySocialImageKey, dailySocialManifestKey, DAILY_SOCIAL_IMAGE_MAX_BYTES, type DailySocialManifest } from "@shared/lib/daily-social-manifest";
 import { dailySocialPreparationWindow, getDailySocialEdition, DAILY_SOCIAL_MAX_SOURCE_AGE_SEC, DAILY_SOCIAL_MAX_CAPTURE_AGE_SEC } from "@shared/lib/daily-social-schedule";
 import { captureDailySocial } from "../lib/daily-social-capture";
 import {
@@ -15,7 +15,6 @@ import { parseStrictCliArgs, assertCliUsage, runCliEntrypoint, writeCliHelpIfReq
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const PNG_MAX_BYTES = 5 * 1024 * 1024;
 const HELP = `Usage: npx tsx scripts/maintenance/publish-daily-social.ts <plan|capture|publish> [options]
   --out-dir <path>   Local artifacts (default agents/daily-social/ci)
   --topic <name>     Capture-only preview of one rotation topic; cannot override publication schedule
@@ -45,7 +44,7 @@ export function makeDailySocialManifest(snapshot: DailySocialSnapshot, png: Uint
     || snapshot.capturedAt > nowSec + 60 || snapshot.asOf > nowSec + 60) {
     throw new Error("Publication requires today's capture before the 14:00 Belgrade deadline");
   }
-  if (png.length > PNG_MAX_BYTES || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => png[i] === byte)) {
+  if (png.length > DAILY_SOCIAL_IMAGE_MAX_BYTES || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => png[i] === byte)) {
     throw new Error("Social poster must be a PNG of at most 5 MiB");
   }
   return DailySocialManifestSchema.parse({ schemaVersion: 1, snapshot, imageSha256: sha256(png),
@@ -68,7 +67,7 @@ export function assertPosterSnapshotPairing(outDir: string, snapshot: DailySocia
 export async function planDailySocial(kv: DailySocialKv, nowSec: number): Promise<{ shouldPrepare: boolean; reason: string }> {
   if (!dailySocialPreparationWindow(nowSec)) return { shouldPrepare: false, reason: "outside-preparation-window" };
   const { editionDate } = getDailySocialEdition(nowSec);
-  const existing = await kv.get(`daily-social:${editionDate}.json`);
+  const existing = await kv.get(dailySocialManifestKey(editionDate));
   if (!existing) return { shouldPrepare: true, reason: "edition-not-prepared" };
   const manifest = DailySocialManifestSchema.parse(JSON.parse(new TextDecoder().decode(existing)));
   if (manifest.snapshot.editionDate !== editionDate) throw new Error("Existing manifest has the wrong edition date");
@@ -79,13 +78,13 @@ export async function planDailySocial(kv: DailySocialKv, nowSec: number): Promis
 export async function publishDailySocial(kv: DailySocialKv, manifest: DailySocialManifest, png: Uint8Array, dryRun = false): Promise<string> {
   DailySocialManifestSchema.parse(manifest);
   if (sha256(png) !== manifest.imageSha256) throw new Error("Poster checksum mismatch");
-  if (png.length > PNG_MAX_BYTES || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => png[i] === byte)) {
+  if (png.length > DAILY_SOCIAL_IMAGE_MAX_BYTES || ![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => png[i] === byte)) {
     throw new Error("Invalid daily social PNG");
   }
   // Decode the full raster before the immutable commit, not just its signature.
   const { info } = await sharp(Buffer.from(png), { limitInputPixels: 1600 * 1000, failOn: "warning" }).raw().toBuffer({ resolveWithObject: true });
   if (info.width !== 1600 || info.height !== 1000) throw new Error("Daily social PNG must be 1600×1000");
-  const key = `daily-social:${manifest.snapshot.editionDate}.json`;
+  const key = dailySocialManifestKey(manifest.snapshot.editionDate);
   const existing = await kv.get(key);
   if (existing) {
     const previous = DailySocialManifestSchema.parse(JSON.parse(new TextDecoder().decode(existing)));

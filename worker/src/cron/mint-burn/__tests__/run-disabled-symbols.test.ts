@@ -2,7 +2,7 @@ import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../../lib/mint-burn-contract-identity";
 import { syncMintBurnPublicationPolicy } from "../../../lib/mint-burn-publication";
 import { MintBurnRun } from "../run";
 

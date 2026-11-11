@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import * as changeContract from "../ci/pharos-change-contract.ts";
+import * as changeContract from "../lib/change-contract-routing.ts";
 
 import {
   buildFocusedCheckPlan,

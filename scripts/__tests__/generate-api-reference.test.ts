@@ -44,6 +44,15 @@ describe("API reference endpoint narratives", () => {
     }
   });
 
+  it("uses catalog reference order even when OpenAPI paths arrive in a different order", () => {
+    const spec = loadOpenapi();
+    const reversed = { ...spec, paths: Object.fromEntries(Object.entries(spec.paths).reverse()) };
+    const expected = [...PUBLIC_API_ARTIFACT_ENDPOINTS].sort((a, b) => a.referenceOrder - b.referenceOrder);
+    expect(new Set(expected.map((endpoint) => endpoint.referenceOrder)).size).toBe(expected.length);
+    expect(collectOpenApiRoutes(reversed).map((route) => route.operationId))
+      .toEqual(expected.map((endpoint) => endpoint.operationId));
+  });
+
   it("keeps the Markdown preview compact while linking to the full OpenAPI narrative", () => {
     const spec = loadOpenapi();
     const path = spec.paths["/api/stablecoins"] as { get: { description: string } };

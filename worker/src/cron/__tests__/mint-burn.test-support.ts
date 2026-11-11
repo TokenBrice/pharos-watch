@@ -5,7 +5,7 @@ import type * as MintBurnRpcModule from "../../lib/mint-burn-pipeline/rpc";
 import type * as MintBurnMaterializationDebtModule from "../../lib/mint-burn-pipeline/materialization-debt";
 import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 export const MINT_BURN_ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";

@@ -3,7 +3,8 @@ import { makeMintBurnConfig } from "../../../test-helpers/__shared/mint-burn-con
 import { fetchConservationBoundaries } from "../../../lib/mint-burn-conservation";
 import { createMintBurnConfigSummary } from "../sync-config";
 import { mintBurnScanRequestFloor, syncMintBurnConfigWithRetries } from "../scan-with-retry";
-import { configKey, runMintBurnConfigPhase } from "../run-configs";
+import { mintBurnConfigKey as configKey } from "../../../lib/mint-burn-contract-identity";
+import { runMintBurnConfigPhase } from "../run-configs";
 import type * as ScanRetryModule from "../scan-with-retry";
 
 vi.mock("../scan-with-retry", async (importOriginal) => ({

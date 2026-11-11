@@ -116,7 +116,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: {
       ...documentedVariableFee(
-        "Circle publishes destination-specific protocol, withdrawal gas and optional forwarding fees. The retained 2 bps and $2 figures cover only part of that schedule; forwarding can add $1.45 plus $0.50 and destination gas, while Movement execution gas is separate. They are not a complete all-in route ceiling",
+        "Circle publishes destination-specific protocol, withdrawal gas and optional forwarding fees. The retained 2 bps and $2 figures cover only part of that schedule; forwarding can add $1.45 plus $0.50 and destination gas, while Movement execution gas is separate. They are not a complete all-in route ceiling", "documented-variable",
       ),
       feeBpsMin: 0,
       feeBpsMax: 2,
@@ -312,7 +312,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
   "alusd-alchemix": defineReviewedQueueRedeemConfig(REVIEWED_QUEUE_REDEMPTION_AT, {
     outputAssets: ["dai-makerdao"],
     settlementModel: "days",
-    costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
+    costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed", "documented-variable"),
     docs: [
       sourceRef("Alchemix Transmuter docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter", [
         "route",
@@ -899,7 +899,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssets: ["usdc-circle"],
     settlementModel: "days",
     costModel: documentedVariableFee(
-      "Avant's avUSD redemption interface displayed a 0.05% (5 bps) redemption fee when reviewed 2026-10-05. The fee docs require checking the current frontend quote before confirmation. This is an observed issuer fee, not a perpetual ceiling or fixed all-in cost; request applicability, current fee and network gas still require producer observation.",
+      "Avant's avUSD redemption interface displayed a 0.05% (5 bps) redemption fee when reviewed 2026-10-05. The fee docs require checking the current frontend quote before confirmation. This is an observed issuer fee, not a perpetual ceiling or fixed all-in cost; request applicability, current fee and network gas still require producer observation.", "documented-variable",
     ),
     docs: [
       sourceRef(
@@ -1184,7 +1184,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether", "dai-makerdao"],
     settlementModel: "days",
-    costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown"),
+    costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown", "documented-variable"),
     reviewedAt: "2026-07-27",
     docs: [
       sourceRefFull("Rings backing", "https://docs.rings.money/backing"),

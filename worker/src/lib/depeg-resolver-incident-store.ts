@@ -1,3 +1,4 @@
+import { loadSealedIncidentFingerprint } from "./depeg-resolver-publication-store";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
@@ -227,10 +228,6 @@ interface IncidentRow {
   backstop_delay_sec?: number | null;
 }
 
-interface SealedIncidentFingerprintRow {
-  outcome_kind: "prediction" | "no_call";
-  lock_time_peak_deviation_bps: unknown;
-}
 
 interface RegimeEscalationSplit {
   splitFromIncidentKey: string;
@@ -1009,19 +1006,7 @@ async function sealedTailEscalatesRegime(
   event: DdrCanonicalIncidentEventInput,
   incidentKey: string,
 ): Promise<boolean> {
-  const fingerprint = await db
-    .prepare(
-      `SELECT outcome_kind,
-              json_extract(
-                sealed_payload_json,
-                '$.frozen.sourceRow.peakDeviationBps'
-              ) AS lock_time_peak_deviation_bps
-       FROM depeg_resolver_public_predictions
-       WHERE incident_key = ?
-       LIMIT 1`,
-    )
-    .bind(incidentKey)
-    .first<SealedIncidentFingerprintRow>();
+  const fingerprint = await loadSealedIncidentFingerprint(db, incidentKey);
   if (fingerprint == null) {
     throw new Error(`Sealed incident ${incidentKey} lost its immutable public prediction`);
   }

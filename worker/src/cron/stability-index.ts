@@ -1,3 +1,4 @@
+import { includePsiEventDeviation } from "../lib/psi-recompute";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -285,8 +286,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       replayPriceFallbackCount++;
     }
 
-    let worstBps = 0;
-    let earliestStart = Infinity;
+    const aggregate = { worstBps: 0, earliestStart: Infinity };
     let missingPrice = false;
     for (const e of events) {
       const price = isNativePegEvent(e)
@@ -297,11 +297,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         missingPrice = true;
         continue;
       }
-      if (depegSignal.absBps > Math.abs(worstBps)) worstBps = depegSignal.bps;
-      if (e.started_at < earliestStart) earliestStart = e.started_at;
+      includePsiEventDeviation(aggregate, depegSignal.bps, e.started_at);
     }
     if (missingPrice) openDepegsWithoutPrice++;
 
+    const { worstBps, earliestStart } = aggregate;
     if (earliestStart === Infinity) continue;
     const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
 

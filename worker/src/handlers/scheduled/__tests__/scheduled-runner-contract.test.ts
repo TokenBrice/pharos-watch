@@ -15,7 +15,6 @@ import {
   isScheduledTaskDueAt,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
-  OFF_SLOT_SCHEDULED_PRODUCERS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CRON_TIMEOUT_MS } from "../../../lib/cron-timeouts";
 import {
@@ -152,19 +151,16 @@ describe("scheduled runner contract", () => {
       Object.values(SCHEDULED_SLOT_PLANS).flatMap((plan) => flattenScheduledSlotPlanJobs(plan)),
     );
     const slotExecutedJobs = CRON_JOB_DEFINITIONS
-      .map((definition) => definition.job)
-      .filter((job) => !(job in OFF_SLOT_SCHEDULED_PRODUCERS));
+      .map((definition) => definition.job);
     expect(sorted(plannedStatusJobs)).toEqual(sorted(slotExecutedJobs));
 
     for (const definition of CRON_JOB_DEFINITIONS) {
-      if (definition.job in OFF_SLOT_SCHEDULED_PRODUCERS) continue;
       const plan = SCHEDULED_SLOT_PLANS[definition.scheduleKey];
       expect(flattenScheduledSlotPlanJobs(plan), `${definition.job} must be planned in ${definition.scheduleKey}`)
         .toContain(definition.job);
     }
 
     for (const entry of CRON_CONNECTION_BUDGET_ENTRIES) {
-      if (entry.job in OFF_SLOT_SCHEDULED_PRODUCERS) continue;
       const plan = SCHEDULED_SLOT_PLANS[entry.scheduleKey];
       expect(getScheduledSlotPlanBudgetEntries(plan), `${entry.job} must have a scheduled budget entry`)
         .toContain(entry.job);

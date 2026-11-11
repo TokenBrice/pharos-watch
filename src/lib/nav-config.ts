@@ -1,3 +1,4 @@
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -263,7 +264,7 @@ function normalizeNavPath(pathname: string): string {
  * header stay in lockstep. Returns a static Tailwind class for the JIT scanner.
  */
 export function stickyChromeTopOffsetClass(pathname: string | null | undefined): string {
-  return pathname === "/" ? "top-0" : "top-[3px]";
+  return getRouteCapabilities(pathname).home ? "top-0" : "top-[3px]";
 }
 
 /**

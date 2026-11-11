@@ -1,3 +1,4 @@
+import { CACHE_FRESHNESS_LANES } from "./data-surface-descriptors";
 import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "./api-freshness";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "./cache-health";
 import { PUBLIC_COMPONENT_LABEL } from "./classification/operational-status";
@@ -54,28 +55,15 @@ const PUBLIC_CORE_COMPONENT_IDS: readonly PublicStatusComponentId[] = ["website-
  * Every cache lane in the availability registry belongs to exactly one
  * component; `public-status-components.test.ts` iterates the registry.
  */
-export const PUBLIC_CACHE_COMPONENT: Readonly<Record<string, PublicStatusComponentId>> = {
-  stablecoins: "stablecoin-data",
-  "fx-rates": "stablecoin-data",
-  "usds-status": "stablecoin-data",
-  "stablecoin-charts": "charts",
-  dews: "risk-signals",
-  "bluechip-ratings": "risk-signals",
-  "dex-liquidity": "liquidity",
-  "yield-data": "yield",
-};
+const PUBLIC_CACHE_LANES = Object.values(CACHE_FRESHNESS_LANES).sort((a, b) => a.publicStatusOrder - b.publicStatusOrder);
+export const PUBLIC_CACHE_COMPONENT: Readonly<Record<string, PublicStatusComponentId>> = Object.fromEntries(
+  PUBLIC_CACHE_LANES.map((lane) => [lane.cacheKey, lane.publicComponent]),
+);
 
 /** Plain-language consequence per cache lane, used when that lane leads its component. */
-const CACHE_IMPACT_SUMMARY: Readonly<Record<string, string>> = {
-  stablecoins: "Market caps, rankings and listings",
-  "fx-rates": "Non-USD peg conversions",
-  "usds-status": "USDS status and reserve context",
-  "stablecoin-charts": "Historical supply and price charts",
-  dews: "Depeg early-warning and stress signals",
-  "bluechip-ratings": "Third-party safety ratings",
-  "dex-liquidity": "DEX liquidity scores and pool data",
-  "yield-data": "Yield rankings and yield history",
-};
+const CACHE_IMPACT_SUMMARY: Readonly<Record<string, string>> = Object.fromEntries(
+  PUBLIC_CACHE_LANES.map((lane) => [lane.cacheKey, lane.publicImpactSummary]),
+);
 
 const STATE_RANK: Record<PublicComponentState, number> = Object.fromEntries(
   PUBLIC_COMPONENT_STATES.map((state, index) => [state, index]),
@@ -105,6 +93,13 @@ function buildBudget(delayedAfterSec: number, degradedAfterSec: number): PublicC
   };
 }
 
+export function getPublicAgeBandState(ageSeconds: number, budget: PublicComponentBudget): PublicComponentState {
+  if (ageSeconds > budget.outageAfterSec) return "outage";
+  if (ageSeconds > budget.degradedAfterSec) return "degraded";
+  if (ageSeconds > budget.delayedAfterSec) return "delayed";
+  return "operational";
+}
+
 /** Grade an age against named bands; `subject` is the plain-language thing that went quiet. */
 function gradeAge(
   subject: string,
@@ -114,7 +109,8 @@ function gradeAge(
 ): ComponentFinding | null {
   if (ageSeconds <= budget.delayedAfterSec) return null;
   const age = formatSpan(ageSeconds);
-  if (ageSeconds > budget.outageAfterSec) {
+  const state = getPublicAgeBandState(ageSeconds, budget);
+  if (state === "outage") {
     return {
       state: "outage",
       summary: `${subject} last updated ${age} ago. Outage declared after ${formatSpan(budget.outageAfterSec)} without an update.`,
@@ -123,7 +119,7 @@ function gradeAge(
       budget,
     };
   }
-  if (ageSeconds > budget.degradedAfterSec) {
+  if (state === "degraded") {
     return {
       state: "degraded",
       summary: `${subject} last updated ${age} ago, past the ${formatSpan(budget.degradedAfterSec)} limit. The last good data is still served.`,

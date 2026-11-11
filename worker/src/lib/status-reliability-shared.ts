@@ -1,3 +1,4 @@
+import { getStatusSeverity } from "@shared/lib/public-health";
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type {  StatusCause,
@@ -75,7 +76,7 @@ export interface StatusTransitionRow {
   created_at: number;
 }
 
-export const SEVERITY: Record<StatusHealthValue, number> = { healthy: 0, degraded: 1, stale: 2 };
+export const SEVERITY: Record<StatusHealthValue, number> = { healthy: getStatusSeverity("healthy"), degraded: getStatusSeverity("degraded"), stale: getStatusSeverity("stale") };
 
 export function maxStatus(a: StatusHealthValue, b: StatusHealthValue): StatusHealthValue {
   return SEVERITY[a] >= SEVERITY[b] ? a : b;

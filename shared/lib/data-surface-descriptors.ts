@@ -2,7 +2,7 @@ import { API_PATHS } from "./api-endpoints/paths";
 import { CRON_INTERVALS } from "./cron-jobs";
 import { STABLECOINS_QUERY_KEY } from "./query-keys";
 import { DAY_SECONDS } from "./time-constants";
-import type { DependencyCriticality } from "../types/status";
+import type { PublicStatusComponentId, DependencyCriticality } from "../types/status";
 
 /**
  * Cache freshness lanes — the single source for a cached surface's producer
@@ -24,11 +24,20 @@ export interface CacheFreshnessLaneConfig {
   endpointBudgetReason: string;
   availabilityBudgetReason: string;
   freshnessSentinelKey?: string;
+  bootstrapProbePath?: string;
+  upstreamProvider: string;
+  publicComponent: PublicStatusComponentId;
+  publicImpactSummary: string;
+  publicStatusOrder: number;
 }
 
 export const CACHE_FRESHNESS_LANES = {
   stablecoins: {
     cacheKey: "stablecoins",
+    upstreamProvider: "DefiLlama",
+    publicComponent: "stablecoin-data",
+    publicImpactSummary: "Market caps, rankings and listings",
+    publicStatusOrder: 0,
     producerJob: "sync-stablecoins",
     producerIntervalSec: CRON_INTERVALS["sync-stablecoins"],
     endpointMaxAgeSec: 600,
@@ -38,6 +47,10 @@ export const CACHE_FRESHNESS_LANES = {
   },
   stablecoinCharts: {
     cacheKey: "stablecoin-charts",
+    upstreamProvider: "DefiLlama",
+    publicComponent: "charts",
+    publicImpactSummary: "Historical supply and price charts",
+    publicStatusOrder: 3,
     producerJob: "sync-stablecoin-charts",
     producerIntervalSec: CRON_INTERVALS["sync-stablecoin-charts"],
     endpointMaxAgeSec: 3600,
@@ -46,7 +59,12 @@ export const CACHE_FRESHNESS_LANES = {
     availabilityBudgetReason: "Matches the hourly chart write cooldown.",
   },
   usdsStatus: {
+    bootstrapProbePath: API_PATHS.usdsStatus(),
     cacheKey: "usds-status",
+    upstreamProvider: "Etherscan",
+    publicComponent: "stablecoin-data",
+    publicImpactSummary: "USDS status and reserve context",
+    publicStatusOrder: 2,
     producerJob: "sync-usds-status",
     producerIntervalSec: CRON_INTERVALS["sync-usds-status"],
     endpointMaxAgeSec: DAY_SECONDS,
@@ -56,6 +74,10 @@ export const CACHE_FRESHNESS_LANES = {
   },
   fxRates: {
     cacheKey: "fx-rates",
+    upstreamProvider: "Frankfurter",
+    publicComponent: "stablecoin-data",
+    publicImpactSummary: "Non-USD peg conversions",
+    publicStatusOrder: 1,
     producerJob: "sync-fx-rates",
     producerIntervalSec: CRON_INTERVALS["sync-fx-rates"],
     endpointMaxAgeSec: CRON_INTERVALS["sync-fx-rates"],
@@ -64,7 +86,12 @@ export const CACHE_FRESHNESS_LANES = {
     availabilityBudgetReason: "Matches the 30-minute usable FX publication cadence.",
   },
   bluechipRatings: {
+    bootstrapProbePath: API_PATHS.bluechipRatings(),
     cacheKey: "bluechip-ratings",
+    upstreamProvider: "Bluechip",
+    publicComponent: "risk-signals",
+    publicImpactSummary: "Third-party safety ratings",
+    publicStatusOrder: 5,
     producerJob: "sync-bluechip",
     producerIntervalSec: CRON_INTERVALS["sync-bluechip"],
     endpointMaxAgeSec: 12 * 3600,
@@ -74,6 +101,10 @@ export const CACHE_FRESHNESS_LANES = {
   },
   dexLiquidity: {
     cacheKey: "dex-liquidity",
+    upstreamProvider: "DefiLlama",
+    publicComponent: "liquidity",
+    publicImpactSummary: "DEX liquidity scores and pool data",
+    publicStatusOrder: 6,
     producerJob: "sync-dex-liquidity",
     producerIntervalSec: CRON_INTERVALS["sync-dex-liquidity"],
     endpointMaxAgeSec: 4 * 3600,
@@ -83,7 +114,12 @@ export const CACHE_FRESHNESS_LANES = {
     freshnessSentinelKey: "freshness:dex-liquidity",
   },
   yieldData: {
+    bootstrapProbePath: API_PATHS.yieldRankings(),
     cacheKey: "yield-data",
+    upstreamProvider: "DefiLlama",
+    publicComponent: "yield",
+    publicImpactSummary: "Yield rankings and yield history",
+    publicStatusOrder: 7,
     producerJob: "sync-yield-data",
     producerIntervalSec: CRON_INTERVALS["sync-yield-data"],
     endpointMaxAgeSec: CRON_INTERVALS["sync-yield-data"],
@@ -94,6 +130,10 @@ export const CACHE_FRESHNESS_LANES = {
   },
   dews: {
     cacheKey: "dews",
+    upstreamProvider: "Internal compute",
+    publicComponent: "risk-signals",
+    publicImpactSummary: "Depeg early-warning and stress signals",
+    publicStatusOrder: 4,
     producerJob: "compute-dews",
     producerIntervalSec: CRON_INTERVALS["compute-dews"],
     endpointMaxAgeSec: CRON_INTERVALS["compute-dews"],
@@ -104,6 +144,10 @@ export const CACHE_FRESHNESS_LANES = {
   },
 } as const satisfies Record<string, CacheFreshnessLaneConfig>;
 
+export const CACHE_UPSTREAM_PROVIDER: Record<string, string> = Object.fromEntries(
+  Object.values(CACHE_FRESHNESS_LANES).map((lane) => [lane.cacheKey, lane.upstreamProvider]),
+);
+
 export type CacheFreshnessLaneKey = keyof typeof CACHE_FRESHNESS_LANES;
 
 /**
@@ -113,14 +157,14 @@ export type CacheFreshnessLaneKey = keyof typeof CACHE_FRESHNESS_LANES;
  */
 type SurfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey> = Omit<
   (typeof CACHE_FRESHNESS_LANES)[K],
-  "endpointBudgetReason" | "availabilityBudgetReason"
+  "endpointBudgetReason" | "availabilityBudgetReason" | "bootstrapProbePath" | "upstreamProvider" | "publicComponent" | "publicImpactSummary" | "publicStatusOrder"
 >;
 
 function surfaceFreshnessLaneFields<K extends CacheFreshnessLaneKey>(
   laneKey: K,
 ): SurfaceFreshnessLaneFields<K> {
-  const { endpointBudgetReason: _endpointBudgetReason, availabilityBudgetReason: _availabilityBudgetReason, ...fields } =
-    CACHE_FRESHNESS_LANES[laneKey];
+  const { endpointBudgetReason: _endpointBudgetReason, availabilityBudgetReason: _availabilityBudgetReason, bootstrapProbePath: _bootstrapProbePath, upstreamProvider: _upstreamProvider, publicComponent: _publicComponent, publicImpactSummary: _publicImpactSummary, publicStatusOrder: _publicStatusOrder, ...fields } =
+    CACHE_FRESHNESS_LANES[laneKey] as (typeof CACHE_FRESHNESS_LANES)[K] & { bootstrapProbePath?: string };
   return fields;
 }
 

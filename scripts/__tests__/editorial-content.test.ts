@@ -3,7 +3,8 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { CaseStudyContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
 import type { CaseStudy, MethodologyChangelogDetailBlock, SummaryHref } from "@shared/types/editorial-content";
 import { buildPrStaticCheckPlan, STRUCTURAL_CHECKS } from "../maintenance/run-pr-static-checks";
-import { checkEditorialContent, mechanismExplainerIssues } from "../ci/check-editorial-content";
+import { checkEditorialContent } from "../ci/check-editorial-content";
+import { mechanismExplainerIssues } from "../../src/lib/mechanism-explainers/editorial-check";
 import { withTempRepo } from "./helpers/test-state";
 
 const load = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));

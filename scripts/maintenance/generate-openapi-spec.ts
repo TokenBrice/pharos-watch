@@ -112,10 +112,7 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
     tags: endpoint.tags,
     summary: endpoint.summary,
     description: endpoint.description,
-    operationId: endpoint.path
-      .replace(/^\/api\//, "")
-      .replace(/[{}]/g, "")
-      .replace(/[^a-zA-Z0-9]+(.)/g, (_, char: string) => char.toUpperCase()),
+    operationId: endpoint.operationId,
     ...(endpoint.security === "none" ? { security: [] } : {}),
     parameters: buildParameters(endpoint),
     responses: {

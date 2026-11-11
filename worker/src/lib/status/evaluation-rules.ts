@@ -1,5 +1,6 @@
 import {
   STATUS_BLACKLIST_THRESHOLDS,
+  getBlacklistGapStatus,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
   STATUS_RESERVE_COHORT_SLO,
@@ -1079,7 +1080,8 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
   },
   (input) => {
       const detail = `classification ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, watch=${input.blacklistRecentMissing}`;
-      if (input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale) {
+      const blacklistStatus = getBlacklistGapStatus({ missingRatio: input.blacklistMissingRatio });
+      if (blacklistStatus === "stale") {
         return ruleResult("stale", [makeCause(
           "data-quality",
           "blacklist_gaps_stale",
@@ -1088,7 +1090,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           { metric: "blacklistMissingRatio", value: input.blacklistMissingRatio, threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale },
         )]);
       }
-      if (input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) {
+      if (blacklistStatus === "degraded") {
         return ruleResult("degraded", [makeCause(
           "data-quality",
           "blacklist_gaps_degraded",

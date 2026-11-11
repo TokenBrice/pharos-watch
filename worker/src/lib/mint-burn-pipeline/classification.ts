@@ -24,7 +24,7 @@ import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-l
 import { updateEventClassifications } from "./persistence";
 import { throwIfAborted } from "../abort";
 import { getCache, setCache } from "../db-cache";
-import { mintBurnConfigKey } from "./sync-state";
+import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import type {
   BurnClassificationCounters,
   MintBurnRequestBudget,

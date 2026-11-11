@@ -1,6 +1,6 @@
 import type { KVNamespace } from "@shared/types/cloudflare-runtime";
 import { bufferReadableStream } from "@shared/lib/bounded-stream";
-import { DailySocialManifestSchema } from "@shared/lib/daily-social-manifest";
+import { DailySocialManifestSchema, dailySocialImageKey, dailySocialManifestKey, DAILY_SOCIAL_IMAGE_MAX_BYTES } from "@shared/lib/daily-social-manifest";
 
 interface Context {
   request: Request;
@@ -18,16 +18,16 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) return fail(404);
   if (!env.SELECTOR_SNAPSHOTS) return fail(503);
   try {
-    const manifestStream = await env.SELECTOR_SNAPSHOTS.get(`daily-social:${date}.json`, "stream");
+    const manifestStream = await env.SELECTOR_SNAPSHOTS.get(dailySocialManifestKey(date), "stream");
     if (!manifestStream) return fail(404);
     const manifestBytes = (await bufferReadableStream(manifestStream, { maxBytes: 32_768 })).bytes;
     const manifest = DailySocialManifestSchema.parse(JSON.parse(new TextDecoder().decode(manifestBytes)));
     if (manifest.snapshot.editionDate !== date) return fail(502);
     let bytes = manifestBytes;
     if (extension === "png") {
-      const stream = await env.SELECTOR_SNAPSHOTS.get(`daily-social:${date}:${manifest.imageSha256}.png`, "stream");
+      const stream = await env.SELECTOR_SNAPSHOTS.get(dailySocialImageKey(date, manifest.imageSha256), "stream");
       if (!stream) return fail(404);
-      bytes = (await bufferReadableStream(stream, { maxBytes: 5 * 1024 * 1024 })).bytes;
+      bytes = (await bufferReadableStream(stream, { maxBytes: DAILY_SOCIAL_IMAGE_MAX_BYTES })).bytes;
       if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)) return fail(502);
       const digest = await crypto.subtle.digest("SHA-256", bytes);
       const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");

@@ -67,7 +67,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       ],
     },
     costModel: {
-      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
+      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee", "documented-variable"),
       feeBpsMax: 45,
       // Published as an additive per-redemption charge, not a minimum.
       feeComponents: [{ currency: "USD", terms: { flatAmount: 100 } }],
@@ -130,7 +130,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       ],
     },
     costModel: {
-      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
+      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee", "documented-variable"),
       feeBpsMax: 45,
       // Published as an additive per-redemption charge, not a minimum.
       feeComponents: [{ currency: "USD", terms: { flatAmount: 100 } }],
@@ -179,7 +179,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         { url: "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf", quote: "ComTech Gold provides a sell price quote on their ComTech Gold app during international market hours You can choose to sell any amount to a maximum of the amount of gold that you own. Retail Customers are required to provide us with the requisite KYC documents and enter the basic personal information" },
       ],
     },
-    costModel: documentedVariableFee("Contractual 1,000 CGO minimum is used conservatively over the FAQ's 10 CGO; making, delivery and applicable storage remain unpriced"),
+    costModel: documentedVariableFee("Contractual 1,000 CGO minimum is used conservatively over the FAQ's 10 CGO; making, delivery and applicable storage remain unpriced", "documented-variable"),
     docs: [
       sourceRef("CGO FAQ: 10 CGO minimum", "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf", ["route", "access", "fees"]),
       sourceRef("CGO contractual terms: 1,000 CGO minimum", "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf", ["route", "access", "fees"]),
@@ -216,7 +216,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       ],
     },
     costModel: documentedVariableFee(
-      "Custody and routine administration are embedded services, not proof of cost-free physical exit. DGLD terms disclose an initially 0.20% burning fee for direct issuer delivery plus holder-paid delivery expenses. Under section 8.2.2, an approved third-party delivery does not burn tokens or charge the issuer burning fee, but independent provider premiums, logistics, handling, insurance, customs and taxes remain separately quoted. Neither delivery method establishes an all-in same-notional USD liquidation cost.",
+      "Custody and routine administration are embedded services, not proof of cost-free physical exit. DGLD terms disclose an initially 0.20% burning fee for direct issuer delivery plus holder-paid delivery expenses. Under section 8.2.2, an approved third-party delivery does not burn tokens or charge the issuer burning fee, but independent provider premiums, logistics, handling, insurance, customs and taxes remain separately quoted. Neither delivery method establishes an all-in same-notional USD liquidation cost.", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacity("DGLD homepage", "https://dgld.ch/"),
@@ -240,7 +240,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-08-19"),
     costModel: documentedVariableFee(
-      "Redemption is limited to WSPN corporate accounts, which qualified businesses must apply and be verified for; there is no retail redemption path. Approved accounts convert WUSD to USD at a 1:1 rate and WSPN docs say the platform conversion has no handling fee, while bank or network fees may still apply",
+      "Redemption is limited to WSPN corporate accounts, which qualified businesses must apply and be verified for; there is no retail redemption path. Approved accounts convert WUSD to USD at a 1:1 rate and WSPN docs say the platform conversion has no handling fee, while bank or network fees may still apply", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacity("About WUSD", "https://developer.wspn.io/5768563m0"),
@@ -271,7 +271,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
-      "AUDC's platform mint/redeem fee is zero, but the 10 February 2026 PDS section 3.1(b) specifies 0.10%-1.00% external-bank payout fees through AUDD Digital or direct AUDC fallback. Distributor fees vary; fees may be waived or changed with notice. No applicable fee at the scored notional is selected; gas and third-party charges remain additional",
+      "AUDC's platform mint/redeem fee is zero, but the 10 February 2026 PDS section 3.1(b) specifies 0.10%-1.00% external-bank payout fees through AUDD Digital or direct AUDC fallback. Distributor fees vary; fees may be waived or changed with notice. No applicable fee at the scored notional is selected; gas and third-party charges remain additional", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacity("AUDD home", "https://www.audd.digital/"),
@@ -332,7 +332,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     },
     executionModel: "opaque",
     costModel: documentedVariableFee(
-      "Physical gold redemption requires KYC and compliance checks, with additional fees, minimums, and logistics that vary by jurisdiction and program terms",
+      "Physical gold redemption requires KYC and compliance checks, with additional fees, minimums, and logistics that vary by jurisdiction and program terms", "documented-variable",
     ),
     docs: [
       sourceRef("PGOLD physical redemption minimum and fee", "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold", ["route", "fees", "access"]),
@@ -480,7 +480,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...documentedBoundSupplyFull("2026-04-16"),
     outputAssets: ["m-m0"],
     costModel: documentedVariableFee(
-      "KAST documents 1:1 mint by wrapping M (M0), and redemption by unwrapping; the fiat on/off-ramp is mediated by licensed partners (Tazapay, BitGo, Fireblocks) whose fees apply separately",
+      "KAST documents 1:1 mint by wrapping M (M0), and redemption by unwrapping; the fiat on/off-ramp is mediated by licensed partners (Tazapay, BitGo, Fireblocks) whose fees apply separately", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacity("KAST documentation", "https://docs.kast.finance/"),
@@ -585,7 +585,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
     costModel: documentedVariableFee(
-      "CFX offers customer-authenticated binding withdrawal quotes with route-specific amounts and fees. Public documentation does not establish a complete numeric MOVEUSD-to-USD deduction ceiling.",
+      "CFX offers customer-authenticated binding withdrawal quotes with route-specific amounts and fees. Public documentation does not establish a complete numeric MOVEUSD-to-USD deduction ceiling.", "documented-variable",
     ),
     docs: [
       sourceRefRouteCapacityAccess("CFX tokenized-deposit mint and redemption overview", "https://cfx.to/on-chain"),

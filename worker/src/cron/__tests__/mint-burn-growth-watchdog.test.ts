@@ -7,7 +7,7 @@ import {
   runMintBurnGrowthWatchdog,
 } from "../mint-burn-growth-watchdog";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 
 const activeConfig = MINT_BURN_CONFIGS.find(
   (config) => config.enabled !== false && WORKER_ACTIVE_IDS.has(config.stablecoinId),

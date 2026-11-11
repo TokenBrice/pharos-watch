@@ -7,7 +7,7 @@ import { cgHeaders, cgUrl } from "./coingecko";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { buildPriceValidationContext, validatePriceCandidate } from "./price-validation";
-import { mintBurnHourlyBucketAggregatesSql } from "./mint-burn-pipeline/persistence";
+import { mintBurnHourlyBucketAggregatesSql } from "./mint-burn-pipeline/hourly-aggregates";
 import {
   executeMintBurnMaintenanceMutations,
   rebuildMintBurnMaterializationHours,

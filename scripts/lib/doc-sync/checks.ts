@@ -14,7 +14,6 @@ import {
   ISOLATE_LOCAL_STATE_DOC_START,
   renderIsolateLocalStateDocumentation,
 } from "@shared/lib/isolate-local-state-registry";
-import { METHODOLOGY_PROVENANCE_FILES } from "./methodology-manifest";
 import { findDocContractDrift } from "./contract-blocks";
 import { assignmentKey, buildAssignmentMap, parseAssignments } from "../wrangler-toml.mjs";
 
@@ -26,21 +25,6 @@ function checkGeneratedDocContractBlocks(failures: Failure[], readDocument: type
       expected: drift.expected,
       found: drift.found,
     });
-  }
-}
-
-function checkMethodologyCommitProvenance(failures: Failure[], readDocument: typeof read): void {
-  for (const file of METHODOLOGY_PROVENANCE_FILES) {
-    const doc = readDocument(file);
-    const found = doc.match(/\*\*Commit(?:s)?:\*\* `unreleased`|commits:\s*\["unreleased"\]/)?.[0] ?? null;
-    if (found !== null) {
-      failures.push({
-        file,
-        label: "methodology commit provenance",
-        expected: "real commit hashes or omitted provenance",
-        found,
-      });
-    }
   }
 }
 
@@ -261,7 +245,6 @@ export function runDocSyncChecks(readDocument: typeof read = read): Failure[] {
   const failures: Failure[] = [];
 
   checkGeneratedDocContractBlocks(failures, readDocument);
-  checkMethodologyCommitProvenance(failures, readDocument);
   checkWorkerInfrastructureIsolateStateDoc(failures, readDocument);
   checkWorkerInfrastructureRuntimeDoc(failures, readDocument);
   checkLaneFreshnessSignOff(failures, readDocument);

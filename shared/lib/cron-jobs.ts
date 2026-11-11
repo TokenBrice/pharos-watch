@@ -324,6 +324,10 @@ export interface CronJobDefinition {
   connectionGroup?: string;
   /** Whether this job publishes data whose age is meaningful to consumers. */
   freshnessSurface?: CronFreshnessSurface;
+  operatorFreshness?: { observation: "completed-run"; staleAfterIntervals: number };
+  operatorCompletionGraceSec?: number;
+  operatorSuccessfulFindingsAttention?: boolean;
+  operatorRecoveryDependencies?: readonly { rootCacheKey: string; dependentCacheKey: string }[];
 }
 
 export interface CronJobMeta extends CronJobDefinition {
@@ -507,6 +511,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   },
   {
     job: "dispatch-telegram-alerts",
+    operatorFreshness: { observation: "completed-run", staleAfterIntervals: 2 },
     label: "Telegram alerts",
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
@@ -578,6 +583,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   },
   {
     job: "sync-dex-liquidity-stage",
+    operatorSuccessfulFindingsAttention: true,
     label: "DEX liquidity source stage",
     group: "hourly",
     intervalSec: 3600,
@@ -587,6 +593,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   },
   {
     job: "sync-dex-liquidity",
+    operatorSuccessfulFindingsAttention: true,
+    operatorRecoveryDependencies: [{ rootCacheKey: "dex-liquidity", dependentCacheKey: "dews" }],
     label: "DEX liquidity scoring",
     group: "hourly",
     intervalSec: 3600,
@@ -729,6 +737,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   },
   {
     job: "sync-usds-status",
+    operatorCompletionGraceSec: 2 * 3600,
     label: "USDS status",
     group: "daily",
     scheduleKey: "daily0800Utc",
@@ -767,6 +776,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   },
   {
     job: "sync-bluechip",
+    operatorCompletionGraceSec: 2 * 3600,
     label: "Bluechip sync",
     group: "daily",
     scheduleKey: "daily0805Utc",

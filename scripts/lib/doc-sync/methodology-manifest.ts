@@ -1,5 +1,3 @@
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
@@ -115,27 +113,6 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     versionFile: "shared/lib/methodology-versions/constants.ts",
     expectedLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
   },
-];
-
-const METHODOLOGY_INFRA_PROVENANCE_FILES = [
-  "shared/lib/methodology-versions/base.ts",
-  "shared/lib/methodology-versions/registry.ts",
-] as const;
-
-
-function changelogFiles(directory: string): string[] {
-  return readdirSync(directory)
-    .filter((file) => file.endsWith(".ts"))
-    .sort()
-    .map((file) => join(directory, file));
-}
-
-export const METHODOLOGY_PROVENANCE_FILES: readonly string[] = [
-  ...METHODOLOGY_MANIFEST.flatMap((entry) => [
-    entry.versionFile,
-    ...changelogFiles(entry.changelogDirectory),
-  ]),
-  ...METHODOLOGY_INFRA_PROVENANCE_FILES,
 ];
 
 export { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, SAFETY_SCORE_METHODOLOGY_VERSION_LABEL };

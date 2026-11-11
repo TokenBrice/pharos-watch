@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 
-import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../ci/pharos-change-contract.ts";
+import { classifyChangedFiles, normalizeExplicitFiles, readChangedFiles } from "../lib/change-contract-routing.ts";
 import { createPrStaticLeafCommand, selectPrBaselineChecks } from "./run-pr-static-checks.ts";
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import {

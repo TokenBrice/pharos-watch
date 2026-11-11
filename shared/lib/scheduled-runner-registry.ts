@@ -389,16 +389,6 @@ export function listScheduledExpressionsForWorker(role: ScheduledWorkerRole): st
     .flatMap((plan) => [...plan.triggerSchedules]);
 }
 
-/**
- * Producers that carry a cron identity and cadence but are not members of a
- * slot chain: the scheduled slot only triggers them and a separate execution
- * surface writes their `cron_runs` row. Declaring them here keeps chain
- * coverage enforceable instead of letting an unimplemented chain member hide
- * among genuinely off-slot work.
- */
-export const OFF_SLOT_SCHEDULED_PRODUCERS = {
-} as const satisfies Record<string, CronScheduleKey>;
-
 export { SHARED_SCHEDULED_JOB_IDENTITIES };
 
 export type ScheduledProducerKind = "scheduled-job" | "budget-only";

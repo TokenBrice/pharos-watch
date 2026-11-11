@@ -1,3 +1,4 @@
+import { mintBurnConfigKey } from "../../src/lib/mint-burn-contract-identity";
 import { blockHashesForLogs, buildAlchemyUrl, resolveBlockTimestamps } from "../../src/lib/alchemy-logs";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../src/lib/alchemy-logs";
 import { createBudget, budgetExhausted, decodeUint256AtSlotOrNull } from "../../src/lib/evm-logs";
@@ -20,7 +21,6 @@ import {
 } from "../../src/lib/mint-burn-pipeline/persistence";
 import {
   ensureMintBurnSyncStateRows,
-  mintBurnConfigKey,
   readMintBurnSyncStateForConfig,
   readMintBurnSyncStateBatch,
   upsertMintBurnSyncState,

@@ -55,7 +55,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
       feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 },
       sameNotionalEligible: false,
     },
-    costModel: documentedVariableFee("Current Rules retrieved 2026-10-20 publish a 0.25% redemption fee at the operator-determined prevailing gold price, a US$100 application fee, waived storage until further notice and a separate 0.01% transfer fee. All-in physical-to-USD transport/assay/sale costs remain unresolved."),
+    costModel: documentedVariableFee("Current Rules retrieved 2026-10-20 publish a 0.25% redemption fee at the operator-determined prevailing gold price, a US$100 application fee, waived storage until further notice and a separate 0.01% transfer fee. All-in physical-to-USD transport/assay/sale costs remain unresolved.", "documented-variable"),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
@@ -434,7 +434,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee("KFS and prospectus publish a Redemption Charge up to 5%; the prospectus footnote describes its anti-dilution application when a single investor's redemption on one Dealing Day reaches 20% of sub-fund NAV, not a second additive 5% fund charge. Bank charges and any currency-conversion costs are additional; complete distributor-route costs remain unbounded. No 5% all-in ceiling is inferred; do not substitute website up-to-1% marketing."),
+    costModel: documentedVariableFee("KFS and prospectus publish a Redemption Charge up to 5%; the prospectus footnote describes its anti-dilution application when a single investor's redemption on one Dealing Day reaches 20% of sub-fund NAV, not a second additive 5% fund charge. Bank charges and any currency-conversion costs are additional; complete distributor-route costs remain unbounded. No 5% all-in ceiling is inferred; do not substitute website up-to-1% marketing.", "documented-variable"),
     v9RouteReviewTerms: {
       minRedeemUsd: 1000,
       scoringDisposition: "bounded-terms-gap",
@@ -493,7 +493,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
     outputAssetType: "stable-single",
     unresolvedOutputAssetKeys: ["fiat:MXN"],
     unresolvedOutputDisposition: "reviewed-external",
-    costModel: { ...documentedVariableFee("Greater of USD 1,000 or 0.1%; verification USD 150"), feeBpsMax: 10, minFeeUsd: 1_000 },
+    costModel: { ...documentedVariableFee("Greater of USD 1,000 or 0.1%; verification USD 150", "documented-variable"), feeBpsMax: 10, minFeeUsd: 1_000 },
     v9RouteReviewTerms: {
       minRedeemUsd: 100000,
       scoringDisposition: "bounded-terms-gap",

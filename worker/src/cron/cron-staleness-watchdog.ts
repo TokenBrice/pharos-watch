@@ -38,6 +38,7 @@ import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
 import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
 import { loadDexYieldWatchConditions } from "./operator-watch-dex-yield";
 import { loadPsiDailyCoverage } from "./operator-watch-psi-daily";
+import type { OperatorWatchCondition, OperatorWatchSection } from "./operator-watch-types";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -62,12 +63,6 @@ export interface ProducerFreshnessLane {
   livenessOnly?: boolean;
 }
 
-/**
- * Control-plane producers with no consumer freshness surface but whose total
- * silence removes user-facing or operator-facing delivery work.
- */
-const LIVENESS_ONLY_PRODUCERS = new Set(["dispatch-telegram-alerts"]);
-
 export function deriveCronFreshnessProducers(
   definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
 ): ProducerFreshnessLane[] {
@@ -78,7 +73,7 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    const livenessOnly = LIVENESS_ONLY_PRODUCERS.has(definition.job);
+    const livenessOnly = definition.operatorFreshness?.observation === "completed-run";
     if (definition.freshnessSurface === "none" && !livenessOnly) return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
@@ -95,7 +90,7 @@ export function deriveCronFreshnessProducers(
     // runs and become stale at 3x their canonical producer interval. A
     // liveness-only control-plane job publishes no consumer output, so one
     // missed invocation is the reviewed budget and the alert names it.
-    const thresholdSec = livenessOnly ? definition.intervalSec * 2 : definition.intervalSec * 3;
+    const thresholdSec = definition.intervalSec * (definition.operatorFreshness?.staleAfterIntervals ?? 3);
     if (thresholdSec > CRON_RUNS_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
@@ -339,47 +334,53 @@ function isStale(observation: CronStalenessObservation): boolean {
   return isAgeStale(observation.ageSeconds, observation.thresholdSec);
 }
 
-function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): Array<{
+interface DependencyRecoveryCheck {
   root: string;
   dependent: string;
   state: "both-stale" | "root-recovered-dependent-stale" | "healthy" | "unknown";
   rootAgeSeconds: number | null;
   dependentAgeSeconds: number | null;
-}> {
+}
+
+function buildDependencyRecoveryChecks(observations: readonly CronStalenessObservation[]): DependencyRecoveryCheck[] {
   const byCacheKey = new Map(
     observations.flatMap((observation) => observation.cacheKey == null ? [] : [[observation.cacheKey, observation] as const]),
   );
-  const dexLiquidity = byCacheKey.get("dex-liquidity");
-  const dews = byCacheKey.get("dews");
-  if (!dexLiquidity || !dews) {
-    return [
-      {
-        root: "dex-liquidity",
-        dependent: "dews",
-        state: "unknown",
-        rootAgeSeconds: dexLiquidity?.ageSeconds ?? null,
-        dependentAgeSeconds: dews?.ageSeconds ?? null,
-      },
-    ];
-  }
+  return CRON_JOB_DEFINITIONS.flatMap((definition) =>
+    (definition.operatorRecoveryDependencies ?? []).flatMap(({ rootCacheKey, dependentCacheKey }): DependencyRecoveryCheck[] => {
+      const dexLiquidity = byCacheKey.get(rootCacheKey);
+      const dews = byCacheKey.get(dependentCacheKey);
+      if (!dexLiquidity || !dews) {
+        return [
+          {
+            root: rootCacheKey,
+            dependent: dependentCacheKey,
+            state: "unknown",
+            rootAgeSeconds: dexLiquidity?.ageSeconds ?? null,
+            dependentAgeSeconds: dews?.ageSeconds ?? null,
+          },
+        ];
+      }
 
-  const rootStale = isStale(dexLiquidity);
-  const dependentStale = isStale(dews);
-  const state =
-    rootStale && dependentStale
-      ? "both-stale"
-      : !rootStale && dependentStale
-        ? "root-recovered-dependent-stale"
-        : "healthy";
-  return [
-    {
-      root: "dex-liquidity",
-      dependent: "dews",
-      state,
-      rootAgeSeconds: dexLiquidity.ageSeconds,
-      dependentAgeSeconds: dews.ageSeconds,
-    },
-  ];
+      const rootStale = isStale(dexLiquidity);
+      const dependentStale = isStale(dews);
+      const state =
+        rootStale && dependentStale
+          ? "both-stale"
+          : !rootStale && dependentStale
+            ? "root-recovered-dependent-stale"
+            : "healthy";
+      return [
+        {
+          root: rootCacheKey,
+          dependent: dependentCacheKey,
+          state,
+          rootAgeSeconds: dexLiquidity.ageSeconds,
+          dependentAgeSeconds: dews.ageSeconds,
+        },
+      ];
+    }),
+  );
 }
 
 function buildObservation(
@@ -406,25 +407,6 @@ export function evaluateCronStaleness(
 }
 
 type ProducerFreshnessState = Record<string, "ok" | "stale">;
-
-/**
- * Operator conditions share the producer transition state. Producer keys are
- * bare job names; every other section prefixes its key with `<section>:` so a
- * condition that disappears (a recovered detail write, a released hold) is
- * reported as recovered instead of silently dropped.
- */
-export interface OperatorWatchCondition {
-  section: OperatorWatchSection;
-  /** Stable identity within the section (job name, coin id, rule name). */
-  id: string;
-  /** Operator-facing detail; defaults to `id`. */
-  label?: string;
-  active: boolean;
-  /** This condition's evidence could not be read this run: keep its prior state. */
-  unknown?: boolean;
-}
-
-export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality" | "psi-daily-coverage" | "blacklist-config" | "mint-burn-config";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },

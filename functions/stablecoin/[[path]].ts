@@ -1,5 +1,6 @@
 import legacyRouteRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 import canonicalOrder from "@shared/data/stablecoins/canonical-order.json";
+import { isLegacyStablecoinRedirectDestination } from "@shared/lib/legacy-stablecoin-redirect";
 import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
 import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback";
 
@@ -10,18 +11,6 @@ interface StablecoinRouteEnv {
 }
 
 const KNOWN_STABLECOIN_IDS = new Set<string>(canonicalOrder);
-const CEMETERY_RECORD_DESTINATION = /^\/cemetery\/#[a-z0-9][a-z0-9-]*$/;
-
-function isRedirectDestination(value: string): boolean {
-  const targetId = value.match(/^\/stablecoin\/([^/]+)\/$/)?.[1];
-  return targetId != null
-    ? KNOWN_STABLECOIN_IDS.has(targetId)
-    : value === "/coverage/"
-      || value === "/cemetery/"
-      || CEMETERY_RECORD_DESTINATION.test(value)
-      || /^\/stablecoins\/[a-z]+\/$/.test(value);
-}
-
 export function resolveLegacyStablecoinRedirect(
   url: URL,
   redirects: Readonly<Record<string, string>> = legacyRouteRedirects,
@@ -30,7 +19,7 @@ export function resolveLegacyStablecoinRedirect(
   if (parts.length !== 2 || parts[0] !== "stablecoin" || !isCanonicalStablecoinId(parts[1])) return null;
 
   const destination = Object.hasOwn(redirects, parts[1]) ? redirects[parts[1]] : null;
-  if (!destination || !isRedirectDestination(destination)) return null;
+  if (!destination || !isLegacyStablecoinRedirectDestination(destination, KNOWN_STABLECOIN_IDS)) return null;
 
   const target = new URL(destination, url);
   target.search = url.search;

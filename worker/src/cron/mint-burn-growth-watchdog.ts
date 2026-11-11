@@ -13,7 +13,7 @@ import {
   readMintBurnDisabledKeys,
   resolveMintBurnDisabledSymbolPolicy,
 } from "../lib/mint-burn-publication";
-import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
 import { normalizeDisabledConfigIdSet, normalizeDisabledSymbolSet } from "./mint-burn/run-state";
 
 /**

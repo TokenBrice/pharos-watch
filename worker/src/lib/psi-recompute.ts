@@ -13,6 +13,15 @@ import { getDepegThresholdBpsForPegCurrency } from "./constants";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 
+export function includePsiEventDeviation(
+  aggregate: { worstBps: number; earliestStart: number },
+  bps: number,
+  startedAt: number,
+): void {
+  if (Math.abs(bps) > Math.abs(aggregate.worstBps)) aggregate.worstBps = bps;
+  if (startedAt < aggregate.earliestStart) aggregate.earliestStart = startedAt;
+}
+
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 const HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC = 6 * 3600;
 
@@ -132,8 +141,7 @@ export function buildStabilityInputForDay(
   let openDepegsWithoutPrice = 0;
   for (const [coinId, events] of grouped) {
     if (!CORE_PSI_ELIGIBLE_IDS.has(coinId)) continue;
-    let worstBps = 0;
-    let earliestStart = Infinity;
+    const aggregate = { worstBps: 0, earliestStart: Infinity };
     let usedHistoricalPrice = false;
     let usedPeakFallback = false;
     let missingPrice = false;
@@ -155,17 +163,13 @@ export function buildStabilityInputForDay(
         ? { bps: nativeSignal!.bps, source: "historical-price" as const }
         : computeHistoricalEventBps(event, snapshotPrice, day, thresholdBps);
       if (!replayBps) continue;
-      if (Math.abs(replayBps.bps) > Math.abs(worstBps)) {
-        worstBps = replayBps.bps;
-      }
+      includePsiEventDeviation(aggregate, replayBps.bps, event.started_at);
       if (replayBps.source === "historical-price") usedHistoricalPrice = true;
       if (replayBps.source === "peak-fallback") usedPeakFallback = true;
-      if (event.started_at < earliestStart) {
-        earliestStart = event.started_at;
-      }
     }
     if (missingPrice) openDepegsWithoutPrice++;
 
+    const { worstBps, earliestStart } = aggregate;
     if (earliestStart === Infinity) continue;
     if (usedHistoricalPrice) historicalPriceCoverageCount++;
     if (usedPeakFallback) peakDeviationFallbackCount++;

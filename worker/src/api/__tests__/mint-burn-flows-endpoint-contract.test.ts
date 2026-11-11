@@ -8,7 +8,8 @@ import { flowResponse, makeFlowHourlyRow } from "./mint-burn-flows.test-support"
 import { aggregateFlowCacheKey, perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { detectFlightToQualityFromValuedNets } from "../../lib/mint-burn-scoring";

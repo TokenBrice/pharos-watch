@@ -33,7 +33,7 @@ import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
-import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, mintBurnScanFingerprint,
   prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../mint-burn-pipeline/scan-coverage";
 import { readMintBurnWindowContext } from "../../mint-burn-flows-service";

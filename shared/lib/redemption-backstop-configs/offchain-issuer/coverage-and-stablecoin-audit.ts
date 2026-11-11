@@ -241,7 +241,7 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
         ? feeDisclosure.feeBpsMax === 0
           ? fixedFee(0, feeDisclosure.statement)
           : {
-              ...documentedVariableFee(feeDisclosure.statement),
+              ...documentedVariableFee(feeDisclosure.statement, "documented-variable"),
               feeBpsMax: feeDisclosure.feeBpsMax,
             }
         : undisclosedReviewedFee(
@@ -526,7 +526,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
     costModel: {
-      ...documentedVariableFee("0.10% with a $1,000 minimum"),
+      ...documentedVariableFee("0.10% with a $1,000 minimum", "documented-variable"),
       // T1: the issuer fee page states the redemption fee outright — 0.10%
       // (greater of that or $1,000) — a citable documented ceiling.
       feeBpsMax: 10,
@@ -677,7 +677,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     v9RouteReviewTerms: midasBusinessDayReview(10),
     outputAssetType: "nav",
     costModel: {
-      ...documentedVariableFee("Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee"),
+      ...documentedVariableFee("Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee", "documented-variable"),
       feeBpsMax: 50,
     },
     docs: [
@@ -957,7 +957,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
     costModel: {
-      ...documentedVariableFee("Greater of C$50 or 0.25% of gross redemption proceeds, plus applicable taxes"),
+      ...documentedVariableFee("Greater of C$50 or 0.25% of gross redemption proceeds, plus applicable taxes", "documented-variable"),
       feeBpsMax: 25,
     },
     docs: [

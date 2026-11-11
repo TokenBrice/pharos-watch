@@ -1,8 +1,9 @@
+import { COVERAGE_REPAIR_MAX_BLOCKS } from "./repair-policy";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError } from "../../lib/d1-overload-retry";
 import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { setCacheIfNewer } from "../../lib/db-cache";
 import { loadMintBurnSupplyProofRepairCursor, mintBurnSupplyProofRepairCursorKey } from "./repair-supply-proofs";
@@ -13,7 +14,6 @@ import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSum
 // At 20 transactions/POST, leave room for roughly 100 context batches plus evidence reads.
 const COVERAGE_REPAIR_MAX_REQUESTS = 120;
 const COVERAGE_REPAIR_MAX_CONFIGS = 4;
-export const COVERAGE_REPAIR_MAX_BLOCKS = 10_000;
 const COVERAGE_REPAIR_WINDOW_MS = 120_000;
 const COVERAGE_REPAIR_TERMINAL_RESERVE_MS = 60_000;
 
