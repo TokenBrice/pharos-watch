@@ -933,7 +933,7 @@ export async function runGitleaks({
   return { status };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])) {
   void runGitleaks()
     .then((result) => {
       process.exitCode = result.status;

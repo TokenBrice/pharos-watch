@@ -526,7 +526,7 @@ export function buildRouteContext(
           source = { content: readFileSync(canonical, "utf8") };
           documents.set(canonical, source);
         }
-        file = { path: normalizeRepoPath(relative(repoRoot, canonical)), source, ranges: [] };
+        file = { path: normalizeRepoPath(relative(realpathSync(repoRoot), canonical)), source, ranges: [] };
         cache.set(canonical, file);
       }
       let range: MarkdownSectionRange;

@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -796,9 +796,22 @@ describe("local trusted Gitleaks", () => {
     expect(outcome.summary).not.toContain("private scanner diagnostic");
   });
 
-  it("returns usage exit 2 at the direct CLI boundary", () => {
-    const outcome = spawnSync(process.execPath, [resolve("scripts/ci/run-gitleaks.ts"), "--local-trusted"], { encoding: "utf8" });
-    expect(outcome.status).toBe(2);
-    expect(outcome.stderr).not.toContain("Secret:");
+  it("returns help and usage exit codes at the direct and symlinked CLI boundary", () => {
+    const root = mkdtempSync(join(tmpdir(), "gitleaks-cli-symlink-"));
+    try {
+      const scanner = resolve("scripts/ci/run-gitleaks.ts");
+      const alias = join(root, "run-gitleaks.ts");
+      symlinkSync(scanner, alias);
+      for (const entry of [scanner, alias]) {
+        const help = spawnSync(process.execPath, [entry, "--help"], { encoding: "utf8" });
+        expect(help.status).toBe(0);
+        expect(help.stdout).toContain("Usage: run-gitleaks.ts");
+        const outcome = spawnSync(process.execPath, [entry, "--local-trusted"], { encoding: "utf8" });
+        expect(outcome.status).toBe(2);
+        expect(outcome.stderr).not.toContain("Secret:");
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

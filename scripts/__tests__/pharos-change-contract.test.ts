@@ -268,6 +268,15 @@ describe("route context accounting", () => {
     });
   });
 
+  it("keeps context paths repository-relative through a symlinked root", () => {
+    withContextFixture((repoRoot) => {
+      const alias = join(repoRoot, "repo-alias");
+      symlinkSync(repoRoot, alias, "dir");
+      const contract = { docs: [{ path: "guide.md", anchor: "one" }], scopedContext: ["scope.md"], background: [] };
+      expect(buildRouteContext(contract, { repoRoot: alias })).toEqual(buildRouteContext(contract, { repoRoot }));
+    });
+  });
+
   it("lets whole-file reads subsume sections and merges adjacent selected ranges", () => {
     withContextFixture((repoRoot) => {
       const contract = {

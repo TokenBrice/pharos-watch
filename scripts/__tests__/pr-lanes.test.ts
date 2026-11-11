@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { PR_DOC_COMMANDS, PR_LANES, PR_PREPARE_BUDGET_SECONDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
@@ -28,6 +28,11 @@ const actionSchema = z.object({ runs: z.object({ steps: z.array(stepSchema) }) }
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const WORKFLOW = workflowSchema.parse(parseYaml(readFileSync(resolve(REPO_ROOT, ".github/workflows/pull-request-checks.yml"), "utf8")));
 const SETUP_WORKSPACE = actionSchema.parse(parseYaml(readFileSync(resolve(REPO_ROOT, ".github/actions/setup-workspace/action.yml"), "utf8")));
+const missingWorkspaceTools = [
+  spawnSync("bash", ["-c", "(( BASH_VERSINFO[0] >= 4 ))"]).status === 0 ? null : "Bash 4+",
+  /GNU tar/.test(spawnSync("tar", ["--version"], { encoding: "utf8" }).stdout ?? "") ? null : "GNU tar",
+  spawnSync("zstd", ["--version"], { stdio: "ignore" }).status === 0 ? null : "zstd",
+].filter(Boolean);
 
 describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
@@ -214,7 +219,9 @@ describe("PR lane manifest", () => {
     expect(uncached).toEqual([]);
   });
 
-  it("roundtrips executable dependencies without caches and fails on missing transport", () => {
+  it.skipIf(missingWorkspaceTools.length > 0)(`roundtrips executable dependencies without caches and fails on missing transport${
+    missingWorkspaceTools.length ? ` (missing ${missingWorkspaceTools.join(", ")})` : ""
+  }`, () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-workspace-transport-"));
     try {
       const source = join(root, "source");
