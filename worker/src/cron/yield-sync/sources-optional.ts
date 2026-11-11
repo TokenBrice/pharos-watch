@@ -87,7 +87,7 @@ function attachOptionalSource(source: typeof orderedSources[number]): TrackedOpt
     stablecoinId: source.stablecoinId,
     sourceKey: source.sourceKey,
     intendedDormant: undefined,
-    run: (context) => runTimedOptionalSource(
+    run: (context) => runTimedOptionalSource<ResolvedYield | null>(
       source.timeoutLabel,
       context.signal,
       (signal) => OPTIONAL_SOURCE_READERS[source.key](signal, context),

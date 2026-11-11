@@ -113,6 +113,7 @@ export const V9_CONTAGION_INPUT_PREFIXES: readonly string[] = [
   "worker/src/lib/freshness-sentinels.ts",
   "worker/src/lib/hash.ts",
   "worker/src/lib/json-parse.ts",
+  "worker/src/lib/live-reserve-policy.ts",
   "worker/src/lib/redemption-exit-route-observations.ts",
   "worker/src/lib/reserve-feed-reviews.ts",
   "worker/src/lib/safe-error-message.ts",
