@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { PLACED_EXECUTOR_URL, PlacedProjectTapeRequestSchema, PlacedProjectTapeResultSchema } from "@shared/types/placed-executor";
+import { PLACED_EXECUTOR_URL, PlacedProjectTapeRequestSchema, PlacedProjectTapeResultSchema as TapeResult } from "@shared/types/placed-executor";
 import type { PlacedProjectTapeRequest } from "@shared/types/placed-executor";
 import type { HeavyEnv } from "../../../lib/env";
 import { createSlotDeadline } from "../../../lib/cron-timeouts";
@@ -164,7 +163,7 @@ describe("project-tape placed-fetch canary", () => {
   it("executes under the original generation and reports fetch colo without owning terminal accounting", async () => {
     const { env, payload, sqlite } = await executorFixture();
     const response = await handlePlacedExecutorFetch(internalRequest(payload), env);
-    const result = PlacedProjectTapeResultSchema.parse(await response.json());
+    const result = TapeResult.parse(await response.json());
     expect(result).toMatchObject({ status: "ok", itemCount: 7, productivity: { productive: true } });
     expect(JSON.parse(result.metadata)).toMatchObject({ perClass: { depeg: 7 }, executorColo: "FRA",
       executorColoSource: "request.cf.colo", slotStartedAt: payload.slotStartedAt, executionGeneration: 3 });
@@ -174,11 +173,25 @@ describe("project-tape placed-fetch canary", () => {
     expect(sqlite.prepare("SELECT terminal_token FROM scheduled_child_attempts").get()).toEqual({ terminal_token: null });
   });
 
+  it.each(["claim", "projection", "final-fence"])("logs the cause of %s failure", async (phase) => {
+    const { env, payload } = await executorFixture();
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const cause = new Error("D1 overloaded");
+    if (phase === "claim") vi.spyOn(env.DB, "prepare").mockImplementationOnce(() => { throw cause; });
+    if (phase === "projection") mocks.projectTape.mockRejectedValueOnce(cause);
+    if (phase === "final-fence") vi.spyOn(env.DB, "batch").mockRejectedValueOnce(cause);
+    const result = TapeResult.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
+    expect(result.error).toBe("placed-executor-execution-failed");
+    expect(JSON.parse(log.mock.calls[0][0])).toMatchObject({ event: result.error,
+      errorName: "Error", errorMessage: cause.message, metadata: { phase } });
+    expect(mocks.projectTape).toHaveBeenCalledTimes(phase === "claim" ? 0 : 1);
+  });
+
   it("durably rejects duplicate delivery without re-executing the projector", async () => {
     const { env, payload } = await executorFixture();
     await handlePlacedExecutorFetch(internalRequest(payload), env);
     const duplicate = await handlePlacedExecutorFetch(internalRequest(payload), env);
-    expect(JSON.parse(PlacedProjectTapeResultSchema.parse(await duplicate.json()).metadata).reason).toBe("placed-executor-duplicate-or-stale");
+    expect(JSON.parse(TapeResult.parse(await duplicate.json()).metadata).reason).toBe("placed-executor-duplicate-or-stale");
     expect(mocks.projectTape).toHaveBeenCalledOnce();
   });
 
@@ -188,7 +201,7 @@ describe("project-tape placed-fetch canary", () => {
     if (stale === "lease") sqlite.exec("UPDATE cron_leases SET lease_until=0");
     if (stale === "terminal") sqlite.exec("UPDATE scheduled_child_attempts SET terminal_token='done'");
     if (stale === "deadline") payload.workDeadlineMs = Date.now() - 1;
-    const result = PlacedProjectTapeResultSchema.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
+    const result = TapeResult.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
     expect(result.status).toBe("error");
     expect(mocks.projectTape).not.toHaveBeenCalled();
   });
@@ -199,7 +212,7 @@ describe("project-tape placed-fetch canary", () => {
       await db.batch([db.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)").bind("canary-two", "two", 1)]);
       return realResult;
     });
-    const result = PlacedProjectTapeResultSchema.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
+    const result = TapeResult.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
     expect(result.status).toBe("ok");
     expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'canary-%' ORDER BY key").all())
       .toEqual([{ key: "canary-one" }, { key: "canary-two" }]);
@@ -215,9 +228,9 @@ describe("project-tape placed-fetch canary", () => {
     const first = handlePlacedExecutorFetch(internalRequest(payload), env);
     await admitted;
     const duplicate = await handlePlacedExecutorFetch(internalRequest(payload), env);
-    expect(PlacedProjectTapeResultSchema.parse(await duplicate.json()).status).toBe("error");
+    expect(TapeResult.parse(await duplicate.json()).status).toBe("error");
     release();
-    expect(PlacedProjectTapeResultSchema.parse(await (await first).json()).status).toBe("ok");
+    expect(TapeResult.parse(await (await first).json()).status).toBe("ok");
     expect(mocks.projectTape).toHaveBeenCalledOnce();
   });
 
@@ -232,7 +245,7 @@ describe("project-tape placed-fetch canary", () => {
       await db.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('canary-write','bad',1)").run();
       return realResult;
     });
-    const result = PlacedProjectTapeResultSchema.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
+    const result = TapeResult.parse(await (await handlePlacedExecutorFetch(internalRequest(payload), env)).json());
     expect(result.status).toBe("error");
     expect(sqlite.prepare("SELECT value FROM cache WHERE key='canary-write'").get()).toBeUndefined();
   });
@@ -266,7 +279,7 @@ describe("project-tape placed-fetch canary", () => {
     const pending = handlePlacedExecutorFetch(internalRequest(payload), env, { waitUntil });
     await claimStarted;
     await vi.advanceTimersByTimeAsync(20);
-    expect(PlacedProjectTapeResultSchema.parse(await (await pending).json()).error).toBe("placed-executor-timeout");
+    expect(TapeResult.parse(await (await pending).json()).error).toBe("placed-executor-timeout");
     expect(waitUntil).toHaveBeenCalledOnce();
     release();
     await Promise.all(waitUntil.mock.calls.map(([work]) => work));

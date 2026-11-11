@@ -29,6 +29,7 @@ export async function projectTape(
   const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
   db = d1Cost.db;
   const perClass: Record<string, number> = {};
+  const classFailures: Record<string, { name: string; message: string }> = {};
   let total = 0;
   let advancedAny = false;
   const startedMs = Date.now();
@@ -67,7 +68,13 @@ export async function projectTape(
       if (result.advanced != null) advancedAny = true;
       await publishProgress("projected-class", job.name, index + 1, result.projected);
     } catch (err) {
-      recordCronFailure("project-tape", err, { metadata: { class: job.name } });
+      const failure = recordCronFailure("project-tape", err, { metadata: { class: job.name } });
+      const diagnostic = { name: failure.errorName.slice(0, 32), message: failure.errorMessage.slice(0, 200) };
+      // Leave room in the 8 KiB metadata budget even when every class fails with escaped or multibyte text.
+      while (new TextEncoder().encode(JSON.stringify(diagnostic)).length > 320) {
+        diagnostic.message = diagnostic.message.slice(0, Math.floor(diagnostic.message.length / 2));
+      }
+      classFailures[job.name] = diagnostic;
       perClass[job.name] = -1;
       await publishProgress("projected-class-error", job.name, index + 1, -1);
     }
@@ -83,6 +90,6 @@ export async function projectTape(
       productive: !hasFailure,
       reason: hasFailure ? "tape-projector-failed" : "tape-projection-current",
     },
-    metadata: JSON.stringify({ reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, watermarkAdvanced: advancedAny, d1Cost: d1Cost.snapshot() }),
+    metadata: JSON.stringify({ reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, ...(hasFailure ? { classFailures } : {}), watermarkAdvanced: advancedAny, d1Cost: d1Cost.snapshot() }),
   };
 }

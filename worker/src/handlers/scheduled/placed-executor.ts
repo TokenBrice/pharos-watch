@@ -165,6 +165,7 @@ export async function handlePlacedExecutorFetch(
   const respond = (result: CronResult) => Response.json({ ...result,
     metadata: JSON.stringify({ ...parseJsonObject(result.metadata), ...evidence }),
   });
+  let phase: "claim" | "projection" | "final-fence" = "claim";
   let work: Promise<CronResult> | undefined;
   const settled = await settleAfterAbort(() => {
     work = (async () => {
@@ -180,10 +181,12 @@ export async function handlePlacedExecutorFetch(
       assertSlotDeadline(deadline, signal);
       if ((claim.meta.changes ?? 0) !== 1) return failure("placed-executor-duplicate-or-stale");
       const db = guardedProjectorDatabase(env.DB, payload, signal);
+      phase = "projection";
       const result = await projectTape(db, signal);
       assertSlotDeadline(deadline, signal);
       // Projectors may degrade after catching a write error; acceptance still
       // requires live driver authority after their last D1 operation.
+      phase = "final-fence";
       await db.batch([]);
       return result;
     })();
@@ -197,8 +200,13 @@ export async function handlePlacedExecutorFetch(
     return respond(failure("placed-executor-timeout"));
   }
   if (settled.status === "rejected") {
-    return respond(failure(signal.aborted || deadline.remainingMs() <= 0
-      ? "placed-executor-timeout" : "placed-executor-execution-failed"));
+    const reason = signal.aborted || deadline.remainingMs() <= 0
+      ? "placed-executor-timeout" : "placed-executor-execution-failed";
+    logWorkerEvent({
+      scope: "handler", level: "error", event: reason, job: "project-tape",
+      message: "Placed tape executor failed.", error: settled.error, metadata: { phase },
+    });
+    return respond(failure(reason));
   }
   return respond(settled.value);
 }
