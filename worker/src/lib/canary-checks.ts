@@ -28,6 +28,7 @@ import {
 } from "./canary-checks-depeg";
 import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./canary-checks-mintburn";
 import {
+  CANARY_METADATA_BUDGET,
   boundedText,
   degradedResult,
   errorResult,
@@ -205,7 +206,6 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
   critical: 3,
 };
 
-const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
 const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
@@ -981,7 +981,7 @@ async function persistCanaryRun(
   // Keep execution identity outside the bounded finding detail: truncation must
   // never turn a newly completed/failed measurement into legacy unknown evidence.
   const metadataJson = JSON.stringify({
-    ...parseObjectMetadata(boundedJson(result.metadata, MAX_CANARY_METADATA_JSON_CHARS - 500)),
+    ...parseObjectMetadata(boundedJson(result.metadata, CANARY_METADATA_BUDGET)),
     label: result.label,
     description: result.description,
     mode: options.mode ?? "shadow",

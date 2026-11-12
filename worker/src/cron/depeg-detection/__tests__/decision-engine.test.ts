@@ -109,6 +109,31 @@ function makeExistingEvent(overrides: Partial<DepegDetectionRow> = {}): DepegDet
   };
 }
 
+function makeDexRow(dex_price_usd: number, overrides = {}) {
+  return {
+    dex_price_usd,
+    stablecoin_id: "usdt-tether",
+    deviation_from_primary_bps: null,
+    source_pool_count: 2,
+    source_total_tvl: 5_000_000,
+    updated_at: 1_750_000_840,
+    aggregateObservedAt: 1_750_000_840,
+    ...overrides,
+  };
+}
+
+function makeUsdEvent(overrides: Partial<DepegDetectionRow> = {}, pricing = true): DepegDetectionRow {
+  return makeExistingEvent({
+    stablecoin_id: "usdt-tether",
+    symbol: "USDT",
+    peg_type: "peggedUSD",
+    direction: "below",
+    ...(pricing ? { peak_deviation_bps: -200, start_price: 0.98, peak_price: 0.98 } : {}),
+    peg_reference: 1,
+    ...overrides,
+  });
+}
+
 function assertNativeOpening({
   circulating,
   nativePrice,
@@ -208,8 +233,39 @@ describe("decideDepegAsset", () => {
           source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: now - 30, aggregateObservedAt },
         protocolSources: ["curve", "uniswap"].map((protocol) => ({
           protocol, sourceFamily: protocol, chain: "ethereum", price: dexPrice, tvl: 2_500_000, updatedAt: now - 30,
+          observedAt: now - 30, aggregateObservedAt: now - 30,
         })),
       });
+      for (const price of [0.992, null]) {
+        const input = sample(0.992, 0.992);
+        input.asset.price = price;
+        input.dexRow.aggregateObservedAt = now - 30;
+        expect(decideDepegAsset(input).deadBandNotice?.eventId).toBe(7);
+      }
+      const zarp = { ...sample(0.985106, 0.991964),
+        meta: { ...usdMeta, flags: { ...usdMeta.flags, pegCurrency: "ZAR" as const } },
+        asset: makeAsset({ price: 0.985106, priceSource: "coingecko", pegType: "peggedZAR" }),
+        pegRates: { peggedZAR: 1 }, pegRateSources: { peggedZAR: "median" as const }, pegRateCounts: { peggedZAR: 4 } };
+      zarp.dexRow.aggregateObservedAt = now - 30;
+      zarp.dexRow.source_total_tvl = 1605155;
+      zarp.protocolSources.forEach((source, i) => { source.price = i ? 1.022914 : 0.984958; });
+      expect(decideDepegAsset(zarp).deadBandNotice?.price).toBe(0.991964);
+      for (const [dex_price_usd, notice] of [[1.007, false], [1.016, false], [1.0075, true], [1.015, true]] as const) {
+        expect(Boolean(decideDepegAsset({ ...zarp, dexRow: { ...zarp.dexRow, dex_price_usd } }).deadBandNotice)).toBe(notice);
+      }
+      for (const [price, families, age, tvl] of [[0.992, 2, 30, 5e6], [0.992, 1, 30, 5e6],
+        [0.992, 2, 2101, 5e6], [0.992, 2, 30, 999999], [1, 2, 30, 5e6], [0.98, 2, 30, 5e6]]) {
+        const input = sample(price, price);
+        input.protocolSources = input.protocolSources.slice(0, families).map((source, index) => ({ ...source,
+          price: price === 0.992 ? [0.98, 1.02][index] : price, observedAt: now - age }));
+        input.dexRow.source_total_tvl = tvl;
+        const decision = decideDepegAsset(input);
+        const notice = fresh && price === 0.992 && families === 2 && age === 30 && tvl === 5e6;
+        expect(Boolean(decision.deadBandNotice)).toBe(notice);
+        if (notice) expect(decision).toMatchObject({ commands: [], seenEventIds: [7],
+          priceCoverage: { lastObservationKind: "blind" }, deadBandNotice: { eventId: 7, price,
+            contributors: input.protocolSources.map(({ price, observedAt }) => expect.objectContaining({ price, observedAt })) } });
+      }
       const recovery = decideDepegAsset(sample(1, 1));
       expect(recovery.observation).toEqual({ kind: "observed" });
       expect(recovery.commands.map((command) => command.type)).toEqual(fresh ? ["begin-recovery"] : []);
@@ -349,13 +405,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_000,
       asset: makeAsset({ price: 1.02 }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peg_reference: 1,
-      }),
+      existing: makeUsdEvent({}, false),
       ...usdPeg,
     });
     expect(directionFlip.commands[0]).toMatchObject({
@@ -754,10 +804,6 @@ describe("decideDepegAsset", () => {
   it("recovers a native-domain row from its native quote under a nominal USD primary", () => {
     const meta = zarMeta;
 
-    // zarm-mento publishes reviewed ZAR par as `protocol-par` /
-    // `nominal_reference` whenever no trusted market quote is admitted, so its
-    // USD primary is unusable for depeg truth; the admitted ZAR quote decides
-    // the native-domain row (docs/depeg-detection.md#three-state-paths).
     const decision = decideDepegAsset({
       now: 1_750_000_900,
       asset: makeAsset({
@@ -993,16 +1039,7 @@ describe("decideDepegAsset", () => {
         priceConfidence: "low",
       }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
-      }),
+      existing: makeUsdEvent({}),
       ...usdPeg,
     });
 
@@ -1021,13 +1058,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ circulating: { ethereum: 1 } }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peg_reference: 1,
-      }),
+      existing: makeUsdEvent({}, false),
       ...usdPeg,
     });
 
@@ -1057,13 +1088,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ circulating }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peg_reference: 1,
-      }),
+      existing: makeUsdEvent({}, false),
       ...usdPeg,
     });
 
@@ -1082,7 +1107,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ circulating: { ethereum: 0 } }),
       meta: usdMeta,
-      existing: makeExistingEvent({ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", peg_reference: 1 }),
+      existing: makeUsdEvent({}, false),
       ...usdPeg,
     });
 
@@ -1122,27 +1147,11 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset(),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
+      existing: makeUsdEvent({
         started_at: 1_749_997_300,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
       }),
       ...usdPeg,
-      dexRow: {
-        stablecoin_id: "usdt-tether",
-        dex_price_usd: 1.001,
-        deviation_from_primary_bps: null,
-        source_pool_count: 5,
-        source_total_tvl: 5_000_000,
-        updated_at: 1_750_000_840,
-        aggregateObservedAt: 1_750_000_840,
-      },
+      dexRow: makeDexRow(1.001, { source_pool_count: 5, }),
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1161,15 +1170,7 @@ describe("decideDepegAsset", () => {
       asset: makeAsset(),
       meta: usdMeta,
       ...usdPeg,
-      dexRow: {
-        stablecoin_id: "usdt-tether",
-        dex_price_usd: 0.999,
-        deviation_from_primary_bps: null,
-        source_pool_count: 2,
-        source_total_tvl: 5_000_000,
-        updated_at: 1_750_000_840,
-        aggregateObservedAt: 1_750_000_840,
-      },
+      dexRow: makeDexRow(0.999),
       protocolSources: [
         {
           protocol: "curve",
@@ -1205,28 +1206,12 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
+      existing: makeUsdEvent({
         recovery_first_seen_at: 1_750_000_300,
         recovery_last_seen_at: 1_750_000_840,
       }),
       ...usdPeg,
-      dexRow: {
-        stablecoin_id: "usdt-tether",
-        dex_price_usd: 0.98,
-        deviation_from_primary_bps: null,
-        source_pool_count: 2,
-        source_total_tvl: 5_000_000,
-        updated_at: 1_750_000_840,
-        aggregateObservedAt: 1_750_000_840,
-      },
+      dexRow: makeDexRow(0.98),
       protocolSources: [
         {
           protocol: "curve",
@@ -1266,26 +1251,9 @@ describe("decideDepegAsset", () => {
         priceConfidence: "low",
       }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
-      }),
+      existing: makeUsdEvent({}),
       ...usdPeg,
-      dexRow: {
-        stablecoin_id: "usdt-tether",
-        dex_price_usd: 0.999,
-        deviation_from_primary_bps: null,
-        source_pool_count: 1,
-        source_total_tvl: 5_000_000,
-        updated_at: 1_750_000_840,
-        aggregateObservedAt: 1_750_000_840,
-      },
+      dexRow: makeDexRow(0.999, { source_pool_count: 1, }),
       protocolSources: [
         {
           protocol: "curve",
@@ -1313,15 +1281,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
+      existing: makeUsdEvent({
         recovery_first_seen_at: 1_750_000_600,
         recovery_last_seen_at: 1_750_000_840,
       }),
@@ -1343,15 +1303,9 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset(),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
+      existing: makeUsdEvent({
         peak_deviation_bps: -300,
-        start_price: 0.98,
         peak_price: 0.97,
-        peg_reference: 1,
         recovery_first_seen_at: 1_750_000_600,
         recovery_last_seen_at: 1_750_000_840,
       }),
@@ -1365,21 +1319,11 @@ describe("decideDepegAsset", () => {
   it("keeps an event open until the full recovery window elapses", () => {
     const now = 1_750_000_900;
     const tolerance = DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
-    // Anchored to the tolerance rather than a literal: a gap at or under it is still
-    // continuous coverage, one second past it is a blind interval that must reset.
     const decisions = [tolerance - 1, tolerance, tolerance + 1].map((gap) => decideDepegAsset({
       now,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
+      existing: makeUsdEvent({
         recovery_first_seen_at: now - gap - 900,
         recovery_last_seen_at: now - gap,
       }),
@@ -1401,15 +1345,7 @@ describe("decideDepegAsset", () => {
       now: 1_750_000_900,
       asset: makeAsset({ price: 0.993 }),
       meta: usdMeta,
-      existing: makeExistingEvent({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
-        peak_deviation_bps: -200,
-        start_price: 0.98,
-        peak_price: 0.98,
-        peg_reference: 1,
+      existing: makeUsdEvent({
         recovery_first_seen_at: 1_750_000_300,
       }),
       ...usdPeg,
@@ -1457,10 +1393,6 @@ describe("decideDepegAsset", () => {
   });
 
   it("updates a native-peg event peak when the USD primary is inside the trigger threshold", () => {
-    // The USD primary is -99 bps against the 0.191895 BRL reference (inside the
-    // 150 bps non-USD trigger), while the admitted BRZ/BRL quote is -500 bps in
-    // the existing direction. The native domain, not the USD primary, decides
-    // the peak (docs/depeg-detection.md#three-state-paths, Path A).
     const decision = decideDepegAsset({
       now: 1_750_000_900,
       asset: makeAsset({
@@ -1564,16 +1496,10 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeExistingEvent({
+      existing: makeUsdEvent({
         id: 42,
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
-        direction: "below",
         peak_deviation_bps: -250,
         started_at: 1_780_600_000,
-        start_price: 0.98,
-        peg_reference: 1,
       }),
       ...usdPeg,
       challengerPools: [
@@ -1669,17 +1595,13 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeExistingEvent({
+      existing: makeUsdEvent({
         id: 42,
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
         direction: "above",
         peak_deviation_bps: 250,
         started_at: now - 3_600,
         start_price: 1.025,
         peak_price: 1.025,
-        peg_reference: 1,
       }),
       ...usdPeg,
       challengerPools: [
@@ -1712,17 +1634,13 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeExistingEvent({
+      existing: makeUsdEvent({
         id: 42,
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        peg_type: "peggedUSD",
         direction: "above",
         peak_deviation_bps: 250,
         started_at: now - 3_600,
         start_price: 1.025,
         peak_price: 1.025,
-        peg_reference: 1,
       }),
       ...usdPeg,
       challengerPools: [
@@ -1796,9 +1714,6 @@ describe("decideDepegAsset", () => {
   });
 
   it("keeps gold-peg recovery open without original challenger observation times", () => {
-    // Reproduced 2026-09-24 from live D1 (event 90760, vnxau-vnx): the
-    // CoinGecko single-source gram price sat inside the 75 bps commodity
-    // recovery band while the published raydium and aerodrome pools confirmed.
     const now = 1_790_231_427;
     const decision = decideDepegAsset({
       now,
@@ -1950,9 +1865,6 @@ describe("decideDepegAsset", () => {
   });
 
   it("requires the challenger corroborating groups to outvote the diverging set", () => {
-    // The same majority rule decides both directions: two diverging groups
-    // still block a two-group corroborating set, and a third corroborating
-    // group flips the recovery.
     const now = 1_780_630_000;
     const makeDecision = (corroboratingPools: Array<{ price: number; tvlUsd: number; protocol: string; chain: string; sourceFamily: string }>) =>
       decideDepegAsset({
@@ -2013,9 +1925,6 @@ describe("decideDepegAsset", () => {
   });
 
   it("does not bypass a challenged aggregate DEX lane with the pool-challenger majority", () => {
-    // While a fresh trusted aggregate row exists it stays the only DEX recovery
-    // lane: a single diverging challenger pool (below the majority veto) blocks
-    // the aggregate recovery, and the challenger snapshot may not overrule it.
     const now = 1_780_630_000;
     const decision = decideDepegAsset({
       now,

@@ -1,3 +1,5 @@
+export const CANARY_METADATA_BUDGET = 4_000 - 500;
+
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CanaryExecutionStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 

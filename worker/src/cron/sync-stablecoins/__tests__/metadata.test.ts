@@ -1,3 +1,4 @@
+import { sampleDepegDeadBandNotices } from "../../detect-depegs";
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
@@ -32,7 +33,7 @@ it.each([false, true])("preserves bounded native evidence for successful and una
   }
   const result = buildStablecoinsSyncResult({
     ...syncInput(ACTIVE_STABLECOINS.map((coin) => ({
-      id: coin.id, name: coin.name, symbol: coin.symbol, price: coin.id === "hbd-hive" ? diagnostic.price : 1,
+      ...identity(coin), price: coin.id === "hbd-hive" ? diagnostic.price : 1,
     }))),
     providerDiagnostics: [{ source: "hive-native-cg", stage: "primary", endpoint: "api.hive.blog",
       status: null, ok: true, success, nativeMarket: diagnostic }],
@@ -51,6 +52,11 @@ it.each([false, true])("preserves bounded native evidence for successful and una
   const terminal = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, 2000));
   expect(terminal.nativeMarket).toEqual({ evidenceOmitted: true, reason: "metadata-size-guard" });
 });
+
+const identity = ({ id, name, symbol }: Pick<PeggedAsset, "id" | "name" | "symbol">) => ({ id, name, symbol });
+const pricedAssets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
+  ...identity(asset), price: 1, priceSource: "coingecko", circulating: { peggedUSD: 1 },
+}));
 
 function syncInput(
   assets: PeggedAsset[],
@@ -87,9 +93,7 @@ function allMissingSizeGuardFixture(): {
   guard: Parameters<typeof buildSizeGuardedStablecoinsSyncMetadata>[0];
 } {
   const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
-    id: stablecoin.id,
-    name: stablecoin.name,
-    symbol: stablecoin.symbol,
+    ...identity(stablecoin),
     price: null,
     priceSource: "coingecko",
     priceObservedAt: 1_776_999_900,
@@ -175,7 +179,7 @@ function sizeGuardRungBudget(
 describe("stablecoins pricing metadata", () => {
   it.each(["main", "fallback"] as const)("keeps preferred native supply findings as bounded quality on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
-      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1,
+      ...identity(coin), price: 1,
       circulating: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "myrc-blox" ? 0 : 1 },
       supplySource: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
       ...(coin.id === "myrc-blox" ? { supplyRestored: true } : {}),
@@ -220,7 +224,7 @@ describe("stablecoins pricing metadata", () => {
 
   it.each(["main", "fallback"] as const)("does not report healthy, observed-zero or reviewed-held preferred supply on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
-      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1,
+      ...identity(coin), price: 1,
       circulating: coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "stac-securitize" ? 0 : 1 },
       supplySource: coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
     }));
@@ -236,7 +240,7 @@ describe("stablecoins pricing metadata", () => {
 
   it.each(["main", "fallback"] as const)("reports capacity holds as degraded with no depeg capability on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin) => ({
-      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1, circulating: { peggedUSD: 1 },
+      ...identity(coin), price: 1, circulating: { peggedUSD: 1 },
     }));
     const input = {
       ...syncInput(assets),
@@ -265,10 +269,7 @@ describe("stablecoins pricing metadata", () => {
   });
 
   it("retains disabled inline GeckoTerminal provenance in final publication metadata", () => {
-    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
-      circulating: { peggedUSD: 1 },
-    }));
+    const assets: PeggedAsset[] = pricedAssets();
     const result = buildStablecoinsSyncResult({
       ...syncInput(assets),
       gtProbe: {
@@ -284,10 +285,7 @@ describe("stablecoins pricing metadata", () => {
   });
 
   it.each([false, true])("reports completed supply publication with bounded quality findings (quarantined=%s)", (quarantined) => {
-    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
-      circulating: { peggedUSD: 1 },
-    }));
+    const assets: PeggedAsset[] = pricedAssets();
     const result = buildStablecoinsSyncResult({
       ...syncInput(assets),
       supplyChainGuard: {
@@ -315,7 +313,7 @@ describe("stablecoins pricing metadata", () => {
   it("names the degrading publication gap as the quality driver ahead of an informational quarantine", () => {
     const missingCount = Math.ceil(ACTIVE_STABLECOINS.length * 0.01);
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.slice(missingCount).map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      ...identity(asset), price: 1, priceSource: "coingecko",
       circulating: { peggedUSD: 1 },
     }));
     const result = buildStablecoinsSyncResult({
@@ -339,10 +337,7 @@ describe("stablecoins pricing metadata", () => {
     [{ depegErrorCount: 1 }, "depeg-pipeline-errors"],
     [{ stalenessCheckFailed: true }, "price-staleness-check-failed"],
   ] as const)("names every degraded driver in reason and quality (%o)", (override, reason) => {
-    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
-      circulating: { peggedUSD: 1 },
-    }));
+    const assets: PeggedAsset[] = pricedAssets();
     const result = buildStablecoinsSyncResult({ ...syncInput(assets), ...override });
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata!);
@@ -362,10 +357,7 @@ describe("stablecoins pricing metadata", () => {
       unavailableAssets: [{ id: "gap", reason: "supply-unavailable" as const, reviewedNominalReference: false }],
       unavailableIdsTruncated: false,
     };
-    const assets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
-      circulating: { peggedUSD: 1 },
-    }));
+    const assets = (): PeggedAsset[] => pricedAssets();
     const build = (path: "main" | "fallback", extra: Partial<Parameters<typeof buildStablecoinsSyncResult>[0]>) => {
       const rows = assets();
       const input = {
@@ -412,6 +404,26 @@ describe("stablecoins pricing metadata", () => {
       });
     });
 
+    it.each([1, 100])("bounds notice samples before coverage compaction (%i receipts)", (count) => {
+      const notices = Array.from({ length: count }, (_, i) => ({ eventId: i + 1, stablecoinId: "coin",
+        evidenceKind: "dex-aggregate" as const, evaluatedAt: 1, price: .992, deviationBps: -80, publishedAt: 1,
+        aggregateObservedAt: 1, pricedTvlUsd: 1e6, contributorCount: 4,
+        contributors: Array(4).fill({ family: "direct_api", protocol: "orca", chain: "solana", price: .992,
+          deviationBps: -80, tvlUsd: 1e6, observedAt: 1, aggregateObservedAt: 1 }) }));
+      const sample = sampleDepegDeadBandNotices(notices);
+      expect(sample.deadBandNoticesShownCount + sample.deadBandNoticesOmittedCount).toBe(count);
+      expect(sample.deadBandNoticesShownCount).toBe(Math.min(count, 2));
+      const input = { ...syncInput(pricedAssets()), depegObservation: { ...census, ...sample } };
+      const expected = JSON.parse(buildStablecoinsSyncResult(syncInput(pricedAssets())).metadata!).activePriceCoverage;
+      expect(JSON.parse(buildStablecoinsSyncResult(input).metadata!).activePriceCoverage).toEqual(expected);
+      const { guard } = allMissingSizeGuardFixture();
+      const baseline = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, Infinity)).activePriceCoverage;
+      guard.metadata.quality = { depegObservation: { ...census, deadBandNotices: notices } };
+      const result = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard));
+      expect(result.activePriceCoverage).toEqual(baseline);
+      expect(result.quality.depegObservation).toMatchObject({ deadBandNoticesShownCount: 0, deadBandNoticesOmittedCount: count });
+    });
+
     it.each([Infinity, 100_000, 2_000])("retains the census through metadata compaction (budget=%s)", (budget) => {
       const { guard } = allMissingSizeGuardFixture();
       const quality = { reason: "depeg-observation-incomplete", depegObservation: { ...census, syncStartSec: 1 } };
@@ -428,7 +440,7 @@ describe("stablecoins pricing metadata", () => {
     "retains %s fallback observations in source health",
     (source) => {
       const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-        id: asset.id, name: asset.name, symbol: asset.symbol,
+        ...identity(asset),
         price: 1, priceSource: asset.id === "usdc-circle" ? source : "coingecko",
         priceConfidence: "high",
       }));
@@ -457,7 +469,7 @@ describe("stablecoins pricing metadata", () => {
 
   it("separates active catalog health from untracked cache rows and counts absent active assets", () => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.filter((asset) => asset.id !== "usdc-circle").map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol,
+      ...identity(asset),
       price: asset.id === "usdt-tether" ? null : 1,
       priceSource: asset.id === "usdt-tether" ? "missing" : "coingecko",
       priceConfidence: "high",
@@ -481,12 +493,12 @@ describe("stablecoins pricing metadata", () => {
             : asset.id === "usdy-ondo-finance" ? { peggedUSD: 2_000_000_000 }
               : { peggedUSD: 0 };
       if (asset.id === "wusd-worldwide") {
-        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: null, priceSource: "missing", priceConfidence: null, circulating };
+        return { ...identity(asset), price: null, priceSource: "missing", priceConfidence: null, circulating };
       }
       if (asset.id === "usdy-ondo-finance") {
-        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
+        return { ...identity(asset), price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
       }
-      return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
+      return { ...identity(asset), price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
     });
     const result = buildStablecoinsSyncResult({ ...syncInput(assets), syncStartSec: nowSec });
     const active = JSON.parse(result.metadata!).priceSourceHealth.active;
@@ -503,7 +515,7 @@ describe("stablecoins pricing metadata", () => {
   it("keeps calendar-closed prices missing and separates them from review acknowledgements in operator tiles", () => {
     const ids = new Set(["cadm-mento", "audm-mento", "chfm-mento", "copm-mento", "jpym-mento"]);
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol,
+      ...identity(asset),
       price: ids.has(asset.id) ? null : 1, priceSource: ids.has(asset.id) ? "missing" : "coingecko",
     }));
     for (const [syncStartSec, expected] of [
@@ -526,7 +538,7 @@ describe("stablecoins pricing metadata", () => {
             : asset.id === "dai-makerdao" ? { peggedUSD: 0 }
               : { peggedUSD: 1 };
       return {
-        id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+        ...identity(asset), price: 1, priceSource: "coingecko",
         priceConfidence: asset.id === "usdc-circle" ? "low" : "high", circulating,
       };
     });
@@ -542,7 +554,7 @@ describe("stablecoins pricing metadata", () => {
   it("re-alerts a reviewed price gap once its review window has expired", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
-      id: asset.id, name: asset.name, symbol: asset.symbol,
+      ...identity(asset),
       price: asset.id === "wusd-worldwide" ? null : 1,
       priceSource: asset.id === "wusd-worldwide" ? "missing" : "coingecko",
       priceConfidence: asset.id === "wusd-worldwide" ? null : "high" as const,
@@ -557,9 +569,7 @@ describe("stablecoins pricing metadata", () => {
       Array.from({ length: count }, (_, index) => [`diagnostic${index}`, "x".repeat(500)]),
     );
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
-      id: stablecoin.id,
-      name: stablecoin.name,
-      symbol: stablecoin.symbol,
+      ...identity(stablecoin),
       price: 1,
       priceSource: "defillama-list",
       priceConfidence: "single-source" as const,
@@ -634,9 +644,7 @@ describe("stablecoins pricing metadata", () => {
   it("reports missing active prices without downgrading a complete row publication", () => {
     const missingId = ACTIVE_STABLECOINS[0]!.id;
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
-      id: stablecoin.id,
-      name: stablecoin.name,
-      symbol: stablecoin.symbol,
+      ...identity(stablecoin),
       price: stablecoin.id === missingId ? null : 1,
       priceSource: stablecoin.id === missingId ? "coingecko" : "defillama-list",
       priceConfidence: "single-source" as const,
@@ -706,9 +714,7 @@ describe("stablecoins pricing metadata", () => {
     ["systemic", Math.floor(ACTIVE_STABLECOINS.length * 0.1) + 1, "degraded", false, "stablecoin-publication-gap-systemic"],
   ] as const)("bands a %s publication gap", (_band, missingCount, status, cacheSafe, reason) => {
     const assets = ACTIVE_STABLECOINS.slice(missingCount).map((stablecoin) => ({
-      id: stablecoin.id,
-      name: stablecoin.name,
-      symbol: stablecoin.symbol,
+      ...identity(stablecoin),
       price: 1,
       priceSource: "defillama-list",
       priceConfidence: "single-source" as const,
@@ -731,9 +737,7 @@ describe("stablecoins pricing metadata", () => {
 
   it("compacts all-asset gap state below the cron metadata limit without losing streak state", () => {
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
-      id: stablecoin.id,
-      name: stablecoin.name,
-      symbol: stablecoin.symbol,
+      ...identity(stablecoin),
       price: null,
       circulating: { peggedUSD: 1 },
     })) as PeggedAsset[];
@@ -768,9 +772,7 @@ describe("stablecoins pricing metadata", () => {
   it("retains missing-asset source attempts when the metadata size guard compacts diagnostics", () => {
     const missingId = ACTIVE_STABLECOINS[0]!.id;
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
-      id: stablecoin.id,
-      name: stablecoin.name,
-      symbol: stablecoin.symbol,
+      ...identity(stablecoin),
       price: null,
       circulating: { peggedUSD: 1 },
     })) as PeggedAsset[];
@@ -840,8 +842,6 @@ describe("stablecoins pricing metadata", () => {
   it("degrades size-guarded metadata through bounded rungs and fails closed when no rung fits", () => {
     const { guard } = allMissingSizeGuardFixture();
 
-    // A mid-ladder budget sheds verbose gap details but keeps the exact ID
-    // sets, the full compact streak state, and every attempt record.
     const midBudgetBytes = sizeGuardRungBudget(guard, 10, 6);
     const midBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, midBudgetBytes);
     expect(new TextEncoder().encode(midBudget).byteLength).toBeLessThan(midBudgetBytes);
@@ -856,8 +856,6 @@ describe("stablecoins pricing metadata", () => {
     expect(mid.activePriceCoverage.missingActiveAssets).toHaveLength(10);
     expect(mid.priceSourceAttemptLedger.records).toHaveLength(6);
 
-    // No rung can satisfy an impossible budget: the guard fails closed with
-    // bounded scalars instead of an oversized payload.
     const terminalBudget = buildSizeGuardedStablecoinsSyncMetadata(guard, 2_000);
     expect(new TextEncoder().encode(terminalBudget).byteLength).toBeLessThan(2_000);
     const terminal = JSON.parse(terminalBudget) as Record<string, unknown> & {
@@ -873,9 +871,6 @@ describe("stablecoins pricing metadata", () => {
   it("treats terminal size-guard payloads as unavailable continuity and preserves streaks across late rungs", async () => {
     const { assets, guard } = allMissingSizeGuardFixture();
 
-    // A terminal envelope persisted as the previous run's cron metadata is
-    // reported as malformed continuity — unavailable, never a healthy empty
-    // missing set that would silently restart every streak.
     const terminalMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, 2_000);
     const terminalPrior = await loadPreviousStablecoinActivePriceCoverage(
       mockD1([{ match: "activePriceCoverage", rows: [], first: { metadata: terminalMetadata } }]),
@@ -883,9 +878,6 @@ describe("stablecoins pricing metadata", () => {
     );
     expect(terminalPrior).toMatchObject({ status: "read-error", reason: "previous-coverage-malformed" });
 
-    // A late rung that drops every verbose gap detail still round-trips: the
-    // loader restores the full missing set with its streak state, and the next
-    // generation builds on those streaks instead of restarting them.
     const lateRungMetadata = buildSizeGuardedStablecoinsSyncMetadata(guard, sizeGuardRungBudget(guard, 0, 0));
     const lateRung = JSON.parse(lateRungMetadata) as {
       activePriceCoverage: { missingActiveAssets: unknown[]; missingActiveAssetsTruncated: number };
@@ -914,9 +906,7 @@ describe("priced-cohort collapse", () => {
   function pricedAssets(unpricedCount: number): PeggedAsset[] {
     const unpriced = new Set(ACTIVE_STABLECOINS.slice(0, unpricedCount).map((coin) => coin.id));
     return ACTIVE_STABLECOINS.map((coin) => ({
-      id: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
+      ...identity(coin),
       price: unpriced.has(coin.id) ? null : 1,
       priceSource: unpriced.has(coin.id) ? "missing" : "defillama-list",
       priceConfidence: "single-source" as const,

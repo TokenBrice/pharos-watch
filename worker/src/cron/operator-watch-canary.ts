@@ -1,9 +1,14 @@
+import { freshDepegDeadBandNotices } from "../lib/depeg-ledger-clock";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { getDepegThresholdBpsForPegCurrency, getDepegRecoveryThresholdBps } from "../lib/depeg-threshold-policy";
 import { boundedText } from "../lib/canary-check-results";
 import { loadCanaryStatus, type WorkerCanaryMode } from "../lib/canary-checks";
 import type { OperatorWatchEvidenceCondition } from "./operator-watch-types";
 
 export interface CanaryOperatorWatchEvidence {
   conditions: OperatorWatchEvidenceCondition[];
+  notices?: OperatorWatchEvidenceCondition[];
+  noticesUnknown?: boolean;
   /** The canary status could not be read this run: keep prior transition state. */
   unknown: boolean;
 }
@@ -69,7 +74,20 @@ export async function loadCanaryOperatorWatch(
         active: true,
       });
     }
-    return { conditions, unknown: false };
+    const coverage = status.checks["depeg-open-coverage"];
+    const notices = coverage?.executionStatus === "completed" && coverage.observedAt <= now &&
+      now - coverage.observedAt <= status.maxAgeSec
+      ? freshDepegDeadBandNotices(coverage.metadata?.unresolvedBlindEvents, now).flatMap((receipt) => {
+        const meta = PSI_ELIGIBLE_META_BY_ID.get(receipt.stablecoinId);
+        if (!meta) return [];
+        const trigger = getDepegThresholdBpsForPegCurrency(meta.flags.pegCurrency);
+        const recovery = getDepegRecoveryThresholdBps(meta.flags.pegCurrency === "USD" ? "peggedUSD" : undefined);
+        return [{ id: `${receipt.stablecoinId}(${receipt.eventId})`, active: true,
+          label: `${receipt.stablecoinId}(${receipt.eventId}): unresolved, neither confirmed nor recovered; ` +
+            `aggregate $${receipt.price} (${receipt.deviationBps.toFixed(2)} bps); recovery band <=${recovery} bps; trigger >=${trigger} bps; ` +
+            receipt.contributors.map((source) => `${source.family}/${source.protocol}: $${source.price} (${source.deviationBps.toFixed(2)} bps)`).join(", ") }];
+      }) : [];
+    return { conditions, notices, noticesUnknown: !coverage || coverage.executionStatus !== "completed", unknown: false };
   } catch {
     return { conditions: [], unknown: true };
   }

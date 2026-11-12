@@ -484,11 +484,21 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
   };
 }
 
+function omitDepegNoticeSample(metadata: Record<string, unknown>): Record<string, unknown> {
+  const quality = metadata.quality as Record<string, unknown> | undefined;
+  const census = quality?.depegObservation as DepegObservationCensus | undefined;
+  if (!census?.deadBandNotices?.length) return metadata;
+  return { ...metadata, quality: { ...quality, depegObservation: { ...census,
+    deadBandNotices: [], deadBandNoticesShownCount: 0,
+    deadBandNoticesOmittedCount: (census.deadBandNoticesOmittedCount ?? 0) + census.deadBandNotices.length } } };
+}
+
 /** @internal Exported for the metadata size-guard ladder test. */
 export function buildSizeGuardedStablecoinsSyncMetadata(
   guard: StablecoinsMetadataSizeGuardInput,
   budgetBytes: number = MAX_STABLECOINS_CRON_METADATA_BYTES,
 ): string {
+  guard = { ...guard, metadata: omitDepegNoticeSample(guard.metadata) };
   for (const rung of SIZE_GUARD_RUNGS) {
     const candidate = buildSyncMetadata(sizeGuardMetadataForRung(guard, rung), {
       cacheWriteMode: "published",
@@ -726,6 +736,10 @@ export function buildStablecoinsSyncResult(input: {
     cacheWriteMode: "published",
     capabilities,
   });
+  if (serializedByteLength(serializedMetadata) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
+    Object.assign(metadata, omitDepegNoticeSample(metadata));
+    serializedMetadata = buildSyncMetadata(metadata, { cacheWriteMode: "published", capabilities });
+  }
   if (serializedByteLength(serializedMetadata) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
     serializedMetadata = buildSizeGuardedStablecoinsSyncMetadata({
       metadata,

@@ -1,4 +1,4 @@
-import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import type { DepegPrimaryTrust } from "@shared/types/price";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
@@ -854,6 +854,37 @@ function withPriceCoverage(
     rowPriceCoverage(input.existing), input.now,
     trustedOffPeg ? "trusted-off-peg" : trustedAtPar ? "trusted-at-par" : "blind",
   );
+  // A notice cannot grant trust, close an event or mask a lifecycle command.
+  const row = input.dexRow;
+  const fallbackPeg = !ctx && row && input.meta && !input.meta.flags.navToken
+    ? deriveAuthoritativePegSignal({ price: row.dex_price_usd, pegCurrency: input.meta.flags.pegCurrency,
+      pegType: input.asset.pegType, pegRates: input.pegRates, pegRateSources: input.pegRateSources,
+      pegRateCounts: input.pegRateCounts, commodityOunces: input.meta.commodityOunces }) : null;
+  const pegRef = ctx?.pegRef ?? (fallbackPeg?.kind === "signal" ? fallbackPeg.pegReference : null);
+  const dex = row && pegRef ? deriveDepegSignal(row.dex_price_usd, pegRef) : null;
+  if (!trustedOffPeg && !trustedAtPar && !native && pegRef && row && dex &&
+    !decision.commands.some((command) => command.type === "close-event" || command.type === "delete-event") &&
+    isAffirmativeDexPriceRow(row, input.now, "depeg") &&
+    !signalIsWithinThreshold(dex, getDepegRecoveryThresholdBps(input.asset.pegType)) &&
+    !signalCrossesThreshold(dex, getDepegThresholdBps(input.asset.pegType))) {
+    const contributors = (input.protocolSources ?? []).flatMap((source) => {
+      const signal = deriveDepegSignal(source.price, pegRef);
+      if (!signal || !Number.isFinite(source.tvl) || source.tvl < 0 ||
+        source.observedAt == null || source.observedAt <= 0 || source.observedAt > input.now ||
+        input.now - source.observedAt > DEX_PROTOCOL_SOURCE_FRESHNESS_SEC ||
+        source.aggregateObservedAt == null || source.aggregateObservedAt <= 0 || source.aggregateObservedAt > input.now ||
+        input.now - source.aggregateObservedAt > DEX_FRESHNESS_SEC) return [];
+      return [{ family: dexProtocolGroupKey(source), protocol: source.protocol, chain: source.chain,
+        price: source.price, deviationBps: signal.rawBps, tvlUsd: source.tvl,
+        observedAt: source.observedAt, aggregateObservedAt: source.aggregateObservedAt }];
+    });
+    if (new Set(contributors.map((source) => source.family)).size >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      decision.deadBandNotice = { eventId: input.existing.id, stablecoinId: input.asset.id,
+        evidenceKind: "dex-aggregate", evaluatedAt: input.now, price: row.dex_price_usd,
+        deviationBps: dex.rawBps, publishedAt: row.updated_at, aggregateObservedAt: row.aggregateObservedAt!,
+        pricedTvlUsd: row.source_total_tvl, contributorCount: contributors.length, contributors };
+    }
+  }
   return decision;
 }
 

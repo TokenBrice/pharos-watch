@@ -1,3 +1,4 @@
+import { CANARY_METADATA_BUDGET } from "./canary-check-results";
 import {
   DEX_FRESHNESS_SEC,
   DEX_PROTOCOL_SOURCE_FRESHNESS_SEC,
@@ -23,6 +24,7 @@ import {
   DDR_REPAIR_TASK_KIND,
 } from "./repair-tasks";
 import {
+  freshDepegDeadBandNotices,
   DEPEG_CENSUS_PRODUCER_JOB,
   latestDepegLedgerRun,
   loadDepegCensusRuns,
@@ -467,6 +469,7 @@ interface BlindOpenEventRow {
   total_count: number | null;
   acknowledged_count: number | null;
   acknowledged_ids_json: string | null;
+  notice_ids_json?: string | null;
 }
 
 /**
@@ -481,6 +484,11 @@ interface BlindOpenEventRow {
 export async function checkDepegOpenCoverage(db: D1Database, observedAt: number) {
   try {
     const reviews = resolveDepegBlindEventReviews(observedAt);
+    const [run] = await loadDepegCensusRuns(db, 1);
+    const notices = run?.pipelineSucceeded && run.runStartedAt <= observedAt &&
+      run.census && run.census.evaluatedAt >= run.runStartedAt
+      ? freshDepegDeadBandNotices(run.census.deadBandNotices, observedAt)
+        .filter((notice) => notice.evaluatedAt === run.census!.evaluatedAt) : [];
     const blindBefore = observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec;
     const rows = await runWithOverloadRetry(() =>
       db
@@ -489,7 +497,10 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
              id, stablecoin_id, symbol, last_trusted_price_at, price_coverage_gap_started_at,
              CASE WHEN EXISTS (SELECT 1 FROM json_each(?) AS review
                WHERE depeg_events.id = json_extract(review.value, '$.eventId')
-                 AND depeg_events.stablecoin_id = json_extract(review.value, '$.stablecoinId')) THEN 1 ELSE 0 END AS acknowledged
+                 AND depeg_events.stablecoin_id = json_extract(review.value, '$.stablecoinId')) THEN 1 ELSE 0 END AS acknowledged,
+             CASE WHEN EXISTS (SELECT 1 FROM json_each(?) AS notice
+               WHERE depeg_events.id = json_extract(notice.value, '$.eventId')
+                 AND depeg_events.stablecoin_id = json_extract(notice.value, '$.stablecoinId')) THEN 1 ELSE 0 END AS unresolved
            FROM depeg_events
            WHERE ended_at IS NULL
              AND stablecoin_id NOT IN (SELECT value FROM json_each(?))
@@ -497,13 +508,14 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
              AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
            )
            SELECT *, COUNT(*) OVER () AS total_count, SUM(acknowledged) OVER () AS acknowledged_count,
-             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 1) AS acknowledged_ids_json
+             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 1) AS acknowledged_ids_json,
+             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 0 AND unresolved = 1) AS notice_ids_json
            FROM blind
            ORDER BY acknowledged ASC, MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
            LIMIT 25`,
         )
         .bind(JSON.stringify([...reviews.values()].map(({ eventId, stablecoinId }) => ({ eventId, stablecoinId }))),
-          JSON.stringify([...FROZEN_IDS]), blindBefore)
+          JSON.stringify(notices), JSON.stringify([...FROZEN_IDS]), blindBefore)
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];
@@ -520,16 +532,30 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
       || !acknowledgedBlindReviewIds.every((id) => reviews.has(id))) {
       return failedFinding("depeg-open-coverage-aggregate-unavailable");
     }
-    const actionableBlindEventCount = blindEventCount - acknowledgedBlindEventCount;
+    const noticeIds = blind.length === 0 ? [] : z.array(z.number().int().positive()).parse(
+      JSON.parse(blind[0].notice_ids_json ?? "[]"));
+    const unresolvedBlindEvents = notices.filter((notice) => noticeIds.includes(notice.eventId));
+    if (unresolvedBlindEvents.length !== noticeIds.length || new Set(noticeIds).size !== noticeIds.length ||
+      unresolvedBlindEvents.length + acknowledgedBlindEventCount > blindEventCount) {
+      return failedFinding("depeg-open-coverage-aggregate-unavailable");
+    }
+    const unresolvedBlindEventCount = unresolvedBlindEvents.length;
+    const actionableBlindEventCount = blindEventCount - acknowledgedBlindEventCount - unresolvedBlindEventCount;
     // Partition the existing detail sample so counts/review IDs survive the canary metadata cap.
     const events = blind.slice(0, 10).map((row) => ({
       eventId: row.id, stablecoinId: row.stablecoin_id, symbol: row.symbol,
       blindAgeSec: Math.max(0, observedAt - Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0)),
     }));
     const acknowledgedBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId === event.stablecoinId);
-    const actionableBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId !== event.stablecoinId);
+    const actionableBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId !== event.stablecoinId && !noticeIds.includes(event.eventId));
     const metadata = {
       blindEventCount,
+      unresolvedBlindEventCount,
+      unresolvedBlindEvents,
+      deadBandNoticesShownCount: run?.census?.deadBandNoticesShownCount ?? null,
+      deadBandNoticesOmittedCount: run?.census?.deadBandNoticesOmittedCount ?? null,
+      evidenceBudgets: { aggregateMaxAgeSec: DEX_FRESHNESS_SEC, familyMaxAgeSec: DEX_PROTOCOL_SOURCE_FRESHNESS_SEC,
+        minTvlUsd: DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD },
       acknowledgedBlindEventCount,
       actionableBlindEventCount,
       acknowledgedBlindReviewIds,
@@ -540,6 +566,15 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
       blindMaxAgeSec: STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec,
       events,
     };
+    // The persistence envelope truncates oversized metadata as a whole. Do not
+    // suppress blindness if the complete contributor receipt cannot survive it.
+    if (unresolvedBlindEventCount > 0 && JSON.stringify(metadata).length > CANARY_METADATA_BUDGET) {
+      return degradedFinding("depeg-open-coverage-receipt-over-budget", { ...metadata,
+        unresolvedBlindEventCount: 0, unresolvedBlindEvents: [],
+        actionableBlindEventCount: blindEventCount - acknowledgedBlindEventCount,
+        actionableBlindEvents: events.filter((event) => reviews.get(event.eventId)?.stablecoinId !== event.stablecoinId),
+        actionableBlindEventsTruncated: blindEventCount - acknowledgedBlindEventCount > events.length - acknowledgedBlindEvents.length });
+    }
     if (actionableBlindEventCount === 0) return okFinding(metadata);
     return degradedFinding(
       `${actionableBlindEventCount} unreviewed open depeg event(s) have no trusted price observation within ${STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec}s: ` +

@@ -1,3 +1,4 @@
+import { CANARY_METADATA_BUDGET } from "../lib/canary-check-results";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { NominalPriceReferenceSchema, type PegAssetBase } from "@shared/types/price";
@@ -73,6 +74,20 @@ function buildObservationCensus(
   return census;
 }
 
+/** Optional diagnostic samples never compete with coverage for the sync envelope. */
+export function sampleDepegDeadBandNotices(notices: NonNullable<DepegObservationCensus["deadBandNotices"]>) {
+  const deadBandNotices: typeof notices = [];
+  let bytes = 2;
+  for (const notice of notices) {
+    const size = new TextEncoder().encode(JSON.stringify(notice)).byteLength + 1;
+    if (deadBandNotices.length >= DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT || bytes + size > CANARY_METADATA_BUDGET / 2) continue;
+    deadBandNotices.push(notice);
+    bytes += size;
+  }
+  return { deadBandNotices, deadBandNoticesShownCount: deadBandNotices.length,
+    deadBandNoticesOmittedCount: notices.length - deadBandNotices.length };
+}
+
 export async function detectDepegEvents(
   db: D1Database,
   assets: PegAssetBase[],
@@ -109,6 +124,7 @@ export async function detectDepegEvents(
   const commands: DepegPersistenceCommand[] = [];
   const observations = new Map<string, DepegObservationOutcome>();
   const nominalReferenceIds = new Set<string>();
+  const deadBandNotices: NonNullable<DepegObservationCensus["deadBandNotices"]> = [];
 
   for (const asset of assets) {
     throwIfAborted(signal);
@@ -139,6 +155,7 @@ export async function detectDepegEvents(
     for (const eventId of decision.seenEventIds) {
       seen.add(eventId);
     }
+    if (decision.deadBandNotice) deadBandNotices.push(decision.deadBandNotice);
     emitDepegDiagnostics(decision.diagnostics);
     if (existing && decision.priceCoverage) {
       commands.push({ type: "record-price-coverage", id: existing.id, coverage: decision.priceCoverage });
@@ -147,6 +164,7 @@ export async function detectDepegEvents(
   }
 
   const census = buildObservationCensus(observations, nominalReferenceIds, hydrated.now);
+  if (deadBandNotices.length > 0) Object.assign(census, sampleDepegDeadBandNotices(deadBandNotices));
 
   // Entirely omitted assets are coverage gaps too; keeping the lifecycle open
   // must never extend the last trusted off-peg interval.
