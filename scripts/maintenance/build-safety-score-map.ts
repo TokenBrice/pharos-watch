@@ -173,10 +173,12 @@ export const CHART_KEY_PANEL: Rect = { x: WIDTH - MARGIN_X - 282, y: 16, w: 282,
 const SUPPLY_KEY_PANEL: Rect = { x: MARGIN_X, y: 790, w: CORNER_BLOCK_W, h: 94 };
 const FOOTER_PANEL: Rect = { x: WIDTH - MARGIN_X - CORNER_BLOCK_W, y: 790, w: CORNER_BLOCK_W, h: 94 };
 // The two-line title steps in with the ellipse curve: the long first line
-// sits above the shorter second line and deck.
+// sits above the shorter second line and deck. The title lines start at
+// MARGIN_X, two pixels inside these blocks: moving them moves the widths too
+// (the rendered-bounds check only runs with a real browser, at publication).
 const MASTHEAD_EYEBROW: Rect = { x: MARGIN_X - 2, y: 16, w: 500, h: 30 };
-const MASTHEAD_LOCKUP: Rect = { x: MARGIN_X - 2, y: 46, w: 352, h: 50 };
-const MASTHEAD_TAIL: Rect = { x: MARGIN_X - 2, y: 96, w: 214, h: 66 };
+const MASTHEAD_LOCKUP: Rect = { x: MARGIN_X - 2, y: 46, w: 354, h: 50 };
+const MASTHEAD_TAIL: Rect = { x: MARGIN_X - 2, y: 96, w: 216, h: 66 };
 const ANNOTATION_FRAME: Rect = { x: MARGIN_X - 16, y: 4, w: WIDTH - (MARGIN_X - 16) * 2, h: HEIGHT - 8 };
 
 /**
