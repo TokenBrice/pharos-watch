@@ -510,7 +510,8 @@ export async function fetchSolanaTokenSupply(
       );
 
       const amount = body.result?.value?.amount;
-      if (typeof amount !== "string" || amount.length === 0) {
+      // Canonical u64 decimal only: BigInt(" ") is 0n and BigInt("0x10") is 16n.
+      if (typeof amount !== "string" || !/^(0|[1-9][0-9]*)$/.test(amount)) {
         continue;
       }
 
