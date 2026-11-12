@@ -410,8 +410,6 @@ describe("status cause text", () => {
   );
 
   it("excludes an info-severity durable-code cause from durable retention", () => {
-    // A transient active_price_coverage_incomplete is emitted at info severity; it
-    // must not reserve or displace a durable slot the way its warning form does.
     const criticalCauses: StatusCause[] = Array.from({ length: 12 }, (_, index) => ({
       code: `critical-${index}`,
       layer: "data-quality",
@@ -459,9 +457,6 @@ describe("status cause text", () => {
   });
 
   it("keeps dataset ages inside the endpoint budget off the stale cause the per-row window used to flag", () => {
-    // Ages past the 4_500 s per-row `DEX_FRESHNESS_SEC` admission window but at
-    // or below the 14_400 s dataset endpoint budget (including the exact
-    // boundary) must not fire the dataset-age diagnostic.
     for (const ageSeconds of [4_501, 5_000, 14_400]) {
       const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
         makePublicHealth("healthy", {
@@ -1361,6 +1356,21 @@ describe("review expiry reminders", () => {
     for (const change of [{ observedAt: now - 1801 }, { observedAt: now + 1 },
       { executionStatus: "failed" as const }, { metadata: {} }, { metadata: { acknowledgedBlindReviewIds: [] } }]) {
       expect(evaluateDepegBlindReviewCauses({ ...input, checks: { [check.checkId]: { ...check, ...change } } }, now)).toEqual([]);
+    }
+  });
+
+  it("shows only fresh dead-band evidence as an info notice", () => {
+    for (const age of [30, 2101, -1]) {
+      const now = 1_750_000_000;
+      const receipt = { eventId: 7, stablecoinId: "usdt-tether", evidenceKind: "dex-aggregate", evaluatedAt: now,
+        price: 0.992, deviationBps: -80, contributorCount: 2, pricedTvlUsd: 2e6, publishedAt: now, aggregateObservedAt: now,
+        contributors: ["direct_api", "cg_onchain"].map((family) => ({ family, protocol: family, chain: "ethereum",
+          price: 0.992, deviationBps: -80, tvlUsd: 1e6, observedAt: now - age, aggregateObservedAt: now })) };
+      const causes = evaluateDepegBlindReviewCauses({ maxAgeSec: 1800, checks: { "depeg-open-coverage": {
+        checkId: "depeg-open-coverage", label: "", description: "", status: "ok", severity: "info",
+        executionStatus: "completed", observedAt: now, durationMs: 1, metadata: { unresolvedBlindEvents: [receipt] },
+      } } }, now);
+      expect(causes).toEqual(age === 30 ? [expect.objectContaining({ code: "depeg_blind_event_dead_band", severity: "info" })] : []);
     }
   });
 

@@ -1,3 +1,6 @@
+import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { DepegDeadBandReceiptSchema } from "@shared/types/depeg-notice";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { parseObjectMetadata } from "./json-metadata";
@@ -95,6 +98,9 @@ export function parseDepegObservationCensus(parsed: unknown): DepegObservationCe
     })
     ? assets as NonNullable<DepegObservationCensus["unavailableAssets"]> : undefined;
   return {
+    deadBandNotices: DepegDeadBandReceiptSchema.array().safeParse(record.deadBandNotices).data,
+    deadBandNoticesShownCount: isCount(record.deadBandNoticesShownCount) ? record.deadBandNoticesShownCount : undefined,
+    deadBandNoticesOmittedCount: isCount(record.deadBandNoticesOmittedCount) ? record.deadBandNoticesOmittedCount : undefined,
     scope: record.scope,
     evaluatedAt: record.evaluatedAt,
     eligibleCount: record.eligibleCount,
@@ -146,4 +152,19 @@ export function latestDepegLedgerRun(runs: readonly DepegCensusRun[]): DepegCens
 export async function loadLatestDepegLedgerRunAt(db: D1Database): Promise<number | null> {
   const runs = await loadDepegCensusRuns(db, DEPEG_LEDGER_CLOCK_READ_LIMIT);
   return latestDepegLedgerRun(runs)?.runStartedAt ?? null;
+}
+
+/** Re-admit persisted notices at the consumer clock; publication never renews observations. */
+export function freshDepegDeadBandNotices(value: unknown, nowSec: number) {
+  const parsed = DepegDeadBandReceiptSchema.array().safeParse(value);
+  if (!parsed.success || new Set(parsed.data.map((receipt) => receipt.eventId)).size !== parsed.data.length) return [];
+  const fresh = (clock: number, budget: number, inclusive = false) => clock <= nowSec &&
+    (inclusive ? nowSec - clock <= budget : nowSec - clock < budget);
+  return parsed.data.filter((receipt) =>
+    fresh(receipt.evaluatedAt, CRON_INTERVALS[DEPEG_CENSUS_PRODUCER_JOB] * STATUS_DEPEG_DETECTION_THRESHOLDS.ledgerMaxAgeIntervals, true) &&
+    fresh(receipt.publishedAt, DEX_FRESHNESS_SEC) && fresh(receipt.aggregateObservedAt, DEX_FRESHNESS_SEC) &&
+    receipt.pricedTvlUsd >= DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD &&
+    new Set(receipt.contributors.map((source) => source.family)).size >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
+    receipt.contributors.every((source) => fresh(source.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, true) &&
+      fresh(source.aggregateObservedAt, DEX_FRESHNESS_SEC, true)));
 }

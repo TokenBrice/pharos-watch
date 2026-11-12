@@ -322,6 +322,7 @@ describe("depeg canary checks", () => {
 
   it("names open events whose trusted price stopped advancing", async () => {
     const db = mockD1([
+      { match: "pharos:depeg-census-runs", rows: [] },
       {
         match: "pharos:depeg-open-coverage-canary",
         rows: [
@@ -348,6 +349,29 @@ describe("depeg canary checks", () => {
         events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 1_800 }],
       },
     });
+  });
+
+  it.each(["fresh", "stale", "future", "missing", "reviewed", "large", "cut", "omitted"])("partitions dead-band notices: %s", async (kind) => {
+    const now = review.reviewedAt;
+    const { db, sqlite } = fixtures.open();
+    const id = kind === "reviewed" ? review.stablecoinId : "usdt-tether";
+    const receipt = { eventId: review.eventId, stablecoinId: id, evidenceKind: "dex-aggregate", evaluatedAt: now,
+      price: 0.992, deviationBps: -80, contributorCount: kind === "large" ? 30 : kind === "cut" ? 3 : 2, pricedTvlUsd: 2e6, publishedAt: now, aggregateObservedAt: now,
+      contributors: Array.from({ length: kind === "large" ? 30 : 2 }, (_, i) => ["direct_api", "cg_onchain"][i % 2]).map((family) => ({ family, protocol: family, chain: "ethereum",
+        price: 0.992, deviationBps: -80, tvlUsd: 1e6, aggregateObservedAt: now,
+        observedAt: now - (kind === "stale" ? 2101 : kind === "future" ? -1 : 30) })) };
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
+      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId, id, now - 5000, now - 2000);
+    sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-stablecoins', ?, 1, 'ok', ?)")
+      .run(now, JSON.stringify({ capabilities: { depegPipeline: true }, quality: { depegObservation:
+        JSON.parse(censusJson({ evaluatedAt: now, deadBandNoticesOmittedCount: 1, deadBandNotices: ["missing", "omitted"].includes(kind) ? undefined : [receipt] })) } }));
+    const unresolved = kind === "fresh" ? 1 : 0;
+    const acknowledged = kind === "reviewed" ? 1 : 0;
+    expect(await checkDepegOpenCoverage(db, now)).toMatchObject({ status: unresolved || acknowledged ? "ok" : "degraded",
+      metadata: { blindEventCount: 1, unresolvedBlindEventCount: unresolved,
+        actionableBlindEventCount: 1 - unresolved - acknowledged, acknowledgedBlindEventCount: acknowledged,
+        unresolvedBlindEvents: unresolved ? [receipt] : [] } });
   });
 
   it.each(["reviewed", "unreviewed", "new-event", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {

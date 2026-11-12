@@ -1,3 +1,4 @@
+import type { DepegDeadBandReceipt } from "@shared/types/depeg-notice";
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { DepegQuoteDomain } from "@shared/lib/depeg-quote-domain";
 import type { PegAssetBase } from "@shared/types/price";
@@ -41,6 +42,9 @@ export const DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT = 64;
  * Diagnostic only.
  */
 export interface DepegObservationCensus {
+  deadBandNotices?: DepegDeadBandReceipt[];
+  deadBandNoticesShownCount?: number;
+  deadBandNoticesOmittedCount?: number;
   scope: "psi-non-nav-before-supply-floor";
   evaluatedAt: number;
   eligibleCount: number;
@@ -129,6 +133,7 @@ export type DepegPersistenceCommand =
 export interface DepegAssetDecision {
   trackedCoinId?: string;
   seenEventIds: number[];
+  deadBandNotice?: DepegDeadBandReceipt;
   priceCoverage?: DepegPriceCoverage;
   /** Absent for untracked and NAV rows, which are outside the census. */
   observation?: DepegObservationOutcome;

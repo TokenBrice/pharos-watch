@@ -611,6 +611,57 @@ async function alertOnFreshnessTransitions(params: {
   return { stale, recovered, sent: true, cooldown: false };
 }
 
+/** Informational membership and delivery clocks never touch the error transition keys. */
+async function alertOnDepegNoticeTransitions(params: {
+  db: D1Database;
+  canaryWatch: Awaited<ReturnType<typeof loadCanaryOperatorWatch>>;
+  nowSec: number;
+  operatorTelegramCreds: TelegramCreds | null;
+  defer: boolean;
+  signal?: AbortSignal;
+}) {
+  const stateKey = "cron-staleness-watchdog:depeg-notice-state:v1";
+  const deliveryKey = "cron-staleness-watchdog:depeg-notice-delivery:v1";
+  const held = (reason: string) => ({ sent: false, pending: true, reason });
+  if (params.canaryWatch.unknown || params.canaryWatch.noticesUnknown) {
+    return { sent: false, pending: false, reason: "operator-notice-evidence-unavailable" };
+  }
+  try {
+    const [state, delivery] = await Promise.all([
+      getCache(params.db, stateKey, params.signal), getCache(params.db, deliveryKey, params.signal),
+    ]);
+    const stored: unknown = state?.value ? JSON.parse(state.value) : {};
+    if (!stored || typeof stored !== "object" || Array.isArray(stored) ||
+      !Object.values(stored).every((value) => value === true)) return held("operator-notice-state-unavailable");
+    const previous = stored as Record<string, boolean>;
+    const active = (params.canaryWatch.notices ?? []).filter((notice) => notice.active);
+    const ids = new Set(active.map((notice) => notice.id));
+    const next = Object.fromEntries(Object.entries(previous).filter(([id]) => ids.has(id)));
+    // Persist known exits even when delivery is blocked; new entries wait for successful delivery.
+    await setCache(params.db, stateKey, JSON.stringify(next), params.signal);
+    const entered = active.filter((notice) => !next[notice.id]);
+    if (entered.length === 0) return { sent: false, pending: false, reason: null };
+    if (params.defer) return held("operator-notice-deferred");
+    if (!params.operatorTelegramCreds) return held("operator-notice-credentials-missing");
+    const lastDeliveredAt = Number(delivery?.value);
+    if (delivery && (!Number.isFinite(lastDeliveredAt) || lastDeliveredAt > params.nowSec)) return held("operator-notice-state-unavailable");
+    if (Number.isFinite(lastDeliveredAt) && params.nowSec - lastDeliveredAt < CRON_STALENESS_ALERT_COOLDOWN_SEC) {
+      return held("operator-notice-cooldown");
+    }
+    const text = `<b>Unresolved depeg notice (informational)</b>: ${entered.map((notice) => escapeHtml(notice.label ?? notice.id)).join(", ")}`;
+    if (text.length > operatorSectionCharBudget(1)) return held("operator-notice-over-budget");
+    const result = await deliverOperatorAlert(params.operatorTelegramCreds, `${OPERATOR_ALERT_HEADER}${text}`, params.signal);
+    if (!result.ok) return held("operator-notice-delivery-failed");
+    for (const notice of entered) next[notice.id] = true;
+    await setCache(params.db, stateKey, JSON.stringify(next), params.signal);
+    await setCache(params.db, deliveryKey, String(params.nowSec), params.signal);
+    return { sent: true, pending: false, reason: null };
+  } catch (error) {
+    rethrowIfAborted(error, params.signal);
+    return held("operator-notice-state-unavailable");
+  }
+}
+
 export async function runCronStalenessWatchdog(
   db: D1Database,
   signal?: AbortSignal,
@@ -793,14 +844,17 @@ export async function runCronStalenessWatchdog(
     ...(producerQualityActive.length > 0 ? ["producer-quality-regression"] : []),
     ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-sample-coverage"] : []),
   ];
-  const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
-    && !alertTransitions.sent;
+  const noticeTransitions = await alertOnDepegNoticeTransitions({ db, canaryWatch, nowSec,
+    operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+    defer: alertTransitions.sent || alertTransitions.deliveryFailed === true, signal });
+  const pendingTransition = noticeTransitions.pending ||
+    ((alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0) && !alertTransitions.sent);
   const alertReceipt = await recordOperatorAlertReceipt(db, "freshness", {
     nowSec,
     operatorConfigured: options.operatorTelegramCreds != null,
     pending: pendingTransition,
-    delivered: alertTransitions.sent,
-    reason: alertTransitions.sent ? null
+    delivered: alertTransitions.sent || noticeTransitions.sent,
+    reason: noticeTransitions.pending ? noticeTransitions.reason : alertTransitions.sent || noticeTransitions.sent ? null
       : alertTransitions.deliveryFailed ? "operator-alert-delivery-failed"
         : alertTransitions.credentialsMissing ? "operator-alert-credentials-missing"
           : alertTransitions.cooldown ? "operator-alert-cooldown" : null,
@@ -844,6 +898,7 @@ export async function runCronStalenessWatchdog(
       canaryWatch: { active: canaryWatch.conditions.filter((condition) => condition.active).length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
       alerting: alertReceipt,
+      depegNoticeTransitions: noticeTransitions,
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       psiDailyCoverage,
       stale,
