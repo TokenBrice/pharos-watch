@@ -18,9 +18,21 @@
       {
         "label": "Rootstock public RPC",
         "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+      },
+      {
+        "label": "Sovryn attack disclosure (November 8; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612"
+      },
+      {
+        "label": "BabelFish ownership-stop transaction, November 4",
+        "url": "https://rootstock.blockscout.com/tx/0xf34c76dd9c4e113ea46ce0514f6a88ad2e8c996a1bd6fb14afbc3902ff89292c"
       }
     ],
-    "evidence": "The traced redeemToBridge route is caller-self only; it does not establish that every current manager route is self-only. The manager implementation has no verified source at the explorer/Sourcify endpoints, so arbitrary-holder reachability through current code and current proxy-admin membership remain unresolved. The upgradeable manager control makes Possible under the binding policy.",
+    "evidence": "The traced redeemToBridge route is caller-self only; it does not establish that every current manager route is self-only. The manager implementation has no verified source at the explorer/Sourcify endpoints, so arbitrary-holder reachability through current code and current proxy-admin membership remain unresolved. The upgradeable manager control makes Possible under the binding policy. Incident annotation reviewed 2026-11-12, separate from the October blacklistability review: the November 1 Sovryn AMM attack was followed by XUSD/WRBTC delisting on November 2. Separately, BabelFish reward-inventory extraction on November 4 preceded the 08:05:49Z ownership stop removing the converter's mint/burn authority. Current owner reads retain that stop. Ordinary XUSD transfers and approvals are separate; the reward debit does not establish an equal shortfall for remaining holders. The recovery manifest sets no reopening date and does not declare XUSD discontinued. Keep active with an incident notice and recovery review. The original possible verdict, reviewer and review date are retained, not renewed by this annotation.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   }

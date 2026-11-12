@@ -21,11 +21,12 @@ const fixtures = createLatestSchemaFixtureTracker();
 const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
+const authored = psi.slice();
 const [review] = DEPEG_BLIND_EVENT_REVIEWS;
 
 afterEach(() => {
   fixtures.closeAll();
-  psi.length = 0;
+  psi.splice(0, psi.length, ...authored);
   gaps.length = gapCount;
 });
 
@@ -162,29 +163,32 @@ describe("depeg canary checks", () => {
     });
   });
 
+  const gap = "primary-unusable";
   it.each([
-    ["nominal", true, "primary-unusable", 0, {}, 0],
-    ["unreviewed", false, "primary-unusable", 0, {}, 1],
-    ["reviewed", false, "primary-unusable", 0, {}, 0],
-    ["expired", false, "primary-unusable", 1, {}, 1],
-    ["future", false, "primary-unusable", -1, {}, 1],
+    ["nominal", true, gap, 0, {}, 0],
+    ["unreviewed", false, gap, 0, {}, 1],
+    ["reviewed", false, gap, 0, {}, 0],
+    ["expired", false, gap, 1, {}, 1],
+    ["future", false, gap, -1, {}, 1],
     ["wrong mechanism", true, "supply-unavailable", 0, {}, 1],
-    ["truncated", true, "primary-unusable", 0, { unavailableIdsTruncated: true }, 1],
-    ["dropped", true, "primary-unusable", 0, { unavailableIdsDropped: true }, 1],
-    ["legacy", true, "primary-unusable", 0, { unavailableAssets: undefined }, 1],
-    ["malformed", true, "primary-unusable", 0, { unavailableIdsDropped: "invalid" }, 1],
-    ["incomplete", true, "primary-unusable", 0, { unavailableAssets: [] }, 1],
-    ["psi", false, "primary-unusable", 0, {}, 0],
-    ["psi empty", false, "primary-unusable", 0, {}, 1],
-    ["psi active", false, "primary-unusable", 0, {}, 1],
-    ["psi expired", false, "primary-unusable", 1, {}, 1],
-    ["psi future", false, "primary-unusable", -1, {}, 1],
-    ["psi http", false, "primary-unusable", 0, {}, 1],
-    ["closure", false, "primary-unusable", 0, {}, 0],
-    ["reopening wait", false, "primary-unusable", 0, {}, 0],
-    ["reopened", false, "primary-unusable", 0, {}, 1],
+    ["truncated", true, gap, 0, { unavailableIdsTruncated: true }, 1],
+    ["dropped", true, gap, 0, { unavailableIdsDropped: true }, 1],
+    ["legacy", true, gap, 0, { unavailableAssets: undefined }, 1],
+    ["malformed", true, gap, 0, { unavailableIdsDropped: "invalid" }, 1],
+    ["incomplete", true, gap, 0, { unavailableAssets: [] }, 1],
+    ["psi", false, gap, 0, {}, 0],
+    ["psi empty", false, gap, 0, {}, 1],
+    ["psi active", false, gap, 0, {}, 1],
+    ["psi expired", false, gap, 1, {}, 1],
+    ["psi future", false, gap, -1, {}, 1],
+    ["psi http", false, gap, 0, {}, 1],
+    ["closure", false, gap, 0, {}, 0],
+    ["reopening wait", false, gap, 0, {}, 0],
+    ["reopened", false, gap, 0, {}, 1],
   ] as const)("grades actionable census gaps: %s", async (kind, nominal, reason, reviewClock, overrides, actionable) => {
-    const review = STABLECOIN_PRICE_GAP_REVIEWS[0];
+    const review = kind === "psi" ? psi[0] : gaps[0];
+    if (kind === "psi") expect([review?.reviewedAt, review?.expiresAt]).toEqual([1794524520, 1795734120]);
+    if (kind !== "psi") psi.length = 0;
     const reopen = Date.UTC(2026, 10, 8, 23) / 1000;
     const market = ["closure", "reopening wait", "reopened"].includes(kind);
     const now = market ? reopen + 1_801
@@ -192,7 +196,7 @@ describe("depeg canary checks", () => {
     const evaluatedAt = market ? reopen + (kind === "closure" ? -1 : kind === "reopened" ? 1_800 : 1_799) : now;
     const id = kind.startsWith("psi") ? "ust-terra"
       : market ? "audm-mento" : kind === "unreviewed" ? "unreviewed" : review.stablecoinId;
-    if (kind.startsWith("psi") && kind !== "psi empty") {
+    if (kind.startsWith("psi") && kind !== "psi empty" && kind !== "psi") {
       (kind === "psi active" ? gaps : psi).push({ ...review, stablecoinId: id,
         sources: kind === "psi http" ? ["http://example.com"] : review.sources });
     }
@@ -204,6 +208,7 @@ describe("depeg canary checks", () => {
     const result = await checkDepegDetectionCensus(mockD1([{ match: "pharos:depeg-census-runs",
       rows: [row, { ...row, started_at: now - 960 }] }]), now);
     expect(result).toMatchObject({ status: actionable ? "degraded" : "ok", metadata: {
+      ...(kind === "psi" && { acknowledgedUnavailableIds: { reviewedPriceGap: [id] } }),
       unavailableCount: 1, unavailableShare: 0.1, acknowledgedUnavailableCount: 1 - actionable,
       actionableUnavailableCount: actionable, actionableUnavailableIds: "unavailableAssets" in overrides
         || "unavailableIdsTruncated" in overrides || "unavailableIdsDropped" in overrides ? null : actionable ? [id] : [],
@@ -391,10 +396,10 @@ describe("depeg canary checks", () => {
 
   it("validates the blind review registry and rejects duplicates", () => {
     for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
-      const at = entry.eventId === 91042 ? 1_794_515_340 : 1_794_513_840;
+      const at = entry.eventId === 89787 ? 1794521280 : [90807, 90808].includes(entry.eventId) ? 1794519660 : entry.eventId === 91042 ? 1794515340 : 1794513840;
       expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 604800]);
     }
-    expect([...resolveDepegBlindEventReviews(review.reviewedAt).keys()]).toEqual([91042, 91040, 90793, 90786, 90748, 84563, 90804, 91037]);
+    expect([...resolveDepegBlindEventReviews(1794521280).keys()]).toEqual([91042, 91040, 90793, 90786, 90748, 84563, 90804, 91037, 90807, 90808, 89787]);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });

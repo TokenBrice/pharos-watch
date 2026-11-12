@@ -48,6 +48,8 @@ Geometry, marker dimensions, logo plates and packing parameters are owned by `sc
 
 The supply-mass rail is exactly proportional to known mapped supply, with no minimum segment width or separator subtraction. The fixture and growth/capacity cases belong to the generator tests, not a frozen census here.
 
+Nightly validation runs the real-browser clock suite's full-render group in Linux Firefox and rejects a missing or skipped case; see [Scheduled validation](./testing.md#scheduled-validation) for its summary and retained execution report. Linux is authoritative for this geometry check; macOS text boxes measure about 2 px wider and can fail the same fixture.
+
 ### Guards
 
 The generator exits non-zero rather than publishing something wrong. All of these are unconditional:
