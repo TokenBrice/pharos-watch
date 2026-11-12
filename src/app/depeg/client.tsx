@@ -32,6 +32,7 @@ import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } 
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { DepegContentLoadingState } from "./loading-state";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "@/lib/request-lifecycle";
 
 function isProducerClock(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -69,7 +70,6 @@ export function DepegClient() {
   }, []);
   const {
     data: pegData,
-    isLoading: isPegLoading,
     error: pegError,
     dataUpdatedAt: pegUpdatedAt,
     meta: pegMeta,
@@ -97,6 +97,25 @@ export function DepegClient() {
   const resolverReviewSlice = useQuerySlice(resolverReview);
   const resolverData = resolverSlice.data;
   const resolverReviewData = resolverReviewSlice.data;
+  const pegPending = pegData == null && pegError == null;
+  const dewsPending = dewsData == null && dewsError == null;
+  const eventsPending = eventsData == null && eventsError == null;
+  const resolverPending = resolverEnabled && resolverData == null && resolverSlice.error == null;
+  const reviewPending = resolverReviewerEnabled && resolverReviewData == null && resolverReviewSlice.error == null;
+  const heroPending = pegPending || dewsPending || eventsPending || resolverPending || reviewPending;
+  const [heroReleased, setHeroReleased] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setHeroReleased(true), DEFAULT_REQUEST_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!heroPending) {
+      // A settled external read must latch before a no-data retry can clear its error.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHeroReleased(true);
+    }
+  }, [heroPending]);
+  const showInitialSkeleton = heroPending && !heroReleased;
   const logos = logosById;
   const router = useRouter();
 
@@ -246,14 +265,14 @@ export function DepegClient() {
   // the loading state), so align a `#forecast-grading` entry once it is in the DOM.
   const gradingScrollPending = useRef(true);
   useEffect(() => {
-    if (!gradingScrollPending.current || isPegLoading) return;
+    if (!gradingScrollPending.current || showInitialSkeleton) return;
     gradingScrollPending.current = false;
     if (window.location.hash !== "#forecast-grading") return;
     document.getElementById("forecast-grading")?.scrollIntoView?.();
-  }, [isPegLoading]);
+  }, [showInitialSkeleton]);
 
   // Loading state
-  if (isPegLoading) {
+  if (showInitialSkeleton) {
     return <DepegContentLoadingState />;
   }
 
@@ -272,6 +291,7 @@ export function DepegClient() {
           single owner of every one of those headline figures; no module below
           restates them. */}
       <DepegOutlookHero
+        pendingSources={{ peg: pegPending, pegCatalog: dewsAvailable && pegPending, dews: dewsPending && (pegData != null || pegError == null), radar: dewsPending, events: eventsPending, resolver: resolverPending, review: reviewPending }}
         stats={pegData?.summary}
         activeDepegIds={activeDepegIds}
         catalogCount={pegData?.coins ? pegData.coins.length : null}
@@ -281,10 +301,10 @@ export function DepegClient() {
         lineage={resolverEnabled ? resolverData?._meta.lineage ?? null : null}
         review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
         logos={logos}
-        alertQueue={
-          dewsAvailable ? (
+        alertQueue={(reserveSpace) =>
+          dewsAvailable || dewsPending ? (
             <SectionErrorBoundary name="dews-alert-feed">
-              <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded />
+              <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded reserveSpace={reserveSpace} />
             </SectionErrorBoundary>
           ) : null
         }

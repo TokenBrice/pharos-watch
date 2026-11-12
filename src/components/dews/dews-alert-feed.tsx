@@ -20,6 +20,7 @@ interface DEWSAlertFeedProps {
   className?: string;
   /** Render without its own card shell, for composition inside another surface. */
   embedded?: boolean;
+  reserveSpace?: boolean;
 }
 
 interface AlertCoin {
@@ -33,7 +34,7 @@ interface AlertCoin {
 
 const PAGE_SIZE = 3;
 
-export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded }: DEWSAlertFeedProps) {
+export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded, reserveSpace = false }: DEWSAlertFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [page, setPage] = useState(0);
 
@@ -79,11 +80,12 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded 
         ) : (
           <h2 className="pharos-section-title pb-3">DEWS alert queue</h2>
         )}
-        <div className="space-y-2">
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
+        <div className={reserveSpace ? "space-y-1.5" : "space-y-2"}>
+          <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
+          <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
+          <Skeleton className={reserveSpace ? "h-[66px] rounded-lg" : "h-12 rounded-lg"} />
         </div>
+        {reserveSpace ? <div aria-hidden="true" className="-mb-4 mt-2 min-h-17 sm:min-h-10" /> : null}
       </div>
     );
   }
@@ -137,29 +139,33 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded 
           })
         )}
       </div>
-      {totalPages > 1 && (
-        <div className="-mx-4 -mb-4 mt-2 flex items-center justify-between border-t border-border/60 px-4 py-2">
-          <button
-            type="button"
-            disabled={safePage === 0}
-            onClick={() => setPage(safePage - 1)}
-            className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
-            aria-label="Previous page"
-          >
-            ← Prev
-          </button>
-          <span className="pharos-numeric text-xs text-muted-foreground">
-            {safePage + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={safePage >= totalPages - 1}
-            onClick={() => setPage(safePage + 1)}
-            className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
-            aria-label="Next page"
-          >
-            Next →
-          </button>
+      {(totalPages > 1 || reserveSpace) && (
+        <div className={cn("-mx-4 -mb-4 mt-2 flex items-center justify-between border-t border-border/60 px-4 py-2", reserveSpace && "min-h-17 sm:min-h-10")}>
+          {totalPages > 1 ? (
+            <>
+              <button
+                type="button"
+                disabled={safePage === 0}
+                onClick={() => setPage(safePage - 1)}
+                className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+                aria-label="Previous page"
+              >
+                ← Prev
+              </button>
+              <span className="pharos-numeric text-xs text-muted-foreground">
+                {safePage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage(safePage + 1)}
+                className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+                aria-label="Next page"
+              >
+                Next →
+              </button>
+            </>
+          ) : null}
         </div>
       )}
     </div>

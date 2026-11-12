@@ -105,7 +105,7 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   confirmed. At zero it reads `0 coins with open confirmed incidents` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the
   same claim as zero stress, nor that every peg holds.
-- **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
+- **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. After the first-result deadline, unanswered sources say “Loading…”; reservation participation is latched once from the sources still pending at the hero’s first show. Already-settled sources use their compact natural layout; already-empty or unscored resolver groups stay omitted. Only first-show pending sources retain responsive slots through later data, empty and failed reads, including their headline/stat cells, queue and radar dependencies. A DEWS count waiting on a readable snapshot’s missing catalog says “Loading peg catalog…”. Settled unreadable sources retain their unavailable presentation. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
 
 ### Metric ownership
 
@@ -232,9 +232,9 @@ Unrelated query parameters are preserved by the shared hook.
 `DepegResolverReviewerModule` sits in `#forecast-grading` directly after the control
 board and is **always displayed** (there is no show/hide toggle). A cold
 `#forecast-grading` URL re-aligns the anchor once the ledger mounts after the
-loading state.
+bounded hero loading state.
 
-The reviewer query runs with the page whenever the DDRR flag is on. Before its first read, the hero's track record stays unavailable rather than
+The reviewer query runs with the page whenever the DDRR flag is on. Before its first read, the hero's track record says “Loading…” after the gate releases, without
 claiming an empty or safe ledger. Retained review evidence keeps its original clock
 and freshness notice. DDR/DDRR feature flags still gate the section and query.
 
@@ -335,8 +335,13 @@ history anchor; the API, tracker, detail history and feeds retain the full event
 `DEWSRadarPanel` additionally reads `useStablecoins()` for market-cap mark sizing through the shared
 query cache. A refresh error keeps a retained radar; its load-error notice appears only with no data,
 and the route's shared DEWS notice owns retained age.
-The route starts that stablecoin read independently before the peg-summary loading
-return, avoiding a peg-summary → radar-sizing request waterfall.
+The route starts that stablecoin read independently before the hero loading return, avoiding a
+peg-summary → radar-sizing request waterfall. The hero waits for a first result (data or error)
+from peg summary, DEWS, the first event page, and enabled DDR/DDRR queries, bounded from mounted
+waiting by `DEFAULT_REQUEST_TIMEOUT_MS` in `src/lib/request-lifecycle.ts`. Stablecoins sizing is
+excluded from this gate. The mounted deadline never restarts, and the first complete result set
+latches release before a no-data retry can clear an error. No later read restores the initial
+skeleton. Exceptionally long wrapped content may outgrow a slot rather than being clipped.
 
 ---
 
