@@ -345,6 +345,9 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
       state: "completed",
       error: null,
     });
+    // Only a completed cohort has no child D1 work left: an errored child may
+    // be an abandoned one whose publication is still in flight.
+    summary.reserveTailSettled = true;
   } else if (isReserveQueueExhausted(checkpointAfterChildren)) {
     // A settled failed consumer is still a real error, but retries need not
     // wait for a synthetic abandonment or the expired 15-minute claim.

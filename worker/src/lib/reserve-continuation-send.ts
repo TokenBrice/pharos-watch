@@ -3,7 +3,7 @@ import type { ScheduledEnv } from "./env";
 import { loadLiveReserveCheckpoint } from "../cron/reserve-adapters/reserve-checkpoint";
 import { settleAfterAbort } from "./cron-abort-settlement";
 import { SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS, type SlotDeadline } from "./cron-timeouts";
-import { logWorkerEventArgs } from "./structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 
 /** Called only after the executing event and all job/child leases settle. */
 export async function sendReserveContinuation(
@@ -42,4 +42,15 @@ export async function sendReserveContinuation(
       '$.handoff', json(?)) WHERE invocation_id = ? AND state = 'finished'`)
       .bind(JSON.stringify(metrics), message.sourceInvocationId),
   ]), AbortSignal.timeout(Math.min(5_000, accountingMs)), { platformDeadlineMs: Date.now() + accountingMs });
+}
+
+/** Best-effort final D1 work after the cohort tail's event accounting and handoff. */
+export async function refreshReserveReliabilityAfterTail(env: ScheduledEnv, deadline: SlotDeadline): Promise<void> {
+  try {
+    const { refreshReserveSyncReliabilityRollup } = await import("./live-reserves/store-history-read");
+    await refreshReserveSyncReliabilityRollup(env.DB, deadline.platformDeadlineMs);
+  } catch (error) {
+    logWorkerEvent({ scope: "handler", level: "warn", event: "reserve_sync_reliability_rollup_refresh",
+      message: "Reserve tail reliability refresh failed", error, metadata: { reason: "event-tail-refresh-failed" } });
+  }
 }

@@ -75,6 +75,9 @@ import {
   type ScheduledRecoveryCheckpoint,
 } from "../../../cron/reserve-adapters/reserve-checkpoint";
 
+type LogRecord = ReturnType<typeof import("../../../lib/structured-log").buildWorkerLogRecord>;
+type Job = Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1];
+
 const completedChildren = {
   "sync-live-reserves": "completed", "sync-redemption-backstops": "completed",
   "sync-kinesis-supply": "completed", "cron-sentinel": "completed",
@@ -104,7 +107,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     runLeasedCron = vi.fn(
-      async (_job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {
+      async (_job: string, fn: Job) => {
         return fn(new AbortController().signal, async () => {});
       },
     );
@@ -169,6 +172,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       slotStartedAt: 900, observedAt: 1000, lookaheadSec: 1440, condition: "same-role-slot-running",
     });
     const result = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+    expect(result.reserveTailSettled).toBeUndefined();
     expect(result).toMatchObject({ jobsErrored: 0, jobsDegraded: 0, jobsNeutralSkipped: 4 });
     expect(syncLiveReserves).not.toHaveBeenCalled();
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
@@ -307,12 +311,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       .find((value: unknown): value is string => typeof value === "string" && value.includes("Live reserves sync failed"));
     expect(errorLine).toBeDefined();
     if (typeof errorLine !== "string") throw new Error("expected a structured reserve failure log line");
-    const errorRecord = JSON.parse(errorLine) as {
-      message?: string;
-      errorName?: string;
-      errorMessage?: string;
-      errorStack?: string;
-    };
+    const errorRecord = JSON.parse(errorLine) as LogRecord;
     expect(errorRecord).toMatchObject({
       message: "[hourly-live-reserves] Live reserves sync failed:", errorName: "Error",
       errorMessage: "sync blew up",
@@ -331,6 +330,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
     const summary = await runFourHourlyReserveSyncSlot(buildRuntime(exhaustedCheckpoint));
 
+    expect(summary.reserveTailSettled).toBeUndefined();
     expect(summary).toMatchObject({ jobsErrored: 1, jobsSkipped: 0, jobsNeutralSkipped: 2 });
     expect(ranJobs().sort()).toEqual([
       "sync-kinesis-supply", "sync-live-reserves",
@@ -350,9 +350,9 @@ describe("runFourHourlyReserveSyncSlot", () => {
   it("does not let a redemption failure block Kinesis or the reserve watchdog", async () => {
     vi.mocked(syncRedemptionBackstops).mockRejectedValue(new Error("rb blew up"));
 
-    await expect(runFourHourlyReserveSyncSlot(tailRuntime())).resolves.toMatchObject({
-      jobsRun: 2, jobsErrored: 1, jobsSkipped: 0,
-    });
+    const errored = await runFourHourlyReserveSyncSlot(tailRuntime());
+    expect(errored).toMatchObject({ jobsRun: 2, jobsErrored: 1, jobsSkipped: 0 });
+    expect(errored.reserveTailSettled).toBeUndefined();
 
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
@@ -362,12 +362,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
       .find((value: unknown): value is string => typeof value === "string" && value.includes("Redemption backstops sync failed"));
     expect(errorLine).toBeDefined();
     if (typeof errorLine !== "string") throw new Error("expected a structured redemption failure log line");
-    const errorRecord = JSON.parse(errorLine) as {
-      message?: string;
-      errorName?: string;
-      errorMessage?: string;
-      errorStack?: string;
-    };
+    const errorRecord = JSON.parse(errorLine) as LogRecord;
     expect(errorRecord).toMatchObject({
       message: "[hourly-live-reserves] Redemption backstops sync failed:", errorName: "Error",
       errorMessage: "rb blew up",
@@ -430,16 +425,16 @@ describe("runFourHourlyReserveSyncSlot", () => {
     }) as never);
 
     releaseSync();
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()))).resolves
-      .toMatchObject({ jobsErrored: 0, jobsSkipped: 0, jobsNeutralSkipped: 2 });
+    const summary = await runFourHourlyReserveSyncSlot(buildRuntime(recoveryCheckpoint()));
+    expect(summary).toMatchObject({ jobsErrored: 0, jobsSkipped: 0, jobsNeutralSkipped: 2 });
+    expect(summary.reserveTailSettled).toBeUndefined();
 
-    // The fresh tail must observe the completed producer generation.
     expect(order).toEqual(["producer:start", "producer:end"]);
     expect(
       vi.mocked(setCache).mock.calls.some(([, key]) => key === SNAPSHOT_KEYS.reserve),
     ).toBe(false);
     expect(continueLiveReserveCheckpoint).toHaveBeenCalledTimes(1);
-    await runFourHourlyReserveSyncSlot(tailRuntime());
+    expect((await runFourHourlyReserveSyncSlot(tailRuntime())).reserveTailSettled).toBe(true);
     expect(order).toEqual(["producer:start", "producer:end", "watchdog:drift-read"]);
   });
 
@@ -447,7 +442,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
     "sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "cron-sentinel",
   ] as const)("keeps a checkpoint recoverable when %s is lease-contended", async (contendedJob) => {
     runLeasedCron.mockImplementation(
-      async (job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) => {
+      async (job: string, fn: Job) => {
         if (job === contendedJob) return { status: "skipped_locked" };
         return fn(new AbortController().signal, async () => {});
       },
@@ -483,7 +478,7 @@ describe("runFourHourlyReserveSyncSlot", () => {
   it.each(["skipped_locked", "error"])("retries a %s redemption sidecar without replaying completed children", async (failure) => {
     let contended = failure === "skipped_locked";
     if (!contended) vi.mocked(syncRedemptionBackstops).mockRejectedValueOnce(Error("redemption failed"));
-    runLeasedCron.mockImplementation(async (job: string, fn: (signal: AbortSignal, reportProgress: unknown) => Promise<unknown>) =>
+    runLeasedCron.mockImplementation(async (job: string, fn: Job) =>
       job === "sync-redemption-backstops" && contended ? { status: "skipped_locked" }
         : fn(new AbortController().signal, async () => {}));
     const firstSummary = await runFourHourlyReserveSyncSlot(tailRuntime());

@@ -26,6 +26,7 @@ export type ScheduledSlotJobSummary = {
 
 export type ScheduledSlotSummary = {
   reserveContinuation?: ReserveContinuationMessage;
+  reserveTailSettled?: true;
   resultStatus: Exclude<SchedulerSummaryOutcome, "skipped">;
   jobsAttempted: number;
   jobsSucceeded: number;
