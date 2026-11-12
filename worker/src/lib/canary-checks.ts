@@ -875,7 +875,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "tape-class-liveness",
     label: "Tape class liveness",
-    description: "Snapshot-backed tape projector cursors keep up with moving source clocks inside the 90-minute lag budget.",
+    description: "The oldest source row a snapshot-backed tape projector has not yet reached waits no longer than the 90-minute lag budget.",
     run: checkTapeClassLiveness,
   },
   {

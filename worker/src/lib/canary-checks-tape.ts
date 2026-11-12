@@ -65,6 +65,28 @@ const SOURCE_CLOCK_SQL = `SELECT /* pharos:canary:tape-class-liveness */
   (SELECT MAX(recorded_at) FROM yield_history WHERE is_best = 1) AS yield_history_at,
   (SELECT MAX(created_at) FROM yield_source_decisions) AS yield_decisions_at`;
 
+// Numbered parameters reuse each class's cursor across the two score relations.
+const UNPROJECTED_CLOCK_SQL = `SELECT /* pharos:canary:tape-oldest-unprojected */
+  (SELECT MIN(stored_at) FROM stability_index_samples WHERE stored_at > ?1) AS "psi.band_changed",
+  (SELECT MIN(computed_at) FROM stress_signals WHERE computed_at > ?2) AS "dews.escalated",
+  (SELECT MIN(computed_at) FROM stress_signals WHERE computed_at > ?3) AS "dews.deescalated",
+  (SELECT MIN(clock) FROM (
+    SELECT MIN(recorded_at) AS clock FROM safety_grade_history
+      WHERE prev_grade IS NOT NULL AND recorded_at > ?4
+    UNION ALL
+    SELECT MIN(recorded_at) AS clock FROM safety_score_history_v2
+      WHERE transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL AND recorded_at > ?4
+  )) AS "score.upgraded",
+  (SELECT MIN(clock) FROM (
+    SELECT MIN(recorded_at) AS clock FROM safety_grade_history
+      WHERE prev_grade IS NOT NULL AND recorded_at > ?5
+    UNION ALL
+    SELECT MIN(recorded_at) AS clock FROM safety_score_history_v2
+      WHERE transition_kind = 'organic-grade-change' AND prev_grade IS NOT NULL AND recorded_at > ?5
+  )) AS "score.downgraded",
+  (SELECT MIN(recorded_at) FROM yield_history WHERE is_best = 1 AND recorded_at > ?6) AS "yield.warning_emitted",
+  (SELECT MIN(created_at) FROM yield_source_decisions WHERE created_at > ?7) AS "yield.pys_dropped"`;
+
 interface TapeSourceClocksRow {
   psi_at: number | null;
   dews_at: number | null;
@@ -111,7 +133,7 @@ export async function checkTapeClassLiveness(
       TAPE_CLASS_SOURCES.map((source) => tapeProjectorCursorKey(source.eventClass)),
     );
     const lagBudgetSec = CRON_INTERVALS["project-tape"] * TAPE_LAG_BUDGET_MULTIPLIER;
-    const classes = TAPE_CLASS_SOURCES.map((source) => {
+    const sourceStates = TAPE_CLASS_SOURCES.map((source) => {
       const sourceMax = sourceClockFor(source.eventClass, clockRow);
       const cursor = parseProjectorWatermark(
         cursorRows.get(tapeProjectorCursorKey(source.eventClass))?.value,
@@ -130,8 +152,33 @@ export async function checkTapeClassLiveness(
         sourceAgeSec,
         lagBudgetSec,
         evaluated,
-        reason: evaluated
-          ? lagSec != null && lagSec > lagBudgetSec ? "cursor-lag" : null
+      };
+    });
+    const needsUnprojectedClock = sourceStates.some((entry) =>
+      entry.evaluated && entry.sourceMax != null && entry.cursor < entry.sourceMax,
+    );
+    const unprojectedClocks = needsUnprojectedClock
+      ? await runWithOverloadRetry(() =>
+        db.prepare(UNPROJECTED_CLOCK_SQL)
+          .bind(...sourceStates.map((entry) => entry.cursor))
+          .first<Record<string, number | null>>(),
+      )
+      : null;
+    const classes = sourceStates.map((entry) => {
+      const behind = entry.lagSec != null && entry.lagSec > 0;
+      const oldestUnprojectedAt = behind ? unprojectedClocks?.[entry.eventClass] ?? null : null;
+      if (entry.evaluated && behind && oldestUnprojectedAt == null) {
+        throw new Error(`tape unprojected source clock unavailable: ${entry.eventClass}`);
+      }
+      const waitingSec = !entry.evaluated ? null : behind
+        ? oldestUnprojectedAt == null ? null : Math.max(0, observedAt - oldestUnprojectedAt)
+        : entry.sourceMax == null ? null : 0;
+      return {
+        ...entry,
+        oldestUnprojectedAt,
+        waitingSec,
+        reason: entry.evaluated
+          ? waitingSec != null && waitingSec > lagBudgetSec ? "cursor-lag" : null
           : "source-stale-or-unavailable",
       };
     });
@@ -145,7 +192,7 @@ export async function checkTapeClassLiveness(
     if (lagging.length > 0) {
       return degradedResult(
         `tape projector cursor lag exceeds ${lagBudgetSec}s: ` +
-          lagging.map((entry) => `${entry.eventClass} (${entry.lagSec}s)`).join(", "),
+          lagging.map((entry) => `${entry.eventClass} (${entry.waitingSec}s waiting)`).join(", "),
         metadata,
       );
     }
