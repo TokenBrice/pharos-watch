@@ -14,10 +14,11 @@ import { WORKER_TRACKED_META_BY_ID, hasWorkerLiveReserves } from "@shared/lib/st
 import { getReserves } from "@shared/lib/reserve-templates";
 import { getLiveReserveAdapterDefinition, computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 
-import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import { YUZU_REVIEW as acknowledgedReview, installYuzuReview } from "../../lib/__tests__/live-reserves-store.test-support";
 import { adaptOndoUsdyPortfolio } from "../../cron/reserve-adapters/ondo-usdy";
 
-const acknowledgedReview = RESERVE_FEED_REVIEWS.find((review) => review.stablecoinId === "yzusd-yuzu")!;
+installYuzuReview();
+const reviewedFingerprint = computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(acknowledgedReview.stablecoinId)!.liveReservesConfig!);
 
 function reviewedSyncRow(now: number, overrides: Parameters<typeof reserveSyncRow>[1] = {}) {
   return {
@@ -29,7 +30,7 @@ function reviewedSyncRow(now: number, overrides: Parameters<typeof reserveSyncRo
     }),
     stablecoin_id: acknowledgedReview.stablecoinId,
     adapter_key: acknowledgedReview.adapterKey,
-    config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(acknowledgedReview.stablecoinId)!.liveReservesConfig!),
+    config_fingerprint: reviewedFingerprint,
   };
 }
 
@@ -43,7 +44,7 @@ function reviewedCompositionRow(fetchedAt: number) {
     source: acknowledgedReview.adapterKey,
     adapter_source_model: definition.sourceModel,
     adapter_evidence_class: definition.evidenceClass,
-    config_fingerprint: computeLiveReserveConfigFingerprint(WORKER_TRACKED_META_BY_ID.get(acknowledgedReview.stablecoinId)!.liveReservesConfig!),
+    config_fingerprint: reviewedFingerprint,
   };
 }
 
@@ -159,7 +160,7 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("publishes matched acknowledgement without admitting missing evidence", async () => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
+    const review = acknowledgedReview;
     vi.useFakeTimers();
     vi.setSystemTime((review.reviewedAt + 1) * 1000);
     try {
@@ -576,9 +577,6 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("routes live-stale mode to the intermediate cache-control tier", async () => {
-    // Composition fetched_at + sync.last_success_at both well beyond the
-    // 2-day freshness window (LIVE_RESERVE_FRESHNESS_SEC) so resolveReserveResult
-    // returns mode=live-stale.
     const now = Math.floor(Date.now() / 1000);
     const fetchedAt = now - 3 * 24 * 3600;
     const db = mockD1([

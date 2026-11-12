@@ -18,6 +18,7 @@ import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage
 import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
+  type SupplySnapshotCompletionMarkerInput as Marker,
 } from "../supply-snapshot-completion";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -25,6 +26,7 @@ const NOW = 1_790_000_000;
 const TODAY = startOfUtcDaySec(new Date(NOW * 1000));
 const ACTIVE = [...ACTIVE_IDS].slice(0, 14);
 const SUPPLY_SOURCE = "defillama";
+const CARRIES = ["coin-a", "coin-b", "coin-c", "coin-d", "coin-e", "coin-f"];
 const CHARTS_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoin-charts"];
 
 afterEach(() => {
@@ -89,13 +91,7 @@ function supplyRun(unavailable: number, observed: number, startedAt = NOW - 900)
   };
 }
 
-function marker(overrides: {
-  snapshotDate?: number;
-  expectedActiveCount?: number;
-  accountedActiveCount?: number;
-  ownedRowIds?: string[];
-  unavailableActiveIds?: string[];
-} = {}) {
+function marker(overrides: Partial<Marker> = {}) {
   const ids = overrides.ownedRowIds ?? ACTIVE;
   return {
     ...buildSupplySnapshotCompletionMarker({
@@ -145,8 +141,8 @@ function timedDatabase() {
   return fixtures.open();
 }
 
-function loadReport(options: Parameters<typeof database>[0]) {
-  return loadSupplyIntegrityReport(database(options), NOW);
+function loadReport(options: Parameters<typeof database>[0], now = NOW) {
+  return loadSupplyIntegrityReport(database(options), now);
 }
 
 function conditionOf(report: SupplyIntegrityReport, id: string) {
@@ -183,8 +179,12 @@ function integrityReport(count = 100): SupplyIntegrityReport {
 }
 
 describe("supply integrity", () => {
-  it.each(REVIEWED_SUPPLY_CARRIES)("acknowledges only in-use $stablecoinId carries and re-arms at expiry", async (review) => {
+  it.each([...REVIEWED_SUPPLY_CARRIES, ...["doc-money-on-chain", "nusd-nexus", "usdnr-nerona", "wm-m0"].map(stablecoinId => ({
+    ...REVIEWED_SUPPLY_CARRIES[0], stablecoinId, reviewedAt: 1794127260, expiresAt: 1794732060,
+    reason: stablecoinId === "wm-m0" ? "coingecko-cap-carry" as const : "defillama-list-fill-default-carry" as const,
+  }))])("acknowledges only in-use $stablecoinId carries and re-arms at expiry", async (review) => {
     const { stablecoinId, reviewedAt, expiresAt } = review;
+    const retired = !REVIEWED_SUPPLY_CARRIES.includes(review);
     expect(ACTIVE_IDS.has(stablecoinId)).toBe(true);
     expect(review.evidence).toBeTruthy();
     expect(expiresAt - reviewedAt).toBeGreaterThan(0);
@@ -193,28 +193,28 @@ describe("supply integrity", () => {
       expect(reviewedAt).toBe(Date.UTC(2026, 10, 11, 23, 19, 58) / 1000);
       expect(expiresAt).toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
     }
-    const carried = [{ id: stablecoinId, current: 0, previous: 100, supplyRestored: true,
+    const carried = [{ id: stablecoinId, current: 0, previous: 100, supplyRestored: true, supplyObservedAt: reviewedAt - 3600,
       guard: review.reason === "defillama-list-fill-default-carry", currentSource: review.reason === "coingecko-cap-carry"
         ? "coingecko-fallback" : review.reason === "nav-parent-price-gap" ? "onchain-total-supply" : "defillama" }];
-    const read = (now: number, assets: AssetInput[] = carried) => loadSupplyIntegrityReport(database({ assets }), now);
+    const read = (now: number, assets: AssetInput[] = carried) => loadReport({ assets }, now);
     const active = await read(reviewedAt);
     expect(active.value.carryIds).toHaveLength(1);
-    expect(active.value.acknowledgedCarryReviews).toHaveLength(1);
-    expect(active.value.unacknowledgedCarryIds).toEqual([]);
-    expect(codes(active)).toContain("supply_carry_reviews_acknowledged");
+    expect(active.value.acknowledgedCarryReviews).toHaveLength(+!retired);
+    expect(active.value.unacknowledgedCarryIds).toEqual(retired ? [stablecoinId] : []);
+    expect(codes(active).includes("supply_carry_reviews_acknowledged")).toBe(!retired);
     expect(codes(active)).not.toContain("supply_carry_stale");
     expect(conditionOf(active, "carry")?.active).toBe(false);
     for (const age of [3600, 3 * 86400]) {
       const mixed = await read(reviewedAt, [...carried, { ...carried[0], id: ACTIVE[0], supplyObservedAt: reviewedAt - age }]);
-      expect(mixed.value.unacknowledgedCarryIds).toEqual([ACTIVE[0]]);
+      expect(mixed.value.unacknowledgedCarryIds).toEqual([ACTIVE[0], ...(retired ? [stablecoinId] : [])].sort());
       expect(codes(mixed).includes("supply_carry_stale")).toBe(age > 48 * 3600);
       expect(conditionOf(mixed, "carry")?.active).toBe(age > 48 * 3600);
     }
     for (const offset of [STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC + 1, STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC, 1, 0]) {
       const report = await read(expiresAt - offset);
-      expect(codes(report).includes("supply_carry_reviews_expiring")).toBe(offset > 0 && offset <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC);
-      expect(codes(report).includes("supply_carry_reviews_expired")).toBe(offset === 0);
-      expect(codes(report).includes("supply_carry_stale")).toBe(offset === 0);
+      expect(codes(report).includes("supply_carry_reviews_expiring")).toBe(!retired && offset > 0 && offset <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC);
+      expect(codes(report).includes("supply_carry_reviews_expired")).toBe(!retired && offset === 0);
+      expect(codes(report).includes("supply_carry_stale")).toBe(retired || offset === 0);
     }
     for (const now of [reviewedAt - 1, expiresAt]) {
       expect((await read(now)).value.acknowledgedCarryReviews).toEqual([]);
@@ -387,7 +387,7 @@ describe("supply integrity", () => {
     Object.assign(base.value, {
       status: "unknown", reason: "supply-history-read-failed", checkedCount: 0,
       aggregateCurrentUsd: null, aggregatePreviousUsd: null, aggregateRatio: null,
-      unacknowledgedCarryIds: ["coin-a", "coin-b", "coin-c", "coin-d", "coin-e", "coin-f"], unacknowledgedCarryOldestAgeSec: 5 * 86_400,
+      unacknowledgedCarryIds: CARRIES, unacknowledgedCarryOldestAgeSec: 5 * 86_400,
     });
     const assessment = assessSupplyIntegrityQuality(base);
     expect(codes(base)).toEqual(expect.arrayContaining([
@@ -406,8 +406,8 @@ describe("supply integrity", () => {
     };
     const carryOf = (conditions: ReturnType<typeof buildSupplyIntegrityConditions>) =>
       conditions.find((condition) => condition.id === "carry")!;
-    const first = buildSupplyIntegrityConditions(reportWithCarry(["coin-a", "coin-b", "coin-c", "coin-d", "coin-e"]));
-    const second = buildSupplyIntegrityConditions(reportWithCarry(["coin-a", "coin-b", "coin-c", "coin-d", "coin-f"]));
+    const first = buildSupplyIntegrityConditions(reportWithCarry(CARRIES.slice(0, 5)));
+    const second = buildSupplyIntegrityConditions(reportWithCarry([...CARRIES.slice(0, 4), CARRIES[5]]));
     expect(carryOf(first).signature).toBe(carryOf(second).signature);
 
     expect(carryOf(await confirmSupplyIntegrityConditions(db, first)).active).toBe(false);
@@ -484,29 +484,29 @@ describe("supply integrity", () => {
     const a = normalAssets();
     a[0] = { ...a[0], id: "iauon-ondo", current: 1_747_207.06, previous: 3_900_000 };
     a[1] = { ...a[1], id: "gtusdtp-gauntlet", current: 300_000, previous: 300_000 };
-    const r = await loadSupplyIntegrityReport(database({
+    const r = await loadReport({
       assets: a,
       confirmState: { "value-drift": { signature: "x", runs: 2, held: { "iauon-ondo": 3_900_000, "gtusdtp-gauntlet": 2_900_000 } } },
-    }), 1_793_836_800);
+    }, 1_794_512_040);
     expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "gtusdtp-gauntlet" }] });
-    const reviewedAt = Date.parse("2026-11-07T19:48:00Z") / 1000;
-    for (const [id, current, previous, reviewStart = reviewedAt] of [
+    const epoch = Date.parse("2026-11-07T19:48:00Z") / 1000;
+    for (const [id, current, previous, start = epoch] of [
       ["sparkusdtbc-spark", 850_692.45, 50_307_247.03],
-      ["frnt-wyoming", 397_773.24, 967_404.4],
+      ["frnt-wyoming", 397_773.24, 967_404.4, 1_794_512_040],
       ["wmxn-ripio", 176_488.15, 663_063.37],
       ["wcop-ripio", 193_650.25, 544_889.08],
-      ["tryb-bilira", 698_792.67, 2_219_652.08, Date.parse("2026-11-07T20:27:00Z") / 1000],
-      ["gbpa-agant", 1_191_268.85, 2_481_810, Date.parse("2026-11-07T21:10:00Z") / 1000],
-      ["witry-brix", 1_543_091.36, 3_365_372.58, Date.parse("2026-11-11T23:21:24Z") / 1000],
+      ["tryb-bilira", 698_792.67, 2_219_652.08, Date.parse("2026-11-12T19:34:00Z") / 1000],
+      ["gbpa-agant", 1_191_268.85, 2_481_810, Date.parse("2026-11-12T19:34:00Z") / 1000],
+      ["witry-brix", 1_543_091.36, 3_365_372.58, Date.parse("2026-11-12T19:34:00Z") / 1000],
     ] as const) {
       for (const [now, value, accepted] of [
-        [reviewStart - 1, current, false], [reviewStart, current, true],
-        [reviewStart, current * 0.97, false], [reviewStart + 7 * 86400 + 1, current, false],
+        [start - 1, current, false], [start, current, id !== "sparkusdtbc-spark"],
+        [start, current * 0.97, false], [start + 7 * 86400 + 1, current, false],
       ] as const) {
-        const report = await loadSupplyIntegrityReport(database({
+        const report = await loadReport({
           assets: [{ id, current: value, previous }],
           confirmState: { "value-drift": { signature: "x", runs: 2, held: { [id]: previous } } },
-        }), now);
+        }, now);
         expect(report.value.driftFindings.length + report.value.heldDriftFindings.length).toBe(accepted ? 0 : 1);
         expect(report.value.heldDriftBaselines[id]).toBe(accepted ? undefined : previous);
       }

@@ -31,7 +31,8 @@ vi.mock("../live-reserves/store-shared", async (importOriginal) => {
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
-import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
+import { YUZU_REVIEW, installYuzuReview } from "./live-reserves-store.test-support";
+installYuzuReview();
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
@@ -140,7 +141,7 @@ describe("live-reserves-store", () => {
     },
   );
   it("conserves raw evidence and removes each acknowledged feed's actual authoritative contribution", async () => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
+    const review = YUZU_REVIEW;
     const now = review.reviewedAt + 1;
     const composition = reserveCompositionRow({
       stablecoin_id: review.stablecoinId, source: review.adapterKey, fetched_at: now - 100,
@@ -655,7 +656,6 @@ describe("live-reserves-store", () => {
       })] }]),
       new Map([[id, reserveSyncStateInput(attemptId, { lastStatus: "degraded", ...state })]]), [id], now,
     );
-    // Latest-attempt warnings cannot contaminate a clean retained composition.
     const withheld = { warningCount: 1, warnings: [warn("fallback-withheld-score-grade-retained")] };
     const ineligible = await inspect(JSON.stringify([warn("undated-portfolio")]), {}, withheld);
     expect([...ineligible.scoreIneligibleIds]).toEqual([id]);
@@ -1023,7 +1023,6 @@ describe("live-reserves-store", () => {
 
     const overview = await readOverview(db, now);
 
-    // Primary bucket increments by exactly 1 (errorCoins, because lastStatus=error + no composition).
     expect(overview.errorCoins).toBe(emptyOverview.errorCoins + 1);
     expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
     expect(overview.writeTimeoutUncertain).toBe(1);
@@ -1108,7 +1107,6 @@ describe("live-reserves-store", () => {
           SET state = 'completed', next_item_key = NULL, items_done = items_total,
               completed_at = ? WHERE slot_started_at = ?`).run(slotStartedAt + duration, slotStartedAt);
       }
-      // A second exhausted attempt of the slowest root must not add a sample.
       sqlite.prepare(`INSERT INTO worker_scheduled_checkpoints
         (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state,
          next_item_key, items_done, items_total, created_at, updated_at, completed_at)
@@ -1314,8 +1312,6 @@ describe("live-reserves-store", () => {
     const now = Math.floor(Date.now() / 1000);
     const emptyOverview = await readOverview(mockD1(), now);
 
-    // Stored slices array has invalid entries (missing risk, bad pct type) that
-    // will fail the LiveReserveSnapshotSchema parse in parseReserveCompositionRow.
     const corruptSlices = [
       { name: "Missing Risk", pct: 20 },
       { name: "Bad Pct", pct: "fifty", risk: "low" },
@@ -1359,8 +1355,6 @@ describe("live-reserves-store", () => {
 
     const overview = await readOverview(db, now);
     expect(overview.corruptCoins).toBe(emptyOverview.corruptCoins + 1);
-    // Corrupt snapshot must not be counted as fresh even though the sync state
-    // reports lastStatus=ok and age=0.
     expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
   });
 

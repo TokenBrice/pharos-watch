@@ -180,31 +180,17 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 10, 25, 23, 19, 58) / 1000,
   },
   {
-    stablecoinId: "spusd-soulpeg",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-11-03 23:48 UTC with fresh GETs: DefiLlama detail 413 reports gecko_id soulpeg-usd but publishes no list price, and coins.llama.fi returns $1.0045316 (confidence 0.99) for both the BSC contract and coingecko:soulpeg-usd at 2026-11-03 18:24:25 UTC, about 5.4 hours old and beyond the 15-minute primary budget. CoinGecko soulpeg-usd reports $1.005 with $211.16 of 24h volume on the same clock. The only DEX market, PancakeSwap SPUSD pair 0x8e0a1c1a3b66a01dc49a0cf1c6d82c0455fe3250, holds $9,190.39 with $0.95 of 24h volume, below the $50K per-pool floor; DefiLlama reports no CMC id. No admissible live market was found and SPUSD is not in the reviewed seven-day lane. Keep SPUSD active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-17 23:48 UTC.",
-    sources: [
-      "https://stablecoins.llama.fi/stablecoin/413",
-      "https://coins.llama.fi/prices/current/bsc:0x40ff3dea2eec93a7b71879874dc4407918da77a6,coingecko:soulpeg-usd",
-      "https://api.coingecko.com/api/v3/simple/price?ids=soulpeg-usd&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.dexscreener.com/token-pairs/v1/bsc/0x40ff3dea2eec93a7b71879874dc4407918da77a6",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 3, 23, 48) / 1000,
-    expiresAt: Date.UTC(2026, 10, 17, 23, 48) / 1000,
-  },
-  {
     stablecoinId: "hbd-hive",
     owner: "ops",
     reason:
-      "Reviewed 2026-11-04 08:53 UTC: HBD's only admitted price path is the native Hive internal market (hive-native-cg), which requires a non-self trade within 900 seconds plus spread, depth, turnover and a fresh HIVE/USD parent. The book itself is healthy: both approved nodes (api.hive.blog and api.deathwing.me, head block 111364328 at 08:53:00 UTC) return the same newest trades (08:52:45, 08:51:57 and 08:44:48 UTC) and a best bid/ask of 0.044975/0.045027 HBD per HIVE with 3,000/560 HBD on top. But trading is sparse: at 08:23 UTC both nodes' newest non-self trade was 07:53:18 UTC, and a trade-freshness replay of 2026-11-03/04 found 40 of 96 quarter-hour boundaries without a trade inside 900 seconds, so publications intermittently and correctly withhold the price. CoinGecko hive_dollar ($1.63 from Upbit-family BTC/HBD tickers) stays outside the existing $1.19 bound and is correctly rejected; HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews the native-trade cadence or establishes another admitted market by this review's expiry, 2026-11-18 08:53 UTC.",
+      "Reviewed 2026-11-12 19:32 UTC: HBD's admitted price path remains the native Hive internal market (hive-native-cg), requiring a non-self trade within 900 seconds plus spread, depth, turnover and a fresh HIVE/USD parent. Today's 19:03 production generation admitted $0.993366682 with observation clock 19:00:56 UTC. Fresh reads at 19:31:53 UTC from api.hive.blog and api.deathwing.me agree on bid/ask 0.042739524883/0.04283 HBD per HIVE (0.2115% spread) and 5,391.966/1,468.08 HBD of depth within 2%; deathwing's newest non-self trade is 19:26:36 UTC and its 1,000-row trade history proves 2,566.53 HBD of non-self 24h turnover. A replay of the 97 quarter-hour boundaries from 2026-11-11 19:30 through 2026-11-12 19:30 UTC finds 34 without a non-self trade inside 900 seconds, so intermittent missing runs remain justified. CoinGecko hive_dollar is $1.24 at 19:31:46 UTC, outside the existing $1.19 bound; both tickers are the duplicated Upbit-family BTC/HBD book ($31,179 reported volume each), with Upbit's 3.875969% spread and latest trade 18:45:31 UTC. HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews the native-trade cadence or establishes another admitted market by this review's expiry, 2026-11-26 19:32 UTC.",
     sources: [
       "https://api.hive.blog",
       "https://api.deathwing.me",
       "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
     ],
-    reviewedAt: Date.UTC(2026, 10, 4, 8, 53) / 1000,
-    expiresAt: Date.UTC(2026, 10, 18, 8, 53) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 12, 19, 32) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 19, 32) / 1000,
   },
 ];
 
