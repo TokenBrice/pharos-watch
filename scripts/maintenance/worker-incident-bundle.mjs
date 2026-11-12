@@ -94,12 +94,16 @@ export async function captureWorkerIncidentBundle(args, { env = process.env, now
       collectionFailed = true; return [];
     }
   };
+  // The started_at range makes the day an index seek instead of a full cron_runs scan (5.5 s of D1 on
+  // 2026-11-12). A child starts after its slot, and for the scheduled capture the upper bound lies in the
+  // future, so nothing already recorded falls outside it; only a historical replay window could.
   const children = select("children", `SELECT job, started_at, duration_ms, status, slot_started_at, schedule_key, invocation_id, worker_version, productive, publication_count,
     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.reason') END AS synthetic_reason,
     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.childDisposition') END AS child_disposition,
     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.slotOwner') END AS synthetic_invocation,
     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.outputPublishedAt') END AS output_published_at
-    FROM cron_runs WHERE COALESCE(slot_started_at, started_at) >= ${from} AND COALESCE(slot_started_at, started_at) < ${to}
+    FROM cron_runs WHERE started_at >= ${from - 3600} AND started_at < ${to + DAY}
+      AND COALESCE(slot_started_at, started_at) >= ${from} AND COALESCE(slot_started_at, started_at) < ${to}
     ORDER BY COALESCE(slot_started_at, started_at), job LIMIT ${LIMIT}`, CHILD_FIELDS);
   const publications = [
     ...select("surfacePublications", `SELECT surface, generation_id, state, started_at, published_at, expected_rows, published_rows FROM surface_publication_generations WHERE started_at >= ${from} AND started_at < ${to} ORDER BY started_at LIMIT ${LIMIT}`, PUBLICATION_FIELDS),
