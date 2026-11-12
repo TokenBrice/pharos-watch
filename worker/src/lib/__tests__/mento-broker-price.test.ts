@@ -8,11 +8,12 @@ const blockNumber = vi.fn(), blockHeader = vi.fn(), multicall = vi.fn();
 vi.mock("../evm-rpc", () => ({ fetchEvmBlockNumber: (...args: unknown[]) => blockNumber(...args),
   fetchEvmBlockHeader: (...args: unknown[]) => blockHeader(...args),
   fetchEvmMulticall3Aggregate3AtBlock: (...args: unknown[]) => multicall(...args) }));
-import { fetchMentoBrokerPrice, mentoBrokerProvider } from "../authoritative-price-sources/mento-broker";
+import { fetchMentoBrokerPrice as fetchPrice, mentoBrokerProvider } from "../authoritative-price-sources/mento-broker";
 import { fetchAuthoritativeLivePriceOverrides } from "../authoritative-price-sources";
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { evaluateStablecoinActivePriceCoverage } from "../stablecoin-publication-coverage";
 import { applyProtocolPriceOverrides, createValidationContextResolver, settleNominalPriceReferences } from "../../cron/sync-stablecoins/pricing";
+const nowSec = () => Math.floor(Date.now() / 1000);
 const UNIT = 10n ** 18n;
 const BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad", USDM = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const routes: Record<string, [`0x${string}`, `0x${string}`, bigint, bigint]> = {
@@ -26,7 +27,7 @@ const encode = (types: string, values: readonly unknown[]) => encodeAbiParameter
 const uint = (x: bigint) => encode("uint256", [x]);
 const address = (x: string) => encode("address", [x]);
 const config = (limit = 10_000, flags = 4) => encode("uint32,uint32,int48,int48,int48,uint8", [0, 0, 0, 0, limit, flags]);
-function context() { return { assetsById: new Map([["cusd-celo", { id: "cusd-celo", price: 1.01, priceSource: "coingecko", priceConfidence: "single-source", priceObservedAt: Math.floor(Date.now() / 1000) - 20, priceObservedAtMode: "upstream" } as PeggedAsset]]) }; }
+function context() { return { assetsById: new Map([["cusd-celo", { id: "cusd-celo", price: 1.01, priceSource: "coingecko", priceConfidence: "single-source", priceObservedAt: nowSec() - 20, priceObservedAtMode: "upstream" } as PeggedAsset]]) }; }
 function fixture(overrides: Record<string, `0x${string}`> = {}, spread = 0n, id = "cadm-mento") {
   const [token, feed, rate, depth] = routes[id];
   const quote = rate * UNIT / 1_000_000n;
@@ -38,7 +39,7 @@ function fixture(overrides: Record<string, `0x${string}`> = {}, spread = 0n, id 
     inputImplementation: address("0x434563b0604be100f04b7ae485bcafe3c9d8850e"), outputImplementation: address("0x815795c30d0758a297b08cd4e0643620c974c318"),
     brokerImplementation: address("0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"), managerImplementation: address("0xc016174b60519bdc24433d4ed2cff6c1efac7881"),
     pool: encodeAbiParameters(MENTO_POOL_EXCHANGE_ABI_PARAMETERS, [{ asset0: USDM, asset1: token, pricingModule: USDM, bucket0: 100_000n * UNIT, bucket1: 100_000n * UNIT, lastBucketUpdate: 1n, config: { spread, referenceRateFeedID: feed, referenceRateResetFrequency: 360n, minimumReports: 1n, stablePoolResetSize: 100_000n * UNIT } }]),
-    mode: uint(0n), oracleTime: uint(BigInt(Math.floor(Date.now() / 1000) - 60)), oracleCount: uint(1n), expired: encode("bool,address", [false, USDM]),
+    mode: uint(0n), oracleTime: uint(BigInt(nowSec() - 60)), oracleCount: uint(1n), expired: encode("bool,address", [false, USDM]),
     small: uint(quote), depth: uint(quote * depth), inputLimits: config(depth > 10_000n ? 2_000_000 : 10_000), outputLimits: config(),
     inputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, 0]), outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, 0]), ...overrides,
   };
@@ -46,49 +47,55 @@ function fixture(overrides: Record<string, `0x${string}`> = {}, spread = 0n, id 
 }
 describe("Mento V2 Broker guarded prices", () => {
   afterEach(() => vi.restoreAllMocks());
-  beforeEach(() => { vi.clearAllMocks(); vi.spyOn(Date, "now").mockReturnValue(1_789_480_000_000); blockNumber.mockResolvedValue(100); blockHeader.mockReset().mockResolvedValue({ number: 100, timestamp: Math.floor(Date.now() / 1000) - 2, hash: `0x${"ab".repeat(32)}` }); fixture(); });
+  beforeEach(() => { vi.clearAllMocks(); vi.spyOn(Date, "now").mockReturnValue(1_789_480_000_000); blockNumber.mockResolvedValue(100); blockHeader.mockReset().mockResolvedValue({ number: 100, timestamp: nowSec() - 2, hash: `0x${"ab".repeat(32)}` }); fixture(); });
   it.each<Record<string, `0x${string}`>>([
     { mode: uint(1n) }, { brokerImplementation: address(USDM) }, { oracleTime: uint(1n) }, { inputLimits: config(999) },
   ])("validates each route even when sharing a head: %j", async (bad) => {
     for (const success of [false, true]) {
       const shared = context(); blockNumber.mockClear();
       fixture(success ? {} : bad);
-      expect(await fetchMentoBrokerPrice("cadm-mento", shared) !== null).toBe(success);
+      expect(await fetchPrice("cadm-mento", shared) !== null).toBe(success);
       fixture(success ? bad : {}, 0n, "audm-mento");
-      expect(await fetchMentoBrokerPrice("audm-mento", shared) !== null).toBe(!success);
+      expect(await fetchPrice("audm-mento", shared) !== null).toBe(!success);
       expect(blockNumber).toHaveBeenCalledTimes(success ? 1 : 2);
       expect(multicall.mock.calls.slice(-2).map((c) => [c[2], c[1].length])).toEqual([[100, 26], [100, 26]]);
     }
   });
   it("rejects a second-route reorg and discards the shared head", async () => {
     const shared = context();
-    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    expect(await fetchPrice("cadm-mento", shared)).not.toBeNull();
     fixture({}, 0n, "audm-mento");
-    blockHeader.mockResolvedValueOnce({ number: 100, timestamp: Math.floor(Date.now() / 1000) - 2, hash: "0xbb" });
-    expect(await fetchMentoBrokerPrice("audm-mento", shared)).toBeNull();
-    expect(await fetchMentoBrokerPrice("audm-mento", shared)).not.toBeNull();
+    blockHeader.mockResolvedValueOnce({ number: 100, timestamp: nowSec() - 2, hash: "0xbb" });
+    expect(await fetchPrice("audm-mento", shared)).toBeNull();
+    expect(await fetchPrice("audm-mento", shared)).not.toBeNull();
     expect(blockNumber).toHaveBeenCalledTimes(2);
   });
   it("refreshes heads at five minutes", async () => {
     const shared = context();
-    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    expect(await fetchPrice("cadm-mento", shared)).not.toBeNull();
     const later = Date.now() + 298_000;
     vi.spyOn(Date, "now").mockReturnValue(later);
     shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(later / 1000) - 20;
     blockHeader.mockResolvedValue({ number: 100, timestamp: Math.floor(later / 1000) - 2, hash: `0x${"ab".repeat(32)}` });
     fixture({}, 0n, "audm-mento");
-    expect(await fetchMentoBrokerPrice("audm-mento", shared)).not.toBeNull();
+    expect(await fetchPrice("audm-mento", shared)).not.toBeNull();
     expect(blockNumber).toHaveBeenCalledTimes(2);
     expect(blockHeader).toHaveBeenCalledTimes(4);
   });
   it("rechecks parent and cancellation", async () => {
     const shared = context();
-    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
-    shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(Date.now() / 1000) - 300;
-    expect(await fetchMentoBrokerPrice("audm-mento", shared)).toBeNull();
-    shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(Date.now() / 1000);
-    await expect(fetchMentoBrokerPrice("audm-mento", shared, AbortSignal.abort())).rejects.toThrow();
+    expect(await fetchPrice("cadm-mento", shared)).not.toBeNull();
+    shared.assetsById.get("cusd-celo")!.priceObservedAt = nowSec() - 300;
+    expect(await fetchPrice("audm-mento", shared)).toBeNull();
+    shared.assetsById.get("cusd-celo")!.priceObservedAt = nowSec();
+    await expect(fetchPrice("audm-mento", shared, AbortSignal.abort())).rejects.toThrow();
     expect(multicall).toHaveBeenCalledTimes(1);
+  });
+  it.each([["unavailable", null], ["future", 1], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
+    const ctx = { ...context(), lastRejectionReason: null as string | null };
+    blockHeader.mockResolvedValue(offset == null ? null : { number: 100, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
+    await fetchPrice("cadm-mento", ctx);
+    expect(ctx.lastRejectionReason).toBe(`mento-broker:block-age-${reason}`);
   });
   it.each([
     ["cadm-mento", "peggedCAD", 0.73, 0.7272],
@@ -98,16 +105,16 @@ describe("Mento V2 Broker guarded prices", () => {
     fixture({}, 0n, id);
     expect(mentoBrokerProvider.matches(id)).toBe(true);
     expect(await mentoBrokerProvider.fetchLivePrice!({ ...context().assetsById.get("cusd-celo")!, id }, context())).toBeNull();
-    const override = await fetchMentoBrokerPrice(id, context());
+    const override = await fetchPrice(id, context());
     expect(override!.price).toBeCloseTo(expected, 12);
-    expect(override!.observedAt).toBe(Math.floor(Date.now() / 1000) - 60);
+    expect(override!.observedAt).toBe(nowSec() - 60);
     for (const severe of [false, true]) {
       const asset = { id, name: id, symbol: id, pegType, price: null } as PeggedAsset;
       const applied = applyProtocolPriceOverrides({
         assets: [asset], overrides: new Map([[id, { ...override!, ...(severe ? { price: reference / 5 } : {}) }]]),
         validationContexts: createValidationContextResolver(),
-        validationReferences: { rates: { [pegType]: reference }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
-        syncStartSec: Math.floor(Date.now() / 1000),
+        validationReferences: { rates: { [pegType]: reference }, type: "fresh", updatedAt: nowSec() },
+        syncStartSec: nowSec(),
       });
       expect(applied).toBe(severe ? 0 : 1);
       if (severe) expect(asset.price).toBeNull();
@@ -137,9 +144,9 @@ describe("Mento V2 Broker guarded prices", () => {
     ["fractional output rounds away from zero", {
       outputLimits: config(1), outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, -1]),
     }],
-  ])("withholds %s", async (_name, overrides) => { fixture(overrides); expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull(); });
+  ])("withholds %s", async (_name, overrides) => { fixture(overrides); expect(await fetchPrice("cadm-mento", context())).toBeNull(); });
   it.each([["xofm-mento", "peggedXOF", 0.0017], ["zarm-mento", "peggedZAR", 0.06]] as const)("%s prefers verified Broker, failing closed", async (id, pegType, par) => {
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSec();
     const rates = JSON.stringify({ [pegType]: par });
     const meta = { usableSyncAt: now, mode: "live", ratesSha256: sha256Hex(rates),
       sourceUpdatedAtByPeg: { [pegType]: now - 60 }, sourceModeByPeg: { [pegType]: "live" },
@@ -169,7 +176,7 @@ describe("Mento V2 Broker guarded prices", () => {
       expect(asset.priceSource).toBe("protocol-par");
     }
     fixture({ oracleTime: uint(BigInt(now - 240)) }, 0n, id);
-    const acquired = await fetchMentoBrokerPrice(id, { ...context(), validationReferences: refs });
+    const acquired = await fetchPrice(id, { ...context(), validationReferences: refs });
     expect(acquired).not.toBeNull();
     for (const delay of [0, 80]) {
       vi.spyOn(Date, "now").mockReturnValue((now + delay) * 1000);
@@ -190,17 +197,17 @@ describe("Mento V2 Broker guarded prices", () => {
     settleNominalPriceReferences([asset], now);
     expect(asset.price).toBeNull();
     fixture({ mode: uint(1n) }, 0n, id);
-    expect(await fetchMentoBrokerPrice(id, { ...context(), validationReferences: refs })).toBeNull();
+    expect(await fetchPrice(id, { ...context(), validationReferences: refs })).toBeNull();
     fixture({}, 0n, id);
     for (const type of ["none", "static", "stale"] as const) {
-      expect(await fetchMentoBrokerPrice(id, { ...context(), validationReferences: { ...refs, typeByPeg: { [pegType]: type } } })).toBeNull();
+      expect(await fetchPrice(id, { ...context(), validationReferences: { ...refs, typeByPeg: { [pegType]: type } } })).toBeNull();
     }
   });
   it("rejects unknown IDs and spread", async () => {
     expect(mentoBrokerProvider.matches("toString")).toBe(false);
-    expect(await fetchMentoBrokerPrice("toString", context())).toBeNull();
+    expect(await fetchPrice("toString", context())).toBeNull();
     fixture({}, 21n * 10n ** 21n);
-    expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull();
+    expect(await fetchPrice("cadm-mento", context())).toBeNull();
   });
 
 });

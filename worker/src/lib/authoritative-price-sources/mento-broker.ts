@@ -56,7 +56,9 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   if (block == null) return reject("block-unavailable");
   const head = reusable?.head ?? await fetchEvmBlockHeader("celo", block, options);
   const now = Math.floor(Date.now() / 1000);
-  if (!head || head.timestamp > now || now - head.timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age");
+  if (!head) return reject("block-age-unavailable");
+  if (head.timestamp > now) return reject("block-age-future");
+  if (now - head.timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age-stale");
   const call = (label: string, target: string, signature: string, args: readonly unknown[] = []) => ({ label, target,
     callData: encodeFunctionData({ abi: parseAbi([signature]) as ParseAbi<readonly string[]>, functionName: signature.match(/function (\w+)/)![1], args }) });
   const calls = [
