@@ -6,7 +6,7 @@ import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
-import { runWithOverloadRetry } from "../lib/d1-overload-retry";
+import { D1_RESOURCE_WINDOW_MS, runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { backfillAmounts, type BlacklistAmountBackfillResult } from "../lib/blacklist/amount-recovery";
 import {
   backfillTronBlacklistAmounts,
@@ -136,6 +136,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerGapMetricSnapshots = 0;
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
+  let producerSnapshotAttempts = 0;
   let producerSnapshotError: string | null = null;
   let producerSnapshotErrorOperation: string | null = null;
   let producerSnapshotReason: "superseded" | null = null;
@@ -313,25 +314,45 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     producerSnapshotSkipped = true;
   } else {
     let operation = "materializeBlacklistGapMetrics";
+    const snapshotNow = Math.floor(Date.now() / 1000);
+    // Configs that did not reach their safe head this run hold the coverage clock back.
+    const behindConfigs = configStates
+      .filter((state) => state.lastSucceededAt == null || state.lastSucceededAt < Math.floor(runStartedAtMs / 1000))
+      .map((state) => ({
+        configKey: state.configKey,
+        symbol: state.config.stablecoin,
+        chainName: state.config.chain.chainName,
+        lastSucceededAt: state.lastSucceededAt,
+      }));
+    let publicationFailure: { error: unknown } | undefined;
     try {
-      const snapshotNow = Math.floor(Date.now() / 1000);
-      if (oldestSuccessAt != null) {
-        const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
-        producerGapMetricSnapshots = gapSnapshot.written;
-      }
-      // Configs that did not reach their safe head this run hold the coverage clock back.
-      const behindConfigs = configStates
-        .filter((state) => state.lastSucceededAt == null || state.lastSucceededAt < Math.floor(runStartedAtMs / 1000))
-        .map((state) => ({
-          configKey: state.configKey,
-          symbol: state.config.stablecoin,
-          chainName: state.config.chain.chainName,
-          lastSucceededAt: state.lastSucceededAt,
-        }));
-      operation = "materializeBlacklistSummarySnapshot";
-      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs, summaryFence);
-      producerSummarySnapshot = summarySnapshot.written;
-      producerSnapshotReason = summarySnapshot.reason ?? null;
+      const failed = await runWithOverloadRetry(async () => {
+        if (producerSnapshotAttempts > 0 &&
+          Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs) {
+          return publicationFailure;
+        }
+        producerSnapshotAttempts++;
+        operation = "materializeBlacklistGapMetrics";
+        try {
+          if (oldestSuccessAt != null) {
+            const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
+            producerGapMetricSnapshots = gapSnapshot.written;
+          }
+          operation = "materializeBlacklistSummarySnapshot";
+          const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs, summaryFence);
+          producerSummarySnapshot = summarySnapshot.written;
+          producerSnapshotReason = summarySnapshot.reason ?? null;
+        } catch (error) {
+          publicationFailure = { error };
+          // Reserve the helper's full resource-window wait, including its maximum jitter.
+          if (signal?.aborted || Date.now() + D1_RESOURCE_WINDOW_MS + 1_000 +
+            BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs) {
+            return publicationFailure;
+          }
+          throw error;
+        }
+      }, 1, signal, { waitOutResourceWindow: true });
+      if (failed) throw failed.error;
     } catch (err) {
       producerSnapshotError = toErrorMessage(err);
       producerSnapshotErrorOperation = operation;
@@ -491,6 +512,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         producerGapMetricSnapshots,
         producerSummarySnapshot,
         producerSnapshotSkipped,
+        producerSnapshotAttempts,
         producerSnapshotError,
         producerSnapshotErrorOperation,
         producerSnapshotReason,

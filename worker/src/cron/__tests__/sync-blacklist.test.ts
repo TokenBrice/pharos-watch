@@ -288,8 +288,9 @@ function emptyBlacklistAggregateTables() {
   ];
 }
 
-function makeDb(syncStateRows: Record<string, unknown>[] = []) {
+function makeDb(syncStateRows: Record<string, unknown>[] = [], tables: Parameters<typeof mockD1>[0] = []) {
   return mockD1([
+    ...tables,
     ...emptyBlacklistAggregateTables(),
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
@@ -417,7 +418,6 @@ describe("syncBlacklist", () => {
   it("processes events and writes to DB on normal path", async () => {
     const db = makeDb();
 
-    // Simulate EVM logs for the USDC config — one blacklist event
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
       completeEtherscanLogs([
         {
@@ -435,7 +435,6 @@ describe("syncBlacklist", () => {
       ]),
     );
 
-    // Stub global fetch for Tron API (returns empty events)
     installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
@@ -506,10 +505,8 @@ describe("syncBlacklist", () => {
   it("isolates per-chain errors — Etherscan 429 does not block Tron", async () => {
     const db = makeDb();
 
-    // Simulate Etherscan returning null (API error) for the EVM config
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(failedEtherscanLogs());
 
-    // Tron fetch succeeds with one event for AddedBlackList only
     const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
@@ -550,10 +547,8 @@ describe("syncBlacklist", () => {
     });
     const result = await syncBlacklist(buildTestOpts({ db }));
 
-    // Tron event should be processed despite EVM failure
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
-    // The EVM config had an API error (null logs) — recorded but did not crash
     expect(meta.apiErrors).toBe(1);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
   });
@@ -733,12 +728,7 @@ describe("syncBlacklist", () => {
       rows: diagnosticRows,
       throwError: undefined as Error | undefined,
     };
-    const db = mockD1([
-      ...emptyBlacklistAggregateTables(),
-      diagnosticFixture,
-      { match: "blacklist_sync_state", rows: [] },
-      { match: "blacklist_events", rows: [] },
-    ]);
+    const db = makeDb([], [diagnosticFixture]);
     const prepare = db.prepare.bind(db);
     let diagnosticAttempts = 0;
     vi.spyOn(db, "prepare").mockImplementation((sql) => {
@@ -783,7 +773,6 @@ describe("syncBlacklist", () => {
     );
 
 
-    // Tron API returns empty
     installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
@@ -887,6 +876,7 @@ describe("syncBlacklist", () => {
     expect(meta.runtimeBudgetReached).toBe(true);
     expect(meta.contractsSkipped).toBeGreaterThan(0);
     expect(meta.producerSnapshotSkipped).toBe(true);
+    expect(meta.producerSnapshotAttempts).toBe(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
@@ -1014,19 +1004,39 @@ describe("syncBlacklist", () => {
   });
 
   it.each([
-    ["blacklist-gap-metrics-cache-write", "materializeBlacklistGapMetrics", 0],
-    ["blacklist-summary-snapshot-write", "materializeBlacklistSummarySnapshot", 2],
-  ])("retains bounded failure diagnostics for %s", async (match, operation, gaps) => {
-    const error = "snapshot write failed".repeat(40);
-    const db = mockD1([
-      ...emptyBlacklistAggregateTables(),
-      { match: "blacklist_sync_state", rows: [] },
-      { match: "blacklist_events", rows: [] },
-      { match, rows: [], throwError: new Error(error) },
+    ["blacklist-gap-metrics-cache-write", "materializeBlacklistGapMetrics", 0, undefined],
+    ["blacklist-summary-snapshot-write", "materializeBlacklistSummarySnapshot", 2, undefined],
+    ...["once", "twice", "late"].map((mode) => ["blacklist-summary-per-coin-event-counts", "materializeBlacklistSummarySnapshot", 2, mode] as const),
+  ] as const)("retains bounded publication diagnostics for %s %s %s %s", async (match, operation, gaps, mode) => {
+    const startedAt = Date.now();
+    const retried = mode === "once" || mode === "twice";
+    const error = mode ? "D1 DB is overloaded: consumed within a 10 second window" : "snapshot write failed".repeat(40);
+    let reads = 0;
+    const db = makeDb([], [
+      { match, throwError: mode ? undefined : new Error(error), get rows() {
+        if (++reads <= (mode === "twice" ? 2 : 1)) {
+          if (mode === "late") vi.setSystemTime(Date.now() + 625_000);
+          throw new Error(error);
+        }
+        return [];
+      } },
     ]);
     const onProgress = vi.fn();
     installFetch(emptyTronResponse);
-    const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
+    const pending = syncBlacklist(buildTestOpts({ db, onProgress }));
+    await vi.runAllTimersAsync();
+    const result = await pending;
+    if (mode === "late") expect(Date.now() - startedAt).toBeLessThan(635_000);
+    if (mode === "once") {
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata).producerSummarySnapshot).toBe(true);
+      expect(materializeBlacklistGapMetrics).toHaveBeenCalledTimes(2);
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(10_000);
+      expect(db.getHistory().find((row) => row.sql.includes("blacklist-summary-snapshot-write"))?.binds[2]).toBe(startedAt / 1000);
+    }
+    expect(JSON.parse(result.metadata).producerSnapshotAttempts).toBe(retried ? 2 : 1);
+    expect(reads).toBe(mode ? (retried ? 2 : 1) : 0);
+    if (mode === "once") return;
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata)).toMatchObject({
       reason: "blacklist-snapshot-publication-failed",
@@ -1188,11 +1198,8 @@ describe("syncBlacklist", () => {
     });
 
     it("degrades instead of rejecting when the current-balance debt lane throws", async () => {
-      const db = mockD1([
-        ...emptyBlacklistAggregateTables(),
+      const db = makeDb([], [
         { match: "FROM cache AS debt", rows: [], throwError: new Error("D1_ERROR: internal error; reference = overloaded") },
-        { match: "blacklist_sync_state", rows: [] },
-        { match: "blacklist_events", rows: [] },
       ]);
       emptyOk();
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
@@ -1231,10 +1238,7 @@ describe("syncBlacklist", () => {
     });
 
     it("preserves scan reason first and lists publication and repair failures together", async () => {
-      const db = mockD1([
-        ...emptyBlacklistAggregateTables(),
-        { match: "blacklist_sync_state", rows: [] },
-        { match: "blacklist_events", rows: [] },
+      const db = makeDb([], [
         { match: "blacklist-summary-snapshot-write", rows: [], throwError: new Error("snapshot write failed") },
       ]);
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
@@ -1255,11 +1259,7 @@ describe("syncBlacklist", () => {
     });
 
     it("never lowers an error status when publication or repair also fails", async () => {
-      const db = mockD1([
-        ...emptyBlacklistAggregateTables(),
-        { match: "blacklist_sync_state", rows: [] },
-        { match: "blacklist_events", rows: [] },
-      ]);
+      const db = makeDb();
       vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValue(new TypeError("explorer down"));
       vi.mocked(fetchAlchemyLogs).mockRejectedValue(new TypeError("rpc down"));
       vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
