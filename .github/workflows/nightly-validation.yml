@@ -134,6 +134,50 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  safety-map-render:
+    name: Safety Map full render (Linux Firefox)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: $/.github/actions/setup-workspace
+        id: workspace
+        with:
+          bootstrap-history: "true"
+          node-modules-cache: "true"
+          install-playwright-firefox: "true"
+      - name: Run the Safety Map full-render suite
+        timeout-minutes: 3
+        run: |
+          mkdir -p .tmp
+          npm test -- scripts/__tests__/build-safety-score-map-clock.test.ts --testNamePattern='clock discipline — emitted artifacts' --reporter=default --reporter=github-actions --reporter=json --outputFile=.tmp/safety-map-render.json
+      - name: Require a passed full-render case
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+          const path = '.tmp/safety-map-render.json';
+          const report = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { testResults: [] };
+          const cases = report.testResults.flatMap(result => result.assertionResults)
+            .filter(test => test.fullName.startsWith('clock discipline — emitted artifacts (full render) '));
+          const passed = cases.length > 0 && cases.every(test => test.status === 'passed');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Safety Map full render: ${passed ? 'passed' : 'FAILED'} (${cases.length} case(s); ${cases.map(test => test.status).join(', ') || 'missing'}).\n`);
+          assert(passed, 'Safety Map full-render case missing, failed or skipped; inspect safety-map-render.json');
+          NODE
+      - name: Retain the Safety Map render report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: safety-map-render-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/safety-map-render.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
   test-timings:
     name: Test timings report
     needs: full-tests
@@ -337,7 +381,7 @@ jobs:
 
   nightly-red:
     name: Nightly red issue
-    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
+    needs: [full-static, full-tests, safety-map-render, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
     if: ${{ always() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -350,6 +394,7 @@ jobs:
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       FULL_STATIC_RESULT: ${{ needs.full-static.result }}
       FULL_TESTS_RESULT: ${{ needs.full-tests.result }}
+      SAFETY_MAP_RENDER_RESULT: ${{ needs.safety-map-render.result }}
       V9_RESOURCE_RESULT: ${{ needs.v9-resource.result }}
       LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
       WEB_VITALS_RESULT: ${{ needs.web-vitals.result }}
@@ -367,6 +412,7 @@ jobs:
           for entry in \
             "full-static:${FULL_STATIC_RESULT}" \
             "full-tests:${FULL_TESTS_RESULT}" \
+            "safety-map-render:${SAFETY_MAP_RENDER_RESULT}" \
             "v9-resource:${V9_RESOURCE_RESULT}" \
             "lighthouse:${LIGHTHOUSE_RESULT}" \
             "web-vitals:${WEB_VITALS_RESULT}" \
