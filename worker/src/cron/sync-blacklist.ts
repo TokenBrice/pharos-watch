@@ -28,6 +28,8 @@ import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from ".
 import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import { refreshBlacklistAmountRepairQueue } from "../lib/blacklist/amount-repair-queue";
 import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
+import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
+import { BLACKLIST_CONFIG_STALE_AGE_SEC } from "./operator-watch-blacklist";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
 const SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS = 10 * 60_000 + 45_000;
@@ -266,19 +268,36 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   }
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
-  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
+  const coverageFailures = Object.values(scan.coverageVerdicts).filter((verdict) => verdict === "failed").length;
+  const assessedAt = Math.floor(Date.now() / 1000);
+  const isolatedPartial = coverageFailures === 1 && apiErrors === 1 && contractsSkipped === 0
+    && !subrequestBudgetReached && !runtimeBudgetHit && !blacklistRuntimeBudgetReached(runBudget)
+    && providerCircuitSkips === 0 && stateConflicts === 0
+    ? configStates.find((state) => {
+      const failure = apiErrorConfigs.find((entry) => entry.configKey === state.configKey);
+      const successClock = assessFreshnessTimestamp(assessedAt, state.lastSucceededAt);
+      return state.lastOutcome === "partial" && state.consecutiveFailures === 1
+        && successClock.reason === null && successClock.ageSeconds <= BLACKLIST_CONFIG_STALE_AGE_SEC
+        && failure?.reason === "partial-coverage" && failure.topicCount != null && failure.topicCount > 0
+        && failure.coveredTopicCount === failure.topicCount
+        && failure.frontier != null && failure.safeHead != null && failure.previousCursor != null
+        && Number.isSafeInteger(failure.frontier) && Number.isSafeInteger(failure.safeHead)
+        && failure.frontier > failure.previousCursor && failure.frontier < failure.safeHead
+        && configStates.some((peer) => peer.config.chain.chainId === state.config.chain.chainId
+          && scan.coverageVerdicts[peer.configKey] === "covered");
+    }) : undefined;
+  const derivedStatus = deriveSyncBlacklistStatus(apiErrors - (isolatedPartial ? 1 : 0), runtimeBudgetHit, {
     contractsSkipped,
     totalConfigs: configStates.length,
     incompleteRuntimeConfigs,
     subrequestBudgetHit: subrequestBudgetReached,
   });
   const { oldestSuccessAt, neverSucceeded } = getOldestBlacklistSuccessAt(configStates);
-  const coverageFailures = Object.values(scan.coverageVerdicts).filter((verdict) => verdict === "failed").length;
   const coverageLaggingWithinTolerance = Object.values(scan.coverageVerdicts)
     .filter((verdict) => verdict === "lagging-within-tolerance").length;
   const scanStatus: SyncBlacklistResult["status"] =
     derivedStatus === "ok" &&
-    (providerCircuitSkips > 0 || coverageFailures > 0 || stateConflicts > 0 || neverSucceeded > 0)
+    (providerCircuitSkips > 0 || coverageFailures > (isolatedPartial ? 1 : 0) || stateConflicts > 0 || neverSucceeded > 0)
       ? "degraded"
       : derivedStatus;
   const producerSnapshotWindowUnavailable =
@@ -392,6 +411,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     itemCount: counters.totalInsertedRows,
     metadata: JSON.stringify(
       withBudgetMetadata(budget, {
+        ...(isolatedPartial ? { quality: {
+          reason: "blacklist-isolated-partial-coverage", configKey: isolatedPartial.configKey,
+        } } : {}),
         outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
           ? Math.floor(Date.now() / 1000) : null,
         ...(status !== "ok" ? {
