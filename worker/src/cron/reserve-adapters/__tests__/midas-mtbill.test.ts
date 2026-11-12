@@ -9,12 +9,10 @@ import octoberCapture from "./fixtures/midas-rejection-oct7-2026.json";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS } from "@shared/types/live-reserve-adapter-declarations";
-import source from "@shared/data/stablecoins/coins/mtbill-midas.json";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext } from "../types";
 import { fetchMidasMtbillReserves, MidasIpfsGatewayError } from "../midas-mtbill";
 import { installAdapterNetwork, expectValidAdapterOutput, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
-import { midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
+import { MIDAS_CONFIG as config, midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { classifyFailure } from "../../sync-live-reserves-shared";
@@ -29,7 +27,6 @@ interface HistoricalFixture {
   };
 }
 const coin = TRACKED_SOURCE_COINS.find((candidate) => candidate.id === "mtbill-midas")!;
-const config = source.liveReservesConfig as LiveReservesConfig;
 const ustb = "('USTB', 'CASH', 'wallet', 'ethereum', 'USTB')";
 const buidl = "('BUIDL', 'CASH', 'wallet', 'ethereum', 'BUIDL')";
 const usdc = "('USDC', 'CASH', 'wallet', 'ethereum', 'USDC')";

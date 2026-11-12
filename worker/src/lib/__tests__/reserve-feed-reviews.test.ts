@@ -9,7 +9,7 @@ import { makeReserveComposition } from "@shared/types/__tests__/status.test-supp
 
 const review = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "yzusd-yuzu")!;
 const accountable = "primary:http-json: Accountable ";
-const http = "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=changed";
+const http = "primary:http-html: HTTP 403 for https://www.fidelitydigitalassets.com/stablecoin?timestamp=changed";
 function state(r = review, overrides: Partial<State> = {}): State {
   const now = r.reviewedAt + 1;
   return {
@@ -99,13 +99,13 @@ describe("reserve feed review policy", () => {
     expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "gusd-gemini")).toBe(false);
   });
   it("pins HTTP classes to the primary endpoint", async () => {
-    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "mtbill-midas")!;
+    const r: Review = { ...review, stablecoinId: "fidd-fidelity", adapterKey: "fidd-independent-assurance",
+      failureCategory: "upstream-http", warningCodes: [], errorPrefix: null, errorClass: "http-403" };
     const s = state(r);
     await check(s, r);
-    await check({ ...s, lastError: http.replace("HTTP 403", "midas-mtbill:source-egress-blocked: HTTP 403") }, r);
     for (const lastError of [http.replace("403", "429"), http + "; fallback:http-json: failed",
-      http.replace("api-prod.midas.app", "other.example"), http.replace("by-timestamp", "other"),
-      http.replace("primary", "fallback"), http.replace("onchain-evm", "http-json"), "midas-mtbill:save-rounded-totals-mismatch"]) {
+      http.replace("www.fidelitydigitalassets.com", "other.example"), http.replace("stablecoin", "other"),
+      http.replace("primary", "fallback"), http.replace("http-html", "http-json"), "unrelated-cause"]) {
       await check({ ...s, lastError }, r, null);
     }
     await check({ ...s, metadata: { failureCategory: "unknown" } }, r, null);

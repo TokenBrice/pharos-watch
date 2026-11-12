@@ -14,7 +14,7 @@
  */
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import { midasNetwork, MIDAS_CAPTURE_NOW } from "./midas-mtbill.test-support";
+import { MIDAS_CONFIG, midasNetwork, MIDAS_CAPTURE_NOW } from "./midas-mtbill.test-support";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
 import TETHER_TRANSPARENCY_CAPTURE from "./fixtures/tether-transparency.json";
@@ -51,6 +51,7 @@ export interface AdapterCorpusDrift {
 
 export interface AdapterCorpusCase {
   coinId: string;
+  coin?: ReturnType<typeof resolveAdapterCoin>["coin"];
   network: AdapterNetworkSpec;
   /** Replay clock, normally just after the capture's own publication instant. */
   nowSec?: number;
@@ -65,6 +66,8 @@ function reasonsFromNames(
   return Object.fromEntries(names.map((name) => [name, overrides[name] ?? reasonFor(name)]));
 }
 
+const INDEPENDENT_ASSURANCE_REASON = "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.";
+
 const CORPUS_NOT_REPLAYABLE_NAMES = [
   "anchorage-independent-assurance", "agora-independent-assurance", "attestation-pdf-index",
   "audd-independent-assurance", "audx-independent-assurance", "brla-independent-assurance", "cadd-independent-assurance",
@@ -77,14 +80,14 @@ export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
   (name) => `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
   {
-    "agora-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-    "anchorage-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-    "audd-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-    "brla-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-    "cadd-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-    "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "agora-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
+    "anchorage-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
+    "audd-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
+    "brla-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
+    "cadd-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
+    "audx-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
-    "straitsx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "straitsx-independent-assurance": INDEPENDENT_ASSURANCE_REASON,
     "chinaamc-holdings-api": "No bound catalog coin: cumiu-chinaamc's liveReservesConfig was withdrawn on 2026-10-29 because the issuer payload duplicates a holding row and totals 103.19%, so the corpus cannot resolve a catalog config. The adapter stays registered for a future reviewed admission; its happy path, source clock and duplicate-row rejection are replayed in chinaamc-holdings-api.test.ts against the reviewed configuration.",
   },
 );
@@ -743,6 +746,7 @@ CORPUS_CASES["river-protocol-info"] = {
 // exact historical portfolio; fixture failure is never replaced by latest.
 CORPUS_CASES["midas-mtbill"] = {
   coinId: "mtbill-midas",
+  coin: { ...resolveAdapterCoin("chainlink-nav", "mtbill-midas").coin, liveReservesConfig: MIDAS_CONFIG },
   nowSec: MIDAS_CAPTURE_NOW,
   network: midasNetwork(),
   drift: {

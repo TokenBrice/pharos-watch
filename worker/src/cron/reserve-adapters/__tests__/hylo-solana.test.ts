@@ -157,7 +157,7 @@ describe("hylo-solana", () => {
 
   it("fails closed when an inactive exogenous pool becomes registered", async () => {
     accounts[p.inactiveExoPairs[0]] = accounts[p.exoPairs[0].pair];
-    await expect(run()).rejects.toThrow(/unreviewed exogenous/);
+    await expect(run()).rejects.toThrow(`Hylo unreviewed exogenous pair activated: ${p.inactiveExoPairs[0]}`);
   });
 
   it("rejects substitution of an exogenous oracle feed", async () => {
