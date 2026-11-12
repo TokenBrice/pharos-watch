@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   getMaxSyncAge,
@@ -11,6 +11,7 @@ import {
   loadLatestNonSkippedReserveAttempt,
   loadReserveSyncAttemptTimeline,
   loadReserveSyncReliabilityRollup,
+  type ReserveSyncAttemptTimelineEntry as Attempt,
 } from "../store-history-read";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -18,12 +19,10 @@ afterEach(() => fixtures.closeAll());
 
 function insertAttempt(
   sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"],
-  args: {
-    stablecoinId: string; attemptedAt: number;
-    adapterKey: string; status: string;
-    warnings?: string | null; lastError?: string | null;
-    metadata?: string; attemptId?: string | null;
-  },
+  { stablecoinId = "usdc-circle", attemptedAt = 1000, adapterKey = "circle", status = "ok",
+    warnings = null, lastError = null, metadata = "{}", attemptId = null }: {
+    warnings?: string | null; metadata?: string;
+  } & Partial<Attempt>,
 ): void {
   sqlite
     .prepare(
@@ -32,78 +31,53 @@ function insertAttempt(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
-      args.stablecoinId,
-      args.attemptedAt,
-      args.adapterKey,
-      `live-reserves:${args.adapterKey}`,
-      args.status,
-      args.warnings ?? null,
-      args.lastError ?? null,
-      args.metadata ?? "{}",
-      args.attemptId ?? null,
+      stablecoinId, attemptedAt, adapterKey, `live-reserves:${adapterKey}`,
+      status, warnings, lastError, metadata, attemptId,
     );
 }
 
 describe("store-history-read", () => {
   it("returns the newest-N attempt timeline for one coin with parsed failure metadata", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      insertAttempt(sqlite, { stablecoinId: "usdc-circle", attemptedAt: 1000, adapterKey: "circle", status: "ok",
-        metadata: JSON.stringify({ diag: { durationMs: 42 } }), attemptId: "a1" });
-      insertAttempt(sqlite, { stablecoinId: "usdc-circle", attemptedAt: 1001, adapterKey: "circle", status: "error",
-        warnings: JSON.stringify([{ code: "network", message: "down", severity: "warning", effect: "degraded" }]),
-        lastError: "fetch failed", metadata: JSON.stringify({ failureCategory: "network", diag: { durationMs: 7 } }), attemptId: "a2" });
-      insertAttempt(sqlite, { stablecoinId: "other-coin", attemptedAt: 1002, adapterKey: "other", status: "ok", attemptId: "a3" });
-
-      const timeline = await loadReserveSyncAttemptTimeline(db, "usdc-circle");
-
-      expect(timeline).toHaveLength(2);
-      expect(timeline[0]).toEqual({
-        stablecoinId: "usdc-circle", attemptedAt: 1001, adapterKey: "circle", breakerKey: "live-reserves:circle",
-        attemptId: "a2", status: "error", failureCategory: "network", warningCodes: ["network"], lastError: "fetch failed", durationMs: 7,
-      });
-      expect(timeline[1]).toMatchObject({ attemptId: "a1", status: "ok", failureCategory: null, warningCodes: [], durationMs: 42 });
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    insertAttempt(sqlite, {
+      metadata: '{"diag":{"durationMs":42}}', attemptId: "a1" });
+    insertAttempt(sqlite, { attemptedAt: 1001, status: "error",
+      warnings: JSON.stringify([{ code: "network", message: "down", severity: "warning", effect: "degraded" }]),
+      lastError: "fetch failed", metadata: '{"failureCategory":"network","diag":{"durationMs":7}}', attemptId: "a2" });
+    insertAttempt(sqlite, { stablecoinId: "other-coin", attemptedAt: 1002, adapterKey: "other", attemptId: "a3" });
+    const timeline = await loadReserveSyncAttemptTimeline(db, "usdc-circle");
+    expect(timeline).toHaveLength(2);
+    expect(timeline[0]).toEqual({
+      stablecoinId: "usdc-circle", attemptedAt: 1001, adapterKey: "circle", breakerKey: "live-reserves:circle",
+      attemptId: "a2", status: "error", failureCategory: "network", warningCodes: ["network"], lastError: "fetch failed", durationMs: 7,
+    });
+    expect(timeline[1]).toMatchObject({ attemptId: "a1", status: "ok", failureCategory: null, warningCodes: [], durationMs: 42 });
   });
 
   it("caps the timeline limit and treats malformed payloads as empty", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      for (let index = 0; index < 5; index++) {
-        insertAttempt(sqlite, { stablecoinId: "usdc-circle", attemptedAt: 1000 + index, adapterKey: "circle", status: "ok",
-          warnings: "{not-json", metadata: "{not-json" });
-      }
-
-      const timeline = await loadReserveSyncAttemptTimeline(db, "usdc-circle", 3);
-
-      expect(timeline).toHaveLength(3);
-      expect(timeline.map((entry) => entry.attemptedAt)).toEqual([1004, 1003, 1002]);
-      expect(timeline[0]).toMatchObject({ failureCategory: null, warningCodes: [], durationMs: null });
-    } finally {
-      sqlite.close();
+    const { sqlite, db } = fixtures.open();
+    for (let index = 0; index < 5; index++) {
+      insertAttempt(sqlite, { attemptedAt: 1000 + index, status: "ok",
+        warnings: "{not-json", metadata: "{not-json" });
     }
+    const timeline = await loadReserveSyncAttemptTimeline(db, "usdc-circle", 3);
+    expect(timeline).toHaveLength(3);
+    expect(timeline.map((entry) => entry.attemptedAt)).toEqual([1004, 1003, 1002]);
+    expect(timeline[0]).toMatchObject({ failureCategory: null, warningCodes: [], durationMs: null });
   });
 
   it("returns the newest non-skipped attempt so circuit skips cannot inherit an older failure", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      insertAttempt(sqlite, { stablecoinId: "stbt-matrixdock", attemptedAt: 1000, adapterKey: "matrixdock-stbt", status: "error",
-        warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
-        lastError: "HTTP 403", metadata: JSON.stringify({ failureCategory: "http" }) });
-      insertAttempt(sqlite, { stablecoinId: "stbt-matrixdock", attemptedAt: 1001, adapterKey: "matrixdock-stbt", status: "ok",
-        metadata: JSON.stringify({ diag: { durationMs: 3 } }) });
-      insertAttempt(sqlite, { stablecoinId: "stbt-matrixdock", attemptedAt: 1002, adapterKey: "matrixdock-stbt", status: "skipped",
-        metadata: JSON.stringify({ failureCategory: "circuit-open" }) });
-
-      const latest = await loadLatestNonSkippedReserveAttempt(db, "stbt-matrixdock");
-
-      expect(latest).toMatchObject({ attemptedAt: 1001, status: "ok", failureCategory: null, warningCodes: [] });
-      expect(await loadLatestNonSkippedReserveAttempt(db, "unknown-coin")).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    insertAttempt(sqlite, { status: "error",
+      warnings: JSON.stringify([{ code: "stale-source-data", message: "old", severity: "warning", effect: "degraded" }]),
+      lastError: "HTTP 403", metadata: '{"failureCategory":"http"}'  });
+    insertAttempt(sqlite, { attemptedAt: 1001,
+      metadata: '{"diag":{"durationMs":3}}'  });
+    insertAttempt(sqlite, { attemptedAt: 1002, status: "skipped",
+      metadata: JSON.stringify({ failureCategory: "circuit-open" }) });
+    const latest = await loadLatestNonSkippedReserveAttempt(db, "usdc-circle");
+    expect(latest).toMatchObject({ attemptedAt: 1001, status: "ok", failureCategory: null, warningCodes: [] });
+    expect(await loadLatestNonSkippedReserveAttempt(db, "unknown-coin")).toBeNull();
   });
 
   it.each([
@@ -111,87 +85,97 @@ describe("store-history-read", () => {
     ["warnings", { warnings: "{not-json" }],
     ["warning entries", { warnings: '[{"message":"no code"}]' }],
   ])("refuses a latest attempt whose %s is malformed", async (_label, overrides) => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      insertAttempt(sqlite, { stablecoinId: "usdc-circle", attemptedAt: 1000, adapterKey: "circle", status: "error", ...overrides });
-
-      expect(await loadLatestNonSkippedReserveAttempt(db, "usdc-circle")).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, db } = fixtures.open();
+    insertAttempt(sqlite, { status: "error", ...overrides });
+    expect(await loadLatestNonSkippedReserveAttempt(db, "usdc-circle")).toBeNull();
   });
 
-  it("rolls up per-adapter reliability counts within the retention window", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+  it.each([0, 1, 4])("rolls up and guards reliability refreshes with %i memo write failures", async (failures) => {
+    vi.resetModules();
+    const { loadReserveSyncReliabilityRollup: load } = await import("../store-history-read");
+    let writes = 0, failScan = false, failMarker = false;
+    const order: string[] = [];
+    const scan = vi.fn(() => { expect(order.pop()).toBe("marker"); if (failScan) throw new Error("scan failed"); });
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onAll: (sql) => { if (sql.startsWith("WITH attempts")) scan(); },
+      onRun: (sql) => {
+        if (sql.includes("WHERE cache.updated_at")) {
+          if (failMarker) throw new Error("marker failed");
+          order.push("marker");
+        } else if (writes++ < failures) throw new Error("D1 DB is overloaded");
+      },
+    });
     try {
-      for (const status of ["ok", "ok", "degraded", "error"] as const) {
-        insertAttempt(sqlite, {
-          stablecoinId: `coin-${status}-${Math.random()}`,
-          attemptedAt: 2000,
-          adapterKey: "adapter-a",
-          status,
-        });
-      }
-      insertAttempt(sqlite, { stablecoinId: "coin-s1", attemptedAt: 2000, adapterKey: "adapter-b", status: "skipped" });
-      insertAttempt(sqlite, { stablecoinId: "coin-s2", attemptedAt: 2000, adapterKey: "adapter-b", status: "skipped" });
-      insertAttempt(sqlite, { stablecoinId: "coin-old", attemptedAt: 999, adapterKey: "adapter-c", status: "ok" });
-
-      const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
-
-      expect(rollup).toEqual([
+      for (const [adapterKey, statuses, attemptedAt] of [
+        ["adapter-a", ["ok", "ok", "degraded", "error"], 2000],
+        ["adapter-b", ["skipped", "skipped"], 2000],
+        ["adapter-c", ["ok"], 999],
+      ] as const) statuses.forEach((status, index) => insertAttempt(sqlite, {
+        stablecoinId: `${adapterKey}-${index}`, attemptedAt, adapterKey, status,
+      }));
+      const [memo, concurrent] = await Promise.all([0, 1].map(() => load(db, 3000, 1000)));
+      expect(scan).toHaveBeenCalledTimes(1);
+      expect(concurrent).toEqual(memo);
+      expect(memo.computedAt).toBe(3000);
+      expect(writes).toBe(Math.min(failures + 1, 4));
+      expect(memo.rows).toEqual([
         { adapterKey: "adapter-a", attempts: 4, ok: 2, degraded: 1, degradedByDesign: 0, error: 1, skipped: 0, successRate: 0.5 },
         { adapterKey: "adapter-b", attempts: 2, ok: 0, degraded: 0, degradedByDesign: 0, error: 0, skipped: 2, successRate: 0 },
       ]);
-
-      // Corrupt or unreadable memo recomputes; a valid one serves the hour.
       sqlite.exec("UPDATE cache SET value = 'x'");
-      expect(await loadReserveSyncReliabilityRollup(db, 3000, 1000)).toEqual(rollup);
+      expect(await load(db, 3000, 1000)).toEqual(memo);
+      sqlite.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run("reserve-sync-reliability-rollup:v1", JSON.stringify(memo), 3000);
       sqlite.exec("DELETE FROM reserve_sync_attempt_history");
-      expect(await loadReserveSyncReliabilityRollup(db, 3001, 1000)).toEqual(rollup);
-      expect(await loadReserveSyncReliabilityRollup(db, 6601, 1000)).toEqual([]);
+      expect(await load(db, 3001, 1000)).toEqual(memo);
+      failScan = true;
+      expect(await load(db, 6601, 1000)).toEqual(memo);
+      vi.resetModules();
+      const { loadReserveSyncReliabilityRollup: fresh } = await import("../store-history-read");
+      expect(await fresh(db, 6602, 1000)).toEqual(memo);
+      expect(scan).toHaveBeenCalledTimes(2);
+      failScan = false;
+      failMarker = true;
+      expect(await fresh(db, 10202, 1000)).toEqual(memo);
+      expect(scan).toHaveBeenCalledTimes(2);
+      failMarker = false;
+      expect((await fresh(db, 10202, 1000)).rows).toEqual([]);
       sqlite.exec("DROP TABLE cache");
-      expect(await loadReserveSyncReliabilityRollup(db, 6602)).toEqual([]);
+      expect((await fresh(db, 10203, 1000)).rows).toEqual([]);
     } finally {
       sqlite.close();
     }
   });
 
   it("counts degraded attempts whose only degraded warnings are structural as by design", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db } = fixtures.open();
     const structural = { code: "nav-portfolio-composition-unverified", message: "m", severity: "warning", effect: "degraded" };
     const operational = { ...structural, code: "source-stale" };
     const info = { ...structural, code: "primary-fallback-used", severity: "info", effect: "info" };
-    try {
-      const rows: Array<[string, unknown[] | string | null]> = [
-        ["ok", null],
-        ["degraded", [structural]],
-        ["degraded", [structural, info]],
-        ["degraded", [structural, operational]],
-        // Legacy rows without `effect` decode as degraded unless info severity.
-        ["degraded", [structural, { code: "source-stale", message: "m", severity: "warning" }]],
-        ["degraded", [structural, { code: "note", message: "m", severity: "info" }]],
-        ["degraded", [structural, { code: "no-message", severity: "info", effect: "info" }]],
-        ["degraded", [structural, { code: "blank", message: "\t\n", severity: "info", effect: "info" }]],
-        ["degraded", [operational]],
-        ["degraded", [{ ...structural, code: undefined }]],
-        ["degraded", ["nav-portfolio-composition-unverified"]],
-        ["degraded", "not json"],
-        ["degraded", null],
-        ["error", [structural]],
-      ];
-      rows.forEach(([status, warnings], index) => insertAttempt(sqlite, {
-        stablecoinId: `coin-${index}`, attemptedAt: 2000, adapterKey: "chainlink-nav", status,
-        warnings: Array.isArray(warnings) ? JSON.stringify(warnings) : warnings,
-      }));
-
-      const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
-
-      expect(rollup).toEqual([
-        { adapterKey: "chainlink-nav", attempts: 14, ok: 1, degraded: 12, degradedByDesign: 3, error: 1, skipped: 0, successRate: 4 / 14 },
-      ]);
-    } finally {
-      sqlite.close();
-    }
+    const rows: Array<[Attempt["status"], unknown[] | string | null]> = [
+      ["ok", null],
+      ["degraded", [structural]],
+      ["degraded", [structural, info]],
+      ["degraded", [structural, operational]],
+      // Legacy rows without `effect` decode as degraded unless info severity.
+      ["degraded", [structural, { code: "source-stale", message: "m", severity: "warning" }]],
+      ["degraded", [structural, { code: "note", message: "m", severity: "info" }]],
+      ["degraded", [structural, { code: "no-message", severity: "info", effect: "info" }]],
+      ["degraded", [structural, { code: "blank", message: "\t\n", severity: "info", effect: "info" }]],
+      ["degraded", [operational]],
+      ["degraded", [{ ...structural, code: undefined }]],
+      ["degraded", ["nav-portfolio-composition-unverified"]],
+      ["degraded", "not json"],
+      ["degraded", null],
+      ["error", [structural]],
+    ];
+    rows.forEach(([status, warnings], index) => insertAttempt(sqlite, {
+      stablecoinId: `coin-${index}`, attemptedAt: 2000, adapterKey: "chainlink-nav", status,
+      warnings: Array.isArray(warnings) ? JSON.stringify(warnings) : warnings,
+    }));
+    const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
+    expect(rollup.rows).toEqual([
+      { adapterKey: "chainlink-nav", attempts: 14, ok: 1, degraded: 12, degradedByDesign: 3, error: 1, skipped: 0, successRate: 4 / 14 },
+    ]);
   });
 });
 
