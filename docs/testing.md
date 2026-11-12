@@ -176,6 +176,8 @@ Weekly owns blocking all-critical measured coverage (full-history bootstrap, so 
 
 Issue publication is serialized with fixed concurrency groups and `cancel-in-progress: false`: weekly CI telemetry locks only `ci-report`, while Agent Maintenance Candidates, Curation Expiry Sweep, DDR Curation Watch and Ops Follow-up Reminders lock their entire workflows. Scheduled and manual runs share each publisher's group, preventing overlapping lookup/write sequences.
 
+The nightly `safety-map-render` job installs Firefox through shared workspace setup on Linux and runs only the clock suite's full-render group; its required JSON-report check fails missing, failed or skipped render cases, writes the outcome to the job summary and feeds `ci:nightly-red`. Confirm execution in the retained `safety-map-render-<sha>-<run>-<attempt>` report; this geometry check is authoritative only on Linux because macOS text boxes measure about 2 px wider.
+
 ### Nightly test tier
 
 [`nightly-test-tier.mts`](../scripts/lib/nightly-test-tier.mts) owns the vocabulary. A case leaves the PR tier only for work the PR gate cannot afford: registry-wide or full-corpus sweeps, full-registry scoring, and long resource probes. Nothing moves while the nightly run is red or unexplained — a red aggregate is an incident to fix, not a licence to demote the failing leaf — and every move must leave a PR-tier test or guard proving the behavior before merge.
