@@ -32,6 +32,22 @@ import {
 const fixtures = createLatestSchemaFixtureTracker();
 
 const NOW = 1_775_900_000;
+const TAPE_CLASSES = [
+  "psi.band_changed", "dews.escalated", "dews.deescalated", "score.upgraded",
+  "score.downgraded", "yield.warning_emitted", "yield.pys_dropped",
+];
+const TAPE_YIELD_INSERT = "INSERT INTO yield_history (stablecoin_id,source_key,recorded_at,is_best,apy,data_source) VALUES ('a','a',?,1,1,'a')";
+const TAPE_D1 = [
+  { match: "canary:tape-oldest-unprojected", rows: [],
+    first: Object.fromEntries(TAPE_CLASSES.map((name) => [name, NOW - 60])) },
+  { match: "FROM cache WHERE key IN", rows: TAPE_CLASSES.map((eventClass) => ({
+    key: tapeProjectorCursorKey(eventClass), value: String(NOW - 120), updated_at: NOW - 120,
+  })) },
+  { match: "canary:tape-class-liveness", rows: [], first: {
+    psi_at: NOW - 60, dews_at: NOW - 60, score_legacy_at: NOW - 60,
+    score_v2_at: NOW - 60, yield_history_at: NOW - 60, yield_decisions_at: NOW - 60,
+  } },
+];
 const EXPECTED_CANARY_CHECK_IDS = [
   "dex-liquidity-current-publication",
   "dex-liquidity-global-row",
@@ -132,7 +148,6 @@ function stablecoinsRunRows(options: {
   ];
 }
 
-/** Fixtures for the depeg canaries: a completed census and no stalled candidates. */
 function depegCanaryFixtures() {
   return [
     { match: "pharos:depeg-census-runs", rows: depegCensusRuns() },
@@ -398,17 +413,6 @@ function healthyD1(
     gbpFallback?: boolean;
     usdRecordDateMissing?: boolean;
     psiInputSnapshot?: string;
-    tape?: {
-      cursors?: Record<string, number>;
-      clocks?: Partial<{
-        psi_at: number;
-        dews_at: number;
-        score_legacy_at: number;
-        score_v2_at: number;
-        yield_history_at: number;
-        yield_decisions_at: number;
-      }>;
-    };
     publicDataset?: {
       snapshot?: { snapshot_date: string; byte_size: number | null; created_at: number } | null;
       evidence?: Partial<{
@@ -495,35 +499,7 @@ function healthyD1(
       first: { count: [...ACTIVE_IDS].length },
       rows: [],
     },
-    {
-      match: "FROM cache WHERE key IN",
-      rows: [
-        "psi.band_changed",
-        "dews.escalated",
-        "dews.deescalated",
-        "score.upgraded",
-        "score.downgraded",
-        "yield.warning_emitted",
-        "yield.pys_dropped",
-      ].map((eventClass) => ({
-        key: `tape-projector:cursor:${eventClass}`,
-        value: String(dex.tape?.cursors?.[eventClass] ?? NOW - 120),
-        updated_at: NOW - 120,
-      })),
-    },
-    {
-      match: "canary:tape-class-liveness",
-      first: {
-        psi_at: NOW - 60,
-        dews_at: NOW - 60,
-        score_legacy_at: NOW - 60,
-        score_v2_at: NOW - 60,
-        yield_history_at: NOW - 60,
-        yield_decisions_at: NOW - 60,
-        ...dex.tape?.clocks,
-      },
-      rows: [],
-    },
+    ...TAPE_D1,
     {
       match: "pharos:canary:public-dataset-snapshot",
       first: dex.publicDataset?.snapshot === undefined
@@ -613,6 +589,9 @@ describe("worker data invariant canaries", () => {
       skippedCount: 0,
       worstStatus: "ok",
       worstSeverity: "info",
+    });
+    expect(summary.results.find((r) => r.checkId === "tape-class-liveness")).toMatchObject({
+      status: "ok", metadata: { classes: TAPE_CLASSES.map((eventClass) => ({ eventClass, lagSec: 60, waitingSec: 60 })) },
     });
     expect(
       summary.results.find((result) => result.checkId === "safety-score-v9-publication")?.metadata,
@@ -712,82 +691,98 @@ describe("worker data invariant canaries", () => {
     });
   });
 
-  it("flags a snapshot tape class whose cursor lags a moving source clock", async () => {
-    const summary = await runCanaryChecks(healthyD1({
-      tape: { cursors: { "psi.band_changed": NOW - 6_000 } },
-    }), { observedAt: NOW, mode: "status" });
-    const tape = summary.results.find((result) => result.checkId === "tape-class-liveness");
-    expect(tape).toMatchObject({
-      status: "degraded",
-      error: expect.stringContaining("psi.band_changed (5940s)"),
-      metadata: { lagBudgetSec: 5_400, evaluatedCount: 7 },
-    });
-  });
-
-  it("skips tape liveness when every source clock is stale", async () => {
-    const stale = NOW - 200_000;
-    const summary = await runCanaryChecks(healthyD1({
-      tape: {
-        clocks: {
-          psi_at: stale,
-          dews_at: stale,
-          score_legacy_at: stale,
-          score_v2_at: stale,
-          yield_history_at: stale,
-          yield_decisions_at: stale,
-        },
-      },
-    }), { observedAt: NOW, mode: "status" });
-    expect(summary.results.find((result) => result.checkId === "tape-class-liveness")).toMatchObject({
-      status: "skipped",
-      error: "tape-source-stale",
-      metadata: { evaluatedCount: 0 },
-    });
-  });
-
-  it("clocks score tape classes from organic history rows only", async () => {
+  it.each([
+    ["yield.warning_emitted", 1704, 7204, "ok"],
+    ["yield.warning_emitted", 5401, 7200, "degraded"],
+    ["dews.escalated", 6000, 12600, "degraded"],
+    ["dews.deescalated", 6000, 12600, "degraded"],
+    ["yield.warning_emitted", 0, 0, "ok"],
+    ["yield.warning_emitted", null, 7204, "error"],
+    ["yield.warning_emitted", -1, 7204, "error"],
+  ] as const)("tape %s: wait %s, gap %s → %s", async (eventClass, wait, gap, status) => {
     const { sqlite, db } = fixtures.open();
-    const organicAt = NOW - 10_000;
+    const yieldClass = eventClass.startsWith("yield");
+    const oldest = NOW - (wait ?? 60);
+    const sourceMax = yieldClass ? oldest : NOW - 60;
+    const stale = eventClass === "dews.deescalated";
+    const insert = sqlite.prepare(yieldClass
+      ? TAPE_YIELD_INSERT
+      : "INSERT INTO stress_signals VALUES ('a', ?, 1, 'CALM', '{}')");
+    for (const at of new Set([sourceMax - gap, oldest, sourceMax])) insert.run(at);
+    if (stale) sqlite.prepare(TAPE_YIELD_INSERT).run(NOW - 200000);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(tapeProjectorCursorKey(eventClass), String(sourceMax - gap), NOW);
+    const original = db.prepare.bind(db);
+    const prepare = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      if (sql.includes("canary:tape-oldest-unprojected")) {
+        if (wait === -1) throw new Error("read failed");
+        if (wait == null || stale) sqlite.exec("DELETE FROM yield_history");
+      }
+      return original(sql);
+    });
+    const result = await checkTapeClassLiveness(db, NOW, {});
+    expect(result.status).toBe(status);
+    if (status === "error") {
+      expect(result).toMatchObject({ executionStatus: "failed", error: "canary-source-unavailable" });
+    } else {
+      expect(result.metadata).toMatchObject({ lagBudgetSec: 5400, classes: expect.arrayContaining([
+        expect.objectContaining({ eventClass, lagSec: gap, waitingSec: wait,
+          oldestUnprojectedAt: gap ? oldest : null, reason: status === "degraded" ? "cursor-lag" : null }),
+      ]) });
+    }
+    if (stale) expect(result.metadata?.classes).toContainEqual(expect.objectContaining({ eventClass: "yield.warning_emitted", evaluated: false,
+        reason: "source-stale-or-unavailable", waitingSec: null }));
+    if (status === "degraded") expect(result.error).toContain(`${eventClass} (${wait}s waiting)`);
+    if (!gap) {
+      expect(prepare.mock.calls.filter(([sql]) => sql.includes("canary:tape"))).toHaveLength(1);
+    }
+  });
+
+  it.each([false, true])("tape cohort caught up %s", async (caught) => {
+    const { sqlite, db } = fixtures.open();
+    const expected = TAPE_CLASSES.map((eventClass, i) => {
+      const sourceMax = NOW - [60,60,60,9000,9000,8000,7000][i];
+      const cursor = caught ? sourceMax : NOW - 14000 + i * 1000;
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(tapeProjectorCursorKey(eventClass), String(cursor), NOW);
+      return { eventClass, sourceMax, lagSec: sourceMax - cursor,
+        oldestUnprojectedAt: caught ? null : cursor + 1000, waitingSec: caught ? 0 : NOW - cursor - 1000,
+        evaluated: true, reason: caught ? null : "cursor-lag",
+      };
+    });
+    sqlite.exec(`
+      INSERT INTO stability_index_samples VALUES
+        (${NOW - 13000},1,'x','{}','{}','v'),(${NOW - 60},1,'x','{}','{}','v');
+      INSERT INTO stress_signals VALUES
+        ('a',${NOW - 12000},1,'CALM','{}'),('a',${NOW - 11000},1,'CALM','{}'),('a',${NOW - 60},1,'CALM','{}');
+      INSERT INTO yield_source_decisions
+        (generation_id,stablecoin_id,selected_source_key,selected_confidence_tier,selected_data_source,
+         selected_apy_30d,selected_reason,alternatives_json,created_at)
+        VALUES ('g','a','a','a','a',1,'a','[]',${NOW - 7000});
+    `);
+    sqlite.prepare(TAPE_YIELD_INSERT).run(NOW - 8000);
     const insertV2 = sqlite.prepare(
       `INSERT INTO safety_score_history_v2
-         (history_id, stablecoin_id, recorded_at, model, methodology_version, policy_id,
-          policy_digest, evaluation_build_digest, base_input_generation_id,
-          model_publication_generation_id, transition_kind, grade, score, prev_grade, created_at)
-       VALUES (?, 'usdt-tether', ?, 'v9', 'v9', 'psi-policy', ?, ?, ?, 'generation-1', ?, 'A', 90, ?, 1)`,
+         (history_id, stablecoin_id, recorded_at, model, methodology_version,
+          evaluation_build_digest, base_input_generation_id, model_publication_generation_id,
+          transition_kind, grade, prev_grade, created_at)
+       VALUES (?, 'a', ?, 'v8', 'v8', '${"d".repeat(64)}',
+         'report-cards-input:v1:${"a".repeat(64)}', 'g', ?, 'A', ?, 1)`,
     );
-    const buildDigest = "d".repeat(64);
-    const baseInput = `report-cards-input:v1:${"a".repeat(64)}`;
-    insertV2.run("organic-1", organicAt, "p".repeat(64), buildDigest, baseInput, "organic-grade-change", "B+");
-    insertV2.run("boundary-1", NOW, "p".repeat(64), buildDigest, baseInput, "methodology-boundary-baseline", null);
-    const insertCursor = sqlite.prepare(
-      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-    );
-    for (const eventClass of ["score.upgraded", "score.downgraded"]) {
-      insertCursor.run(tapeProjectorCursorKey(eventClass), String(organicAt), organicAt);
+    insertV2.run("up", NOW - 10000, "organic-grade-change", "B+");
+    insertV2.run("down", NOW - 9000, "organic-grade-change", "B+");
+    insertV2.run("boundary", NOW, "methodology-boundary-baseline", null);
+    const tape = async (at = NOW) => (await runCanaryChecks(db, { observedAt: at, mode: "status" }))
+      .results.find((r) => r.checkId === "tape-class-liveness");
+    const result = await tape();
+    expect(result).toMatchObject({ status: caught ? "ok" : "degraded",
+      metadata: { evaluatedCount: 7, classes: expected } });
+    if (!caught) {
+      for (const r of expected) expect(result?.error).toContain(`${r.eventClass} (${r.waitingSec}s waiting)`);
+      expect(await tape(NOW + 200000)).toMatchObject({
+        status: "skipped", error: "tape-source-stale", metadata: { evaluatedCount: 0 },
+      });
     }
-
-    const result = await checkTapeClassLiveness(db, NOW, {});
-    expect(result).toMatchObject({
-      status: "ok",
-      metadata: {
-        classes: expect.arrayContaining([
-          expect.objectContaining({
-            eventClass: "score.upgraded",
-            sourceMax: organicAt,
-            lagSec: 0,
-            evaluated: true,
-            reason: null,
-          }),
-          expect.objectContaining({
-            eventClass: "score.downgraded",
-            sourceMax: organicAt,
-            lagSec: 0,
-            evaluated: true,
-            reason: null,
-          }),
-        ]),
-      },
-    });
   });
 
   it("flags an empty sealed public-dataset section even when the run reports success", async () => {
@@ -1342,34 +1337,7 @@ describe("worker data invariant canaries", () => {
         first: { count: [...ACTIVE_IDS].length },
         rows: [],
       },
-      {
-        match: "FROM cache WHERE key IN",
-        rows: [
-          "psi.band_changed",
-          "dews.escalated",
-          "dews.deescalated",
-          "score.upgraded",
-          "score.downgraded",
-          "yield.warning_emitted",
-          "yield.pys_dropped",
-        ].map((eventClass) => ({
-          key: `tape-projector:cursor:${eventClass}`,
-          value: String(NOW - 120),
-          updated_at: NOW - 120,
-        })),
-      },
-      {
-        match: "canary:tape-class-liveness",
-        first: {
-          psi_at: NOW - 60,
-          dews_at: NOW - 60,
-          score_legacy_at: NOW - 60,
-          score_v2_at: NOW - 60,
-          yield_history_at: NOW - 60,
-          yield_decisions_at: NOW - 60,
-        },
-        rows: [],
-      },
+      ...TAPE_D1,
       {
         match: "pharos:canary:public-dataset-snapshot",
         first: { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 },
@@ -1502,8 +1470,6 @@ describe("worker data invariant canaries", () => {
     const db = mockD1([{ match: "WITH active(check_id)", rows: [] }]);
     await loadCanaryStatus(db, NOW, "status");
     const query = db.getHistory()[0];
-    // The GROUP BY form scanned every retained run of every active check, and
-    // the staleness watchdog now reads this on every 15-minute run.
     expect(query.sql).not.toContain("GROUP BY");
     expect(query.sql).toContain("CROSS JOIN worker_canary_runs r");
     expect(query.binds.slice(0, EXPECTED_CANARY_CHECK_IDS.length)).toEqual(EXPECTED_CANARY_CHECK_IDS);
@@ -1628,11 +1594,6 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    // The depeg and pricing checks read cron_runs and depeg tables, which this fixture also omits.
-    // The mint/burn and blacklist checks read the healthy cache rows above, so the union keeps
-    // the original error total and adds two healthy observations.
-    // tape-class-liveness fails on the omitted stability-index source clock above, while the
-    // public-dataset check reads the two rows supplied here: the union adds one error and one ok.
     expect(summary.errorCount).toBe(12);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);

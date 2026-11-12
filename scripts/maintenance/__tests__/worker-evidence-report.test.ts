@@ -146,7 +146,8 @@ describe("21-day incident evidence", () => {
     try {
       const query = vi.fn().mockImplementation((sql: string) => {
         expect(sql.trim()).toMatch(/^SELECT/i);
-        if (sql.includes("FROM cron_runs")) return [{ job: "job", status: "error", error: "secret-error", metadata: "secret-metadata" }];
+        // Without this indexable range the day is a full cron_runs scan.
+        if (sql.includes(`FROM cron_runs WHERE started_at >= ${Date.parse("2026-10-16T23:00:00Z") / 1000} AND started_at < ${Date.parse("2026-10-19T00:00:00Z") / 1000}\n`)) return [{ job: "job", status: "error", error: "secret-error", metadata: "secret-metadata" }];
         throw Object.assign(new Error(`Command failed: npx wrangler d1 execute --command "${sql}"\nsecret-stderr Bearer secret-token [code: 7429] overloaded`), { status: 1, signal: "SIGTERM", stderr: "secret-stderr" });
       });
       const offline = vi.fn().mockRejectedValue(new Error("secret-token"));
