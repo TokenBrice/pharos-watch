@@ -117,6 +117,7 @@
     },
     "params": {
       "bucket": "exposure_split",
+      "maxUnattributedResidualShare": 0.02,
       "riskMap": {
         "[Fluid]_fUSDT0": "low",
         "Liquidity_Buffer": "low",

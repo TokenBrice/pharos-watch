@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
 import * as adapters from "@shared/lib/live-reserve-adapters";
-import type { LiveReserveAdapterDefinitionMap } from "@shared/lib/live-reserve-adapters";
 import {
   getIndependentAssuranceManifest,
   independentAssuranceSourceTimestamp,
@@ -12,7 +11,6 @@ import {
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import {
   AUDM_INDEPENDENT_ASSURANCE_PROFILE,
   EUROP_INDEPENDENT_ASSURANCE_PROFILE,
@@ -46,10 +44,6 @@ import {
   verifyFixtureIndex,
   verifyIndex as verifyAssuranceIndex,
 } from "./independent-assurance.test-support";
-
-/** One registered live-reserve adapter definition: the union
- * `getLiveReserveAdapterDefinition` hands out for any adapter key. */
-type LiveReserveAdapterDefinition = LiveReserveAdapterDefinitionMap[LiveReserveAdapterKey];
 
 const PDF_SHA256 = createHash("sha256").update(PDF_BYTES).digest("hex");
 
@@ -186,6 +180,8 @@ function assuranceFenceCases() {
   const agoraReviewed =
     `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com${new URL(ausd.reportUrl).pathname}?X-Amz-Signature=fixture`;
   const fiddIndex = `<a href="${FIDD_VIEWER_URL}">September</a>`;
+  const auddIndex = indexFixture("audd-independent-assurance.html") +
+    '<a href="https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf">October 2026</a>';
   return [
     {
       adapter: "agora-independent-assurance",
@@ -214,9 +210,9 @@ function assuranceFenceCases() {
       adapter: "audd-independent-assurance",
       coinId: "audd-novatti",
       product: "AUDD",
-      html: indexFixture("audd-independent-assurance.html"),
-      newerHtml: indexFixture("audd-independent-assurance.html") +
-        '<a href="https://www.audd.digital/wp-content/uploads/2026/11/AUDC-Agreed-upon-procedures-report-Oct26_.pdf">October 2026</a>',
+      html: auddIndex,
+      newerHtml: auddIndex +
+        '<a href="https://www.audd.digital/wp-content/uploads/2026/12/AUDC-Agreed-upon-procedures-report-Nov26_.pdf">November 2026</a>',
     },
     {
       adapter: "cadd-independent-assurance",
@@ -291,7 +287,6 @@ describe("independent-assurance manifest framework", () => {
           reportRedirect: "https://unreviewed.example/report.pdf",
         }),
       ).rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
-      // A newer index entry no longer stops discovery; the pinned PDF gates still run.
       await expect(
         verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.newerHtml, options),
       ).rejects.toThrow("PDF byte length");
@@ -327,8 +322,6 @@ describe("independent-assurance manifest framework", () => {
         reportByteLength: PDF_BYTES.length,
         reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
       });
-      // The synthetic PDF has its own identity; the product suite separately
-      // rejects any real report identity outside the reviewed rounding scope.
       const reconcile = assurance.reconcileIndependentAssuranceManifest;
       vi.spyOn(assurance, "reconcileIndependentAssuranceManifest").mockImplementation((manifest, options) =>
         reconcile(manifest, options?.reviewedReport ? {
@@ -350,7 +343,7 @@ describe("independent-assurance manifest framework", () => {
       expect(result.metadata?.details).toMatchObject({
         assurance: { product: testCase.product, assets: reviewed.assets, liabilities: reviewed.liabilities },
       });
-      if (testCase.product === "SBC") {
+      if (testCase.product === "SBC" || testCase.product === "AUDD") {
         expect(result.warnings).toContainEqual(expect.objectContaining({
           code: "report-rounding-difference", severity: "info", effect: "info",
         }));
@@ -360,6 +353,7 @@ describe("independent-assurance manifest framework", () => {
         now: assurance.independentAssuranceSourceTimestamp(reviewed) + 60,
       }).valid).toBe(true);
       expect(result.warnings?.some((warning) => warning.code === "newer-unreviewed-report")).not.toBe(true);
+      if (testCase.product === "AUDD") expect(result.warnings?.map(({ code }) => code)).toEqual(["report-rounding-difference"]);
 
       installAssuranceFetch(testCase.product, testCase.newerHtml, options);
       const newer = await adapter.fetch(coin, coin.liveReservesConfig, new AbortController().signal);
@@ -427,7 +421,7 @@ describe("independent-assurance manifest framework", () => {
       // mirroring the keyed-params cast in live-reserve-adapters.ts.
       vi.spyOn(adapters, "getLiveReserveAdapterDefinition").mockReturnValue({
         ...descriptor, evidenceClass: "static-validated", sourceOriginClass: "issuer-attested",
-      } as unknown as LiveReserveAdapterDefinition);
+      } as unknown as typeof descriptor);
       const result = await fetchIndependentAssuranceReserves(
         coin, config, new AbortController().signal, profile, params,
       );
@@ -605,7 +599,6 @@ describe("independent-assurance manifest framework", () => {
           error: "configured index URL is not the reviewed official index",
         },
         { name: "missing reviewed URL", config, html: "<p>No reports</p>", pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
-        // A newer report passes discovery and still meets the pinned PDF identity gate.
         { name: "newer unreviewed report", config, html: reviewedCandidate + newerCandidate, pdf: PDF_BYTES, error: "PDF byte length" },
         { name: "duplicate latest date", config, html: reviewedCandidate + duplicateCandidate, pdf: PDF_BYTES, error: "reviewed report URL is missing or duplicated" },
       ];
@@ -1032,20 +1025,19 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
 });
 
 describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
+  const manifest = getIndependentAssuranceManifest("AUDD");
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("reviews the September 2026 agreed-upon-procedures report and reconciles every chain's circulation", () => {
-    const manifest = getIndependentAssuranceManifest("AUDD");
+  it("reviews the October 2026 agreed-upon-procedures report and reconciles every chain's circulation", () => {
     expect(manifest.assuranceTier).toBe("agreed-upon-procedures");
-    // Reconciliation recomputes both totals from the reviewed rows and admits the
-    // report's reported cent-rounding difference within the profile's bound.
+    expect(independentAssuranceSourceTimestamp(manifest)).toBe(1793491140);
     expect(reconcileIndependentAssuranceManifest(manifest, AUDD_INDEPENDENT_ASSURANCE_PROFILE.reconciliation))
       .toMatchObject({
-        computedAssetTotal: "11289945.05",
-        liabilityTotal: "11159088.48",
+        computedAssetTotal: "9213478.78",
+        liabilityTotal: "9088311.69",
         reportedAssetDifference: "0",
         reportedLiabilityDifference: "0.01",
       });
@@ -1058,8 +1050,7 @@ describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
   });
 
   it("rejects discrepancies beyond the cent-rounding bound or relative cap", () => {
-    const manifest = getIndependentAssuranceManifest("AUDD");
-    for (const reportedLiabilityTotal of ["11159088.54", "11159088.42"]) {
+    for (const reportedLiabilityTotal of ["9088311.75", "9088311.63"]) {
       expect(() => reconcileIndependentAssuranceManifest(
         { ...manifest, reportedLiabilityTotal }, AUDD_INDEPENDENT_ASSURANCE_PROFILE.reconciliation,
       )).toThrow("reported liability total differs");

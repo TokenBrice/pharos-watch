@@ -3,13 +3,13 @@
   "product": "AUDD",
   "profile": "audd-v1",
   "officialIndexUrl": "https://www.audd.digital/transparency/",
-  "reportUrl": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf",
-  "reportSha256": "6fd925a71337f450181f607cfce7a3a74dc918debe50f55e097970384c40b321",
-  "reportByteLength": 255103,
-  "reportDate": "2026-09-30",
-  "reportAsOf": "2026-09-30T23:59:00Z",
+  "reportUrl": "https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf",
+  "reportSha256": "17378203a7ee5b7c050b6a67cc7f4195e1425401980baeaee0c552ecf7803db0",
+  "reportByteLength": 388252,
+  "reportDate": "2026-10-31",
+  "reportAsOf": "2026-10-31T23:59:00Z",
   "reportTimeZone": "UTC (as printed in the report)",
-  "reportIssuedAt": "2026-10-05T23:59:00Z",
+  "reportIssuedAt": "2026-11-10T23:59:00Z",
   "attestor": "William Buck Audit (Vic) Pty Ltd",
   "engagement": "Report of Factual Findings under ASRS 4400 Agreed-Upon Procedures Engagements (not an assurance engagement)",
   "conclusion": "agreed-upon-procedures",
@@ -18,19 +18,19 @@
     {
       "code": "banking-circle",
       "label": "AUD cash held at Banking Circle (AUDC Reserve Account)",
-      "amount": "1880893.19"
+      "amount": "770500.92"
     },
     {
       "code": "westpac",
       "label": "AUD cash held at Westpac under the AMAL Bare Trust",
-      "amount": "9409051.86"
+      "amount": "8442977.86"
     }
   ],
   "liabilities": [
     {
       "code": "stellar",
       "label": "Stellar AUDD circulation",
-      "amount": "3135787.26"
+      "amount": "2663082.84"
     },
     {
       "code": "xrpl",
@@ -40,7 +40,7 @@
     {
       "code": "ethereum",
       "label": "Ethereum AUDD circulation",
-      "amount": "4196409.63"
+      "amount": "2797933.87"
     },
     {
       "code": "solana",
@@ -50,17 +50,17 @@
     {
       "code": "hedera",
       "label": "Hedera AUDD circulation",
-      "amount": "1197.00"
+      "amount": "1198.00"
     },
     {
       "code": "base",
       "label": "Base AUDD circulation",
-      "amount": "2996028.58"
+      "amount": "2997227.87"
     },
     {
       "code": "xdc",
       "label": "XDC AUDD circulation",
-      "amount": "361440.04"
+      "amount": "160643.14"
     },
     {
       "code": "redbelly",
@@ -73,13 +73,13 @@
       "amount": "10.00"
     }
   ],
-  "reportedAssetTotal": "11289945.05",
-  "computedAssetTotal": "11289945.05",
-  "reportedLiabilityTotal": "11159088.49",
+  "reportedAssetTotal": "9213478.78",
+  "computedAssetTotal": "9213478.78",
+  "reportedLiabilityTotal": "9088311.70",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "740eb55ba03c54eeab5bbc34bad22118358e83fcf82d7ec46c67170c9e623f24",
+    "normalizedTextSha256": "bce196e02123dd014bdd14c5cee62b69c7c085e609ded6acf101e60109aac6e6",
     "pageCount": 5
   },
   "assuranceTier": "agreed-upon-procedures"

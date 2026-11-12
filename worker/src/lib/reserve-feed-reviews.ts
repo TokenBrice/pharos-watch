@@ -57,16 +57,7 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
     reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
     expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
   },
-  {
-    stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "upstream-http",
-    warningCodes: [], errorPrefix: null, errorClass: "http-403",
-    owner: "ops", reason: "Issuer historical-portfolio GET rechecked 2026-11-07T19:43:37Z for the latest production checkpoint query token=mTBILL&timestamp=2026-11-06T12%3A00 still returns HTTP 403 from Cloudflare (CF-RAY a56ed3f16b01e292-BEG; two-byte JSON body SHA256 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a). Latest production attempt reports upstream-http/source-egress-blocked for the same endpoint with no warnings; 40 seven-day attempts are the same HTTP-403 failure. Last success was October 24, so the outage remains below the 30-day retirement boundary. Renew only this stable HTTP-403 class, adapter, endpoint and empty warning set for seven days, allowing the checkpoint query to vary. Other causes/statuses/warnings remain unacknowledged; preserve quarantine, original clocks and scoring refusal. An issuer-approved reachable historical source requires separate evidence and allowlist review.",
-    sources: [
-      { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-06T12%3A00", evidenceDate: "2026-11-07" },
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
-  },
+
 ];
 
 export function resolveReserveFeedReviews(
@@ -176,10 +167,7 @@ export async function matchReserveFeedReview(
   }
   if (review.errorClass != null) {
     // Only the single primary failure may inherit a class; mixed fallback causes remain unreviewed.
-    const message = review.adapterKey === "midas-mtbill"
-      ? failure.lastError?.replace("primary:onchain-evm: midas-mtbill:source-egress-blocked: ", "primary:onchain-evm: ")
-      : failure.lastError;
-    const http = /^primary:(http-json|http-html|onchain-evm): HTTP ([45]\d{2}) for (https:\/\/\S+)$/.exec(message ?? "");
+    const http = /^primary:(http-json|http-html|onchain-evm): HTTP ([45]\d{2}) for (https:\/\/\S+)$/.exec(failure.lastError ?? "");
     if (!config || !http || http[1] !== config.inputs.primary.kind || `http-${http[2]}` !== review.errorClass) return null;
     const endpoint = "url" in config.inputs.primary ? config.inputs.primary.url : config.params?.historicalSourceUrl;
     if (typeof endpoint !== "string") return null;

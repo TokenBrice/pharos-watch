@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { PROFILE as audd } from "../lib/independent-assurance-profiles/audd";
 import { PROFILE as gusd } from "../lib/independent-assurance-profiles/gusd";
 import { PROFILE as myrc } from "../lib/independent-assurance-profiles/myrc";
 import { PROFILE as rlusd } from "../lib/independent-assurance-profiles/rlusd";
@@ -149,4 +150,13 @@ describe("RLUSD reviewed offline compiler", () => {
       expect(() => prepareAssuranceExtractionText(rlusd, changed)).toThrow(/re-review the report/);
     });
   });
+});
+
+it("extracts AUDD October amounts above chain labels", () => {
+  const m = getIndependentAssuranceManifest("AUDD");
+  for (const [i, row] of audd.liabilityRows.entries()) {
+    const prefix = i < 2 ? `Acc: ${i ? "XXXX-XX6566" : "XX9639"} 100% cash $1 ` : "";
+    expect(amount(row.pattern, `${i === 1 ? "Value at Westpac " : ""}${m.liabilities[i].amount}\n${prefix}${row.label.replace(" AUDD circulation", "")}`)).toBe(m.liabilities[i].amount);
+  }
+  expect(audd.requiredText.find(({ label }) => label === "examined instant")!.pattern.test("11:59pm UTC on 31st October 2026")).toBe(true);
 });

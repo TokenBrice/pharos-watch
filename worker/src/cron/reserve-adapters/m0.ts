@@ -2,6 +2,7 @@ import type { ReserveAdapterCoin } from "@shared/types/stablecoin-meta-schemas";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
+import { redactProviderUrls } from "../../lib/safe-error-message";
 import { fetchEvmBlockTimestamp } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
 import { decodeAbiWordAt, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
@@ -90,8 +91,8 @@ const M0_TOTAL_COLLATERAL_SOURCE_KEY = "m0:eligible-collateral";
 
 // --- On-chain fallback (decision 2026-09-24) ------------------------------
 //
-// When the keyed Protocol API snapshot is older than the adapter's source-age
-// cap (the `DASHBOARD_VALIDATION` policy in the adapter declaration), publish
+// When the keyed Protocol API fails or its snapshot is older than the adapter's
+// source-age cap (the `DASHBOARD_VALIDATION` policy in the declaration), publish
 // the MinterGateway's current collateral instead of the stale indexer total.
 //
 // The approved-minter set cannot be enumerated on-chain: the TTG Registrar
@@ -119,7 +120,7 @@ const M0_ONCHAIN_SELECTORS = {
 } as const;
 
 // Mirrors the `m0` declaration's DASHBOARD_VALIDATION policy: the fallback runs
-// exactly when the published indexer snapshot would trip `stale-source-data`
+// when a readable indexer snapshot would trip `stale-source-data`
 // (or carry no verified timestamp at all). Keep this in step with the
 // declaration's validation tier.
 const M0_INDEXER_SOURCE_MAX_AGE_SEC = DASHBOARD_SOURCE_MAX_AGE_SEC;
@@ -354,9 +355,7 @@ export function adaptM0OnchainCollateral(observation: M0OnchainObservation): Ada
       observedBlock,
       details: {
         collateralSource: M0_ONCHAIN_SOURCE,
-        // The fallback only runs when the indexer snapshot exceeds the adapter's
-        // source-age cap or carries no verified timestamp; the warning message
-        // carries the precise age.
+        // The caller overrides this reason when the indexer read fails.
         fallbackReason: "indexer-snapshot-stale",
         discoveredMinterCount,
         nonContributingMinterCount: reads.length - contributing.length,
@@ -500,32 +499,40 @@ export async function fetchM0Reserves(
   if (!apiKey) {
     throw new Error("M0_API_KEY not configured; the M0 Protocol API requires keyed access");
   }
-  const primaryInput = requireJsonInputFromConfig(config, "m0");
-  const payload = await fetchJsonPostWithRetry<M0GraphQlResponse>(
-    primaryInput.url,
-    { query: M0_TOTAL_COLLATERAL_QUERY },
-    signal,
-    12_000,
-    ctx,
-    {
-      headers: { Authorization: `ApiKey ${apiKey}` },
-      // Workers has no redirect: "error"; manual keeps the API key on the
-      // reviewed GraphQL origin instead of replaying a 307/308 POST elsewhere.
-      redirect: "manual",
-    },
-  );
-  if (payload.errors?.length) {
-    const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");
-    throw new Error(message || "M0 GraphQL returned errors");
-  }
+  let indexerResult: AdapterResult | null = null;
+  let indexerError: string | null = null;
+  try {
+    const primaryInput = requireJsonInputFromConfig(config, "m0");
+    const payload = await fetchJsonPostWithRetry<M0GraphQlResponse>(
+      primaryInput.url,
+      { query: M0_TOTAL_COLLATERAL_QUERY },
+      signal,
+      Math.min(12_000, Math.max(1, Math.floor(((ctx?.attemptDeadlineMs ?? Infinity) - Date.now()) / 2))),
+      ctx,
+      {
+        // Leave half the inherited attempt for on-chain fallback; never spend it on primary retries.
+        maxRetries: 0,
+        headers: { Authorization: `ApiKey ${apiKey}` },
+        // Workers has no redirect: "error"; manual keeps the API key on the
+        // reviewed GraphQL origin instead of replaying a 307/308 POST elsewhere.
+        redirect: "manual",
+      },
+    );
+    if (payload.errors?.length) {
+      const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");
+      throw new Error(message || "M0 GraphQL returned errors");
+    }
 
-  const indexerResult = adaptM0Collateral(payload);
+    indexerResult = adaptM0Collateral(payload);
+  } catch (error) {
+    indexerError = redactProviderUrls(toErrorMessage(error)).slice(0, 200);
+  }
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
-  const indexerSourceTimestamp = indexerResult.metadata?.sourceTimestamp;
+  const indexerSourceTimestamp = indexerResult?.metadata?.sourceTimestamp;
   const indexerAgeSec = typeof indexerSourceTimestamp === "number" && Number.isFinite(indexerSourceTimestamp)
     ? nowSec - indexerSourceTimestamp
     : null;
-  if (indexerAgeSec != null && indexerAgeSec <= M0_INDEXER_SOURCE_MAX_AGE_SEC) return indexerResult;
+  if (indexerResult && indexerAgeSec != null && indexerAgeSec <= M0_INDEXER_SOURCE_MAX_AGE_SEC) return indexerResult;
 
   const staleReason = indexerAgeSec == null
     ? `has no verified timestamp (source-age cap ${M0_INDEXER_SOURCE_MAX_AGE_SEC}s)`
@@ -534,17 +541,32 @@ export async function fetchM0Reserves(
     const onchainResult = await fetchM0OnchainCollateral(signal, ctx);
     return {
       ...onchainResult,
+      metadata: {
+        ...onchainResult.metadata,
+        details: {
+          ...onchainResult.metadata?.details,
+          fallbackReason: indexerResult ? "indexer-snapshot-stale" : "indexer-unavailable",
+        },
+      },
       warnings: [
         ...(onchainResult.warnings ?? []),
-        reserveInfoWarning(
-          M0_ONCHAIN_WARNING_CODE,
-          `M0 indexer snapshot ${staleReason}; published on-chain MinterGateway collateral instead`,
-        ),
+        indexerResult
+          ? reserveInfoWarning(
+            M0_ONCHAIN_WARNING_CODE,
+            `M0 indexer snapshot ${staleReason}; published on-chain MinterGateway collateral instead`,
+          )
+          : reserveDegradedWarning(
+            "m0-indexer-unavailable-fallback",
+            `M0 Protocol API read failed (${indexerError}); published on-chain MinterGateway unexpired collateral lower bound instead`,
+          ),
       ],
     };
   } catch (error) {
-    const message = toErrorMessage(error);
-    const truncated = message.length > 200 ? `${message.slice(0, 200)}…` : message;
+    const message = redactProviderUrls(toErrorMessage(error));
+    const truncated = message.length > 200 ? `${message.slice(0, 200)}\u2026` : message;
+    if (!indexerResult) {
+      throw new Error(`M0 Protocol API failed (${indexerError}) and the on-chain collateral fallback is unavailable: ${truncated}`);
+    }
     return {
       ...indexerResult,
       warnings: [
