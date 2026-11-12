@@ -4,8 +4,9 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
+import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS, type StablecoinPriceGapReview } from "../stablecoin-publication-reviews";
 import {
+  assessDepegObservationGaps,
   checkDdrEligibleUnsealed,
   checkDepegDetectionCensus,
   checkDepegDexSuppression,
@@ -17,9 +18,14 @@ import {
 } from "../canary-checks-depeg";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
+const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
+const gapCount = gaps.length;
 
 afterEach(() => {
   fixtures.closeAll();
+  psi.length = 0;
+  gaps.length = gapCount;
 });
 
 const NOW = 1_775_900_000;
@@ -59,6 +65,13 @@ function censusRow(overrides: Record<string, unknown> = {}) {
     unavailable_reason: null,
     ...overrides,
   };
+}
+
+function pending(first: Record<string, unknown>, rows: Record<string, unknown>[] = []) {
+  return mockD1([
+    { match: "pharos:depeg-pending-confirmation-canary", first, rows: [] },
+    { match: "pharos:depeg-pending-aged-candidates", rows },
+  ]);
 }
 
 describe("depeg canary checks", () => {
@@ -160,6 +173,12 @@ describe("depeg canary checks", () => {
     ["legacy", true, "primary-unusable", 0, { unavailableAssets: undefined }, 1],
     ["malformed", true, "primary-unusable", 0, { unavailableIdsDropped: "invalid" }, 1],
     ["incomplete", true, "primary-unusable", 0, { unavailableAssets: [] }, 1],
+    ["psi", false, "primary-unusable", 0, {}, 0],
+    ["psi empty", false, "primary-unusable", 0, {}, 1],
+    ["psi active", false, "primary-unusable", 0, {}, 1],
+    ["psi expired", false, "primary-unusable", 1, {}, 1],
+    ["psi future", false, "primary-unusable", -1, {}, 1],
+    ["psi http", false, "primary-unusable", 0, {}, 1],
     ["closure", false, "primary-unusable", 0, {}, 0],
     ["reopening wait", false, "primary-unusable", 0, {}, 0],
     ["reopened", false, "primary-unusable", 0, {}, 1],
@@ -170,10 +189,17 @@ describe("depeg canary checks", () => {
     const now = market ? reopen + 1_801
       : reviewClock > 0 ? review.expiresAt : reviewClock < 0 ? review.reviewedAt - 1 : review.reviewedAt + 60;
     const evaluatedAt = market ? reopen + (kind === "closure" ? -1 : kind === "reopened" ? 1_800 : 1_799) : now;
-    const id = market ? "audm-mento" : kind === "unreviewed" ? "unreviewed" : review.stablecoinId;
+    const id = kind.startsWith("psi") ? "ust-terra"
+      : market ? "audm-mento" : kind === "unreviewed" ? "unreviewed" : review.stablecoinId;
+    if (kind.startsWith("psi") && kind !== "psi empty") {
+      (kind === "psi active" ? gaps : psi).push({ ...review, stablecoinId: id,
+        sources: kind === "psi http" ? ["http://example.com"] : review.sources });
+    }
     const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt, eligibleCount: 10,
       observedCount: 9, unavailableCount: 1, reasonCounts: { [reason]: 1 }, unavailableIdsTruncated: false,
       unavailableAssets: [{ id, reason, reviewedNominalReference: nominal }], ...overrides }) });
+    if (kind === "psi empty") expect(JSON.stringify(assessDepegObservationGaps(JSON.parse(row.census_json), now)))
+      .toBe('{"unavailableIdsComplete":true,"acknowledgedUnavailableIds":{"reviewedNominalReference":[],"scheduledMarketClosure":[],"reviewedPriceGap":[]},"actionableUnavailableIds":["ust-terra"],"actionableReasonCounts":{"primary-unusable":1},"acknowledgedUnavailableCount":0,"actionableUnavailableCount":1}');
     const result = await checkDepegDetectionCensus(mockD1([{ match: "pharos:depeg-census-runs",
       rows: [row, { ...row, started_at: now - 960 }] }]), now);
     expect(result).toMatchObject({ status: actionable ? "degraded" : "ok", metadata: {
@@ -234,14 +260,7 @@ describe("depeg canary checks", () => {
   });
 
   it("keeps quiet when no candidate is pending", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 0, stalled_count: 0, pending_count: 0, oldest_first_seen: null },
-        rows: [],
-      },
-      { match: "pharos:depeg-pending-aged-candidates", rows: [] },
-    ]);
+    const db = pending({ severe_recent: 0, stalled_count: 0, pending_count: 0, oldest_first_seen: null });
 
     expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
       status: "ok",
@@ -250,14 +269,7 @@ describe("depeg canary checks", () => {
   });
 
   it("errors when an extreme move expired without a public event", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 1, stalled_count: 0, pending_count: 0, oldest_first_seen: null },
-        rows: [],
-      },
-      { match: "pharos:depeg-pending-aged-candidates", rows: [] },
-    ]);
+    const db = pending({ severe_recent: 1, stalled_count: 0, pending_count: 0, oldest_first_seen: null });
 
     const result = await checkDepegPendingConfirmation(db, NOW);
 
@@ -269,19 +281,9 @@ describe("depeg canary checks", () => {
   });
 
   it("errors when a candidate outlives every dynamic expiry limit", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 0, stalled_count: 2, pending_count: 2, oldest_first_seen: NOW - 20_000 },
-        rows: [],
-      },
-      {
-        match: "pharos:depeg-pending-aged-candidates",
-        rows: [
-          { stablecoin_id: "usdt-tether", first_seen_at: NOW - 20_000 },
-          { stablecoin_id: "usdc-circle", first_seen_at: NOW - 15_000 },
-        ],
-      },
+    const db = pending({ severe_recent: 0, stalled_count: 2, pending_count: 2, oldest_first_seen: NOW - 20_000 }, [
+      { stablecoin_id: "usdt-tether", first_seen_at: NOW - 20_000 },
+      { stablecoin_id: "usdc-circle", first_seen_at: NOW - 15_000 },
     ]);
 
     const result = await checkDepegPendingConfirmation(db, NOW);
@@ -299,65 +301,16 @@ describe("depeg canary checks", () => {
     });
   });
 
-  it("keeps a candidate that is legitimately inside the extended confirmation window", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 0 },
-        rows: [],
-      },
-      {
-        match: "pharos:depeg-pending-aged-candidates",
-        rows: [{ stablecoin_id: "usdt-tether", first_seen_at: NOW - 3_000, reason: "large-cap" }],
-      },
-    ]);
-
-    const result = await checkDepegPendingConfirmation(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "ok",
-      metadata: { olderThanBaseExpiryCount: 1, stalledExpiredCount: 0 },
-    });
-  });
-
-  it("errors when a non-extreme candidate outlives the extended expiry limit", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 0 },
-        rows: [],
-      },
-      {
-        match: "pharos:depeg-pending-aged-candidates",
-        rows: [{ stablecoin_id: "usdt-tether", first_seen_at: NOW - 9_060, reason: "large-cap" }],
-      },
-    ]);
-
-    const result = await checkDepegPendingConfirmation(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      error: expect.stringContaining("outlived every dynamic expiry limit"),
-      metadata: { stalledExpiredCount: 1 },
-    });
-  });
-
-  it("keeps an extreme-move candidate inside its severe expiry limit", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-pending-confirmation-canary",
-        first: { severe_recent: 0 },
-        rows: [],
-      },
-      {
-        match: "pharos:depeg-pending-aged-candidates",
-        rows: [{ stablecoin_id: "usdt-tether", first_seen_at: NOW - 9_600, reason: "extreme-move" }],
-      },
-    ]);
-
+  it.each([
+    ["keeps a candidate that is legitimately inside the extended confirmation window", 3000, "large-cap", false],
+    ["errors when a non-extreme candidate outlives the extended expiry limit", 9060, "large-cap", true],
+    ["keeps an extreme-move candidate inside its severe expiry limit", 9600, "extreme-move", false],
+  ] as const)("%s", async (_title, age, reason, expired) => {
+    const db = pending({ severe_recent: 0 }, [{ stablecoin_id: "usdt-tether", first_seen_at: NOW - age, reason }]);
     expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
-      status: "ok",
-      metadata: { olderThanBaseExpiryCount: 1, stalledExpiredCount: 0 },
+      status: expired ? "error" : "ok",
+      ...(expired ? { error: expect.stringContaining("outlived every dynamic expiry limit") } : {}),
+      metadata: expired ? { stalledExpiredCount: 1 } : { olderThanBaseExpiryCount: 1, stalledExpiredCount: 0 },
     });
   });
 

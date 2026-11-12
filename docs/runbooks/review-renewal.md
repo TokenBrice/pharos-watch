@@ -43,6 +43,12 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-re
 - Keep source-review acknowledgement expiry separate from an existing lifecycle/holder-exit decision deadline. A fresh source review may acknowledge the still-missing price for a short explicit interval, but must retain the original lifecycle deadline and accountable owner in its reason; it neither satisfies that decision nor authorizes extending it. Report any outstanding lifecycle decision explicitly at hand-off.
 - Recheck inherited-price dependencies as well as the asset's own exact contracts. A stale parent quote, fallback-confidence parent, below-floor pool or unreviewed native cross-rate is not recovery. Record actual observation clocks and depth; an empty market response is different from a failed request.
 
+### PSI historical price-gap reviews
+
+`PSI_HISTORICAL_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-reviews.ts` uses the same provenance, date validation and roughly 30-day editorial renewal policy as active price-gap reviews above; lifetime is bounded by the authored `expiresAt`, with no runtime maximum duration. Keep identities in the off-catalog PSI historical cohort. A valid entry acknowledges that asset's `primary-unusable` census gap as a cohort until expiry, including a recurrence after recovery; it is not tied to one gap episode. Raw census counts remain unchanged, and active-price coverage, detection, events, DEWS and alerts are unaffected.
+
+Unlike the active registry, historical reviews have no invalid/expired ID diagnostics surfaced from the canary, no 48-hour renewal reminder and no authored-registry validation sweep. Invalid entries acknowledge nothing when evaluated rather than failing at module load. Inspect `acknowledgedUnavailableIds.reviewedPriceGap` and `actionableUnavailableIds` in the canary metadata and schedule editorial renewal explicitly. Expiry re-arms the gap on the next evaluation; persisted canary metadata is not revalidated by status reads.
+
 ### Market-hours calendars
 
 Mento's standing source calendar is separate from `STABLECOIN_PRICE_GAP_REVIEWS`; do not recreate monthly weekend acknowledgements. Inspect `/api/health.activePriceCoverage.scheduledClosureGapIds` and `missingActiveAssets[].scheduledClosure` for `market-closed`, lane, owner, sources, review date and `reviewDeadline`. Calendar scope, closure windows, the reopening gate, tile counts and invalid/expired calendar behaviour are owned by [ADR-43](../architecture.md#adr-43); this section owns only the annual revalidation.
