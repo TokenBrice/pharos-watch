@@ -66,13 +66,14 @@ interface ChartTooltipProps {
   label?: number;
   pegKeys: string[];
   data: ChartRow[];
+  firstObserved: Map<string, number>;
 }
 
-function CohortTooltip({ active, label, pegKeys, data }: ChartTooltipProps) {
+function CohortTooltip({ active, label, pegKeys, data, firstObserved }: ChartTooltipProps) {
   if (!active || !label) return null;
   const point = data.find((row) => row.ts === label);
   if (!point) return null;
-  const rows = [...pegKeys].reverse().map((key) => ({
+  const rows = pegKeys.filter((key) => (firstObserved.get(key) ?? Infinity) <= point.ts).reverse().map((key) => ({
     key, value: point[key], color: pegKeyToHex(key),
   }));
 
@@ -117,20 +118,25 @@ export function AltPegCohortHistoryChart({
   const query = useStablecoinCharts();
   const { data, isLoading } = query;
 
-  const { chartData, pegKeys, pegCount, otherLabels } = useMemo(() => {
+  const { chartData, pegKeys, pegCount, otherLabels, firstObserved } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) {
       return {
         chartData: [] as ChartRow[],
         pegKeys: [] as string[],
         pegCount: 0,
         otherLabels: [] as string[],
+        firstObserved: new Map<string, number>(),
       };
     }
 
     const keySet = new Set<string>();
+    const firstObserved = new Map<string, number>();
     for (const point of data) {
       for (const key of Object.keys(point.totalCirculatingUSD)) {
-        if (key !== "peggedUSD") keySet.add(key);
+        if (key === "peggedUSD") continue;
+        keySet.add(key);
+        // Presence starts a peg, valid or not: a malformed first bucket is a gap, never a later start.
+        firstObserved.set(key, Math.min(firstObserved.get(key) ?? Infinity, point.date * 1000));
       }
     }
 
@@ -158,13 +164,16 @@ export function AltPegCohortHistoryChart({
     const hasOther = minorKeys.length > 0;
     const displayKeys = hasOther ? [...majorKeys, OTHER_KEY] : majorKeys;
 
+    firstObserved.set(OTHER_KEY, Math.min(...minorKeys.map((key) => firstObserved.get(key) ?? Infinity)));
     const points = data.map((point) => {
-      const row: ChartRow = { ts: point.date * 1000, total: sumCohorts(point.totalCirculatingUSD, sorted) };
+      const ts = point.date * 1000;
+      const started = sorted.filter((key) => (firstObserved.get(key) ?? Infinity) <= ts);
+      const row: ChartRow = { ts, total: started.length ? sumCohorts(point.totalCirculatingUSD, started) : 0 };
       for (const key of majorKeys) {
         row[key] = point.totalCirculatingUSD[key] ?? null;
       }
       if (hasOther) {
-        row[OTHER_KEY] = sumCohorts(point.totalCirculatingUSD, minorKeys);
+        row[OTHER_KEY] = sumCohorts(point.totalCirculatingUSD, minorKeys.filter((key) => started.includes(key)));
       }
       return row;
     });
@@ -174,6 +183,7 @@ export function AltPegCohortHistoryChart({
       pegKeys: displayKeys,
       pegCount: sorted.length,
       otherLabels: minorKeys.map((key) => pegKeyToLabel(key)),
+      firstObserved,
     };
   }, [data]);
 
@@ -206,10 +216,10 @@ export function AltPegCohortHistoryChart({
       ...pegKeys.map((key) => ({
         id: key,
         label: pegKeyToLabel(key),
-        format: (row: ChartRow) => formatObservation(row[key]),
+        format: (row: ChartRow) => (firstObserved.get(key) ?? Infinity) <= row.ts ? formatObservation(row[key]) : "",
       })),
     ],
-    [pegKeys],
+    [firstObserved, pegKeys],
   );
   const getYDomain = useCallback(
     (filteredData: ChartRow[], range: TimeRangeOption) =>
@@ -255,8 +265,9 @@ export function AltPegCohortHistoryChart({
               <p>
                 This historical provider-wide cohort feed includes selected structural history overlays. No current
                 core-universe point is appended because the populations differ. Cohorts below $
-                {OTHER_THRESHOLD.toLocaleString("en-US")} at their latest observed sample roll into Other. Missing or
-                invalid buckets remain gaps; incomplete totals are unavailable.
+                {OTHER_THRESHOLD.toLocaleString("en-US")} at their latest observed sample roll into Other. A peg joins the series, and the total,
+                from its first sample; earlier tooltip and table entries are omitted. After that, a missing or invalid
+                bucket is a gap and the total for that date is unavailable.
               </p>
             </div>
           </ModuleDisclosure>
@@ -280,7 +291,7 @@ export function AltPegCohortHistoryChart({
       ariaLabel={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
       emptyMessage="No cohort-growth data available"
       series={series}
-      tooltip={<CohortTooltip pegKeys={pegKeys} data={chartData} />}
+      tooltip={<CohortTooltip pegKeys={pegKeys} data={chartData} firstObserved={firstObserved} />}
       yDomain={getYDomain}
       yTickFormatter={formatCurrencyTick}
       tableColumns={tableColumns}
