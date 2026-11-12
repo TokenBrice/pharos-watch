@@ -2,7 +2,7 @@
   "id": "dllr-sovryn",
   "name": "Sovryn Dollar",
   "symbol": "DLLR",
-  "oneLiner": "DLLR is Sovryn's BTC-backed dollar stablecoin on Rootstock, minted 1:1 via the Mynt aggregator from a basket of underlying CDP stables (mostly ZUSD).",
+  "oneLiner": "DLLR is Sovryn's Rootstock dollar token backed through Mynt; minting and redemption are stopped following the November 2026 Zero halt.",
   "llamaId": "160",
   "detailProvider": "defillama",
   "geckoId": "sovryn-dollar",
@@ -11,8 +11,8 @@
     "backing": "crypto-backed",
     "governance": "decentralized"
   },
-  "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
-  "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
+  "collateral": "Mynt claims on Sovryn Zero ZUSD and Money on Chain DOC; ZUSD token operations and balance queries are halted, leaving current whole-book reserve composition unavailable",
+  "pegMechanism": "Designed for 1:1 Mynt conversion against ZUSD or DOC; both minting and redemption paths are stopped by the ZUSD halt as of the November 12, 2026 review",
   "mechanismArchetype": "cdp",
   "links": [
     {
@@ -83,5 +83,12 @@
       ]
     }
   },
-  "launchDate": "2023-03-16"
+  "launchDate": "2023-03-16",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Mynt minting and redemption stopped",
+      "message": "Reviewed November 12, 2026: the November 7 Zero emergency halt blocks Mynt conversions against both DOC and ZUSD. Pinned calls still revert. Ordinary DLLR transfers are separate; current reserve composition and recovery value are unavailable. Sovryn describes containment and recovery conditions without a reopening date. Source: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+    }
+  ]
 }

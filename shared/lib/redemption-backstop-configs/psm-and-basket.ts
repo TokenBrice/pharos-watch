@@ -185,13 +185,27 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
   },
   "dllr-sovryn": {
     ...basketRedeemBase,
+    routeStatus: "suspended",
+    routeSuspension: {
+      routeId: "redemption:dllr-sovryn:basket-redeem",
+      channel: "Mynt DLLR-to-DOC and DLLR-to-ZUSD conversion",
+      suspendedAt: "2026-11-07",
+      reviewedAt: "2026-11-12",
+      reviewer: "Codex lifecycle proposal 2026-11-12",
+      reason: "The Zero emergency halt makes Mynt's shared basket checks revert for both selected bAssets. Pinned Rootstock calls on November 12 still reject both conversions; ordinary DLLR transfers are separate. Restoration requires reviewed code, reconciled balances and authorized recovery, not merely an unpaused Mynt flag.",
+      sources: [{
+        url: "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+        quote: "Minting and redemption against DOC and ZUSD were effectively stopped",
+      }],
+    },
     reviewedAt: "2026-10-05",
     outputAssetType: "stable-single",
     capacityModel: { kind: "reserve-sync-metadata" },
     unresolvedOutputAssetKeys: ["asset:zusd", "doc-money-on-chain"],
     unresolvedOutputDisposition: "reviewed-external",
-    costModel: documentedVariableFee("Mynt fees are currently disabled but can be enabled; evaluate the selected bAsset redemption fee and gas at the actual notional", "formula"),
+    costModel: documentedVariableFee("Historical Mynt terms permit optional redemption fees; after recovery, evaluate the selected bAsset fee and gas at the actual notional", "formula"),
     docs: [
+      sourceRef("Sovryn mitigation and recovery manifest (November 9; published November 10)", "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611", ["route"]),
       sourceRef("Mynt selected bAsset redemption", "https://build.sovryn.com/builder-portal/smart-contracts/mynt", ["route", "fees", "settlement"]),
       sourceRefRouteCapacityAccess("Sovryn Dollar", "https://sovryn.com/sovryn-dollar"),
       sourceRef("Launching the Sovryn Dollar", "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar", [
@@ -201,12 +215,25 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       sourceRef("Mynt app", "https://app.mynt.xyz/", ["route", "capacity", "fees", "settlement"]),
     ],
     notes: [
-      "Mynt redeems DLLR 1:1 into holder-selected DOC or ZUSD, not a proportional reserve basket. Both diagnostic identities remain visible; no weights or DOC-only output are inferred.",
-      "Separate exact DOC/ZUSD request observations and fresh USD output valuation are required before attributing executable branch capacity. Raw Mynt backing balances do not prove holder-selected same-notional capacity; ZUSD remains externally unpriced.",
+      "Mynt was designed to convert DLLR 1:1 into holder-selected DOC or ZUSD, not a proportional basket. Both conversions are stopped by the ZUSD halt; DOC is not a currently working alternative. Output identities are retained for diagnosis, without payout weights or executable capacity.",
+      "Re-reviewed November 12 at Rootstock block 9406049: both redeem(1 DLLR) calls revert with Zero: emergency shutdown. Fresh successful funded requests, restored implementation and reconciled reserve/output valuation are required before reopening this channel; raw DOC backing alone cannot prove it works.",
     ],
   },
   "xusd-babelfish": {
     ...basketRedeemBase,
+    routeStatus: "suspended",
+    routeSuspension: {
+      routeId: "redemption:xusd-babelfish:basket-redeem",
+      channel: "BabelFish XUSD basket mint/redemption conversion",
+      suspendedAt: "2026-11-04",
+      reviewedAt: "2026-11-12",
+      reviewer: "Codex lifecycle proposal 2026-11-12",
+      reason: "BabelFish's November 4 ownership stop removed the converter's XUSD mint/burn authority. At Rootstock block 9405952 on November 12, the owner is still the containment multisig and a funded holder's 0.0001 XUSD-to-DOC call reverts with caller is not the owner. Basket holdings and ordinary transfers do not establish executable redemption; the recovery manifest retains the stop and sets no reopening date.",
+      sources: [{
+        url: "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+        quote: "Babelfish minting and redemptions were stopped.",
+      }],
+    },
     ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
     outputAssetType: "stable-basket",
     outputAssets: ["dllr-sovryn", "doc-money-on-chain", "usdt-tether", "usdc-circle", "dai-makerdao", "usdrif-rif"],
@@ -223,9 +250,12 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       },
     },
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
-    docs: [sourceRefFull("BabelFish", "https://babelfish.money/")],
+    docs: [
+      sourceRefFull("BabelFish", "https://babelfish.money/"),
+      sourceRef("Sovryn mitigation and recovery manifest (November 9; published November 10)", "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611", ["route"]),
+    ],
     notes: [
-      "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
+      "BabelFish basket conversion is suspended independently of the Sovryn AMM delisting. Historical output and fee terms remain documented, but the ownership stop withholds this channel's immediate, eventual and scoring capacity. Reserve reads do not establish a working exit or whole-asset exhaustion.",
     ],
   },
   "eur0-usual": {

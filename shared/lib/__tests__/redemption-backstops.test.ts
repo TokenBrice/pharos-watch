@@ -11,6 +11,13 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "../../data/coverage-dispositions/redemption-coverage-dispositions";
 
 describe("getRedemptionBackstopConfig", () => {
+  it.each(["dllr-sovryn", "xusd-babelfish"])("keeps %s conversions suspended", (id) => {
+    expect(getRedemptionBackstopConfig(id)).toMatchObject({
+      routeStatus: "suspended",
+      routeSuspension: { routeId: `redemption:${id}:basket-redeem`, reviewedAt: "2026-11-12" },
+    });
+  });
+
   it.each([
     ["usdv-solomon-v2", "defer", "issuer-terms-missing", "https://raw.githubusercontent.com/SolomonLabs/chancery/main/spec/04_Settlement_Pathways_and_Permissions.md"],
     ["iusd-initia", "needs-research", "documentation-insufficient", "https://contents.initia.xyz/app/iusd-faq.json"],
@@ -212,9 +219,6 @@ describe("getRedemptionBackstopConfig", () => {
 });
 
 describe("reviewed queue-redeem capacity models", () => {
-  // docs/redemption-backstops.md #capacity-models: reserve-sync telemetry must
-  // isolate assets immediately executable through the holder route. USDCx's own
-  // note keeps the xReserve escrow balance as collateral evidence only.
   it("does not publish USDCx's collateral-only escrow read as live-direct capacity", () => {
     const stablecoinId = "usdcx-movement";
     const config = getRedemptionBackstopConfig(stablecoinId)!;
@@ -226,8 +230,6 @@ describe("reviewed queue-redeem capacity models", () => {
     expect(adapter?.redemptionTelemetry.capacity).toBe("direct");
     expect(config.capacityModel).toEqual({ kind: "unquantified" });
     expect(resolveReviewedRedemptionSettlement(config, 1_793_318_400)).toBe("queued");
-    // A queued route with no observed completion bound carries no atomic
-    // 0-second adapter delay.
     expect(meta.liveReservesConfig?.params?.settlementDelaySec).toBeUndefined();
   });
 });
