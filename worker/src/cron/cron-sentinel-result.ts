@@ -4,6 +4,7 @@ import { getCaches, setCacheIfNewer } from "../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { stripSensitive } from "../lib/safe-error-message";
 import { sanitizeBoundedMetadata } from "../lib/sensitive-metadata";
+import { isRetriableD1OverloadError } from "../lib/d1-overload-retry";
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_SENTINEL_RULE_IDS, type CronSentinelRuleSource } from "./cron-sentinel-rules";
 
@@ -75,6 +76,20 @@ function sourceStateMaxAgeSec(source: CronSentinelRuleSource): number {
     SOURCE_STATE_MAX_AGE_SEC,
     SOURCE_INTERVAL_SEC[source] * SOURCE_STATE_INTERVAL_MULTIPLIER,
   );
+}
+
+function isRetriableSourceError(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  try {
+    for (let depth = 0; depth < 5 && error != null && !seen.has(error); depth++) {
+      seen.add(error);
+      if (isRetriableD1OverloadError(error)) return true;
+      error = typeof error === "object" && "cause" in error ? error.cause : null;
+    }
+  } catch {
+    // A cause chain that cannot be read is not evidence of a retriable overload.
+  }
+  return false;
 }
 
 function parseMetadata(metadata: string | undefined): unknown {
@@ -273,6 +288,7 @@ export async function runCronSentinelSources(
     });
     if (due[0]) evaluations.push({ source: due[0], run: () => retryDailySource(due[0]) });
   }
+  const failedEvaluations = new Map<CronSentinelRuleSource, StoredSourceResult>();
   for (const { source, run } of evaluations) {
     throwIfAborted(signal);
     const key = `cron-sentinel:source:${source}`;
@@ -288,13 +304,32 @@ export async function runCronSentinelSources(
       await setCacheIfNewer(db, key, JSON.stringify({ ...previous, attempt }), row.updatedAt, signal);
     }
     let result: CronResult;
+    let keepPrevious = false;
     try {
       result = await run();
     } catch (error) {
       rethrowIfAborted(error, signal);
       result = { status: "error", error: stripSensitive(toErrorMessage(error)) };
+      keepPrevious = isRetriableSourceError(error) && row != null && previous != null
+        && previous.status !== "error"
+        && Number.isFinite(row.updatedAt) && nowSec - row.updatedAt <= sourceStateMaxAgeSec(source);
     }
     attempt.status = result.aborted ? "incomplete" : result.status ?? "ok";
+    if (keepPrevious && previous && row) {
+      // A failed evaluation is run evidence, not a new source observation.
+      attempt.count = previous.attempt?.status === "error" ? previous.attempt.count + 1 : 1;
+      const failure = { ...result, error: result.error?.slice(0, 500), itemCount: 0, attempt };
+      failedEvaluations.set(source, failure);
+      const notStored = "; attempt metadata not stored";
+      let stored = false;
+      try {
+        stored = (await setCacheIfNewer(db, key, JSON.stringify({ ...previous, attempt }), row.updatedAt, signal)).written;
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+      }
+      if (!stored) failure.error = `${(failure.error ?? "").slice(0, 500 - notStored.length)}${notStored}`;
+      continue;
+    }
     if (result.status === "skipped_neutral" || result.status === "skipped_locked" || result.aborted) {
       if (previous?.status === "error" && row) {
         await setCacheIfNewer(db, key, JSON.stringify({ ...previous, attempt }), row.updatedAt, signal);
@@ -318,6 +353,11 @@ export async function runCronSentinelSources(
   for (const source of allSources) {
     const row = saved.get(`cron-sentinel:source:${source}`);
     const maxAgeSec = sourceStateMaxAgeSec(source);
+    const failure = failedEvaluations.get(source);
+    if (failure) {
+      results.push({ source, result: failure, observedAt: nowSec, state: "current", maxAgeSec });
+      continue;
+    }
     if (!row) {
       results.push({ source, result: { status: "skipped_neutral" }, state: "missing", maxAgeSec });
       continue;
