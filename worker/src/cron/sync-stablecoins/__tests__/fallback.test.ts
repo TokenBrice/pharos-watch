@@ -29,9 +29,7 @@ import type * as pricing from "../pricing";
 const NOW_SEC = 1_700_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
 
-// ---------------------------------------------------------------------------
 // Mocks for the heavy sub-phase modules referenced by fallback.ts
-// ---------------------------------------------------------------------------
 
 const subPhaseMocks = vi.hoisted(() => ({
   loadPreviousStablecoinsById: vi.fn(async (): Promise<PreviousStablecoinsLoadResult> => ({
@@ -164,10 +162,8 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
   });
   afterEach(() => { fixtures.closeAll(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  // -----------------------------------------------------------------------
   // (a) A successful fallback write still fails closed when CoinGecko cannot
   //     cover the exact active registry set.
-  // -----------------------------------------------------------------------
   it("(a) publishes fallback data but degrades incomplete active-set coverage", async () => {
     const omittedIds = ["usdt-tether", "usdc-circle"];
     const cgData = buildRealCgData(Infinity);
@@ -443,13 +439,11 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       .toEqual(frozenRow.chainCirculating);
   });
 
-  // -----------------------------------------------------------------------
   // (c) Non-USD pegged coin: circulating is USD-denominated
   //
   // The CoinGecko `usd_market_cap` for a EUR-pegged coin is already in USD.
   // buildFallbackAssetsFromCoinGecko must store it under `peggedEUR` WITHOUT
   // multiplying by price (that would be denomination drift).
-  // -----------------------------------------------------------------------
   it("(c) stores usd_market_cap directly (no price multiplication) for non-USD pegs", () => {
     const testCoin = {
       id: "fixture-eur", name: "Fixture EUR", symbol: "FEUR", geckoId: "fixture-eur",
