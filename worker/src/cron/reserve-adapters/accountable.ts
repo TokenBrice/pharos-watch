@@ -17,6 +17,8 @@ import {
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
 import { coerceFiniteNumber } from "@shared/lib/type-guards";
+import { canonicalizeDecimal } from "@shared/lib/protocol-api-sources/decimal";
+import { decimalNumberFromBigInt } from "../../lib/bigint";
 
 interface AccountableDashboardResponse {
   res: string;
@@ -330,7 +332,8 @@ function validateMappedBucketValues(
 
 /** Coverage guard for the composition buckets. Under-coverage means the feed's own breakdown is
  *  incomplete relative to the reserve total, so the published mix would silently omit backing:
- *  that still fails closed. Over-coverage on a signed (netted) book is the issuer's own
+ *  that fails closed unless an unsigned exposure split declares a residual band.
+ *  Over-coverage on a signed (netted) book is the issuer's own
  *  readable inconsistency — the levered gross legs are netted by the negative buckets, so the
  *  net can sit above the reserve total; it returns the signed residual for a degraded warning
  *  instead of failing the snapshot. */
@@ -341,12 +344,21 @@ function validateBucketTotalAgainstReserves(
   options?: {
     excludeBuckets?: ReadonlySet<string>;
     hasSignedBuckets?: boolean;
+    maxUnattributedResidualShare?: number;
   },
 ): number | null {
   if (totalReserves == null) return null;
   const totalValue = sumReconciledBuckets(breakdown, options?.excludeBuckets);
-  const residual = totalValue - totalReserves;
-  if (isWithinTotalReservesTolerance(totalValue, totalReserves)) return null;
+  const exact = options?.maxUnattributedResidualShare == null ? null : reconcileUnattributedBacking(
+    breakdown.filter((entry) => !options.excludeBuckets?.has(entry.name)).map((entry) => entry.value),
+    totalReserves, options.maxUnattributedResidualShare,
+  );
+  const residual = exact ? -exact.residual : totalValue - totalReserves;
+  if (exact && residual < 0) {
+    if (exact.withinBand) return residual;
+  } else if (isWithinTotalReservesTolerance(totalValue, totalReserves)) {
+    return null;
+  }
   if (residual > 0 && options?.hasSignedBuckets) return residual;
   throw new Error(`Accountable ${bucket} bucket total ${totalValue} does not match total_reserves ${totalReserves}`);
 }
@@ -360,6 +372,19 @@ function sumReconciledBuckets(
     .reduce((sum, entry) => sum + entry.value, 0);
 }
 
+function reconcileUnattributedBacking(values: readonly number[], totalReserves: number, maxShare: number) {
+  const decimals = [...values, totalReserves, maxShare].map((value) => canonicalizeDecimal(String(value)).split("."));
+  const scale = Math.max(...decimals.map(([, fraction = ""]) => fraction.length));
+  const units = decimals.map(([whole, fraction = ""]) => BigInt(whole + fraction.padEnd(scale, "0")));
+  const band = units.pop()!;
+  const total = units.pop()!;
+  const residual = total - units.reduce((sum, value) => sum + value, 0n);
+  return {
+    residual: decimalNumberFromBigInt(residual, scale),
+    withinBand: residual > 0n && residual * 10n ** BigInt(scale) <= total * band,
+  };
+}
+
 function isWithinTotalReservesTolerance(bucketTotal: number, totalReserves: number): boolean {
   const tolerance = Math.max(TOTAL_RESERVES_ABSOLUTE_TOLERANCE, totalReserves * TOTAL_RESERVES_RELATIVE_TOLERANCE);
   return Math.abs(bucketTotal - totalReserves) <= tolerance;
@@ -369,13 +394,16 @@ function isWithinTotalReservesTolerance(bucketTotal: number, totalReserves: numb
  *  bracket its exposure_split_ts (latest at/before, earliest at/after). The live
  *  point stamped with the dashboard envelope `ts` moves on every fetch, so it is
  *  never a reconciliation anchor. The split is accepted when it matches either
- *  bracket within tolerance; otherwise the nearer bracket is returned so the
+ *  bracket within tolerance, then an explicitly permitted residual band;
+ *  otherwise the nearer bracket is returned so the
  *  bucket-total guard reports the real gap. */
 function findExposureSplitBracketReserveTotal(
   reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
   sourceTimestamp: number,
   liveTimestamp: number | null,
   bucketTotal: number,
+  maxUnattributedResidualShare?: number,
+  bucketValues?: readonly number[],
 ): { totalReserves: number; timestamp: number } {
   const timeline = Array.isArray(reserves.timeline) ? reserves.timeline : [];
   const candidates = timeline.flatMap((point) => {
@@ -399,7 +427,10 @@ function findExposureSplitBracketReserveTotal(
   if (brackets.length === 0) {
     throw new Error("Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation");
   }
-  return brackets.find((point) => isWithinTotalReservesTolerance(bucketTotal, point.totalReserves)) ?? brackets[0]!;
+  return brackets.find((point) => isWithinTotalReservesTolerance(bucketTotal, point.totalReserves))
+    ?? brackets.find((point) => maxUnattributedResidualShare != null && bucketValues != null
+      && reconcileUnattributedBacking(bucketValues, point.totalReserves, maxUnattributedResidualShare).withinBand)
+    ?? brackets[0]!;
 }
 
 /** Signed buckets are always omitted from slice weights and named in metadata; the degraded
@@ -524,6 +555,9 @@ export function adaptAccountableDashboard(
     : null;
   const ownClaimNames = new Set<string>(selfIssuedAccounting?.excludedSelfClaims.map((row) => row.name) ?? []);
   const signedBuckets = breakdown.filter((entry) => entry.value < 0);
+  // Signed net gaps cannot be added to positive slice weights without double counting.
+  const maxUnattributedResidualShare = bucket === "exposure_split" && signedBuckets.length === 0
+    ? params.maxUnattributedResidualShare : undefined;
   const reconciledBreakdown = breakdown.filter((entry) => !(totalReservesExcludeBuckets.has(entry.name) || ownClaimNames.has(entry.name)));
   const positiveBreakdown = reconciledBreakdown.filter((entry) => entry.value > 0);
   validateMappedBucketValues(breakdown.filter(({ name }) => name in riskMap && !ownClaimNames.has(name)), breakdownBucket);
@@ -547,20 +581,30 @@ export function adaptAccountableDashboard(
         exposureSplitSourceTimestamp,
         parseTimestampLikeToUnixSeconds(payload.data.ts),
         sumReconciledBuckets(breakdown, totalReservesExcludeBuckets),
+        maxUnattributedResidualShare,
+        maxUnattributedResidualShare != null ? reconciledBreakdown.map((entry) => entry.value) : undefined,
       )
     : null;
-  const signedResidual = validateBucketTotalAgainstReserves(
+  const reconciliationResidual = validateBucketTotalAgainstReserves(
     breakdown,
     exposureSplitTimelineTotal?.totalReserves ?? totalReserves,
     breakdownBucket,
-    { excludeBuckets: totalReservesExcludeBuckets, hasSignedBuckets: signedBuckets.length > 0 },
+    { excludeBuckets: totalReservesExcludeBuckets, hasSignedBuckets: signedBuckets.length > 0, maxUnattributedResidualShare },
   );
+  const unattributedBackingUsd = reconciliationResidual != null && reconciliationResidual < 0 ? -reconciliationResidual : 0;
+  const unattributedBackingShare = unattributedBackingUsd > 0
+    ? unattributedBackingUsd / (exposureSplitTimelineTotal?.totalReserves ?? totalReserves!) : 0;
+  const undercoverageWarning = unattributedBackingUsd > 0
+    ? reserveDegradedWarning("exposure-split-undercovered", `Accountable exposure_split has unattributed backing share ${unattributedBackingShare}`)
+    : null;
   const unknown = positiveBreakdown.filter(({ name }) => !(name in riskMap));
   const totalValue = positiveBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
-  const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
+  const unknownExposurePct = unattributedBackingUsd > 0
+    ? computeUnknownExposurePct(unknownValue + unattributedBackingUsd, exposureSplitTimelineTotal?.totalReserves ?? totalReserves!)
+    : computeUnknownExposurePct(unknownValue, totalValue);
   const signedBucketWarning = signedBuckets.length > 0
-    ? buildSignedBucketWarning(signedBuckets, totalValue, signedResidual)
+    ? buildSignedBucketWarning(signedBuckets, totalValue, reconciliationResidual)
     : null;
   const collateralizationRatio = coerceFiniteNumber(payload.data.collateralization);
   if (collateralizationRatio == null || collateralizationRatio < 0) {
@@ -606,6 +650,9 @@ export function adaptAccountableDashboard(
         ...(coinIdMap[name] ? { coinId: coinIdMap[name] } : {}),
         ...(depTypeMap[name] ? { depType: depTypeMap[name] } : {}),
       })),
+      ...(unattributedBackingUsd > 0
+        ? [{ name: "Unattributed backing", value: unattributedBackingUsd, risk: "very-high" as const }]
+        : []),
       ...(nestedHoldings
         ? unknown.map(({ name, value }) => ({
             sourceKey: `accountable:asset-breakdown:${sourceKeySlug(name)}`,
@@ -623,18 +670,25 @@ export function adaptAccountableDashboard(
     ],
   );
 
+  if (unattributedBackingUsd > 0) {
+    const residual = slices.find((slice) => slice.name === "Unattributed backing")!;
+    residual.unclassifiedResidual = true;
+    residual.residualReason = "insufficient-evidence";
+  }
+
   const sourceTimestamp = exposureSplitSourceTimestamp ?? parseTimestampLikeToUnixSeconds(payload.data.ts);
 
   return {
     slices,
     ...((unknownExposurePct > 0
       || signedBucketWarning
+      || undercoverageWarning
       || protocolOwnedWarning
       || reconciliationWarning
       || collateralizationWarnings.length > 0)
       ? {
           warnings: [
-            ...(unknownExposurePct > 0
+            ...(unknownExposurePct > 0 && (unattributedBackingUsd === 0 || unknownValue > 0)
               ? [nestedHoldings
                 ? reserveInfoWarning("unmapped-nested-holding", `Accountable holdings remain unlinked: ${unknown.map((entry) => entry.name).sort().join(", ")}`)
                 : buildUnknownExposureWarning({ adapterKey: "accountable", code: "unmapped-bucket",
@@ -642,6 +696,7 @@ export function adaptAccountableDashboard(
                     unknownExposurePct, })]
               : []),
             ...(signedBucketWarning ? [signedBucketWarning] : []),
+            ...(undercoverageWarning ? [undercoverageWarning] : []),
             ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),
             ...(reconciliationWarning ? [reconciliationWarning] : []),
             ...collateralizationWarnings,
@@ -666,6 +721,7 @@ export function adaptAccountableDashboard(
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
+      ...(unattributedBackingUsd > 0 ? { unattributedBackingUsd, unattributedBackingShare } : {}),
       ...(exposureSplitSourceTimestamp != null
         ? {
             exposureSplitTimestamp: payload.data.reserves.exposure_split_ts,
@@ -694,7 +750,7 @@ export function adaptAccountableDashboard(
             signedBucketCount: signedBuckets.length,
             signedBucketNames: signedBuckets.map((entry) => entry.name).sort(),
             signedBucketValue: signedBuckets.reduce((sum, entry) => sum + entry.value, 0),
-            ...(signedResidual != null ? { signedBucketTotalResidual: signedResidual } : {}),
+            ...(reconciliationResidual != null ? { signedBucketTotalResidual: reconciliationResidual } : {}),
           }
         : {}),
       dashboardTimestamp: payload.data.ts,
