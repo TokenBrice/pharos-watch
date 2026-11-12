@@ -320,6 +320,8 @@ The legacy pipeline (target plans, source events, `telegram_pending_alerts`, dea
 
 [Status dashboard Telegram metrics](./status-dashboard.md#telegram-bot-metrics) owns the field inventory and delivery-SLI interpretation; `worker/src/lib/status/telegram-bot-stats.ts` owns the projection. Acceptance means Bot API acceptance, not recipient delivery/read. Ad hoc usage questions read `telegram_usage_daily` and the lifecycle tables directly; there is no funnel report.
 
+The delivery SLI core drives its per-job delivery lookup from the bounded recent-job set with `CROSS JOIN`, preserving the `(job_id, chat_id, seq)` index seek rather than scanning retained delivery history.
+
 Public pulse/client privacy and freshness are owned by [Mini App public pulse](./telegram-mini-app.md#public-pulse-privacy-and-freshness). Lifecycle deltas use atomic transition events, not net snapshot differences; unavailable telemetry is null with explicit quality, never zero.
 
 When initial dispatch sources cannot be loaded, source-event counts, `chatsWithActiveSnooze`, `suppressedSafetyChangesAtSeed` and safety/reserve source states are null. Unread sources are not labelled `missing`; safety/reserve suppression stays enabled. Independently observed freeze, delivery and capacity metrics retain their measured values.

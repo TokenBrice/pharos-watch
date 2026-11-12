@@ -482,6 +482,9 @@ export async function fetchEvmEventsIncremental(
         );
         providerCalls += fetchedLogs.calls;
         maxSplitDepth = Math.max(maxSplitDepth, fetchedLogs.maxDepth);
+        if (fetchedLogs.failureReason && failureSamples.length < 4) {
+          failureSamples.push(fetchedLogs.failureReason.slice(0, 120));
+        }
         let providerScannedToBlock = Math.min(fetchedLogs.scannedToBlock, scanToBlock);
         let malformedHeld = false;
         for (const [index, rejected] of (fetchedLogs.rejectedLogs ?? []).entries()) {
@@ -490,6 +493,7 @@ export async function fetchEvmEventsIncremental(
             `${String(raw.blockNumber)}:${String(raw.transactionHash)}:${String(raw.logIndex)}:${index}`,
             "invalid-log-identity", raw, runBudget.deadlineMs);
           malformedHeld ||= !retained;
+          if (!retained && failureSamples.length < 4) failureSamples.push("invalid-log-identity");
         }
         const intakeComplete = fetchedLogs.complete || (fetchedLogs.validatedToBlock != null && !malformedHeld);
         if (intakeComplete && fetchedLogs.validatedToBlock != null) providerScannedToBlock = Math.min(fetchedLogs.validatedToBlock, scanToBlock);
@@ -499,6 +503,10 @@ export async function fetchEvmEventsIncremental(
             return !Number.isFinite(block) || block <= providerScannedToBlock;
           });
           const parsed = await parseEvmLogsWithRetry(db, config, contiguousLogs, runBudget.deadlineMs);
+          failureSamples.push(...parsed.failures.slice(0, 4 - failureSamples.length).map((failure) => failure.reason));
+          if (parsed.coverageCeiling != null && parsed.failures.length === 0 && failureSamples.length < 4) {
+            failureSamples.push("missing-block-timestamp");
+          }
           rows = parsed.rows;
           fetched = true;
           topicScannedToBlock =
@@ -587,6 +595,7 @@ export async function fetchEvmEventsIncremental(
               : new Map<number, number>();
           let eventScannedToBlock = Math.min(fetchedLogs.scannedToBlock, scanToBlock);
           if (uniqueBlocks.length > blockTimestamps.size) {
+            if (failureSamples.length < 4) failureSamples.push("missing-block-timestamp");
             const earliestMissingBlock = uniqueBlocks
               .filter((block) => !blockTimestamps.has(block))
               .reduce((min, block) => Math.min(min, block), Number.POSITIVE_INFINITY);
@@ -597,6 +606,7 @@ export async function fetchEvmEventsIncremental(
           topicScannedToBlock = eventScannedToBlock;
 
           const parsed = await parseEvmLogsWithRetry(db, config, fetchedLogs.logs as Array<AlchemyLogEntry>, runBudget.deadlineMs, blockTimestamps);
+          failureSamples.push(...parsed.failures.slice(0, 4 - failureSamples.length).map((failure) => failure.reason));
           if (parsed.coverageCeiling != null) {
             eventScannedToBlock = Math.min(eventScannedToBlock, Math.max(fromBlock - 1, parsed.coverageCeiling));
             topicScannedToBlock = eventScannedToBlock;

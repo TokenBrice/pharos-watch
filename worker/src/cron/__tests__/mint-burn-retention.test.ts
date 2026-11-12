@@ -24,6 +24,9 @@ import {
 const NOW_SEC = 1_800_000_000;
 const HOUR_SEC = 3600;
 const TAPE_CURSOR_KEY = "tape-projector:cursor:mint_burn.large_flow";
+const USDC_ETHEREUM_CONFIG = MINT_BURN_CONFIGS.find((config) =>
+  config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum" && config.enabled !== false,
+)!;
 let sqlite: DatabaseSync;
 let db: D1Database;
 
@@ -86,7 +89,7 @@ describe("mint/burn retention", () => {
   beforeEach(() => { ({ sqlite, db } = setupDb()); });
   afterEach(() => sqlite.close());
 
-  it("matches a per-event oracle across protections without per-event sibling scans", async () => {
+  it("matches scan and protection oracles via coin/chain seeks", async () => {
     const now = NOW_SEC + 123;
     const cutoff = now - MINT_BURN_EVENT_RETENTION_SEC;
     const hourlyCutoff = now - MINT_BURN_HOURLY_RETENTION_SEC;
@@ -96,7 +99,7 @@ describe("mint/burn retention", () => {
       const timestamp = kind === "expired" ? hourFor(hourlyCutoff) - HOUR_SEC
         : kind === "straddle" ? cutoff - 3 : kind === "cursor" ? cutoff - 1 : kind === "boundary" ? cutoff : hourFor(cutoff) - (i + 2) * HOUR_SEC;
       const coin = kind === "frontier" ? "usdc-circle" : kind === "pending" ? "dai-makerdao" : `coin-${i % 2}`;
-      const chain = ["frontier", "pending"].includes(kind) || i % 2 ? "ethereum" : "arbitrum";
+      const chain = ["frontier", "pending"].includes(kind) || i % 3 ? "ethereum" : "arbitrum";
       return Array.from({ length: kind === "proof" ? 400 : 2 }, (_, j) =>
         ({ id: `${kind}-${j}`, kind, primary: j === 0, coin, chain, timestamp: timestamp + (kind === "straddle" ? j * 4 : j) }));
     });
@@ -134,7 +137,19 @@ describe("mint/burn retention", () => {
     const sql: string[] = [];
     const observed = new Proxy(db, { get(target, key) {
       if (key !== "prepare") return Reflect.get(target, key);
-      return (query: string) => { sql.push(query); return target.prepare(query); };
+      return (query: string) => {
+        sql.push(query);
+        const candidate = query.match(/WITH RECURSIVE[\s\S]+LIMIT \(SELECT event_limit FROM retention_limits\)/)?.[0];
+        if (candidate) {
+          const scan = candidate.replace(/FROM retention_pairs pair[\s\S]+?AND event.timestamp </,
+            "FROM mint_burn_events event INDEXED BY idx_mbe_coin_chain_ts LEFT JOIN frontiers ON frontiers.stablecoin_id = event.stablecoin_id AND frontiers.chain_id = event.chain_id WHERE event.timestamp <");
+          for (const limit of [0, 1, 2, 50_000]) {
+            const binds = [cutoff, TAPE_CURSOR_KEY, hourlyCutoff, limit];
+            expect(sqlite.prepare(candidate).all(...binds)).toEqual(sqlite.prepare(scan).all(...binds));
+          }
+        }
+        return target.prepare(query);
+      };
     } });
     const pending = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "dai-makerdao")!;
     const result = await pruneMintBurnRetention(observed, now, undefined,
@@ -144,10 +159,11 @@ describe("mint/burn retention", () => {
     const queries = sql.filter((query) => query.includes("hour_status AS MATERIALIZED"));
     expect(queries).toHaveLength(3);
     for (const query of queries) {
-      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all(cutoff, TAPE_CURSOR_KEY, hourlyCutoff, 1);
-      const details = plan.map((step) => String(step.detail));
+      const details = sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`).all(cutoff, TAPE_CURSOR_KEY, hourlyCutoff, 1)
+        .map((step) => String(step.detail));
       expect(details).toContain("MATERIALIZE hour_status");
-      expect(details.filter((detail) => detail.includes("idx_mbe_coin_chain_ts"))).toHaveLength(2);
+      expect(details.filter((detail) => detail.includes("idx_mbe_coin_chain_ts"))).toHaveLength(4);
+      expect(details).toContain("SEARCH event USING INDEX idx_mbe_coin_chain_ts (stablecoin_id=? AND chain_id=? AND timestamp<?)");
       expect(details.some((detail) => /SEARCH event .*timestamp>\? AND timestamp<\?/.test(detail))).toBe(true);
       expect(details.some((detail) => /(?:SCAN|SEARCH) sibling/.test(detail))).toBe(false);
     }
@@ -420,24 +436,20 @@ describe("mint/burn retention", () => {
       VALUES (?, 'cap', 'law', 1, 1, 'proven', ?, ?)`);
     for (let index = 0; index < 5; index++) proofInsert.run(`proof-${index}`,
       JSON.stringify({ closingTimestamp: cutoff - 100 + index }), NOW_SEC);
-    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+    const limits = {
       eventBatchLimit: 2,
       eventRunLimit: 3, proofBatchLimit: 2, proofRunLimit: 3,
       hourlyBatchLimit: 2,
       hourlyRunLimit: 2,
-    });
+    };
+    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
     expect(first.eventRows.deletedRows).toBe(3);
     expect(first.proofRows).toMatchObject({ deletedRows: 3, cappedAtLimit: true });
     expect(first.eventRows.cappedAtLimit).toBe(true);
     expect(first.eventRows.oldestEligibleAt).not.toBeNull();
     expect(eventIds()).toHaveLength(2);
 
-    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
-      eventBatchLimit: 2,
-      eventRunLimit: 3, proofBatchLimit: 2, proofRunLimit: 3,
-      hourlyBatchLimit: 2,
-      hourlyRunLimit: 2,
-    });
+    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
     expect(second.eventRows.deletedRows).toBe(2);
     expect(second.proofRows).toMatchObject({ deletedRows: 2, cappedAtLimit: false });
     expect(second.eventRows.cappedAtLimit).toBe(false);
@@ -452,12 +464,13 @@ describe("mint/burn retention", () => {
       insertEvent(`old-eligible-${index}`, oldTimestamp + index);
     }
 
-    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+    const limits = {
       eventBatchLimit: 2,
       eventRunLimit: 3,
       hourlyBatchLimit: 2,
       hourlyRunLimit: 2,
-    });
+    };
+    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
 
     expect(first.eventRows.deletedRows).toBe(3);
     expect(first.eventRows.cappedAtLimit).toBe(true);
@@ -470,12 +483,7 @@ describe("mint/burn retention", () => {
         .get(oldHour),
     ).toEqual({ count: 1 });
 
-    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
-      eventBatchLimit: 2,
-      eventRunLimit: 3,
-      hourlyBatchLimit: 2,
-      hourlyRunLimit: 2,
-    });
+    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
 
     expect(second.eventRows.deletedRows).toBe(2);
     expect(second.eventRows.cappedAtLimit).toBe(false);
@@ -700,9 +708,7 @@ describe("mint/burn retention", () => {
   });
 
   it.each([true, false])("only enabled secondary configs hold frontier protection (enabled=%s)", async (enabled) => {
-    const primary = MINT_BURN_CONFIGS.find((config) =>
-      config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum" && config.enabled !== false,
-    )!;
+    const primary = USDC_ETHEREUM_CONFIG;
     const secondary = { ...primary, contractAddress: "0x0000000000000000000000000000000000000001", enabled };
     const timestamp = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - HOUR_SEC;
     insertEvent("secondary-held", timestamp);
@@ -728,9 +734,7 @@ describe("mint/burn retention", () => {
   });
 
   it("reports missing active frontier state without inventing a block lag", async () => {
-    const config = MINT_BURN_CONFIGS.find((candidate) =>
-      candidate.stablecoinId === "usdc-circle" && candidate.chain.chainId === "ethereum" && candidate.enabled !== false,
-    )!;
+    const config = USDC_ETHEREUM_CONFIG;
     sqlite.prepare("DELETE FROM mint_burn_sync_state WHERE config_key = ?").run(mintBurnConfigKey(config));
     insertEvent("missing-frontier", NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC - HOUR_SEC);
     const result = await pruneMintBurnRetention(db, NOW_SEC, undefined, { enabledConfigs: [config] });
@@ -744,9 +748,7 @@ describe("mint/burn retention", () => {
   });
 
   it("ignores inactive configs and never reports fresh-only frontier debt as retention protection", async () => {
-    const config = MINT_BURN_CONFIGS.find((candidate) =>
-      candidate.stablecoinId === "usdc-circle" && candidate.chain.chainId === "ethereum" && candidate.enabled !== false,
-    )!;
+    const config = USDC_ETHEREUM_CONFIG;
     const inactive = { ...config, stablecoinId: "inactive-retired-asset" };
     const cutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
     insertEvent("inactive", cutoff - HOUR_SEC);
@@ -784,28 +786,22 @@ describe("mint/burn retention", () => {
       insertEvent(`stranded-hour-${index}`, oldTimestamp + index * HOUR_SEC, { withHourly: false });
     }
 
-    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+    const limits = {
       repairCandidateEventLimit: 3,
       repairRunLimit: 2,
       eventBatchLimit: 3,
       eventRunLimit: 3,
       hourlyBatchLimit: 3,
       hourlyRunLimit: 3,
-    });
+    };
+    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
 
     expect(first.aggregationRepair.repairedRows).toBe(2);
     expect(first.aggregationRepair.cappedAtLimit).toBe(true);
     expect(first.aggregationRepair.oldestRepairableAt).not.toBeNull();
     expect(eventIds()).toEqual(["stranded-hour-2"]);
 
-    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
-      repairCandidateEventLimit: 3,
-      repairRunLimit: 2,
-      eventBatchLimit: 3,
-      eventRunLimit: 3,
-      hourlyBatchLimit: 3,
-      hourlyRunLimit: 3,
-    });
+    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, limits);
 
     expect(second.aggregationRepair.repairedRows).toBe(1);
     expect(second.aggregationRepair.cappedAtLimit).toBe(false);

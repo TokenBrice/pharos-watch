@@ -29,6 +29,8 @@ const coins = [
   }),
 ];
 
+const heroProps = { gauge: gauge(), coins, sync: null };
+
 const evidenceWindow = (overrides: Partial<NonNullable<NonNullable<MintBurnFlowsResponse["window"]>["watermark"]>> = {}): MintBurnFlowsResponse["window"] => ({
   start: Date.UTC(2026, 0, 17, 16) / 1000,
   end: Date.UTC(2026, 0, 18, 16) / 1000,
@@ -44,7 +46,7 @@ const evidenceWindow = (overrides: Partial<NonNullable<NonNullable<MintBurnFlows
 
 describe("FlowGaugeHero", () => {
   it("shows the common evidence hour separately from the newer sync clock", () => {
-    render(<FlowGaugeHero gauge={gauge()} coins={coins}
+    render(<FlowGaugeHero {...heroProps}
       sync={{ lastSuccessfulSyncAt: Date.UTC(2026, 0, 18, 18) / 1000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true }}
       window={evidenceWindow()} />);
 
@@ -58,7 +60,7 @@ describe("FlowGaugeHero", () => {
   it.each([undefined, { start: 0, end: 86400, semantics: "closed-utc-hours" as const }])(
     "preserves the old hero when watermark metadata is absent",
     (window) => {
-      render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} window={window} />);
+      render(<FlowGaugeHero {...heroProps} window={window} />);
       expect(screen.queryByRole("button", { name: /Data through|Data time unavailable/ })).toBeNull();
       expect(screen.getByRole("button", { name: /Universe: Active, 2 of 3 flow-tracked scored/ })).toBeTruthy();
       expect(screen.queryByRole("button", { name: /^Partial$/ })).toBeNull();
@@ -66,11 +68,11 @@ describe("FlowGaugeHero", () => {
   );
 
   it("discloses excluded scan members without confusing admitted and scored counts", () => {
-    render(<FlowGaugeHero gauge={gauge({
+    render(<FlowGaugeHero {...heroProps} gauge={gauge({
       trackedCoins: 133,
       scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete",
         admittedCoins: 128, excludedCoins: 5, excludedMcapUsd: 12_000_000 },
-    })} coins={coins} sync={null} window={evidenceWindow()} />);
+    })} window={evidenceWindow()} />);
     expect(screen.getByRole("button", { name: /2 of 133 flow-tracked scored · 5 excluded \(\$12\.0M mcap\)/ })).toBeTruthy();
     const partial = screen.getByRole("button", { name: "Partial" });
     expect(partial.getAttribute("data-reason-codes")).toBe("scan-coverage-incomplete");
@@ -81,24 +83,24 @@ describe("FlowGaugeHero", () => {
   });
 
   it("does not claim a partial gauge when no scan members are excluded", () => {
-    render(<FlowGaugeHero gauge={gauge({ scanCoverage: {
+    render(<FlowGaugeHero {...heroProps} gauge={gauge({ scanCoverage: {
       complete: true, unavailableReason: null, admittedCoins: 3, excludedCoins: 0, excludedMcapUsd: 0,
-    } })} coins={coins} sync={null} />);
+    } })} />);
     expect(screen.queryByRole("button", { name: "Partial" })).toBeNull();
     expect(screen.getByRole("button", { name: /Universe: Active, 2 of 3 flow-tracked scored/ }).textContent).not.toContain("excluded");
   });
 
   it("labels missing excluded supply weight as unavailable, never zero", () => {
-    render(<FlowGaugeHero gauge={gauge({ scanCoverage: {
+    render(<FlowGaugeHero {...heroProps} gauge={gauge({ scanCoverage: {
       complete: false, unavailableReason: "scan-coverage-incomplete", excludedCoins: 1, excludedMcapUsd: null,
-    } })} coins={coins} sync={null} />);
+    } })} />);
     expect(screen.getByRole("button", { name: /1 excluded \(mcap unavailable\)/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Partial" }));
     expect(screen.getByText("Excluded supply weight: unavailable.")).toBeTruthy();
   });
 
   it("marks stale watermark evidence even when the sync itself is fresh", () => {
-    render(<FlowGaugeHero gauge={gauge()} coins={coins}
+    render(<FlowGaugeHero {...heroProps}
       sync={{ lastSuccessfulSyncAt: Date.UTC(2026, 0, 19, 2) / 1000, freshnessStatus: "fresh", warning: null, criticalLaneHealthy: true }}
       window={evidenceWindow({ ageSec: 36000, unavailableReason: "scan-watermark-stale" })} />);
     expect(screen.getByRole("button", { name: "Data through 16:00 UTC" })).toBeTruthy();
@@ -109,7 +111,7 @@ describe("FlowGaugeHero", () => {
   });
 
   it("does not substitute a sync timestamp for an unavailable watermark", () => {
-    const { container } = render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null}
+    const { container } = render(<FlowGaugeHero {...heroProps}
       window={evidenceWindow({ timestamp: null, ageSec: null, unavailableReason: "scan-watermark-unavailable" })} />);
     expect(screen.queryByRole("button", { name: /Data through/ })).toBeNull();
     const unavailable = container.querySelector('[data-reason-codes="scan-watermark-unavailable"]');
@@ -119,17 +121,14 @@ describe("FlowGaugeHero", () => {
   });
 
   it("leads with the gauge and its band chip, never a degraded headline", () => {
-    const { container } = render(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} />);
+    const { container } = render(<FlowGaugeHero {...heroProps} />);
     const hero = screen.getByRole("group", { name: "Bank Run Gauge overview" });
 
-    // Beam: one rounding, typographic minus, and the published band beside it.
     expect(hero.querySelector("p.pharos-numeric")?.textContent).toBe("−48Stress");
     expect(container.textContent).not.toMatch(/Net direction unavailable|Pressure stable|Minting Pressure/i);
-    // Verdict from structured fields: band, then the weighted driver.
     expect(screen.getByText(/Weighted redemption pressure is heavy against the 30-day norm\. USDC pulls it down most/)).toBeTruthy();
     expect(screen.getByText("Printed 24h")).toBeTruthy();
     expect(screen.getByRole("img", { name: /Run line: 2 coins in the Bank Run Gauge/ })).toBeTruthy();
-    // Equivalent data surface: every tracked coin, with status.
     expect(screen.getByRole("table")).toBeTruthy();
     expect(screen.getAllByRole("row")).toHaveLength(4);
     expect(screen.getByText("Withheld: incomplete valuation")).toBeTruthy();
@@ -137,10 +136,8 @@ describe("FlowGaugeHero", () => {
 
   it("labels a re-weighted beam on the label and as a reason-coded chip", () => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ partialValuationInputs: 1, partialValuationMcapUsd: 2, scoredMcapUsd: 220 })}
-        coins={coins}
-        sync={null}
       />,
     );
 
@@ -151,7 +148,7 @@ describe("FlowGaugeHero", () => {
   });
 
   it("renders an unrated gauge as an em dash with a Not rated chip, never 0", () => {
-    const { container } = render(<FlowGaugeHero gauge={gauge({ score: null, band: null })} coins={[]} sync={null} />);
+    const { container } = render(<FlowGaugeHero {...heroProps} gauge={gauge({ score: null, band: null })} coins={[]} sync={null} />);
     const beam = container.querySelector("p.pharos-numeric");
 
     expect(container.querySelector('[data-reason-codes="gauge-score-null"]')).toBeTruthy();
@@ -160,17 +157,28 @@ describe("FlowGaugeHero", () => {
     expect(beam?.textContent).not.toContain("0");
   });
 
-  it("omits the verdict when the summary payload was not read", () => {
-    const { container } = render(<FlowGaugeHero gauge={null} coins={[]} sync={null} />);
+  it.each([undefined, "partial"] as const)("omits the missing-summary verdict and labels subsets (%s)", (completeness) => {
+    const { container, rerender } = render(<FlowGaugeHero gauge={null} coins={[]} sync={null} />);
 
     expect(container.textContent).not.toMatch(/not rated this window|history and fully valued/i);
     expect(container.querySelector("p.pharos-numeric")?.textContent).toBe("—Not rated");
     expect(screen.getByText("Printed 24h")).toBeTruthy();
+    rerender(<FlowGaugeHero gauge={null} sync={null} coins={[
+      makeMintBurnFlowCoin({ gaugeWeightUsd: 90, netFlow24hUsd: 100, valuation: undefined }),
+      makeMintBurnFlowCoin({ gaugeWeightUsd: 10, netFlow24hUsd: null,
+        valuation: completeness ? makeMintBurnCoinValuation({ completeness }) : undefined }),
+    ]} />);
+    const value = screen.getByText("1 of 2 coins").parentElement!;
+    expect(value.textContent).toContain("+$100.00");
+    expect(value.textContent).toContain("+$100.00*");
+    expect(value.title).toContain("Coverage unknown");
+    expect(value.textContent).toContain("(coverage unknown)");
+
   });
 
   it("preserves unknown activity and unavailable totals in the hero and run-line data surface", () => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ score: null, band: null })}
         coins={[makeMintBurnFlowCoin({
           has24hActivity: null,
@@ -181,7 +189,6 @@ describe("FlowGaugeHero", () => {
           mintVolume24hUsd: 0,
           burnVolume24hUsd: 0,
         })]}
-        sync={null}
       />,
     );
     expect(screen.getByRole("table").textContent).toContain("24h activity unknown");
@@ -192,9 +199,8 @@ describe("FlowGaugeHero", () => {
 
   it("puts a sync warning in a status chip with its freshness reason", () => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge()}
-        coins={coins}
         sync={{ lastSuccessfulSyncAt: 1_790_000_000, freshnessStatus: "stale", warning: "Lane lagging", criticalLaneHealthy: false }}
       />,
     );
@@ -204,10 +210,8 @@ describe("FlowGaugeHero", () => {
 
   it("prints no band, and says why, when withheld weight could carry the score across an edge", () => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ partialValuationInputs: 1, partialValuationMcapUsd: 80, scoredMcapUsd: 220 })}
-        coins={coins}
-        sync={null}
       />,
     );
 
@@ -229,7 +233,7 @@ describe("FlowGaugeHero", () => {
       meta: null,
     };
     const { container, rerender } = render(
-      <FlowGaugeHero gauge={gauge()} coins={coins} sync={null}
+      <FlowGaugeHero {...heroProps}
         dataHealth={{ ...health, state: "degraded", degradationReason: "source" }} />,
     );
 
@@ -237,16 +241,15 @@ describe("FlowGaugeHero", () => {
     expect(container.textContent).not.toContain("Source warning");
     expect(container.textContent).not.toContain("Data quality warning");
 
-    rerender(<FlowGaugeHero gauge={gauge()} coins={coins} sync={null} dataHealth={{ ...health, state: "stale" }} />);
+    rerender(<FlowGaugeHero {...heroProps} dataHealth={{ ...health, state: "stale" }} />);
     expect(container.querySelector('[data-reason-codes="data-health-stale"]')?.textContent).toContain("Older snapshot");
   });
 
   it.each(["source-stale", "publication-held"])("explains classification-null before valuation-null and retains its dependency budget: %s", (reason) => {
     const warning = `199 - "Flight-to-quality classification unavailable: Safety Score source (${reason}); budget 1h."`;
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ flightToQuality: null, flightIntensity: null, classificationSource: "unavailable", classificationReason: reason })}
-        coins={coins}
         sync={{ lastSuccessfulSyncAt: 1_790_000_000, freshnessStatus: "fresh", warning: null,
           classificationWarning: warning, criticalLaneHealthy: true }}
         dataHealth={{
@@ -272,11 +275,9 @@ describe("FlowGaugeHero", () => {
 
   it("retains the valuation-specific FTQ reason when classification is admitted", () => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ flightToQuality: null, flightIntensity: null,
           classificationSource: "safety-score-v9-publication", classificationReason: null })}
-        coins={coins}
-        sync={null}
       />,
     );
     expect(container.querySelector('[data-reason-codes="valuation-incomplete"]')).toBeTruthy();
@@ -291,12 +292,10 @@ describe("FlowGaugeHero", () => {
     ["classification-unknown", "Historical classification completeness is unknown, so no flight-to-quality verdict is published."],
   ] as const)("explains a withheld verdict with its published %s cause", (reason, explanation) => {
     const { container } = render(
-      <FlowGaugeHero
+      <FlowGaugeHero {...heroProps}
         gauge={gauge({ flightToQuality: null, flightIntensity: null,
           classificationSource: "safety-score-v9-publication", classificationReason: null,
           flightToQualityReason: reason })}
-        coins={coins}
-        sync={null}
       />,
     );
     expect(container.querySelector(`[data-reason-codes="${reason}"]`)).toBeTruthy();

@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { stripSensitive } from "../../lib/safe-error-message";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { type RateLimitedFetch, getEvmBlockNumber } from "../../lib/evm-logs";
@@ -344,6 +345,7 @@ function recordIncompleteConfigScan(
       configState.config.stablecoin,
       configState.config.chain.chainId,
       "incomplete-coverage",
+      undefined, { result, previousCursor: configState.cursorValue },
     );
   }
   const cursorLabel = configState.config.chain.type === "tron" ? "ts" : "block";
@@ -356,12 +358,15 @@ function recordEvmApiError(configState: BlacklistConfigState, result: BlacklistS
   if (result.incomplete || !result.apiError) return;
 
   state.apiErrors++;
+  const errorClass = stripSensitive(result.failureSamples[0] ?? (result.nextCursor != null ? "partial-coverage" : "no-coverage")).slice(0, 120);
+  state.apiErrorClasses[errorClass] = (state.apiErrorClasses[errorClass] ?? 0) + 1;
   recordApiErrorConfig(
     state.apiErrorConfigs,
     configState.configKey,
     configState.config.stablecoin,
     configState.config.chain.chainId,
     result.nextCursor != null ? "partial-coverage" : "no-coverage",
+    undefined, { result, previousCursor: configState.cursorValue },
   );
   const message =
     result.nextCursor != null
@@ -537,7 +542,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
         deferredToDebt: 0,
       },
     },
-    apiErrorClasses: {},
+    apiErrorClasses: Object.create(null) as Record<string, number>,
     apiErrorConfigs: [],
     configsAttempted: 0,
     configsSucceeded: 0,

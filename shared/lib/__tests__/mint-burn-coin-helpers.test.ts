@@ -9,44 +9,18 @@ import {
   resolveBaselineDailyNetUsd,
 } from "@shared/lib/mint-burn-coin-helpers";
 import { emptyMintBurnClassificationTally, summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
-import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types/mint-burn";
-import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
-import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
-
-function valuation24h(overrides: Partial<MintBurnValuation> = {}): NonNullable<MintBurnCoinFlow["valuation"]> {
-  return {
-    window24h: {
-      completeness: "complete",
-      mintCompleteness: "complete",
-      burnCompleteness: "complete",
-      unpricedMintEventCount: 0,
-      unpricedBurnEventCount: 0,
-      ...overrides,
-    },
-    baseline: "complete",
-    netFlow7d: "complete",
-    netFlow30d: "complete",
-    netFlow90d: "complete",
-  };
-}
+import { MINT_BURN_NET_SUBSET_MIN_WEIGHT_SHARE as floor, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
+import { MintBurnFlowsResponseSchema, type MintBurnCoinFlow } from "@shared/types/mint-burn";
+import { makeInactiveMintBurnFlowCoin, makeMintBurnCoinValuation as valuation24h, makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const PARTIAL_MINT_SIDE = { completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 2 } as const;
 
 function stubCoin(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
-  return {
-    stablecoinId: "test",
-    symbol: "TEST",
-    mintVolume24hUsd: 0,
-    burnVolume24hUsd: 0,
-    netFlow24hUsd: 0,
-    mintCount24h: 0,
-    burnCount24h: 0,
-    netFlow7dUsd: 0,
-    netFlow30dUsd: 0,
-    netFlow90dUsd: 0,
-    pressureShiftScore: null,
+  return makeInactiveMintBurnFlowCoin({
+    stablecoinId: "test", symbol: "TEST",
+    has24hActivity: undefined, netFlowDirection24h: undefined, pressureShiftState: undefined,
     ...overrides,
-  } as MintBurnCoinFlow;
+  });
 }
 
 describe("inferHas24hActivity", () => {
@@ -161,9 +135,23 @@ describe("pressure gating", () => {
 });
 
 describe("aggregateCoinFlows24h", () => {
+  const active100 = stubCoin({ has24hActivity: true, netFlow24hUsd: 100, valuation: valuation24h() });
+  it.each([10, 11, null, -1, Infinity, NaN])("qualifies a labelled subset against withheld weight %s", (weight) => {
+    for (const completeness of ["complete", "partial"] as const) {
+      const coins = [
+        stubCoin({ netFlow24hUsd: 100, gaugeWeightUsd: floor * 100 }),
+        stubCoin({ netFlow24hUsd: null, gaugeWeightUsd: weight, valuation: valuation24h({ completeness }) }),
+      ];
+      const net = aggregateCoinFlows24h(coins).net;
+      expect(net.valueUsd).toBeNull();
+      expect(net.subtotal).toEqual(weight === 10 ? { valueUsd: 100, included: 1, total: 2, weightShare: 0.9, coverageUnknown: true } : undefined);
+      expect(sumMintBurnSignedNets(coins.map((coin) => resolveCoinNetFlow(coin, "24h"))).subtotal).toBeUndefined();
+    }
+  });
+
   it("makes the summed net and direction unavailable when one component is partial", () => {
     const aggregate = aggregateCoinFlows24h([
-      stubCoin({ has24hActivity: true, netFlow24hUsd: 100, mintVolume24hUsd: 100, valuation: valuation24h() }),
+      stubCoin({ ...active100, mintVolume24hUsd: 100 }),
       stubCoin({
         has24hActivity: true,
         netFlow24hUsd: -300,
@@ -180,7 +168,7 @@ describe("aggregateCoinFlows24h", () => {
 
   it("makes the summed net unavailable when a component net is null", () => {
     const aggregate = aggregateCoinFlows24h([
-      stubCoin({ has24hActivity: true, netFlow24hUsd: 100, valuation: valuation24h() }),
+      active100,
       stubCoin({ has24hActivity: true, netFlow24hUsd: null, netFlowDirection24h: null, valuation: valuation24h() }),
     ]);
     expect(aggregate.net.valueUsd).toBeNull();
@@ -189,7 +177,7 @@ describe("aggregateCoinFlows24h", () => {
 
   it("sums complete components", () => {
     const aggregate = aggregateCoinFlows24h([
-      stubCoin({ has24hActivity: true, netFlow24hUsd: 100, valuation: valuation24h() }),
+      active100,
       stubCoin({ has24hActivity: true, netFlow24hUsd: -40, valuation: valuation24h() }),
     ]);
     expect(aggregate.net).toEqual({ valueUsd: 60, completeness: "complete", note: null });
@@ -209,15 +197,16 @@ describe("aggregateCoinFlows24h", () => {
 
   it("proves the aggregate direction and bound from a partial coin's known subtotals", () => {
     const aggregate = aggregateCoinFlows24h([
-      stubCoin({ has24hActivity: true, netFlow24hUsd: -50, valuation: valuation24h() }),
+      stubCoin({ has24hActivity: true, netFlow24hUsd: -50, gaugeWeightUsd: 90, valuation: valuation24h() }),
       stubCoin({
         has24hActivity: true, netFlow24hUsd: null, netFlowDirection24h: "minting",
-        mintVolume24hUsd: 300, burnVolume24hUsd: 100, valuation: valuation24h(PARTIAL_MINT_SIDE),
+        gaugeWeightUsd: 10, mintVolume24hUsd: 300, burnVolume24hUsd: 100, valuation: valuation24h(PARTIAL_MINT_SIDE),
       }),
     ]);
     expect(aggregate.direction).toBe("minting");
     expect(aggregate.net.valueUsd).toBeNull();
     expect(aggregate.net.bound).toEqual({ kind: "lower", valueUsd: 150 });
+    expect(aggregate.net.subtotal).toBeUndefined();
   });
 
   it("leaves the aggregate unbounded when components are bounded on opposite sides", () => {
@@ -259,9 +248,6 @@ describe("aggregateCoinFlows24h", () => {
     expect(aggregate.net.valueUsd).toBe(0);
   });
 
-  // /flows passes `summaryData?.coins ?? []`; a failed or generationless summary
-  // read leaves no coin components at all. R1/R2 keep that missing evidence
-  // unavailable instead of publishing a complete observed zero.
   it("publishes no complete zero, inactive direction or scan proof for an empty cohort", () => {
     const aggregate = aggregateCoinFlows24h([]);
     expect(aggregate.net).toMatchObject({ valueUsd: null, completeness: "unknown" });

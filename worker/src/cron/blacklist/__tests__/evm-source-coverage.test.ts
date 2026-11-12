@@ -119,6 +119,7 @@ describe("EVM blacklist contiguous coverage", () => {
         const first = await fetchEvmEventsIncremental(db, config, "key", 100, new Map(), makeBudget(), limiter, undefined, undefined, 10_000);
         expect(first.scannedToBlock).toBe(104);
         expect(first.rows).toHaveLength(1);
+        expect(first.failureSamples).toContain("invalid-log-identity");
         vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue({
           logs: [valid, repaired], complete: true, scannedToBlock: 120, calls: 1, maxDepth: 0,
         });
@@ -481,7 +482,7 @@ describe("EVM blacklist contiguous coverage", () => {
       topicCount: 2,
       coveredTopicCount: 2,
       providerCalls: 4,
-      maxSplitDepth: 2,
+      maxSplitDepth: 2, failureSamples: ["provider-timeout"],
     });
   });
 
@@ -603,7 +604,8 @@ describe("EVM blacklist contiguous coverage", () => {
       vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map(timestampKnown ? [[105, 1000]] : []));
       const rpc = await scan(null);
       expect(rpc).toMatchObject({ scannedToBlock: timestampKnown ? 200 : 104,
-        coverageOutcome: timestampKnown ? "complete" : "partial", usedRpcLogs: true });
+        coverageOutcome: timestampKnown ? "complete" : "partial", usedRpcLogs: true,
+        failureSamples: timestampKnown ? [] : ["missing-block-timestamp"] });
       expect(rpc.rows).toEqual(timestampKnown ? explorer.rows : []);
       expect(prepare).not.toHaveBeenCalled();
     } finally { vi.unstubAllGlobals(); }

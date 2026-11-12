@@ -10,8 +10,8 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
-import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
+import { aggregateCoinFlows24h, inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
+import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/mint-burn/flow-valuation-value";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
@@ -41,7 +41,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
     const topMovers = movers
       .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd))
       .slice(0, 3);
-    const totalNet = sumMintBurnSignedNets(nets.map(({ net }) => net));
+    const totalNet = aggregateCoinFlows24h(data?.coins ?? []).net;
     return { topMovers, totalNet, hasUnavailableNet: totalNet.valueUsd == null, hasActivity: activeCoins.length > 0 };
   }, [data?.coins]);
 
@@ -93,7 +93,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
             </p>
           </div>
           <ul className="ml-auto flex flex-1 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
-            {state === "empty" ? (
+            {state === "empty" || (state === "stale-with-data" && !hasActivity) ? (
               <li className="pharos-meta">No 24h activity</li>
             ) : topMovers.length === 0 ? (
               <li className="pharos-meta">

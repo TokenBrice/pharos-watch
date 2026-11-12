@@ -1,5 +1,18 @@
 [
   {
+    "version": "6.45",
+    "title": "Labelled subset sums for incomplete aggregate nets",
+    "date": "2026-11-12",
+    "effectiveAt": 1794498300,
+    "summary": "Page-wide and weekly summed nets can show a labelled sum of the coins with a published net when neither an exact total nor a proven bound exists and those coins carry at least 90% of tracked supply weight.",
+    "impact": [
+      "The flows page and home mini card share the same 24-hour total and coin population. Weekly receipts use the same fallback for 7-day nets. Each subset value is labelled N of M coins and explains its tracked supply weight share; the full signed net remains unavailable.",
+      "Exact totals and proven one-sided bounds keep precedence. Below the tracked supply weight floor, or without known weights for every withheld coin, the sum remains unavailable. Per-coin nets, directions, pressure, gauge, hourly buckets and leader rankings are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.44",
     "title": "Hourly coverage scoped to each constituent's evidence",
     "date": "2026-11-11",
