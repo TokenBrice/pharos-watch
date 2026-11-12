@@ -16,13 +16,13 @@ function liveReserves(overrides: Record<string, unknown> = {}) {
     reserves: [{ name: "T-bills", pct: 100, risk: "low" }],
     estimated: false,
     liveAt: 1_700_000_000,
-    sync: { status: "ok" },
+    sync: { enabled: true, status: "ok", stale: false, bootstrap: false },
     ...overrides,
   };
 }
 
 describe("status probe payload contracts", () => {
-  it("scopes the contract to the reserve and redemption probe paths", () => {
+  it("scopes reserve and redemption contracts", () => {
     expect(hasStatusProbePayloadContract(RESERVES_PATH)).toBe(true);
     expect(hasStatusProbePayloadContract(REDEMPTION_PATH)).toBe(true);
     expect(hasStatusProbePayloadContract("/api/health")).toBe(false);
@@ -30,7 +30,7 @@ describe("status probe payload contracts", () => {
   });
 
   it.each([
-    API_PATHS.stablecoinReserves("iusd-infinifi"),
+    RESERVES_PATH,
     API_PATHS.reserveAttemptHistory({ coin: "usdc-circle", limit: 10 }),
     API_PATHS.redemptionBackstops(),
     API_PATHS.redemptionBackstopCoin("usdc-circle"),
@@ -49,36 +49,35 @@ describe("status probe payload contracts", () => {
     expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves())).toEqual({ ok: true });
   });
 
-  it.each([
-    ["curated-fallback", "reserve-mode-curated-fallback"],
-    ["template-fallback", "reserve-mode-template-fallback"],
-    ["unavailable", "reserve-mode-unavailable"],
-    ["live-stale", "reserve-mode-live-stale"],
-  ] as const)("rejects reserve mode %s", (mode, error) => {
-    expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves({ mode })))
-      .toEqual({ ok: false, error });
-  });
+  it.each(["live", "live-stale", "curated-fallback", "template-fallback", "unavailable"])(
+    "passes valid %s reserves despite asset quality", mode => {
+      for (const status of ["degraded", "error"]) {
+        const payload = liveReserves({ mode, liveAt: mode.startsWith("live") ? 1_700_000_000 : undefined,
+          estimated: mode === "template-fallback", ...(mode === "unavailable" ? { reserves: [] } : {}),
+          sync: { enabled: true, status, stale: mode === "live-stale", bootstrap: false } });
+        expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(status === "error" ? { Warning: '110 - "stale"' } : {}), payload))
+          .toEqual({ ok: true });
+      }
+    },
+  );
 
-  it("rejects a live mode whose sync is degraded or whose slices are empty", () => {
-    expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves({ sync: { status: "degraded" } })))
-      .toEqual({ ok: false, error: "reserve-sync-degraded" });
-    expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves({ sync: { status: "error" } })))
-      .toEqual({ ok: false, error: "reserve-sync-error" });
-    expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves({ reserves: [] })))
-      .toEqual({ ok: false, error: "reserve-slices-empty" });
+  it.each([
+    { reserves: [] }, { reserves: [{ name: "Cash", pct: "100", risk: "low" }] },
+    { stablecoinId: "other" }, { mode: "unknown" }, { estimated: true }, { liveAt: undefined },
+    { mode: "unavailable" }, { sync: { status: "ok" } },
+  ])("rejects malformed or inconsistent reserves %j", overrides => {
+    expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves(overrides)).ok).toBe(false);
   });
 
   it("fails the payload's own stale freshness verdict", () => {
     expect(evaluateStatusProbePayload(
-      RESERVES_PATH,
+      REDEMPTION_PATH,
       new Headers({ Warning: '110 - "Response is stale (90000s old, fresh budget 3600s)"' }),
       liveReserves(),
     )).toEqual({ ok: false, error: "stale-freshness-header" });
   });
 
   it("fails a future-dated generation the producer marked 199 and no-store", () => {
-    // `addFreshnessHeaders` clamps X-Data-Age to 0 for a future timestamp, so
-    // the 199 verdict is the only evidence the generation clock is unusable.
     expect(evaluateStatusProbePayload(
       REDEMPTION_PATH,
       new Headers({

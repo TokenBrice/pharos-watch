@@ -12,10 +12,9 @@ import { fetchHiveHbdProtocolSupply } from "../hive-hbd-protocol";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const NOW_SEC = 1_800_000_000;
-const PRIMARY_URL = "https://api.hive.blog";
-const FALLBACK_URL = "https://api.openhive.network";
+const PRIMARY_URL = "https://api.openhive.network";
+const FALLBACK_URL = "https://api.deathwing.me";
 const PRIMARY_HEAD_ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const FALLBACK_HEAD_ID = PRIMARY_HEAD_ID;
 
 function hiveTime(timestamp: number): string {
   return new Date(timestamp * 1_000).toISOString().slice(0, 19);
@@ -89,7 +88,7 @@ function hiveNetwork(
 ): AdapterNetworkSpec {
   const fixtures: Record<"primary" | "fallback", NodeFixture> = {
     primary: { ...fixture(), ...overrides.primary },
-    fallback: { ...fixture(baseDgp(FALLBACK_HEAD_ID)), ...overrides.fallback },
+    fallback: { ...fixture(baseDgp(PRIMARY_HEAD_ID)), ...overrides.fallback },
   };
 
   const respond = async (request: Request): Promise<unknown> => {
@@ -164,11 +163,9 @@ describe("hive-hbd-protocol adapter", () => {
     ]);
     expect(result.slices[0]).not.toHaveProperty("coinId");
     expect(result.metadata).toMatchObject({ freshnessMode: "not-applicable" });
-    expect(result.metadata).not.toHaveProperty("sourceTimestamp");
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
-    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
-    expect(result.metadata).not.toHaveProperty("supplyUsd");
-    expect(result.metadata).not.toHaveProperty("redemption");
+    for (const key of ["sourceTimestamp", "collateralizationRatio", "totalReserveUsd", "supplyUsd", "redemption"]) {
+      expect(result.metadata).not.toHaveProperty(key);
+    }
     expect(result.metadata?.details).toMatchObject({
       treasuryAccount: "hive.fund",
       thresholdState: "print-stop",
@@ -179,6 +176,22 @@ describe("hive-hbd-protocol adapter", () => {
       effect: "info",
     }));
     expect(network.requests).toHaveLength(6);
+  });
+
+  it("retains the peer through transport failures and still requires both nodes", async () => {
+    let calls = 0;
+    const network = hiveNetwork({}, (request) => {
+      if (request.url.startsWith(PRIMARY_URL) && ++calls <= 3) {
+        return { status: 429, headers: { "Retry-After": "1" } };
+      }
+    });
+    const { result, network: observed } = await fetchFixture(network);
+    expect(result.metadata?.details).toMatchObject({ sourceNodes: [PRIMARY_URL, FALLBACK_URL] });
+    expect(observed.requests).toHaveLength(9);
+    expect(calls).toBe(6);
+    await expect(fetchFixture(hiveNetwork({}, (request) => (
+      request.url.startsWith(PRIMARY_URL) ? { status: 403 } : undefined
+    )))).rejects.toThrow("HTTP 403");
   });
 
   it("rejects disagreement in a material feed input", async () => {
@@ -195,7 +208,7 @@ describe("hive-hbd-protocol adapter", () => {
     }))).rejects.toThrow("crossed a changing Hive head");
   });
 
-  it.each([PRIMARY_URL, `${PRIMARY_URL}/`, "https://API.HIVE.BLOG./other-rpc"])(
+  it.each([PRIMARY_URL, `${PRIMARY_URL}/`, "https://API.OPENHIVE.NETWORK./other-rpc"])(
     "rejects duplicate node hosts before fetching: %s",
     async (url) => {
       await expect(fetchFixture(undefined, {
@@ -217,24 +230,11 @@ describe("hive-hbd-protocol adapter", () => {
       await Promise.resolve();
       const url = request.url.replace(/\/+$/, "");
       let payload: unknown;
-      if (Array.isArray(body)) {
-        const [feedRequest, accountRequest] = body as Array<{ id: number }>;
-        const node = url === PRIMARY_URL ? fixture() : fixture(baseDgp(FALLBACK_HEAD_ID));
-        payload = [
-          rpcResult(feedRequest.id, node.feed),
-          rpcResult(accountRequest.id, [node.account]),
-        ];
-      } else {
-        const rpc = body as { id: number };
-        const node = url === PRIMARY_URL ? fixture() : fixture(baseDgp(FALLBACK_HEAD_ID));
-        const dgp = rpc.id === 1 ? node.dgpBefore : node.dgpAfter;
-        payload = rpcResult(rpc.id, dgp);
-        if (rpc.id === 4) {
-          if (url === PRIMARY_URL && completedBrackets.length < 2) {
-            payload = rpcResult(4, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
-          }
-          completedBrackets.push(url);
+      if (!Array.isArray(body) && (body as { id: number }).id === 4) {
+        if (url === PRIMARY_URL && completedBrackets.length < 2) {
+          payload = rpcResult(4, baseDgp("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
         }
+        completedBrackets.push(url);
       }
       active -= 1;
       return payload;
@@ -312,7 +312,7 @@ describe("hive-hbd-protocol adapter", () => {
 
   it("rejects stale DGP head time", async () => {
     const stalePrimary = baseDgp(PRIMARY_HEAD_ID, hiveTime(NOW_SEC - 1_801));
-    const staleFallback = baseDgp(FALLBACK_HEAD_ID, hiveTime(NOW_SEC - 1_801));
+    const staleFallback = baseDgp(PRIMARY_HEAD_ID, hiveTime(NOW_SEC - 1_801));
     await expect(fetchFixture(hiveNetwork({
       primary: { dgpBefore: stalePrimary, dgpAfter: stalePrimary },
       fallback: { dgpBefore: staleFallback, dgpAfter: staleFallback },

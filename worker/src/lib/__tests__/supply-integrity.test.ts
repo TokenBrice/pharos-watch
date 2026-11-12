@@ -183,25 +183,23 @@ function integrityReport(count = 100): SupplyIntegrityReport {
 }
 
 describe("supply integrity", () => {
-  it("acknowledges only in-use dated carries and re-arms at expiry", async () => {
-    const reviews = REVIEWED_SUPPLY_CARRIES;
-    for (const r of reviews) {
-      expect(ACTIVE_IDS.has(r.stablecoinId)).toBe(true);
-      expect(r.evidence).toBeTruthy();
-      expect(r.expiresAt - r.reviewedAt).toBeGreaterThan(0);
-      expect(r.expiresAt - r.reviewedAt).toBeLessThanOrEqual(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
+  it.each(REVIEWED_SUPPLY_CARRIES)("acknowledges only in-use $stablecoinId carries and re-arms at expiry", async (review) => {
+    const { stablecoinId, reviewedAt, expiresAt } = review;
+    expect(ACTIVE_IDS.has(stablecoinId)).toBe(true);
+    expect(review.evidence).toBeTruthy();
+    expect(expiresAt - reviewedAt).toBeGreaterThan(0);
+    expect(expiresAt - reviewedAt).toBeLessThanOrEqual(RESERVE_FEED_REVIEW_MAX_AGE_SEC);
+    if (review.stablecoinId === "said-gaib") {
+      expect(reviewedAt).toBe(Date.UTC(2026, 10, 11, 23, 19, 58) / 1000);
+      expect(expiresAt).toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
     }
-    expect(reviews.find(r => r.stablecoinId === "said-gaib")!.expiresAt)
-      .toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
-    const reviewedAt = Math.max(...reviews.map(r => r.reviewedAt));
-    const expiresAt = Math.min(...reviews.map(r => r.expiresAt));
-    const carried = reviews.map(r => ({ id: r.stablecoinId, current: 0, previous: 100, supplyRestored: true,
-      guard: r.reason === "defillama-list-fill-default-carry", currentSource: r.reason === "coingecko-cap-carry"
-        ? "coingecko-fallback" : r.reason === "nav-parent-price-gap" ? "onchain-total-supply" : "defillama" }));
+    const carried = [{ id: stablecoinId, current: 0, previous: 100, supplyRestored: true,
+      guard: review.reason === "defillama-list-fill-default-carry", currentSource: review.reason === "coingecko-cap-carry"
+        ? "coingecko-fallback" : review.reason === "nav-parent-price-gap" ? "onchain-total-supply" : "defillama" }];
     const read = (now: number, assets: AssetInput[] = carried) => loadSupplyIntegrityReport(database({ assets }), now);
     const active = await read(reviewedAt);
-    expect(active.value.carryIds).toHaveLength(reviews.length);
-    expect(active.value.acknowledgedCarryReviews).toHaveLength(reviews.length);
+    expect(active.value.carryIds).toHaveLength(1);
+    expect(active.value.acknowledgedCarryReviews).toHaveLength(1);
     expect(active.value.unacknowledgedCarryIds).toEqual([]);
     expect(codes(active)).toContain("supply_carry_reviews_acknowledged");
     expect(codes(active)).not.toContain("supply_carry_stale");
@@ -218,14 +216,14 @@ describe("supply integrity", () => {
       expect(codes(report).includes("supply_carry_reviews_expired")).toBe(offset === 0);
       expect(codes(report).includes("supply_carry_stale")).toBe(offset === 0);
     }
-    for (const r of reviews) for (const now of [r.reviewedAt - 1, r.expiresAt]) {
-      expect((await read(now, carried.filter(a => a.id === r.stablecoinId))).value.acknowledgedCarryReviews).toEqual([]);
+    for (const now of [reviewedAt - 1, expiresAt]) {
+      expect((await read(now)).value.acknowledgedCarryReviews).toEqual([]);
     }
     for (const assets of [carried.map(a => ({ ...a, current: null })), carried.map(a => ({ ...a, supplyRestored: false })),
       carried.map(a => ({ ...a, guard: !a.guard, currentSource: a.guard ? "onchain-total-supply" : "defillama" })),
       carried.map(a => ({ ...a, guard: false, currentSource: a.currentSource === "coingecko-fallback"
         ? "onchain-total-supply" : "other" }))]) {
-      for (const now of [expiresAt - 1, ...reviews.map(r => r.expiresAt)]) {
+      for (const now of [expiresAt - 1, expiresAt]) {
         const report = await read(now, assets);
         expect(report.value.acknowledgedCarryReviews).toEqual([]);
         expect(codes(report).some(code => code.startsWith("supply_carry_reviews_"))).toBe(false);
@@ -499,6 +497,7 @@ describe("supply integrity", () => {
       ["wcop-ripio", 193_650.25, 544_889.08],
       ["tryb-bilira", 698_792.67, 2_219_652.08, Date.parse("2026-11-07T20:27:00Z") / 1000],
       ["gbpa-agant", 1_191_268.85, 2_481_810, Date.parse("2026-11-07T21:10:00Z") / 1000],
+      ["witry-brix", 1_543_091.36, 3_365_372.58, Date.parse("2026-11-11T23:21:24Z") / 1000],
     ] as const) {
       for (const [now, value, accepted] of [
         [reviewStart - 1, current, false], [reviewStart, current, true],

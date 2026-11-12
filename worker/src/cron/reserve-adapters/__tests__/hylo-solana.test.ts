@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { fetchDefiLlamaPrices } from "../defillama";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+import { fetchDefiLlamaPrices } from "../defillama";
+import { classifyFailure } from "../../sync-live-reserves-shared";
 import capture from "./fixtures/hylo-solana-account-census.json";
-import { runAdapter, installAdapterNetwork, evaluateAdapterSnapshotAdmission, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { runAdapter, runAdapterWithFakeTimers, installAdapterNetwork, evaluateAdapterSnapshotAdmission, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const coin = ACTIVE_META_BY_ID.get("hyusd-hylo")!;
 const config = coin.liveReservesConfig!;
@@ -35,9 +36,6 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-// DefiLlama's `solana:` namespace is keyed by mint address, case-sensitively: a
-// case variant is a different key with no quote. Retaining the captured key
-// makes a mis-keyed Solana price identity fail here instead of only in prod.
 const priceEntries = Object.entries(capture.quotes.result.coins).map(([key, quote]) => {
   const [chain, address] = key.split(":");
   return { chain, address, price: quote.price };
@@ -91,7 +89,6 @@ describe("hylo-solana", () => {
     expect(result.metadata?.observedBlock).toEqual({ chain: "solana", number: capture.response.result.context.slot, timestamp: NOW_SEC });
     expect(result.metadata?.freshnessMode).toBe("not-applicable");
     expect(result.slices.map((slice) => slice.sourceKey)).toEqual(expect.arrayContaining(["hylo-solana:lst-pool", "hylo-solana:cbbtc-pool", "hylo-solana:hype-pool", "hylo-solana:zec-pool"]));
-    // Both small positive vaults retain their measured shares.
     expect(result.slices.find((slice) => slice.sourceKey === "hylo-solana:usdc-pool")?.pct).toBeCloseTo((capture.verification.usdcAmount * quote("usd-coin") / total) * 100, 10);
     expect(result.metadata?.details?.usdcDustExcludedUsd).toBe(0);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
@@ -101,8 +98,6 @@ describe("hylo-solana", () => {
   it("quotes hyloSOL under its own on-chain mint identity", async () => {
     const hyloSol = p.lsts.find((lst) => lst.priceChain === "solana")!;
     const { result, network } = await run();
-    // DefiLlama's `solana:` namespace is case-sensitive, so quoting a case
-    // variant (the 2026-09-09 config) resolves no price and errors every run.
     expect(network.requests.some((request) => request.url.includes(`solana:${hyloSol.mint}`))).toBe(true);
     const breakdown = result.metadata?.details?.lstBreakdown as Array<{ mint: string; valueUsd: number }>;
     expect(breakdown.find((row) => row.mint === hyloSol.mint)?.valueUsd).toBeCloseTo(capture.verification.lsts[1].amount * priceEntries.find((row) => row.address === hyloSol.mint)!.price, 5);
@@ -177,21 +172,29 @@ describe("hylo-solana", () => {
     await expect(run(network)).rejects.toThrow(/registry changed/);
   });
 
-  it("preserves case-sensitive Solana price identities at the real quote boundary", async () => {
+  it.each([403, "transport"])("names every census hop with final failure %s and no keys", async final => {
+    const keyed = "https://solana-mainnet.g.alchemy.com/v2/private-key";
+    const urls = [keyed, SOLANA_RPC_URL, "https://api.mainnet.solana.com", "https://solana-rpc.publicnode.com"];
+    const error = await runAdapterWithFakeTimers(() => run({
+      chains: { solana: keyed },
+      json: Object.fromEntries(urls.map((url, i) => [url, i === 3 && final === "transport"
+        ? () => { throw new Error("fetch failed"); } : { status: 403, body: "" }])),
+    })).catch((error: Error) => error);
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain(`[${urls.map((url, i) => `${new URL(url).hostname}=${i === 3 ? final : 403}`).join(", ")}]`);
+    expect(message).not.toContain("private-key");
+    expect(classifyFailure("adapter-exception", message)).toBe(final === 403 ? "upstream-http" : "network");
+  });
+
+  it("preserves case-sensitive Solana price identity at the quote boundary", async () => {
     const address = p.lsts[1].priceAddress;
-    const url = `https://coins.llama.fi/prices/current/solana:${address}`;
-    const network = installAdapterNetwork({
-      json: {
-        [url]: {
-          coins: {
-            [`solana:${address}`]: { price: 111.21, timestamp: NOW_SEC, confidence: 1 },
-          },
-        },
-      },
-    });
+    const key = `solana:${address}`;
+    const network = installAdapterNetwork({ json: {
+      [`https://coins.llama.fi/prices/current/${key}`]: { coins: { [key]: { price: 111.21, timestamp: NOW_SEC, confidence: 1 } } },
+    } });
     const { prices, warnings } = await fetchDefiLlamaPrices(
-      [{ key: "hyloSOL", chain: "solana", address }],
-      new AbortController().signal,
+      [{ key: "hyloSOL", chain: "solana", address }], new AbortController().signal,
       { chainRpcs: network.chainRpcs, requestCache: new Map(), nowSec: NOW_SEC },
     );
     expect(prices.get("hyloSOL")).toBe(111.21);

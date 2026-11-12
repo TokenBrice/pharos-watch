@@ -33,7 +33,7 @@ const HOLDINGS: Record<string, { name: string; symbol: string; risk: ReserveSlic
   "6e7b5396-27eb-488c-9f9f-9c7b833b0d82": { name: "Fidelity Treasury Digital Fund", symbol: "FYOXX", risk: "low" },
   "545bffa5-2de4-4080-a879-1ad11ebfb040": { name: "Coinbase - Cash Equivalents", symbol: "USDC", risk: "low", coinId: "usdc-circle" },
   "71e93ded-53e3-4125-a317-2ce6cc55df36": { name: "Other Assets ⁴", symbol: "USD", risk: "high" },
-  "04bcda43-af66-497e-8064-efe82ca3cb71": { name: "Silicon Valley Bank - Bank Deposits", symbol: "USD", risk: "medium" },
+  "04bcda43-af66-497e-8064-efe82ca3cb71": { name: "First Citizens Bank - Bank Deposits", symbol: "USD", risk: "medium" },
 };
 const OTHER_ASSETS_ID = "71e93ded-53e3-4125-a317-2ce6cc55df36";
 

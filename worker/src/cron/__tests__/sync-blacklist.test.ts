@@ -1051,41 +1051,35 @@ describe("syncBlacklist", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
-  it("degrades an otherwise healthy run when snapshot publication fails", async () => {
+  it.each([
+    ["blacklist-gap-metrics-cache-write", "materializeBlacklistGapMetrics", 0],
+    ["blacklist-summary-snapshot-write", "materializeBlacklistSummarySnapshot", 2],
+  ])("retains bounded failure diagnostics for %s", async (match, operation, gaps) => {
+    const error = "snapshot write failed".repeat(40);
     const db = mockD1([
       ...emptyBlacklistAggregateTables(),
       { match: "blacklist_sync_state", rows: [] },
       { match: "blacklist_events", rows: [] },
-      { match: "blacklist-gap-metrics-cache-write", rows: [], throwError: new Error("snapshot write failed") },
+      { match, rows: [], throwError: new Error(error) },
     ]);
     const onProgress = vi.fn();
-
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+      status: 200, headers: { "Content-Type": "application/json" },
     }));
-
     const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
-
     expect(result.status).toBe("degraded");
-    const meta = JSON.parse(result.metadata);
-    expect(meta.reason).toBe("blacklist-snapshot-publication-failed");
-    expect(meta.reasons).toEqual(["blacklist-snapshot-publication-failed"]);
-    expect(meta.producerSnapshotError).toBe("Error");
-    expect(meta.producerGapMetricSnapshots).toBe(0);
-    expect(meta.producerSummarySnapshot).toBe(false);
-    expect(meta.producerSnapshotSkipped).toBe(false);
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stage: "producer-snapshots",
-        message: "Failed to materialize blacklist producer snapshots",
-        metadata: expect.objectContaining({
-          producerSnapshotError: "Error",
-          errorMessage: "snapshot write failed",
-        }),
-      }),
-    );
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      reason: "blacklist-snapshot-publication-failed",
+      reasons: ["blacklist-snapshot-publication-failed"],
+      producerSnapshotError: error.slice(0, 500), producerSnapshotErrorOperation: operation,
+      producerGapMetricSnapshots: gaps, producerSummarySnapshot: false, producerSnapshotSkipped: false,
+    });
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      stage: "producer-snapshots",
+      message: "Failed to materialize blacklist producer snapshots",
+      metadata: expect.objectContaining({ errorMessage: error.slice(0, 500) }),
+    }));
   });
 
   describe("outcome truth", () => {

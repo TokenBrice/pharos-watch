@@ -40,6 +40,25 @@ interface FirmMarketsResponse {
   timestamp: number | string;
 }
 
+const FIRM_MARKETS_TIMEOUT_MS = 8_000;
+const FIRM_MARKETS_TOTAL_TIMEOUT_MS = 16_000;
+
+// Leave room inside the 20s adapter wall for a labelled per-fetch timeout.
+async function readFirmMarkets(config: LiveReservesConfig, url: string, signal: AbortSignal, ctx?: AdapterContext) {
+  const deadline = AbortSignal.timeout(FIRM_MARKETS_TOTAL_TIMEOUT_MS);
+  try {
+    return await fetchJsonAdapterInput<FirmMarketsResponse>(
+      config, "dola-inverse", AbortSignal.any([signal, deadline]), FIRM_MARKETS_TIMEOUT_MS, ctx,
+    );
+  } catch (error) {
+    if (signal.aborted) throw error;
+    if (deadline.aborted) {
+      throw new Error(`dola-inverse firm-markets fetch timed out after ${FIRM_MARKETS_TOTAL_TIMEOUT_MS}ms: ${url}`);
+    }
+    throw error;
+  }
+}
+
 type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "sinvusd" | "other";
 
 const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "sSwanUSD", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "reUSD", "ysyBOLD", "FraxPyUSD lp", "DOLA-FRAXBP"]);
@@ -471,7 +490,7 @@ export async function fetchDolaInverseReserves(
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "dola-inverse");
   const [payload, psm, sellFeeBps] = await Promise.all([
-    fetchJsonAdapterInput<FirmMarketsResponse>(config, "dola-inverse", signal, 12_000, ctx),
+    readFirmMarkets(config, primaryInput.url, signal, ctx),
     probeInversePsm(signal, ctx),
     probeInversePsmSellFeeBps(signal, ctx),
   ]);

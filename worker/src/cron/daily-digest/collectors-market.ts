@@ -528,7 +528,7 @@ export async function collectMintBurnFlows(
         classifyGaugeRegime(bound) === classifyGaugeRegime(gaugeScore)
         && getGaugeRiskTapeTone(bound) === getGaugeRiskTapeTone(gaugeScore));
       if (!bandRobust || !decisionsRobust) {
-        return collectorResult(undefined, [...degradedReasons, "mint-burn-gauge-valuation-partial"], ["mint-burn-gauge-valuation-partial"]);
+        return collectorResult(undefined, degradedReasons, ["mint-burn-gauge-valuation-partial"]);
       }
       qualityReasons.push("mint-burn-gauge-valuation-partial-band-stable");
     }

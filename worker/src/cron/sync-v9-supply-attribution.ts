@@ -864,6 +864,14 @@ export async function syncSafetyScoreV9SupplyAttribution(
       acceptedCount: generation.acceptedAssetIds.length,
       rejectedCount: generation.rejectedAssetIds.length,
       rejectedAssetIds: generation.rejectedAssetIds,
+      rejectedOutcomes: generation.rejectedAssetIds.slice(0, 20).flatMap(assetId => {
+        const outcome = generation.outcomesById[assetId];
+        return outcome.status === "rejected" ? [{
+          assetId, rejectionCode: outcome.rejectionCode,
+          failedRouteId: outcome.failedRouteId?.slice(0, 200) ?? null,
+          journalId: outcome.journalId,
+        }] : [];
+      }),
       diagnosticRejectedCount: diagnosticRejected.length,
       diagnosticRejectedAssetIds: diagnosticRejected,
       blockingRejectedCount: blockingRejectedAssetIds.length,

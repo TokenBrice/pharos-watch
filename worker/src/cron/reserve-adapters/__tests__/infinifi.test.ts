@@ -344,36 +344,32 @@ describe("adaptInfiniFi", () => {
     ]);
   });
 
-  it("flags and preserves unknown positive farms", () => {
-    const response = farmResponse([
-      ...SAMPLE_RESPONSE.data.farms,
-      { name: "dust-farm", label: "Dust Farm", assetsNormalized: 0.4, type: "LIQUID", underlyingAssetSymbol: "USDC" },
-    ], 100.4);
-
-    const result = adaptInfiniFi(response);
-    expect(result.unknownFarms).toContain("dust-farm");
-    expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(true);
+  it("preserves unknown farms and recognizes reviewed unlinked credit farms", () => {
+    const names = ["dust-farm", "fasanara-mfone", "jet-stream"];
+    const result = adaptInfiniFi(farmResponse(names.map((name) => ({
+      name, label: name, assetsNormalized: 1, type: "ILLIQUID",
+    })), 3));
+    expect(result.unknownFarms).toEqual(["dust-farm"]);
+    expect(result.unknownExposurePct).toBeCloseTo(100 / 3);
+    expect(result.slices).toEqual(names.map((name, i) => ({
+      sourceKey: `infinifi:${name}`, name, pct: 1 / 3 * 100, risk: i ? "high" : "medium",
+      ...(i === 1 ? { blacklistable: true } : {}),
+    })));
   });
 
   it("propagates coinId from FARM_RISK_MAP for dependency tracking", () => {
-    const response: InfiniFiProtocolData = {
-      code: "OK",
-      data: {
-        stats: { asset: { totalTVLAssetNormalized: 65 } },
-        farms: [
-          { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "base-morpho-steakhouse-prime", label: "Steakhouse Prime", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
-          { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-        ],
-      },
-    };
+    const response = farmResponse([
+      { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "base-morpho-steakhouse-prime", label: "Steakhouse Prime", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
+      { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+    ], 65);
 
     const { slices } = adaptInfiniFi(response);
-    expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
-    expect(slices.find((s) => s.name === "Steakhouse Prime")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
+    for (const name of ["Morpho steakUSDC", "Steakhouse Prime", "Maple Syrup USDC"]) {
+      expect(slices.find((s) => s.name === name)).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
+    }
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
-    expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
   });
 
   it("keeps PROTOCOL farm exposure explicit instead of renormalizing active farm subset", () => {

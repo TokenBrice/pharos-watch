@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { logCronEvent } from "../../lib/cron-logger";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { mockRegistry } from "../../test-helpers/cron";
 import { isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
@@ -91,6 +92,8 @@ vi.mock("../yield-sync/sources-optional-royco", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/cron-logger", () => ({ logCronEvent: vi.fn() }));
+
 vi.mock("../../lib/db-cache", () => ({
   getCaches: vi.fn(async () => new Map()),
   setCache: vi.fn(async () => undefined),
@@ -102,8 +105,8 @@ import { fetchAaveV3SupplyRates, fetchCompoundV3SupplyRates } from "../yield-syn
 import { fetchBeefySources, fetchMorphoVaultSources, fetchPendleMarketSources, fetchYearnKongSources } from "../yield-sync/sources-optional-vaults";
 import { fetchRoycoDawnSources } from "../yield-sync/sources-optional-royco";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
-import { loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
+import { type SupplementalSourceFamilySummary, type SupplementalSourceAccounting, loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
+import { type SupplementalSourceFamilyKey, SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
 import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
 import { supplementalFamilySnapshotHash } from "../yield-sync/cache";
 import { buildYieldSupplementalRunOutcome } from "../yield-sync/cache";
@@ -362,10 +365,12 @@ describe("syncYieldSupplemental", () => {
         reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
         source: "retry-after",
       });
-      const metadata = JSON.parse(result.metadata ?? "{}") as {
-        familyCacheResults?: Record<string, string>;
-        degradedFamilies?: string[];
-      };
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(logCronEvent).toHaveBeenCalledTimes(1);
+      expect(logCronEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        eventType: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+        metadata: expect.objectContaining({ backoffUntilSec: activeBackoffUntilSec, recordedAtSec: START_SEC }),
+      }));
       expect(metadata.familyCacheResults?.pendle).toBe("skipped-backoff");
       expect(metadata.degradedFamilies).toEqual([]);
       expect(result.status).toBeUndefined();
@@ -430,11 +435,11 @@ describe("syncYieldSupplemental", () => {
 
       expect(fetchPendleMarketSources).not.toHaveBeenCalled();
       expect(result.status).toBe("degraded");
-      const metadata = JSON.parse(result.metadata ?? "{}") as {
-        familyCacheResults?: Record<string, string>;
-        degradedFamilies?: string[];
-        degradedFamilyReasons?: Record<string, string>;
-      };
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata.pendleBackoff).toMatchObject({
+        source: "x-ratelimit-weekly-reset", recordedAtSec: START_SEC, backoffUntilSec: activeBackoffUntilSec,
+      });
+      expect(logCronEvent).not.toHaveBeenCalled();
       expect(metadata.familyCacheResults?.pendle).toBe("retained-previous");
       expect(metadata.degradedFamilies).toEqual(["pendle"]);
       expect(metadata.degradedFamilyReasons?.pendle).toBe(PENDLE_RATE_LIMIT_BACKOFF_REASON);
@@ -555,20 +560,7 @@ describe("syncYieldSupplemental", () => {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
         sourceFamilyCounts?: { aaveV3?: number };
-        sourceFamilySummaries?: {
-          aaveV3?: {
-            status?: string;
-            rawCandidateCount?: number;
-            candidateCount?: number;
-            optionalRpc?: {
-              targetCount?: number;
-              attemptedCount?: number;
-              resolvedTargetCount?: number;
-              emittedCount?: number;
-              missingTargetExamplesTruncated?: boolean;
-            };
-          };
-        };
+        sourceFamilySummaries?: Partial<Record<SupplementalSourceFamilyKey, SupplementalSourceFamilySummary>>;
         optionalRpcTelemetry?: {
           aaveV3?: { resolvedTargetCount?: number; emittedCount?: number; missingTargetCount?: number };
         };
@@ -984,16 +976,7 @@ describe("syncYieldSupplemental", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       familyCacheResults?: Record<string, string>;
       sourceCoverage?: {
-        sourceFamilySummaries?: {
-          aaveV3?: {
-            optionalRpc?: {
-              missingTargetExamples?: string[];
-              missingTargetExamplesTruncated?: boolean;
-              missingTargetCount?: number;
-              budgetExhausted?: boolean;
-            };
-          };
-        };
+        sourceFamilySummaries?: Partial<Record<SupplementalSourceFamilyKey, SupplementalSourceFamilySummary>>;
       };
     };
 
@@ -1123,17 +1106,7 @@ describe("syncYieldSupplemental", () => {
       sourceCoverage?: {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
-        sourceFamilySummaries?: {
-          beefy?: {
-            dedupeDiscardedValues?: Array<{
-              sourceKey: string;
-              discardedApy: number;
-              discardedObservedAt: number | null;
-              keptApy: number;
-              keptObservedAt: number | null;
-            }>;
-          };
-        };
+        sourceFamilySummaries?: Partial<Record<SupplementalSourceFamilyKey, SupplementalSourceFamilySummary>>;
         optionalRpcTelemetry?: {
           compoundV3?: { emittedCount?: number };
           aaveV3?: { emittedCount?: number };
@@ -1185,7 +1158,7 @@ describe("syncYieldSupplemental", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       degradedFamilies?: string[];
       sourceCoverage?: {
-        sourceFamilySummaries?: { beefy?: { dedupeDiscardedValues?: Array<{ discardedApy: number }> } };
+        sourceFamilySummaries?: Partial<Record<SupplementalSourceFamilyKey, SupplementalSourceFamilySummary>>;
       };
     };
     expect(metadata.degradedFamilies).toEqual([]);
@@ -1272,18 +1245,7 @@ describe("syncYieldSupplemental", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceCoverage?: {
         sourceFamilyCounts?: { beefy?: number };
-        supplementalSourceAccounting?: {
-          malformedSourceDrops?: {
-            total?: number;
-            bySourceFamily?: { beefy?: number };
-            exampleSourceKeysBySourceFamily?: { beefy?: string[] };
-          };
-          apyEnvelopeDrops?: {
-            total?: number;
-            bySourceFamily?: { beefy?: number };
-            exampleSourceKeysBySourceFamily?: { beefy?: string[] };
-          };
-        };
+        supplementalSourceAccounting?: SupplementalSourceAccounting;
       };
     };
 
@@ -1303,21 +1265,12 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("bounds supplemental source family execution concurrency", async () => {
-    type PendingSource =
-      | "morpho"
-      | "pendle"
-      | "yearnKong"
-      | "beefy"
-      | "compoundV3"
-      | "aaveV3"
-      | "roycoDawn";
-
-    const started: PendingSource[] = [];
-    const pending = new Map<PendingSource, () => void>();
+    const started: SupplementalSourceFamilyKey[] = [];
+    const pending = new Map<SupplementalSourceFamilyKey, () => void>();
     let active = 0;
     let maxActive = 0;
 
-    function trackFamily<T>(key: PendingSource, result: T) {
+    function trackFamily<T>(key: SupplementalSourceFamilyKey, result: T) {
       return () => {
         started.push(key);
         active += 1;

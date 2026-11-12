@@ -548,6 +548,7 @@ async function fetchHiveHbdProtocolState(
   const urls = [primary.url, fallbacks[0].url] as const;
   const retained: [HiveNodeSnapshot | undefined, HiveNodeSnapshot | undefined] = [undefined, undefined];
   let lastCoherenceError: HiveSnapshotCoherenceError | undefined;
+  let lastTransportError: unknown;
   try {
     for (let sample = 0; sample <= MAX_RESAMPLES; sample += 1) {
       attempt.signal.throwIfAborted();
@@ -563,7 +564,8 @@ async function fetchHiveHbdProtocolState(
           retained[index] = undefined;
           lastCoherenceError = snapshot.reason;
         } else {
-          throw snapshot.reason;
+          retained[index] = undefined;
+          lastTransportError = snapshot.reason;
         }
       }
       const [primarySnapshot, fallbackSnapshot] = retained;
@@ -583,8 +585,9 @@ async function fetchHiveHbdProtocolState(
         }
       }
     }
-    throw lastCoherenceError;
+    throw lastTransportError ?? lastCoherenceError;
   } catch (error) {
+    if (attempt.signal.aborted && !signal.aborted && lastTransportError) throw lastTransportError;
     if (attempt.signal.aborted && lastCoherenceError && !signal.aborted) {
       throw new Error(`${ADAPTER_KEY}: attempt budget exceeded; ${lastCoherenceError.message}`);
     }

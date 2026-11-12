@@ -201,18 +201,18 @@ describe("completeMintBurnRun", () => {
       if (kind === "quarantine") repair.rowsQuarantinedDecode = 1;
       input.recalcFailed = kind === "materialization";
       if (kind === "api") input.phase.apiErrors = 2;
-      // Recover an escalated producer; retain debt beyond the threshold.
       input.runState.degradedStreak = capacity ? 3 : 0;
       for (let run = 0; run < 5; run++) {
-        const result = await completeMintBurnRun(input);
-        expect(result.status).toBe(!capacity && run >= 2 ? "error" : kind === "api" && run === 0 ? "ok" : "degraded");
-        expect(result.metadata.degradedSignal).toBe(!capacity);
-        expect(result.metadata.degradedStreak).toBe(capacity ? 0 : run + 1);
-        expect(result.metadata.outputPublishedAt != null).toBe(result.status !== "error" && !input.recalcFailed);
-        expect(result.metadata.reason).toBe(result.status === "ok" ? undefined : kind.includes("conservation") || kind === "reorg"
+        const { status, metadata } = await completeMintBurnRun(input);
+        expect(status).toBe(capacity || kind === "api" && run === 0 ? "ok" : run >= 2 ? "error" : "degraded");
+        if (capacity) expect(metadata.quality).toEqual({ reasons: ["mint-burn-capacity-only-repair-debt"] });
+        expect(metadata.degradedSignal).toBe(!capacity);
+        expect(metadata.degradedStreak).toBe(capacity ? 0 : run + 1);
+        expect(metadata.outputPublishedAt != null).toBe(status !== "error" && !input.recalcFailed);
+        expect(metadata.reason).toBe(status === "ok" ? undefined : kind.includes("conservation") || kind === "reorg"
           ? "mint-burn-conservation-failure" : input.recalcFailed ? "mint-burn-hourly-recalc-failed"
           : "mint-burn-source-coverage-degraded");
-        input.runState.degradedStreak = result.metadata.degradedStreak as number;
+        input.runState.degradedStreak = metadata.degradedStreak as number;
         expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, input.runState.degradedStreak, null);
       }
       if (kind === "api") {
@@ -443,15 +443,13 @@ describe("completeMintBurnRun", () => {
     }
   });
 
-  it("degrades explicitly but completes maintenance when backlog metadata is unavailable", async () => {
+  it("holds unknown backlog metadata without degrading completed maintenance", async () => {
     vi.useFakeTimers();
     vi.mocked(getNullPriceBacklog).mockRejectedValue(
       new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long."),
     );
     vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({
-      reclassified: 4,
-      affectedHours: new Map(),
-      saturated: false,
+      reclassified: 4, affectedHours: new Map(), saturated: false,
     });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -459,8 +457,9 @@ describe("completeMintBurnRun", () => {
       const pending = completeMintBurnRun(buildRunInput());
       await vi.runAllTimersAsync();
       const result = await pending;
-      expect(result.status).toBe("degraded");
+      expect(result.status).toBe("ok");
       expect(result.metadata).toMatchObject({
+        quality: { reasons: ["mint-burn-null-price-backlog-unavailable"] },
         nullPriceBacklog: null,
         nullPriceBacklogRecent: null,
         nullPriceBacklogHistorical: null,

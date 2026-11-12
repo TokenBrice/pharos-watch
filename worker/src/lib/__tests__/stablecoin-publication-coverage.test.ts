@@ -452,7 +452,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar", "idrt-rupiah-token", "deuro-deuro", "fusd-finchain", "usdp-parallel", "xusd-babelfish"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = reviewFor(id);
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = priceCoverage(
@@ -757,26 +757,21 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
-  it("retires the recovered IDRT review and the expired M0-family reviews that would acknowledge nothing", () => {
-    for (const id of ["idrt-rupiah-token", "usdk-kast"]) {
-      expect(COINS.some((coin) => coin.id === id)).toBe(true);
-      expect(GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
-      const first = priceCoverage(
-        [unpricedUsd(id)], [id], { nowSec: Date.UTC(2026, 9, 29, 12) / 1000 },
-      );
-      const second = priceCoverage(
-        [unpricedUsd(id)], [id],
-        { nowSec: Date.UTC(2026, 9, 29, 12) / 1000 + 900, previousCoverage: first },
-      );
-      expect(second).toMatchObject({ missingActiveIds: [id], acknowledgedGapIds: [], alertEligibleIds: [id] });
-      expect([...second.expiredGapReviewIds, ...second.invalidGapReviewIds]).not.toContain(id);
-    }
-    // IDRT recovered through its ordinary lane: a published price stays priced, never acknowledged.
-    const idrt = priceCoverage(
-      [{ id: "idrt-rupiah-token", price: 0.00005568, priceSource: "coingecko" }], ["idrt-rupiah-token"],
-      { nowSec: Date.UTC(2026, 9, 29, 12) / 1000 },
-    );
-    expect(idrt).toMatchObject({ complete: true, pricedActiveIds: ["idrt-rupiah-token"], missingPriceCount: 0 });
+  it("reviews IDRT's empty lanes; priced rows and retired USDK reviews acknowledge nothing", () => {
+    const id = "idrt-rupiah-token", review = reviewFor(id);
+    expect(review.owner).toBe("ops");
+    expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(30 * 86400);
+    expect(review.sources.join()).toContain("api.coingecko.com/api/v3/simple/price?");
+    expect(review.sources.join()).toContain("api.dexscreener.com/token-pairs/v1/ethereum/");
+    expect(priceCoverage([{ id, price: 0.00005568 }], [id], { nowSec: review.reviewedAt }))
+      .toMatchObject({ complete: true, pricedActiveIds: [id], missingPriceCount: 0, acknowledgedGapCount: 0 });
+    const usdk = "usdk-kast", nowSec = Date.UTC(2026, 9, 29, 12) / 1000;
+    expect(ACTIVE_IDS.has(usdk)).toBe(true);
+    expect(reviewFor(usdk)).toBeUndefined();
+    const first = priceCoverage([unpricedUsd(usdk)], [usdk], { nowSec });
+    const second = priceCoverage([unpricedUsd(usdk)], [usdk], { nowSec: nowSec + 900, previousCoverage: first });
+    expect(second).toMatchObject({ missingActiveIds: [usdk], acknowledgedGapIds: [], alertEligibleIds: [usdk] });
+    expect([...second.expiredGapReviewIds, ...second.invalidGapReviewIds]).not.toContain(usdk);
   });
 
   it("closes PHT's holder-exit review with a sourced scope delisting", () => {

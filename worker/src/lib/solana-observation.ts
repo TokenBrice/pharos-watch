@@ -20,6 +20,7 @@ async function fetchSolanaAccountCensus(addresses: string[], signal: AbortSignal
   const configured = ctx?.chainRpcs?.get("solana");
   const urls = [...new Set([...registryRpcUrls(configured), "https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com", "https://solana-rpc.publicnode.com"].filter((url): url is string => !!url))];
   let lastError: unknown;
+  const attempts: string[] = [];
   for (const url of urls) {
     throwIfAborted(signal);
     try {
@@ -39,10 +40,15 @@ async function fetchSolanaAccountCensus(addresses: string[], signal: AbortSignal
         accounts.set(addresses[i], account ? { owner: account.owner, data: base64ToBytes(account.data[0]), ...(programWitness ? { executable: true } : {}) } : null);
       });
       return { accounts, observedBlock: { chain: "solana", number: result.context.slot, timestamp } };
-    } catch (error) { lastError = error; }
+    } catch (error) {
+      lastError = error;
+      const status = /^HTTP (\d{3}) for POST /.exec(toErrorMessage(error))?.[1];
+      // Numeric statuses cannot override the final error's failure category.
+      attempts.push(`${new URL(url).hostname}=${status ?? "transport"}`);
+    }
   }
   throwIfAborted(signal);
-  throw new Error(`Solana census failed: ${redactProviderUrls(toErrorMessage(lastError))}`);
+  throw new Error(`Solana census failed: ${redactProviderUrls(toErrorMessage(lastError))} [${attempts.join(", ")}]`);
 }
 
 export async function fetchSolanaAccounts(addresses: string[], signal: AbortSignal, ctx: ChainObservationContext, minContextSlot?: number) {

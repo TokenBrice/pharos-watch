@@ -39,9 +39,11 @@ import {
   runReservePostSyncWatchdog,
   type ReserveAdapterAlertAttempt,
   type ReserveAdapterAlertState,
+  type ReserveAdapterAlertEvaluation,
 } from "../reserve-post-sync-watchdog";
 import { SNAPSHOT_KEYS } from "../telegram/sources/telegram-alert-snapshots";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { setCache } from "../../lib/db-cache";
 
 const COIN = "iusd-infinifi";
 const NOW = 1_000_000;
@@ -342,13 +344,8 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       activeAdapterAlertReasons: string[];
       quality?: { reason?: string; reasons: string[] };
       compositionCensus: { observedCoins: number; findings: Array<Record<string, unknown>> } | null;
-      reserveAdapterAlert: {
-        raised: string[];
-        recovered: string[];
-        failedSources: Array<{ stablecoinId: string; failedCycles: number }>;
-        scoreIneligibleSources: Array<{ stablecoinId: string; degradedCycles: number }>;
-        scoreIneligibleUnknownSources: Array<{ stablecoinId: string; heldRaised: boolean }>;
-      } | null;
+      reserveAdapterAlert: Pick<ReserveAdapterAlertEvaluation,
+        "raised" | "recovered" | "failedSources" | "scoreIneligibleSources" | "scoreIneligibleUnknownSources"> | null;
     };
   }
 
@@ -437,17 +434,18 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(next.degradedReasons).not.toContain("reserve-adapter-alert-evidence-read-failed");
   });
 
-  it("degrades the reserve source with machine reasons while an adapter alert is active", async () => {
+  it("records active adapter alerts as quality; persistence failure still degrades", async () => {
     const result = await runReservePostSyncWatchdog(historyDb(historyRows("error")));
     const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(result.status).toBe("degraded");
-    expect(metadata.reason).toBe("reserve-adapter-alert-raised");
-    expect(metadata.degradedReasons).toContain("reserve-adapter-alert-raised");
+    expect(result.status).toBe("ok");
+    expect(metadata.degradedReasons).toEqual([]);
     expect(metadata.quality).toEqual({
       reason: "reserve-adapter-alert-raised",
       reasons: ["reserve-adapter-failure-sustained:iusd-infinifi", "reserve-sync-degraded"],
     });
     expect(metadata.activeAdapterAlertReasons).toEqual(["reserve-adapter-failure-sustained:iusd-infinifi"]);
+    vi.mocked(setCache).mockRejectedValueOnce(Error("write failed"));
+    expect((await runReservePostSyncWatchdog(historyDb(historyRows("error")))).status).toBe("degraded");
   });
 
   it("keeps an acknowledged adapter failure out of the status cause", async () => {
@@ -465,11 +463,11 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect((await readAlert(rows)).activeAdapterAlertReasons).toEqual([`reserve-adapter-failure-sustained:${COIN}`]);
   });
 
-  it("keeps structural findings as quality while mixed, unknown or stalled findings still degrade", async () => {
+  it("keeps asset findings as quality; unreadable scoring evidence still degrades", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "ok" }]]));
     expect((await readAlert([])).quality).toBeUndefined();
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded", lastAttemptedAt: NOW }]]));
-    const evidence = { structuralOnlyIds: new Set([COIN]), scoreIneligibleIds: new Set([COIN]), unknownIds: new Set<string>() };
+    const evidence = { ...scoringEvidence([COIN]), structuralOnlyIds: new Set([COIN]) };
     mocks.scoringEvidence.mockResolvedValue(evidence);
     const rows = historyRows("degraded");
     const result = await runReservePostSyncWatchdog(historyDb(rows));
@@ -480,13 +478,13 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(metadata.quality.reasons).toEqual([`reserve-score-ineligible-sustained:${COIN}`, "reserve-sync-degraded"]);
     for (const status of ["error", "degraded"]) {
       mocks.scoringEvidence.mockResolvedValue(status === "degraded" ? { ...evidence, structuralOnlyIds: new Set() } : evidence);
-      expect((await runReservePostSyncWatchdog(historyDb(rows.map((row) => historyRow(row.attempted_at, status))))).status).toBe("degraded");
+      expect((await runReservePostSyncWatchdog(historyDb(rows.map((row) => historyRow(row.attempted_at, status))))).status).toBe("ok");
     }
     mocks.scoringEvidence.mockResolvedValue({ ...evidence, unknownIds: new Set([COIN]) });
     expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
     mocks.scoringEvidence.mockResolvedValue(evidence);
     const stalled = rows.map((row) => ({ ...row, source_timestamp: 1, freshness_mode: "verified" }));
-    expect((await runReservePostSyncWatchdog(historyDb(stalled))).status).toBe("degraded");
+    expect((await runReservePostSyncWatchdog(historyDb(stalled))).status).toBe("ok");
     mocks.acknowledged.mockResolvedValue(new Set([COIN]));
     const acknowledged = await readAlert(stalled);
     expect(acknowledged.activeAdapterAlertReasons).toEqual([]);
@@ -524,7 +522,6 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   });
 
   it("raises the census rule when a published composition changes shape", async () => {
-    // A configured state map makes the adapter stage run; this test only reads the census stage.
     mocks.states.mockResolvedValue(new Map());
     mocks.drift.mockResolvedValue(composition([["T-bills", 60], ["Custody cash", 40]]));
     const first = await readAlert([]);

@@ -800,13 +800,11 @@ describe("market and risk collectors", () => {
     const small = await withWithheld({ partialValuationInputs: 3, partialValuationMcapUsd: 58e6, scoredMcapUsd: 300e9 });
     expect(small.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY" });
     expect(small.qualityReasons).toContain("mint-burn-gauge-valuation-partial-band-stable");
-    // Equal withheld and scored weight could lift the score to 68.75 (CONFIDENT): withheld as a named quality finding.
     const large = await withWithheld({ partialValuationInputs: 1, partialValuationMcapUsd: 100e9, scoredMcapUsd: 100e9 });
-    // A withheld count without published weights (pre-v6.23 producer) is unbounded.
     const unweighted = await withWithheld({ partialValuationInputs: 1 });
     for (const withheld of [large, unweighted]) {
       expect(withheld.value).toBeUndefined();
-      expect(withheld.degradedReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
+      expect(withheld.degradedReasons).toEqual([]);
       expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
     }
 
@@ -815,7 +813,7 @@ describe("market and risk collectors", () => {
       const withheld = await withWithheld({ score, partialValuationInputs: 1, partialValuationMcapUsd: 5, scoredMcapUsd: 100 });
       expect(withheld.value).toBeUndefined();
       expect(withheld.qualityReasons).toEqual(["mint-burn-gauge-valuation-partial"]);
-      const input: DigestInputData = { ...BASE_DIGEST_INPUT, topDepegs: [], dewsStress: undefined, mintBurnFlows: withheld.value, degradedSources: withheld.degradedReasons };
+      const input: DigestInputData = { ...BASE_DIGEST_INPUT, topDepegs: [], dewsStress: undefined, mintBurnFlows: withheld.value, degradedSources: [...withheld.degradedReasons, ...(withheld.qualityReasons ?? [])] };
       expect(classifyRegime(input)).toBe("WATCHFUL");
       expect(buildRiskTape(input).some((item) => item.id === "risk-tape:gauge")).toBe(false);
     }
