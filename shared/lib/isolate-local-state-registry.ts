@@ -361,7 +361,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["reliabilityRollups"],
     owner: "Reserve sync reliability rollup",
     kind: "cache",
-    resetOrTtl: "Last computed rollup, last refresh attempt and in-flight refresh per window; a newer D1 memo replaces the local one, and everything resets with the isolate.",
+    resetOrTtl: "Last computed rollup per window; a newer D1 memo replaces the local one, and everything resets with the isolate.",
     durableTruth: "The D1 cache rows reserve-sync-reliability-rollup:v1 (memo with computedAt) and its refresh-attempt marker are authoritative; the marker's atomic claim, not this state, limits refreshes to one per hour across isolates.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];

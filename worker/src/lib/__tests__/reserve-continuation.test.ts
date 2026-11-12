@@ -11,6 +11,8 @@ import { createSlotDeadline } from "../cron-timeouts";
 import { sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
 
 vi.mock("../../handlers/scheduled/four-hourly-reserves", () => ({ runFourHourlyReserveSyncSlot: vi.fn() }));
+const refresh = vi.hoisted(() => vi.fn());
+vi.mock("../live-reserves/store-history-read", () => ({ refreshReserveSyncReliabilityRollup: refresh }));
 const heartbeatMock = vi.hoisted(() => vi.fn());
 vi.mock("../reserve-continuation-fence", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../reserve-continuation-fence")>()),
@@ -46,6 +48,7 @@ async function setup() {
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
   vi.mocked(runFourHourlyReserveSyncSlot).mockReset();
+  refresh.mockReset();
   heartbeatMock.mockReset();
   heartbeatMock.mockResolvedValue(true);
 });
@@ -67,15 +70,16 @@ describe("reserve Queue delivery semantics", () => {
       expect(runtime.recoveryCheckpoint).toMatchObject({ nextItemKey: null, itemsDone: 2,
         childDispositions: { "sync-live-reserves": "completed" } });
       expect(runtime.reserveQueueMetadata?.phase).toBe("tail");
-      return buildScheduledSlotSummary([]);
+      return { ...buildScheduledSlotSummary([]), reserveTailSettled: true };
     });
     await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
     expect(runFourHourlyReserveSyncSlot).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledOnce();
     expect(f.delivery.ack).toHaveBeenCalledOnce();
     expect(f.delivery.retry).not.toHaveBeenCalled();
     expect(f.send).not.toHaveBeenCalled();
   });
-  it("acks successful work only after lease/event settlement and sends the next exact frontier", async () => {
+  it.each([false, true, "reject", "overloaded"])("settles and hands off before ack and tail refresh: %s", async (tail) => {
     const f = await setup();
     vi.mocked(runFourHourlyReserveSyncSlot).mockImplementationOnce(async (runtime) => {
       expect(runtime.scheduledTimeMs).toBeNull();
@@ -84,7 +88,14 @@ describe("reserve Queue delivery semantics", () => {
       expect(runtime.reserveQueueMetadata).toMatchObject({ deliveryLatencyMs: 500, deliveryAttempt: 1, phase: "reserve" });
       await runtime.runLeasedCron("cron-sentinel", async () => ({ status: "ok" }));
       await continueLiveReserveCheckpoint(f.db, runtime.recoveryCheckpoint!);
-      return { ...buildScheduledSlotSummary([]), reserveContinuation: { ...f.message, sourceInvocationId: runtime.invocationId! } };
+      return { ...buildScheduledSlotSummary([]), reserveTailSettled: tail ? true : undefined,
+        reserveContinuation: { ...f.message, sourceInvocationId: runtime.invocationId! } };
+    });
+    let observed: unknown;
+    refresh.mockImplementationOnce(async () => {
+      observed = [f.delivery.ack.mock.calls.length, f.sqlite.prepare(
+        "SELECT result_status, json_extract(metadata,'$.handoff.sendStatus') AS handoff FROM reserve_continuation_executions").get()];
+      if (typeof tail === "string") throw Error(tail === "overloaded" ? "D1 DB is overloaded" : tail);
     });
     f.send.mockImplementationOnce(async () => {
       expect(f.sqlite.prepare("SELECT state FROM reserve_continuation_executions").get()).toEqual({ state: "finished" });
@@ -94,6 +105,8 @@ describe("reserve Queue delivery semantics", () => {
     expect(f.delivery.ack).toHaveBeenCalledOnce();
     expect(f.delivery.retry).not.toHaveBeenCalled();
     expect(f.send).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledTimes(tail ? 1 : 0);
+    expect(observed).toEqual(tail ? [1, { result_status: "ok", handoff: "sent" }] : undefined);
     expect(f.sqlite.prepare("SELECT json_extract(metadata,'$.reserveQueue.phase') AS phase FROM cron_runs").get()).toEqual({ phase: "reserve" });
     expect(f.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_slot_executions").get()).toEqual({ count: 1 });
   });

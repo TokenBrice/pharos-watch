@@ -4,7 +4,7 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledWorkerRole } from "@sha
 import type { ScheduledEnv } from "../lib/env";
 import { runScheduledSlotWithFence, type ScheduledSlotCatchUpRequest } from "../lib/scheduled-slot-fence";
 import type { SlotRunnerLoader } from "./scheduled/runner-types";
-import { sendReserveContinuation } from "../lib/reserve-continuation-send";
+import { refreshReserveReliabilityAfterTail, sendReserveContinuation } from "../lib/reserve-continuation-send";
 import { createSlotDeadline, SCHEDULED_SLOT_JOB_BUDGET_MS } from "../lib/cron-timeouts";
 
 import { createScheduledRuntimeContext } from "./scheduled/context";
@@ -102,6 +102,7 @@ export async function handleScheduledEvent(
         const summary = await runner(runtime);
         slotSignal.throwIfAborted();
         if (!summary) return;
+        if (summary.reserveTailSettled) runtime.reserveTailSettled = true;
         runtime.pendingReserveContinuation = summary.reserveContinuation ?? runtime.pendingReserveContinuation;
         return {
           ...summary,
@@ -138,6 +139,7 @@ export async function handleScheduledEvent(
   if (slotResult.resultStatus !== "error") {
     await sendReserveContinuation(env, runtime.pendingReserveContinuation, runtime.deadline);
   }
+  if (runtime.reserveTailSettled) await refreshReserveReliabilityAfterTail(env, runtime.deadline);
   if (slotResult.resultStatus === "error") {
     throw new ScheduledSlotAggregateError(scheduleKey, slotStartedAt, slotResult.metadata);
   }

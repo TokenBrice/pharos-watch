@@ -6,10 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as V9SlotWindow from "../lib/v9-slot-window";
 import type { ScheduledExecutionFence } from "../lib/scheduled-execution-contract";
-import type { SlotDeadline } from "../lib/cron-timeouts";
+import type { CronLeaseOptions } from "../lib/cron-lease-primitives";
+import type { ScheduledSlotExecutionOptions } from "../lib/scheduled-slot-fence";
+import { handleScheduledEvent } from "../handlers/scheduled";
+import * as handoff from "../lib/reserve-continuation-send";
+import { buildScheduledSlotSummary } from "../handlers/scheduled/slot-summary";
 import type { CronRunLoggerOptions } from "../lib/cron-logger";
 import type { ScheduledChildDisposition } from "@shared/types/live-reserves";
 
+const refresh = vi.hoisted(() => ({ run: vi.fn(), loaded: false }));
+vi.mock("../lib/live-reserves/store-history-read", () => {
+  refresh.loaded = true;
+  return { refreshReserveSyncReliabilityRollup: refresh.run };
+});
 // 44 of this suite's cron entrypoints are mocked only so the slot stays
 // dispatchable; they share one result shape. Entrypoints whose payload a test
 // reads are spelled out in `cronMocks` below.
@@ -107,19 +116,7 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (ctx: { signal: AbortSignal }) => Promise<unknown>,
-    _opts?: {
-      abortSignal?: AbortSignal;
-      owner?: string;
-      deadline?: SlotDeadline;
-      onLeaseState?: (state: {
-        event: "acquired" | "renewed";
-        job: string;
-        leaseOwner: string;
-        leaseUntil: number;
-        heartbeatAt: number;
-        ttlSec: number;
-      }) => Promise<void> | void;
-    },
+    _opts?: CronLeaseOptions,
   ) => ({
     status: "ok",
     leaseOwner: _opts?.owner ?? "test-lease",
@@ -148,7 +145,7 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     slotKey: string,
     fn: (signal: AbortSignal, fence: ScheduledExecutionFence) => Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number } | void>,
-    opts: { slotStartedAt: number; invocationId?: string | null; workerRole?: "public" | "heavy"; deadline?: SlotDeadline },
+    opts: ScheduledSlotExecutionOptions,
   ) => {
     const metadata = await fn(new AbortController().signal, {
       scheduleKey: slotKey, slotStartedAt: opts.slotStartedAt, invocationId: opts.invocationId ?? "slot-invocation",
@@ -411,6 +408,27 @@ describe("worker.scheduled", () => {
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each([false, true, "reject", "error"])("refreshes after event handoff only for settled tails: %s", async (tail) => {
+    const send = vi.spyOn(handoff, "sendReserveContinuation").mockResolvedValue();
+    const observed: number[] = [];
+    refresh.run.mockReset().mockImplementation(async () => {
+      observed.push(send.mock.calls.length);
+      if (typeof tail === "string") throw Error("refresh failed");
+    });
+    const work = handleScheduledEvent({ cron: "11 */4 * * *" } as ScheduledEvent,
+      makeScheduledEnv(), makeExecutionContext().ctx, "public", {
+        fourHourlyReserveSync: async () => async (runtime) => {
+          if (typeof tail === "string") runtime.reserveTailSettled = true;
+          return { ...buildScheduledSlotSummary([]), jobsErrored: tail === "error" ? 1 : 0, reserveTailSettled: tail === true ? true : undefined };
+        },
+      }, Date.now());
+    if (tail === "error") await expect(work).rejects.toThrow(ScheduledSlotAggregateError);
+    else await work;
+    expect(refresh.run).toHaveBeenCalledTimes(tail ? 1 : 0);
+    expect(observed).toEqual(tail ? [tail === "error" ? 0 : 1] : []);
+    if (!tail) expect(refresh.loaded).toBe(false);
   });
 
   it("rejects a terminal fence error even when no child throws", async () => {
