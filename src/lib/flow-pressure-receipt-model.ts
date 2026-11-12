@@ -11,7 +11,7 @@ import {
   resolveMintBurnValuationCompleteness,
 } from "@shared/lib/mint-burn-valuation";
 import { hasCompleteCoinScan, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
-import { describeMintBurnVolumeBound, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
+import { describeMintBurnVolumeBound, sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 
 export type FlowReceiptTone = "mint" | "burn" | "net" | "scope";
 
@@ -36,6 +36,8 @@ export interface FlowPressureReceiptRow {
   note: string | null;
   /** Proven one-sided bound on an unavailable net row. */
   bound?: MintBurnSignedNetBound | null;
+  /** Labelled subset of published nets; never the full net. */
+  subtotal?: MintBurnSignedNetView["subtotal"];
 }
 
 export interface FlowPressureReceiptCoverageRow {
@@ -108,7 +110,7 @@ export function buildFlowPressureReceiptModel({
   scopeLabel?: string;
   syncWarning?: string | null;
 }): FlowPressureReceiptModel {
-  const net7d = sumMintBurnSignedNets(coins.map((coin) => resolveCoinNetFlow(coin, "7d")));
+  const net7d = sumMintBurnSignedNets(coins.map((coin) => resolveCoinNetFlow(coin, "7d")), coins.map((coin) => coin.gaugeWeightUsd));
   const weeklyCompleteness = combineMintBurnValuationCompleteness(
     ...(weeklyHourly ?? []).map((bucket) => resolveMintBurnValuationCompleteness(bucket.valuation)),
   );
@@ -173,6 +175,7 @@ export function buildFlowPressureReceiptModel({
         completeness: net7d.completeness,
         note: net7d.note,
         bound: net7d.bound ?? null,
+        subtotal: net7d.subtotal ?? null,
       },
     ],
   };
