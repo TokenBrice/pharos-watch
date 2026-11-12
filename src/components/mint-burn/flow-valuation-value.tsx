@@ -10,7 +10,7 @@ import {
  * Signed mint/burn net with valuation-completeness semantics: an unavailable net
  * (null, or partial valuation) renders the placeholder with an accessible reason,
  * never $0, unless it carries a proven one-sided bound, which renders as an explicit
- * `≥`/`≤` value; a coverage-unknown net keeps its value with a subtle marker.
+ * `≥`/`≤` value, or a labelled subset; a coverage-unknown net keeps its value with a subtle marker.
  */
 export function FlowSignedNetValue({
   net,
@@ -33,6 +33,14 @@ export function FlowSignedNetValue({
    */
   unknownMarker?: "visible" | "sr-only";
 }) {
+  const coverageMarker = (net.valueUsd == null ? net.subtotal?.coverageUnknown : net.completeness === "unknown") ? (
+    <>
+      {unknownMarker === "visible" ? (
+        <span aria-hidden="true" className="ml-0.5 align-super text-[0.65em] text-muted-foreground">*</span>
+      ) : null}
+      <span className="sr-only"> (coverage unknown)</span>
+    </>
+  ) : null;
   if (net.valueUsd == null && net.bound) {
     const { kind, valueUsd } = net.bound;
     // Colour only when the bound already proves the sign; otherwise the bound stays neutral.
@@ -48,6 +56,15 @@ export function FlowSignedNetValue({
       </span>
     );
   }
+  if (net.valueUsd == null && net.subtotal) {
+    return (
+      <span className={cn("text-foreground", className)} title={net.note ?? undefined}>
+        {format(net.subtotal.valueUsd)}{coverageMarker}{" "}
+        <span className="text-xs text-muted-foreground">{net.subtotal.included} of {net.subtotal.total} coins</span>
+        <span className="sr-only"> ({net.note})</span>
+      </span>
+    );
+  }
   if (net.valueUsd == null) {
     return (
       <span className={cn("text-muted-foreground", className)} title={net.note ?? undefined}>
@@ -59,14 +76,7 @@ export function FlowSignedNetValue({
   return (
     <span className={cn(colorClassName?.(net.valueUsd), className)} title={net.note ?? undefined}>
       {format(net.valueUsd)}
-      {net.completeness === "unknown" ? (
-        <>
-          {unknownMarker === "visible" ? (
-            <span aria-hidden="true" className="ml-0.5 align-super text-[0.65em] text-muted-foreground">*</span>
-          ) : null}
-          <span className="sr-only"> (coverage unknown)</span>
-        </>
-      ) : null}
+      {coverageMarker}
     </span>
   );
 }

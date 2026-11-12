@@ -169,7 +169,7 @@ export interface MintBurnCoinsAggregate24h {
   scanComplete: boolean;
   unpricedMintEventCount: number;
   unpricedBurnEventCount: number;
-  /** Summed signed net; unavailable when any coin's 24h net is null or partial. */
+  /** Summed signed net; withheld components may retain a proven bound or a labelled, weight-qualified subset. */
   net: MintBurnSignedNetView;
   has24hActivity: boolean | null;
   /** Aggregate direction; `null` when missing valuation leaves it unproven. */
@@ -241,7 +241,7 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     else if (activity === null && has24hActivity === false) has24hActivity = null;
   }
 
-  const summed = sumMintBurnSignedNets(nets);
+  const summed = sumMintBurnSignedNets(nets, coins.map((coin) => coin.gaugeWeightUsd));
   const mintCompleteness = combineMintBurnValuationCompleteness(...mintSides);
   const burnCompleteness = combineMintBurnValuationCompleteness(...burnSides);
   // The aggregate bound uses the same per-side range as the direction, so the two never disagree.
@@ -250,7 +250,8 @@ export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintB
     : null;
   const net: MintBurnSignedNetView = bound
     ? {
-        ...summed,
+        valueUsd: null,
+        completeness: summed.completeness,
         bound,
         note: describeMintBurnSignedNetBound(bound, describeUnpricedEvents({ unpricedMintEventCount, unpricedBurnEventCount })),
       }
