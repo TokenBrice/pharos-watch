@@ -3,7 +3,7 @@
   "name": "XUSD",
   "symbol": "XUSD",
   "brand": "BabelFish",
-  "oneLiner": "XUSD is BabelFish's Rootstock dollar token, minted 1:1 from a basket of bridged stablecoins (DLLR, USDT, USDC, DAI) with basket-balance constraints.",
+  "oneLiner": "XUSD is BabelFish's Rootstock dollar token backed by a stablecoin basket; minting and redemption are stopped following the November 2026 ownership stop.",
   "llamaId": "162",
   "detailProvider": "defillama",
   "geckoId": "xusd-babelfish",
@@ -12,8 +12,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Rootstock basket of accepted stablecoins: Sovryn DLLR, Rootstock-, Ethereum-, and BNB-bridged USDT, Ethereum- and BNB-bridged DAI and USDC, and Money on Chain DOC. Pharos reads live branch balances from the basket holder, so weights shift as users mint and redeem against individual branches; DLLR is the largest branch at the latest read.",
-  "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
+  "collateral": "Rootstock stablecoin basket with historical DLLR, bridged USDT and DOC holdings. Current weights and bridge-sensitive recoverable value are not re-certified by this incident review; BabelFish conversions and DLLR's Mynt conversions are stopped.",
+  "pegMechanism": "Designed for 1:1 conversion against accepted basket stablecoins, subject to balancing constraints and fees; the November 4, 2026 ownership stop currently blocks minting and redemption",
   "links": [
     {
       "label": "Website",
@@ -212,5 +212,12 @@
         "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/"
       }
     ]
-  }
+  },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "BabelFish minting and redemption stopped",
+      "message": "Reviewed November 12, 2026: the November 4 ownership stop removed the converter's XUSD mint/burn authority. The Sovryn XUSD/WRBTC pair was delisted November 2, and no current market was verified in the checked indexes. Ordinary XUSD transfers remain separate. The disclosed reward-inventory loss does not establish an equal shortfall for remaining holders; no reopening date is set. Sources: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611 ; https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612"
+    }
+  ]
 }

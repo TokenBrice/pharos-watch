@@ -2,40 +2,15 @@
   "id": "dllr-sovryn",
   "reserves": [
     {
-      "name": "Sovryn Zero ZUSD",
-      "pct": 99.976338709,
-      "risk": "medium",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Sovryn Zero protocol",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "evm-branch-balances:rootstock:0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d"
-    },
-    {
-      "name": "Dollar on Chain DOC",
-      "pct": 0.023661291,
-      "risk": "medium",
-      "coinId": "doc-money-on-chain",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Money on Chain protocol",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "evm-branch-balances:rootstock:0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+      "name": "Unclassified or unavailable reserve residual",
+      "pct": 100,
+      "risk": "high"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex reserve refresh 2026-08-20",
-    "confidence": "verified",
+    "reviewedAt": "2026-11-12",
+    "reviewer": "Codex lifecycle proposal 2026-11-12",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Sovryn Mynt and DLLR documentation",
@@ -48,21 +23,32 @@
       {
         "label": "Rootstock public RPC (Mynt holder balanceOf snapshot)",
         "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+      },
+      {
+        "label": "Verified ZeroEmergencyHalt implementation",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
+      },
+      {
+        "label": "ZUSD proxy current implementation and logs",
+        "url": "https://rootstock.blockscout.com/address/0xdb107fa69e33f05180a4c2ce9c2e7cb481645c2d"
       }
     ],
-    "rationale": "Refresh 2026-08-20: Sovryn documents DLLR as a 1:1 Mynt basket whose supported bAssets are ZUSD and DOC, both BTC-backed. Rootstock public RPC at block 9,167,786 (2026-08-20T13:18:00Z) read balanceOf(Mynt MassetManager 0x5f777270259e32f79589fe82269db6209f7b7582) as 1,809,205.3931645737 ZUSD and 428.1826685298049 DOC, yielding 99.976338709% ZUSD and 0.023661291% DOC. ZUSD remains an untracked exogenous bAsset; the measured DOC holding is tracked and is emitted by the live envelope as its own linked branch.",
-    "compositionBasis": "Sovryn Mynt supported-bAsset documentation and Rootstock balanceOf snapshot at block 9,167,786",
-    "compositionAsOf": "2026-08-20",
-    "scope": "full-composition",
-    "knownUnknownExposure": "Sovryn's Mynt documentation identifies ZUSD and DOC as the supported DLLR bAssets, and the Rootstock snapshot directly reads both balances in the configured MassetManager holder; this is an on-chain composition verification rather than an issuer attestation.",
-    "knownUnknownExposurePct": 0,
+    "rationale": "Lifecycle proposal reviewed 2026-11-12: retain active monitoring with a material conversion-halt notice and recovery hold; containment is documented, but effective termination of DLLR is not established. On 2026-11-07T20:05:28Z, SIP-0097 replaced the Zero financial implementations, including ZUSD, with ZeroEmergencyHalt. At Rootstock block 9406049 (2026-11-12T14:45:55Z; hash 0x18cb950a1cfa34f6e54a79f2be3d128f171178cfb0fd66963570451fda7af157), getImplementation() still returns 0xe0E757E8fcf336658036202834aEE10ce03debDA and balanceOf(Mynt MassetManager 0x5f777270259e32f79589fe82269db6209f7b7582) reverts with Zero: emergency shutdown. The proxy uses a custom implementation getter, not EIP-1967. Both Mynt redeem(1 DLLR) calls, selecting DOC or ZUSD, also revert at that pin. The accessible 120,624.718465306245685181 DOC holding is not a working redemption leg or a measured share of the current book. Editorial choice: replace the current fallback with 100% unavailable exposure instead of carrying historical weights into a now-unreadable denominator. Historical evidence retained here only: block 9167786 on 2026-08-20 read 1,809,205.3931645737 ZUSD and 428.1826685298049 DOC, or 99.976338709% and 0.023661291%. The historical ZUSD position is now a halted token claim; these weights do not measure current holdings, recoverable value or holder loss. The recovery manifest describes precautionary containment and qualified restoration conditions, not a DLLR wind-down. No asset-lifecycle freeze, live-reader suspension or numeric loss estimate is asserted.",
+    "compositionBasis": "Whole-book composition unavailable: halted ZUSD balanceOf prevents a current denominator; high-risk residual is a withholding placeholder, not an observed reserve valuation",
+    "scope": "classification-only",
+    "knownUnknownExposure": "Current whole-book composition and recoverable value are unavailable. The former 99.976338709% ZUSD slice belongs only to the August 20 snapshot retained in the rationale. A readable DOC balance cannot bound its present share while ZUSD is unreadable; neither zero ZUSD nor 100% DOC is inferred.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Sovryn Zero ZUSD",
-        "pct": 99.976338709,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Sovryn identifies ZUSD as a supported DLLR bAsset, but it is not a tracked Pharos stablecoin and therefore cannot form a dependency graph edge."
+        "reserveName": "Unclassified or unavailable reserve residual",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The halted ZUSD claim prevents a complete current quantity and valuation census. Withhold the whole-book denominator rather than normalize the readable DOC leg or republish historical weights as current."
       }
     ]
   },
@@ -89,6 +75,6 @@
         "url": "https://public-node.rsk.co"
       }
     ],
-    "uncertainty": "Pinned balanceOf reads at Rootstock block 9286816 confirm ZUSD and DOC in the MassetManager holder. The holder is a governed on-chain aggregator, not a named off-chain custodian. The profile does not infer legal segregation, insolvency priority, rehypothecation restrictions, or safeguards of the upstream bAsset issuers."
+    "uncertainty": "Pinned balanceOf reads at Rootstock block 9286816 confirm ZUSD and DOC in the MassetManager holder. The holder is a governed on-chain aggregator, not a named off-chain custodian. The profile does not infer legal segregation, insolvency priority, rehypothecation restrictions, or safeguards of the upstream bAsset issuers. Incident annotation 2026-11-12: the historical custody observation does not establish present access or recovery value. ZUSD token calls and both Mynt conversions are stopped; the original custody review date and unresolved legal safeguards are unchanged."
   }
 }

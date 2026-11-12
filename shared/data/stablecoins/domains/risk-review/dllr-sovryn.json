@@ -14,22 +14,30 @@
       {
         "label": "Rootstock public RPC",
         "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+      },
+      {
+        "label": "Verified ZeroEmergencyHalt implementation",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xe0E757E8fcf336658036202834aEE10ce03debDA"
       }
     ],
-    "evidence": "The manager proxy is the current operator identity in the W1 pin; its implementation source is unavailable/unverified, so other burn routes cannot be ruled out. The observed redeemTo caller was 0x8544E7d93C901697F3fd469f66505B1F3E9A033F and the trace burns that same caller. Owner-controlled manager replacement is the verified possible path; current timelock/owner state and manager implementation behavior remain unresolved.",
+    "evidence": "The manager proxy is the current operator identity in the W1 pin; its implementation source is unavailable/unverified, so other burn routes cannot be ruled out. The observed redeemTo caller was 0x8544E7d93C901697F3fd469f66505B1F3E9A033F and the trace burns that same caller. Owner-controlled manager replacement is the verified possible path; current timelock/owner state and manager implementation behavior remain unresolved. Incident annotation reviewed 2026-11-12, separate from the October blacklistability review: the November 7 Zero halt makes ZUSD delegated calls revert, including balanceOf, and blocks both Mynt DOC/ZUSD conversions through shared basket checks. Both positive-amount redemption eth_calls still revert at Rootstock block 9406049. This is a service/conversion stop, not evidence that ordinary DLLR transfers are frozen or that an arbitrary holder was seized. Keep active with an incident notice and recovery review; terminal asset failure is not established. The original possible verdict, reviewer and review date are retained, not renewed by this annotation.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
   "oracleRisk": {
     "tier": "oracleless",
-    "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
+    "summary": "DLLR/Mynt was designed for deterministic 1:1 conversion against accepted bAssets, rather than an aggregator liquidation oracle. Incident annotation 2026-11-12: the November 7 Zero halt now blocks both DOC and ZUSD conversions through basket checks. Oracleless mechanics do not establish current redemption availability or backing value.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
       "reviewedAt": "2026-07-14",
       "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "Mynt documents DLLR as an aggregator token minted and redeemed 1:1 against supported bAssets such as ZUSD and DOC. The DLLR aggregation layer does not create borrower debt positions or liquidate collateral; collateral-oracle and liquidation risks remain in the independent upstream bAsset protocols.",
+      "rationale": "Mynt documents DLLR as an aggregator token minted and redeemed 1:1 against supported bAssets such as ZUSD and DOC. The DLLR aggregation layer does not create borrower debt positions or liquidate collateral; collateral-oracle and liquidation risks remain in the independent upstream bAsset protocols. Incident annotation 2026-11-12: this historical mechanism classification does not establish a currently working route. The Zero emergency halt now blocks shared Mynt checks for both ZUSD and DOC; the original oracle review date and tier are unchanged.",
       "sources": [
         {
           "label": "Sovryn builder portal: Mynt contracts",
@@ -38,6 +46,10 @@
         {
           "label": "Sovryn Dollar product page",
           "url": "https://sovryn.com/sovryn-dollar"
+        },
+        {
+          "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+          "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
         }
       ]
     },
@@ -52,6 +64,10 @@
       {
         "label": "Sovryn Dollar product page",
         "url": "https://sovryn.com/sovryn-dollar"
+      },
+      {
+        "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
       }
     ]
   },

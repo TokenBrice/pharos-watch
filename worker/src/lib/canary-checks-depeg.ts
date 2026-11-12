@@ -435,6 +435,18 @@ export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventR
     sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://explorer.risechain.com/address/0xCBc0c0d2782f97077A6309e28B9B70Dc73a934D2"],
     reviewedAt: Date.UTC(2026, 10, 12, 20, 4) / 1000, expiresAt: Date.UTC(2026, 10, 19, 20, 4) / 1000,
   },
+  {
+    eventId: 90807, stablecoinId: "xaum-matrixdock", owner: "ops",
+    reason: "Reviewed 2026-11-12 21:41 UTC from the 21:39:27 UTC public API capture: event 90807 remains open and blind; CoinGecko-only single-source primary displays +2 bps and remains confirm_required. DEX priced contributors are $816,268 from four pools across cg_onchain and direct_api (two independent families), below the unchanged $1M floor; $1,239,612.42 retained TVL is not priced depth. Contributor observations are 1,582-1,712 seconds old and their aggregate clock is 1,712 seconds old, within the consumer's unchanged 2,100-second family and 4,500-second aggregate budgets, but the aggregate fails the depth floor. No authoritative primary or alternative appears in the capture. The event had a single trusted observation at 2026-11-12 19:17:16 UTC and has been blind again since; the retained gap clock is 2026-11-12 03:31:32 UTC, predating that intermittent observation. The canary uses the newer 19:17:16 trusted clock, already 8,531 seconds old against its 1,200-second budget. Review only blind coverage, never recovery or price trust.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/matrixdock-gold/tickers", "https://data.chain.link/feeds/bsc/mainnet/xaum-reference-rate", "https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 12, 21, 41) / 1000, expiresAt: Date.UTC(2026, 10, 19, 21, 41) / 1000,
+  },
+  {
+    eventId: 90808, stablecoinId: "vnxau-vnx", owner: "ops",
+    reason: "Reviewed 2026-11-12 21:41 UTC from the 21:39:27 UTC public API capture: event 90808 remains open and blind; CoinGecko-only single-source primary displays +183 bps and remains confirm_required. DEX priced contributors are $422,785 from three pools (Raydium/Aero/Orca), all one direct_api family, below the unchanged $1M/two-family floor; $490,703.25 retained TVL is not priced depth. Contributor observations are 1,701-1,712 seconds old and their aggregate clock is 1,712 seconds old, within the consumer's unchanged 2,100-second family and 4,500-second aggregate budgets, but the aggregate fails depth and breadth. No authoritative primary or alternative appears in the capture. The event had a single trusted observation at 2026-11-12 19:17:16 UTC and has been blind again since the gap clock 2026-11-12 19:31:36 UTC, already 7,671 seconds old against the canary's 1,200-second budget. Coverage is intermittent; the displayed quote proves no recovery. Review only blind coverage, never recovery or price trust.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/vnx-gold/tickers", "https://vnx.li/vnxau", "https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 12, 21, 41) / 1000, expiresAt: Date.UTC(2026, 10, 19, 21, 41) / 1000,
+  },
 ];
 
 export function resolveDepegBlindEventReviews(nowSec: number, reviews: readonly unknown[] = DEPEG_BLIND_EVENT_REVIEWS) {
