@@ -1,6 +1,7 @@
 import { decodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, type ParseAbi } from "viem/utils";
 import { decodeMentoPoolExchange, MENTO_POOL_SPREAD_FIXIDITY_SCALE } from "@shared/lib/mento-contracts";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmBlockHeader } from "../evm-rpc";
@@ -51,13 +52,13 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   throwIfAborted(signal);
   const cached = validatedHeads.get(context);
   const cachedAge = cached ? Math.floor(Date.now() / 1000) - cached.head.timestamp : Infinity;
-  const reusable = cached && cachedAge >= 0 && cachedAge < MAX_BLOCK_AGE_SEC ? cached : undefined;
+  const reusable = cached && cachedAge >= -STATUS_ALLOWED_FUTURE_SKEW_SEC && cachedAge < MAX_BLOCK_AGE_SEC ? cached : undefined;
   const block = reusable?.block ?? await fetchEvmBlockNumber("celo", options);
   if (block == null) return reject("block-unavailable");
   const head = reusable?.head ?? await fetchEvmBlockHeader("celo", block, options);
   const now = Math.floor(Date.now() / 1000);
   if (!head) return reject("block-age-unavailable");
-  if (head.timestamp > now) return reject("block-age-future");
+  if (head.timestamp > now + STATUS_ALLOWED_FUTURE_SKEW_SEC) return reject("block-age-future");
   if (now - head.timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age-stale");
   const call = (label: string, target: string, signature: string, args: readonly unknown[] = []) => ({ label, target,
     callData: encodeFunctionData({ abi: parseAbi([signature]) as ParseAbi<readonly string[]>, functionName: signature.match(/function (\w+)/)![1], args }) });

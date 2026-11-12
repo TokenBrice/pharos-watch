@@ -14,6 +14,7 @@ import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { evaluateStablecoinActivePriceCoverage } from "../stablecoin-publication-coverage";
 import { applyProtocolPriceOverrides, createValidationContextResolver, settleNominalPriceReferences } from "../../cron/sync-stablecoins/pricing";
 const nowSec = () => Math.floor(Date.now() / 1000);
+const head = (offset = -2) => ({ number: 100, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
 const UNIT = 10n ** 18n;
 const BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad", USDM = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const routes: Record<string, [`0x${string}`, `0x${string}`, bigint, bigint]> = {
@@ -47,10 +48,11 @@ function fixture(overrides: Record<string, `0x${string}`> = {}, spread = 0n, id 
 }
 describe("Mento V2 Broker guarded prices", () => {
   afterEach(() => vi.restoreAllMocks());
-  beforeEach(() => { vi.clearAllMocks(); vi.spyOn(Date, "now").mockReturnValue(1_789_480_000_000); blockNumber.mockResolvedValue(100); blockHeader.mockReset().mockResolvedValue({ number: 100, timestamp: nowSec() - 2, hash: `0x${"ab".repeat(32)}` }); fixture(); });
+  beforeEach(() => { vi.clearAllMocks(); vi.spyOn(Date, "now").mockReturnValue(1_789_480_000_000); blockNumber.mockResolvedValue(100); blockHeader.mockReset().mockResolvedValue(head()); fixture(); });
   it.each<Record<string, `0x${string}`>>([
     { mode: uint(1n) }, { brokerImplementation: address(USDM) }, { oracleTime: uint(1n) }, { inputLimits: config(999) },
   ])("validates each route even when sharing a head: %j", async (bad) => {
+    blockHeader.mockResolvedValue(head(60));
     for (const success of [false, true]) {
       const shared = context(); blockNumber.mockClear();
       fixture(success ? {} : bad);
@@ -65,7 +67,7 @@ describe("Mento V2 Broker guarded prices", () => {
     const shared = context();
     expect(await fetchPrice("cadm-mento", shared)).not.toBeNull();
     fixture({}, 0n, "audm-mento");
-    blockHeader.mockResolvedValueOnce({ number: 100, timestamp: nowSec() - 2, hash: "0xbb" });
+    blockHeader.mockResolvedValueOnce({ ...head(), hash: "0xbb" });
     expect(await fetchPrice("audm-mento", shared)).toBeNull();
     expect(await fetchPrice("audm-mento", shared)).not.toBeNull();
     expect(blockNumber).toHaveBeenCalledTimes(2);
@@ -76,7 +78,7 @@ describe("Mento V2 Broker guarded prices", () => {
     const later = Date.now() + 298_000;
     vi.spyOn(Date, "now").mockReturnValue(later);
     shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(later / 1000) - 20;
-    blockHeader.mockResolvedValue({ number: 100, timestamp: Math.floor(later / 1000) - 2, hash: `0x${"ab".repeat(32)}` });
+    blockHeader.mockResolvedValue(head());
     fixture({}, 0n, "audm-mento");
     expect(await fetchPrice("audm-mento", shared)).not.toBeNull();
     expect(blockNumber).toHaveBeenCalledTimes(2);
@@ -91,11 +93,12 @@ describe("Mento V2 Broker guarded prices", () => {
     await expect(fetchPrice("audm-mento", shared, AbortSignal.abort())).rejects.toThrow();
     expect(multicall).toHaveBeenCalledTimes(1);
   });
-  it.each([["unavailable", null], ["future", 1], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
+  it.each([["unavailable", null], [null, 1], [null, 60], ["future", 61], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
     const ctx = { ...context(), lastRejectionReason: null as string | null };
-    blockHeader.mockResolvedValue(offset == null ? null : { number: 100, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
-    await fetchPrice("cadm-mento", ctx);
-    expect(ctx.lastRejectionReason).toBe(`mento-broker:block-age-${reason}`);
+    blockHeader.mockResolvedValue(offset == null ? null : head(offset));
+    const result = await fetchPrice("cadm-mento", ctx);
+    expect(ctx.lastRejectionReason).toBe(reason && `mento-broker:block-age-${reason}`);
+    expect(result?.observedAt ?? null).toBe(reason ? null : nowSec() - 60);
   });
   it.each([
     ["cadm-mento", "peggedCAD", 0.73, 0.7272],
