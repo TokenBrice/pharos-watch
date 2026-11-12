@@ -2445,7 +2445,7 @@ const ADAPTER_DECLARATIONS = {
       // ASRS 4400 agreed-upon procedures: the report explicitly disclaims an
       // assurance opinion, so the evidence class stays static-validated with
       // issuer-attested origin instead of the independent class.
-      // V3 binds the reviewed September report generation; admission is unchanged.
+      // V3 binds the reviewed October report generation; admission is unchanged.
       configValidation: configPolicy(["attestation-mix"], [2, 3]),
       sourceModel: "validated-static",
       evidenceClass: "static-validated",

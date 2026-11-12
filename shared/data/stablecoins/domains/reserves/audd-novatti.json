@@ -4,7 +4,7 @@
     {
       "sourceKey": "audd-independent-assurance:audd:banking-circle",
       "name": "AUD cash at Banking Circle (AUDC Reserve Account)",
-      "pct": 16.65989676362508,
+      "pct": 8.362757850732253,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Banking Circle",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "audd-independent-assurance:audd:westpac",
       "name": "AUD cash at Westpac under the AMAL Bare Trust",
-      "pct": 83.34010323637492,
+      "pct": 91.63724214926775,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Westpac Banking Corporation via AMAL Trustees Pty Ltd ATF AMAL Bare Trust",
@@ -33,22 +33,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori)",
+    "reviewedAt": "2026-11-12",
+    "reviewer": "Codex D2-DATA1 October AUP renewal 2026-11-12",
     "confidence": "verified",
     "sources": [
       {
-        "label": "William Buck AUDD Agreed-Upon Procedures Report - September 2026",
-        "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
+        "label": "William Buck AUDD Agreed-Upon Procedures Report - October 2026",
+        "url": "https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf"
       },
       {
         "label": "AUDD transparency",
         "url": "https://www.audd.digital/transparency/"
       }
     ],
-    "rationale": "William Buck ASRS 4400 report as of 30 September 2026 23:59 UTC, signed 5 October 2026: AUD 1,880,893.19 at Banking Circle and AUD 9,409,051.86 at Westpac under the AMAL bare trust, both expressly 100% cash, total AUD 11,289,945.05. Percentages derive without favourable rounding from those amounts and the complete reserve denominator. Page 4 states 11,159,088.49 AUDD across nine networks, including 10.00 on ARC, while the individual displayed chain amounts sum to 11,159,088.48; the one-cent reported-total difference is retained, not silently treated as exact equality. The procedures agree account statements and chain confirmations without exception, but expressly provide no assurance opinion and have no independence requirement. Exact institution source keys match the existing adapter; the report does not disclose deposit tenor or reserve-wide insolvency/rehypothecation protections.",
-    "compositionBasis": "William Buck September 2026 factual findings and complete cash reserve schedule, page 4",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "William Buck ASRS 4400 report as of 31 October 2026 23:59 UTC, signed 10 November 2026: AUD 770,500.92 at Banking Circle and AUD 8,442,977.86 at Westpac under the AMAL bare trust, both expressly 100% cash, total AUD 9,213,478.78. Percentages derive without favourable rounding from those amounts and the complete reserve denominator. Page 4 states 9,088,311.70 AUDD across nine networks, including 10.00 on ARC, while the individual displayed chain amounts sum to 9,088,311.69; the one-cent reported-total difference is retained, not silently treated as exact equality. Reserves exceed reported liabilities by AUD 125,167.08 (101.38% coverage). The procedures agree account statements and chain confirmations without exception, but expressly provide no assurance opinion and have no independence requirement. Exact institution source keys match the existing adapter; the report does not disclose deposit tenor or reserve-wide insolvency/rehypothecation protections.",
+    "compositionBasis": "William Buck October 2026 factual findings and complete cash reserve schedule, page 4",
+    "compositionAsOf": "2026-10-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete cash reserve and account institutions; detailed deposit terms and deposit-insurance coverage are not disclosed.",
     "knownUnknownExposurePct": 0,
@@ -56,14 +56,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "AUD cash at Banking Circle (AUDC Reserve Account)",
-        "pct": 16.65989676362508,
+        "pct": 8.362757850732253,
         "disposition": "untracked-exogenous-asset",
         "rationale": "AUD cash in a bank account is an external fiat reserve, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "AUD cash at Westpac under the AMAL Bare Trust",
-        "pct": 83.34010323637492,
+        "pct": 91.63724214926775,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Trustee-held AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       }
@@ -74,12 +74,12 @@
       {
         "name": "Banking Circle",
         "role": "bank",
-        "sharePct": 16.65989676362508
+        "sharePct": 8.362757850732253
       },
       {
         "name": "Westpac Banking Corporation",
         "role": "bank",
-        "sharePct": 83.34010323637492,
+        "sharePct": 91.63724214926775,
         "jurisdiction": "Australia"
       },
       {
@@ -91,13 +91,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori)",
+    "reviewedAt": "2026-11-12",
+    "reviewer": "Codex D2-DATA1 October AUP renewal 2026-11-12",
     "confidence": "verified",
     "sources": [
       {
-        "label": "William Buck AUDD Agreed-Upon Procedures Report - September 2026",
-        "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
+        "label": "William Buck AUDD Agreed-Upon Procedures Report - October 2026",
+        "url": "https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf"
       }
     ],
     "uncertainty": "The Westpac reserve is held under an AMAL bare trust, while the report describes the Banking Circle balance as an AUDC Reserve Account. The source does not establish statutory bankruptcy remoteness for the complete reserve or disclose rehypothecation terms."
