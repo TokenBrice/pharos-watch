@@ -368,8 +368,9 @@ describe("mechanism refresh branch lifecycle", () => {
     expect(workflow.jobs.refresh.env).toBeUndefined();
     const validation = workflow.jobs.refresh.steps.find((step: { name?: string }) => step.name === "Validate target branch ownership");
     expect(validation.env).toEqual({ ASSET_ID: "${{ matrix.asset }}", GH_TOKEN: "${{ github.token }}" });
-    expect(validation.run).toBe(
-      'node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage validate-branch',
-    );
+    expect(validation.run).toBe(`set -euo pipefail
+node --import tsx --input-type=module -e 'import { PROTOCOL_API_TARGETS } from "./scripts/lib/mechanism-measurement/protocol-api.ts"; if (!Object.hasOwn(PROTOCOL_API_TARGETS, process.env.ASSET_ID)) throw new Error("Unknown protocol API asset");'
+node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage validate-branch
+`);
   });
 });
