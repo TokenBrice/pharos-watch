@@ -900,6 +900,7 @@ describe("CI workflow scope", () => {
       RUN_URL: "https://example.test/run/1",
       FULL_STATIC_RESULT: "success",
       FULL_TESTS_RESULT: "success",
+      SAFETY_MAP_RENDER_RESULT: "success",
       V9_RESOURCE_RESULT: "success",
       LIGHTHOUSE_RESULT: "success",
       WEB_VITALS_RESULT: "skipped",
@@ -922,12 +923,11 @@ describe("CI workflow scope", () => {
       expect(cancelled).not.toContain("issue create");
       expect(cancelled).not.toContain("issue comment");
       expect(cancelled).not.toContain("label create");
-      // Every leaf success/skipped closes the one issue.
       const green = run({ OPEN_ISSUE: "7" });
       expect(green).toContain("issue close 7");
       expect(green).not.toContain("issue create");
       // Any non-success/skipped leaf (e.g. a tool failure) keeps it open.
-      const failed = run({ OPEN_ISSUE: "7", TEST_PLAN_PARITY_RESULT: "failure" });
+      const failed = run({ OPEN_ISSUE: "7", SAFETY_MAP_RENDER_RESULT: "failure" });
       expect(failed).toContain("issue comment 7");
       expect(failed).not.toContain("issue close");
     } finally {
