@@ -390,9 +390,12 @@ const accountableParamsSchema = z
     coinIdMap: stringRecordSchema.optional(),
     depTypeMap: depTypeRecordSchema.optional(),
     totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),
+    maxUnattributedResidualShare: z.number().finite().positive().max(1).optional(),
     accountingMode: z.literal("apyx-net-external-reserves").optional(),
   })
-  .strict();
+  .strict().refine((params) => params.maxUnattributedResidualShare == null
+    || (params.bucket === "exposure_split" && params.layout !== "asset-breakdown"),
+  "Unattributed residual admission requires exposure_split");
 
 const attestationPdfIndexParamsSchema = z
   .object({
