@@ -3,6 +3,9 @@ import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { normalizeBlacklistSyncStateKey } from "../../lib/blacklist-cache-keys";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
+import type { BlacklistScanResult } from "../../lib/blacklist/shared";
+import { stripSensitive } from "../../lib/safe-error-message";
+import { BLACKLIST_API_ERROR_CONFIG_LIMIT } from "../../lib/cron-metadata-persistence";
 
 type ProcessedRows = {
   insertedRows: number;
@@ -36,6 +39,16 @@ export type SyncBlacklistApiErrorConfig = {
   reason: string;
   errorMessage?: string;
   stackHead?: string;
+  errorClass?: string;
+  previousCursor?: number;
+  frontier?: number | null;
+  safeHead?: number | null;
+  usedRpcLogs?: boolean;
+  providerCalls?: number;
+  maxSplitDepth?: number;
+  topicCount?: number;
+  coveredTopicCount?: number;
+  failureSamples?: string[];
 };
 
 type SyncBlacklistCounters = {
@@ -152,11 +165,23 @@ export function recordApiErrorConfig(
   chainId: string,
   reason: string,
   error?: unknown,
+  scan?: { result: BlacklistScanResult; previousCursor: number },
 ): void {
-  if (apiErrorConfigs.length >= 10) return;
+  if (apiErrorConfigs.length >= BLACKLIST_API_ERROR_CONFIG_LIMIT) return;
 
   const entry: SyncBlacklistApiErrorConfig = { configKey, stablecoin, chainId, reason };
+  if (scan) {
+    const { result, previousCursor } = scan;
+    Object.assign(entry, {
+      errorClass: stripSensitive(result.failureSamples[0] ?? reason).slice(0, 120),
+      previousCursor, frontier: result.scannedToCursor, safeHead: result.safeHead,
+      usedRpcLogs: result.usedRpcLogs, providerCalls: result.providerCalls, maxSplitDepth: result.maxSplitDepth,
+      topicCount: result.topicCount, coveredTopicCount: result.coveredTopicCount,
+      failureSamples: result.failureSamples.slice(0, 4).map((sample) => stripSensitive(sample).slice(0, 120)),
+    });
+  }
   if (error instanceof Error) {
+    entry.errorClass = error.name;
     entry.errorMessage = error.message.slice(0, 200);
     if (error.stack) {
       entry.stackHead = error.stack.split("\n").slice(0, 3).join(" | ").slice(0, 240);

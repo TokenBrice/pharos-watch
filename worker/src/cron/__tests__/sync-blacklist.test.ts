@@ -15,6 +15,12 @@ function installFetch(implementation: (request: Request) => Response | Promise<R
 }
 
 
+function emptyTronResponse() {
+  return new Response(JSON.stringify({ success: true, data: [] }), {
+    status: 200, headers: { "Content-Type": "application/json" },
+  });
+}
+
 vi.mock("../../lib/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
@@ -214,6 +220,7 @@ vi.mock("@shared/types/chain-identity", async (importOriginal) => ({
   normalizeChainId: (chain: string) => chain.trim().toLowerCase(),
 }));
 
+import { compactCronMetadataForPersistence, getCronMetadataBudgetBytes } from "../../lib/cron-metadata-persistence";
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
 import { fetchEvmLogsForTopicWithCompleteness, getEvmBlockNumber } from "../../lib/evm-logs";
 import type { EtherscanLogEntry, EvmLogFetchResult } from "../../lib/evm-logs";
@@ -429,10 +436,7 @@ describe("syncBlacklist", () => {
     );
 
     // Stub global fetch for Tron API (returns empty events)
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -473,10 +477,7 @@ describe("syncBlacklist", () => {
       ]),
     );
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -492,10 +493,7 @@ describe("syncBlacklist", () => {
     const db = makeDb();
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
@@ -535,10 +533,7 @@ describe("syncBlacklist", () => {
       }
       if (urlStr.includes("trongrid.io/v1/contracts")) {
         // Other Tron event names return empty
-        return new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return emptyTronResponse();
       }
       // Etherscan balance/block fetches — success with dummy data
       if (urlStr.includes("etherscan.io")) {
@@ -608,10 +603,7 @@ describe("syncBlacklist", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ success: true, data: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return emptyTronResponse();
     });
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
@@ -649,10 +641,7 @@ describe("syncBlacklist", () => {
     ]);
     const fetchMock = installFetch(
       async (_url: string | Request) =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
+        emptyTronResponse(),
     );
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
@@ -680,7 +669,6 @@ describe("syncBlacklist", () => {
     const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
     vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
@@ -704,10 +692,7 @@ describe("syncBlacklist", () => {
         );
       }
       if (urlStr.includes("trongrid.io/v1/contracts")) {
-        return new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return emptyTronResponse();
       }
       if (urlStr.includes("api.trongrid.io/jsonrpc")) {
         return new Response(
@@ -719,10 +704,7 @@ describe("syncBlacklist", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return new Response(JSON.stringify({ success: true, data: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return emptyTronResponse();
     });
     await syncBlacklist(buildTestOpts({ db }));
 
@@ -800,13 +782,9 @@ describe("syncBlacklist", () => {
       })),
     );
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     // Tron API returns empty
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -837,9 +815,7 @@ describe("syncBlacklist", () => {
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [], complete: true, scannedToBlock: 20_000_000 - lag, calls: 1, maxDepth: 0,
     });
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
     const result = await syncBlacklist(buildTestOpts({ db }));
     const metadata = JSON.parse(result.metadata);
     expect(result.status).toBe(expectedStatus);
@@ -872,10 +848,7 @@ describe("syncBlacklist", () => {
       calls: 9,
       maxDepth: 3,
     });
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -901,14 +874,10 @@ describe("syncBlacklist", () => {
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     installFetch(async () => {
         vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
-        return new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return emptyTronResponse();
       });
 
     const result = await syncBlacklist(buildTestOpts({ db }));
@@ -939,9 +908,7 @@ describe("syncBlacklist", () => {
       vi.setSystemTime(Date.now() + 10_000);
       return { runtimeBudgetReached: false, attempted: 0, resolved: 0, retried: 0, parked: 0, limit: 24 };
     });
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
     expect(result.status).toBe("ok");
@@ -982,7 +949,6 @@ describe("syncBlacklist", () => {
       { match: "blacklist_events", rows: [] },
     ]);
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
       vi.setSystemTime(new Date("2025-06-15T12:10:05Z"));
       return {
@@ -1021,7 +987,6 @@ describe("syncBlacklist", () => {
   it("degrades a one-contract runtime tail and withholds producer snapshots", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
       vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
       return {
@@ -1033,10 +998,7 @@ describe("syncBlacklist", () => {
       };
     });
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -1063,10 +1025,7 @@ describe("syncBlacklist", () => {
       { match, rows: [], throwError: new Error(error) },
     ]);
     const onProgress = vi.fn();
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
     const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata)).toMatchObject({
@@ -1083,10 +1042,7 @@ describe("syncBlacklist", () => {
   });
 
   describe("outcome truth", () => {
-    const emptyOk = () => installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const emptyOk = () => installFetch(emptyTronResponse);
 
     it("reports successful empty repair stages as ok with observed zero", async () => {
       emptyOk();
@@ -1322,13 +1278,9 @@ describe("syncBlacklist", () => {
   it("advances sync state for EVM chains toward chain head when no events", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     await syncBlacklist(buildTestOpts({ db }));
 
@@ -1365,10 +1317,7 @@ describe("syncBlacklist", () => {
     });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -1425,10 +1374,7 @@ describe("syncBlacklist", () => {
           },
         );
       }
-      return new Response(JSON.stringify({ success: true, data: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return emptyTronResponse();
     });
     const result = await syncBlacklist(buildTestOpts({ db, drpcApiKey: "drpc-key" }));
 
@@ -1440,10 +1386,7 @@ describe("syncBlacklist", () => {
   it("orders backfill work newest-first so recent gaps are not starved by old backlog", async () => {
     const db = makeDb();
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     await syncBlacklist(buildTestOpts({ db }));
 
@@ -1458,39 +1401,81 @@ describe("syncBlacklist", () => {
     expect(backfillQuery?.sql).toContain("timestamp DESC");
   });
 
-  it("advances the cursor after partial RPC coverage instead of restarting from zero", async () => {
-    const db = makeDb();
+  it.each([[null, 0, false, "degraded"], [60, 0, false, "ok"], [60, 1, false, "degraded"], [60, 0, true, "degraded"], [60, 0, "exhausted", "degraded"], [7 * 86400, 0, false, "degraded"], [-86400, 0, false, "degraded"]] as const)(
+    "retains partial progress; success=%s failures=%s peerPartial=%s grades %s", async (success, failures, peerPartial, status) => {
+    const base = CONTRACT_CONFIGS[1];
+    const peer = { ...base, configKey: "base-peer" };
+    const now = Math.floor(Date.now() / 1000);
+    CONTRACT_CONFIGS.push(peer);
+    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
+      config_key: config.configKey, last_block: config === base && success == null ? 0 : 19_950_000,
+      last_succeeded_at: config === base && success == null ? null : now - (config === base ? success! : 60),
+      consecutive_failures: config === base ? failures : 0,
+      last_attempted_at: config.chain.chainId === "ethereum" ? 1 : 2,
+    })));
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [],
       complete: false,
       scannedToBlock: 19_960_000,
       calls: 9,
-      maxDepth: 3,
+      maxDepth: 3, failureReason: "provider-timeout",
     });
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    if (peerPartial === true) vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [], complete: false, scannedToBlock: 19_960_000, calls: 9, maxDepth: 3,
+    });
+    if (peerPartial === "exhausted") vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async (...args) => {
+      const budget = args[5];
+      if (budget) budget.count = budget.limit;
+      return { logs: [], complete: true, scannedToBlock: 20_000_000, calls: 1, maxDepth: 0 };
+    });
+    installFetch(emptyTronResponse);
 
-    const result = await syncBlacklist(buildTestOpts({ db }));
-
+    const result = await syncBlacklist(buildTestOpts({ db })).finally(() => CONTRACT_CONFIGS.pop());
+    expect(result.status).toBe(status);
     expect(result.itemCount).toBe(0);
-    const meta = JSON.parse(result.metadata);
-    expect(meta.apiErrors).toBe(1);
+    const metadata = {
+      ...JSON.parse(result.metadata), configLag: Object.fromEntries(Array.from({ length: 66 }, (_, i) =>
+        [i, { cursorKind: "evm_block", frontier: 19_960_000, safeHead: 20_000_000, lag: 40_000 }])),
+    };
+    const pack = (data: Record<string, unknown>) => compactCronMetadataForPersistence(JSON.stringify(data), undefined, "sync-blacklist");
+    const meta = JSON.parse(pack(metadata).metadata!);
+    expect(meta.apiErrors).toBe(peerPartial === true ? 2 : 1);
+    if (success && Math.abs(success) >= 86400) expect(meta.reason).toBe("blacklist-source-coverage-incomplete");
+    if (peerPartial === "exhausted") expect(meta).toMatchObject({ reason: "blacklist-budget-exhausted", subrequestBudgetReached: true });
     expect(meta.apiErrorConfigs).toEqual([
       expect.objectContaining({
-        configKey: "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        configKey: base.configKey,
         stablecoin: "USDC",
         chainId: "base",
-        reason: "partial-coverage",
+        reason: "partial-coverage", errorClass: "provider-timeout", failureSamples: ["provider-timeout"],
+        frontier: 19_960_000, safeHead: 20_000_000, providerCalls: 9, maxSplitDepth: 3,
       }),
+      ...(peerPartial === true ? [expect.objectContaining({ configKey: peer.configKey })] : []),
     ]);
-    expect(meta.zeroCursorConfigs).toContain("base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
-    const finalization = findStateFinalization(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+    if (success == null) expect(JSON.parse(result.metadata).zeroCursorConfigs).toContain(base.configKey);
+    if (status === "ok") expect(meta.quality).toEqual({ reason: "blacklist-isolated-partial-coverage", configKey: base.configKey });
+    if (status === "ok") for (const text of ["a", String.fromCharCode(0, 34, 92, 0x2603)]) {
+      const sample = text.repeat(120).slice(0, 120);
+      const entries = Array.from({ length: 10 }, (_, i) => ({ ...meta.apiErrorConfigs[0],
+        configKey: base.configKey + i, errorClass: i + sample, failureSamples: Array(4).fill(sample),
+      }));
+      const packed = pack({ ...metadata, apiErrorConfigs: entries,
+        apiErrorClasses: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i < 2 ? ["constructor", "__proto__"][i] : i + sample, 1])),
+        schedulerAttemptKey: "attempt", resourcePressure: { outcome: "ok", pending: false },
+      });
+      const bounded = JSON.parse(packed.metadata!);
+      expect.soft(packed.persistedBytes).toBeLessThanOrEqual(getCronMetadataBudgetBytes("sync-blacklist"));
+      expect(bounded.apiErrorConfigs.map((entry: { configKey: string }) => entry.configKey)).toEqual(entries.map((entry) => entry.configKey));
+      expect.soft(bounded.apiErrorDetailsOmitted).toBeGreaterThan(0);
+      expect(Object.values<number>(bounded.apiErrorClasses).reduce((a, b) => a + b, 0)).toBe(20);
+      expect.soft(Object.keys(bounded.apiErrorClasses).length).toBeLessThanOrEqual(10);
+      expect.soft(Object.keys(bounded.apiErrorClasses).every((code) => /^[a-zA-Z0-9:._-]{1,64}$/.test(code))).toBe(true);
+    }
+    const finalization = findStateFinalization(db, base.configKey);
     expect(finalization?.binds[0]).toBe(19_960_000);
+    expect(finalization?.binds[2]).toBe(0);
     expect(finalization?.binds[11]).toBe("partial");
   });
 
@@ -1531,10 +1516,7 @@ describe("syncBlacklist", () => {
       .mockResolvedValueOnce(failedEtherscanLogs())
       .mockResolvedValue(completeEtherscanLogs());
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     try {
       const result = await syncBlacklist(buildTestOpts({ db }));
@@ -1567,7 +1549,6 @@ describe("syncBlacklist", () => {
       },
     ];
 
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     // A complete OR scan must reach the observed safe head, even if it consumes the budget.
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(19_960_450);
     vi.mocked(fetchAlchemyLogs).mockImplementationOnce(
@@ -1583,10 +1564,7 @@ describe("syncBlacklist", () => {
       },
     );
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     try {
       const result = await syncBlacklist(buildTestOpts({ db }));
@@ -1621,7 +1599,6 @@ describe("syncBlacklist", () => {
     if (!baseConfig) return;
 
     baseConfig.startBlock = 1_000_000;
-    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [],
       complete: true,
@@ -1630,10 +1607,7 @@ describe("syncBlacklist", () => {
       maxDepth: 0,
     });
 
-    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    installFetch(emptyTronResponse);
 
     try {
       const result = await syncBlacklist(buildTestOpts({ db }));

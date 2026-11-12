@@ -1,5 +1,6 @@
 import { stripSensitive } from "./safe-error-message";
 import { parseJsonObject } from "./json-parse";
+import { isRecord } from "@shared/lib/type-guards";
 
 /** Absolute ceiling; individual jobs normally admit only 8 KiB. */
 export const MAX_PERSISTED_CRON_METADATA_BYTES = 64 * 1_024 - 1;
@@ -23,6 +24,8 @@ export function getCronMetadataBudgetBytes(job?: string): number {
 
 const MAX_DIAGNOSTIC_STRING_CHARS = 500;
 const MAX_NESTED_SCALARS = 24;
+export const BLACKLIST_API_ERROR_CONFIG_LIMIT = 10;
+const BLACKLIST_ERROR_CLASS_MAX_CHARS = 64;
 // Audited readers: cron-output, cron-health, freshness oracle, status supplements,
 // public-health reads, cron-metadata-summary, operator cron detail and the measured-execution ledger.
 // Scalars remain top-level too. These collections must NEVER turn into counts.
@@ -62,6 +65,52 @@ function utf8Bytes(value: string): number {
   return new TextEncoder().encode(value).length;
 }
 
+function blacklistErrorCode(value: string): string {
+  return stripSensitive(value).replace(/[^a-zA-Z0-9:._-]/g, "-").slice(0, BLACKLIST_ERROR_CLASS_MAX_CHARS) || "unknown-source-error";
+}
+
+function normalizeBlacklistDiagnostics(metadata: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...metadata };
+  if (isRecord(metadata.apiErrorClasses)) {
+    const classes = new Map<string, number | null>();
+    for (const [name, value] of Object.entries(metadata.apiErrorClasses)) {
+      const code = blacklistErrorCode(name);
+      const key = classes.has(code) || classes.size < BLACKLIST_API_ERROR_CONFIG_LIMIT - 1 ? code : "other";
+      const count = typeof value === "number" && Number.isFinite(value) ? value : null;
+      const previous = classes.get(key);
+      classes.set(key, previous === null || count === null ? null : (previous ?? 0) + count);
+    }
+    normalized.apiErrorClasses = Object.fromEntries(classes);
+  }
+  if (Array.isArray(metadata.apiErrorConfigs)) {
+    normalized.apiErrorConfigs = metadata.apiErrorConfigs.slice(0, BLACKLIST_API_ERROR_CONFIG_LIMIT).map((entry: unknown) =>
+      isRecord(entry) ? {
+        ...entry,
+        ...(typeof entry.reason === "string" ? { reason: blacklistErrorCode(entry.reason) } : {}),
+        ...(typeof entry.errorClass === "string" ? { errorClass: blacklistErrorCode(entry.errorClass) } : {}),
+      } : entry);
+  }
+  return normalized;
+}
+
+function trimBlacklistDiagnosticDetails(metadata: Record<string, unknown>, budgetBytes: number): string {
+  let serialized = JSON.stringify(metadata);
+  if (!Array.isArray(metadata.apiErrorConfigs)) return serialized;
+  let omitted = typeof metadata.apiErrorDetailsOmitted === "number" ? metadata.apiErrorDetailsOmitted : 0;
+  // Samples/text go first; keep config identity and compact error codes intact.
+  for (const key of ["failureSamples", "stackHead", "errorMessage", "maxSplitDepth", "providerCalls", "usedRpcLogs",
+    "coveredTopicCount", "topicCount", "safeHead", "frontier", "previousCursor"]) {
+    for (const entry of metadata.apiErrorConfigs) {
+      if (utf8Bytes(serialized) <= budgetBytes) return serialized;
+      if (!isRecord(entry) || !Object.prototype.hasOwnProperty.call(entry, key)) continue;
+      delete entry[key];
+      metadata.apiErrorDetailsOmitted = ++omitted;
+      serialized = JSON.stringify(metadata);
+    }
+  }
+  return serialized;
+}
+
 function boundedScalar(value: unknown): string | number | boolean | null | undefined {
   if (value == null || typeof value === "number" || typeof value === "boolean") return value;
   if (typeof value === "string") return stripSensitive(value).slice(0, MAX_DIAGNOSTIC_STRING_CHARS);
@@ -99,10 +148,20 @@ export function compactCronMetadataForPersistence(
   if (!metadata) return { metadata: null, originalBytes: 0, persistedBytes: 0, compacted: false };
   const budgetBytes = getCronMetadataBudgetBytes(job);
   const originalBytes = utf8Bytes(metadata);
-  if (originalBytes <= budgetBytes) {
+  if (originalBytes <= budgetBytes && job !== "sync-blacklist") {
     return { metadata, originalBytes, persistedBytes: originalBytes, compacted: false };
   }
-  const parsed = preparsed !== undefined ? preparsed : parseJsonObject(metadata);
+  let parsed = preparsed !== undefined ? preparsed : parseJsonObject(metadata);
+  if (job === "sync-blacklist" && parsed) {
+    parsed = normalizeBlacklistDiagnostics(parsed);
+    const normalized = JSON.stringify(parsed);
+    const normalizedBytes = utf8Bytes(normalized);
+    if (normalizedBytes <= budgetBytes) {
+      return { metadata: normalized, originalBytes, persistedBytes: normalizedBytes, compacted: normalized !== metadata };
+    }
+  } else if (originalBytes <= budgetBytes) {
+    return { metadata, originalBytes, persistedBytes: originalBytes, compacted: false };
+  }
   const entries = parsed ? Object.entries(parsed) : [];
   const retained: Record<string, unknown> = { ...(parsed ?? {}) };
   if (!parsed) retained.reason = "cron-metadata-invalid-json";
@@ -156,6 +215,9 @@ export function compactCronMetadataForPersistence(
     compaction.retainedTopLevelDiagnostics--;
     compaction.omittedTopLevelDiagnostics++;
     compacted = JSON.stringify(retained);
+  }
+  if (job === "sync-blacklist" && utf8Bytes(compacted) > budgetBytes) {
+    compacted = trimBlacklistDiagnosticDetails(retained, budgetBytes);
   }
   if (utf8Bytes(compacted) > budgetBytes) {
     // Terminal accounting must survive even when contractual evidence alone exceeds policy.
