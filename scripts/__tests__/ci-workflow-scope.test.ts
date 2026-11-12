@@ -968,12 +968,13 @@ it("scans PR merge-resolution lines for the full PR range including historical m
   expect(steps.indexOf(candidate)).toBeGreaterThan(tree);
 });
 
-it("admits hosted protocol mechanism refresh only for Falcon on main dispatches and schedules", () => {
+it("admits hosted protocol mechanism refresh only for explicit Falcon dispatches on main", () => {
   const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
-  expect(workflow.on).toHaveProperty("workflow_dispatch");
-  expect(workflow.on.schedule.length).toBeGreaterThan(0);
+  expect(workflow.on).toEqual({ workflow_dispatch: { inputs: { asset: {
+    description: "Protocol API asset to capture", required: true, type: "choice", options: ["usdf-falcon"],
+  } } } });
   expect(workflow.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
-  expect(workflow.jobs.refresh.strategy.matrix).toEqual({ asset: ["usdf-falcon"] });
+  expect(workflow.jobs.refresh.strategy.matrix).toEqual({ asset: ["${{ inputs.asset }}"] });
   expect(workflow.jobs.refresh.steps[0].uses).toMatch(/^actions\/checkout@[0-9a-f]{40}$/);
   expect(workflow.jobs.refresh.steps[0].with["persist-credentials"]).toBe(false);
   expect(workflow.jobs.refresh.steps.some(
@@ -992,14 +993,10 @@ it("runs the mechanism-refresh verifier only from a trusted snapshot inside the 
   expect(snapshot).toBeGreaterThanOrEqual(0);
   expect(snapshot).toBeLessThan(prepareBranch);
   expect(run).toContain("--bundle --platform=node --format=esm --external:playwright");
-  // After prepare-branch switches the worktree to the automation branch, every
-  // verifier invocation must resolve outside the mutable worktree.
   for (const line of run.split("\n")) {
     if (!line.includes("verify-mechanism-refresh-diff.ts") || line.includes("esbuild ")) continue;
     expect(line).toContain("$TRUSTED_VERIFIER/");
   }
-  // Bundling includes the protocol replay/comparison dependency closure too,
-  // without resolving any imports from the unreviewed checkout afterwards.
   expect(run).toContain('--outfile="$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts"');
 });
 

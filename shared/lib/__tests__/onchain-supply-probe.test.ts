@@ -11,6 +11,7 @@ import {
   isZephyrScannerSupplyId,
   onchainSupplyProbeFamily,
   prefersOnChainSupplyMcap,
+  REVIEWED_ONCHAIN_SUPPLY_PLANS,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
   supportsOnchainSupplyProbe,
@@ -361,24 +362,24 @@ describe("curated on-chain supply paths", () => {
     { id: "syzusd-yuzu", chains: ["plasma", "ethereum", "monad", "hyperevm", "sei", "pharos", "berachain", "aptos", "base"], canonical: "plasma",
       zero: ["hyperevm", "base"],
       endpoints: { plasma: "https://rpc.plasma.to", monad: "https://rpc.monad.xyz" } },
-    { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon", "harmony"],
-      zero: ["harmony"], endpoints: { harmony: "https://api.harmony.one" },
-      fallback: { harmony: "https://api.s0.t.hmny.io" } },
+    { id: "idrt-rupiah-token", chains: ["ethereum", "bsc", "polygon"], prefer: true },
     { id: "ntbill-nest", chains: ["ethereum", "plume", "arbitrum", "bsc", "solana"],
       mint: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", zeroFlags: [undefined, undefined, true, true, undefined],
       endpoints: { plume: "https://rpc.plume.org" } },
     { id: "susdc-spark-v1", chains: ["ethereum", "arbitrum", "base", "optimism", "unichain"],
       zeroFlags: [true, true, true, true, true], endpoints: { unichain: "https://mainnet.unichain.org" } },
 
-  ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime }) => {
+  ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime, prefer }) => {
     const contracts = chains.map((chain, index) => ({
       chain,
       address: chain === "solana" ? mint! : `0x${String(index + 1).padStart(40, "0")}`,
       decimals: chain === "solana" ? 6 : 18,
     }));
-    const meta = makeMeta([...contracts].reverse(), id);
+    const meta = prefer ? TRACKED_META_BY_ID.get(id)! : makeMeta([...contracts].reverse(), id);
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
-    expect(selected?.map((entry) => entry.contract)).toEqual(contracts);
+    expect(selected?.map((entry) => entry.contract)).toEqual(prefer
+      ? chains.map(chain => meta.contracts!.find(contract => contract.chain === chain)) : contracts);
+    if (prefer) expect(prefersOnChainSupplyMcap(meta)).toBe(true);
     expect(selected?.map((entry) => entry.config.chain)).toEqual(chains);
     // Undefined means independent issuance; a canonical chain identifies escrow reallocation policy.
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBe(canonical);
@@ -677,7 +678,8 @@ it("keeps every tracked curated roster either complete or explicitly excused acr
     ).length ?? 0;
     expect(
       unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] != null
-        || unselectedCount === CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id]?.length,
+        || unselectedCount === (CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id]?.length ?? 0)
+          + (REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.unreadableDeployments?.length ?? 0),
       `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no reviewed accounting exclusion`,
     ).toBe(true);
   }

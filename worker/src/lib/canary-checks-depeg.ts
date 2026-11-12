@@ -4,7 +4,7 @@ import {
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
 } from "@shared/lib/depeg-config";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -31,6 +31,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { getDexPriceSourceEntries } from "./depeg-trust-policy";
 import type { DepegObservationCensus } from "../cron/depeg-detection/types";
 import { resolveStablecoinMarketHours, resolveStablecoinPriceGapReviews } from "./stablecoin-publication-coverage";
+import { PSI_HISTORICAL_PRICE_GAP_REVIEWS, STABLECOIN_PRICE_GAP_REVIEWS } from "./stablecoin-publication-reviews";
 
 type DepegCanaryFinding = {
   status: "ok" | "degraded" | "error";
@@ -94,7 +95,10 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
   }
   const ids = assets.map((asset) => asset.id);
   const marketHours = resolveStablecoinMarketHours(ids, census.evaluatedAt);
-  const reviews = resolveStablecoinPriceGapReviews(ids, observedAt);
+  const reviews = resolveStablecoinPriceGapReviews(ids, observedAt, [
+    ...STABLECOIN_PRICE_GAP_REVIEWS.filter((review) => ACTIVE_IDS.has(review.stablecoinId)),
+    ...PSI_HISTORICAL_PRICE_GAP_REVIEWS.filter((review) => PSI_HISTORICAL_IDS.has(review.stablecoinId)),
+  ]);
   const actionableUnavailableIds: string[] = [];
   for (const asset of assets) {
     if (asset.reason === "primary-unusable") {

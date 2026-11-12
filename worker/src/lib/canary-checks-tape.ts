@@ -1,9 +1,11 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
+import { ZEPHYR_MAX_FUTURE_SKEW_SEC } from "./yield-source-adapters/zephyr";
 import { throwIfAborted } from "./abort";
 import { getCaches } from "./db-cache";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { parseProjectorWatermark, tapeProjectorCursorKey } from "./tape-event-store";
-import { degradedResult, okResult, skippedResult, unavailableResult } from "./canary-check-results";
+import { degradedResult, failedResult, okResult, skippedResult, unavailableResult } from "./canary-check-results";
 
 /**
  * Per-class tape liveness. A projector that returns without throwing but emits
@@ -132,6 +134,8 @@ export async function checkTapeClassLiveness(
       db,
       TAPE_CLASS_SOURCES.map((source) => tapeProjectorCursorKey(source.eventClass)),
     );
+    const cursorReadAt = Math.floor(Date.now() / 1000);
+    const allowedFutureSkewSec = ZEPHYR_MAX_FUTURE_SKEW_SEC + STATUS_ALLOWED_FUTURE_SKEW_SEC;
     const lagBudgetSec = CRON_INTERVALS["project-tape"] * TAPE_LAG_BUDGET_MULTIPLIER;
     const sourceStates = TAPE_CLASS_SOURCES.map((source) => {
       const sourceMax = sourceClockFor(source.eventClass, clockRow);
@@ -178,17 +182,23 @@ export async function checkTapeClassLiveness(
         oldestUnprojectedAt,
         waitingSec,
         reason: entry.evaluated
-          ? waitingSec != null && waitingSec > lagBudgetSec ? "cursor-lag" : null
+          ? entry.cursor > cursorReadAt + allowedFutureSkewSec ? "cursor-future"
+            : waitingSec != null && waitingSec > lagBudgetSec ? "cursor-lag" : null
           : "source-stale-or-unavailable",
       };
     });
     const lagging = classes.filter((entry) => entry.evaluated && entry.reason === "cursor-lag");
     const evaluatedCount = classes.filter((entry) => entry.evaluated).length;
     const metadata = {
+      cursorReadAt,
+      allowedFutureSkewSec,
       lagBudgetSec,
       evaluatedCount,
       classes,
     };
+    if (classes.some((entry) => entry.reason === "cursor-future")) {
+      return failedResult("cursor-future", metadata);
+    }
     if (lagging.length > 0) {
       return degradedResult(
         `tape projector cursor lag exceeds ${lagBudgetSec}s: ` +

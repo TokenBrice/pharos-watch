@@ -47,7 +47,7 @@ const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
  */
 const ZEPHYR_OBSERVATION_BUCKET_SEC = ZEPHYR_YIELD_HISTORY_POLICY.observationBucketSec;
 /** Same five-minute future-skew ceiling as the sibling issuer-NAV adapters. */
-const ZEPHYR_MAX_FUTURE_SKEW_SEC = 5 * 60;
+export const ZEPHYR_MAX_FUTURE_SKEW_SEC = 5 * 60;
 
 function getFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
