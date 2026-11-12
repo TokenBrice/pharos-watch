@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 
 vi.mock("../../../lib/evm-logs", async (importOriginal) => {
@@ -576,66 +577,36 @@ describe("EVM blacklist contiguous coverage", () => {
     expect(secondRun.rows.map((row) => row.block_number)).toEqual([115]);
   });
 
-  it("stops before the earliest RPC log whose timestamp is unresolved", async () => {
-    const config = makeConfig("base");
-    const chainRpcs = new Map<string, ChainRpcConfig>();
-    chainRpcs.set("base", {
-      chainId: "base",
-      chainName: "Base",
-      type: "evm",
-      endpoints: [
-        {
-          url: "https://base.example",
-          operator: "alchemy",
-          keyed: true,
-          position: "registry",
-          stateHistory: "archive",
-          logsHistory: "full",
-        },
-      ],
-      explorerUrl: "https://basescan.org",
-    });
-    vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("base"));
-    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(1_000);
-    vi.mocked(fetchAlchemyLogs).mockResolvedValue({
-      logs: [
-        {
-          address: config.contractAddress,
-          topics: [TOPIC_A, ADDRESS_WORD],
-          data: "0x",
-          blockNumber: "0x69",
-          transactionHash: "0x" + "55".repeat(32),
-          transactionIndex: "0x0",
-          blockHash: "0x" + "66".repeat(32),
-          logIndex: "0x0",
-          removed: false,
-        },
-      ],
-      complete: true,
-      scannedToBlock: 200,
-      calls: 1,
-      maxDepth: 0,
-    });
-    vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
-
-    const result = await fetchEvmEventsIncremental(
-      mockD1(),
-      config,
-      null,
-      100,
-      new Map(),
-      makeBudget(),
-      limiter,
-      undefined,
-      chainRpcs,
+  it.each([true, false])("matches explorer/RPC zero IDs with timestamp coverage %s", async (timestampKnown) => {
+    const config = makeConfig();
+    const log = { address: config.contractAddress, topics: [TOPIC_A, ADDRESS_WORD], data: "0x",
+      blockNumber: "0x69", transactionHash: "0x" + "55".repeat(32), logIndex: "0x0" };
+    const actual = await vi.importActual<typeof import("../../../lib/evm-logs")>("../../../lib/evm-logs");
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementation(actual.fetchEvmLogsForTopicWithCompleteness);
+    mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: [{ ...log, logIndex: "0x", timeStamp: "0x3e8" }] } }]);
+    const db = mockD1();
+    const prepare = vi.spyOn(db, "prepare");
+    const chainRpcs = buildChainRpcs("key");
+    const scan = (apiKey: string | null) => fetchEvmEventsIncremental(
+      db, config, apiKey, 100, new Map(), makeBudget(), limiter, undefined, chainRpcs, apiKey ? 3_800 : null,
     );
-
-    expect(result).toMatchObject({
-      rows: [],
-      scannedToBlock: 104,
-      coverageOutcome: "partial",
-      usedRpcLogs: true,
-    });
+    try {
+      const explorer = await scan("key");
+      expect(explorer).toMatchObject({ coverageOutcome: "complete", scannedToBlock: 200, apiError: false, usedRpcLogs: false });
+      expect(explorer.rows[0]?.id).toBe(`arbitrum-${log.transactionHash}-0x0`);
+      vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("arbitrum"));
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(3_800);
+      vi.mocked(fetchAlchemyLogs).mockResolvedValue({
+        logs: [{ ...log, transactionIndex: "0x0", blockHash: "0x" + "66".repeat(32), removed: false }],
+        complete: true, scannedToBlock: 200, calls: 1, maxDepth: 0,
+      });
+      vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map(timestampKnown ? [[105, 1000]] : []));
+      const rpc = await scan(null);
+      expect(rpc).toMatchObject({ scannedToBlock: timestampKnown ? 200 : 104,
+        coverageOutcome: timestampKnown ? "complete" : "partial", usedRpcLogs: true });
+      expect(rpc.rows).toEqual(timestampKnown ? explorer.rows : []);
+      expect(prepare).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it.each([50, -50])("keeps the original topic safe head when RPC fallback moves by %i blocks", async (headDelta) => {

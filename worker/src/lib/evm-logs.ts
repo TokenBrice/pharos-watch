@@ -149,6 +149,13 @@ const EVM_QUANTITY_HEX_RE = /^0x[0-9a-fA-F]+$/;
 /** Etherscan log data is whole ABI words, so the hex body is always even-length. */
 const EVM_DATA_HEX_RE = /^0x[0-9a-fA-F]*$/;
 
+function normalizeEtherscanLogEntry(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const log = value as Record<string, unknown>;
+  // Etherscan encodes a zero log index as an empty hex quantity.
+  return log.logIndex === "0x" ? { ...log, logIndex: "0x0" } : value;
+}
+
 function isEtherscanLogEntry(value: unknown): value is EtherscanLogEntry {
   if (!value || typeof value !== "object") return false;
   const log = value as Record<string, unknown>;
@@ -286,7 +293,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
     };
   }
 
-  const rawLogs = json.result;
+  const rawLogs = json.result.map(normalizeEtherscanLogEntry);
   const logs = rawLogs.filter(isEtherscanLogEntry);
   if (logs.length !== rawLogs.length) {
     logWorkerEvent({

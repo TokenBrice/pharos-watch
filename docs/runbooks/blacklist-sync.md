@@ -313,6 +313,7 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 ### Provider Paths
 
 - Etherscan v2 is an explorer source for supported EVM log scans, emitted destroy-amount receipt recovery and a best-effort final current-balance fallback.
+  Explorer log intake normalizes exactly `logIndex: "0x"` to `"0x0"` before validation and decode quarantine; all other malformed quantities remain rejected.
 - Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs`; chain RPC configuration comes from `worker/src/lib/chain-registry.ts`.
 - Current EVM balance snapshots use `fetchEvmTokenBalance` with the explicit `latest` tag: dRPC when configured, then the shared chain RPC path, then best-effort Etherscan. The same transport accepts a numeric block, but a block-bound balance is not proof of an amountless event's historical quantity; current snapshots and the rebuild CLI never supply that quantity.
 - Scheduled `logScanRpcEndpoints` puts Dwellir first on Gnosis (9,000-block pages; dRPC/public failover), Base/Optimism/Avalanche/BSC (10,000; Alchemy/public), independent of state placement. `DWELLIR_ROUTING_DISABLED_CHAINS` restores incumbents; EVM mint/burn keeps Alchemy.
