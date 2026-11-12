@@ -334,9 +334,9 @@ export async function computeReserveCompositionOverview(
     loadReserveCompositionRowMap(db),
     loadLatestLiveReserveResumePointer(db),
     loadReserveCohortCompletions(db, now),
-    options.adapterReliability === false ? { rows: [], availability: undefined } : loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
+    options.adapterReliability === false ? { rows: [], availability: undefined } : loadReserveSyncReliabilityRollup(db, now).then(({ rows, computedAt }) => ({
       rows,
-      availability: { status: "available" as const },
+      availability: { status: "available" as const, computedAt },
     })).catch((error) => {
       logWorkerEvent({
         scope: "status",

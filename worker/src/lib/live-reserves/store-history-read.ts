@@ -1,7 +1,7 @@
 import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import { LIVE_RESERVE_WARNING_EFFECT_VALUES } from "@shared/types/live-reserve-core";
 import { ReserveSyncAdapterReliabilitySchema, type ReserveSyncAdapterReliability, type ReserveSyncStatus } from "@shared/types/live-reserves";
-import { getCache, setCache } from "../db-cache";
+import { getCaches, setCache } from "../db-cache";
 import { runWithOverloadRetry } from "../d1-overload-retry";
 import { parseJsonObject } from "../json-parse";
 import { logWorkerEvent } from "../structured-log";
@@ -149,6 +149,7 @@ export async function loadLatestNonSkippedReserveAttempt(
 }
 
 const RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY = "reserve-sync-reliability-rollup:v1";
+const RELIABILITY_REFRESH_ATTEMPT_KEY = "reserve-sync-reliability-rollup:refresh-attempt:v1";
 const RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC = 3_600;
 
 interface ReliabilityRollupCachePayload {
@@ -156,6 +157,13 @@ interface ReliabilityRollupCachePayload {
   windowSec: number;
   rows: ReserveSyncAdapterReliability[];
 }
+
+// One state per requested window, shared across invocation-local D1 cost wrappers.
+const reliabilityRollups = new Map<number, {
+  memo: ReliabilityRollupCachePayload | null;
+  lastAttemptAt: number;
+  inFlight: Promise<ReliabilityRollupCachePayload> | null;
+}>();
 
 function parseReliabilityRollupCache(value: string): ReliabilityRollupCachePayload | null {
   let parsed: unknown;
@@ -172,23 +180,24 @@ function parseReliabilityRollupCache(value: string): ReliabilityRollupCachePaylo
   return parsedRows.success ? { computedAt, windowSec, rows: parsedRows.data } : null;
 }
 
-/** A cache read fails open: the rollup is recomputed rather than left unavailable. */
+/** Age schedules refresh; it never invalidates an otherwise usable observation. */
 async function readReliabilityRollupCache(
   db: D1Database,
   now: number,
   windowSec: number,
-): Promise<ReserveSyncAdapterReliability[] | null> {
-  let cached: { value: string; updatedAt: number } | null;
+): Promise<{ memo: ReliabilityRollupCachePayload | null; attemptedAt: number } | null> {
+  let cached: Awaited<ReturnType<typeof getCaches>>;
   try {
-    cached = await getCache(db, RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY);
+    cached = await getCaches(db, [RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY, RELIABILITY_REFRESH_ATTEMPT_KEY]);
   } catch {
     return null;
   }
-  if (cached == null) return null;
-  const payload = parseReliabilityRollupCache(cached.value);
-  if (payload == null || payload.windowSec !== windowSec) return null;
-  const ageSec = now - payload.computedAt;
-  return ageSec >= 0 && ageSec < RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC ? payload.rows : null;
+  const value = cached.get(RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY)?.value;
+  const payload = value ? parseReliabilityRollupCache(value) : null;
+  return {
+    memo: payload?.windowSec === windowSec && payload.computedAt <= now ? payload : null,
+    attemptedAt: cached.get(RELIABILITY_REFRESH_ATTEMPT_KEY)?.updatedAt ?? -Infinity,
+  };
 }
 
 /**
@@ -197,19 +206,68 @@ async function readReliabilityRollupCache(
  * warnings are all structural (`LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES`).
  * `successRate` is `(ok + degradedByDesign) / attempts` (all attempts in the
  * window, including breaker-skipped rows) and is `null` only when an adapter
- * has no attempts. The result feeds the admin reserve card and is cached with
- * the hourly status snapshot.
+ * has no attempts. The admin card and status self-check retain its computedAt.
  *
- * The scan costs ~1 s over 30 days of attempts, so the result is memoized in
- * the `cache` table and rescanned at most hourly.
+ * A durable attempt marker admits at most one refresh per hour across Workers.
+ * Retain isolate sharing and the last observation before attempting persistence.
  */
 export async function loadReserveSyncReliabilityRollup(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   windowSec = LIVE_RESERVE_HISTORY_RETENTION_SEC,
-): Promise<ReserveSyncAdapterReliability[]> {
-  const memoized = await readReliabilityRollupCache(db, now, windowSec);
-  if (memoized !== null) return memoized;
+): Promise<ReliabilityRollupCachePayload> {
+  let state = reliabilityRollups.get(windowSec);
+  if (!state) {
+    state = { memo: null, lastAttemptAt: -Infinity, inFlight: null };
+    reliabilityRollups.set(windowSec, state);
+  }
+  const cached = await readReliabilityRollupCache(db, now, windowSec);
+  const stored = cached?.memo;
+  if (stored && (!state.memo || stored.computedAt > state.memo.computedAt)) state.memo = stored;
+  const memo = state.memo;
+  if (memo && now - memo.computedAt < RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC) return memo;
+  if (state.inFlight) return memo ?? state.inFlight;
+  state.lastAttemptAt = Math.max(state.lastAttemptAt, cached?.attemptedAt ?? -Infinity);
+  if (!cached || now - state.lastAttemptAt < RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC) {
+    if (memo) return memo;
+    throw new Error("Reserve sync reliability rollup refresh deferred after failed attempt");
+  }
+  state.inFlight = (async () => {
+    // Existing cache writes cannot atomically claim an expired refresh marker.
+    const claim = await runWithOverloadRetry(() => db.prepare(
+      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        WHERE cache.updated_at <= excluded.updated_at - ?`,
+    ).bind(RELIABILITY_REFRESH_ATTEMPT_KEY, String(now), now, RESERVE_SYNC_RELIABILITY_ROLLUP_MAX_AGE_SEC).run());
+    if (claim.meta.changes !== 1) {
+      if (memo) return memo;
+      throw new Error("Reserve sync reliability rollup refresh already claimed");
+    }
+    state.lastAttemptAt = now;
+    return scanReliabilityRollup(db, now, windowSec);
+  })();
+  try {
+    return await state.inFlight;
+  } catch (error) {
+    if (!memo) throw error;
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "reserve_sync_reliability_rollup_refresh_failed",
+      message: "Reserve sync reliability rollup refresh failed; serving retained memo",
+      error,
+    });
+    return memo;
+  } finally {
+    state.inFlight = null;
+  }
+}
+
+async function scanReliabilityRollup(
+  db: D1Database,
+  now: number,
+  windowSec: number,
+): Promise<ReliabilityRollupCachePayload> {
   const cutoff = now - windowSec;
   const result = await runWithOverloadRetry(() => db
     .prepare(
@@ -292,7 +350,9 @@ export async function loadReserveSyncReliabilityRollup(
     };
   });
   const payload: ReliabilityRollupCachePayload = { computedAt: now, windowSec, rows };
+  reliabilityRollups.get(windowSec)!.memo = payload;
   try {
+    // setCache already uses runWithOverloadRetry.
     await setCache(db, RESERVE_SYNC_RELIABILITY_ROLLUP_CACHE_KEY, JSON.stringify(payload));
   } catch (error) {
     // A memo write is an optimisation: the freshly computed rows are still the answer.
@@ -304,5 +364,5 @@ export async function loadReserveSyncReliabilityRollup(
       error,
     });
   }
-  return rows;
+  return payload;
 }
