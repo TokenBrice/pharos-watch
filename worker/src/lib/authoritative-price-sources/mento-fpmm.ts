@@ -48,7 +48,9 @@ export async function fetchMentoFpmmPrice(id: string, context: LivePriceContext,
   const head = await fetchEvmBlockHeader("celo", block, options);
   const timestamp = head?.timestamp;
   const now = Math.floor(Date.now() / 1000);
-  if (timestamp == null || timestamp > now || now - timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age");
+  if (timestamp == null) return reject("block-age-unavailable");
+  if (timestamp > now) return reject("block-age-future");
+  if (now - timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age-stale");
   const implementation = await fetchEvmStorageAtBlock("celo", route.pool, IMPLEMENTATION_SLOT, block, options);
   throwIfAborted(signal);
   if (implementation?.toLowerCase() !== POOL_IMPLEMENTATION_WORD) return reject("pool-implementation");

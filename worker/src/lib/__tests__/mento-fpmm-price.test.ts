@@ -11,20 +11,21 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmMulticall3Aggregate3AtBlock: (...args: unknown[]) => multicall(...args),
   fetchEvmStorageAtBlock: (...args: unknown[]) => storage(...args),
 }));
-import { fetchMentoFpmmPrice, mentoFpmmProvider } from "../authoritative-price-sources/mento-fpmm";
+import { fetchMentoFpmmPrice as fetchPrice, mentoFpmmProvider } from "../authoritative-price-sources/mento-fpmm";
 import { applyProtocolPriceOverrides, createValidationContextResolver } from "../../cron/sync-stablecoins/pricing";
 const CHFM = "0xb55a79f398e759e43c95b979163f30ec87ee131d";
 const USDM = "0x765de816845861e75a25fca122bb6898b8b1282a";
+const nowSec = () => Math.floor(Date.now() / 1000);
 const UNIT = 10n ** 18n;
 const encode = (types: string, values: readonly unknown[]) => encodeAbiParameters(parseAbiParameters(types), values);
 const uint = (value: bigint) => encode("uint256", [value]);
 const limits = (limit = 100_000n * 10n ** 15n, flow = 0n) =>
   encode("int120,int120,uint8,uint32,uint32,int96,int96", [limit, limit * 5n, 18, 0, 0, flow, flow]);
 function context(overrides: Partial<PeggedAsset> = {}) {
-  return { assetsById: new Map([["cusd-celo", {
+  return { lastRejectionReason: null as string | null, assetsById: new Map([["cusd-celo", {
     id: "cusd-celo", name: "USDm", symbol: "USDm", price: 1.01,
     priceSource: "coingecko", priceConfidence: "single-source",
-    priceObservedAt: Math.floor(Date.now() / 1000) - 30, priceObservedAtMode: "upstream",
+    priceObservedAt: nowSec() - 30, priceObservedAtMode: "upstream",
     ...overrides,
   } as PeggedAsset]]) };
 }
@@ -51,12 +52,18 @@ describe("CHFm guarded FPMM price", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     blockNumber.mockResolvedValue(77580896);
     storage.mockResolvedValue("0x0000000000000000000000008cb0518a0510ab62450f79f3cd9ee0cbddb77f30");
-    blockHeader.mockReset().mockResolvedValue({ number: 77580896, timestamp: Math.floor(Date.now() / 1000) - 3, hash: `0x${"ab".repeat(32)}` });
+    blockHeader.mockReset().mockResolvedValue({ number: 77580896, timestamp: nowSec() - 3, hash: `0x${"ab".repeat(32)}` });
     pool();
+  });
+  it.each([["unavailable", null], ["future", 1], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
+    const ctx = context();
+    blockHeader.mockResolvedValue(offset == null ? null : { number: 77580896, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
+    await fetchPrice("chfm-mento", ctx);
+    expect(ctx.lastRejectionReason).toBe(`mento-fpmm:block-age-${reason}`);
   });
   it("prices a bounded executable quote using the actual fresh USDm mark and oldest dependency time", async () => {
     const ctx = context();
-    const result = await fetchMentoFpmmPrice("chfm-mento", ctx);
+    const result = await fetchPrice("chfm-mento", ctx);
     expect(result).toMatchObject({ price: 1.208364, source: "mento-fpmm", confidence: "fallback",
       observedAt: ctx.assetsById.get("cusd-celo")!.priceObservedAt, observedAtMode: "upstream" });
     expect(multicall).toHaveBeenCalledTimes(1);
@@ -64,15 +71,15 @@ describe("CHFm guarded FPMM price", () => {
     expect(multicall.mock.calls[0][1]).toHaveLength(17);
   });
   it("survives shared publication validation near the CHF reference, while severe downside remains guarded", async () => {
-    const override = await fetchMentoFpmmPrice("chfm-mento", context());
+    const override = await fetchPrice("chfm-mento", context());
     expect(override).not.toBeNull();
     for (const severe of [false, true]) {
       const asset = { id: "chfm-mento", name: "CHFm", symbol: "CHFm", pegType: "peggedCHF", price: null } as PeggedAsset;
       const applied = applyProtocolPriceOverrides({
         assets: [asset], overrides: new Map([[asset.id, { ...override!, ...(severe ? { price: 0.2 } : {}) }]]),
         validationContexts: createValidationContextResolver(),
-        validationReferences: { rates: { peggedCHF: 1.21 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
-        syncStartSec: Math.floor(Date.now() / 1000),
+        validationReferences: { rates: { peggedCHF: 1.21 }, type: "fresh", updatedAt: nowSec() },
+        syncStartSec: nowSec(),
       });
       expect(applied).toBe(severe ? 0 : 1);
       expect(asset.price).toBe(severe ? null : override!.price);
@@ -95,12 +102,12 @@ describe("CHFm guarded FPMM price", () => {
     ["int96 flow overflow even under a larger configured limit", { inputLimits: limits(1n << 100n, (1n << 95n) - 1n) }],
   ] as Array<[string, Record<string, `0x${string}`>]>) ("fails closed on %s", async (_name, overrides) => {
     pool(overrides);
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
+    expect(await fetchPrice("chfm-mento", context())).toBeNull();
   });
   it("records a null RPC result with the pinned block", async () => {
     multicall.mockResolvedValue(null);
-    const ctx = { ...context(), lastRejectionReason: null as string | null };
-    expect(await fetchMentoFpmmPrice("chfm-mento", ctx)).toBeNull();
+    const ctx = context();
+    expect(await fetchPrice("chfm-mento", ctx)).toBeNull();
     expect(ctx.lastRejectionReason).toBe("mento-fpmm:state-rpc-null:block-77580896");
   });
   it.each(["short", "wrong-label", "failed-call"])("records bounded %s diagnostics without RPC data", async (kind) => {
@@ -111,40 +118,40 @@ describe("CHFm guarded FPMM price", () => {
       else rows[14] = { ...rows[14], success: false, returnData: "secret-upstream-payload" };
       return rows;
     });
-    const ctx = { ...context(), lastRejectionReason: null as string | null };
-    expect(await fetchMentoFpmmPrice("chfm-mento", ctx)).toBeNull();
+    const ctx = context();
+    expect(await fetchPrice("chfm-mento", ctx)).toBeNull();
     expect(ctx.lastRejectionReason).toBe(kind === "failed-call"
       ? "mento-fpmm:state-subcall-smallQuote:block-77580896"
       : "mento-fpmm:state-batch-shape:block-77580896");
     expect(ctx.lastRejectionReason).not.toContain("secret");
   });
   it("rejects a reorg between the pinned read and closing header", async () => {
-    blockHeader.mockResolvedValueOnce({ number: 77580896, timestamp: Math.floor(Date.now() / 1000), hash: `0x${"cd".repeat(32)}` });
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
+    blockHeader.mockResolvedValueOnce({ number: 77580896, timestamp: nowSec(), hash: `0x${"cd".repeat(32)}` });
+    expect(await fetchPrice("chfm-mento", context())).toBeNull();
   });
   it("rejects an unreviewed pool implementation before any quote", async () => {
     storage.mockResolvedValue(uint(1n));
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
+    expect(await fetchPrice("chfm-mento", context())).toBeNull();
     expect(multicall).not.toHaveBeenCalled();
   });
   it("rejects duplicate/missing multicall labels and propagates cancellation", async () => {
     multicall.mockResolvedValue(Array.from({ length: 17 }, () => ({ label: "token0", success: true, returnData: uint(1n) })));
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
+    expect(await fetchPrice("chfm-mento", context())).toBeNull();
     const controller = new AbortController();
     multicall.mockImplementation(async () => { controller.abort(); return null; });
-    await expect(fetchMentoFpmmPrice("chfm-mento", context(), controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+    await expect(fetchPrice("chfm-mento", context(), controller.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
   it("rejects a trusted parent already too old for the five-minute derived source", async () => {
-    expect(await fetchMentoFpmmPrice("chfm-mento", context({ priceObservedAt: Math.floor(Date.now() / 1000) - 300 }))).toBeNull();
+    expect(await fetchPrice("chfm-mento", context({ priceObservedAt: nowSec() - 300 }))).toBeNull();
     expect(blockNumber).not.toHaveBeenCalled();
   });
   it.each(["stale", "future"])("rejects a %s block before reading pool state", async (kind) => {
-    blockHeader.mockResolvedValue({ number: 77580896, timestamp: Math.floor(Date.now() / 1000) + (kind === "stale" ? -301 : 1), hash: `0x${"ab".repeat(32)}` });
-    expect(await fetchMentoFpmmPrice("chfm-mento", context())).toBeNull();
+    blockHeader.mockResolvedValue({ number: 77580896, timestamp: nowSec() + (kind === "stale" ? -301 : 1), hash: `0x${"ab".repeat(32)}` });
+    expect(await fetchPrice("chfm-mento", context())).toBeNull();
     expect(multicall).not.toHaveBeenCalled();
   });
   it.each([{ priceSource: "cached" }, { priceObservedAt: 1 }, { price: null }])("requires a fresh trusted USDm parent: %j", async (overrides) => {
-    expect(await fetchMentoFpmmPrice("chfm-mento", context(overrides))).toBeNull();
+    expect(await fetchPrice("chfm-mento", context(overrides))).toBeNull();
     expect(blockNumber).not.toHaveBeenCalled();
   });
   it("only targets missing reviewed FPMM routes and preserves a published market price", async () => {
@@ -172,7 +179,7 @@ describe("CHFm guarded FPMM price", () => {
     }
     it("prices JPYm through its own pool with a JPY-scaled impact quote and publishes near the JPY reference", async () => {
       jpymPool();
-      const override = await fetchMentoFpmmPrice("jpym-mento", context());
+      const override = await fetchPrice("jpym-mento", context());
       expect(override).toMatchObject({ source: "mento-fpmm", confidence: "fallback", observedAtMode: "upstream" });
       expect(override!.price).toBeCloseTo(0.00633401079 * 1.01, 12);
       expect(storage.mock.calls[0][1]).toBe(JPYM_POOL);
@@ -184,8 +191,8 @@ describe("CHFm guarded FPMM price", () => {
         const applied = applyProtocolPriceOverrides({
           assets: [asset], overrides: new Map([[asset.id, { ...override!, ...(severe ? { price: 0.001 } : {}) }]]),
           validationContexts: createValidationContextResolver(),
-          validationReferences: { rates: { peggedJPY: 0.00636 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
-          syncStartSec: Math.floor(Date.now() / 1000),
+          validationReferences: { rates: { peggedJPY: 0.00636 }, type: "fresh", updatedAt: nowSec() },
+          syncStartSec: nowSec(),
         });
         expect(applied).toBe(severe ? 0 : 1);
         expect(asset.price).toBe(severe ? null : override!.price);
@@ -193,13 +200,13 @@ describe("CHFm guarded FPMM price", () => {
     });
     it("fails closed below the JPY-scaled inventory floor that CHFm's 1,000-unit floor would pass", async () => {
       jpymPool(199_999n * UNIT);
-      const ctx = { ...context(), lastRejectionReason: null as string | null };
-      expect(await fetchMentoFpmmPrice("jpym-mento", ctx)).toBeNull();
+      const ctx = context();
+      expect(await fetchPrice("jpym-mento", ctx)).toBeNull();
       expect(ctx.lastRejectionReason).toBe("mento-fpmm:inventory");
     });
     it("rejects the CHFm pair when read through the JPYm route", async () => {
       pool();
-      expect(await fetchMentoFpmmPrice("jpym-mento", context())).toBeNull();
+      expect(await fetchPrice("jpym-mento", context())).toBeNull();
     });
   });
 });
