@@ -245,14 +245,14 @@ describe("XRPL issued-currency supply", () => {
   });
 
   it("sums the full OUSG perimeter and partitions an admitted cap only after every leg succeeds", async () => {
-    let xrplAvailable = true;
+    let xrplAvailable = true, solanaAmount = "0";
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
       const request = JSON.parse(String(init?.body));
       if (request.method === "gateway_balances") return Response.json(xrplAvailable
         ? gatewayFixture : { result: { status: "error", error: "actNotFound" } });
       if (request.method === "ledger") return Response.json(ledgerFixture);
       if (request.method === "getTokenSupply") return Response.json({ jsonrpc: "2.0", id: 1,
-        result: { context: { slot: 465436215 }, value: { amount: "0", decimals: 6, uiAmount: 0 } },
+        result: { context: { slot: 465436215 }, value: { amount: solanaAmount, decimals: 6, uiAmount: 0 } },
       });
       const raw = request.params[0].to.toLowerCase() === meta.contracts!.find(entry => entry.chain === "ethereum")!.address
         ? 1121340573244524372905069n : 0n;
@@ -279,6 +279,10 @@ describe("XRPL issued-currency supply", () => {
       if (typeof row.current !== "number") throw new Error("expected observed numeric chain stock");
       return sum + row.current;
     }, 0)).toBeCloseTo(total * 1.05, 6);
+    for (solanaAmount of [" ", "0x0", "-1"]) {
+      expect(await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs())).toBeNull();
+    }
+    solanaAmount = "0";
     xrplAvailable = false;
     expect(await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs())).toBeNull();
     expect(await fetchOnChainSupplyPartition(meta, total, price, undefined, keyedChainRpcs()))
