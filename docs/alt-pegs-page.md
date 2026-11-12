@@ -26,7 +26,7 @@ Cohort history starts alongside the current stablecoin query, before the page's 
 
 `useNonUsdShare()` non-commodity history includes currency-linked and other non-commodity pegs, not pure fiat only. Numeric cohort/share observations are required; malformed data is unavailable, not zero. Coverage uses `interior-gap-prior-value`: observed value over observed plus prior-value estimates for missing core assets, including trailing holes. This cannot census assets with no history. Existing endpoint publication floors remain producer-owned. Headline/tooltips/tables/annual changes qualify partial or unknown coverage.
 
-Cohort omitted/null/malformed buckets stay chart gaps and Unavailable cells; explicit zero remains zero. Other and headline totals require every contributing observation. Grouping thresholds use each cohort's latest observed value, never fabricated simultaneous readings.
+A peg joins the series and total from its first bucket in the provider history, valid or not; earlier tooltip and table entries are omitted, and Other appears only once a minor peg starts. From then on, omitted/null/malformed buckets stay chart gaps and Unavailable cells and withhold dependent totals; explicit zero remains zero. Grouping thresholds use each cohort's latest observed value, never fabricated simultaneous readings.
 
 ### Clocks And Failure
 

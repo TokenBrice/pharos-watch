@@ -72,13 +72,25 @@
       {
         "label": "W2 source recovery: unpinned manager token-balance census, not admitted composition",
         "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1440d19436bEEaf8517896bffB957A88ec95a00F/token-balances"
+      },
+      {
+        "label": "Sovryn mitigation and recovery manifest (November 9; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+      },
+      {
+        "label": "Sovryn attack disclosure (November 8; published November 10)",
+        "url": "https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612"
+      },
+      {
+        "label": "BabelFish ownership-stop transaction, November 4",
+        "url": "https://rootstock.blockscout.com/tx/0xf34c76dd9c4e113ea46ce0514f6a88ad2e8c996a1bd6fb14afbc3902ff89292c"
       }
     ],
-    "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero.",
+    "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero. Incident annotation reviewed 2026-11-12: the Sovryn XUSD/WRBTC pair was delisted on November 2 following the November 1 attack. Separately, the November 4 BabelFish ownership stop removed the conversion manager's XUSD mint/burn authority, stopping minting and redemption. Current pinned owner reads retain the containment multisig. The November 8 attack disclosure records 69,381.254896 XUSD debited from reward inventory, with examined DOC/DLLR principal returned; it expressly does not establish an equal backing shortfall for remaining XUSD holders or certify liquidity. The November 9 recovery manifest retains the stop and gives no restart date. Editorial choice: keep active monitoring with a conversion-halt notice and review hold because permanent failure or discontinuation is not established. This annotation does not renew the July composition/review dates, percentages, bridge valuation or whole-book coverage.",
     "compositionBasis": "Exact live Rootstock reserve-contract balances captured on 2026-07-15",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The historical July 15 three-row composition is fully linked for its original observation only. Source recovery recorded 2026-10-09T11:41:39Z by Sol curation campaign 2026-10-09 (W2L22Spark): the canonical Rootstock explorer token-balances endpoint for the issuer-documented manager returned twelve positive ERC-20 balances: DLLR, RUSDT, DOC, USDTbs, DAIes, USDCbs, DAIbs, USDCes, USDTes, BUSDbs, RDOC and ZUSD. These are unpinned explorer balances, not an exhaustive admitted backing census or whole-liability USD valuation. In particular, BIP-0011's BUSD deposit/swap removal does not establish a zero legacy BUSD balance. Several receipts lack quoted USD valuation, and the manager-to-whole-liability join remains unproved. The mandated helper has no registered Rootstock endpoint. No new percentages, zero-tail finding, liability coverage or composition date are asserted. knownUnknownExposurePct 0 belongs only to the retained historical review.",
+    "knownUnknownExposure": "The historical July 15 three-row composition is fully linked for its original observation only. Source recovery recorded 2026-10-09T11:41:39Z by Sol curation campaign 2026-10-09 (W2L22Spark): the canonical Rootstock explorer token-balances endpoint for the issuer-documented manager returned twelve positive ERC-20 balances: DLLR, RUSDT, DOC, USDTbs, DAIes, USDCbs, DAIbs, USDCes, USDTes, BUSDbs, RDOC and ZUSD. These are unpinned explorer balances, not an exhaustive admitted backing census or whole-liability USD valuation. In particular, BIP-0011's BUSD deposit/swap removal does not establish a zero legacy BUSD balance. Several receipts lack quoted USD valuation, and the manager-to-whole-liability join remains unproved. The mandated helper has no registered Rootstock endpoint. No new percentages, zero-tail finding, liability coverage or composition date are asserted. knownUnknownExposurePct 0 belongs only to the retained historical review. November 12 incident annotation: the 89.4% DLLR row is a historical July weight, not current measured exposure to the halted Mynt book. Basket balances and positive XUSD totalSupply do not prove executable redemption. The independent BabelFish conversion path is itself stopped; no remaining-holder loss percentage is inferred from the reward-inventory debit.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
