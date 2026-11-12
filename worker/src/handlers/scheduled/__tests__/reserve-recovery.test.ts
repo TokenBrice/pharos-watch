@@ -143,9 +143,12 @@ describe("reserve recovery mode", () => {
   it("replays past a never-delivered current reserve slot and records why", async () => {
     mocks.currentSlot = { reason: "current-slot-never-delivered", slotStartedAt: 900, graceSec: 600 };
     mocks.claim.mockResolvedValue({ disposition: "claimed", checkpoint: makeLiveReserveCheckpoint() });
-    await runFiveMinuteReserveRecoverySlot(runtime("recover"));
+    mocks.runReserveSlot.mockResolvedValueOnce({ jobsErrored: 0, jobsSkipped: 0, jobsDegraded: 0, jobs: [], reserveTailSettled: true });
+    const outer = runtime("recover");
+    await runFiveMinuteReserveRecoverySlot(outer);
+    expect(outer.reserveTailSettled).toBe(true);
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
-    expect(JSON.parse((latestLeasedResult as { metadata?: string }).metadata ?? "{}")).toMatchObject({
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
       disposition: "recovery-executed",
       currentSlot: { reason: "current-slot-never-delivered", slotStartedAt: 900, graceSec: 600 },
     });
@@ -333,7 +336,7 @@ describe("reserve recovery mode", () => {
       "preparing-reserve-checkpoint",
       "replaying-reserve-checkpoint",
     ]);
-    expect(JSON.parse((latestLeasedResult as { metadata?: string }).metadata ?? "{}")).toMatchObject({
+    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
       disposition: "recovery-executed",
       mode: "recover",
       retiredCheckpoints: 0,

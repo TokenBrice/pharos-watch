@@ -7,7 +7,7 @@ import { createReserveLeaseOwner, reserveRecoveryLeaseAdmission } from "../lib/r
 import { claimReserveContinuation, finishReserveContinuation, heartbeatReserveContinuation } from "../lib/reserve-continuation-fence";
 import type { ReserveContinuationClaim } from "../lib/reserve-continuation-fence";
 import { createScheduledRuntimeContext } from "./scheduled/context";
-import { sendReserveContinuation } from "../lib/reserve-continuation-send";
+import { refreshReserveReliabilityAfterTail, sendReserveContinuation } from "../lib/reserve-continuation-send";
 import { retainUntilDeadline, settleAfterAbort } from "../lib/cron-abort-settlement";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
@@ -115,8 +115,10 @@ export async function handleReserveContinuationBatch(
   const work = lifecycle();
   try {
     const outcome = await settleAfterAbort(() => work, controller.signal, { platformDeadlineMs: deadline.platformDeadlineMs });
-    if (outcome.status === "fulfilled") delivery.ack();
-    else {
+    if (outcome.status === "fulfilled") {
+      delivery.ack();
+      if (summary?.reserveTailSettled) await refreshReserveReliabilityAfterTail(env, deadline);
+    } else {
       // Transport/uncaught consumer failures have three delayed deliveries then DLQ.
       // A retry of an already claimed delivery can never authorize another attempt.
       delivery.retry({ delaySeconds: 60 });

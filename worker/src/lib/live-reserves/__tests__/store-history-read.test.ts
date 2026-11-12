@@ -10,12 +10,21 @@ import {
 import {
   loadLatestNonSkippedReserveAttempt,
   loadReserveSyncAttemptTimeline,
-  loadReserveSyncReliabilityRollup,
   type ReserveSyncAttemptTimelineEntry as Attempt,
 } from "../store-history-read";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); });
+
+async function load(db: D1Database, now: number) {
+  return (await import("../store-history-read")).loadReserveSyncReliabilityRollup(db, now, 1000);
+}
+async function refresh(db: D1Database, now: number, remaining = 20_000) {
+  const { refreshReserveSyncReliabilityRollup: renew } = await import("../store-history-read");
+  const result = renew(db, Date.now() + remaining, undefined, now, 1000);
+  await vi.advanceTimersByTimeAsync(12_000);
+  return result;
+}
 
 function insertAttempt(
   sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"],
@@ -91,8 +100,8 @@ describe("store-history-read", () => {
   });
 
   it.each([0, 1, 4])("rolls up and guards reliability refreshes with %i memo write failures", async (failures) => {
+    vi.useFakeTimers();
     vi.resetModules();
-    const { loadReserveSyncReliabilityRollup: load } = await import("../store-history-read");
     let writes = 0, failScan = false, failMarker = false;
     const order: string[] = [];
     const scan = vi.fn(() => { expect(order.pop()).toBe("marker"); if (failScan) throw new Error("scan failed"); });
@@ -106,6 +115,10 @@ describe("store-history-read", () => {
       },
     });
     try {
+      const prepare = vi.spyOn(db, "prepare");
+      const cacheRead = ["SELECT key, value, updated_at FROM cache WHERE key IN (?)"];
+      await expect(load(db, 3000)).rejects.toThrow("unavailable");
+      expect(prepare.mock.calls.map(([sql]) => sql)).toEqual(cacheRead);
       for (const [adapterKey, statuses, attemptedAt] of [
         ["adapter-a", ["ok", "ok", "degraded", "error"], 2000],
         ["adapter-b", ["skipped", "skipped"], 2000],
@@ -113,9 +126,10 @@ describe("store-history-read", () => {
       ] as const) statuses.forEach((status, index) => insertAttempt(sqlite, {
         stablecoinId: `${adapterKey}-${index}`, attemptedAt, adapterKey, status,
       }));
-      const [memo, concurrent] = await Promise.all([0, 1].map(() => load(db, 3000, 1000)));
+      const memo = (await refresh(db, 3000))!;
+      expect(await refresh(db, 3000)).toBeNull();
       expect(scan).toHaveBeenCalledTimes(1);
-      expect(concurrent).toEqual(memo);
+      expect(await load(db, 3000)).toEqual(memo);
       expect(memo.computedAt).toBe(3000);
       expect(writes).toBe(Math.min(failures + 1, 4));
       expect(memo.rows).toEqual([
@@ -123,24 +137,28 @@ describe("store-history-read", () => {
         { adapterKey: "adapter-b", attempts: 2, ok: 0, degraded: 0, degradedByDesign: 0, error: 0, skipped: 2, successRate: 0 },
       ]);
       sqlite.exec("UPDATE cache SET value = 'x'");
-      expect(await load(db, 3000, 1000)).toEqual(memo);
+      expect(await load(db, 3000)).toEqual(memo);
       sqlite.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run("reserve-sync-reliability-rollup:v1", JSON.stringify(memo), 3000);
       sqlite.exec("DELETE FROM reserve_sync_attempt_history");
-      expect(await load(db, 3001, 1000)).toEqual(memo);
+      expect(await load(db, 3001)).toEqual(memo);
       failScan = true;
-      expect(await load(db, 6601, 1000)).toEqual(memo);
+      expect(await refresh(db, 6601)).toBeNull();
+      expect(await load(db, 6601)).toEqual(memo);
       vi.resetModules();
-      const { loadReserveSyncReliabilityRollup: fresh } = await import("../store-history-read");
-      expect(await fresh(db, 6602, 1000)).toEqual(memo);
+      expect(await refresh(db, 6602)).toBeNull();
+      prepare.mockClear();
+      expect(await load(db, 6602)).toEqual(memo);
+      expect(prepare.mock.calls.map(([sql]) => sql)).toEqual(cacheRead);
       expect(scan).toHaveBeenCalledTimes(2);
       failScan = false;
       failMarker = true;
-      expect(await fresh(db, 10202, 1000)).toEqual(memo);
+      expect(await refresh(db, 10202)).toBeNull();
+      expect(await load(db, 10202)).toEqual(memo);
       expect(scan).toHaveBeenCalledTimes(2);
       failMarker = false;
-      expect((await fresh(db, 10202, 1000)).rows).toEqual([]);
+      expect((await refresh(db, 10202))?.rows).toEqual([]);
       sqlite.exec("DROP TABLE cache");
-      expect((await fresh(db, 10203, 1000)).rows).toEqual([]);
+      expect((await load(db, 10203)).rows).toEqual([]);
     } finally {
       sqlite.close();
     }
@@ -172,7 +190,8 @@ describe("store-history-read", () => {
       stablecoinId: `coin-${index}`, attemptedAt: 2000, adapterKey: "chainlink-nav", status,
       warnings: Array.isArray(warnings) ? JSON.stringify(warnings) : warnings,
     }));
-    const rollup = await loadReserveSyncReliabilityRollup(db, 3000, 1000);
+    vi.useFakeTimers();
+    const rollup = (await refresh(db, 3000))!;
     expect(rollup.rows).toEqual([
       { adapterKey: "chainlink-nav", attempts: 14, ok: 1, degraded: 12, degradedByDesign: 3, error: 1, skipped: 0, successRate: 4 / 14 },
     ]);

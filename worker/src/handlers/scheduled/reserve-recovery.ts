@@ -189,6 +189,7 @@ async function runReserveRecovery(
   const { runFourHourlyReserveSyncSlot } = await import("./four-hourly-reserves");
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   runtime.pendingReserveContinuation = summary.reserveContinuation;
+  runtime.reserveTailSettled = summary.reserveTailSettled;
   const admissionReason = summary.jobs?.find((job) =>
     job.reason === "producer-slot-priority" || job.reason === "same-role-slot-co-tenancy")?.reason;
   const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0
