@@ -8,7 +8,7 @@ import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../../lib/dex-cron-constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { encodeResponseReadyCacheValue, getResponseReadyCacheKey } from "../../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../../lib/response-ready-cache-contracts";
-import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "../cache-publication";
+import { commitReplayPriceCache, validateAndWriteStablecoinsCache, type ValidateAndCacheInput } from "../cache-publication";
 import { loadPreviousStablecoinsById, mergeSupplementalLastKnownGood, normalizeStablecoinsPayload } from "../shared";
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -22,7 +22,33 @@ import type { PeggedAsset } from "../enrich-prices";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 
+async function readCompanion(db: D1Database) {
+  return JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+}
+
+function publish(input: ValidateAndCacheInput, blocked = () => ({ metadata: "blocked" })) {
+  return validateAndWriteStablecoinsCache(input, blocked);
+}
+
 describe("validateAndWriteStablecoinsCache", () => {
+  const syncStartSec = 1_777_000_000;
+  it.each(["defillama", "onchain-total-supply", "missing", "clock", "newer"])("fences bootstrap against %s", async (source) => {
+    const { db, sqlite } = fixtures.open();
+    const row = makePeggedAsset({ id: "buidl-blackrock", pegMechanism: "fiat-backed", circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [],
+      supplySource: "defillama", supplyRestored: true, supplyObservedAt: 100 });
+    const prior = JSON.stringify({ peggedAssets: [{ ...row, supplySource: source === "clock" ? "defillama" : source === "newer" ? "onchain-total-supply" : source,
+      supplyObservedAt: source === "clock" ? 99 : 100 }] });
+    if (source !== "missing") sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run("stablecoins", prior, source === "newer" ? 400 : 200);
+    const result = await publish({ db, assets: [row], syncStartSec: 300, validationContext: "main" });
+    expect(result).toMatchObject({ written: source === "defillama", skippedBecauseNewer: source === "newer" });
+    const cached = await getCache(db, "stablecoins");
+    if (source === "defillama") expect(cached?.updatedAt).toBe(300);
+    else {
+      expect(cached?.value).toBe(source === "missing" ? undefined : prior);
+      if (source !== "newer") expect(JSON.parse((result as { blockedResult: { metadata: string } }).blockedResult.metadata).reason)
+        .toBe("buidl-bootstrap-predecessor-unavailable");
+    }
+  });
   it.each([[0.8, false], [null, false], [0.8, true]] as const)("publishes quote-bound fields at %s with DEX overload=%s", async (price, overload) => {
     const derive = vi.spyOn(currentPeg, "deriveCurrentPegObservationMap");
     const { db, sqlite } = fixtures.open();
@@ -46,16 +72,16 @@ describe("validateAndWriteStablecoinsCache", () => {
       supplySource: "coingecko-fallback", supplyObservedAt: 1_777_000_050,
       chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 } }, chains: ["Ethereum"], chainPartition,
     });
-    await validateAndWriteStablecoinsCache({
+    await publish({
       assets: [asset], db, syncStartSec: 1_777_000_100, validationContext: "main",
-    }, () => ({ metadata: "blocked" }));
+    });
     dexRead.mockRestore();
     const canonical = JSON.parse((await getCache(db, "stablecoins"))!.value);
     expect(StablecoinListResponseSchema.parse(canonical).peggedAssets[0]).toMatchObject({
       chainPartition, circulating: asset.circulating, circulatingPrevDay: asset.circulatingPrevDay,
       supplySource: asset.supplySource, supplyObservedAt: asset.supplyObservedAt,
     });
-    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    const companion = await readCompanion(db);
     expect(JSON.parse(companion.body)).toEqual(canonical);
     expect((await loadPreviousStablecoinsById(db)).previousAssetsById.get(asset.id)?.chainPartition).toEqual(chainPartition);
     const published = canonical.peggedAssets[0];
@@ -82,9 +108,9 @@ describe("validateAndWriteStablecoinsCache", () => {
       chains: ["Ethereum", "Arbitrum"],
       chainCirculating: { Ethereum: { current: 63_900_000 }, Arbitrum: { current: 100_000 } },
     })];
-    const result = await validateAndWriteStablecoinsCache({
+    const result = await publish({
       assets, db, syncStartSec: 1_777_000_001, validationContext,
-    }, () => ({ metadata: "blocked" }));
+    });
     expect(result).toMatchObject({ written: true, quarantinedAssets: [] });
     const cached = await getCache(db, "stablecoins");
     const payload = StablecoinListResponseSchema.parse(JSON.parse(cached!.value));
@@ -102,7 +128,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     // Subsequent same-run consumers must see the refusal too, not the old input.
     expect(getCirculatingRawOrNull(assets[0])).toBeNull();
     expect(assets[0]!.supplyUnavailableReason).toBe("economic-float-unreconciled");
-    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    const companion = await readCompanion(db);
     expect(JSON.parse(companion.body)).toEqual(JSON.parse(cached!.value));
   });
 
@@ -118,7 +144,6 @@ describe("validateAndWriteStablecoinsCache", () => {
   });
 
   it("writes byte-identical canonical and replay-price payloads for main and fallback policies", async () => {
-    const syncStartSec = 1_777_000_000;
     const fxFallbackRates = { EUR: 1.1 };
     const priceCacheEntries = [{
       id: "fixture-usd",
@@ -138,13 +163,13 @@ describe("validateAndWriteStablecoinsCache", () => {
       [mainDb, "main", undefined],
       [fallbackDb, "fallback", "fallback-"],
     ] as const) {
-      await validateAndWriteStablecoinsCache({
+      await publish({
         assets: [],
         fxFallbackRates,
         db,
         syncStartSec,
         validationContext,
-      }, () => ({ metadata: "blocked" }));
+      });
       await commitReplayPriceCache({
         db,
         entries: priceCacheEntries,
@@ -173,11 +198,11 @@ describe("validateAndWriteStablecoinsCache", () => {
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(companionKey, "companion", 50);
     const controller = new AbortController();
     if (gate === "aborted") controller.abort("cancelled before cache publication");
-    const result = await validateAndWriteStablecoinsCache({
+    const result = await publish({
       db, assets: gate === "invalid" ? [makePeggedAsset({ name: 42 as never })] : [],
       syncStartSec: gate === "newer" ? 100 : 300, validationContext: "main",
       signal: controller.signal,
-    }, () => ({ metadata: "blocked" }));
+    });
     expect(await getCache(db, "stablecoins")).toEqual({ value: "prior", updatedAt: 200 });
     expect(await getCache(db, companionKey)).toEqual({ value: "companion", updatedAt: 50 });
     if (gate === "invalid") {
@@ -223,7 +248,6 @@ describe("validateAndWriteStablecoinsCache", () => {
   });
 
   it("keeps canonical stablecoins publication successful when response-ready cache write fails", async () => {
-    const syncStartSec = 1_777_000_000;
     const body = JSON.stringify({ peggedAssets: [] });
     const responseReadyBody = encodeResponseReadyCacheValue(body, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins);
     const db = mockD1(
@@ -243,7 +267,7 @@ describe("validateAndWriteStablecoinsCache", () => {
       ],
     );
 
-    const result = await validateAndWriteStablecoinsCache({
+    const result = await publish({
       assets: [], db, syncStartSec, validationContext: "main",
     }, () => ({ status: "degraded", itemCount: 0, metadata: "blocked" }));
 
@@ -257,7 +281,6 @@ describe("validateAndWriteStablecoinsCache", () => {
 
   it("quarantines a post-enrichment schema-invalid row per asset and publishes the healthy cohort", async () => {
     const { db, sqlite } = fixtures.open();
-    const syncStartSec = 1_777_000_000;
     const publishable = (id: string, overrides: Partial<PeggedAsset> = {}) => makePeggedAsset({
       id, name: id, symbol: id.toUpperCase(), pegMechanism: "fiat-backed", price: 1, priceSource: "defillama",
       circulating: { peggedUSD: 1000 }, chainCirculating: {}, chains: [], ...overrides,
@@ -272,9 +295,9 @@ describe("validateAndWriteStablecoinsCache", () => {
     const invalid = publishable("negative-history", { circulatingPrevDay: { peggedUSD: -1 } });
     const assets = [...healthy, invalid];
 
-    const result = await validateAndWriteStablecoinsCache({
+    const result = await publish({
       assets, db, syncStartSec, validationContext: "main",
-    }, () => ({ metadata: "blocked" }));
+    });
 
     expect(result).toMatchObject({ written: true, quarantinedAssets: [expect.objectContaining({ id: "negative-history" })] });
     // Later stages (depeg, coverage) see only the published cohort.
@@ -287,15 +310,14 @@ describe("validateAndWriteStablecoinsCache", () => {
       Base: { current: 0, circulatingPrevDay: 0 },
     };
     expect(canonical.peggedAssets[0]?.chainCirculating).toEqual(expectedChains);
-    const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
+    const companion = await readCompanion(db);
     expect((JSON.parse(companion.body) as typeof canonical).peggedAssets[0]?.chainCirculating)
       .toEqual(expectedChains);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("stablecoins:invalid-last")).toHaveLength(1);
   });
   it("strips upstream frozen fields from non-registry assets before publishing", async () => {
-    const syncStartSec = 1_777_000_000;
     const db = mockD1([{ match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } }]);
-    const result = await validateAndWriteStablecoinsCache({
+    const result = await publish({
       assets: [makePeggedAsset({
         id: "upstream-controlled-active-coin", pegMechanism: "fiat-backed", price: 1, priceSource: "defillama",
         circulating: { peggedUSD: 1000 }, chainCirculating: {}, chains: [], frozen: true, frozenAt: "2026-04-27",

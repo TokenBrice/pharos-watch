@@ -214,7 +214,7 @@ describe("stablecoin intake admission", () => {
     expect(fx).toHaveBeenCalledOnce();
     expect(events).toEqual(["fx", "Loading DefiLlama stablecoin intake", "Loaded DefiLlama stablecoin intake"]);
     expect(supplemental.fetchSupplementalTrackedTokens).toHaveBeenCalledWith(
-      cgData, undefined, undefined, undefined, fxFallbackRates, db, expect.any(Map), undefined, undefined,
+      cgData, undefined, undefined, undefined, fxFallbackRates, db, expect.any(Map), undefined, undefined, 1_777_000_000, result.replayPriceCache,
     );
     expect(result.fxFallbackRates).toBe(fxFallbackRates);
     expect(result.validationReferences).toBe(validationReferences);
@@ -247,18 +247,19 @@ describe("stablecoin intake admission", () => {
   });
 
   it.each([
+    { label: "BUIDL native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "BUIDL skipped native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: null, expected: undefined, source: "onchain-supply-withheld", observedAt: undefined },
     { label: "positive primary beats positive supplemental", primary: 100, supplemental: 200, expected: 100, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats positive supplemental", primary: 0, supplemental: 200, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats zero supplemental", primary: 0, supplemental: 0, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
-    { label: "absent primary admits positive supplemental", primary: "absent", supplemental: 200, expected: 200, source: "coingecko-fallback", observedAt: 1_777_000_000 },
-    { label: "invalid primary admits positive supplemental", primary: -1, supplemental: 200, expected: 200, source: "coingecko-fallback", observedAt: 1_777_000_000 },
-    { label: "omitted primary admits positive supplemental", primary: "omitted", supplemental: 200, expected: 200, source: "coingecko-fallback", observedAt: 1_777_000_000 },
-    { label: "absent primary leaves supplemental unavailable", primary: "absent", supplemental: undefined, expected: undefined, source: "coingecko-fallback", observedAt: 1_777_000_000 },
-    { label: "invalid primary leaves supplemental unavailable", primary: -1, supplemental: undefined, expected: undefined, source: "coingecko-fallback", observedAt: 1_777_000_000 },
+    { label: "absent primary admits positive supplemental", primary: "absent", supplemental: 200, expected: 200 },
+    { label: "invalid primary admits positive supplemental", primary: -1, supplemental: 200, expected: 200 },
+    { label: "omitted primary admits positive supplemental", primary: "omitted", supplemental: 200, expected: 200 },
+    { label: "absent primary leaves supplemental unavailable", primary: "absent", supplemental: undefined, expected: undefined },
+    { label: "invalid primary leaves supplemental unavailable", primary: -1, supplemental: undefined, expected: undefined },
     { label: "omitted providers leave no asset", primary: "omitted", supplemental: null, expected: undefined, source: null, observedAt: null },
-  ])("$label with original supply provenance", async ({ primary, supplemental: supplementalSupply, expected, source, observedAt }) => {
+  ])("$label with original supply provenance", async ({ id = "intake-supply-fixture", primary, supplemental: supplementalSupply, expected, source = "coingecko-fallback", observedAt = source === "onchain-supply-withheld" ? undefined : 1_777_000_000 }) => {
     const { db } = fixtures.open();
-    const id = "intake-supply-fixture";
     const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
       id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
     }));
@@ -269,7 +270,7 @@ describe("stablecoin intake admission", () => {
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({
       goldTokens: [], silverTokens: [], fiatCgTokens: supplementalSupply === null ? [] : [makePeggedAsset({
         id, circulating: supplementalSupply === undefined ? {} : { peggedUSD: supplementalSupply },
-        supplySource: "coingecko-fallback", supplyObservedAt: 1_777_000_000,
+        supplySource: id === "buidl-blackrock" ? "onchain-total-supply" : "coingecko-fallback", supplyObservedAt: 1_777_000_000,
       })],
     });
     upstream({ peggedAssets: rows });

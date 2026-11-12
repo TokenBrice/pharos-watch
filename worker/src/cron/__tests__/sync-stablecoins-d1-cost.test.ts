@@ -15,10 +15,11 @@ vi.mock("../sync-stablecoins/publication", () => ({
 
 import { syncStablecoins } from "../sync-stablecoins";
 
+const replay = new Map();
 beforeEach(() => {
   vi.clearAllMocks();
   stages.intake.mockReset().mockResolvedValue({
-    kind: "main", canonicalDeduplication: { duplicateRows: 0, affectedIds: [] }, supplyChainGuard: {},
+    replayPriceCache: replay, kind: "main", canonicalDeduplication: { duplicateRows: 0, affectedIds: [] }, supplyChainGuard: {},
   });
   stages.pricing.mockReset().mockResolvedValue({ metadata: {}, priceCacheEntries: [], providerDiagnostics: [] });
   stages.publish.mockReset();
@@ -30,17 +31,19 @@ describe("syncStablecoins D1 cost metadata", () => {
     const rows = [{ id: "stablecoin-evidence" }];
     const db = mockD1([{ match: "SELECT stablecoin_evidence", rows }, { match: "UPDATE stablecoins_cache", rows: [] }]);
     const assertCost = observeMockD1Cost(db);
-    const published: CronResult = { status: "ok", itemCount: 1, metadata: JSON.stringify({ path: "main", outputPublishedAt: 123 }) };
+    const metadata = JSON.stringify({ path: "main", outputPublishedAt: 123 });
+    const published: CronResult = { status: "ok", itemCount: 1, metadata };
     stages.publish.mockImplementationOnce(async ({ db: trackedDb }: { db: D1Database }) => {
       expect((await trackedDb.prepare("SELECT stablecoin_evidence").all()).results).toBe(rows);
       await trackedDb.batch([trackedDb.prepare("UPDATE stablecoins_cache"), trackedDb.prepare("UPDATE stablecoins_cache")]);
       return published;
     });
     const result = await syncStablecoins(db);
+    expect(stages.pricing.mock.calls[0][0].replayPriceCache).toBe(replay);
     expect(result).toMatchObject({ status: published.status, itemCount: published.itemCount });
     expect(JSON.parse(result.metadata!)).toMatchObject(JSON.parse(published.metadata!));
     expect(assertCost(result)).toMatchObject({ queries: 3, bindingCalls: 2, batchCalls: 1 });
-    expect(published.metadata).toBe(JSON.stringify({ path: "main", outputPublishedAt: 123 }));
+    expect(published.metadata).toBe(metadata);
   });
 
   it.each(["intake", "fallback", "pricing"])("preserves %s early-return results and includes their SQL costs", async (path) => {

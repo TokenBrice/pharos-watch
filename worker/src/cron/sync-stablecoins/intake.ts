@@ -12,6 +12,7 @@ import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { OnchainPartitionSummary } from "@shared/types/status/cron";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
+import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
@@ -39,6 +40,7 @@ import { guardChainDropouts, loadChainDropoutState, type SupplyChainGuardResult 
 import {
   hydrateGeckoIdAliases,
   loadFreshFxRates,
+  loadReplayPriceCacheForTrustedContinuity,
   loadPreviousStablecoinsById,
   logTrackedCoverageRestore,
   mergeSupplementalLastKnownGood,
@@ -60,6 +62,7 @@ interface StablecoinsIntakeMainResult {
   validationReferences: PriceValidationReferences | undefined;
   previousAssetsById: Map<string, PeggedAsset>;
   previousCacheState: PreviousStablecoinsCacheState;
+  replayPriceCache: Map<string, PriceCacheEntry> | null;
   cgData: CoinGeckoMcapData;
   supplyGapReconciliation: SupplyGapReconciliationResult;
   supplyChainGuard: SupplyChainGuardResult;
@@ -264,6 +267,7 @@ export async function loadStablecoinsIntake(
     };
   }
 
+  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(input.db, true).catch(() => null);
   const supplementalTokensPromise = fetchSupplementalTrackedTokens(
     cgData,
     input.signal,
@@ -274,6 +278,8 @@ export async function loadStablecoinsIntake(
     previousAssetsById,
     input.dwellirNative,
     input.reportPartitionSummary,
+    input.syncStartSec,
+    replayPriceCache,
   );
 
   const [dlFetchResult, supplementalTokens] = await Promise.all([
@@ -474,6 +480,9 @@ export async function loadStablecoinsIntake(
   }
 
   const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
+  // BUIDL's reviewed native stock is primary even if DefiLlama relists it.
+  // A skipped/failed supplemental read follows preferred-native restore/withhold, never list supply.
+  assets = assets.filter((asset) => asset.id !== "buidl-blackrock");
   const supplementalResolution = mergeSupplementalLastKnownGood(
     supplementalAssets,
     previousAssetsById,
@@ -630,6 +639,7 @@ export async function loadStablecoinsIntake(
     validationReferences,
     previousAssetsById,
     previousCacheState,
+    replayPriceCache,
     cgData,
     supplyGapReconciliation,
     supplyChainGuard,

@@ -105,6 +105,7 @@ export async function syncStablecoins(
   const { previousActivePriceCoverage, previousMissingGenerationsById } =
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
   const pricingStage = await runStablecoinsPricingStage({
+    replayPriceCache: intake.replayPriceCache,
     db,
     assets,
     previousAssetsById,

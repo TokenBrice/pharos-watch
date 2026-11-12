@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
@@ -41,6 +42,7 @@ interface StablecoinsPricingStageOptions {
   db: D1Database;
   assets: PeggedAsset[];
   previousAssetsById: Map<string, PeggedAsset>;
+  replayPriceCache?: Map<string, PriceCacheEntry> | null;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
   syncStartSec: number;
   fxFallbackRates?: Record<string, number>;
@@ -55,7 +57,7 @@ export async function runStablecoinsPricingStage(
   options: StablecoinsPricingStageOptions,
 ) {
   const validationContexts = createValidationContextResolver();
-  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(options.db);
+  const replayPriceCache = options.replayPriceCache ?? await loadReplayPriceCacheForTrustedContinuity(options.db);
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(
     options.previousAssetsById,
     options.syncStartSec,

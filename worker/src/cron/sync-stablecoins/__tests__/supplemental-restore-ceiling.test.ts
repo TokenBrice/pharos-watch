@@ -36,6 +36,30 @@ function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">)
   } as PeggedAsset;
 }
 
+function metaFor(id: string) {
+  const meta = ACTIVE_STABLECOINS.find(entry => entry.id === id);
+  if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
+  return meta;
+}
+
+function merge(current: PeggedAsset, previous: PeggedAsset) {
+  return mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), NOW_SEC);
+}
+
+function track(previous: PeggedAsset) {
+  const result = restoreMissingTrackedAssets([], new Map([[previous.id, previous]]), NOW_SEC);
+  return { ...result, asset: result.assets.find(row => row.id === previous.id)! };
+}
+
+function restores(previous: PeggedAsset) {
+  return [merge(asset({ id: previous.id, symbol: previous.symbol }), previous).assets[0],
+    track(previous).asset];
+}
+
+function xaut(input: Partial<PeggedAsset>) {
+  return asset({ id: "xaut-tether", symbol: "XAUT", ...input });
+}
+
 function chainRow(current: number): Record<string, unknown> {
   return {
     current,
@@ -59,11 +83,32 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
-  it.each(["usg-tangent", "usyc-hashnote", "jtrsy-anemoy"].map((id) => {
-    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
-    if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
-    return meta;
-  }))(
+  it("bootstraps BUIDL before native carry", () => {
+    const id = "buidl-blackrock";
+    const native = asset({ id, symbol: "BUIDL", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC,
+      circulating: { peggedUSD: 900 }, chainCirculating: Object.fromEntries(
+        metaFor(id).contracts!.map(c => [CHAIN_META[c.chain].name, { current: 100 }])) });
+    const legacy = asset({ ...native, supplySource: "defillama", supplyRestored: true, supplyObservedAt: NOW_SEC - 60,
+      circulating: { peggedUSD: 800 }, chainCirculating: { ...native.chainCirculating, Tempo: { current: null } },
+      supplyChainGuard: { reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, chains: [{
+        chainLabel: "Tempo", listCurrentUsd: null, baselineUsd: 100, baselineObservedAt: NOW_SEC - 60,
+        baselineSource: "seed", resolution: "unavailable",
+      }] } });
+    expect(restorePreferredNativeSupply(native, { ...legacy, supplyRestored: undefined }, NOW_SEC).circulating).toEqual({});
+    let previous = legacy;
+    for (const [success, supplySource, supplyObservedAt] of [
+      [false, "defillama", NOW_SEC - 60], [true, "onchain-total-supply", NOW_SEC], [false, "onchain-total-supply", NOW_SEC],
+    ] as const) {
+      previous = success ? merge(native, previous).assets[0]
+        : restorePreferredNativeSupply(asset({ id, symbol: "BUIDL" }), previous, NOW_SEC + 1);
+      const packet = supplySource === "defillama" ? legacy : native;
+      expect(previous).toMatchObject({ supplySource, supplyObservedAt, circulating: packet.circulating });
+      expect(previous.chainCirculating).toEqual(packet.chainCirculating);
+      expect(previous.supplyRestored).toBe(success ? undefined : true);
+      expect(previous.supplyChainGuard).toEqual(packet.supplyChainGuard);
+    }
+  });
+  it.each(["usg-tangent", "usyc-hashnote", "jtrsy-anemoy"].map(metaFor))(
     "restores only bounded native supply for preferred $id", (meta) => {
       const labels = [...new Set(meta.contracts!.map((contract) => CHAIN_META[contract.chain].name))];
       for (const [source, age, admitted] of [
@@ -76,12 +121,9 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
           circulating: { peggedUSD: labels.length * 100 },
           chainCirculating: Object.fromEntries(labels.map((label) => [label, { current: 100 }])),
         });
-        const previousById = new Map([[meta.id, previous]]);
-        const supplemental = mergeSupplementalLastKnownGood(
-          [asset({ id: meta.id, symbol: meta.symbol })], previousById, new Set(), NOW_SEC,
-        );
-        const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC);
-        const trackedAsset = tracked.assets.find((row) => row.id === meta.id)!;
+        const supplemental = merge(asset({ id: meta.id, symbol: meta.symbol }), previous);
+        const tracked = track(previous);
+        const trackedAsset = tracked.asset;
         expect(supplemental.restoredCount).toBe(admitted ? 1 : 0);
         expect(tracked.restoredIds.includes(meta.id)).toBe(admitted);
         if (admitted) {
@@ -117,11 +159,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
     for (const age of [60, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC]) {
       const previous = previousFor(age);
-      const previousById = new Map([[previous.id, previous]]);
-      const supplemental = mergeSupplementalLastKnownGood(
-        [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
-      ).assets[0];
-      const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === previous.id)!;
+      const [supplemental, tracked] = restores(previous);
       const restored = restorePreferredNativeSupply(
         asset({ id: previous.id, symbol: previous.symbol, supplySource: "onchain-supply-withheld" }),
         previous,
@@ -160,11 +198,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
         basis: "onchain-share", observedAt: NOW_SEC - 60, onchainUsd: 300, ratio: 1, admission: "entered",
       } : undefined;
       expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC, true)).toBeNull();
-      const previousById = new Map([[id, previous]]);
-      const restored = [
-        mergeSupplementalLastKnownGood([asset({ id, symbol: id })], previousById, new Set(), NOW_SEC).assets[0],
-        restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === id)!,
-      ];
+      const restored = restores(previous);
       for (const row of restored) {
         expect(row.circulating).toEqual(previous.circulating);
         expect(row.supplyObservedAt).toBe(previous.supplyObservedAt);
@@ -175,15 +209,15 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     previous.supplySource = "onchain-total-supply";
     previous.chainPartition = undefined;
     expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)).toBeNull();
-    const restoredStock = restoreMissingTrackedAssets([], new Map([[id, previous]]), NOW_SEC);
-    const restoredAsset = restoredStock.assets.find((row) => row.id === id);
+    const restoredStock = track(previous);
+    const restoredAsset = restoredStock.asset;
     if (id === "ustb-superstate") {
       expect(restoredAsset?.chainCirculating).toEqual(previous.chainCirculating);
       expect(restoredAsset?.supplySource).toBe("onchain-total-supply");
     } else {
       expect(restoredAsset).toBeUndefined();
       expect(restoredStock.droppedIds).toContain(id);
-      expect(mergeSupplementalLastKnownGood([asset({ id, symbol: id })], new Map([[id, previous]]), new Set(), NOW_SEC).restoredCount).toBe(0);
+      expect(merge(asset({ id, symbol: id }), previous).restoredCount).toBe(0);
     }
   });
 
@@ -208,11 +242,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       chainPartition: { basis: "onchain-share", observedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
         onchainUsd: 100_000_000, ratio: 1, admission: "carried" },
     });
-    const previousById = new Map([[previous.id, previous]]);
-    const supplemental = mergeSupplementalLastKnownGood(
-      [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
-    ).assets[0];
-    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === previous.id)!;
+    const [supplemental, missing] = restores(previous);
     for (const restored of [supplemental, missing]) {
       expect(restored.circulating).toEqual(previous.circulating);
       expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
@@ -234,11 +264,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       priceObservedAt: NOW_SEC - age, priceObservedAtMode: "upstream",
       supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
     });
-    const previousById = new Map([[id, previous]]);
-    const supplemental = mergeSupplementalLastKnownGood(
-      [asset({ id, symbol: id })], previousById, new Set(), NOW_SEC,
-    ).assets[0];
-    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === id)!;
+    const [supplemental, missing] = restores(previous);
     for (const restored of [supplemental, missing]) {
       expect(restored.circulating).toEqual(previous.circulating);
       expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
@@ -261,8 +287,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       id: "usdc-circle", symbol: "USDC", price: 1, priceSource: source, priceObservedAt,
       supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
     });
-    const restored = restoreMissingTrackedAssets([], new Map([["usdc-circle", previous]]), NOW_SEC)
-      .assets.find((row) => row.id === previous.id)!;
+    const restored = track(previous).asset;
     expect(restored.circulating).toEqual(previous.circulating);
     expect(restored.supplyRestored).toBe(true);
     expect(restored.price).toBeNull();
@@ -314,12 +339,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       supplyObservedAt: NOW_SEC - 900,
     });
 
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["syrupusdt-maple", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
@@ -376,9 +396,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
       ...patch,
     });
-    const result = mergeSupplementalLastKnownGood(
-      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
-    );
+    const result = merge(current, previous);
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
     expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.expired ? [current.id] : [])
@@ -403,9 +421,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
         "Robinhood Chain": chainRow(0), Tempo: chainRow(0),
       },
     });
-    const result = mergeSupplementalLastKnownGood(
-      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
-    );
+    const result = merge(current, previous);
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
     expect(result.assets).toEqual([current]);
@@ -413,20 +429,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it("restores last-known-good supply observed inside the ceiling", () => {
-    const current = asset({ id: "xaut-tether", symbol: "XAUT", circulating: {} });
-    const previous = asset({
-      id: "xaut-tether",
-      symbol: "XAUT",
-      circulating: { peggedUSD: 500_000_000 },
+    const current = xaut({ circulating: {} });
+    const previous = xaut({ circulating: { peggedUSD: 500_000_000 },
       supplyObservedAt: NOW_SEC - 86_400,
     });
 
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["xaut-tether", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(1);
     expect(result.expiredRestoreIds).toEqual([]);
@@ -438,20 +446,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it("refuses to restore supply older than the 7-day ceiling", () => {
-    const current = asset({ id: "xaut-tether", symbol: "XAUT", circulating: {} });
-    const previous = asset({
-      id: "xaut-tether",
-      symbol: "XAUT",
-      circulating: { peggedUSD: 500_000_000 },
+    const current = xaut({ circulating: {} });
+    const previous = xaut({ circulating: { peggedUSD: 500_000_000 },
       supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
     });
 
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["xaut-tether", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual(["xaut-tether"]);
@@ -460,20 +460,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it.each([-1, NOW_SEC - 0.5])("refuses invalid supply observation timestamp %s", (supplyObservedAt) => {
-    const current = asset({ id: "xaut-tether", symbol: "XAUT", circulating: {} });
-    const previous = asset({
-      id: "xaut-tether",
-      symbol: "XAUT",
-      circulating: { peggedUSD: 500_000_000 },
+    const current = xaut({ circulating: {} });
+    const previous = xaut({ circulating: { peggedUSD: 500_000_000 },
       supplyObservedAt,
     });
 
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["xaut-tether", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual(["xaut-tether"]);
@@ -484,19 +476,17 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     ["prior positive", { peggedUSD: 100 }],
     ["prior zero", { peggedUSD: 0 }],
   ])("keeps an admitted current zero packet over a %s", (_label, previousCirculating) => {
-    const current = asset({
-      id: "xaut-tether", symbol: "XAUT", price: 1, priceSource: "coingecko",
+    const current = xaut({ price: 1, priceSource: "coingecko",
       circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 50 },
       chainCirculating: { Ethereum: chainRow(0) }, chains: ["Ethereum"],
       supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 30,
     });
-    const previous = asset({
-      id: "xaut-tether", symbol: "XAUT", circulating: previousCirculating,
+    const previous = xaut({ circulating: previousCirculating,
       chainCirculating: { Ethereum: chainRow(100), Tron: chainRow(0) }, chains: ["Ethereum", "Tron"],
       supplySource: "coingecko-fallback", supplyObservedAt: NOW_SEC - 86_400,
     });
 
-    const result = mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), NOW_SEC);
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(0);
     expect(result.expiredRestoreIds).toEqual([]);
@@ -518,19 +508,17 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     ["nonfinite", { peggedUSD: Number.NaN }],
     ["partially invalid", { peggedUSD: 0, peggedEUR: -1 }],
   ])("still restores a prior positive over an %s current bucket set", (_label, circulating) => {
-    const current = asset({ id: "xaut-tether", symbol: "XAUT", circulating: circulating as PeggedAsset["circulating"] });
-    const previous = asset({
-      id: "xaut-tether", symbol: "XAUT", circulating: { peggedUSD: 100 }, supplyObservedAt: NOW_SEC - 60,
+    const current = xaut({ circulating: circulating as PeggedAsset["circulating"] });
+    const previous = xaut({ circulating: { peggedUSD: 100 }, supplyObservedAt: NOW_SEC - 60,
     });
-    const result = mergeSupplementalLastKnownGood([current], new Map([[previous.id, previous]]), new Set(), NOW_SEC);
+    const result = merge(current, previous);
     expect(result.restoredCount).toBe(1);
     expect(result.assets[0]).toMatchObject({ circulating: { peggedUSD: 100 }, supplyRestored: true });
   });
 
   it("keeps hold, primary-duplicate and expired-predecessor precedence around a current zero", () => {
     const zero = (id: string) => asset({ id, symbol: id, circulating: { peggedUSD: 0 }, supplyObservedAt: NOW_SEC - 30 });
-    const expiredPrevious = asset({
-      id: "xaut-tether", symbol: "XAUT", circulating: { peggedUSD: 100 },
+    const expiredPrevious = xaut({ circulating: { peggedUSD: 100 },
       supplyObservedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
     });
     const result = mergeSupplementalLastKnownGood(
@@ -556,12 +544,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       circulating: { peggedUSD: 900_000_000 },
     });
 
-    const result = mergeSupplementalLastKnownGood(
-      [current],
-      new Map([["paxg-paxos", previous]]),
-      new Set(),
-      NOW_SEC,
-    );
+    const result = merge(current, previous);
 
     expect(result.restoredCount).toBe(0);
     expect(result.unclockedRestoreIds).toEqual(["paxg-paxos"]);
@@ -586,9 +569,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
     const { previousAssetsById } = await loadPreviousStablecoinsById(db);
 
-    // The payload clock is the observation clock of a row this publication read…
     expect(previousAssetsById.get("usdt-tether")?.supplyObservedAt).toBe(NOW_SEC);
-    // …but never of a row it merely republished.
     expect(previousAssetsById.get("usdc-circle")?.supplyObservedAt).toBeUndefined();
     const restored = restoreMissingTrackedAssets([], previousAssetsById, NOW_SEC);
     expect(restored.restoredIds).not.toContain("usdc-circle");
