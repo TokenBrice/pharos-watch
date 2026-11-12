@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DEWSRadarPanel } from "@/components/dews/dews-summary";
 import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -25,6 +25,8 @@ interface DepegOutlookHeroProps {
   pendingCount: number | null;
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
   dewsAlertCount: number | null;
+  /** First reads still needed by each figure or rail group. */
+  pendingSources?: { peg: boolean; pegCatalog?: boolean; dews: boolean; radar?: boolean; events: boolean; resolver: boolean; review: boolean };
   /** Whole-book recovery posture from DDR; omitted when the flag is off. */
   book?: ResolverBookSummary | null;
   /** DDR calibration lineage, shown as the posture's provenance. */
@@ -32,15 +34,15 @@ interface DepegOutlookHeroProps {
   /** DDRR headline accuracy; omitted when the reviewer flag is off. */
   review?: DdrrSummary | null;
   logos?: Record<string, string>;
-  /** The DEWS alert queue, composed at the foot of the command rail. */
-  alertQueue?: ReactNode;
+  /** Compose the queue with the first-show reservation decision. */
+  alertQueue?: (reserveSpace: boolean) => ReactNode;
   /** Conditional reliability caveats, shown as a quiet band under the hero. */
   footer?: ReactNode;
 }
 
-function StatCell({ label, value, detail }: { label: ReactNode; value: string; detail: string }) {
+function StatCell({ label, value, detail, reserve }: { label: ReactNode; value: string; detail: string; reserve?: boolean }) {
   return (
-    <div>
+    <div className={reserve ? "min-h-20" : undefined}>
       <p className="pharos-label">{label}</p>
       <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
         <span className="pharos-numeric text-lg font-semibold leading-tight text-foreground">{value}</span>
@@ -77,6 +79,7 @@ export function DepegOutlookHero({
   catalogCount,
   pendingCount,
   dewsAlertCount,
+  pendingSources,
   book,
   lineage,
   review,
@@ -84,12 +87,18 @@ export function DepegOutlookHero({
   alertQueue,
   footer,
 }: DepegOutlookHeroProps) {
+  // This component mounts at first show; later results cannot enroll or remove a reservation.
+  const [reservedSources] = useState(() => ({ ...pendingSources }));
+  const reserveRadar = reservedSources?.radar ?? reservedSources?.dews ?? false;
+  const reserveQueue = reserveRadar || !!reservedSources?.peg;
+  const queue = alertQueue?.(reserveQueue);
   const activeCount = stats?.activeDepegCount ?? 0;
   const worst = stats?.worstCurrent;
   const tierGroups = book?.tierGroups ?? [];
   const headline = review?.headline;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
   const accuracyLines = review ? formatPromotedAccuracyLines(describePromotedAccuracy(review)) : null;
+  const pegMissing = pendingSources?.peg ? "Loading peg summary…" : "peg summary unavailable";
 
   return (
     <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
@@ -98,11 +107,11 @@ export function DepegOutlookHero({
           silently collapses this hero to a single column. */}
       <div className="grid gap-x-8 gap-y-6 p-5 sm:p-6 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-1">
-          <div>
+          <div className={reservedSources?.peg ? "min-h-32 lg:min-h-36" : undefined}>
             <p className="pharos-label">
               <MethodologyLabel topic="activeDepegs">Active depegs</MethodologyLabel>
             </p>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <div className={cn("mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1", reservedSources?.peg && "min-h-16 content-start lg:min-h-20")}>
               <RailHeroFigureTransition rail="depeg">
                 <span className={HERO_KPI_VALUE_CLASS}>
                   {stats ? activeCount : "—"}
@@ -113,7 +122,7 @@ export function DepegOutlookHero({
                     now: recovery may be observed but not yet confirmed. Without a
                     peg summary the honest reading is that we cannot say. */}
                 {!stats
-                  ? "peg summary unavailable"
+                  ? pegMissing
                   : activeCount === 1
                     ? "coin with an open confirmed incident"
                     : "coins with open confirmed incidents"}
@@ -143,66 +152,85 @@ export function DepegOutlookHero({
 
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 border-t border-border/60 pt-3">
             <StatCell
+              reserve={reservedSources?.events}
               label="Pending"
               value={pendingCount == null ? "—" : String(pendingCount)}
-              detail={pendingCount == null ? "event data unavailable" : pendingCount === 1 ? "crossing" : "crossings"}
+              detail={pendingCount == null ? pendingSources?.events ? "Loading event data…" : "event data unavailable" : pendingCount === 1 ? "crossing" : "crossings"}
             />
-            <StatCell label="DEWS alert+" value={dewsAlertCount == null ? "—" : String(dewsAlertCount)} detail={dewsAlertCount == null ? "DEWS or peg catalog unavailable" : "of the peg catalog"} />
+            <StatCell reserve={reservedSources?.dews || reservedSources?.pegCatalog} label="DEWS alert+" value={dewsAlertCount == null ? "—" : String(dewsAlertCount)} detail={dewsAlertCount == null ? pendingSources?.dews ? "Loading DEWS…" : pendingSources?.pegCatalog ? "Loading peg catalog…" : "DEWS or peg catalog unavailable" : "of the peg catalog"} />
             <StatCell
+              reserve={reservedSources?.peg}
               label={<MethodologyLabel topic="coinsAtPeg">Holding peg</MethodologyLabel>}
               value={stats ? `${stats.coinsAtPeg} / ${stats.totalTracked}` : "—"}
-              detail={stats ? "live peg status" : "peg summary unavailable"}
+              detail={stats ? "live peg status" : pegMissing}
             />
             <StatCell
+              reserve={reservedSources?.peg}
               label="Median deviation"
               value={stats?.medianDeviationBps == null ? "—" : `${stats.medianDeviationBps} bps`}
-              detail={!stats ? "peg summary unavailable" : stats.medianDeviationBps === null ? "live peg status unavailable" : "live peg status"}
+              detail={!stats ? pegMissing : stats.medianDeviationBps === null ? "live peg status unavailable" : "live peg status"}
             />
           </div>
 
-          {book && book.total > 0 ? (
-            <RailGroup label="Recovery outlook · DDR">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                {tierGroups.map(({ tier, vocabulary, count }) => {
-                  const meta = getTierMeta(tier, vocabulary);
-                  return (
-                    <span key={`${tier}:${vocabulary}`} className="inline-flex items-baseline gap-1 text-xs">
-                      <span className={cn("pharos-numeric text-sm font-semibold", meta.accent)}>{count}</span>
-                      <span className={meta.accent}>{meta.label.toLowerCase()}</span>
-                    </span>
-                  );
-                })}
-              </div>
-              <p className="pharos-meta mt-1">
-                {book.pastPeakCount > 0 ? (
-                  <span className="text-state-warn">
-                    {book.pastPeakCount} at a new worst ·{" "}
-                  </span>
-                ) : null}
-                {lineage
-                  ? `calibrated on ${lineage.incidentCount.toLocaleString()} historical incidents`
-                  : `${book.total} open ${book.total === 1 ? "forecast" : "forecasts"}`}
-              </p>
-            </RailGroup>
+          {reservedSources?.resolver || (book && book.total > 0) || pendingSources?.resolver ? (
+            <div className={reservedSources?.resolver ? "min-h-32" : undefined}>
+              {book && book.total > 0 ? (
+                <RailGroup label="Recovery outlook · DDR">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    {tierGroups.map(({ tier, vocabulary, count }) => {
+                      const meta = getTierMeta(tier, vocabulary);
+                      return (
+                        <span key={`${tier}:${vocabulary}`} className="inline-flex items-baseline gap-1 text-xs">
+                          <span className={cn("pharos-numeric text-sm font-semibold", meta.accent)}>{count}</span>
+                          <span className={meta.accent}>{meta.label.toLowerCase()}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <p className="pharos-meta mt-1">
+                    {book.pastPeakCount > 0 ? (
+                      <span className="text-state-warn">
+                        {book.pastPeakCount} at a new worst ·{" "}
+                      </span>
+                    ) : null}
+                    {lineage
+                      ? `calibrated on ${lineage.incidentCount.toLocaleString()} historical incidents`
+                      : `${book.total} open ${book.total === 1 ? "forecast" : "forecasts"}`}
+                  </p>
+                </RailGroup>
+              ) : pendingSources?.resolver ? (
+                <RailGroup label="Recovery outlook · DDR">
+                  <p className="pharos-meta">Loading DDR…</p>
+                </RailGroup>
+              ) : null}
+            </div>
           ) : null}
 
-          {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
-            <RailGroup label="Forecast track record · DDRR">
-              <p className="flex flex-wrap items-baseline gap-x-2">
-                <span className="pharos-numeric text-lg font-semibold text-foreground">
-                  {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
-                </span>
-                <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
-              </p>
-              <p className="pharos-meta mt-1">
-                {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
-                <a href="#forecast-grading" className="pharos-prose-link">
-                  see the grading
-                </a>
-              </p>
-            </RailGroup>
+          {reservedSources?.review || (headline && headline.recoveryLikelihoodScoredCount > 0) || pendingSources?.review ? (
+            <div className={reservedSources?.review ? "min-h-28" : undefined}>
+              {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
+                <RailGroup label="Forecast track record · DDRR">
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="pharos-numeric text-lg font-semibold text-foreground">
+                      {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
+                  </p>
+                  <p className="pharos-meta mt-1">
+                    {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
+                    <a href="#forecast-grading" className="pharos-prose-link">
+                      see the grading
+                    </a>
+                  </p>
+                </RailGroup>
+              ) : pendingSources?.review ? (
+                <RailGroup label="Forecast track record · DDRR">
+                  <p className="pharos-meta">Loading DDRR…</p>
+                </RailGroup>
+              ) : null}
+            </div>
           ) : null}
-          {alertQueue ? <div className="border-t border-border/60 pt-3">{alertQueue}</div> : null}
+          {queue || reserveQueue ? <div className={cn("border-t border-border/60 pt-3", reserveQueue && "min-h-84 sm:min-h-76")}>{queue}</div> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -215,6 +243,8 @@ export function DepegOutlookHero({
             logos={logos}
             activeDepegIds={activeDepegIds}
             maxHeight={520}
+            reserveSpace={reserveRadar}
+            reserveLegend={reserveQueue}
             className="flex-1"
           />
         </div>

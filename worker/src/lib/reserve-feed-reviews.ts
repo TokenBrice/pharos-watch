@@ -10,44 +10,16 @@ import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-sn
 /** Dated operational acknowledgements: no snapshot, scoring, or freshness authority. */
 export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
   {
-    stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "unknown",
-    warningCodes: [], errorPrefix: "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation",
-    owner: "ops", reason: "Issuer GET rechecked 2026-11-07T19:43:38Z: exposure_split_ts remains 2026-11-03T13:00:10Z. November 1-4 timeline rows repeat 1793490451779 (October 31); the nearest non-live bracket is now November 5 at 1793922368335, still 211,558 seconds (2.45 days) after the split and outside the unchanged 24-hour window. The November 7 row repeats the live envelope clock 1794079871779 and cannot date the split. Its 22 leaves total $50,183,467.12 versus current total_reserves $48,206,074.05 (+4.10%); timeline repair alone does not establish the unchanged 1% reconciliation. Latest production attempt still reports this exact error/category with no warnings. Renew only that stale-timeline finding for seven days; preserve original clocks, quarantine and scoring refusal. Different errors, warnings or categories remain unacknowledged.",
-    sources: [{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-07" }],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
-  },
-  {
     stablecoinId: "nwisdom-nest", adapterKey: "nest-vault-positions", failureCategory: null,
     warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1793302678,
-    owner: "ops", reason: "Issuer positions, price and last-price-update GETs rechecked 2026-11-07: latest accountant updatedAt remains 1793302678 (2026-10-29T19:37:58Z), about nine days old. Settled positions remain $15,749.82659297394, including $15,707.79 unidentified nUSDR (99.7331%); reported NAV is $15,749.819224982213. Renew only the exact stalled clock and stale-source-data warning for seven days, not nUSDR identity or fresh backing. Preserve original clocks, quarantine and scoring refusal; clock advancement or a different warning/cause requires reassessment.",
+    owner: "ops", reason: "Issuer positions, price and last-price-update GETs rechecked 2026-11-12T19:31Z: latest accountant updatedAt remains 1793302678 (2026-10-29T19:37:58Z), about 14 days old. Settled positions total $14,463.39090297394, including $14,407.79 unidentified nUSDR (99.6156%); reported NAV is $14,463.384577405013. The 2026-11-12T19:28Z production status still acknowledges the same null-category, null-error stale-source-data finding and source clock. Renew only the exact stalled clock and stale-source-data warning for seven days, not nUSDR identity or fresh backing. Preserve original clocks, quarantine and scoring refusal; clock advancement or a different warning/cause requires reassessment.",
     sources: [
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions", evidenceDate: "2026-11-07" },
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update", evidenceDate: "2026-11-07" },
-      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price", evidenceDate: "2026-11-07" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions", evidenceDate: "2026-11-12" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update", evidenceDate: "2026-11-12" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price", evidenceDate: "2026-11-12" },
     ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
-  },
-  {
-    stablecoinId: "zsd-zephyr-protocol", adapterKey: "zephyr-scanner", failureCategory: null,
-    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1792250105,
-    owner: "ops", reason: "Issuer reservesnapshots GET rechecked 2026-11-07 still returns height 887405, captured_at 2026-10-17T15:17:42.772Z and pricing timestamp 1792250105 (2026-10-17T15:15:05Z), about 21 days old. Production cohort retains the same stalled clock and stale-source-data warning. Renew only that exact scanner/clock and warning set for seven days; no timestamp-free livestats substitution or freshness/scoring exception. D6 retirement remains 2026-11-16 if still frozen; this review expires first and cannot authorize early retirement.",
-    sources: [
-      { url: "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc", evidenceDate: "2026-11-07" },
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
-  },
-  {
-    stablecoinId: "zys-zephyr-protocol", adapterKey: "zephyr-scanner", failureCategory: null,
-    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1792250105,
-    owner: "ops", reason: "Issuer reservesnapshots GET rechecked 2026-11-07 still returns underlying ZSD reserve height 887405, captured_at 2026-10-17T15:17:42.772Z and pricing timestamp 1792250105 (2026-10-17T15:15:05Z), about 21 days old. Production cohort retains that stalled clock and stale-source-data warning. Renew only the frozen underlying scanner/clock and exact warning set for seven days; wrapper NAV cannot establish fresh underlying backing. Preserve original clocks, quarantine and scoring refusal. D6 retirement remains 2026-11-16 if still frozen; this review expires first and cannot authorize early retirement.",
-    sources: [
-      { url: "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc", evidenceDate: "2026-11-07" },
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 12, 19, 31) / 1000,
+    expiresAt: Date.UTC(2026, 10, 19, 19, 31) / 1000,
   },
   {
     stablecoinId: "m-m0", adapterKey: "m0", failureCategory: null,
@@ -57,16 +29,7 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
     reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
     expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
   },
-  {
-    stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "upstream-http",
-    warningCodes: [], errorPrefix: null, errorClass: "http-403",
-    owner: "ops", reason: "Issuer historical-portfolio GET rechecked 2026-11-07T19:43:37Z for the latest production checkpoint query token=mTBILL&timestamp=2026-11-06T12%3A00 still returns HTTP 403 from Cloudflare (CF-RAY a56ed3f16b01e292-BEG; two-byte JSON body SHA256 44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a). Latest production attempt reports upstream-http/source-egress-blocked for the same endpoint with no warnings; 40 seven-day attempts are the same HTTP-403 failure. Last success was October 24, so the outage remains below the 30-day retirement boundary. Renew only this stable HTTP-403 class, adapter, endpoint and empty warning set for seven days, allowing the checkpoint query to vary. Other causes/statuses/warnings remain unacknowledged; preserve quarantine, original clocks and scoring refusal. An issuer-approved reachable historical source requires separate evidence and allowlist review.",
-    sources: [
-      { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-06T12%3A00", evidenceDate: "2026-11-07" },
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 46, 52) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 19, 46, 52) / 1000,
-  },
+
 ];
 
 export function resolveReserveFeedReviews(
@@ -176,10 +139,7 @@ export async function matchReserveFeedReview(
   }
   if (review.errorClass != null) {
     // Only the single primary failure may inherit a class; mixed fallback causes remain unreviewed.
-    const message = review.adapterKey === "midas-mtbill"
-      ? failure.lastError?.replace("primary:onchain-evm: midas-mtbill:source-egress-blocked: ", "primary:onchain-evm: ")
-      : failure.lastError;
-    const http = /^primary:(http-json|http-html|onchain-evm): HTTP ([45]\d{2}) for (https:\/\/\S+)$/.exec(message ?? "");
+    const http = /^primary:(http-json|http-html|onchain-evm): HTTP ([45]\d{2}) for (https:\/\/\S+)$/.exec(failure.lastError ?? "");
     if (!config || !http || http[1] !== config.inputs.primary.kind || `http-${http[2]}` !== review.errorClass) return null;
     const endpoint = "url" in config.inputs.primary ? config.inputs.primary.url : config.params?.historicalSourceUrl;
     if (typeof endpoint !== "string") return null;

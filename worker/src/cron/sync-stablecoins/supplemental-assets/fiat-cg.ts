@@ -1,3 +1,4 @@
+import type { PriceCacheEntry } from "../../../lib/price-cache";
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { REVIEWED_ONCHAIN_SUPPLY_PLANS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
@@ -12,10 +13,12 @@ import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats } from "../zephyr-zsd";
 import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
-import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
-import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
+import { buildPriceReasonablenessOptions, buildPriceValidationContext, isReasonablePrice } from "../../../lib/price-validation";
+import { validatePublishedAssetPrice } from "../../../lib/price-publish-policy";
+import { buildPreviousTrustedPriceLookup } from "../pricing";
+import { validateCompositePricingSourceFreshness, validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
-import { restoreCuratedAggregateChainPartition, restorePreferredNativeSupply, reviewedOnchainSupplyHoldFields } from "../shared";
+import { loadReplayPriceCacheForTrustedContinuity, restoreCuratedAggregateChainPartition, restorePreferredNativeSupply, reviewedOnchainSupplyHoldFields } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -29,7 +32,8 @@ import {
   type CoinGeckoMcapData,
 } from "./shared";
 
-export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
+// BUIDL retains DefiLlama detail/history identity, but reviewed native stock owns live supply.
+export const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko" || stablecoin.id === "buidl-blackrock");
 const FIAT_CG_TOKEN_CONCURRENCY = 2;
 // Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
 export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
@@ -82,6 +86,8 @@ export async function fetchFiatCoinGeckoTokens(
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
   dwellirNative?: DwellirNativeCapability,
   reportPartitionSummary?: (summary: OnchainPartitionSummary) => void,
+  syncStartSec?: number,
+  replayPriceCache?: Map<string, PriceCacheEntry> | null,
 ): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
   const summary: OnchainPartitionSummary = {
@@ -93,6 +99,11 @@ export async function fetchFiatCoinGeckoTokens(
     return [];
   }
   const runNowSec = Math.floor(Date.now() / 1000);
+  const replaySnapshot = replayPriceCache === undefined && db && FIAT_CG_METAS.some(meta => meta.id === "buidl-blackrock")
+    ? await loadReplayPriceCacheForTrustedContinuity(db, true).catch(() => null) : replayPriceCache;
+  const previousTrustedPrices = buildPreviousTrustedPriceLookup(new Map(previousAssetsById), syncStartSec ?? runNowSec,
+    replaySnapshot ?? undefined);
+  throwIfAborted(signal);
   const navParentAssetsById = buildNavParentAssetsById(cgData, previousAssetsById, fxFallbackRates, runNowSec);
   let partitionStage: { timeout: ReturnType<typeof createTimeoutSignal>; deadlineAtMs: number } | undefined;
   let partitionCandidateCount = 0;
@@ -197,6 +208,24 @@ export async function fetchFiatCoinGeckoTokens(
         // plain USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
         // NAV/yield-bearing assets need an observed market price; do not par-value them or use an FX reference.
         const navLikeAsset = meta.flags.navToken || meta.flags.yieldBearing;
+        const priceConfidence: PeggedAsset["priceConfidence"] = priceResolution
+          ? priceResolution.source === "coingecko-low-volume"
+            ? "fallback"
+            : "single-source"
+          : null;
+        const priceQuote = { priceResolution, priceConfidence };
+        if (meta.id === "buidl-blackrock") {
+          const candidate = buildSupplementalAsset({
+            meta, ...priceQuote, nowSec, mcap: null, supplySource: "onchain-supply-withheld",
+          });
+          if (replaySnapshot === null || !validateCompositePricingSourceFreshness({
+            source: candidate.priceSource || "defillama", observedAt: candidate.priceObservedAt ?? candidate.priceUpdatedAt,
+            observedAtMode: candidate.priceObservedAtMode, nowSec: syncStartSec ?? runNowSec,
+          }).accepted || !validatePublishedAssetPrice({
+            asset: candidate, validationContext: buildPriceValidationContext({ stablecoinId: meta.id }),
+            previousTrustedPrice: previousTrustedPrices.get(meta.id),
+          }).accepted) return restorePreferredNativeSupply(candidate, previousAssetsById?.get(meta.id), nowSec);
+        }
         const usdPegDefault = !navLikeAsset && meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
         // NAV assets that lost every market price source (e.g. a CoinGecko
         // delisting) fall back to the authoritative protocol-redeem NAV route
@@ -308,7 +337,7 @@ export async function fetchFiatCoinGeckoTokens(
 
         if (preferOnChainMcap && !mcap) {
           return restorePreferredNativeSupply(buildSupplementalAsset({
-            meta, priceResolution, nowSec, mcap: null, supplySource: "onchain-supply-withheld",
+            meta, ...priceQuote, nowSec, mcap: null, supplySource: "onchain-supply-withheld",
           }), previousAssetsById?.get(meta.id), nowSec);
         }
 
@@ -327,15 +356,9 @@ export async function fetchFiatCoinGeckoTokens(
           return null;
         }
 
-        const priceConfidence: PeggedAsset["priceConfidence"] = priceResolution
-          ? priceResolution.source === "coingecko-low-volume"
-            ? "fallback"
-            : "single-source"
-          : null;
         const asset = buildSupplementalAsset({
           meta,
-          priceResolution,
-          priceConfidence,
+          ...priceQuote,
           nowSec,
           mcap,
           supplySource,

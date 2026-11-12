@@ -196,6 +196,21 @@ function classifyCcip(rows: MintBurnBridgeClassifiableRow[], logs: Log[], detect
   }
 }
 
+function classifyNativeGovernor(rows: MintBurnBridgeClassifiableRow[], logs: Log[], detection: MintBurnCcipBridgeDetectionConfig, used: Set<Log>): void {
+  if (!detection.nativeEvents || !detection.externalMinterAddress) return;
+  const governor = detection.externalMinterAddress.toLowerCase(), holder = addressWord(governor);
+  for (const event of logs) {
+    const burn = isEvent(event, governor, topic(detection.nativeEvents.burn), 3, 1);
+    if ((!burn && !isEvent(event, governor, topic(detection.nativeEvents.mint), 3, 1))
+      || !address(event.topics[1]) || !address(event.topics[2])) continue;
+    const transfer = matchTransfer(logs, used, detection.tokenAddress.toLowerCase(), event,
+      burn ? holder : ZERO, burn ? ZERO : holder, event.data);
+    if (!transfer) continue;
+    used.add(transfer);
+    for (const row of transferRows(rows, transfer)) setDefaultClassification(row);
+  }
+}
+
 export function classifyLayerZeroOft(rows: MintBurnBridgeClassifiableRow[], detection: MintBurnLayerZeroOftBridgeDetectionConfig, contexts: Map<string, MintBurnTxContext | null>): void {
   const tokenAddress = detection.tokenAddress.toLowerCase(), endpoint = detection.endpointAddress.toLowerCase();
   for (const [hash, txRows] of groupRowsByTx(rows)) {
@@ -267,5 +282,7 @@ export function classifyPoolBridge(rows: MintBurnBridgeClassifiableRow[], detect
     else classifyCcip(txRows, logs, detection, used);
     markUnresolved(txRows, logs, ctx, [...detection.knownBridgePoolAddresses,
       ...(detection.protocol === "ccip" && detection.externalMinterAddress ? [detection.externalMinterAddress] : [])], detection.tokenAddress.toLowerCase());
+    // CCIP consumes its movements first; native proof clears only the remaining exact rows.
+    if (detection.protocol === "ccip") classifyNativeGovernor(txRows, logs, detection, used);
   }
 }

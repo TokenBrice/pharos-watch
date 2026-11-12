@@ -27,7 +27,12 @@ export interface MintBurnSignedNetView {
   note: string | null;
   /** Proven one-sided bound when `valueUsd` is null; never a substitute statistic for sorts or sums. */
   bound?: MintBurnSignedNetBound | null;
+  /** Sum of components that publish a net when others do not; a labelled subset, never the net, never ranked or re-summed. */
+  subtotal?: { valueUsd: number; included: number; total: number; weightShare: number; coverageUnknown: boolean } | null;
 }
+
+/** Minimum tracked supply weight share for publishing a labelled subset sum. */
+export const MINT_BURN_NET_SUBSET_MIN_WEIGHT_SHARE = 0.9;
 
 export const MINT_BURN_COVERAGE_UNKNOWN_NOTE =
   "Coverage unknown: aggregated before valuation completeness was recorded";
@@ -83,10 +88,13 @@ export function resolveMintBurnSignedNet(
  * Client-side sum of signed nets. Any unavailable component (null or partial) makes the
  * sum unavailable; `unknown` components keep the sum with the coverage-unknown marker.
  * When every unavailable component carries a bound of the same kind and no component is
- * coverage-unknown, the sum keeps that one-sided bound; otherwise it carries none. No
- * components at all is missing evidence, not an observed zero sum.
+ * coverage-unknown, the sum keeps that one-sided bound. Otherwise supplied weights may
+ * admit a labelled subset; the net stays null. No components is missing evidence, not zero.
  */
-export function sumMintBurnSignedNets(parts: readonly MintBurnSignedNetView[]): MintBurnSignedNetView {
+export function sumMintBurnSignedNets(
+  parts: readonly MintBurnSignedNetView[],
+  weightsUsd?: readonly (number | null | undefined)[],
+): MintBurnSignedNetView {
   if (parts.length === 0) return { valueUsd: null, completeness: "unknown", note: EMPTY_SUM_NOTE };
   const completeness = combineMintBurnValuationCompleteness(...parts.map((part) => part.completeness));
   let total = 0;
@@ -109,6 +117,34 @@ export function sumMintBurnSignedNets(parts: readonly MintBurnSignedNetView[]): 
     const bound = completeness === "partial" ? boundMintBurnSignedNetRange({ lowerUsd, upperUsd }) : null;
     if (bound) {
       return { valueUsd: null, completeness, note: describeMintBurnSignedNetBound(bound, "a component has unpriced events"), bound };
+    }
+    if (weightsUsd) {
+      let included = 0;
+      let includedWeight = 0;
+      let withheldWeight = 0;
+      let coverageUnknown = false;
+      for (const [index, part] of parts.entries()) {
+        const weight = weightsUsd[index];
+        const knownWeight = weight != null && Number.isFinite(weight) && weight >= 0;
+        if (part.valueUsd != null) {
+          included++;
+          if (part.completeness === "unknown") coverageUnknown = true;
+          if (knownWeight) includedWeight += weight;
+        } else if (knownWeight) {
+          withheldWeight += weight;
+        } else {
+          withheldWeight = Number.POSITIVE_INFINITY;
+        }
+      }
+      const weightShare = includedWeight / (includedWeight + withheldWeight);
+      if (included > 0 && includedWeight > 0 && weightShare >= MINT_BURN_NET_SUBSET_MIN_WEIGHT_SHARE) {
+        return {
+          valueUsd: null,
+          completeness,
+          subtotal: { valueUsd: total, included, total: parts.length, weightShare, coverageUnknown },
+          note: `Sum of the ${included} of ${parts.length} coins that publish a signed net (${(weightShare * 100).toFixed(1)}% of current tracked supply weight); the others have incomplete flow evidence${coverageUnknown ? `; included coins: ${MINT_BURN_COVERAGE_UNKNOWN_NOTE}` : ""}`,
+        };
+      }
     }
     return {
       valueUsd: null,

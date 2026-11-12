@@ -112,6 +112,7 @@ export interface ScheduledRuntimeContext {
   fetchBudget?: ScheduledFetchBudget;
   recoveryCheckpoint?: ScheduledRecoveryCheckpoint;
   pendingReserveContinuation?: ReserveContinuationMessage;
+  reserveTailSettled?: boolean;
   reserveQueueMetadata?: Record<string, string | number>;
   /** Set only for a Queue-executed catch-up of this missed slot. */
   catchUp?: ScheduledSlotCatchUpRequest;

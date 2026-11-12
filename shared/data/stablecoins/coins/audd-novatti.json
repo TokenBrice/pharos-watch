@@ -9,7 +9,7 @@
     "pegCurrency": "AUD",
     "governance": "centralized"
   },
-  "collateral": "Australian-dollar cash in Australian or foreign banks and AUD-denominated cash equivalents permitted by the PDS; the September 2026 report records 100% cash at Westpac and Banking Circle",
+  "collateral": "Australian-dollar cash in Australian or foreign banks and AUD-denominated cash equivalents permitted by the PDS; the October 2026 report records 100% cash at Westpac and Banking Circle",
   "pegMechanism": "1:1 AUD redemption via distributors, with direct AUDC fallback when distributor redemption is unavailable, subject to KYC and a $10 minimum; monthly William Buck agreed-upon procedures reconcile reserves and multichain supply",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -35,18 +35,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-09-30",
-      "publishedAt": "2026-10-05",
+      "periodEnd": "2026-10-31",
+      "publishedAt": "2026-11-10",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane50Tori); September AUP observed 2026-10-09T10:36:44Z",
+      "reviewer": "Codex D2-DATA1 October AUP renewal 2026-11-12",
       "confidence": "verified",
       "sources": [
         {
-          "label": "William Buck AUDD Agreed-Upon Procedures Report - September 2026 (signed 5 October)",
-          "url": "https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf"
+          "label": "William Buck AUDD Agreed-Upon Procedures Report - October 2026 (signed 10 November)",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf"
         }
       ]
     }

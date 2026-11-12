@@ -117,23 +117,32 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "midas-mtbill",
-    "version": 2,
-    "semantics": "collateral-mix",
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
     "breakerScope": "mtbill-midas",
+    "scoring": {
+      "maxSourceAgeSec": 345600
+    },
     "display": {
       "url": "https://midas.app/transparency?token=mtbill",
-      "label": "Midas mTBILL portfolio"
+      "label": "Midas mTBILL NAV"
     },
     "inputs": {
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "rpcMode": "alchemy"
       }
     },
     "params": {
-      "historicalSourceUrl": "https://api-prod.midas.app/api/transparency/by-timestamp"
+      "navScope": "portfolio",
+      "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
+      "tokenAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "sourceKey": "chainlink-nav:token:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "assetLabel": "Midas mTBILL U.S. Treasury bill portfolio NAV",
+      "assetRisk": "low",
+      "maxOracleAgeSec": 604800
     }
   },
   "yieldConfig": {

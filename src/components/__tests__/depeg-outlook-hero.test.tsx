@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { render } from "@testing-library/react";
 import { DepegOutlookHero } from "../depeg/depeg-outlook-hero";
 import type { PegSummaryStats } from "@shared/types/peg";
 import { summarizeResolverBook } from "../depeg/depeg-resolver-book-summary";
@@ -14,14 +17,22 @@ const observedZero: PegSummaryStats = {
   coinsAtPeg: 0, totalTracked: 0, depegEventsToday: 0, depegEventsYesterday: 0,
 };
 
-function renderHero(stats: PegSummaryStats | undefined, pendingCount: number | null, dewsAlertCount: number | null) {
-  return renderToStaticMarkup(<DepegOutlookHero stats={stats} pendingCount={pendingCount} dewsAlertCount={dewsAlertCount} activeDepegIds={new Set()} />);
+const baseProps = { stats: observedZero, pendingCount: 0, dewsAlertCount: 0, activeDepegIds: new Set<string>() };
+
+function markup(props: Partial<Parameters<typeof DepegOutlookHero>[0]>) {
+  return renderToStaticMarkup(<DepegOutlookHero {...baseProps} {...props} />);
+}
+
+const pending = (loading = false) => ({ peg: loading, dews: loading, events: loading, resolver: loading, review: loading });
+
+function renderHero(stats: PegSummaryStats | undefined, pendingCount: number | null, dewsAlertCount: number | null, loading = false) {
+  return markup({ stats, pendingCount, dewsAlertCount, pendingSources: pending(loading) });
 }
 
 describe("DepegOutlookHero source availability", () => {
-  it("renders missing peg summary as placeholders rather than zero observations", () => {
-    const markup = renderHero(undefined, 2, 3);
-    expect(markup).toContain("peg summary unavailable");
+  it.each([false, true])("renders missing peg summary without zero observations (pending=%s)", (loading) => {
+    const markup = renderHero(undefined, 2, 3, loading);
+    expect(markup).toContain(loading ? "Loading peg summary…" : "peg summary unavailable");
     expect(markup).not.toContain("0 / 0");
     expect(markup).not.toContain("0 bps");
     expect(markup).not.toContain("coins with open confirmed incidents");
@@ -37,17 +48,30 @@ describe("DepegOutlookHero source availability", () => {
     expect(markup).not.toContain("peg summary unavailable");
   });
 
-  it("renders independently unavailable event and DEWS counts with reasons", () => {
-    const markup = renderHero(observedZero, null, null);
-    expect(markup).toContain("event data unavailable");
-    expect(markup).toContain("DEWS or peg catalog unavailable");
+  it.each([false, true])("distinguishes pending/unavailable and latches first-show slots (%s)", (loading) => {
+    const markup = renderHero(observedZero, null, null, loading);
+    expect(markup).toContain(loading ? "Loading event data…" : "event data unavailable");
+    expect(markup).toContain(loading ? "Loading DEWS…" : "DEWS or peg catalog unavailable");
+    for (const source of ["DDR", "DDRR"]) expect(markup.includes(`Loading ${source}…`)).toBe(loading);
     expect(markup).toContain("0 / 0");
     expect(markup).toContain("0 bps");
+    const v = render(<DepegOutlookHero {...baseProps} pendingSources={pending(loading)} />);
+    for (let i = 0; i < 2; i++) {
+      expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 9 : 0);
+      for (const slot of ["min-h-20", "min-h-32", "min-h-28", "border-t border-border/60 pt-3 min-h-84 sm:min-h-76"])
+        expect(v.container.innerHTML.includes(`class="${slot}"`)).toBe(loading);
+      v.rerender(<DepegOutlookHero {...baseProps} />);
+    }
+    expect(v.container.innerHTML).not.toMatch(/Recovery outlook|Forecast track record/);
+    v.unmount();
+  });
+
+  it("names a pending peg catalog after DEWS answered", () => {
+    expect(markup({ stats: undefined, dewsAlertCount: null, pendingSources: { ...pending(), peg: true, pegCatalog: true } })).toContain("Loading peg catalog…");
   });
 
   it("preserves successful zero counts rather than treating zero as unavailable", () => {
     const markup = renderHero(observedZero, 0, 0);
-    // Zero open incidents is not a claim that every peg holds.
     expect(markup).toContain("coins with open confirmed incidents");
     expect(markup).not.toContain("all pegs holding");
     expect(markup).toContain("crossings");
@@ -58,9 +82,7 @@ describe("DepegOutlookHero source availability", () => {
 
 describe("DepegOutlookHero open-incident wording", () => {
   it("counts coins with open confirmed incidents, independent of current recovery evidence", () => {
-    const one = renderToStaticMarkup(
-      <DepegOutlookHero stats={{ ...observedZero, activeDepegCount: 1 }} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set(["a"])} />,
-    );
+    const one = markup({ stats: { ...observedZero, activeDepegCount: 1 }, activeDepegIds: new Set(["a"]) });
     expect(one).toContain("coin with an open confirmed incident");
     expect(one).toContain("halo marks an elevated coin with an open confirmed incident");
     expect(one).not.toContain("right now");
@@ -71,13 +93,9 @@ describe("DepegOutlookHero open-incident wording", () => {
 
 describe("DepegOutlookHero universe chip", () => {
   it("names the peg catalog size when the summary was read, and only the set otherwise", () => {
-    const read = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} catalogCount={249} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} />,
-    );
+    const read = markup({ catalogCount: 249 });
     expect(read).toContain("249 coins");
-    const unread = renderToStaticMarkup(
-      <DepegOutlookHero stats={undefined} catalogCount={null} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} />,
-    );
+    const unread = markup({ stats: undefined, catalogCount: null });
     expect(unread).toContain("Peg catalog");
     expect(unread).not.toContain("coins<");
   });
@@ -99,13 +117,12 @@ describe("DepegOutlookHero current forecast posture", () => {
       noCall: { lockedAt: valid.prediction.lockedAt, eventAgeAtLockSec: valid.prediction.eventAgeAtLockSec,
         missingReasons: [], relatedContext: valid.frozen.relatedContext },
     });
-    const props = { stats: observedZero, pendingCount: 0, dewsAlertCount: 0, activeDepegIds: new Set<string>() };
-    const mixed = renderToStaticMarkup(<DepegOutlookHero {...props} book={summarizeResolverBook([valid, invalidated, pending, noCall])} />);
+    const mixed = markup({ book: summarizeResolverBook([valid, invalidated, pending, noCall]) });
     expect(mixed).toContain("1 open forecast");
     expect(mixed).toContain("no break signals");
     expect(mixed).not.toContain("recovery likely");
     expect(mixed).not.toContain("4 open forecasts");
-    const auditOnly = renderToStaticMarkup(<DepegOutlookHero {...props} book={summarizeResolverBook([invalidated, pending, noCall])} />);
+    const auditOnly = markup({ book: summarizeResolverBook([invalidated, pending, noCall]) });
     expect(auditOnly).not.toContain("Recovery outlook");
     expect(auditOnly).not.toContain("recovery likely");
   });
@@ -118,39 +135,27 @@ describe("DepegOutlookHero recovery outlook caption", () => {
   });
 
   it.each([[1, "1 at a new worst"], [3, "3 at a new worst"]] as const)("states %s live new-worst incidents", (count, caption) => {
-    const markup = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(count)} />,
-    );
-    expect(markup).toContain(caption);
-    expect(markup).not.toContain("past their worst");
+    const html = markup({ book: book(count) });
+    expect(html).toContain(caption);
+    expect(html).not.toContain("past their worst");
   });
 
   it.each([[8_466, "calibrated on 8,466 historical incidents"], [0, "calibrated on 0 historical incidents"]] as const)(
     "passes the producer lineage count %s through as historical incidents",
     (incidentCount, caption) => {
-      const markup = renderToStaticMarkup(
-        <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)}
-          lineage={{ incidentCount, coinCount: 41 }} />,
-      );
-      expect(markup).toContain(caption);
-      expect(markup).not.toContain("recovered incidents");
+      const html = markup({ book: book(0), lineage: { incidentCount, coinCount: 41 } });
+      expect(html).toContain(caption);
+      expect(html).not.toContain("recovered incidents");
     },
   );
 
-  it("falls back to the open forecast count without lineage", () => {
-    const markup = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)} lineage={null} />,
-    );
-    expect(markup).toContain("3 open forecasts");
-    expect(markup).not.toContain("calibrated on");
+  it.each([null, undefined])("falls back to forecast count without lineage (%s), omitting zero new-worst", (lineage) => {
+    const html = markup({ book: book(0), lineage });
+    expect(html).toContain("3 open forecasts");
+    expect(html).not.toContain("calibrated on");
+    expect(html).not.toContain("new worst");
   });
 
-  it("omits the new-worst clause at zero", () => {
-    const markup = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)} />,
-    );
-    expect(markup).not.toContain("new worst");
-  });
 });
 
 describe("DepegOutlookHero forecast track record", () => {
@@ -168,13 +173,10 @@ describe("DepegOutlookHero forecast track record", () => {
   }) as unknown as Parameters<typeof DepegOutlookHero>[0]["review"];
 
   it("shows the captured fraction with no sub-text under the figure", () => {
-    const markup = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
-        review={review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]])} />,
-    );
-    expect(markup).toContain("Recovery calls correct: 61/74");
-    expect(markup).not.toContain("Always-recover baseline");
-    expect(markup).not.toContain("Graded calls");
-    expect(markup).toContain("see the grading");
+    const html = markup({ review: review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]]) });
+    expect(html).toContain("Recovery calls correct: 61/74");
+    expect(html).not.toContain("Always-recover baseline");
+    expect(html).not.toContain("Graded calls");
+    expect(html).toContain("see the grading");
   });
 });

@@ -1,9 +1,16 @@
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import capture from "./fixtures/midas-mtbill-save.json";
 import type { AdapterNetworkSpec, AdapterRpcValue } from "./reserve-adapter.test-support";
+
+export const MIDAS_CONFIG: LiveReservesConfig = {
+  adapter: "midas-mtbill", version: 2, semantics: "collateral-mix",
+  inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+  params: { historicalSourceUrl: "https://api-prod.midas.app/api/transparency/by-timestamp" },
+};
 
 export const MIDAS_CAPTURE_NOW = Number.parseInt(capture.block.timestamp, 16);
 export const MIDAS_CHECKPOINT_SEC = Date.parse("2026-10-16T10:00:00Z") / 1000;

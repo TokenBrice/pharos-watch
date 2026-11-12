@@ -109,6 +109,7 @@ describe("ReserveSyncHealthCard", () => {
     const { container } = render(
       <ReserveSyncHealthCard
         health={makeReserveHealth({
+          adapterReliabilityAvailability: { status: "available", computedAt: 1_712_590_000 },
           adapterReliability: [
             { adapterKey: "chainlink-nav", attempts: 10, ok: 4, degraded: 6, degradedByDesign: 5, error: 0, skipped: 0, successRate: 0.9 },
             { adapterKey: "legacy-row", attempts: 2, ok: 2, degraded: 0, error: 0, skipped: 0, successRate: 1 },
@@ -119,6 +120,7 @@ describe("ReserveSyncHealthCard", () => {
     );
     const rows = Array.from(container.querySelectorAll("table[aria-label='30-day adapter reliability'] tbody tr"));
     expect(screen.getByText("By design")).toBeTruthy();
+    expect(screen.getByText("Computed:").querySelector("time")?.dateTime).toBe("2024-04-08T15:26:40.000Z");
     expect(rows[0]?.textContent).toContain("90.0%");
     expect(Array.from(rows[0]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("5");
     expect(Array.from(rows[1]!.querySelectorAll("td")).map((cell) => cell.textContent)[4]).toBe("—");

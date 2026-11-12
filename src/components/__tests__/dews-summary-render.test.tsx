@@ -47,13 +47,19 @@ describe("DEWSRadarPanel radar logos", () => {
       makeStablecoin({ id: "usdc-circle", circulating: {} }),
       makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 0 } }),
     ] } });
-    const { getByRole, getByText } = render(<DEWSRadarPanel />);
+    const { getByRole, getByText, container, rerender } = render(<DEWSRadarPanel />);
     const missing = getByRole("button", { name: /USDC.*supply unavailable/ });
     const zero = getByRole("button", { name: /USDT.*\$0.*market cap/ });
     expect(missing.getAttribute("aria-label")).not.toContain("$0");
     expect(zero.getAttribute("aria-label")).not.toContain("supply unavailable");
     fireEvent.focus(missing);
     expect(getByText("Supply unavailable")).toBeTruthy();
+    for (const isLoading of [true, false]) for (const data of [undefined, RETAINED_SIGNALS, { signals: {} }]) {
+      useStressSignalsMock.mockReturnValue({ data, isLoading, error: new Error("HTTP 503") });
+      rerender(<DEWSRadarPanel reserveSpace />);
+      expect(container.innerHTML).toContain("aspect-[560/500]");
+      expect(container.innerHTML).toContain("min-h-36 sm:min-h-16");
+    }
   });
 });
 

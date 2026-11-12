@@ -1,7 +1,7 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserve-policy";
 import { fetchEearnSuiSupply } from "./sui-vault-supply";
 import { fetchUsdySuiSupply } from "./usdy-sui-supply";
-import { fetchUsdyAptosSupply } from "./usdy-aptos-supply";
+import { fetchAptosSupply } from "./usdy-aptos-supply";
 import { fetchStellarSupply } from "./stellar-supply";
 import { fetchNobleSupply } from "./noble-supply";
 import { fetchXrplSupply, XrplSupplyValidationError } from "./xrpl-supply";
@@ -226,8 +226,8 @@ async function readContractSupplyRaw(input: {
   }
 
   if (input.family === "aptos") {
-    if (reader === "usdy-aptos") {
-      return fetchUsdyAptosSupply(supplyContract.address, supplyContract.decimals, input.signal);
+    if (reader === "usdy-aptos" || reader === "buidl-aptos") {
+      return fetchAptosSupply(supplyContract.address, supplyContract.decimals, input.signal, reader === "buidl-aptos" ? "BUIDL" : "USDY");
     }
     if (!input.rpcUrl) throw new Error("Aptos supply probe REST endpoint is unavailable");
     const observation = await fetchMoveFungibleAssetSupply(

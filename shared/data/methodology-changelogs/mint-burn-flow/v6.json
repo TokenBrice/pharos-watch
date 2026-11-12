@@ -1,5 +1,34 @@
 [
   {
+    "version": "6.46",
+    "title": "Receipt-bound USD1 native governor flows",
+    "date": "2026-11-12",
+    "effectiveAt": 1794505740,
+    "summary": "USD1 issuer mints and burns can count as native flows when the configured TokenGovernor proves the exact token movement with its reviewed NativeMint or NativeBurn event.",
+    "impact": [
+      "Each governor event consumes one earlier unused zero-address Transfer of the configured token with the same raw amount and the governor counterparty. Only the matched row keeps ordinary issuer classification. CCIP proofs retain precedence; BridgeMint/BridgeBurn alone and movements without either proof remain unresolved. Missing receipt context remains unavailable.",
+      "Only USD1 opts in. The decoder declaration changes its scan fingerprint; earlier scan coverage is withdrawn. Existing bounded coverage repair rescans complete retained hours and reclassifies stored rows before certifying them. The 24-hour and 7-day nets may recover after complete repair; unrepaired 30-day and 90-day windows remain unavailable until earlier history ages out. Admission, conservation, valuation, atomic-roundtrip policy and scoring formulas are unchanged.",
+      "The proof trusts the reviewed governor's role assignments at the time of each call and does not independently establish the economic purpose of a movement.",
+      "Activation is 2026-11-12 17:49 UTC (1794505740), rounded up to the next whole minute from the public Worker activation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.45",
+    "title": "Labelled subset sums for incomplete aggregate nets",
+    "date": "2026-11-12",
+    "effectiveAt": 1794501360,
+    "summary": "Page-wide and weekly summed nets can show a labelled sum of the coins with a published net when neither an exact total nor a proven bound exists and those coins carry at least 90% of tracked supply weight.",
+    "impact": [
+      "The flows page and home mini card share the same 24-hour total and coin population. Weekly receipts use the same fallback for 7-day nets. Each subset value is labelled N of M coins and explains its tracked supply weight share; the full signed net remains unavailable.",
+      "Exact totals and proven one-sided bounds keep precedence. Below the tracked supply weight floor, or without known weights for every withheld coin, the sum remains unavailable. Per-coin nets, directions, pressure, gauge, hourly buckets and leader rankings are unchanged.",
+      "Activation is 2026-11-12 16:36 UTC (1794501360), rounded up to the next whole minute from the public Pages release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.44",
     "title": "Hourly coverage scoped to each constituent's evidence",
     "date": "2026-11-11",

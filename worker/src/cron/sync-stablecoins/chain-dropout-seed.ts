@@ -397,13 +397,14 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     reviewedAt: Date.parse("2026-11-04T09:03:51Z") / 1000,
     evidenceUrl: "https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
   },
-  // Tempo absent from list/detail. Finalized block 47370052 confirms 17,161,941.91
-  // BUIDL shares, not the stale $107.4M baseline. Owner accepts omission, never par-NAV valuation.
+  // 2026-11-12: Tempo is still absent from provider list/detail. Finalized block
+  // 48710775 confirms 17,177,908.27 BUIDL shares; native aggregate publication
+  // includes this stock independently. Retain provider omission, never par-NAV valuation.
   {
     assetId: "buidl-blackrock", chainId: "tempo",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:35:00Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-26T19:35:00Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
   },
   // Finalized Tempo block 47370053 confirms 1M fxUSD, also omitted by list/detail.

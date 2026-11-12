@@ -332,9 +332,7 @@ describe("computeStabilityIndex", () => {
     });
   });
 
-  // -----------------------------------------------------------------------
   // Calibration examples from docs
-  // -----------------------------------------------------------------------
 
   describe("calibration examples (from docs)", () => {
     it("12 micro-coin depegs barely move the score", () => {

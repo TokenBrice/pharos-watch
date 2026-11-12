@@ -6,10 +6,10 @@ import { RESERVE_FEED_REVIEWS, matchReserveFeedReview as matchReview, resolveRes
 import type { ReserveSyncStateRecord as State } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
+import { YUZU_REVIEW as review } from "./live-reserves-store.test-support";
 
-const review = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "yzusd-yuzu")!;
 const accountable = "primary:http-json: Accountable ";
-const http = "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=changed";
+const http = "primary:http-html: HTTP 403 for https://www.fidelitydigitalassets.com/stablecoin?timestamp=changed";
 function state(r = review, overrides: Partial<State> = {}): State {
   const now = r.reviewedAt + 1;
   return {
@@ -36,7 +36,7 @@ const skipped = { lastStatus: "skipped", lastError: null, metadata: { failureCat
 
 describe("reserve feed review policy", () => {
   it("matches authored findings; rejects changed, corrupt, fatal and expired evidence", async () => {
-    for (const r of RESERVE_FEED_REVIEWS) {
+    for (const r of [review, ...RESERVE_FEED_REVIEWS]) {
       const s = state(r);
       await check(s, r);
       const mutations: Partial<State>[] = [
@@ -82,9 +82,10 @@ describe("reserve feed review policy", () => {
       expect(result.expiredIds).toEqual(offset < 0 ? [] : [review.stablecoinId]);
     }
   });
-  it("keeps Yuzu dated and its exact error/category boundary", async () => {
-    expect([review.reviewedAt, review.expiresAt]).toEqual(["2026-11-07T19:46:52Z", "2026-11-14T19:46:52Z"].map((s) => Date.parse(s) / 1000));
-    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-07" }]);
+  it("retires Yuzu, dates nWISDOM and retains the exact error/category boundary", async () => {
+    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "nwisdom-nest")!;
+    expect([r.reviewedAt, r.expiresAt]).toEqual(["2026-11-12T19:31:00Z", "2026-11-19T19:31:00Z"].map((s) => Date.parse(s) / 1000));
+    expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "yzusd-yuzu")).toBe(false);
     expect(review.failureCategory).toBe("unknown");
     expect(review.errorPrefix).toBe(accountable + "exposure_split has no contemporaneous timeline reserve total for reconciliation");
     for (const lastError of [
@@ -99,20 +100,20 @@ describe("reserve feed review policy", () => {
     expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "gusd-gemini")).toBe(false);
   });
   it("pins HTTP classes to the primary endpoint", async () => {
-    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "mtbill-midas")!;
+    const r: Review = { ...review, stablecoinId: "fidd-fidelity", adapterKey: "fidd-independent-assurance",
+      failureCategory: "upstream-http", warningCodes: [], errorPrefix: null, errorClass: "http-403" };
     const s = state(r);
     await check(s, r);
-    await check({ ...s, lastError: http.replace("HTTP 403", "midas-mtbill:source-egress-blocked: HTTP 403") }, r);
     for (const lastError of [http.replace("403", "429"), http + "; fallback:http-json: failed",
-      http.replace("api-prod.midas.app", "other.example"), http.replace("by-timestamp", "other"),
-      http.replace("primary", "fallback"), http.replace("onchain-evm", "http-json"), "midas-mtbill:save-rounded-totals-mismatch"]) {
+      http.replace("www.fidelitydigitalassets.com", "other.example"), http.replace("stablecoin", "other"),
+      http.replace("primary", "fallback"), http.replace("http-html", "http-json"), "unrelated-cause"]) {
       await check({ ...s, lastError }, r, null);
     }
     await check({ ...s, metadata: { failureCategory: "unknown" } }, r, null);
     await check({ ...s, ...skipped }, r, r, history(r));
   });
   it("pins verified stalled clocks, including clean ok attempts", async () => {
-    const r = { ...RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "zsd-zephyr-protocol")!, warningCodes: [] };
+    const r = { ...RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "nwisdom-nest")!, warningCodes: [] };
     const s = state(r, { lastStatus: "ok" });
     await check(s, r);
     for (const metadata of [{ ...s.metadata, sourceTimestamp: r.sourceTimestamp! + 1 }, { ...s.metadata, freshnessMode: "unverified" as const }]) {

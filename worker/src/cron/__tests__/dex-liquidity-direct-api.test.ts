@@ -34,9 +34,6 @@ function mockTextFetch(body: string, status: number): void {
 }
 
 
-// ---------------------------------------------------------------------------
-// Fluid
-// ---------------------------------------------------------------------------
 describe("fetchFluidPools", () => {
   const FLUID_POOL_ADDRESS = "0x1111111111111111111111111111111111111111";
 
@@ -313,9 +310,6 @@ describe("fetchFluidPools", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Balancer
-// ---------------------------------------------------------------------------
 describe("fetchBalancerPools", () => {
   afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
@@ -596,9 +590,6 @@ describe("fetchBalancerPools", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Raydium
-// ---------------------------------------------------------------------------
 describe("fetchRaydiumPools", () => {
   afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
@@ -902,9 +893,6 @@ describe("fetchRaydiumPools", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Orca
-// ---------------------------------------------------------------------------
 describe("fetchOrcaPools", () => {
   afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 

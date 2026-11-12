@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { loadTelegramDeliverySliRollup } from "../delivery-sli";
 
@@ -15,12 +15,11 @@ function insertJob(sqlite: DatabaseSync, id: string, kind: string, state: string
   ).run(id, kind, state, createdAt, createdAt + 7200);
 }
 
-function insertDelivery(
+function insertDeliveries(
   sqlite: DatabaseSync,
-  row: {
-    jobId: string;
+  jobId: string,
+  rows: {
     chatId: string;
-    kind?: string;
     state: string;
     createdAt: number;
     doneAt?: number | null;
@@ -30,16 +29,17 @@ function insertDelivery(
     errorClass?: string | null;
     attempts?: number;
     priority?: number;
-  },
+  }[],
+  kind = "alert",
 ): void {
-  sqlite.prepare(
+  for (const row of rows) sqlite.prepare(
     `INSERT INTO telegram_deliveries (
        job_id, kind, chat_id, seq, body_hash, families, priority, state, attempts,
        next_attempt_at, expires_at, created_at, done_at, reason, error_class
      ) VALUES (?, ?, ?, 0, 'h', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    row.jobId,
-    row.kind ?? "alert",
+    jobId,
+    kind,
     row.chatId,
     row.families === undefined ? "depeg" : row.families,
     row.priority ?? 10,
@@ -60,16 +60,23 @@ describe("Telegram delivery SLI rollup (delivery v2)", () => {
     insertJob(sqlite, "alert:a", "alert", "done", NOW - 600);
     insertJob(sqlite, "alert:b", "alert", "planning", NOW - 120);
     insertJob(sqlite, "broadcast:x", "broadcast", "done", NOW - 600);
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "1", state: "sent", createdAt: NOW - 590, doneAt: NOW - 580 });
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "2", state: "sent", createdAt: NOW - 590, doneAt: NOW - 500, families: "depeg,safety" });
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "3", state: "suppressed_duplicate", createdAt: NOW - 590, doneAt: NOW - 590, reason: "duplicate_prior_delivery" });
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "4", state: "blocked", createdAt: NOW - 590, doneAt: NOW - 570, reason: "blocked", errorClass: "blocked", attempts: 1 });
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "5", state: "unknown", createdAt: NOW - 590, doneAt: NOW - 1000 + 100, reason: "ambiguous_send" });
-    insertDelivery(sqlite, { jobId: "alert:a", chatId: "6", state: "cancelled", createdAt: NOW - 590, doneAt: NOW - 590, reason: "coin_snoozed" });
-    insertDelivery(sqlite, { jobId: "alert:b", chatId: "7", state: "pending", createdAt: NOW - 100, families: "safety", priority: 20 });
-    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "1", kind: "broadcast", state: "sent", createdAt: NOW - 590, doneAt: NOW - 580, families: "adminBroadcast" });
+    insertDeliveries(sqlite, "alert:a", [
+      { state: "sent", doneAt: NOW - 580 },
+      { state: "sent", doneAt: NOW - 500, families: "depeg,safety" },
+      { state: "suppressed_duplicate", doneAt: NOW - 590, reason: "duplicate_prior_delivery" },
+      { state: "blocked", doneAt: NOW - 570, reason: "blocked", errorClass: "blocked", attempts: 1 },
+      { state: "unknown", doneAt: NOW - 1000 + 100, reason: "ambiguous_send" },
+      { state: "cancelled", doneAt: NOW - 590, reason: "coin_snoozed" },
+    ].map((row, index) => ({ chatId: String(index + 1), createdAt: NOW - 590, ...row })));
+    insertDeliveries(sqlite, "alert:b", [{ chatId: "7", state: "pending", createdAt: NOW - 100, families: "safety", priority: 20 }]);
+    insertDeliveries(sqlite, "broadcast:x", [{ chatId: "1", state: "sent", createdAt: NOW - 590, doneAt: NOW - 580, families: "adminBroadcast" }], "broadcast");
 
+    const prepare = vi.spyOn(db, "prepare");
     const rollup = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
+    const sql = prepare.mock.calls[0][0];
+    const read = (query: string) => sqlite.prepare(query).get(NOW - 86400, NOW);
+    expect(read(sql)).toEqual(read(sql.replace("CROSS JOIN", "JOIN")));
+    expect(sqlite.prepare("EXPLAIN QUERY PLAN " + sql).all(NOW - 86400, NOW).map((row) => row.detail).join()).not.toMatch(/SCAN d/);
     expect(rollup.detectionToPlan).toMatchObject({ eligibleCount: 2, observedCount: 1, averageSec: 10 });
     expect(rollup.authoritativeTargetOutcomes).toMatchObject({
       total: 7,
@@ -102,15 +109,15 @@ describe("Telegram delivery SLI rollup (delivery v2)", () => {
   it("keeps broadcast delivery rows out of every alert-family sub-rollup", async () => {
     const { sqlite, db } = fixtures.open();
     insertJob(sqlite, "broadcast:x", "broadcast", "done", NOW - 600);
-    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "1", kind: "broadcast", state: "pending", createdAt: NOW - 300 });
-    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "2", kind: "broadcast", state: "cancelled", createdAt: NOW - 400, doneAt: NOW - 400, reason: "subscriber_missing" });
-    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "3", kind: "broadcast", state: "failed", createdAt: NOW - 500, doneAt: NOW - 490, reason: "bad_request", errorClass: "bad_request", attempts: 1 });
-    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "4", kind: "broadcast", state: "unknown", createdAt: NOW - 500, doneAt: NOW - 480, reason: "ambiguous_send" });
+    insertDeliveries(sqlite, "broadcast:x", [
+      { chatId: "1", state: "pending", createdAt: NOW - 300 },
+      { chatId: "2", state: "cancelled", createdAt: NOW - 400, doneAt: NOW - 400, reason: "subscriber_missing" },
+      { chatId: "3", state: "failed", createdAt: NOW - 500, doneAt: NOW - 490, reason: "bad_request", errorClass: "bad_request", attempts: 1 },
+      { chatId: "4", state: "unknown", createdAt: NOW - 500, doneAt: NOW - 480, reason: "ambiguous_send" },
+    ], "broadcast");
 
     const rollup = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
 
-    // The whole rollup is defined over alert-family jobs and their delivery
-    // rows, so every sub-rollup must agree an all-broadcast window is empty.
     expect(rollup.authoritativeTargetOutcomes).toMatchObject({ total: 0, telegramAcceptanceRate: null });
     expect(rollup.backlog).toMatchObject({ count: 0, oldestAgeSec: null, buckets: [] });
     expect(rollup.preferenceChangeCancellations).toMatchObject({ count: 0, reasons: [] });

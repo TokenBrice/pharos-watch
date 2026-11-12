@@ -6,9 +6,7 @@ import {
   runAdapter,
 } from "./reserve-adapter.test-support";
 
-// ---------------------------------------------------------------------------
 // Catalog identities (probed live 2026-09-09)
-// ---------------------------------------------------------------------------
 
 const BUIDL_CONSUMER = "0x2d6db2116ad7a6e203e72c8dccfff23f5315b0dd";
 const BUIDL_TOKEN = "0x7712c34205737192402172409a8f7ccef8aa2aec";
@@ -141,9 +139,7 @@ describe("chronicle-nav BUIDL binding", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Existing bindings keep their native-fund-share admission
-// ---------------------------------------------------------------------------
 
 describe("chronicle-nav ACRDX binding", () => {
   it("aggregates the coin's EVM deployments and omits the Solana deployment with an info warning", async () => {

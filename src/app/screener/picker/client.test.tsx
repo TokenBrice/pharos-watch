@@ -15,10 +15,8 @@ import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 import * as resultPane from "@/components/selector/result-pane";
 import * as request from "@/lib/request";
 
-// ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
 // call inside `useSelector` resolves to a deterministic SelectorOutput.
-// ----------------------------------------------------------------------------
 
 
 function installSnapshotFetch(body: unknown, status = 200): MockFetchSpy {
@@ -66,9 +64,7 @@ vi.mock("@shared/lib/selector/data-adapter", () => ({
   })),
 }));
 
-// ----------------------------------------------------------------------------
 // Hooks: stub the data-fetching layer so the engine receives "ready" data.
-// ----------------------------------------------------------------------------
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: () => ({
@@ -106,9 +102,7 @@ vi.mock("next/link", async () => {
 import { SelectorClient } from "./client";
 import { SELECTOR_STATE_DEFAULTS, toSelectorInput } from "@/lib/selector-state";
 
-// ----------------------------------------------------------------------------
 // Helpers
-// ----------------------------------------------------------------------------
 
 function setUrlSearch(search: string) {
   window.history.replaceState(null, "", `/screener/picker/${search ? `?${search}` : ""}`);
@@ -132,9 +126,7 @@ afterEach(() => {
   cleanupFrontendTest();
 });
 
-// ----------------------------------------------------------------------------
 // Tests
-// ----------------------------------------------------------------------------
 
 describe("SelectorClient — state machine", () => {
 

@@ -265,7 +265,6 @@ describe("adaptAccountableDashboard", () => {
       name: "US Treasury Bills",
       sourceKey: "accountable:noon:deployment:us-treasury-bills",
     }));
-    // A positive sub-display-precision bucket survives as its true share.
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Funding Rate (BTC)",
       pct: expect.closeTo(0.0000027942145582178365, 12),
@@ -374,8 +373,6 @@ describe("adaptAccountableDashboard", () => {
     });
     expect(result.warnings ?? []).toEqual([]);
     // This September payload is independent of the refreshed catalog composition.
-    // The adapter publishes unrounded slices; its sub-rounding Other balance
-    // survives as a positive slice and does not change the external-reserves or redeemable-claims denominators.
     expect(result.slices).toEqual([
       {
         sourceKey: "accountable:apyx:deployment:strc",
@@ -540,16 +537,7 @@ describe("adaptAccountableDashboard", () => {
     expect(() => adaptAccountableDashboard(
       {
         res: "ok",
-        data: {
-          collateralization: 1.01,
-          ts: "1773337492853",
-          reserves: {
-            total_reserves: { value: 1_000, name: "Total Reserves" },
-            reserves_split: [
-              { name: "Cash & Equivalents", value: 100 },
-            ],
-          },
-        },
+        data: makeTimestampedYuzuPayload({ reserves_split: [{ name: "Cash & Equivalents", value: 100 }] }),
       },
       {
         bucket: "reserves_split",
@@ -933,7 +921,7 @@ describe("adaptAccountableDashboard", () => {
     expect(widened).toEqual([]);
   });
 
-  it("rejects a timestamped Yuzu exposure split that misses the nearest timeline reserve total by more than 1%", async () => {
+  it("bounds Yuzu residual admission while preserving signed-book rejection", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
@@ -947,6 +935,28 @@ describe("adaptAccountableDashboard", () => {
     }))).rejects.toThrow(
       /Accountable exposure_split bucket total 63527322\.23 does not match total_reserves 65000000/,
     );
+    for (const [band, value, admitted, total = 1000, extra = 0, gap = total - value - extra] of [
+      [0.02, 980, true], [0.02, 987, true], [0.02, 979.999, false], [undefined, 980, false], [0.02, 1021, false],
+      [0.02, 940, true, 1000, 40], [0.02, 46060000.98, true, 47000001, 0, 940000.02], [0.02, 46059999.99, false, 47000000, 0.009999999],
+    ] as const) {
+      const run = () => runAccountablePayload({ ...config, params: { ...config.params, maxUnattributedResidualShare: band } }, makeTimestampedYuzuPayload({
+        total_reserves: total, total_supply: total,
+        exposure_split: { Liquidity_Buffer: value, ...(extra ? { Unmapped: extra } : {}) },
+        timeline: [
+          { ts: String((1_787_556_676 - 3600) * 1000), reserves: total * 1.1 },
+          { ts: String((1_787_556_676 + 7200) * 1000), reserves: total },
+        ],
+      }));
+      if (!admitted) { await expect(run()).rejects.toThrow(/bucket total .* does not match total_reserves/); continue; }
+      const result = await run();
+      expect(result.slices).toEqual([
+        expect.objectContaining({ name: "Liquidity buffer", pct: value / total * 100, risk: "low" }),
+        ...(extra ? [{ name: "Unknown / unmapped Accountable buckets", pct: extra / total * 100, risk: "high" }] : []),
+        { name: "Unattributed backing", pct: gap / total * 100, risk: "very-high", unclassifiedResidual: true, residualReason: "insufficient-evidence" },
+      ]);
+      expect(result.warnings).toEqual([...(extra ? [expect.objectContaining({ code: "unmapped-bucket", effect: "degraded" })] : []), { code: "exposure-split-undercovered", message: expect.stringContaining(String(gap / total)), severity: "warning", effect: "degraded" }]);
+      expect(result.metadata).toMatchObject({ unattributedBackingUsd: gap, unattributedBackingShare: gap / total, unknownExposurePct: (extra + gap) / total * 100 });
+    }
   });
 
   it("accepts a Yuzu exposure split that matches either dated timeline bracket", async () => {
@@ -1121,9 +1131,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps the root-level assetBreakdown layout into reserve slices", () => {
-    // Verbatim Tori Accountable dashboard capture: the four strategy categories
-    // live at data.assetBreakdown (not data.reserves.type*), and their nested
-    // entries sum to the published total_reserves value.
     const result = adaptAccountableDashboard(
       TORI_ASSET_BREAKDOWN_CAPTURE,
       {
@@ -1300,11 +1307,11 @@ describe("adaptAccountableDashboard", () => {
 
 
 describe("adaptAccountableDashboard collateralization reconciliation", () => {
+  const cashData = makeTimestampedYuzuPayload({ reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }] });
 
   it("reconciles the contradicted Apyx snapshot to a net-of-protocol-owned denominator", () => {
     const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...APYX_RESERVE_PARAMS });
 
-    // The gross ratio the prior review derived, and the ratio the dashboard actually reports.
     expect(308_600_110.7 / 327_073_514.82).toBeCloseTo(0.943519, 6);
     expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
     expect(result.metadata?.collateralizationReconciliation).toMatchObject({
@@ -1321,8 +1328,6 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     };
     expect(reconciliation.grossRatio).toBeCloseTo(0.9435191072, 9);
     expect(reconciliation.netRatio).toBeCloseTo(0.922477, 6);
-    // A reviewed-net basis is reproducible, so the canonical ratio is the derived one and the
-    // issuer headline is not duplicated under a second key.
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(reconciliation.netRatio, 12);
     expect(result.metadata?.reportedCollateralizationRatio).toBeUndefined();
     expect(result.metadata?.supplyUsd).toBe(327_073_514.82);
@@ -1344,7 +1349,6 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
       effect: "degraded",
     });
 
-    // 28.77% of reserves is issuer-held; it must never read as itemized third-party composition.
     const protocolOwned = result.warnings?.find((warning) => warning.code === "protocol-owned-bucket");
     expect(protocolOwned).toMatchObject({ severity: "warning", effect: "degraded" });
     expect(protocolOwned?.message).toContain("not itemized third-party backing");
@@ -1383,17 +1387,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     const result = adaptAccountableDashboard(
       {
         res: "ok",
-        data: {
-          collateralization: 0.75,
-          ts: "1785192343737",
-          reserves: {
-            total_reserves: { name: "Total Reserves", value: 1_000 },
-            total_supply: { name: "Total Supply", value: 1_000 },
-            inventory: 100,
-            pol: 50,
-            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-          },
-        },
+        data: { ...cashData, collateralization: 0.75, reserves: { ...cashData.reserves, inventory: 100, pol: 50 } },
       },
       { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
     );
@@ -1412,22 +1406,13 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
     const result = adaptAccountableDashboard(
       {
         res: "ok",
-        data: {
-          collateralization: 0.9,
-          ts: "1785192343737",
-          reserves: {
-            total_reserves: 1_000,
-            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-          },
-        },
+        data: { ...cashData, collateralization: 0.9, reserves: { ...cashData.reserves, total_supply: undefined } },
       },
       { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
     );
 
     expect(result.metadata?.collateralizationBasis).toBe("underived");
     expect(result.metadata?.supplyUsd).toBeUndefined();
-    // No totals means no reproducible denominator: the issuer headline is published as
-    // reported, and no canonical ratio or coverage warning can claim measured coverage.
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
     expect(result.metadata?.reportedCollateralizationRatio).toBe(0.9);
     expect(result.warnings).toBeUndefined();
@@ -1438,15 +1423,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
       adaptAccountableDashboard(
         {
           res: "ok",
-          data: {
-            collateralization: 1,
-            ts: "1785192343737",
-            reserves: {
-              total_reserves: 1_000,
-              total_supply: { name: "Total Supply", value: "n/a" },
-              reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-            },
-          },
+          data: { ...cashData, reserves: { ...cashData.reserves, total_supply: { name: "Total Supply", value: "n/a" } } },
         },
         { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
       ),

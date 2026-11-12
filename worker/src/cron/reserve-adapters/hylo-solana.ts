@@ -77,7 +77,7 @@ export async function fetchHyloSolanaReserves(_coin: ReserveAdapterCoin, config:
   if (currentRegistry.length !== discoveredRegistry.length || !currentRegistry.every((byte, i) => byte === discoveredRegistry[i])) throw new Error("Hylo registry changed during discovery");
   const state = anchor(accounts, p.state, p.program, "hylo");
   if (key(state, 72) !== p.registry || key(state, 104) !== p.hyusdMint || key(state, 392) !== p.solOracle) throw new Error("Hylo state identity mismatch");
-  for (const address of p.inactiveExoPairs) if (accounts.get(address) !== null) throw new Error("Hylo unreviewed exogenous pair activated");
+  for (const address of p.inactiveExoPairs) if (accounts.get(address) !== null) throw new Error(`Hylo unreviewed exogenous pair activated: ${address}`);
   let isPaused = paused(state, 478) || paused(state, 479);
   const { prices, warnings } = await fetchDefiLlamaPrices([
     ...lsts.map((lst) => ({ key: lst.mint, chain: lst.priceChain, address: lst.priceAddress })),

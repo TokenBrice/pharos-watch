@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { buildFlowPressureReceiptModel } from "@/lib/flow-pressure-receipt-model";
-import type { MintBurnCoinFlow, MintBurnHourlyBucket } from "@shared/types/mint-burn";
+import type { MintBurnCoinCoverage, MintBurnHourlyBucket } from "@shared/types/mint-burn";
 import {
   makeInactiveMintBurnFlowCoin as makeCoin,
   makeMintBurnCoinValuation as completeValuation,
 } from "@/test-utils/mint-burn-fixtures";
 
 function makeCoverage(
-  overrides: Partial<NonNullable<MintBurnCoinFlow["coverage"]>> = {},
-): NonNullable<MintBurnCoinFlow["coverage"]> {
+  overrides: Partial<MintBurnCoinCoverage> = {},
+): MintBurnCoinCoverage {
   return {
     startBlock: 1, lastSyncedBlock: 10, lagBlocks: null, historyStartAt: 1_700_000_000,
     has24hWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
@@ -101,11 +101,11 @@ describe("buildFlowPressureReceiptModel", () => {
     expect(model.coverageRows).toEqual([{ status: "unknown", count: 1 }]);
   });
 
-  it.each(["upper", "lower"] as const)("never ranks a partial net and keeps its weekly %s bound", (kind) => {
+  it.each(["upper", "lower", null] as const)("never ranks a partial net and keeps its weekly %s bound", (kind) => {
     const model = buildFlowPressureReceiptModel({
       coins: [
         makeCoin({
-          symbol: "USDC",
+          symbol: "USDC", gaugeWeightUsd: 90,
           has24hActivity: true,
           netFlow24hUsd: 50,
           mintVolume24hUsd: 50,
@@ -113,7 +113,7 @@ describe("buildFlowPressureReceiptModel", () => {
           valuation: completeValuation(),
         }),
         makeCoin({
-          symbol: "DAI",
+          symbol: "DAI", gaugeWeightUsd: 10,
           has24hActivity: true,
           netFlow24hUsd: 900,
           mintVolume24hUsd: 900,
@@ -122,7 +122,7 @@ describe("buildFlowPressureReceiptModel", () => {
             completeness: "partial",
             burnCompleteness: "partial",
             unpricedBurnEventCount: 4,
-          }, { netFlow7d: "partial", netFlow7dBound: { kind, valueUsd: 900 } }),
+          }, { netFlow7d: "partial", netFlow7dBound: kind ? { kind, valueUsd: 900 } : null }),
         }),
       ],
       weeklyHourly: [
@@ -131,12 +131,12 @@ describe("buildFlowPressureReceiptModel", () => {
       ],
     });
 
-    // DAI's partial weekly net is only a bound, so it cannot lead.
     expect(model.topMint).toEqual({ symbol: "USDC", valueUsd: 70 });
     const byId = Object.fromEntries(model.rows.map((row) => [row.id, row]));
     expect(byId["net-7d"]).toMatchObject({ valueUsd: null, completeness: "partial" });
-    expect(byId["net-7d"].bound).toEqual({ kind, valueUsd: 970 });
-    expect(byId["net-7d"].note?.toLowerCase()).toContain(`${kind} bound`);
+    expect(byId["net-7d"].bound).toEqual(kind ? { kind, valueUsd: 970 } : null);
+    expect(byId["net-7d"].subtotal).toEqual(kind ? null : { valueUsd: 70, included: 1, total: 2, weightShare: 0.9, coverageUnknown: false });
+    expect(byId["net-7d"].note?.toLowerCase()).toMatch(kind ? `${kind} bound` : /1 of 2 coins.*current tracked supply weight/);
     expect(byId["burn-7d"]).toMatchObject({ valueUsd: 3, completeness: "partial" });
     expect(byId["burn-7d"].note).toMatch(/lower bound/i);
     expect(byId["mint-7d"]).toMatchObject({ valueUsd: 15, completeness: "partial" });
@@ -183,8 +183,6 @@ describe("buildFlowPressureReceiptModel", () => {
     }
   });
 
-  // An empty coin list is missing evidence (a failed or generationless summary
-  // read), not a complete observed zero: the receipt must not print Net 7d $0.00.
   it("keeps the net row unavailable for an empty coin population", () => {
     const model = buildFlowPressureReceiptModel({ coins: [] });
     expect(model.rows.find((row) => row.id === "net-7d")).toMatchObject({

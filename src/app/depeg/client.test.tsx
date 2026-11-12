@@ -6,9 +6,9 @@ import type { ReactNode } from "react";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
-import type { ResolverBookSummary } from "@/components/depeg/depeg-resolver-book-summary";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 import type { ApiMeta } from "@/lib/api";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "@/lib/request-lifecycle";
 
 import { DepegClient } from "./client";
 import {
@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => ({
   useUrlFilters: vi.fn(),
   QueryFreshnessNotices: vi.fn(),
 }));
+
+const sourceHooks = { peg: mocks.usePegSummary, dews: mocks.useStressSignals, events: mocks.useInfiniteDepegEvents };
 
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: vi.fn() }));
 
@@ -55,7 +57,7 @@ vi.mock("@/hooks/use-url-filters", () => ({
 }));
 
 vi.mock("@/components/query-freshness-notices", () => ({
-  QueryFreshnessNotices: (props: { onRetry: () => Promise<unknown>; queries: Array<{ label?: string; preset?: string }> }) => {
+  QueryFreshnessNotices: (props: { onRetry: () => Promise<unknown>; queries: readonly StaleQuery[] }) => {
     mocks.QueryFreshnessNotices(props);
     const presetLabels: Record<string, string> = {
       depegResolver: "Depeg Resolver",
@@ -73,26 +75,18 @@ vi.mock("@/components/section-error-boundary", () => ({
   SectionErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-// Heavyweight leaf: the hero's own rendering is covered by its suite. This stand-in
-// exposes the figures the client derives and whether the client passed a footer.
 vi.mock("@/components/depeg/depeg-outlook-hero", () => ({
-  DepegOutlookHero: (props: {
-    activeDepegIds?: ReadonlySet<string>;
-    pendingCount?: number | null;
-    dewsAlertCount?: number | null;
-    footer?: ReactNode;
-    alertQueue?: ReactNode;
-    book?: ResolverBookSummary | null;
-  }) => (
+  DepegOutlookHero: (props: Parameters<typeof import("@/components/depeg/depeg-outlook-hero").DepegOutlookHero>[0]) => (
     <div
       data-testid="depeg-hero"
+      data-loading={Object.entries(props.pendingSources ?? {}).filter(([, pending]) => pending).map(([key]) => key).join(",")}
       data-active-ids={[...(props.activeDepegIds ?? [])].join(",")}
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
       data-resolver-total={props.book?.total ?? "unavailable"}
       data-footer={props.footer == null ? "none" : "present"}
     >
-      {props.alertQueue}
+      {props.alertQueue?.(false)}
     </div>
   ),
 }));
@@ -102,7 +96,7 @@ vi.mock("@/components/dews/dews-alert-feed", () => ({
 }));
 
 vi.mock("@/components/depeg/depeg-control-board", () => ({
-  DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown; openIncidentEvidence?: string | null }> }) => (
+  DepegControlBoard: ({ rows }: { rows: import("@/lib/depeg-sort").DepegTrackerRow[] }) => (
     <div
       data-testid="depeg-control-board"
       data-row-ids={rows.map((row) => row.coin.id).join(",")}
@@ -137,12 +131,13 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  // Unconditional: a failing assertion mid-case must not leak fake timers.
   vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 const NOW_SEC = 1_700_000_000;
+const advanceTime = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+const fakeClock = (offset = 0) => vi.useFakeTimers({ now: NOW_SEC * 1000 + offset, toFake: ["setTimeout", "clearTimeout", "Date"] });
 
 /** Renders the real shared banner over the route's captured freshness queries for the given presets. */
 function renderCapturedNotices(presets: readonly string[]) {
@@ -172,8 +167,7 @@ function mountDepegRoute(options: {
     ? { ...surfaces, resolver: { ...surfaces.resolver, data: options.resolverData } }
     : surfaces);
   mocks.useUrlFilters.mockReturnValue(makeUrlFilters(options.params));
-  render(<DepegClient />);
-  return { peg, dews, events, surfaces };
+  return { ...render(<DepegClient />), peg, dews, events, surfaces };
 }
 
 describe("DepegClient", () => {
@@ -196,19 +190,70 @@ describe("DepegClient", () => {
   });
 
   it.each(["events", "dews", "peg"] as const)("does not manufacture headline counts when %s query settles without data", (missing) => {
-    const peg = makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] });
-    const dews = makeStressSignalsResult({ signals: { "coin-a": { band: "ALERT" } } });
-    const events = makeEventsResult();
+    const { unmount } = mountDepegRoute({ signals: { signals: { "coin-a": { band: "ALERT" } } } });
+    unmount();
     const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
-    mocks.usePegSummary.mockReturnValue(missing === "peg" ? absent : peg);
-    mocks.useStressSignals.mockReturnValue(missing === "dews" ? absent : dews);
-    mocks.useInfiniteDepegEvents.mockReturnValue(missing === "events" ? absent : events);
-    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
-    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    sourceHooks[missing].mockReturnValue(absent);
     render(<DepegClient />);
     const hero = screen.getByTestId("depeg-hero");
     expect(hero.dataset.pending).toBe(missing === "events" ? "null" : "0");
     expect(hero.dataset.alerts).toBe(missing === "dews" || missing === "peg" ? "null" : "1");
+    if (missing === "events") expect(screen.queryByTestId("feed-Recent resolved detections")).toBeNull();
+    if (missing === "peg") {
+      expect(screen.queryByTestId("depeg-control-board")).toBeNull();
+      expect(hero.dataset.alerts).toBe("null");
+    }
+  });
+
+  it.each(["peg", "dews", "events", "resolver", "resolverReview"] as const)("bounds the first %s read and never re-gates retained data", (source) => {
+    vi.useFakeTimers();
+    const { unmount, peg, dews, events, surfaces } = mountDepegRoute();
+    unmount();
+    const result = { peg, dews, events, ...surfaces }[source];
+    const waiting = { ...result, data: undefined, error: null };
+    const publish = (value: typeof waiting | typeof result) => {
+      if (source === "resolver" || source === "resolverReview") {
+        mocks.useDepegResolverSurfaces.mockReturnValue({ ...surfaces, [source]: value });
+      } else sourceHooks[source].mockReturnValue(value);
+    };
+    publish(waiting);
+    const view = render(<DepegClient />);
+    expect(screen.queryByTestId("depeg-hero")).toBeNull();
+    advanceTime(DEFAULT_REQUEST_TIMEOUT_MS - 1);
+    expect(screen.queryByTestId("depeg-hero")).toBeNull();
+    advanceTime(1);
+    const hero = screen.getByTestId("depeg-hero");
+    expect(hero.dataset.loading).toContain(source === "resolverReview" ? "review" : source);
+    if (source === "dews") expect(screen.getByTestId("dews-alert-feed")).not.toBeNull();
+    publish({ ...waiting, error: new Error("first read failed") });
+    view.rerender(<DepegClient />);
+    expect(hero.dataset.loading).toBe("");
+    if (source === "dews") expect(screen.queryByTestId("dews-alert-feed")).toBeNull();
+    publish(result);
+    view.rerender(<DepegClient />);
+    expect(screen.getByTestId("depeg-hero")).toBe(hero);
+    expect(hero.dataset.loading).toBe("");
+    if (source === "dews") expect(screen.getByTestId("dews-alert-feed")).not.toBeNull();
+    publish({ ...result, error: new Error("refresh failed") });
+    view.rerender(<DepegClient />);
+    expect(screen.getByTestId("depeg-hero")).toBe(hero);
+    view.unmount();
+    publish(waiting);
+    const retry = render(<DepegClient />);
+    advanceTime(DEFAULT_REQUEST_TIMEOUT_MS - 1);
+    publish({ ...waiting, error: new Error("first read failed") });
+    retry.rerender(<DepegClient />);
+    const released = screen.getByTestId("depeg-hero");
+    publish(waiting);
+    retry.rerender(<DepegClient />);
+    expect(screen.getByTestId("depeg-hero")).toBe(released);
+    advanceTime(1);
+    expect(screen.getByTestId("depeg-hero")).toBe(released);
+    publish(result);
+    retry.rerender(<DepegClient />);
+    expect(screen.getByTestId("depeg-hero").dataset.loading).toBe("");
+    retry.unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("treats a DEWS payload with no readable current rows as unavailable", () => {
@@ -224,29 +269,6 @@ describe("DepegClient", () => {
       .find((entry) => entry.preset === "stressSignals")!;
     expect(query.hasData).toBe(false);
     expect(screen.queryByTestId("dews-alert-feed")).toBeNull();
-  });
-
-  it("hides the resolved-history card until the first event page is readable", () => {
-    const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
-    mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
-    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult({ signals: { "coin-a": { band: "CALM" } } }));
-    mocks.useInfiniteDepegEvents.mockReturnValue(absent);
-    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
-    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
-    render(<DepegClient />);
-    expect(screen.queryByTestId("feed-Recent resolved detections")).toBeNull();
-  });
-
-  it("hides the control board when the peg catalog was not read", () => {
-    const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
-    mocks.usePegSummary.mockReturnValue(absent);
-    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult({ signals: { "coin-a": { band: "ALERT" } } }));
-    mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
-    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
-    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
-    render(<DepegClient />);
-    expect(screen.queryByTestId("depeg-control-board")).toBeNull();
-    expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("null");
   });
 
   it("labels open incidents from their unique event's latest trusted observation, without touching the census", () => {
@@ -272,14 +294,11 @@ describe("DepegClient", () => {
       makeCoin("blind", "BLIND", { activeDepeg: true }),
       makeCoin("calm", "CALM"),
     ] });
-    // Spot zero does not override a current off-peg observation; missing or
-    // ambiguous detail stays unconfirmed; non-incident rows carry no label.
     expect(screen.getByTestId("depeg-control-board").dataset.evidence)
       .toBe("off:outside,par:inside,dup:unconfirmed,blind:unconfirmed,calm:none");
     expect(screen.getByTestId("depeg-hero").dataset.activeIds).toBe("off,par,dup,blind");
 
-    // The page minute clock expires the at-par reading past the 1,200-second limit.
-    act(() => { vi.advanceTimersByTime(60_000); });
+    advanceTime(60_000);
     expect(screen.getByTestId("depeg-control-board").dataset.evidence)
       .toBe("off:outside,par:unconfirmed,dup:unconfirmed,blind:unconfirmed,calm:none");
   });
@@ -310,13 +329,10 @@ describe("DepegClient", () => {
     const board = screen.getByTestId("depeg-control-board");
     const hero = screen.getByTestId("depeg-hero");
 
-    // Only the EUR asset survives the board filter…
     expect(board.dataset.rowIds).toBe("coin-e");
-    // …while the hero keeps counting the whole tracked universe.
     expect(hero.dataset.activeIds).toBe("coin-b");
     expect(hero.dataset.pending).toBe("1");
     expect(hero.dataset.alerts).toBe("1");
-    // History is route-wide too: the resolved event of a filtered-out coin stays.
     expect(screen.getByTestId("feed-Recent resolved detections").textContent).toBe("1");
     expect(screen.queryByTestId("feed-Active Incidents")).toBeNull();
   });
@@ -358,18 +374,17 @@ describe("DepegClient", () => {
     const usable = { "coin-a": { band: "CALM" } };
 
     it("ages the oldest signal generation against the shared six-hour band, not a private hour", () => {
-      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
-      // The newest generation is current; only the oldest retained signal ages.
+      fakeClock();
       const { dews } = mountDepegRoute({
         signals: { signals: usable, oldestComputedAt: NOW_SEC - 2 * 3600, updatedAt: NOW_SEC, meta: transport(NOW_SEC) },
       });
       const banner = renderCapturedNotices(["stressSignals"]);
-      act(() => vi.advanceTimersByTime(0));
+      advanceTime(0);
       expect(banner()).toBeNull();
       expect(screen.queryByText(/oldest DEWS signal|Coverage caveats/)).toBeNull();
-      act(() => vi.advanceTimersByTime(SIX_HOURS_MS - 2 * 3_600_000));
+      advanceTime(SIX_HOURS_MS - 2 * 3_600_000);
       expect(banner()).toBeNull();
-      act(() => vi.advanceTimersByTime(1));
+      advanceTime(1);
       expect(banner()?.getAttribute("data-health-state")).toBe("stale");
       expect(dews.refetch).not.toHaveBeenCalled();
     });
@@ -387,7 +402,7 @@ describe("DepegClient", () => {
     });
 
     it("retains usable signals through a refresh error and malformed rows without a hero caveat", () => {
-      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      fakeClock();
       mountDepegRoute({
         signals: {
           signals: usable, oldestComputedAt: NOW_SEC - 3 * 3600, malformedRows: 1,
@@ -395,7 +410,7 @@ describe("DepegClient", () => {
         },
       });
       const banner = renderCapturedNotices(["stressSignals"]);
-      act(() => vi.advanceTimersByTime(0));
+      advanceTime(0);
       expect(banner()).toBeNull();
       expect(screen.queryByText(/malformed DEWS|Coverage caveats/)).toBeNull();
       expect(screen.getByTestId("depeg-hero").dataset.footer).toBe("none");
@@ -415,26 +430,22 @@ describe("DepegClient", () => {
     });
 
     it("falls back to the body producer clock for legacy bodies, never receipt time", () => {
-      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      fakeClock();
       mountDepegRoute({
         signals: { signals: usable, updatedAt: NOW_SEC - SIX_HOURS_MS / 1000, dataUpdatedAt: NOW_SEC * 1000 },
       });
       const banner = renderCapturedNotices(["stressSignals"]);
-      act(() => vi.advanceTimersByTime(0));
+      advanceTime(0);
       expect(banner()).toBeNull();
-      act(() => vi.advanceTimersByTime(1));
+      advanceTime(1);
       expect(banner()?.getAttribute("data-health-state")).toBe("stale");
     });
   });
 
   it("routes retained DDR and DDRR ages through the shared public stale band", () => {
-    vi.useFakeTimers({ now: NOW_SEC * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
-    const surfaces = makeResolverSurfaces();
+    fakeClock(901_000);
+    const { surfaces, rerender } = mountDepegRoute();
     const meta = { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" as const };
-    mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
-    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult());
-    mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
-    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
     mocks.useDepegResolverSurfaces.mockReturnValue({
       ...surfaces,
       resolver: {
@@ -448,14 +459,13 @@ describe("DepegClient", () => {
       },
       resolverReview: { ...surfaces.resolverReview, dataUpdatedAt: NOW_SEC * 1000, meta, error: new Error("HTTP 503") },
     });
-    render(<DepegClient />);
+    rerender(<DepegClient />);
     const banner = renderCapturedNotices(["depegResolver", "depegResolverReview"]);
-    act(() => vi.advanceTimersByTime(0));
+    advanceTime(0);
     expect(banner()).toBeNull();
-    // Exactly 12 x 900 s is still inside the degraded band.
-    act(() => vi.advanceTimersByTime(10_800_000 - 901_000));
+    advanceTime(10_800_000 - 901_000);
     expect(banner()).toBeNull();
-    act(() => vi.advanceTimersByTime(1));
+    advanceTime(1);
     expect(banner()?.getAttribute("data-health-state")).toBe("stale");
     expect(surfaces.resolver.refetch).not.toHaveBeenCalled();
     expect(surfaces.resolverReview.refetch).not.toHaveBeenCalled();

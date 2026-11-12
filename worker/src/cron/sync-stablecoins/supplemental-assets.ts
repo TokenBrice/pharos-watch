@@ -1,3 +1,4 @@
+import type { PriceCacheEntry } from "../../lib/price-cache";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
@@ -90,6 +91,8 @@ export async function fetchSupplementalTrackedTokens(
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
   dwellirNative?: DwellirNativeCapability,
   reportPartitionSummary?: (summary: OnchainPartitionSummary) => void,
+  syncStartSec?: number,
+  replayPriceCache?: Map<string, PriceCacheEntry> | null,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -101,7 +104,7 @@ export async function fetchSupplementalTrackedTokens(
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
   const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs, dwellirNative);
   const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs, dwellirNative);
-  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative, reportPartitionSummary);
+  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db, previousAssetsById, dwellirNative, reportPartitionSummary, syncStartSec, replayPriceCache);
 
   return { goldTokens, silverTokens, fiatCgTokens };
 }

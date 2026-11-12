@@ -31,7 +31,8 @@ vi.mock("../live-reserves/store-shared", async (importOriginal) => {
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
-import { RESERVE_FEED_REVIEWS } from "../reserve-feed-reviews";
+import { YUZU_REVIEW, installYuzuReview } from "./live-reserves-store.test-support";
+installYuzuReview();
 import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { beginLiveReserveCheckpoint } from "../../cron/reserve-adapters/reserve-checkpoint";
@@ -44,6 +45,8 @@ function pendingCheckpoint(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+const reservePolicy = resolveScheduledSlotPolicy("fourHourlyReserveSync");
+const readOverview = (db: D1Database, now: number) => computeReserveCompositionOverview(db, now, reservePolicy);
 describe("live-reserves-store", () => {
   it.each([
     ["fatal", "warning", true, false], ["fatal", "info", true, false], ["fatal", "warning", false, false],
@@ -138,7 +141,7 @@ describe("live-reserves-store", () => {
     },
   );
   it("conserves raw evidence and removes each acknowledged feed's actual authoritative contribution", async () => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
+    const review = YUZU_REVIEW;
     const now = review.reviewedAt + 1;
     const composition = reserveCompositionRow({
       stablecoin_id: review.stablecoinId, source: review.adapterKey, fetched_at: now - 100,
@@ -154,14 +157,14 @@ describe("live-reserves-store", () => {
       { match: "FROM reserve_composition", rows: [composition], first: composition },
       { match: "FROM reserve_sync_state", rows: [sync], first: sync },
     ]);
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
     expect(overview.errorCoins).toBe(1);
     expect(overview.freshCoins).toBe(0);
     expect(overview.acknowledgedFeedIds).toEqual([review.stablecoinId]);
     expect(overview.healthConfiguredCoins).toBe(overview.configuredCoins - 1);
     expect(overview.healthAuthoritativeFreshCoins).toBe(overview.independentFreshEligible
       + overview.independentFreshUnverified + overview.staticValidatedFresh - 1);
-    const expired = await computeReserveCompositionOverview(db, review.expiresAt, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const expired = await readOverview(db, review.expiresAt);
     expect(expired.acknowledgedFeedIds).toEqual([]);
     expect(expired.healthConfiguredCoins).toBe(expired.configuredCoins);
     expect(expired.expiredFeedReviewIds).toContain(review.stablecoinId);
@@ -192,7 +195,7 @@ describe("live-reserves-store", () => {
     expect(detail?.provenance?.scoringEligible).toBe(!stale);
     expect(detail?.displayBadge).toEqual({ kind: "proof", label: "Attestation" });
     expect((await loadFreshIndependentLiveReserveMap(db, now)).has(id)).toBe(!stale);
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
     expect(overview.freshCoins).toBe(stale ? 0 : 1);
     expect(overview.staleCoins).toBe(stale ? 1 : 0);
   });
@@ -475,19 +478,18 @@ describe("live-reserves-store", () => {
   });
 
   describe("adapter reliability availability", () => {
-    const policy = () => resolveScheduledSlotPolicy("fourHourlyReserveSync");
-    const reliabilityRow = {
-      adapter_key: "infinifi", attempts: 4, ok_count: 3, degraded_count: 1,
-      degraded_by_design_count: 0, error_count: 0, skipped_count: 0,
+    const rows = [{ adapterKey: "infinifi", attempts: 4, ok: 3, degraded: 1,
+      degradedByDesign: 0, error: 0, skipped: 0, successRate: 0.75 }];
+    const overview = async (memo: typeof rows | null) => {
+      vi.resetModules();
+      const { computeReserveCompositionOverview: read } = await import("../live-reserves/store-overview");
+      return read(mockD1([{ match: "FROM cache", rows: memo === null ? [] : [{
+        key: "reserve-sync-reliability-rollup:v1", updated_at: 1000,
+        value: JSON.stringify({ computedAt: 1000, windowSec: 2_592_000, rows: memo }),
+      }] }]), 2000, reservePolicy);
     };
-
-    it("marks a failed rollup unavailable without disturbing readable coverage counts", async () => {
-      const readable = await computeReserveCompositionOverview(mockD1([
-        { match: "reserve_sync_attempt_history", rows: [] },
-      ]), 2_000, policy());
-      const failed = await computeReserveCompositionOverview(mockD1([
-        { match: "reserve_sync_attempt_history", rows: [], throwError: new Error("rollup unavailable") },
-      ]), 2_000, policy());
+    it("marks a missing memo unavailable without disturbing readable coverage counts", async () => {
+      const readable = await overview([]), failed = await overview(null);
       expect(failed.adapterReliability).toEqual([]);
       expect(failed.adapterReliabilityAvailability).toEqual({
         status: "unavailable", reason: "reserve_adapter_reliability_query_failed",
@@ -495,32 +497,23 @@ describe("live-reserves-store", () => {
       expect({ ...failed, adapterReliabilityAvailability: undefined })
         .toEqual({ ...readable, adapterReliabilityAvailability: undefined });
     });
-
-    it("distinguishes a successful empty read from populated rows", async () => {
-      const empty = await computeReserveCompositionOverview(mockD1([
-        { match: "reserve_sync_attempt_history", rows: [] },
-      ]), 2_000, policy());
+    it("distinguishes an empty memo from populated rows with their computation clock", async () => {
+      const empty = await overview([]);
       expect(empty).toMatchObject({ adapterReliability: [], adapterReliabilityAvailability: { status: "available" } });
-      const populated = await computeReserveCompositionOverview(mockD1([
-        { match: "reserve_sync_attempt_history", rows: [reliabilityRow] },
-      ]), 2_000, policy());
-      expect(populated.adapterReliabilityAvailability).toEqual({ status: "available" });
+      const populated = await overview(rows);
+      expect(populated.adapterReliabilityAvailability).toEqual({ status: "available", computedAt: 1000 });
       expect(populated.adapterReliability).toEqual([expect.objectContaining({ adapterKey: "infinifi", attempts: 4, ok: 3 })]);
     });
-
     it("emits available empty evidence for a zero configured cohort", async () => {
       vi.mocked(getConfiguredLiveReserveCoins).mockReturnValueOnce([]);
-      const overview = await computeReserveCompositionOverview(mockD1([
-        { match: "reserve_sync_attempt_history", rows: [], throwError: new Error("must not be read") },
-      ]), 2_000, policy());
-      expect(overview).toMatchObject({
+      expect(await overview(null)).toMatchObject({
         configuredCoins: 0, adapterReliability: [], adapterReliabilityAvailability: { status: "available" },
       });
     });
   });
 
   it("treats inconsistent live snapshots as missing in the reserve overview", async () => {
-    const emptyOverview = await computeReserveCompositionOverview(mockD1(), 2_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const emptyOverview = await readOverview(mockD1(), 2_000);
     const db = mockD1([
       {
         match: "reserve_sync_state",
@@ -534,7 +527,7 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, 2_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, 2_000);
 
     // Inconsistent snapshot (sync.last_success_at !== composition.fetched_at) is treated as missing.
     // The coin was already counted as missing in the empty overview, so counts don't change.
@@ -627,8 +620,8 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now + 100, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
-    const empty = await computeReserveCompositionOverview(mockD1(), now + 100, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now + 100);
+    const empty = await readOverview(mockD1(), now + 100);
     expect(overview.errorCoins).toBe(empty.errorCoins + 1);
     expect(overview.degradedCoins).toBe(empty.degradedCoins);
     expect(overview.freshCoins + overview.staleCoins + overview.missingCoins
@@ -648,7 +641,7 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
     expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
     expect(overview.staleCoins).toBe(0);
   });
@@ -663,7 +656,6 @@ describe("live-reserves-store", () => {
       })] }]),
       new Map([[id, reserveSyncStateInput(attemptId, { lastStatus: "degraded", ...state })]]), [id], now,
     );
-    // Latest-attempt warnings cannot contaminate a clean retained composition.
     const withheld = { warningCount: 1, warnings: [warn("fallback-withheld-score-grade-retained")] };
     const ineligible = await inspect(JSON.stringify([warn("undated-portfolio")]), {}, withheld);
     expect([...ineligible.scoreIneligibleIds]).toEqual([id]);
@@ -680,7 +672,7 @@ describe("live-reserves-store", () => {
         const overview = await computeReserveCompositionOverview(mockD1([
           { match: "reserve_composition", rows: [reserveCompositionRow({ ...raw, metadata: JSON.stringify({ freshnessMode: "not-applicable" }) })] },
           { match: "reserve_sync_state", rows: [reserveSyncRow({ ...raw, last_status: "degraded" })] },
-        ]), now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+        ]), now, reservePolicy);
         expect([overview.degradedCoins, overview.healthDegradedCoins]).toEqual([1, operational]);
       }
       const assess = (row: Record<string, unknown> = {}, state = {}, now = 1_200) => inspect(JSON.stringify(warnings), row, state, now);
@@ -993,7 +985,7 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now + 100, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now + 100);
     expect(overview.freshCoins).toBeGreaterThanOrEqual(4);
     expect(overview.independentFreshEligible).toBe(1);
     expect(overview.independentFreshUnverified).toBe(1);
@@ -1004,7 +996,7 @@ describe("live-reserves-store", () => {
 
   it("counts an uncertainWrite coin with no composition in a single primary bucket", async () => {
     const now = 10_000;
-    const emptyOverview = await computeReserveCompositionOverview(mockD1(), now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const emptyOverview = await readOverview(mockD1(), now);
     const db = mockD1([
       {
         match: "reserve_sync_state",
@@ -1029,9 +1021,8 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
 
-    // Primary bucket increments by exactly 1 (errorCoins, because lastStatus=error + no composition).
     expect(overview.errorCoins).toBe(emptyOverview.errorCoins + 1);
     expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
     expect(overview.writeTimeoutUncertain).toBe(1);
@@ -1054,18 +1045,18 @@ describe("live-reserves-store", () => {
       sqlite.prepare(`INSERT INTO cron_slot_executions
         (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
         VALUES ('fourHourlyReserveSync', 9500, 'running', 'older-producer', 1, 9500, 9905)`).run();
-      expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, 10_000)).toMatchObject({
         inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
       });
       sqlite.prepare(`INSERT INTO cron_slot_executions
         (slot_key, slot_started_at, state, execution_owner, execution_generation, started_at, updated_at)
         VALUES ('fourHourlyReserveSync', 9600, 'running', 'exact-producer', 1, 9600, 9905)`).run();
-      expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, 10_000)).toMatchObject({
         inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false,
       });
       sqlite.prepare(`UPDATE cron_slot_executions SET state = 'finished', finished_at = 9950
         WHERE slot_key = 'fourHourlyReserveSync' AND slot_started_at = 9600`).run();
-      expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, 10_000)).toMatchObject({
         inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
       });
     } finally {
@@ -1087,13 +1078,13 @@ describe("live-reserves-store", () => {
         SET state = 'ready', next_item_key = NULL, items_done = items_total,
             child_dispositions_json = json_set(child_dispositions_json, '$."sync-live-reserves"', 'completed')
         WHERE slot_started_at = 9600`).run();
-      expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, 10_000)).toMatchObject({
         cohort: { slotStartedAt: 9600, completedAt: null, ageSec: 400,
           continuationPending: true, completedCohorts: 2, completionP95Sec: 1801, recentCompletionMaxSec: 1801 },
       });
       sqlite.prepare(`UPDATE worker_scheduled_checkpoints
         SET state = 'completed', completed_at = 10100 WHERE slot_started_at = 9600`).run();
-      expect(await computeReserveCompositionOverview(db, 10_200, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, 10_200)).toMatchObject({
         cohort: { slotStartedAt: 9600, completedAt: 10100, ageSec: 500,
           continuationPending: false, completedCohorts: 3, completionP95Sec: 1801, recentCompletionMaxSec: 1801 },
       });
@@ -1116,14 +1107,13 @@ describe("live-reserves-store", () => {
           SET state = 'completed', next_item_key = NULL, items_done = items_total,
               completed_at = ? WHERE slot_started_at = ?`).run(slotStartedAt + duration, slotStartedAt);
       }
-      // A second exhausted attempt of the slowest root must not add a sample.
       sqlite.prepare(`INSERT INTO worker_scheduled_checkpoints
         (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state,
          next_item_key, items_done, items_total, created_at, updated_at, completed_at)
         SELECT schedule_key, slot_started_at, job, 2, 'replay', queue_hash, state,
                next_item_key, items_done, items_total, created_at, updated_at, completed_at + 60
         FROM worker_scheduled_checkpoints ORDER BY slot_started_at LIMIT 1`).run();
-      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, now)).toMatchObject({
         cohort: { slotStartedAt: latestSlot, completedAt: latestSlot + 664, ageSec: 664,
           continuationPending: false, completedCohorts: 41, completionP95Sec: 3_691, recentCompletionMaxSec: 664 },
       });
@@ -1145,14 +1135,14 @@ describe("live-reserves-store", () => {
               completed_at = ? WHERE slot_started_at = ?`)
           .run(slotStartedAt + (slotStartedAt === oldSlot ? 1_801 : 100), slotStartedAt);
       }
-      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, now)).toMatchObject({
         cohort: { completedCohorts: 2, completionP95Sec: 1_801 },
       });
-      expect(await computeReserveCompositionOverview(db, now + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, now + 1)).toMatchObject({
         cohort: { completedCohorts: 1, completionP95Sec: 100 },
       });
       expect(await computeReserveCompositionOverview(
-        db, latestSlot + STATUS_RESERVE_COHORT_SLO.windowSec + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"),
+        db, latestSlot + STATUS_RESERVE_COHORT_SLO.windowSec + 1, reservePolicy,
       )).toMatchObject({
         cohort: { completedCohorts: 0, completionP95Sec: null, recentCompletionMaxSec: null },
       });
@@ -1173,10 +1163,10 @@ describe("live-reserves-store", () => {
           SET state = 'completed', next_item_key = NULL, items_done = items_total,
               completed_at = ? WHERE slot_started_at = ?`).run(completedAt, slotStartedAt);
       }
-      expect(await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, now)).toMatchObject({
         cohort: { completedCohorts: 1, completionP95Sec: 200, recentCompletionMaxSec: oldCompletedAt - oldSlot },
       });
-      expect(await computeReserveCompositionOverview(db, now + 1, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+      expect(await readOverview(db, now + 1)).toMatchObject({
         cohort: { completedCohorts: 1, completionP95Sec: 200, recentCompletionMaxSec: 200 },
       });
     } finally {
@@ -1188,7 +1178,7 @@ describe("live-reserves-store", () => {
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint({
       state: "ready", producer_disposition: "continuation_pending", producer_state: "finished", producer_finished_at: 9900,
     }) }]);
-    expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(db, 10_000)).toMatchObject({
       inProgressCoins: 0, deferredCoins: 0, runBudgetTruncated: false,
       cohort: { continuationPending: true, ageSec: 400 },
     });
@@ -1196,7 +1186,7 @@ describe("live-reserves-store", () => {
       state: "recovering", producer_disposition: "running", recovery_lease_until: 10500,
       producer_state: "finished", producer_finished_at: 9900, slot_started_at: 8000,
     }) }]);
-    expect(await computeReserveCompositionOverview(recovering, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(recovering, 10_000)).toMatchObject({
       inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false,
       cohort: { continuationPending: true, ageSec: 2000 },
     });
@@ -1204,7 +1194,7 @@ describe("live-reserves-store", () => {
 
   it("reports a fresh exact-slot running checkpoint as in-progress without inventing deferred coins", async () => {
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint() }]);
-    const overview = await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, 10_000);
     expect(overview).toMatchObject({
       inProgressCoins: 9, deferredCoins: 0, runBudgetTruncated: false, deferredAt: null,
       nextCursorStablecoinId: "coin-tail", cursorRecordedAt: 9_905,
@@ -1237,12 +1227,11 @@ describe("live-reserves-store", () => {
       { match: "FROM worker_scheduled_checkpoints", rows: [], first: pendingCheckpoint() },
       { match: "FROM reserve_sync_state", rows: states },
     ]);
-    expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(db, 10_000)).toMatchObject({
       deferredCoins: 2, inProgressCoins: 9, runBudgetTruncated: true, deferredAt: 9_905,
     });
   });
 
-  const reservePolicy = resolveScheduledSlotPolicy("fourHourlyReserveSync");
   it.each([
     ["recovering", { state: "recovering" }],
     ["ready", { state: "ready" }],
@@ -1261,7 +1250,7 @@ describe("live-reserves-store", () => {
   ] as const)("keeps non-live pending checkpoint tails deferred: %s", async (_label, overrides) => {
     const checkpoint = pendingCheckpoint(overrides);
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: checkpoint }]);
-    expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(db, 10_000)).toMatchObject({
       inProgressCoins: 0, deferredCoins: 9, runBudgetTruncated: true,
       nextCursorStablecoinId: "coin-tail", cursorRecordedAt: checkpoint.updated_at,
     });
@@ -1270,7 +1259,7 @@ describe("live-reserves-store", () => {
   it.each([0, 1])("bounds checkpoint heartbeat silence at the exact policy boundary plus %s", async (extraSec) => {
     const checkpoint = pendingCheckpoint({ updated_at: 10_000 - reservePolicy.slotSilenceSec - extraSec });
     const db = mockD1([{ match: "FROM worker_scheduled_checkpoints", rows: [], first: checkpoint }]);
-    expect(await computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(db, 10_000)).toMatchObject({
       inProgressCoins: extraSec === 0 ? 9 : 0,
       deferredCoins: extraSec === 0 ? 0 : 9,
       runBudgetTruncated: extraSec !== 0,
@@ -1278,13 +1267,13 @@ describe("live-reserves-store", () => {
   });
 
   it("distinguishes absent checkpoint from checkpoint read failure", async () => {
-    expect(await computeReserveCompositionOverview(mockD1(), 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).toMatchObject({
+    expect(await readOverview(mockD1(), 10_000)).toMatchObject({
       inProgressCoins: 0, deferredCoins: 0, runBudgetTruncated: false,
     });
     const db = mockD1([{
       match: "FROM worker_scheduled_checkpoints", rows: [], throwError: new Error("checkpoint-read-failed"),
     }]);
-    await expect(computeReserveCompositionOverview(db, 10_000, resolveScheduledSlotPolicy("fourHourlyReserveSync"))).rejects.toThrow("checkpoint-read-failed");
+    await expect(readOverview(db, 10_000)).rejects.toThrow("checkpoint-read-failed");
   });
 
   it("ignores stale pending pointers when the latest checkpoint is terminal", async () => {
@@ -1308,7 +1297,7 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, 10_100, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, 10_100);
 
     expect(overview.runBudgetTruncated).toBe(false);
     expect(overview.inProgressCoins).toBe(0);
@@ -1321,10 +1310,8 @@ describe("live-reserves-store", () => {
 
   it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const emptyOverview = await computeReserveCompositionOverview(mockD1(), now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const emptyOverview = await readOverview(mockD1(), now);
 
-    // Stored slices array has invalid entries (missing risk, bad pct type) that
-    // will fail the LiveReserveSnapshotSchema parse in parseReserveCompositionRow.
     const corruptSlices = [
       { name: "Missing Risk", pct: 20 },
       { name: "Bad Pct", pct: "fifty", risk: "low" },
@@ -1366,10 +1353,8 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
     expect(overview.corruptCoins).toBe(emptyOverview.corruptCoins + 1);
-    // Corrupt snapshot must not be counted as fresh even though the sync state
-    // reports lastStatus=ok and age=0.
     expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
   });
 
@@ -1416,7 +1401,7 @@ describe("live-reserves-store", () => {
       },
     ]);
 
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
 
     expect(overview.corruptCoins).toBe(1);
     // The latest attempt hit the write-timeout path, so the coin is uncertain
@@ -1450,7 +1435,7 @@ describe("live-reserves-store", () => {
       })] },
       { match: "reserve_composition", rows: [] },
     ]);
-    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+    const overview = await readOverview(db, now);
     const entries = overview.persistentlyStaleIndependentCoins.filter((entry) => entry.stablecoinId === "iusd-infinifi");
     expect(entries.map((entry) => ({ id: entry.stablecoinId, age: entry.ageSec })))
       .toEqual(expected ? [{ id: "iusd-infinifi", age }] : []);

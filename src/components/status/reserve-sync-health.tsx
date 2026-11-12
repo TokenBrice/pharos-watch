@@ -182,6 +182,11 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
           <div className="text-xs font-medium text-foreground">30-day Adapter Reliability</div>
+          {health.adapterReliabilityAvailability?.status !== "unavailable" ? (
+            <div className="text-xs text-muted-foreground">
+              Computed: <Timestamp epochSec={health.adapterReliabilityAvailability?.computedAt} nowSec={nowSeconds} fallback="unknown (legacy payload)" />
+            </div>
+          ) : null}
           {health.adapterReliabilityAvailability?.status === "unavailable" ? (
             <div className="space-y-1 text-xs">
               <div className="font-medium text-muted-foreground">Unavailable · counts unknown</div>

@@ -149,7 +149,7 @@ export interface OnChainSupplyExclusionConfig {
 interface ReviewedOnchainSupplyDeployment extends CuratedOnchainSupplyContractConfig {
   /** Explicit permission for additive dropout repair, independent of aggregate readability. */
   dropoutRepair?: "registry" | "pharos-state-only";
-  reader?: "usdy-sui" | "usdy-aptos";
+  reader?: "usdy-sui" | "usdy-aptos" | "buidl-aptos";
 }
 
 interface ReviewedOnchainSupplyPlan {
@@ -166,6 +166,32 @@ interface ReviewedOnchainSupplyPlan {
 
 /** Reviewed deployment stock, accounting and supply preference, owned together per asset. */
 export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnchainSupplyPlan>> = {
+  // Reviewed 2026-11-12: issuer-identified native share registers. Verified EVM
+  // bridges burn source shares and issue destination shares, not lock/mint.
+  // Non-EVM bridge accounting and a complete issuer-escrow census are unverified;
+  // issuer share-class identity supports addition, not a universal no-escrow claim.
+  // https://public-feed.securitize.io/asset-info?symbol=BUIDL
+  // Both Ethereum classes are independent six-decimal registers; sum them once.
+  // Six-decimal shares: ETH 170,226,737.157549 + I-class 144,103,743.045100
+  // (26399392); BSC 277,532,492.635 (133176007); OP 26,575,157.77 (159446793);
+  // ARB 12,630,305.63 (523586559); AVAX 356,359,217.49 (100119134);
+  // Polygon 10,478,611.20 (97192152); SOL 483,827,334.40 (slot 468558788);
+  // Aptos 157,418,928.49 (version 8018167035); Tempo 17,174,363.99 (48676770).
+  // Sum 1,656,326,891.807649: last DL stock plus its omitted Tempo leg.
+  // Tempo's +12,422.08 since reviewed block 47370052 reconciles to five mints
+  // before Nov 11; the list-specific exclusion remains valid for list repair.
+  // Every zero or unreadable leg rejects the aggregate under current readers.
+  // A genuinely redeemed-to-zero class requires a reviewed plan change.
+  "buidl-blackrock": {
+    preferMcap: true,
+    aggregateContracts: [
+      { chain: "ethereum", address: "0x7712c34205737192402172409a8f7ccef8aa2aec" },
+      { chain: "ethereum", address: "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041" },
+      { chain: "bsc" }, { chain: "optimism" }, { chain: "arbitrum" },
+      { chain: "avalanche" }, { chain: "polygon" }, { chain: "solana" },
+      supplyProbeChain("aptos", { reader: "buidl-aptos" }), supplyProbeChain("tempo"),
+    ],
+  },
   "hbd-hive": { nativeWorkflow: "hive-debt" },
   [ZEPHYR_ZSD_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   [ZEPHYR_ZYS_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },

@@ -8,7 +8,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../../lib/response-ready-cache-contracts";
-import { setCacheIfNewer } from "../../lib/db-cache";
+import { getCacheUpdatedAt, setCacheIfNewer, type CacheWriteResult } from "../../lib/db-cache";
 import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { PeggedAsset } from "./enrich-prices";
 import { returnIfAborted } from "./runtime";
@@ -215,7 +215,37 @@ export async function validateAndWriteStablecoinsCache(
   );
   if (cacheWriteAbort) return cacheWriteAbort;
   const stablecoinsCacheBody = JSON.stringify(admission.payload);
-  const cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+  const bootstrap = admission.payload.peggedAssets.find(asset => asset.id === "buidl-blackrock"
+    && asset.supplySource === "defillama" && asset.supplyRestored);
+  let cacheResult: CacheWriteResult;
+  if (bootstrap) {
+    // A delayed legacy carry cannot overwrite native success, even with a later
+    // run clock. UPDATE also refuses to bootstrap an absent canonical predecessor.
+    const result = await runWithOverloadRetry(() => db.prepare(`
+      UPDATE cache SET value = ?, updated_at = ? WHERE key = 'stablecoins' AND updated_at <= ?
+        AND EXISTS (SELECT 1 FROM json_each(cache.value, '$.peggedAssets') AS prior
+          WHERE json_extract(prior.value, '$.id') = 'buidl-blackrock'
+            AND json_extract(prior.value, '$.supplySource') = 'defillama'
+            AND json_extract(prior.value, '$.supplyRestored') = 1
+            AND json_extract(prior.value, '$.supplyObservedAt') = ?)
+    `).bind(stablecoinsCacheBody, syncStartSec, syncStartSec, bootstrap.supplyObservedAt).run(), 3, signal);
+    if (result.meta.changes !== 1) {
+      const updatedAt = await getCacheUpdatedAt(db, "stablecoins");
+      if (updatedAt != null && updatedAt > syncStartSec) return {
+        written: false, skippedBecauseNewer: true, cacheKey: "stablecoins", syncStartSec,
+        quarantinedAssets: admission.quarantined,
+      };
+      return {
+        written: false, skippedBecauseNewer: false, cacheKey: "stablecoins", syncStartSec,
+        quarantinedAssets: admission.quarantined,
+        blockedResult: { status: "degraded", itemCount: 0,
+          metadata: JSON.stringify({ reason: "buidl-bootstrap-predecessor-unavailable" }) },
+      };
+    }
+    cacheResult = { written: true, skippedBecauseNewer: false };
+  } else {
+    cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+  }
   let responseReadyCacheError: string | null = null;
   if (cacheResult.written) {
     try {

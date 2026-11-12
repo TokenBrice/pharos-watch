@@ -654,9 +654,7 @@ describe("handleStatus", () => {
     expect(body.causes.availability.some((cause) => cause.code === "cache_freshness_query_failed")).toBe(true);
   });
 
-  // -------------------------------------------------------------------------
   // 2026-04-13 status-stability hardening: missing-price thresholds.
-  // -------------------------------------------------------------------------
   //
   // `missingPriceRatio` keeps only its 45% stale band; below it, breadth is
   // graded by the shared active-asset threshold (5% of the active cohort).
@@ -733,9 +731,7 @@ describe("handleStatus", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // Follow-up #4 — scope missingPriceRatio denominator to active canonical
-  // -------------------------------------------------------------------------
   //
   // The pre-follow-up implementation counted all peggedAssets in the cache,
   // including DefiLlama residuals (numeric IDs from the DL API that we are
@@ -884,9 +880,7 @@ describe("handleStatus", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 2026-04-13 status-stability hardening: on-chain low-sample suppression.
-  // -------------------------------------------------------------------------
   //
   // Suppress the `onchain_monitor_low_sample` info cause when the on-chain
   // monitor is at the structural floor (tracked coins < 3). Currently only
@@ -954,9 +948,7 @@ describe("handleStatus", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // 2026-04-13 status-stability hardening: transition-count observability.
-  // -------------------------------------------------------------------------
   //
   // Surface the 24-hour transition count in the status summary so operators
   // can detect new flapping lanes as thresholds drift.
@@ -1000,12 +992,10 @@ describe("handleStatus", () => {
     });
   });
 
-  // -------------------------------------------------------------------------
   // Task 2: handleStatus must be read-only w.r.t. status_state. The cron
   // (status-self-check, */15 min) is the sole writer. The API used to call
   // reconcileStatusState whenever staleness.isStale was true, racing with the
   // cron's own reconcile and dropping transitions.
-  // -------------------------------------------------------------------------
   describe("handleStatus — read-only w.r.t. status_state", () => {
     function buildBaseStatusTables(now: number, stateRow: Record<string, unknown> | null) {
       const stablecoinsCache = JSON.stringify({

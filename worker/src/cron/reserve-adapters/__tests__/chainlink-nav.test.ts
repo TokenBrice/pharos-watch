@@ -187,10 +187,10 @@ describe("adaptChainlinkNavResponse", () => {
     expect(classifications[0]?.classificationKey).toMatch(/^registry-reviewed:/);
   });
 
-  it("keeps portfolio NAV visible but degrades unverified composition", () => {
+  it.each([{ ...params, navScope: "portfolio" as const }, TRACKED_META_BY_ID.get("mtbill-midas")!.liveReservesConfig!.params as ChainlinkNavParams])("keeps portfolio NAV visible but degrades unverified composition", (portfolio) => {
     const result = adaptChainlinkNavResponse(
       { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
-      { ...params, navScope: "portfolio" },
+      portfolio,
     );
     expect(result.slices[0].pct).toBe(100);
     expect(result.metadata?.freshnessMode).toBe("verified");
@@ -488,7 +488,6 @@ describe("fetchChainlinkNavCore", () => {
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "nav-portfolio-composition-unverified", effect: "degraded" }),
     ]));
-    // freshness falls through to unverified (no valid wrapper timestamp)
     expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 });

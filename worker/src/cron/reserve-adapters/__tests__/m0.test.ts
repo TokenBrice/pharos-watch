@@ -1,3 +1,4 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citrea.json";
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
@@ -10,7 +11,7 @@ import type { OnchainLogEntry } from "../onchain";
 import { adaptM0Collateral, adaptM0OnchainCollateral } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import { expectWarningEffect, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+import { expectWarningEffect, expectWarnings, installAdapterNetwork, runAdapter, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
 
 // The CollateralUpdated scan is the only M0 on-chain fallback step the adapter
 // harness cannot answer (it routes eth_call/block methods only), so it is
@@ -286,6 +287,14 @@ const STALE_INDEXER_PAYLOAD = {
 const ONCHAIN_WINDOW_FROM_KEY = `eth_getBlockByNumber:0x${ONCHAIN_WINDOW_FROM_BLOCK.toString(16)}`;
 const ONCHAIN_INTERVAL_KEY = "ethereum:updateCollateralInterval()";
 
+const windowNetwork = {
+  block: ONCHAIN_BLOCK,
+  rpc: {
+    [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
+    [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
+  },
+};
+
 function m0CollateralUpdatedLog(minter: string, blockNumber: number): OnchainLogEntry {
   return {
     address: "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e",
@@ -295,38 +304,35 @@ function m0CollateralUpdatedLog(minter: string, blockNumber: number): OnchainLog
   };
 }
 
-function m0OnchainNetwork(options: {
-  collateralByMinter: Record<string, bigint>;
-  updatedByMinter: Record<string, number>;
-}) {
+function m0OnchainNetwork() {
   return {
-    block: ONCHAIN_BLOCK,
+    ...windowNetwork,
     rpc: {
-      [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
-      [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
+      ...windowNetwork.rpc,
+      "eth_getBlockByNumber:latest": () => new Promise<typeof ONCHAIN_BLOCK>((r) => setTimeout(() => r(ONCHAIN_BLOCK), 7_000)),
       "ethereum:isMinterApproved(address)": true,
       "ethereum:collateralOf(address)": (call: { data: string }) =>
-        options.collateralByMinter[`0x${call.data.slice(-40)}`] ?? 0n,
+        observation.reads.find((r) => r.minter === `0x${call.data.slice(-40)}`)?.collateralRaw ?? 0n,
       "ethereum:collateralUpdateTimestampOf(address)": (call: { data: string }) =>
-        options.updatedByMinter[`0x${call.data.slice(-40)}`] ?? 0n,
+        observation.reads.find((r) => r.minter === `0x${call.data.slice(-40)}`)?.updatedAtSec ?? 0n,
     },
   };
 }
 
-describe("adaptM0OnchainCollateral", () => {
-  const observation = {
-    reads: [
-      { minter: MINTER_CONTRIBUTING_A, approved: true, collateralRaw: 1_000_000_000_000n, updatedAtSec: 1_799_996_400 },
-      { minter: MINTER_CONTRIBUTING_B, approved: true, collateralRaw: 500_000_000_000n, updatedAtSec: 1_799_992_800 },
-      { minter: MINTER_WITHOUT_COLLATERAL, approved: true, collateralRaw: 0n, updatedAtSec: 1_799_996_400 },
-    ],
-    discoveredMinterCount: 3,
-    updateCollateralIntervalSec: ONCHAIN_INTERVAL_SEC,
-    windowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
-    windowCoverageSec: 216_000,
-    observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
-  };
+const observation = {
+  reads: [
+    { minter: MINTER_CONTRIBUTING_A, approved: true, collateralRaw: 1_000_000_000_000n, updatedAtSec: 1_799_996_400 },
+    { minter: MINTER_CONTRIBUTING_B, approved: true, collateralRaw: 500_000_000_000n, updatedAtSec: 1_799_992_800 },
+    { minter: MINTER_WITHOUT_COLLATERAL, approved: true, collateralRaw: 0n, updatedAtSec: 1_799_996_400 },
+  ],
+  discoveredMinterCount: 3,
+  updateCollateralIntervalSec: ONCHAIN_INTERVAL_SEC,
+  windowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
+  windowCoverageSec: 216_000,
+  observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
+};
 
+describe("adaptM0OnchainCollateral", () => {
   it("derives the total and the oldest contributing update timestamp", () => {
     const result = adaptM0OnchainCollateral(observation);
 
@@ -363,57 +369,40 @@ describe("adaptM0OnchainCollateral", () => {
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined, now: ONCHAIN_BLOCK.timestamp }).valid).toBe(true);
   });
 
-  it("treats a window with no unexpired collateral as unavailable, never as zero reserves", () => {
-    expect(() => adaptM0OnchainCollateral({
-      ...observation,
-      reads: observation.reads.map((read) => ({ ...read, collateralRaw: 0n })),
-    })).toThrow(/no minter with unexpired collateral/);
-  });
-
-  it("fails closed on a discovered minter that is not TTG-approved", () => {
-    expect(() => adaptM0OnchainCollateral({
-      ...observation,
-      reads: observation.reads.map((read) =>
-        read.minter === MINTER_CONTRIBUTING_B ? { ...read, approved: false } : read,
-      ),
-    })).toThrow(/not approved by the TTG Registrar/);
-  });
-
-  it("fails closed on a contributing update outside the update interval", () => {
-    expect(() => adaptM0OnchainCollateral({
-      ...observation,
-      reads: observation.reads.map((read) =>
-        read.minter === MINTER_CONTRIBUTING_B
-          ? { ...read, updatedAtSec: ONCHAIN_BLOCK.timestamp - ONCHAIN_INTERVAL_SEC }
-          : read,
-      ),
-    })).toThrow(/outside the 108000s update interval/);
-  });
-
-  it("fails closed on a future-dated contributing update", () => {
-    expect(() => adaptM0OnchainCollateral({
-      ...observation,
-      reads: observation.reads.map((read) =>
-        read.minter === MINTER_CONTRIBUTING_A
-          ? { ...read, updatedAtSec: ONCHAIN_BLOCK.timestamp + 1 }
-          : read,
-      ),
-    })).toThrow(/future collateral update timestamp/);
-  });
-
-  it("fails closed when the window does not cover one update interval", () => {
-    expect(() => adaptM0OnchainCollateral({ ...observation, windowCoverageSec: ONCHAIN_INTERVAL_SEC - 1 }))
-      .toThrow(/less than the 108000s update interval/);
-  });
-
-  it("fails closed when reads do not cover every discovered minter", () => {
-    expect(() => adaptM0OnchainCollateral({ ...observation, discoveredMinterCount: 4 }))
-      .toThrow(/discovered 4 minters but only 3 were read/);
+  it.each([
+    ["treats a window with no unexpired collateral as unavailable, never as zero reserves", {
+      reads: observation.reads.map((r) => ({ ...r, collateralRaw: 0n })),
+    }, /no minter with unexpired collateral/],
+    ["fails closed on a discovered minter that is not TTG-approved", {
+      reads: observation.reads.map((r) => r.minter === MINTER_CONTRIBUTING_B ? { ...r, approved: false } : r),
+    }, /not approved by the TTG Registrar/],
+    ["fails closed on a contributing update outside the update interval", {
+      reads: observation.reads.map((r) => r.minter === MINTER_CONTRIBUTING_B
+        ? { ...r, updatedAtSec: ONCHAIN_BLOCK.timestamp - ONCHAIN_INTERVAL_SEC } : r),
+    }, /outside the 108000s update interval/],
+    ["fails closed on a future-dated contributing update", {
+      reads: observation.reads.map((r) => r.minter === MINTER_CONTRIBUTING_A
+        ? { ...r, updatedAtSec: ONCHAIN_BLOCK.timestamp + 1 } : r),
+    }, /future collateral update timestamp/],
+    ["fails closed when the window does not cover one update interval", {
+      windowCoverageSec: ONCHAIN_INTERVAL_SEC - 1,
+    }, /less than the 108000s update interval/],
+    ["fails closed when reads do not cover every discovered minter", {
+      discoveredMinterCount: 4,
+    }, /discovered 4 minters but only 3 were read/],
+  ])("%s", (_title, overrides, error) => {
+    expect(() => adaptM0OnchainCollateral({ ...observation, ...overrides })).toThrow(error);
   });
 });
 
 describe("fetchM0Reserves on-chain fallback", () => {
-  it("publishes verified on-chain collateral when the indexer snapshot is beyond the source-age cap", async () => {
+  const hung = (request: Request) => new Promise((_resolve, reject) => {
+    request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
+  });
+  const fallbackOptions = { ctx: { m0ApiKey: "test-key" }, nowSec: ONCHAIN_BLOCK.timestamp };
+  it.each([STALE_INDEXER_PAYLOAD, {}, { errors: [{ message: "indexer" }] }, () => new Response("gone", { status: 404 }), hung])("publishes on-chain collateral after stale or failed indexer read %#", async (payload) => {
+    const unavailable = payload !== STALE_INDEXER_PAYLOAD;
+    const code = unavailable ? "m0-indexer-unavailable-fallback" : "m0-onchain-collateral-fallback";
     vi.mocked(onchain.fetchOnchainLogs).mockResolvedValueOnce({
       logs: [
         m0CollateralUpdatedLog(MINTER_CONTRIBUTING_A, ONCHAIN_BLOCK.number - 100),
@@ -424,27 +413,28 @@ describe("fetchM0Reserves on-chain fallback", () => {
       calls: 1,
     });
 
-    const { result, report } = await runAdapter("m0", "m-m0", {
-      network: {
-        json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
-        ...m0OnchainNetwork({
-          collateralByMinter: {
-            [MINTER_CONTRIBUTING_A]: 1_000_000_000_000n,
-            [MINTER_CONTRIBUTING_B]: 500_000_000_000n,
+    const { result, report } = await runAdapterWithFakeTimers(async () => {
+      const start = Date.now();
+      const timeout = createTimeoutSignal({ timeoutMs: 20_000, timeoutReason: "adapter-timeout" });
+      try {
+        const run = await runAdapter("m0", "m-m0", {
+          network: {
+            ...m0OnchainNetwork(),
+            json: { "https://protocol-api.m0.org/graphql": payload },
           },
-          updatedByMinter: {
-            [MINTER_CONTRIBUTING_A]: 1_799_996_400,
-            [MINTER_CONTRIBUTING_B]: 1_799_992_800,
-            [MINTER_WITHOUT_COLLATERAL]: 1_799_996_400,
-          },
-        }),
-      },
-      ctx: { m0ApiKey: "test-key" },
-      nowSec: ONCHAIN_BLOCK.timestamp,
-    });
+          ...fallbackOptions,
+          signal: timeout.signal,
+          ctx: { ...fallbackOptions.ctx, attemptDeadlineMs: start + 20_000 },
+        });
+        expect(Date.now() - start).toBe(payload === hung ? 17_000 : 7_000);
+        expect(run.network.requests).toHaveLength(5);
+        expect(run.network.requests.filter((r) => r.url.includes("protocol-api.m0.org"))).toHaveLength(1);
+        return run;
+      } finally { timeout.dispose(); }
+    }, 20_001);
 
-    expectWarnings(result, ["m0-onchain-collateral-fallback"]);
-    expectWarningEffect(result, "m0-onchain-collateral-fallback", "info");
+    expectWarnings(result, [code]);
+    expectWarningEffect(result, code, unavailable ? "degraded" : "info");
     expect(result.slices).toEqual([
       {
         sourceKey: "m0:eligible-collateral",
@@ -461,7 +451,7 @@ describe("fetchM0Reserves on-chain fallback", () => {
       observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
       details: {
         collateralSource: "minter-gateway-collateral-updated-window",
-        fallbackReason: "indexer-snapshot-stale",
+        fallbackReason: unavailable ? "indexer-unavailable" : "indexer-snapshot-stale",
         discoveredMinterCount: 3,
         nonContributingMinterCount: 1,
         collateralWindowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
@@ -482,21 +472,18 @@ describe("fetchM0Reserves on-chain fallback", () => {
     });
   });
 
-  it("keeps the degraded indexer snapshot when the window scan is incomplete", async () => {
-    const { result, report, network } = await runAdapter("m0", "m-m0", {
+  it.each([false, true])("handles an incomplete window with indexer failure %s", async (failed) => {
+    const attempt = runAdapter("m0", "m-m0", {
       network: {
-        json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
-        block: ONCHAIN_BLOCK,
-        rpc: {
-          [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
-          [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
-        },
+        json: { "https://protocol-api.m0.org/graphql": failed ? {} : STALE_INDEXER_PAYLOAD },
+        ...windowNetwork,
       },
-      ctx: { m0ApiKey: "test-key" },
-      nowSec: ONCHAIN_BLOCK.timestamp,
+      ...fallbackOptions,
       allowUnmatched: true,
     });
 
+    if (failed) return expect(attempt).rejects.toThrow(/Protocol API failed .*on-chain collateral fallback is unavailable/);
+    const { result, report, network } = await attempt;
     expectWarnings(result, ["m0-onchain-fallback-unavailable"]);
     expectWarningEffect(result, "m0-onchain-fallback-unavailable", "info");
     expect(result.metadata).toMatchObject({
@@ -522,14 +509,9 @@ describe("fetchM0Reserves on-chain fallback", () => {
     const { result } = await runAdapter("m0", "m-m0", {
       network: {
         json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
-        block: ONCHAIN_BLOCK,
-        rpc: {
-          [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
-          [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
-        },
+        ...windowNetwork,
       },
-      ctx: { m0ApiKey: "test-key" },
-      nowSec: ONCHAIN_BLOCK.timestamp,
+      ...fallbackOptions,
     });
 
     expectWarnings(result, ["m0-onchain-fallback-unavailable"]);

@@ -9,6 +9,8 @@ import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
+import { buildPriceValidationContext } from "../../lib/price-validation";
+import { validatePublishedAssetPrice, type TrustedPriceReference } from "../../lib/price-publish-policy";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata, hydrateGeckoIdAliases, restorePreferredNativeSupply } from "./shared";
 import { filterStructurallyValidAssets, normalizeChainCirculating } from "./phase-helpers";
@@ -152,6 +154,7 @@ export async function overlayFallbackCuratedAggregateSupply(
   chainRpcs?: Map<string, ChainRpcConfig>,
   dwellirNative?: DwellirNativeCapability,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
+  previousTrustedPrices?: ReadonlyMap<string, TrustedPriceReference> | null,
 ): Promise<void> {
   for (const asset of assets) {
     throwIfAborted(signal);
@@ -162,7 +165,10 @@ export async function overlayFallbackCuratedAggregateSupply(
 
     const priceUsd = toPositiveFiniteNumber(asset.price);
     let onChainMcap: OnChainMcapResult | null = null;
-    if (priceUsd != null) {
+    if (priceUsd != null && (meta.id !== "buidl-blackrock" || (previousTrustedPrices !== null && validatePublishedAssetPrice({
+      asset, validationContext: buildPriceValidationContext({ stablecoinId: meta.id }),
+      previousTrustedPrice: previousTrustedPrices?.get(meta.id),
+    }).accepted))) {
       onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative);
       // A preferred single-register asset has no curated roster but still owns
       // a readable native stock; withholding it would publish unavailable
