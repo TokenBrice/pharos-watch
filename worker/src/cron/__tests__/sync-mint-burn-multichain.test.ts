@@ -254,8 +254,8 @@ describe("syncMintBurn — multi-chain invariant", () => {
     const metadata = JSON.parse(result.metadata);
     expect(vi.mocked(phases.runMintBurnConfigPhase).mock.calls[0]![0].budget.limit).toBe(200);
     if (outcome.endsWith("overload")) {
-      expect(result.status).toBe("degraded");
-      expect(metadata.reason).toBe("mint-burn-source-coverage-degraded");
+      expect(result.status).toBe("ok");
+      expect(metadata.quality.reasons).toEqual(["mint-burn-capacity-only-repair-debt"]);
       expect(metadata.coverageRepairs[0]).toMatchObject({ errors: 1, repairReason: "repair-runtime-exhausted" });
       expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 2 });
       if (outcome === "cursor-overload") expect(metadata.coverageRepairs.map((r: { attempted: boolean }) => r.attempted)).toEqual([false]);
