@@ -33,7 +33,25 @@ export interface StablecoinPriceGapReview {
 export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
 
 /** Census-only reviews for off-catalog PSI historical members; never active-price coverage. */
-export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [];
+export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
+  {
+    stablecoinId: "ust-terra",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-12 23:02 UTC from saved source reads: UST is an off-catalog PSI historical census member. CoinGecko USTC was $0.00411637 with $1,070,254.44 of 24h volume at 21:21 UTC; R10's later 22:08 UTC read was $0.00412039. The severe-downside publication gate still lacks an admitted second price source. DefiLlama reports dead since 2022-05-09, with final supply zero on 2022-06-22. At 21:21 UTC SushiSwap UST/WETH held $9,398.40 and Biswap UST/BUSD $13,446.31, but one PancakeSwap v2 BSC UST/BUSD pool exceeds the unchanged $50,000 floor ($112,101.16), pricing a stranded Shuttle bridge wrapper at $0.01351; R10 confirmed this pool at 22:08 UTC and its real reserves at 22:09 UTC. Its bridge closed and exchangeability into native USTC is unproven; Pharos has no reviewed collection route. BUSD and depth are not the reasons it fails to corroborate. Other native-like quotes remain outside existing admission. Accept the census gap; preserve all gates. Reassess or remove this acknowledgement if native USTC gains an admitted corroborating source, the wrapper's exchangeability into native USTC is proven, or a reviewed collection route is added.",
+    sources: [
+      "https://api.coingecko.com/api/v3/simple/price?ids=terrausd&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://stablecoins.llama.fi/stablecoin/3",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xa47c8bf37f92abed4a126bda807a7b7498661acd",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0x23396cf899ca06c4472205fc903bdb4de249d6fc",
+      "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x05faf555522fa3f93959f86b41a3808666093210",
+      "https://raw.githubusercontent.com/terra-money/shuttle/main/TERRA_ASSET.md",
+      "https://x.com/terra_money/status/1853823983369818246",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 12, 23, 2) / 1000,
+    expiresAt: Date.UTC(2026, 10, 26, 23, 2) / 1000,
+  },
+];
 
 /** Reviewed price-gap acknowledgements for active stablecoins whose every
  * admissible price lane is empty. Entries are registry edits reviewed like
