@@ -21,6 +21,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
+const [review] = DEPEG_BLIND_EVENT_REVIEWS;
 
 afterEach(() => {
   fixtures.closeAll();
@@ -345,7 +346,6 @@ describe("depeg canary checks", () => {
   });
 
   it.each(["reviewed", "unreviewed", "new-event", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {
-    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     const now = kind === "expired" ? review.expiresAt : review.reviewedAt - (kind === "future" ? 1 : 0);
     const id = kind === "unreviewed" ? "usdt-tether" : review.stablecoinId;
     const { db, sqlite } = fixtures.open();
@@ -360,16 +360,17 @@ describe("depeg canary checks", () => {
   });
 
   it.each([{ owner: "" }, { reason: " " }, { sources: [] }, { sources: ["http://example.com"] }, { sources: ["https://"] },
-    { reviewedAt: NaN }, { stablecoinId: "unknown" }, { expiresAt: DEPEG_BLIND_EVENT_REVIEWS[0].reviewedAt + 14 * 86400 + 1 },
+    { reviewedAt: NaN }, { stablecoinId: "unknown" }, { expiresAt: review.reviewedAt + 14 * 86400 + 1 },
   ])("ignores malformed blind reviews: %j", (overrides) => {
-    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [{ ...review, ...overrides }]).size).toBe(0);
   });
 
   it("validates the blind review registry and rejects duplicates", () => {
-    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
-    for (const entry of DEPEG_BLIND_EVENT_REVIEWS) expect(DepegBlindEventReviewSchema.safeParse(entry).success).toBe(true);
-    expect(resolveDepegBlindEventReviews(review.reviewedAt).size).toBe(DEPEG_BLIND_EVENT_REVIEWS.length);
+    for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
+      const at = entry.eventId === 91042 ? 1_794_515_340 : 1_794_513_840;
+      expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 604800]);
+    }
+    expect([...resolveDepegBlindEventReviews(review.reviewedAt).keys()]).toEqual([91042, 91040, 90793, 90786, 90748, 84563, 90804, 91037]);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });
@@ -413,7 +414,6 @@ describe("depeg canary checks", () => {
   });
 
   it("reports the full blind cohort while capping the event detail list", async () => {
-    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
       `INSERT INTO depeg_events

@@ -47,13 +47,13 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   {
     stablecoinId: "iauon-ondo",
     baselineUsd: 1_747_207.06,
-    reviewedAt: Date.parse("2026-11-04T00:00:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-18T00:00:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T19:34:00Z") / 1000,
     evidenceUrls: [
       "https://defillama.com/rwa/asset/IAUon",
       "https://www.coingecko.com/en/coins/ishares-gold-trust-ondo-tokenized-stock",
     ],
-    reason: "Verified redemptions (Ondo GM token burns) took the CoinGecko market cap from $3.90M to $1.76M on Nov 2-3; DefiLlama on-chain AUM now reads $1.75M.",
+    reason: "Re-read 2026-11-12: CoinGecko reports $1,770,485 market cap, updated 19:30:56 UTC; the 19:03 UTC published value is $1,770,857, within 2% of the unchanged $1,747,207.06 reviewed post-redemption level. The November 2-3 redemption comparison remains obsolete; no new redemption or supply override is claimed.",
   },
   {
     stablecoinId: "gtusdtp-gauntlet",
@@ -66,38 +66,31 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   {
     stablecoinId: "usdq-quantoz",
     baselineUsd: 3_001_518.8,
-    reviewedAt: Date.parse("2026-11-04T12:30:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-18T12:30:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T19:34:00Z") / 1000,
     evidenceUrls: ["https://etherscan.io/token/0xc83e27f270cce0a3a3a29521173a83f402c1768b"],
-    reason: "Reviewed collapse release: finalized Ethereum block 26340352 confirms 2M USDQ, down from the frozen 7M carry; with XRPL and Polygon the published total is $3.00M.",
+    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail reports 2,000,000 USDQ on Ethereum and 3,001,518.796226 USDQ aggregate in its November 12 daily row, matching the 19:03 UTC published $3,001,518.80. The earlier 7M Ethereum carry remains an obsolete comparison; the provider aggregate unreleased sentinel is not treated as observed supply.",
   },
   {
     stablecoinId: "usdglo-glo",
     baselineUsd: 852_329.33,
-    reviewedAt: Date.parse("2026-11-04T12:30:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-18T12:30:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-26T19:34:00Z") / 1000,
     evidenceUrls: ["https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"],
-    reason: "Reviewed collapse release: finalized Base block 53496375 confirms 91.4k USDGLO, down from the $1.018M carry; the eight-chain published total is $852.3k.",
+    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail reports 92,283.401966 USDGLO on Base and 853,012.418797 aggregate in its November 12 daily row; the 19:03 UTC published total is $849,748.19, within 2% of the unchanged $852,329.33 reviewed level. The earlier $1.018M Base carry remains obsolete.",
+  },
+  {
+    stablecoinId: "frnt-wyoming",
+    baselineUsd: 397_773.24,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-19T19:34:00Z") / 1000,
+    evidenceUrls: [
+      "https://stablecoins.llama.fi/stablecoin/441",
+      "https://etherscan.io/token/0x5e817f2abccb9095585d26c2a3ce234a440574fc?a=0x3994d1bBb6a96671804D996915AAbE8b1569712E",
+    ],
+    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail November 12 row reports 398,052.919913 FRNT circulating and 569,895 FRNT unreleased; Ethereum is 95,052.248641 minted minus 95,007 unreleased, or 45.248641 circulating. The 19:03 UTC published $397,822.37 remains within 2% of the unchanged $397,773.24 corrected-perimeter level; the old $967.4k daily comparison counted inventory.",
   },
   ...[
-    {
-      stablecoinId: "sparkusdtbc-spark",
-      baselineUsd: 850_692.45,
-      evidenceUrls: [
-        "https://eth.blockscout.com/tx/0xe0a239b8708cc3955a18e4e568fc1b972369ae8e7fc2958abdb289ee9b8fc8ff",
-        "https://eth.blockscout.com/token/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
-      ],
-      reason: "Verified November 6 vault redemptions: Ethereum block 26365071 confirms 835,854.472234 shares and 851,338.899178 USDT totalAssets, supporting the published $850.7k rather than the pre-redemption $50.3M baseline.",
-    },
-    {
-      stablecoinId: "frnt-wyoming",
-      baselineUsd: 397_773.24,
-      evidenceUrls: [
-        "https://stablecoins.llama.fi/stablecoin/441",
-        "https://etherscan.io/token/0x5e817f2abccb9095585d26c2a3ce234a440574fc?a=0x3994d1bBb6a96671804D996915AAbE8b1569712E",
-      ],
-      reason: "Corrected DefiLlama circulating perimeter: six pinned EVM reads confirm 569,895 FRNT in its configured unreleased wallet. Net EVM stock plus finalized Solana supply is 398,052.919913 FRNT; the old $967.4k daily row counted that inventory.",
-    },
     {
       stablecoinId: "wmxn-ripio",
       baselineUsd: 176_488.15,
@@ -124,35 +117,35 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   {
     stablecoinId: "tryb-bilira",
     baselineUsd: 698_792.67,
-    reviewedAt: Date.parse("2026-11-07T20:27:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-14T20:27:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-19T19:34:00Z") / 1000,
     evidenceUrls: [
       "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1742983312-tryb-yaratma-ve-yakma-surecinin-seffafligi",
       "https://github.com/DefiLlama/peggedassets-server/blob/66e24e7adc31b49c37b7fe03c98996ef40546030/src/peggedData/peggedData.ts",
       "https://stablecoins.llama.fi/stablecoin/300",
     ],
-    reason: "Corrected DefiLlama circulating perimeter: BiLira identifies 0x75950B957009fe615c8AE02fBAac8AaA6da91B2D as its redemption sweep awaiting burn. Pinned Ethereum block 26365294 and the other nine deployments net to 36,124,961.095158 TRYB ($698,792.67); the newly excluded sweep holds 17,676,620.201490 TRYB across Ethereum/BSC/Avalanche, not a fresh circulating redemption against the old $2.22M daily baseline.",
+    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail still configures the BiLira redemption-sweep wallet 0x75950B957009fe615c8AE02fBAac8AaA6da91B2D as unreleased and reports 36,124,961.095158 TRYB circulating in its November 12 row, with 180,622,474.294655 TRYB unreleased across deployments. The 19:03 UTC publication is $718,776.53, outside 2% of the unchanged $698,792.67 reviewed level, so this renewal does not acknowledge that current value or suppress its ordinary drift checks.",
   },
   {
     stablecoinId: "gbpa-agant",
     baselineUsd: 1_191_268.85,
-    reviewedAt: Date.parse("2026-11-07T21:10:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-14T21:10:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-19T19:34:00Z") / 1000,
     evidenceUrls: ["https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances"],
-    reason: "Follow-on to the reviewed Ethereum collapse release: block 26365071 shows 1,001,981.18 GBPA total supply with 1,001,879.18 in the detail feed's unreleased inventory, leaving 102 circulating. The released aggregate publishes $1.191M; the earlier daily row counted that inventory, so its comparison is obsolete.",
+    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail November 12 row reports 1,001,981.18 GBPA minted on Ethereum minus 1,001,879.18 unreleased, leaving 102 circulating, and 892,494.94 GBPA aggregate. The 19:03 UTC published $1,180,913.88 remains within 2% of the unchanged $1,191,268.85 reviewed level; the earlier daily row still counted inventory.",
   },
   {
     stablecoinId: "witry-brix",
     baselineUsd: 1_543_091.36,
-    reviewedAt: Date.parse("2026-11-11T23:21:24Z") / 1000,
-    expiresAt: Date.parse("2026-11-18T23:21:24Z") / 1000,
+    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-19T19:34:00Z") / 1000,
     evidenceUrls: [
       "https://eth.blockscout.com/api/v2/transactions/0x3f2104ecb4c87c35ea58d4ec2825673938dc734c807db18c21e24812506a2e91",
       "https://eth.blockscout.com/api/v2/transactions/0xdaaf4772f669c7f0d1d2c1f717c055dcee0d91e65e85a87f9159c84f65f8e3d3",
       "https://eth.blockscout.com/api/v2/tokens/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
       "https://api.coingecko.com/api/v3/coins/wrapped-itry/market_chart?vs_currency=usd&days=14&interval=daily",
     ],
-    reason: "Re-read 2026-11-11 23:16-23:21 UTC: successful ERC-4626 redemptions at block 26386490 (2026-11-10T19:05:11Z) burned 49,142,568.684564 wiTRY and block 26393072 (2026-11-11T17:06:59Z) burned 26,222,383.020347 wiTRY. Ethereum totalSupply is 63,440,233.768206 wiTRY; CoinGecko market cap moved from $3,365,372.58 on November 10 to $1,543,039.31 now. Blockscout values the same stock at $1,543,321.87. Both are within 2% of the $1,543,091.36 production baseline recorded in supply-drift-ripio-brix.md for the 2026-11-11T22:15:39Z generation. The MegaETH OFT leg represents the same locked float and is not added. This review retires the obsolete pre-redemption comparison only; published supply, history and clocks are unchanged. Owner: ops.",
+    reason: "Re-read 2026-11-12 19:31 UTC: Blockscout confirms successful ERC-4626 burns of 49,142,568.684564 wiTRY at block 26386490 (November 10 19:05:11 UTC) and 26,222,383.020347 wiTRY at block 26393072 (November 11 17:06:59 UTC). Current Ethereum totalSupply is 63,440,233.768206 wiTRY and Blockscout market cap is $1,542,627.76; the 19:03 UTC publication is $1,542,921.47, within 2% of the unchanged $1,543,091.36 baseline. The MegaETH OFT leg remains the same locked float and is not added. Only the obsolete pre-redemption comparison is retired; supply, history and clocks are unchanged. Owner: ops.",
   },
 ];
 
@@ -167,13 +160,6 @@ export interface ReviewedSupplyCarry {
 
 /** Operational acknowledgement only; publication and its carry ceiling are unchanged. */
 export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
-  ...["doc-money-on-chain", "nusd-nexus", "usdnr-nerona"].map((stablecoinId): ReviewedSupplyCarry => ({
-    stablecoinId,
-    reviewedAt: Date.UTC(2026, 10, 4, 16) / 1000,
-    expiresAt: Date.UTC(2026, 10, 11, 16) / 1000,
-    reason: "defillama-list-fill-default-carry",
-    evidence: "DefiLlama stablecoins list fill-price rescale (~5.5e-5) since 2026-11-03 ~02:35Z. The 2026-11-04 native-repair review found bridge custody in raw supply, so no native replacement is admissible (docs/supply-snapshot.md, Coverage Decisions). Owner D1 retains the bounded carried-baseline until expiry or provider recovery.",
-  })),
   {
     stablecoinId: "said-gaib",
     reviewedAt: Date.UTC(2026, 10, 11, 23, 19, 58) / 1000,
@@ -181,14 +167,6 @@ export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
     owner: "ops",
     reason: "nav-parent-price-gap",
     evidence: "Re-reviewed 2026-11-11 23:19:58 UTC: the successful 23:17:26 UTC CoinGecko batch GET (https://api.coingecko.com/api/v3/simple/price?ids=rupiah-token,decentralized-euro,parallel-usdp,xusd-babelfish,gaib-aid,gaib-said,wrapped-itry&vs_currencies=usd&include_24hr_vol=true&include_market_cap=true&include_last_updated_at=true) reports gaib-said $0.64483 dated 2026-07-05T21:35:30Z and AID $1.004 dated 2026-11-11T08:26:53Z; later single-asset retries were rate-limited. AID tickers are empty (https://api.coingecko.com/api/v3/coins/gaib-aid/tickers), and its observed Curve pool has only $1,474.55 with zero volume (https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools). No fresh trusted AID parent supports ERC-4626 NAV supply valuation. The prior carried on-chain valuation and supplyObservedAt 2026-11-11T08:46:08Z are recorded in price-acked-gaps-b.md as read 2026-11-11 22:45Z, not re-read from production here. STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-reviews.ts supports aid-gaib's gap through 2026-11-25T23:19:58Z. This review classifies only: no price, supply, original clock, quarantine or carry ceiling changes.",
-  },
-  {
-    stablecoinId: "wm-m0",
-    reviewedAt: Date.parse("2026-11-08T08:41:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-15T08:41:00Z") / 1000,
-    owner: "ops",
-    reason: "coingecko-cap-carry",
-    evidence: "O6 review: six missing deployments read 39.519543 wM at pinned 2026-11-08 blocks, but Nexus remains unreadable (https://docs.m0.org/resources/addresses/m0-platform; https://3946.rpc.thirdweb.com returns chain ID but rejects token/state reads). Legacy Plume retains 0.000001 wM. No complete native roster or inventory perimeter is admitted. CoinGecko cap publication recovered by 2026-11-08T08:30Z; this review is dormant for fresh supply and covers only a bounded coingecko-fallback restore, never a native or quarantine carry. No value or observation clock is changed.",
   },
 ];
 

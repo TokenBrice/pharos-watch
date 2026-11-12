@@ -40,7 +40,7 @@ import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config
 import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
 import { getReserveSyncState } from "../../lib/live-reserves/store-read";
 import { adaptMakinaStrategyReserves } from "../reserve-adapters/makina-strategy";
-import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import { YUZU_REVIEW, installYuzuReview } from "../../lib/__tests__/live-reserves-store.test-support";
 import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
 
 const mockD1 = mockLiveReserveD1;
@@ -1396,7 +1396,7 @@ describe("syncLiveReserves", () => {
   it("keeps Yuzu's failed attempt and retained snapshot unchanged when acknowledging the cron finding", async () => {
     let now = Math.floor(Date.now() / 1000);
     const reviews = await import("../../lib/reserve-feed-reviews");
-    const review = { ...RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!, reviewedAt: now - 1, expiresAt: now + 86400 };
+    const review = { ...YUZU_REVIEW, reviewedAt: now - 1, expiresAt: now + 86400 };
     vi.spyOn(reviews, "resolveReserveFeedReviews").mockReturnValue({ activeById: new Map([[review.stablecoinId, review]]), expiredIds: [], invalidIds: [] });
     vi.spyOn(Date, "now").mockImplementation(() => now * 1000);
     let fail = false;
@@ -1454,7 +1454,8 @@ describe("syncLiveReserves", () => {
     { name: "unreadable circuit history", circuit: true, unreadable: true, expected: "degraded" },
     { name: "budget exhausted before matching", budget: true, expected: "degraded" },
   ])("keeps raw attempts while accounting for $name", async (scenario) => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
+    installYuzuReview();
+    const review = YUZU_REVIEW;
     const now = scenario.expired ? review.expiresAt : review.reviewedAt + 1;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const failure: ReserveSyncStateRecord = {
