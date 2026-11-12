@@ -168,7 +168,7 @@ export function AltPegCohortHistoryChart({
     const points = data.map((point) => {
       const ts = point.date * 1000;
       const started = sorted.filter((key) => (firstObserved.get(key) ?? Infinity) <= ts);
-      const row: ChartRow = { ts, total: started.length ? sumCohorts(point.totalCirculatingUSD, started) : 0 };
+      const row: ChartRow = { ts, total: sumCohorts(point.totalCirculatingUSD, started) };
       for (const key of majorKeys) {
         row[key] = point.totalCirculatingUSD[key] ?? null;
       }
