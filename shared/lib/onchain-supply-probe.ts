@@ -158,6 +158,7 @@ interface ReviewedOnchainSupplyPlan {
   preferMcap?: boolean;
   canonicalSupplyChain?: string;
   excludedRepresentations?: readonly { chain: string; address: string; canonicalChain: string }[];
+  unreadableDeployments?: readonly { chain: string; address: string }[];
   escrowResidual?: CuratedAggregateEscrowResidualConfig;
   excludedBalances?: OnChainSupplyExclusionConfig;
   nativeWorkflow?: "hive-debt" | "zephyr-scanner" | "pinned-native-shares";
@@ -1453,10 +1454,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // IDRT is minted natively on Ethereum, BSC and Polygon: each is a
   // non-upgradeable Ownable ERC-20 whose owner() is the same PT Rupiah Token
   // Indonesia 4-of-6 Safe, so no leg escrows another and the deployments sum.
-  // Harmony is a dormant legacy lock-mint representation frozen at 1,201,000 IDRT
-  // (0.0013% of the total, unchanged across the last ~25M Harmony blocks); it is
-  // configured so the route publishes a share, and may read zero if the issuer
-  // ever retires it. Verified 2026-09-01: Ethereum 44,876,696,516.00 (block
+  // Historical four-ledger verification, 2026-09-01: Ethereum 44,876,696,516.00 (block
   // 25881782) + BSC 31,739,108,295.00 (block 119325993) + Polygon
   // 14,040,000,000.000000 (block 93035233) + Harmony 1,201,000.00 (block 93230607)
   // = 90,657,005,811.00. RESTATEMENT: CoinGecko's 173,856,905,811 reconciles to
@@ -1474,14 +1472,17 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // Publishing the pinned reads restates supply by -47.86%; even crediting
   // IDRTB/IDRTL at face value, CoinGecko's own basis would give ~130.7B today,
   // never the frozen 173.9B (owner-ratified 2026-09-01).
-  // Harmony is in CHAIN_META but absent from buildChainRpcs(); both official
-  // shard-0 endpoints were verified 2026-09-01 (eth_chainId 1666600000).
+  // Reviewed 2026-11-12: Harmony shard 0 unreadable since 2026-11-11 (both
+  // official endpoints HTTP 502; network closure proposed). Its frozen
+  // 1,201,000 IDRT lock-mint representation (0.0014%) joins IDRTB/IDRTL outside
+  // the readable perimeter, not as observed zero; the three issuer-native legs sum.
   "idrt-rupiah-token": {
+    preferMcap: true,
+    unreadableDeployments: [{ chain: "harmony", address: "0xcefbea899cfccdc653b171d063481b622086be3f" }],
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "bsc" },
       { chain: "polygon" },
-      supplyProbeChain("harmony", { allowZeroSupply: true }),
     ],
   },
   // nTBILL is issuer-native Nest BoringVault issuance on Ethereum, Plume,
@@ -1654,6 +1655,7 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
   }
 
   const representations = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];
+  const unreadable = REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.unreadableDeployments ?? [];
   if (representations.some((review) =>
     !selected.some(({ contract }) => contract.chain === review.canonicalChain)
     || !meta.contracts?.some((contract) => contract.chain === review.chain && contract.address === review.address)
@@ -1663,11 +1665,11 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
   // participates. A summed roster that skips one under-counts; a canonical
   // lock/mint roster conserves remote supply but attributes the unprobed
   // remainder to the canonical chain. Only explicit residual policies or exact
-  // reviewed escrow representations excuse an unselected deployment.
+  // reviewed escrow representations or unreadable ledgers excuse an unselected deployment.
   if (
     CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
     && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract)
-      && !representations.some((review) => review.chain === contract.chain && review.address === contract.address))
+      && ![...representations, ...unreadable].some((review) => review.chain === contract.chain && review.address === contract.address))
   ) {
     return null;
   }

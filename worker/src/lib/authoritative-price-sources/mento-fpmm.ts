@@ -1,5 +1,6 @@
 import { decodeAbiParameters, parseAbiParameters } from "viem/utils";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock } from "../evm-rpc";
@@ -49,7 +50,7 @@ export async function fetchMentoFpmmPrice(id: string, context: LivePriceContext,
   const timestamp = head?.timestamp;
   const now = Math.floor(Date.now() / 1000);
   if (timestamp == null) return reject("block-age-unavailable");
-  if (timestamp > now) return reject("block-age-future");
+  if (timestamp > now + STATUS_ALLOWED_FUTURE_SKEW_SEC) return reject("block-age-future");
   if (now - timestamp >= MAX_BLOCK_AGE_SEC) return reject("block-age-stale");
   const implementation = await fetchEvmStorageAtBlock("celo", route.pool, IMPLEMENTATION_SLOT, block, options);
   throwIfAborted(signal);
