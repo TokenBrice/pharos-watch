@@ -71,6 +71,8 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
  * Bind order: event cutoff, Tape cursor key, hourly cutoff, event limit.
  * Group the COMPLETE cutoff-straddling hour, including newer siblings. Tape
  * eligibility remains per event; repair does not require settled classification.
+ * Seek each stored coin/chain's expired range; skip-scan discovery includes retired
+ * identities without reading their event populations or requiring a registry.
  * Materialization keeps every sibling/proof/frontier visit in this one pass.
  * Limit eligible hours AFTER protections, ordered by their first eligible event:
  * N oldest events need at most N such hours, so protected hours cannot starve
@@ -80,8 +82,24 @@ function mintBurnCandidateEventsSql(frontiersSql: string, pendingProtectionSql: 
   const tapeEligible = MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL
     .replace("event.timestamp < ?", "event.timestamp < (SELECT cutoff FROM retention_limits)")
     .replace("key = ?", "key = (SELECT tape_key FROM retention_limits)");
-  return `WITH retention_limits AS MATERIALIZED (
+  return `WITH RECURSIVE retention_limits AS MATERIALIZED (
     SELECT ? AS cutoff, ? AS tape_key, ? AS hourly_cutoff, ? AS event_limit
+  ), retention_coins(stablecoin_id) AS (
+    SELECT MIN(stablecoin_id) FROM mint_burn_events INDEXED BY idx_mbe2_coin
+    UNION ALL
+    SELECT (SELECT MIN(stablecoin_id) FROM mint_burn_events INDEXED BY idx_mbe2_coin
+             WHERE stablecoin_id > retention_coins.stablecoin_id)
+      FROM retention_coins WHERE stablecoin_id IS NOT NULL
+  ), retention_pairs(stablecoin_id, chain_id) AS (
+    SELECT stablecoin_id,
+           (SELECT MIN(chain_id) FROM mint_burn_events INDEXED BY idx_mbe_coin_chain_ts
+             WHERE stablecoin_id = coin.stablecoin_id)
+      FROM retention_coins coin WHERE stablecoin_id IS NOT NULL
+    UNION ALL
+    SELECT stablecoin_id,
+           (SELECT MIN(chain_id) FROM mint_burn_events INDEXED BY idx_mbe_coin_chain_ts
+             WHERE stablecoin_id = previous.stablecoin_id AND chain_id > previous.chain_id)
+      FROM retention_pairs previous WHERE chain_id IS NOT NULL
   ), frontiers AS MATERIALIZED (
     SELECT frontier.column1 AS stablecoin_id, frontier.column2 AS chain_id,
            MIN(COALESCE(state.last_block, -1)) AS last_block
@@ -104,10 +122,13 @@ function mintBurnCandidateEventsSql(frontiersSql: string, pendingProtectionSql: 
              OR (event.direction = 'burn'
                AND (event.burn_type IS NULL OR event.burn_type NOT IN ('effective_burn', 'bridge_burn')))
            ) THEN 1 ELSE 0 END) AS unresolved`}
-      FROM mint_burn_events event INDEXED BY idx_mbe_coin_chain_ts
-      LEFT JOIN frontiers ON frontiers.stablecoin_id = event.stablecoin_id
-                         AND frontiers.chain_id = event.chain_id
-     WHERE event.timestamp < ((SELECT cutoff FROM retention_limits) / 3600 + 1) * 3600
+      FROM retention_pairs pair
+      LEFT JOIN frontiers ON frontiers.stablecoin_id = pair.stablecoin_id
+                         AND frontiers.chain_id = pair.chain_id
+      CROSS JOIN mint_burn_events event INDEXED BY idx_mbe_coin_chain_ts
+     WHERE pair.chain_id IS NOT NULL
+       AND event.stablecoin_id = pair.stablecoin_id AND event.chain_id = pair.chain_id
+       AND event.timestamp < ((SELECT cutoff FROM retention_limits) / 3600 + 1) * 3600
      GROUP BY event.stablecoin_id, event.chain_id, (event.timestamp / 3600) * 3600
   ), eligible_hours AS MATERIALIZED (
     SELECT event.* FROM hour_status event
