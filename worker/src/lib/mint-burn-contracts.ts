@@ -27,6 +27,11 @@ function bridgeAddressFields(d: MintBurnBridgeDetectionConfig): string[][] {
  * Signatures are code-owned; every configurable deployment identity fails closed.
  */
 export function validateMintBurnBridgeDetection(d: MintBurnBridgeDetectionConfig): void {
+  if (d.protocol === "ccip" && d.nativeEvents !== undefined && (!d.externalMinterAddress
+    || d.nativeEvents?.mint !== "NativeMint(address,address,uint256)"
+    || d.nativeEvents?.burn !== "NativeBurn(address,address,uint256)")) {
+    throw new Error("mint-burn bridge config: invalid native governor events or missing external minter");
+  }
   if (d.protocol === "layerzero-oft" && (!Number.isSafeInteger(d.endpointId) || d.endpointId <= 0)) {
     throw new Error("mint-burn bridge config: invalid LayerZero endpoint id");
   }
