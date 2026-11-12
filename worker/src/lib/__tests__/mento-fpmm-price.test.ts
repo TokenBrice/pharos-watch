@@ -16,6 +16,7 @@ import { applyProtocolPriceOverrides, createValidationContextResolver } from "..
 const CHFM = "0xb55a79f398e759e43c95b979163f30ec87ee131d";
 const USDM = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const nowSec = () => Math.floor(Date.now() / 1000);
+const head = (offset = -3) => ({ number: 77580896, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
 const UNIT = 10n ** 18n;
 const encode = (types: string, values: readonly unknown[]) => encodeAbiParameters(parseAbiParameters(types), values);
 const uint = (value: bigint) => encode("uint256", [value]);
@@ -52,14 +53,15 @@ describe("CHFm guarded FPMM price", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     blockNumber.mockResolvedValue(77580896);
     storage.mockResolvedValue("0x0000000000000000000000008cb0518a0510ab62450f79f3cd9ee0cbddb77f30");
-    blockHeader.mockReset().mockResolvedValue({ number: 77580896, timestamp: nowSec() - 3, hash: `0x${"ab".repeat(32)}` });
+    blockHeader.mockReset().mockResolvedValue(head());
     pool();
   });
-  it.each([["unavailable", null], ["future", 1], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
+  it.each([["unavailable", null], [null, 1], [null, 60], ["future", 61], ["stale", -300]] as const)("reports block-age-%s at offset %s", async (reason, offset) => {
     const ctx = context();
-    blockHeader.mockResolvedValue(offset == null ? null : { number: 77580896, timestamp: nowSec() + offset, hash: `0x${"ab".repeat(32)}` });
-    await fetchPrice("chfm-mento", ctx);
-    expect(ctx.lastRejectionReason).toBe(`mento-fpmm:block-age-${reason}`);
+    blockHeader.mockResolvedValue(offset == null ? null : head(offset));
+    const result = await fetchPrice("chfm-mento", ctx);
+    expect(ctx.lastRejectionReason).toBe(reason && `mento-fpmm:block-age-${reason}`);
+    expect(result?.observedAt ?? null).toBe(reason ? null : nowSec() - 30);
   });
   it("prices a bounded executable quote using the actual fresh USDm mark and oldest dependency time", async () => {
     const ctx = context();
@@ -126,7 +128,7 @@ describe("CHFm guarded FPMM price", () => {
     expect(ctx.lastRejectionReason).not.toContain("secret");
   });
   it("rejects a reorg between the pinned read and closing header", async () => {
-    blockHeader.mockResolvedValueOnce({ number: 77580896, timestamp: nowSec(), hash: `0x${"cd".repeat(32)}` });
+    blockHeader.mockResolvedValueOnce({ ...head(0), hash: `0x${"cd".repeat(32)}` });
     expect(await fetchPrice("chfm-mento", context())).toBeNull();
   });
   it("rejects an unreviewed pool implementation before any quote", async () => {
@@ -146,7 +148,7 @@ describe("CHFm guarded FPMM price", () => {
     expect(blockNumber).not.toHaveBeenCalled();
   });
   it.each(["stale", "future"])("rejects a %s block before reading pool state", async (kind) => {
-    blockHeader.mockResolvedValue({ number: 77580896, timestamp: nowSec() + (kind === "stale" ? -301 : 1), hash: `0x${"ab".repeat(32)}` });
+    blockHeader.mockResolvedValue(head(kind === "stale" ? -301 : 61));
     expect(await fetchPrice("chfm-mento", context())).toBeNull();
     expect(multicall).not.toHaveBeenCalled();
   });

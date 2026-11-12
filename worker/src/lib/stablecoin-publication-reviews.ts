@@ -5,7 +5,7 @@ export interface StablecoinPublicationWaiver {
   expiresAt: number;
 }
 
-/** A dated, owned, expiring review that acknowledges one active stablecoin's
+/** A dated, owned, expiring review that acknowledges one stablecoin's
  * missing live price. The gap stays listed as missing in every coverage
  * payload; it stops being alert-eligible only while the review applies, before
  * `expiresAt`. Renewal requires a fresh review; expiry re-arms the alert. */
@@ -31,6 +31,9 @@ export interface StablecoinPriceGapReview {
  * acknowledgement never waives the row itself and never applies to a depeg or
  * to an asset that has a price. */
 export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaiver[] = [];
+
+/** Census-only reviews for off-catalog PSI historical members; never active-price coverage. */
+export const PSI_HISTORICAL_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [];
 
 /** Reviewed price-gap acknowledgements for active stablecoins whose every
  * admissible price lane is empty. Entries are registry edits reviewed like

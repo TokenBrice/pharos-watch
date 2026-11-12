@@ -48,7 +48,6 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
   arbitrum: 96,
   base: 12,
   plume: 24,
-  linea: 12,
   bsc: 30,
   hyperevm: 10,
   soneium: 12,
@@ -107,6 +106,7 @@ async function observeWmEvmDeployment(
     dependencies,
     signal,
     observationWindow,
+    safeBlockAgeSec: chainId === "linea" ? 24 : undefined,
     identity: (deploymentRouteId) => {
       const identity = expectedWmDeploymentIdentity(deploymentRouteId);
       return identity?.runtime === "evm" ? identity : undefined;

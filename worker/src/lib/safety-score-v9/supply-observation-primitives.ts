@@ -87,6 +87,7 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   observationWindow?: { earliestTimestamp: number; latestTimestamp: number };
   identity: (routeId: string) => Identity | undefined;
   safeBlockLag: (identity: Identity, chainId: string) => number;
+  safeBlockAgeSec?: number;
   extraRpcUrls: (identity: Identity, chainId: string) => readonly string[] | undefined;
   protocolCalls: (identity: Identity) => readonly EvmMulticall3Call[];
   decodeProtocolObservation: (context: { identity: Identity; results: EvmMulticall3Result[];
@@ -116,9 +117,11 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   const options = safetyScoreV9EvmObservationOptions({ chainRpcs,
     ...(extraRpcUrls ? { extraRpcUrls } : {}), signal });
   const headBlockNumber = await dependencies.fetchEvmBlockNumber(chainId, options);
-  const safetyLag = input.safeBlockLag(identity, chainId);
+  const safetyLag = input.safeBlockAgeSec === undefined ? input.safeBlockLag(identity, chainId) : 0;
   if (headBlockNumber === null || !Number.isSafeInteger(safetyLag) ||
-      safetyLag <= 0 || headBlockNumber < safetyLag) {
+      safetyLag < 0 || headBlockNumber < safetyLag ||
+      (input.safeBlockAgeSec === undefined ? safetyLag === 0 :
+        !Number.isSafeInteger(input.safeBlockAgeSec) || input.safeBlockAgeSec <= 0)) {
     return rejectDeployment("safe-block-unavailable");
   }
   const numberPinMinLag = BRACKETED_NUMBER_PIN_MIN_LAG_BY_CHAIN_ID[chainId];
@@ -126,12 +129,20 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
     return rejectDeployment("deployment-pin-lag-violation");
   }
 
-  let blockHeader = await rewindEvmBlockHeaderToScoringClock({
-    initialBlockNumber: headBlockNumber - safetyLag,
-    scoringClockSec: input.scoringClockSec,
-    signal,
-    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
-  });
+  const fetchHeader = (number: number) => dependencies.fetchEvmBlockHeader(chainId, number, options);
+  throwIfAborted(signal);
+  let blockHeader = await fetchHeader(headBlockNumber - safetyLag);
+  if (blockHeader === null) return rejectDeployment("safe-block-unavailable");
+  blockHeader = input.safeBlockAgeSec === undefined
+    ? await rewindEvmBlockHeaderToScoringClock({
+        initialHeader: blockHeader, scoringClockSec: input.scoringClockSec, signal, fetchHeader,
+      })
+    : await findEvmBlockHeaderInTimestampWindow({
+        initialHeader: blockHeader, earliestTimestamp: 0,
+        latestTimestamp: Math.min(input.scoringClockSec, Math.floor(Date.now() / 1_000) - input.safeBlockAgeSec),
+        newest: true, maxRewindBlocks: REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS,
+        signal, fetchHeader,
+      });
   if (blockHeader === null) return rejectDeployment("safe-block-unavailable");
   if (input.observationWindow) {
     blockHeader = await findEvmBlockHeaderInTimestampWindow({
@@ -246,15 +257,17 @@ export async function rewindEvmBlockHeaderToScoringClock(input: {
   return null;
 }
 
-/** Find any safe header in the inclusive window, not the closest timestamp.
+/** Find a safe header in the inclusive window, optionally the newest one.
  * Exponential bracketing stays near the supplied safe head; binary refinement
- * is needed only when a probe jumps over the whole window. Return the fetched
+ * finds the newest eligible block or repairs an overshot window. Return the fetched
  * hash-bearing header so callers do not perform a second numbered lookup.
  */
 export async function findEvmBlockHeaderInTimestampWindow(input: {
   initialHeader: EvmBlockHeader;
   earliestTimestamp: number;
   latestTimestamp: number;
+  newest?: boolean;
+  maxRewindBlocks?: number;
   fetchHeader: (blockNumber: number) => Promise<EvmBlockHeader | null>;
   signal?: AbortSignal;
 }): Promise<EvmBlockHeader | null> {
@@ -265,14 +278,15 @@ export async function findEvmBlockHeaderInTimestampWindow(input: {
     return newer.timestamp >= input.earliestTimestamp ? newer : null;
   }
   const anchor = newer.number;
+  const floor = Math.max(0, anchor - (input.maxRewindBlocks ?? anchor));
   let offset = 1;
-  while (newer.number > 0) {
-    const number = Math.max(0, anchor - offset);
+  while (newer.number > floor) {
+    const number = Math.max(floor, anchor - offset);
     throwIfAborted(input.signal);
     const header = await input.fetchHeader(number);
     if (!header || header.number !== number || header.timestamp > newer.timestamp) return null;
     if (header.timestamp <= input.latestTimestamp) {
-      if (header.timestamp >= input.earliestTimestamp) return header;
+      if (!input.newest && header.timestamp >= input.earliestTimestamp) return header;
       let older = header;
       while (older.number + 1 < newer.number) {
         const mid = older.number + Math.floor((newer.number - older.number) / 2);
@@ -281,13 +295,13 @@ export async function findEvmBlockHeaderInTimestampWindow(input: {
         if (!candidate || candidate.number !== mid ||
           candidate.timestamp < older.timestamp || candidate.timestamp > newer.timestamp) return null;
         if (candidate.timestamp > input.latestTimestamp) newer = candidate;
-        else if (candidate.timestamp < input.earliestTimestamp) older = candidate;
+        else if (input.newest || candidate.timestamp < input.earliestTimestamp) older = candidate;
         else return candidate;
       }
-      return null;
+      return input.newest && older.timestamp >= input.earliestTimestamp ? older : null;
     }
     newer = header;
-    offset = Math.min(anchor, offset * 2);
+    offset = Math.min(anchor - floor, offset * 2);
   }
   return null;
 }
