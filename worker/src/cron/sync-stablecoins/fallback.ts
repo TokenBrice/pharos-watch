@@ -155,20 +155,21 @@ export async function syncViaCoingeckoFallback(
     });
     return buildUnreadablePreviousPublicationResult(assets.length, rowsRead);
   }
-  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",
   );
   // Reuse this snapshot for trusted continuity and downstream cached fallback
   // instead of loading the full price_cache table a second time per run.
-  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(db);
+  const replaySnapshot = await loadReplayPriceCacheForTrustedContinuity(db, true).catch(() => null);
+  const replayPriceCache = replaySnapshot ?? new Map<string, never>();
   const validationContexts = createValidationContextResolver();
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(
     previousAssetsById,
     syncStartSec,
     replayPriceCache,
   );
+  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById, replaySnapshot === null ? null : previousTrustedPrices);
   const { previousActivePriceCoverage, previousMissingGenerationsById } =
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
 

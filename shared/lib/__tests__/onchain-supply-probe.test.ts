@@ -75,8 +75,6 @@ describe("supportsOnchainSupplyProbe", () => {
     ]) expect(onchainSupplyProbeFamily(invalid)).toBeNull();
   });
 
-  // Platform extension: non-EVM legs must be able to join a fail-closed
-  // aggregate instead of poisoning it for the whole asset.
   it("accepts Starknet felts and ICP canister ids and reports their reader family", () => {
     const starknet = {
       chain: "starknet",
@@ -134,6 +132,7 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
 
 describe("curated on-chain supply paths", () => {
   it.each([
+    { id: "buidl-blackrock", chains: ["ethereum", "ethereum", "bsc", "optimism", "arbitrum", "avalanche", "polygon", "solana", "aptos", "tempo"], zero: [] },
     { id: "usyc-hashnote", chains: ["ethereum", "bsc", "solana", "arc"], zero: ["arc"] },
     { id: "jtrsy-anemoy", chains: ["ethereum", "base", "arbitrum", "avalanche", "plume", "bsc", "monad", "solana", "pharos", "xlayer", "arc"], zero: ["solana", "xlayer", "arc"] },
     { id: "nopal-nest", chains: ["ethereum", "plume", "bsc", "solana", "plasma", "worldchain", "avalanche", "arc", "monad", "robinhood"], zero: ["plasma"] },
@@ -583,8 +582,6 @@ describe("curated on-chain supply paths", () => {
   });
 
 
-  // The whole probe must fail closed: drop any one reviewed leg and the asset
-  // resolves to null rather than publishing a partial per-chain split.
   it("refuses every ODR-E4 aggregate when a reviewed leg is missing", () => {
     const cases = [
       ["brlv-crown", [{ chain: "base", address: "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36", decimals: 18 }]],

@@ -1,4 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
+import * as replayCache from "../../lib/price-cache";
+import { loadReplayPriceCacheForTrustedContinuity as loadReplay } from "../sync-stablecoins/shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
@@ -107,13 +109,12 @@ function makePrimaryPriceResult(syncStartSec: number): PrimaryPriceResult {
 
 function makeEurAsset(id: string, price?: number): PeggedAsset {
   return {
+    ...makePricedAsset(),
     id,
     name: id,
     symbol: id.toUpperCase(),
     pegType: "peggedEUR",
     circulating: { peggedEUR: 1_000_000 },
-    chainCirculating: {},
-    chains: ["Ethereum"],
     ...(price == null ? {} : {
       price,
       priceSource: "coingecko",
@@ -125,6 +126,11 @@ function makeEurAsset(id: string, price?: number): PeggedAsset {
 }
 
 describe("sync-stablecoins stage helpers", () => {
+  const syncStartSec = 1_800_000_000;
+  const priceDb = () => mockD1([{ match: "price_cache", rows: [] }]);
+  const noFx = { fxFallbackRates: undefined, validationReferences: undefined };
+  const prices = () => ({ results: new Map([["usdt-tether", makePrimaryPriceResult(syncStartSec)]]),
+    stats: {}, providerDiagnostics: [] });
   beforeEach(() => {
     pricingStageMocks.fetchPrimaryPrices.mockReset();
     pricingStageMocks.enrichMissingPrices.mockReset();
@@ -153,8 +159,7 @@ describe("sync-stablecoins stage helpers", () => {
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(new Map());
   });
 
-  it("reuses primary-path authoritative overrides during shared price completion", async () => {
-    const syncStartSec = 1_800_000_000;
+  it.each([false, true])("reuses primary-path authoritative overrides during shared price completion (replay failed=%s)", async (failed) => {
     const assets = [makePricedAsset()];
     const authoritativeOverrides = new Map([
       [
@@ -168,22 +173,19 @@ describe("sync-stablecoins stage helpers", () => {
         },
       ],
     ]);
-    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
-      results: new Map([["usdt-tether", makePrimaryPriceResult(syncStartSec)]]),
-      stats: {},
-      providerDiagnostics: [],
-    });
+    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue(prices());
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(authoritativeOverrides);
 
-    const chainRpcs = new Map();
+    const chainRpcs = new Map(), replay = new Map(), db = priceDb();
+    const read = vi.spyOn(replayCache, "getPriceCache").mockResolvedValue(replay);
+    if (failed) read.mockRejectedValueOnce(new Error());
+    const replayPriceCache = await loadReplay(db, true).catch(() => null);
     const result = await runStablecoinsPricingStage({
-      chainRpcs,
-      db: mockD1([{ match: "price_cache", rows: [] }]),
+      chainRpcs, replayPriceCache, db,
       assets,
       previousAssetsById: new Map(),
       syncStartSec,
-      fxFallbackRates: undefined,
-      validationReferences: undefined,
+      ...noFx,
     });
 
     expect("priceCacheEntries" in result ? result.metadata.authoritativeOverrideCount : null).toBe(1);
@@ -191,7 +193,11 @@ describe("sync-stablecoins stage helpers", () => {
     for (const call of pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls) {
       expect(call[3].chainRpcs).toBe(chainRpcs);
     }
-    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[0][3].localRepairOnly).toBeUndefined();
+    const first = pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[0][3];
+    expect(first.localRepairOnly).toBeUndefined();
+    expect(first.priceCache).toBe(replay);
+    expect(read).toHaveBeenCalledTimes(failed ? 2 : 1);
+    read.mockRestore();
     expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mock.calls[1][3].localRepairOnly).toBe(true);
     expect(assets[0]).toMatchObject({
       price: 0.998,
@@ -204,23 +210,17 @@ describe("sync-stablecoins stage helpers", () => {
   });
 
   it("keeps inline GeckoTerminal disabled without reporting a synthetic work stage", async () => {
-    const syncStartSec = 1_800_000_000;
     const assets = [makePricedAsset()];
-    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
-      results: new Map([["usdt-tether", makePrimaryPriceResult(syncStartSec)]]),
-      stats: {},
-      providerDiagnostics: [],
-    });
+    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue(prices());
     const reportProgress = vi.fn(async (_update: CronProgressUpdate) => {});
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected pricing transport"));
     try {
       const result = await runStablecoinsPricingStage({
-        db: mockD1([{ match: "price_cache", rows: [] }]),
+        db: priceDb(),
         assets,
         previousAssetsById: new Map(),
         syncStartSec,
-        fxFallbackRates: undefined,
-        validationReferences: undefined,
+        ...noFx,
         reportProgress,
       });
 
@@ -244,7 +244,6 @@ describe("sync-stablecoins stage helpers", () => {
 
 
   it("reports native-peg fills and corrections in the price-validation log and metadata", async () => {
-    const syncStartSec = 1_800_000_000;
     const filled = makeEurAsset("eutbl-spiko");
     const corrected = makeEurAsset("eursafo-spiko", 0.9);
     const references: PriceValidationReferences = {
@@ -265,7 +264,7 @@ describe("sync-stablecoins stage helpers", () => {
     const infos = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const result = await runStablecoinsPricingStage({
-      db: mockD1([{ match: "price_cache", rows: [] }]),
+      db: priceDb(),
       assets: [filled, corrected],
       previousAssetsById: new Map(),
       syncStartSec,

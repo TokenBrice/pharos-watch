@@ -456,11 +456,12 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Previ
   }
 }
 
-export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): Promise<Map<string, PriceCacheEntry>> {
+export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database, throwOnError = false): Promise<Map<string, PriceCacheEntry>> {
   try {
     return await getPriceCache(db);
   } catch (error) {
     logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
+    if (throwOnError) throw error;
     return new Map<string, PriceCacheEntry>();
   }
 }
@@ -502,14 +503,18 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   return isSupplyObservationWithinRestoreCeiling(observedAt, nowSec);
 }
 
-/** Preserve current price/identity while carrying only an eligible native supply packet. */
+/** Preserve current price/identity while carrying eligible supply under its original provenance. */
 export function restorePreferredNativeSupply(
   asset: PeggedAsset,
   previous: PeggedAsset | undefined,
   nowSec: number,
 ): PeggedAsset {
+  // Only the immediately previous legacy carry can bootstrap BUIDL. Native success
+  // replaces that cache lineage; fresh provider rows never enter this path.
+  const legacyBootstrap = asset.id === "buidl-blackrock" && previous?.id === asset.id
+    && previous.supplySource === "defillama" && previous.supplyRestored === true;
   const restorableSource = previous?.supplySource === "onchain-total-supply"
-    || previous?.supplySource === "onchain-circulating-supply";
+    || previous?.supplySource === "onchain-circulating-supply" || legacyBootstrap;
   const restored = restorableSource && !previous.supplyUnavailableReason
     && getCirculatingRawOrNull(previous) !== null && isWithinRestoreCeiling(previous, nowSec)
     ? markRestoredSupply(previous, nowSec) : null;
@@ -534,6 +539,7 @@ export function restorePreferredNativeSupply(
       chains: restored.chains,
       supplySource: restored.supplySource,
       supplyObservedAt: restored.supplyObservedAt,
+      supplyChainGuard: restored.supplyChainGuard,
       supplyRestored: true,
       supplyUnavailableReason: undefined,
     } : {}),
