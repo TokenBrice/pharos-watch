@@ -66,19 +66,17 @@ describe("readDataWord", () => {
 
 describe("decodeUint256", () => {
   it("decodes standard uint256 with 18 decimals", () => {
-    // 1e18 in hex = 0xDE0B6B3A7640000
-    const hex = "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000";
+    const hex = "0x" + "de0b6b3a7640000".padStart(64, "0");
     expect(decodeUint256(hex, 18)).toBeCloseTo(1.0, 10);
   });
 
   it("decodes uint256 with 6 decimals (USDC)", () => {
-    // 1,000,000 in hex = 0xF4240
-    const hex = "0x00000000000000000000000000000000000000000000000000000000000f4240";
+    const hex = "0x" + "f4240".padStart(64, "0");
     expect(decodeUint256(hex, 6)).toBeCloseTo(1.0, 10);
   });
 
   it("decodes zero value", () => {
-    const hex = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const hex = "0x" + "0".padStart(64, "0");
     expect(decodeUint256(hex, 18)).toBe(0);
   });
 
@@ -88,8 +86,7 @@ describe("decodeUint256", () => {
   });
 
   it("decodes large values (1 billion USDC)", () => {
-    // 1e9 * 1e6 = 1e15 = 0x38D7EA4C68000
-    const hex = "0x00000000000000000000000000000000000000000000000000038d7ea4c68000";
+    const hex = "0x" + "38d7ea4c68000".padStart(64, "0");
     expect(decodeUint256(hex, 6)).toBeCloseTo(1_000_000_000, 0);
   });
 });
@@ -102,7 +99,7 @@ describe("decodeUint256Word", () => {
   });
 
   it("decodes a strict 32-byte word", () => {
-    const word = "0x00000000000000000000000000000000000000000000000000000000000f4240";
+    const word = "0x" + "f4240".padStart(64, "0");
     expect(decodeUint256Word(word, 6)).toBe(1);
   });
 });
@@ -131,7 +128,7 @@ describe("createRateLimiter", () => {
 
 
   it("enforces timing between sequential calls", async () => {
-    const limiter = createRateLimiter(5); // 5 req/s = 200ms interval
+    const limiter = createRateLimiter(5);
     const callTimes: number[] = [];
 
     const p1 = limiter(async () => {
@@ -150,7 +147,6 @@ describe("createRateLimiter", () => {
     expect(r1).toBe(1);
     expect(r2).toBe(2);
     expect(callTimes).toHaveLength(2);
-    // Second call should be at least 200ms after first
     expect(callTimes[1] - callTimes[0]).toBeGreaterThanOrEqual(200);
   });
 });
@@ -186,58 +182,33 @@ describe("getEvmBlockNumber", () => {
 describe("fetchEvmLogsForTopicWithCompleteness", () => {
   beforeEach(() => {
     mockFetch([], { requireMatch: true });
+    vi.spyOn(console, "warn");
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
   const noopLimiter = <T>(fn: () => Promise<T>) => fn();
 
-  it("retains malformed provider evidence and fences its block while keeping valid peers", async () => {
-    const valid = {
-      address: "0x" + "11".repeat(20),
-      topics: ["0x" + "22".repeat(32)],
-      data: "0x",
-      blockNumber: "0x1",
-      timeStamp: "0x1000",
-      transactionHash: "0x" + "33".repeat(32),
-      logIndex: "0x0",
-    };
-    mockFetch([{
-      match: () => true,
-      body: {
-        status: "1",
-        message: "OK",
-        result: [valid, { ...valid, topics: ["not-a-topic"] }],
-      },
-    }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    try {
+  it.each([null, { topics: ["not-a-topic"] }, { logIndex: "0xzz" }, { logIndex: "" }])(
+    "normalizes zero and fences malformed peers: %j", async (defect) => {
+      const valid = { ...logAt(1), transactionIndex: "0x" };
+      const rejectedLogs = defect ? [{ ...valid, ...defect }] : [];
+      mockFetch([{ match: () => true, body: {
+        status: "1", message: "OK", result: [{ ...valid, logIndex: "0x" }, ...rejectedLogs],
+      } }]);
       const result = await fetchEvmLogsForTopicWithCompleteness(
-        1,
-        "0x123",
-        "0xabc",
-        null,
-        0,
-        100,
-        0,
-        noopLimiter,
-        createBudget(10),
+        1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, createBudget(10),
       );
-      expect(result).toMatchObject({
-        complete: false, logs: [valid], scannedToBlock: 0, validatedToBlock: 100,
-        rejectedLogs: [{ ...valid, topics: ["not-a-topic"] }],
-      });
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("etherscan_logs_malformed_entries_dropped"),
-      );
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
+      expect(result).toMatchObject({ complete: !defect, logs: [valid], scannedToBlock: defect ? 0 : 100 });
+      expect(result.rejectedLogs ?? []).toEqual(rejectedLogs);
+      if (defect) expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("etherscan_logs_malformed_entries_dropped"));
+      if (defect) expect(result).toMatchObject({ validatedToBlock: 100, failureReason: "etherscan-malformed-logs" });
+    },
+  );
 
   it("marks the scan incomplete on HTTP error", async () => {
     vi.useFakeTimers();
@@ -267,13 +238,12 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     const budget = createBudget(10);
     const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
 
-    // A failed read is not an observed empty scan (ADR-29).
     expect(result).toMatchObject({ complete: false, logs: [], scannedToBlock: -1 });
     expect(result.failureReason).toEqual(expect.any(String));
   });
 
   it("marks the scan incomplete when budget is exhausted", async () => {
-    const budget = { count: 10, limit: 10 }; // Already exhausted
+    const budget = { count: 10, limit: 10 };
     const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
 
     expect(result).toMatchObject({

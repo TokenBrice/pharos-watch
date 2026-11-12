@@ -3,6 +3,7 @@ import { USER_AGENT } from "../../lib/constants";
 import {
   addDays,
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRateForKey,
   parseRate,
 } from "./shared";
@@ -43,7 +44,10 @@ function buildCbrKeyRateSoapBody(now = new Date()): string {
   ].join("");
 }
 
-export async function tryCbrKeyRate(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryCbrKeyRate(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: CBR_DAILY_INFO_SOAP_URL,
     method: "POST",
@@ -57,5 +61,6 @@ export async function tryCbrKeyRate(signal?: AbortSignal): Promise<{ rate: numbe
     parse: parseCbrKeyRateXml,
     warnLabel: "CBR key rate",
     signal,
+    onDiagnostic,
   });
 }

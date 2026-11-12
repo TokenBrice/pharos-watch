@@ -101,6 +101,7 @@ async function fetchSelic(
     url,
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     maxResponseBytes: BCB_SELIC_MAX_RESPONSE_BYTES,
+    returnFinalResponse: true,
     parse: body => {
       htmlBody = /^\s*</.test(body);
       return parse(body, status => { upstreamError = true; upstreamStatus = status; });

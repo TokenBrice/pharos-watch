@@ -2,6 +2,7 @@ import { BANXICO_CETES_28D_URL } from "./shared";
 import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRate,
   parseRate,
   parseSlashDmyToIso,
@@ -37,6 +38,7 @@ export function parseBanxicoSeries(json: string): { recordDate: string; rate: nu
 export async function tryBanxicoCetes(
   banxicoToken: string | null,
   signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
 ): Promise<{ rate: number; recordDate: string } | null> {
   if (!banxicoToken) return null;
   return fetchAndParseBenchmark({
@@ -49,5 +51,6 @@ export async function tryBanxicoCetes(
     parse: parseBanxicoSeries,
     warnLabel: "Banxico CETES",
     signal,
+    onDiagnostic,
   });
 }

@@ -1,6 +1,6 @@
 import { TREASURY_YIELD_XML_URL } from "./shared";
 import { USER_AGENT } from "../../lib/constants";
-import { fetchAndParseBenchmark, isValidBenchmarkRate } from "./shared";
+import { type BenchmarkResponseDiagnostic, fetchAndParseBenchmark, isValidBenchmarkRate } from "./shared";
 
 /** Parse the latest 3-month yield from Treasury.gov yield curve XML. */
 export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: number } | null {
@@ -27,7 +27,10 @@ export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: 
   return { recordDate, rate: lastRate };
 }
 
-export async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryTreasuryXml(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: TREASURY_YIELD_XML_URL,
     headers: { "User-Agent": USER_AGENT },
@@ -35,5 +38,6 @@ export async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: numb
     parse: parseTreasuryYieldXml,
     warnLabel: "Treasury XML",
     signal,
+    onDiagnostic,
   });
 }

@@ -99,6 +99,7 @@ export async function tryBoeSoniaCompoundedIndex(
     headers: { "User-Agent": USER_AGENT },
     parse: parseBoeSoniaCompoundedIndexCsv,
     warnLabel: "BoE SONIA Compounded Index CSV",
+    returnFinalResponse: onDiagnostic != null,
     signal,
     onDiagnostic,
   });

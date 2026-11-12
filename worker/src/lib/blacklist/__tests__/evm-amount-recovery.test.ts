@@ -253,8 +253,8 @@ describe("EVM bracket recovery", () => {
     expect(mock.mock.calls.map(([, , retries]) => retries)).toEqual([0, 0, 0, 0]);
   });
 
-  it("resolves the prefix of a reconciled block rather than either endpoint balance", async () => {
-    mockBracket(100_000000n, 67_000000n, [transfer(1, 10_000000n), transfer(2, 20_000000n, address, other),
+  it("reconciles an explorer zero-index Transfer", async () => {
+    mockBracket(100_000000n, 67_000000n, [{ ...transfer(0, 10_000000n), logIndex: "0x" }, transfer(2, 20_000000n, address, other),
       transfer(7, 30_000000n, address, other), transfer(8, 7_000000n)]);
     expect(await recoverBlacklistAmountForRow({ ...row, event_type: "blacklist" }, config, recoveryOptions()))
       .toMatchObject({ amount: 90, amountUsd: 90, amountSource: "historical_balance", amountStatus: "resolved" });

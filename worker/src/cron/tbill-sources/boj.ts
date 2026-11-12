@@ -3,6 +3,7 @@ import { USER_AGENT } from "../../lib/constants";
 import {
   addDays,
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRate,
   parseCompactDate,
   parseRate,
@@ -49,12 +50,16 @@ function buildBojCallRateJsonUrl(now = new Date()): string {
   return url.toString();
 }
 
-export async function tryBojCallRate(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryBojCallRate(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: buildBojCallRateJsonUrl(),
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     parse: parseBojCallRateJson,
     warnLabel: "BOJ call-rate JSON",
     signal,
+    onDiagnostic,
   });
 }

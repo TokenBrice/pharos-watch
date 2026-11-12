@@ -69,6 +69,7 @@ export async function tryFredCsv(
   url: string,
   signal: AbortSignal | undefined,
   maxObservationAgeDays: number,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url,
@@ -76,6 +77,7 @@ export async function tryFredCsv(
     parse: (body) => parseFredLatest(body, maxObservationAgeDays),
     warnLabel: "FRED CSV",
     signal,
+    onDiagnostic,
   });
 }
 
@@ -120,6 +122,7 @@ export async function tryFredSoniaCompoundedIndex(
     headers: { "User-Agent": ST_LOUIS_FED_USER_AGENT },
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "FRED SONIA Compounded Index CSV",
+    returnFinalResponse: onDiagnostic != null,
     signal,
     onDiagnostic,
   });
@@ -134,6 +137,7 @@ export async function tryAlfredSoniaCompoundedIndex(
     headers: { "User-Agent": ST_LOUIS_FED_USER_AGENT },
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "ALFRED SONIA Compounded Index CSV",
+    returnFinalResponse: onDiagnostic != null,
     signal,
     onDiagnostic,
   });

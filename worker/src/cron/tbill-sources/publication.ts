@@ -1,5 +1,7 @@
-import { readBenchmarkPreviousGenerationId, prepareGbpRetainedFallbackMonitor, prepareUsdFreshStreakMonitor, RISK_FREE_RATES_CACHE_KEY, type PreparedBenchmarkMonitor } from "../yield-sync/benchmark-monitor";
-import { prepareCacheUpsert, type CacheEntryWrite } from "../../lib/db-cache";
+import { GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY, USD_FRESH_STREAK_CACHE_KEY, readBenchmarkPreviousGenerationId, prepareGbpRetainedFallbackMonitor, prepareUsdFreshStreakMonitor, RISK_FREE_RATES_CACHE_KEY, type PreparedBenchmarkMonitor } from "../yield-sync/benchmark-monitor";
+import { getCache, prepareCacheUpsert, type CacheEntryWrite } from "../../lib/db-cache";
+import { parseObjectMetadata } from "../../lib/json-metadata";
+import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { logCronEvent, recordCronFailure } from "../../lib/cron-logger";
 import { buildRiskFreeRateCachePayload, buildRiskFreeRatesCachePayload, serializeRiskFreeRateCache, serializeRiskFreeRatesCache } from "../yield-sync/cache";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
@@ -71,6 +73,7 @@ export async function publishBenchmarks(params: {
   fetchedAt: number;
   registryCacheWrite: "written" | "skipped-unreadable-cache";
   signal?: AbortSignal;
+  retainedRetryKeys?: readonly YieldBenchmarkKey[];
 }) {
   const { db, benchmarks, fetchedAt, registryCacheWrite, signal } = params;
   let gbpRetainedFallbackMonitor: PreparedBenchmarkMonitor = { metadata: {} };
@@ -91,10 +94,30 @@ export async function publishBenchmarks(params: {
       });
     }
     throwIfAborted(signal);
-    gbpRetainedFallbackMonitor = await prepareGbpRetainedFallbackMonitor({
+    // Rebinding an untouched monitor preserves its evidence; a retry of EUR
+    // cannot certify another fresh USD/GBP observation.
+    async function carryMonitor(currency: "gbp" | "usd"): Promise<PreparedBenchmarkMonitor> {
+      try {
+        const key = currency === "gbp" ? GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY : USD_FRESH_STREAK_CACHE_KEY;
+        const row = await getCache(db, key);
+        throwIfAborted(signal);
+        const previous = parseObjectMetadata(row?.value ?? null);
+        return previousGenerationId != null && previous?.generationId === previousGenerationId
+          ? { metadata: {}, entry: { key, value: JSON.stringify({ ...previous, generationId }) } }
+          : { metadata: {} };
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        if (error instanceof DOMException && error.name === "AbortError") throw error;
+        recordCronFailure("fetch-tbill-rate", error, { metadata: { stage: "benchmark-monitor-carry" } });
+        return { metadata: {} };
+      }
+    }
+    gbpRetainedFallbackMonitor = params.retainedRetryKeys && !params.retainedRetryKeys.includes("GBP")
+      ? await carryMonitor("gbp") : await prepareGbpRetainedFallbackMonitor({
       db, benchmark: benchmarks.GBP, fetchedAt, generationId, previousGenerationId, signal,
     });
-    usdFreshStreakMonitor = await prepareUsdFreshStreakMonitor({
+    usdFreshStreakMonitor = params.retainedRetryKeys && !params.retainedRetryKeys.includes("USD")
+      ? await carryMonitor("usd") : await prepareUsdFreshStreakMonitor({
       db, benchmark: benchmarks.USD, fetchedAt, generationId, previousGenerationId, signal,
     });
     const entries = [
