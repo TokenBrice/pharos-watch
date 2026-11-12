@@ -102,7 +102,7 @@ export async function healNullPrices(
     return { healed: 0, affectedHours: new Map() };
   }
 
-  const priceContext = await loadMintBurnPriceContextBatch(db, candidateCoins);
+  const priceContext = await loadMintBurnPriceContextBatch(db, candidateCoins, undefined, cutoff);
   const healableCoins = candidateCoins.filter((stablecoinId) =>
     hasMintBurnEventPriceEvidenceSince(stablecoinId, cutoff, priceContext));
   if (healableCoins.length === 0) {

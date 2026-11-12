@@ -217,15 +217,18 @@ export function projectMintBurnPriceHistory(
 async function loadMintBurnPriceHistoryRows(
   db: D1Database,
   idChunks: string[][],
+  earliestEventTimestamp?: number,
 ): Promise<SupplyHistoryPriceRow[]> {
+  const snapshotStart = earliestEventTimestamp == null ? []
+    : [bucketUnixSecondsToUtcDay(earliestEventTimestamp) - SNAPSHOT_SCAN_MARGIN_SEC];
   const rows: SupplyHistoryPriceRow[] = [];
   for (const idChunk of idChunks) {
     const historyInClause = buildInClause(idChunk);
     const priceHistoryRows = await db
       .prepare(
-        `SELECT stablecoin_id, snapshot_date, price, price_observed_at FROM supply_history WHERE stablecoin_id IN (${historyInClause.sql}) AND price IS NOT NULL AND price_observed_at IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC`,
+        `SELECT stablecoin_id, snapshot_date, price, price_observed_at FROM supply_history WHERE stablecoin_id IN (${historyInClause.sql})${snapshotStart.length ? " AND snapshot_date >= ?" : ""} AND price IS NOT NULL AND price_observed_at IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC`,
       )
-      .bind(...historyInClause.binds)
+      .bind(...historyInClause.binds, ...snapshotStart)
       .all<SupplyHistoryPriceRow>();
     rows.push(...(priceHistoryRows.results ?? []));
   }
@@ -236,11 +239,14 @@ async function loadMintBurnPriceHistoryRows(
  * Loads event-time price evidence for parse and heal. Observations are assessed
  * against the clock taken after they are read, so a row published during the
  * read is not rejected as future-dated; a clock after that is not evidence.
+ * A known earliest event bounds snapshot days by the resolver's same margin;
+ * callers replaying arbitrary history leave that bound unset.
  */
 export async function loadMintBurnPriceContextBatch(
   db: D1Database,
   stablecoinIds: string[],
   sqlInChunkSize = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
+  earliestEventTimestamp?: number,
 ): Promise<MintBurnPriceContext> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const priceObservations = new Map<string, MintBurnPriceObservation>();
@@ -250,7 +256,7 @@ export async function loadMintBurnPriceContextBatch(
   }
 
   const idChunks = chunkArray(uniqueIds, sqlInChunkSize);
-  const historyRows = await loadMintBurnPriceHistoryRows(db, idChunks);
+  const historyRows = await loadMintBurnPriceHistoryRows(db, idChunks, earliestEventTimestamp);
   const rows: PriceCacheObservationRow[] = [];
   for (const idChunk of idChunks) {
     const priceInClause = buildInClause(idChunk);

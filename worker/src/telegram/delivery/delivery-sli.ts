@@ -162,7 +162,8 @@ export async function loadTelegramDeliverySliRollup(
        SELECT d.state, d.created_at, d.expires_at, d.done_at,
               job.target_plan_completed_at
          FROM recent_jobs job
-         JOIN telegram_deliveries d ON d.job_id = job.job_id
+         -- Keep the bounded jobs outermost so deliveries seek their job_id index.
+         CROSS JOIN telegram_deliveries d ON d.job_id = job.job_id
      )
      SELECT
        (SELECT COUNT(*) FROM recent_jobs) AS source_count,
