@@ -356,6 +356,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     resetOrTtl: "WeakMap keyed by config object; serialized source changes invalidate an entry, and entries disappear with the config object or isolate.",
     durableTruth: "Current config source fields determine the fingerprint; durable D1 scan-coverage rows remain authoritative for proof. The cache only avoids hashing unchanged serialized source.",
   },
+  {
+    sourcePath: "worker/src/lib/live-reserves/store-history-read.ts",
+    stateNames: ["reliabilityRollups"],
+    owner: "Reserve sync reliability rollup",
+    kind: "cache",
+    resetOrTtl: "Last computed rollup, last refresh attempt and in-flight refresh per window; a newer D1 memo replaces the local one, and everything resets with the isolate.",
+    durableTruth: "The D1 cache rows reserve-sync-reliability-rollup:v1 (memo with computedAt) and its refresh-attempt marker are authoritative; the marker's atomic claim, not this state, limits refreshes to one per hour across isolates.",
+  },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 
 export const ISOLATE_LOCAL_STATE_DOC_START = "<!-- ISOLATE-LOCAL-STATE:START -->";
