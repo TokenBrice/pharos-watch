@@ -604,6 +604,10 @@ interface DEWSRadarPanelProps {
   activeDepegIds?: ReadonlySet<string>;
   /** Cap for the radar stage, so a hero can run it more compactly. */
   maxHeight?: number;
+  /** Keep the depeg hero chart and legend footprint through every first-read outcome. */
+  reserveSpace?: boolean;
+  /** Peg arrival can change the halo legend even when DEWS already settled. */
+  reserveLegend?: boolean;
 }
 
 /**
@@ -614,7 +618,7 @@ interface DEWSRadarPanelProps {
  * peg-status universe the surrounding peg-summary figures use. The centre
  * caption and legend name that scope so the two counts are not read as one.
  */
-export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 440 }: DEWSRadarPanelProps) {
+export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 440, reserveSpace = false, reserveLegend = reserveSpace }: DEWSRadarPanelProps) {
   const { data, isLoading, error } = useStressSignals();
   const { data: stablecoinsData } = useStablecoins();
   const router = useRouter();
@@ -629,6 +633,44 @@ export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 4
     if (!data?.signals || Object.keys(data.signals).length === 0) return null;
     return buildDewsSummaryViewModel(data, logos, mcapById);
   }, [data, logos, mcapById]);
+
+  // Halo changes belong inside the reserved legend, not in the chart's height.
+  const haloCount = activeDepegIds
+    ? viewModel?.elevated.filter((coin) => activeDepegIds.has(coin.id)).length ?? 0
+    : 0;
+  const radar = viewModel ? (
+    <DEWSRadar
+      elevated={viewModel.elevated}
+      calmDots={viewModel.calmDots}
+      highest={viewModel.highest}
+      totalCount={viewModel.totalCount}
+      activeDepegIds={activeDepegIds}
+      maxHeight={maxHeight}
+      onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
+    />
+  ) : null;
+  const legend = viewModel ? (
+    <DEWSLegend bandCounts={viewModel.bandCounts} updatedAtLabel={viewModel.updatedAtLabel} activeDepegCount={haloCount} />
+  ) : null;
+
+  if (reserveSpace || reserveLegend) {
+    return (
+      <div className={cn("pharos-chart-stage flex flex-col", className)}>
+        {reserveSpace ? (
+          <div className="relative mx-auto aspect-[560/500] w-full max-w-[582px]">
+            {isLoading ? (
+              <div aria-busy="true" className="absolute inset-0 animate-pulse rounded-lg bg-muted" />
+            ) : error && data == null ? (
+              <div tabIndex={0} className="absolute inset-0 overflow-auto">
+                <QueryErrorNotice error={error} hasData={false} />
+              </div>
+            ) : <div className="absolute inset-0">{radar}</div>}
+          </div>
+        ) : <div className="flex-1">{radar}</div>}
+        {reserveLegend ? <div className="min-h-36 sm:min-h-16">{legend}</div> : legend}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -645,38 +687,10 @@ export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 4
 
   if (!viewModel) return null;
 
-  const {
-    totalCount,
-    elevated,
-    calmDots,
-    bandCounts,
-    highest,
-    updatedAtLabel,
-  } = viewModel;
-
-  // Calm marks are anonymous positions, so a coin in a confirmed depeg that is
-  // still CALM on DEWS gets no halo. Count the halos actually drawn rather than
-  // every active depeg, or the key promises marks the radar never renders.
-  const haloCount = activeDepegIds ? elevated.filter((coin) => activeDepegIds.has(coin.id)).length : 0;
-
   return (
     <div className={cn("pharos-chart-stage flex flex-col", className)}>
-      <div className="flex-1">
-        <DEWSRadar
-          elevated={elevated}
-          calmDots={calmDots}
-          highest={highest}
-          totalCount={totalCount}
-          activeDepegIds={activeDepegIds}
-          maxHeight={maxHeight}
-          onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
-        />
-      </div>
-      <DEWSLegend
-        bandCounts={bandCounts}
-        updatedAtLabel={updatedAtLabel}
-        activeDepegCount={haloCount}
-      />
+      <div className="flex-1">{radar}</div>
+      {legend}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DEWSAlertFeed } from "@/components/dews/dews-alert-feed";
-import type { StressSignalEntry } from "@shared/types/stress";
 import { makeDews } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
@@ -16,8 +15,7 @@ vi.mock("next/link", async () => {
 });
 
 
-function makeSignal(overrides: Partial<StressSignalEntry> = {}): StressSignalEntry {
-  return makeDews({
+const signal = makeDews({
     score: 70,
     band: "WARNING",
     signals: {
@@ -26,13 +24,12 @@ function makeSignal(overrides: Partial<StressSignalEntry> = {}): StressSignalEnt
     },
     amplifiers: { psi: 1.1, contagion: 1.08 },
     computedAt: 1_700_000_000,
-    ...overrides,
-  });
-}
+});
 
 describe("DEWSAlertFeed", () => {
-  it("shows top drivers and amplifiers for elevated rows", () => {
-    render(<DEWSAlertFeed signals={{ "test-coin": makeSignal() }} />);
+  it.each([[false, false], [true, false], [true, true]])("shows top drivers and amplifiers for elevated rows (embedded=%s, reserved=%s)", (embedded, reserveSpace) => {
+    const { container } = render(<DEWSAlertFeed embedded={embedded} reserveSpace={reserveSpace} signals={{ "test-coin": signal }} />);
+    expect(container.innerHTML.includes("min-h-17 sm:min-h-10")).toBe(reserveSpace);
 
     expect(screen.getByText(/Supply Velocity/i)).toBeTruthy();
     expect(screen.getByText(/PSI 1.10x/i)).toBeTruthy();
@@ -47,7 +44,7 @@ describe("DEWSAlertFeed", () => {
   });
 
   it("keeps the all-clear only for a census whose assets were actually observed", () => {
-    render(<DEWSAlertFeed signals={{ "test-coin": makeSignal({ band: "CALM" }) }} />);
+    render(<DEWSAlertFeed signals={{ "test-coin": { ...signal, band: "CALM" } }} />);
 
     expect(screen.getByText("All peg-catalog assets with DEWS coverage are below ALERT.")).toBeTruthy();
   });
