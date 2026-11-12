@@ -844,7 +844,6 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
     expect(coverage.missingActiveAssets[0]).toMatchObject({ currentPrice: null, consecutiveMissingGenerations: 2, acknowledgedGap: null });
 
-    // Registry readback (compact and verbose) applies the same clock.
     const compact = compactCoverage(coverage, 0);
     expect(parseCompactGap(compact.missingActiveState[0], { nowSec: review.reviewedAt - 1 }))
       .toMatchObject({ acknowledgedGap: null, alertEligible: true });
@@ -881,6 +880,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   it.each([
     ["usda-avalon", 0.9998, "defillama-contract"],
     ["usdn-smardex", 0.991, "coinmarketcap"],
+    ["spusd-soulpeg", 0.99498, "coingecko"],
   ] as const)("retires the recovered %s review: the next gap is unacknowledged and an observed price stays priced", (id, price, priceSource) => {
     expect(GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
     const nowSec = Date.UTC(2026, 9, 27, 12) / 1000;

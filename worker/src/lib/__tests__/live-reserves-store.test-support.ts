@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+import * as reviewPolicy from "../reserve-feed-reviews";
 import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -6,6 +8,19 @@ import {
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../live-reserves/store";
+
+export const YUZU_REVIEW: (typeof reviewPolicy.RESERVE_FEED_REVIEWS)[number] = {
+  stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "unknown", warningCodes: [],
+  errorPrefix: "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation",
+  owner: "ops", reason: "Historical test fixture",
+  sources: [{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-07" }],
+  reviewedAt: 1794080812, expiresAt: 1794685612,
+};
+const resolveReviews = reviewPolicy.resolveReserveFeedReviews, matchReview = reviewPolicy.matchReserveFeedReview;
+export function installYuzuReview() {
+  vi.spyOn(reviewPolicy, "resolveReserveFeedReviews").mockImplementation((now, reviews) => resolveReviews(now, reviews ?? [YUZU_REVIEW]));
+  vi.spyOn(reviewPolicy, "matchReserveFeedReview").mockImplementation((db, state, now, reviews) => matchReview(db, state, now, reviews ?? resolveReviews(now, [YUZU_REVIEW]).activeById));
+}
 
 export const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
@@ -136,28 +151,13 @@ export async function finalizeReserveSuccess(
 }
 
 export function reserveSyncRow(overrides: MockRow = {}): MockRow {
-  return {
-    stablecoin_id: "iusd-infinifi",
-    adapter_key: "infinifi",
-    breaker_key: "live-reserves:infinifi",
-    last_attempted_at: 1_000,
-    last_success_at: 1_000,
-    last_status: "ok",
-    warning_count: 0,
-    warnings: null,
-    last_error: null,
-    metadata: "{}",
-    ...overrides,
-  };
+  return { ...SYNC_STATE_ROW, ...overrides };
 }
 
 export function reserveCompositionRow(overrides: MockRow = {}): MockRow {
   const config = WORKER_TRACKED_META_BY_ID.get(String(overrides.stablecoin_id ?? "iusd-infinifi"))?.liveReservesConfig;
   return {
-    stablecoin_id: "iusd-infinifi",
-    slices: JSON.stringify(LIVE_SLICES),
-    fetched_at: 1_000,
-    source: "infinifi",
+    ...COMPOSITION_ROW,
     config_fingerprint: config ? computeLiveReserveConfigFingerprint(config) : null,
     ...overrides,
   };
