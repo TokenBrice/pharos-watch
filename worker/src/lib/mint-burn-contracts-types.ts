@@ -48,6 +48,10 @@ export interface MintBurnCcipBridgeDetectionConfig {
   tokenAddress: string;
   knownBridgePoolAddresses: string[];
   externalMinterAddress?: string;
+  nativeEvents?: {
+    mint: "NativeMint(address,address,uint256)";
+    burn: "NativeBurn(address,address,uint256)";
+  };
   poolKind?: "usdo";
 }
 

@@ -2,6 +2,7 @@ import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolut
 import type {
   MintBurnAdapterKind,
   MintBurnBridgeDetectionConfig,
+  MintBurnCcipBridgeDetectionConfig,
   MintBurnContractConfig,
   MintBurnContractConfigSpec,
   MintBurnEventDef,
@@ -53,6 +54,7 @@ export function ccipBridgeDetection(
   stablecoinId: string,
   externalMinterAddress?: string,
   poolKind?: "usdo",
+  nativeEvents?: MintBurnCcipBridgeDetectionConfig["nativeEvents"],
 ): MintBurnBridgeDetectionConfig {
   return {
     protocol: "ccip",
@@ -60,6 +62,7 @@ export function ccipBridgeDetection(
     knownBridgePoolAddresses,
     ...(externalMinterAddress ? { externalMinterAddress } : {}),
     ...(poolKind ? { poolKind } : {}),
+    ...(nativeEvents ? { nativeEvents } : {}),
   };
 }
 

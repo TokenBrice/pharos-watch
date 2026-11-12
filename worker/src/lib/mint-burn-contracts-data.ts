@@ -418,7 +418,10 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
     bridgeDetection: ccipBridgeDetection([
       "0x36a72ed0096b414521c45e3ddc9ed657d1d9c141",
-    ], "usd1-world-liberty-financial", "0xee9b1a09aedaced9dcda74964ea447feb93861c2"),
+    ], "usd1-world-liberty-financial", "0xee9b1a09aedaced9dcda74964ea447feb93861c2", undefined, {
+      mint: "NativeMint(address,address,uint256)",
+      burn: "NativeBurn(address,address,uint256)",
+    }),
   },
 
   // --- Top-50 supported expansion (Ethereum only) ---
