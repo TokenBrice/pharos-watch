@@ -4,6 +4,7 @@ import {
   fetchAndParseBenchmark,
   isValidBenchmarkRate,
   parseRate,
+  type BenchmarkResponseDiagnostic,
 } from "./shared";
 
 export function parseEcbCompoundedEstrCsv(csv: string): { recordDate: string; rate: number } | null {
@@ -32,12 +33,16 @@ export function parseEcbCompoundedEstrCsv(csv: string): { recordDate: string; ra
   return null;
 }
 
-export async function tryEcbCompoundedEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryEcbCompoundedEstrCsv(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: ECB_ESTR_3M_CSV_URL,
     headers: { "User-Agent": USER_AGENT },
     parse: parseEcbCompoundedEstrCsv,
     warnLabel: "ECB 3M compounded €STR CSV",
     signal,
+    onDiagnostic,
   });
 }

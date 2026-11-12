@@ -160,13 +160,16 @@ export async function resolveBenchmarkProvider(params: {
   let source: string | null = null;
   let rejected: BenchmarkFetchResult | null = null;
   let confirmation: BenchmarkRateConfirmation | null = null;
-  let responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] | undefined;
+  const responseDiagnostics: BenchmarkProviderAttemptDiagnostic[] = [];
 
   if (allowed && hasCredentials) {
     for (const provider of policy.orderedProviders) {
-      const outcome = await provider.fetch({ signal, credential });
+      const outcome = await provider.fetch({
+        signal, credential,
+        onDiagnostic: diagnostic => responseDiagnostics.push({ provider: provider.source, ...diagnostic }),
+      });
       const fetched = outcome && "result" in outcome ? outcome.result : outcome;
-      if (policy.responseDiagnostics === "preserve") responseDiagnostics = outcome?.responseDiagnostics;
+      responseDiagnostics.push(...outcome?.responseDiagnostics ?? []);
       if (!fetched) continue;
       const assessment = assessYieldBenchmarkRate(
         key, fetched.rate, previousMarketRate, previousBenchmark?.lastRejectedMarketRate ?? null,
@@ -217,7 +220,7 @@ export async function resolveBenchmarkProvider(params: {
     meta,
     failureMode: parsed ? null : meta?.fallbackMode ?? fallbackMode,
     ...(confirmation ? { confirmation } : {}),
-    ...(responseDiagnostics ? { responseDiagnostics } : {}),
+    ...(responseDiagnostics.length > 0 ? { responseDiagnostics } : {}),
   };
 }
 
@@ -227,11 +230,15 @@ export async function resolveBenchmarkProviderMap(params: {
   fetchedAt: number;
   env?: Pick<Env, "BANXICO_TOKEN">;
   signal?: AbortSignal;
+  keys?: readonly YieldBenchmarkKey[];
 }): Promise<Record<string, ResolvedBenchmarkProvider>> {
   const resolvedProviders: ResolvedBenchmarkProvider[] = [];
   for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
     throwIfAborted(params.signal);
-    resolvedProviders.push(await resolveBenchmarkProvider({ ...params, key: descriptor.key, policy: descriptor.policy }));
+    const previous = params.previous[descriptor.key];
+    resolvedProviders.push(params.keys && !params.keys.includes(descriptor.key)
+      ? { key: descriptor.key, parsed: null, meta: previous ?? null, failureMode: null }
+      : await resolveBenchmarkProvider({ ...params, key: descriptor.key, policy: descriptor.policy }));
   }
   return Object.fromEntries(resolvedProviders.map((entry) => [entry.key, entry]));
 }

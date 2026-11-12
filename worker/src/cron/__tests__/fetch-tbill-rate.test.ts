@@ -15,7 +15,7 @@ import {
   TREASURY_XML_SNIPPET,
   type BenchmarkFetchRoutes,
 } from "./rates-cron.test-support";
-import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import { YIELD_BENCHMARK_KEY_VALUES, type YieldBenchmarkKey, type YieldBenchmarkRegistry } from "@shared/types/yield";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { DatabaseSync } from "node:sqlite";
 import type * as DbCache from "../../lib/db-cache";
@@ -46,9 +46,13 @@ import {
   fetchTbillRate,
 } from "../fetch-tbill-rate";
 
-import { buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, toYieldBenchmarkRegistry, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
+import { type ParsedYieldBenchmarkMeta, buildHardcodedUsdBenchmark, getBenchmarkKeyForPegCurrency, resolveBenchmarkForStablecoin, toYieldBenchmarkRegistry, withYieldBenchmarkStaticMeta } from "../yield-sync/benchmarks";
 import { classifyYieldBenchmarkFreshness, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
 import { loadRiskFreeRateRegistryWithState } from "../yield-sync/state";
+import { GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY as GBP_MARKER, USD_FRESH_STREAK_CACHE_KEY as USD_MARKER } from "../yield-sync/benchmark-monitor";
+import { BENCHMARK_RESOLUTION_POLICIES } from "../tbill-sources/providers";
+import { buildFailedBenchmarkResponseDiagnostics } from "../tbill-sources/metadata";
+import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";
@@ -57,10 +61,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
 const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-03-26,100\n2026-06-24,101\n";
 
-// FRED and NY Fed observations enforce the shared per-key five-day budget.
-// The shared routes ship static 2026-03 rows, so override them with fresh rows
-// relative to FROZEN_NOW; tests that exercise a stale or future-dated feed pass
-// their own override on top.
+// Fresh rows relative to FROZEN_NOW keep the five-day observation guard active.
 const FRESH_FRED_OBSERVATION_DATE = "2026-06-24";
 const FRESH_FRED_ROUTES: BenchmarkFetchRoutes = {
   "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},3.72\n`, { status: 200 }),
@@ -89,17 +90,23 @@ function mockUnavailableTbillByUrl(calls?: string[]) {
 
 /** Banxico requires a token; pass via env. */
 const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
+const runBenchmarks = () => fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+function runMetadata(result: { metadata?: string }) {
+  return JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+}
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
-// The St. Louis Fed SONIA mirrors gate their latest observation against the
-// real clock (140-day staleness / 1-day future-skew window in
-// tbill-sources/fred.ts). Freeze Date so the static 2026 fixtures stay inside
-// that window instead of silently rerouting GBP to the BoE fallback once the
-// wall clock drifts past the fixtures.
+// Freeze Date so fixture age cannot silently reroute the SONIA fallback.
 const FROZEN_NOW = new Date("2026-06-25T12:00:00Z");
 const fixtures = createLatestSchemaFixtureTracker();
 let db: D1Database;
 let sqlite: DatabaseSync;
+
+function cacheWritePayload<T = Record<string, unknown>>(key: string) {
+  const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
+  expect(row).toBeDefined();
+  return JSON.parse(String(row?.value)) as T;
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -112,22 +119,12 @@ afterEach(() => {
   fixtures.closeAll();
 });
 
+const priorUsd = { key: "USD", rate: 3.72, recordDate: "2026-03-02", fetchedAt: 1773100800, source: "fred-dgs3mo" };
+const writtenBenchmarks = () => cacheWritePayload<{ benchmarks: YieldBenchmarkRegistry }>("risk_free_rates").benchmarks;
+
 describe("fetchTbillRate", () => {
 
-  function latestCachePayload() {
-    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rate");
-    expect(row).toBeDefined();
-    return JSON.parse(String(row?.value)) as {
-      rate: number;
-      source: string;
-      fallbackMode: string | null;
-      isFallback: boolean;
-      recordDate: string | null;
-      lastMarketRate?: number | null;
-      lastRejectedMarketRate?: number | null;
-      lastRejectedMarketFetchedAt?: number | null;
-    };
-  }
+  const latestCachePayload = () => cacheWritePayload<ParsedYieldBenchmarkMeta>("risk_free_rate");
 
   function installBaselineUsdCache() {
     installCacheByKey(vi.mocked(getCache), {
@@ -145,6 +142,13 @@ describe("fetchTbillRate", () => {
     });
   }
 
+  function mockUsdRate(rate: string) {
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},${rate}\n`),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET.replaceAll("3.71", rate).replaceAll("3.72", rate)),
+    });
+  }
+
   function installWrittenBenchmarkCache() {
     const read = (key: string) => {
       const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key) as
@@ -159,31 +163,9 @@ describe("fetchTbillRate", () => {
     });
   }
 
-  function latestStructuredCachePayload() {
-    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rates");
-    expect(row).toBeDefined();
-    return JSON.parse(String(row?.value)) as {
-      benchmarks: Record<string, {
-        key: string;
-        rate: number;
-        source: string;
-        isFallback: boolean;
-        fallbackMode: string | null;
-        recordDate: string | null;
-      } | null>;
-    };
-  }
-
   function previousRiskFreeRatesCacheWithGbp() {
     return makeRiskFreeRatesCacheRow({
-      USD: makeBenchmarkCacheEntry({
-        key: "USD",
-        label: "USD 3M T-Bill",
-        rate: 3.72,
-        recordDate: "2026-03-02",
-        fetchedAt: 1773100800,
-        source: "fred-dgs3mo",
-      }),
+      USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
       GBP: makeBenchmarkCacheEntry({
         key: "GBP",
         label: "GBP 3M compounded SONIA",
@@ -194,11 +176,7 @@ describe("fetchTbillRate", () => {
     }, 1774479600);
   }
 
-  function cacheWritePayload(key: string) {
-    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
-    expect(row).toBeDefined();
-    return JSON.parse(String(row?.value)) as Record<string, unknown>;
-  }
+
 
   beforeEach(() => {
     vi.mocked(fetchWithRetry).mockReset();
@@ -217,11 +195,14 @@ describe("fetchTbillRate", () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toContain("usd:circuit-open");
+    expect(metadata.failedBenchmarkResponseAttempts).toEqual(expect.arrayContaining(YIELD_BENCHMARK_KEY_VALUES
+      .filter(key => key !== "SGD").map(key => ({ key, failureMode: "circuit-open", attempts: [] }))));
+
     expect(metadata.eurSource).toBeNull();
     expect(metadata.usdEffrSource).toBeNull();
     expect(latestCachePayload()).toMatchObject({
@@ -239,8 +220,8 @@ describe("fetchTbillRate", () => {
   it("returns ok from benchmark feeds", async () => {
     mockTbillByUrl();
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     const requests = vi.mocked(fetchWithRetry).mock.calls;
     const requestOptions = (part: string) => {
       const request = requests.find(([url]) => String(url).includes(part));
@@ -261,18 +242,21 @@ describe("fetchTbillRate", () => {
     }
 
     expect(result.status).toBe("ok");
-    expect(metadata.fallbackMode).toBeNull();
-    expect(metadata.usdSource).toBe("fred-dgs3mo");
-    expect(metadata.usdRate).toBe(3.72);
-    expect(metadata.usdEffrSource).toBe("nyfed-effr");
-    expect(metadata.usdEffrRate).toBe(4.33);
-    expect(metadata.eurSource).toBe("ecb-estr-3m");
-    expect(metadata.eurRate).toBe(1.9358);
-    expect(metadata.chfSource).toBe("six-sar3mc");
-    expect(metadata.chfRate).toBe(-0.0539);
-    expect(metadata.gbpSource).toBe("fred-sonia-compounded-index");
+    expect(metadata).toMatchObject({
+      fallbackMode: null, usdSource: "fred-dgs3mo",
+      usdRate: 3.72, usdEffrSource: "nyfed-effr",
+      usdEffrRate: 4.33, eurSource: "ecb-estr-3m",
+      eurRate: 1.9358, chfSource: "six-sar3mc",
+      chfRate: -0.0539, gbpSource: "fred-sonia-compounded-index",
+      gbpResponseAttemptCount: 1, jpySource: "boj-call-rate",
+      jpyRate: 0.1, audSource: "rba-cash-rate-target",
+      audRate: 4.3, mxnSource: "banxico-cetes-28d",
+      mxnRate: 10.45, brlSource: "bcb-selic",
+      cadSource: "boc-valet-v122530", cadRate: 4.75,
+      rubSource: "cbr-key-rate", rubRate: 14.5,
+      trySource: "cbrt-evds-tlref", tryRate: 40,
+    });
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
-    expect(metadata.gbpResponseAttemptCount).toBe(1);
     expect(metadata.gbpResponseAttempts).toEqual([
       expect.objectContaining({
         provider: "fred-sonia-compounded-index",
@@ -281,20 +265,7 @@ describe("fetchTbillRate", () => {
         failure: null,
       }),
     ]);
-    expect(metadata.jpySource).toBe("boj-call-rate");
-    expect(metadata.jpyRate).toBe(0.1);
-    expect(metadata.audSource).toBe("rba-cash-rate-target");
-    expect(metadata.audRate).toBe(4.3);
-    expect(metadata.mxnSource).toBe("banxico-cetes-28d");
-    expect(metadata.mxnRate).toBe(10.45);
-    expect(metadata.brlSource).toBe("bcb-selic");
     expect(metadata.brlRate).toBeCloseTo(13.638253562615565, 12);
-    expect(metadata.cadSource).toBe("boc-valet-v122530");
-    expect(metadata.cadRate).toBe(4.75);
-    expect(metadata.rubSource).toBe("cbr-key-rate");
-    expect(metadata.rubRate).toBe(14.5);
-    expect(metadata.trySource).toBe("cbrt-evds-tlref");
-    expect(metadata.tryRate).toBe(40);
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
     expect(latestCachePayload()).toMatchObject({
       rate: 3.72,
@@ -303,22 +274,22 @@ describe("fetchTbillRate", () => {
       isFallback: false,
       recordDate: FRESH_FRED_OBSERVATION_DATE,
     });
-    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+    expect(writtenBenchmarks().USD_EFFR).toMatchObject({
       key: "USD_EFFR",
       rate: 4.33,
       source: "nyfed-effr",
       isFallback: false,
       fallbackMode: null,
     });
-    expect(latestStructuredCachePayload().benchmarks.TRY).toMatchObject({
+    expect(writtenBenchmarks().TRY).toMatchObject({
       key: "TRY",
       rate: 40,
       source: "cbrt-evds-tlref",
       isFallback: false,
       fallbackMode: null,
     });
-    expect(Object.keys(latestStructuredCachePayload().benchmarks)).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
-    expect(latestStructuredCachePayload().benchmarks.AUD).toMatchObject({
+    expect(Object.keys(writtenBenchmarks())).toEqual([...YIELD_BENCHMARK_KEY_VALUES]);
+    expect(writtenBenchmarks().AUD).toMatchObject({
       rate: 4.3, source: "rba-cash-rate-target", label: "AUD cash-rate target",
       isProxy: false, isFallback: false, fallbackMode: null,
     });
@@ -333,30 +304,41 @@ describe("fetchTbillRate", () => {
         `23-Jun-2026,4.35,,4.36\n24-Jun-2026,${target},,4.36\n`, { status: 200 },
       ),
     });
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    expect(metadata.audSource).toBe(source);
-    expect(metadata.audRate).toBe(rate);
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
+    expect(result.status).toBe("ok");
+    expect(metadata).toMatchObject({ audSource: source, audRate: rate, fallbackMode: null });
     const expected = {
       key: "AUD", rate, recordDate: "2026-06-24", source, label,
       isProxy, isFallback: isProxy, fallbackMode: isProxy ? "aud-interbank-overnight-proxy" : null,
       lastMarketRate: rate, lastMarketSource: source,
     };
-    expect(latestStructuredCachePayload().benchmarks.AUD).toMatchObject(expected);
+    expect(writtenBenchmarks().AUD).toMatchObject(expected);
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeCacheRow(cacheWritePayload("risk_free_rates"), FROZEN_NOW.getTime() / 1000),
     });
     const loaded = await loadRiskFreeRateRegistryWithState(db);
     expect(loaded.cacheState).toBe("valid");
     expect(toYieldBenchmarkRegistry(loaded.registry).AUD).toMatchObject(expected);
+    const previous = writtenBenchmarks().AUD!;
+    installWrittenBenchmarkCache();
+    vi.setSystemTime(FROZEN_NOW.getTime() + 3600_000);
+    mockTbillByUrl({ "rba.gov.au/statistics/tables/csv/f1-data.csv": null });
+    const failed = await runBenchmarks();
+    const failedMeta = runMetadata(failed);
+    expect(failed.status).toBe("degraded");
+    expect(failedMeta.fallbackMode).toBe("aud:aud-cash-rate-failed-retained");
+    expect(failedMeta.resolvedBenchmarkKeys).not.toContain("AUD");
+    expect(writtenBenchmarks().AUD).toMatchObject({ rate, recordDate: previous.recordDate,
+      fetchedAt: previous.fetchedAt, fallbackMode: "aud-cash-rate-failed-retained" });
   });
 
   it("fetches every benchmark descriptor on each daily run", async () => {
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 
-    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    await runBenchmarks();
+    await runBenchmarks();
 
     expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(2);
     expect(calls.filter((url) => url.includes("id=DGS3MO"))).toHaveLength(2);
@@ -374,7 +356,7 @@ describe("fetchTbillRate", () => {
       async (_db, source) => source !== "TREASURY_RATES:EUR",
     );
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
 
     expect(result.status).toBe("degraded");
     expect(calls.filter((url) => url.includes("data-api.ecb.europa.eu"))).toHaveLength(0);
@@ -382,92 +364,34 @@ describe("fetchTbillRate", () => {
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:CHF", true);
   });
 
-  it("falls back to the ALFRED SONIA index when the FRED mirror is unreachable", async () => {
+  it.each([
+    ["unreachable", null, "2026-06-24"],
+    ["stale", "observation_date,IUDZOS2\n2000-01-01,100\n2000-04-01,101\n", "2026-06-24"],
+    ["frozen 36 days", "observation_date,IUDZOS2\n2026-02-15,100\n2026-05-20,101\n", "2026-06-23"],
+  ] as const)("falls through %s FRED SONIA evidence to current ALFRED", async (_kind, fredCsv, recordDate) => {
     mockTbillByUrl({
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": fredCsv == null ? null : new Response(fredCsv),
       "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": (_url, opts) => {
         expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
           .toBe("Pharos/1.0 (+https://pharos.watch)");
-        return new Response(ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 });
+        return new Response(recordDate === "2026-06-24" ? ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET
+          : "observation_date,IUDZOS2_20260623\n2026-03-25,100\n2026-06-23,101\n");
       },
     });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     expect(result.status).toBe("ok");
-    expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
+    expect(metadata).toMatchObject({ gbpSource: "alfred-sonia-compounded-index", gbpRecordDate: recordDate,
+      gbpResponseResolvedProvider: "alfred-sonia-compounded-index", fallbackMode: null });
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
-    expect(metadata.gbpResponseResolvedProvider).toBe("alfred-sonia-compounded-index");
     expect(metadata.gbpResponseAttempts).toEqual([
-      expect.objectContaining({
-        provider: "fred-sonia-compounded-index",
-        status: null,
-        parsed: false,
-        failure: "transport-failed",
-      }),
-      expect.objectContaining({
-        provider: "alfred-sonia-compounded-index",
-        status: 200,
-        parsed: true,
-        failure: null,
-      }),
+      expect.objectContaining({ provider: "fred-sonia-compounded-index", status: fredCsv == null ? null : 200,
+        parsed: false, failure: fredCsv == null ? "transport-failed" : "parse-failed" }),
+      expect.objectContaining({ provider: "alfred-sonia-compounded-index", status: 200, parsed: true, failure: null }),
     ]);
-  });
-
-  it("falls back to ALFRED when the FRED SONIA index is stale", async () => {
-    mockTbillByUrl({
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
-        "observation_date,IUDZOS2\n2000-01-01,100\n2000-04-01,101\n",
-        { status: 200 },
-      ),
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
-        ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET,
-        { status: 200 },
-      ),
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
-    expect(metadata.gbpRecordDate).toBe("2026-06-24");
-    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
-  });
-
-  it("falls through a frozen 36-day-old FRED SONIA mirror to the current ALFRED observation", async () => {
-    // The FRED mirror answers HTTP 200 with an unbounded historical CSV but has
-    // stopped updating; ALFRED's copy carries the current print.
-    mockTbillByUrl({
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
-        "observation_date,IUDZOS2\n2026-02-15,100\n2026-05-20,101\n",
-        { status: 200 },
-      ),
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
-        "observation_date,IUDZOS2_20260623\n2026-03-25,100\n2026-06-23,101\n",
-        { status: 200 },
-      ),
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
-    expect(metadata.gbpRecordDate).toBe("2026-06-23");
-    expect(metadata.fallbackMode).toBeNull();
-
-    const persisted = latestStructuredCachePayload();
-    expect(persisted.benchmarks.GBP).toMatchObject({
-      source: "alfred-sonia-compounded-index",
-      recordDate: "2026-06-23",
-      isFallback: false,
-      fallbackMode: null,
-    });
-
-    // The persisted print must satisfy the same shared GBP bound the consumer
-    // applies; a 36-day-old mirror print would classify stale there.
+    expect(writtenBenchmarks().GBP).toMatchObject({ source: "alfred-sonia-compounded-index", recordDate,
+      isFallback: false, fallbackMode: null });
+    // The persisted print must satisfy the consumer's shared GBP bound.
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeCacheRow(cacheWritePayload("risk_free_rates"), FROZEN_NOW.getTime() / 1000),
     });
@@ -475,51 +399,29 @@ describe("fetchTbillRate", () => {
     expect(loaded.cacheState).toBe("valid");
     const gbp = loaded.registry.GBP!;
     expect(classifyYieldBenchmarkFreshness(gbp, {
-      recordDate: gbp.recordDate,
-      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP,
+      recordDate: gbp.recordDate, maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP,
       nowSec: FROZEN_NOW.getTime() / 1000,
     })).toBe("healthy");
   });
 
-  it("falls back to the BoE SONIA index when St. Louis Fed SONIA observations are future dated", async () => {
+  it.each([false, true])("falls back to BoE when St. Louis Fed SONIA is unavailable (future=%s)", async (future) => {
     mockTbillByUrl({
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
-        "observation_date,IUDZOS2\n2099-01-01,100\n2099-04-01,101\n",
-        { status: 200 },
-      ),
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
-        "observation_date,IUDZOS2_20990401\n2099-01-01,100\n2099-04-01,101\n",
-        { status: 200 },
-      ),
-      "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": future
+        ? new Response("observation_date,IUDZOS2\n2099-01-01,100\n2099-04-01,101\n") : null,
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": future
+        ? new Response("observation_date,IUDZOS2_20990401\n2099-01-01,100\n2099-04-01,101\n") : null,
+      "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET),
     });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     expect(result.status).toBe("ok");
-    expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
-    expect(metadata.gbpRecordDate).toBe("2026-04-01");
+    expect(metadata).toMatchObject({ gbpSource: "boe-sonia-compounded-index", gbpRecordDate: "2026-04-01" });
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
     expect(metadata.gbpResponseAttempts).toEqual([
-      expect.objectContaining({ provider: "fred-sonia-compounded-index", failure: "parse-failed" }),
-      expect.objectContaining({ provider: "alfred-sonia-compounded-index", failure: "parse-failed" }),
+      expect.objectContaining({ provider: "fred-sonia-compounded-index", failure: future ? "parse-failed" : "transport-failed" }),
+      expect.objectContaining({ provider: "alfred-sonia-compounded-index", failure: future ? "parse-failed" : "transport-failed" }),
       expect.objectContaining({ provider: "boe-sonia-compounded-index", parsed: true, failure: null }),
     ]);
-  });
-
-  it("falls back to the BoE SONIA index when the St. Louis Fed mirrors are unreachable", async () => {
-    mockTbillByUrl({
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(metadata.gbpSource).toBe("boe-sonia-compounded-index");
-    expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
   });
 
   it("surfaces a retained GBP SONIA fallback as structured metadata", async () => {
@@ -532,8 +434,8 @@ describe("fetchTbillRate", () => {
       risk_free_rates: previousRiskFreeRatesCacheWithGbp(),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe("gbp:gbp-sonia-compounded-index-failed-retained");
@@ -553,10 +455,8 @@ describe("fetchTbillRate", () => {
     expect(metadata.retainedFallbackBenchmarks).toEqual([
       expect.objectContaining({
         key: "GBP",
-        currency: "GBP",
         source: "fred-sonia-compounded-index",
         fallbackMode: "gbp-sonia-compounded-index-failed-retained",
-        lastMarketSource: "fred-sonia-compounded-index",
         retained: true,
       }),
     ]);
@@ -596,7 +496,7 @@ describe("fetchTbillRate", () => {
     const result = await fetchTbillRate(db, undefined, {
       ...BANXICO_TEST_ENV,
     });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata).toMatchObject({
@@ -645,8 +545,8 @@ describe("fetchTbillRate", () => {
       },
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("ok");
     expect(metadata).toMatchObject({
@@ -679,12 +579,12 @@ describe("fetchTbillRate", () => {
     const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
     vi.mocked(getCache).mockImplementation(cache.getCache);
     mockTbillByUrl();
-    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    await runBenchmarks();
     const firstGeneration = cacheWritePayload("risk_free_rates").generationId;
     mockTbillByUrl();
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(metadata).toMatchObject({
       gbpFreshPublicationStreak: 2,
@@ -708,7 +608,7 @@ describe("fetchTbillRate", () => {
     const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
     vi.mocked(getCache).mockImplementation(cache.getCache);
     mockTbillByUrl();
-    await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    await runBenchmarks();
     const previousGenerationId = cacheWritePayload("risk_free_rates").generationId;
     let registryReads = 0;
     vi.mocked(getCache).mockImplementation(async (database, key) => {
@@ -719,11 +619,11 @@ describe("fetchTbillRate", () => {
     });
     mockTbillByUrl();
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
     const generationId = cacheWritePayload("risk_free_rates").generationId;
     expect(result.status).toBe("ok");
     expect(generationId).not.toBe(previousGenerationId);
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    expect(runMetadata(result)).toMatchObject({
       generationId,
       previousGenerationId: null,
       previousGenerationUnavailableReason: "benchmark-previous-generation-read-failed",
@@ -736,10 +636,10 @@ describe("fetchTbillRate", () => {
     for (const key of ["fetch-tbill-rate:usd-fresh-streak", GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]) {
       expect(cacheWritePayload(key)).toMatchObject({ consecutiveFreshRuns: 1, generationId });
     }
-    expect(latestCachePayload().rate).toBe(latestStructuredCachePayload().benchmarks.USD?.rate);
+    expect(latestCachePayload().rate).toBe(writtenBenchmarks().USD?.rate);
     mockTbillByUrl();
-    const recovered = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(JSON.parse(recovered.metadata ?? "{}")).toMatchObject({
+    const recovered = await runBenchmarks();
+    expect(runMetadata(recovered)).toMatchObject({
       previousGenerationId: generationId,
       previousGenerationUnavailableReason: null,
       gbpFreshPublicationStreak: 2,
@@ -752,7 +652,7 @@ describe("fetchTbillRate", () => {
       const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
       vi.mocked(getCache).mockImplementation(cache.getCache);
       mockTbillByUrl();
-      await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+      await runBenchmarks();
       const marker = cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
       sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
         JSON.stringify({ ...marker, consecutiveFreshRuns: 0, consecutiveRetainedRuns: 2 }),
@@ -817,7 +717,7 @@ describe("fetchTbillRate", () => {
           generationId, consecutiveFreshRuns: 2,
         });
         expect(cacheWritePayload("risk_free_rate").rate).toBe(
-          latestStructuredCachePayload().benchmarks.USD?.rate,
+          writtenBenchmarks().USD?.rate,
         );
       } else {
         expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
@@ -834,7 +734,7 @@ describe("fetchTbillRate", () => {
       [GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY]: makeCacheRow({ consecutiveRetainedRuns: 2 }, Math.floor(FROZEN_NOW.getTime() / 1000)),
     });
     vi.mocked(logCronEvent).mockRejectedValueOnce(new Error("event unavailable"));
-    await expect(fetchTbillRate(db, undefined, BANXICO_TEST_ENV)).resolves.toMatchObject({ status: "ok" });
+    await expect(runBenchmarks()).resolves.toMatchObject({ status: "ok" });
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveRetainedRuns: 0, consecutiveFreshRuns: 1,
       generationId: cacheWritePayload("risk_free_rates").generationId,
@@ -848,35 +748,35 @@ describe("fetchTbillRate", () => {
       return cache.getCache(database, key);
     });
     mockTbillByUrl();
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(JSON.parse(result.metadata ?? "{}")).not.toHaveProperty("usdFreshPublicationVerifiedTwice");
+    const result = await runBenchmarks();
+    expect(runMetadata(result)).not.toHaveProperty("usdFreshPublicationVerifiedTwice");
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
       { key: "risk_free_rate" }, { key: "risk_free_rates" },
     ]);
     expect(logCronEvent).not.toHaveBeenCalled();
   });
 
-  it("falls back to Treasury XML when FRED fails", async () => {
+  it.each([
+    ["unreachable", null], ["invalid", "DATE,DGS3MO\n2026-03-02,.\n"],
+    ["drift", `DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`],
+  ] as const)("falls back to independent Treasury XML after %s FRED evidence", async (kind, csv) => {
     mockTbillByUrl({
-      "id=DGS3MO": null,
-      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
+      "id=DGS3MO": csv == null ? null : new Response(csv),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET),
     });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
+    if (kind === "drift") installBaselineUsdCache();
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     expect(result.status).toBe("ok");
-    expect(metadata.usdSource).toBe("treasury-yield-xml");
-    expect(metadata.usdRate).toBe(3.72);
-    expect(metadata.fallbackMode).toBeNull();
+    expect(metadata).toMatchObject({ usdSource: "treasury-yield-xml", usdRate: 3.72, fallbackMode: null });
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
     expect(latestCachePayload()).toMatchObject({
-      rate: 3.72,
-      source: "treasury-yield-xml",
-      fallbackMode: null,
-      isFallback: false,
-      recordDate: "2026-03-13",
+      rate: 3.72, source: "treasury-yield-xml", fallbackMode: null, isFallback: false, recordDate: "2026-03-13",
     });
+    if (kind === "drift") {
+      expect(String(metadata.fallbackMode)).not.toContain("usd-rate-out-of-band");
+      expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({ eventType: "benchmark-rate-out-of-band" }));
+    }
   });
 
   it("falls back to FRED DFF when the NY Fed EFFR feed fails", async () => {
@@ -884,14 +784,14 @@ describe("fetchTbillRate", () => {
       "markets.newyorkfed.org": null,
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("ok");
     expect(metadata.fallbackMode).toBeNull();
     expect(metadata.usdEffrSource).toBe("fred-dff");
     expect(metadata.usdEffrRate).toBe(4.33);
-    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+    expect(writtenBenchmarks().USD_EFFR).toMatchObject({
       key: "USD_EFFR",
       rate: 4.33,
       source: "fred-dff",
@@ -907,30 +807,15 @@ describe("fetchTbillRate", () => {
         refRates: [{ type: "EFFR", effectiveDate: recordDate, percentRate: 9.99 }],
       }),
     }, calls);
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ usdEffrSource: "fred-dff", usdEffrRate: 4.33 });
+    const result = await runBenchmarks();
+    expect(runMetadata(result)).toMatchObject({ usdEffrSource: "fred-dff", usdEffrRate: 4.33 });
     expect(calls.some((url) => url.includes("id=DFF"))).toBe(true);
-    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+    expect(writtenBenchmarks().USD_EFFR).toMatchObject({
       rate: 4.33, source: "fred-dff", isFallback: false, fallbackMode: null,
       recordDate: FRESH_FRED_OBSERVATION_DATE,
     });
   });
 
-
-  it("falls back to Treasury XML when FRED returns invalid data", async () => {
-    mockTbillByUrl({
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,.\n", { status: 200 }),
-      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
-    expect(metadata.usdSource).toBe("treasury-yield-xml");
-    expect(metadata.usdRate).toBe(3.72);
-    expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", true);
-  });
 
   it("retains the last EUR benchmark when the ECB feed fails", async () => {
     mockTbillByUrl({
@@ -938,14 +823,7 @@ describe("fetchTbillRate", () => {
     });
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          label: "USD 3M T-Bill",
-          rate: 3.72,
-          recordDate: "2026-03-02",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-        }),
+        USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
         EUR: makeBenchmarkCacheEntry({
           key: "EUR",
           label: "EUR 3M compounded €STR",
@@ -958,13 +836,17 @@ describe("fetchTbillRate", () => {
       }, 1774393200),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.eurSource).toBe("ecb-estr-3m");
     expect(metadata.eurRate).toBe(1.94);
     expect(metadata.fallbackMode).toBe("eur:ecb-failed-retained");
+    expect(metadata.failedBenchmarkResponseAttempts).toEqual([{
+      key: "EUR", failureMode: "ecb-failed-retained",
+      attempts: [expect.objectContaining({ provider: "ecb-estr-3m", failure: "transport-failed", status: null })],
+    }]);
   });
 
   it.each([
@@ -995,8 +877,8 @@ describe("fetchTbillRate", () => {
       }, observedAt),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     const retained = {
       rate: retainedRate,
       recordDate: "2026-06-23",
@@ -1021,9 +903,9 @@ describe("fetchTbillRate", () => {
       failure: contentType === "application/json" ? "upstream-error" : "html-body",
       ...(contentType === "application/json" ? { upstreamStatus: 500 } : {}),
     })));
-    expect(latestStructuredCachePayload().benchmarks.BRL).toMatchObject(retained);
+    expect(writtenBenchmarks().BRL).toMatchObject(retained);
     expect(metadata.retainedFallbackBenchmarks).toEqual([
-      expect.objectContaining({ key: "BRL", retained: true, fetchedAt: observedAt, lastMarketFetchedAt: observedAt }),
+      expect.objectContaining({ key: "BRL", retained: true, fetchedAt: observedAt }),
     ]);
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:BRL", false);
   });
@@ -1041,8 +923,8 @@ describe("fetchTbillRate", () => {
         "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json(bcbFixtures.annualized) : primary,
       }, calls);
 
-      const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-      const metadata = JSON.parse(result.metadata ?? "{}");
+      const result = await runBenchmarks();
+      const metadata = runMetadata(result);
       expect(result.status).toBe("ok");
       expect(metadata.brlSource).toBe("bcb-selic-1178");
       expect(metadata.brlRate).toBe(13.65);
@@ -1063,7 +945,7 @@ describe("fetchTbillRate", () => {
         .toEqual([[db, "TREASURY_RATES:BRL", true]]);
       expect(metadata.usdSource).toBe("fred-dgs3mo");
       expect(metadata.eurSource).toBe("ecb-estr-3m");
-      const entry = latestStructuredCachePayload().benchmarks.BRL!;
+      const entry = writtenBenchmarks().BRL!;
       expect(entry).toMatchObject({
         key: "BRL", label: "BRL SELIC over", currency: "BRL", source: "bcb-selic-1178",
         rate: 13.65, recordDate: "2026-06-24", isFallback: false, fallbackMode: null,
@@ -1103,10 +985,10 @@ describe("fetchTbillRate", () => {
     mockTbillByUrl({
       "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json([{ data, valor: "13.65" }]) : null,
     });
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(metadata.brlResponseAttempts[1]).toMatchObject({ parsed: true, failure });
-    expect(latestStructuredCachePayload().benchmarks.BRL).toMatchObject({
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
+    expect((metadata.brlResponseAttempts as unknown[])[1]).toMatchObject({ parsed: true, failure });
+    expect(writtenBenchmarks().BRL).toMatchObject({
       source: "bcb-selic-1178", recordDate: "2026-06-23", fetchedAt: observedAt,
       lastMarketSource: "bcb-selic-1178", lastMarketRecordDate: "2026-06-23", lastMarketFetchedAt: observedAt,
       isFallback: true, fallbackMode: "bcb-selic-failed-retained",
@@ -1118,8 +1000,8 @@ describe("fetchTbillRate", () => {
     vi.setSystemTime(new Date("2026-06-25T00:00:00Z"));
     const calls: string[] = [];
     mockTbillByUrl({ "api.bcb.gov.br": Response.json([{ data: "20/06/2026", valor: "0.050747" }]) }, calls);
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(JSON.parse(result.metadata ?? "{}").brlSource).toBe("bcb-selic");
+    const result = await runBenchmarks();
+    expect(runMetadata(result).brlSource).toBe("bcb-selic");
     expect(calls.some(url => url.includes("sgs.1178/"))).toBe(false);
     expect(classifyYieldBenchmarkFreshness(
       { ageSeconds: 0, isFallback: false, fallbackMode: null },
@@ -1135,8 +1017,8 @@ describe("fetchTbillRate", () => {
     mockTbillByUrl({
       "api.bcb.gov.br": url => url.includes("sgs.1178/") ? Response.json([{ data: "26/06/2026", valor: "13.65" }]) : null,
     });
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    expect(JSON.parse(result.metadata ?? "{}").brlSource).toBe(source);
+    const result = await runBenchmarks();
+    expect(runMetadata(result).brlSource).toBe(source);
   });
 
   it("bounds response MIME diagnostics and never persists an error body", async () => {
@@ -1144,10 +1026,10 @@ describe("fetchTbillRate", () => {
     mockTbillByUrl({
       "api.bcb.gov.br": new Response(bcbFixtures.html, { headers: { "Content-Type": `${mime}; charset=utf-8` } }),
     });
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}");
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
     expect(metadata.brlResponseAttempts).toHaveLength(2);
-    for (const attempt of metadata.brlResponseAttempts) {
+    for (const attempt of metadata.brlResponseAttempts as unknown[]) {
       expect(attempt).toMatchObject({ failure: "html-body", contentType: mime.slice(0, 100) });
     }
     expect(result.metadata).not.toContain("<html>");
@@ -1173,14 +1055,7 @@ describe("fetchTbillRate", () => {
     });
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          label: "USD 3M T-Bill",
-          rate: 3.72,
-          recordDate: "2026-03-02",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-        }),
+        USD: makeBenchmarkCacheEntry({ ...priorUsd, label: "USD 3M T-Bill" }),
         EUR: null,
         CHF: makeBenchmarkCacheEntry({
           key: "CHF",
@@ -1192,8 +1067,8 @@ describe("fetchTbillRate", () => {
       }, 1774479600),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.chfSource).toBe("six-sar3mc");
@@ -1208,13 +1083,7 @@ describe("fetchTbillRate", () => {
     });
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.72,
-          recordDate: "2026-03-02",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-        }),
+        USD: makeBenchmarkCacheEntry(priorUsd),
         USD_EFFR: makeBenchmarkCacheEntry({
           key: "USD_EFFR",
           rate: 4.31,
@@ -1236,14 +1105,14 @@ describe("fetchTbillRate", () => {
       }, 1774479600),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.usdEffrSource).toBe("fred-dff");
     expect(metadata.usdEffrRate).toBe(4.31);
     expect(metadata.fallbackMode).toBe("usd_effr:usd-effr-sources-failed-retained");
-    expect(latestStructuredCachePayload().benchmarks.USD_EFFR).toMatchObject({
+    expect(writtenBenchmarks().USD_EFFR).toMatchObject({
       key: "USD_EFFR",
       rate: 4.31,
       source: "fred-dff",
@@ -1252,21 +1121,49 @@ describe("fetchTbillRate", () => {
     });
   });
 
-  it("returns degraded when both sources fail", async () => {
+  it.each([false, true])("records all failed sources through compaction (retained=%s)", async retained => {
+    if (retained) {
+      mockTbillByUrl();
+      await runBenchmarks();
+      installWrittenBenchmarkCache();
+    }
     mockUnavailableTbillByUrl();
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
-    );
+    const reasons = "usd:all-sources-failed,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed";
+    expect(metadata.fallbackMode).toBe(reasons.split(",").map(reason => reason + (retained ? "-retained" : "")).join(","));
+    const diagnostic = { status: 503, failure: "http-status" as const,
+      contentType: "x".repeat(100), bodyBytes: 1000000, parsed: false, recordDate: null };
+    const bounded = buildFailedBenchmarkResponseDiagnostics(YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "SGD").map(key => ({
+      key, parsed: null, meta: null, failureMode: BENCHMARK_RESOLUTION_POLICIES[key].failureMode + (retained ? "-retained" : ""),
+      responseDiagnostics: Array(4).fill({ ...diagnostic, provider: BENCHMARK_RESOLUTION_POLICIES[key].orderedProviders[0].source }),
+    })));
+    const legacy = Object.fromEntries(([
+      ["gbpResponseAttempts", 3, "alfred-sonia-compounded-index"], ["brlResponseAttempts", 2, "bcb-selic-1178"],
+    ] as const).map(([key, count, provider]) => [key, Array(count).fill({ ...diagnostic, provider })]));
+    const valid = { ...metadata, ...legacy, schedulerAttemptKey: "x".repeat(200) };
+    expect(new TextEncoder().encode(JSON.stringify(valid)).length).toBeLessThanOrEqual(8192);
+    const input = { ...valid, ...bounded };
+    const persisted = compactCronMetadataForPersistence(JSON.stringify({ ...input, payload: "x".repeat(10000) }), undefined, "fetch-tbill-rate");
+    expect(persisted.compacted).toBe(true);
+    expect(persisted.persistedBytes).toBeLessThanOrEqual(8192);
+    expect(JSON.parse(persisted.metadata!)).toMatchObject(bounded);
+    for (const failure of bounded.failedBenchmarkResponseAttempts!) {
+      expect(failure).toMatchObject({ attemptCount: 4, omittedAttemptCount: 1 });
+      expect(failure.attempts).toHaveLength(3);
+    }
+    expect(metadata.failedBenchmarkResponseAttempts).toEqual(expect.arrayContaining(YIELD_BENCHMARK_KEY_VALUES
+      .filter(key => key !== "SGD").map(key => expect.objectContaining({ key,
+        attempts: expect.arrayContaining([expect.objectContaining({ failure: "transport-failed" })]),
+      }))));
     expect(recordOutcome).toHaveBeenCalledWith(db, "TREASURY_RATES:USD", false);
     expect(latestCachePayload()).toMatchObject({
-      rate: RISK_FREE_RATE_FALLBACK,
-      source: "hardcoded-fallback",
-      fallbackMode: "all-sources-failed",
+      rate: retained ? 3.72 : RISK_FREE_RATE_FALLBACK,
+      source: retained ? "fred-dgs3mo" : "hardcoded-fallback",
+      fallbackMode: retained ? "all-sources-failed-retained" : "all-sources-failed",
       isFallback: true,
     });
   });
@@ -1282,24 +1179,18 @@ describe("fetchTbillRate", () => {
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 
-  it("retains last known good rate when both sources fail", async () => {
+  it.each([false, true])("retains USD market evidence across fallback days: %s", async (consecutive) => {
     mockUnavailableTbillByUrl();
     installCacheByKey(vi.mocked(getCache), {
-      risk_free_rate: {
-          value: JSON.stringify({
-            rate: 3.91,
-            recordDate: "2026-03-07",
-            fetchedAt: 1773100800,
-            source: "fred-dgs3mo",
-            isFallback: false,
-            fallbackMode: null,
-          }),
-          updatedAt: 1773100800,
-      },
+      risk_free_rate: makeCacheRow({ rate: 3.91, recordDate: "2026-03-07", fetchedAt: 1773100800,
+        source: "fred-dgs3mo", isFallback: consecutive, fallbackMode: consecutive ? "all-sources-failed-retained" : null,
+        ...(consecutive ? { lastMarketRate: 3.91, lastMarketRecordDate: "2026-03-07",
+          lastMarketFetchedAt: 1773100800, lastMarketSource: "fred-dgs3mo" } : {}),
+      }, consecutive ? 1773104400 : 1773100800),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const result = await runBenchmarks();
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toBe(
@@ -1311,93 +1202,15 @@ describe("fetchTbillRate", () => {
       fallbackMode: "all-sources-failed-retained",
       isFallback: true,
       recordDate: "2026-03-07",
+      ...(consecutive ? { lastMarketRate: 3.91, lastMarketSource: "fred-dgs3mo" } : {}),
     });
-  });
-
-  it("retains the last market-derived rate across consecutive degraded fallback days", async () => {
-    mockUnavailableTbillByUrl();
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rate: {
-          value: JSON.stringify({
-            rate: 3.91,
-            recordDate: "2026-03-07",
-            fetchedAt: 1773100800,
-            source: "fred-dgs3mo",
-            isFallback: true,
-            fallbackMode: "all-sources-failed-retained",
-            lastMarketRate: 3.91,
-            lastMarketRecordDate: "2026-03-07",
-            lastMarketFetchedAt: 1773100800,
-            lastMarketSource: "fred-dgs3mo",
-          }),
-          updatedAt: 1773104400,
-      },
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe(
-      "usd:all-sources-failed-retained,usd_effr:usd-effr-sources-failed,eur:ecb-failed,chf:six-saron-failed,gbp:gbp-sonia-compounded-index-failed,jpy:jpy-call-rate-failed,mxn:banxico-cetes-failed,brl:bcb-selic-failed,aud:aud-cash-rate-failed,cad:boc-corra-failed,rub:cbr-key-rate-failed,try:cbrt-tlref-failed",
-    );
-    expect(latestCachePayload()).toMatchObject({
-      rate: 3.91,
-      source: "fred-dgs3mo",
-      fallbackMode: "all-sources-failed-retained",
-      isFallback: true,
-      recordDate: "2026-03-07",
-      lastMarketRate: 3.91,
-      lastMarketSource: "fred-dgs3mo",
-    });
-  });
-
-  it("rejects a published-rate unit drift and retains the previous USD observation", async () => {
-    const driftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.72", "0.43").replaceAll("3.71", "0.43");
-    mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
-      "home.treasury.gov": new Response(driftedSnippet, { status: 200 }),
-    });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rate: {
-        value: JSON.stringify({
-          rate: 3.72,
-          recordDate: "2026-03-07",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-          isFallback: false,
-          fallbackMode: null,
-        }),
-        updatedAt: 1773100800,
-      },
-    });
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("degraded");
-    expect(String(metadata.fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
-    expect(latestCachePayload()).toMatchObject({
-      rate: 3.72,
-      source: "fred-dgs3mo",
-      fallbackMode: "usd-rate-out-of-band-retained",
-      isFallback: true,
-    });
-    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
-      eventType: "benchmark-rate-out-of-band",
-      metadata: expect.objectContaining({ key: "USD", rate: 0.43, previousMarketRate: 3.72 }),
-    }));
   });
 
   it("accepts a persistent genuine level shift on the second consecutive observation", async () => {
-    const shiftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.71", "2.4").replaceAll("3.72", "2.4");
-    mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},2.4\n`, { status: 200 }),
-      "home.treasury.gov": new Response(shiftedSnippet, { status: 200 }),
-    });
+    mockUsdRate("2.4");
     installBaselineUsdCache();
 
-    const first = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const first = await runBenchmarks();
     expect(first.status).toBe("degraded");
     expect(latestCachePayload()).toMatchObject({
       rate: 3.72,
@@ -1407,8 +1220,8 @@ describe("fetchTbillRate", () => {
     });
 
     installWrittenBenchmarkCache();
-    const second = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(second.metadata ?? "{}") as Record<string, unknown>;
+    const second = await runBenchmarks();
+    const metadata = runMetadata(second);
     expect(second.status).toBe("ok");
     expect(metadata.benchmarkRateConfirmations).toEqual([
       expect.objectContaining({
@@ -1431,21 +1244,17 @@ describe("fetchTbillRate", () => {
   });
 
   it("rejects a one-off level spike and recovers on the next inside-band observation", async () => {
-    const shiftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.71", "2.4").replaceAll("3.72", "2.4");
-    mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},2.4\n`, { status: 200 }),
-      "home.treasury.gov": new Response(shiftedSnippet, { status: 200 }),
-    });
+    mockUsdRate("2.4");
     installBaselineUsdCache();
 
-    const spike = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const spike = await runBenchmarks();
     expect(spike.status).toBe("degraded");
     expect(latestCachePayload().lastRejectedMarketRate).toBe(2.4);
 
     installWrittenBenchmarkCache();
     mockTbillByUrl({});
-    const recovered = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(recovered.metadata ?? "{}") as Record<string, unknown>;
+    const recovered = await runBenchmarks();
+    const metadata = runMetadata(recovered);
     expect(recovered.status).toBe("ok");
     expect(metadata.benchmarkRateConfirmations).toBeUndefined();
     expect(latestCachePayload()).toMatchObject({
@@ -1456,24 +1265,24 @@ describe("fetchTbillRate", () => {
   });
 
   it("keeps a persistent 100x unit drift rejected instead of confirming it", async () => {
-    const driftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.72", "0.43").replaceAll("3.71", "0.43");
-    mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
-      "home.treasury.gov": new Response(driftedSnippet, { status: 200 }),
-    });
+    mockUsdRate("0.43");
     installBaselineUsdCache();
 
-    const first = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const first = await runBenchmarks();
     expect(first.status).toBe("degraded");
+    expect(String(runMetadata(first).fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
     expect(latestCachePayload()).toMatchObject({
-      rate: 3.72,
-      isFallback: true,
-      lastRejectedMarketRate: 0.43,
+      rate: 3.72, source: "fred-dgs3mo", fallbackMode: "usd-rate-out-of-band-retained",
+      isFallback: true, lastRejectedMarketRate: 0.43,
     });
+    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
+      eventType: "benchmark-rate-out-of-band",
+      metadata: expect.objectContaining({ key: "USD", rate: 0.43, previousMarketRate: 3.72 }),
+    }));
 
     installWrittenBenchmarkCache();
-    const second = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(second.metadata ?? "{}") as Record<string, unknown>;
+    const second = await runBenchmarks();
+    const metadata = runMetadata(second);
     expect(second.status).toBe("degraded");
     expect(metadata.benchmarkRateConfirmations).toBeUndefined();
     expect(String(metadata.fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
@@ -1484,38 +1293,7 @@ describe("fetchTbillRate", () => {
     });
   });
 
-  it("falls through to the independent Treasury feed when FRED drifts out of band", async () => {
-    mockTbillByUrl({
-      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
-      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
-    });
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rate: {
-        value: JSON.stringify({
-          rate: 3.72,
-          recordDate: "2026-03-07",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-          isFallback: false,
-          fallbackMode: null,
-        }),
-        updatedAt: 1773100800,
-      },
-    });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(String(metadata.fallbackMode)).not.toContain("usd-rate-out-of-band");
-    expect(latestCachePayload()).toMatchObject({
-      rate: 3.72,
-      source: "treasury-yield-xml",
-      isFallback: false,
-    });
-    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
-      eventType: "benchmark-rate-out-of-band",
-    }));
-  });
 });
 
 
@@ -1533,7 +1311,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     mockNewCurrencyByUrl({}, calls);
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: undefined });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const metadata = runMetadata(result);
 
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(false);
     expect(calls.some((u) => u.includes("app.etherfuse.com/bonds/cetes"))).toBe(false);
@@ -1547,13 +1325,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
   it("retains the last MXN benchmark when the Banxico fetch fails", async () => {
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.72,
-          recordDate: "2026-03-02",
-          fetchedAt: 1773100800,
-          source: "fred-dgs3mo",
-        }),
+        USD: makeBenchmarkCacheEntry(priorUsd),
         EUR: null,
         CHF: null,
         GBP: null,
@@ -1575,7 +1347,7 @@ describe("fetchTbillRate — new currency fetchers", () => {
     mockNewCurrencyByUrl({ "banxico.org.mx": null });
 
     const result = await fetchTbillRate(db, undefined, { BANXICO_TOKEN: "test-token" });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const metadata = runMetadata(result);
 
     expect(result.status).toBe("degraded");
     expect(metadata.mxnSource).toBe("banxico-cetes-28d");
@@ -1586,17 +1358,9 @@ describe("fetchTbillRate — new currency fetchers", () => {
 
 describe("getBenchmarkKeyForPegCurrency", () => {
   it("routes each supported peg currency to its native benchmark key", () => {
-    expect(getBenchmarkKeyForPegCurrency("USD")).toBe("USD");
-    expect(getBenchmarkKeyForPegCurrency("EUR")).toBe("EUR");
-    expect(getBenchmarkKeyForPegCurrency("CHF")).toBe("CHF");
-    expect(getBenchmarkKeyForPegCurrency("GBP")).toBe("GBP");
-    expect(getBenchmarkKeyForPegCurrency("JPY")).toBe("JPY");
-    expect(getBenchmarkKeyForPegCurrency("MXN")).toBe("MXN");
-    expect(getBenchmarkKeyForPegCurrency("BRL")).toBe("BRL");
-    expect(getBenchmarkKeyForPegCurrency("AUD")).toBe("AUD");
-    expect(getBenchmarkKeyForPegCurrency("CAD")).toBe("CAD");
-    expect(getBenchmarkKeyForPegCurrency("RUB")).toBe("RUB");
-    expect(getBenchmarkKeyForPegCurrency("TRY")).toBe("TRY");
+    for (const key of YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "USD_EFFR" && key !== "SGD")) {
+      expect(getBenchmarkKeyForPegCurrency(key)).toBe(key);
+    }
   });
 
   it("returns null for currencies without a fetcher so callers fall back to USD", () => {
@@ -1609,7 +1373,7 @@ describe("getBenchmarkKeyForPegCurrency", () => {
 
 describe("resolveBenchmarkForStablecoin", () => {
   function buildMeta(
-    key: "USD" | "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "RUB" | "TRY" | "SGD",
+    key: YieldBenchmarkKey,
   ) {
     return {
       ...withYieldBenchmarkStaticMeta(key, {
@@ -1629,10 +1393,7 @@ describe("resolveBenchmarkForStablecoin", () => {
   }
 
   function buildRegistry(
-    overrides: Partial<Record<
-      "USD_EFFR" | "EUR" | "CHF" | "GBP" | "JPY" | "MXN" | "BRL" | "AUD" | "CAD" | "RUB" | "TRY",
-      boolean
-    >> = {},
+    overrides: Partial<Record<Exclude<YieldBenchmarkKey, "USD" | "SGD">, boolean>> = {},
   ) {
     return {
       USD: buildHardcodedUsdBenchmark("test"),
@@ -1745,23 +1506,7 @@ describe("classifyYieldBenchmarkFreshness", () => {
 describe("fetchTbillRate — benchmark observation guard and registry integrity", () => {
   const RETRY_BOUND_SEC = 24 * 3600;
 
-  function runMetadata(result: { metadata?: string }) {
-    return JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-  }
-
-  function writtenBenchmarks() {
-    const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("risk_free_rates");
-    expect(row).toBeDefined();
-    return (JSON.parse(String(row?.value)) as {
-      benchmarks: Record<string, {
-        rate: number;
-        source: string;
-        isFallback: boolean;
-        fallbackMode: string | null;
-        recordDate: string | null;
-      } | null>;
-    }).benchmarks;
-  }
+  const writtenBenchmarks = () => cacheWritePayload<{ benchmarks: YieldBenchmarkRegistry }>("risk_free_rates").benchmarks;
 
   function cacheKeysWritten(): string[] {
     return sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key));
@@ -1781,7 +1526,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
 
     expect(runMetadata(result).usdSource).toBe("treasury-yield-xml");
     expect(writtenBenchmarks().USD).toMatchObject({
@@ -1792,13 +1537,47 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     });
   });
 
+  it.each(["oversized", "stalled", "legacy-bcb", "legacy-bcb-exhausted"])("preserves terminal 403 transport: %s", async (kind) => {
+    vi.useFakeTimers();
+    const retry = await import("../../lib/fetch-retry");
+    const actual = await vi.importActual<typeof retry>("../../lib/fetch-retry");
+    const read = vi.spyOn(retry, "fetchTextWithRetry").mockImplementation(actual.fetchTextWithRetry);
+    const legacy = kind.startsWith("legacy-bcb");
+    const exhausted = kind.endsWith("exhausted");
+    const physical = vi.fn(async (): Promise<Response> => legacy && !exhausted && physical.mock.calls.length === 2
+      ? Response.json([{ data: "11/11/2026", valor: "0.055" }]) : new Response(new ReadableStream({
+        pull(controller) { if (kind !== "stalled") controller.enqueue(new Uint8Array((legacy ? 16 * 1024 : 16 * 1024 * 1024) + 1)); },
+      }, { highWaterMark: 0 }), { status: 403, headers: { "Content-Type": "text/html" } }));
+    vi.stubGlobal("fetch", physical);
+    try {
+      const { tryBocCorra } = await import("../tbill-sources/boc");
+      const { tryBcbSelic } = await import("../tbill-sources/bcb");
+      const observe = vi.fn();
+      const pending = (legacy ? tryBcbSelic : tryBocCorra)(undefined, observe);
+      await vi.runAllTimersAsync();
+      if (legacy) {
+        expect(await pending).toEqual(exhausted ? null : { rate: 14.862077781254435, recordDate: "2026-11-11" });
+        expect(physical).toHaveBeenCalledTimes(exhausted ? 3 : 2);
+        if (exhausted) expect(observe).toHaveBeenCalledExactlyOnceWith({ status: null, contentType: null, bodyBytes: 0, parsed: false, recordDate: null, failure: "transport-failed" });
+      } else {
+        expect(await pending).toBeNull();
+        expect(physical).toHaveBeenCalledTimes(1);
+        expect(observe).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ status: 403, failure: "http-status", bodyBytes: 0 }));
+        expect(Date.now()).toBe(FROZEN_NOW.getTime());
+      }
+    } finally {
+      read.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("rejects a future-dated DGS3MO row instead of publishing it as market data", async () => {
     mockTbillByUrl({
       "id=DGS3MO": new Response("DATE,DGS3MO\n2099-01-01,3.72\n", { status: 200 }),
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
 
     expect(runMetadata(result).usdSource).toBe("treasury-yield-xml");
     expect(writtenBenchmarks().USD?.recordDate).toBe("2026-03-13");
@@ -1842,7 +1621,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       "id=DFF": new Response("DATE,DFF\n2026-03-01,9.99\n", { status: 200 }),
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
     const metadata = runMetadata(result);
 
     expect(metadata.usdEffrRate).toBe(4.31);
@@ -1878,7 +1657,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       source: "ecb-estr-3m",
     });
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
     const metadata = runMetadata(result);
 
     expect(metadata.registryCacheState).toBe("invalid");
@@ -1895,7 +1674,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockUnavailableTbillByUrl();
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
     const metadata = runMetadata(result);
 
     expect(metadata.registryCacheState).toBe("invalid");
@@ -1904,55 +1683,123 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     expect(cacheKeysWritten()).not.toContain("risk_free_rate");
   });
 
-  it("skips the hourly retry while the registry still carries a recent market observation", async () => {
-    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+  it.each([null, "CAD"] as const)("skips hourly refresh with recent USD and unused %s policy evidence", async (key) => {
+    const fetchedAt = FROZEN_NOW.getTime() / 1000;
+    const USD = makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+      fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" });
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({
-          key: "USD",
-          rate: 3.91,
-          recordDate: FRESH_FRED_OBSERVATION_DATE,
-          fetchedAt: fetchedAt - 3600,
-          source: "fred-dgs3mo",
-        }),
-      }, fetchedAt - 3600),
-    });
-    const calls: string[] = [];
-    mockTbillByUrl({}, calls);
-
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, {
-      minRegistryAgeSec: RETRY_BOUND_SEC,
-    });
-
-    expect(result.status).toBe("skipped_neutral");
-    expect(result.itemCount).toBe(0);
-    expect(runMetadata(result)).toMatchObject({
-      skipped: true,
-      skipReason: "risk-free-registry-fresh",
-      minRegistryAgeSec: RETRY_BOUND_SEC,
-    });
-    expect(calls).toEqual([]);
-    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
-  });
-
-  it("does not force hourly catch-up for an unused old policy-rate record", async () => {
-    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
-    installCacheByKey(vi.mocked(getCache), {
-      risk_free_rates: makeRiskFreeRatesCacheRow({
-        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
-          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
-        CAD: makeBenchmarkCacheEntry({ key: "CAD", rate: 2.25, recordDate: "2025-01-01",
-          fetchedAt: fetchedAt - 3600, source: "boc-valet-v122530" }),
+        ...Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "SGD").map(key => [key, { ...USD, key }])),
+        ...(key ? { [key]: makeBenchmarkCacheEntry({ key, rate: 2.25, recordDate: "2025-01-01",
+          fetchedAt: fetchedAt - 3600, source: "boc-valet-v122530" }) } : {}),
       }, fetchedAt - 3600),
     });
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
     expect(result.status).toBe("skipped_neutral");
+    expect(result.itemCount).toBe(0);
+    expect(runMetadata(result)).toMatchObject({ skipped: true, skipReason: "risk-free-registry-fresh", minRegistryAgeSec: RETRY_BOUND_SEC });
     expect(calls).toEqual([]);
+    expect(cacheKeysWritten()).toEqual([]);
   });
 
-  it("refreshes an expired observation even when the last fetch is recent", async () => {
+  it.each([false, true])("retries EUR while carrying AUD proxy and expired CAD (recovery=%s)", async (recovery) => {
+    const now = FROZEN_NOW.getTime() / 1000;
+    const USD = makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+      fetchedAt: now - 3600, source: "fred-dgs3mo" });
+    const row = makeRiskFreeRatesCacheRow({
+      ...Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.filter(key => key !== "SGD").map(key => [key, { ...USD, key }])), USD,
+      EUR: { ...makeBenchmarkCacheEntry({ key: "EUR", rate: 1.94, recordDate: FRESH_FRED_OBSERVATION_DATE,
+        fetchedAt: now - 7200, source: "ecb-estr-3m" }), isFallback: true, fallbackMode: "ecb-failed-retained" },
+      AUD: makeBenchmarkCacheEntry({ key: "AUD", rate: 4.36, recordDate: FRESH_FRED_OBSERVATION_DATE,
+        fetchedAt: now - 3600, source: "rba-interbank-overnight", isProxy: true,
+        isFallback: true, fallbackMode: "aud-interbank-overnight-proxy" }),
+      CAD: { ...USD, key: "CAD", recordDate: "2025-01-01" },
+    }, now - 3600);
+    const marker = { generationId: "old", consecutiveFreshRuns: 2, lastFreshAt: now - 3600 };
+    row.value = JSON.stringify({ ...JSON.parse(row.value), generationId: "old" });
+    installCacheByKey(vi.mocked(getCache), { risk_free_rates: row,
+      [USD_MARKER]: makeCacheRow(marker, now - 3600), [GBP_MARKER]: makeCacheRow(marker, now - 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl(recovery ? {} : { "data-api.ecb.europa.eu": null }, calls);
+    const options = { minRegistryAgeSec: RETRY_BOUND_SEC };
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, options);
+    expect(result.status).toBe(recovery ? "ok" : "degraded");
+    expect(runMetadata(result)).toMatchObject({ fallbackMode: recovery ? null : "eur:ecb-failed-retained",
+      resolvedBenchmarkKeys: recovery ? ["EUR"] : [] });
+    expect(calls).toEqual([expect.stringContaining("data-api.ecb.europa.eu")]);
+    expect(writtenBenchmarks().USD).toMatchObject(USD);
+    expect(writtenBenchmarks()).toMatchObject({ EUR: { fetchedAt: recovery ? now : now - 7200 },
+      AUD: { rate: 4.36, recordDate: FRESH_FRED_OBSERVATION_DATE, fetchedAt: now - 3600,
+        source: "rba-interbank-overnight", fallbackMode: "aud-interbank-overnight-proxy" },
+      CAD: { recordDate: "2025-01-01", fetchedAt: now - 3600 } });
+    const stored = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key='risk_free_rates'").get()!;
+    for (const key of [USD_MARKER, GBP_MARKER]) {
+      const saved = sqlite.prepare("SELECT value FROM cache WHERE key=?").get(key)!;
+      expect(JSON.parse(String(saved.value))).toEqual({ ...marker, generationId: JSON.parse(String(stored.value)).generationId });
+    }
+    installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeCacheRow(stored.value, Number(stored.updated_at)) });
+    vi.setSystemTime(FROZEN_NOW.getTime() + 3599_000);
+    expect((await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, options)).status).toBe("skipped_neutral");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("retries unavailable CHF/JPY after EUR recovers until each recovers", async () => {
+    const now = FROZEN_NOW.getTime() / 1000;
+    installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeRiskFreeRatesCacheRow({
+      EUR: makeBenchmarkCacheEntry({ key: "EUR", source: "ecb-estr-3m", rate: 1.94,
+        recordDate: FRESH_FRED_OBSERVATION_DATE, fetchedAt: now - 3600 }),
+    }, now - 3600) });
+    const failed = { "oauth/token": null, "stat-search.boj.or.jp": null };
+    mockTbillByUrl({ ...failed, "data-api.ecb.europa.eu": null });
+    expect((await runBenchmarks()).status).toBe("degraded");
+    expect(writtenBenchmarks()).toMatchObject({ CHF: null, JPY: null, EUR: { fallbackMode: "ecb-failed-retained" } });
+    const cache = await vi.importActual<typeof DbCache>("../../lib/db-cache");
+    vi.mocked(getCache).mockImplementation(cache.getCache);
+    for (const [hour, overrides, count, reason, resolved] of [
+      [1, failed, 3, "chf:six-saron-failed,jpy:jpy-call-rate-failed", ["EUR"]],
+      [3, failed, 2, "chf:six-saron-failed,jpy:jpy-call-rate-failed", []],
+      [5, { "oauth/token": null }, 2, "chf:six-saron-failed", ["JPY"]],
+      [7, {}, 2, null, ["CHF"]],
+    ] as const) {
+      vi.setSystemTime((now + hour * 3600) * 1000);
+      const before = writtenBenchmarks();
+      const calls: string[] = [];
+      mockTbillByUrl(overrides, calls);
+      const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
+      expect(result.status).toBe(reason ? "degraded" : "ok");
+      expect(runMetadata(result)).toMatchObject({ fallbackMode: reason, resolvedBenchmarkKeys: resolved, ...(reason ? { reason } : {}) });
+      expect(calls).toHaveLength(count);
+      for (const key of YIELD_BENCHMARK_KEY_VALUES) {
+        if (resolved.some(id => id === key)) expect(writtenBenchmarks()[key]).toMatchObject({ fetchedAt: now + hour * 3600, isFallback: false });
+        else expect(writtenBenchmarks()[key]).toEqual(before[key]);
+      }
+    }
+  });
+
+  it.each(["MXN", "JPY"] as const)("keeps selective %s admission denial unavailable without HTTP", async (key) => {
+    const now = FROZEN_NOW.getTime() / 1000;
+    const healthy = makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+      fetchedAt: now - 3600, source: "fred-dgs3mo" });
+    const before = Object.fromEntries(YIELD_BENCHMARK_KEY_VALUES.map(id => [id,
+      id === key || id === "SGD" ? null : { ...healthy, key: id }]));
+    installCacheByKey(vi.mocked(getCache), { risk_free_rates: makeRiskFreeRatesCacheRow(before, now - 3600) });
+    if (key === "JPY") vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    const result = await fetchTbillRate(db, undefined, {}, { minRegistryAgeSec: RETRY_BOUND_SEC });
+    const reason = key === "MXN" ? "banxico-token-missing" : "circuit-open";
+    expect(result.status).toBe("degraded");
+    expect(runMetadata(result)).toMatchObject({ fallbackMode: `${key.toLowerCase()}:${reason}`,
+      resolvedBenchmarkKeys: [], failedBenchmarkResponseAttempts: [{ key, failureMode: reason, attempts: [] }] });
+    expect(calls).toEqual([]);
+    expect(vi.mocked(shouldAttemptFetch).mock.calls.map(([, source]) => source)).toEqual([`TREASURY_RATES:${key}`]);
+    expect(writtenBenchmarks()).toMatchObject(before);
+  });
+
+  it.each([false, true])("refreshes expired USD without renewing failed evidence (failure=%s)", async (failure) => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
     const oldRecordDate = new Date(FROZEN_NOW.getTime() - 6 * 86400_000).toISOString().slice(0, 10);
     installCacheByKey(vi.mocked(getCache), {
@@ -1962,9 +1809,13 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
       }, fetchedAt - 3600),
     });
     const calls: string[] = [];
-    mockTbillByUrl({}, calls);
+    mockTbillByUrl(failure ? { "id=DGS3MO": null, "treasury.gov": null } : {}, calls);
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
-    expect(result.status).not.toBe("skipped_neutral");
+    expect(result.status).toBe(failure ? "degraded" : "ok");
+    expect(runMetadata(result).fallbackMode).toBe(failure ? "usd:all-sources-failed-retained" : null);
+    expect(writtenBenchmarks().USD).toMatchObject({ rate: failure ? 3.91 : 3.72,
+      recordDate: failure ? oldRecordDate : FRESH_FRED_OBSERVATION_DATE,
+      fetchedAt: failure ? fetchedAt - 3600 : fetchedAt });
     expect(calls.length).toBeGreaterThan(0);
   });
 
@@ -2058,7 +1909,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     const calls: string[] = [];
     mockTbillByUrl({}, calls);
 
-    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const result = await runBenchmarks();
 
     expect(result.status).toBe("ok");
     expect(calls.some((url) => url.includes("id=DGS3MO"))).toBe(true);

@@ -8,6 +8,7 @@ import {
 import {
   addDays,
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRateForKey,
   parseRate,
   parseSlashDmyToIso,
@@ -63,7 +64,10 @@ function formatCbrtEvdsRequestDate(date: Date): string {
   return `${String(date.getUTCDate()).padStart(2, "0")}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${date.getUTCFullYear()}`;
 }
 
-export async function tryCbrtTlref(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryCbrtTlref(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   const now = new Date();
   const body = JSON.stringify({
     type: "json",
@@ -98,5 +102,6 @@ export async function tryCbrtTlref(signal?: AbortSignal): Promise<{ rate: number
     parse: (responseBody) => parseCbrtEvdsSeries(responseBody, CBRT_TLREF_SERIES_CODE),
     warnLabel: "CBRT EVDS TLREF",
     signal,
+    onDiagnostic,
   });
 }

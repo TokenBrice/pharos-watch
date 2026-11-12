@@ -1,5 +1,5 @@
 import type { YieldBenchmarkKey } from "@shared/types/yield";
-import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, benchmarkRecordAgeSeconds } from "@shared/lib/yield-benchmark-freshness";
+import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, YIELD_BENCHMARK_RETAINED_RETRY_SEC, benchmarkRecordAgeSeconds } from "@shared/lib/yield-benchmark-freshness";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import type { BenchmarkProviderKey } from "./shared";
@@ -7,6 +7,11 @@ import { BENCHMARK_METADATA_DESCRIPTORS, BENCHMARK_DEGRADATION_DESCRIPTORS } fro
 import type { ResolvedBenchmarkProvider } from "./resolve";
 // Series whose next print lands after the following business day's 08:00 UTC fetch.
 const REFRESH_AHEAD_BENCHMARK_KEYS: readonly YieldBenchmarkKey[] = ["USD", "USD_EFFR", "GBP"];
+
+export function getBenchmarkRetryKeys(registry: ParsedYieldBenchmarkRegistry): YieldBenchmarkKey[] {
+  return BENCHMARK_DEGRADATION_DESCRIPTORS.filter(({ key }) => registry[key] == null
+    || registry[key]?.fallbackMode?.endsWith("-retained")).map(({ key }) => key);
+}
 
 export function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
@@ -20,15 +25,9 @@ function buildFallbackBenchmarkMetadata(benchmarks: ParsedYieldBenchmarkRegistry
     return [
       {
         key,
-        currency: benchmark.currency,
         source: benchmark.source,
         fallbackMode: benchmark.fallbackMode,
-        rate: benchmark.rate,
-        recordDate: benchmark.recordDate,
         fetchedAt: benchmark.fetchedAt,
-        lastMarketSource: benchmark.lastMarketSource,
-        lastMarketRecordDate: benchmark.lastMarketRecordDate,
-        lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
         retained: typeof benchmark.fallbackMode === "string" && benchmark.fallbackMode.endsWith("-retained"),
       },
     ];
@@ -54,7 +53,8 @@ export function resolveBenchmarkRefreshNeed(params: {
   registry: ParsedYieldBenchmarkRegistry;
   nowSec: number;
   minRegistryAgeSec: number;
-}): { refresh: boolean; newestMarketAgeSec: number | null; usdMarketAgeSec: number | null } {
+  lastAttemptAtSec?: number | null;
+}): { refresh: boolean; retainedRetryKeys: YieldBenchmarkKey[]; newestMarketAgeSec: number | null; usdMarketAgeSec: number | null } {
   const { registry, nowSec, minRegistryAgeSec } = params;
   const marketFetchedAt: number[] = [];
   let usdMarketFetchedAt: number | null = null;
@@ -79,14 +79,19 @@ export function resolveBenchmarkRefreshNeed(params: {
   const newest = marketFetchedAt.length > 0 ? Math.max(...marketFetchedAt) : null;
   const newestMarketAgeSec = newest == null ? null : Math.max(0, nowSec - newest);
   const usdMarketAgeSec = usdMarketFetchedAt == null ? null : Math.max(0, nowSec - usdMarketFetchedAt);
-  return {
-    refresh:
+  const refreshAll =
       expiredUsdObservation
       || nearingRecordBound
       || newestMarketAgeSec == null
       || newestMarketAgeSec > minRegistryAgeSec
       || usdMarketAgeSec == null
-      || usdMarketAgeSec > minRegistryAgeSec,
+      || usdMarketAgeSec > minRegistryAgeSec;
+  const retainedRetryKeys = !refreshAll && params.lastAttemptAtSec != null
+    && nowSec - params.lastAttemptAtSec >= YIELD_BENCHMARK_RETAINED_RETRY_SEC
+    ? getBenchmarkRetryKeys(registry) : [];
+  return {
+    refresh: refreshAll || retainedRetryKeys.length > 0,
+    retainedRetryKeys,
     newestMarketAgeSec,
     usdMarketAgeSec,
   };
@@ -103,7 +108,7 @@ export function buildBenchmarkRunMetadata(params: {
   const retainedFallbackBenchmarks = fallbackBenchmarks.filter((entry) => entry.retained === true);
   fields.fallbackBenchmarkCount = fallbackBenchmarks.length;
   fields.retainedFallbackBenchmarkCount = retainedFallbackBenchmarks.length;
-  fields.fallbackBenchmarks = fallbackBenchmarks;
+  fields.fallbackBenchmarks = fallbackBenchmarks.filter((entry) => entry.retained !== true);
   fields.retainedFallbackBenchmarks = retainedFallbackBenchmarks;
   for (const { key, metadataPrefix: prefix } of BENCHMARK_METADATA_DESCRIPTORS) {
     const benchmark = params.benchmarks[key];
@@ -140,4 +145,22 @@ export function buildGbpResponseDiagnosticMetadata(resolved: ResolvedBenchmarkPr
     gbpResponseAttempts: attempts,
     gbpResponseResolvedProvider: resolved.parsed?.source ?? null,
   };
+}
+
+export function buildFailedBenchmarkResponseDiagnostics(
+  resolved: ResolvedBenchmarkProvider[],
+) {
+  const failed = resolved.flatMap((entry) => {
+    if (entry.parsed || !entry.failureMode) return [];
+    const attempts = entry.responseDiagnostics ?? [];
+    const retained = attempts.slice(-3).map(({ provider, status, failure }) => ({
+      provider: provider.slice(0, 80), status, failure,
+    }));
+    return [{ key: entry.key, failureMode: entry.failureMode, attempts: retained,
+      ...(attempts.length > retained.length ? {
+        attemptCount: attempts.length, omittedAttemptCount: attempts.length - retained.length,
+      } : {}),
+    }];
+  });
+  return failed.length > 0 ? { failedBenchmarkResponseAttempts: failed } : {};
 }

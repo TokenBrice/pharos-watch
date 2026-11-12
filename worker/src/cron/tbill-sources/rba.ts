@@ -2,6 +2,7 @@ import { RBA_F1_MONEY_MARKET_CSV_URL } from "./shared";
 import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRate,
   parseEnglishDate,
   parseRate,
@@ -29,12 +30,16 @@ export function parseRbaF1MoneyMarketCsv(csv: string): BenchmarkFetchResult | nu
   return null;
 }
 
-export async function tryRbaCashRateTarget(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
+export async function tryRbaCashRateTarget(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<BenchmarkFetchResult | null> {
   return fetchAndParseBenchmark({
     url: RBA_F1_MONEY_MARKET_CSV_URL,
     headers: { "User-Agent": USER_AGENT },
     parse: parseRbaF1MoneyMarketCsv,
     warnLabel: "RBA F1 money-market CSV",
     signal,
+    onDiagnostic,
   });
 }

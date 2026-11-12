@@ -27,7 +27,7 @@ const MAX_NESTED_SCALARS = 24;
 // public-health reads, cron-metadata-summary, operator cron detail and the measured-execution ledger.
 // Scalars remain top-level too. These collections must NEVER turn into counts.
 const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEntries([
-  "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt",
+  "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt", "failedBenchmarkResponseAttempts",
   "mode", "stale", "sources", "sourceStatuses", "resourcePressure", "retentionTruncated", "d1Cost", "truncated",
   "sourceCoverage", "fallbackMode", "publication", "active", "chains", "chainHeads", "criticalCoverage", "extendedCoverage",
   "laggingConfigs", "breakerKeys", "coinsWithWarnings", "coinsWithErrors", "failedCoins", "failedSources",

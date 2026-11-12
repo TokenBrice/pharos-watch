@@ -1,6 +1,6 @@
 import { BOC_CORRA_URL } from "./shared";
 import { USER_AGENT } from "../../lib/constants";
-import { fetchAndParseBenchmark, isValidBenchmarkRate, parseRate } from "./shared";
+import { type BenchmarkResponseDiagnostic, fetchAndParseBenchmark, isValidBenchmarkRate, parseRate } from "./shared";
 
 /**
  * Parse a Bank of Canada Valet observations response. Shape:
@@ -28,7 +28,10 @@ export function parseBocValetSeries(
   }
 }
 
-export async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryBocCorra(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: BOC_CORRA_URL,
     headers: {
@@ -38,5 +41,6 @@ export async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number;
     parse: (body) => parseBocValetSeries(body, "V122530"),
     warnLabel: "BoC Valet CORRA",
     signal,
+    onDiagnostic,
   });
 }

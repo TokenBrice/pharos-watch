@@ -1,12 +1,14 @@
+import { getCache } from "../lib/db-cache";
+import { RISK_FREE_RATES_CACHE_KEY } from "./yield-sync/benchmark-monitor";
 import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import type { Env } from "../lib/env";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { loadRiskFreeRateRegistryWithState } from "./yield-sync/state";
 import { BENCHMARK_FETCH_DESCRIPTORS, BENCHMARK_METADATA_DESCRIPTORS, BENCHMARK_RESOLUTION_POLICIES } from "./tbill-sources/providers";
-import { resolveBenchmarkProviderMap, resolveBenchmarkProvider, type BenchmarkRateConfirmation } from "./tbill-sources/resolve";
+import { resolveBenchmarkProviderMap, resolveBenchmarkProvider, type ResolvedBenchmarkProvider, type BenchmarkRateConfirmation } from "./tbill-sources/resolve";
 import { buildBenchmarkRegistry, publishBenchmarks } from "./tbill-sources/publication";
-import { buildMetadata, resolveBenchmarkRefreshNeed, buildBenchmarkDegradationReasons, buildBenchmarkRunMetadata, buildGbpResponseDiagnosticMetadata } from "./tbill-sources/metadata";
+import { buildMetadata, resolveBenchmarkRefreshNeed, buildBenchmarkDegradationReasons, buildBenchmarkRunMetadata, buildGbpResponseDiagnosticMetadata, buildFailedBenchmarkResponseDiagnostics, getBenchmarkRetryKeys } from "./tbill-sources/metadata";
 
 export interface FetchTbillRateOptions {
   /**
@@ -30,9 +32,12 @@ export async function fetchTbillRate(
   const fetchedAt = Math.floor(Date.now() / 1000);
   const minRegistryAgeSec = options?.minRegistryAgeSec ?? null;
 
+  const lastAttemptAtSec = minRegistryAgeSec != null && getBenchmarkRetryKeys(previous).length > 0
+    ? (await getCache(db, RISK_FREE_RATES_CACHE_KEY))?.updatedAt ?? null : null;
+  throwIfAborted(signal);
   const refreshNeed = minRegistryAgeSec == null
     ? null
-    : resolveBenchmarkRefreshNeed({ registry: previous, nowSec: fetchedAt, minRegistryAgeSec });
+    : resolveBenchmarkRefreshNeed({ registry: previous, nowSec: fetchedAt, minRegistryAgeSec, lastAttemptAtSec });
   if (refreshNeed && !refreshNeed.refresh) {
     return {
       status: "skipped_neutral",
@@ -48,9 +53,12 @@ export async function fetchTbillRate(
     };
   }
 
-  const usdResolved = await resolveBenchmarkProvider({
-    db, key: "USD", policy: BENCHMARK_RESOLUTION_POLICIES.USD, previous, fetchedAt, env, signal,
-  });
+  const retainedRetryKeys = refreshNeed?.retainedRetryKeys.length ? refreshNeed.retainedRetryKeys : undefined;
+  const usdResolved: ResolvedBenchmarkProvider = !retainedRetryKeys || retainedRetryKeys.includes("USD")
+    ? await resolveBenchmarkProvider({
+        db, key: "USD", policy: BENCHMARK_RESOLUTION_POLICIES.USD, previous, fetchedAt, env, signal,
+      })
+    : { key: "USD", parsed: null, meta: previous.USD, failureMode: null };
   const usdMeta = usdResolved.meta!;
   const usdParsed = usdResolved.parsed;
   const usdConfirmation = usdResolved.confirmation;
@@ -61,6 +69,7 @@ export async function fetchTbillRate(
     fetchedAt,
     env,
     signal,
+    keys: retainedRetryKeys,
   });
 
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
@@ -84,7 +93,7 @@ export async function fetchTbillRate(
     ? "skipped-unreadable-cache"
     : "written";
   const { gbpRetainedFallbackMonitor, usdFreshStreakMonitor, generationId, previousGenerationId, previousGenerationUnavailableReason } =
-    await publishBenchmarks({ db, benchmarks, fetchedAt, registryCacheWrite, signal });
+    await publishBenchmarks({ db, benchmarks, fetchedAt, registryCacheWrite, signal, retainedRetryKeys });
 
   const degradationReasons = buildBenchmarkDegradationReasons(usdMeta, resolvedByKey);
   return {
@@ -112,6 +121,9 @@ export async function fetchTbillRate(
             confirmedKeys: rateConfirmations.map(({ key }) => key),
           },
         } : {}),
+        ...buildFailedBenchmarkResponseDiagnostics([usdResolved, ...Object.values(resolvedByKey)].filter(
+          (resolved) => !retainedRetryKeys || retainedRetryKeys.includes(resolved.key),
+        )),
         ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
         brlResponseAttempts: resolvedByKey.BRL.responseDiagnostics ?? [],
       },

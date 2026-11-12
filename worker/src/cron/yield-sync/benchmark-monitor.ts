@@ -8,8 +8,8 @@ import { parseRiskFreeRatesCache } from "./cache";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
 
 export const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
-const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
-const USD_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
+export const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+export const USD_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 const GBP_RETAINED_FALLBACK_MODE = "gbp-sonia-compounded-index-failed-retained";
 const GBP_RETAINED_FALLBACK_EVENT_THRESHOLD = 2;
 export const REQUIRED_BENCHMARK_FRESH_PUBLICATIONS = 2;

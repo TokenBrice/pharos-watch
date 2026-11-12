@@ -7,6 +7,7 @@ import { FRED_EFFR_CSV_URL, FRED_TBILL_CSV_URL } from "./shared";
 import type {
   BenchmarkFetchResult,
   BenchmarkProviderAttemptDiagnostic,
+  BenchmarkResponseDiagnostic,
   BenchmarkProviderFetchOutcome,
   BenchmarkProviderKey,
 } from "./shared";
@@ -27,8 +28,11 @@ import { tryCbrKeyRate } from "./cbr";
 
 const USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD_EFFR / DAY_SECONDS;
 
-async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
-  const nyFed = await tryNyFedEffr(signal);
+async function tryUsdEffrBenchmark(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic & { provider?: string }) => void,
+): Promise<BenchmarkFetchResult | null> {
+  const nyFed = await tryNyFedEffr(signal, diagnostic => onDiagnostic?.({ ...diagnostic, provider: "nyfed-effr" }));
   if (nyFed) {
     const recordAgeSec = benchmarkRecordAgeSeconds(nyFed.recordDate, Math.floor(Date.now() / 1000));
     if (recordAgeSec != null && recordAgeSec >= 0 && recordAgeSec <= YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD_EFFR) {
@@ -36,7 +40,8 @@ async function tryUsdEffrBenchmark(signal?: AbortSignal): Promise<BenchmarkFetch
     }
   }
 
-  const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal, USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS);
+  const fred = await tryFredCsv(FRED_EFFR_CSV_URL, signal, USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS,
+    diagnostic => onDiagnostic?.({ ...diagnostic, provider: "fred-dff" }));
   return fred ? { ...fred, source: "fred-dff" } : null;
 }
 
@@ -90,7 +95,11 @@ export interface BenchmarkResolutionPolicy {
     missingOutcome: "record-failure" | "skip";
   };
   orderedProviders: readonly {
-    fetch: (params: { signal?: AbortSignal; credential: string | null }) => Promise<BenchmarkProviderFetchOutcome | null>;
+    fetch: (params: {
+      signal?: AbortSignal;
+      credential: string | null;
+      onDiagnostic: (diagnostic: BenchmarkResponseDiagnostic & { provider?: string }) => void;
+    }) => Promise<BenchmarkProviderFetchOutcome | null>;
     source: string;
     sourceSelection: "observation" | "fixed";
     rejectionDiagnostic: "record" | "silent";
@@ -98,7 +107,6 @@ export interface BenchmarkResolutionPolicy {
   failureMode: string;
   terminalFallback: "unavailable" | "hardcoded-usd";
   outcomeTiming: "before-meta" | "after-meta";
-  responseDiagnostics: "preserve" | "omit";
 }
 
 const NO_CREDENTIALS: BenchmarkResolutionPolicy["credentials"] = {
@@ -119,7 +127,6 @@ function standardBenchmarkPolicy(
     failureMode,
     terminalFallback: "unavailable",
     outcomeTiming: "before-meta",
-    responseDiagnostics: "preserve",
   };
 }
 
@@ -130,40 +137,38 @@ export const BENCHMARK_RESOLUTION_POLICIES: Record<Exclude<YieldBenchmarkKey, "S
     credentials: NO_CREDENTIALS,
     orderedProviders: [
       {
-        fetch: ({ signal }) => tryFredCsv(FRED_TBILL_CSV_URL, signal, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD / DAY_SECONDS),
+        fetch: ({ signal, onDiagnostic }) => tryFredCsv(FRED_TBILL_CSV_URL, signal, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD / DAY_SECONDS, onDiagnostic),
         source: "fred-dgs3mo", sourceSelection: "fixed", rejectionDiagnostic: "record",
       },
       {
-        fetch: ({ signal }) => tryTreasuryXml(signal),
+        fetch: ({ signal, onDiagnostic }) => tryTreasuryXml(signal, onDiagnostic),
         source: "treasury-yield-xml", sourceSelection: "fixed", rejectionDiagnostic: "silent",
       },
     ],
     failureMode: "all-sources-failed",
     terminalFallback: "hardcoded-usd",
     outcomeTiming: "after-meta",
-    responseDiagnostics: "omit",
   },
-  USD_EFFR: standardBenchmarkPolicy(({ signal }) => tryUsdEffrBenchmark(signal), "nyfed-effr", "usd-effr-sources-failed"),
-  EUR: standardBenchmarkPolicy(({ signal }) => tryEcbCompoundedEstrCsv(signal), "ecb-estr-3m", "ecb-failed"),
-  CHF: standardBenchmarkPolicy(({ signal }) => trySixSar3mcCsv(signal), "six-sar3mc", "six-saron-failed"),
+  USD_EFFR: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryUsdEffrBenchmark(signal, onDiagnostic), "nyfed-effr", "usd-effr-sources-failed"),
+  EUR: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryEcbCompoundedEstrCsv(signal, onDiagnostic), "ecb-estr-3m", "ecb-failed"),
+  CHF: standardBenchmarkPolicy(({ signal, onDiagnostic }) => trySixSar3mcCsv(signal, onDiagnostic), "six-sar3mc", "six-saron-failed"),
   GBP: standardBenchmarkPolicy(tryGbpBenchmark, "fred-sonia-compounded-index", "gbp-sonia-compounded-index-failed"),
-  JPY: standardBenchmarkPolicy(({ signal }) => tryBojCallRate(signal), "boj-call-rate", "jpy-call-rate-failed"),
+  JPY: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryBojCallRate(signal, onDiagnostic), "boj-call-rate", "jpy-call-rate-failed"),
   MXN: {
     credentials: BANXICO_CREDENTIALS,
     orderedProviders: [{
-      fetch: ({ signal, credential }) => tryBanxicoCetes(credential!, signal),
+      fetch: ({ signal, credential, onDiagnostic }) => tryBanxicoCetes(credential!, signal, onDiagnostic),
       source: "banxico-cetes-28d", sourceSelection: "fixed", rejectionDiagnostic: "record",
     }],
     failureMode: "banxico-cetes-failed",
     terminalFallback: "unavailable",
     outcomeTiming: "before-meta",
-    responseDiagnostics: "omit",
   },
   BRL: standardBenchmarkPolicy(tryBrlBenchmark, "bcb-selic", "bcb-selic-failed"),
-  AUD: standardBenchmarkPolicy(({ signal }) => tryRbaCashRateTarget(signal), "rba-cash-rate-target", "aud-cash-rate-failed"),
-  CAD: standardBenchmarkPolicy(({ signal }) => tryBocCorra(signal), "boc-valet-v122530", "boc-corra-failed"),
-  RUB: standardBenchmarkPolicy(({ signal }) => tryCbrKeyRate(signal), "cbr-key-rate", "cbr-key-rate-failed"),
-  TRY: standardBenchmarkPolicy(({ signal }) => tryCbrtTlref(signal), "cbrt-evds-tlref", "cbrt-tlref-failed"),
+  AUD: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryRbaCashRateTarget(signal, onDiagnostic), "rba-cash-rate-target", "aud-cash-rate-failed"),
+  CAD: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryBocCorra(signal, onDiagnostic), "boc-valet-v122530", "boc-corra-failed"),
+  RUB: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryCbrKeyRate(signal, onDiagnostic), "cbr-key-rate", "cbr-key-rate-failed"),
+  TRY: standardBenchmarkPolicy(({ signal, onDiagnostic }) => tryCbrtTlref(signal, onDiagnostic), "cbrt-evds-tlref", "cbrt-tlref-failed"),
 };
 
 type BenchmarkDescriptor = {

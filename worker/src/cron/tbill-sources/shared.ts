@@ -160,6 +160,7 @@ export async function fetchAndParseBenchmark<T>({
   warnLabel,
   signal,
   onDiagnostic,
+  returnFinalResponse = false,
 }: {
   url: string;
   headers: Record<string, string>;
@@ -171,7 +172,10 @@ export async function fetchAndParseBenchmark<T>({
   warnLabel: string;
   signal?: AbortSignal;
   onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void;
+  /** Preserve the terminal-body behavior of the pre-existing GBP/BRL readers. */
+  returnFinalResponse?: boolean;
 }): Promise<T | null> {
+  const responseEvidence: { status: number | null; contentType: string | null } = { status: null, contentType: null };
   try {
     const result = await fetchTextWithRetry(url, {
       method,
@@ -181,17 +185,27 @@ export async function fetchAndParseBenchmark<T>({
     }, retries, {
       timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
       maxResponseBytes,
-      returnFinalResponse: onDiagnostic != null,
+      returnFinalResponse,
+      // New diagnostic readers observe headers; legacy callers retain their body policy.
+      beforeRequest: returnFinalResponse ? undefined : () => {
+        responseEvidence.status = null;
+        responseEvidence.contentType = null;
+        return true;
+      },
+      onResponse: returnFinalResponse ? undefined : (response) => {
+        responseEvidence.status = response.status;
+        responseEvidence.contentType = response.headers.get("Content-Type")?.split(";")[0].trim().slice(0, 100) ?? null;
+      },
     });
 
     if (!result) {
       onDiagnostic?.({
-        status: null,
-        contentType: null,
+        ...responseEvidence,
         bodyBytes: 0,
         parsed: false,
         recordDate: null,
-        failure: "transport-failed",
+        failure: responseEvidence.status != null && (responseEvidence.status < 200 || responseEvidence.status >= 300)
+          ? "http-status" : "transport-failed",
       });
       return null;
     }
@@ -267,8 +281,7 @@ export async function fetchAndParseBenchmark<T>({
       error: err,
     });
     onDiagnostic?.({
-      status: null,
-      contentType: null,
+      ...responseEvidence,
       bodyBytes: 0,
       parsed: false,
       recordDate: null,

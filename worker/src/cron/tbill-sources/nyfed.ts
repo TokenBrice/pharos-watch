@@ -2,6 +2,7 @@ import { NYFED_EFFR_JSON_URL } from "./shared";
 import { USER_AGENT } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
+  type BenchmarkResponseDiagnostic,
   isValidBenchmarkRateForKey,
   parseRate,
 } from "./shared";
@@ -41,12 +42,16 @@ export function parseNyFedEffrJson(json: string): BenchmarkFetchResult | null {
   }
 }
 
-export async function tryNyFedEffr(signal?: AbortSignal): Promise<BenchmarkFetchResult | null> {
+export async function tryNyFedEffr(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<BenchmarkFetchResult | null> {
   return fetchAndParseBenchmark({
     url: NYFED_EFFR_JSON_URL,
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     parse: parseNyFedEffrJson,
     warnLabel: "NY Fed EFFR JSON",
     signal,
+    onDiagnostic,
   });
 }
