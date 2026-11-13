@@ -21,6 +21,7 @@ import type { CronResult } from "../../lib/cron-logger";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import type { BackingType, PegCurrency } from "@shared/types/core";
 import type { PeggedAsset } from "./enrich-prices-shared";
+import { reviewedGapFillDecision } from "./supply-gap-reviewed-pairs";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
 import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
@@ -869,6 +870,17 @@ export function restoreMissingTrackedAssets(
       const retained = restorePreferredNativeSupply(current, previous, nowSec);
       restoredAssets.push(retained);
       if (retained.supplyRestored) restoredIds.push(id);
+      continue;
+    }
+    const refusedFill = previous?.supplyGapFill?.missingChainId;
+    if (refusedFill && reviewedGapFillDecision(id, refusedFill, nowSec) === "refused") {
+      // A reviewed refusal ends the fill on every path: withhold the asset until the list carries it again.
+      logWorkerEvent({
+        scope: "lib", job: "sync-stablecoins", level: "warn", event: "tracked-asset-refused-gap-fill-withheld",
+        message: "Previous packet is a refused CoinGecko gap-fill; withholding instead of restoring it",
+        metadata: { stablecoinId: id, missingChainId: refusedFill, reason: "missing-chain-refused" },
+      });
+      droppedIds.push(id);
       continue;
     }
     const previousSupply = getCirculatingRawOrNull(previous);

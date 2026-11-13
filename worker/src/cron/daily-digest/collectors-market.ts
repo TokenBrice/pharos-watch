@@ -9,6 +9,7 @@ import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../l
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
 import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
@@ -365,6 +366,10 @@ export async function collectSupplyVelocity(
         const yesterdayVal = byDate.get(yesterday);
         const weekAgoVal = byDate.get(weekAgo);
         if (todayVal == null || yesterdayVal == null || weekAgoVal == null) continue;
+        // A reviewed perimeter change is not a supply move: leave out a window that straddles it.
+        const dates = [ctx.todayTs, yesterday, weekAgo];
+        if (dates.some((date) => isAmbiguousSupplyPerimeterDay(coin.id, date)
+          || isEarlierSupplyPerimeter(coin.id, date) !== isEarlierSupplyPerimeter(coin.id, ctx.todayTs))) continue;
 
         const change1d = todayVal - yesterdayVal;
         const change7d = todayVal - weekAgoVal;

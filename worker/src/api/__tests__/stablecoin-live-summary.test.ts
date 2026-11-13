@@ -59,6 +59,7 @@ describe("site-only stablecoin live summary", () => {
       circulatingPrevWeek: { peggedUSD: 193 }, circulatingPrevMonth: { peggedUSD: 170 },
       supplyObservedAt: NOW, nativeSupply: { current: 100, prevWeek: 93, prevMonth: 70 },
     });
+    expect(projectStablecoinLiveSummary(detail, "usdf-falcon")).toEqual(projectStablecoinLiveSummary(detail));
     const unavailable = projectStablecoinLiveSummary({ ...detail, currentCirculatingUSD: {} });
     expect(unavailable.circulating).toEqual({});
     expect(unavailable.circulatingPrevDay).toEqual({});

@@ -28,6 +28,31 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/commit/110fb5b87eaebe9c3f0c957967a91b6d591cf8f3",
     marketWide: false,
   },
+  // Pricing v6.80: reviewed refusals end CoinGecko gap-fills whose missing-chain remainder is not that chain's stock
+  // (USDf: $163.6M Solana remainder double counting DefiLlama's bridged BSC + XDC rows; wPEN: $9.4K HyperEVM
+  // remainder with zero supply; apxUSD: $18.9M Solana remainder against 6.27M on-chain). Each refusal takes effect
+  // at this clock, so earlier published values counted the larger quantity. Set it at or after the deploy.
+  {
+    stablecoinId: "usdf-falcon",
+    changedAt: Date.parse("2026-11-13T23:00:00Z") / 1000,
+    chainIds: ["solana"],
+    evidenceUrl: "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "wpen-ripio",
+    changedAt: Date.parse("2026-11-13T23:00:00Z") / 1000,
+    chainIds: ["hyperevm"],
+    evidenceUrl: "https://purrsec.com/token/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "apxusd-apyx",
+    changedAt: Date.parse("2026-11-13T23:00:00Z") / 1000,
+    chainIds: ["solana"],
+    evidenceUrl: "https://solscan.io/token/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
+    marketWide: false,
+  },
 ] as const;
 
 /** Intraday observations retain their strict observation timestamp. */

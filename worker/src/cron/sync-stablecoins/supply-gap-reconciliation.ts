@@ -20,6 +20,7 @@ import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
 import { isSupplyObservationWithinRestoreCeiling, supplyObservationClock } from "./shared";
+import { reviewedGapFillDecision } from "./supply-gap-reviewed-pairs";
 
 /**
  * DEC-01 CoinGecko aggregate gap-fill limits (ratio = CoinGecko market cap / DefiLlama list total).
@@ -58,6 +59,8 @@ export function carryForwardSupplyGapFill(
 ): boolean {
   const provenance = previous?.supplyGapFill;
   if (previous?.supplySource !== "coingecko-gap-fill" || !provenance) return false;
+  // A reviewed refusal ends the fill on every path, including no-decision and outage carries.
+  if (reviewedGapFillDecision(asset.id, provenance.missingChainId, nowSec) === "refused") return false;
   const observedAt = supplyObservationClock(previous);
   // A carry must name the observation it republishes. An undated prior value has
   // no age a consumer could bound, and re-dating it to this run would publish a
@@ -115,7 +118,9 @@ export type CoinGeckoGapFillRejectionReason =
   | "history-incomplete"
   | "history-ratio-above-bound"
   | "history-below-baseline"
-  | "current-observation-future";
+  | "current-observation-future"
+  | "missing-chain-unreviewed"
+  | "missing-chain-refused";
 
 export interface CoinGeckoGapFillRejection {
   id: string;
@@ -537,6 +542,12 @@ function buildSupplyGapCandidates(
       // be attributed without inventing a split, so no supplemental contribution is admitted.
       if (missingChainIds.length !== 1) {
         rejections.push({ id: assetId, reason: "multiple-missing-chains", ratio });
+        continue;
+      }
+      // The reviewed list is the only authority: a fill, new or retained, needs an eligible pair.
+      const decision = reviewedGapFillDecision(assetId, missingChainIds[0]!);
+      if (decision !== "eligible") {
+        rejections.push({ id: assetId, reason: decision === "refused" ? "missing-chain-refused" : "missing-chain-unreviewed", ratio });
         continue;
       }
 
