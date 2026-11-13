@@ -58,6 +58,9 @@ const GLOBAL_BUDGET_LIMIT = 200;
 const CRITICAL_CONFIG_BUDGET_LIMIT = 60;
 const CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT = 150;
 const EXTENDED_CONFIG_BUDGET_LIMIT = 25;
+// One extended-tier coverage repair. Eight requests fund a one-page scan with supply boundaries and a cold
+// head read for all but four of the 127 extended configs; four more fund transaction-context batches.
+const EXTENDED_HOLE_REPAIR_RESERVE_REQUESTS = 12;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 
@@ -530,13 +533,25 @@ export class MintBurnRun {
       }
       // One attempt per config: a window's coverage hole precedes its independent supply replay.
       const repairs = [...new Map([...supplyRanges, ...gaps].map((range) => [configKey(range.config), range])).values()];
-      // Repairs consume leftovers only; discovery must never reduce live requests or runtime.
-      phaseResult = await runMintBurnConfigPhase({ ...input, deadlineMs });
+      // Repairs consume leftovers; discovery never reduces live runtime. One exception: the extended live
+      // scan spends its whole budget, so a known coverage hole of an admitted config holds one repair's
+      // requests out of it. The repair pass gets them back and gives them to the first hole it attempts.
+      const holeKeys = new Set(input.lane === "extended" && !discoveryFailed
+        ? gaps.map((gap) => configKey(gap.config)).filter((key) => !input.pendingAdmissionKeys?.has(key)) : []);
+      const repairReserve = holeKeys.size > 0 ? EXTENDED_HOLE_REPAIR_RESERVE_REQUESTS : 0;
+      // Lower the limit, not the count: progress snapshots report the count as requests used.
+      input.budget.limit -= repairReserve;
+      try {
+        phaseResult = await runMintBurnConfigPhase({ ...input, deadlineMs });
+      } finally {
+        input.budget.limit += repairReserve;
+      }
       phaseResult.coverageRepairs = discoveryFailed ? input.configs.map((config) => ({
         ...createMintBurnConfigSummary(config, configKey(config), config.tier ?? "critical"),
         errors: 1, skippedReason: "repair-runtime-exhausted", repairReason: "repair-runtime-exhausted" as const,
       })) : await repairMintBurnCoverage(
-        { ...input, deadlineMs }, repairs, repairProofs, phaseResult.activeProviderDeferrals, { supplyProofRepair: true },
+        { ...input, deadlineMs }, repairs, repairProofs, phaseResult.activeProviderDeferrals,
+        { supplyProofRepair: true, ...(repairReserve > 0 ? { leadKeys: holeKeys, leadAllowance: repairReserve } : {}) },
       );
       for (const repair of phaseResult.coverageRepairs) {
         phaseResult.rowsRead += repair.rowsRead;

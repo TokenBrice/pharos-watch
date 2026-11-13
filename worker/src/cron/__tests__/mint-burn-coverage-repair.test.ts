@@ -248,7 +248,7 @@ describe("bounded scanner coverage repair", () => {
     [0, 1, 0, false, [120]], [160, 1, 0, false, [30]],
     [0, 2, 0, false, [120, 70]], [160, 2, 0, false, [15, 15]],
     [199, 1, 0, false, []], [0, 1, 480_000, false, []], [160, 8, 0, false, [9, 7, 7, 7]], [185, 4, 0, false, [3, 2], "extended"],
-    [0, 2, 0, true, [120, 120]], [160, 2, 330_000, true, [15, 26]], [160, 2, 360_000, true, [15]], [178, 4, 0, false, [7, 3, 2], "extended"], [179, 4, 0, false, [5, 2, 2, 2]],
+    [0, 2, 0, true, [120, 120]], [160, 2, 330_000, true, [15, 26]], [160, 2, 360_000, true, [15]], [178, 4, 0, false, [7, 3, 2], "extended"], [179, 4, 0, false, [5, 2, 2, 2]], [171, 4, 0, false, [12, 3, 2, 2], "extended"],
   ])("shares unused requests/time and protects admitted work (%#)", async (used, count, elapsed, pending, expected, tier) => {
     const { db } = fixtures.open();
     const configs = Array.from({ length: count }, (_, i) => i === 0 ? used > 170 ? { ...supplyConfig, tier } : config : makeMintBurnConfig({
@@ -272,7 +272,9 @@ describe("bounded scanner coverage repair", () => {
     request.budget.count = used;
     if (pending) request.pendingAdmissionKeys = new Set([pendingKey]);
     const gaps = configs.map((config, i) => ({ config, fromBlock: 111 + i * 10, toBlock: i ? 120 + i * 10 : 1e6 }));
-    const summaries = await repairMintBurnCoverage(request, pending ? [...gaps].reverse() : gaps, [], new Map());
+    // 171 used, two named holes: only the first attempted takes the 12 its run held back.
+    const summaries = await repairMintBurnCoverage(request, pending ? [...gaps].reverse() : gaps, [], new Map(),
+      used === 171 ? { leadKeys: new Set(configs.slice(0, 2).map(mintBurnConfigKey)), leadAllowance: 12 } : {});
     const calls = sync.mock.calls.map(([scan]) => scan);
     expect(calls.map((scan) => scan.configBudgetLimit)).toEqual(expected);
     expect(request.budget.count).toBe(used + (pending ? calls.length * 4 : expected.reduce((sum, n) => sum + n, 0)));
@@ -291,6 +293,10 @@ describe("bounded scanner coverage repair", () => {
         await repairMintBurnCoverage({ ...input(db), lane, runTimestamp: now + at }, gaps, [], new Map());
         expect(sync.mock.lastCall![0].fromBlock % 20).toBe(11);
       }
+      // A run that held requests back for holes attempts them first, whatever the rotation.
+      const first = sync.mock.calls.length, leadKeys = new Set([mintBurnConfigKey(configs[2]!)]);
+      await repairMintBurnCoverage({ ...input(db), runTimestamp: now + 1800 }, gaps, [], new Map(), { leadKeys });
+      expect(leadKeys.has(sync.mock.calls[first]![0].key)).toBe(true);
     }
   });
 });
