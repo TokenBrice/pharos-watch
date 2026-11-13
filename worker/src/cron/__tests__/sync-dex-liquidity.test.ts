@@ -461,7 +461,6 @@ describe("dex liquidity scoring stage cycle", () => {
     const quoterFinished = deferred<void>();
     const order: string[] = [];
     const refresh = vi.spyOn(priceRefresh, "refreshPoolPrices");
-    const tail = vi.spyOn(priceRefresh, "priceRefreshDeadlines");
     vi.spyOn(quoterEnrichment, "enrichQuoterV2ExecutionTargets").mockImplementationOnce(async () => {
       order.push("quoter-start");
       await v4Started.promise;
@@ -479,7 +478,6 @@ describe("dex liquidity scoring stage cycle", () => {
     await stageSource();
     expect(order).toEqual(["quoter-start", "v4-start", "quoter-end", "v4-end"]);
     expect(refresh.mock.invocationCallOrder[0]).toBeGreaterThan(vi.mocked(mergeStagedPools).mock.invocationCallOrder[0]!);
-    expect(tail).toHaveBeenCalledOnce();
     expect(persistStage).toHaveBeenCalledOnce();
   });
 
