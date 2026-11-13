@@ -19,8 +19,11 @@ import { suiCoinType } from "./sui/identity";
 import type { DexPriceObs, PoolEntry, SourcePoolGraph } from "./types";
 
 const PRICE_REFRESH_POLICY = {
-  budgetMs: 90_000,
-  persistenceReserveMs: 20_000,
+  // Full demand (about 1,400 pools, 95 requests) needs 54 to 78 s and overran 90 s in 5 of 26
+  // measured hours (2026-11-11 to 13); the readiness cutoff still bounds a late start.
+  budgetMs: 150_000,
+  // Persistence after the refresh was measured at 28 s (2026-11-13 07:10 UTC stage).
+  persistenceReserveMs: 40_000,
   requestTimeoutMs: 8_000,
   maxRequests: 125,
   maxConsecutiveFailures: 3,
