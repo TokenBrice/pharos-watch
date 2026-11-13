@@ -163,6 +163,7 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
           stopped: overrides.ledgerStopped ?? false,
         };
       }
+      if (overrides.settleComplete === false) _ctx.pagesFetched.count += maxPages;
       const settleFlows = overrides.settleFlows ?? [];
       return {
         transfers: toTransfers(settleFlows),
@@ -518,6 +519,12 @@ describe("recoverTronFreezeAmountForRow", () => {
 });
 
 describe("backfillTronBlacklistAmounts", () => {
+  const backfill = (db: D1Database) => backfillTronBlacklistAmounts(db, {
+    trongridApiKey: "tron-key",
+    limiter: createRateLimiter(1000),
+    runBudget: makeRunBudget(),
+  });
+
   it.each([
     ["ledger", "full", null],
     ["settle", "full", null],
@@ -691,11 +698,7 @@ describe("backfillTronBlacklistAmounts", () => {
       { match: "amount_attempt_count = COALESCE", rows: [] },
     ]);
 
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    const result = await backfill(db);
 
     expect(result).toMatchObject({ attempted: 1, resolved: 0, retried: 0, parked: 1 });
     const queueFinish = db.getHistory().find((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"));
@@ -716,11 +719,7 @@ describe("backfillTronBlacklistAmounts", () => {
       ...QUEUE_TABLES,
     ]);
 
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    const result = await backfill(db);
 
     expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
     expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
@@ -739,11 +738,7 @@ describe("backfillTronBlacklistAmounts", () => {
       ...QUEUE_TABLES,
     ]);
 
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    const result = await backfill(db);
 
     expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
     expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
@@ -771,11 +766,7 @@ describe("backfillTronBlacklistAmounts", () => {
       { match: "amount_native = ?", rows: [] },
     ]);
 
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    const result = await backfill(db);
 
     // The ledger consumes 110 of the 120-page run budget, so each row's destroy
     // window may only spend what is left, and its pages count against the same
@@ -798,11 +789,7 @@ describe("backfillTronBlacklistAmounts", () => {
       { match: "amount_native = ?", rows: [] },
     ]);
 
-    await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    await backfill(db);
 
     // Two window reads per row: the ledger (clamped to the remaining budget) and the settle window.
     // The first ledger read consumes 100 of the 120-page run budget, so the second
@@ -812,7 +799,8 @@ describe("backfillTronBlacklistAmounts", () => {
     expect(captureMaxPages[3]).toBe(20);
   });
 
-  it("keeps a ledger cut short by the run's remaining pages out of the park path", async () => {
+  it.each([false, true])("keeps run-capped rows queued (deadline %s)", async (expired) => {
+    const runBudget = makeRunBudget();
     const rows = [
       await makeRow({ id: "tron-heavy" }),
       await makeRow({ id: "tron-budget-cut", tx_hash: "2".repeat(64) }),
@@ -824,7 +812,10 @@ describe("backfillTronBlacklistAmounts", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }], {
       captureMaxPages,
       consumeLedgerPages: 100,
-      ledgerCompleteForCap: (maxPages) => maxPages >= 25,
+      ledgerCompleteForCap: (maxPages) => {
+        if (expired && maxPages < 25) runBudget.deadlineMs = 0;
+        return maxPages >= 25;
+      },
     });
     const db = mockD1([
       { match: "blacklist-tron-replay-candidates", rows: rows as unknown as Array<Record<string, unknown>> },
@@ -835,7 +826,7 @@ describe("backfillTronBlacklistAmounts", () => {
     const result = await backfillTronBlacklistAmounts(db, {
       trongridApiKey: "tron-key",
       limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
+      runBudget,
     });
 
     expect(captureMaxPages).toEqual([40, 20, 20]);
@@ -844,7 +835,7 @@ describe("backfillTronBlacklistAmounts", () => {
       resolved: 1,
       retried: 0,
       parked: 0,
-      runtimeBudgetReached: true,
+      runtimeBudgetReached: expired, pageCapReached: !expired,
     });
     const finishedIds = db.getHistory()
       .filter((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"))
@@ -866,22 +857,18 @@ describe("backfillTronBlacklistAmounts", () => {
       ...QUEUE_TABLES,
     ]);
 
-    const result = await backfillTronBlacklistAmounts(db, {
-      trongridApiKey: "tron-key",
-      limiter: createRateLimiter(1000),
-      runBudget: makeRunBudget(),
-    });
+    const result = await backfill(db);
 
     expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
     expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"))).toBe(false);
   });
 
-  it("shrinks the settle window's page cap to the pages left in the run", async () => {
+  it.each([true, false])("caps the final settle read (complete %s)", async (settleComplete) => {
     const captureMaxPages: number[] = [];
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }], {
       captureMaxPages,
-      consumeLedgerPages: 110,
+      consumeLedgerPages: 110, settleComplete,
     });
     const db = mockD1([
       { match: "blacklist-tron-replay-candidates", rows: [await makeRow() as unknown as Record<string, unknown>] },
@@ -889,7 +876,7 @@ describe("backfillTronBlacklistAmounts", () => {
       { match: "amount_native = ?", rows: [] },
     ]);
 
-    await backfillTronBlacklistAmounts(db, {
+    const result = await backfillTronBlacklistAmounts(db, {
       trongridApiKey: "tron-key",
       limiter: createRateLimiter(1000),
       runBudget: makeRunBudget(),
@@ -898,6 +885,7 @@ describe("backfillTronBlacklistAmounts", () => {
     // 120-page run budget: the ledger read is capped at 40 and consumes 110, so the
     // settle read that follows may only spend the 10 pages still left.
     expect(captureMaxPages).toEqual([40, 10]);
+    expect(result.pageCapReached === true).toBe(!settleComplete);
   });
 
   it("does nothing when no Tron freeze row is outstanding", async () => {

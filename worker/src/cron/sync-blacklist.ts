@@ -233,7 +233,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           signal,
         });
         runtimeBudgetHit ||= tronAmountBackfill.runtimeBudgetReached;
-        tronAmountRepair = measuredRepair(tronAmountBackfill.runtimeBudgetReached);
+        tronAmountRepair = tronAmountBackfill.pageCapReached
+          ? { outcome: "partial", reason: "blacklist-tron-amount-repair-page-cap" }
+          : measuredRepair(tronAmountBackfill.runtimeBudgetReached);
       } catch (err) {
         tronAmountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
         logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
@@ -305,8 +307,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs;
 
   // Refresh observed totals during catch-up without advancing the full-coverage freshness clock.
-  // The amount-repair tails are maintenance: one that stops at its own cap degrades the run but
-  // must not withhold publication while the window checks below still pass.
+  // Bounded amount-repair tails must not withhold publication while these window checks pass.
   if (
     scan.runtimeBudgetHit ||
     counters.currentBalanceCacheCounters.budgetExhausted ||
@@ -435,8 +436,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     itemCount: counters.totalInsertedRows,
     metadata: JSON.stringify(
       withBudgetMetadata(budget, {
-        ...(isolatedPartial ? { quality: {
-          reason: "blacklist-isolated-partial-coverage", configKey: isolatedPartial.configKey,
+        ...(isolatedPartial || tronAmountBackfill?.pageCapReached ? { quality: {
+          reason: isolatedPartial ? "blacklist-isolated-partial-coverage" : tronAmountRepair.reason,
+          ...(isolatedPartial ? { configKey: isolatedPartial.configKey } : {}),
         } } : {}),
         outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
           ? Math.floor(Date.now() / 1000) : null,
