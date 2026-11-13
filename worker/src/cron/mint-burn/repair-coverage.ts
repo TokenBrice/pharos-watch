@@ -166,7 +166,7 @@ export function isMintBurnCapacityOnlyRepairDebt(summary: MintBurnCoverageRepair
 export async function repairMintBurnCoverage(
   input: Parameters<typeof runMintBurnConfigPhase>[0], gaps: readonly MintBurnCoverageGap[],
   pendingProofs: MintBurnScanCoverage[], deferred: ReadonlyMap<string, number>,
-  options: { supplyProofRepair?: boolean } = {},
+  options: { supplyProofRepair?: boolean; leadKeys?: ReadonlySet<string>; leadAllowance?: number } = {},
 ): Promise<MintBurnCoverageRepairSummary[]> {
   if (gaps.length === 0) return [];
   const summaries: MintBurnCoverageRepairSummary[] = [];
@@ -184,8 +184,12 @@ export async function repairMintBurnCoverage(
     ? "halfHourlyMintBurnExtended" : "halfHourlyMintBurnCritical"].intervalSec;
   const offset = gaps.length ? Math.floor(input.runTimestamp / cadenceSec) % gaps.length : 0;
   const pending = (gap: MintBurnCoverageGap) => input.pendingAdmissionKeys?.has(mintBurnConfigKey(gap.config)) === true;
+  // A run that held requests back for coverage holes attempts them first, in rotation order; the first
+  // one attempted takes that allowance before peers share the rest.
+  const lead = (gap: MintBurnCoverageGap) => options.leadKeys?.has(mintBurnConfigKey(gap.config)) === true;
+  let leadAllowance = options.leadAllowance ?? 0;
   const ordered = [...gaps.slice(offset), ...gaps.slice(0, offset)]
-    .sort((a, b) => Number(pending(a)) - Number(pending(b)));
+    .sort((a, b) => Number(pending(a)) - Number(pending(b)) || Number(lead(b)) - Number(lead(a)));
   for (let i = 0; i < ordered.length; i++) {
     if (!stopped && i >= COVERAGE_REPAIR_MAX_CONFIGS) break;
     throwIfAborted(input.signal);
@@ -235,7 +239,7 @@ export async function repairMintBurnCoverage(
       + (needsMintBurnConservationBoundaries(config) ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0)
       : config.events.length + 2;
     const limit = Math.min(COVERAGE_REPAIR_MAX_REQUESTS,
-      extended ? Math.min(remainingRequests, Math.max(minimum, share)) : share);
+      extended ? Math.min(remainingRequests, Math.max(minimum, share, lead(gap) ? leadAllowance : 0)) : share);
     if (limit < minimum) {
       // Refused before idle or D1 reads.
       summary.skippedReason = summary.repairReason = "repair-budget-exhausted";
@@ -277,6 +281,7 @@ export async function repairMintBurnCoverage(
     let overloaded = false;
     const startedAtMs = Date.now();
     summary.attempted = true;
+    if (lead(gap)) leadAllowance = 0;
     try {
       const boundaries = await fetchConservationBoundaries({
         requests: [{ key, config, fromBlock, toBlock }],

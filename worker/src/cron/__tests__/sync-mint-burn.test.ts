@@ -98,6 +98,8 @@ import {
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import * as mintBurnConservation from "../../lib/mint-burn-conservation";
+import * as coverageRepair from "../mint-burn/repair-coverage";
+import * as phases from "../mint-burn/run-configs";
 import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
@@ -894,6 +896,26 @@ describe("syncMintBurn", () => {
 
     expect(sqlite.prepare("SELECT key FROM cache WHERE key IN (?, ?)").all(aggregateKey, coinKey))
       .toEqual([{ key: aggregateKey }]);
+  });
+
+  it("reserves extended live requests only for a coverage hole", async () => {
+    const live = phases.runMintBurnConfigPhase, seen: number[][] = [];
+    for (const [lane, hole] of [["extended", false], ["extended", true], ["critical", true]] as const) {
+      const { sqlite, db } = sqliteFixtures.open();
+      seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
+      const config = MINT_BURN_CONFIGS[lane === "critical" ? 0 : 1]!;
+      vi.spyOn(coverageRepair, "loadMintBurnCoverageGaps").mockResolvedValue(hole ? [{ config, fromBlock: 1, toBlock: 9e9 }] : []);
+      const repair = vi.spyOn(coverageRepair, "repairMintBurnCoverage");
+      let at = 0;
+      vi.spyOn(phases, "runMintBurnConfigPhase").mockImplementation((input) => (at = input.budget.limit, live(input)));
+      const meta = JSON.parse((await syncMintBurn(db, "alchemy-key", { lane })).metadata), options = repair.mock.lastCall![4];
+      seen.push([at, meta.budgetLimit, meta.budgetUsed, options?.leadKeys?.size ?? 0, options?.leadAllowance ?? 0]);
+    }
+    // The live scan sees a lower limit, restored after it; the repair pass gets the hole and the allowance.
+    expect(seen[0]!.slice(0, 2)).toEqual([200, 200]);
+    expect(seen[1]).toEqual([188, 200, seen[0]![2], 1, 12]);
+    // The critical lane never reserves.
+    expect([seen[2]![0], seen[2]![3]]).toEqual([200, 0]);
   });
 
   it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {
