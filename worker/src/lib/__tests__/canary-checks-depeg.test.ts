@@ -330,8 +330,8 @@ describe("depeg canary checks", () => {
             id: 7,
             stablecoin_id: "usdt-tether",
             symbol: "USDT",
-            last_trusted_price_at: NOW - 2_000,
-            price_coverage_gap_started_at: NOW - 1_800,
+            last_trusted_price_at: NOW - 5_001,
+            price_coverage_gap_started_at: NOW - 4_501,
             total_count: 1,
             acknowledged_count: 0, acknowledged_ids_json: "[]",
           },
@@ -346,7 +346,7 @@ describe("depeg canary checks", () => {
       error: expect.stringContaining("USDT(usdt-tether)"),
       metadata: {
         blindEventCount: 1,
-        events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 1_800 }],
+        events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 4_501 }],
       },
     });
   });
@@ -362,7 +362,7 @@ describe("depeg canary checks", () => {
         observedAt: now - (kind === "stale" ? 2101 : kind === "future" ? -1 : 30) })) };
     sqlite.prepare(`INSERT INTO depeg_events
       (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
-      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId, id, now - 5000, now - 2000);
+      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId, id, now - 8000, now - 5000);
     sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-stablecoins', ?, 1, 'ok', ?)")
       .run(now, JSON.stringify({ capabilities: { depegPipeline: true }, quality: { depegObservation:
         JSON.parse(censusJson({ evaluatedAt: now, deadBandNoticesOmittedCount: 1, deadBandNotices: ["missing", "omitted"].includes(kind) ? undefined : [receipt] })) } }));
@@ -380,7 +380,7 @@ describe("depeg canary checks", () => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO depeg_events
       (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
-      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId + (kind === "new-event" ? 1 : 0), id, now - 5000, now - 2000);
+      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId + (kind === "new-event" ? 1 : 0), id, now - 8000, now - 5000);
     const acknowledged = kind === "reviewed" ? 1 : 0;
     expect(await checkDepegOpenCoverage(db, now)).toMatchObject({ status: acknowledged ? "ok" : "degraded",
       metadata: { blindEventCount: 1, acknowledgedBlindEventCount: acknowledged, actionableBlindEventCount: 1 - acknowledged,
@@ -404,14 +404,14 @@ describe("depeg canary checks", () => {
     expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });
 
-  it("uses the newer trusted clock when an old continuity gap survives a fresh at-par observation", async () => {
+  it.each([60, 4500])("uses the newer trusted clock when an old continuity gap survives a fresh at-par observation (%s)", async (age) => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(
       `INSERT INTO depeg_events
          (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
           start_price, peg_reference, last_trusted_price_at, price_coverage_gap_started_at)
        VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, ?)`,
-    ).run(NOW - 5_000, NOW - 60, NOW - 3_000);
+    ).run(NOW - 8_000, NOW - age, NOW - 6_000);
 
     const result = await checkDepegOpenCoverage(db, NOW);
 
@@ -431,7 +431,7 @@ describe("depeg canary checks", () => {
     );
     const [frozenId] = [...FROZEN_IDS];
     insert.run(frozenId, "FRZ", NOW - 90_000, NOW - 80_000);
-    insert.run("live-coin", "LIVE", NOW - 5_000, NOW - 2_000);
+    insert.run("live-coin", "LIVE", NOW - 8_000, NOW - 4_501);
 
     const result = await checkDepegOpenCoverage(db, NOW);
 
@@ -451,7 +451,7 @@ describe("depeg canary checks", () => {
        VALUES (?, ?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
     );
     for (let index = 0; index < 30; index++) {
-      insert.run(review.eventId + index, index < 2 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 5_000 - index, NOW - 2_000 - index);
+      insert.run(review.eventId + index, index < 2 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 8_000 - index, NOW - 5_000 - index);
     }
 
     const result = await checkDepegOpenCoverage(db, review.reviewedAt);

@@ -66,6 +66,7 @@ export interface TronReplayRow extends BlacklistAmountSelectedState {
 }
 
 export interface TronReplayRecovery {
+  pageCapReached?: true;
   amount: number | null;
   lastErrorClass: BlacklistRecoveryErrorClass | null;
   evidenceObservedAt: number;
@@ -86,6 +87,7 @@ class TronReplayEvidenceError extends Error {
       | "provider_null"
     >,
     message: string,
+    readonly pageCapReached = false,
   ) {
     super(message);
   }
@@ -156,7 +158,8 @@ export async function recoverTronFreezeAmountForRow(
   const pagesAtStart = provider.pagesFetched.count;
   // Pages are metered from the shared counter so pages burned by a failing row
   // still count against the run's page budget.
-  const failed = (errorClass: BlacklistRecoveryErrorClass): TronReplayRecovery => ({
+  const failed = (errorClass: BlacklistRecoveryErrorClass, pageCapReached = false): TronReplayRecovery => ({
+    ...(pageCapReached ? { pageCapReached: true } : {}),
     amount: null,
     lastErrorClass: errorClass,
     evidenceObservedAt: observedAt,
@@ -213,7 +216,7 @@ export async function recoverTronFreezeAmountForRow(
       // about the ledger's length, so it stays a runtime condition; only a
       // ledger that exhausts the per-history cap is deterministically over-cap.
       if (ledgerPageCap < TRON_REPLAY_MAX_PAGES_PER_HISTORY) {
-        throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the ledger read");
+        throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the ledger read", true);
       }
       // The ledger only grows, so a cap-exceeded history can never resolve on retry.
       throw new TronReplayEvidenceError("history_over_cap", "confirmed transfer ledger exceeds the replay page cap");
@@ -244,7 +247,7 @@ export async function recoverTronFreezeAmountForRow(
     // that span would sit in the balance but outside the ledger, so the span must
     // be proven quiet before the reconciliation below means anything.
     if (provider.pagesFetched.count - pagesAtStart >= pagesRemaining) {
-      throw new TronReplayEvidenceError("runtime_budget", "run page budget consumed by the ledger read");
+      throw new TronReplayEvidenceError("runtime_budget", "run page budget consumed by the ledger read", true);
     }
     const settleHead = await fetchTronHeadBlock(provider);
     const settle = await fetchTronTransferWindow(
@@ -257,7 +260,8 @@ export async function recoverTronFreezeAmountForRow(
     );
     if (settle.stopped) throw new TronReplayEvidenceError("runtime_budget", "run window closed mid-ledger");
     if (!settle.complete || settle.watermarkMs < settleHead.timestampMs) {
-      throw new TronReplayEvidenceError("state_raced", "settle window is not provable yet");
+      throw new TronReplayEvidenceError("state_raced", "settle window is not provable yet",
+        !settle.complete && provider.pagesFetched.count >= TRON_REPLAY_MAX_PAGES_PER_RUN);
     }
     if (settle.transfers.length > 0) {
       throw new TronReplayEvidenceError("state_raced", "account moved between the ledger and the balance read");
@@ -297,7 +301,7 @@ export async function recoverTronFreezeAmountForRow(
         previousTimestamp = transfer.timestampMs;
       }
       if (provider.pagesFetched.count - pagesAtStart >= pagesRemaining) {
-        throw new TronReplayEvidenceError("runtime_budget", "run page budget consumed before the destroy window read");
+        throw new TronReplayEvidenceError("runtime_budget", "run page budget consumed before the destroy window read", true);
       }
       const destroyPageCap = windowPageCap();
       const destroy = await fetchTronDestroyWindowClear(
@@ -316,7 +320,7 @@ export async function recoverTronFreezeAmountForRow(
         // positively observed destroy — even on the final budget page — keeps
         // the deterministic mismatch class.
         if (destroy.capExceeded === true && destroyPageCap < TRON_REPLAY_MAX_PAGES_PER_HISTORY) {
-          throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the destroy window");
+          throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the destroy window", true);
         }
         throw new TronReplayEvidenceError(destroy.outcome, "zero balance lacks a clear post-freeze destroy window");
       }
@@ -329,7 +333,7 @@ export async function recoverTronFreezeAmountForRow(
     };
   } catch (error) {
     throwIfAborted(provider.signal);
-    if (error instanceof TronReplayEvidenceError) return failed(error.errorClass);
+    if (error instanceof TronReplayEvidenceError) return failed(error.errorClass, error.pageCapReached);
     if (error instanceof TronReplayProviderError) return failed(error.errorClass);
     logWorkerEventArgs("lib", "warn", "[sync-blacklist] Tron freeze-amount replay failed:", error);
     return failed("provider_null");
@@ -337,6 +341,7 @@ export async function recoverTronFreezeAmountForRow(
 }
 
 export interface TronAmountBackfillResult {
+  pageCapReached?: boolean;
   runtimeBudgetReached: boolean;
   attempted: number;
   resolved: number;
@@ -470,7 +475,10 @@ export async function backfillTronBlacklistAmounts(
     }
     if (blacklistSubrequestBudgetReached(runBudget)) break;
     const remainingPages = TRON_REPLAY_MAX_PAGES_PER_RUN - provider.pagesFetched.count;
-    if (remainingPages <= 0) break;
+    if (remainingPages <= 0) {
+      result.pageCapReached = true;
+      break;
+    }
 
     const attemptAt = Math.floor(Date.now() / 1000);
     const config = resolveTronConfig(row);
@@ -482,13 +490,17 @@ export async function backfillTronBlacklistAmounts(
     }
 
     const recovery = await recoverTronFreezeAmountForRow(row, config, provider, { pagesRemaining: remainingPages });
-    // Runtime window closures and landing transfers are not row failures: they are
+    // Runtime/page window closures and landing transfers are not row failures: they are
     // recorded as no attempt so the row keeps its queue position for the next run.
     if (recovery.lastErrorClass === "runtime_budget") {
-      result.runtimeBudgetReached = true;
+      result.pageCapReached = recovery.pageCapReached;
+      result.runtimeBudgetReached = !recovery.pageCapReached;
       break;
     }
-    if (recovery.lastErrorClass === "state_raced") continue;
+    if (recovery.lastErrorClass === "state_raced") {
+      result.pageCapReached ||= recovery.pageCapReached;
+      continue;
+    }
 
     providerInteractionSeen = true;
     if (recovery.amount == null) {
@@ -543,6 +555,10 @@ export async function backfillTronBlacklistAmounts(
   // replay lane opens the circuit for the scan and for later replay tails.
   if (providerInteractionSeen) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !providerFailureSeen);
+  }
+  if (result.pageCapReached && (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget))) {
+    result.runtimeBudgetReached = true;
+    result.pageCapReached = false;
   }
   return result;
 }
