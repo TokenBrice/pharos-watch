@@ -16,6 +16,12 @@ export type PublicStatusTone = StatusHealthValue;
  */
 export const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
 
+/**
+ * Status-system freshness bound: the self-check's state and snapshots, and a
+ * public hold, which reads "not confirmed" once its last full read is older.
+ */
+export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
+
 /** Upstream providers with an open source-wide circuit required to affect public availability and admin causes. */
 export const PUBLIC_CIRCUIT_IMPACT_QUORUM = 3;
 

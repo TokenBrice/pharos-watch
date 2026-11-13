@@ -39,7 +39,7 @@ import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registr
 import type { ProducerHeadStatus } from "@shared/types/status";
 import { loadProducerHeads } from "../lib/producer-history";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
-import { loadSchedulerLiveness, schedulerLivenessImpactStatus } from "../lib/status/scheduler-liveness";
+import { loadSchedulerLiveness } from "../lib/status/scheduler-liveness";
 import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { maxStatus } from "../lib/status-reliability-shared";
 import { computeReserveCompositionOverview } from "../lib/live-reserves/store-overview";
@@ -313,8 +313,10 @@ export function handleStatus({
       // race with the cron's own reconcile call. First-boot with empty table
       // returns a fallback state but does NOT persist — the next cron seeds.
       // A failed/rejected read is unavailable, never an evaluation at `now`.
-      const statusStateReadFailed = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot");
-      const resolvedState = statusStateReadFailed
+      // With no row, an assessment that could not read its evidence confirms nothing either (ADR-42).
+      const stateUnavailable = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot")
+        || (!state && (!raw.dbHealthy || (raw.confirmedReadFailures ?? raw.evidenceReadFailures ?? []).length > 0));
+      const resolvedState = stateUnavailable
         ? null
         : state ?? buildFallbackStatusState(raw.rawOverallStatus, now);
       // Distinguish three cases:
@@ -324,13 +326,14 @@ export function handleStatus({
       //     don't trust the fallback as fresh. The specific DB error is also
       //     present in `sectionErrors.statusState`.
       const resolvedStaleness = staleness ?? {
-        ageSeconds: statusStateReadFailed ? STATUS_SYSTEM_FRESHNESS_SEC + 1 : 0,
+        ageSeconds: stateUnavailable ? STATUS_SYSTEM_FRESHNESS_SEC + 1 : 0,
         maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-        isStale: statusStateReadFailed,
+        isStale: stateUnavailable,
       };
 
+      // A failed live slot-start read holds rather than colours (ADR-42).
       const effectiveOverallStatus = maxStatus(resolvedState?.currentStatus ?? raw.rawOverallStatus,
-        schedulerLivenessImpactStatus(schedulerLiveness));
+        evaluateSchedulerLiveness(schedulerLiveness).status);
       const probeIssues: StatusPersistenceIssue[] = [];
       const discrepancyIssues: StatusPersistenceIssue[] = [];
       const timelineIssues: StatusPersistenceIssue[] = [];

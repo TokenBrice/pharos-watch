@@ -4,7 +4,9 @@ import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { buildStatusD1Scenario, cleanupStatusTest } from "./status.test-support";
+import {
+  buildStatusD1Scenario, cleanupStatusTest, completePublicationEntry, healthD1, STABLECOIN_COVERAGE_QUERY_MATCH,
+} from "./status.test-support";
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/public-health-snapshot";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { HealthResponse } from "@shared/types/status";
@@ -34,74 +36,6 @@ function makePublicHealthSnapshotRow(now: number, publicHealth: HealthResponse) 
     key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
     updated_at: now - 60,
     value: JSON.stringify({ version: 1, producedAt: now - 60, publicHealth: { ...publicHealth, ...projectPublicStatus(publicHealth) } }),
-  };
-}
-
-const STABLECOIN_COVERAGE_QUERY_MATCH =
-  "metadata LIKE '%\"activePublicationCoverage\"%'";
-
-function healthD1(tables: MockTableConfig[]) {
-  return buildStatusD1Scenario({
-    sections: ["sentinel"],
-    overrides: [
-      ...tables.map((table) => ({ ...table, allowUnused: true })),
-      { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null, allowUnused: true },
-      { match: "FROM dex_liquidity", rows: [], first: { age: 60 }, allowUnused: true },
-      { match: "FROM yield_data", rows: [], first: { age: 60 }, allowUnused: true },
-      { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [], allowUnused: true },
-      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null, allowUnused: true },
-      { match: "blacklist-gap-metrics-cache-write", rows: [], allowUnused: true },
-      {
-        match: "status IN ('ok', 'degraded')",
-        rows: [],
-        first: { item_count: 0, metadata: null },
-        allowUnused: true,
-      },
-      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null, allowUnused: true },
-      { match: "stamped_identity", rows: [], first: null, allowUnused: true },
-      { match: "publication_identity", rows: [], first: null, allowUnused: true },
-      { match: "telegram_subscribers", rows: [], first: { n: 0 }, allowUnused: true },
-      { match: "telegram_deliveries", rows: [], first: null, allowUnused: true },
-      { match: "dispatch-telegram-alerts", rows: [], first: null, allowUnused: true },
-    ],
-  });
-}
-
-function completePublicationEntry(
-  now: number,
-  activePriceCoverage: Record<string, unknown> = {
-    complete: true,
-    expectedActiveCount: ACTIVE_IDS.size,
-    presentActiveCount: ACTIVE_IDS.size,
-    pricedActiveCount: ACTIVE_IDS.size,
-    missingPriceCount: 0,
-    pricedActiveIds: [...ACTIVE_IDS],
-    missingActiveIds: [],
-    affectedMarketCapUsd: 0,
-    missingActiveAssets: [],
-    alertEligibleCount: 0,
-    alertEligibleIds: [],
-    maxConsecutiveMissingGenerations: 0,
-  },
-): MockTableConfig {
-  return {
-    match: STABLECOIN_COVERAGE_QUERY_MATCH,
-    rows: [],
-    first: {
-      started_at: now - 30,
-      metadata: JSON.stringify({
-        activePublicationCoverage: {
-          complete: true,
-          expectedActiveCount: ACTIVE_IDS.size,
-          presentActiveCount: ACTIVE_IDS.size,
-          waivedActiveCount: 0,
-          missingActiveIds: [],
-          waivedActiveIds: [],
-          expiredWaiverIds: [],
-        },
-        activePriceCoverage,
-      }),
-    },
   };
 }
 
@@ -340,6 +274,47 @@ describe("handleHealth", () => {
     db.assertAllMatchesUsed();
     vi.useRealTimers();
   });
+  // Holds (ADR-42): a snapshot cache row, and the data-refresh component of a body.
+  const snapshotEntry = (updatedAt: number, publicHealth: object, producedAt = updatedAt): MockTableConfig => ({
+    match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [],
+    first: { key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, updated_at: updatedAt, value: JSON.stringify({ version: 1, producedAt, publicHealth }) },
+  });
+  const dataRefresh = (body: HealthResponse) => body.components!.find((item) => item.id === "data-refresh");
+
+  it("keeps a held colour at read time and re-dates its label", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    const now = Math.floor(Date.now() / 1000);
+    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    Object.assign(publicHealth, { circuits: null, circuitsUnavailableReason: "circuits-read-failed", assessedAt: now - 60 });
+    const held = { since: now - 960, confirmedAt: now - 1801, sections: ["circuits"], expired: false };
+    const degraded = (withHeld: boolean) => projectPublicStatus(publicHealth).components.map(({ held: _held, ...item }) =>
+      item.id === "data-refresh" ? { ...item, state: "degraded" as const, ...(withHeld ? { held } : {}) } : item);
+    const serve = async (snapshot: object) => HealthResponseSchema.parse(await (await handleHealth(buildStatusD1Scenario({
+      sections: [], overrides: [snapshotEntry(now - 60, { ...publicHealth, ...snapshot })] }))).json());
+    expect(dataRefresh(await serve({ components: degraded(true) }))).toMatchObject({ state: "degraded", held: { ...held, expired: true } });
+    // An overdue snapshot (1,200 s) marks every component.
+    expect((await serve({ assessedAt: now - 1500, components: degraded(true) })).components!.find((item) => item.id === "website-api")!.held)
+      .toEqual({ since: now - 1500, confirmedAt: now - 1500, sections: ["database"], expired: false });
+    // A legacy snapshot that could not read circuits either gives no clock.
+    expect(dataRefresh(await serve({ components: degraded(false) }))).toMatchObject({ state: "degraded", held: { confirmedAt: null } });
+  });
+
+  it.each(["none", "stale", "future", "scheduler"] as const)("holds a publication over the live fallback (snapshot: %s)", async (mode) => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    const now = Math.floor(Date.now() / 1000);
+    const published = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const at = mode === "scheduler" ? now - 60 : now - 4000;
+    const publicHealth = { ...published, assessedAt: at,
+      components: published.components!.map((item) => item.id === "data-refresh" ? { ...item, state: "degraded" as const } : item),
+      schedulerLiveness: { ...published.schedulerLiveness!, status: mode === "scheduler" ? "degraded" as const : "healthy" as const } };
+    const extras: MockTableConfig[] = [{ match: "key >= 'circuit:'", rows: [], throwError: new Error("D1 unavailable") },
+      ...(mode === "none" ? [] : [snapshotEntry(at, publicHealth, mode === "future" ? now + 4000 : at)])];
+    const body = await (await handleHealth(makeHealthyHealthDb(now, { extras }))).json() as HealthResponse;
+    // With no admitted publication the failed read keeps its colour (R2).
+    expect(dataRefresh(body)).toMatchObject(mode === "stale" || mode === "scheduler"
+      ? { state: "degraded", held: { confirmedAt: at, expired: mode === "stale" } }
+      : { state: "degraded", reasons: ["circuits-unavailable:circuits-read-failed"] });
+  });
   // A read-time crossing into a worse state is held at the snapshot's published
   // state until the self-check confirms it (hysteresis); an outage bypasses.
   it.each([
@@ -434,9 +409,14 @@ describe("handleHealth", () => {
     it("clears Delayed at once when the producer has published since the snapshot", async () => {
       vi.spyOn(Date, "now").mockReturnValue(Date.now());
       const now = Math.floor(Date.now() / 1000);
-      const db = sentinelDb(now, await delayedYieldSnapshot(now, "healthy"), recoveredSentinel(now));
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const row = await delayedYieldSnapshot(now, "healthy");
+      // A recovered lane was read: its rejected-read marker goes (ADR-42).
+      const value = JSON.parse(row.value);
+      value.publicHealth.warnings.push("read-failed:cache:yield-data");
+      row.value = JSON.stringify(value);
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
       expect(body.caches["yield-data"]).toMatchObject({ ageSeconds: 30, publishedAt: now - 30, healthy: true });
+      expect(body.warnings).not.toContain("read-failed:cache:yield-data");
       expect(body.status).toBe("healthy");
       expect(body.components!.find((item) => item.id === "yield")).toMatchObject({ state: "operational", reasons: [] });
       expect(body.components!.find((item) => item.id === "website-api")!.state).toBe("operational");
@@ -548,6 +528,13 @@ describe("handleHealth", () => {
       // GET stays read-only for public status state, history and the snapshot.
       expect(db.getHistory().filter((item) => /status_state|status_transitions|status-history/.test(item.sql)
         || (/^\s*(INSERT|UPDATE)/i.test(item.sql) && item.binds.includes(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY)))).toEqual([]);
+      // A recovery assessment is read now: no overdue mark, and no hold it read past (ADR-42).
+      const aged = await retainedSnapshot(now, (health) => {
+        lateSafety(now)(health);
+        Object.assign(health, { assessedAt: now - 1500, circuits: null, circuitsUnavailableReason: "circuits-read-failed" });
+      });
+      const recovered = await (await handleHealth(makeHealthyHealthDb(now, { extras: [aged.entry] }))).json() as HealthResponse;
+      expect(recovered.components!.some((item) => item.held)).toBe(false);
     });
 
     it("clears late mint/burn sync and its run warning from confirmed newer output", async () => {

@@ -116,6 +116,7 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
     },
     expectedLanes: initialExpectedLanes("lane-slot-start-evidence-unreadable"),
   };
+  let queried = false;
   try {
     const laneKeys = EXPECTED_LIVENESS_PLANS.map((plan) => plan.scheduleKey);
     // One correlated MAX per lane keeps every lookup an index seek; a
@@ -136,6 +137,7 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
        )) AS lanes`)
       .bind(...SCHEDULER_LIVENESS_LANES, observation.heavy.scheduleKey, ...laneKeys)
       .first<SlotStarts>();
+    queried = true;
     if (!row) {
       observation.unavailableReason = "slot-start-evidence-missing";
       if (HEAVY_LIVENESS_PLAN) observation.heavy.unavailableReason = "slot-start-evidence-missing";
@@ -187,6 +189,12 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
     observation.unavailableReason = "slot-start-query-failed";
     if (HEAVY_LIVENESS_PLAN) observation.heavy.unavailableReason = "slot-start-query-failed";
     observation.expectedLanes = initialExpectedLanes("slot-start-query-failed");
+    // Only a rejected query is a failed read (ADR-42); the same reason also
+    // names an invalid observation clock, which was read.
+    if (!queried) {
+      observation.readFailed = true;
+      if (HEAVY_LIVENESS_PLAN) observation.heavy.readFailed = true;
+    }
     return observation;
   }
 }

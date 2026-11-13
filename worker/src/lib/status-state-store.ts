@@ -12,7 +12,9 @@ import {
   parseCauses,
   persistStatusStateAtomically,
   reportStatusPersistenceIssue,
+  SEVERITY,
   STATUS_HYSTERESIS,
+  STATUS_SELF_CHECK_CONTINUITY_SEC,
   STATUS_SCOPE,
   STATUS_SYSTEM_FRESHNESS_SEC,
   toStateInfo,
@@ -25,8 +27,16 @@ import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 
 const STATUS_STATE_SELECT_COLUMNS =
-  "scope, current_status, raw_status, last_evaluated_at, last_changed_at, consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json";
+  "scope, current_status, raw_status, last_evaluated_at, last_changed_at, consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at";
 
+/**
+ * `held` (ADR-42): this run could not read some evidence. `"frozen"` (the
+ * database check failed) keeps the current state without a write. `true`
+ * applies a worsening the read evidence proves; anything else writes the
+ * current status back with every streak reset, so a change needs consecutive
+ * fully read runs. A held run never renews `last_evaluated_at`, so
+ * `/api/status` reports the state stale after `STATUS_SYSTEM_FRESHNESS_SEC`.
+ */
 export async function reconcileStatusState(
   db: D1Database,
   now: number,
@@ -34,6 +44,7 @@ export async function reconcileStatusState(
   confidence: number,
   causes: StatusCause[],
   onIssue?: StatusPersistenceIssueReporter,
+  held: boolean | "frozen" = false,
 ): Promise<{
   effectiveStatus: StatusHealthValue;
   state: ReturnType<typeof buildFallbackStatusState>;
@@ -61,6 +72,14 @@ export async function reconcileStatusState(
       transition: null,
       persistenceSucceeded: false,
     };
+  }
+
+  // A failed database check, or a first evaluation with a failed read,
+  // establishes nothing: no seed, no transition, no clock.
+  if (held === "frozen" || (held && !current)) {
+    return current
+      ? { effectiveStatus: current.current_status, state: toStateInfo(current), transition: null, persistenceSucceeded: true }
+      : { effectiveStatus: rawStatus, state: buildFallbackStatusState(rawStatus, now), transition: null, persistenceSucceeded: true };
   }
 
   if (!current) {
@@ -175,15 +194,22 @@ export async function reconcileStatusState(
     };
   }
 
-  const counters = {
-    healthy: rawStatus === "healthy" ? current.consecutive_healthy + 1 : 0,
-    degraded: rawStatus === "degraded" ? current.consecutive_degraded + 1 : 0,
-    stale: rawStatus === "stale" ? current.consecutive_stale + 1 : 0,
+  const frozen = held && SEVERITY[rawStatus] <= SEVERITY[current.current_status];
+  // A streak continues only from the immediately preceding evaluation: a frozen,
+  // skipped or unwritten run leaves an older `updated_at` (ADR-42).
+  const prior = current.updated_at == null || now - current.updated_at <= STATUS_SELF_CHECK_CONTINUITY_SEC
+    ? current : { ...current, consecutive_healthy: 0, consecutive_degraded: 0, consecutive_stale: 0 };
+  const counters = frozen ? { healthy: 0, degraded: 0, stale: 0, nonHealthy: 0 } : {
+    healthy: rawStatus === "healthy" ? prior.consecutive_healthy + 1 : 0,
+    degraded: rawStatus === "degraded" ? prior.consecutive_degraded + 1 : 0,
+    stale: rawStatus === "stale" ? prior.consecutive_stale + 1 : 0,
     // At least 2 exactly when the previous reading was non-healthy too.
-    nonHealthy: rawStatus === "healthy" ? 0 : current.consecutive_degraded + current.consecutive_stale + 1,
+    nonHealthy: rawStatus === "healthy" ? 0 : prior.consecutive_degraded + prior.consecutive_stale + 1,
   };
   const dwellSec = Math.max(0, now - current.last_changed_at);
-  const decision = decideNextStatus(current.current_status, rawStatus, counters, dwellSec, STATUS_HYSTERESIS);
+  const decision = frozen
+    ? { next: current.current_status, changed: false, reason: "evidence-read-held" }
+    : decideNextStatus(current.current_status, rawStatus, counters, dwellSec, STATUS_HYSTERESIS);
   const nextStatus = decision.next;
   const changed = decision.changed;
   const nextChangedAt = changed ? now : current.last_changed_at;
@@ -192,7 +218,7 @@ export async function reconcileStatusState(
     scope: STATUS_SCOPE,
     current_status: nextStatus,
     raw_status: rawStatus,
-    last_evaluated_at: now,
+    last_evaluated_at: held ? current.last_evaluated_at : now,
     last_changed_at: nextChangedAt,
     consecutive_healthy: counters.healthy,
     consecutive_degraded: counters.degraded,

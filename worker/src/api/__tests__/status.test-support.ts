@@ -7,7 +7,7 @@ import {
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as dependencyHealthModule from "../../lib/dependency-health";
 import { makeDataQuality, makeReserveComposition, makeStatusSummary } from "@shared/types/__tests__/status.test-support";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
@@ -394,6 +394,75 @@ export function buildCoverageRow(
       metadata: JSON.stringify({
         activePublicationCoverage: coverage.publication ?? buildPublicationCoverage(),
         activePriceCoverage: coverage.price ?? buildPriceCoverage(ACTIVE_STABLECOINS.length, []),
+      }),
+    },
+  };
+}
+
+export const STABLECOIN_COVERAGE_QUERY_MATCH =
+  "metadata LIKE '%\"activePublicationCoverage\"%'";
+
+/** `/api/health` live-path scenario: the given tables over permissive defaults. */
+export function healthD1(tables: MockTableConfig[]) {
+  return buildStatusD1Scenario({
+    sections: ["sentinel"],
+    overrides: [
+      ...tables.map((table) => ({ ...table, allowUnused: true })),
+      { match: STABLECOIN_COVERAGE_QUERY_MATCH, rows: [], first: null, allowUnused: true },
+      { match: "FROM dex_liquidity", rows: [], first: { age: 60 }, allowUnused: true },
+      { match: "FROM yield_data", rows: [], first: { age: 60 }, allowUnused: true },
+      { match: "key >= 'circuit:' AND key < 'circuit;'", rows: [], allowUnused: true },
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null, allowUnused: true },
+      { match: "blacklist-gap-metrics-cache-write", rows: [], allowUnused: true },
+      {
+        match: "status IN ('ok', 'degraded')",
+        rows: [],
+        first: { item_count: 0, metadata: null },
+        allowUnused: true,
+      },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null, allowUnused: true },
+      { match: "stamped_identity", rows: [], first: null, allowUnused: true },
+      { match: "publication_identity", rows: [], first: null, allowUnused: true },
+      { match: "telegram_subscribers", rows: [], first: { n: 0 }, allowUnused: true },
+      { match: "telegram_deliveries", rows: [], first: null, allowUnused: true },
+      { match: "dispatch-telegram-alerts", rows: [], first: null, allowUnused: true },
+    ],
+  });
+}
+
+export function completePublicationEntry(
+  now: number,
+  activePriceCoverage: Record<string, unknown> = {
+    complete: true,
+    expectedActiveCount: ACTIVE_IDS.size,
+    presentActiveCount: ACTIVE_IDS.size,
+    pricedActiveCount: ACTIVE_IDS.size,
+    missingPriceCount: 0,
+    pricedActiveIds: [...ACTIVE_IDS],
+    missingActiveIds: [],
+    affectedMarketCapUsd: 0,
+    missingActiveAssets: [],
+    alertEligibleCount: 0,
+    alertEligibleIds: [],
+    maxConsecutiveMissingGenerations: 0,
+  },
+): MockTableConfig {
+  return {
+    match: STABLECOIN_COVERAGE_QUERY_MATCH,
+    rows: [],
+    first: {
+      started_at: now - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: {
+          complete: true,
+          expectedActiveCount: ACTIVE_IDS.size,
+          presentActiveCount: ACTIVE_IDS.size,
+          waivedActiveCount: 0,
+          missingActiveIds: [],
+          waivedActiveIds: [],
+          expiredWaiverIds: [],
+        },
+        activePriceCoverage,
       }),
     },
   };

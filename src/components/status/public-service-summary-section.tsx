@@ -3,6 +3,7 @@
 import type { PublicStatusComponent, PublicStatusComponentId } from "@shared/types/status/public-health";
 import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_SCOPE } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { STATUS_SYSTEM_FRESHNESS_SEC } from "@shared/lib/public-health";
 import { ComponentStatePill, StatusSection, Timestamp } from "@/components/status/page-primitives";
 import { UptimeBar } from "@/components/status/uptime-bar";
 import type { ComponentDayCell } from "@/lib/status/public-status-timeline";
@@ -22,20 +23,40 @@ interface PublicServiceSummarySectionProps {
   publicHistoryStartedAt: number | null;
   /** Informational note on reviewed price gaps (not an incident). */
   footnote?: string | null;
+  /** The page's minute clock (epoch seconds) for hold labels; defaults to `nowSec`. */
+  clockSec?: number;
 }
 
 function formatBudget(budget: NonNullable<PublicStatusComponent["budget"]>): string {
   return `Delayed after ${formatElapsedSeconds(budget.delayedAfterSec)}, degraded after ${formatElapsedSeconds(budget.degradedAfterSec)}, outage after ${formatElapsedSeconds(budget.outageAfterSec)} without an update.`;
 }
 
+function formatUtcMinute(epochSec: number): string {
+  return `${new Date(epochSec * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
+/**
+ * A failed read keeps the last confirmed state (ADR-42); this line says so.
+ * The page clock re-dates a retained response, so "held" cannot outlive its bound.
+ */
+function formatHeld(held: NonNullable<PublicStatusComponent["held"]>, clockSec: number): string {
+  if (!held.expired && held.confirmedAt != null && clockSec - held.confirmedAt <= STATUS_SYSTEM_FRESHNESS_SEC) {
+    return `Held since ${formatUtcMinute(held.since)}. Some evidence cannot be read right now, so the last confirmed state is shown.`;
+  }
+  return held.confirmedAt == null ? "Not confirmed. Some evidence cannot be read right now."
+    : `Not confirmed since ${formatUtcMinute(held.confirmedAt)}. Some evidence cannot be read, so the last confirmed state is shown.`;
+}
+
 function ComponentRow({
   component,
   cells,
   historyState,
+  clockSec,
 }: {
   component: PublicStatusComponent;
   cells: ComponentDayCell[] | undefined;
   historyState: PublicHistoryLoadState;
+  clockSec: number;
 }) {
   const label = PUBLIC_COMPONENT_LABEL[component.id];
   const operational = component.state === "operational";
@@ -48,9 +69,10 @@ function ComponentRow({
         </div>
         <ComponentStatePill state={component.state} className="shrink-0" />
       </div>
-      {!operational || component.summary ? (
+      {!operational || component.summary || component.held ? (
         <div className="mt-2 space-y-1 text-sm text-foreground">
           {component.summary ? <p>{component.summary}</p> : null}
+          {component.held ? <p className="text-xs text-muted-foreground">{formatHeld(component.held, clockSec)}</p> : null}
           <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
             {!operational && component.since != null ? (
               <span>
@@ -90,6 +112,7 @@ export function PublicServiceSummarySection({
   nowSec,
   publicHistoryStartedAt,
   footnote,
+  clockSec = nowSec,
 }: PublicServiceSummarySectionProps) {
   const windowStart = nowSec - historyDays * 86_400;
   return (
@@ -101,6 +124,7 @@ export function PublicServiceSummarySection({
             component={component}
             cells={dayCells?.[component.id]}
             historyState={historyState}
+            clockSec={clockSec}
           />
         ))}
       </ul>
