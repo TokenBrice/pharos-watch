@@ -13,6 +13,7 @@ describe("BlackRock BRSRV disclosed securities", () => {
     expect(result.metadata).toMatchObject({ sourceTimestamp: Date.parse("2026-10-01T00:00:00Z") / 1000 });
     expect(result.metadata).not.toHaveProperty("totalReservesUsd");
     expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
+    expect(parseBlackrockBrsrvHoldings(`${body.trimEnd()}\n"The content contained herein\n\nis owned."\n`, now)).toEqual(result);
   });
   it("preserves unreviewed categories as high-risk unknown exposure", () => {
     const result = parseBlackrockBrsrvHoldings(body.replaceAll("U.S. Treasury Debt", "Unreviewed security"), now);
@@ -23,6 +24,7 @@ describe("BlackRock BRSRV disclosed securities", () => {
     expect(() => parseBlackrockBrsrvHoldings(body.replace('"5,000,000.00"', '"-5,000,000.00"').replace('"5,000,000.00"', '"-5,000,000.00"'), now)).toThrow();
     expect(() => parseBlackrockBrsrvHoldings(body.split("\n").slice(0, 5).join("\n"), now)).toThrow(/incomplete/);
     expect(() => parseBlackrockBrsrvHoldings(body.replace('"4,996,858.33"', '"4,99,858.33"'), now)).toThrow();
+    expect(() => parseBlackrockBrsrvHoldings(`${body.trimEnd()}\n"ERROR"\n`, now)).toThrow(/invalid row/);
   });
   it("rejects stale or invalid holding dates", () => {
     expect(() => parseBlackrockBrsrvHoldings(body, now + 6 * 86400)).toThrow(/stale/);
