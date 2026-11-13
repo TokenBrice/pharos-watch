@@ -66,10 +66,19 @@
           "pool": "zec-pool",
           "name": "ZEC pool collateral",
           "priceAddress": "zcash"
+        },
+        {
+          "pair": "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
+          "vault": "3fReQsdmK7KyZ6Ggpgs1ayekZCEuqCSRH8U7CCqfvsFf",
+          "mint": "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5",
+          "oracle": "81yWm9JDhCGgzxWivVkz4tZAEJxYE1VB8tMKKEFbTx71",
+          "feedId": "babbfcc7f46b6e7df73adcccece8b6782408ed27c4e77f35ba39a449440170ab",
+          "pool": "onyc-pool",
+          "name": "ONYC pool collateral",
+          "priceAddress": "onyc"
         }
       ],
       "inactiveExoPairs": [
-        "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
         "ANbqWKsgtWxoaaYQPyAfZWsMxptmzaFJ6RJDW7yXvEf6",
         "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ"
       ]
@@ -77,12 +86,12 @@
   },
   "name": "Hylo HYUSD",
   "symbol": "hyUSD",
-  "oneLiner": "HYUSD is Hylo's stable claim across independent SOL-LST, cbBTC, HYPE, and USDC collateral pools.",
+  "oneLiner": "HYUSD is Hylo's stable claim across independent SOL-LST, cbBTC, HYPE, ZEC, ONYC, and USDC collateral pools.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "decentralized"
   },
-  "collateral": "Independent SOL-LST, cbBTC, HYPE, and USDC pools under Hylo V2; each volatile-asset pool has an xASSET tranche that absorbs collateral-price exposure before HYUSD",
+  "collateral": "Independent SOL-LST, cbBTC, HYPE, ZEC, ONYC, and USDC pools under Hylo V2; each volatile-asset pool has an xASSET tranche that absorbs collateral-price exposure before HYUSD",
   "pegMechanism": "Each isolated pool maintains the Hylo invariant in which its xASSET tranche absorbs collateral-price changes while HYUSD remains the stable claim; pool liabilities reconcile to HYUSD supply.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "302",
