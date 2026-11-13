@@ -1,7 +1,6 @@
 import { CRON_INTERVALS } from "./cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
-import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
-import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "./depeg-config";
+import { DEX_FRESHNESS_SEC, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "./depeg-config";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
@@ -625,8 +624,8 @@ export const STATUS_DEPEG_DETECTION_THRESHOLDS = {
   pendingStalledGraceIntervals: 1,
   /** An extreme move expired without a public event stays a finding for one day. */
   unconfirmedSevereLookbackSec: 24 * 3600,
-  /** Shared observation-gap budget: an open event blind past this has no trusted price. */
-  openEventBlindMaxAgeSec: DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC,
+  /** Operator canary allowance for the hourly DEX refresh; public coverage keeps its own gap budget. */
+  openEventBlindMaxAgeSec: DEX_FRESHNESS_SEC,
   /** A newly eligible DDR incident may wait one producer run for its seal. */
   ddrUnsealedGraceIntervals: 2,
   /** An incident eligible this long without a public prediction escalates to error. */
