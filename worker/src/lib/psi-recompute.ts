@@ -5,7 +5,7 @@ import {
   type SupplySnapshotMap,
   type PsiUniverseCache,
 } from "./psi-history-universe";
-import { isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
@@ -192,7 +192,9 @@ export function buildStabilityInputForDay(
     const prior = universe7dAgo.mcapById.get(coinId);
     const currentDate = findNearestSupplySnapshot(supplyByCoin.get(coinId), day)?.date;
     const priorDate = findNearestSupplySnapshot(supplyByCoin.get(coinId), day - 7 * DAY_SECONDS)?.date;
-    if (current == null || prior == null || (priorDate != null && currentDate != null && !isEarlierSupplyPerimeter(coinId, currentDate) && isEarlierSupplyPerimeter(coinId, priorDate))) {
+    if (current == null || prior == null || (priorDate != null && currentDate != null &&
+      (isAmbiguousSupplyPerimeterDay(coinId, currentDate) || isAmbiguousSupplyPerimeterDay(coinId, priorDate) ||
+        (!isEarlierSupplyPerimeter(coinId, currentDate) && isEarlierSupplyPerimeter(coinId, priorDate))))) {
       trendUnavailableIds.push(coinId);
       continue;
     }

@@ -54,7 +54,7 @@ import { classifyRegime } from "../daily-digest/prompt/regime";
 import { ALLOWED_TONES, hasBlockingDigestQualityIssues, parseDigestModelResponse, validateDigestModelOutput, type DigestValidationProfile, type ParsedDigestResponse } from "../daily-digest/response";
 import { collectActiveDepegs, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity } from "../daily-digest/collectors-market";
 import { collectDewsStress, collectGradeTransitions, collectSafetyScores, collectYieldAnomalies } from "../daily-digest/collectors-risk";
-import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors } from "../daily-digest/collectors-history";
+import { collectCrossDayTrends, collectHistoricalContext, collectPsiContributors, collectTotalMcapAth } from "../daily-digest/collectors-history";
 import { buildDigestIntelligence, parseStoredDigestInput } from "../daily-digest/digest-intelligence";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../daily-digest/digest-next-triggers";
@@ -1101,9 +1101,22 @@ describe("history and DEWS collectors", () => {
     const short = await collect(rows(4, 1)); expect(short.value?.gaugeTrajectory).toBeNull();
     expect((await collect(rows(2, 0, 1))).value).toBeUndefined();
   });
-  it("collects historical PSI and market context", async () => {
-    const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ date: today - daysAgo * 86_400, score: 91.2, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);
-    expect((await collectHistoricalContext(makeCollectorCtx(db), 91.2, "BEDROCK", today, { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 5e6, currentMcap: 100e6 })).value).toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 } });
+  it("collects comparable historical PSI and supply records", async () => {
+    const today = 1795392000, day = 86400;
+    const { db, sqlite } = nativeQuoteFixtures.open();
+    for (let i = 0; i < 31; i++) sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, 91.2, ?, '{}', '{}')")
+      .run(today - i * day, i < 3 ? "BEDROCK" : "STEADY");
+    for (const [date, cap] of [[today - 30 * day, 2699e6], [today - day, 2269e6]]) {
+      sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+        .run(date, JSON.stringify({ aggregateUniverse: "core-stablecoins-v1", supplyCoverage: { complete: true }, totalMcapUsd: cap,
+          ...(cap > 2500e6 ? { stabilityIndex: { score: 89, band: "STEADY" } } : {}) }));
+    }
+    for (const [date, cap] of [[1794009600, 697750000], [1794528000, 268e6], [1794614400, 268217409], [1794700800, 268217409], [today - day, 269217409]])
+      sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('gho-aave', ?, ?)").run(date, cap);
+    const ctx = { ...makeCollectorCtx(db), todayTs: today, nowSec: today + 8 * 3600 };
+    expect((await collectHistoricalContext(ctx, 91.2, "BEDROCK", today, { id: "gho-aave", symbol: "GHO", name: "GHO", changeUsd: 1e6, currentMcap: 269217409 })).value)
+      .toMatchObject({ psiBandStreak: 3, psiPrecedent: { lastSeenDaysAgo: 30 }, supplyMoverContext: { allTimeHighMcap: 269217409, largestWeeklyChange: 1e6 } });
+    expect((await collectTotalMcapAth(ctx)).value?.value).toBe(2269e6);
   });
   it.each([
     { name: "missing yesterday", days: [0, 2], changedYesterday: false, currentDayOffset: 0, expected: 1 },
@@ -2019,8 +2032,9 @@ describe("daily digest generation", () => {
   });
 
   describe("enrichment and ancillary publication", () => {
+    const athDb = () => makeDailyDigestScenario({ db: { prependTables: [first("ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", { ath_value: 330e9, ath_date: 1_772_150_400 })] } }).db;
     it("stores a total-mcap ATH when the history query supplies one", async () => {
-      const db = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
+      const db = athDb();
       const result = await invoke(db);
       const input = bindJson(db as MockD1Database, 3);
       expect(result.itemCount).toBe(1);
@@ -2030,28 +2044,20 @@ describe("daily digest generation", () => {
     });
 
     it("withholds ATH comparisons when current supply is unavailable but retains observed zero", async () => {
-      const db = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
+      const db = athDb();
       const source = scenario.sourcePayload;
       if (source.kind !== "ok") throw new Error("Expected an admitted stablecoin fixture");
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        ...source,
-        payload: { ...source.payload, peggedAssets: source.payload.peggedAssets.map((coin) => ({
-          ...coin,
-          circulating: coin.id === "usdc-circle" ? {} : coin.circulating,
-        })) },
+      const setSupply = (circulating: Record<string, number>) => vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+        ...source, payload: { ...source.payload,
+          peggedAssets: source.payload.peggedAssets.map((coin) => coin.id === "usdc-circle" ? { ...coin, circulating } : coin) },
       });
+      setSupply({});
       await invoke(db);
       expect(bindJson(db, 3).supplyCoverage).toEqual({ complete: false, observedCount: 1, unavailableCount: 1, memberFingerprint: supplyMemberFingerprint });
       expect(firstRequestBody().messages[0].content).not.toContain("Digest-window ATH");
       vi.mocked(fetchWithRetry).mockClear();
-      const zeroDb = makeDailyDigestScenario({ db: { prependTables: [{ match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC", first: { ath_value: 330e9, ath_date: 1_772_150_400 }, rows: [] }] } }).db;
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        ...source,
-        payload: { ...source.payload, peggedAssets: source.payload.peggedAssets.map((coin) => ({
-          ...coin,
-          circulating: coin.id === "usdc-circle" ? { peggedUSD: 0 } : coin.circulating,
-        })) },
-      });
+      const zeroDb = athDb();
+      setSupply({ peggedUSD: 0 });
       await invoke(zeroDb);
       expect(bindJson(zeroDb, 3).supplyCoverage).toEqual({ complete: true, observedCount: 2, unavailableCount: 0, memberFingerprint: supplyMemberFingerprint });
       expect(firstRequestBody().messages[0].content).toContain("Digest-window ATH");

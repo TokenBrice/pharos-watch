@@ -1,3 +1,4 @@
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
 import { sumPegBucketsOrNull } from "./supply";
 import type { SupplyCoverage } from "./supply-provenance";
 import { DAY_SECONDS, HOUR_SECONDS } from "./time-constants";
@@ -18,6 +19,7 @@ export interface DigestFlowSupplySnapshot {
 
 /** Null means admitted; unavailable evidence never confirms a large flow. */
 export function getMintBurnPressureRejection(input: {
+  stablecoinId: string;
   net24hUsd: number;
   gaugeWeightUsd: number | null;
   window: { start: number; end: number } | null;
@@ -36,6 +38,11 @@ export function getMintBurnPressureRejection(input: {
     || ![window.start - previous.snapshotDate, window.end - current.snapshotDate]
       .every((lag) => Number.isFinite(lag) && lag >= 0 && lag <= DIGEST_SUPPLY_WINDOW_TOLERANCE_SEC)) {
     return "supply-window-mismatch";
+  }
+  if (isAmbiguousSupplyPerimeterDay(input.stablecoinId, previous.snapshotDate)
+    || isAmbiguousSupplyPerimeterDay(input.stablecoinId, current.snapshotDate)
+    || isEarlierSupplyPerimeter(input.stablecoinId, previous.snapshotDate) !== isEarlierSupplyPerimeter(input.stablecoinId, current.snapshotDate)) {
+    return "supply-unavailable";
   }
   const before = previous.circulatingUsd == null ? null : sumPegBucketsOrNull({ usd: previous.circulatingUsd });
   const after = current.circulatingUsd == null ? null : sumPegBucketsOrNull({ usd: current.circulatingUsd });

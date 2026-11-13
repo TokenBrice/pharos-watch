@@ -4,7 +4,7 @@ import {
   type DdrSupplyContext,
   type DdrWindDownFingerprintContext,
 } from "@shared/lib/depeg-resolver";
-import { isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { isRecord } from "@shared/lib/type-guards";
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -165,7 +165,8 @@ export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): 
     const coin = meta ? toStructural(meta, context.structuralContext) : fallbackStructural(ev.stablecoinId, ev.symbol, ev.pegType);
     const supply = buildSupplyContext(
       (context.supplyByCoin.get(ev.stablecoinId) ?? []).filter((snapshot) =>
-        isEarlierSupplyPerimeter(ev.stablecoinId, nowSec) || !isEarlierSupplyPerimeter(ev.stablecoinId, snapshot.date)),
+        !isAmbiguousSupplyPerimeterDay(ev.stablecoinId, snapshot.date) &&
+        (isEarlierSupplyPerimeter(ev.stablecoinId, nowSec) || !isEarlierSupplyPerimeter(ev.stablecoinId, snapshot.date))),
       ev.startedAt,
       nowSec,
       context.mintBurnHourlyByCoin.get(ev.stablecoinId) ?? [],

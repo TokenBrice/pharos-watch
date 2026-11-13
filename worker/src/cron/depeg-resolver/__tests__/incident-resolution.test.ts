@@ -1007,13 +1007,13 @@ describe("resolveDdrIncidents", () => {
     expect(row.resolution.factors.some((factor) => factor.code === "K5_exit_collapse")).toBe(false);
   });
 
-  it.each([false, true])("omits stale context and incomparable supply (%s)", (perimeter) => {
-    const now = perimeter ? 1794614400 : NOW_SEC;
+  it.each([0, 1, 2])("omits stale context and incomparable supply (%s)", (perimeter) => {
+    const now = perimeter ? 1794614400 - (perimeter - 1) * DAY + (perimeter === 2 ? 8 * 3600 : 0) : NOW_SEC;
     const id = perimeter ? "gho-aave" : "usdc-circle";
     const map = <T>(row: T) => new Map([[id, row]]);
     const context = loadedContext({
       active: [activeInput({ stablecoinId: id, startedAt: now - DAY })],
-      supplyByCoin: map(perimeter ? [{ date: now - 30 * DAY, usd: 699e6 }, { date: now, usd: 268e6 }] : [{ date: now - DAY, usd: 1_000_000 }]),
+      supplyByCoin: map(perimeter ? [{ date: now - 30 * DAY, usd: 699e6 }, { date: Math.floor(now / DAY) * DAY, usd: 268e6 }] : [{ date: now - DAY, usd: 1_000_000 }]),
       dewsByCoin: map({
         stablecoin_id: id,
         score: 80,

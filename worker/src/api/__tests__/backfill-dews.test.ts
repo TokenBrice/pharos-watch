@@ -1,7 +1,6 @@
-import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { readJsonResponse, makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { handleStressSignals } from "../stress-signals";
@@ -203,20 +202,13 @@ describe("handleBackfillDEWS", () => {
     }>(response, 200);
     expect(body.summary).toMatchObject({ evaluableEvents: 0, excludedEvents: 1, tpRate: null });
   });
-  it.each([["usdt-tether", 1710000000, true], ["gho-aave", 1794614400, false]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, comparable) => {
+  it.each([["usdt-tether", 1710000000, true, true], ["gho-aave", 1794614400, false, false], ["gho-aave", 1794528000, false, false], ["gho-aave", 1795132800, true, false]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk) => {
     vi.mocked(computeHistoricalDEWS).mockClear();
     const day = Math.floor(startedAt / 86400) * 86400;
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: id,
-            started_at: startedAt,
-            ended_at: startedAt + 7200,
-            peak_deviation_bps: -150,
-          },
-        ],
+        rows: [{ stablecoin_id: id, started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
       },
       {
         match: "FROM supply_history",
@@ -241,9 +233,9 @@ describe("handleBackfillDEWS", () => {
       expect.objectContaining({
         stablecoinId: id,
         circulatingCurrent: 100_000_000,
-        circulatingPrevDay: comparable ? 99_500_000 : 100_000_000,
-        circulatingPrevWeek: comparable ? 98_000_000 : 100_000_000,
-        circulatingPrevDayAvailable: comparable, circulatingPrevWeekAvailable: comparable,
+        circulatingPrevDay: dayOk ? 99_500_000 : 100_000_000,
+        circulatingPrevWeek: weekOk ? 98_000_000 : 100_000_000,
+        circulatingPrevDayAvailable: dayOk, circulatingPrevWeekAvailable: weekOk,
         liquidityScore: 81,
         liquidityScore7dAgo: 77,
         tvlCurrent: 2_200_000,
