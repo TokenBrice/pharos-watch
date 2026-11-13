@@ -163,11 +163,19 @@ export function projectSugarTokens(decoded: readonly SugarToken[]): Map<string, 
 
 
 
+/**
+ * Sugar walks at most this many pools of one factory (`MAX_ITERATIONS()` on both reviewed
+ * deployments), so the next factory starts right after them once a factory holds more.
+ * Aerodrome's V2 factory passed it on 2026-11-12 (30,002 pools; CL segment at offset 30,000).
+ */
+const SUGAR_MAX_FACTORY_ITERATIONS = 30_000;
+
 export function getSugarClStartOffset(
   protocol: SlipstreamProtocol,
   v2PoolCount: number,
 ): number {
-  const offset = v2PoolCount - SLIPSTREAM_CONFIG[protocol].sugarSkippedV2PoolCount;
+  const offset = Math.min(v2PoolCount, SUGAR_MAX_FACTORY_ITERATIONS) -
+    SLIPSTREAM_CONFIG[protocol].sugarSkippedV2PoolCount;
   if (!Number.isSafeInteger(offset) || offset < 0) {
     throw new Error(`cl-offset-invalid:${protocol}:${v2PoolCount}`);
   }
