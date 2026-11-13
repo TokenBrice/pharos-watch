@@ -188,6 +188,8 @@ describe("compactCronMetadataForPersistence", () => {
       poolRejections: [{ reason: "invalid-pool-volume", source: "dl", protocol: "curve", chain: "ethereum",
         poolId: "pool-a", tvlUsd: 50_000, stablecoinIds: ["coin-a"] }],
       poolRejectionMateriality: { material: true, affectedCoins: [{ stablecoinId: "coin-a", lostShare: 0.5 }] },
+      failedOutputs: ["status_state"], failedOutputReads: ["status_state"],
+      evidenceReadFailures: ["circuits:read-failed"], confirmedReadFailures: ["circuits:read-failed"], unreadablePublicSections: ["circuits"],
     };
     const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence,
       payload: "x".repeat(10_000),

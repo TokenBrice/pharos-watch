@@ -94,7 +94,7 @@ Investigate only when `/api/health` is `degraded` with a `yield-safety-unrated-s
 - `yield-safety-unrated-serving:safety-identity-missing`: the cached payload has no stamped safety identity. The last `sync-yield-data` publish predates identity stamping or published without a usable safety snapshot; check its `cron_runs` metadata `sourceCoverage.safetySnapshot`.
 - `yield-safety-unrated-serving:safety-identity-mismatch` / `:safety-snapshot-unavailable`: the publish-time fallback aged past the 24-hour stale-coherent window, meaning `sync-yield-data` has not published a compatible snapshot for over a day. Diagnose the cron (below), not the identity coupling.
 - `yield-safety-unrated-serving:safety-snapshot-held`: either the yield or original accepted safety clock exceeded 24 hours (or lacks a valid timestamp), even when identities match. The in-budget form is the healthy advisory `yield-safety-publish-time-fallback:safety-snapshot-held`.
-- `yield-safety-availability-unknown`: missing/unreadable validated publication health, or its accepted generation disagrees with the readable identity envelope. Investigate the sidecar; never bypass the identity guard.
+- `yield-safety-availability-unknown`: missing/unreadable validated publication health, or its accepted generation disagrees with the readable identity envelope. Investigate the sidecar; never bypass the identity guard. With `read-failed:yield-safety` beside it, the D1 read of the yield cache identity was rejected: check D1 first.
 
 Compare the two identities directly:
 

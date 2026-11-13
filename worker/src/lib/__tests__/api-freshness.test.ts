@@ -592,6 +592,24 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(warnings).toContain("dex-liquidity: freshness sentinel invalid (malformed-json); using cron-fallback");
   });
 
+  it.each([
+    ["missing", { first: null }, []],
+    ["malformed", { first: { key: "dews:published-generation", updated_at: 1, value: "{" } }, []],
+    ["future", { first: dewsPublicationPointerRow(1_800_003_600) }, []],
+    ["rejected", { throwError: new Error("D1 down") }, ["dews"]],
+  ] as const)("names only a rejected DEWS pointer read as a rejected read (%s)", async (_kind, pointer, expected) => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [sentinelRow("dews", now - 240, { source: "wrong-producer" })] },
+      { match: "GROUP BY job", rows: [] },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], ...pointer },
+    ]);
+    const { caches, failures, rejectedReads } = await buildCacheStatuses(db, now, { keys: ["dews"] });
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(failures.map((failure) => failure.key)).toEqual(["dews"]);
+    expect(rejectedReads).toEqual(expected);
+  });
+
   it("uses the DEWS publication pointer instead of partial stress-signal rows", async () => {
     const now = 1_800_000_000;
     const publishedAt = now - 420;

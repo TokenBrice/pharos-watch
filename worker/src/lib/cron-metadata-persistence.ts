@@ -27,7 +27,7 @@ const MAX_NESTED_SCALARS = 24;
 export const BLACKLIST_API_ERROR_CONFIG_LIMIT = 10;
 const BLACKLIST_ERROR_CLASS_MAX_CHARS = 64;
 // Audited readers: cron-output, cron-health, freshness oracle, status supplements,
-// public-health reads, cron-metadata-summary, operator cron detail and the measured-execution ledger.
+// public-health reads, cron-metadata-summary, operator cron detail, the measured-execution ledger and the status self-check.
 // Scalars remain top-level too. These collections must NEVER turn into counts.
 const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEntries([
   "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt", "failedBenchmarkResponseAttempts",
@@ -46,6 +46,8 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "publicationAbortCause", "publicationPhaseElapsedMs", "publicationSubphaseElapsedMs", "publicationWork", "publicMaterialization", "publicationPhaseTimingBasis",
   "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",
   "reserveQueue", "reserveQueueHandoff", "capabilities",
+  // Status self-check read/write evidence: bounded section and output lists.
+  "failedOutputs", "failedOutputReads", "evidenceReadFailures", "confirmedReadFailures", "unreadablePublicSections",
 ].map((key) => [key, true]));
 // These are forensic-only cron copies. Active-price coverage is deliberately excluded:
 // the next producer and public-health reader reconstruct missing-asset streaks from it.

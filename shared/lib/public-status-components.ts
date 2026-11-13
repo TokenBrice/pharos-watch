@@ -651,5 +651,67 @@ export function headlineToStatusLevel(state: PublicStatusHeadline["state"]): "he
   return "degraded";
 }
 
+/**
+ * Public evidence sections (ADR-32: one authority): each independently read
+ * section of the public health body and the components it feeds. One read
+ * can feed two components (Safety publication health feeds Safety Scores and
+ * yield); `public-status-components.test.ts` iterates both registries.
+ * Evidence that colours no component stays outside: the mint/burn row count
+ * (operator diagnostics only), `operatorAlerts` and `telegramSummary`.
+ * `slot-start-query-failed` is trusted as a read failure: besides a rejected
+ * query it is set only when `observed_at` from `(SELECT unixepoch()) AS
+ * observed_at` is not a positive finite number, which SQLite cannot return.
+ */
+export const PUBLIC_EVIDENCE_SECTIONS: Readonly<Record<string, readonly PublicStatusComponentId[]>> = {
+  database: PUBLIC_STATUS_COMPONENT_IDS,
+  "d1-capacity": ["website-api"],
+  "stablecoin-coverage": ["stablecoin-data"],
+  "safety-score-publication": ["safety-scores", "yield"],
+  "yield-safety": ["yield"],
+  "yield-safety-live-identity": ["yield"],
+  "mint-burn": ["mint-burn"],
+  blacklist: ["blacklist"],
+  scheduler: ["data-refresh"],
+  "heavy-scheduler": ["data-refresh"],
+  circuits: ["data-refresh"],
+  ...Object.fromEntries(PUBLIC_CACHE_LANES.map((lane) => [`cache:${lane.cacheKey}`, [lane.publicComponent]])),
+};
+
+/**
+ * The evidence sections whose read failed in a stored public health body, in
+ * registry order. Only named read failures count: missing, malformed, invalid
+ * or future-dated evidence is a finding, not a read failure (R2). A cache lane
+ * counts only when its age is also unavailable, since a fallback read may
+ * still have graded it.
+ */
+export function classifyUnreadablePublicSections(health: HealthResponse): string[] {
+  const has = (warning: string) => health.warnings.includes(warning);
+  const unreadable = new Set<string>();
+  const mark = (section: string, failed: boolean) => {
+    if (failed) unreadable.add(section);
+  };
+  mark("database", has("db-unhealthy"));
+  mark("d1-capacity", has("d1-capacity-query-failed"));
+  mark("stablecoin-coverage", health.activePriceCoverage?.unavailableReason === "coverage-read-failed");
+  // Their `*-read-failed` reasons also name rows that were read but failed to
+  // decode, so only the `read-failed:<section>` marker of a rejected read counts.
+  for (const section of ["safety-score-publication", "yield-safety", "yield-safety-live-identity"]) {
+    mark(section, has(`read-failed:${section}`));
+  }
+  mark("mint-burn", health.mintBurn.unavailableReason === "mint-burn-read-failed"
+    || health.mintBurn.unavailableReason === "mint-burn-output-read-failed");
+  mark("blacklist", health.blacklist.unavailableReason === "blacklist-read-failed");
+  mark("scheduler", health.schedulerLiveness?.unavailableReason === "slot-start-query-failed");
+  mark("heavy-scheduler", health.schedulerLiveness?.heavy.unavailableReason === "slot-start-query-failed");
+  mark("circuits", health.circuitsUnavailableReason === "circuits-read-failed");
+  // `cache-freshness-query-failed` also names a missing, malformed or future
+  // DEWS pointer that was read, so only the rejected-read markers count.
+  for (const lane of PUBLIC_CACHE_LANES) {
+    mark(`cache:${lane.cacheKey}`, (has(`read-failed:cache:${lane.cacheKey}`) || has("read-failed:cache:__cache__"))
+      && health.caches[lane.cacheKey]?.ageSeconds == null);
+  }
+  return Object.keys(PUBLIC_EVIDENCE_SECTIONS).filter((section) => unreadable.has(section));
+}
+
 /** The registry the cache mapping must cover (exported for the completeness test). */
 export const PUBLIC_STATUS_CACHE_REGISTRY_KEYS: readonly string[] = Object.keys(CACHE_AVAILABILITY_MAX_AGE_SEC);

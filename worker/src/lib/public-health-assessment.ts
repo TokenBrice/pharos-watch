@@ -44,8 +44,13 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelopeForHealth } from "./safety-score-v9/publication-store";
-import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9/publication-health";
+import {
+  loadSafetyScoreV9PublicationIdentityEnvelopeForHealth,
+  SafetyScoreV9PublicationIdentityUnreadableError,
+} from "./safety-score-v9/publication-store";
+import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "./safety-score-v9/publication-health";
+import { getCache } from "./db-cache";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   loadStablecoinCoverageHealth,
   unknownActivePriceCoverageHealth,
@@ -171,6 +176,32 @@ export function getPublicHealthEvidenceReadFailures(assessment: PublicHealthAsse
     ...(assessment.schedulerLiveness.unavailableReason === "slot-start-query-failed" ? ["scheduler:read-failed"] : []),
     ...(assessment.schedulerLiveness.heavy.unavailableReason === "slot-start-query-failed" ? ["heavy-scheduler:read-failed"] : []),
   ];
+}
+
+/**
+ * The subset of `getPublicHealthEvidenceReadFailures` proven to be a rejected
+ * read. Codes that content can also raise count only with their
+ * `read-failed:<section>` marker; the mint/burn row count has no marker (its
+ * query reads unvalidated metadata JSON) and is left out.
+ */
+export function getPublicHealthConfirmedReadFailures(assessment: PublicHealthAssessment): string[] {
+  const marked = (section: string) => assessment.warnings.includes(`read-failed:${section}`);
+  return getPublicHealthEvidenceReadFailures(assessment).filter((code) => {
+    if (code.startsWith("cache:")) return marked(`cache:${code.split(":")[1]}`);
+    switch (code) {
+      case "safety-score-publication:read-failed":
+      case "yield-safety-publication-health:read-failed":
+        return marked("safety-score-publication");
+      case "yield-safety:read-failed":
+        return marked("yield-safety");
+      case "yield-safety-live-identity:read-failed":
+        return marked("yield-safety-live-identity");
+      case "mint-burn-count:read-failed":
+        return false;
+      default:
+        return true;
+    }
+  });
 }
 
 export function buildPublicHealthResponse(
@@ -304,7 +335,24 @@ type MintBurnSubqueryName = keyof NonNullable<HealthResponse["mintBurn"]["queryE
  */
 export type PublicHealthReadResult<T> =
   | { ok: true; value: T; error: null }
-  | { ok: false; value: null; error: string };
+  | { ok: false; value: null; error: string; readFailed?: true };
+
+/** A rejected D1 read, as opposed to content that was read and failed to decode. */
+class PublicHealthReadError extends Error {}
+
+/**
+ * Marks a rejected read so the stored body can name it apart from malformed
+ * content (R2): only evidence that could not be read is a read failure.
+ * SQLite rejects `json_extract` over invalid stored JSON; that row was read.
+ */
+async function markReadFailure<T>(read: () => Promise<T>, isContentError: (error: unknown) => boolean = () => false): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (isContentError(error) || /malformed JSON/i.test(toErrorMessage(error))) throw error;
+    throw new PublicHealthReadError(toErrorMessage(error));
+  }
+}
 
 export async function capturePublicHealthRead<T>(
   descriptor: { event: string; source: string; message: string; job?: string; reason?: string },
@@ -323,7 +371,12 @@ export async function capturePublicHealthRead<T>(
       message: descriptor.message,
       error: err,
     });
-    return { ok: false, value: null, error: descriptor.reason ?? descriptor.message };
+    return {
+      ok: false,
+      value: null,
+      error: descriptor.reason ?? descriptor.message,
+      ...(err instanceof PublicHealthReadError ? { readFailed: true as const } : {}),
+    };
   }
 }
 
@@ -504,6 +557,8 @@ interface YieldSafetyAvailability {
   warning: string | null;
   queryFailed?: boolean;
   queryErrors?: YieldSafetyQueryErrors;
+  /** Warnings naming reads that were rejected, not content that failed to decode. */
+  readFailureWarnings?: string[];
 }
 
 /**
@@ -520,12 +575,12 @@ async function assessYieldSafetyAvailability(
   publicationHealthRead: Promise<PublicHealthReadResult<V9PublicationHealth | null>>,
 ): Promise<YieldSafetyAvailability> {
   try {
-    const row = await db
+    const row = await markReadFailure(() => db
       .prepare(
         "SELECT updated_at, json_extract(value, '$.provenance.safetySnapshot.safetyScoreIdentity') AS stamped_identity, json_extract(value, '$.provenance.safetySnapshot.publishedAt') AS safety_published_at FROM cache WHERE key = ?",
       )
       .bind("yield-rankings")
-      .first<{ updated_at: number; stamped_identity: string | null; safety_published_at: number | null }>();
+      .first<{ updated_at: number; stamped_identity: string | null; safety_published_at: number | null }>());
     if (!row) {
       // Missing yield cache is the cache-freshness assessment's finding.
       return { impactStatus: "healthy", warning: null };
@@ -550,7 +605,8 @@ async function assessYieldSafetyAvailability(
           message: "Live yield safety identity unavailable.",
           reason: "yield-safety-live-identity-read-failed",
         },
-        () => loadSafetyScoreV9PublicationIdentityEnvelopeForHealth(db),
+        () => markReadFailure(() => loadSafetyScoreV9PublicationIdentityEnvelopeForHealth(db),
+          (error) => error instanceof SafetyScoreV9PublicationIdentityUnreadableError),
       ),
       publicationHealthRead,
     ]);
@@ -563,6 +619,9 @@ async function assessYieldSafetyAvailability(
           liveIdentity: liveResult.error,
           publicationHealth: healthResult.ok ? null : "yield-safety-publication-health-read-failed",
         },
+        ...(!liveResult.ok && liveResult.readFailed
+          ? { readFailureWarnings: ["read-failed:yield-safety-live-identity"] }
+          : {}),
       };
     }
     const live = liveResult.value;
@@ -592,7 +651,12 @@ async function assessYieldSafetyAvailability(
       error: err,
     });
     // An unreadable check cannot prove the yield surface is rated (rule R2).
-    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown", queryFailed: true };
+    return {
+      impactStatus: "degraded",
+      warning: "yield-safety-availability-unknown",
+      queryFailed: true,
+      ...(err instanceof PublicHealthReadError ? { readFailureWarnings: ["read-failed:yield-safety"] } : {}),
+    };
   }
 }
 
@@ -674,7 +738,10 @@ export async function assessPublicHealth(
       message: "Safety Score publication health unavailable.",
       reason: "safety-score-publication-read-failed",
     },
-    () => loadSafetyScoreV9PublicationHealth(db),
+    async () => {
+      const row = await markReadFailure(() => getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth));
+      return row ? parseSafetyScoreV9PublicationHealthCache(row) : null;
+    },
   );
   const [
     cacheAssessment,
@@ -891,6 +958,11 @@ export async function assessPublicHealth(
   for (const error of Object.values(yieldSafetyAvailability.queryErrors ?? {})) {
     if (error) warnings.push(error);
   }
+  // The `*-read-failed` codes above also name rows that were read but did not
+  // decode; these markers, after every existing warning, name only rejected reads (R4).
+  if (!safetyScoreResult.ok && safetyScoreResult.readFailed) warnings.push("read-failed:safety-score-publication");
+  warnings.push(...yieldSafetyAvailability.readFailureWarnings ?? []);
+  warnings.push(...[...new Set(cacheAssessment.rejectedReads)].map((key) => `read-failed:cache:${key}`));
 
   const statusExcludingCacheEvidence = maxPublicStatus(
     mintBurnResult.mintBurnImpactStatus,

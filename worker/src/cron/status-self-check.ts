@@ -1,6 +1,7 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES, type CacheFreshnessLaneConfig } from "@shared/lib/data-surface-descriptors";
 import { getStatusSeverity } from "@shared/lib/public-health";
+import { classifyUnreadablePublicSections } from "@shared/lib/public-status-components";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -776,6 +777,13 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   // combined probe status once that streak reaches the shared threshold.
   await options.reportProgress?.({ stage: "probe-path-streaks" });
   const failedOutputs = new Set<string>();
+  // Outputs whose row read failed; the other `failedOutputs` entries are failed
+  // writes or dependent operations skipped because of a failed read.
+  const failedOutputReads = new Set<string>();
+  const onOutputIssue = (output: string) => (issue?: { code: string }) => {
+    failedOutputs.add(output);
+    if (issue?.code.endsWith("_read_failed")) failedOutputReads.add(output);
+  };
   const pathFailureUpdate = await updateProbePathFailureStreaks(
     db,
     now,
@@ -787,7 +795,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       failed: !probe.ok && !probe.error?.startsWith("reported-"),
     })),
     probeCandidateIdentities,
-    () => failedOutputs.add("status_discrepancy_state"),
+    onOutputIssue("status_discrepancy_state"),
   );
   const persistentProbeFailures = pathFailureUpdate.persistentFailures;
   const probePathFailureEvidenceUnavailable = !pathFailureUpdate.persistenceSucceeded || persistentProbeFailures == null;
@@ -864,7 +872,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
     },
-  }, () => failedOutputs.add("status_probe_runs"));
+  }, onOutputIssue("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
   // One assessment feeds the operator verdict and the public projection. A
@@ -875,7 +883,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   let statusStateReadFailed = false;
   const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     (issue) => {
-      failedOutputs.add("status_state");
+      onOutputIssue("status_state")(issue);
       if (issue.code === "status_state_read_failed") statusStateReadFailed = true;
     });
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
@@ -904,7 +912,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ? buildPublicHealthResponse(publicHealthAssessment, assessedAt)
     : null;
   const publicStatus = publicHealthBody
-    ? await reconcilePublicStatusState(db, assessedAt, publicHealthBody, () => failedOutputs.add("status_state:public"))
+    ? await reconcilePublicStatusState(db, assessedAt, publicHealthBody, onOutputIssue("status_state:public"))
     : null;
   if (publicStatus && !publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, assessedAt, raw, { supplements });
@@ -921,7 +929,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const discrepancyState = statusStateReadFailed
     ? { consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false }
     : await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
-      () => failedOutputs.add("status_discrepancy_state"));
+      onOutputIssue("status_discrepancy_state"));
   const discrepancy = buildDiscrepancy(
     statusStateReadFailed ? null : effectiveStatus,
     probeSummary,
@@ -941,6 +949,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
   ])];
   const evidenceReadFailed = evidenceReadFailures.length > 0;
+  // The accurate list for the later switch; the legacy list above still decides the run.
+  const confirmedReadFailures = [...new Set([
+    ...(raw.dbHealthy === false ? ["db-unavailable"] : []),
+    ...(raw.confirmedReadFailures ?? []),
+  ])];
+  const unreadablePublicSections = publicHealthBody ? classifyUnreadablePublicSections(publicHealthBody) : [];
   const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
   const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
     : evidenceReadFailed ? "status-self-check-evidence-read-failed"
@@ -954,7 +968,10 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       // A held public evaluation published no public snapshot this run.
       outputPublishedAt: failedOutputs.size === 0 && publicHealthBody ? now : null,
       failedOutputs: [...failedOutputs],
+      ...(failedOutputReads.size > 0 ? { failedOutputReads: [...failedOutputReads] } : {}),
       evidenceReadFailures,
+      confirmedReadFailures,
+      ...(unreadablePublicSections.length > 0 ? { unreadablePublicSections } : {}),
       ...(reason ? { reason } : {}),
       ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),
       sampleCount,
@@ -968,7 +985,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       transportStatus,
       semanticStatus,
       rawOverallStatus: raw.rawOverallStatus,
-      effectiveStatus,
+      // An unreadable global row has no effective status; the raw fallback is not it.
+      effectiveStatus: statusStateReadFailed ? null : effectiveStatus,
       probePersistenceSucceeded,
       statusPersistenceSucceeded,
       rawSnapshotPersistenceSucceeded,

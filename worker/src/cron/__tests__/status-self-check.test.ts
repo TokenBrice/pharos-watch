@@ -663,6 +663,7 @@ describe("runStatusSelfCheck", () => {
 
     expect(result.status).toBe("degraded");
     expect(metadata.failedOutputs).toEqual(["status_state", "status_discrepancy_state"]);
+    expect(metadata).toMatchObject({ failedOutputReads: ["status_state"], effectiveStatus: null });
     // No observation was attempted, so the durable streak is not rewritten.
     expect(updateDiscrepancyObservationMock).not.toHaveBeenCalled();
     expect(metadata.discrepancyStreak).toBeNull();
@@ -697,6 +698,18 @@ describe("runStatusSelfCheck", () => {
       });
     },
   );
+
+  it.each([
+    ["ok", [], ["supply-integrity-value:read-failed"]],
+    ["degraded", ["data-quality:stablecoins-cache:read-failed"], []],
+  ])("decides the run (%s) on the legacy list alone; the confirmed list is metadata", async (status, legacy, confirmed) => {
+    computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), evidenceReadFailures: legacy, confirmedReadFailures: confirmed } as never);
+    const result = await runStatusSelfCheck({} as D1Database);
+    expect(result.status).toBe(status);
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata).toMatchObject({ evidenceReadFailures: legacy, confirmedReadFailures: confirmed });
+    expect(metadata.reason).toBe(legacy.length ? "status-self-check-evidence-read-failed" : undefined);
+  });
 
   it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {
     computeRawStatusMock.mockResolvedValueOnce(

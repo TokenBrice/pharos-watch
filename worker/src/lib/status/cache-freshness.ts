@@ -26,6 +26,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   DEWS_PUBLICATION_POINTER_CACHE_KEY,
   DEWS_SERVED_GENERATION_SQL,
+  DewsPublicationPointerReadError,
   readDewsFreshnessAge,
 } from "../dews-publication-pointer";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
@@ -257,6 +258,8 @@ async function resolveSentinelBackedFreshness(params: {
   cacheLookupFailed: boolean;
   cacheRowsByKey: Map<string, CacheRow>;
   cronHistory: ProducerCronHistoryRead;
+  /** Collects keys whose D1 read was rejected, apart from content that was read (R2). */
+  rejectedReads: string[];
 }): Promise<SentinelBackedFreshnessResult> {
   const diagnostics: CacheFreshnessDiagnostic[] = [];
   const failures: CacheStatusFailure[] = [];
@@ -338,8 +341,8 @@ async function resolveSentinelBackedFreshness(params: {
 
   const sentinelFailureSource = params.cacheLookupFailed ? "cache-table" as const : undefined;
 
+  const readAge = TABLE_FRESHNESS_READERS[params.key];
   try {
-    const readAge = TABLE_FRESHNESS_READERS[params.key];
     if (!readAge) throw new Error(`No table freshness fallback configured for ${params.key}`);
     const tableAge = await readAge(params.db, params.now, readClock);
     if (tableAge != null) {
@@ -353,6 +356,9 @@ async function resolveSentinelBackedFreshness(params: {
       source: "table-freshness",
       message: toErrorMessage(error),
     });
+    if (readAge && (params.key !== "dews" || error instanceof DewsPublicationPointerReadError)) {
+      params.rejectedReads.push(params.key);
+    }
     if (params.key === "dews") {
       return freshnessOutcome(null, null);
     }
@@ -375,6 +381,7 @@ async function resolveSentinelBackedFreshness(params: {
       source: "cron-fallback",
       message: params.cronHistory.error,
     });
+    params.rejectedReads.push(params.key);
   }
 
   return freshnessOutcome(null, null);
@@ -389,6 +396,8 @@ export async function buildCacheStatuses(
   caches: Record<string, CacheStatus>;
   worstRatio: number;
   failures: CacheStatusFailure[];
+  /** Keys (`__cache__` for the whole table) whose D1 read was rejected; content errors are not listed. */
+  rejectedReads: string[];
   diagnostics: CacheFreshnessDiagnostic[];
   statusFloor: "healthy" | "degraded" | "stale";
   warnings: string[];
@@ -413,6 +422,7 @@ export async function buildCacheStatuses(
   );
   let cacheRows: { results?: CacheRow[] } = { results: [] };
   const failures: CacheStatusFailure[] = [];
+  const rejectedReads: string[] = [];
 
   if (cacheLookupKeys.length > 0) {
     try {
@@ -433,6 +443,7 @@ export async function buildCacheStatuses(
         source: "cache-table",
         message: toErrorMessage(err),
       });
+      rejectedReads.push("__cache__");
       cacheRows = { results: [] };
     }
   }
@@ -478,6 +489,7 @@ export async function buildCacheStatuses(
         cacheLookupFailed,
         cacheRowsByKey,
         cronHistory,
+        rejectedReads,
       });
       ageSeconds = freshness.ageSeconds;
       generationId = freshness.generationId;
@@ -570,5 +582,5 @@ export async function buildCacheStatuses(
     };
   }
 
-  return { caches, worstRatio, failures, diagnostics, statusFloor, warnings };
+  return { caches, worstRatio, failures, rejectedReads, diagnostics, statusFloor, warnings };
 }

@@ -348,6 +348,57 @@ function fixtureMockD1(
     options,
   );
 }
+// P2-13 (CRON-25) single-sources `dataQuality.missingPrices`/`totalStablecoins`
+// on the producer's `activePriceCoverage` evidence and keeps the cache scan as
+// the evidence-absent fallback, so ratio fixtures publish the coverage row.
+export function buildPublicationCoverage(): Record<string, unknown> {
+  return {
+    complete: true,
+    expectedActiveCount: ACTIVE_STABLECOINS.length,
+    presentActiveCount: ACTIVE_STABLECOINS.length,
+    waivedActiveCount: 0,
+    missingActiveIds: [],
+    waivedActiveIds: [],
+    expiredWaiverIds: [],
+  };
+}
+
+export function buildPriceCoverage(total: number, missingIds: string[]): Record<string, unknown> {
+  const ids = ACTIVE_STABLECOINS.slice(0, total).map((stablecoin) => stablecoin.id);
+  const pricedActiveIds = ids.filter((id) => !missingIds.includes(id));
+  return {
+    complete: missingIds.length === 0,
+    expectedActiveCount: total,
+    presentActiveCount: total,
+    pricedActiveCount: pricedActiveIds.length,
+    pricedActiveIds,
+    missingPriceCount: missingIds.length,
+    missingActiveIds: missingIds,
+    affectedMarketCapUsd: 0,
+    missingActiveAssets: [],
+    alertEligibleCount: 0,
+    alertEligibleIds: [],
+    maxConsecutiveMissingGenerations: 0,
+  };
+}
+
+export function buildCoverageRow(
+  now: number,
+  coverage: { publication?: Record<string, unknown>; price?: Record<string, unknown> },
+) {
+  return {
+    match: `metadata LIKE '%\"activePublicationCoverage\"%'`,
+    rows: [],
+    first: {
+      started_at: now - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: coverage.publication ?? buildPublicationCoverage(),
+        activePriceCoverage: coverage.price ?? buildPriceCoverage(ACTIVE_STABLECOINS.length, []),
+      }),
+    },
+  };
+}
+
 const fixtureMakeApiRequest = makeApiRequest;
 const fixtureMockFetch = mockFetch;
 const fixtureCRON_INTERVALS = CRON_INTERVALS;

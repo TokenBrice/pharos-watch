@@ -204,6 +204,9 @@ export async function readDewsPublishedGenerationResult(
   }
 }
 
+/** The pointer read itself was rejected; a missing, invalid or future pointer was read. */
+export class DewsPublicationPointerReadError extends Error {}
+
 export async function readDewsFreshnessAge(db: D1Database, now: number, readClock: number): Promise<number> {
   const published = await readDewsPublishedGenerationResult(db, readClock);
   if (published.status !== "ok") {
@@ -212,7 +215,8 @@ export async function readDewsFreshnessAge(db: D1Database, now: number, readCloc
       : published.status === "invalid-pointer"
         ? published.reason
         : "publication pointer is missing";
-    throw new Error(`DEWS published generation unavailable (${published.status}): ${detail}`);
+    const message = `DEWS published generation unavailable (${published.status}): ${detail}`;
+    throw published.status === "read-failed" ? new DewsPublicationPointerReadError(message) : new Error(message);
   }
   return now - published.computedAt;
 }

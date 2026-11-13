@@ -147,7 +147,7 @@ export async function writeStatusRawSnapshot(
   raw: RawStatusComputation,
   options: StatusRawSnapshotWriteOptions = {},
 ): Promise<boolean> {
-  const { crons, ...assessment } = raw;
+  const { crons, confirmedReadFailures: _confirmedReadFailures, ...assessment } = raw;
   return writeStatusSnapshotPayload(db, STATUS_RAW_SNAPSHOT_CACHE_KEY, now, {
     version: STATUS_RAW_SNAPSHOT_PAYLOAD_VERSION,
     producedAt: now,
