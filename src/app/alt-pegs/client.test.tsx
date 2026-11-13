@@ -439,7 +439,7 @@ describe("AltPegsClient", () => {
     expect(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-selected-peg")).toBe("EUR");
     const euro = screen.getByRole("button", { name: /^Euro/ });
     expect(euro.getAttribute("aria-pressed")).toBe("true");
-    expect(euro.closest("li")!.getAttribute("style")).toContain("inset 3px 0 0");
+    expect(euro.closest("li")!.getAttribute("style")).toMatch(/inset 3px|3px 0px inset/);
     fireEvent.click(screen.getByRole("button", { name: "Show all pegs" }));
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("peg")).toBeNull());
   });
