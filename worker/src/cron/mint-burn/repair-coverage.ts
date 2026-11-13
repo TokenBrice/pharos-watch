@@ -1,7 +1,8 @@
 import { COVERAGE_REPAIR_MAX_BLOCKS } from "./repair-policy";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError } from "../../lib/d1-overload-retry";
-import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { fetchConservationBoundaries, needsMintBurnConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
@@ -9,6 +10,7 @@ import { setCacheIfNewer } from "../../lib/db-cache";
 import { loadMintBurnSupplyProofRepairCursor, mintBurnSupplyProofRepairCursorKey } from "./repair-supply-proofs";
 import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, MINT_BURN_REQUEST_RESERVE, type runMintBurnConfigPhase } from "./run-configs";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
+import { MINT_BURN_RETRY_BOUNDARY_REQUESTS, mintBurnScanRequestFloor } from "./scan-with-retry";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
 // At 20 transactions/POST, leave room for roughly 100 context batches plus evidence reads.
@@ -177,7 +179,10 @@ export async function repairMintBurnCoverage(
   const repairBudget = { count: 0, limit: Math.max(0, input.budget.limit - input.budget.count - MINT_BURN_REQUEST_RESERVE) };
   // Rotate independently of the live frontier; one failing source must not pin
   // every healthy repair behind it on successive scheduled runs.
-  const offset = gaps.length ? Math.floor(input.runTimestamp / (30 * 60)) % gaps.length : 0;
+  // Step by the running lane's cadence, or an hourly lane only ever leads with even offsets.
+  const cadenceSec = CRON_SCHEDULE_CADENCES[input.lane === "extended"
+    ? "halfHourlyMintBurnExtended" : "halfHourlyMintBurnCritical"].intervalSec;
+  const offset = gaps.length ? Math.floor(input.runTimestamp / cadenceSec) % gaps.length : 0;
   const pending = (gap: MintBurnCoverageGap) => input.pendingAdmissionKeys?.has(mintBurnConfigKey(gap.config)) === true;
   const ordered = [...gaps.slice(offset), ...gaps.slice(0, offset)]
     .sort((a, b) => Number(pending(a)) - Number(pending(b)));
@@ -217,9 +222,25 @@ export async function repairMintBurnCoverage(
     const remainingRequests = repairBudget.limit - repairBudget.count;
     // Preserve a scanner-sized share for each peer; cheap work leaves its remainder to the next.
     const peerAllowance = Math.min(input.extendedConfigBudgetLimit, Math.floor(remainingRequests / remainingConfigs));
-    const limit = Math.min(COVERAGE_REPAIR_MAX_REQUESTS, remainingRequests - peerAllowance * (remainingConfigs - 1));
-    if (limit < config.events.length + 2) {
-      summary.repairReason = "repair-budget-exhausted";
+    const share = remainingRequests - peerAllowance * (remainingConfigs - 1);
+    // An extended config needs the live scanner's own floor over the largest span one attempt can scan
+    // (the span cap bounds paging from above; a persisted cursor span can only be smaller). It reserves
+    // that before the peer shares, and a refusal lets a cheaper later gap try. Critical configs keep
+    // their event-count threshold and stop at the first shortfall: their arithmetic is unchanged.
+    const extended = config.tier === "extended";
+    const minimum = extended ? mintBurnScanRequestFloor({ config,
+      fromBlock: gap.backward ? Math.max(fromBlock, gap.toBlock - COVERAGE_REPAIR_MAX_BLOCKS + 1) : fromBlock,
+      scanTo: gap.backward ? gap.toBlock : Math.min(gap.toBlock, fromBlock + COVERAGE_REPAIR_MAX_BLOCKS - 1),
+      rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads })
+      + (needsMintBurnConservationBoundaries(config) ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0)
+      : config.events.length + 2;
+    const limit = Math.min(COVERAGE_REPAIR_MAX_REQUESTS,
+      extended ? Math.min(remainingRequests, Math.max(minimum, share)) : share);
+    if (limit < minimum) {
+      // Refused before idle or D1 reads.
+      summary.skippedReason = summary.repairReason = "repair-budget-exhausted";
+      summary.requestBudgetLimit = limit;
+      if (extended) continue;
       break;
     }
     if (idleMs > 0) {
