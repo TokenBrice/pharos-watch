@@ -10,6 +10,7 @@ import type {
   SafetyScoreV8PublicationIdentity,
   SafetyScoreV9PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { SUPPLY_PERIMETER_CHANGES as P, getLatestSupplyPerimeterChange as latest } from "@shared/lib/supply-perimeter-changes";
 import { buildWeeklyInputData } from "../weekly-recap/input-data";
 import type { DailyDigestSourceRow } from "../weekly-recap/types";
 import { buildWeeklyPrompt } from "../weekly-recap/prompt";
@@ -520,6 +521,7 @@ describe("weekly recap comparison availability", () => {
       unavailableReason: "insufficient-market-observations",
     });
     if (perimeter) expect(weekly.weekOverWeekDeltas?.mcap.deltaPct).toBeNull();
+    for (const c of P) expect(latest(c.changedAt - 1, c.changedAt)).toBe(c.marketWide ? c.changedAt : null);
     const prompt = buildWeeklyPrompt(weekly);
     expect(prompt).toContain("Market cap: N/A (insufficient-market-observations)");
     expect(prompt).not.toContain("+0.00%");

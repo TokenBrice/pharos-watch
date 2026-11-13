@@ -1,10 +1,32 @@
-/** changedAt is first publication of the redefined quantity; evidence may have been read earlier. */
+/**
+ * changedAt is first publication of the redefined quantity; evidence may have been read earlier.
+ * marketWide marks a step large enough to break whole-market comparisons (total all-time high,
+ * market trajectories and ranges); other entries only withhold their own asset's comparisons.
+ */
 export const SUPPLY_PERIMETER_CHANGES = [
   {
     stablecoinId: "gho-aave",
     changedAt: Date.parse("2026-11-13T10:30:00Z") / 1000,
     chainIds: ["ethereum", "arbitrum", "monad", "plasma"],
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/987",
+    marketWide: true,
+  },
+  // Quantoz, 2026-11-13: DefiLlama reports the issuer's XRPL treasury account as unreleased. EURQ is
+  // outside the chain dropout guard (CoinGecko detail provider), so the 03:15 UTC sync published the
+  // lower figure directly; that clock is inferred from USDQ's pair, which changed in the same commit.
+  {
+    stablecoinId: "eurq-quantoz",
+    changedAt: Date.parse("2026-11-13T03:15:41Z") / 1000,
+    chainIds: ["xrpl"],
+    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/commit/110fb5b87eaebe9c3f0c957967a91b6d591cf8f3",
+    marketWide: false,
+  },
+  {
+    stablecoinId: "usdq-quantoz",
+    changedAt: Date.parse("2026-11-13T14:00:00Z") / 1000,
+    chainIds: ["xrpl"],
+    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/commit/110fb5b87eaebe9c3f0c957967a91b6d591cf8f3",
+    marketWide: false,
   },
 ] as const;
 
@@ -19,8 +41,8 @@ export function isAmbiguousSupplyPerimeterDay(stablecoinId: string, observedAt: 
     && observedAt === Math.floor(change.changedAt / 86_400) * 86_400);
 }
 
-/** Totals across this boundary cannot be compared without restating their members. */
+/** Whole-market totals across a market-wide boundary cannot be compared without restating their members. */
 export function getLatestSupplyPerimeterChange(start: number, end: number): number | null {
-  const changes = SUPPLY_PERIMETER_CHANGES.filter((change) => change.changedAt > start && change.changedAt <= end);
+  const changes = SUPPLY_PERIMETER_CHANGES.filter((change) => change.marketWide && change.changedAt > start && change.changedAt <= end);
   return changes.length ? Math.max(...changes.map((change) => change.changedAt)) : null;
 }

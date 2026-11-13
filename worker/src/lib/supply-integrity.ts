@@ -57,11 +57,14 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   },
   {
     stablecoinId: "usdq-quantoz",
-    baselineUsd: 3_001_518.8,
-    reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-26T19:34:00Z") / 1000,
-    evidenceUrls: ["https://etherscan.io/token/0xc83e27f270cce0a3a3a29521173a83f402c1768b"],
-    reason: "Re-read 2026-11-12 19:31 UTC: DefiLlama detail reports 2,000,000 USDQ on Ethereum and 3,001,518.796226 USDQ aggregate in its November 12 daily row, matching the 19:03 UTC published $3,001,518.80. The earlier 7M Ethereum carry remains an obsolete comparison; the provider aggregate unreleased sentinel is not treated as observed supply.",
+    baselineUsd: 2_001_518.8,
+    reviewedAt: Date.parse("2026-11-13T11:18:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-27T11:18:00Z") / 1000,
+    evidenceUrls: [
+      "https://github.com/DefiLlama/peggedassets-server/commit/110fb5b87eaebe9c3f0c957967a91b6d591cf8f3",
+      "https://livenet.xrpl.org/accounts/rsTXamYqHPDaNQPKejfRavmwPevuAkPQeT",
+    ],
+    reason: "Re-read 2026-11-13 11:18 UTC: DefiLlama reports 2,001,518.796226 USDQ after marking the Quantoz XRPL treasury account unreleased (2026-11-13 01:30 UTC). Validated XRPL ledger 108302298 shows that account holding all 1,000,000 XRPL USDQ and no issuer obligation outside it. The earlier $3,001,518.80 level counted that treasury stock; the provider perimeter change is recorded in SUPPLY_PERIMETER_CHANGES.",
   },
   {
     stablecoinId: "usdglo-glo",
