@@ -1105,12 +1105,13 @@ describe("chain dropout guard", () => {
   });
 
   it("withholds provider anchors that predate GHO's reviewed perimeter change", async () => {
-    const reviewedAt = Date.parse("2026-11-13T08:03:20Z") / 1000;
-    for (const [age, kept] of [[0, 0], [2 * DAY, 1], [8 * DAY, 2], [31 * DAY, 3]] as const) {
+    const reviewedAt = Date.parse("2026-11-13T10:30:00Z") / 1000;
+    for (const [age, kept] of [[-1, 0], [0, 0], [2 * DAY, 1], [8 * DAY, 2], [31 * DAY, 3]] as const) {
       const asset: PeggedAsset = { ...usdg(), id: "gho-aave", circulating: { peggedUSD: 3e8 },
         chainCirculating: { Ethereum: leg(2e8, 8e8), Base: leg(1e8) } };
       const result = await runGuard(asset, { now: reviewedAt + age, state: savedState("gho-aave", {
         chainId: "ethereum", chainLabel: "Ethereum", baselineUsd: 8e8, baselineObservedAt: reviewedAt - DAY, quarantinedSince: reviewedAt - 900 }) });
+      if (age < 0) { expect(result.quarantinedAssetIds).toEqual([asset.id]); continue; }
       expect(result.quarantinedAssetIds).toEqual([]);
       expect(getCirculatingRawOrNull(asset)).toBe(3e8);
       expect([getPrevDayRawOrNull(asset), getPrevWeekRawOrNull(asset), getPrevMonthRawOrNull(asset)].map((value) => value != null))

@@ -567,7 +567,7 @@ export async function collectMintBurnFlows(
     const supplyWindow = gauge.window && gauge.window.end <= ctx.nowSec ? gauge.window : null;
     const supplyEnd = supplyWindow ? Math.floor(supplyWindow.end / DAY_SECONDS) * DAY_SECONDS : null;
     const confirmationCoins = pressureCoins.filter((coin) => getMintBurnPressureRejection({
-      net24hUsd: coin.net24hUsd, gaugeWeightUsd: coin.gaugeWeightUsd, window: null,
+      stablecoinId: coin.id, net24hUsd: coin.net24hUsd, gaugeWeightUsd: coin.gaugeWeightUsd, window: null,
     }) === "supply-unavailable");
     if (confirmationCoins.length > 0 && supplyEnd != null) {
       try {
@@ -594,6 +594,7 @@ export async function collectMintBurnFlows(
       .filter((coin) => {
         const snapshots = supplyById.get(coin.id);
         const rejection = getMintBurnPressureRejection({
+          stablecoinId: coin.id,
           net24hUsd: coin.net24hUsd,
           gaugeWeightUsd: coin.gaugeWeightUsd,
           window: supplyWindow,

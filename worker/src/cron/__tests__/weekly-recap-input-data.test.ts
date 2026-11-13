@@ -511,7 +511,7 @@ describe("weekly recap comparison availability", () => {
   it.each([false, true])("withholds a market-cap change from a single comparable observation (%s)", (perimeter) => {
     const rows = Array.from({ length: 7 }, (_, index) => ({
       ...row(index, perimeter || index === 6 ? { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 302e9 } : {}),
-      ...(perimeter ? { generated_at: 1794614400 - (6 - index) * 86400 } : {}),
+      ...(perimeter ? { generated_at: 1794614400 - (6 - index) * 86400 + (index === 5 ? 29100 : 0) } : {}),
     }));
     const weekly = buildWeeklyInputData(rows, perimeter ? rows.map((r) => ({ ...r, generated_at: r.generated_at - 7 * 86400 })) : [])!;
 
