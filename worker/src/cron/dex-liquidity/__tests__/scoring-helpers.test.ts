@@ -169,7 +169,7 @@ describe("source-stage exact-pool price refresh", () => {
     const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + clock[fetch.mock.calls.length - 1]!); return reply([row(0)]); });
     vi.stubGlobal("fetch", fetch);
     const result = await run(graph(pools), { readinessDeadlineMs: kind === "deadline" ? now * 1000 + 50_000 : undefined });
-    expect(result).toMatchObject({ requests: clock.length, refreshed: 1, elapsedMs: clock.at(-1), stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
+    expect(result).toMatchObject({ requests: clock.length, refreshed: 1, elapsedMs: clock[clock.length - 1], stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
     expect(pools[0]!.priceObservedAt).toBe(now);
     expect(pools[30]!.priceObservedAt).toBe(now - 6 * 3600);
     expect(fetch).toHaveBeenCalledTimes(clock.length);
