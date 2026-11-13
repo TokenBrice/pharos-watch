@@ -26,7 +26,10 @@ interface SupplyProvenanceSource {
   supplyChainGuard?: unknown;
 }
 
-/** A chain-dropout guard whose published amount omits at least one unavailable chain. */
+/**
+ * A chain-dropout guard with a chain the row cannot vouch for: a published remainder (`partialCoverage`), or
+ * a gap below the guard's materiality bound, where the amount stands but a change across it is not a supply move.
+ */
 function isSupplyChainGuardPartial(guard: SupplyChainGuardProvenance): boolean {
   if (guard.partialCoverage === true) return true;
   return guard.status === "chains-unavailable" && guard.chains.some((chain) => chain.resolution === "unavailable");
@@ -71,11 +74,25 @@ export function parseSupplyObservationProvenance(
   return parsed.success ? { provenance: parsed.data, invalid: false } : { provenance: null, invalid: true };
 }
 
+/** Coverage for comparing an observation with another one: any unavailable chain makes it partial. */
 export function classifySupplyCoverage(provenance: SupplyObservationProvenance | null | undefined): SupplyCoverage {
   if (provenance == null) return "unknown";
   return provenance.supplyChainGuard != null && isSupplyChainGuardPartial(provenance.supplyChainGuard)
     ? "partial"
     : "complete";
+}
+
+/**
+ * Coverage of the published amount on its own, for totals, cohorts and shares (Pricing v6.78). Only a guard
+ * that sets `partialCoverage` publishes a remainder. Below the guard's 2% materiality bound the gap
+ * removes nothing from the published aggregate, so the amount is complete while `classifySupplyCoverage` still
+ * withholds changes.
+ */
+export function classifySupplyAmountCoverage(
+  provenance: SupplyObservationProvenance | null | undefined,
+): SupplyCoverage {
+  if (provenance == null) return "unknown";
+  return provenance.supplyChainGuard?.partialCoverage === true ? "partial" : "complete";
 }
 
 /** True only for a string Pricing Pipeline version at or above the guard-capable contract; malformed is false. */

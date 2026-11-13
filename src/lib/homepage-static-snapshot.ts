@@ -1,7 +1,7 @@
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { numberValue } from "@shared/lib/type-guards";
 import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
-import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { classifySupplyAmountCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
@@ -45,7 +45,7 @@ export async function getHomepageHeroSnapshot(): Promise<HomepageHeroSnapshot> {
         pegType: row.pegType,
         circulatingUsd: numberValue(row.circulatingUsd),
         // Rows exported before provenance existed (or with malformed metadata) stay unknown: legacy, never partial.
-        supplyCoverage: classifySupplyCoverage(parseSupplyObservationProvenance(row.supplyProvenance).provenance),
+        supplyCoverage: classifySupplyAmountCoverage(parseSupplyObservationProvenance(row.supplyProvenance).provenance),
       }];
     }),
     asOfISO(),

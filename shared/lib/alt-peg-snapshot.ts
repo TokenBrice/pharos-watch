@@ -2,7 +2,7 @@ import type { PegCurrency } from "../types/core";
 import { isCommodityPeg } from "./filter-tags";
 import { compareFiniteDesc } from "./sort";
 import { getCirculatingRawOrNull } from "./supply";
-import { buildSupplyObservationProvenance, classifySupplyCoverage } from "./supply-provenance";
+import { buildSupplyObservationProvenance, classifySupplyAmountCoverage } from "./supply-provenance";
 import { CLIENT_ACTIVE_META_BY_ID } from "./stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "./stablecoins/aggregate-client-registry";
 
@@ -128,7 +128,7 @@ export function buildNonUsdMarketSnapshot(rows: readonly NonUsdMarketRow[] | nul
     seenIds.add(row.id);
     const marketCap = getCirculatingRawOrNull(row);
     const supplyPartial = marketCap !== null
-      && classifySupplyCoverage(buildSupplyObservationProvenance(row)) === "partial";
+      && classifySupplyAmountCoverage(buildSupplyObservationProvenance(row)) === "partial";
     if (marketCap === null) supplyUnavailableCount += 1;
     else {
       supplyObservedCount += 1;

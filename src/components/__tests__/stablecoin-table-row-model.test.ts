@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { deviationColorClass } from "@/lib/severity-colors";
 
@@ -165,11 +165,7 @@ describe("buildStablecoinTableRowModel supply changes", () => {
         circulating: { peggedUSD: 50 },
         circulatingPrevDay: { peggedUSD: 100 },
         circulatingPrevWeek: { peggedUSD: 100 },
-        supplyChainGuard: {
-          reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage,
-          chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-            baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
-        },
+        supplyChainGuard: makeChainGapGuard(partialCoverage),
       }),
       density: "spacious",
       variant: "default",

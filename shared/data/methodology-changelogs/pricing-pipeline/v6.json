@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.78",
+    "title": "A chain gap below the materiality bound no longer withholds a total",
+    "date": "2026-11-13",
+    "effectiveAt": 1794576480,
+    "summary": "Totals, named cohorts and shares treat a supply observation as partial only when its guard publishes a remainder. A chain gap below the chain-dropout guard's 2% materiality bound removes nothing from the published aggregate, so the amount stands and only changes measured across the gap stay withheld.",
+    "impact": [
+      "Since v6.59 an observation counted as partial when its guard set partialCoverage or reported chains-unavailable with an unavailable chain. The second case is the guard's immaterial dropout: the unverified deficit is below 2% of the vetted total, the chain row publishes null and the published aggregate stays the provider value plus any admitted repair, so nothing is excluded from the amount. Treating it as a remainder withheld whole figures over a fraction of a percent. From the 2026-11-13 12:15 UTC sync, DefiLlama's hacked-bridge exclusion (peggedassets-server PR #970) dropped Fantom, Kava and edgeX L1 rows worth 0.05% of USDT, 0.27% of USDC and 0.79% of DAI, and the homepage withheld its USDT, USDC and USDS+DAI figures.",
+      "Amount coverage is now its own verdict in the same authority (shared/lib/supply-provenance.ts): partial only when the guard sets partialCoverage, which it does for a material deficit of at most 5%, a reviewed omitted-chain exclusion and a fill-default native remainder. It decides the homepage's named cohorts, supplyPartialCount and completeness verdict, gaps in homepage cohort history, and the alt-peg snapshot's partial counts and share availability.",
+      "Comparison coverage keeps the v6.59 rule: any unavailable chain still makes the observation partial for the directory's 24h and 7d changes and sparkline, supply-mover ranking, Compare changes and supply series, the detail chart's 24h change, build-time detail snapshots and the digest's large-flow supply confirmation, because a change measured across the gap may be the provider's reattribution, not a supply move.",
+      "Published supply amounts, the guard's 2% and 5% bounds, quarantine, carry and release rules, supplyChainGuard provenance, the supply-history API and stored rows are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.77",
     "title": "A reviewed provider perimeter change withholds earlier supply anchors",
     "date": "2026-11-13",

@@ -3,7 +3,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
-import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types/supply";
 
 const { logosByIdMock, useStablecoinsMock } = vi.hoisted(() => ({
@@ -102,11 +102,7 @@ describe("SupplyMovesCard", () => {
 
   it.each([true, undefined] as const)("excludes partial-chain coins from mover ranking (explicit partial=%s)", (partialCoverage) => {
     const partial = makeStablecoin({ id: "usdr-real", symbol: "USDR", currentSupply: 10_000_000, previousWeekSupply: 30_000_000 });
-    partial.supplyChainGuard = {
-      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage,
-      chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-        baselineUsd: 20_000_000, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
-    };
+    partial.supplyChainGuard = makeChainGapGuard(partialCoverage);
     useStablecoinsMock.mockReturnValue({
       data: { peggedAssets: [partial, makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 12_000_000, previousWeekSupply: 10_000_000 })] },
       isLoading: false,
