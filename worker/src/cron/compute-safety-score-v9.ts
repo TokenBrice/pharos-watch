@@ -675,11 +675,13 @@ export async function computeSafetyScoreV9(
       },
       supplyAttributionGeneration: supplyAttributionGenerationState,
       resourcePressure: resourceAdmission.resourcePressure,
-      publication: publicationDiagnostics,
+      // `work` is emitted once, as the top-level `publicationWork` scalar map.
+      publication: { ...publicationDiagnostics, work: undefined },
       // Top-level scalar maps survive the bounded >64 KiB compactor, which
       // deliberately does not retain objects nested inside publication.
       publicationPhaseElapsedMs: publication.phaseElapsedMs,
       publicationSubphaseElapsedMs: publication.subphaseElapsedMs,
+      publicationWork: publication.work ?? null,
       ...(publication.status === "published" ? { publicMaterialization: publication.publicMaterialization } : {}),
       publicationPhaseTimingBasis: publication.phaseTimingBasis,
       publicationAbortCause: publication.abortCause,

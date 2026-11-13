@@ -2,7 +2,7 @@ import { setCache } from "../db-cache";
 import { createCronResult } from "../cron-result";
 import { logWorkerEvent } from "../structured-log";
 import type { CronResult } from "../cron-logger";
-import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult, type V9PublicMaterializationTiming } from "../report-cards-v9-materialization";
+import { materializeV9AcceptedPublication, type V9AcceptedPublicMaterializationSource, type V9PublicMaterializationResult, type V9PublicMaterializationTiming, type V9PublicMaterializationWork } from "../report-cards-v9-materialization";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY, V9_PUBLIC_REPRESENTATION_VERSION } from "@shared/types/report-cards-v9-materialization";
 import { throwIfAborted } from "../abort";
 import { loadSafetyScoreV9PublicationStoredRow } from "./publication-chunks";
@@ -25,11 +25,12 @@ export async function materializeAcceptedPublication(
   source: V9AcceptedPublicMaterializationSource,
   signal: AbortSignal,
   timing: V9PublicMaterializationTiming,
+  work?: V9PublicMaterializationWork,
 ): Promise<SafetyScoreV9PublicMaterializationRunResult> {
   const maxAttempts = 2;
   for (let attempt = 1; ; attempt++) {
     try {
-      return await materializeV9AcceptedPublication(db, source, signal, timing);
+      return await materializeV9AcceptedPublication(db, source, signal, timing, work);
     } catch (error) {
       if (attempt < maxAttempts && !signal.aborted) continue;
       const failure = safeFailure(error, "publication-write");
