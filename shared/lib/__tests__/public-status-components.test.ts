@@ -350,7 +350,7 @@ describe("public status components", () => {
     ["colour kept past expiry", "ok open open cx cx cx cx", "ooddddd", "---hhnn"],
     ["a clear read resets a pending worsening", "ok open ok+sx open open", "ooood", "--h--"],
   ])("holds what it could not read: %s", (_label, runs, states, holds) => {
-    let prior = new Map();
+    let prior: Parameters<typeof stepPublicHold>[0] = new Map();
     const seen = runs.split(" ").map((run, index) => {
       const out = stepPublicHold(prior, makeHoldRunHealth(run), NOW + index * 900);
       prior = out.next;
