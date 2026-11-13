@@ -305,8 +305,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs;
 
   // Refresh observed totals during catch-up without advancing the full-coverage freshness clock.
+  // The amount-repair tails are maintenance: one that stops at its own cap degrades the run but
+  // must not withhold publication while the window checks below still pass.
   if (
-    runtimeBudgetHit ||
+    scan.runtimeBudgetHit ||
+    counters.currentBalanceCacheCounters.budgetExhausted ||
     blacklistRuntimeBudgetReached(maintenanceRunBudget) ||
     subrequestBudgetReached ||
     producerSnapshotWindowUnavailable
