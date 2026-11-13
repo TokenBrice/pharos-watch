@@ -1103,6 +1103,21 @@ describe("chain dropout guard", () => {
     }
   });
 
+  it("withholds provider anchors that predate GHO's reviewed perimeter change", async () => {
+    const reviewedAt = Date.parse("2026-11-13T08:03:20Z") / 1000;
+    for (const [age, kept] of [[0, 0], [2 * DAY, 1], [8 * DAY, 2], [31 * DAY, 3]] as const) {
+      const asset: PeggedAsset = { ...usdg(), id: "gho-aave", circulating: { peggedUSD: 3e8 },
+        chainCirculating: { Ethereum: leg(2e8, 8e8), Base: leg(1e8) } };
+      const result = await runGuard(asset, { now: reviewedAt + age, state: savedState("gho-aave", {
+        chainId: "ethereum", chainLabel: "Ethereum", baselineUsd: 8e8, baselineObservedAt: reviewedAt - DAY, quarantinedSince: reviewedAt - 900 }) });
+      expect(result.quarantinedAssetIds).toEqual([]);
+      expect(getCirculatingRawOrNull(asset)).toBe(3e8);
+      expect([getPrevDayRawOrNull(asset), getPrevWeekRawOrNull(asset), getPrevMonthRawOrNull(asset)].map((value) => value != null))
+        .toEqual([kept > 0, kept > 1, kept > 2]);
+      expect([asset.chainCirculating!.Ethereum.circulatingPrevDay, asset.chainCirculating!.Base.circulatingPrevDay]).toEqual([kept ? 8e8 : null, 1e8]);
+    }
+  });
+
   it.each([0, 14 * DAY])("expires frxUSD's reviewed omitted HyperEVM identity after 14 days (%s)", async (offset) => {
     const reviewedAt = Date.parse("2026-11-07T19:45:46Z") / 1000;
     const asset: PeggedAsset = { ...usdg(), id: "frxusd-frax", circulating: { peggedUSD: 91_508_143.55 },

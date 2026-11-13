@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.76`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.77`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -53,6 +53,8 @@ Pricing v6.71 gives only pre-intake vault supply valuation a previous-payload pa
 Pricing v6.72 separates target-only DEX comparison anchors from trusted quote-token valuation. A positive observed `high` or `single-source` primary with an original clock inside `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` may anchor outlier, deviation and display-ratio guards. Missing, nominal, cached, fallback, low-confidence, invalid, future or stale primaries remain unavailable. The source-stage snapshot preserves that comparison map separately; older stages retain the previous trusted-map behavior. A comparison anchor adds no vote, USD conversion or depeg authority. Existing pool admission, freshness, corroboration and liquidity floors still decide whether a measured row can affect consensus or event state.
 
 Reserve USD3's exact Curve USD3/scrvUSD recovery is missing-only fallback evidence. The pool block and trusted scrvUSD parent must each be within five minutes; exact token identity, inventory and quote-impact checks still apply, and the older input clock dates the USD value. Pricing v6.72 additionally requires that value to stay within 3% of a trusted published USD3 baseline whose original observation is at most 24 hours old. Candidates from the previous publication and existing replay-safe price cache need explicit valid observation/sync clocks and authoritative depeg trust evaluated at their original publication time; the newest eligible original observation wins. Retention or republication never renews that baseline, and this route's own thin-pool quote cannot establish it. Missing, stale, malformed or untrusted evidence and excessive divergence return a named no-quote reason. The route remains non-replay-safe and non-depeg-authoritative, replaces no usable price and changes no supply or market-cap preference. The [v6.72 history](https://pharos.watch/methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-72) owns provisional activation and outstanding production acceptance.
+
+Pricing v6.77 lets a dated `accept-observed-collapse` review carry `perimeterChange` when the provider redefined what it counts as circulating on a chain, as DefiLlama did for GHO on 2026-11-12 (pre-minted reserve and unborrowed direct-minter GHO became unreleased). The provider's lower observation is accepted unchanged, and its day, week and month buckets from before the review are withheld for 2, 8 and 31 days after `reviewedAt` on the aggregate and on the reviewed chain, so the redefinition is not published as a supply move. [Supply snapshot](supply-snapshot.md#chain-dropout-guard) owns the rule and the GHO evidence.
 
 ### Release obligations
 

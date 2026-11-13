@@ -282,7 +282,11 @@ export const CHAIN_DROPOUT_SEED = [
 type ReviewedChainSupplyCollapse = {
   assetId: string; chainId: string; reviewedAt: number; evidenceUrl: string;
 } & (
-  | { policy: "accept-observed-collapse"; excludeOmittedUntil?: never }
+  | {
+    policy: "accept-observed-collapse"; excludeOmittedUntil?: never;
+    /** The provider redefined what it counts: its day/week/month values from before the review are another quantity. */
+    perimeterChange?: true;
+  }
   | { policy: "exclude-omitted"; excludeOmittedUntil: number }
 );
 
@@ -440,4 +444,16 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-27T05:26:09Z") / 1000,
     evidenceUrl: "https://bscscan.com/token/0x60b14ec49874af1ba471685cb11132101aebdf09",
   },
+  // GHO, 2026-11-13: not a dropout. DefiLlama peggedassets-server PR #987 (merged 2026-11-12
+  // 08:05 UTC) reports GHO pre-minted into Aave's GhoReserve contracts and unborrowed
+  // GhoDirectMinter liquidity as unreleased. Recomputed from chain state at Ethereum block 26404723,
+  // Arbitrum 523807208, Monad 121833574 and Plasma 37613621: reserves hold 278,748,901 /
+  // 28,642,003 / 15,640,791 / 6,804,874 GHO, direct minters 100,524,608 idle; circulating is
+  // 268,638,822 GHO of 699,000,000 minted, against the provider's 268,653,633.
+  ...["ethereum", "arbitrum", "monad", "plasma"].map((chainId) => ({
+    assetId: "gho-aave", chainId,
+    policy: "accept-observed-collapse" as const, perimeterChange: true as const,
+    reviewedAt: Date.parse("2026-11-13T08:03:20Z") / 1000,
+    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/987",
+  })),
 ];

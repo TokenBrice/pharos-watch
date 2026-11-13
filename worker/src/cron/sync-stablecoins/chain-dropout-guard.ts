@@ -727,6 +727,21 @@ export async function guardChainDropouts(input: {
     if (!result.unavailableAssetIds.includes(String(asset.id))) result.unavailableAssetIds.push(String(asset.id));
     warn("supply-list-fill-default-withheld", "Rescaled list supply lacks complete native corroboration; publishing unavailable supply", { assetId: asset.id, reason: "supply-chain-dropout" });
   }
+  // A reviewed provider perimeter change is not a supply move: the provider's day/week/month values
+  // from before the review count another quantity. Withhold each until it can no longer predate it (R1).
+  for (const entry of REVIEWED_CHAIN_SUPPLY_COLLAPSES) {
+    if (entry.policy !== "accept-observed-collapse" || !entry.perimeterChange || entry.reviewedAt > now) continue;
+    const asset = input.assets.find((candidate) => String(candidate.id) === entry.assetId);
+    if (!asset) continue;
+    const ageDays = (now - entry.reviewedAt) / 86_400;
+    const rows = Object.entries(asset.chainCirculating ?? {}).filter(([label, row]) =>
+      canonicalizeChainCirculating({ [label]: row }).keys().next().value === entry.chainId).map(([, row]) => row);
+    for (const row of [asset, ...rows]) {
+      if (ageDays < 2) row.circulatingPrevDay = null;
+      if (ageDays < 8) row.circulatingPrevWeek = null;
+      if (ageDays < 31) row.circulatingPrevMonth = null;
+    }
+  }
   for (const [key, pair] of Object.entries(state.pairs)) {
     if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null
       && !findSeed(pair.assetId, pair.chainId, pair.chainLabel, now)) delete state.pairs[key];
