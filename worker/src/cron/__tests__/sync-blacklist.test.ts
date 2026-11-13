@@ -1115,16 +1115,18 @@ describe("syncBlacklist", () => {
       expect(meta.tronAmountRepairLimit).toBeNull();
     });
 
-    it("reports a budget-limited replay as partial with observed counters", async () => {
+    it.each([false, true])("reports replay limits (page cap %s)", async (pageCapReached) => {
       emptyOk();
       vi.mocked(backfillTronBlacklistAmounts).mockResolvedValueOnce({
-        runtimeBudgetReached: true, attempted: 2, resolved: 1, retried: 1, parked: 0, limit: 24,
+        runtimeBudgetReached: !pageCapReached, pageCapReached, attempted: 2, resolved: 1, retried: 1, parked: 0, limit: 24,
       });
       const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
       const meta = JSON.parse(result.metadata);
 
       expect(meta.tronAmountRepairOutcome).toBe("partial");
-      expect(meta.tronAmountRepairReason).toBe("blacklist-budget-exhausted");
+      expect(result.status).toBe(pageCapReached ? "ok" : "degraded");
+      expect(meta.tronAmountRepairReason).toBe(pageCapReached ? "blacklist-tron-amount-repair-page-cap" : "blacklist-budget-exhausted");
+      expect(meta.quality?.reason).toBe(pageCapReached ? meta.tronAmountRepairReason : undefined);
       expect(meta.tronAmountRepairAttempted).toBe(2);
       expect(meta.tronAmountRepairLimit).toBe(24);
       expect(meta).toMatchObject({ producerSnapshotSkipped: false, producerSummarySnapshot: true });

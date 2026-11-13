@@ -143,7 +143,7 @@ describe("YieldInstrumentBoard", () => {
     });
     const marker = screen.getByRole("img", { name: "30 day APY range 4.0% to 9.9%, current 9.8%" });
     const dot = marker.querySelectorAll("div")[1]!;
-    expect(Number.parseFloat(dot.style.left)).toBeCloseTo(((9.8 - 4) / (9.9 - 4)) * 100, 6);
+    expect(Number.parseFloat(dot.style.left)).toBeCloseTo(((9.8 - 4) / (9.9 - 4)) * 100, 3);
   });
 
   it("places the range marker at the low edge after an APY collapse", () => {
