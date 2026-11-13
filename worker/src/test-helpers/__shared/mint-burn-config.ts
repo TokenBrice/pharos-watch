@@ -71,3 +71,14 @@ export function makeMintBurnConfig({
     ...(bridgeDetection ? { bridgeDetection } : {}),
   };
 }
+
+/** A zero-address `Transfer` event definition: mints filter `from`, burns filter `to`. */
+export function makeMintBurnTransferEvent(direction: "mint" | "burn"): MintBurnEventDef {
+  return {
+    signature: "Transfer(address,address,uint256)",
+    topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+    direction, amountEncoding: "transfer-value",
+    filterTopic: { index: direction === "mint" ? 1 : 2,
+      value: "0x0000000000000000000000000000000000000000000000000000000000000000" },
+  };
+}

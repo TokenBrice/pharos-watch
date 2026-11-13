@@ -42,13 +42,15 @@ import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { getCircuitRecordForAdmission } from "../../lib/circuit-breaker";
 import {
-  idleMintBurnRepairD1, loadMintBurnCoverageGaps, repairMintBurnCoverage,
+  COVERAGE_REPAIR_MAX_CONFIGS, COVERAGE_REPAIR_TERMINAL_RESERVE_MS, COVERAGE_REPAIR_WINDOW_MS, idleMintBurnRepairD1,
+  loadMintBurnCoverageGaps, repairMintBurnCoverage, type MintBurnCoverageRepairSummary,
 } from "./repair-coverage";
 import { loadMintBurnSupplyProofRepairRanges } from "./repair-supply-proofs";
 import { mintBurnConservationFingerprint, requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
 import { invalidateChangedMintBurnSupplyProofConfigs } from "../../lib/mint-burn-supply-proofs";
-import { isD1ResourceWindowError } from "../../lib/d1-overload-retry";
+import { D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError } from "../../lib/d1-overload-retry";
 import { createMintBurnConfigSummary } from "./sync-config";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 const MAX_SCAN_RANGE = 50_000;
 
@@ -59,6 +61,9 @@ const CRITICAL_CONFIG_BUDGET_LIMIT = 60;
 const CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT = 150;
 const EXTENDED_CONFIG_BUDGET_LIMIT = 25;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
+// Cross-lane admission: a leading idle, the full 120 s repair window, the repair's own two-window
+// clip, the 60 s publication reserve and a trailing idle must all fit before the run deadline (220 s).
+const FOREIGN_REPAIR_ADMISSION_MS = 4 * D1_RESOURCE_WINDOW_MS + COVERAGE_REPAIR_WINDOW_MS + COVERAGE_REPAIR_TERMINAL_RESERVE_MS;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 
 export interface SyncMintBurnOptions {
@@ -326,10 +331,18 @@ export class MintBurnRun {
     const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical"
       && !pendingAdmissionKeys.has(configKey(config))).length;
     const affectedHours = new Map<string, MintBurnAffectedHour>();
+    // Admitted extended-lane configs whose coverage holes this critical run may repair last.
+    const admittedLegKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.status === "admitted").map((leg) => leg.configKey));
+    const foreignRepairConfigs = lane === "critical" ? publicationContext.diagnosticConfigs.filter((config) => {
+      const key = configKey(config);
+      return configTier(config) === "extended" && admittedLegKeys.has(key) && !pendingAdmissionKeys.has(key)
+        && !reactivationKeys.has(key) && !unsupportedKeys.has(key) && !disabledPublicationKeys.has(key);
+    }) : [];
     const pendingCursorUpdates = new Map<string, number>();
     const pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
 
-    const { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures } = await this.scanAndMaterialize({
+    const phaseInput: Parameters<MintBurnRun["scanAndMaterialize"]>[0] = {
       db,
       configs,
       lane,
@@ -363,7 +376,8 @@ export class MintBurnRun {
       extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
       affectedHours,
       deadlineMs,
-    });
+    };
+    const { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures } = await this.scanAndMaterialize(phaseInput);
 
     const chainHeads = new Map(
       [...chainContexts.entries()].flatMap(([chainId, context]) =>
@@ -459,8 +473,6 @@ export class MintBurnRun {
         completion.metadata.reason = "mint-burn-retention-failed";
       }
     }
-    const metadata = JSON.stringify(completion.metadata);
-
     await reportCronProgress(reportProgress, {
       stage: "complete",
       itemsDone: configs.length,
@@ -488,6 +500,18 @@ export class MintBurnRun {
         logWorkerEventArgs("handler", "warn", "[sync-mint-burn] cache invalidation failed:", e);
       }
     }
+
+    // Cross-lane repair is the last step: every critical write, the status, the item count and the
+    // quality reasons above are final, and foreign results only add metadata.
+    const foreignSlots = COVERAGE_REPAIR_MAX_CONFIGS
+      - (phaseResult.coverageRepairs ?? []).filter((repair) => repair.attempted).length;
+    if (foreignRepairConfigs.length > 0 && foreignSlots > 0 && Date.now() + FOREIGN_REPAIR_ADMISSION_MS <= deadlineMs) {
+      const foreign = await this.repairForeignCoverage(phaseInput, foreignRepairConfigs,
+        phaseResult.activeProviderDeferrals, foreignSlots, deadlineMs);
+      completion.metadata.foreignCoverageRepairs = foreign.repairs;
+      if (foreign.error) completion.metadata.foreignCoverageRepairError = foreign.error;
+    }
+    const metadata = JSON.stringify(completion.metadata);
 
     return {
       itemCount: phaseResult.rowsInserted,
@@ -551,5 +575,59 @@ export class MintBurnRun {
       }));
     }
     return { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures };
+  }
+
+  /** Repairs admitted extended-lane coverage holes with the run's leftover requests. Its rows,
+   * proofs and hourly rebuilds are a separate group; nothing it does changes the critical result. */
+  private async repairForeignCoverage(
+    input: Parameters<typeof runMintBurnConfigPhase>[0], configs: MintBurnContractConfig[],
+    deferred: ReadonlyMap<string, number>, maxConfigs: number, deadlineMs: number,
+  ): Promise<{ repairs: MintBurnCoverageRepairSummary[]; error: string | null }> {
+    const signal = input.signal;
+    let error: string | null = null;
+    let overloaded = false;
+    const fail = (caught: unknown) => {
+      rethrowIfAborted(caught, signal);
+      overloaded ||= isD1ResourceWindowError(caught);
+      error ??= toErrorMessage(caught).slice(0, 200);
+      logWorkerEvent({ scope: "handler", job: input.jobName, level: "warn", event: "mint_burn_cross_lane_repair_failed",
+        message: "Cross-lane coverage repair failed; the critical result is unchanged", error: caught });
+    };
+    const proofs: MintBurnScanCoverage[] = [];
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
+    let repairs: MintBurnCoverageRepairSummary[] = [];
+    try {
+      const live = configs.filter((config) => input.chainContexts.get(config.chain.chainId)?.chainHead != null);
+      const gaps = await loadMintBurnCoverageGaps(this.db, live, await readMintBurnSyncStateBatch(this.db, live), input.runTimestamp);
+      // Critical completion has just written; scan only behind one resource window. The trailing
+      // window stays reserved below the repair deadline. Summaries beyond the cap are never attempted.
+      if (gaps.length > 0 && await idleMintBurnRepairD1(deadlineMs, signal)) {
+        repairs = (await repairMintBurnCoverage({ ...input, affectedHours, deadlineMs: deadlineMs - D1_RESOURCE_WINDOW_MS },
+          gaps, proofs, deferred, { supplyProofRepair: true, maxConfigs, persistSpan: false })).slice(0, maxConfigs);
+      }
+    } catch (caught) {
+      fail(caught);
+    }
+    if (proofs.length > 0 || affectedHours.size > 0) {
+      try {
+        const published = await publishMintBurnScan(this.db, {
+          ...input, configs, affectedHours, lastBlocksAfterRun: new Map(), pendingCursorUpdates: new Map(),
+          pendingScanCoverage: new Map(), pendingAdmissionKeys: new Set(),
+        }, { repairProofs: proofs, supplyRepairRanges: new Map(), coverageRepairs: repairs, deadlineMs });
+        // The recalculation error is already logged; it may be a resource-window stop.
+        if (published.recalcFailed) {
+          overloaded = true;
+          error ??= published.recalcError?.slice(0, 200) ?? "foreign-hourly-recalc-failed";
+        }
+      } catch (caught) {
+        fail(caught);
+        for (const repair of repairs) if (repair.repairReason === "proof-staged") repair.repairReason = "materialization-failed";
+      }
+    }
+    // The run record and the aggregate sidecar follow; never hand them an exhausted D1 window.
+    if (overloaded || repairs.some((repair) => repair.repairReason === "repair-runtime-exhausted" && repair.errors > 0)) {
+      await idleMintBurnRepairD1(deadlineMs, signal);
+    }
+    return { repairs, error };
   }
 }

@@ -15,9 +15,9 @@ import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSum
 
 // At 20 transactions/POST, leave room for roughly 100 context batches plus evidence reads.
 const COVERAGE_REPAIR_MAX_REQUESTS = 120;
-const COVERAGE_REPAIR_MAX_CONFIGS = 4;
-const COVERAGE_REPAIR_WINDOW_MS = 120_000;
-const COVERAGE_REPAIR_TERMINAL_RESERVE_MS = 60_000;
+export const COVERAGE_REPAIR_MAX_CONFIGS = 4;
+export const COVERAGE_REPAIR_WINDOW_MS = 120_000;
+export const COVERAGE_REPAIR_TERMINAL_RESERVE_MS = 60_000;
 
 export async function idleMintBurnRepairD1(deadlineMs: number, signal?: AbortSignal,
   idleMs = D1_RESOURCE_WINDOW_MS): Promise<boolean> {
@@ -166,7 +166,7 @@ export function isMintBurnCapacityOnlyRepairDebt(summary: MintBurnCoverageRepair
 export async function repairMintBurnCoverage(
   input: Parameters<typeof runMintBurnConfigPhase>[0], gaps: readonly MintBurnCoverageGap[],
   pendingProofs: MintBurnScanCoverage[], deferred: ReadonlyMap<string, number>,
-  options: { supplyProofRepair?: boolean } = {},
+  options: { supplyProofRepair?: boolean; maxConfigs?: number; persistSpan?: boolean } = {},
 ): Promise<MintBurnCoverageRepairSummary[]> {
   if (gaps.length === 0) return [];
   const summaries: MintBurnCoverageRepairSummary[] = [];
@@ -174,6 +174,7 @@ export async function repairMintBurnCoverage(
     - COVERAGE_REPAIR_TERMINAL_RESERVE_MS;
   // A slow D1 batch may outlast the scan allowance; retain time to save its smaller retry span.
   const deadlineMs = Math.min(runDeadlineMs - 2 * D1_RESOURCE_WINDOW_MS, Date.now() + COVERAGE_REPAIR_WINDOW_MS);
+  const maxConfigs = options.maxConfigs ?? COVERAGE_REPAIR_MAX_CONFIGS;
   let stopped = false;
   let idleMs = input.affectedHours.size > 0 ? D1_RESOURCE_WINDOW_MS : 0;
   const repairBudget = { count: 0, limit: Math.max(0, input.budget.limit - input.budget.count - MINT_BURN_REQUEST_RESERVE) };
@@ -187,13 +188,13 @@ export async function repairMintBurnCoverage(
   const ordered = [...gaps.slice(offset), ...gaps.slice(0, offset)]
     .sort((a, b) => Number(pending(a)) - Number(pending(b)));
   for (let i = 0; i < ordered.length; i++) {
-    if (!stopped && i >= COVERAGE_REPAIR_MAX_CONFIGS) break;
+    if (!stopped && i >= maxConfigs) break;
     throwIfAborted(input.signal);
     const gap = ordered[i]!;
     const { config } = gap;
     let fromBlock = gap.fromBlock;
     const key = mintBurnConfigKey(config);
-    const remainingConfigs = Math.max(1, Math.min(COVERAGE_REPAIR_MAX_CONFIGS, ordered.length) - i);
+    const remainingConfigs = Math.max(1, Math.min(maxConfigs, ordered.length) - i);
     const fairDeadlineMs = Date.now() + Math.floor((deadlineMs - Date.now()) / remainingConfigs);
     const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
       ? Math.min(fairDeadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : fairDeadlineMs;
@@ -323,7 +324,9 @@ export async function repairMintBurnCoverage(
     // One idle window clears prior work; no fresh scan allowance is granted.
     idleMs = overloaded ? D1_RESOURCE_WINDOW_MS
       : Math.min(D1_RESOURCE_WINDOW_MS, (Date.now() - startedAtMs) * D1_HEAVY_STATEMENT_IDLE_RATIO);
-    if (maxBlocks != null && maxBlocks !== (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS)) {
+    // A cross-lane repair reads the span but never writes it: the whole-cursor write could replace
+    // supply-repair progress the owning lane committed after this read.
+    if (options.persistSpan !== false && maxBlocks != null && maxBlocks !== (cursor.maxBlocks ?? COVERAGE_REPAIR_MAX_BLOCKS)) {
       for (let attempt = 0; attempt < 2; attempt++) {
         if (Date.now() + 5_000 >= runDeadlineMs
           || ((overloaded || attempt > 0) && !await idleMintBurnRepairD1(runDeadlineMs, input.signal))) {

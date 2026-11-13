@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
+  actualMintBurnRecalc,
   mintBurnEventInsertBinds,
   makeMintBurnDb,
   mintBurnScanResult,
   mintBurnTestHash,
   makeMintBurnMintLog as makeMintLog,
+  makeMintBurnBurnLog as makeBurnLog,
+  makeMintBurnReceiptLog as makeReceiptLog,
+  mintBurnTopicAddress as topicAddress,
+  readMintBurnCursor,
   resetMintBurnMocks,
+  restoreMintBurnBatch,
   seedMintBurnAdmissions,
-  MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
+  seedMintBurnCursor,
   MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
   USDT_CONTRACT,
   type MintBurnDbOptions,
@@ -18,14 +24,7 @@ const CCIP_BURNED_TOPIC = "0x696de425f79f4a40bc6d2122ca50507f0efbeabbff86a84871b
 
 vi.mock("../../lib/mint-burn-contracts", async () => {
   // The hoisted factory runs before static bindings; use the registry-free builder to avoid a mock import cycle.
-  const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn-config");
-  const transferEvent = (direction: "mint" | "burn") => ({
-    signature: "Transfer(address,address,uint256)",
-    topicHash: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-    direction, amountEncoding: "transfer-value" as const,
-    filterTopic: { index: direction === "mint" ? 1 : 2,
-      value: "0x0000000000000000000000000000000000000000000000000000000000000000" },
-  });
+  const { makeMintBurnConfig, makeMintBurnTransferEvent: transferEvent } = await import("../../test-helpers/__shared/mint-burn-config");
   return {
     buildMintBurnScope: vi.fn((configs: Array<{ chain: { chainId: string } }>) => ({
       chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
@@ -98,8 +97,6 @@ import {
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import * as mintBurnConservation from "../../lib/mint-burn-conservation";
-import type * as DbModule from "../../lib/db";
-import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
 import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
 
 const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
@@ -132,31 +129,6 @@ function scanConfig(overrides: Pick<Parameters<typeof syncMintBurnConfig>[0], "d
   });
 }
 
-
-function topicAddress(address: string): string {
-  const raw = address.toLowerCase().replace(/^0x/, "");
-  return `0x${"0".repeat(24)}${raw}`;
-}
-
-function makeBurnLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number; sender?: string } = {}) {
-  const sender = opts.sender ?? "0x1234000000000000000000000000000000000000";
-  return { ...makeMintLog({ ...opts, txHash: opts.txHash ?? mintBurnTestHash(10) }),
-    topics: [TRANSFER_TOPIC, topicAddress(sender), ZERO_TOPIC] };
-}
-
-function makeReceiptLog(txHash: string, topics: string[]) {
-  return {
-    address: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-    topics,
-    data: "0x",
-    blockNumber: "0x14fb180",
-    transactionHash: txHash,
-    transactionIndex: "0x0",
-    blockHash: mintBurnTestHash(2),
-    logIndex: "0x0",
-    removed: false,
-  };
-}
 
 describe("syncMintBurn", () => {
   beforeEach(() => {
@@ -383,13 +355,9 @@ describe("syncMintBurn", () => {
   it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    sqlite
-      .prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
-      .run(USDT_CONFIG_KEY, 21_950_000);
+    seedMintBurnCursor(sqlite, USDT_CONFIG_KEY, 21_950_000);
     const readFrontier = (): number | null => {
-      const row = sqlite
-        .prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?")
-        .get(USDT_CONFIG_KEY) as { last_block: number } | undefined;
+      const row = readMintBurnCursor(sqlite, USDT_CONFIG_KEY) as { last_block: number } | undefined;
       return row?.last_block ?? null;
     };
 
@@ -413,22 +381,18 @@ describe("syncMintBurn", () => {
   it("holds a cursor after recalc failure, protects retained inputs, and rebuilds a complete bucket on duplicate replay", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
-    const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
-    const actualPersistence = await vi.importActual<typeof PersistenceModule>(
-      "../../lib/mint-burn-pipeline/persistence",
-    );
-    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+    await restoreMintBurnBatch();
+    const actualRecalc = await actualMintBurnRecalc();
     vi.spyOn(mintBurnConservation, "fetchConservationBoundaries").mockResolvedValue(new Map());
     const timestamp = Math.floor((Date.now() / 1000 - 10 * 86_400) / 3600) * 3600 + 60;
     const hourTs = Math.floor(timestamp / 3600) * 3600;
-    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
-      .run(USDT_CONFIG_KEY, 21_950_000);
+    seedMintBurnCursor(sqlite, USDT_CONFIG_KEY, 21_950_000);
     sqlite.prepare(`INSERT INTO mint_burn_events
       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number, timestamp, explorer_tx_url)
       VALUES ('prior-event', 'usdt-tether', 'USDT', 'ethereum', 'mint', 50000, 50000, '0xprior', 21950000, ?, 'https://etherscan.io/tx/0xprior')`)
       .run(timestamp);
     const affected = new Map([["hour", { stablecoinId: "usdt-tether", chainId: "ethereum", hourTs }]]);
-    await actualPersistence.recalcAffectedHours(db, affected);
+    await actualRecalc(db, affected);
     sqlite.prepare(`INSERT INTO supply_history
       (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
       VALUES ('usdt-tether', ?, 1000000, 1, ?)`).run(Math.floor(timestamp / 86_400) * 86_400, timestamp);
@@ -442,7 +406,7 @@ describe("syncMintBurn", () => {
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map([[21_950_001, timestamp], [22_000_000, timestamp + 1]]));
     vi.mocked(recalcAffectedHours)
       .mockRejectedValueOnce(new Error("D1 hourly rebuild failed"))
-      .mockImplementation(actualPersistence.recalcAffectedHours);
+      .mockImplementation(actualRecalc);
     const frontier = sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?");
     const bucket = sqlite.prepare("SELECT mint_count, mint_volume_usd, mint_unpriced_event_count FROM mint_burn_hourly WHERE hour_ts = ?");
 
@@ -465,8 +429,7 @@ describe("syncMintBurn", () => {
 
   it("keeps a reactivation-pending leg's mid-hour prefix protected from retention", async () => {
     const { sqlite, db } = sqliteFixtures.open();
-    const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
-    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+    await restoreMintBurnBatch();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const nowSec = Math.floor(Date.now() / 1000);
     const hourTs = Math.floor((nowSec - 9 * 86_400) / 3600) * 3600;
@@ -478,8 +441,7 @@ describe("syncMintBurn", () => {
     sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
       VALUES (1, '[]', ?, ?)`)
       .run(JSON.stringify([USDT_CONFIG_KEY]), nowSec - 86_400);
-    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
-      .run(USDT_CONFIG_KEY, cursorBlock);
+    seedMintBurnCursor(sqlite, USDT_CONFIG_KEY, cursorBlock);
     // The catch-up cursor stopped mid-hour: the scanned prefix is priced and
     // materialized while the rest of this >8-day-old hour is still unscanned.
     sqlite.prepare(`INSERT INTO mint_burn_scan_coverage

@@ -7,6 +7,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 
 export const MINT_BURN_ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const MINT_BURN_TRANSFER_TOPIC =
@@ -232,11 +233,73 @@ export function makeMintBurnMintLog(
   };
 }
 
+export function mintBurnTopicAddress(address: string): string {
+  const raw = address.toLowerCase().replace(/^0x/, "");
+  return `0x${"0".repeat(24)}${raw}`;
+}
+
+/** A `Transfer` to the zero address (a burn) from `sender`. */
+export function makeMintBurnBurnLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number; sender?: string } = {}) {
+  const sender = opts.sender ?? "0x1234000000000000000000000000000000000000";
+  return { ...makeMintBurnMintLog({ ...opts, txHash: opts.txHash ?? mintBurnTestHash(10) }),
+    topics: [MINT_BURN_TRANSFER_TOPIC, mintBurnTopicAddress(sender), MINT_BURN_ZERO_TOPIC] };
+}
+
+export function makeMintBurnReceiptLog(txHash: string, topics: string[]) {
+  return {
+    address: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+    topics,
+    data: "0x",
+    blockNumber: "0x14fb180",
+    transactionHash: txHash,
+    transactionIndex: "0x0",
+    blockHash: mintBurnTestHash(2),
+    logIndex: "0x0",
+    removed: false,
+  };
+}
+
 export function mintBurnScanResult(
   scannedToBlock: number, logs: AlchemyLogsModule.AlchemyLogEntry[] = [],
   overrides: { complete?: boolean; calls?: number; maxDepth?: number } = {},
 ) {
   return { logs, complete: true, scannedToBlock, calls: 1, maxDepth: 0, ...overrides };
+}
+
+export const MINT_BURN_D1_OVERLOAD = "D1 DB is overloaded. Too many resources consumed within a 10 second window";
+
+/** A validated finalized head. */
+export function mintBurnHead(number: number, timestamp: number) {
+  return { number, timestamp, hash: `0x${"a".repeat(64)}` as const };
+}
+
+/** Live cursor fixtures for latest-schema SQLite suites. */
+export function seedMintBurnCursor(sqlite: DatabaseSync, key: string, lastBlock: number): void {
+  sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(key, lastBlock);
+}
+
+export function readMintBurnCursor(sqlite: DatabaseSync, key: string) {
+  return sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key);
+}
+
+/** Proven current-fingerprint segments; the cursor ends at the last range. */
+export async function seedMintBurnCoverage(
+  db: D1Database, config: MintBurnContractConfig, ranges: number[][], timestamp: number,
+): Promise<void> {
+  const key = mintBurnConfigKey(config);
+  for (const [fromBlock, toBlock] of ranges) {
+    await upsertMintBurnSyncState(db, key, toBlock!, "monotonic-max", {
+      configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+      fromBlock: fromBlock!, toBlock: toBlock!, fromTimestamp: timestamp - 60,
+      toTimestamp: timestamp + 60, finalizedBlock: ranges[ranges.length - 1]![1]!, acceptedAt: timestamp + 600,
+    });
+  }
+}
+
+/** The real hourly rebuild, for SQLite suites that exercise materialization. */
+export async function actualMintBurnRecalc() {
+  return (await vi.importActual<typeof import("../../lib/mint-burn-pipeline/persistence")>("../../lib/mint-burn-pipeline/persistence"))
+    .recalcAffectedHours;
 }
 
 export async function restoreMintBurnBatch(): Promise<void> {
