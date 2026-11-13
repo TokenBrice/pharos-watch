@@ -237,8 +237,9 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
  * R2: an unreadable state row must neither release quarantines nor resurrect disproven baselines.
  * Rebuild pairs from the last accepted publication: guarded chains from `supplyChainGuard` provenance
  * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
- * other published chain current as its accepted level — including a confirmed low/zero whose guard
- * sidecar disappeared once the chain stopped being flagged. Only unpublished chains bootstrap from seed.
+ * other published chain current except the CoinGecko gap-fill remainder as its accepted level,
+ * including a confirmed low/zero whose guard sidecar disappeared once the chain stopped being flagged.
+ * Only unpublished chains bootstrap from seed.
  */
 function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
   for (const previous of previousAssetsById.values()) {
@@ -272,6 +273,8 @@ function recoverStateFromPublication(state: ChainDropoutState, previousAssetsByI
     const observedAt = previous.supplyObservedAt ?? now;
     for (const [label, row] of Object.entries(rows)) {
       const chainId = canonicalizeChainCirculating({ [label]: row }).keys().next().value as string | undefined;
+      // An aggregate remainder is not a provider chain observation or a dropout baseline.
+      if (chainId && chainId === previous.supplyGapFill?.missingChainId) continue;
       const key = pairKey(assetId, chainId ?? `label:${label}`);
       if (state.pairs[key]) continue;
       const current = chainId ? canonical.get(chainId)?.current : normalizeChainSupplyValue(row.current);
