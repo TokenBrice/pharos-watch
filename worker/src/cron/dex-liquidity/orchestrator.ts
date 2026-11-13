@@ -28,7 +28,7 @@ import {
   processPoolMetrics,
 } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
-import { refreshPoolPrices } from "./price-refresh";
+import { priceRefreshDeadlines, refreshPoolPrices } from "./price-refresh";
 import {
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -991,7 +991,7 @@ async function buildDexLiquidityPoolState(
       stablecoinPriceById: sourceState.stablecoinPriceById,
       stablecoinPriceProvenanceById: sourceState.stablecoinPriceProvenanceById,
       chainRpcs: ctx.chainRpcs, signal: ctx.signal, nowSec: Math.floor(Date.now() / 1000),
-      deadlineMs: Math.min(ctx.deadline?.platformDeadlineMs ?? Infinity, ctx.readinessDeadlineMs ?? Infinity) - 20_000 }),
+      deadlineMs: priceRefreshDeadlines(ctx.readinessDeadlineMs, ctx.deadline).tempo }),
   } };
   await ctx.reportDexProgress("pool-price-refresh-complete", {
     message: "Completed exact-pool price refresh", providerFamily: "cg-onchain",

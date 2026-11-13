@@ -16,18 +16,27 @@ import { evaluatePoolPriceCoherence } from "./pool-price-coherence";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { applyPoolVolumeEligibility, buildDexPriceObservationsFromRetainedPools, filterRetainedPools, hasDexPricePrimaryReference, isP4OnlyPausedBalancerPool, oldestPriceObservation, quarantineProtocolTvlOutliers } from "./scoring-helpers";
 import { suiCoinType } from "./sui/identity";
+import { TEMPO_PRICE_BUDGET_MS } from "./tempo-price";
 import type { DexPriceObs, PoolEntry, SourcePoolGraph } from "./types";
 
 const PRICE_REFRESH_POLICY = {
-  // Full demand (about 1,400 pools, 95 requests) needs 54 to 78 s and overran 90 s in 5 of 26
+  // Full demand (about 1,400 pools, 95 requests) needs 54 to 78 s and hit the 90 s budget in 5 of 26
   // measured hours (2026-11-11 to 13); the readiness cutoff still bounds a late start.
   budgetMs: 150_000,
-  // Persistence after the refresh was measured at 28 s (2026-11-13 07:10 UTC stage).
-  persistenceReserveMs: 40_000,
+  // Nov 11-13 evidence: max persistence 64.289 s + 15.711 s margin = 80 s;
+  // refresh-end/Tempo timings are unavailable. Margin also covers progress/USDA and
+  // the phase remainder (max 5.732 s). Reserve Tempo's separate 20 s cap before this boundary.
+  persistenceReserveMs: 80_000,
   requestTimeoutMs: 8_000,
   maxRequests: 125,
   maxConsecutiveFailures: 3,
 } as const;
+
+export function priceRefreshDeadlines(readinessDeadlineMs = Infinity, deadline?: SlotDeadline) {
+  const tempo = Math.min(deadline?.platformDeadlineMs ?? Infinity, readinessDeadlineMs)
+    - PRICE_REFRESH_POLICY.persistenceReserveMs;
+  return { refresh: tempo - TEMPO_PRICE_BUDGET_MS, tempo };
+}
 
 interface Contributor {
   stablecoinId: string;
@@ -248,8 +257,7 @@ export async function refreshPoolPrices(input: RefreshGraph & {
   }
   for (const contributor of plan.unsupported) unchanged(contributor, contributor.reason);
   const wallDeadlineMs = startedAtMs + PRICE_REFRESH_POLICY.budgetMs;
-  const readinessDeadlineMs = Math.min(input.deadline?.platformDeadlineMs ?? Infinity,
-    input.readinessDeadlineMs ?? Infinity) - PRICE_REFRESH_POLICY.persistenceReserveMs;
+  const readinessDeadlineMs = priceRefreshDeadlines(input.readinessDeadlineMs, input.deadline).refresh;
   const deadlineMs = Math.min(wallDeadlineMs, readinessDeadlineMs);
   let blockedReason = !input.apiKey?.trim() ? "missing-api-key" : null;
   if (!blockedReason && plan.candidates.length && !input.signal?.aborted) {

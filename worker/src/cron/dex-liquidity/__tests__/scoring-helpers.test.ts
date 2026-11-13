@@ -16,7 +16,7 @@ import { computeLiquidityScore, initLiquidityFallbackCounters } from "../pool-he
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
 import { makeObs, makePool, scorePoolGraph, withCompleteVolume } from "./scoring-test-builders";
-import { captureObservedPoolPrices, measurePriceRefreshDemand, refreshPoolPrices } from "../price-refresh";
+import { captureObservedPoolPrices, measurePriceRefreshDemand, priceRefreshDeadlines, refreshPoolPrices } from "../price-refresh";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import * as cg from "../../../lib/coingecko-onchain";
 import * as breaker from "../../../lib/circuit-breaker";
@@ -164,11 +164,12 @@ describe("source-stage exact-pool price refresh", () => {
     expect(pools.every((p) => p.priceObservedAt === now - 6 * 3600)).toBe(true);
   });
 
-  it.each([["budget", [141_000, 150_000]], ["deadline", [3_000]]] as const)("stops on the %s after a successful first batch", async (kind, clock) => {
+  it.each([["budget", [141_000, 150_000]], ["deadline", [43_000]]] as const)("stops on the %s after a successful first batch", async (kind, clock) => {
+    expect(priceRefreshDeadlines(450_000)).toEqual({ refresh: 350_000, tempo: 370_000 });
     const pools = Array.from({ length: 1 + 30 * clock.length }, (_, i) => pool(i));
     const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + clock[fetch.mock.calls.length - 1]!); return reply([row(0)]); });
     vi.stubGlobal("fetch", fetch);
-    const result = await run(graph(pools), { readinessDeadlineMs: kind === "deadline" ? now * 1000 + 50_000 : undefined });
+    const result = await run(graph(pools), { readinessDeadlineMs: now * 1000 + (kind === "deadline" ? 150_000 : 260_000) });
     expect(result).toMatchObject({ requests: clock.length, refreshed: 1, elapsedMs: clock[clock.length - 1], stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
     expect(pools[0]!.priceObservedAt).toBe(now);
     expect(pools[30]!.priceObservedAt).toBe(now - 6 * 3600);
@@ -302,7 +303,6 @@ describe("isPlausibleDexObservationPrice guards peg", () => {
   });
 });
 
-// Minimal input builder for classifyCoverage – only sourceMix and totalTvlUsd vary per case.
 function makeCoverageInput(
   sourceMix: LiquiditySourceMixByFamily,
   totalTvlUsd: number,
@@ -429,7 +429,6 @@ describe("collapseDuplicateObservations", () => {
       makeObs({ identityConfidence: "derived_ambiguous", derivedMatchKey: "usdc:usdt" }),
     ];
     const { collapsed, duplicateGroups } = collapseDuplicateObservations(obs);
-    // Both lack a qualifying key, so both pass through unchanged
     expect(collapsed).toHaveLength(2);
     expect(duplicateGroups).toBe(0);
   });
