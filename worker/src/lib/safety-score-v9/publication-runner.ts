@@ -865,10 +865,12 @@ export async function runSafetyScoreV9Publication(
       // Fresh clock: the archive step just did I/O. Measurement only, no new tick.
       work.materializeRemainingMs = publicationDeadlineMs - Date.now();
       pendingPublished.publicMaterialization = await materializeAcceptedPublication(
-        input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs, work,
+        input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs, publicationDeadlineMs, work,
       );
       if (pendingPublished.publicMaterialization.status === "failed") {
         pendingPublished.warnings.push("public-materialization-failed");
+      } else if (pendingPublished.publicMaterialization.status === "skipped") {
+        pendingPublished.warnings.push("public-materialization-deferred");
       }
     }
     pendingPublished.abortCause = abortCause();

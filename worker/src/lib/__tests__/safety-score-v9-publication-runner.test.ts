@@ -1184,9 +1184,12 @@ describe("Safety Score V9 publication runner", () => {
   });
 
   it.each([
-    { latencyMs: 400, expected: "materialized" },
-    { latencyMs: 20_000, expected: "failed" },
-  ] as const)("accepts before real 397-card staging, which is $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
+    { latencyMs: 400, expected: "materialized", buildMs: 16e3 },
+    { latencyMs: 20_000, expected: "failed", buildMs: 16e3 },
+    { latencyMs: 400, expected: "materialized", buildMs: 119_600 },
+    { latencyMs: 400, expected: "skipped", buildMs: 119_601 },
+    { latencyMs: 400, expected: "failed", buildMs: 119_599 },
+  ] as const)("accepts before real 397-card staging, which is $expected with $latencyMs ms D1 latency after $buildMs ms", async ({ latencyMs, expected, buildMs }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({
@@ -1228,6 +1231,7 @@ describe("Safety Score V9 publication runner", () => {
           // Model elapsed I/O and its real abort signal without sleeping for
           // three minutes. A completed staged write still cannot select itself.
           elapsedMs += latencyMs;
+          if (stagingCalls > 1 && buildMs % 2) throw RangeError();
           if (elapsedMs >= getSafetyScoreV9PublicationBudgetMs(start, start + 180_000)) {
             deadline.abort(new DOMException("Staging exhausted the publication window", "TimeoutError"));
           }
@@ -1250,7 +1254,7 @@ describe("Safety Score V9 publication runner", () => {
       const before = acceptedRows.all(...acceptedKeys);
       mocks.loadBaseline.mockResolvedValue(acceptedBaseline(prior));
       mocks.build.mockImplementationOnce(() => {
-        elapsedMs = 16_000;
+        elapsedMs = buildMs;
         return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry };
       });
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
@@ -1270,7 +1274,7 @@ describe("Safety Score V9 publication runner", () => {
         expect(acceptedRows.all(...acceptedKeys)).not.toEqual(before);
         expect((await store.loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId)
           .toBe(candidate.publicationGenerationId);
-        expect(result.subphaseElapsedMs.materializeStage).toBeGreaterThan(0);
+        expect(result.subphaseElapsedMs.materializeStage! > 0).toBe(expected !== "skipped"); // skipped: no staging
         expect(result.subphaseElapsedMs.persistCommit).toEqual(expect.any(Number));
         expect(result.work?.publisherDeadlineAtMs).toBe(start + 165e3);
         expect(mocks.persistAttempt).not.toHaveBeenCalled();
@@ -1283,6 +1287,10 @@ describe("Safety Score V9 publication runner", () => {
           });
           expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
             .get(candidate.publicationGenerationId)!.n).toBe(398);
+        } else if (buildMs % 2) { // odd: no attempt, or attempt 1 failed under 45 s left
+          expect(result).toMatchObject({ abortCause: null, warnings: [...missingLaneCertificateWarnings, `public-materialization-${expected === "failed" ? expected : "deferred"}`],
+            publicMaterialization: expected === "failed"
+              ? { status: expected, attempts: 1, code: expect.stringContaining("RangeError") } : { status: expected, reason: "insufficient-budget", remainingMs: 44_999, requiredMs: 45e3 } });
         } else {
           expect(result).toMatchObject({
             abortCause: { source: "publication-deadline", name: "TimeoutError" },
