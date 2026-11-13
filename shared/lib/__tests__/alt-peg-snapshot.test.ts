@@ -3,6 +3,7 @@ import { buildNonUsdMarketSnapshot, formatNonUsdShare, getCoreNonUsdPeg } from "
 import { CLIENT_ACTIVE_META_BY_ID } from "../stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "../stablecoins/aggregate-client-registry";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "../../test-utils/alt-peg-fixtures";
+import { makeChainGapGuard } from "../../test-utils/stablecoin";
 
 const row = (id: string, circulating: Record<string, number> | null) => ({ id, name: id, symbol: id.toUpperCase(), circulating });
 
@@ -52,23 +53,10 @@ describe("buildNonUsdMarketSnapshot", () => {
   it("keeps a partial-chain remainder in the known subtotal but withholds every exact share", () => {
     // A recorded ≤5% chain dropout (docs/supply-snapshot.md): EURC's amount is
     // the observed remainder, not a complete supply observation.
-    const rows = complete({ "eurc-circle": 60, "paxg-paxos": 40 }).map((entry) =>
-      entry.id === "eurc-circle"
-        ? {
-            ...entry,
-            supplyChainGuard: {
-              reason: "supply-chain-dropout" as const,
-              status: "chains-unavailable" as const,
-              partialCoverage: true as const,
-              quarantinedSince: 1_792_800_000,
-              chains: [{
-                chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: 0, baselineUsd: 1_653_927,
-                baselineObservedAt: 1_792_700_000, baselineSource: "seed" as const, resolution: "unavailable" as const,
-              }],
-            },
-          }
-        : entry);
-    const snapshot = buildNonUsdMarketSnapshot(rows);
+    const guarded = (partialCoverage?: true) => buildNonUsdMarketSnapshot(
+      complete({ "eurc-circle": 60, "paxg-paxos": 40 }).map((entry) =>
+        entry.id === "eurc-circle" ? { ...entry, supplyChainGuard: makeChainGapGuard(partialCoverage) } : entry));
+    const snapshot = guarded(true);
 
     expect(snapshot.altMarketCap).toBe(100);
     expect(snapshot.altSupplyPartialCount).toBe(1);
@@ -78,6 +66,8 @@ describe("buildNonUsdMarketSnapshot", () => {
     expect(snapshot.pegs.every((entry) => entry.sharePct === null)).toBe(true);
     expect(snapshot.commoditySharePct).toBeNull();
     expect(snapshot.nonCommoditySharePct).toBeNull();
+    // Below the guard's materiality bound the published amount is whole: shares stay exact.
+    expect(guarded()).toMatchObject({ altSupplyPartialCount: 0, commoditySharePct: 40 });
   });
 
   it("keeps an observed zero numeric", () => {

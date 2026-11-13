@@ -4,6 +4,7 @@ import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import productionFixtureJson from "./fixtures/hero-cohort-history.json";
 import octoberFixture from "@shared/test-utils/fixtures/hero-chart-oct10.json";
 import { StablecoinChartResponseSchema } from "@shared/types/supply";
+import { makeChainGapGuard } from "@shared/test-utils/stablecoin";
 
 // JSON imports widen literal unions such as `aggregateUniverse`; the fixture is production-shaped.
 const productionFixture = productionFixtureJson as unknown as {
@@ -263,26 +264,19 @@ describe("buildTotalMcapChartRows", () => {
   });
 
   it("leaves a gap for a selected partial-chain cohort row and its Others residual, keeping the provider total (K-031)", () => {
-    const partial = {
-      supplySource: null,
-      supplyObservedAt: null,
-      supplyChainGuard: {
-        reason: "supply-chain-dropout" as const, status: "chains-unavailable" as const, partialCoverage: true as const,
-        chains: [{
-          chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3, baselineObservedAt: 50,
-          baselineSource: "state" as const, resolution: "unavailable" as const,
-        }],
-      },
-    };
+    const provenance = (partialCoverage?: true) =>
+      ({ supplySource: null, supplyObservedAt: null, supplyChainGuard: makeChainGapGuard(partialCoverage) });
     const rows = buildTotalMcapChartRows(
       [
         { date: 100, totalCirculatingUSD: { peggedUSD: 100 } },
         { date: 200, totalCirculatingUSD: { peggedUSD: 200 } },
+        { date: 300, totalCirculatingUSD: { peggedUSD: 300 } },
       ],
       {
         usdtHistory: [
           { date: 100, circulatingUsd: 10, price: 1, supplyProvenance: null },
-          { date: 200, circulatingUsd: 17, price: 1, supplyProvenance: partial },
+          { date: 200, circulatingUsd: 17, price: 1, supplyProvenance: provenance(true) },
+          { date: 300, circulatingUsd: 20, price: 1, supplyProvenance: provenance() },
         ],
         usdcHistory: [{ date: 100, circulatingUsd: 5, price: 1 }, { date: 200, circulatingUsd: 0, price: 1 }],
         usdsHistory: [{ date: 100, circulatingUsd: 2, price: 1 }, { date: 200, circulatingUsd: 4, price: 1 }],
@@ -292,5 +286,7 @@ describe("buildTotalMcapChartRows", () => {
     // The legacy (unrecorded) row stays numeric; the partial row does not fall back to the older point.
     expect(rows[0]).toMatchObject({ usdt: 10, usdc: 5, sky: 5, others: 80, total: 100 });
     expect(rows[1]).toMatchObject({ usdt: null, usdc: 0, sky: 10, others: null, total: 200 });
+    // A gap below the guard's materiality bound leaves the published amount whole: the row stays numeric.
+    expect(rows[2]).toMatchObject({ usdt: 20, others: 270 });
   });
 });

@@ -1,7 +1,21 @@
-import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinData, SupplyChainGuardProvenance } from "@shared/types/supply";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
 export const TEST_STABLECOIN_TIMESTAMP_SEC = 1_700_000_000;
+
+/**
+ * A chain-dropout guard with one unavailable chain. `true` publishes a partial remainder; omitted, the gap is
+ * below the guard's materiality bound and removes nothing from the published aggregate.
+ */
+export function makeChainGapGuard(partialCoverage?: true): SupplyChainGuardProvenance {
+  return {
+    reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage,
+    chains: [{
+      chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
+      baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable",
+    }],
+  };
+}
 
 export function makeStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   const pegType = overrides.pegType ?? "peggedUSD";
