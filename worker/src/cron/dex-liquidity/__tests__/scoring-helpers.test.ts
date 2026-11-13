@@ -164,16 +164,15 @@ describe("source-stage exact-pool price refresh", () => {
     expect(pools.every((p) => p.priceObservedAt === now - 6 * 3600)).toBe(true);
   });
 
-  it.each(["budget", "deadline"] as const)("stops on the %s after a successful first batch", async (kind) => {
-    const pools = Array.from({ length: 31 }, (_, i) => pool(i));
-    const elapsed = kind === "budget" ? 90_000 : 3_000;
-    const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + elapsed); return reply([row(0)]); });
+  it.each([["budget", [141_000, 150_000]], ["deadline", [3_000]]] as const)("stops on the %s after a successful first batch", async (kind, clock) => {
+    const pools = Array.from({ length: 1 + 30 * clock.length }, (_, i) => pool(i));
+    const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + clock[fetch.mock.calls.length - 1]!); return reply([row(0)]); });
     vi.stubGlobal("fetch", fetch);
-    const result = await run(graph(pools), { readinessDeadlineMs: kind === "deadline" ? now * 1000 + 30_000 : undefined });
-    expect(result).toMatchObject({ requests: 1, refreshed: 1, elapsedMs: elapsed, stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
+    const result = await run(graph(pools), { readinessDeadlineMs: kind === "deadline" ? now * 1000 + 50_000 : undefined });
+    expect(result).toMatchObject({ requests: clock.length, refreshed: 1, elapsedMs: clock.at(-1), stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
     expect(pools[0]!.priceObservedAt).toBe(now);
     expect(pools[30]!.priceObservedAt).toBe(now - 6 * 3600);
-    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledTimes(clock.length);
   });
 
   it("orders unknown and oldest clocks across networks, batches and coin attributions", async () => {
