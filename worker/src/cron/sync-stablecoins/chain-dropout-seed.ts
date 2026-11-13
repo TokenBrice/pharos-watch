@@ -489,8 +489,9 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
   // reports the issuer's XRPL treasury account rsTXamYqHPDaNQPKejfRavmwPevuAkPQeT as unreleased.
   // Validated XRPL ledger 108302298: it holds 1,000,000 USDQ and 999,977.5 EURQ; issuer obligations
   // outside it are 0 USDQ and 22.5 EURQ. USDQ's XRPL row is an observed 0, accepted at changedAt.
-  // EURQ has a CoinGecko detail provider, so the guard never evaluates its chains and the acceptance
-  // generated below goes unused; the guard's perimeter loop still withholds its earlier anchors.
+  // EURQ came under the guard in v6.81, after changedAt: its stale XRPL pair relearns from the observed row
+  // and no XRPL pair was flagged before changedAt, so the acceptance generated below goes unused. The
+  // guard's perimeter loop still withholds its earlier anchors.
   ...SUPPLY_PERIMETER_CHANGES.flatMap((change) => change.chainIds.map((chainId) => ({
     assetId: change.stablecoinId, chainId,
     policy: "accept-observed-collapse" as const,
