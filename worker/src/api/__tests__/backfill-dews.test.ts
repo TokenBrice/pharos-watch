@@ -1,7 +1,6 @@
-import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
 import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { readJsonResponse, makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { handleStressSignals } from "../stress-signals";
@@ -203,49 +202,26 @@ describe("handleBackfillDEWS", () => {
     }>(response, 200);
     expect(body.summary).toMatchObject({ evaluableEvents: 0, excludedEvents: 1, tpRate: null });
   });
-  it("reconstructs inputs from circulating_usd and liquidity history schema columns", async () => {
-    const startedAt = 1710000000;
+  it.each([["usdt-tether", 1710000000, true, true], ["gho-aave", 1794614400, false, false], ["gho-aave", 1794528000, false, false], ["gho-aave", 1795132800, true, false]] as const)("reconstructs %s supply and liquidity history", async (id, startedAt, dayOk, weekOk) => {
+    vi.mocked(computeHistoricalDEWS).mockClear();
     const day = Math.floor(startedAt / 86400) * 86400;
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            started_at: startedAt,
-            ended_at: startedAt + 7200,
-            peak_deviation_bps: -150,
-          },
-        ],
+        rows: [{ stablecoin_id: id, started_at: startedAt, ended_at: startedAt + 7200, peak_deviation_bps: -150 }],
       },
       {
         match: "FROM supply_history",
-        rows: [
-          { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
-          { stablecoin_id: "usdt-tether", snapshot_date: day - 86400, circulating_usd: 99_500_000 },
-          { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * 86400, circulating_usd: 98_000_000 },
-        ],
+        rows: [[0, 100_000_000], [1, 99_500_000], [7, 98_000_000]].map(([days, circulating_usd]) => ({
+          stablecoin_id: id, snapshot_date: day - days * 86400, circulating_usd,
+        })),
       },
       {
         match: "FROM dex_liquidity_history",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            snapshot_date: day,
-            liquidity_score: 81,
-            total_tvl_usd: 2_200_000,
-            coverage_confidence: 0.5,
-            methodology_version: null,
-          },
-          {
-            stablecoin_id: "usdt-tether",
-            snapshot_date: day - 7 * 86400,
-            liquidity_score: 77,
-            total_tvl_usd: 2_000_000,
-            coverage_confidence: 0.5,
-            methodology_version: null,
-          },
-        ],
+        rows: [[0, 81, 2_200_000], [7, 77, 2_000_000]].map(([days, liquidity_score, total_tvl_usd]) => ({
+          stablecoin_id: id, snapshot_date: day - days * 86400, liquidity_score, total_tvl_usd,
+          coverage_confidence: 0.5, methodology_version: null,
+        })),
       },
     ]);
 
@@ -255,10 +231,11 @@ describe("handleBackfillDEWS", () => {
     expect(response.status).toBe(200);
     expect(computeHistoricalDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
-        stablecoinId: "usdt-tether",
+        stablecoinId: id,
         circulatingCurrent: 100_000_000,
-        circulatingPrevDay: 99_500_000,
-        circulatingPrevWeek: 98_000_000,
+        circulatingPrevDay: dayOk ? 99_500_000 : 100_000_000,
+        circulatingPrevWeek: weekOk ? 98_000_000 : 100_000_000,
+        circulatingPrevDayAvailable: dayOk, circulatingPrevWeekAvailable: weekOk,
         liquidityScore: 81,
         liquidityScore7dAgo: 77,
         tvlCurrent: 2_200_000,

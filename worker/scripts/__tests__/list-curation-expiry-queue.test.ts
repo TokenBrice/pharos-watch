@@ -147,9 +147,7 @@ describe("buildCurationExpiryQueue", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Active evidence families. Registries are injected: no live-registry counts.
-// ---------------------------------------------------------------------------
 
 const HORIZON_SEC = CLOCK_SEC + 10 * DAY;
 const isoSec = (sec: number) => new Date(sec * 1_000).toISOString();

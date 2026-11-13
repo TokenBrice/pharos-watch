@@ -1007,49 +1007,38 @@ describe("resolveDdrIncidents", () => {
     expect(row.resolution.factors.some((factor) => factor.code === "K5_exit_collapse")).toBe(false);
   });
 
-  it("omits stale live context while preserving sparse supply coverage", () => {
+  it.each([0, 1, 2])("omits stale context and incomparable supply (%s)", (perimeter) => {
+    const now = perimeter ? 1794614400 - (perimeter - 1) * DAY + (perimeter === 2 ? 8 * 3600 : 0) : NOW_SEC;
+    const id = perimeter ? "gho-aave" : "usdc-circle";
+    const map = <T>(row: T) => new Map([[id, row]]);
     const context = loadedContext({
-      supplyByCoin: new Map([["usdc-circle", [{ date: NOW_SEC - DAY, usd: 1_000_000 }]]]),
-      dewsByCoin: new Map([
-        [
-          "usdc-circle",
-          {
-            stablecoin_id: "usdc-circle",
-            score: 80,
-            band: "DANGER",
-            signals_json: "{bad json",
-            computed_at: NOW_SEC - 3 * 3600,
-          },
-        ],
-      ]),
-      liqByCoin: new Map([
-        [
-          "usdc-circle",
-          {
-            stablecoin_id: "usdc-circle",
-            liquidity_score: 10,
-            concentration_hhi: 0.9,
-            total_tvl_usd: 10,
-            total_volume_24h_usd: 5,
-            updated_at: NOW_SEC - 5 * 3600,
-            methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
-          },
-        ],
-      ]),
-      redemptionByCoin: new Map([
-        [
-          "usdc-circle",
-          {
-            stablecoin_id: "usdc-circle",
-            immediate_capacity_ratio: 0.5,
-            route_family: "native",
-            updated_at: NOW_SEC - 8 * DAY,
-          },
-        ],
-      ]),
+      active: [activeInput({ stablecoinId: id, startedAt: now - DAY })],
+      supplyByCoin: map(perimeter ? [{ date: now - 30 * DAY, usd: 699e6 }, { date: Math.floor(now / DAY) * DAY, usd: 268e6 }] : [{ date: now - DAY, usd: 1_000_000 }]),
+      dewsByCoin: map({
+        stablecoin_id: id,
+        score: 80,
+        band: "DANGER",
+        signals_json: "{bad json",
+        computed_at: now - 3 * 3600,
+      }),
+      liqByCoin: map({
+        stablecoin_id: id,
+        liquidity_score: 10,
+        concentration_hhi: 0.9,
+        total_tvl_usd: 10,
+        total_volume_24h_usd: 5,
+        updated_at: now - 5 * 3600,
+        methodology_version: LIQUIDITY_METHODOLOGY_VERSION,
+      }),
+      redemptionByCoin: map({
+        stablecoin_id: id,
+        immediate_capacity_ratio: 0.5,
+        route_family: "native",
+        updated_at: now - 8 * DAY,
+      }),
     });
 
-    const [row] = resolveDdrIncidents(context, NOW_SEC);
+    const [row] = resolveDdrIncidents(context, now);
 
     expect(row.relatedContext).toMatchObject({
       dewsScore: null,

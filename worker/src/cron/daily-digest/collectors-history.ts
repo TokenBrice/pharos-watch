@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
+import { SUPPLY_PERIMETER_CHANGES, getLatestSupplyPerimeterChange, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
@@ -26,9 +27,11 @@ export async function collectTotalMcapAth(
            AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
            AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
            AND json_extract(input_data, '$.supplyCoverage.complete') = 1
+           AND generated_at >= ?
          ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
          LIMIT 1`,
       )
+      .bind(getLatestSupplyPerimeterChange(0, ctx.nowSec) ?? 0)
       .first<{ ath_value: number | null; ath_date: number | null }>();
     if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return collectorOk(undefined);
     const dayTs = bucketUnixSecondsToUtcDay(row.ath_date);
@@ -157,11 +160,14 @@ export async function collectHistoricalContext(
 
       let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
       if (biggestSupplyChange) {
+        const perimeterChangedAt = Math.max(0, ...SUPPLY_PERIMETER_CHANGES
+          .filter((change) => change.stablecoinId === biggestSupplyChange.id && change.changedAt <= ctx.nowSec)
+          .map((change) => change.changedAt));
         const athRow = await ctx.db
           .prepare(
-            "SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history WHERE stablecoin_id = ? ORDER BY circulating_usd DESC LIMIT 1",
+            "SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND snapshot_date >= ? ORDER BY circulating_usd DESC LIMIT 1",
           )
-          .bind(biggestSupplyChange.id)
+          .bind(biggestSupplyChange.id, perimeterChangedAt)
           .first<{ ath_mcap: number | null; snapshot_date: number }>();
         const athDate = athRow?.snapshot_date ?? 0;
 
@@ -172,13 +178,15 @@ export async function collectHistoricalContext(
              JOIN supply_history s2
                ON s1.stablecoin_id = s2.stablecoin_id
                AND s2.snapshot_date = s1.snapshot_date - ?
-             WHERE s1.stablecoin_id = ?
+             WHERE s1.stablecoin_id = ? AND s2.snapshot_date >= ?
              ORDER BY abs_change DESC LIMIT 1`,
           )
-          .bind(7 * DAY_SECONDS, biggestSupplyChange.id)
+          .bind(7 * DAY_SECONDS, biggestSupplyChange.id, perimeterChangedAt)
           .first<{ snapshot_date: number; abs_change: number }>();
 
-        if (athRow?.ath_mcap && largestChangeRow) {
+        if (athRow?.ath_mcap && largestChangeRow
+          && ![athDate, largestChangeRow.snapshot_date, largestChangeRow.snapshot_date - 7 * DAY_SECONDS]
+            .some((date) => isAmbiguousSupplyPerimeterDay(biggestSupplyChange.id, date))) {
           supplyMoverContext = {
             allTimeHighMcap: athRow.ath_mcap,
             allTimeHighDate: athDate,
@@ -216,6 +224,7 @@ export async function collectCrossDayTrends(
       .all<{ generated_at: number; input_data: string }>();
 
     const entries = rows.results ?? [];
+    const perimeterChangedAt = getLatestSupplyPerimeterChange(ctx.nowSec - 7 * DAY_SECONDS, ctx.nowSec);
     if (entries.length < 3) return collectorOk(undefined);
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
@@ -231,10 +240,11 @@ export async function collectCrossDayTrends(
         if (data.stabilityIndex) {
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
-        if (data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
+        const comparableSupply = perimeterChangedAt == null || row.generated_at >= perimeterChangedAt;
+        if (comparableSupply && data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        if (data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (comparableSupply && data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }

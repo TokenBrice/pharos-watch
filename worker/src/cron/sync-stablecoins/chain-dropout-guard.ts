@@ -1,3 +1,4 @@
+import { SUPPLY_PERIMETER_CHANGES } from "@shared/lib/supply-perimeter-changes";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
@@ -236,8 +237,9 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
  * R2: an unreadable state row must neither release quarantines nor resurrect disproven baselines.
  * Rebuild pairs from the last accepted publication: guarded chains from `supplyChainGuard` provenance
  * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
- * other published chain current as its accepted level — including a confirmed low/zero whose guard
- * sidecar disappeared once the chain stopped being flagged. Only unpublished chains bootstrap from seed.
+ * other published chain current except the CoinGecko gap-fill remainder as its accepted level,
+ * including a confirmed low/zero whose guard sidecar disappeared once the chain stopped being flagged.
+ * Only unpublished chains bootstrap from seed.
  */
 function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
   for (const previous of previousAssetsById.values()) {
@@ -271,6 +273,8 @@ function recoverStateFromPublication(state: ChainDropoutState, previousAssetsByI
     const observedAt = previous.supplyObservedAt ?? now;
     for (const [label, row] of Object.entries(rows)) {
       const chainId = canonicalizeChainCirculating({ [label]: row }).keys().next().value as string | undefined;
+      // An aggregate remainder is not a provider chain observation or a dropout baseline.
+      if (chainId && chainId === previous.supplyGapFill?.missingChainId) continue;
       const key = pairKey(assetId, chainId ?? `label:${label}`);
       if (state.pairs[key]) continue;
       const current = chainId ? canonical.get(chainId)?.current : normalizeChainSupplyValue(row.current);
@@ -389,6 +393,8 @@ export async function guardChainDropouts(input: {
         pair.baselineObservedAt = now;
         pair.quarantinedSince = null;
         pair.releasedAt = now;
+        delete pair.ambiguousSince;
+        delete pair.heldTotalUsd;
         continue;
       }
       candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, firstFlaggedAt: pair.quarantinedSince!, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
@@ -726,6 +732,21 @@ export async function guardChainDropouts(input: {
     }
     if (!result.unavailableAssetIds.includes(String(asset.id))) result.unavailableAssetIds.push(String(asset.id));
     warn("supply-list-fill-default-withheld", "Rescaled list supply lacks complete native corroboration; publishing unavailable supply", { assetId: asset.id, reason: "supply-chain-dropout" });
+  }
+  // A reviewed provider perimeter change is not a supply move: the provider's day/week/month values
+  // from before the review count another quantity. Withhold each until it can no longer predate it (R1).
+  for (const entry of SUPPLY_PERIMETER_CHANGES) {
+    if (entry.changedAt > now) continue;
+    const asset = input.assets.find((candidate) => String(candidate.id) === entry.stablecoinId);
+    if (!asset) continue;
+    const ageDays = (now - entry.changedAt) / 86_400;
+    const rows = Object.entries(asset.chainCirculating ?? {}).filter(([label, row]) =>
+      entry.chainIds.some((chainId) => canonicalizeChainCirculating({ [label]: row }).has(chainId))).map(([, row]) => row);
+    for (const row of [asset, ...rows]) {
+      if (ageDays < 2) row.circulatingPrevDay = null;
+      if (ageDays < 8) row.circulatingPrevWeek = null;
+      if (ageDays < 31) row.circulatingPrevMonth = null;
+    }
   }
   for (const [key, pair] of Object.entries(state.pairs)) {
     if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null

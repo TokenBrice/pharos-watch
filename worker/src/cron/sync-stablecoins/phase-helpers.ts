@@ -1,3 +1,4 @@
+import { isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -291,6 +292,7 @@ export async function fillMissingSupplyHistory(
 
   const historyById = new Map<string, { day?: number; week?: number; month?: number }>();
   for (const row of historyRows.results ?? []) {
+    if (isEarlierSupplyPerimeter(row.stablecoin_id, row.snapshot_date)) continue;
     const entry = historyById.get(row.stablecoin_id) ?? {};
     if (row.snapshot_date === date1d) entry.day = row.circulating_usd;
     else if (row.snapshot_date === date7d) entry.week = row.circulating_usd;

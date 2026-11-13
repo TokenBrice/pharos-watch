@@ -104,7 +104,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       const entry: DetailSnapshotInputEntry = {
         id,
         status: "available",
-        liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail)),
+        liveSummary: projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id),
         supplyHistory: SupplyHistoryResponseSchema.parse(history),
         updatedAt: { liveSummary: liveSummaryUpdatedAt, supplyHistory: supplyHistoryUpdatedAt },
         freshness: {

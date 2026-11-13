@@ -2,6 +2,7 @@ import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
 import { admitSupplyBuckets, sumPegBucketsOrNull } from "./supply";
+import { isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
 
@@ -30,12 +31,13 @@ function detailBucketsAt(
   detail: StablecoinDetailResponse,
   targetDate: number,
   field: "totalCirculatingUSD" | "totalCirculating",
+  stablecoinId: string,
 ): Record<string, number> {
   let chosen: Record<string, number> | undefined;
   let chosenDate = Number.NEGATIVE_INFINITY;
   for (const token of detail.tokens ?? []) {
     const date = token.date;
-    if (date == null || date > targetDate) continue;
+    if (date == null || date > targetDate || isEarlierSupplyPerimeter(stablecoinId, date)) continue;
     if (targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
     if (date > chosenDate) {
       chosenDate = date;
@@ -46,7 +48,7 @@ function detailBucketsAt(
 }
 
 /** Shared by the compact live endpoint, per-coin acquisition and cache-only bulk acquisition. */
-export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): StablecoinLiveSummary {
+export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, stablecoinId = ""): StablecoinLiveSummary {
   const datedTokens = (detail.tokens ?? []).filter(
     (token): token is typeof token & { date: number } => token.date != null,
   );
@@ -97,17 +99,17 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     ...(hasCurrentSupply && detail.currentSupplyExcludedChains?.length ? { supplyExcludedChains: detail.currentSupplyExcludedChains } : {}),
     circulating,
     circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
-      : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
-    circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD"),
-    circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD"),
+      : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD", stablecoinId),
+    circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
+    circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
     nativeSupply: {
       current: currentNative,
       prevWeek: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculating")),
+        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculating", stablecoinId)),
       prevMonth: currentNative == null || supplyObservedAt == null
         ? null
-        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculating")),
+        : sumPegBucketsOrNull(detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculating", stablecoinId)),
     },
   }));
 }

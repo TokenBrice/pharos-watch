@@ -706,9 +706,7 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   });
 });
 
-// ---------------------------------------------------------------------------
 // 2026-04-13 status-stability hardening: watch-tier cron bootstrap handling.
-// ---------------------------------------------------------------------------
 //
 // A watch-tier cron with zero historical cron_runs rows is in bootstrap mode,
 // not unhealthy. This mirrors the reserveComposition bootstrap pattern and

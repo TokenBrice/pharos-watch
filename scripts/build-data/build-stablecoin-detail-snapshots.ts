@@ -378,7 +378,7 @@ export async function generateSnapshots(
     }
     return {
       id,
-      liveSummary: detail ? projectStablecoinLiveSummary(detail.data) : null,
+      liveSummary: detail ? projectStablecoinLiveSummary(detail.data, id) : null,
       supplyHistory: history?.data ?? null,
       updatedAt: {
         ...(detail?.updatedAt != null ? { liveSummary: detail.updatedAt } : {}),

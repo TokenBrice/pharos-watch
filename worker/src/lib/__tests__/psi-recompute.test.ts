@@ -18,12 +18,9 @@ describe("buildSupplySnapshotMap", () => {
   });
 
   it("groups multiple coins independently and keeps per-coin sorting", () => {
-    const rows: PsiSupplyRow[] = [
-      { stablecoin_id: "usdc-circle", snapshot_date: 2 * DAY, circulating_usd: 220 },
-      { stablecoin_id: "usdt-tether", snapshot_date: 3 * DAY, circulating_usd: 330 },
-      { stablecoin_id: "usdc-circle", snapshot_date: 1 * DAY, circulating_usd: 210 },
-      { stablecoin_id: "usdt-tether", snapshot_date: 1 * DAY, circulating_usd: 310 },
-    ];
+    const rows: PsiSupplyRow[] = ([
+      ["usdc-circle", 2, 220], ["usdt-tether", 3, 330], ["usdc-circle", 1, 210], ["usdt-tether", 1, 310],
+    ] as const).map(([stablecoin_id, day, circulating_usd]) => ({ stablecoin_id, snapshot_date: day * DAY, circulating_usd }));
 
     const result = buildSupplySnapshotMap(rows);
     expect(result.get("usdc-circle")).toEqual([
@@ -289,20 +286,22 @@ describe("buildStabilityInputForDay", () => {
     expect(result.trendUnavailableIds).toContain("usdt-tether");
   });
 
-  it("pairs trend identities independently of the current denominator and admits observed zero", () => {
-    const day = 40 * DAY;
+  it.each([[14, 0], [14, 1], [14, 2], [13, 0], [20, 0]])("pairs trend identities independently of current supply (%s / %s)", (date, age) => {
+    const day = Date.UTC(2026, 10, date) / 1000;
     const input = buildPsiStabilityInput(day, [
       ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2e9, priorMcap: 2e9 }),
       { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 10e9 },
       // Available at the prior target but outside the current 14-day as-of window.
       { stablecoin_id: "dai-makerdao", snapshot_date: day - 21 * DAY, circulating_usd: 3e9 },
       ...psiSupplyPair({ stablecoinId: "usds-sky", day, currentMcap: 0, priorMcap: 0 }),
+      ...psiSupplyPair({ stablecoinId: "gho-aave", day: day - age * DAY, currentMcap: age === 2 ? 699e6 : 268e6, priorMcap: 699e6 }),
     ]);
-    expect(input.totalMcapUsd).toBe(12e9);
+    expect(input.totalMcapUsd).toBe(12e9 + (age === 2 ? 699e6 : 268e6));
     expect(input.mcap7dChangePct).toBe(0);
     expect(input.trendUnavailableIds).toContain("usdc-circle");
     expect(input.trendUnavailableIds).toContain("dai-makerdao");
     expect(input.trendUnavailableIds).not.toContain("usds-sky");
+    expect(input.trendUnavailableIds.includes("gho-aave")).toBe(age !== 2);
   });
 
   it("holds a measured zero paired prior denominator instead of inventing a trend", () => {

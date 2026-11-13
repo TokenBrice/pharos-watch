@@ -1,3 +1,5 @@
+import { SUPPLY_PERIMETER_CHANGES } from "@shared/lib/supply-perimeter-changes";
+
 // Vetted DefiLlama per-chain daily points at 2026-10-08T00:00Z, captured 2026-10-09.
 // USDG X Layer/Ink cross-checked against issuer-native on-chain totalSupply.
 // Incident bootstrap only: never supersedes a successfully loaded persisted baseline.
@@ -282,7 +284,9 @@ export const CHAIN_DROPOUT_SEED = [
 type ReviewedChainSupplyCollapse = {
   assetId: string; chainId: string; reviewedAt: number; evidenceUrl: string;
 } & (
-  | { policy: "accept-observed-collapse"; excludeOmittedUntil?: never }
+  | {
+    policy: "accept-observed-collapse"; excludeOmittedUntil?: never;
+  }
   | { policy: "exclude-omitted"; excludeOmittedUntil: number }
 );
 
@@ -440,4 +444,16 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-27T05:26:09Z") / 1000,
     evidenceUrl: "https://bscscan.com/token/0x60b14ec49874af1ba471685cb11132101aebdf09",
   },
+  // GHO, 2026-11-13: not a dropout. DefiLlama peggedassets-server PR #987 (merged 2026-11-12
+  // 08:05 UTC) reports GHO pre-minted into Aave's GhoReserve contracts and unborrowed
+  // GhoDirectMinter liquidity as unreleased. Recomputed from chain state at Ethereum block 26404723,
+  // Arbitrum 523807208, Monad 121833574 and Plasma 37613621: reserves hold 278,748,901 /
+  // 28,642,003 / 15,640,791 / 6,804,874 GHO, direct minters 100,524,608 idle; circulating is
+  // 268,638,822 GHO of 699,000,000 minted, against the provider's 268,653,633.
+  ...SUPPLY_PERIMETER_CHANGES.flatMap((change) => change.chainIds.map((chainId) => ({
+    assetId: change.stablecoinId, chainId,
+    policy: "accept-observed-collapse" as const,
+    reviewedAt: change.changedAt,
+    evidenceUrl: change.evidenceUrl,
+  }))),
 ];

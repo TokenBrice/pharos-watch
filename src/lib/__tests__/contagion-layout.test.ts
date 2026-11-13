@@ -204,9 +204,7 @@ describe("buildGraphData", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // runSimulation — O(n²) collision-pass bound
-// ---------------------------------------------------------------------------
 
 describe("runSimulation", () => {
   function makeRing(count: number): { nodes: GraphNode[]; links: GraphLink[] } {
