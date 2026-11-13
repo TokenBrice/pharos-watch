@@ -12,7 +12,11 @@ const TYPES: Record<string, { key: string; name: string }> = {
 };
 
 export function parseBlackrockBrsrvHoldings(body: string, nowSec: number): AdapterResult {
-  const lines = body.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+  let lines = body.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+  // BlackRock ends the file with its legal notice: one quoted field spanning several lines.
+  // Only that notice is removed. Any other extra row, single-field ones included, still throws.
+  const notice = lines.findIndex((line) => line.startsWith('"The content contained herein'));
+  if (notice > 1 && /^"(?:[^"]|"")*"$/.test(lines.slice(notice).join("\n"))) lines = lines.slice(0, notice);
   const match = /^Fund Holdings as of,"(\d{2})-([A-Z][a-z]{2})-(\d{4})"$/.exec(lines[0] ?? "");
   if (!match || !MONTHS[match[2]]) throw new Error("blackrock-brsrv-holdings missing dated holdings header");
   const date = `${match[3]}-${MONTHS[match[2]]}-${match[1]}`;
@@ -24,10 +28,10 @@ export function parseBlackrockBrsrvHoldings(body: string, nowSec: number): Adapt
   let unknownUsd = 0;
   const holdings = lines.slice(2).map((line) => {
     // This publisher quotes every field. Doubled quotes are the only CSV escape.
+    // Sticky: each field must start where the last ended, so a bad row is rejected in one pass.
     const fields: string[] = [];
     let offset = 0;
-    for (const field of line.matchAll(/"((?:[^"]|"")*)"(?:,|$)/g)) {
-      if (field.index !== offset) throw new Error("blackrock-brsrv-holdings malformed CSV");
+    for (const field of line.matchAll(/"((?:[^"]|"")*)"(?:,|$)/gy)) {
       fields.push(field[1].replaceAll('""', '"'));
       offset += field[0].length;
     }
