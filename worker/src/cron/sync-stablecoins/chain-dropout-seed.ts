@@ -429,4 +429,15 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
     evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
   },
+  // BSC block 133295638 (2026-11-13 05:26 UTC): the registry iUSD token has zero total supply and
+  // no Transfer in the sampled 22 hours before; DefiLlama detail id 298 has no BSC series. The
+  // guard carried a $3,926,614 BSC baseline dated 2026-11-12 19:15:10 UTC. Code and arithmetic
+  // point to a CoinGecko gap-fill remainder; that packet was not captured, so this is inferred.
+  {
+    assetId: "iusd-infinifi", chainId: "bsc",
+    policy: "exclude-omitted",
+    reviewedAt: Date.parse("2026-11-13T05:26:09Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-27T05:26:09Z") / 1000,
+    evidenceUrl: "https://bscscan.com/token/0x60b14ec49874af1ba471685cb11132101aebdf09",
+  },
 ];
