@@ -1,6 +1,6 @@
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "./stablecoins/aggregate-client-registry";
 import { getCirculatingRawOrNull } from "./supply";
-import { buildSupplyObservationProvenance, classifySupplyCoverage, type SupplyCoverage } from "./supply-provenance";
+import { buildSupplyObservationProvenance, classifySupplyAmountCoverage, type SupplyCoverage } from "./supply-provenance";
 import type { StablecoinListResponse } from "../types/supply";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "./homepage-cohort-config";
 
@@ -18,7 +18,7 @@ interface HomepageHeroMarketRow {
   pegType: string;
   /** `null` when the source row carries no observed supply; `0` only for an explicit zero. */
   circulatingUsd: number | null;
-  /** Chain coverage of the numeric amount; only meaningful when `circulatingUsd` is admitted. */
+  /** Amount coverage (`classifySupplyAmountCoverage`); only meaningful when `circulatingUsd` is admitted. */
   supplyCoverage: SupplyCoverage;
 }
 
@@ -125,7 +125,8 @@ export function buildLiveHomepageHeroSnapshot(
       pegType: asset.pegType,
       circulatingUsd: getCirculatingRawOrNull(asset),
       // The live payload is the admitted current row, so its guard (or absence) is recorded coverage.
-      supplyCoverage: classifySupplyCoverage(buildSupplyObservationProvenance(asset)),
+      // Amount coverage: a chain gap below the guard's materiality bound does not withhold a cohort.
+      supplyCoverage: classifySupplyAmountCoverage(buildSupplyObservationProvenance(asset)),
     })),
     asOfISO,
   );

@@ -8,7 +8,7 @@ import {
   type HomepageHeroSnapshot,
 } from "@shared/lib/homepage-hero-snapshot";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS, selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 
 function snapshot(asOfISO: string, totalUsd: number): HomepageHeroSnapshot {
   return {
@@ -221,16 +221,6 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
 });
 
 describe("homepage hero chain coverage (K-031)", () => {
-  const PARTIAL_GUARD = {
-    reason: "supply-chain-dropout" as const,
-    status: "chains-unavailable" as const,
-    partialCoverage: true as const,
-    quarantinedSince: 1_792_800_000,
-    chains: [{
-      chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
-      baselineObservedAt: 1_792_700_000, baselineSource: "state" as const, resolution: "unavailable" as const,
-    }],
-  };
   const everyCoreAsset = (overrides: Record<string, Partial<Parameters<typeof makeStablecoin>[0]>> = {}) =>
     [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) =>
       makeStablecoin({ id, pegType: "peggedUSD", circulating: { peggedUSD: 100 }, ...overrides[id] }));
@@ -241,7 +231,7 @@ describe("homepage hero chain coverage (K-031)", () => {
     expect(isHomepageSupplyComplete(complete)).toBe(true);
 
     const partial = buildLiveHomepageHeroSnapshot({ peggedAssets: everyCoreAsset({
-      "usdt-tether": { circulating: { peggedUSD: 97 }, supplyChainGuard: PARTIAL_GUARD },
+      "usdt-tether": { circulating: { peggedUSD: 97 }, supplyChainGuard: makeChainGapGuard(true) },
     }) });
     expect(partial.supplyObservedCount).toBe(CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size);
     expect(partial.supplyPartialCount).toBe(1);
@@ -252,6 +242,13 @@ describe("homepage hero chain coverage (K-031)", () => {
     // The named cohort with a partial member is unavailable; the provider-independent total stays numeric.
     expect(partial.cohort.usdt).toBeNull();
     expect(partial.cohort.usdc).toBe(100);
+
+    // Below the guard's materiality bound the published amount is whole: the cohort stays numeric.
+    const immaterial = buildLiveHomepageHeroSnapshot({ peggedAssets: everyCoreAsset({
+      "usdt-tether": { supplyChainGuard: makeChainGapGuard() },
+    }) });
+    expect(immaterial).toMatchObject({ supplyPartialCount: 0, cohort: { usdt: 100 } });
+    expect(isHomepageSupplyComplete(immaterial)).toBe(true);
   });
 
   it("treats static dataset rows without recorded provenance as legacy, never partial", () => {

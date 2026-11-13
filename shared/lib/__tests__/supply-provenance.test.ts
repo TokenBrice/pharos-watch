@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SupplyChainGuardProvenance } from "../../types/supply";
 import {
   buildSupplyObservationProvenance,
+  classifySupplyAmountCoverage,
   classifySupplyCoverage,
   isGuardCapablePricingPipelineVersion,
   parseSupplyObservationProvenance,
@@ -47,8 +48,11 @@ describe("supply provenance coverage authority (K-031)", () => {
   });
 
   it("treats an immaterial chains-unavailable omission as partial, but repaired or carried chains as complete", () => {
-    const immaterial = { ...PARTIAL_GUARD, partialCoverage: undefined };
-    expect(classifySupplyCoverage(buildSupplyObservationProvenance({ supplyChainGuard: immaterial }))).toBe("partial");
+    const immaterial = buildSupplyObservationProvenance({ supplyChainGuard: { ...PARTIAL_GUARD, partialCoverage: undefined } });
+    expect(classifySupplyCoverage(immaterial)).toBe("partial");
+    // The amount itself stands below the materiality bound; only a published remainder is a partial amount.
+    expect([immaterial, buildSupplyObservationProvenance({ supplyChainGuard: PARTIAL_GUARD }), null].map(classifySupplyAmountCoverage))
+      .toEqual(["complete", "partial", "unknown"]);
 
     const repaired: SupplyChainGuardProvenance = {
       reason: "supply-chain-dropout",
