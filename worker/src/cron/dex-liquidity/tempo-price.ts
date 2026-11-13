@@ -16,6 +16,7 @@ const OUSD = "0x20c0000000000000000000006a37da5c996874be";
 const USDT = "0x20c00000000000000000000014f22ca97301eb73";
 const BOOK = "0x0e97fc372f446f247f99ba27614fb2ec87a502a765dedf7e20890909189eed2f";
 const USDT_BOOK = "0xf9ae4b57f259c7f292ee1e6d6452621d169e4323ddf7550d6177213b91d6c3f0";
+export const TEMPO_PRICE_BUDGET_MS = 20_000;
 const ABI = parseAbi([
   "function decimals() view returns (uint8)",
   "function quoteToken() view returns (address)",
@@ -69,7 +70,7 @@ export async function refreshTempoPathUsdPrice(input: {
       maxAgeSec: DEX_FRESHNESS_SEC,
       rpcOptions: { chainRpcs: input.chainRpcs, signal: input.signal, maxRetries: 0,
         timeoutMs: 4_000, maxResponseBytes: 32_768,
-        deadlineMs: Math.min(input.deadlineMs ?? Infinity, Date.now() + 20_000) },
+        deadlineMs: Math.min(input.deadlineMs ?? Infinity, Date.now() + TEMPO_PRICE_BUDGET_MS) },
       verifyDeployment: async ({ blockNumber, header, rpcOptions }) => ({
         // Native Tempo precompiles expose the reviewed 0xef marker, not EVM bytecode.
         ok: header.timestamp <= Math.floor(Date.now() / 1000) &&
