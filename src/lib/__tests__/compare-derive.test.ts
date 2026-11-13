@@ -3,6 +3,7 @@ import {
   buildCompareRadarCohortBaseline,
   deriveComparisonCoins,
   deriveSupplySeries,
+  normalizeSupplyComparisonData,
   deriveFlowSeries,
   deriveFlowCardData,
   type CompareRadarCardEntry,
@@ -261,6 +262,24 @@ describe("deriveComparisonCoins", () => {
   });
 });
 
+const partialProvenance: NonNullable<SupplyHistoryPoint["supplyProvenance"]> = {
+  supplySource: null,
+  supplyObservedAt: null,
+  supplyChainGuard: {
+    reason: "supply-chain-dropout",
+    status: "chains-unavailable",
+    partialCoverage: true,
+    chains: [{
+      chainLabel: "HyperEVM",
+      listCurrentUsd: null,
+      baselineUsd: 40_000,
+      baselineObservedAt: 1_699_000_000,
+      baselineSource: "seed",
+      resolution: "unavailable",
+    }],
+  },
+};
+
 describe("deriveSupplySeries", () => {
   it("returns empty array when no histories provided", () => {
     const result = deriveSupplySeries({
@@ -296,23 +315,7 @@ describe("deriveSupplySeries", () => {
         date: 1700086400,
         circulatingUsd: 960_000,
         price: 1.0,
-        supplyProvenance: {
-          supplySource: null,
-          supplyObservedAt: null,
-          supplyChainGuard: {
-            reason: "supply-chain-dropout",
-            status: "chains-unavailable",
-            partialCoverage: true,
-            chains: [{
-              chainLabel: "HyperEVM",
-              listCurrentUsd: null,
-              baselineUsd: 40_000,
-              baselineObservedAt: 1_699_000_000,
-              baselineSource: "seed",
-              resolution: "unavailable",
-            }],
-          },
-        },
+        supplyProvenance: partialProvenance,
       },
       { date: 1700172800, circulatingUsd: 1_010_000, price: 1.0, supplyProvenance: null },
     ];
@@ -326,23 +329,6 @@ describe("deriveSupplySeries", () => {
   });
 
   it("drops a series whose every recorded point is a partial-chain remainder", () => {
-    const partialProvenance: NonNullable<SupplyHistoryPoint["supplyProvenance"]> = {
-      supplySource: null,
-      supplyObservedAt: null,
-      supplyChainGuard: {
-        reason: "supply-chain-dropout",
-        status: "chains-unavailable",
-        partialCoverage: true,
-        chains: [{
-          chainLabel: "HyperEVM",
-          listCurrentUsd: null,
-          baselineUsd: 40_000,
-          baselineObservedAt: 1_699_000_000,
-          baselineSource: "seed",
-          resolution: "unavailable",
-        }],
-      },
-    };
     const result = deriveSupplySeries({
       selectedIds: ["frxusd-frax"],
       histories: [[{ date: 1700000000, circulatingUsd: 960_000, price: 1.0, supplyProvenance: partialProvenance }]],
@@ -526,4 +512,16 @@ describe("deriveFlowCardData", () => {
     expect(card.pressureShiftState).toBe("nr");
     expect(card.pressureUnavailableNote).toMatch(/partial valuation/i);
   });
+});
+
+it("normalizes GHO only after its reviewed perimeter change, leaving USDT unchanged", () => {
+  const data = [697_750_000, 268_200_000, 268_200_000, 536_400_000].map((value, i) => ({
+    ts: Date.UTC(2026, 10, 12 + i), "gho-aave": value, "usdt-tether": 100,
+  }));
+  const series = [{ id: "gho-aave" }, { id: "usdt-tether" }];
+  const values = (rows: typeof data) => normalizeSupplyComparisonData(rows, series)
+    .map((row) => [row["gho-aave"], row["usdt-tether"]]);
+  expect(values(data)).toEqual([[null, 0], [null, 0], [0, 0], [100, 0]]);
+  expect(values(data.slice(0, 1))).toEqual([[0, 0]]);
+  expect(values(data.slice(2))).toEqual([[0, 0], [100, 0]]);
 });

@@ -20,6 +20,7 @@ import { useMarketDataChartFrame } from "@/components/chart-primitives/use-marke
 import { relativeChangeRatio, ratioToPercentage } from "@shared/lib/stats";
 import { DAY_MS } from "@shared/lib/time-constants";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
@@ -134,6 +135,7 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
 
 function McapChartBody({
   data,
+  stablecoinId,
   controlledRange,
   onControlledRangeChange,
   cardClassName,
@@ -201,6 +203,9 @@ function McapChartBody({
     const last = visibleData[visibleData.length - 1];
     const prev = visibleData.length >= 2 ? visibleData[visibleData.length - 2] : null;
     const delta = prev && last.ts - prev.ts === DAY_MS && !last.partial && !prev.partial
+      && !isAmbiguousSupplyPerimeterDay(stablecoinId, prev.ts / 1000)
+      && !isAmbiguousSupplyPerimeterDay(stablecoinId, last.ts / 1000)
+      && isEarlierSupplyPerimeter(stablecoinId, prev.ts / 1000) === isEarlierSupplyPerimeter(stablecoinId, last.ts / 1000)
       ? relativeChangeRatio(last.mcap, prev.mcap)
       : null;
     return {
@@ -208,7 +213,7 @@ function McapChartBody({
       ts: last.ts,
       deltaPct: delta === null ? null : ratioToPercentage(delta),
     };
-  }, [visibleData]);
+  }, [stablecoinId, visibleData]);
 
   const deltaColor =
     readout?.deltaPct == null

@@ -24,7 +24,7 @@ export function mergeMultiSeriesData<D extends { ts: number }>(
 interface MultiSeriesLineChartProps<D extends { ts: number }> {
   series: readonly MultiSeriesLineChartSeries<D>[];
   getValue: (datum: D) => number;
-  data?: Record<string, number>[];
+  data?: Record<string, number | null>[];
   ariaLabel: string;
   height: number | `${number}%`;
   className?: string;
@@ -34,7 +34,7 @@ interface MultiSeriesLineChartProps<D extends { ts: number }> {
   valueFormatter: (value: number) => string;
   tooltipLabelFormatter: (timestamp: number) => string;
   tableDateFormatter: (timestamp: number) => string;
-  tableCaption: (rows: ReadonlyArray<Record<string, number>>, truncated: boolean, total: number) => string;
+  tableCaption: (rows: ReadonlyArray<Record<string, number | null>>, truncated: boolean, total: number) => string;
   lineStrokeWidth?: number;
   minTickGap?: number;
   showGrid?: boolean;
@@ -70,18 +70,18 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
       <ScreenReaderDataTable
         data={mergedData}
         columns={[
-          { id: "ts", label: "Date", format: (row) => tableDateFormatter(row.ts) },
+          { id: "ts", label: "Date", format: (row) => tableDateFormatter(row.ts as number) },
           ...series.map((item) => ({
             id: item.id,
             label: item.label,
-            format: (row: Record<string, number>) => row[item.id] == null ? "—" : valueFormatter(row[item.id]),
+            format: (row: Record<string, number | null>) => row[item.id] == null ? "—" : valueFormatter(row[item.id] as number),
           })),
         ]}
         caption={tableCaption}
       />
       <div className={className} role="figure" aria-label={ariaLabel}>
         <ResponsiveContainer width="100%" height={height} minWidth={0} minHeight={0}>
-          <LineChart data={mergedData} margin={margin}>
+          <LineChart<Record<string, number | null>> data={mergedData} margin={margin}>
             {showGrid ? <TimeGrid /> : null}
             <TimeXAxis dataKey="ts" minTickGap={minTickGap} tickFormatter={xTickFormatter} />
             <MonoYAxis tickFormatter={yTickFormatter} {...valueAxis} />

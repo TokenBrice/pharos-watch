@@ -4,10 +4,11 @@ import { useState } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { McapChart } from "@/components/chart-primitives/mcap-chart";
+import type { SupplyHistoryPoint } from "@shared/types/supply";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 
 type HistoryState = {
-  data: Array<{ date: number; circulatingUsd: number; price?: number | null }>;
+  data: SupplyHistoryPoint[];
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -93,18 +94,9 @@ function setWindowState(window: "365" | "all", state: Partial<HistoryState>) {
 }
 
 describe("ExpandableHistoryMcapChart wide-read recovery", () => {
-  it("resets a failed wide selection to the 90-day seed without a notice", async () => {
-    setWindowState("365", { isError: true, error: new Error("upstream down") });
-    render(<ControlledChart initialRange="1y" />);
-
-    await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("90d"));
-    expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
-    expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
-  });
-
-  it("resets a successful empty wide selection to the 90-day seed without a notice", async () => {
-    render(<ControlledChart initialRange="all" />);
-
+  it.each([true, false])("resets an unavailable wide selection without a notice (error: %s)", async (failed) => {
+    if (failed) setWindowState("365", { isError: true, error: new Error("upstream down") });
+    render(<ControlledChart initialRange={failed ? "1y" : "all"} />);
     await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("90d"));
     expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
     expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
@@ -119,31 +111,31 @@ describe("ExpandableHistoryMcapChart wide-read recovery", () => {
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("retries an All click against the all-history key", async () => {
+  it.each([
+    ["all", "All", "all", 4], ["365", "1Y", "1y", 3],
+  ] as const)("retries %s against its history key", async (key, button, range, points) => {
     setWindowState("all", { isError: true, error: new Error("upstream down") });
     render(<ControlledChart initialRange="all" />);
     await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("90d"));
 
-    setWindowState("all", { data: expanded, isError: false, error: null });
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    setWindowState(key, { data: expanded, isError: false, error: null });
+    fireEvent.click(screen.getByRole("button", { name: button }));
 
-    expect(history.refetches).toEqual(["all"]);
-    await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("all"));
-    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("figure", { name: "Market cap chart showing 4 data points" })).toBeTruthy();
+    expect(history.refetches).toEqual([key]);
+    await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe(range));
+    expect(screen.getByRole("button", { name: button }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("figure", { name: `Market cap chart showing ${points} data points` })).toBeTruthy();
   });
+});
 
-  it("retries a 1Y click against the one-year key", async () => {
-    setWindowState("all", { isError: true, error: new Error("upstream down") });
-    render(<ControlledChart initialRange="all" />);
-    await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("90d"));
-
-    setWindowState("365", { data: expanded, isError: false, error: null });
-    fireEvent.click(screen.getByRole("button", { name: "1Y" }));
-
-    expect(history.refetches).toEqual(["365"]);
-    await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("1y"));
-    expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy();
-  });
+it.each([
+  ["gho-aave", 12, 0, null], ["gho-aave", 13, 0, null],
+  ["gho-aave", 12, 11, null], ["usdt-tether", 12, 0, "-61.56% 24h"],
+  ["gho-aave", 14, 0, "-61.56% 24h"],
+] as const)("guards %s header delta on November %s at %s UTC", (stablecoinId, day, hour, delta) => {
+  const data = [697_750_000, 268_200_000].map((circulatingUsd, i) => ({
+    date: Date.UTC(2026, 10, day + i, hour) / 1000, circulatingUsd, price: 1,
+  }));
+  render(<McapChart stablecoinId={stablecoinId} data={data} />);
+  expect(screen.queryByText(/% 24h/)?.textContent ?? null).toBe(delta);
 });
