@@ -469,6 +469,16 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     baselineObservedAt: 1793946610, baselineUsd: 163746469.69199657,
     evidenceUrl: "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
   },
+  // 2026-11-13 20:10 UTC: DefiLlama id 20 re-attributed alUSD's Multichain-bridged OP stock to Ethereum. List rows
+  // read Ethereum 10,491,286, OP Mainnet 0, Arbitrum 0, Fantom 0; the OP chart's last point (11-13 00:00 UTC) still
+  // reads 3,368,204 bridged from Ethereum, and the asset total is unchanged. Accepting the observed zero (not
+  // retiring the baseline, which would re-bootstrap from the list's 3.36M OP prevDay) avoids adding it back twice.
+  {
+    assetId: "alusd-alchemix", chainId: "optimism",
+    policy: "accept-observed-collapse",
+    reviewedAt: Date.parse("2026-11-13T20:10:00Z") / 1000,
+    evidenceUrl: "https://stablecoins.llama.fi/stablecoin/20",
+  },
   // GHO, 2026-11-13: not a dropout. DefiLlama peggedassets-server PR #987 (merged 2026-11-12
   // 08:05 UTC) reports GHO pre-minted into Aave's GhoReserve contracts and unborrowed
   // GhoDirectMinter liquidity as unreleased. Recomputed from chain state at Ethereum block 26404723,

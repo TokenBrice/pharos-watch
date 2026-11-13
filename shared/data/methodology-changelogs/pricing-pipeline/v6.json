@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.80",
+    "title": "CoinGecko gap-fills need a reviewed missing-chain pair",
+    "date": "2026-11-13",
+    "effectiveAt": 1794610800,
+    "summary": "A CoinGecko gap-fill, new or retained, now needs a reviewed missing-chain pair backed by an on-chain read; the reviewed list is the only authority. From 2026-11-13 23:00 UTC, reviewed refusals end USDf's Solana gap-fill (about $163.6M, 9.5% of its published supply, which counted DefiLlama's bridged BSC and XDC supply a second time while the Solana mint holds none), wPEN's HyperEVM gap-fill (about $9.4K; the HyperEVM token has zero supply) and apxUSD's Solana gap-fill (about $18.8M, 6.4%, at least $12.6M of it a double count). alUSD's stale OP Mainnet guard baseline is released.",
+    "impact": [
+      "A single-missing-chain candidate, new or retained, is admitted by the existing ratio rules only when its asset/chain pair is listed as eligible: an on-chain read at a pinned block shows stock on the missing chain of at least half the current remainder. A pair with no entry is refused with the new reason missing-chain-unreviewed; retained fills are not grandfathered. USDSC on Ethereum is eligible (227,897.55 USDSC at Ethereum block 26408200). On 2026-11-13 the only retained fills were USDf, wPEN and apxUSD, all refused below, so no other asset moves.",
+      "A reviewed refusal ends a fill whether or not it was retained, with the new reason missing-chain-refused, and no carry republishes it. USDf on Solana is refused: its registry Solana mint had zero supply at slot 468944023, CoinGecko lists no Solana platform, DefiLlama has no Solana series, and the $163.6M remainder equals DefiLlama's own BSC and XDC rows within 0.05%. USDf publishes the DefiLlama total (about $1,557M instead of $1,721M) and its Solana row disappears. wPEN on HyperEVM is refused too: the registry HyperEVM token had zero total supply at block 51180000, so wPEN publishes the DefiLlama total (about $32.0K instead of $41.4K) and its HyperEVM row disappears. apxUSD on Solana is refused: the registry Solana mint held 6,273,500.906527 apxUSD at slot 468944023 while the fill assigned about $18.9M to Solana, and CoinGecko's aggregate minus DefiLlama's total equals DefiLlama's Base, BSC and Monad rows plus that Solana stock within about 1.4%, so at least $12.6M was counted twice. apxUSD publishes the DefiLlama total (about $278.4M instead of $297.2M, −6.4%), which may omit up to 6.27M of Solana supply until DefiLlama lists the chain. All three refusals take effect at 2026-11-13 23:00 UTC; before that clock each pair is admitted as before.",
+      "The USDf, wPEN and apxUSD steps are perimeter changes, not redemptions. SUPPLY_PERIMETER_CHANGES entries (asset-scoped, not market-wide) dated 2026-11-13 23:00 UTC date the refusals, so each asset's day, week and month comparisons, D1 history fill, the detail chart header, DDR supply context, historical PSI, DEWS backfill and digest records withhold comparisons across it. Stored history is not restated.",
+      "alUSD's OP Mainnet pair was quarantined from 2026-11-13 12:15 UTC after DefiLlama re-attributed its Multichain-bridged OP stock to Ethereum, leaving the asset total unchanged. A dated acceptance of the observed zero releases it: alUSD publishes the provider total with no supplyChainGuard block. A baseline retirement was not used because the guard would re-bootstrap the pair from the list's 3.36M OP previous-day value and add the moved stock back.",
+      "Tracked-coverage restoration withholds an omitted asset whose previous packet is a refused fill instead of republishing it. The digest's supply velocity leaves out an asset's window that straddles its perimeter change, and the live summary applies a perimeter change only once the served generation has adopted it.",
+      "Ratio bands, hysteresis, the hard ceiling, history conservation, carry bounds and every other guard pair are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.79",
     "title": "Reviewed retirement of chain baselines the provider never observed",
     "date": "2026-11-13",

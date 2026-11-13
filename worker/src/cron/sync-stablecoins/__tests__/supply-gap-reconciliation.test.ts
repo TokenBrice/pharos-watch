@@ -10,6 +10,8 @@ import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
 const logWorkerEventMock = vi.hoisted(() => vi.fn());
+let gate = "eligible";
+vi.mock("../supply-gap-reviewed-pairs", () => ({ reviewedGapFillDecision: () => gate }));
 
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
@@ -48,6 +50,7 @@ import {
 } from "../supply-gap-reconciliation";
 import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain-supply";
 import { fillMissingSupplyHistory } from "../phase-helpers";
+import { restoreMissingTrackedAssets } from "../shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); });
@@ -111,6 +114,7 @@ function previousGapFilled(): Map<string, PeggedAsset> {
 
 beforeEach(() => {
   fetchTextWithRetryMock.mockReset();
+  gate = "eligible";
   logWorkerEventMock.mockReset();
   vi.mocked(fetchCuratedAggregateOnChainMcap).mockReset();
 });
@@ -171,6 +175,9 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(current.chainCirculating).toEqual(previous.chainCirculating);
     expect(current.supplyGapFill).toEqual({ ...previous.supplyGapFill, carryForwardRuns: 1 });
     expect(current.supplyRestored).toBe(true);
+    gate = "refused";
+    expect(carryForwardSupplyGapFill(makeAsset(), previous)).toBe(false);
+    expect(restoreMissingTrackedAssets([], new Map([[previous.id, previous]])).droppedIds).toContain(previous.id);
   });
 
   it.each([undefined, null])("refuses an undated prior gap-fill (%s) instead of re-dating it to the run", async (observedAt) => {
@@ -475,7 +482,11 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     { label: "above the hard ceiling even when retained", current: 151, previous: true, filled: false, rejection: "ratio-out-of-band" },
     { label: "retained below entry by hysteresis", current: 104, previous: true, filled: true, rejection: null },
     { label: "released at the retain floor", current: 102, previous: true, filled: false, rejection: null },
-  ] as const)("applies the DEC-01 band $label (CG $current vs DL 100)", async ({ current, previous, filled, rejection }) => {
+    { label: "unlisted", current: 106, rejection: "missing-chain-unreviewed", d: "" },
+    { label: "retained", current: 106, previous: true, rejection: "missing-chain-unreviewed", d: "" },
+    { label: "refused", current: 106, previous: true, rejection: "missing-chain-refused", d: "refused" },
+  ] as const)("applies the DEC-01 band $label (CG $current vs DL 100)", async ({ current, previous, filled, rejection, d }) => {
+    gate = d ?? "eligible";
     const asset = makeAsset();
     const before = structuredClone(asset);
     mockCoinGeckoAt(current);

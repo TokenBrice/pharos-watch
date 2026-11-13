@@ -6,6 +6,7 @@ import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, get
 import type { PeggedAsset } from "../enrich-prices";
 import * as fetchRetry from "../../../lib/fetch-retry";
 import * as onchain from "../supplemental-assets/onchain-supply";
+import * as pairs from "../supply-gap-reviewed-pairs";
 import { reconcileTrackedSupplyGaps } from "../supply-gap-reconciliation";
 import { makePeggedAsset } from "./_fixtures";
 import * as phase from "../phase-helpers";
@@ -224,6 +225,8 @@ describe("source-owned supply history publication", () => {
       }, chains: ["Ethereum", "Solana", "Stellar"],
     });
     original[field] = null;
+    expect([0, 2e9].map((t) => pairs.reviewedGapFillDecision("usdf-falcon", "solana", t))).toEqual(["eligible", "refused"]);
+    vi.spyOn(pairs, "reviewedGapFillDecision").mockReturnValue("eligible");
     vi.spyOn(fetchRetry, "fetchTextWithRetry").mockImplementation(async (url) => ({
       response: new Response(null, { status: 200 }),
       body: JSON.stringify(String(url).includes("/simple/price")

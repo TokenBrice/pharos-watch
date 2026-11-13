@@ -73,6 +73,8 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     if (admitSupplyBuckets(circulating).status !== "observed") circulating = {};
   }
   const supplyObservedAt = hasCurrentSupply ? detail.currentSupplyObservedAt ?? null : supplyUnavailable ? null : latestDate;
+  // A perimeter change applies only once the served generation has adopted it.
+  if (isEarlierSupplyPerimeter(stablecoinId, supplyObservedAt ?? latestDate ?? Number.POSITIVE_INFINITY)) stablecoinId = "";
   const observedPrice = isObservedPrice(detail) ? detail.price : null;
   const currentUsd = sumPegBucketsOrNull(circulating);
   const derivedNative = hasCurrentSupply && currentUsd != null && typeof observedPrice === "number" &&
