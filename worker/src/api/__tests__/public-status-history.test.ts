@@ -222,9 +222,7 @@ describe("handlePublicStatusHistory", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 200" });
   });
 
-  // -------------------------------------------------------------------------
   // 2026-04-13 status-stability hardening: public-impact filtering.
-  // -------------------------------------------------------------------------
   //
   // The public transition history should only surface transitions whose
   // causes include at least one public-facing impact (cache ratio, FX source,

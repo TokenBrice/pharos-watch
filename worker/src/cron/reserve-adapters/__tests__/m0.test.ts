@@ -252,7 +252,6 @@ describe("fetchM0Reserves", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // On-chain fallback (decision 2026-09-24)
 //
 // The fallback derives the contributing minter set from the gateway's own
@@ -261,7 +260,6 @@ describe("fetchM0Reserves", () => {
 // provable superset of minters that still contribute collateral. The fixtures
 // below pin one such window (block 23,000,000 at 1,800,000,000; interval
 // 108,000s) and prove the fail-closed edges.
-// ---------------------------------------------------------------------------
 
 const ONCHAIN_BLOCK = { number: 23_000_000, timestamp: 1_800_000_000 };
 const ONCHAIN_INTERVAL_SEC = 108_000;

@@ -3,9 +3,7 @@ import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { evaluateAdapterSnapshotAdmission, expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
-// ---------------------------------------------------------------------------
 // Recorded live census (probed via api.koios.rest on 2026-09-09)
-// ---------------------------------------------------------------------------
 
 const TIP = {
   hash: "499b2403106b31f32cfdb638fa6598bd573daabdcad6658ec84bbc2055bed75b",

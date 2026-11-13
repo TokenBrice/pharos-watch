@@ -1300,7 +1300,6 @@ describe("stability-index OG handler aggregation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // Satori render smoke tests
 //
 // renderToStaticMarkup never catches satori-level failures: satori walks the
@@ -1309,7 +1308,6 @@ describe("stability-index OG handler aggregation", () => {
 // `.trim()`). Exactly that broke /api/og/stablecoin/* in production for every
 // coin (MetricRow's optional marginBottom). Each card template must render
 // through the real engine.
-// ---------------------------------------------------------------------------
 
 describe("og cards render through satori", () => {
   const font = (file: string) =>
