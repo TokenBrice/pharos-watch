@@ -63,6 +63,7 @@ export type DiscoveryCrawlTier = "refresh" | "t1" | "t2" | "t3" | "dormant";
 /** The admitted cohort remains fixed until its bounded cron slices finish. */
 export interface DiscoveryRunCheckpoint {
   runSeq: number;
+  /** The writing run has not refreshed stale pools. Kept for older readers; every run refreshes. */
   refreshPending: boolean;
   pendingCandidates: Array<{ stablecoinId: string; tier: DiscoveryCrawlTier }>;
 }
