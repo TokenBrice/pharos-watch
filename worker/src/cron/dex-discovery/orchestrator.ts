@@ -583,7 +583,6 @@ export async function syncDexDiscovery(
     targetCursors = await readDiscoveryTargetCursors(db, signal);
     const checkpoint = await readDiscoveryRunCheckpoint(db, signal);
     resumedFromCheckpoint = checkpoint != null;
-    refreshPending = checkpoint?.refreshPending ?? true;
     runSeq = checkpoint?.runSeq ?? await incrementRunSeq(db, signal);
     const checkpointCandidates = new Map(
       checkpoint?.pendingCandidates.map((candidate) => [candidate.stablecoinId, candidate] as const) ?? [],
@@ -684,8 +683,10 @@ export async function syncDexDiscovery(
       },
     });
 
-    // Refresh once per admitted cohort, not once per continuation slice.
-    if (refreshPending && hasDiscoveryFinalizationWindow(deadlineMs)) {
+    // Refresh on every tick, continuation slices included. A cohort spans two to four six-hour
+    // ticks, and the pass reads pools from 12h of age so that two ticks precede the 24h price
+    // bound: once per cohort left priced pools past that bound between passes (2026-11-13).
+    if (hasDiscoveryFinalizationWindow(deadlineMs)) {
       await onProgress?.({
         stage: "refresh-stale-pools",
         itemsDone: 0,

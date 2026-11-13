@@ -67,7 +67,7 @@ export const STALE_POOL_REFRESH_POLICY = {
    * a slow or failing provider.
    */
   maxRequestsPerRun: 125,
-  /** Wall-clock slice of the 12-minute discovery budget; cohort crawling keeps the rest. */
+  /** Wall-clock slice of the nine-minute discovery budget; cohort crawling keeps the rest. */
   budgetMs: 150_000,
   maxConsecutiveFailures: 3,
   requestTimeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain,
