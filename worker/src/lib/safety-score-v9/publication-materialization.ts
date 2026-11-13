@@ -13,7 +13,16 @@ import { safeFailure, SAFETY_SCORE_V9_PUBLICATION_DIAGNOSTIC_BUDGET_MS } from ".
 export type SafetyScoreV9PublicMaterializationRunResult =
   | V9PublicMaterializationResult
   | { status: "failed"; publicationGenerationId: string; attempts: number; code: string; message: string }
-  | { status: "skipped"; reason: "post-commit-interrupted" };
+  | { status: "skipped"; reason: "post-commit-interrupted" }
+  | { status: "skipped"; reason: "insufficient-budget"; remainingMs: number; requiredMs: number };
+
+/**
+ * Minimum time left to the publisher's deadline before an in-run attempt
+ * starts; below it the :52 second chance owns materialization. Evidence
+ * (publicationWork, 2026-11-13): the 15:22 run timed out with 44.3 s left,
+ * while every run with 64 s or more materialized.
+ */
+const SAFETY_SCORE_V9_PUBLIC_MATERIALIZATION_MIN_REMAINING_MS = 45_000;
 
 /**
  * Best-effort post-acceptance materialization. Acceptance is already durable;
@@ -25,14 +34,34 @@ export async function materializeAcceptedPublication(
   source: V9AcceptedPublicMaterializationSource,
   signal: AbortSignal,
   timing: V9PublicMaterializationTiming,
+  publisherDeadlineMs: number,
   work?: V9PublicMaterializationWork,
 ): Promise<SafetyScoreV9PublicMaterializationRunResult> {
   const maxAttempts = 2;
+  const requiredMs = SAFETY_SCORE_V9_PUBLIC_MATERIALIZATION_MIN_REMAINING_MS;
+  const remainingMs = publisherDeadlineMs - Date.now();
+  if (remainingMs < requiredMs) {
+    logWorkerEvent({
+      scope: "lib", level: "info", event: "safety_score_v9_public_materialization_deferred",
+      job: "compute-safety-score-v9", message: "Accepted publication retained; materialization deferred to the :52 second chance",
+      metadata: { publicationGenerationId: source.publication.publicationGenerationId, remainingMs, requiredMs },
+    });
+    return { status: "skipped", reason: "insufficient-budget", remainingMs, requiredMs };
+  }
   for (let attempt = 1; ; attempt++) {
     try {
       return await materializeV9AcceptedPublication(db, source, signal, timing, work);
     } catch (error) {
-      if (attempt < maxAttempts && !signal.aborted) continue;
+      if (attempt < maxAttempts && !signal.aborted) {
+        const retryRemainingMs = publisherDeadlineMs - Date.now();
+        if (retryRemainingMs >= requiredMs) continue;
+        // A deferral never hides a real failure: report this attempt's error.
+        logWorkerEvent({
+          scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_retry_not_attempted",
+          job: "compute-safety-score-v9", message: "In-run materialization retry not attempted: insufficient budget",
+          metadata: { publicationGenerationId: source.publication.publicationGenerationId, attempts: attempt, remainingMs: retryRemainingMs, requiredMs },
+        });
+      }
       const failure = safeFailure(error, "publication-write");
       logWorkerEvent({
         scope: "lib", level: "warn", event: "safety_score_v9_public_materialization_failed",
