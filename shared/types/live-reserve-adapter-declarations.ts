@@ -337,9 +337,9 @@ const hyloSolanaParamsSchema = z.object({
   exoPairs: z.array(z.object({
     pair: hyloAddressSchema, vault: hyloAddressSchema, mint: hyloAddressSchema,
     oracle: hyloAddressSchema, feedId: z.string().regex(/^[0-9a-f]{64}$/),
-    pool: z.enum(["cbbtc-pool", "hype-pool", "zec-pool"]), name: z.string().min(1),
+    pool: z.enum(["cbbtc-pool", "hype-pool", "zec-pool", "onyc-pool"]), name: z.string().min(1),
     priceAddress: z.string().min(1),
-  }).strict()).length(3).refine((pairs) => new Set(pairs.map((pair) => pair.pool)).size === pairs.length),
+  }).strict()).length(4).refine((pairs) => new Set(pairs.map((pair) => pair.pool)).size === pairs.length),
   inactiveExoPairs: z.array(hyloAddressSchema).max(16),
 }).strict();
 
