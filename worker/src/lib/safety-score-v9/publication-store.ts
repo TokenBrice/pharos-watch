@@ -24,6 +24,7 @@ import {
   stageV9PublicMaterialization,
   v9StagedPublicMaterializationStatements,
   type V9AcceptedPublicMaterializationSource,
+  type V9PublicMaterializationWork,
   type V9StagedPublicMaterialization,
 } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "./publication-health";
@@ -146,6 +147,8 @@ export interface PersistSafetyScoreV9PublicationInput {
   signal?: AbortSignal;
   /** Filled with sub-phase wall time: pre-commit admission/reads versus the atomic write. */
   timing?: SafetyScoreV9PersistTiming;
+  /** Filled with work counts already at hand and the reference-read latency; run metadata only. */
+  work?: SafetyScoreV9PersistWork;
   /**
    * Leave public representations to `materializeV9AcceptedPublication` after
    * acceptance. Otherwise they are staged first and selected in the acceptance
@@ -157,6 +160,24 @@ export interface PersistSafetyScoreV9PublicationInput {
 export interface SafetyScoreV9PersistTiming {
   persistPrepare: number | null;
   persistCommit: number | null;
+}
+
+/**
+ * `storedChars` is the stored envelope's string length (ASCII base64 plus canonical JSON). The staging
+ * counts are filled here only when representations are staged before acceptance (not deferred).
+ */
+export interface SafetyScoreV9PersistWork extends V9PublicMaterializationWork {
+  persistReferenceReadMs?: number | null;
+  storedChars?: number | null;
+  compressedBytes?: number | null;
+  packedBytes?: number | null;
+  uncompressedBytes?: number | null;
+  commitStatements?: number | null;
+  publicationChunks?: number | null;
+  cohortChunks?: number | null;
+  cohortBytes?: number | null;
+  baselineBytes?: number | null;
+  lenderBytes?: number | null;
 }
 
 export interface PersistSafetyScoreV9PublicationResult {
@@ -311,7 +332,9 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    const payloadSha256: string = (JSON.parse(stored) as { payloadSha256: string }).payloadSha256;
+    const { payloadSha256, compressedBytes, packedBytes, uncompressedBytes } = JSON.parse(stored) as
+      { payloadSha256: string; compressedBytes: number; packedBytes: number; uncompressedBytes: number };
+    if (input.work) Object.assign(input.work, { storedChars: stored.length, compressedBytes, packedBytes, uncompressedBytes });
     publicationPayloadSha256 = payloadSha256;
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");
@@ -320,7 +343,7 @@ export async function persistSafetyScoreV9Publication(
     if (input.deferPublicMaterialization) {
       acceptedMaterialization = { publication, health, payloadSha256 };
     } else {
-      stagedMaterialization = await stageV9PublicMaterialization(db, publication, health, payloadSha256, input.signal);
+      stagedMaterialization = await stageV9PublicMaterialization(db, publication, health, payloadSha256, input.signal, input.work);
     }
     scoreIndexValue = stableJsonStringifyV1(SafetyScoreIndexSchema.parse({
       schemaVersion: 2,
@@ -378,9 +401,11 @@ export async function persistSafetyScoreV9Publication(
   if (health.status === "current") {
     // Compare the raw row clock so a newer valid publication can replace an
     // older retained payload that the current reader can no longer parse.
+    const referenceReadStartedAtMs = Date.now();
     const existingPublicationRow = priorPublication = await loadStoredSafetyScoreV9PublicationReference(
       db,
     );
+    if (input.work) input.work.persistReferenceReadMs = Date.now() - referenceReadStartedAtMs;
     if (
       existingPublicationRow !== null &&
       existingPublicationRow.publishedAtSec > input.publicationClockSec
@@ -390,9 +415,11 @@ export async function persistSafetyScoreV9Publication(
       );
     }
   } else {
+    const referenceReadStartedAtMs = Date.now();
     const existingPublication = await loadStoredSafetyScoreV9PublicationReference(
       db,
     );
+    if (input.work) input.work.persistReferenceReadMs = Date.now() - referenceReadStartedAtMs;
     const healthMatchesPublication = existingPublication === null
       ? health.acceptedPublicationGenerationId === null &&
         health.acceptedAtSec === null
@@ -428,6 +455,7 @@ export async function persistSafetyScoreV9Publication(
     // Always sharded: an admitted stored value can exceed D1's 2 MB row limit.
     const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
     const canonicalValue = sharded.envelope;
+    if (input.work) input.work.publicationChunks = sharded.chunks.length;
     statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
       db, sharded, publicationPayloadSha256!, input.publicationClockSec,
     ));
@@ -458,6 +486,7 @@ export async function persistSafetyScoreV9Publication(
       input.publicationClockSec,
     ));
     const cohort = shardSafetyScoreV9CohortStoredValue(acceptedProjections!.cohort);
+    if (input.work) input.work.cohortChunks = cohort.chunks.length;
     statements.push(...shardedSafetyScoreV9CohortChunkStatements(db, cohort, input.publicationClockSec));
     statements.push(cacheStatement.bind(
       SAFETY_SCORE_V9_CACHE_KEYS.cohort,
@@ -563,6 +592,7 @@ export async function persistSafetyScoreV9Publication(
     ),
   );
   if (input.timing) input.timing.persistPrepare = Date.now() - prepareStartedAtMs;
+  if (input.work) input.work.commitStatements = statements.length;
   const commitStartedAtMs = Date.now();
   try {
     await executeAtomicBatch(db, statements, { signal: input.signal });
@@ -571,15 +601,16 @@ export async function persistSafetyScoreV9Publication(
   }
   throwIfAborted(input.signal);
   if (acceptedProjections !== null) {
+    const projectionBytes = {
+      cohortBytes: new TextEncoder().encode(acceptedProjections.cohort).byteLength,
+      baselineBytes: new TextEncoder().encode(acceptedProjections.baseline).byteLength,
+      lenderBytes: new TextEncoder().encode(acceptedProjections.lender).byteLength,
+    };
+    if (input.work) Object.assign(input.work, projectionBytes);
     logWorkerEvent({
       scope: "lib", level: "info", event: "safety_score_v9_accepted_projections_written",
       message: "Accepted Safety Score v9 projections committed",
-      metadata: {
-        publicationClockSec: input.publicationClockSec,
-        cohortBytes: new TextEncoder().encode(acceptedProjections.cohort).byteLength,
-        baselineBytes: new TextEncoder().encode(acceptedProjections.baseline).byteLength,
-        lenderBytes: new TextEncoder().encode(acceptedProjections.lender).byteLength,
-      },
+      metadata: { publicationClockSec: input.publicationClockSec, ...projectionBytes },
     });
   }
   // Return references to the exact committed transports, never re-encode or

@@ -378,6 +378,7 @@ describe("computeSafetyScoreV9", () => {
         phaseElapsedMs: { enrichment: 10, baselineLoad: 20, compile: 165_000, assess: null,
           serialize: null, persist: null, journal: null, archive: null },
         subphaseElapsedMs: { persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null },
+        work: { stagedBytes: 9 },
         phaseTimingBasis: "workers-io-boundary-attributed",
         journal: { status: "skipped", reason: "publication-failed", rows: 0 },
         captureArchive: { status: "skipped", reason: "publication-failed" },
@@ -401,6 +402,7 @@ describe("computeSafetyScoreV9", () => {
       publicationAbortCause: { source: "caller", name: "TimeoutError" },
       publicationPhaseElapsedMs: { compile: 165_000, persist: null },
       publicationSubphaseElapsedMs: { persistPrepare: null, persistCommit: null },
+      publicationWork: { stagedBytes: 9 },
       publicationPhaseTimingBasis: "workers-io-boundary-attributed",
     });
   });

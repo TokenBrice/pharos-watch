@@ -1272,6 +1272,7 @@ describe("Safety Score V9 publication runner", () => {
           .toBe(candidate.publicationGenerationId);
         expect(result.subphaseElapsedMs.materializeStage).toBeGreaterThan(0);
         expect(result.subphaseElapsedMs.persistCommit).toEqual(expect.any(Number));
+        expect(result.work?.publisherDeadlineAtMs).toBe(start + 165e3);
         expect(mocks.persistAttempt).not.toHaveBeenCalled();
         if (expected === "materialized") {
           expect(stagingCalls).toBeLessThanOrEqual(40);

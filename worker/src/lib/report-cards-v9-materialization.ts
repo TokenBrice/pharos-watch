@@ -91,6 +91,7 @@ export async function stageV9PublicMaterialization(
   health: V9PublicationHealth,
   payloadSha256: string,
   signal?: AbortSignal,
+  work?: V9PublicMaterializationWork,
 ): Promise<V9StagedPublicMaterialization> {
   let manifest: V9PublicRepresentationManifest | undefined;
   let siteCount = 0;
@@ -112,6 +113,10 @@ export async function stageV9PublicMaterialization(
     if (statementCount === 0) return;
     await executeAtomicBatch(db, groups.flatMap(group =>
       prepareMultiRowInsertStatements(db, group.sql, group.rows)), { signal });
+    if (work) {
+      work.stageFlushes = (work.stageFlushes ?? 0) + 1;
+      work.stagedBytes = (work.stagedBytes ?? 0) + batchBytes;
+    }
     for (const group of groups) group.rows.length = 0;
     batchBytes = 0;
     statementCount = 0;
@@ -231,6 +236,12 @@ export interface V9PublicMaterializationTiming {
   materializeSelect: number | null;
 }
 
+/** Run-metadata-only staging work, summed across attempts: completed flushes and their budgeted SQL plus binding bytes. */
+export interface V9PublicMaterializationWork {
+  stageFlushes?: number | null;
+  stagedBytes?: number | null;
+}
+
 export type V9PublicMaterializationResult =
   | { status: "materialized"; publicationGenerationId: string; siteRepresentationCount: number }
   | { status: "superseded"; publicationGenerationId: string };
@@ -246,12 +257,13 @@ export async function materializeV9AcceptedPublication(
   source: V9AcceptedPublicMaterializationSource,
   signal?: AbortSignal,
   timing?: V9PublicMaterializationTiming,
+  work?: V9PublicMaterializationWork,
 ): Promise<V9PublicMaterializationResult> {
   const generationId = source.publication.publicationGenerationId;
   let startedAtMs = Date.now();
   let staged: V9StagedPublicMaterialization;
   try {
-    staged = await stageV9PublicMaterialization(db, source.publication, source.health, source.payloadSha256, signal);
+    staged = await stageV9PublicMaterialization(db, source.publication, source.health, source.payloadSha256, signal, work);
   } finally {
     if (timing) timing.materializeStage = Date.now() - startedAtMs;
   }

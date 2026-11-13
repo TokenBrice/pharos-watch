@@ -33,7 +33,9 @@ import {
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   loadSafetyScoreV9PublicationIdentityEnvelope,
+  type SafetyScoreV9PersistWork,
 } from "./publication-store";
+import type { V9PublicMaterializationWork } from "../report-cards-v9-materialization";
 import { loadSafetyScoreV9PublicationHealth } from "./publication-health";
 import type { V9PublicationPhaseElapsedMs, V9PublicationAbortCause, V9PublicationAttempt } from "./publication-attempts";
 import type { V9AssetQuarantine } from "./fact-set";
@@ -69,6 +71,18 @@ export interface SafetyScoreV9PublicationSubphaseElapsedMs {
   persistCommit: number | null;
   materializeStage: number | null;
   materializeSelect: number | null;
+}
+
+/**
+ * Run-metadata-only scalars the frozen Workers clock can measure (absolute
+ * deadlines, time left at a fresh clock, one I/O interval) plus work counts
+ * already at hand. Null means not reached or not measured, never zero.
+ */
+export interface SafetyScoreV9PublicationWork extends SafetyScoreV9PersistWork, V9PublicMaterializationWork {
+  windowDeadlineAtMs?: number | null;
+  publisherDeadlineAtMs?: number | null;
+  publicationBudgetMs?: number | null;
+  materializeRemainingMs?: number | null;
 }
 
 interface SafetyScoreV9PublicationOptions {
@@ -155,6 +169,7 @@ export type SafetyScoreV9PublicationRunResult = (
     }) & {
       phaseElapsedMs: V9PublicationPhaseElapsedMs;
       subphaseElapsedMs: SafetyScoreV9PublicationSubphaseElapsedMs;
+      work?: SafetyScoreV9PublicationWork;
       phaseTimingBasis: "workers-io-boundary-attributed";
       abortCause: V9PublicationAbortCause | null;
     };
@@ -508,6 +523,13 @@ export async function runSafetyScoreV9Publication(
   const subphaseElapsedMs: SafetyScoreV9PublicationSubphaseElapsedMs = {
     persistPrepare: null, persistCommit: null, materializeStage: null, materializeSelect: null,
   };
+  const work: SafetyScoreV9PublicationWork = {
+    windowDeadlineAtMs: input.publicationDeadlineMs ?? null, publisherDeadlineAtMs: publicationDeadlineMs,
+    publicationBudgetMs: budgetMs, materializeRemainingMs: null, persistReferenceReadMs: null,
+    storedChars: null, compressedBytes: null, packedBytes: null, uncompressedBytes: null, commitStatements: null,
+    publicationChunks: null, cohortChunks: null, cohortBytes: null, baselineBytes: null, lenderBytes: null,
+    stageFlushes: null, stagedBytes: null,
+  };
   let activePhase: keyof V9PublicationPhaseElapsedMs | null = null;
   let phaseStartedAtMs = startedAtMs;
   let committed = false;
@@ -666,6 +688,7 @@ export async function runSafetyScoreV9Publication(
         publicationClockSec: fixedInput.clockSec,
         signal: publicationSignal,
         timing: subphaseElapsedMs,
+        work,
       });
       let journal: SafetyScoreJournalResult = { status: "skipped", reason: "post-commit-interrupted", rows: 0 };
       let postCommitFailure: { stage: SafetyScoreV9PublicationFailureStage; code: string; message: string } | null = null;
@@ -697,6 +720,7 @@ export async function runSafetyScoreV9Publication(
         attemptId,
         phaseElapsedMs,
         subphaseElapsedMs,
+        work,
         phaseTimingBasis: "workers-io-boundary-attributed",
         abortCause: cause,
         warnings: postCommitFailure === null ? [] : ["held-state-committed-before-journal-failure"],
@@ -757,7 +781,7 @@ export async function runSafetyScoreV9Publication(
       journal: { status: "skipped", reason: "post-commit-interrupted", rows: 0 },
       captureArchive: { status: "skipped", reason: "post-commit-interrupted" },
       publicMaterialization: { status: "skipped", reason: "post-commit-interrupted" },
-      warnings: laneCertificateWarnings, postCommitFailure: null, phaseElapsedMs, subphaseElapsedMs, abortCause: null,
+      warnings: laneCertificateWarnings, postCommitFailure: null, phaseElapsedMs, subphaseElapsedMs, work, abortCause: null,
       phaseTimingBasis: "workers-io-boundary-attributed",
     };
     const persisted = await persistSafetyScoreV9Publication(input.db, {
@@ -789,6 +813,7 @@ export async function runSafetyScoreV9Publication(
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
       timing: subphaseElapsedMs,
+      work,
       deferPublicMaterialization: input.deferPublicMaterialization,
     });
     committed = true;
@@ -837,8 +862,10 @@ export async function runSafetyScoreV9Publication(
     pendingPublished.captureArchive = captureArchive;
     // An interrupted run leaves materialization to the next heavy slot.
     if (persisted.acceptedMaterialization !== null && !publicationSignal.aborted) {
+      // Fresh clock: the archive step just did I/O. Measurement only, no new tick.
+      work.materializeRemainingMs = publicationDeadlineMs - Date.now();
       pendingPublished.publicMaterialization = await materializeAcceptedPublication(
-        input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs,
+        input.db, persisted.acceptedMaterialization, publicationSignal, subphaseElapsedMs, work,
       );
       if (pendingPublished.publicMaterialization.status === "failed") {
         pendingPublished.warnings.push("public-materialization-failed");
@@ -911,6 +938,7 @@ export async function runSafetyScoreV9Publication(
       stage,
       phaseElapsedMs,
       subphaseElapsedMs,
+      work,
       phaseTimingBasis: "workers-io-boundary-attributed",
       abortCause: cause,
       journal: { status: "skipped", reason: "publication-failed", rows: 0 },
