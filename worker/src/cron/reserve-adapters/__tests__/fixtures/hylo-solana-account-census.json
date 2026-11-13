@@ -522,7 +522,7 @@
         "feedId": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
         "price": 79.74078966,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       },
       "USDC": {
@@ -530,7 +530,7 @@
         "feedId": "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
         "price": 0.99975911,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       },
       "CBBTC": {
@@ -538,7 +538,7 @@
         "feedId": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
         "price": 68534.20018637,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       },
       "HYPE": {
@@ -546,7 +546,7 @@
         "feedId": "4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b",
         "price": 71.29029649,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       },
       "ZEC": {
@@ -554,7 +554,7 @@
         "feedId": "be9b59d178f0d6a97ab4c343bff2aa69caa1eaae3e9048a65788c529b125bb24",
         "price": 937.87188707,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       },
       "ONYC": {
@@ -562,7 +562,7 @@
         "feedId": "babbfcc7f46b6e7df73adcccece8b6782408ed27c4e77f35ba39a449440170ab",
         "price": 1.1654794,
         "publishTime": 1794556918,
-        "postedSlot": 1831453,
+        "postedSlot": 468852200,
         "ageSeconds": 5
       }
     },
