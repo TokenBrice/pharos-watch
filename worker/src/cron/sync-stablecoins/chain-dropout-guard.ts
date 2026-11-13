@@ -239,7 +239,8 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
  * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
  * other published chain current except the CoinGecko gap-fill remainder as its accepted level,
  * including a confirmed low/zero whose guard sidecar disappeared once the chain stopped being flagged.
- * Only unpublished chains bootstrap from seed.
+ * Only unpublished chains bootstrap from seed. One exception: a reviewed `retire-baseline` entry is
+ * code, not state, so it removes a recovered pair holding exactly its reviewed baseline on this run too.
  */
 function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
   for (const previous of previousAssetsById.values()) {
@@ -299,6 +300,14 @@ export async function guardChainDropouts(input: {
   // The caller owns this newly loaded generation; no module-global mutable state.
   const state = input.state;
   if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
+  // A reviewed retirement removes the pair, persisted or recovered, only while it holds exactly the reviewed
+  // baseline (same observation clock and stored value); a different clock or value keeps its guard. It runs
+  // outside the per-asset loop, which skips gap-filled assets.
+  for (const entry of REVIEWED_CHAIN_SUPPLY_COLLAPSES) {
+    const key = pairKey(entry.assetId, entry.chainId), pair = state.pairs[key];
+    if (entry.policy === "retire-baseline" && entry.reviewedAt <= now && pair
+      && pair.baselineObservedAt === entry.baselineObservedAt && pair.baselineUsd === entry.baselineUsd) delete state.pairs[key];
+  }
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
   const fillDefaultAssets = new Map<PeggedAsset, number>();
@@ -350,7 +359,7 @@ export async function guardChainDropouts(input: {
       const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";
       const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
       const reviewed = REVIEWED_CHAIN_SUPPLY_COLLAPSES.find((entry) => entry.assetId === meta.id && entry.chainId === group.chainId
-        && entry.reviewedAt >= (pair.quarantinedSince ?? now) && entry.reviewedAt <= now);
+        && entry.policy !== "retire-baseline" && entry.reviewedAt >= (pair.quarantinedSince ?? now) && entry.reviewedAt <= now);
       if (observation.current == null && reviewed?.policy === "exclude-omitted" && now < reviewed.excludeOmittedUntil) {
         // Retain the original incident and baseline for expiry/recovery; neither enters this generation's totals.
         pair.quarantinedSince ??= now;

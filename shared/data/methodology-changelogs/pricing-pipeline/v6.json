@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.79",
+    "title": "Reviewed retirement of chain baselines the provider never observed",
+    "date": "2026-11-13",
+    "effectiveAt": 1794582000,
+    "summary": "A dated review can now retire a chain-dropout guard baseline that was never a DefiLlama chain observation. Each run deletes the listed pair only while it holds exactly the reviewed baseline (same observation clock and stored value), so the chain is no longer injected, carried or excluded. iUSD on BSC, apxUSD on Solana and USDf on Solana are retired.",
+    "impact": [
+      "The guard persisted a $3,926,614 iUSD baseline on BSC, a $17,992,714 apxUSD baseline on Solana and a $163,746,470 USDf baseline on Solana. DefiLlama's details for the three assets have never had a key for those chains and their per-chain charts are empty. On 2026-11-13 at 13:31 UTC the BSC iUSD token had zero total supply, the Solana USDf mint had zero supply and the Solana apxUSD mint held 6,273,500.906527 apxUSD. That the baselines were CoinGecko gap-fill remainders is inferred; the originating packets were not captured.",
+      "The new reviewed policy retire-baseline in REVIEWED_CHAIN_SUPPLY_COLLAPSES runs after state-read recovery and outside the per-asset loop, so it removes a pair rebuilt from the previous publication's guard block on the same run and reaches gap-filled assets. Each entry names the reviewed baseline's observation clock and exact stored value, compared strictly; a baseline with a different clock or value, including one learned from the provider later, keeps its guard. The ordinary and omitted-chain release lookups ignore these entries.",
+      "iUSD publishes the provider total with complete coverage and no supplyChainGuard, replacing the 14-day omitted-chain exclusion that flagged partial coverage. apxUSD and USDf keep their admitted CoinGecko gap-fills; if a gap-fill lapses they publish the provider remainder under ADR-8(b) instead of unavailable supply (apxUSD) or a carried baseline (USDf).",
+      "Guard bounds, quarantine, carry and release rules for other pairs, supplyChainGuard provenance, the supply-history API and stored rows are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.78",
     "title": "A chain gap below the materiality bound no longer withholds a total",
     "date": "2026-11-13",
