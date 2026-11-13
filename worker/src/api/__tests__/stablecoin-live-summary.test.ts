@@ -10,7 +10,7 @@ import { handleStablecoinLiveSummary } from "../stablecoin-live-summary";
 
 vi.mock("../stablecoin-detail", () => ({ handleStablecoinDetail: vi.fn() }));
 
-const NOW = 1_800_000_000;
+const NOW = 1_794_565_800;
 const DAY = 86_400;
 const db = mockD1([]);
 const ctx = { waitUntil: vi.fn() } as unknown as ExecutionContext;
@@ -71,14 +71,15 @@ describe("site-only stablecoin live summary", () => {
       .toMatchObject({ circulating: { peggedUSD: 0 }, supplyObservedAt: NOW, nativeSupply: { current: 0 } });
   });
 
-  it.each(fixtures)("matches the shared client projector for $name without history transport", async ({ detail }) => {
+  it.each(fixtures)("matches the shared client projector for $name without history transport", async ({ name, detail }) => {
+    const id = name === "restored supply" ? "gho-aave" : "usdt-tether";
     const full = detailResponse(detail);
     full.headers.set("Content-Length", "190575");
     vi.mocked(handleStablecoinDetail).mockResolvedValue(full);
-    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx, "provider-key");
+    const response = await handleStablecoinLiveSummary(db, id, ctx, "provider-key");
     const text = await response.text();
     const { _meta, ...summary } = JSON.parse(text);
-    expect(summary).toEqual(JSON.parse(JSON.stringify(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail)))));
+    expect(summary).toEqual(JSON.parse(JSON.stringify(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(detail), id))));
     expect(StablecoinLiveSummarySchema.safeParse(summary).success).toBe(true);
     expect(summary).not.toHaveProperty("tokens");
     expect(new TextEncoder().encode(text).length).toBeLessThan(2_048);
@@ -87,16 +88,17 @@ describe("site-only stablecoin live summary", () => {
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(NOW - 60));
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=10, s-maxage=240");
     expect(response.headers.get("Content-Length")).toBeNull();
-    expect(handleStablecoinDetail).toHaveBeenCalledExactlyOnceWith(db, "usdt-tether", ctx, "provider-key");
+    expect(handleStablecoinDetail).toHaveBeenCalledExactlyOnceWith(db, id, ctx, "provider-key");
   });
 
-  it.each([-1, NaN, Infinity, Number.MAX_VALUE])("withholds malformed selected checkpoints (%s), without older-row rescue", (value) => {
+  it.each([-1, NaN, Infinity, Number.MAX_VALUE, 50])("withholds malformed or earlier GHO checkpoints (%s), without older-row rescue", (value) => {
+    const id = value === 50 ? "gho-aave" : "";
     const buckets = { peggedUSD: value, peggedEUR: value };
     const tokens = [0, 1, 7, 30].flatMap((days) => [
       { date: NOW - days * DAY - 1, totalCirculatingUSD: { peggedUSD: 50 }, totalCirculating: { peggedUSD: 25 } },
-      { date: NOW - days * DAY, totalCirculatingUSD: buckets, totalCirculating: buckets },
+      { date: NOW - days * DAY, totalCirculatingUSD: days === 0 && id ? { peggedUSD: -1 } : buckets, totalCirculating: days === 0 && id ? { peggedUSD: -1 } : buckets },
     ]);
-    const summary = projectStablecoinLiveSummary({ price: 2, priceSource: "coingecko", tokens });
+    const summary = projectStablecoinLiveSummary({ price: 2, priceSource: "coingecko", tokens }, id);
     expect([summary.circulating, summary.circulatingPrevDay, summary.circulatingPrevWeek, summary.circulatingPrevMonth])
       .toEqual([{}, {}, {}, {}]);
     expect(summary).toMatchObject({
@@ -106,8 +108,8 @@ describe("site-only stablecoin live summary", () => {
     const canonical = projectStablecoinLiveSummary({
       price: 2, priceSource: "coingecko", tokens,
       currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: NOW,
-      currentCirculatingPrevDayUSD: buckets,
-    });
+      currentCirculatingPrevDayUSD: id ? {} : buckets,
+    }, id);
     expect([canonical.circulatingPrevDay, canonical.circulatingPrevWeek, canonical.circulatingPrevMonth]).toEqual([{}, {}, {}]);
     expect(canonical).toMatchObject({
       circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},

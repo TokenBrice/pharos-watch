@@ -508,20 +508,18 @@ describe("weekly recap canonical candidate aggregation", () => {
 });
 
 describe("weekly recap comparison availability", () => {
-  it("withholds a market-cap change from a single complete core-universe observation", () => {
-    // The core-universe marker only appears on the last edition; the six
-    // earlier archived editions carry the legacy all-stablecoins universe.
-    const rows = Array.from({ length: 7 }, (_, index) => row(index, index === 6
-      ? { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 302_000_000_000 }
-      : {}));
-    const weekly = buildWeeklyInputData(rows)!;
+  it.each([false, true])("withholds a market-cap change from a single comparable observation (%s)", (perimeter) => {
+    const rows = Array.from({ length: 7 }, (_, index) => ({
+      ...row(index, perimeter || index === 6 ? { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 302e9 } : {}),
+      ...(perimeter ? { generated_at: 1794614400 - (6 - index) * 86400 } : {}),
+    }));
+    const weekly = buildWeeklyInputData(rows, perimeter ? rows.map((r) => ({ ...r, generated_at: r.generated_at - 7 * 86400 })) : [])!;
 
-    // One complete observation is zero comparison pairs: the weekly change is
-    // unobserved, not a measured flat week.
     expect(weekly.mcapRange).toEqual({
       start: null, end: null, netChange: null, pctChange: null,
       unavailableReason: "insufficient-market-observations",
     });
+    if (perimeter) expect(weekly.weekOverWeekDeltas?.mcap.deltaPct).toBeNull();
     const prompt = buildWeeklyPrompt(weekly);
     expect(prompt).toContain("Market cap: N/A (insufficient-market-observations)");
     expect(prompt).not.toContain("+0.00%");

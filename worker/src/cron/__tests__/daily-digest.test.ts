@@ -1089,11 +1089,17 @@ describe("market and risk collectors", () => {
 
 describe("history and DEWS collectors", () => {
   it("builds cross-day trajectories and covers null and insufficient history", async () => {
-    const now = Math.floor(Date.now() / 1000); const full = await collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: [makeDigestRow(now, 0, 92, "BEDROCK", 200e9, -5), makeDigestRow(now, 1, 91, "BEDROCK", 199e9, -3), makeDigestRow(now, 2, 90, "STEADY", 198e9, -1), makeDigestRow(now, 3, 89, "STEADY", 197e9), makeDigestRow(now, 4, 88, "STEADY", 196e9)] }]));
+    vi.setSystemTime(1794614400 * 1000);
+    const now = Math.floor(Date.now() / 1000);
+    const collect = (rows: ReturnType<typeof makeDigestRow>[]) => collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: rows.map((row) => ({ ...row, input_data: row.input_data.replace("{", '{"supplyCoverage":{"complete":true},') })) }]));
+    const rows = (count: number, gauges: number, offset = 0) => Array.from({ length: count }, (_, i) =>
+      makeDigestRow(now, i + offset, 92 - i, i < 2 ? "BEDROCK" : "STEADY", (200 - i) * 1e9, i < gauges ? -5 + i * 2 : undefined));
+    const full = await collect(rows(5, 3));
     const psiTrajectory = full.value?.psiTrajectory ?? [];
     expect(psiTrajectory[0]).toMatchObject({ score: 88 }); expect(psiTrajectory[psiTrajectory.length - 1]).toMatchObject({ score: 92 }); expect(full.value?.gaugeTrajectory).toEqual(expect.any(Array));
-    const short = await collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: [makeDigestRow(now, 0, 92, "BEDROCK", 200e9, -5), makeDigestRow(now, 1, 91, "BEDROCK", 199e9), makeDigestRow(now, 2, 90, "STEADY", 198e9), makeDigestRow(now, 3, 89, "STEADY", 197e9)] }])); expect(short.value?.gaugeTrajectory).toBeNull();
-    expect((await collectCrossDayTrends(ctxFor([{ match: "FROM daily_digest", rows: [makeDigestRow(now, 1, 92, "BEDROCK", 200e9), makeDigestRow(now, 2, 91, "BEDROCK", 199e9)] }]))).value).toBeUndefined();
+    expect(full.value?.mcapTrajectory).toHaveLength(1);
+    const short = await collect(rows(4, 1)); expect(short.value?.gaugeTrajectory).toBeNull();
+    expect((await collect(rows(2, 0, 1))).value).toBeUndefined();
   });
   it("collects historical PSI and market context", async () => {
     const today = 1_772_755_200; const db = mockD1([first("SELECT COUNT(*) as cnt FROM stability_index", { cnt: 90 }), first("SELECT MIN(generated_at) as oldest FROM daily_digest", null), first("FROM daily_digest\n           WHERE json_extract(input_data", { generated_at: today - 30 * 86_400 + 8 * 3600, psi_score: 89, psi_band: "STEADY" }), { match: "ORDER BY computed_at DESC LIMIT 90", rows: [0, 1, 2].map((daysAgo) => ({ date: today - daysAgo * 86_400, score: 91.2, band: "BEDROCK" })) }, first("SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", { ath_mcap: 120e6, snapshot_date: today - 60 * 86_400 }), first("ABS(s1.circulating_usd - s2.circulating_usd)", { snapshot_date: today - 45 * 86_400, abs_change: 8e6 })]);

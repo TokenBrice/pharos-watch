@@ -289,20 +289,22 @@ describe("buildStabilityInputForDay", () => {
     expect(result.trendUnavailableIds).toContain("usdt-tether");
   });
 
-  it("pairs trend identities independently of the current denominator and admits observed zero", () => {
-    const day = 40 * DAY;
+  it.each([0, 1])("pairs trend identities independently of current supply (%s)", (age) => {
+    const day = 1794614400;
     const input = buildPsiStabilityInput(day, [
       ...psiSupplyPair({ stablecoinId: "usdt-tether", day, currentMcap: 2e9, priorMcap: 2e9 }),
       { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 10e9 },
       // Available at the prior target but outside the current 14-day as-of window.
       { stablecoin_id: "dai-makerdao", snapshot_date: day - 21 * DAY, circulating_usd: 3e9 },
       ...psiSupplyPair({ stablecoinId: "usds-sky", day, currentMcap: 0, priorMcap: 0 }),
+      ...psiSupplyPair({ stablecoinId: "gho-aave", day: day - age * DAY, currentMcap: age ? 699e6 : 268e6, priorMcap: 699e6 }),
     ]);
-    expect(input.totalMcapUsd).toBe(12e9);
+    expect(input.totalMcapUsd).toBe(12e9 + (age ? 699e6 : 268e6));
     expect(input.mcap7dChangePct).toBe(0);
     expect(input.trendUnavailableIds).toContain("usdc-circle");
     expect(input.trendUnavailableIds).toContain("dai-makerdao");
     expect(input.trendUnavailableIds).not.toContain("usds-sky");
+    expect(input.trendUnavailableIds.includes("gho-aave")).toBe(age === 0);
   });
 
   it("holds a measured zero paired prior denominator instead of inventing a trend", () => {

@@ -2,6 +2,7 @@ import { isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { percentileNearestRank } from "@shared/lib/stats";
+import { isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { errorResponse, jsonResponse, methodNotAllowedResponse } from "../lib/api-response";
@@ -407,8 +408,10 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
       const dayMidnight = bucketUnixSecondsToUtcDay(targetDay);
 
       const current = coinSupply?.get(dayMidnight) ?? null;
-      const prevDay = coinSupply?.get(dayMidnight - DAY_SECONDS) ?? null;
-      const prevWeek = coinSupply?.get(dayMidnight - 7 * DAY_SECONDS) ?? null;
+      const prevDay = !isEarlierSupplyPerimeter(event.stablecoin_id, dayMidnight) && isEarlierSupplyPerimeter(event.stablecoin_id, dayMidnight - DAY_SECONDS)
+        ? null : coinSupply?.get(dayMidnight - DAY_SECONDS) ?? null;
+      const prevWeek = !isEarlierSupplyPerimeter(event.stablecoin_id, dayMidnight) && isEarlierSupplyPerimeter(event.stablecoin_id, dayMidnight - 7 * DAY_SECONDS)
+        ? null : coinSupply?.get(dayMidnight - 7 * DAY_SECONDS) ?? null;
 
       if (current == null) {
         if (d > 0) evaluationReasons.add("current-supply-unavailable");

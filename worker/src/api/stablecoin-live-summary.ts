@@ -28,7 +28,7 @@ export async function handleStablecoinLiveSummary(
   }
   const parsed = StablecoinDetailResponseSchema.safeParse(payload);
   if (!parsed.success) return errorResponse(502, "Invalid stablecoin detail data", { noStore: true });
-  const summary = projectStablecoinLiveSummary(parsed.data);
+  const summary = projectStablecoinLiveSummary(parsed.data, id);
   const headers = new Headers(response.headers);
   headers.delete("Content-Length");
   const sourceClock = headers.get("X-Data-Updated-At");

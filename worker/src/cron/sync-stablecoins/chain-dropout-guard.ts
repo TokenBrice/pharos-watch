@@ -1,3 +1,4 @@
+import { SUPPLY_PERIMETER_CHANGES } from "@shared/lib/supply-perimeter-changes";
 import { z } from "zod";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { canonicalizeChainCirculating, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
@@ -389,6 +390,8 @@ export async function guardChainDropouts(input: {
         pair.baselineObservedAt = now;
         pair.quarantinedSince = null;
         pair.releasedAt = now;
+        delete pair.ambiguousSince;
+        delete pair.heldTotalUsd;
         continue;
       }
       candidates.push({ asset, labels: group.labels, pegKey, state: pair, resolved: false, firstFlaggedAt: pair.quarantinedSince!, evidence: { ...(group.chainId ? { chainId: group.chainId } : {}), chainLabel: pair.chainLabel, listCurrentUsd: observation.current, baselineUsd: pair.baselineUsd, baselineObservedAt: pair.baselineObservedAt, baselineSource, resolution: "unavailable" } });
@@ -729,13 +732,13 @@ export async function guardChainDropouts(input: {
   }
   // A reviewed provider perimeter change is not a supply move: the provider's day/week/month values
   // from before the review count another quantity. Withhold each until it can no longer predate it (R1).
-  for (const entry of REVIEWED_CHAIN_SUPPLY_COLLAPSES) {
-    if (entry.policy !== "accept-observed-collapse" || !entry.perimeterChange || entry.reviewedAt > now) continue;
-    const asset = input.assets.find((candidate) => String(candidate.id) === entry.assetId);
+  for (const entry of SUPPLY_PERIMETER_CHANGES) {
+    if (entry.changedAt > now) continue;
+    const asset = input.assets.find((candidate) => String(candidate.id) === entry.stablecoinId);
     if (!asset) continue;
-    const ageDays = (now - entry.reviewedAt) / 86_400;
+    const ageDays = (now - entry.changedAt) / 86_400;
     const rows = Object.entries(asset.chainCirculating ?? {}).filter(([label, row]) =>
-      canonicalizeChainCirculating({ [label]: row }).keys().next().value === entry.chainId).map(([, row]) => row);
+      entry.chainIds.some((chainId) => canonicalizeChainCirculating({ [label]: row }).has(chainId))).map(([, row]) => row);
     for (const row of [asset, ...rows]) {
       if (ageDays < 2) row.circulatingPrevDay = null;
       if (ageDays < 8) row.circulatingPrevWeek = null;

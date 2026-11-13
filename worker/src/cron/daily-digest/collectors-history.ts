@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
+import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
 import { round1 } from "@shared/lib/math";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getPsiBandStreak, type PsiHistoryPointLike } from "@shared/lib/psi-view-model";
@@ -216,6 +217,7 @@ export async function collectCrossDayTrends(
       .all<{ generated_at: number; input_data: string }>();
 
     const entries = rows.results ?? [];
+    const perimeterChangedAt = getLatestSupplyPerimeterChange(ctx.nowSec - 7 * DAY_SECONDS, ctx.nowSec);
     if (entries.length < 3) return collectorOk(undefined);
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
@@ -231,10 +233,11 @@ export async function collectCrossDayTrends(
         if (data.stabilityIndex) {
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
-        if (data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
+        const comparableSupply = perimeterChangedAt == null || row.generated_at >= perimeterChangedAt;
+        if (comparableSupply && data.aggregateUniverse === "core-stablecoins-v1" && data.supplyCoverage?.complete === true) {
           mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         }
-        if (data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (comparableSupply && data.supplyCoverage?.complete === true) completeCoverageMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }

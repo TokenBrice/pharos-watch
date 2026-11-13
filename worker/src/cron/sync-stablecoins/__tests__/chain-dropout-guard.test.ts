@@ -1090,6 +1090,7 @@ describe("chain dropout guard", () => {
     expect(accepted.historyFetches).toBe(0);
     expect(asset).toEqual(original);
     expect(accepted.state.pairs[key]).toMatchObject({ baselineUsd: current, quarantinedSince: null, releasedAt: reviewedAt });
+    expect([accepted.state.pairs[key].ambiguousSince, accepted.state.pairs[key].heldTotalUsd]).toEqual([undefined, undefined]);
 
     for (const scenario of [
       { now: reviewedAt - 1, state: makeState(), asset: makeAsset() },

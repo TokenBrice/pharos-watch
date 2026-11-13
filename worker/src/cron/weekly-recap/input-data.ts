@@ -1,3 +1,4 @@
+import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
@@ -842,7 +843,9 @@ export function buildWeeklyInputData(
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
   const coreMarketInputs = parsed.filter((day) => day.inputData.aggregateUniverse === "core-stablecoins-v1");
-  const marketInputs = coreMarketInputs.length > 0 ? coreMarketInputs : parsed;
+  const perimeterChangedAt = getLatestSupplyPerimeterChange(parsed[0].generatedAt, parsed[parsed.length - 1].generatedAt);
+  const marketInputs = (coreMarketInputs.length > 0 ? coreMarketInputs : parsed)
+    .filter((day) => perimeterChangedAt == null || day.generatedAt >= perimeterChangedAt);
   const marketCoverageComplete = marketInputs.every((day) =>
     day.inputData.supplyCoverage?.complete === true && Number.isFinite(day.inputData.totalMcapUsd));
   const mcaps = marketCoverageComplete ? marketInputs.map((day) => day.inputData.totalMcapUsd) : [];
@@ -878,6 +881,9 @@ export function buildWeeklyInputData(
   });
 
   const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed, gradeTransitionPeriods?.prior);
+  if (weekOverWeekDeltas && getLatestSupplyPerimeterChange(priorParsed[priorParsed.length - 1].generatedAt, parsed[parsed.length - 1].generatedAt) != null) {
+    weekOverWeekDeltas.mcap = { current: current.mcapEnd, prior: null, deltaPct: null };
+  }
   // Forward-look accountability: publishing the hit rate creates pressure
   // toward falsifiable near-term triggers (the corpus ran at ~4% hits).
   const outcomeCounts = { hit: 0, missed: 0, pending: 0, expired: 0, unavailable: 0 };

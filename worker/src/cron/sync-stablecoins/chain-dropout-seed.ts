@@ -1,3 +1,5 @@
+import { SUPPLY_PERIMETER_CHANGES } from "@shared/lib/supply-perimeter-changes";
+
 // Vetted DefiLlama per-chain daily points at 2026-10-08T00:00Z, captured 2026-10-09.
 // USDG X Layer/Ink cross-checked against issuer-native on-chain totalSupply.
 // Incident bootstrap only: never supersedes a successfully loaded persisted baseline.
@@ -284,8 +286,6 @@ type ReviewedChainSupplyCollapse = {
 } & (
   | {
     policy: "accept-observed-collapse"; excludeOmittedUntil?: never;
-    /** The provider redefined what it counts: its day/week/month values from before the review are another quantity. */
-    perimeterChange?: true;
   }
   | { policy: "exclude-omitted"; excludeOmittedUntil: number }
 );
@@ -450,10 +450,10 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
   // Arbitrum 523807208, Monad 121833574 and Plasma 37613621: reserves hold 278,748,901 /
   // 28,642,003 / 15,640,791 / 6,804,874 GHO, direct minters 100,524,608 idle; circulating is
   // 268,638,822 GHO of 699,000,000 minted, against the provider's 268,653,633.
-  ...["ethereum", "arbitrum", "monad", "plasma"].map((chainId) => ({
-    assetId: "gho-aave", chainId,
-    policy: "accept-observed-collapse" as const, perimeterChange: true as const,
-    reviewedAt: Date.parse("2026-11-13T08:03:20Z") / 1000,
-    evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/987",
-  })),
+  ...SUPPLY_PERIMETER_CHANGES.flatMap((change) => change.chainIds.map((chainId) => ({
+    assetId: change.stablecoinId, chainId,
+    policy: "accept-observed-collapse" as const,
+    reviewedAt: change.changedAt,
+    evidenceUrl: change.evidenceUrl,
+  }))),
 ];

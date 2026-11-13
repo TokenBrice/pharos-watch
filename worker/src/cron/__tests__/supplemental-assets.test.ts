@@ -505,21 +505,15 @@ describe("fetchGoldTokens", () => {
   });
 
   it("fills empty historical buckets from exact daily observations without replacing observed zero", async () => {
-    vi.useFakeTimers({ now: Date.UTC(2026, 5, 3, 12), toFake: ["Date"] });
-    const snapshotDate = (daysAgo: number) => Date.UTC(2026, 5, 3 - daysAgo) / 1000;
+    vi.useFakeTimers({ now: Date.UTC(2026, 10, 13, 12), toFake: ["Date"] });
+    const snapshotDate = (daysAgo: number) => Date.UTC(2026, 10, 13 - daysAgo) / 1000;
     const db = mockD1([{
       match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
-      rows: [
-        { stablecoin_id: "empty", snapshot_date: snapshotDate(1), circulating_usd: 99 },
-        { stablecoin_id: "empty", snapshot_date: snapshotDate(7), circulating_usd: 98 },
-        { stablecoin_id: "empty", snapshot_date: snapshotDate(30), circulating_usd: 97 },
-        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(1), circulating_usd: 99 },
-        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(7), circulating_usd: 98 },
-        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(30), circulating_usd: 97 },
-        { stablecoin_id: "out-of-bound", snapshot_date: snapshotDate(7), circulating_usd: 50 },
-      ],
+      rows: ["empty", "observed-zero", "gho-aave"].flatMap((stablecoin_id) =>
+        [1, 7, 30].map((days, i) => ({ stablecoin_id, snapshot_date: snapshotDate(days), circulating_usd: 99 - i })))
+        .concat({ stablecoin_id: "out-of-bound", snapshot_date: snapshotDate(7), circulating_usd: 50 }),
     }]);
-    const assets = ["empty", "observed-zero", "out-of-bound", "no-history"].map((id) => ({
+    const assets = ["empty", "observed-zero", "out-of-bound", "no-history", "gho-aave"].map((id) => ({
       id,
       name: id,
       symbol: id,
@@ -542,6 +536,7 @@ describe("fetchGoldTokens", () => {
     });
     expect(assets[2].circulatingPrevWeek).toEqual({});
     expect(assets[3].circulatingPrevWeek).toEqual({});
+    expect([assets[4].circulatingPrevDay, assets[4].circulatingPrevWeek, assets[4].circulatingPrevMonth]).toEqual([{}, {}, {}]);
   });
 
   it("does not mis-attribute total history to a multi-bucket asset", async () => {
