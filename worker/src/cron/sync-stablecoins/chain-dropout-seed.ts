@@ -288,6 +288,9 @@ type ReviewedChainSupplyCollapse = {
     policy: "accept-observed-collapse"; excludeOmittedUntil?: never;
   }
   | { policy: "exclude-omitted"; excludeOmittedUntil: number }
+  // From `reviewedAt`, the guard removes the pair only while it holds exactly this reviewed baseline: the same
+  // observation clock and the same stored value. A different clock or value keeps its guard.
+  | { policy: "retire-baseline"; baselineObservedAt: number; baselineUsd: number; excludeOmittedUntil?: never }
 );
 
 export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollapse[] = [
@@ -433,16 +436,38 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
     evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
   },
-  // BSC block 133295638 (2026-11-13 05:26 UTC): the registry iUSD token has zero total supply and
-  // no Transfer in the sampled 22 hours before; DefiLlama detail id 298 has no BSC series. The
-  // guard carried a $3,926,614 BSC baseline dated 2026-11-12 19:15:10 UTC. Code and arithmetic
-  // point to a CoinGecko gap-fill remainder; that packet was not captured, so this is inferred.
+  // BSC block 133360128 (2026-11-13 13:31 UTC): the registry iUSD token has zero total supply, as
+  // at block 133295638. DefiLlama id 298 has no BSC key in its detail chain balances and an empty
+  // BSC chart. The retired $3,926,614 baseline dated 2026-11-12 19:15:10 UTC was therefore never a
+  // provider observation; that it was a CoinGecko gap-fill remainder is inferred, not captured.
   {
     assetId: "iusd-infinifi", chainId: "bsc",
-    policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-13T05:26:09Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-27T05:26:09Z") / 1000,
+    policy: "retire-baseline",
+    reviewedAt: Date.parse("2026-11-13T13:31:00Z") / 1000,
+    baselineObservedAt: 1794510910, baselineUsd: 3926614.153173417,
     evidenceUrl: "https://bscscan.com/token/0x60b14ec49874af1ba471685cb11132101aebdf09",
+  },
+  // Finalized Solana slot 468944023 (2026-11-13 13:31 UTC): the registry apxUSD mint holds
+  // 6,273,500.906527 apxUSD. DefiLlama id 354 has no Solana key in its detail chain balances and an
+  // empty Solana chart. The retired $17,992,714 baseline dated 2026-10-15 was therefore never a
+  // provider observation; that it was a CoinGecko gap-fill remainder is inferred, not captured.
+  {
+    assetId: "apxusd-apyx", chainId: "solana",
+    policy: "retire-baseline",
+    reviewedAt: Date.parse("2026-11-13T13:31:00Z") / 1000,
+    baselineObservedAt: 1792070050, baselineUsd: 17992713.995119274,
+    evidenceUrl: "https://solscan.io/token/HAYQtfJEQ9DbDbaHEhxfGsWbSZ3ywthdsVB3PuB72DYe",
+  },
+  // Finalized Solana slot 468944023 (2026-11-13 13:31 UTC): the registry USDf mint has zero supply.
+  // DefiLlama id 246 has no Solana key in its detail chain balances and an empty Solana chart. The
+  // retired $163,746,470 baseline dated 2026-11-06 was therefore never a provider observation; that
+  // it was a CoinGecko gap-fill remainder is inferred, not captured.
+  {
+    assetId: "usdf-falcon", chainId: "solana",
+    policy: "retire-baseline",
+    reviewedAt: Date.parse("2026-11-13T13:31:00Z") / 1000,
+    baselineObservedAt: 1793946610, baselineUsd: 163746469.69199657,
+    evidenceUrl: "https://solscan.io/token/9ksrtYx1vnRxr4X5YqmGxqRMRBhgsc6FfQwWjB1KZq2x",
   },
   // GHO, 2026-11-13: not a dropout. DefiLlama peggedassets-server PR #987 (merged 2026-11-12
   // 08:05 UTC) reports GHO pre-minted into Aave's GhoReserve contracts and unborrowed

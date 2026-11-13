@@ -12,6 +12,7 @@ import {
   getPrevWeekRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
 } from "@shared/lib/supply";
+import { makeChainBaseline as baseline, makeChainLeg as leg, makeChartPoint as chartPoint, makeDropoutUsdg, makeGapFill as gapFill } from "@shared/test-utils/stablecoin";
 import { buildChainRpcs, hasRegistryRpc } from "../../../lib/chain-registry";
 import { normalizeStablecoinsPayload } from "../shared";
 import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
@@ -51,27 +52,7 @@ const RWA_AMOUNTS = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_0
 
 const XLAYER_SCALE = 10n ** BigInt(xlayerContract.decimals!);
 
-function leg(current: number, circulatingPrevDay = current) {
-  return { current, circulatingPrevDay };
-}
-
-function usdg(): PeggedAsset {
-  return {
-    id: "usdg-paxos", name: "Global Dollar", symbol: "USDG", pegType: "peggedUSD", pegMechanism: "fiat-backed",
-    supplySource: "defillama", price: 1, priceSource: "defillama",
-    circulating: { peggedUSD: 321_300_000 + 696_500_000 + 627_500_000 },
-    circulatingPrevDay: { peggedUSD: 3_134_000_000 }, circulatingPrevWeek: { peggedUSD: 3_000_000_000 }, circulatingPrevMonth: { peggedUSD: 2_900_000_000 },
-    chains: ["X Layer", "Ink", "Hyperliquid L1", "Ethereum", "Robinhood", "Solana"],
-    chainCirculating: {
-      "X Layer": leg(0, 1_427_900_000),
-      Ink: leg(0, 63_600_000),
-      "Hyperliquid L1": leg(0, 1_200_000),
-      Ethereum: leg(321_300_000),
-      Robinhood: leg(696_500_000),
-      Solana: leg(627_500_000),
-    },
-  };
-}
+const usdg = (): PeggedAsset => makeDropoutUsdg();
 
 function usdgXlayer(): PeggedAsset {
   const asset = usdg();
@@ -87,20 +68,6 @@ function savedState(assetId: string, ...pairs: Omit<ChainDropoutState["pairs"][s
   return { version: 1, pairs: Object.fromEntries(pairs.map((pair) => [JSON.stringify([assetId, pair.chainId]), {
     ...pair, assetId, baselineSource: "state" as const,
   }])) };
-}
-
-function baseline(chainId: string, baselineUsd: number, baselineObservedAt: number, quarantinedSince: number | null = null) {
-  return { chainId, chainLabel: CHAIN_META[chainId].name, baselineUsd, baselineObservedAt, quarantinedSince };
-}
-
-function gapFill(missingChainId: string, canonicalCurrentUsd: number, supplementalCurrentUsd: number, observedAt = NOW, maxRatio = 1.5): NonNullable<PeggedAsset["supplyGapFill"]> {
-  return { method: "coingecko-single-missing-chain", admission: "entered", missingChainId, canonicalSource: "defillama",
-    canonicalCurrentUsd, supplementalSource: "coingecko", supplementalCurrentUsd,
-    ratio: supplementalCurrentUsd / canonicalCurrentUsd, maxRatio, observedAt };
-}
-
-function chartPoint(value: number, date: number) {
-  return { response: { ok: true }, body: JSON.stringify([{ date, totalCirculatingUSD: { peggedUSD: value } }]) };
 }
 
 beforeEach(() => {
@@ -603,21 +570,37 @@ describe("chain dropout guard", () => {
   });
 
   it.each([false, true])("imports provider baselines, not gap-fills (synthetic: %s)", async (synthetic) => {
-    const current = 70_800_808, prior = 74_722_177, gap = 3_926_614;
-    const previous: PeggedAsset = { ...usdg(), id: "iusd-infinifi", supplyObservedAt: AFTER_SEED,
+    // `t` and `gap` are the baseline clock and value of iUSD's reviewed BSC retirement.
+    const current = 70_800_808, prior = 74_722_177, gap = 3926614.153173417, t = 1794510910, later = t + 2 * DAY;
+    const previous: PeggedAsset = { ...usdg(), id: "iusd-infinifi", supplyObservedAt: t,
       circulating: { peggedUSD: prior + gap }, chainCirculating: { Ethereum: leg(prior), BSC: leg(gap) } };
     if (synthetic) Object.assign(previous, { supplySource: "coingecko-gap-fill",
-      supplyGapFill: gapFill("bsc", prior, prior + gap, AFTER_SEED) });
-    const first = await runGuard(previous, { now: AFTER_SEED });
-    const next: PeggedAsset = { ...usdg(), id: previous.id, circulating: { peggedUSD: current },
-      chainCirculating: { Ethereum: leg(current, prior) } };
-    const result = await runGuard(next, { now: AFTER_SEED + 900, state: first.state,
+      supplyGapFill: gapFill("bsc", prior, prior + gap, t) });
+    const first = await runGuard(previous, { now: t });
+    const fresh = (): PeggedAsset => ({ ...usdg(), id: previous.id, circulating: { peggedUSD: current },
+      chainCirculating: { Ethereum: leg(current, prior) } }), next = fresh(), key = JSON.stringify([previous.id, "bsc"]);
+    const result = await runGuard(next, { now: t + 900, state: first.state,
       previousAssetsById: new Map([[previous.id, previous]]) });
     expect(result.flagged).toBe(synthetic ? 0 : 1);
     expect(result.quarantinedAssetIds).toEqual(synthetic ? [] : [previous.id]);
     expect(getCirculatingRawOrNull(next)).toBe(synthetic ? current : current + gap);
-    expect(result.state.pairs[JSON.stringify([previous.id, "bsc"])]?.baselineUsd).toBe(synthetic ? undefined : gap);
+    expect(result.state.pairs[key]?.baselineUsd).toBe(synthetic ? undefined : gap);
     expect(next.supplyChainGuard?.status).toBe(synthetic ? undefined : "quarantined");
+    if (synthetic) return;
+    // The retirement removes the reviewed baseline, whether recovered after an unreadable state or persisted.
+    const empty: ChainDropoutState = { version: 1, pairs: {} };
+    for (const state of [empty, result.state]) {
+      const asset = fresh();
+      const run = await runGuard(asset, { now: later, state, stateReadFailed: state === empty, previousAssetsById: new Map([[previous.id, next]]) });
+      expect([run.state.pairs[key], asset.supplyChainGuard, getCirculatingRawOrNull(asset)]).toEqual([undefined, undefined, current]);
+    }
+    // A later list prev-day bootstrap backdated onto the retired clock, with a near-equal value, stays guarded.
+    const listed = fresh(), omitted = fresh(), near = 3926614.4;
+    listed.chainCirculating!.BSC = leg(1e6, near);
+    const learned = await runGuard(listed, { now: t + DAY });
+    const kept = await runGuard(omitted, { now: later, state: learned.state });
+    expect([kept.state.pairs[key]?.baselineUsd, omitted.supplyChainGuard?.status, getCirculatingRawOrNull(omitted)])
+      .toEqual([near, "quarantined", current + near]);
   });
 
   it("recovers omitted material identities from the previous accepted publication even without a saved pair", async () => {
