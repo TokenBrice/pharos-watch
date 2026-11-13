@@ -384,7 +384,7 @@ describe("chain dropout guard", () => {
     const display = chainCirculatingForDisplay(published)!;
     expect(display.Tempo.current).toBe(tempoBaselineUsd);
     expect(Object.values(display).reduce((sum, row) => sum + row.current!, 0)).toBeCloseTo(headline, 2);
-    const reviewedAt = Date.parse(id === "buidl-blackrock" ? "2026-11-12T19:35:00Z" : "2026-11-04T09:03:53Z") / 1000;
+    const reviewedAt = Date.parse(id === "buidl-blackrock" ? "2026-11-12T19:35:00Z" : "2026-11-13T00:12:36Z") / 1000;
     const expiresAt = reviewedAt + 14 * DAY;
     const otherBaseline = observedTotal / 19 + 1;
     for (const [now, incident, restored, expected, other] of [

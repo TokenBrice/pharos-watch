@@ -60,8 +60,8 @@ describe("getSlipstreamPoolFeeBps", () => {
 });
 
 describe("getSugarClStartOffset", () => {
-  it("accounts for Velodrome Sugar omitting the first V2 convertor pool", () => {
-    expect(getSugarClStartOffset("aerodrome-slipstream", 10)).toBe(10);
+  it("accounts for Sugar's skipped V2 convertor and its 30,000-pool cap", () => {
+    expect(getSugarClStartOffset("aerodrome-slipstream", 30_002)).toBe(30_000);
     expect(getSugarClStartOffset("velodrome-slipstream", 10)).toBe(9);
   });
 });

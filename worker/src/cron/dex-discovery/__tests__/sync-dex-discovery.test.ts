@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
 import type { DiscoveryRunCheckpoint } from "../types";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import type { CronProgressReporter } from "../../../lib/cron-logger";
 
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => {
   const stablecoins = [
@@ -442,7 +441,7 @@ describe("syncDexDiscovery", () => {
     });
   });
 
-  it("resumes the saved cohort tail without advancing its sequence or repeating refresh", async () => {
+  it("resumes the saved cohort tail without advancing its sequence and refreshes again", async () => {
     const cohortDb = makeNoopD1({
       prepare: (sql: string) => ({ all: async () => ({
         results: sql.includes("FROM dex_liquidity")
@@ -476,14 +475,13 @@ describe("syncDexDiscovery", () => {
         stage: "deferred", itemsDone: 1, itemsTotal: 2,
       }));
 
-      nowMs += 2 * 3600_000;
-      const nextProgress = vi.fn<CronProgressReporter>(async () => {});
-      const second = await syncDexDiscovery(cohortDb, null, undefined, nextProgress);
+      nowMs += 6 * 3600_000;
+      const second = await syncDexDiscovery(cohortDb, null);
       expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a", "coin-b"]);
       expect(incrementRunSeq).toHaveBeenCalledTimes(1);
-      expect(nextProgress.mock.calls.some(([progress]) => progress.stage === "refresh-stale-pools")).toBe(false);
       expect(JSON.parse(second.metadata ?? "{}")).toMatchObject({
         runSeq: 2, resumedFromCheckpoint: true, continuationPending: 0,
+        stalePoolRefresh: { outcome: "skipped-no-api-key" },
       });
       expect(checkpoint).toBeNull();
     } finally {
