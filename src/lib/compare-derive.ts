@@ -49,6 +49,7 @@ import {
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { SUPPLY_PERIMETER_CHANGES, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 
 export type ComparisonMeta = Pick<
   StablecoinClientDetailMeta,
@@ -268,6 +269,29 @@ export function deriveSupplySeries({
       };
     })
     .filter((series): series is NonNullable<typeof series> => series != null);
+}
+
+/** Normalize within the latest quantity represented in the displayed window. */
+export function normalizeSupplyComparisonData(data: Record<string, number>[], series: Pick<SupplySeriesEntry, "id">[]) {
+  if (data.length === 0) return [];
+  const anchors: Record<string, { ts: number; value: number; changed: boolean }> = {};
+  for (const { id } of series) {
+    const changes = SUPPLY_PERIMETER_CHANGES.filter((change) => change.stablecoinId === id && change.changedAt > data[0].ts / 1000
+      && Math.floor(change.changedAt / 86_400) * 86_400 <= data[data.length - 1].ts / 1000);
+    const cutoff = changes.length ? Math.max(...changes.map((change) => change.changedAt)) * 1000 : null;
+    const first = data.find((row) => typeof row[id] === "number" && row[id] > 0
+      && (cutoff == null || row.ts >= cutoff) && !isAmbiguousSupplyPerimeterDay(id, row.ts / 1000));
+    if (first) anchors[id] = { ts: first.ts, value: first[id], changed: cutoff != null };
+  }
+  return data.map((row) => {
+    const norm: { ts: number; [id: string]: number | null } = { ts: row.ts };
+    for (const { id } of series) {
+      const anchor = anchors[id];
+      norm[id] = typeof row[id] === "number" && anchor && (!anchor.changed || row.ts >= anchor.ts)
+        ? ((row[id] / anchor.value) - 1) * 100 : null;
+    }
+    return norm;
+  });
 }
 
 /**

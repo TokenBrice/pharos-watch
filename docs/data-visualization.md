@@ -158,6 +158,8 @@ At-peg occupancy labels use `formatPegOccupancy` from `shared/lib/format.ts`: a 
 
 Detail price and market-cap charts preserve their series, time-range controls, brushing, crosshairs and accessible data tables. The annotation markers, legends, density strip and their exclusive browser Tape reads are retired. The curated annotation corpus and human review/intake history remain editorial evidence, without a live chart-overlay consumer.
 
+The detail market-cap header omits its 24h delta when the daily pair crosses a reviewed supply perimeter change or either endpoint is the ambiguous change-day label; absolute chart observations stay unchanged.
+
 ## Stablecoin Detail Primitives
 
 The `/stablecoin/[id]/` evidence modules share a small set of CSS/HTML visuals under `src/components/stablecoin-detail/`. They are spans with inline offsets rather than SVG, which keeps the static dossier HTML light. Each draws a published field and states its degenerate case explicitly: unavailable is dashed, hatched or "–", and never a zero-width fill, a "0 %" or a green mark. [design-language.md](./design-language.md#stablecoin-detail-module-contract) owns where these sit in a module.

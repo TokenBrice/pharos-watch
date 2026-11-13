@@ -10,7 +10,7 @@ import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import { exactTickFormatter } from "@/lib/chart-ticks";
-import type { SupplySeriesEntry } from "@/lib/compare-derive";
+import { normalizeSupplyComparisonData, type SupplySeriesEntry } from "@/lib/compare-derive";
 // Raw boolean options keep the normalization toggle free of a per-render
 // descriptor array; labels come from the hoisted formatter below.
 const NORMALIZATION_OPTIONS = [false, true] as const;
@@ -58,31 +58,9 @@ export function ComparisonChart({
     onRangeChange?.(r);
   }, [setLocalRange, onRangeChange]);
 
-  // Normalize: percent change from first available value per series
-  const displayData = useMemo(() => {
-    if (!normalized || filteredData.length === 0) return filteredData;
-    const firstValues: Record<string, number> = {};
-    for (const s of series) {
-      for (const row of filteredData) {
-        const val = row[s.id];
-        if (typeof val === "number" && val > 0) {
-          firstValues[s.id] = val;
-          break;
-        }
-      }
-    }
-    return filteredData.map((row) => {
-      const norm: Record<string, number> = { ts: row.ts };
-      for (const s of series) {
-        const val = row[s.id];
-        const first = firstValues[s.id];
-        if (typeof val === "number" && first) {
-          norm[s.id] = ((val / first) - 1) * 100;
-        }
-      }
-      return norm;
-    });
-  }, [normalized, filteredData, series]);
+  const displayData = useMemo(() => normalized
+    ? normalizeSupplyComparisonData(filteredData, series)
+    : filteredData, [normalized, filteredData, series]);
 
   // A series is plotted only when the displayed rows actually carry a value for
   // it; a range cut or a failed normalized anchor can leave it with none.
