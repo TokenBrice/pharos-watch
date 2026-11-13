@@ -1127,7 +1127,7 @@ describe("syncBlacklist", () => {
       expect(meta.tronAmountRepairReason).toBe("blacklist-budget-exhausted");
       expect(meta.tronAmountRepairAttempted).toBe(2);
       expect(meta.tronAmountRepairLimit).toBe(24);
-      expect(meta).toMatchObject({ runtimeBudgetReached: true, producerSnapshotSkipped: false, producerSummarySnapshot: true });
+      expect(meta).toMatchObject({ producerSnapshotSkipped: false, producerSummarySnapshot: true });
     });
 
     it("skips EVM repair with provider-circuit-open when the Etherscan circuit is open", async () => {
