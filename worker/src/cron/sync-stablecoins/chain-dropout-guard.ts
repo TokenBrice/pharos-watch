@@ -241,16 +241,19 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
  * including a confirmed low/zero whose guard sidecar disappeared once the chain stopped being flagged.
  * Only unpublished chains bootstrap from seed. One exception: a reviewed `retire-baseline` entry is
  * code, not state, so it removes a recovered pair holding exactly its reviewed baseline on this run too.
+ * A `stale` pair counts as missing (the state write after that publication may have failed), but only a
+ * guarded chain or a fresh DefiLlama list row replaces it; a replaced pair leaves `stale` and is compared.
  */
-function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number): void {
+function recoverStateFromPublication(state: ChainDropoutState, previousAssetsById: ReadonlyMap<string, PeggedAsset>, now: number, stale: Set<string>): void {
   for (const previous of previousAssetsById.values()) {
     const assetId = String(previous.id);
     const guard = previous.supplyChainGuard;
+    const listRows = !previous.supplyRestored && ["defillama", "defillama-chain-repair", "coingecko-gap-fill"].includes(previous.supplySource ?? "defillama");
     if (guard) {
       const heldTotal = guard.concurrentGainUsd != null && guard.status === "quarantined" ? getCirculatingRawOrNull(previous) : null;
       for (const chain of guard.chains) {
         const key = pairKey(assetId, chain.chainId ?? `label:${chain.chainLabel}`);
-        if (state.pairs[key]) continue;
+        if (state.pairs[key] && !stale.delete(key)) continue;
         const identity = { assetId, chainLabel: chain.chainLabel, ...(chain.chainId ? { chainId: chain.chainId } : {}) };
         // A published native-low corroboration released the pair at the native amount: recover that
         // confirmed level, never the old positive baseline it disproved.
@@ -277,9 +280,10 @@ function recoverStateFromPublication(state: ChainDropoutState, previousAssetsByI
       // An aggregate remainder is not a provider chain observation or a dropout baseline.
       if (chainId && chainId === previous.supplyGapFill?.missingChainId) continue;
       const key = pairKey(assetId, chainId ?? `label:${label}`);
-      if (state.pairs[key]) continue;
+      if (state.pairs[key] && !(listRows && stale.has(key))) continue;
       const current = chainId ? canonical.get(chainId)?.current : normalizeChainSupplyValue(row.current);
       if (current == null) continue;
+      stale.delete(key);
       state.pairs[key] = { assetId, chainLabel: label, ...(chainId ? { chainId } : {}), baselineUsd: current, baselineObservedAt: observedAt, baselineSource: "state", quarantinedSince: null };
     }
   }
@@ -299,7 +303,23 @@ export async function guardChainDropouts(input: {
   const { now, signal } = input;
   // The caller owns this newly loaded generation; no module-global mutable state.
   const state = input.state;
-  if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
+  // A stale pair is older than the carry allowance relative to the previous run (the loaded state's newest
+  // valid clock, never wall time, so a sync outage ages nothing), unquarantined and unreleased: it was last
+  // written by a run that skipped its asset (out of scope, gap-filled or restored) and is no baseline. A change
+  // during an absence longer than the carry allowance is therefore absorbed, not flagged. Judged on the loaded
+  // state only; the previous publication replaces a stale pair first, and only the rest relearn from the row.
+  // Only coins without a DefiLlama detail provider qualify: the guard skipped them before v6.81, so their pairs
+  // were never refreshed; pairs of coins it always evaluated keep their recovery, baseline and comparison logic.
+  const stateClock = Math.max(...Object.values(state.pairs).map((pair) => pair.baselineObservedAt)
+    .filter((clock) => clock <= now + SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC));
+  const newlyGuarded = (assetId: string) => {
+    const meta = ACTIVE_META_BY_ID.get(assetId);
+    return meta != null && meta.detailProvider !== "defillama";
+  };
+  const staleKeys = new Set(Object.keys(state.pairs).filter((key) => state.pairs[key].quarantinedSince == null
+    && state.pairs[key].releasedAt == null && stateClock - state.pairs[key].baselineObservedAt > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC
+    && newlyGuarded(state.pairs[key].assetId)));
+  if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now, staleKeys);
   // A reviewed retirement removes the pair, persisted or recovered, only while it holds exactly the reviewed
   // baseline (same observation clock and stored value); a different clock or value keeps its guard. It runs
   // outside the per-asset loop, which skips gap-filled assets.
@@ -315,15 +335,17 @@ export async function guardChainDropouts(input: {
   // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
   const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
   const knownPairsByAssetId = new Map<string, PairState[]>();
-  for (const pair of Object.values(state.pairs)) {
-    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null) continue;
+  for (const [key, pair] of Object.entries(state.pairs)) {
+    if ((pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null) || staleKeys.has(key)) continue;
     const pairs = knownPairsByAssetId.get(pair.assetId) ?? [];
     pairs.push(pair);
     knownPairsByAssetId.set(pair.assetId, pairs);
   }
   for (const asset of input.assets) {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
-    if (!meta || meta.detailProvider !== "defillama" || asset.frozen || asset.supplyRestored || input.skipAssetIds?.has(meta.id) || (asset.supplySource && asset.supplySource !== "defillama")) continue;
+    // Scope is list-supplied supply, whatever the detail provider: a `llamaId` plus a DefiLlama (or not yet
+    // defaulted) source. The llamaId excludes supplemental rows that carry `defillama` from another endpoint.
+    if (!meta || !meta.llamaId || asset.frozen || asset.supplyRestored || input.skipAssetIds?.has(meta.id) || (asset.supplySource && asset.supplySource !== "defillama")) continue;
     const pegKey = asset.pegType ?? pegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;
     if (getCirculatingRawOrNull(asset) == null) continue;
@@ -348,12 +370,21 @@ export async function guardChainDropouts(input: {
       groups.set(identity, { chainId: pair.chainId, labels: [pair.chainLabel] });
       if (!asset.chains?.includes(pair.chainLabel)) asset.chains = [...(asset.chains ?? []), pair.chainLabel];
     }
+    // A stale pair (see `staleKeys`) is no baseline: relearn it from this row before any comparison,
+    // or drop it when the row is absent or unobserved.
+    for (const key of staleKeys) if (state.pairs[key]?.assetId === meta.id && !groups.has(JSON.parse(key)[1])) delete state.pairs[key];
     const canonical = canonicalizeChainCirculating(rows);
     for (const [identity, group] of groups) {
       const label = group.labels[0];
       const observation = group.chainId ? canonical.get(group.chainId)! : { current: normalizeChainSupplyValue(rows[label].current), circulatingPrevDay: normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? undefined };
       const key = pairKey(meta.id, identity);
-      const previous = state.pairs[key];
+      let previous: PairState | undefined = state.pairs[key];
+      if (previous && staleKeys.has(key)) {
+        if (observation.current == null) {
+          delete state.pairs[key];
+          previous = undefined;
+        } else Object.assign(previous, { baselineUsd: observation.current, baselineObservedAt: now });
+      }
       const seed = findSeed(meta.id, group.chainId, label, now);
       const baseline = previous?.baselineUsd ?? seed?.baselineUsd ?? observation.circulatingPrevDay;
       const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";

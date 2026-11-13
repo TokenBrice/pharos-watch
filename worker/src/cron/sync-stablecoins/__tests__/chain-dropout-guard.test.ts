@@ -1122,6 +1122,13 @@ describe("chain dropout guard", () => {
     }
   });
 
+  it.each([[3, 0, {}, 2], [8, 0, {}, 1], [8, 0, { releasedAt: 1 }, 2], [5, 3, {}, 2], [9, -9, {}, 2], [8, 0, {}, 2, 9e8], [8, 0, {}, 2, 0, "usdg-paxos"]])("list scope, stale pairs %#", async (a, i, x, n, p = 0, id = "sofid-sofi") => {
+    const row = (c = 0, k = id) => ({ ...usdg(), id: k, chainCirculating: { Ethereum: leg(c, 5e6) } });
+    const state = savedState(id, baseline("ink", 1, NOW + i * DAY), { ...baseline("ethereum", 9e8, NOW - a * DAY), ...x });
+    expect((await guardChainDropouts({ assets: [row(0, "eurq-quantoz"), row(0, "xaut-tether"), row(1e6)], now: NOW, state,
+      previousAssetsById: new Map(p ? [[id, row(p)]] : []) })).flagged).toBe(n);
+  });
+
   it.each([0, 14 * DAY])("expires frxUSD's reviewed omitted HyperEVM identity after 14 days (%s)", async (offset) => {
     const reviewedAt = Date.parse("2026-11-07T19:45:46Z") / 1000;
     const asset: PeggedAsset = { ...usdg(), id: "frxusd-frax", circulating: { peggedUSD: 91_508_143.55 },

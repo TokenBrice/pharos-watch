@@ -11,8 +11,8 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://github.com/DefiLlama/peggedassets-server/pull/987",
     marketWide: true,
   },
-  // Quantoz, 2026-11-13: DefiLlama reports the issuer's XRPL treasury account as unreleased. EURQ is
-  // outside the chain dropout guard (CoinGecko detail provider), so the 03:15 UTC sync published the
+  // Quantoz, 2026-11-13: DefiLlama reports the issuer's XRPL treasury account as unreleased. EURQ was
+  // then outside the chain dropout guard (CoinGecko detail provider), so the 03:15 UTC sync published the
   // lower figure directly; that clock is inferred from USDQ's pair, which changed in the same commit.
   {
     stablecoinId: "eurq-quantoz",
