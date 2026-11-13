@@ -63,6 +63,27 @@ export const PublicComponentBudgetSchema = z.object({
 });
 export type PublicComponentBudget = z.output<typeof PublicComponentBudgetSchema>;
 
+/**
+ * Evidence for this component could not be read (ADR-42). A failed read
+ * neither colours nor clears the state shown. `expired` is true once
+ * `confirmedAt` is unknown or older than the status freshness bound: the state
+ * is then "not confirmed", never re-graded.
+ */
+export const PublicComponentHeldSchema = z.object({
+  /** First evaluation of the current hold. */
+  since: z.number(),
+  /**
+   * Last run that read every evidence section of the component; null when
+   * unknown. A worsening proven by the readable sections can be published
+   * after it, so it is not when the shown state was confirmed.
+   */
+  confirmedAt: z.number().nullable(),
+  /** The unreadable evidence sections (`PUBLIC_EVIDENCE_SECTIONS` ids). */
+  sections: z.array(z.string().max(64)).max(32),
+  expired: z.boolean(),
+});
+export type PublicComponentHeld = z.output<typeof PublicComponentHeldSchema>;
+
 export const PublicStatusComponentSchema = z.object({
   id: z.enum(PUBLIC_STATUS_COMPONENT_IDS),
   state: z.enum(PUBLIC_COMPONENT_STATES),
@@ -75,6 +96,8 @@ export const PublicStatusComponentSchema = z.object({
   budget: PublicComponentBudgetSchema.nullable(),
   /** When this state began, from the persisted public projection; null when unknown. */
   since: z.number().nullable(),
+  /** Additive: present only while evidence for this component cannot be read. */
+  held: PublicComponentHeldSchema.optional(),
 });
 export type PublicStatusComponent = z.output<typeof PublicStatusComponentSchema>;
 
@@ -183,6 +206,8 @@ export const SchedulerLivenessSchema = z.object({
     lastStartedAt: z.number().finite().nullable(),
   })),
   unavailableReason: z.string().nullable(),
+  /** Additive: the slot-start query was rejected (an invalid clock that was read is not). */
+  readFailed: z.literal(true).optional(),
   heavy: z.object({
     scheduleKey: z.string().nullable(),
     lastStartedAt: z.number().finite().nullable(),
@@ -191,6 +216,7 @@ export const SchedulerLivenessSchema = z.object({
     staleAfterSec: z.number().positive(),
     status: SchedulerStateSchema,
     unavailableReason: z.string().nullable(),
+    readFailed: z.literal(true).optional(),
   }),
   /**
    * Registry-derived expected-vs-observed starts for every slot plan whose 3x

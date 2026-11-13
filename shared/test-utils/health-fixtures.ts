@@ -1,4 +1,5 @@
 import type { HealthResponse } from "@shared/types/status/public-health";
+import { applyPublicStatusHysteresis, projectPublicStatus } from "@shared/lib/public-status-components";
 
 /**
  * Canonical healthy public-health payload shared by src and worker status
@@ -85,4 +86,32 @@ export function assetScopedHealth(): HealthResponse {
   };
   health.mintBurn.sync.warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
   return health;
+}
+
+/**
+ * One public-health run of a hold sequence (ADR-42), from tokens: `open`
+ * three open circuit providers; `late` a scheduler read 1,300 s old; `cx`,
+ * `sx`, `bx` the circuits, scheduler and blacklist reads failed.
+ */
+export function makeHoldRunHealth(run: string): HealthResponse {
+  const health = makeHealthyHealthResponse();
+  const open = { state: "open" as const, consecutiveFailures: 3, lastFailureAt: 1, lastSuccessAt: null, openedAt: 1 };
+  if (run.includes("open")) health.circuits = { "coingecko-prices": open, "defillama-coins": open, "dexscreener-prices": open };
+  if (run.includes("late")) Object.assign(health.schedulerLiveness!, { status: "degraded", ageSeconds: 1300 });
+  if (run.includes("cx")) Object.assign(health, { circuits: null, circuitsUnavailableReason: "circuits-read-failed" });
+  if (run.includes("sx")) {
+    Object.assign(health.schedulerLiveness!, { status: "unavailable", ageSeconds: null, unavailableReason: "slot-start-query-failed", readFailed: true });
+  }
+  if (run.includes("bx")) Object.assign(health.blacklist, { missingRatio: null, unavailableReason: "blacklist-read-failed" });
+  return health;
+}
+
+type Published = Parameters<typeof applyPublicStatusHysteresis>[1];
+
+/** One writer step: project, publish through the held hysteresis, carry the stored fields forward. */
+export function stepPublicHold(prior: Published, health: HealthResponse, now: number, maxHoldSec = 1800) {
+  const out = applyPublicStatusHysteresis(projectPublicStatus(health, {}, undefined, { holdable: (id) => prior.has(id) }), prior, now, maxHoldSec);
+  const next: Published = new Map(out.projection.components.map((item) => [item.id,
+    { ...item, pending: out.pending[item.id] ?? null, confirmedAt: out.confirmedAt[item.id] ?? null }]));
+  return { ...out, next };
 }

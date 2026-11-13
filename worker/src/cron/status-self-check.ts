@@ -5,6 +5,8 @@ import { classifyUnreadablePublicSections } from "@shared/lib/public-status-comp
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { isRecord } from "@shared/lib/type-guards";
+import { PublicComponentHeldSchema } from "@shared/types/status/public-health";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { STATUS_PROBE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { median, percentileNearestRank } from "@shared/lib/stats";
@@ -20,7 +22,6 @@ import { computeRawStatus } from "../lib/status-evaluation";
 import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
 import { reconcilePublicStatusState } from "../lib/status/public-status-state";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
-import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, writeStatusPublicHealthSnapshot } from "../lib/status/public-health-snapshot";
 import { loadStatusSupplements } from "../lib/status/supplements";
 import { route } from "../router";
 import {
@@ -357,6 +358,13 @@ async function evaluateProbeResponse(
     );
     if (payloadContract) {
       return evaluateStatusProbePayload(path, response.headers, payload);
+    }
+    // A valid body with held components (evidence not read now, ADR-42) gives no
+    // like-for-like semantic verdict; an invalid status is still a failed contract.
+    if ((payload.status === "healthy" || payload.status === "degraded" || payload.status === "stale")
+      && Array.isArray(payload.components)
+      && payload.components.some((component) => isRecord(component) && PublicComponentHeldSchema.safeParse(component.held).success)) {
+      return { ok: false, error: "reported-held" };
     }
     if (payload.status === "healthy") {
       return {
@@ -881,11 +889,13 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const publicHealthAssessment = await assessPublicHealth(db, assessedAt, { logPrefix: "status-self-check" });
   const raw = await computeRawStatus(db, assessedAt, undefined, publicHealthAssessment);
   let statusStateReadFailed = false;
+  // A proven failed read holds the operator state (ADR-42); a failed database check freezes it.
+  const operatorHeld = raw.dbHealthy === false ? "frozen" as const : (raw.confirmedReadFailures?.length ?? 0) > 0;
   const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     (issue) => {
       onOutputIssue("status_state")(issue);
       if (issue.code === "status_state_read_failed") statusStateReadFailed = true;
-    });
+    }, operatorHeld);
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
   const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
     ?? (options.d1StatusConfig
@@ -912,19 +922,29 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ? buildPublicHealthResponse(publicHealthAssessment, assessedAt)
     : null;
   const publicStatus = publicHealthBody
-    ? await reconcilePublicStatusState(db, assessedAt, publicHealthBody, onOutputIssue("status_state:public"))
+    ? await reconcilePublicStatusState(db, assessedAt, publicHealthBody, onOutputIssue("status_state:public"), {
+      statusExcludingCacheFreshness: publicHealthAssessment.statusExcludingCacheFreshness,
+      statusExcludingCacheEvidence: publicHealthAssessment.statusExcludingCacheEvidence,
+    })
     : null;
   if (publicStatus && !publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, assessedAt, raw, { supplements });
-  const publicHealthSnapshotPersistenceSucceeded = publicHealthBody && publicStatus
-    ? await writeStatusPublicHealthSnapshot(db, assessedAt,
-      { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
-      publicHealthAssessment.statusExcludingCacheEvidence)
-    : null;
+  // The public snapshot shares the public state batch; an unread row writes nothing.
+  const publicStateReadFailed = publicStatus?.stateReadFailed === true;
+  const publicHealthSnapshotPersistenceSucceeded = publicStatus && !publicStateReadFailed
+    ? publicStatus.persistenceSucceeded && !publicStatus.superseded : null;
   // An unreadable status_state cannot establish effective-vs-raw divergence.
   // The raw fallback is not the persisted authority, so observing it would
-  // overwrite a real streak with an invented in-sync/zero verdict.
-  const discrepancyObserved = statusStateReadFailed ? false : hasDivergence(effectiveStatus, probeSummary, assessedAt);
+  // overwrite a real streak with an invented in-sync/zero verdict. A held plane
+  // (ADR-42) counts only a transport (held operator) or probe (held body) status
+  // worse than the operator status; anything else is no observation.
+  const worseThanOperator = (status: StatusHealthValue) => getStatusSeverity(status) > getStatusSeverity(effectiveStatus)
+    && hasDivergence(effectiveStatus, { ...probeSummary, status }, assessedAt) ? true : null;
+  const discrepancyObserved = statusStateReadFailed ? false
+    // Transport evidence: the aggregate plus confirmed per-path HTTP failures, never health semantics.
+    : operatorHeld !== false ? worseThanOperator(persistentProbeFailures?.length ? maxProbeStatus(transportStatus, "degraded") : transportStatus)
+      : probes.some((probe) => probe.error === "reported-held") ? worseThanOperator(probeSummary.status)
+        : hasDivergence(effectiveStatus, probeSummary, assessedAt);
 
   const discrepancyState = statusStateReadFailed
     ? { consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false }
@@ -940,7 +960,6 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");
-  if (publicHealthSnapshotPersistenceSucceeded === false) failedOutputs.add(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY);
   if (!discrepancyState.persistenceSucceeded) failedOutputs.add("status_discrepancy_state");
   // `raw.evidenceReadFailures` already names this run's public-health reads.
   const evidenceReadFailures = [...new Set([
@@ -949,12 +968,14 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
   ])];
   const evidenceReadFailed = evidenceReadFailures.length > 0;
-  // The accurate list for the later switch; the legacy list above still decides the run.
+  // The proven subset; it holds the operator state.
   const confirmedReadFailures = [...new Set([
     ...(raw.dbHealthy === false ? ["db-unavailable"] : []),
     ...(raw.confirmedReadFailures ?? []),
   ])];
   const unreadablePublicSections = publicHealthBody ? classifyUnreadablePublicSections(publicHealthBody) : [];
+  const heldPublicComponents = publicStatus && !publicStateReadFailed
+    ? publicStatus.projection.components.filter((component) => component.held).map((component) => component.id) : [];
   const executionFailed = sampleCount === 0 || failCount > 0 || transportStatus !== "healthy";
   const reason = failedOutputs.size > 0 ? "status-self-check-persistence-failed"
     : evidenceReadFailed ? "status-self-check-evidence-read-failed"
@@ -966,12 +987,14 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     metadata: JSON.stringify({
       d1Cost: d1Cost.snapshot(),
       // A held public evaluation published no public snapshot this run.
-      outputPublishedAt: failedOutputs.size === 0 && publicHealthBody ? now : null,
+      outputPublishedAt: failedOutputs.size === 0 && publicHealthBody && !publicStatus?.superseded ? now : null,
       failedOutputs: [...failedOutputs],
       ...(failedOutputReads.size > 0 ? { failedOutputReads: [...failedOutputReads] } : {}),
       evidenceReadFailures,
       confirmedReadFailures,
       ...(unreadablePublicSections.length > 0 ? { unreadablePublicSections } : {}),
+      ...(heldPublicComponents.length > 0 ? { heldPublicComponents } : {}),
+      ...(operatorHeld ? { operatorStatusHeld: operatorHeld } : {}),
       ...(reason ? { reason } : {}),
       ...(semanticStatus == null ? { semanticStatusReason: "probe-semantic-evidence-unavailable" } : {}),
       sampleCount,
@@ -991,7 +1014,10 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       statusPersistenceSucceeded,
       rawSnapshotPersistenceSucceeded,
       publicHealthSnapshotPersistenceSucceeded,
-      ...(publicHealthBody ? {} : { publicStatusHeldReason: "db-unavailable" }),
+      ...(!publicHealthBody ? { publicStatusHeldReason: "db-unavailable" }
+        : publicStateReadFailed ? { publicStatusHeldReason: "public-state-read-failed" } : {}),
+      // A newer generation's row was already written: this run published nothing, and did not fail.
+      ...(publicStatus?.superseded ? { publicStatusSuperseded: true } : {}),
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,

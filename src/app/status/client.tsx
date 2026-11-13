@@ -127,6 +127,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
           nowSec={historyData?.timestamp ?? healthData.timestamp}
           publicHistoryStartedAt={historyData?.publicHistoryStartedAt ?? null}
           footnote={getAcknowledgedPriceGapNotice(healthData.activePriceCoverage)}
+          clockSec={Math.floor(nowMs / 1000)}
         />
 
         <PublicStatusHistorySection

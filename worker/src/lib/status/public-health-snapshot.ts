@@ -110,7 +110,8 @@ export function advancePublicHealthSnapshot(
   const warnings = adoptedKeys.length === 0 ? publicHealth.warnings : [
     ...publicHealth.warnings.filter((warning) =>
       !CACHE_QUALITY_WARNING_PREFIXES.some((prefix) => warning.startsWith(prefix))
-      && !adoptedKeys.some((key) => warning.startsWith(`${key}: `))),
+      // An adopted lane was read: its rejected-read marker no longer applies.
+      && !adoptedKeys.some((key) => warning.startsWith(`${key}: `) || warning === `read-failed:cache:${key}`)),
     ...quality.warnings,
     ...adoptedKeys.flatMap((key) => caches[key].warning ? [caches[key].warning] : []),
   ];
@@ -129,18 +130,27 @@ export function advancePublicHealthSnapshot(
   };
 }
 
-export function writeStatusPublicHealthSnapshot(
-  db: D1Database,
-  now: number,
-  publicHealth: HealthResponse,
-  statusExcludingCacheFreshness?: HealthResponse["status"],
-  statusExcludingCacheEvidence?: HealthResponse["status"],
-): Promise<boolean> {
-  return writeStatusSnapshotPayload(db, STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, now, {
-    version: 1,
+type PublicHealthStatus = HealthResponse["status"];
+
+function publicHealthSnapshotPayload(now: number, publicHealth: HealthResponse,
+  statusExcludingCacheFreshness?: PublicHealthStatus, statusExcludingCacheEvidence?: PublicHealthStatus) {
+  return {
+    version: 1 as const,
     producedAt: now,
     publicHealth: { ...publicHealth, assessedAt: publicHealth.assessedAt ?? publicHealth.timestamp },
     ...(statusExcludingCacheFreshness != null ? { statusExcludingCacheFreshness } : {}),
     ...(statusExcludingCacheEvidence != null ? { statusExcludingCacheEvidence } : {}),
-  });
+  };
+}
+
+export function writeStatusPublicHealthSnapshot(db: D1Database, now: number, publicHealth: HealthResponse,
+  statusExcludingCacheFreshness?: PublicHealthStatus, statusExcludingCacheEvidence?: PublicHealthStatus): Promise<boolean> {
+  return writeStatusSnapshotPayload(db, STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, now,
+    publicHealthSnapshotPayload(now, publicHealth, statusExcludingCacheFreshness, statusExcludingCacheEvidence));
+}
+
+/** The snapshot value the public state batch writes behind its fence (ADR-42). */
+export function publicHealthSnapshotValue(now: number, publicHealth: HealthResponse,
+  statusExcludingCacheFreshness?: PublicHealthStatus, statusExcludingCacheEvidence?: PublicHealthStatus): string {
+  return JSON.stringify(publicHealthSnapshotPayload(now, publicHealth, statusExcludingCacheFreshness, statusExcludingCacheEvidence));
 }

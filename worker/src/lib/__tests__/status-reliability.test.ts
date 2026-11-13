@@ -292,6 +292,26 @@ describe("status-reliability", () => {
     expect(store.transitions.map((row) => row.transition_type)).toEqual(["init", "degrade", "recover", "recover"]);
   });
 
+  it("holds on a failed read: a proven worsening counts, nothing clears (ADR-42)", async () => {
+    const { db, store } = makeStatefulDb();
+    const run = async (now: number, raw: StatusHealthValue, held: boolean | "frozen" = true) =>
+      (await reconcileStatusState(db, now, raw, 0.9, [], undefined, held)).effectiveStatus;
+    await run(50, "stale", "frozen");
+    await run(60, "healthy");
+    expect(store.stateRow).toBeNull();
+    await run(100, "degraded", false);
+    for (const now of [200, 300, 400, 500]) expect(await run(now, "healthy")).toBe("degraded");
+    expect(store.stateRow).toMatchObject({ last_evaluated_at: 100, consecutive_healthy: 0 });
+    await run(600, "stale");
+    expect(await run(700, "stale")).toBe("stale");
+    expect(await run(800, "healthy", "frozen")).toBe("stale");
+    expect(store.stateRow?.last_evaluated_at).toBe(100);
+    // Two missing runs restart a streak; one does not.
+    await run(900, "degraded", false);
+    expect(await run(3100, "degraded", false)).toBe("stale");
+    expect(await run(4900, "degraded", false)).toBe("degraded");
+  });
+
   it("rolls back a seeded status write when the transition insert fails", async () => {
     const { db, store } = makeStatefulDb({
       failOnSql: "status_transitions",
@@ -618,6 +638,8 @@ describe("status-reliability", () => {
       persistenceSucceeded: true,
     });
 
+    // A held probe (ADR-42) makes no observation: the streak neither rises nor resets.
+    expect((await updateDiscrepancyObservation(db, 200, null, false)).consecutiveDivergent).toBe(1);
     const second = await updateDiscrepancyObservation(db, 400, false, false);
     expect(second).toEqual({
       consecutiveDivergent: 0,

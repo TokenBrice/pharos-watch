@@ -1,7 +1,7 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
+import { makeHealthyHealthResponse, makeHoldRunHealth } from "@shared/test-utils/health-fixtures";
 import type { HealthResponse } from "@shared/types/status";
 import { listRecentStatusTransitions } from "../../status-reliability";
 import { listPublicStatusTransitions, reconcilePublicStatusState } from "../public-status-state";
@@ -176,15 +176,76 @@ describe("reconcilePublicStatusState", () => {
       components: [expect.objectContaining({ reasons: ["upstream-circuits-open:3:source-a,source-b,source-d"] })] });
   });
 
+  // Hold runs (ADR-42): `makeHoldRunHealth` tokens; data-refresh is component 9.
+  const run = async (db: D1Database, at: number, kind: string, snapshot?: object) =>
+    (await reconcilePublicStatusState(db, NOW + at, makeHoldRunHealth(kind), undefined, snapshot)).projection.components[9];
+  const failing = (db: D1Database, patch: Partial<D1Database>) => Object.assign(Object.create(db) as D1Database, patch);
+
+  it("stores the hold clock; a missing clock is not confirmed", async () => {
+    const cold = fixtures.open().db;
+    expect(await run(cold, 0, "cx")).toMatchObject({ state: "degraded", held: { confirmedAt: null, expired: true } });
+    expect(await run(cold, 900, "cx")).toMatchObject({ held: { confirmedAt: null, expired: true } });
+    const { db } = fixtures.open();
+    await run(db, 0, "open");
+    expect(await run(db, 900, "cx")).toMatchObject({ state: "degraded", held: { since: NOW + 900, confirmedAt: NOW, expired: false } });
+    await db.prepare("UPDATE status_state SET causes_json = json_remove(causes_json, '$.components[9].confirmedAt')").run();
+    expect(await run(db, 1000, "cx")).toMatchObject({ state: "degraded", held: { since: NOW + 900, confirmedAt: null, expired: true } });
+    expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(1);
+  });
+
+  it("publishes row, transition and snapshot in one fenced batch", async () => {
+    const { db } = fixtures.open();
+    const stored = () => db.prepare(`SELECT (SELECT causes_json FROM status_state WHERE scope = 'public') AS row,
+      (SELECT value FROM cache WHERE key = 'status:public-health-snapshot:v1') AS snapshot,
+      (SELECT COUNT(*) FROM status_transitions WHERE scope = 'public') AS transitions`).first();
+    await run(db, 0, "ok", {});
+    await run(db, 900, "open", {});
+    const before = await stored();
+    // A failing snapshot statement rolls back the confirming row and transition.
+    await run(failing(db, { prepare: (sql: string) => db.prepare(sql.replace("INSERT INTO cache", "INSERT INTO cache_missing")) }), 1800, "open", {});
+    expect(await stored()).toEqual(before);
+    expect(await run(db, 2700, "cx", {})).toMatchObject({ state: "operational", held: { confirmedAt: NOW + 900 } });
+    expect(JSON.parse((await stored())!.snapshot as string).publicHealth.components[9]).toMatchObject({ state: "operational", held: {} });
+    // A newer generation's row fences this batch out: nothing written, not a failure.
+    await db.prepare("UPDATE status_state SET updated_at = ? WHERE scope = 'public'").bind(NOW + 9000).run();
+    const settled = await stored();
+    const health = makeHoldRunHealth("ok");
+    health.caches = { ...health.caches, "stablecoin-charts": { ageSeconds: 90_000, maxAge: 3600, healthy: true } };
+    expect(await reconcilePublicStatusState(db, NOW + 3600, health, undefined, {})).toMatchObject({ persistenceSucceeded: true, superseded: true });
+    expect(await stored()).toEqual(settled);
+  });
+
+  // Two readable samples confirm across at most one unpersisted (!) or missing (~) run.
+  it.each([
+    ["ok open open! open", "degraded"],
+    ["ok open ~ ~ open", "operational"],
+    ["ok open open! open open! open open! open open! open", "degraded"],
+    ["open ok ok! ok", "operational"],
+    ["open ok ~ ~ ok", "degraded"],
+  ])("confirms across one unpersisted run: %s", async (runs, last) => {
+    const { db } = fixtures.open();
+    const rejected = failing(db, { batch: async () => { throw new Error("batch rejected"); } });
+    let state = "";
+    for (const [index, kind] of runs.split(" ").entries()) {
+      if (kind === "~") continue;
+      const component = await run(kind.endsWith("!") ? rejected : db, index * 900, kind.replace("!", ""));
+      if (!kind.endsWith("!")) state = component.state;
+    }
+    expect(state).toBe(last);
+  });
+
   it("records a changed scheduler unavailable subreason without repeated poll events", async () => {
     const { db } = fixtures.open();
     const health = makeHealthyHealthResponse();
     health.schedulerLiveness = { ...health.schedulerLiveness!, status: "unavailable", ageSeconds: null,
       unavailableReason: "clock-invalid" };
     await reconcilePublicStatusState(db, NOW, health);
-    health.schedulerLiveness.unavailableReason = "slot-start-query-failed";
+    health.schedulerLiveness.unavailableReason = "clock-future";
     await reconcilePublicStatusState(db, NOW + 1, health);
     await reconcilePublicStatusState(db, NOW + 2, health);
+    // A failed read changes nothing published (ADR-42).
+    Object.assign(health.schedulerLiveness, { unavailableReason: "slot-start-query-failed", readFailed: true });
+    await reconcilePublicStatusState(db, NOW + 3, health);
     expect((await listPublicStatusTransitions(db, 50, NOW - 1)).transitions).toHaveLength(2);
   });
 

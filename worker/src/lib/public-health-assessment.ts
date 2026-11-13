@@ -198,6 +198,10 @@ export function getPublicHealthConfirmedReadFailures(assessment: PublicHealthAss
         return marked("yield-safety-live-identity");
       case "mint-burn-count:read-failed":
         return false;
+      case "scheduler:read-failed":
+        return assessment.schedulerLiveness.readFailed === true;
+      case "heavy-scheduler:read-failed":
+        return assessment.schedulerLiveness.heavy.readFailed === true;
       default:
         return true;
     }
@@ -207,6 +211,7 @@ export function getPublicHealthConfirmedReadFailures(assessment: PublicHealthAss
 export function buildPublicHealthResponse(
   assessment: PublicHealthAssessment,
   timestamp: number,
+  projectionOptions?: Parameters<typeof projectPublicStatus>[3],
 ): HealthResponse {
   const body: HealthResponse = {
     status: assessment.overallStatus,
@@ -230,7 +235,7 @@ export function buildPublicHealthResponse(
   return {
     ...body,
     ...(assessment.operatorAlerts ? { operatorAlerts: assessment.operatorAlerts } : {}),
-    ...projectPublicStatus(body, undefined, blacklistImpactStatus),
+    ...projectPublicStatus(body, undefined, blacklistImpactStatus, projectionOptions),
   };
 }
 

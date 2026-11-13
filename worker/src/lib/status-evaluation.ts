@@ -190,7 +190,8 @@ export async function computeRawStatus(
     cronBudgetSurfaceTelemetryQueryFailed: budgetOnlySurfaceResult.queryFailed,
   });
   applyCronHealthSectionErrors(sectionErrors, cronHealth);
-  const evidenceReadFailures = [
+  const sectionErrorCodes = Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []);
+  const legacyReadFailures = [
     ...(!transitionsLast24h.ok ? [transitionsLast24h.error] : []),
     ...getPublicHealthEvidenceReadFailures(publicHealth),
     ...[
@@ -202,23 +203,31 @@ export async function computeRawStatus(
       ["budget-surfaces", budgetOnlySurfaceResult.queryFailed],
     ].filter(([, failed]) => failed === true).map(([source]) => `${source}:read-failed`),
     ...dataQuality.sourceFailures.map((failure) => `data-quality:${failure.source}:read-failed`),
-    ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
   ];
-  // Proven rejected reads only, beside the legacy list that still decides the
-  // run. A missing, unparseable or malformed stablecoins cache is a finding;
+  // Proven rejected reads only; they hold the operator state (ADR-42). A
+  // missing, unparseable or malformed stablecoins cache is a finding;
   // supply-integrity reads are named. Left out until their loaders tell a
-  // rejected read from a content error: supplement section codes, and cron
-  // history (a malformed `jobs` value in slot metadata fails its `json_each`).
+  // rejected read from a content error: supplement section codes, the mint/burn
+  // row count, and cron history (a malformed `jobs` value in slot metadata
+  // fails its `json_each`).
   const confirmedReadFailures = [
     ...(!transitionsLast24h.ok ? [transitionsLast24h.error] : []),
     ...getPublicHealthConfirmedReadFailures(publicHealth),
-    ...evidenceReadFailures.filter((code) => /^(cron-(?!history)|scheduled-slot|budget-surfaces:)/.test(code)),
+    ...legacyReadFailures.filter((code) => /^(cron-(?!history)|scheduled-slot|budget-surfaces:)/.test(code)),
     ...dataQuality.sourceFailures
       .filter((failure) => failure.source !== "stablecoins-cache" || dataQuality.stablecoinsCacheReason === "cache-read-failed")
       .map((failure) => `data-quality:${failure.source}:read-failed`),
     ...(supplyIntegrity == null ? ["supply-integrity:read-failed"]
       : (supplyIntegrity.readFailures ?? []).map((dimension) => `supply-integrity-${dimension}:read-failed`)),
   ];
+  // What decides the self-check run: the proven reads plus the codes that may
+  // still be a read failure. Content that was read and did not decode is a
+  // finding, not a failed read.
+  const evidenceReadFailures = [...new Set([
+    ...confirmedReadFailures,
+    ...legacyReadFailures.filter((code) => /^(cron-history|mint-burn-count):/.test(code)),
+    ...sectionErrorCodes,
+  ])];
   if (!transitionsLast24h.ok) sectionErrors.statusTransitions = {
     code: transitionsLast24h.error,
     message: "Recent status transition count unavailable; this does not imply zero transitions.",

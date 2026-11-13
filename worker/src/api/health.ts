@@ -1,5 +1,5 @@
 import { errorResponse, jsonResponse } from "../lib/api-response";
-import type { HealthResponse } from "@shared/types/status";
+import type { HealthResponse, PublicStatusComponentId } from "@shared/types/status";
 import {
   assessPublicHealth,
   buildPublicHealthResponse,
@@ -15,6 +15,7 @@ import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { buildCacheStatuses } from "../lib/status/cache-freshness";
 import { listFreshnessSentinelBackedCacheKeys } from "../lib/freshness-sentinels";
 import { logWorkerEvent } from "../lib/structured-log";
+import { STATUS_SNAPSHOT_OVERDUE_SEC, STATUS_SYSTEM_FRESHNESS_SEC } from "../lib/status-reliability-shared";
 
 /**
  * Re-read only the freshness sentinels of lanes the stored snapshot already
@@ -97,13 +98,35 @@ async function assessRetainedLaneRecovery(
  * already published through hysteresis, so a read-time change honours it
  * (outage and read-time recovery excepted).
  */
-function projectOverSnapshot(body: HealthResponse, cachedHealth: HealthResponse) {
+function projectOverSnapshot(body: HealthResponse, cachedHealth: HealthResponse, servesSnapshotEvaluation = true) {
   const since = Object.fromEntries((cachedHealth.components ?? [])
     .map((component) => [component.id, { state: component.state, since: component.since }]));
-  const live = projectPublicStatus(body, since);
-  return cachedHealth.components
-    ? holdPublicStatusAtReadTime(live, cachedHealth.components, projectPublicStatus(cachedHealth))
-    : live;
+  const { options, hold } = publishedHold(cachedHealth, body.timestamp);
+  const live = projectPublicStatus(body, since, undefined, options);
+  if (!cachedHealth.components) return live;
+  const assessedAt = cachedHealth.assessedAt ?? cachedHealth.timestamp;
+  const projection = holdPublicStatusAtReadTime(live, cachedHealth.components, projectPublicStatus(cachedHealth, {}, undefined, options), hold);
+  // A served snapshot evaluation older than 1,200 s (cadence plus timeout; the
+  // widest normal gap in seven days was ~1,020 s) missed a publication (ADR-42).
+  if (!servesSnapshotEvaluation || body.timestamp - assessedAt <= STATUS_SNAPSHOT_OVERDUE_SEC) return projection;
+  const expired = body.timestamp - assessedAt > STATUS_SYSTEM_FRESHNESS_SEC;
+  return { ...projection, components: projection.components.map((component) => component.held ? component
+    : { ...component, held: { since: assessedAt, confirmedAt: assessedAt, sections: ["database"], expired } }) };
+}
+
+/**
+ * Only components with a last publication may hold a failed read; the rest keep
+ * its colour (R2). A hold's clock is the publication's, re-dated per request,
+ * and none where the publication could not read that component either.
+ */
+function publishedHold(published: HealthResponse, now: number) {
+  const ids = new Set((published.components ?? []).map((component) => component.id));
+  const unread = new Set(projectPublicStatus(published).components.filter((component) => component.held).map((component) => component.id));
+  const assessedAt = published.assessedAt ?? published.timestamp;
+  return {
+    options: { holdable: (id: PublicStatusComponentId) => ids.has(id) },
+    hold: { now, maxHoldSec: STATUS_SYSTEM_FRESHNESS_SEC, confirmedAt: (id: PublicStatusComponentId) => unread.has(id) ? null : assessedAt },
+  };
 }
 
 export const handleHealth = async (db: D1Database): Promise<Response> => {
@@ -125,7 +148,7 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
     const recovery = await assessRetainedLaneRecovery(db, now, cachedHealth, schedulerLiveness);
     if (typeof recovery === "object") {
       const body: HealthResponse = { ...buildPublicHealthResponse(recovery, now), assessedAt: now };
-      return jsonResponse({ ...body, ...projectOverSnapshot(body, cachedHealth) },
+      return jsonResponse({ ...body, ...projectOverSnapshot(body, cachedHealth, false) },
         { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
     }
     const statusExcludingCacheFreshness = snapshot.kind === "fresh" ? snapshot.payload.statusExcludingCacheFreshness : undefined;
@@ -158,6 +181,15 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
   // No snapshot and no database read: nothing was assessed, so there is no
   // verdict to serve (R2). Uncached, so the next request re-checks.
   if (!assessment.dbHealthy) return errorResponse(503, "Health check unavailable", { noStore: true });
-  const body: HealthResponse = { ...buildPublicHealthResponse(assessment, now), assessedAt: now };
+  // The snapshot (fresh with an unhealthy scheduler, or stale) commits with the public
+  // state row, so it is the last publication; it holds what this read could not read.
+  const retained = snapshot.kind === "fresh" || snapshot.kind === "stale" ? snapshot.payload?.publicHealth : undefined;
+  const published = retained?.components && !retained.warnings.includes("db-unhealthy") ? retained : null;
+  const held = published ? publishedHold(published, now) : null;
+  const live = { ...buildPublicHealthResponse(assessment, now, held?.options), assessedAt: now };
+  const body: HealthResponse = published && held ? {
+    ...live,
+    ...holdPublicStatusAtReadTime({ headline: live.headline!, components: live.components! }, published.components!, null, held.hold),
+  } : live;
   return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
 };

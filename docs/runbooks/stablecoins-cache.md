@@ -13,7 +13,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-The cached `/api/stablecoins` payload is missing, malformed, has the wrong object shape, or is still in a legacy array shape that strict readers reject. Depending on mode, `/api/stablecoins` may return `503` rather than serving a payload. Age-only incidents are handled by cache freshness / public-health causes such as `cache_ratio_degraded`, `cache_ratio_stale`, and `cache_freshness_query_failed`; those cause codes do not currently attach this runbook link.
+The cached `/api/stablecoins` payload is missing, malformed, has the wrong object shape, or is still in a legacy array shape that strict readers reject. Depending on mode, `/api/stablecoins` may return `503` rather than serving a payload. A cache row that could not be read at all (`stablecoinsCacheReason: "cache-read-failed"`) is not this finding: its `stablecoins_cache_unavailable` cause drops to `info` and the operator status is held at its last confirmed value until a run reads it ([Overall status](../status-dashboard.md#overall-status)); the same holds for `stablecoin_publication_unknown` and `active_price_coverage_unknown` when the coverage read itself failed (`coverage-read-failed`). Age-only incidents are handled by cache freshness / public-health causes such as `cache_ratio_degraded`, `cache_ratio_stale`, and `cache_freshness_query_failed`; those cause codes do not currently attach this runbook link.
 
 ## First checks
 
