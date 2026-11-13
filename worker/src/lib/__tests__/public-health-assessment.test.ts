@@ -1,262 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../public-health-assessment";
-import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthConfirmedReadFailures, getPublicHealthEvidenceReadFailures } from "../public-health-assessment";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, STATUS_MISSING_PRICE_THRESHOLDS, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
-import { makePriceCoverageMetadata } from "./public-health.test-support";
-import { fxRatesCacheRows } from "./fx-rate-state.test-support";
+import { makeMinimalDb, makeMintBurnAssessmentDb, makePriceCoverageMetadata } from "./public-health.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
-import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getCacheQualityImpact, maxPublicStatus } from "@shared/lib/public-health";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import { projectPublicStatus } from "@shared/lib/public-status-components";
+import { classifyUnreadablePublicSections, projectPublicStatus } from "@shared/lib/public-status-components";
 
 const fixtures = createLatestSchemaFixtureTracker();
 /** A USYC-sized asset: the retired $1B rule used to degrade on one such gap. */
 const LARGE_MARKET_CAP_USD = 2_400_000_000;
 const PUBLICATION_BREADTH = getActiveAssetServiceBreadthThreshold(ACTIVE_IDS.size)!;
 afterEach(() => fixtures.closeAll());
-
-/**
- * Minimal D1 mock that returns a stablecoins cache row and empty results for
- * every other query. Enough to drive `assessPublicHealth` through its cache
- * enrichment path without having to mock every downstream sub-query.
- */
-function makeMinimalDb(
-  nowSec: number,
-  d1Capacity?: Record<string, unknown>,
-  stablecoinPublicationMetadata?: Record<string, unknown>,
-): D1Database {
-  // P2-08 bound the coverage scan at a seven-day `started_at` fence, so the
-  // snapshot read now arrives through `bind()`.
-  const firstFor = async <T>(sql: string) => {
-    if (sql === "SELECT 1") return { "1": 1 } as T;
-    if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-      return {
-        value: JSON.stringify({ version: 1, assessment: d1Capacity }),
-        updated_at: nowSec,
-      } as T;
-    }
-    if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
-      return {
-        started_at: nowSec - 30,
-        metadata: JSON.stringify(stablecoinPublicationMetadata),
-      } as T;
-    }
-    return null as T | null;
-  };
-  return makeNoopD1({
-    prepare: (sql: string) => ({
-      bind: (..._args: unknown[]) => ({
-        all: async <T>() => {
-          if (sql.includes("cache WHERE key IN")) {
-            return {
-              results: [{ key: "stablecoins", updated_at: nowSec - 60 }] as T[],
-              success: true,
-              meta: {},
-            };
-          }
-          return { results: [] as T[], success: true, meta: {} };
-        },
-        first: async <T>() => firstFor<T>(sql),
-        run: async () => ({ success: true, meta: {} }),
-      }),
-      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => firstFor<T>(sql),
-      run: async () => ({ success: true, meta: {} }),
-    }),
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  });
-}
-
-function makeMintBurnAssessmentDb(
-  nowSec: number,
-  options: {
-    latestRunStatus?: string | null;
-    latestSuccessfulSyncAt?: number | null;
-    latestSuccessfulSyncError?: unknown;
-    rowCount?: number | null;
-    rowCountError?: unknown;
-    publicationMetadata?: Record<string, unknown>;
-    publicationQueryError?: unknown;
-    yieldSafetyError?: unknown;
-    yieldSafetyIdentity?: SafetyScoreV9PublicationIdentity;
-    /** Overrides the readable `$.identity` extraction, e.g. a newer build's envelope. */
-    liveIdentityEnvelope?: Record<string, unknown> | null;
-    yieldSafetyPublishedAt?: number | null;
-    yieldPublishedAt?: number;
-    yieldSafetyLiveReadError?: unknown;
-    yieldSafetyHealthReadError?: unknown;
-    safetyScorePublication?: V9PublicationHealth | null;
-    producerHistoryError?: unknown;
-    blacklistError?: unknown;
-    blacklistAggregate?: { total: number; missing: number; missing_recent: number; classification_missing?: number; classification_watch?: number };
-    dbError?: unknown;
-    dbSentinelMissing?: boolean;
-    cacheError?: unknown;
-    circuitError?: unknown;
-    latestRunError?: unknown;
-    fxFutureSec?: number;
-    cacheMissing?: boolean;
-  } = {},
-): D1Database {
-  const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
-  const latestSuccessfulSyncAt =
-    options.latestSuccessfulSyncAt !== undefined ? options.latestSuccessfulSyncAt : nowSec - 300;
-  const rowCount = options.rowCount !== undefined ? options.rowCount : 4321;
-  const safetyScorePublication = options.safetyScorePublication === undefined ? {
-    schemaVersion: 2 as const,
-    status: "current" as const,
-    acceptedPublicationGenerationId: options.yieldSafetyIdentity?.publicationGenerationId ?? "fixture-safety-publication",
-    acceptedAtSec: nowSec - 60,
-    attemptedAtSec: nowSec - 60,
-    heldSinceSec: null,
-    reasons: [],
-  } : options.safetyScorePublication;
-  const cacheRows = [
-    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
-    { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
-    { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
-    ...fxRatesCacheRows(nowSec - 60 + (options.fxFutureSec ?? 0), Object.fromEntries(EXPECTED_FX_PEG_KEYS.map((key) => [key, 1]))),
-    {
-      key: "ops:d1-capacity:v1",
-      updated_at: nowSec,
-      value: JSON.stringify({ version: 1, assessment: assessD1Capacity({ observedAt: nowSec, databaseSizeBytes: 1_000_000_000 }) }),
-    },
-    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
-    { key: "freshness:dex-liquidity", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-dex-liquidity", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
-    { key: "freshness:yield-data", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "sync-yield-data", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
-    { key: "freshness:dews", updated_at: nowSec - 60, value: JSON.stringify({ updatedAt: nowSec - 60, source: "compute-dews", publishStatus: "ok", generationId: "fixture-generation" }), served_generation_id: "fixture-generation" },
-  ];
-  const timestampLookup: MockTableConfig = {
-    match: "as started_at FROM cron_runs",
-    matchBinds: ["sync-mint-burn"],
-    rows: [],
-    ...(options.latestSuccessfulSyncError
-      ? { throwError: options.latestSuccessfulSyncError }
-      : { first: { started_at: latestSuccessfulSyncAt } }),
-  };
-  const rowCountLookup: MockTableConfig = {
-    match: "item_count",
-    matchBinds: ["cron-sentinel", "mint-burn-growth-watchdog"],
-    rows: [],
-    ...(options.rowCountError
-      ? { throwError: options.rowCountError }
-      : {
-          first: rowCount == null ? null : {
-            job: "mint-burn-growth-watchdog",
-            item_count: rowCount,
-            metadata: JSON.stringify({ rowCount }),
-          },
-        }),
-  };
-
-  const liveIdentityEnvelope = options.liveIdentityEnvelope !== undefined
-    ? options.liveIdentityEnvelope
-    : options.yieldSafetyIdentity ? {
-        candidateId: "fixture-candidate",
-        policyVersion: options.yieldSafetyIdentity.methodologyVersion,
-        publicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
-        baseInputGenerationId: options.yieldSafetyIdentity.baseInputGenerationId,
-        factSetDigest: "d".repeat(64),
-        policyId: options.yieldSafetyIdentity.policyId,
-        policyDigest: options.yieldSafetyIdentity.policyDigest,
-        evaluationBuildDigest: options.yieldSafetyIdentity.evaluationBuildDigest,
-        resultDigest: "e".repeat(64),
-      } : null;
-
-  return mockD1([
-    { match: "AS last_any", rows: [], first: { observed_at: nowSec, last_any: nowSec - 30, reserve: nowSec - 30, telegram: nowSec - 30, digest: nowSec - 30, heavy: nowSec - 30 } },
-    {
-      match: "job = 'sync-stablecoins'", rows: [],
-      ...(options.publicationQueryError
-        ? { throwError: options.publicationQueryError }
-        : {
-            first: options.publicationMetadata
-              ? { started_at: nowSec - 30, metadata: JSON.stringify(options.publicationMetadata) }
-              : null,
-          }),
-    },
-    { match: "blacklist-gap-aggregate", rows: [], first: options.blacklistAggregate ?? { total: 0, missing: 0, missing_recent: 0 }, ...(options.blacklistError ? { throwError: options.blacklistError } : {}) },
-    { match: "SELECT 1", rows: [], first: options.dbSentinelMissing ? null : { value: 1 }, ...(options.dbError ? { throwError: options.dbError } : {}) },
-    { match: "cache WHERE key IN", rows: options.cacheMissing ? cacheRows.filter((row) => row.key !== "stablecoins") : cacheRows,
-      ...(options.cacheError ? { throwError: options.cacheError } : {}) },
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["ops:d1-capacity:v1"],
-      rows: [],
-      first: cacheRows.find((row) => row.key === "ops:d1-capacity:v1"),
-    },
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["report-cards:v9:publication-health"],
-      rows: [],
-      ...(options.yieldSafetyHealthReadError
-        ? { throwError: options.yieldSafetyHealthReadError }
-        : {
-            first: safetyScorePublication ? {
-              value: stableJsonStringifyV1(safetyScorePublication),
-              updated_at: safetyScorePublication.attemptedAtSec,
-            } : null,
-          }),
-    },
-    {
-      match: "AS publication_identity",
-      matchBinds: ["report-cards:v9"],
-      rows: [],
-      ...(options.yieldSafetyLiveReadError
-        ? { throwError: options.yieldSafetyLiveReadError }
-        : {
-            first: liveIdentityEnvelope ? {
-              publication_identity: JSON.stringify(liveIdentityEnvelope),
-            } : null,
-          }),
-    },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-    {
-      match: "stamped_identity",
-      matchBinds: ["yield-rankings"],
-      rows: [],
-      ...(options.yieldSafetyError
-        ? { throwError: options.yieldSafetyError }
-        : {
-            first: options.yieldSafetyIdentity ? {
-              updated_at: options.yieldPublishedAt ?? nowSec - 60,
-              stamped_identity: JSON.stringify(options.yieldSafetyIdentity),
-              safety_published_at: options.yieldSafetyPublishedAt === undefined ? nowSec - 60 : options.yieldSafetyPublishedAt,
-            } : null,
-          }),
-    },
-    { match: "SELECT key, value FROM cache WHERE key >= 'circuit:' AND key < 'circuit;'", rows: [], ...(options.circuitError ? { throwError: options.circuitError } : {}) },
-    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
-    {
-      match: "GROUP BY job",
-      rows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
-        job, started_at: nowSec - 60, generation_id: "fixture-generation", degraded_runs_since_ok: 0,
-      })),
-      ...(options.producerHistoryError ? { throwError: options.producerHistoryError } : {}),
-    },
-    {
-      match: "SELECT status",
-      matchBinds: ["sync-mint-burn"],
-      rows: [],
-      first: latestRunStatus == null ? null : { status: latestRunStatus },
-      ...(options.latestRunError ? { throwError: options.latestRunError } : {}),
-    },
-    timestampLookup,
-    rowCountLookup,
-    { match: "FROM cron_runs", rows: [], first: null },
-  ]);
-}
 
 describe("assessPublicHealth Safety Score publication", () => {
   const now = 1_800_000_000;
@@ -299,6 +60,18 @@ describe("assessPublicHealth Safety Score publication", () => {
     expect(scoreComponent(result)).toMatchObject({ state: "degraded", reasons: ["safety-score-publication-read-failed"] });
     expect(getPublicHealthEvidenceReadFailures(result)).toContain("safety-score-publication:read-failed");
     expect(result.safetyScoreImpactStatus).toBe("degraded");
+  });
+
+  // Complete sequences: rows that were read keep HEAD's warnings; only a rejected read gains the trailing marker.
+  it.each([
+    ["missing row", { safetyScorePublication: null }, ["safety-score-publication-unavailable"]],
+    ["v1 cutover row", { safetyScorePublication: { ...current, schemaVersion: 1 } as never }, ["safety-score-publication-read-failed"]],
+    ["malformed row", { safetyScorePublication: { ...current, extra: 1 } as never }, ["safety-score-publication-read-failed"]],
+    ["rejected read", { yieldSafetyHealthReadError: new Error("D1 down") },
+      ["safety-score-publication-read-failed", "read-failed:safety-score-publication"]],
+  ])("emits the complete warning sequence for a %s", async (_kind, options, [first, ...markers]) => {
+    expect((await assessPublicHealth(makeMintBurnAssessmentDb(now, options), now)).warnings)
+      .toEqual([first, "stablecoin-publication-unknown", "active-price-coverage-unknown", ...markers]);
   });
 
   it("keeps the API future-skew allowance at its boundary for the accepted clock", async () => {
@@ -410,6 +183,8 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       ? { cacheError: new Error("cache unavailable") } : { cacheMissing: true }), 1_800_000_000);
     // Missing evidence is independent of finite ratios measured for other caches.
     expect(result.worstCacheRatio).toBeNull();
+    // Only the rejected table read reaches the classifier as unreadable lanes.
+    expect(classifyUnreadablePublicSections(buildPublicHealthResponse(result, 1_800_000_000)).length > 0).toBe(failed);
   });
   it("attributes FX and ratings caches to their known upstream providers", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
@@ -1043,14 +818,13 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const db = makeMintBurnAssessmentDb(nowSec, {
-        yieldSafetyError: new Error("yield identity read failed"),
-      });
-
-      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
-
-      expect(result.warnings).toContain("yield-safety-availability-unknown");
-      expect(result.overallStatus).not.toBe("healthy");
+      for (const message of ["yield identity read failed", "D1_ERROR: malformed JSON"]) {
+        const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, { yieldSafetyError: new Error(message) }), nowSec, { logPrefix: "test" });
+        expect(result.warnings).toContain("yield-safety-availability-unknown");
+        // Invalid stored JSON was read; only the rejected read carries the marker.
+        expect(result.warnings.includes("read-failed:yield-safety")).toBe(!message.includes("malformed"));
+        expect(result.overallStatus).not.toBe("healthy");
+      }
     } finally {
       consoleWarn.mockRestore();
     }
@@ -1097,12 +871,36 @@ describe("assessPublicHealth independent yield-safety reads", () => {
         "yield-safety-availability-unknown",
         ...failedSources.map((source) => `${source}-read-failed`),
       ]);
+      expect(result.warnings.includes("read-failed:yield-safety-live-identity")).toBe(liveFailed);
       expect(getPublicHealthEvidenceReadFailures(result).filter((failure) => failure.startsWith("yield-safety"))).toEqual(
         failedSources.map((source) => `${source}:read-failed`),
       );
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it.each([
+    ["v1 publication-health row", { safetyScorePublication: { schemaVersion: 1 } as never }, { yieldSafetyHealthReadError: new Error("D1 down") }],
+    ["invalid live identity", { liveIdentityEnvelope: { identity: null } as never }, { yieldSafetyLiveReadError: new Error("D1 down") }],
+    ["malformed yield JSON", { yieldSafetyError: new Error("D1_ERROR: malformed JSON") }, { yieldSafetyError: new Error("D1 down") }],
+  ])("keeps the legacy code for a %s but confirms only the rejected read", async (_kind, content, rejected) => {
+    const lists = async (options: Parameters<typeof makeMintBurnAssessmentDb>[1]) => {
+      const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000, { yieldSafetyIdentity: identity, ...options }), 1_800_000_000);
+      return [getPublicHealthEvidenceReadFailures(result), getPublicHealthConfirmedReadFailures(result)];
+    };
+    const [[legacy, unconfirmed], [rejectedLegacy, confirmed]] = [await lists(content), await lists(rejected)];
+    expect(legacy.length).toBeGreaterThan(0);
+    expect([legacy, unconfirmed, confirmed]).toEqual([rejectedLegacy, [], rejectedLegacy]);
+  });
+
+  it("confirms a DEWS table-freshness failure only with its rejected-read marker", async () => {
+    const base = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000), 1_800_000_000);
+    const missingPointer = { ...base, cacheFailures: [{ key: "dews", source: "table-freshness" as const, message: "no-pointer" }] };
+    expect(getPublicHealthEvidenceReadFailures(missingPointer)).toEqual(["cache:dews:table-freshness"]);
+    expect(getPublicHealthConfirmedReadFailures(missingPointer)).toEqual([]);
+    expect(getPublicHealthConfirmedReadFailures({ ...missingPointer, warnings: [...base.warnings, "read-failed:cache:dews"] }))
+      .toEqual(["cache:dews:table-freshness"]);
   });
 
   it("preserves the healthy yield-safety output when both reads succeed", async () => {
@@ -1150,6 +948,7 @@ describe("assessPublicHealth independent yield-safety reads", () => {
     // so health may not advertise that fallback or keep <yield> operational.
     expect(result.warnings).not.toContain("yield-safety-publish-time-fallback:safety-snapshot-unavailable");
     expect(result.warnings).toContain("yield-safety-availability-unknown");
+    expect(result.warnings).not.toContain("read-failed:yield-safety-live-identity");
     expect(response.status).not.toBe("healthy");
     expect(response.components?.find((component) => component.id === "yield")?.state).toBe("degraded");
   });

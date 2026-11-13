@@ -3,6 +3,7 @@ import type { CronStatusDetail, StatusCause, StatusResponse } from "@shared/type
 import {
   assessPublicHealth,
   capturePublicHealthRead,
+  getPublicHealthConfirmedReadFailures,
   getPublicHealthEvidenceReadFailures,
   type PublicHealthAssessment,
   type PublicHealthReadResult,
@@ -37,6 +38,8 @@ import type { SchedulerLiveness } from "@shared/types/status/public-health";
 export interface RawStatusComputation {
   dbHealthy: boolean;
   evidenceReadFailures?: string[];
+  /** Self-check metadata only: true read failures, not stored in the raw snapshot. */
+  confirmedReadFailures?: string[];
   availabilityStatus: StatusResponse["availabilityStatus"];
   dataQualityStatus: StatusResponse["dataQualityStatus"];
   rawOverallStatus: StatusHealthValue;
@@ -201,6 +204,21 @@ export async function computeRawStatus(
     ...dataQuality.sourceFailures.map((failure) => `data-quality:${failure.source}:read-failed`),
     ...Object.values(supplements.sectionErrors).flatMap((error) => error ? [error.code] : []),
   ];
+  // Proven rejected reads only, beside the legacy list that still decides the
+  // run. A missing, unparseable or malformed stablecoins cache is a finding;
+  // supply-integrity reads are named. Left out until their loaders tell a
+  // rejected read from a content error: supplement section codes, and cron
+  // history (a malformed `jobs` value in slot metadata fails its `json_each`).
+  const confirmedReadFailures = [
+    ...(!transitionsLast24h.ok ? [transitionsLast24h.error] : []),
+    ...getPublicHealthConfirmedReadFailures(publicHealth),
+    ...evidenceReadFailures.filter((code) => /^(cron-(?!history)|scheduled-slot|budget-surfaces:)/.test(code)),
+    ...dataQuality.sourceFailures
+      .filter((failure) => failure.source !== "stablecoins-cache" || dataQuality.stablecoinsCacheReason === "cache-read-failed")
+      .map((failure) => `data-quality:${failure.source}:read-failed`),
+    ...(supplyIntegrity == null ? ["supply-integrity:read-failed"]
+      : (supplyIntegrity.readFailures ?? []).map((dimension) => `supply-integrity-${dimension}:read-failed`)),
+  ];
   if (!transitionsLast24h.ok) sectionErrors.statusTransitions = {
     code: transitionsLast24h.error,
     message: "Recent status transition count unavailable; this does not imply zero transitions.",
@@ -274,6 +292,7 @@ export async function computeRawStatus(
     rawOverallStatus,
     confidence,
     evidenceReadFailures,
+    confirmedReadFailures,
     causes: {
       availability: availabilityCauses,
       dataQuality: dataQualityCauses,

@@ -91,6 +91,9 @@ export async function loadSafetyScoreV9PublicationIdentityEnvelope(
   return read.status === "readable" ? read.identity : null;
 }
 
+/** The publication row was read but its identity is missing or invalid: content, not a failed read. */
+export class SafetyScoreV9PublicationIdentityUnreadableError extends Error {}
+
 /**
  * Health admission distinguishes an absent publication row (legacy fallback)
  * from a present but unreadable identity, which must fail closed.
@@ -101,7 +104,7 @@ export async function loadSafetyScoreV9PublicationIdentityEnvelopeForHealth(
 ): Promise<SafetyScoreV9PublicationIdentity | null> {
   const read = await readSafetyScoreV9PublicationIdentityEnvelope(db, signal);
   if (read.status === "unreadable") {
-    throw new Error("Safety Score V9 publication identity is unreadable");
+    throw new SafetyScoreV9PublicationIdentityUnreadableError("Safety Score V9 publication identity is unreadable");
   }
   return read.status === "readable" ? read.identity : null;
 }

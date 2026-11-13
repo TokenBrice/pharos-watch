@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "../cron-jobs";
-import { makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
+import { assetScopedHealth, makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
 import {
   applyPublicStatusHysteresis,
   buildPublicHeadline,
+  classifyUnreadablePublicSections,
   holdPublicStatusAtReadTime,
   headlineToStatusLevel,
   projectPublicStatus,
   PUBLIC_CACHE_COMPONENT,
+  PUBLIC_EVIDENCE_SECTIONS,
   PUBLIC_STATUS_CACHE_REGISTRY_KEYS,
 } from "../public-status-components";
 import { countPublicImpactOpenCircuits, getPublicMintBurnStatus, getPublicProducerGraceBudget } from "../public-health";
@@ -23,34 +25,6 @@ function cache(ageSeconds: number | null, maxAge = 600): HealthResponse["caches"
 
 function component(health: HealthResponse, id: string) {
   return projectPublicStatus(health).components.find((item) => item.id === id)!;
-}
-
-function assetScopedHealth(): HealthResponse {
-  const health = makeHealthyHealthResponse();
-  const missingActiveAssets = [
-    { stablecoinId: "usdy-ondo-finance", symbol: "USDY", marketCapUsd: null,
-      lastKnownMarketCapUsd: 2_344_462_796.3038855, lastKnownMarketCapObservedAt: NOW - 7 * 86400,
-      consecutiveMissingGenerations: 10 },
-    { stablecoinId: "frnt-wyoming", symbol: "FRNT", marketCapUsd: 967_947.92,
-      consecutiveMissingGenerations: 9 * 96 },
-  ].map((asset) => ({
-    ...asset, currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
-    lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
-    rejectionReason: "missing", alertEligible: true,
-  }));
-  health.stablecoinPublication = {
-    status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, waivedActiveCount: 0,
-    missingActiveIds: ["usdy-ondo-finance"], waivedActiveIds: [], expiredWaiverIds: [], observedAt: NOW,
-  };
-  health.activePriceCoverage = {
-    status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395, pricedActiveCount: 394,
-    missingPriceCount: 2, pricedActiveIds: [], missingActiveIds: missingActiveAssets.map((asset) => asset.stablecoinId),
-    affectedMarketCapUsd: null, missingActiveAssets, alertEligibleCount: 2,
-    alertEligibleIds: missingActiveAssets.map((asset) => asset.stablecoinId),
-    maxConsecutiveMissingGenerations: 9 * 96, observedAt: NOW,
-  };
-  health.mintBurn.sync.warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
-  return health;
 }
 
 describe("public status components", () => {
@@ -73,6 +47,47 @@ describe("public status components", () => {
       expect(PUBLIC_CACHE_COMPONENT[key], key).toBeDefined();
     }
     for (const id of PUBLIC_STATUS_COMPONENT_IDS) expect(PUBLIC_COMPONENT_LABEL[id]).toBeTruthy();
+  });
+
+  it("classifies each evidence section's named read failure only (ADR-32 completeness, R2)", () => {
+    type Fail = [string, string | ((health: HealthResponse) => void)];
+    const fail: Record<string, Fail> = {
+      database: [PUBLIC_STATUS_COMPONENT_IDS.join(), "db-unhealthy"],
+      "d1-capacity": ["website-api", "d1-capacity-query-failed"],
+      "stablecoin-coverage": ["stablecoin-data", (h) => { h.activePriceCoverage = { unavailableReason: "coverage-read-failed" } as never; }],
+      "safety-score-publication": ["safety-scores,yield", "read-failed:safety-score-publication"],
+      "yield-safety": ["yield", "read-failed:yield-safety"],
+      "yield-safety-live-identity": ["yield", "read-failed:yield-safety-live-identity"],
+      "mint-burn": ["mint-burn", (h) => { h.mintBurn.unavailableReason = "mint-burn-output-read-failed"; }],
+      blacklist: ["blacklist", (h) => { h.blacklist.unavailableReason = "blacklist-read-failed"; }],
+      scheduler: ["data-refresh", (h) => { h.schedulerLiveness!.unavailableReason = "slot-start-query-failed"; }],
+      "heavy-scheduler": ["data-refresh", (h) => { h.schedulerLiveness!.heavy.unavailableReason = "slot-start-query-failed"; }],
+      circuits: ["data-refresh", (h) => { h.circuitsUnavailableReason = "circuits-read-failed"; }],
+    };
+    for (const [section, ids] of Object.entries(PUBLIC_EVIDENCE_SECTIONS)) {
+      const health = makeHealthyHealthResponse();
+      const [components, failure]: Fail = section.startsWith("cache:")
+        ? [PUBLIC_CACHE_COMPONENT[section.slice(6)], `read-failed:${section}`] : fail[section];
+      expect(ids.join(), section).toBe(components);
+      if (typeof failure === "string") health.warnings.push(failure);
+      else failure(health);
+      expect(classifyUnreadablePublicSections(health), section).toEqual([section]);
+    }
+    for (const section of Object.keys(fail)) expect(PUBLIC_EVIDENCE_SECTIONS[section], section).toBeDefined();
+    for (const key of PUBLIC_STATUS_CACHE_REGISTRY_KEYS) expect(PUBLIC_EVIDENCE_SECTIONS[`cache:${key}`], key).toBeDefined();
+    // Read but undecodable, missing or future evidence is a finding; so is a lane a fallback graded.
+    const health = assetScopedHealth();
+    health.warnings = ["cache-freshness-query-failed: dews", "d1-capacity-future-clock", "yield-safety-availability-unknown",
+      "yield-safety-live-identity-read-failed", "yield-safety-publication-health-read-failed"];
+    health.caches = { stablecoins: cache(60) };
+    health.activePriceCoverage!.unavailableReason = "coverage-malformed";
+    health.safetyScorePublicationUnavailableReason = "safety-score-publication-read-failed";
+    health.mintBurn.sync.lastSuccessfulSyncAt = null;
+    health.circuits = null;
+    expect(classifyUnreadablePublicSections(health)).toEqual([]);
+    health.warnings.push("read-failed:cache:__cache__");
+    expect(classifyUnreadablePublicSections(health)).toEqual(Object.keys(PUBLIC_EVIDENCE_SECTIONS)
+      .filter((section) => section.startsWith("cache:") && section !== "cache:stablecoins"));
   });
 
   it("reports all systems operational for a healthy payload", () => {

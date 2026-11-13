@@ -20,6 +20,8 @@ import {
   fixtureMakeApiRequest,
   fixtureCRON_INTERVALS,
   fixtureACTIVE_STABLECOINS,
+  buildCoverageRow,
+  buildPriceCoverage,
 } from "./status.test-support";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -40,67 +42,24 @@ function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Sce
   });
 }
 
-// P2-13 (CRON-25) single-sources `dataQuality.missingPrices`/`totalStablecoins`
-// on the producer's `activePriceCoverage` evidence and keeps the cache scan as
-// the evidence-absent fallback, so ratio fixtures publish the coverage row.
-function buildPublicationCoverage(): Record<string, unknown> {
-  return {
-    complete: true,
-    expectedActiveCount: fixtureACTIVE_STABLECOINS.length,
-    presentActiveCount: fixtureACTIVE_STABLECOINS.length,
-    waivedActiveCount: 0,
-    missingActiveIds: [],
-    waivedActiveIds: [],
-    expiredWaiverIds: [],
-  };
-}
-
-function buildPriceCoverage(total: number, missingIds: string[]): Record<string, unknown> {
-  const ids = fixtureACTIVE_STABLECOINS.slice(0, total).map((stablecoin) => stablecoin.id);
-  const pricedActiveIds = ids.filter((id) => !missingIds.includes(id));
-  return {
-    complete: missingIds.length === 0,
-    expectedActiveCount: total,
-    presentActiveCount: total,
-    pricedActiveCount: pricedActiveIds.length,
-    pricedActiveIds,
-    missingPriceCount: missingIds.length,
-    missingActiveIds: missingIds,
-    affectedMarketCapUsd: 0,
-    missingActiveAssets: [],
-    alertEligibleCount: 0,
-    alertEligibleIds: [],
-    maxConsecutiveMissingGenerations: 0,
-  };
-}
-
-function buildCoverageRow(
-  now: number,
-  coverage: { publication?: Record<string, unknown>; price?: Record<string, unknown> },
-) {
-  return {
-    match: `metadata LIKE '%\"activePublicationCoverage\"%'`,
-    rows: [],
-    first: {
-      started_at: now - 30,
-      metadata: JSON.stringify({
-        activePublicationCoverage: coverage.publication ?? buildPublicationCoverage(),
-        activePriceCoverage: coverage.price ?? buildPriceCoverage(fixtureACTIVE_STABLECOINS.length, []),
-      }),
-    },
-  };
-}
-
 describe("handleStatus", () => {
   it.each([
     { match: "UNION ALL", code: "cron-history:read-failed" },
     { match: "AS last_any", code: "scheduler:read-failed" },
     { match: "SELECT COUNT(*) as cnt FROM depeg_events", code: "data-quality:active-depegs:read-failed" },
-  ])("carries explicit evidence outcomes when $match fails", async ({ match, code }) => {
+    { match: "supply-integrity-previous-rows", code: "supply-integrity-value:read-failed" },
+    { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], code: "data-quality:stablecoins-cache:read-failed" },
+  ])("carries explicit evidence outcomes when $match fails", async ({ code, ...row }) => {
     const now = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([{ match, rows: [], throwError: new Error("evidence unavailable") }], true);
+    const db = fixtureMockD1([{ ...row, rows: [], throwError: new Error("evidence unavailable") }], true);
     const raw = await computeRawStatus(db, now);
-    expect(raw.evidenceReadFailures).toContain(code);
+    // Cron history is never confirmed: malformed slot metadata fails its query like a rejected read.
+    expect(raw.confirmedReadFailures!.includes(code)).toBe(!code.startsWith("cron-history"));
+    // The legacy list that decides the run stays HEAD's: supply reads out, a missing cache in.
+    expect(raw.evidenceReadFailures!.includes(code)).toBe(!code.startsWith("supply"));
+    const missing = await computeRawStatus(fixtureMockD1([{ match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null }], true), now);
+    expect(missing.evidenceReadFailures).toContain("data-quality:stablecoins-cache:read-failed");
+    expect(missing.confirmedReadFailures).not.toContain("data-quality:stablecoins-cache:read-failed");
   });
   beforeEach(() => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());

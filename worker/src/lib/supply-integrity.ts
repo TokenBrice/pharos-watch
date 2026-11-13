@@ -279,6 +279,8 @@ export interface SupplyIntegrityReport {
   value: SupplyValueIntegrityReport;
   availability: SupplyAvailabilityIntegrityReport;
   snapshot: SupplySnapshotIntegrityReport;
+  /** Dimensions whose evidence read failed this run; missing or malformed evidence is not listed. */
+  readFailures?: string[];
 }
 
 interface SupplyHistoryRow {
@@ -811,20 +813,34 @@ export async function loadSupplyIntegrityReport(
   options: SupplyIntegrityReadOptions = {},
 ): Promise<SupplyIntegrityReport> {
   const expectedDate = startOfUtcDaySec(new Date(nowSec * 1000));
+  const thrown = new Set<string>();
+  const failed = <T>(dimension: string, fallback: (reason: string) => T) => (reason: string) => {
+    thrown.add(dimension);
+    return fallback(reason);
+  };
   const [value, availability, snapshot] = await Promise.all([
-    settle(() => loadSupplyValueIntegrity(db, nowSec), unknownValueIntegrity, options.signal),
-    settle(() => loadSupplyAvailabilityIntegrity(db, nowSec), unknownAvailabilityIntegrity, options.signal),
+    settle(() => loadSupplyValueIntegrity(db, nowSec), failed("value", unknownValueIntegrity), options.signal),
+    settle(() => loadSupplyAvailabilityIntegrity(db, nowSec), failed("availability", unknownAvailabilityIntegrity), options.signal),
     settle(
       () => loadSupplySnapshotIntegrity(db, nowSec),
-      (reason) => unknownSnapshotIntegrity(
+      failed("snapshot", (reason) => unknownSnapshotIntegrity(
         reason,
         expectedDate,
         nowSec - expectedDate >= STATUS_SUPPLY_VALUE_THRESHOLDS.snapshotDueGraceSec,
-      ),
+      )),
       options.signal,
     ),
   ]);
-  return { observedAt: nowSec, value, availability, snapshot };
+  // Loaders name their own failed reads `*-read-failed`; a thrown loader is one too.
+  const readFailures = ([
+    ["value", value.reason],
+    ["value-held-drift", value.heldDriftUnknownReason],
+    ["availability", availability.reason],
+    ["charts", availability.charts.reason],
+    ["snapshot", snapshot.reason],
+  ] as const).filter(([dimension, reason]) => thrown.has(dimension) || reason?.endsWith("-read-failed"))
+    .map(([dimension]) => dimension);
+  return { observedAt: nowSec, value, availability, snapshot, readFailures };
 }
 
 export type SupplyIntegrityConditionId =
