@@ -21,15 +21,6 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
     reviewedAt: Date.UTC(2026, 10, 12, 19, 31) / 1000,
     expiresAt: Date.UTC(2026, 10, 19, 19, 31) / 1000,
   },
-  {
-    stablecoinId: "m-m0", adapterKey: "m0", failureCategory: null,
-    warningCodes: ["minter-collateral-reconciliation"], errorPrefix: null,
-    owner: "ops", reason: "Keyless production reserve projection GET observed 2026-11-04T09:03:22Z: sourceTimestamp 1793778131 (07:42:11Z), attempt 1793779933 (08:12:13Z), global collateral $220,896,523.037063 versus four-minter sum $193,515,313.204742, a $27,381,209.832321 discrepancy (12.39549%, rounded 12.40%). This is production evidence, not an independent upstream replay: the configured M0 GraphQL API requires Wrangler-managed M0_API_KEY and was not called. Acknowledge only the null-category degraded minter-collateral-reconciliation finding; keep the reconciliation guard, raw evidence quarantine, source clocks and scoring refusal. No discrepancy value is accepted as reconciled backing and no fallback/source admission changes.",
-    sources: [{ url: "https://pharos.watch/_site-data/stablecoin-reserves/m-m0", evidenceDate: "2026-11-04" }],
-    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
-    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
-  },
-
 ];
 
 export function resolveReserveFeedReviews(

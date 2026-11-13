@@ -56,14 +56,6 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     reason: "Re-read 2026-11-12: CoinGecko reports $1,770,485 market cap, updated 19:30:56 UTC; the 19:03 UTC published value is $1,770,857, within 2% of the unchanged $1,747,207.06 reviewed post-redemption level. The November 2-3 redemption comparison remains obsolete; no new redemption or supply override is claimed.",
   },
   {
-    stablecoinId: "gtusdtp-gauntlet",
-    baselineUsd: 386_800.93,
-    reviewedAt: Date.parse("2026-11-04T00:00:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-18T00:00:00Z") / 1000,
-    evidenceUrls: ["https://eth.blockscout.com/token/0xf3557AD5E984211ac8A0874A670344f2C3376471"],
-    reason: "The pre-move baseline covered a different vault perimeter; Blockscout values the current Gauntlet USDT Prime V2 stock at $386.8k.",
-  },
-  {
     stablecoinId: "usdq-quantoz",
     baselineUsd: 3_001_518.8,
     reviewedAt: Date.parse("2026-11-12T19:34:00Z") / 1000,
@@ -93,27 +85,40 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   ...[
     {
       stablecoinId: "wmxn-ripio",
-      baselineUsd: 176_488.15,
+      baselineUsd: 664_412.56,
       evidenceUrls: [
         "https://stablecoins.llama.fi/stablecoin/383",
-        "https://etherscan.io/token/0x337e7456b420bd3481e7fa61fa9850343d610d34?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+        "https://etherscan.io/token/0x337e7456b420bd3481e7fa61fa9850343d610d34?a=0x7e3022272b9d6386Eb36569c8E5b7a2457D48d5C",
+        "https://github.com/DefiLlama/peggedassets-server/pull/996",
       ],
-      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 3,269,392.897505 MXN, excluding 9,092,861.065585 MXN. The old $663.1k daily level reflected gross stock, not a 73% circulating redemption.",
+      reason: "Re-read 2026-11-13 08:10 UTC: on 2026-11-11 16:50-16:52 UTC DefiLlama's configured unreleased wallet 0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807 sent 9,034,261.07 wMXN to 0x7e3022272b9d6386Eb36569c8E5b7a2457D48d5C, which DefiLlama does not exclude. Total supply did not change. At Ethereum block 26404759 and Base block 56835318 the receiving wallet holds 5,372,208.45 and 5,362,933.67 wMXN (98% of each chain's supply). The published $664,412.56 is the provider's circulating value; the old $176.5k level excluded this inventory. Ownership of the receiving wallet is inferred from the transfers, not issuer-confirmed; the linked upstream request asks DefiLlama to exclude it. No supply override.",
     },
     {
       stablecoinId: "wcop-ripio",
-      baselineUsd: 193_650.25,
+      baselineUsd: 534_854.52,
       evidenceUrls: [
         "https://stablecoins.llama.fi/stablecoin/382",
-        "https://etherscan.io/token/0x8a1d45e102e886510e891d2ec656a708991e2d76?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+        "https://etherscan.io/token/0x8a1d45e102e886510e891d2ec656a708991e2d76?a=0x7e3022272b9d6386Eb36569c8E5b7a2457D48d5C",
+        "https://github.com/DefiLlama/peggedassets-server/pull/996",
       ],
-      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 620,785,461.758091 COP, excluding 1,132,848,349.038808 COP. The old $544.9k daily level reflected gross stock, not a 64% circulating redemption.",
+      reason: "Re-read 2026-11-13 08:10 UTC: on 2026-11-11 16:52 UTC DefiLlama's configured unreleased wallet 0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807 sent 1,120,943,035.95 wCOP to 0x7e3022272b9d6386Eb36569c8E5b7a2457D48d5C, which DefiLlama does not exclude. Total supply did not change. At Ethereum block 26404759 and Base block 56835311 the receiving wallet holds 455,670,504.12 and 791,643,035.95 wCOP (94% and 80% of each chain's supply). The published $534,854.52 is the provider's circulating value; the old $193.7k level excluded this inventory. Ownership of the receiving wallet is inferred from the transfers, not issuer-confirmed; the linked upstream request asks DefiLlama to exclude it. No supply override.",
     },
   ].map((review) => ({
     ...review,
-    reviewedAt: Date.parse("2026-11-07T19:48:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-14T19:48:00Z") / 1000,
+    reviewedAt: Date.parse("2026-11-13T08:12:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-20T08:12:00Z") / 1000,
   })),
+  {
+    stablecoinId: "gho-aave",
+    baselineUsd: 268_217_409,
+    reviewedAt: Date.parse("2026-11-13T08:12:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-20T08:12:00Z") / 1000,
+    evidenceUrls: [
+      "https://github.com/DefiLlama/peggedassets-server/pull/987",
+      "https://stablecoins.llama.fi/stablecoin/118",
+    ],
+    reason: "Provider perimeter change, not a redemption: DefiLlama PR #987 (merged 2026-11-12 08:05 UTC) reports GHO pre-minted into Aave's GhoReserve contracts and unborrowed GhoDirectMinter liquidity as unreleased. Recomputed from chain state on 2026-11-13 08:03 UTC (Ethereum block 26404723): 699,000,000 GHO minted, 268,638,822 circulating, against the list's $268,217,409 at 08:05 UTC. The $697.75M daily row of 2026-11-12 counts the full minted stock. Total supply did not change.",
+  },
   {
     stablecoinId: "tryb-bilira",
     baselineUsd: 698_792.67,
