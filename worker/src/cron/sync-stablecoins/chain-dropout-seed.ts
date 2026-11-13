@@ -407,13 +407,17 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     excludeOmittedUntil: Date.parse("2026-11-26T19:35:00Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
   },
-  // Finalized Tempo block 47370053 confirms 1M fxUSD, also omitted by list/detail.
-  // Catalog review identifies a lock/mint representation, ineligible for additive native repair.
+  // Tempo block 48741970 (2026-11-13): 1,000,000 fxUSD exist, also omitted by list/detail, and
+  // 999,996 of them sit in the Tempo OFT adapter 0xd87bbc92431f2908fbba780ce902f309a171335c.
+  // Its Ethereum peer 0x06013F99661B59e5A5BFD62AFEEd6fe7C10bdDE9 locks 8 fxUSD (block 26402372).
+  // Only 4 fxUSD are outside the Tempo adapter; its balance may be inventory or bridge custody.
+  // Ethereum's 8 are not exactly reconciled. Retain the omitted-chain exclusion.
+  // Renewal requires token(), reciprocal peers, totalSupply() and both adapter balance reads.
   {
     assetId: "fxusd-f-x-protocol", chainId: "tempo",
     policy: "exclude-omitted",
-    reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
-    excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
+    reviewedAt: Date.parse("2026-11-13T00:12:36Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-27T00:12:36Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
   },
   // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
@@ -424,5 +428,16 @@ export const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly ReviewedChainSupplyCollap
     reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
     excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
     evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
+  },
+  // BSC block 133295638 (2026-11-13 05:26 UTC): the registry iUSD token has zero total supply and
+  // no Transfer in the sampled 22 hours before; DefiLlama detail id 298 has no BSC series. The
+  // guard carried a $3,926,614 BSC baseline dated 2026-11-12 19:15:10 UTC. Code and arithmetic
+  // point to a CoinGecko gap-fill remainder; that packet was not captured, so this is inferred.
+  {
+    assetId: "iusd-infinifi", chainId: "bsc",
+    policy: "exclude-omitted",
+    reviewedAt: Date.parse("2026-11-13T05:26:09Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-27T05:26:09Z") / 1000,
+    evidenceUrl: "https://bscscan.com/token/0x60b14ec49874af1ba471685cb11132101aebdf09",
   },
 ];
