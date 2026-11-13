@@ -861,6 +861,10 @@ describe("handleStatus", () => {
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 2 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      // A persisted row: unmocked reads would otherwise present no state (ADR-42).
+      { match: "FROM status_state", rows: [], first: { scope: "global", current_status: "healthy", raw_status: "healthy",
+        last_evaluated_at: now - 60, last_changed_at: now - 600, consecutive_healthy: 3, consecutive_degraded: 0,
+        consecutive_stale: 0, confidence: 1, causes_json: "[]" } },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -1059,7 +1063,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("mintBurnReconciliation");
   });
 
-  it("keeps failed cron telemetry unknown and degrades unreadable mint/burn evidence", async () => {
+  it("keeps failed cron telemetry unknown and holds unreadable mint/burn evidence", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -1112,7 +1116,7 @@ describe("handleStatus", () => {
       causes: { availability: Array<{ code: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("degraded");
+    expect(body.availabilityStatus).toBe("healthy");
     expect(body.summary.unhealthyCrons).toBeNull();
     expect(body.summary.cronErrors).toBeNull();
     expect(body.summary.cronHistoryUnavailableReason).toBe("cron-history-read-failed");

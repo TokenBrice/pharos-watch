@@ -48,6 +48,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "reserveQueue", "reserveQueueHandoff", "capabilities",
   // Status self-check read/write evidence: bounded section and output lists.
   "failedOutputs", "failedOutputReads", "evidenceReadFailures", "confirmedReadFailures", "unreadablePublicSections",
+  "heldPublicComponents", "operatorStatusHeld", "publicStatusSuperseded",
 ].map((key) => [key, true]));
 // These are forensic-only cron copies. Active-price coverage is deliberately excluded:
 // the next producer and public-health reader reconstruct missing-asset streaks from it.

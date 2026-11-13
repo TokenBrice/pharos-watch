@@ -23,6 +23,7 @@ import {
   PUBLIC_STATUS_COMPONENT_IDS,
   type HealthResponse,
   type PublicComponentBudget,
+  type PublicComponentHeld,
   type PublicComponentState,
   type PublicStatusComponent,
   type PublicStatusComponentId,
@@ -46,7 +47,11 @@ import type { StatusHealthValue } from "../types/status/core";
  * - coverage inputs are `degraded` at most: the data is served, some of it is
  *   incomplete. Producer input quality is a notice (ADR-42): the generation is
  *   published and its age alone grades the component.
- * - unreadable evidence is `degraded` with a named reason, never operational (R2).
+ * - missing, malformed or future-dated evidence is `degraded` with a named
+ *   reason, never operational (R2).
+ * - evidence whose read failed colours nothing (ADR-42): its finding is a
+ *   notice and the component is marked `held`; the writer keeps its last
+ *   confirmed state, labelled "not confirmed" once the hold outlives its bound.
  * - a failed database health check is an unreadable evaluation, never an
  *   outage: the self-check holds the published state and `/api/health` answers
  *   503. Every outage is age-graded.
@@ -82,6 +87,8 @@ interface ComponentFinding {
   reason: string;
   ageSeconds?: number | null;
   budget?: PublicComponentBudget | null;
+  /** The evidence sections whose failed read neutralises this finding (`PUBLIC_EVIDENCE_SECTIONS`). */
+  sections?: readonly string[];
 }
 
 function formatSpan(seconds: number): string {
@@ -209,8 +216,8 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
   const findings = new Map<PublicStatusComponentId, ComponentFinding[]>(
     PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, []]),
   );
-  const add = (id: PublicStatusComponentId, finding: ComponentFinding | null) => {
-    if (finding) findings.get(id)!.push(finding);
+  const add = (id: PublicStatusComponentId, finding: ComponentFinding | null, ...sections: string[]) => {
+    if (finding) findings.get(id)!.push(sections.length > 0 ? { ...finding, sections } : finding);
   };
 
   // A failed database health check read nothing, so nothing is confirmed (R2),
@@ -250,7 +257,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
   for (const [key, cache] of Object.entries(health.caches)) {
     // Mirror the shared cache impact floor exactly; findings only explain it.
     if (getCacheImpactStatus(cache, key) === "healthy" && cache.degraded !== true && cache.degraded !== null) continue;
-    for (const finding of projectPublicCacheStatus(key, cache).findings) add(PUBLIC_CACHE_COMPONENT[key] ?? "stablecoin-data", finding);
+    for (const finding of projectPublicCacheStatus(key, cache).findings) add(PUBLIC_CACHE_COMPONENT[key] ?? "stablecoin-data", finding, `cache:${key}`);
   }
 
   const publication = health.stablecoinPublication;
@@ -264,7 +271,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
         : `${publication.missingActiveIds.length || "Some"} tracked stablecoin${publication.missingActiveIds.length === 1 ? " is" : "s are"} missing from published listings.`,
       reason: publication.status === "unknown" ? "publication-unknown"
         : impact === "healthy" ? "publication-incomplete:asset-scoped" : "publication-incomplete",
-    });
+    }, "stablecoin-coverage");
   }
   if (coverage) {
     if (coverage.status === "unknown") {
@@ -272,19 +279,19 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
         state: "degraded",
         summary: "Live price coverage cannot be verified right now.",
         reason: "price-coverage-unknown",
-      });
+      }, "stablecoin-coverage");
     } else if (getActivePriceCoverageBreadthStatus(coverage, publication?.missingActiveIds) !== "healthy") {
       add("stablecoin-data", {
         state: "degraded",
         summary: `${countActivePriceBreadthGaps(coverage, publication?.missingActiveIds) ?? "Many"} of ${coverage.expectedActiveCount} tracked stablecoins have no live price.`,
         reason: "price-coverage-breadth",
-      });
+      }, "stablecoin-coverage");
     } else if (coverage.status === "incomplete") {
       add("stablecoin-data", {
         state: "operational",
         summary: `${coverage.missingPriceCount ?? "Some"} tracked assets have no live price. Other listings and prices remain available.`,
         reason: "price-coverage-incomplete:asset-scoped",
-      });
+      }, "stablecoin-coverage");
     }
   }
 
@@ -294,7 +301,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
       state: "degraded",
       summary: "Safety Score publication health is unavailable, so current scores cannot be confirmed.",
       reason: health.safetyScorePublicationUnavailableReason ?? "safety-score-publication-unavailable",
-    });
+    }, "safety-score-publication");
   } else {
     const budget = getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.safetyScores);
     const ageSeconds = safety.acceptedAtSec == null ? null : Math.max(0, health.timestamp - safety.acceptedAtSec);
@@ -342,7 +349,10 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
         ? "Safety ratings on yield rankings cannot be verified right now."
         : "Yield rankings are served without current safety ratings.",
       reason: yieldWarning,
-    });
+      // Only "availability unknown" can come from a failed read; the unrated
+      // verdict needs every yield read to have succeeded.
+    }, ...(yieldWarning === "yield-safety-availability-unknown"
+      ? ["yield-safety", "yield-safety-live-identity", "safety-score-publication"] : []));
   }
 
   // Graded by success age only; the worker's run-level freshness band is not
@@ -356,7 +366,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
       state: "degraded",
       summary: "Mint and burn sync evidence is unavailable.",
       reason: health.mintBurn.unavailableReason ?? "mint-burn-evidence-unavailable",
-    });
+    }, "mint-burn");
   } else {
     add("mint-burn", gradeAge("Mint and burn events", mintBurnAgeSeconds,
       getPublicProducerGraceBudget(PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn), "mint-burn-sync"));
@@ -386,7 +396,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
       reason: health.blacklist.missingRatio == null
         ? health.blacklist.unavailableReason ?? "blacklist-evidence-unavailable"
         : "blacklist-amounts-missing",
-    });
+    }, "blacklist");
   }
 
   const scheduler = health.schedulerLiveness;
@@ -418,7 +428,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
           state: "degraded",
           summary: `${lane.subject} evidence is unavailable, so delivery cannot be confirmed.`,
           reason: `${lane.reason}:unavailable:${(lane.unavailableReason ?? "unknown").slice(0, 80)}`,
-        });
+        }, lane.reason);
         continue;
       }
       add("data-refresh", gradeAge(
@@ -439,7 +449,7 @@ function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusH
         : `${openCircuits} upstream data providers are paused after repeated failures. Affected data keeps its last good value.`,
       reason: openCircuits == null ? `circuits-unavailable:${health.circuitsUnavailableReason ?? "unknown"}`
         : `upstream-circuits-open:${openCircuits}:${sources.join(",")}`,
-    });
+    }, "circuits");
   }
 
   return findings;
@@ -493,20 +503,38 @@ export function buildPublicHeadline(
  * carries persisted `since` values forward while a component keeps its state.
  * Fresh classification is internal; subsequent projections retain its component,
  * because public gap counts deliberately include queued proofs.
+ *
+ * Every component with evidence that could not be read carries `held`
+ * (ADR-42). `holdable` names the components whose last publication the caller
+ * applies over the result: only for those does a finding from an unreadable
+ * section become a notice; every other component keeps the R2 colour of the
+ * failed read. Default: none.
  */
 export function projectPublicStatus(
   health: HealthResponse,
   previous: PublicComponentSinceMap = {},
   blacklistImpactStatus?: StatusHealthValue,
+  options: { holdable?: (id: PublicStatusComponentId) => boolean } = {},
 ): PublicStatusProjection {
   const findings = collectFindings(health, blacklistImpactStatus);
+  const unreadable = new Set(health.warnings.includes("db-unhealthy") ? [] : classifyUnreadablePublicSections(health));
+  let neutralised = false;
+  for (const [id, list] of findings) {
+    if (!options.holdable?.(id)) continue;
+    list.forEach((finding, index) => {
+      if (!finding.sections?.some((section) => unreadable.has(section))) return;
+      list[index] = { ...finding, state: "operational" };
+      neutralised = true;
+    });
+  }
 
   // R2 fail-safe: surface a raw failure only when no non-operational finding
   // explains it. Asset-scoped findings still attribute the raw verdict; their
-  // service-wide severity is decided separately by buildPublicHeadline.
+  // service-wide severity is decided separately by buildPublicHeadline. A held
+  // read failure also explains it.
   const anyFinding = [...findings.values()].some((list) => list.some((finding) =>
     finding.state !== "operational"));
-  if (!anyFinding && health.status !== "healthy") {
+  if (!anyFinding && !neutralised && health.status !== "healthy") {
     findings.get("website-api")!.push({
       state: "degraded",
       summary: "Some public health checks are not passing.",
@@ -522,6 +550,7 @@ export function projectPublicStatus(
     );
     const state = worst?.state ?? "operational";
     const prior = previous[id];
+    const sections = [...unreadable].filter((section) => PUBLIC_EVIDENCE_SECTIONS[section]?.includes(id));
     return {
       id,
       state,
@@ -530,6 +559,8 @@ export function projectPublicStatus(
       ageSeconds: worst?.ageSeconds ?? null,
       budget: worst?.budget ?? null,
       since: prior && prior.state === state ? prior.since : null,
+      // No clock is known here; the writer and the snapshot reader supply it.
+      ...(sections.length > 0 ? { held: { since: health.timestamp, confirmedAt: null, sections, expired: true } } : {}),
     };
   });
 
@@ -551,13 +582,18 @@ export interface PublicComponentPending {
   firstSeenAt: number;
 }
 
-/** The previously published component plus its unconfirmed raw change. */
+/** The previously published component plus its unconfirmed raw change and hold clock. */
 export type PublicComponentPublished = Pick<PublicStatusComponent, "state" | "since" | "reasons">
-  & Partial<Pick<PublicStatusComponent, "summary" | "ageSeconds" | "budget">>
-  & { pending?: PublicComponentPending | null };
+  & Partial<Pick<PublicStatusComponent, "summary" | "ageSeconds" | "budget" | "held">>
+  & { pending?: PublicComponentPending | null; confirmedAt?: number | null };
 
 function direction(from: PublicComponentState, to: PublicComponentState): number {
   return Math.sign(STATE_RANK[to] - STATE_RANK[from]);
+}
+
+/** A hold is "not confirmed" once its clock is unknown or older than `maxHoldSec`. */
+function withHoldClock(held: PublicComponentHeld, confirmedAt: number | null, now: number, maxHoldSec: number): PublicComponentHeld {
+  return { ...held, confirmedAt, expired: confirmedAt == null || now - confirmedAt > maxHoldSec };
 }
 
 /**
@@ -566,15 +602,44 @@ function direction(from: PublicComponentState, to: PublicComponentState): number
  * published state until it repeats in the same direction, then publishes with
  * `since` at the streak's first observation. A prior record without a summary
  * (written before hysteresis) cannot be held faithfully and publishes at once.
+ *
+ * With `maxHoldSec`, a component marked `held` (ADR-42) is component-level
+ * like every other run: a run counts toward a pending worsening when evidence
+ * read in that run proves the worse state, and the evidence may differ between
+ * the two runs. No failed read contributes, because its finding is
+ * neutralised. A held run that is not worse republishes the published state
+ * and drops the pending change, worsening or clear, so a held run whose
+ * readable evidence is clear resets it. `confirmedAt` (the last run that read
+ * every section) is renewed only without a hold; `held.expired` is set past
+ * `maxHoldSec`, and expiry changes the label only.
  */
 export function applyPublicStatusHysteresis(
   raw: PublicStatusProjection,
   previous: ReadonlyMap<PublicStatusComponentId, PublicComponentPublished>,
   now: number,
-): { projection: PublicStatusProjection; pending: Partial<Record<PublicStatusComponentId, PublicComponentPending>> } {
+  maxHoldSec?: number,
+): {
+  projection: PublicStatusProjection;
+  pending: Partial<Record<PublicStatusComponentId, PublicComponentPending>>;
+  confirmedAt: Partial<Record<PublicStatusComponentId, number | null>>;
+} {
   const pending: Partial<Record<PublicStatusComponentId, PublicComponentPending>> = {};
+  const confirmedAt: Partial<Record<PublicStatusComponentId, number | null>> = {};
   const components = raw.components.map((component): PublicStatusComponent => {
     const prior = previous.get(component.id);
+    const held = maxHoldSec == null ? undefined : component.held;
+    confirmedAt[component.id] = held ? prior?.confirmedAt ?? null : now;
+    if (held) {
+      const hold = withHoldClock({ ...held, since: prior?.held?.since ?? now }, prior?.confirmedAt ?? null, now, maxHoldSec!);
+      const worse = prior && STATE_RANK[component.state] > STATE_RANK[prior.state];
+      if (prior && !worse && !prior.reasons.includes("db-unavailable")) {
+        return {
+          id: component.id, state: prior.state, summary: prior.summary ?? "", reasons: prior.reasons,
+          ageSeconds: prior.ageSeconds ?? null, budget: prior.budget ?? null, since: prior.since, held: hold,
+        };
+      }
+      component = { ...component, held: hold };
+    }
     if (!prior || prior.state === component.state) return component;
     // A stored `db-unavailable` state was an unreadable evaluation, not a
     // verdict to hold (written before 2026-11-11): this evaluation replaces it.
@@ -594,9 +659,10 @@ export function applyPublicStatusHysteresis(
       ageSeconds: prior.ageSeconds ?? null,
       budget: prior.budget ?? null,
       since: prior.since,
+      ...(component.held ? { held: component.held } : {}),
     };
   });
-  return { projection: { headline: buildPublicHeadline(components), components }, pending };
+  return { projection: { headline: buildPublicHeadline(components), components }, pending, confirmedAt };
 }
 
 /**
@@ -605,20 +671,32 @@ export function applyPublicStatusHysteresis(
  * and may not clear a state the snapshot is still confirming. A recovery that
  * appears only at read time (a producer published since the snapshot) clears
  * at once: clearing on fresh data is honest.
+ * A held live component (ADR-42) keeps the published one, outage excepted, with
+ * the published hold clock (or `hold.confirmedAt(id)`, null when the
+ * publication could not read that component either) re-dated for `hold.now`.
+ * With `rawAtSnapshot` null (a live fallback) only that hold applies, and not
+ * over a worse live state, which readable evidence proved.
  */
 export function holdPublicStatusAtReadTime(
   live: PublicStatusProjection,
   published: readonly PublicStatusComponent[],
-  rawAtSnapshot: PublicStatusProjection,
+  rawAtSnapshot: PublicStatusProjection | null,
+  hold?: { now: number; maxHoldSec: number; confirmedAt: (id: PublicStatusComponentId) => number | null },
 ): PublicStatusProjection {
   const publishedById = new Map(published.map((component) => [component.id, component]));
-  const rawById = new Map(rawAtSnapshot.components.map((component) => [component.id, component.state]));
+  const rawById = new Map(rawAtSnapshot?.components.map((component) => [component.id, component.state]));
   const components = live.components.map((component) => {
     const snap = publishedById.get(component.id);
-    if (!snap || snap.state === component.state || component.state === "outage") return component;
-    const worse = STATE_RANK[component.state] > STATE_RANK[snap.state];
-    const snapshotHeld = rawById.get(component.id) !== snap.state;
-    return worse || snapshotHeld ? snap : component;
+    const chosen = component.held && snap && component.state !== "outage"
+      && (rawAtSnapshot || STATE_RANK[component.state] <= STATE_RANK[snap.state]) ? snap
+      : !snap || !rawAtSnapshot || snap.state === component.state || component.state === "outage"
+        || !(STATE_RANK[component.state] > STATE_RANK[snap.state] || rawById.get(component.id) !== snap.state)
+        ? component : snap;
+    // The label follows the live read: a fully read component sheds the published hold.
+    const { held: _held, ...rest } = chosen;
+    if (!component.held) return rest;
+    return { ...rest, held: !hold ? component.held : withHoldClock({ ...component.held, since: snap?.held?.since ?? component.held.since },
+      snap?.held ? snap.held.confirmedAt : hold.confirmedAt(component.id), hold.now, hold.maxHoldSec) };
   });
   return { headline: buildPublicHeadline(components), components };
 }
@@ -658,9 +736,9 @@ export function headlineToStatusLevel(state: PublicStatusHeadline["state"]): "he
  * yield); `public-status-components.test.ts` iterates both registries.
  * Evidence that colours no component stays outside: the mint/burn row count
  * (operator diagnostics only), `operatorAlerts` and `telegramSummary`.
- * `slot-start-query-failed` is trusted as a read failure: besides a rejected
- * query it is set only when `observed_at` from `(SELECT unixepoch()) AS
- * observed_at` is not a positive finite number, which SQLite cannot return.
+ * A scheduler lane counts only with `readFailed`, set for a rejected query:
+ * `slot-start-query-failed` also names an invalid observation clock, which
+ * was read.
  */
 export const PUBLIC_EVIDENCE_SECTIONS: Readonly<Record<string, readonly PublicStatusComponentId[]>> = {
   database: PUBLIC_STATUS_COMPONENT_IDS,
@@ -684,7 +762,8 @@ export const PUBLIC_EVIDENCE_SECTIONS: Readonly<Record<string, readonly PublicSt
  * counts only when its age is also unavailable, since a fallback read may
  * still have graded it.
  */
-export function classifyUnreadablePublicSections(health: HealthResponse): string[] {
+export function classifyUnreadablePublicSections(health: Pick<HealthResponse, "warnings" | "activePriceCoverage"
+  | "mintBurn" | "blacklist" | "schedulerLiveness" | "circuitsUnavailableReason" | "caches">): string[] {
   const has = (warning: string) => health.warnings.includes(warning);
   const unreadable = new Set<string>();
   const mark = (section: string, failed: boolean) => {
@@ -701,8 +780,8 @@ export function classifyUnreadablePublicSections(health: HealthResponse): string
   mark("mint-burn", health.mintBurn.unavailableReason === "mint-burn-read-failed"
     || health.mintBurn.unavailableReason === "mint-burn-output-read-failed");
   mark("blacklist", health.blacklist.unavailableReason === "blacklist-read-failed");
-  mark("scheduler", health.schedulerLiveness?.unavailableReason === "slot-start-query-failed");
-  mark("heavy-scheduler", health.schedulerLiveness?.heavy.unavailableReason === "slot-start-query-failed");
+  mark("scheduler", health.schedulerLiveness?.readFailed === true);
+  mark("heavy-scheduler", health.schedulerLiveness?.heavy.readFailed === true);
   mark("circuits", health.circuitsUnavailableReason === "circuits-read-failed");
   // `cache-freshness-query-failed` also names a missing, malformed or future
   // DEWS pointer that was read, so only the rejected-read markers count.

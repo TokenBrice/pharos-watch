@@ -70,6 +70,7 @@ const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveProbeFailures: 0 as number | null,
   persistenceSucceeded: true,
 }));
+const HELD = { since: 1, confirmedAt: null, sections: [], expired: true };
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
   return { rawOverallStatus, dbHealthy: true, evidenceReadFailures: [] as string[], sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
@@ -125,7 +126,7 @@ vi.mock("../../lib/status-reliability", () => ({
   updateProbePathFailureStreaks: updateProbePathFailureStreaksMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
 }));
-const reconcilePublicStatusStateMock = vi.fn(async (_db: unknown, _now: number, health: HealthResponse) => ({
+const reconcilePublicStatusStateMock = vi.fn(async (_db: unknown, _now: number, health: HealthResponse, _onIssue?: unknown, _snapshot?: unknown) => ({
   projection: projectPublicStatus(health),
   persistenceSucceeded: true,
 }));
@@ -247,7 +248,7 @@ describe("runStatusSelfCheck", () => {
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), assessedAt, undefined, expect.anything());
     expect(assessPublicHealthMock).toHaveBeenCalledExactlyOnceWith(expect.anything(), assessedAt, expect.anything());
     expect(writeStatusRawSnapshotMock).toHaveBeenCalledWith(expect.anything(), assessedAt, expect.anything(), expect.anything());
-    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledWith(
+    expect(reconcilePublicStatusStateMock).toHaveBeenCalledWith(
       expect.anything(), assessedAt, expect.anything(), expect.anything(), expect.anything(),
     );
     expect(updateDiscrepancyObservationMock).toHaveBeenCalledWith(
@@ -529,9 +530,9 @@ describe("runStatusSelfCheck", () => {
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
-    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
-      expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.any(String),
-      expect.any(String),
+    expect(reconcilePublicStatusStateMock).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.anything(),
+      { statusExcludingCacheFreshness: expect.any(String), statusExcludingCacheEvidence: expect.any(String) },
     );
     expect(firstSnapshotWrite[3]).not.toHaveProperty("publicHealth");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
@@ -544,8 +545,9 @@ describe("runStatusSelfCheck", () => {
       cacheQualityImpactStatus: "degraded",
     }));
     await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
-    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
-      expect.anything(), expect.any(Number), expect.objectContaining({ status: "degraded" }), "degraded", "healthy",
+    expect(reconcilePublicStatusStateMock).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: "degraded" }), expect.anything(),
+      { statusExcludingCacheFreshness: "degraded", statusExcludingCacheEvidence: "healthy" },
     );
   });
 
@@ -629,14 +631,17 @@ describe("runStatusSelfCheck", () => {
       if (output === "status_probe_runs") writeStatusProbeRunMock.mockResolvedValueOnce(false);
       if (output === "status_state") reconcileStatusStateMock.mockResolvedValueOnce({ effectiveStatus: "healthy", persistenceSucceeded: false });
       if (output === "status:raw-snapshot:v1") writeStatusRawSnapshotMock.mockResolvedValueOnce(false);
-      if (output === "status:public-health-snapshot:v1") writeStatusPublicHealthSnapshotMock.mockResolvedValueOnce(false);
+      // The snapshot commits in the public state batch, so the batch names the failure.
+      if (output === "status:public-health-snapshot:v1") reconcilePublicStatusStateMock.mockImplementationOnce(async (_db, _now, health) => ({
+        projection: projectPublicStatus(health), persistenceSucceeded: false }));
       if (output === "status_discrepancy_state") updateDiscrepancyObservationMock.mockResolvedValueOnce({
         consecutiveDivergent: 0, consecutiveProbeFailures: 0, persistenceSucceeded: false,
       });
       const result = await runStatusSelfCheck({} as D1Database);
       expect(result.status).toBe("degraded");
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-        reason: "status-self-check-persistence-failed", failedOutputs: [output], outputPublishedAt: null,
+        reason: "status-self-check-persistence-failed", outputPublishedAt: null,
+        failedOutputs: [output === "status:public-health-snapshot:v1" ? "status_state:public" : output],
       });
     },
   );
@@ -687,6 +692,34 @@ describe("runStatusSelfCheck", () => {
     expect(writeStatusPublicHealthSnapshotMock).not.toHaveBeenCalled();
   });
 
+  it.each([true, false])("publishes the public snapshot only with its state batch (read failed: %s)", async (readFailed) => {
+    reconcilePublicStatusStateMock.mockImplementationOnce(async (_db, _now, health) => ({
+      projection: projectPublicStatus(health), persistenceSucceeded: false, ...(readFailed ? { stateReadFailed: true } : {}),
+    }));
+    const metadata = JSON.parse((await runStatusSelfCheck({} as D1Database)).metadata!);
+    expect(metadata).toMatchObject({ publicHealthSnapshotPersistenceSucceeded: readFailed ? null : false, failedOutputs: ["status_state:public"] });
+    expect(metadata.publicStatusHeldReason).toBe(readFailed ? "public-state-read-failed" : undefined);
+  });
+
+  // A hold is no semantic observation; worse transport (or probe, for a held body) still counts (ADR-42).
+  it.each([
+    ["held body", false, false, "stale", null],
+    ["held body, transport outage", true, false, "healthy", true],
+    ["held operator", false, true, "stale", null],
+    ["held operator, body coloured by the read", false, true, "healthy", null],
+    ["held operator, per-path failure", false, true, "healthy", true],
+  ] as const)("compares like with like: %s", async (label, outage, operatorHeld, effectiveStatus, observed) => {
+    if (operatorHeld) computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), confirmedReadFailures: ["x:read-failed"] } as never);
+    if (label.includes("per-path")) updateProbePathFailureStreaksMock.mockResolvedValueOnce({ persistenceSucceeded: true,
+      persistentFailures: [{ plane: "internal", lane: "self-check", origin: "x", path: "/api/status", failStreak: 3, lastProbedAt: 1 }] });
+    reconcileStatusStateMock.mockResolvedValueOnce({ effectiveStatus, persistenceSucceeded: true });
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => outage && !String(input).includes("/api/health")
+      ? new Response("down", { status: 500 })
+      : buildProbeResponse(input, "degraded", init, operatorHeld ? {} : { body: { status: "degraded", components: [{ id: "blacklist", held: HELD }] } }));
+    await runStatusSelfCheck({} as D1Database);
+    expect((updateDiscrepancyObservationMock.mock.lastCall as unknown[])[2]).toBe(observed);
+  });
+
   it.each(["cron-history:read-failed", "scheduler:read-failed", "data-quality:active-depegs:read-failed"])(
     "fails execution on explicit current evidence outcome %s despite successful probes and stores",
     async (failure) => {
@@ -700,15 +733,17 @@ describe("runStatusSelfCheck", () => {
   );
 
   it.each([
-    ["ok", [], ["supply-integrity-value:read-failed"]],
-    ["degraded", ["data-quality:stablecoins-cache:read-failed"], []],
-  ])("decides the run (%s) on the legacy list alone; the confirmed list is metadata", async (status, legacy, confirmed) => {
+    ["ok", [], []],
+    ["degraded", ["cron-history:read-failed"], []],
+    ["degraded", ["supply-integrity-value:read-failed"], ["supply-integrity-value:read-failed"]],
+  ])("decides the run (%s) on evidenceReadFailures; only proven reads hold the operator", async (status, legacy, confirmed) => {
     computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), evidenceReadFailures: legacy, confirmedReadFailures: confirmed } as never);
     const result = await runStatusSelfCheck({} as D1Database);
     expect(result.status).toBe(status);
     const metadata = JSON.parse(result.metadata!);
     expect(metadata).toMatchObject({ evidenceReadFailures: legacy, confirmedReadFailures: confirmed });
     expect(metadata.reason).toBe(legacy.length ? "status-self-check-evidence-read-failed" : undefined);
+    expect((reconcileStatusStateMock.mock.lastCall as unknown[])[6]).toBe(confirmed.length > 0);
   });
 
   it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {
@@ -1097,6 +1132,12 @@ describe("health probe semantic classification", () => {
       unknown[] | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
     expect(latestProbeWrite.status).toBe("stale");
+    // The status enum is checked first, and only a valid hold marker suppresses semantics (ADR-42).
+    for (const [status, held, probe] of [["weird", HELD, "stale"], ["degraded", "garbage", "degraded"], ["degraded", {}, "degraded"]]) {
+      mockHealthBody({ status, components: [{ id: "blacklist", held }] });
+      await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
+      expect((writeStatusProbeRunMock.mock.lastCall as unknown[])[2]).toMatchObject({ status: probe });
+    }
   });
 
   it("forces overall probeStatus to at least stale when health endpoint semantically broken", async () => {

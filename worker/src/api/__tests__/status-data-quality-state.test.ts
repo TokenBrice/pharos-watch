@@ -55,10 +55,11 @@ describe("handleStatus", () => {
     const raw = await computeRawStatus(db, now);
     // Cron history is never confirmed: malformed slot metadata fails its query like a rejected read.
     expect(raw.confirmedReadFailures!.includes(code)).toBe(!code.startsWith("cron-history"));
-    // The legacy list that decides the run stays HEAD's: supply reads out, a missing cache in.
-    expect(raw.evidenceReadFailures!.includes(code)).toBe(!code.startsWith("supply"));
+    // The list that decides the run: supply reads in, a missing cache (a finding) out.
+    expect(raw.evidenceReadFailures!.includes(code)).toBe(true);
+    expect(raw.rawOverallStatus).toBe("healthy");
     const missing = await computeRawStatus(fixtureMockD1([{ match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null }], true), now);
-    expect(missing.evidenceReadFailures).toContain("data-quality:stablecoins-cache:read-failed");
+    expect(missing.evidenceReadFailures).not.toContain("data-quality:stablecoins-cache:read-failed");
     expect(missing.confirmedReadFailures).not.toContain("data-quality:stablecoins-cache:read-failed");
   });
   beforeEach(() => {
@@ -119,8 +120,11 @@ describe("handleStatus", () => {
       const expectedStatus = kind === "fresh" || kind === "boundary" || kind === "held" ? "healthy"
         : kind === "outage" ? "stale" : "degraded";
       expect(assessment.safetyScoreImpactStatus).toBe(expectedStatus);
-      expect(body.availabilityStatus, JSON.stringify(body.causes.availability)).toBe(expectedStatus);
-      expect(body.rawOverallStatus).toBe(expectedStatus);
+      // A rejected read holds the admin verdict (ADR-42); its cause stays at info.
+      const readFailed = kind === "read-failed";
+      expect(body.availabilityStatus, JSON.stringify(body.causes.availability)).toBe(readFailed ? "healthy" : expectedStatus);
+      expect(body.rawOverallStatus).toBe(readFailed ? "healthy" : expectedStatus);
+      if (readFailed) expect(body).toMatchObject({ state: null, staleness: { isStale: true } });
       const safetyCauses = body.causes.availability.filter((cause) => cause.code.startsWith("safety_score_publication_"));
       if (expectedStatus === "healthy") {
         expect(safetyCauses).toEqual(kind === "held"
@@ -131,7 +135,7 @@ describe("handleStatus", () => {
           : kind === "stale" || kind === "outage" ? "safety_score_publication_stale"
           : "safety_score_publication_unavailable";
         expect(safetyCauses).toEqual([expect.objectContaining({
-          code: expectedCode, severity: expectedStatus === "stale" ? "critical" : "warning",
+          code: expectedCode, severity: readFailed ? "info" : expectedStatus === "stale" ? "critical" : "warning",
         })]);
         expect(body.causes.overall).toContainEqual(safetyCauses[0]);
         expect(publicHealth.components?.find((component) => component.id === "safety-scores")?.state)
@@ -1015,7 +1019,8 @@ describe("handleStatus", () => {
         state: { currentStatus: string };
         staleness: { isStale: boolean };
       };
-      expect(["healthy", "degraded", "stale"]).toContain(body.state.currentStatus);
+      // Unmocked reads here are proven read failures: with no row, no fallback state (ADR-42).
+      expect(body).toMatchObject({ state: null, staleness: { isStale: true } });
     });
   });
 });

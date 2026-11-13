@@ -49,7 +49,7 @@ interface FreshStatusRawSnapshot {
   maxAgeSec: number;
 }
 
-export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusSnapshot;
+export type StatusRawSnapshotLoadResult = FreshStatusRawSnapshot | UnavailableStatusSnapshot<z.output<typeof StatusRawSnapshotPayloadSchema>>;
 
 const StatusSectionErrorsSchema = z.record(
   z.string(),

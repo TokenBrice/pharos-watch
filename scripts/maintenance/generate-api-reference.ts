@@ -220,7 +220,10 @@ function renderSourceBackedRouteDetails(operationId: string): string | null {
       "| `currentPeg.currentDeviationBps` | `number \\| null` | Null for unavailable admitted price/reference, NAV tokens or nominal par; null never means zero or fallback. An absent `currentPeg` on legacy/cached rows falls back to existing peg-summary behavior, allowing Worker/Pages deployment in either order |",
     ].join("\n"));
   }
-  if (operationId === "health") lines.push(renderHealthFreshnessExample());
+  if (operationId === "health") {
+    lines.push("**Held components.** An optional `held` object means evidence for this component could not be read: `since` (first evaluation of the hold), `confirmedAt` (the last run that read every evidence section of the component, or `null` when unknown; a worsening proven by the readable sections can be published after it, so it is not when the shown state was confirmed), `sections` (the unreadable evidence sections) and `expired` (true once `confirmedAt` is unknown or more than 1,800 seconds old). A failed read neither colours nor clears the state shown. `held` follows the request's own read, so a component read in full carries none even while its published state awaits confirmation; a publication can be delayed by failed writes. A component with no previous publication keeps the colour of the failed read. When the served snapshot's own evaluation is more than 1,200 seconds old (the self-check cadence plus its timeout), every component is marked `held` with `sections: [\"database\"]`. The compatibility `status` still floors on the failed read.");
+    lines.push(renderHealthFreshnessExample());
+  }
   if (operationId === "redemptionBackstops") lines.push(renderRedemptionBackstopContract());
   if (operationId === "chains") {
     lines.push([

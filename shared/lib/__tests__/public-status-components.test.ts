@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "../cron-jobs";
-import { assetScopedHealth, makeHealthyHealthResponse } from "../../test-utils/health-fixtures";
+import { assetScopedHealth, makeHealthyHealthResponse, makeHoldRunHealth, stepPublicHold } from "../../test-utils/health-fixtures";
 import {
   applyPublicStatusHysteresis,
   buildPublicHeadline,
@@ -60,8 +60,8 @@ describe("public status components", () => {
       "yield-safety-live-identity": ["yield", "read-failed:yield-safety-live-identity"],
       "mint-burn": ["mint-burn", (h) => { h.mintBurn.unavailableReason = "mint-burn-output-read-failed"; }],
       blacklist: ["blacklist", (h) => { h.blacklist.unavailableReason = "blacklist-read-failed"; }],
-      scheduler: ["data-refresh", (h) => { h.schedulerLiveness!.unavailableReason = "slot-start-query-failed"; }],
-      "heavy-scheduler": ["data-refresh", (h) => { h.schedulerLiveness!.heavy.unavailableReason = "slot-start-query-failed"; }],
+      scheduler: ["data-refresh", (h) => { h.schedulerLiveness!.readFailed = true; }],
+      "heavy-scheduler": ["data-refresh", (h) => { h.schedulerLiveness!.heavy.readFailed = true; }],
       circuits: ["data-refresh", (h) => { h.circuitsUnavailableReason = "circuits-read-failed"; }],
     };
     for (const [section, ids] of Object.entries(PUBLIC_EVIDENCE_SECTIONS)) {
@@ -84,6 +84,8 @@ describe("public status components", () => {
     health.safetyScorePublicationUnavailableReason = "safety-score-publication-read-failed";
     health.mintBurn.sync.lastSuccessfulSyncAt = null;
     health.circuits = null;
+    // An invalid observation clock was read: the reason alone is not a failed read.
+    health.schedulerLiveness!.unavailableReason = "slot-start-query-failed";
     expect(classifyUnreadablePublicSections(health)).toEqual([]);
     health.warnings.push("read-failed:cache:__cache__");
     expect(classifyUnreadablePublicSections(health)).toEqual(Object.keys(PUBLIC_EVIDENCE_SECTIONS)
@@ -331,6 +333,31 @@ describe("public status components", () => {
     health.circuits = null;
     expect(component(health, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-read-failed"] });
     expect(component(health, "data-refresh").reasons).toContain("circuits-unavailable:unknown");
+    // A failed read is a held notice only where a publication applies (ADR-42).
+    health.status = "degraded";
+    const held = projectPublicStatus(health, {}, undefined, { holdable: (id) => id === "blacklist" }).components;
+    expect(held.find((item) => item.id === "blacklist")).toMatchObject({ state: "operational", reasons: ["blacklist-read-failed"],
+      held: { sections: ["blacklist"], confirmedAt: null, expired: true } });
+    // Elsewhere it keeps its colour, still marked held.
+    expect(component(health, "blacklist")).toMatchObject({ state: "degraded", held: { confirmedAt: null, expired: true } });
+  });
+
+  // Data-refresh per run, 900 s apart: o/d state; -/h/n no hold, held, not confirmed.
+  it.each([
+    ["a read worsening confirms", "ok open+bx open+bx", "ood", "---"],
+    ["a failed read never clears", "ok open open ok cx ok ok", "ooddddo", "----h--"],
+    ["alternating failed reads never clear", "ok open open cx ok cx ok", "ooddddd", "---h-h-"],
+    ["colour kept past expiry", "ok open open cx cx cx cx", "ooddddd", "---hhnn"],
+    ["a clear read resets a pending worsening", "ok open ok+sx open open", "ooood", "--h--"],
+  ])("holds what it could not read: %s", (_label, runs, states, holds) => {
+    let prior = new Map();
+    const seen = runs.split(" ").map((run, index) => {
+      const out = stepPublicHold(prior, makeHoldRunHealth(run), NOW + index * 900);
+      prior = out.next;
+      return out.projection.components.find((item) => item.id === "data-refresh")!;
+    });
+    expect(seen.map((item) => item.state[0]).join("")).toBe(states);
+    expect(seen.map((item) => !item.held ? "-" : item.held.expired ? "n" : "h").join("")).toBe(holds);
   });
 
   it("bounds and sorts circuit source identity and retains unavailable subreasons", () => {
@@ -437,6 +464,11 @@ describe("public status components", () => {
     expect(holdPublicStatusAtReadTime(healthy, delayed.components, delayed).headline.state).toBe("operational");
     // Snapshot still confirming a clear (raw already operational): keep the published state.
     expect(holdPublicStatusAtReadTime(healthy, delayed.components, healthy).headline.state).toBe("delayed");
+    // A held live component keeps the publication; the live fallback publishes a read worsening (ADR-42).
+    const hold = (projection: typeof healthy) => ({ ...projection, components: projection.components.map((item) =>
+      ({ ...item, held: { since: NOW, confirmedAt: null, sections: [], expired: true } })) });
+    expect(holdPublicStatusAtReadTime(hold(healthy), delayed.components, delayed).headline.state).toBe("delayed");
+    expect(holdPublicStatusAtReadTime(hold(delayed), healthy.components, null).headline.state).toBe("delayed");
   });
 
   it("keeps a D1 watch capacity state operational, matching the worker verdict", () => {

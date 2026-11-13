@@ -14,7 +14,13 @@ import {
   getStablecoinPublicationImpactStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
-import { getPublicProducerGraceBudget, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
+import {
+  getOverallCacheImpactStatus,
+  getPublicProducerGraceBudget,
+  PUBLIC_CIRCUIT_IMPACT_QUORUM,
+  PUBLIC_PRODUCER_INTERVAL_SEC,
+} from "@shared/lib/public-health";
+import { classifyUnreadablePublicSections } from "@shared/lib/public-status-components";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
@@ -591,12 +597,15 @@ export const SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES = [
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
   const causes: StatusCause[] = [];
   let status: StatusHealthValue = "healthy";
+  // A rejected slot-start read holds (ADR-42, the classifier's `scheduler`
+  // sections): the cause stays at info and the lane adds no status.
+  const readFailed = (lane: { readFailed?: true }) => lane.readFailed === true;
   if (scheduler.status !== "healthy") {
     const unavailable = scheduler.status === "unavailable";
-    status = scheduler.status === "unavailable" ? "degraded" : scheduler.status;
+    status = readFailed(scheduler) ? "healthy" : scheduler.status === "unavailable" ? "degraded" : scheduler.status;
     causes.push(makeCause(
       "availability", unavailable ? "scheduler_liveness_unavailable" : "scheduled_delivery_stalled",
-      status === "stale" ? "critical" : "warning",
+      readFailed(scheduler) ? "info" : status === "stale" ? "critical" : "warning",
       unavailable ? `Scheduler delivery evidence unavailable (${scheduler.unavailableReason}; warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`
         : `No five-minute lane has started for ${scheduler.ageSeconds}s (warning >${scheduler.warningAfterSec}s; stale >${scheduler.staleAfterSec}s).`,
       { metric: "schedulerDeliveryAgeSeconds", value: scheduler.ageSeconds ?? undefined, threshold: scheduler.warningAfterSec },
@@ -605,11 +614,11 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
   const heavy = scheduler.heavy;
   if (heavy.status !== "healthy") {
     const unavailable = heavy.status === "unavailable";
-    const heavyStatus: StatusHealthValue = heavy.status === "unavailable" ? "degraded" : heavy.status;
+    const heavyStatus: StatusHealthValue = readFailed(heavy) ? "healthy" : heavy.status === "unavailable" ? "degraded" : heavy.status;
     status = maxStatus(status, heavyStatus);
     causes.push(makeCause(
       "availability", unavailable ? "heavy_scheduler_liveness_unavailable" : "heavy_scheduled_delivery_stalled",
-      heavyStatus === "stale" ? "critical" : "warning",
+      readFailed(heavy) ? "info" : heavyStatus === "stale" ? "critical" : "warning",
       unavailable ? `Heavy scheduler delivery evidence unavailable (${heavy.unavailableReason}; warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`
         : `Heavy lane ${heavy.scheduleKey} has not started for ${heavy.ageSeconds}s (warning >${heavy.warningAfterSec}s; stale >${heavy.staleAfterSec}s).`,
       { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
@@ -674,11 +683,33 @@ function evaluateSafetyScoreStatus(input: AvailabilityEvaluationInput): Partial<
   )]);
 }
 
+/**
+ * ADR-42 (T-2): a rule whose own evidence could not be read holds instead of
+ * colouring. Its causes stay visible at info, and the self-check holds the
+ * operator state on the same proven read failure, so nothing clears either.
+ */
+function holdOnReadFailure<Input>(unreadable: (input: Input) => boolean, rule: StatusRule<Input>): StatusRule<Input> {
+  return (input) => {
+    const result = rule(input);
+    return result && unreadable(input)
+      ? { status: "healthy", causes: (result.causes ?? []).map((cause) => ({ ...cause, severity: "info" as const })) }
+      : result;
+  };
+}
+
+/** The public classifier is the one authority for which section failed to read. */
+const sectionUnreadable = (section: string) => (input: AvailabilityEvaluationInput) =>
+  classifyUnreadablePublicSections(input.publicHealth).includes(section);
+
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
   (input) => input.publicHealth.schedulerLiveness ? evaluateSchedulerLiveness(input.publicHealth.schedulerLiveness) : null,
-  evaluateSafetyScoreStatus,
+  holdOnReadFailure(sectionUnreadable("safety-score-publication"), evaluateSafetyScoreStatus),
   (input) => {
-      const status = input.publicHealth.cacheImpactStatus;
+      const unreadable = classifyUnreadablePublicSections(input.publicHealth);
+      const readable = Object.fromEntries(Object.entries(input.publicHealth.caches)
+        .filter(([key]) => !unreadable.includes(`cache:${key}`)));
+      const status = unreadable.some((section) => section.startsWith("cache:"))
+        ? getOverallCacheImpactStatus(readable) : input.publicHealth.cacheImpactStatus;
       const unavailableCauses: StatusCause[] = [];
       let worstCacheBreach:
         | { key: string; ratio: number; thresholds: ReturnType<typeof getCacheRatioThresholds>; tier: "degraded" | "stale" }
@@ -689,7 +720,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
         const ratio = getCacheFreshnessRatio(cache);
         if (ratio == null) {
           unavailableCauses.push(makeCause(
-            "availability", "cache_freshness_unavailable", "critical",
+            "availability", "cache_freshness_unavailable", key in readable ? "critical" : "info",
             `Cache freshness unavailable (${key}: ${cache.timestampReason ?? cache.warning ?? "missing-timestamp"}).`,
           ));
           continue;
@@ -719,7 +750,7 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
   evaluateFxDiagnostics,
   evaluateCacheWarnings,
   evaluateDexDiagnostics,
-  (input) => {
+  holdOnReadFailure(sectionUnreadable("mint-burn"), (input) => {
     const status = input.publicHealth.mintBurnQueryError
       ? "degraded"
       : input.publicHealth.mintBurnBootstrap ? "healthy" : input.publicHealth.mintBurnImpactStatus;
@@ -749,9 +780,9 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
       );
     }
     return ruleResult(status, cause ? [cause] : []);
-  },
-  evaluateCircuitStatus,
-  evaluateD1Status,
+  }),
+  holdOnReadFailure(sectionUnreadable("circuits"), evaluateCircuitStatus),
+  holdOnReadFailure(sectionUnreadable("d1-capacity"), evaluateD1Status),
   evaluateCronDiagnosticQueries,
   (input) => {
       const stale = input.availabilityImpactingConsecutiveCronErrors > 0;
@@ -932,8 +963,13 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
   return ruleResult("healthy", causes);
 }
 
+/** The classifier's `stablecoin-coverage` section: one read feeds publication and prices. */
+const coverageUnreadable = (input: DataQualityEvaluationInput) =>
+  input.activePriceCoverage.unavailableReason === "coverage-read-failed";
+
 const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>[] = [
-  (input) => {
+  // A missing or unparseable cache is a finding; only a failed read holds.
+  holdOnReadFailure((input) => input.dataQuality.stablecoinsCacheReason === "cache-read-failed", (input) => {
       const status = input.dataQuality.stablecoinsCacheStatus === "error" ? "stale" : input.dataQuality.stablecoinsCacheStatus === "degraded" ? "degraded" : "healthy";
       if (status === "healthy") return null;
       const cause = makeCause(
@@ -943,8 +979,8 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
         `Stablecoins cache is ${status === "stale" ? "unavailable" : "degraded"} (${input.dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
       );
       return ruleResult(status, [cause]);
-  },
-  (input) => {
+  }),
+  holdOnReadFailure(coverageUnreadable, (input) => {
       const publication = input.dataQuality.stablecoinPublication;
       if (publication == null || publication.status === "complete") return null;
       const status = getStablecoinPublicationImpactStatus(publication);
@@ -964,8 +1000,8 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           })()
         : makeCause("data-quality", "stablecoin_publication_unknown", "warning", "Exact stablecoin publication coverage evidence is unavailable.");
       return ruleResult(status, [cause]);
-  },
-  (input) => {
+  }),
+  holdOnReadFailure(coverageUnreadable, (input) => {
       const coverage = input.activePriceCoverage;
       const causes: StatusCause[] = [];
       if (coverage.nominalReferenceCount != null && coverage.nominalReferenceCount > 0) {
@@ -1064,7 +1100,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
         { metric: "priceGapReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC },
       ));
       return ruleResult(input.activePriceCoverageImpactStatus, causes);
-  },
+  }),
   evaluateDataSourceFailures,
   evaluateReserveQueryFailure,
   evaluateRepairDiagnostics,

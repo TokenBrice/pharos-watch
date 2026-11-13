@@ -18,15 +18,17 @@ export interface FreshStatusSnapshot<T> {
   maxAgeSec: number;
 }
 
-export interface UnavailableStatusSnapshot {
+export interface UnavailableStatusSnapshot<T = never> {
   kind: "missing" | "stale" | "unreadable" | "read-error";
   updatedAt: number | null;
   ageSec: number | null;
   maxAgeSec: number;
   error?: string;
+  /** Stale only: the last publication, never served as fresh (a hold applies it over a live read). */
+  payload?: T;
 }
 
-export type StatusSnapshotLoadResult<T> = FreshStatusSnapshot<T> | UnavailableStatusSnapshot;
+export type StatusSnapshotLoadResult<T> = FreshStatusSnapshot<T> | UnavailableStatusSnapshot<T>;
 
 interface StatusSnapshotEnvelope {
   version: number;
@@ -49,13 +51,16 @@ export async function loadStatusSnapshotPayload<T extends Record<string, unknown
       return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: timestamp.reason };
     }
     const ageSec = timestamp.ageSeconds;
-    if (ageSec > maxAgeSec) return { kind: "stale", updatedAt: cached.updatedAt, ageSec, maxAgeSec };
-
     const payload = parseJsonObjectWithSchema(cached.value, schema);
+    const generationTimestamp = assessFreshnessTimestamp(now, payload?.producedAt);
+    if (ageSec > maxAgeSec) {
+      // A stale payload is usable only with an admitted generation clock.
+      const usable = payload && generationTimestamp.reason == null ? { payload } : {};
+      return { kind: "stale", updatedAt: cached.updatedAt, ageSec, maxAgeSec, ...usable };
+    }
     if (!payload) {
       return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec, maxAgeSec, error: `invalid ${key} payload` };
     }
-    const generationTimestamp = assessFreshnessTimestamp(now, payload.producedAt);
     if (generationTimestamp.reason != null) {
       return { kind: "unreadable", updatedAt: cached.updatedAt, ageSec: null, maxAgeSec, error: generationTimestamp.reason };
     }

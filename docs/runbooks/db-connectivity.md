@@ -10,7 +10,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. Publicly this is an unreadable evaluation, not an outage: the self-check holds the published `/status/` state and `/api/health` answers 503 until a check reads the database. Data-quality loaders were skipped to avoid cascading failures; status persistence may also fail, leaving only the raw fallback rather than a durable transition.
+`/api/status` reports a fallback payload; `assessPublicHealth` failed its connectivity probe. Publicly this is an unreadable evaluation, not an outage: the self-check holds the published `/status/` state and `/api/health` answers 503 until a check reads the database. Data-quality loaders were skipped to avoid cascading failures; status persistence may also fail, leaving only the raw fallback rather than a durable transition. The operator status is frozen too (`operatorStatusHeld: "frozen"` in the self-check metadata): a failed database check neither raises nor clears it, and after 1,800 s without a full read `/api/status` reports `staleness.isStale` ([Overall status](../status-dashboard.md#overall-status)). `d1_capacity_query_failed` is an `info` cause that holds the status the same way; it no longer degrades the admin floor.
 
 For storage warnings use [Capacity signals](#capacity-signals); for write-pressure shedding use [Telemetry kill switch](#telemetry-kill-switch). Compatibility-date qualification and retired replication research belong to [runtime experiments](../process/worker-runtime-experiments.md), not incident remediation.
 

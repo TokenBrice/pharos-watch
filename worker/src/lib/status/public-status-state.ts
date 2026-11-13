@@ -8,6 +8,7 @@ import {
   headlineToStatusLevel,
   projectPublicStatus,
   toPublicTransitionComponents,
+  type PublicComponentPublished,
   type PublicComponentSinceMap,
   type PublicStatusProjection,
 } from "@shared/lib/public-status-components";
@@ -15,17 +16,22 @@ import {
   PUBLIC_COMPONENT_STATES,
   PUBLIC_STATUS_COMPONENT_IDS,
   PublicComponentBudgetSchema,
+  PublicComponentHeldSchema,
   PublicStatusHeadlineSchema,
   PublicStatusTransitionComponentSchema,
   type HealthResponse,
+  type PublicStatusComponentId,
   type PublicStatusHistoryBoundary,
   type PublicStatusTransition,
 } from "@shared/types/status";
+import { publicHealthSnapshotValue, STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "./public-health-snapshot";
 import { getStatusSeverity } from "@shared/lib/public-health";
 import {
   buildStatusTransitionIdempotencyKey,
   persistStatusStateAtomically,
   reportStatusPersistenceIssue,
+  STATUS_SELF_CHECK_CONTINUITY_SEC,
+  STATUS_SYSTEM_FRESHNESS_SEC,
   type StatusPersistenceIssueReporter,
   type StatusStateRow,
 } from "../status-reliability-shared";
@@ -54,6 +60,10 @@ const PersistedComponentSchema = z.object({
     count: z.number().int().positive(),
     firstSeenAt: z.number(),
   }).nullable().optional(),
+  // Additive (2026-11, ADR-42 hold): the last run that read every section of
+  // the component, and the hold published while one could not be read.
+  confirmedAt: z.number().nullable().optional(),
+  held: PublicComponentHeldSchema.optional(),
 });
 
 // Tolerant read: a component id or state this release does not know (added or
@@ -78,6 +88,10 @@ const PersistedTransitionSchema = z.object({
 export interface PublicStatusReconciliation {
   projection: PublicStatusProjection;
   persistenceSucceeded: boolean;
+  /** The state row could not be read: the projection lacks hysteresis and holds, so it must not be published. */
+  stateReadFailed?: true;
+  /** A newer generation already wrote the row: this batch published nothing, and that is not a failure. */
+  superseded?: true;
 }
 
 /** Only bounded forensic identities participate; ages, clocks and metric counts are not heartbeat events. */
@@ -90,20 +104,24 @@ function causeIdentity(reasons: readonly string[]): string {
  * Project the public health payload, publish it through transition
  * hysteresis (`applyPublicStatusHysteresis`), carry each component's `since`
  * forward, and persist a public transition whenever any published component or
- * the headline changes. A failed state read still returns the raw projection,
- * without `since`.
+ * the headline changes. A failed state read returns the raw projection,
+ * without `since`, flagged `stateReadFailed` so the caller does not publish it.
+ * Components marked `held` keep their published state (ADR-42); `confirmedAt`
+ * and `held` are stored with the hysteresis state, and with `snapshot` the
+ * served public snapshot joins the same batch.
  */
 export async function reconcilePublicStatusState(
   db: D1Database,
   now: number,
   health: HealthResponse,
   onIssue?: StatusPersistenceIssueReporter,
+  snapshot?: { statusExcludingCacheFreshness?: HealthResponse["status"]; statusExcludingCacheEvidence?: HealthResponse["status"] },
 ): Promise<PublicStatusReconciliation> {
-  let row: (Pick<StatusStateRow, "current_status" | "last_changed_at" | "causes_json"
+  let row: (Pick<StatusStateRow, "current_status" | "last_changed_at" | "last_evaluated_at" | "causes_json"
     | "consecutive_healthy" | "consecutive_degraded" | "consecutive_stale"> & { history_started_at?: number | null }) | null;
   try {
     row = await db
-      .prepare(`SELECT current_status, last_changed_at, causes_json,
+      .prepare(`SELECT current_status, last_changed_at, last_evaluated_at, causes_json,
         consecutive_healthy, consecutive_degraded, consecutive_stale,
         CASE WHEN CASE WHEN json_valid(causes_json)
           THEN json_type(causes_json, '$.componentHistoryStartedAt') = 'object' ELSE 0 END THEN NULL
@@ -113,16 +131,22 @@ export async function reconcilePublicStatusState(
       .first();
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "public_status_state_read_failed", "load-public-status-state", error);
-    return { projection: projectPublicStatus(health), persistenceSucceeded: false };
+    return { projection: projectPublicStatus(health), persistenceSucceeded: false, stateReadFailed: true };
   }
 
   const parsed = row ? PersistedStateSchema.safeParse(tryParseJson(row.causes_json)) : null;
   const previous = parsed?.success ? parsed.data : null;
-  const previousById = new Map(previous?.components.map((component) => [component.id, component]) ?? []);
+  // A pending change continues only from the immediately preceding evaluation.
+  const continuous = !row || now - row.last_evaluated_at <= STATUS_SELF_CHECK_CONTINUITY_SEC;
+  const previousById = new Map<PublicStatusComponentId, PublicComponentPublished>(previous?.components.map((component) =>
+    [component.id, continuous ? component : { ...component, pending: null }]) ?? []);
   const sinceMap: PublicComponentSinceMap = Object.fromEntries(
     [...previousById].map(([id, component]) => [id, { state: component.state, since: component.since }]),
   );
-  const raw = projectPublicStatus(health, sinceMap);
+  // Only a component with a last publication can hold a failed read (R2 otherwise).
+  const raw = projectPublicStatus(health, sinceMap, undefined, {
+    holdable: (id) => previousById.has(id) && !previousById.get(id)!.reasons.includes("db-unavailable"),
+  });
   const componentHistoryStartedAt = Object.fromEntries(raw.components.map((component) => [
     component.id,
     previous?.componentHistoryStartedAt?.[component.id]
@@ -134,9 +158,8 @@ export async function reconcilePublicStatusState(
     const prior = previousById.get(component.id);
     if (prior && prior.state !== component.state) component.since = now;
   }
-  const { projection, pending } = previous == null
-    ? { projection: raw, pending: {} as ReturnType<typeof applyPublicStatusHysteresis>["pending"] }
-    : applyPublicStatusHysteresis(raw, previousById, now);
+  // With no previous row the map is empty, so every component publishes as projected.
+  const { projection, pending, confirmedAt } = applyPublicStatusHysteresis(raw, previousById, now, STATUS_SYSTEM_FRESHNESS_SEC);
   // `consecutive_*` count consecutive evaluations of the raw (pre-hysteresis)
   // headline level, so operators can see a change that is still confirming.
   const rawLevel = headlineToStatusLevel(raw.headline.state);
@@ -174,7 +197,8 @@ export async function reconcilePublicStatusState(
     components: projection.components.map((component) => ({
       id: component.id, state: component.state, since: component.since, reasons: component.reasons,
       summary: component.summary, ageSeconds: component.ageSeconds, budget: component.budget,
-      pending: pending[component.id] ?? null,
+      pending: pending[component.id] ?? null, confirmedAt: confirmedAt[component.id] ?? null,
+      ...(component.held ? { held: component.held } : {}),
     })),
   });
   const transitionJson = JSON.stringify({
@@ -217,7 +241,7 @@ export async function reconcilePublicStatusState(
       ? [db.prepare(
         `INSERT OR IGNORE INTO status_transitions
          (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at, idempotency_key)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+         SELECT ?, ?, ?, ?, ?, ?, 1, ?, ?, ? WHERE ${ROW_APPLIED}`,
       ).bind(
         PUBLIC_STATUS_SCOPE,
         previousLevel,
@@ -238,12 +262,22 @@ export async function reconcilePublicStatusState(
           causesJson: transitionJson,
           createdAt: now,
         }),
+        PUBLIC_STATUS_SCOPE, now,
       )]
       : []),
+    // The served snapshot joins the same batch behind the same fence: one publication.
+    ...(snapshot ? [db.prepare(`INSERT INTO cache (key, value, updated_at) SELECT ?, ?, ? WHERE ${ROW_APPLIED}
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+       WHERE cache.updated_at <= excluded.updated_at`).bind(STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY, publicHealthSnapshotValue(now,
+      { ...health, ...projection }, snapshot.statusExcludingCacheFreshness, snapshot.statusExcludingCacheEvidence), now, PUBLIC_STATUS_SCOPE, now)] : []),
   ];
-  const persistenceSucceeded = await persistStatusStateAtomically(db, statements, onIssue, "update_public_status_state");
-  return { projection, persistenceSucceeded };
+  const results = await persistStatusStateAtomically(db, statements, onIssue, "update_public_status_state");
+  // A newer generation's row rejected this batch's row upsert: it wrote nothing (fenced).
+  return { projection, persistenceSucceeded: results != null, ...(results?.[0]?.meta.changes === 0 ? { superseded: true as const } : {}) };
 }
+
+/** The fence: the transition and the snapshot apply only if this batch's row upsert applied. */
+const ROW_APPLIED = "(SELECT updated_at FROM status_state WHERE scope = ?) = ?";
 
 interface PublicTransitionRow {
   id: number;

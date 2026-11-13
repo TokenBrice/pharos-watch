@@ -1,4 +1,6 @@
-import { getStatusSeverity } from "@shared/lib/public-health";
+import { getStatusSeverity, STATUS_SYSTEM_FRESHNESS_SEC } from "@shared/lib/public-health";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { CRON_TIMEOUT_MS } from "./cron-timeouts";
 import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type {  StatusCause,
@@ -24,7 +26,19 @@ export const STATUS_HYSTERESIS = {
   staleMinDwellSec: 180,
 } as const;
 
-export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
+export { STATUS_SYSTEM_FRESHNESS_SEC };
+
+const STATUS_SELF_CHECK_TIMEOUT_SEC = Math.ceil(CRON_TIMEOUT_MS["status-self-check"] / 1000);
+
+/** A served public snapshot older than one cadence plus the job's timeout missed a publication. */
+export const STATUS_SNAPSHOT_OVERDUE_SEC = CRON_INTERVALS["status-self-check"] + STATUS_SELF_CHECK_TIMEOUT_SEC;
+
+/**
+ * Two readable samples confirm a change when at most one unevaluated or
+ * unpersisted self-check lies between them: twice the cadence plus the job's
+ * timeout. A longer gap restarts a streak or pending change (ADR-42).
+ */
+export const STATUS_SELF_CHECK_CONTINUITY_SEC = 2 * CRON_INTERVALS["status-self-check"] + STATUS_SELF_CHECK_TIMEOUT_SEC;
 
 /**
  * Isolate-scoped dedup set: suppresses repeat `code:operation` error logs within
@@ -54,6 +68,8 @@ export interface StatusStateRow {
   consecutive_stale: number;
   confidence: number;
   causes_json: string | null;
+  /** Last write; selected for streak continuity, absent on rows built in memory. */
+  updated_at?: number | null;
 }
 
 export interface StatusTransitionRow {
@@ -172,13 +188,12 @@ export async function persistStatusStateAtomically(
   statements: D1PreparedStatement[],
   onIssue: StatusPersistenceIssueReporter | undefined,
   operation: string,
-): Promise<boolean> {
+): Promise<D1Result[] | null> {
   try {
-    await runWithOverloadRetry(() => db.batch(statements));
-    return true;
+    return await runWithOverloadRetry(() => db.batch(statements));
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_state_persistence_failed", operation, error);
-    return false;
+    return null;
   }
 }
 

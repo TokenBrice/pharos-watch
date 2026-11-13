@@ -22,11 +22,17 @@ describe("PublicServiceSummarySection", () => {
           state: "degraded",
           summary: "Safety Score publication is held.",
           reasons: ["safety-score-publication-held:redemption-stale"],
+          held: { since: NOW - 600, confirmedAt: NOW - 900, sections: ["circuits"], expired: false },
         },
+        blacklist: { held: { since: NOW, confirmedAt: NOW - 2000, sections: ["blacklist"], expired: false } },
+        charts: { held: { since: NOW, confirmedAt: null, sections: [], expired: true } },
       })}
       dayCells={null} historyState="loading" historyDays={30} nowSec={NOW} publicHistoryStartedAt={null}
     />);
+    expect(screen.getByTestId("public-component-blacklist").textContent).toContain("Not confirmed since 2026-09-21 13:40 UTC.");
+    expect(screen.getByTestId("public-component-charts").textContent).toContain("Not confirmed. Some evidence cannot be read right now.");
     const row = within(screen.getByTestId("public-component-safety-scores"));
+    expect(row.getByText(/^Held since 2026-09-21 14:03 UTC\./)).toBeTruthy();
     expect(row.getByText("Safety Scores")).toBeTruthy();
     expect(row.getByText("Pharos Safety Scores and their publication.")).toBeTruthy();
     expect(row.getByText("Degraded")).toBeTruthy();

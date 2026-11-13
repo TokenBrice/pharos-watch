@@ -78,7 +78,8 @@ function parseProbePathFailureState(value: string | null): StatusProbePathFailur
 export async function updateDiscrepancyObservation(
   db: D1Database,
   now: number,
-  hasDivergence: boolean,
+  /** `null`: no like-for-like comparison this run (a held probe), so the streak is kept as it is. */
+  hasDivergence: boolean | null,
   hasProbeFailure = false,
   onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{
@@ -109,7 +110,8 @@ export async function updateDiscrepancyObservation(
     };
   }
 
-  const nextConsecutive = hasDivergence ? (current?.consecutive_divergent ?? 0) + 1 : 0;
+  const nextConsecutive = hasDivergence == null ? current?.consecutive_divergent ?? 0
+    : hasDivergence ? (current?.consecutive_divergent ?? 0) + 1 : 0;
   const nextLastDivergentAt = hasDivergence ? now : (current?.last_divergent_at ?? null);
   const nextConsecutiveProbeFailures = hasProbeFailure ? (current?.consecutive_probe_failures ?? 0) + 1 : 0;
   const nextLastProbeFailureAt = hasProbeFailure ? now : (current?.last_probe_failure_at ?? null);
