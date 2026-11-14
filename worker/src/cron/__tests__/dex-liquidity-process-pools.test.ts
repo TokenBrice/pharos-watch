@@ -740,13 +740,14 @@ describe("processPoolMetrics", () => {
         "ethereum:0xmetapool",
         makeCurveEntry({
           A: 100,
-          balanceRatio: 1,
+          balanceRatio: 0.49,
+          balanceRatioById: { "usdc-circle": 1, "usdt-tether": 0.49 },
           registryId: "factory-meta",
           isMetaPool: true,
           tvl: 100_000_000,
           balanceDetails: [
-            { symbol: "USDC", balancePct: 50, isTracked: true },
-            { symbol: "USDT", balancePct: 50, isTracked: true },
+            { symbol: "USDC", balancePct: 33, isTracked: true },
+            { symbol: "USDT", balancePct: 67, isTracked: true },
           ],
         }),
       ],
@@ -779,6 +780,9 @@ describe("processPoolMetrics", () => {
     expect(usdc?.pools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
     expect(rebuiltUsdc.qualityAdjustedTvl).toBe(85_000_000);
     expect(rebuiltUsdc.effectiveTvl).toBe(85_000_000);
+    // v7.2: each coin reads its own side; only over-held USDT is penalised.
+    expect(usdc?.pools[0]?.extra?.balanceRatio).toBe(1);
+    expect(metrics.get("usdt-tether")?.pools[0]?.extra?.balanceRatio).toBe(0.49);
   });
 
 

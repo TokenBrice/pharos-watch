@@ -267,7 +267,9 @@ describe("convertToGtNewPools", () => {
     const gtPool = result.get("usdc")![0];
 
     expect(gtPool.feeTierBps).toBe(1);
-    expect(gtPool.balanceRatio).toBeCloseTo(2 / 3, 2);
+    // v7.2: only the over-held side is imbalanced.
+    expect(gtPool.balanceRatio).toBe(1);
+    expect(result.get("usdt")![0].balanceRatio).toBeCloseTo(2 / 3, 2);
     expect(gtPool.balanceDetails).toEqual([
       { symbol: "USDC", balancePct: 40, isTracked: true },
       { symbol: "USDT", balancePct: 60, isTracked: true },

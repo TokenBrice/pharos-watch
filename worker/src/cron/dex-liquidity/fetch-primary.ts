@@ -24,7 +24,13 @@ import {
   CURVE_CHAINS,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
-import { normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint } from "./pool-helpers";
+import {
+  normalizeProtocol,
+  classifyPoolType,
+  isCryptoSwap,
+  buildPoolFingerprint,
+  trackedSideBalanceRatio,
+} from "./pool-helpers";
 import { resolvePermanentLiquidity } from "./permanent-liquidity";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -550,6 +556,26 @@ export async function buildCurveLookups(
               isTracked: symbolToIds.has(normalizeDexSymbol(coin.symbol)),
             }))
           : undefined;
+        // v7.2: each tracked coin is penalised only for its own excess.
+        let balanceRatioById: Record<string, number> | undefined;
+        if (balanceComplete && totalUsd > 0) {
+          const sides = new Map<string, { share: number; coins: number }>();
+          for (const { coin, usdBalance } of coinBalances) {
+            const resolved = resolveTrackedStablecoinId(
+              { chain, address: typeof coin.address === "string" ? coin.address : "", symbol: coin.symbol },
+              { chainAddressToId, symbolToChainScopedIds },
+            );
+            if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+            const side = sides.get(resolved.stablecoinId) ?? { share: 0, coins: 0 };
+            side.share += usdBalance! / totalUsd;
+            side.coins += 1;
+            sides.set(resolved.stablecoinId, side);
+          }
+          for (const [id, side] of sides) {
+            const ratio = trackedSideBalanceRatio(side.share, side.coins / pool.coins.length);
+            if (ratio != null) (balanceRatioById ??= {})[id] = ratio;
+          }
+        }
 
         const coinSymbols = pool.coins
           .map((c) => normalizeDexSymbol(c.symbol))
@@ -641,6 +667,7 @@ export async function buildCurveLookups(
           apiIsBroken: false,
           A,
           balanceRatio,
+          ...(balanceRatioById ? { balanceRatioById } : {}),
           // A metapool's TVL includes its base-LP leg: that leg is the counterparty
           // depth, and no tracked coin is credited with it through this pool.
           tvl: pool.usdTotal,

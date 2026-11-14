@@ -93,6 +93,8 @@ DEX pool imbalances from `dex_liquidity`. Blends:
 - 35% pool stress score (avg_pool_stress)
 - 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL and a measured `extra.balanceRatio`)
 
+Since Liquidity v7.2 these balance inputs are read from the tracked coin's side, so only a pool holding too much of the coin registers as imbalance; a pool short of it does not.
+
 The signal is unavailable unless both `weighted_balance_ratio` and `avg_pool_stress` are finite. The worst-pool component carries its own availability (`worstPoolStatus`):
 
 - `observed` — at least one eligible pool has a measured balance ratio; pools without a balance measurement are excluded from the max, never read as perfect balance

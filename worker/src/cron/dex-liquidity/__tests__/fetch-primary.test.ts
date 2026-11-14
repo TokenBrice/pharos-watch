@@ -975,7 +975,7 @@ describe("buildCurveLookups", () => {
       [{ data: { poolData: [makeRegistryView("main"), makeRegistryView("factory")] } }],
       new Map(),
       new Map(),
-      new Map(),
+      new Map([[`ethereum:${LUSD}`, "lusd-liquity"]]),
     );
 
     const fingerprint = buildPoolFingerprint("ethereum", "curve", [LUSD, THREE_CRV]);
@@ -983,6 +983,9 @@ describe("buildCurveLookups", () => {
     const addressEntry = curvePoolMap.get(`ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`);
     expect(addressEntry?.registryId).toBe("factory");
     expect(addressEntry?.tvl).toBe(11_900_000); // with the 3Crv leg, not usdTotalExcludingBasePool
+    // v7.2: 15% LUSD against 85% 3Crv is spare exit depth for LUSD, not imbalance.
+    expect(addressEntry?.balanceRatio).toBeCloseTo(0.17, 2);
+    expect(addressEntry?.balanceRatioById).toEqual({ "lusd-liquity": 1 });
     expect(curvePoolMap.get(fingerprint)).toBe(addressEntry);
     expect(curvePoolCandidatesByFingerprint.get(fingerprint)).toEqual([addressEntry]);
     expect(buildCurveCompositeMeasuredExecutionTarget({

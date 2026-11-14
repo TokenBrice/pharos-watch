@@ -15,6 +15,7 @@ import {
   computePoolQualityContribution,
   computePoolStress,
   normalizeProtocol,
+  trackedSideBalanceRatio,
 } from "../pool-helpers";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../../lib/chain-registry";
 import { initMetrics, withCompleteVolume } from "./scoring-test-builders";
@@ -106,6 +107,17 @@ describe("computePoolQualityContribution", () => {
       expect(contribution.qualityAdjustedTvl).toBe(0);
       expect(contribution.effectiveTvl).toBe(0);
     }
+  });
+});
+
+describe("trackedSideBalanceRatio", () => {
+  it.each([
+    [0.33, 0.5, 1], [0.5, 0.5, 1], [0.75, 0.5, 1 / 3], [1, 0.5, 0], [0.5, 1 / 3, 0.5], [0.9, 0.8, 4 / 9],
+    [NaN, 0.5, null], [1.1, 0.5, null], [0.5, 1, null],
+  ])("share %s of target %s -> %s", (share, target, ratio) => {
+    const result = trackedSideBalanceRatio(share, target);
+    if (ratio == null) expect(result).toBeNull();
+    else expect(result).toBeCloseTo(ratio, 10);
   });
 });
 

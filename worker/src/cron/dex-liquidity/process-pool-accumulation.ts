@@ -30,7 +30,6 @@ export function accumulatePoolMetrics(
     curveData,
     resolvedPoolType,
     qualityMultiplier,
-    balanceRatio,
     organicFraction,
     hasMeasuredOrganicFraction,
     poolMaturityDays,
@@ -45,6 +44,10 @@ export function accumulatePoolMetrics(
     metrics.set(stablecoinId, metric);
   }
 
+  // v7.2: this coin's own side of the pool; the worst side when it is not located.
+  const balanceRatio =
+    (enrichment.hasMeasuredBalance ? curveData?.balanceRatioById?.[stablecoinId] : undefined) ??
+    enrichment.balanceRatio;
   const pairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
   // computePoolQualityContribution runs its optimistic balanceHealth=1 path when
   // no measured Curve balance data exists for this pool.

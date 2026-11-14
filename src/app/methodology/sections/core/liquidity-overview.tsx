@@ -25,8 +25,8 @@ export function LiquidityOverview() {
       </p>
       <p>
         Pool quality uses the same retained TVL throughout. Curve metapools count their full TVL, base-pool LP leg
-        included, and are weighted by their full-pool balance; an incomplete balance capture stays neutral and
-        unmeasured. Remembered pools keep their measured imbalance penalties, and measured zero depth is never
+        included. Balance health penalises a pool only for holding too much of the tracked coin, since extra
+        counter-asset is more exit depth; an incomplete balance capture stays neutral and unmeasured. Remembered pools keep their measured imbalance penalties, and measured zero depth is never
         replaced by raw TVL. Exact EVM execution keeps its original capture clock; validated source headers for
         QuoterV2, Uniswap V4 and Curve CryptoSwap enforce the existing three-hour source-age ceiling. Malformed or
         incomplete pool censuses cannot certify deployment-wide absence or erase independently valid pools.

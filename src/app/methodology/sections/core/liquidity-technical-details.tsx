@@ -99,8 +99,9 @@ export function LiquidityTechnicalDetails() {
         <h3 className="text-foreground font-medium">Pool quality adjustments</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>
-            <span className="text-foreground">Balance health</span> &mdash; continuous ratio (not binary threshold):
-            pools with imbalanced reserves score lower
+            <span className="text-foreground">Balance health</span> &mdash; continuous ratio (not binary threshold),
+            read from the tracked coin&rsquo;s side: a pool holding more than its share of the coin scores lower,
+            while extra counter-asset is more exit depth and never a penalty
           </li>
           <li>
             <span className="text-foreground">Pair quality</span> &mdash; co-token scored by Pharos governance
