@@ -78,11 +78,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "7ef29eaafd2a5454c92919cb8b18018f082f2be369f261e7ddf18e5d7d792a1d"
+      "sha256": "33aa1a65d755d2858405f77baa889d2a043fb1735291f71fa26a484cdacb83e5"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "924cb520ecdf7406516f0eb39b060017f63f573a3fbf8831753330d7aac67ce9"
+      "sha256": "76c6c2dcaaa7e5c9ce95f5bae17d9108614f429daef2ed36288254ee54e83188"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-14-block-26412669-shock-coverage.json.gz"
     }
   ],
-  "digest": "843a8062ee543dcd358b4a6321b995fe7727a557f508e467ca32cce3e8683e50"
+  "digest": "32bcd7fc3de782c63fd5b9cd184f0a21a0ccc1f60b7d5c8c0fc61340d44c0c0c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
