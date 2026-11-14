@@ -11,7 +11,6 @@ export function makeApiPool(address: string, coins: Array<{ symbol: string; addr
     registryId: "factory-stable-ng",
     isBroken: false,
     virtualPrice: "1",
-    usdTotalExcludingBasePool: 0,
     creationTs: 123,
     basePoolAddress: null,
     gaugeCrvApy: null,

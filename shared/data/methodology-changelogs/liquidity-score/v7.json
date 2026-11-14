@@ -1,5 +1,21 @@
 [
   {
+    "version": "7.1",
+    "title": "Curve metapools count their base-pool LP leg",
+    "date": "2026-11-14",
+    "effectiveAt": 1794614400,
+    "summary": "A Curve metapool's retained TVL is now its full pool value, base-pool LP leg (3Crv, crv2pool, FRAXBP and similar) included, as Curve and DeFiLlama report it. Pharos had read Curve's usdTotalExcludingBasePool, which drops that leg entirely: LUSD/3Crv published $4.3M of a $12.9M pool. No tracked coin is credited with a metapool's base-LP leg, so the exclusion prevented no double count; it removed the depth the metapool coin trades against.",
+    "impact": [
+      "On 2026-11-14 Curve data, 15 metapools pairing 14 tracked coins gain about $12.7M of retained TVL: LUSD +$8.65M ($4.26M to $12.91M), USD1 +$2.12M, Mezo mUSD +$0.81M and GUSD +$0.72M (about 3x); STBT, eUSD, msUSD, FRAX, alUSD, TUSD, NXUSD, OUSD, MAI and DOLA gain less than $0.15M each.",
+      "Global headline TVL rises by the same amount, about 0.14%. A base-LP leg is a claim on its base pool, whose own TVL is also in the global headline; that overlap is accepted as the cost of measuring each metapool's real depth.",
+      "Metapool balance is measured on the same full-pool basis as its TVL, so the v6.94 scope-matching rule has nothing left to withhold: LUSD/3Crv now carries its measured one-third LUSD, two-thirds 3Crv split (ratio about 0.49) instead of the neutral unmeasured fallback. Balance health, Pool Quality and pool stress move with it; incomplete balance captures still stay unmeasured.",
+      "Reviewed composite metapool targets size measured-execution probes from the same retained TVL: MUSD/crv2pool crosses the $2.5M tier and NXUSD/av3CRV the $250K tier. Probe notionals and admission rules are unchanged. Metapool DEX price observations are weighted by, and held to the unchanged $50K floor on, the same full TVL, so eUSD/FRAXBP can now contribute one. The display-only permanent-liquidity figure follows the published TVL, so LUSD/3Crv's 89% locked share reads about $11.5M instead of $3.85M.",
+      "Retained TVL is measured differently for these pools, so the TVL-basis break list appends 7.1; trend consumers compare stored measurement epochs rather than reading the step as a market move. Component weights are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.0",
     "title": "Independent native prices for reviewed retained markets",
     "date": "2026-11-08",

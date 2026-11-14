@@ -58,12 +58,8 @@ export function enrichPoolProtocol(
     | undefined;
 
   if (curveData) {
-    const contributionScope = curveAddressMatch
-      ? curveData.contributionTvlScope ?? (curveData.metapoolAdjustedTvl !== curveData.tvl ? "base-pool-excluded" : "full-pool")
-      : "full-pool";
-    hasMeasuredBalance = curveData.balanceRatio != null &&
-      (curveData.balanceTvlScope ?? "full-pool") === contributionScope;
-    // Incomplete or differently scoped balances cannot weight this notional.
+    hasMeasuredBalance = curveData.balanceRatio != null;
+    // An incomplete balance capture cannot weight this notional.
     balanceRatio = hasMeasuredBalance ? curveData.balanceRatio! : 1;
     balanceDetails = hasMeasuredBalance ? curveData.balanceDetails : undefined;
     if (isCryptoSwap(curveData.registryId)) {
@@ -72,9 +68,7 @@ export function enrichPoolProtocol(
     } else {
       ({ resolvedPoolType, qualityMultiplier } = classifyCurveStableSwapQuality(curveData.A));
     }
-    effectivePoolTvl = curveAddressMatch
-      ? curveData.metapoolAdjustedTvl
-      : pool.tvlUsd;
+    effectivePoolTvl = curveAddressMatch ? curveData.tvl : pool.tvlUsd;
     if (curveData.creationTs > 0) {
       poolMaturityDays = Math.floor(
         (Date.now() / 1000 - curveData.creationTs) / DAY_SECONDS,
@@ -131,9 +125,7 @@ export function enrichPoolProtocol(
     organicFraction,
     hasMeasuredOrganicFraction,
     effectivePoolTvl,
-    rawContribTvl: curveAddressMatch
-      ? curveData!.metapoolAdjustedTvl
-      : pool.tvlUsd,
+    rawContribTvl: curveAddressMatch ? curveData!.tvl : pool.tvlUsd,
     balanceDetails,
     volumeUsd1d: pool.volumeUsd1d ?? null,
     volumeUsd7d: pool.volumeUsd7d ?? null,

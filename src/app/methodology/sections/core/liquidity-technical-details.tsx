@@ -109,8 +109,8 @@ export function LiquidityTechnicalDetails() {
             their underlying stablecoin basket
           </li>
           <li>
-            <span className="text-foreground">Metapool dedup</span> &mdash; uses TVL excluding base pool to prevent
-            double-counting across Curve metapools
+            <span className="text-foreground">Metapool TVL</span> &mdash; a Curve metapool counts its full TVL,
+            including the base-pool LP leg (3Crv, FRAXBP) its coin trades against
           </li>
           <li>
             <span className="text-foreground">Dead-pool floor</span> &mdash; a pool with at least $
@@ -136,7 +136,7 @@ export function LiquidityTechnicalDetails() {
           </li>
           <li>
             <span className="text-foreground">Measured evidence</span> &mdash; complete finite provider values,
-            valid token scales and complete matching-scope balance legs are required. Unknown balances stay
+            valid token scales and complete balance legs are required. Unknown balances stay
             unmeasured, while measured zero remains zero. Factory references must be independently current;
             carried pool identity cannot supply a current USD price. Each historical quote ages at assessment,
             and canonical block hashes and fresh non-future per-peg FX bind measured capacity

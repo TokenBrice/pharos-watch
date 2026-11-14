@@ -75,7 +75,7 @@ async function targetFromCapturedSource() {
       chain: "ethereum",
       stablecoinId: policy.stablecoinId,
       ...refs,
-      retainedTvlUsd: curveData!.metapoolAdjustedTvl,
+      retainedTvlUsd: curveData!.tvl,
       capturedAt: Math.floor(captured.curveSource.generatedTimeMs / 1_000),
     }),
   };

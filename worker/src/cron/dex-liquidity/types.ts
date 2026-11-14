@@ -46,7 +46,6 @@ export interface CurvePool {
   registryId: string;
   isBroken: boolean;
   virtualPrice: string;
-  usdTotalExcludingBasePool: number;
   creationTs: number;
   basePoolAddress: string | null;
   gaugeCrvApy: [number, number] | null;
@@ -294,15 +293,11 @@ export interface CurvePoolEntry {
   A: number;
   /** Null when any required coin USD leg is unreadable; explicit zero is measured. */
   balanceRatio: number | null;
-  /** Legacy captures measured the full coin roster; missing scope means full-pool. */
-  balanceTvlScope?: "full-pool" | "base-pool-excluded";
-  contributionTvlScope?: "full-pool" | "base-pool-excluded";
   tvl: number;
   registryId: string;
   isMetaPool: boolean;
   /** Source base-pool identity retained only for reviewed composite target candidates. */
   basePoolAddress?: string;
-  metapoolAdjustedTvl: number;
   creationTs: number;
   balanceDetails?: { symbol: string; balancePct: number; isTracked: boolean }[];
   /** Reviewed LP lock on this exact pool, sized from this run's LP total supply. */
