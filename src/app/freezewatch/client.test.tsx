@@ -316,4 +316,21 @@ describe("FreezeWatchClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry intervention seismograph" }));
     expect(mocks.useBlacklistSummary.mock.results.at(-1)?.value.refetch).toHaveBeenCalledTimes(2);
   });
+
+  const ADDR = "0x" + "ab".repeat(20);
+  const meta = (status: "fresh" | "stale") => ({ updatedAt: 1, ageSeconds: 0, status });
+  it.each([
+    ["found", { data: { events: [{ address: ADDR, stablecoin: "USDT", timestamp: 1700049600 }], total: 1 }, meta: meta("fresh") }, /Pharos records 1 freeze, release or wipe event for this address\. Latest: USDT, Nov 15, 2023\./],
+    ["none", { data: { events: [], total: 0 }, meta: meta("fresh") }, /No freeze, release or wipe event is recorded for this address on the contracts Pharos scans\./],
+    ["stale", { data: { events: [], total: 0 }, meta: meta("stale") }, null],
+    ["loading", { isLoading: true }, null],
+    ["failed", { error: new Error("down") }, null],
+  ] as const)("address check, %s", (_, page, sentence) => {
+    currentSearch = `?q=${ADDR}`;
+    mocks.useBlacklistEventsPage.mockReturnValue(stubQuery(page));
+    render(<FreezeWatchClient />);
+    expect(screen.getByText("Check an address")).toBeTruthy();
+    if (sentence) expect(screen.getByText(sentence)).toBeTruthy();
+    else expect(screen.queryByText(/records|No freeze, release/)).toBeNull();
+  });
 });

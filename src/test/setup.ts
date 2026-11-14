@@ -26,3 +26,15 @@ configure({ asyncUtilTimeout: 3000 });
  * in their own hook.
  */
 afterEach(cleanup);
+
+/**
+ * jsdom serves every suite from `localhost`, which the Analytics host gate admits only
+ * after the browser-side opt-in. Answer that one key here: suites that assert tracked
+ * events keep working even when they clear storage, and no suite sees an extra stored key.
+ */
+if (typeof Storage !== "undefined") {
+  const getItem = Storage.prototype.getItem;
+  Storage.prototype.getItem = function (key: string) {
+    return key === "pharos-ga-loopback" ? "1" : getItem.call(this, key);
+  };
+}

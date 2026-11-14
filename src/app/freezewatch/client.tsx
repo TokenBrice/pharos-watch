@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UsdsStatusCard } from "@/components/freezewatch/usds-status-card";
 import { EurcBlacklistCard } from "@/components/freezewatch/eurc-blacklist-card";
@@ -26,13 +27,13 @@ import { InterventionSeismograph } from "@/components/freezewatch/intervention-s
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatEventDate } from "@shared/lib/format";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
-import { useFreezeWatchPageController } from "./view-model";
+import { resolveAddressCheck, useFreezeWatchPageController } from "./view-model";
 
 function FreezeWatchSection({
   eyebrow,
@@ -70,7 +71,7 @@ function HeroStat({ label, value, loading }: { label: string; value: string; loa
   );
 }
 
-export default function FreezeWatchClient() {
+export default function FreezeWatchClient({ children }: { children?: ReactNode }) {
   const {
     summary,
     summaryLoading,
@@ -115,6 +116,8 @@ export default function FreezeWatchClient() {
     rangeStart,
     rangeEnd,
     pageLoading,
+    pageSettled,
+    searchQuery,
     events,
     pageSize,
   } = useFreezeWatchPageController();
@@ -139,6 +142,20 @@ export default function FreezeWatchClient() {
   const supplyAvailable = freezableSummary.coverage !== "unavailable";
   // Every active coin with a freeze-control bucket: the hero's coin denominator.
   const classifiedCount = freezableSummary.registryCount;
+
+  const ledgerRef = useRef<HTMLElement>(null);
+  const ledgerUnfiltered =
+    stablecoinFilter === "all" && chainFilter === "all" && eventTypeFilter === "all" &&
+    sortKey === "date" && sortDirection === "desc" && clampedPage === 1;
+  // Only a settled read for exactly the typed address may produce a sentence.
+  const addressCheck =
+    ledgerUnfiltered && searchInput.trim() === searchQuery.trim()
+      ? resolveAddressCheck({ query: searchQuery, settled: pageSettled, events, total })
+      : null;
+  const handleAddressSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    ledgerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <FeaturePageShell
@@ -225,6 +242,43 @@ export default function FreezeWatchClient() {
           selectedBucket={statusBucket}
           onBucketSelect={handleStatusBucketChange}
         />
+        <form
+          onSubmit={handleAddressSubmit}
+          className="space-y-2 border-t border-border/50 p-5 sm:p-6"
+        >
+          <label htmlFor="freezewatch-address-check" className="pharos-label">Check an address</label>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              id="freezewatch-address-check"
+              value={searchInput}
+              onChange={(event) => handleSearchChange(event.target.value)}
+              placeholder="0x… or T… address"
+              autoComplete="off"
+              spellCheck={false}
+              className="h-11 w-full sm:h-9 sm:w-96"
+            />
+            <button type="submit" className="pharos-focus-ring h-11 rounded-md border border-border/60 px-4 text-sm sm:h-9">
+              Show in ledger
+            </button>
+          </div>
+          <p className="pharos-meta max-w-3xl">
+            Pharos freeze checker: look up a full address in the recorded freeze, release and wipe events.
+            Coverage is limited to the contracts Pharos scans.
+          </p>
+          <p className="pharos-meta max-w-3xl" aria-live="polite">
+            {addressCheck?.kind === "found"
+              ? `Pharos records ${addressCheck.count} freeze, release or wipe ${addressCheck.count === 1 ? "event" : "events"} for this address. Latest: ${addressCheck.stablecoin}, ${formatEventDate(addressCheck.timestamp)}.`
+              : null}
+            {addressCheck?.kind === "none" ? (
+              <>
+                No freeze, release or wipe event is recorded for this address on the contracts Pharos scans.{" "}
+                <Link href="/docs/blacklist-tracker/" className="underline">
+                  Coverage limits
+                </Link>
+              </>
+            ) : null}
+          </p>
+        </form>
       </section>
 
       <BlacklistStats
@@ -290,7 +344,7 @@ export default function FreezeWatchClient() {
           </div>
         </div>
 
-        <section id="data" aria-label="Data table" tabIndex={-1}>
+        <section id="data" ref={ledgerRef} aria-label="Data table" tabIndex={-1}>
           <BlacklistTable
             events={events}
             isLoading={pageLoading}
@@ -369,6 +423,8 @@ export default function FreezeWatchClient() {
           <EurcBlacklistCard />
         </div>
       </FreezeWatchSection>
+
+      {children}
     </FeaturePageShell>
   );
 }

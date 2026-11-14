@@ -304,7 +304,7 @@ function ExitBoard({
         shared.redemptionEvidence.status === "empty" ? (
           <EvidenceStateStrip id="redemption" title="Redemption route" state="not-reviewed" density="main" />
         ) : (
-          <section id="redemption" aria-labelledby="redemption-heading" className={cn(SECTION_SCROLL_MT, "py-4")}>
+          <section id="redemption" aria-labelledby="redemption-heading" className={cn(SECTION_SCROLL_MT, "py-4")} data-nosnippet>
             <h3 id="redemption-heading" className="pharos-label">Redemption route · {shared.redemptionEvidence.label}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {shared.redemptionEvidence.status === "unavailable"

@@ -95,6 +95,8 @@ Minimum stub content:
 - One milestone: the dated announcement (`type: "announcement"`, or `regulatory` for a licence or authorisation), plus `announcedDate`. Add `launchPhase`, `expectedLaunchDate` or `launchPhaseDetail` only when the source states them; never infer a phase or date from promotional language.
 - `blacklistabilityReview` in `domains/risk-review/<id>.json`: when no source describes holder-control powers yet, record the reviewed status with a `sourceFreeRationale` that says the verdict follows the issuer model in the announcement.
 
+Cadence and approval (maintainer decision, 2026-11-14): discovery runs daily, not with the weekly pass. Each run searches issuer, regulator and bank announcements plus the Search Console queries that match no tracked coin, and opens at most one stub-only pull request (each stub rotates the generated Safety Score manifest, so two open at once conflict). A stub that meets the minimum content above from a primary source needs no per-coin approval and merges once checks pass. A candidate known only from secondary reporting gets no stub: the run reports it, and the maintainer decides whether an existing record may carry a press-attributed mention.
+
 Deeper research follows through the [`pre-launch-update`](../../.codex/skills/pre-launch-update/SKILL.md) review: collateral, peg mechanism, jurisdiction, featured content, further milestones and any refined blacklistability evidence. A stub never skips the [Phase 1a runtime gate](#1a-hard-runtime-data-gate-for-active-assets) at promotion.
 
 ### 0b. Plan the per-coin registry file

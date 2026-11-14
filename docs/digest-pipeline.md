@@ -437,6 +437,8 @@ Trigger history keeps hit, missed, expired, pending and unavailable separate. Di
 
 `src/app/digest/[date]/page.tsx` statically generates `data/digests.json` entries; `src/components/digest/digest-snapshot.tsx` reads the matching snapshot. Daily and `YYYY-MM-DD-weekly` slugs select independent row types, so same-day editions cannot shadow one another.
 
+Older and newer links on a daily page point to the adjacent daily edition. On a weekly page they point to the previous and next weekly, taken from `INDEXABLE_DIGEST_ENTRIES`, so the indexable editions link to each other and not to the noindex dailies.
+
 Render every published editorial paragraph and only captured, admitted intelligence/context. The stored map uses immutable `imageUrl`/`manifest.date`, never latest, with a validated deterministic tally; missing/failed posters or unusable snapshot context show unavailable states, not invented figures or silent disappearance.
 
 The dated snapshot is immutable archived evidence: a failed refetch never withdraws retained `inputData`, only a settled read with no `inputData` is unavailable, and the capture is never aged as current data.

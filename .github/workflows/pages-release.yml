@@ -135,6 +135,10 @@ jobs:
             "",
           ].join("\n"));
           NODE
+      - name: Save live sitemap for IndexNow diff
+        if: ${{ vars.INDEXNOW_ENABLED == 'true' }}
+        continue-on-error: true
+        run: curl -fsS --max-time 30 -o "${RUNNER_TEMP}/previous-sitemap.xml" https://pharos.watch/sitemap.xml
       - name: Deploy Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -201,3 +205,7 @@ jobs:
             echo "- Deployment: ${DEPLOYMENT_URL}"
             echo "- Release marker: verified for \`${GITHUB_SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Ping IndexNow with changed sitemap URLs
+        if: ${{ vars.INDEXNOW_ENABLED == 'true' }}
+        continue-on-error: true
+        run: node scripts/ci/indexnow-ping.mjs --previous "${RUNNER_TEMP}/previous-sitemap.xml"

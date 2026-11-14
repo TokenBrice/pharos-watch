@@ -168,7 +168,7 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {formatEventPrice(event.pegReference) ?? "—"}
+          {formatEventPrice(event.pegReference) ?? "—"}{event.pegReference == null ? "" : pegReferenceUnit(event.pegType)}
         </dd>
       </div>
       {startPrice ? (
@@ -193,6 +193,12 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
   );
 }
 
+/** " per 1 EUR" for pegs whose prices are shown in the peg currency: their reference is US dollars per unit of it. */
+function pegReferenceUnit(pegType: string | undefined): string {
+  const peg = getPegTaxonomyByType(pegType);
+  return peg && peg.nativePriceUsesUsdSymbol !== true ? ` per 1 ${peg.currency}` : "";
+}
+
 function buildDepegRecordContext({
   event,
   versionLabel,
@@ -202,13 +208,14 @@ function buildDepegRecordContext({
 }): string {
   const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
   const pegReference = formatEventPrice(event.pegReference);
+  const pegReferenceWithUnit = pegReference ? `${pegReference}${pegReferenceUnit(event.pegType)}` : pegReference;
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
-  const pricePath = startPrice && pegReference
-    ? `The checked-in price path starts at ${startPrice} against a recorded peg reference of ${pegReference}.`
+  const pricePath = startPrice && pegReferenceWithUnit
+    ? `The checked-in price path starts at ${startPrice} against a recorded peg reference of ${pegReferenceWithUnit}.`
     : startPrice
       ? `The checked-in price path starts at ${startPrice}.`
-      : pegReference
-        ? `The checked-in record uses a peg reference of ${pegReference}.`
+      : pegReferenceWithUnit
+        ? `The checked-in record uses a peg reference of ${pegReferenceWithUnit}.`
         : "The checked-in record preserves the measured direction and peak deviation.";
   const confirmation = event.confirmationSources
     ? ` Confirmation evidence is recorded as “${event.confirmationSources}”.`

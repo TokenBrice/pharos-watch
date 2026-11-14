@@ -44,6 +44,18 @@ function imgSrc(csp: string | null): string {
     .find((directive) => directive.startsWith("img-src ")) ?? "";
 }
 
+describe("alias host redirect", () => {
+  it.each([
+    ["https://stablecoin-dashboard.pages.dev/depeg/x?a=1", 301, "https://pharos.watch/depeg/x?a=1"],
+    ["https://stablecoin-dashboard.pages.dev/__pharos_release.json", 200, null],
+    ["https://abc123.stablecoin-dashboard.pages.dev/depeg/x", 200, null],
+  ])("%s", async (url, status, location) => {
+    const res = await onRequest(ctx(new Request(url), { "/depeg/x": "ok", "/__pharos_release.json": "{}" }));
+    expect(res.status).toBe(status);
+    expect(res.headers.get("Location")).toBe(location);
+  });
+});
+
 describe("prefersMarkdown", () => {
   it.each([
     ["text/markdown", true],

@@ -176,6 +176,7 @@ interface DepegEventNoindexCandidate extends DepegEventPageCandidate {
   slug: string;
   stablecoinId: string;
   startedAt: number;
+  endedAt: number | null;
   pendingReason?: string | null;
 }
 
@@ -193,9 +194,11 @@ export function isLowConfidenceDepegEvent(event: Pick<DepegEventNoindexCandidate
  * duplicates (Google chose a sibling canonical for one GYD fragment), and
  * most event pages earn no search demand. Pages are not merged:
  * the producer owns the event vocabulary. Two thin-page rules apply:
- * - the event's opening was held for verification on a low-confidence price input;
- * - it is a secondary event in a same-coin, same-UTC-day cluster. The event
- *   with the largest absolute peak (low-confidence events excluded) stays indexed.
+ * - the event's opening was held for verification on a low-confidence price
+ *   input and the event is still open; a closed low-confidence event is indexed;
+ * - it is a secondary event in a same-coin, same-UTC-day cluster. The cluster
+ *   leads with its largest trusted event, or with its largest closed
+ *   low-confidence event when it has no trusted one.
  * Pages with recent search impressions are never noindexed.
  */
 export function buildNoindexDepegEventSlugs(
@@ -211,15 +214,17 @@ export function buildNoindexDepegEventSlugs(
 
   const noindex = new Set<string>();
   for (const cluster of clusters.values()) {
-    const lead = cluster
-      .filter((event) => !isLowConfidenceDepegEvent(event))
-      .sort((a, b) =>
-        getPeakDeviationMagnitudeBps(b) - getPeakDeviationMagnitudeBps(a)
-        || a.startedAt - b.startedAt
-        || a.slug.localeCompare(b.slug))[0];
+    const ranked = [...cluster].sort((a, b) =>
+      getPeakDeviationMagnitudeBps(b) - getPeakDeviationMagnitudeBps(a)
+      || a.startedAt - b.startedAt
+      || a.slug.localeCompare(b.slug));
+    const lead = ranked.find((event) => !isLowConfidenceDepegEvent(event))
+      ?? ranked.find((event) => event.endedAt != null)
+      ?? ranked[0];
     for (const event of cluster) {
       if (SEARCH_IMPRESSION_DEPEG_EVENT_SLUGS.has(event.slug)) continue;
-      if (isLowConfidenceDepegEvent(event) || event !== lead) noindex.add(event.slug);
+      const thinLowConfidence = isLowConfidenceDepegEvent(event) && event.endedAt == null;
+      if (thinLowConfidence || event !== lead) noindex.add(event.slug);
     }
   }
   return noindex;

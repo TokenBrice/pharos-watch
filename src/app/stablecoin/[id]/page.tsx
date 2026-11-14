@@ -12,7 +12,8 @@ import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { DEPEG_EVENT_ENTRIES, buildExploreDepegEventLinks } from "@/lib/depeg-event-page-data";
 import { buildStablecoinDetailHistorySnapshot } from "@/lib/stablecoin-detail-history-snapshot";
 import { DepegHistoryPreview } from "@/components/stablecoin-detail/depeg-history-preview";
-import { buildStablecoinDetailMetadata, hasRedundantName } from "@/lib/page-metadata";
+import { buildStablecoinDetailMetadata, hasRedundantName, normalizeWhitespace } from "@/lib/page-metadata";
+import { stripTermMarkup } from "@/lib/term-markup";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
@@ -53,19 +54,21 @@ const PERMANENT_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(DEPEG_EVENT_ENT
 
 function DetailPageShellFallback({
   coin,
+  oneLiner,
   logoSrc,
 }: {
   coin: StablecoinStaticMeta;
+  oneLiner?: string;
   logoSrc?: string;
 }) {
   return (
     <div className="space-y-6">
-      <div className="space-y-6" aria-hidden="true">
+      <div className="space-y-6" aria-hidden="true" data-nosnippet>
         <StablecoinDetailLoadingShell
           coin={coin}
           logoSrc={logoSrc}
-          description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
-          statusLabel="Research dossier loading"
+          description={oneLiner ? normalizeWhitespace(stripTermMarkup(oneLiner)) : "Price, safety, liquidity, flows, and historical context."}
+          statusLabel="Research dossier"
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
@@ -266,7 +269,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         <script id="pharos-detail-data-bootstrap" dangerouslySetInnerHTML={{ __html: getStablecoinDetailDataBootstrapScript(id) }} />
       ) : null}
       {/* The fallback holds no content or links: a reveal discards it. */}
-      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} logoSrc={getLogoSrc(logosById, coin.id)} />}>
+      <Suspense fallback={<DetailPageShellFallback coin={staticCoin} oneLiner={coin.oneLiner} logoSrc={getLogoSrc(logosById, coin.id)} />}>
         <StablecoinDetailClient
           key={id}
           id={id}

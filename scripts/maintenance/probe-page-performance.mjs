@@ -253,13 +253,15 @@ export function violations(row) {
   return failures;
 }
 
-export async function capture(browser, origin, route, viewport, dwellMs, confirmMobileCls = true) {
+export async function capture(browser, origin, route, viewport, dwellMs, confirmMobileCls = true, blockAnalytics = false) {
   const originRoot = new URL(origin).origin;
   const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height },
     deviceScaleFactor: viewport.dpr, isMobile: viewport.width < 500 });
   let row;
   try {
     await context.addInitScript(installObservers);
+    // Keep probe loads out of GA sessions; aborted requests only lower the request count.
+    if (blockAnalytics) await context.route((u) => /(^|\.)(googletagmanager|google-analytics)\.com$/.test(u.hostname), (r) => r.abort());
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
     await cdp.send("Network.enable");
@@ -314,7 +316,7 @@ export async function capture(browser, origin, route, viewport, dwellMs, confirm
   } finally { await context.close(); }
   let clsConfirmation;
   if (confirmMobileCls && viewport.width < 500 && !row.bannerVisible && row.cls > BUDGETS.clsMobile) {
-    clsConfirmation = await capture(browser, origin, route, viewport, dwellMs, false);
+    clsConfirmation = await capture(browser, origin, route, viewport, dwellMs, false, blockAnalytics);
   }
   const result = { ...row, clsConfirmation };
   return { ...result, violations: violations(result) };
@@ -323,9 +325,10 @@ export async function capture(browser, origin, route, viewport, dwellMs, confirm
 runDirectCli(import.meta.url, async () => {
   const { values } = parseStrictCliArgs(process.argv.slice(2), { options: {
     url: { type: "string", default: "https://pharos.watch" }, out: { type: "string", default: ".tmp/page-performance.json" },
-    "dwell-seconds": { type: "string" }, advisory: { type: "boolean" },
+    "dwell-seconds": { type: "string" }, advisory: { type: "boolean" }, "allow-analytics": { type: "boolean" },
   } });
-  if (values.help) { console.log("Usage: node scripts/maintenance/probe-page-performance.mjs [--url URL] [--out FILE] [--dwell-seconds 1800] [--advisory]\nCold no-scroll home/detail captures at five viewport/DPR pairs, plus mobile depeg/safety-scores/stablecoins; one confirm re-capture for mobile CLS breaches; optional single wide-home dwell capture."); return; }
+  if (values.help) { console.log("Usage: node scripts/maintenance/probe-page-performance.mjs [--url URL] [--out FILE] [--dwell-seconds 1800] [--advisory] [--allow-analytics]\nGoogle Analytics requests are blocked unless --allow-analytics is set. Cold no-scroll home/detail captures at five viewport/DPR pairs, plus mobile depeg/safety-scores/stablecoins; one confirm re-capture for mobile CLS breaches; optional single wide-home dwell capture."); return; }
+  const blockAnalytics = !values["allow-analytics"];
   const origin = new URL(String(values.url));
   if (!["http:", "https:"].includes(origin.protocol)) throw new Error("--url must use HTTP(S)");
   const dwellMs = values["dwell-seconds"] === undefined ? undefined
@@ -334,9 +337,9 @@ runDirectCli(import.meta.url, async () => {
   const rows = [];
   try {
     for (const viewport of VIEWPORTS) for (const route of ["/", "/stablecoin/usdt-tether/", ...(viewport.width < 500 ? MOBILE_ONLY_ROUTES : [])]) {
-      rows.push(await capture(browser, origin, route, viewport, 30_000));
+      rows.push(await capture(browser, origin, route, viewport, 30_000, true, blockAnalytics));
     }
-    if (dwellMs !== undefined) rows.push(await capture(browser, origin, "/", LONG_DWELL_VIEWPORT, dwellMs));
+    if (dwellMs !== undefined) rows.push(await capture(browser, origin, "/", LONG_DWELL_VIEWPORT, dwellMs, true, blockAnalytics));
   } finally { await browser.close(); }
   writeFileResolved(String(values.out), JSON.stringify({ capturedAt: new Date().toISOString(), release: captureReleaseIdentity(), budgets: BUDGETS, rows }, null, 2));
   const summary = ["## Production page performance", "Decoded JSON is browser-delivered CDP body bytes (not heap); V9 wait is request→headers. Missing V9/banner timings mean not observed, never zero/fresh. Banner disappearance is not proof all data is fresh. CLS is the maximum 5-second session window.",

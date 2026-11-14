@@ -15,7 +15,7 @@ import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types/digest";
-import { DIGEST_BY_DATE, DIGEST_ENTRIES, isDigestIndexable } from "@/lib/digest-registry";
+import { DIGEST_BY_DATE, DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES, isDigestIndexable } from "@/lib/digest-registry";
 import { getDigestModelLabel } from "@/lib/digest-model-label";
 
 type DigestWithLlmMetadata = DigestContentEntry & {
@@ -75,10 +75,12 @@ function renderDigestDetail(digest: DigestContentEntry) {
   const editionLabel = isWeekly ? "Weekly Recap" : "Daily Digest";
   const editionKicker = digest.editionNumber ? `${editionLabel} #${digest.editionNumber}` : editionLabel;
 
-  // Find prev/next digests
-  const idx = DIGEST_ENTRIES.findIndex((d) => d.date === digest.date);
-  const newer = idx > 0 ? DIGEST_ENTRIES[idx - 1] : null;
-  const older = idx < DIGEST_ENTRIES.length - 1 ? DIGEST_ENTRIES[idx + 1] : null;
+  // Weekly recaps navigate between weeklies, the only indexable editions, so a
+  // recap never spends its links on the adjacent noindex daily editions.
+  const siblings = isWeekly ? INDEXABLE_DIGEST_ENTRIES : DIGEST_ENTRIES;
+  const idx = siblings.findIndex((d) => d.date === digest.date);
+  const newer = idx > 0 ? siblings[idx - 1] : null;
+  const older = idx < siblings.length - 1 ? siblings[idx + 1] : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

@@ -1159,6 +1159,9 @@ function validateStablecoinProfileRender(pageRecords, errors) {
     if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
       errors.push(`${record.route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
     }
+    if (html.includes("/compare/?coins=")) {
+      errors.push(`${record.route}: profile HTML links to a /compare/?coins= facet URL (use buildComparePrefillUrl)`);
+    }
     validateStablecoinProfileHistoryPreview(record.route, html, errors);
   }
 }

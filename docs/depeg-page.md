@@ -302,9 +302,10 @@ the shrink override plus one-hop redirects in `public/_redirects`; follow
 Permanent is not the same as indexed. `buildNoindexDepegEventSlugs()` in
 `src/lib/depeg-event-config.ts` serves two thin-page tiers `noindex, follow` and drops them
 from the sitemap and `public-route-inventory.ts`: events whose opening was held on a
-low-confidence price input (`pendingReason` includes `low-confidence`), and secondary
+low-confidence price input (`pendingReason` includes `low-confidence`) and that are still
+open (`endedAt` is null; a closed low-confidence event is indexed), and secondary
 events in a same-coin, same-UTC-day cluster, where the event with the largest absolute
-peak (low-confidence events excluded) stays indexed. Pages with at least one click or at
+peak stays indexed: the largest trusted event, or the largest closed low-confidence event when the cluster has no trusted one. Pages with at least one click or at
 least 10 impressions in the 16 months to 2026-10-25 sit in a checked-in allowlist and are
 never noindexed. Noindexed pages stay live, keep their URL and stay listed in the archive,
 so the continuity gate needs no redirect. Events are never merged; the producer owns the
