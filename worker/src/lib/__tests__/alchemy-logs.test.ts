@@ -808,14 +808,14 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(0);
   });
 
-  it.each(["ok", "recover", "abort", "deadline", "exhaust"])("persistent timestamp cache %s holds progress on failed reads", async (mode) => {
+  it.each(["ok", "recover", "abort", "deadline"])("persistent timestamp cache %s holds progress on failed reads", async (mode) => {
     vi.useFakeTimers();
     let reads = 0;
     const error = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
     const db = makeDbForTimestampCache({
       cachedRows: [{ block_number: 100, timestamp: 200 }],
       onCacheReadBindCount: () => {
-        if (++reads === 1 && mode !== "ok" || mode === "exhaust") throw error;
+        if (++reads === 1 && mode !== "ok") throw error;
       },
     });
     const controller = new AbortController();
@@ -833,9 +833,16 @@ describe("resolveBlockTimestamps", () => {
     await vi.runAllTimersAsync();
     if (success) expect([...await pending]).toEqual([[100, 200]]);
     else { await checked; expect(localCache.size).toBe(0); }
-    expect(reads).toBe(mode === "recover" || mode === "exhaust" ? 2 : 1);
+    expect(reads).toBe(mode === "recover" ? 2 : 1);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(budget.count).toBe(0);
+  });
+
+  it("falls back to RPC when an overloaded cache read stays unavailable", async () => {
+    const db = makeDbForTimestampCache({ onCacheReadBindCount: () => { throw new Error("D1 DB is overloaded"); } });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result: header(100, "0x12c") }])));
+    expect([...await resolveBlockTimestamps(url, [100], createBudget(1), { persistentCache: { db, chainId: "ethereum" } })])
+      .toEqual([[100, 300]]);
   });
 
   it("excludes other chains and expired persistent timestamps", async () => {

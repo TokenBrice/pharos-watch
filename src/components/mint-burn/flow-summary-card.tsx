@@ -300,6 +300,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               );
             })}
           </div>
+          <p className="border-t border-border/40 px-4 py-2 text-xs text-muted-foreground sm:px-5">
+            Excludes bridge transfers; covers tracked chains only, not global issuance.
+          </p>
         </div>
       </div>
 
