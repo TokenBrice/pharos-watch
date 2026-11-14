@@ -508,6 +508,13 @@ describe("buildCurveLookups", () => {
     });
   });
 
+  it.each([["12398938862749059986430614", 0.8901], ["11036306658186216357784388", undefined]])(
+    "sizes the reviewed LUSD/3CRV lock from LP supply %s", async (totalSupply, lpShare) => {
+      const pool = { ...makeApiPool("0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA", [{ symbol: "A", address: "0x1" }, { symbol: "B", address: "0x2" }]), totalSupply };
+      const { curvePoolMap } = await buildCurveLookups([{ data: { poolData: [pool] } }] as CurveApiPayload[], new Map(), new Map(), new Map());
+      expect(curvePoolMap.get("ethereum:0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca")?.permanentLiquidity?.lpShare).toBe(lpShare);
+    });
+
   it("withholds overflowed Curve USD legs and aggregate balances", async () => {
     for (const usdPrice of [2, 1]) {
       const pool = makeApiPool("0xpool", [

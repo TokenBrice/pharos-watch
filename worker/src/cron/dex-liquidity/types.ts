@@ -41,7 +41,8 @@ export interface CurvePool {
   usdTotal: number;
   isMetaPool: boolean;
   assetTypeName: string;
-  totalSupply: number;
+  /** LP supply in raw token units; the live API sends it as a decimal string. */
+  totalSupply: number | string;
   registryId: string;
   isBroken: boolean;
   virtualPrice: string;
@@ -92,6 +93,7 @@ import type {
 } from "@shared/types/dex-execution";
 import type {
   DexLiquidityPool,
+  DexPermanentLiquidity,
   DexVolumeAvailabilityRecord,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
@@ -303,6 +305,8 @@ export interface CurvePoolEntry {
   metapoolAdjustedTvl: number;
   creationTs: number;
   balanceDetails?: { symbol: string; balancePct: number; isTracked: boolean }[];
+  /** Reviewed LP lock on this exact pool, sized from this run's LP total supply. */
+  permanentLiquidity?: DexPermanentLiquidity;
   /** Normalized symbol → USD price for each coin in the pool (from Curve API). */
   tokenPrices: Record<string, number>;
   /** Original API observation clock shared by the token prices. */

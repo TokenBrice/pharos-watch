@@ -25,6 +25,7 @@ import {
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
 import { normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint } from "./pool-helpers";
+import { resolvePermanentLiquidity } from "./permanent-liquidity";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -638,6 +639,7 @@ export async function buildCurveLookups(
           pool.coins.length <= 8 &&
           executionCoins.every((coin) => coin !== null);
 
+        const permanentLiquidity = resolvePermanentLiquidity(chain, pool.address, pool.totalSupply);
         const entry: CurvePoolEntry = {
           poolAddress: pool.address,
           apiIsBroken: false,
@@ -656,6 +658,7 @@ export async function buildCurveLookups(
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
           tokenPrices,
+          ...(permanentLiquidity ? { permanentLiquidity } : {}),
           priceObservedAt: json.observedAt ?? null,
           ...(poolIdentityComplete && retainCompositePoolIdentity
             ? { poolCoins: poolCoins as NonNullable<CurvePoolEntry["poolCoins"]> }

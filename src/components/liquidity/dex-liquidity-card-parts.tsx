@@ -7,7 +7,8 @@ import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/componen
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
-import { formatCurrency, formatChartDate, formatUsdPriceAdaptive } from "@shared/lib/format";
+import { formatAddress, formatCurrency, formatChartDate, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
+import { buildExplorerUrl } from "@shared/lib/explorer";
 import { getNetColor } from "@shared/lib/classification/flows";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
@@ -26,6 +27,7 @@ import {
   formatFeeTierLabel,
   getPoolVariantLabel,
   formatBalanceDetails,
+  type PermanentLiquidityPool,
 } from "@/components/liquidity/dex-liquidity-card-model";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types/dex-liquidity";
@@ -241,6 +243,14 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
                     <OrganicBadge fraction={pool.extra.organicFraction} maturityDays={pool.extra.maturityDays} />
+                    {pool.extra.permanentLiquidity && (
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${QUALITY_TIER_3_CLASSES.good.badgeSoft}`}
+                        title="Share of this pool's LP tokens that can never be withdrawn"
+                      >
+                        {formatPercentFromRatio(pool.extra.permanentLiquidity.lpShare, 0)} permanent
+                      </span>
+                    )}
                   </div>
                 )}
                 {pool.extra?.organicFraction == null && (
@@ -304,6 +314,46 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
           ))}
         </TableBody>
       </TableFrame>
+    </div>
+  );
+}
+
+const PERMANENT_LIQUIDITY_PROOF_COPY: Record<string, string> = {
+  "no-call-bytecode": "a contract whose code has no instruction that can move a token",
+  "burn-address": "a burn address that no key exists for",
+};
+
+/** Fold detail behind the card's permanent-liquidity line: who holds the LP tokens and why they cannot move. */
+export function PermanentLiquidityProof({ entries }: { entries: PermanentLiquidityPool[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      <p className="pharos-label">Permanent liquidity</p>
+      {entries.map(({ pool, lock }) => {
+        const holderUrl = buildExplorerUrl({ chainKey: lock.chain, entityType: "address", value: lock.holder });
+        return (
+          <p key={`${lock.chain}-${lock.lpToken}-${lock.holder}`} className="text-xs text-muted-foreground">
+            {pool.symbol}: {formatPercentFromRatio(lock.lpShare, 1)} of the pool&apos;s LP tokens sit with{" "}
+            {holderUrl ? (
+              <a
+                href={holderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring rounded-sm font-mono text-frost-blue hover:underline"
+              >
+                {formatAddress(lock.holder)}
+              </a>
+            ) : (
+              <span className="font-mono">{formatAddress(lock.holder)}</span>
+            )}
+            , {PERMANENT_LIQUIDITY_PROOF_COPY[lock.proof] ?? "an address that cannot move them"}. Nobody can redeem
+            them, so that share stays in the pool whatever other providers do. It keeps depth in the pool, not a
+            price: trades can still change the pool&apos;s mix. Holder checked at block{" "}
+            <span className="font-mono tabular-nums">{lock.verifiedAtBlock.toLocaleString("en-US")}</span>; the share
+            follows the pool&apos;s current LP supply.
+          </p>
+        );
+      })}
     </div>
   );
 }

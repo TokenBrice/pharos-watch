@@ -44,25 +44,10 @@ describe("normalizeTopPools", () => {
         },
       },
     ]);
-    const result = normalizeTopPools(json);
-    expect(result).toHaveLength(1);
-    const pool = result[0] as Record<string, unknown>;
-    expect(pool.project).toBe("uniswap-v3");
-    expect(pool.poolType).toBe("generic");
-    expect(pool.tvlUsd).toBe(100_000);
-    expect(pool.volumeUsd1d).toBe(50_000);
-    expect(pool.volumeUsd7d).toBe(300_000);
-    expect(pool.price).toBe(1.0001);
-    expect(pool.source).toBe("dl");
-    expect(pool).not.toHaveProperty("poolId");
-    const extra = pool.extra as Record<string, unknown>;
-    expect(extra.balanceRatio).toBe(0.5);
-    expect(extra.feeTier).toBe(100);
-    expect(extra.organicFraction).toBe(0.9);
-    expect(extra).not.toHaveProperty("qualityAdjustedTvl");
-    expect(extra).not.toHaveProperty("hasMeasuredOrganicFraction");
-    expect(extra).not.toHaveProperty("measuredExecution");
-    expect(extra).not.toHaveProperty("executionCapabilityGate");
+    expect(normalizeTopPools(json)).toEqual([{
+      project: "uniswap-v3", chain: "Ethereum", symbol: "USDC / USDT", poolType: "generic", tvlUsd: 100_000, volumeUsd1d: 50_000,
+      volumeUsd7d: 300_000, price: 1.0001, source: "dl", extra: { balanceRatio: 0.5, feeTier: 100, organicFraction: 0.9 },
+    }]);
   });
 
   it("preserves the optional exact AMM execution model", () => {
@@ -146,6 +131,12 @@ describe("normalizeTopPools", () => {
       tvlUsd: 200_000,
       source: "dl",
     }]);
+  });
+
+  it("keeps a valid reviewed LP lock and drops a malformed one", () => {
+    const permanentLiquidity = { lpShare: 0.5, chain: "ethereum", lpToken: "0x1", holder: "0x2", proof: "burn-address", verifiedAtBlock: 1 };
+    const pools = [permanentLiquidity, { ...permanentLiquidity, lpShare: 2 }].map((lock) => ({ extra: { permanentLiquidity: lock } }));
+    expect(normalizeTopPools(JSON.stringify(pools)).map((pool) => pool.extra)).toEqual([{ permanentLiquidity }, {}]);
   });
 
   it("omits malformed extra values", () => {
