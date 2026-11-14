@@ -76,6 +76,37 @@ export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilt
   };
 }
 
+// Complete address formats present in the ledger: EVM (0x + 40 hex) and Tron (T + 33 base58 characters).
+const COMPLETE_ADDRESS = /^(?:0x[0-9a-fA-F]{40}|T[1-9A-HJ-NP-Za-km-z]{33})$/;
+
+export function isCompleteAddress(value: string): boolean {
+  return COMPLETE_ADDRESS.test(value.trim());
+}
+
+export type AddressCheck =
+  | { kind: "found"; count: number; stablecoin: string; timestamp: number }
+  | { kind: "none" };
+
+/**
+ * Result of the hero address check. Returns null (no sentence) unless the read
+ * settled successfully for exactly this address with the ledger unfiltered;
+ * loading, failed or inconsistent reads never produce a result.
+ */
+export function resolveAddressCheck(input: {
+  query: string;
+  settled: boolean;
+  events: ReadonlyArray<{ address: string; stablecoin: string; timestamp: number }>;
+  total: number;
+}): AddressCheck | null {
+  const query = input.query.trim();
+  if (!input.settled || !isCompleteAddress(query)) return null;
+  if (input.events.length === 0) return input.total === 0 ? { kind: "none" } : null;
+  const matches = input.events.filter((e) => e.address.toLowerCase() === query.toLowerCase());
+  if (matches.length !== input.events.length || input.total < matches.length) return null;
+  const latest = matches.reduce((a, b) => (b.timestamp > a.timestamp ? b : a));
+  return { kind: "found", count: input.total, stablecoin: latest.stablecoin, timestamp: latest.timestamp };
+}
+
 export function useFreezeWatchPageController() {
   const {
     data: summary,
@@ -366,6 +397,9 @@ export function useFreezeWatchPageController() {
     searchInput,
     searchQuery,
     pageLoading,
+    // A stale ledger or an inexact total must not back a "no event recorded" sentence.
+    pageSettled: pageData != null && !pageError && !pageQueryLoading
+      && pageMeta != null && pageMeta.status !== "stale" && pageData.totalExact !== false,
     events,
     drilldownRef,
     handleStablecoinChange,

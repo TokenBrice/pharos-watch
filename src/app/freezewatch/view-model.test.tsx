@@ -3,6 +3,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  isCompleteAddress,
   parseFreezeWatchPageFilters,
   useFreezeWatchPageController,
 } from "./view-model";
@@ -469,3 +470,6 @@ describe("useFreezeWatchPageController", () => {
     expect(nextParams.get("chainId")).toBeNull();
   });
 });
+
+it.each([["0x" + "a".repeat(40), true], ["T" + "a".repeat(33), true], ["0x" + "a".repeat(39), false], ["T0" + "a".repeat(32), false]])(
+  "isCompleteAddress %s", (v, ok) => expect(isCompleteAddress(v)).toBe(ok));

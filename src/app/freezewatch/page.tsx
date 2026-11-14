@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import FreezeWatchClient from "./client";
+import { FreezeWatchRegistryBlock } from "./registry-block";
 
 const FREEZEWATCH_DESCRIPTION =
   "Live log of issuer freezes, unfreezes and token wipes across tracked stablecoins, including USDT, USDC and PAXG, with frozen value, addresses and transactions.";
@@ -13,5 +14,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function FreezeWatchPage() {
-  return <FreezeWatchClient />;
+  return <FreezeWatchClient>
+      <FreezeWatchRegistryBlock />
+    </FreezeWatchClient>;
 }

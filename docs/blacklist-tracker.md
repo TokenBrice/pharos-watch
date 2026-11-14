@@ -113,6 +113,8 @@ Tron event scans prefer admitted Dwellir JSON-RPC, with TronGrid fallback. The p
 
 RLUSD clawbacks lack a dedicated event in the verified ABI and are not event-covered. USDA role-gated burns do not emit the configured destroy event. Binance-Peg USDT on BSC and legacy bridged USDT on Optimism emit no blacklist events and are not scanned; Optimism's separate USDT0 deployment is scanned. Removing a non-emitting scan preserves recorded history.
 
+The hero address check reuses the ledger address search (`q`) and adds no endpoint. It answers only for a complete address (EVM `0x` plus 40 hex digits, or a Tron `T` address) with the ledger unfiltered and a settled, non-stale read whose total is exact: it states the recorded event count and the latest event's coin and date, or that no event is recorded on the contracts Pharos scans. A loading, failed or stale read shows no sentence. An empty result is bounded by the coverage limits above and is not a statement about current state. The page also prerenders a registry block with no live figures: the reviewed exposure classes with their active-coin counts, and the event-tracked assets with profile links.
+
 ## Storage Semantics
 
 Event history, the historical freeze ledger and local net-active state are separate views. A release does not erase history or a prior successful ledger observation. A destroy may replace a snapshot with a better emitted seizure/burn amount, without adding destroyed funds to the active frozen total.
