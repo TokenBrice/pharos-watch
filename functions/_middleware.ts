@@ -1,5 +1,5 @@
 import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { PAGES_APP_HOSTNAME, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   getCanonicalPathForMarkdownAsset,
   getGeneratedMarkdownAssetPath,
@@ -116,6 +116,11 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
 
   if (matchesPassthrough(url.pathname) || !isNegotiableMethod(ctx.request.method)) {
     return ctx.next();
+  }
+
+  // Exact alias host only; the release pipeline still reads its marker here.
+  if (url.hostname === PAGES_APP_HOSTNAME && url.pathname !== "/__pharos_release.json") {
+    return Response.redirect(new URL(url.pathname + url.search, SITE_ORIGIN).toString(), 301);
   }
 
   const directMarkdownCanonicalPath = getCanonicalPathForMarkdownAsset(url.pathname);
