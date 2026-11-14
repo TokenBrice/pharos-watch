@@ -21,6 +21,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
 import { EventSkeleton, SummaryBand, SummaryBandSkeleton } from "./timeline-feed-sections";
+import { tapeSlotSettled } from "./timeline-feed-helpers";
 import { TimelineFeed } from "./timeline-feed";
 import { useTimelineFeedData } from "./use-timeline-feed-data";
 import { useTimelineFeedInteractions } from "./use-timeline-feed-interactions";
@@ -182,6 +183,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     dataUpdatedAt,
   } = feed.events;
   const hasData = feed.events.pages?.[0] != null;
+  const tapeSettled = tapeSlotSettled(feed.activeStatus);
 
   const interactions = useTimelineFeedInteractions({
     filterSignature: feedController.filterSignature,
@@ -193,6 +195,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     hasNextPage,
     isFetchingNextPage,
     nextPageError: isFetchNextPageError,
+    tapeSettled,
   });
 
   const handleClearFilters = useCallback(() => {

@@ -14,6 +14,8 @@ interface UseTimelineFeedInteractionsArgs {
   isFetchingNextPage: boolean;
   /** A rejected next-page request stays user-retried; the sentinel must not loop it. */
   nextPageError: boolean;
+  /** The tape slot mounts only after the incident census settles, so its rows exist from then. */
+  tapeSettled?: boolean;
 }
 export function useTimelineFeedInteractions({
   filterSignature,
@@ -25,6 +27,7 @@ export function useTimelineFeedInteractions({
   hasNextPage,
   isFetchingNextPage,
   nextPageError,
+  tapeSettled = true,
 }: UseTimelineFeedInteractionsArgs) {
   const [autoLoadState, setAutoLoadState] = useState<{ filterSignature: string; enabled: boolean } | null>(null);
   const autoLoadEnabled =
@@ -45,7 +48,7 @@ export function useTimelineFeedInteractions({
   const prevVisibleCountRef = useRef<{ filterSignature: string; count: number } | null>(null);
 
   useEffect(() => {
-    if (!permalinkResolved || !permalinkId) {
+    if (!permalinkResolved || !permalinkId || !tapeSettled) {
       return undefined;
     }
     if (typeof window === "undefined") return undefined;
@@ -90,7 +93,7 @@ export function useTimelineFeedInteractions({
         window.clearTimeout(timeoutId);
       }
     };
-  }, [permalinkResolved, permalinkId]);
+  }, [permalinkResolved, permalinkId, tapeSettled]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {

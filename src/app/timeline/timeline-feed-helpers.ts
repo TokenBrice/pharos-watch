@@ -5,6 +5,7 @@ import { formatRelativeDurationSeconds, formatRelativeTimeMs } from "@shared/lib
 import type { DigestedDay } from "@/lib/tape-digest";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DepegEvent } from "@shared/types/peg";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
 
 export const HIGHLIGHT_DURATION_MS = 2000;
 
@@ -51,4 +52,13 @@ export function retainedIncidentPrefix(event: DepegEvent, observedAtMs: number):
   const duration = formatRelativeDurationSeconds(observedAtMs / 1000 - event.startedAt);
   const observedAt = new Date(observedAtMs).toISOString().replace("T", " ").slice(0, 16);
   return `Observed open for ${duration} as of ${observedAt} UTC`;
+}
+
+/**
+ * The open-incidents census paints above the tape and grows with the open count, so the
+ * tape slot mounts only after the census's first read settles. Only an in-flight first
+ * read waits; failed, retained or incomplete cohorts settle immediately.
+ */
+export function tapeSlotSettled(status: TimelineActiveStatus): boolean {
+  return status !== "loading";
 }
