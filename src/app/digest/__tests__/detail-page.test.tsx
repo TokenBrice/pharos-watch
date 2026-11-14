@@ -41,32 +41,32 @@ vi.mock("@/lib/page-metadata", () => ({
   trimTextAtWordBoundary: (text: string) => text,
 }));
 vi.mock("@/lib/digest-registry", () => {
+  const entry = (date: string, generatedAt: number, digestType: "daily" | "weekly", title = `Edition ${date}`) => ({
+    date,
+    title,
+    text: "Summary",
+    extended: "Extended",
+    generatedAt,
+    digestType,
+    editionNumber: 1,
+  });
   const entries = [
     {
-      date: "2026-10-17",
-      title: "With model metadata",
-      text: "Summary",
-      extended: "Extended",
-      generatedAt: 1_792_224_322,
-      digestType: "daily",
-      editionNumber: 1,
+      ...entry("2026-10-17", 1_792_224_322, "daily", "With model metadata"),
       llm: { servedModel: "claude-sonnet-5" },
     },
-    {
-      date: "2026-02-25",
-      title: "Legacy edition",
-      text: "Summary",
-      extended: "Extended",
-      generatedAt: 1_772_021_621,
-      digestType: "daily",
-      editionNumber: 0,
-    },
+    entry("2026-10-12-weekly", 1_791_798_000, "weekly"),
+    entry("2026-10-12", 1_791_792_376, "daily"),
+    entry("2026-10-05-weekly", 1_791_187_800, "weekly"),
+    entry("2026-10-05", 1_791_187_537, "daily"),
+    entry("2026-02-25", 1_772_021_621, "daily", "Legacy edition"),
   ];
   return {
     DIGEST_ENTRIES: entries,
+    INDEXABLE_DIGEST_ENTRIES: entries.filter((row) => row.digestType === "weekly"),
     DIGEST_BY_DATE: {
       get(date: string) {
-        return entries.find((entry) => entry.date === date);
+        return entries.find((row) => row.date === date);
       },
     },
   };
@@ -90,6 +90,18 @@ describe("digest detail model credit", () => {
     const html = await renderDigest("2026-02-25");
 
     expect(html).toContain("Model not recorded");
+  });
+});
+
+describe("digest detail navigation", () => {
+  it("links weekly recaps to the neighbouring weeklies instead of the adjacent daily editions", async () => {
+    const newestWeekly = await renderDigest("2026-10-12-weekly");
+    expect(newestWeekly).toContain('href="/digest/2026-10-05-weekly/"');
+    expect(newestWeekly).not.toContain('href="/digest/2026-10-12/"');
+
+    const oldestWeekly = await renderDigest("2026-10-05-weekly");
+    expect(oldestWeekly).toContain('href="/digest/2026-10-12-weekly/"');
+    expect(oldestWeekly).not.toContain('href="/digest/2026-02-25/"');
   });
 });
 
