@@ -51,10 +51,14 @@ describe("public analytics scope", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each(["pharos.watch", "localhost", "127.0.0.1", "[::1]"])(
-    "allows public routes on %s, including explicit loopback smoke checks",
+    "allows public routes on %s, loopback only with the localStorage opt-in",
     (hostname) => {
       for (const path of ["/", "/yield/", "/pharoswatchbot/", "/portfolio/"]) {
+        const loopback = hostname !== "pharos.watch";
+        expect(isAnalyticsAllowed(path, hostname)).toBe(!loopback);
+        vi.stubGlobal("window", { localStorage: { getItem: () => "1" } });
         expect(isAnalyticsAllowed(path, hostname)).toBe(true);
+        vi.unstubAllGlobals();
       }
     },
   );
@@ -70,6 +74,7 @@ describe("public analytics scope", () => {
     "excludes unavailable or nonpublic path %s",
     (path) => {
       expect(isAnalyticsAllowed(path, "pharos.watch")).toBe(false);
+      vi.stubGlobal("window", { localStorage: { getItem: () => "1" } });
       expect(isAnalyticsAllowed(path, "localhost")).toBe(false);
     },
   );

@@ -6,7 +6,7 @@ Public static `/privacy/` describes processing elsewhere in the product; it fetc
 
 ### Website analytics
 
-`src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.
+`src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`; loopback hosts are admitted only after a browser-side opt-in (`localStorage["pharos-ga-loopback"] = "1"`), for local smoke checks. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.
 
 The gtag stub queues page views and `fresh_data_ready` immediately after hydration. The external script is scheduled immediately in the effect at idle with a two-second deadline (or a two-second post-paint fallback), without waiting for window `load`. Visits ending before it loads may not be recorded.
 

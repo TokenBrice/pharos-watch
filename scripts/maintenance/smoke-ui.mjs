@@ -754,6 +754,8 @@ export async function run() {
 
     const runSmokeSession = async (smokeConfig, stepLabel) => {
       const context = await browser.newContext();
+      // Local GA smoke: the site admits loopback hosts only after this browser-side opt-in.
+      if (config.expectedGaId) await context.addInitScript(() => localStorage.setItem("pharos-ga-loopback", "1"));
       const page = await context.newPage();
       const analyticsNetwork = {
         failures: [],

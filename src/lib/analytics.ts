@@ -84,12 +84,22 @@ type EventMap = {
   };
 };
 
+/** Browser-side opt-in for local GA smoke checks: `localStorage["pharos-ga-loopback"] = "1"`. */
+function hasLoopbackOptIn(): boolean {
+  try {
+    return window.localStorage.getItem("pharos-ga-loopback") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function isAnalyticsAllowed(
   pathname: string | null | undefined,
   hostname = typeof window === "undefined" ? "" : window.location.hostname,
 ): boolean {
-  // Loopback preserves explicit local GA smoke checks; layout still requires NEXT_PUBLIC_GA_ID.
-  const allowedHost = hostname === SITE_HOSTNAME || ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+  // Loopback (local smoke runs, headless probes) is admitted only on explicit opt-in; layout still requires NEXT_PUBLIC_GA_ID.
+  const allowedHost = hostname === SITE_HOSTNAME
+    || (["localhost", "127.0.0.1", "[::1]"].includes(hostname) && hasLoopbackOptIn());
   return allowedHost && Boolean(pathname) && !isOpsPath(pathname) && !isTelegramMiniAppPath(pathname ?? "");
 }
 
