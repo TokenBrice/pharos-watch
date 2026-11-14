@@ -143,6 +143,21 @@ export const DexPoolVolumeObservationSchema = z.object({
   observedAtSec: nullableEpochSec,
 });
 
+/**
+ * A reviewed LP lock on this exact pool: `lpShare` of the LP supply sits with
+ * `holder`, which provably cannot move it. `proof` stays an open string so an
+ * older bundle keeps reading a row that carries a later proof class.
+ */
+export const DexPermanentLiquiditySchema = z.object({
+  lpShare: z.number().positive().max(1),
+  chain: z.string(),
+  lpToken: z.string(),
+  holder: z.string(),
+  proof: z.string(),
+  verifiedAtBlock: z.number().int().positive(),
+});
+export type DexPermanentLiquidity = z.infer<typeof DexPermanentLiquiditySchema>;
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
@@ -195,6 +210,7 @@ const DexLiquidityPoolSchema = z.object({
       executionCapabilityGate: DexExecutionCapabilityGateSchema.optional(),
       ammExecutionModel: DexStoredAmmExecutionModelSchema.optional(),
       measuredExecution: DexMeasuredExecutionPublicProfileSchema.optional(),
+      permanentLiquidity: DexPermanentLiquiditySchema.optional(),
     })
     .optional(),
 });

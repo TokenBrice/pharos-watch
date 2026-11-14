@@ -168,6 +168,9 @@ describe("TvlTrendChart", () => {
   });
 });
 
+const mockCoin = (overrides: Parameters<typeof makeDexLiquidityData>[0], id = "usdc-circle") =>
+  useDexLiquidityMock.mockReturnValue({ data: { [id]: makeDexLiquidityData(overrides) }, isLoading: false });
+
 describe("DexLiquidityCard", () => {
   beforeEach(() => {
     useDexLiquidityMock.mockReset();
@@ -191,10 +194,7 @@ describe("DexLiquidityCard", () => {
   it.each([[0, "Low", "0%"], [0.18, "Medium", "18%"], [0.35, "High", "35%"]] as const)(
     "preserves the rated concentration display for %s",
     (concentrationHhi, label, percent) => {
-      useDexLiquidityMock.mockReturnValue({
-        data: { "usdc-circle": makeDexLiquidityData({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 }) },
-        isLoading: false,
-      });
+      mockCoin({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 });
       const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
       // The full market breakdown mounts its diagnostics only after opening.
       openMarketBreakdown(container);
@@ -203,10 +203,7 @@ describe("DexLiquidityCard", () => {
   );
 
   it.each([0.0000553, 0.0000499])("renders sub-cent DEX-implied price %s with adaptive precision", (dexPriceUsd) => {
-    useDexLiquidityMock.mockReturnValue({
-      data: { "usdc-circle": makeDexLiquidityData({ poolCount: 1, totalTvlUsd: 1_000_000, liquidityScore: 76, dexPriceUsd, dexDeviationBps: 0 }) },
-      isLoading: false,
-    });
+    mockCoin({ poolCount: 1, totalTvlUsd: 1_000_000, liquidityScore: 76, dexPriceUsd, dexDeviationBps: 0 });
     const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
     openMarketBreakdown(container);
     const price = screen.getByText("DEX-implied price").parentElement!.querySelector("span.text-lg")!;
@@ -214,13 +211,10 @@ describe("DexLiquidityCard", () => {
   });
 
   it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
-    useDexLiquidityMock.mockReturnValue({
-      data: { "usdc-circle": makeDexLiquidityData({
-        totalTvlUsd, poolCount: 0, coverageClass: null, coverageConfidence: null,
-        liquidityEvidenceClass: null, liquidityScore: null,
-        unavailableReason: "invalid-coverage-evidence",
-      }) },
-      isLoading: false,
+    mockCoin({
+      totalTvlUsd, poolCount: 0, coverageClass: null, coverageConfidence: null,
+      liquidityEvidenceClass: null, liquidityScore: null,
+      unavailableReason: "invalid-coverage-evidence",
     });
     render(<DexLiquidityCard stablecoinId="usdc-circle" />);
     expect(screen.getByText("Unavailable coverage")).toBeTruthy();
@@ -244,21 +238,12 @@ describe("DexLiquidityCard", () => {
   });
 
   it("renders unavailable 7d volume as an em dash", () => {
-    useDexLiquidityMock.mockReturnValue({
-      data: {
-        "gusd-gate": makeDexLiquidityData({
-          totalVolume24hUsd: 2_890_000,
-          totalVolume7dUsd: null,
-          poolCount: 1,
-          chainCount: 1,
-        }),
-      },
-      isLoading: false,
-    });
-    useDexLiquidityHistoryMock.mockReturnValue({
-      data: [],
-      isLoading: false,
-    });
+    mockCoin({
+      totalVolume24hUsd: 2_890_000,
+      totalVolume7dUsd: null,
+      poolCount: 1,
+      chainCount: 1,
+    }, "gusd-gate");
 
     const { container } = render(<DexLiquidityCard stablecoinId="gusd-gate" />);
     const sevenDayLabel = screen.getAllByText("7d Volume")[0];
@@ -268,17 +253,12 @@ describe("DexLiquidityCard", () => {
   });
 
   it("renders an explicit unobserved-history state instead of a zero-value chart for unrated assets", () => {
-    useDexLiquidityMock.mockReturnValue({
-      data: {
-        "usdk-kast": makeDexLiquidityData({
-          // Coin is observed (has a pool) but unrated (liquidityScore null); the
-          // card still renders and surfaces the unrated/no-direct-market notice.
-          poolCount: 1,
-          totalTvlUsd: 1_000,
-        }),
-      },
-      isLoading: false,
-    });
+    mockCoin({
+      // Coin is observed (has a pool) but unrated (liquidityScore null); the
+      // card still renders and surfaces the unrated/no-direct-market notice.
+      poolCount: 1,
+      totalTvlUsd: 1_000,
+    }, "usdk-kast");
     useDexLiquidityHistoryMock.mockReturnValue({
       data: [makeHistoryPoint(), makeHistoryPoint({ date: 1_775_779_200 })],
       isLoading: false,
@@ -317,10 +297,7 @@ describe("DexLiquidityCard", () => {
     }
 
     function renderCard({ poolCount = 6, pools = makePools(6) }: { poolCount?: number; pools?: DexLiquidityPool[] } = {}) {
-      useDexLiquidityMock.mockReturnValue({
-        data: { "usdc-circle": makeDexLiquidityData({ poolCount, totalTvlUsd: 1_000_000, topPools: pools }) },
-        isLoading: false,
-      });
+      mockCoin({ poolCount, totalTvlUsd: 1_000_000, topPools: pools });
       useDexLiquidityHistoryMock.mockReturnValue({ data: makeTrendHistory(), isLoading: false });
       return render(<DexLiquidityCard stablecoinId="usdc-circle" />);
     }
@@ -377,6 +354,16 @@ describe("DexLiquidityCard", () => {
       expect(poolTables(container)[0]!.textContent).not.toContain("$0.0001");
     });
 
+    it("states a reviewed LP lock as a pool fact and keeps its proof in the fold", () => {
+      const [pool] = makePools(1);
+      const holder = "0xbddab785b306bcd9fb056da189615cc8ece1d823";
+      const permanentLiquidity = { lpShare: 0.8901, chain: "ethereum", lpToken: "0x1", holder, proof: "no-call-bytecode", verifiedAtBlock: 1 };
+      const { container } = renderCard({ poolCount: 1, pools: [{ ...pool!, tvlUsd: 4e6, extra: { organicFraction: 1, permanentLiquidity } }] });
+      expect(container.textContent).toContain("Permanent liquidity: 89% of the POOL0 pool on Curve, about $3.56M, can never be withdrawn.");
+      expect(poolTables(container)[0]!.textContent).toContain("89% permanent");
+      expect(marketBreakdown(container).querySelector(`a[href$="/address/${holder}"]`)?.textContent).toBe("0xbdda...d823");
+    });
+
     it("labels five displayed rows from the authoritative pool count rather than the sliced list", () => {
       const { container } = renderCard({ poolCount: 9 });
       expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
@@ -400,23 +387,17 @@ describe("DexLiquidityCard", () => {
     function renderWindows(pools: DexPoolVolumeObservationInput[], overrides: Parameters<typeof makeDexLiquidityData>[0] = {}) {
       const day = summarizeDexVolumeWindow(pools, "24h", clock);
       const week = summarizeDexVolumeWindow(pools, "7d", clock);
-      useDexLiquidityMock.mockReturnValue({
-        data: {
-          "usdc-circle": makeDexLiquidityData({
-            totalTvlUsd: 1_000_000,
-            poolCount: pools.length,
-            chainCount: 1,
-            liquidityScore: 60,
-            totalVolume24hUsd: day.measuredUsd,
-            totalVolume7dUsd: week.measuredUsd,
-            volume24hAvailability: day.availability,
-            volume7dAvailability: week.availability,
-            ...overrides,
-          }),
-        },
-        isLoading: false,
+      mockCoin({
+        totalTvlUsd: 1_000_000,
+        poolCount: pools.length,
+        chainCount: 1,
+        liquidityScore: 60,
+        totalVolume24hUsd: day.measuredUsd,
+        totalVolume7dUsd: week.measuredUsd,
+        volume24hAvailability: day.availability,
+        volume7dAvailability: week.availability,
+        ...overrides,
       });
-      useDexLiquidityHistoryMock.mockReturnValue({ data: [], isLoading: false });
       render(<DexLiquidityCard stablecoinId="usdc-circle" />);
       return ["24h Volume", "7d Volume"].map((label) => {
         const value = screen.getAllByText(label)[0]!.nextElementSibling!;

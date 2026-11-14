@@ -9,6 +9,7 @@ import {
   type ExitRouteObservationCoverage,
 } from "@shared/types/exit-route";
 import {
+  DexPermanentLiquiditySchema,
   DexPoolVolumeObservationSchema,
   LiquidityScoreUnavailableReasonSchema,
   type LiquidityPoolSourceFamily,
@@ -280,6 +281,7 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "executionCapabilityGate",
   "ammExecutionModel",
   "measuredExecution",
+  "permanentLiquidity",
 ]);
 
 const TOP_POOLS_PARSE_FAILURE = Symbol("top-pools-parse-failure");
@@ -309,6 +311,10 @@ export function normalizeTopPools(
       const cleanedExtra = pickAllowedKeys(poolRecord.extra as Record<string, unknown>, ALLOWED_EXTRA_KEYS);
       const retired = DexRetiredSolidlyLegacyModelSchema.safeParse(cleanedExtra.ammExecutionModel);
       if (retired.success) cleanedExtra.ammExecutionModel = retired.data;
+      // A malformed lock is dropped; it must not fail the row's wire schema.
+      if (!DexPermanentLiquiditySchema.safeParse(cleanedExtra.permanentLiquidity).success) {
+        delete cleanedExtra.permanentLiquidity;
+      }
       cleaned.extra = cleanedExtra;
     }
     // Absent = legacy row whose volume eligibility was never recorded; a

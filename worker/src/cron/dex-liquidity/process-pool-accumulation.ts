@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPoolFingerprint,
@@ -71,6 +72,14 @@ export function accumulatePoolMetrics(
   // Preserve the native physical identity after a proven address/unique-token join.
   // A two-token discovery row cannot dedupe a three-token Curve fingerprint.
   const exactCurveAddress = enrichment.curveAddressMatch ? curveData?.poolAddress : undefined;
+  // A reviewed lock is a claim about one exact pool: it needs an address-grade
+  // join, and a row that names another pool address never inherits it from a
+  // shared coin-set fingerprint.
+  const rowPoolAddress = canonicalEvmAddress(pool.pool);
+  const reviewedLock =
+    exactCurveAddress != null && (rowPoolAddress == null || rowPoolAddress === canonicalEvmAddress(exactCurveAddress))
+      ? curveData?.permanentLiquidity
+      : undefined;
   metric.pools.push({
     poolId: buildPrimaryPoolKey(chainNorm, pool.pool, pool.project, exactCurveAddress),
     candidateFingerprint: buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ?? undefined,
@@ -93,6 +102,7 @@ export function accumulatePoolMetrics(
             registryId: curveData.registryId,
             isMetaPool: curveData.isMetaPool,
             balanceDetails: enrichment.balanceDetails,
+            ...(reviewedLock ? { permanentLiquidity: reviewedLock } : {}),
           }
         : enrichment.feeTierForExtra != null
           ? { feeTier: Math.round(enrichment.feeTierForExtra / 100) }

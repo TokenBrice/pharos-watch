@@ -20,8 +20,10 @@ import { BalanceBar } from "@/components/liquidity/balance-bar";
 import {
   getConcentrationLabel,
   getLiquidityEvidenceLabel,
+  getPermanentLiquidityPools,
   isLiquidityActivityNotRated,
 } from "@/components/liquidity/dex-liquidity-card-model";
+import { prettifyProtocol } from "@/lib/dex-display-constants";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -31,6 +33,7 @@ import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
   DurabilityBadge,
+  PermanentLiquidityProof,
   PoolSourceLabel,
   ProtocolBar,
   ScoreBreakdown,
@@ -113,6 +116,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
   const verdictLine = isRated ? buildLiquidityVerdictLine(liq.scoreComponents) : null;
+  const permanentPools = getPermanentLiquidityPools(liq.topPools);
   const hasTvlChange24h = liq.tvlChange24h != null && Math.abs(liq.tvlChange24h) >= 0.05;
   const hasTvlChange7d = liq.tvlChange7d != null && Math.abs(liq.tvlChange7d) >= 0.05;
 
@@ -249,7 +253,14 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               <p className="text-lg font-extrabold font-mono tabular-nums">{liq.chainCount}</p>
             </div>
           </div>
-
+          {permanentPools.map(({ pool, lock, lockedUsd }) => (
+            <p key={`${lock.chain}-${lock.lpToken}-${lock.holder}`} className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Permanent liquidity:</span>{" "}
+              {formatPercentFromRatio(lock.lpShare, 0)} of the {pool.symbol} pool on {prettifyProtocol(pool.project)},
+              about <span className="font-mono tabular-nums">{formatCurrency(lockedUsd)}</span>, can never be
+              withdrawn.
+            </p>
+          ))}
         </div>
 
         {/* The score explanation is the module's one summary visual. A DEC-19
@@ -356,6 +367,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           {liq.topPools.length > 0 && (
             <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />
           )}
+
+          <PermanentLiquidityProof entries={permanentPools} />
         </div>
         </ModuleDisclosure>
 

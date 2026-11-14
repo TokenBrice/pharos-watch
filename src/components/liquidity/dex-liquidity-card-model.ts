@@ -30,6 +30,19 @@ export function getPoolVariantLabel(poolType: string): string | null {
   }
 }
 
+/**
+ * Published pools that carry a reviewed LP lock, with the dollar size of the
+ * locked share on that pool's own TVL basis. A per-pool fact: the rows are a
+ * bounded slice, so the amounts are never summed into a coin-level statistic.
+ */
+export function getPermanentLiquidityPools(pools: DexLiquidityPool[]) {
+  return pools.flatMap((pool) => {
+    const lock = pool.extra?.permanentLiquidity;
+    return lock ? [{ pool, lock, lockedUsd: pool.tvlUsd * lock.lpShare }] : [];
+  });
+}
+export type PermanentLiquidityPool = ReturnType<typeof getPermanentLiquidityPools>[number];
+
 export function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefined): string | null {
   if (!balanceDetails || balanceDetails.length === 0) return null;
   return balanceDetails
