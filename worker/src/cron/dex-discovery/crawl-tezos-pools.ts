@@ -7,6 +7,7 @@ import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitive
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
+import { trackedSideBalanceRatio } from "../../lib/dex-cron-constants";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { buildStageSignal, toStagedPool, type CrawlStageContext } from "./staged-pool";
 import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck, type StagedPool } from "./types";
@@ -269,7 +270,8 @@ function evaluatePool(
     account: group.account,
     reserves: [tracked.raw, quote.raw],
   });
-  const balanceRatio = Math.min(trackedAmount, quoteAmount) / Math.max(trackedAmount, quoteAmount);
+  // v7.2: only an excess of uUSD over its stable quote is imbalance.
+  const balanceRatio = trackedSideBalanceRatio(trackedAmount / (trackedAmount + quoteAmount), 0.5);
   const pool = toStagedPool(context, {
     poolId,
     source: TEZOS_POOL_SOURCE,
@@ -282,7 +284,7 @@ function evaluatePool(
     qualityMultiplier: null,
     poolType: family.poolType,
     feeTier: null,
-    balanceRatio: Number.isFinite(balanceRatio) ? balanceRatio : null,
+    balanceRatio,
     isStable: true,
     baseToken: target.address,
     quoteToken: quote.tokenAddress,

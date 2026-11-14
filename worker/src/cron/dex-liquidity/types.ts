@@ -293,6 +293,8 @@ export interface CurvePoolEntry {
   A: number;
   /** Null when any required coin USD leg is unreadable; explicit zero is measured. */
   balanceRatio: number | null;
+  /** Tracked-side balance ratio per stablecoin id resolved in this pool (v7.2). */
+  balanceRatioById?: Record<string, number>;
   tvl: number;
   registryId: string;
   isMetaPool: boolean;

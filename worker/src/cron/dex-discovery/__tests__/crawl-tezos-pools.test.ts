@@ -102,6 +102,7 @@ describe("Tezos uUSD pool discovery", () => {
       symbol: "uUSD / USDt",
       tvlUsd: 30000,
       priceUsd: 0.75,
+      balanceRatio: expect.closeTo(0.75), // over-held uUSD
       poolType: "tezos-flat-curve",
       baseToken: UUSD_ADDRESS,
       quoteToken: USDT_ADDRESS,

@@ -1,6 +1,6 @@
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters } from "../cron/dex-liquidity/types";
 import type { SymbolLookups } from "../cron/dex-liquidity/types";
-import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
+import { QUALITY_MULTIPLIERS, normalizeDexSymbol, trackedSideBalanceRatio } from "./dex-cron-constants";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
@@ -512,6 +512,8 @@ function derivePoolBalanceMetrics(
   trackedStablecoinPrices?: Map<string, number>,
 ): {
   balanceRatio: number;
+  /** v7.2 tracked-side ratio by original token index; undefined for an excluded token. */
+  sideRatios: (number | null | undefined)[];
   balanceDetails: {
     symbol: string;
     balancePct: number;
@@ -580,9 +582,11 @@ function derivePoolBalanceMetrics(
   const totalWeight = normalizedWeights.reduce((sum, value) => sum + value, 0);
   if (!Number.isFinite(totalWeight) || totalWeight <= 0) return null;
 
+  const sideRatios: (number | null | undefined)[] = [];
   const normalizedShares = measuredBalances.map((usdBalance, index) => {
     const actualShare = usdBalance / totalUsd;
     const targetShare = normalizedWeights[index]! / totalWeight;
+    sideRatios[includedTokens[index]!.index] = trackedSideBalanceRatio(actualShare, targetShare);
     return targetShare > 0 ? actualShare / targetShare : 0;
   });
 
@@ -592,6 +596,7 @@ function derivePoolBalanceMetrics(
 
   return {
     balanceRatio: minShare / maxShare,
+    sideRatios,
     balanceDetails: measuredBalances.map((usdBalance, index) => {
       const token = includedTokens[index]!.token;
       return {
@@ -686,7 +691,8 @@ export function convertToGtNewPools(
         sourceFamily: "direct_api",
         ...(balanceMetrics
           ? {
-              balanceRatio: balanceMetrics.balanceRatio,
+              // v7.2: this token's own side; the worst side when it has none.
+              balanceRatio: balanceMetrics.sideRatios[i] ?? balanceMetrics.balanceRatio,
               balanceDetails: balanceMetrics.balanceDetails,
             }
           : {}),

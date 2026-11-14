@@ -1,5 +1,20 @@
 [
   {
+    "version": "7.2",
+    "title": "Balance health penalises only an excess of the tracked coin",
+    "date": "2026-11-14",
+    "effectiveAt": 1794690000,
+    "summary": "Balance health now reads each tracked coin's own side of a pool. A pool holding no more than its target share of the coin counts as balanced: the extra counter-asset is more exit depth for holders, not less. Above target, the ratio is the rest of the pool's normalised share over the coin's, which for a two-coin pool equals the former min/max ratio. LUSD/3Crv (33% LUSD) moves from 0.49 to 1; Mezo mUSD/crv2pool (75% MUSD) stays at 0.33.",
+    "impact": [
+      "The tracked-side ratio is never below the former min/max ratio, so no Liquidity Score falls. Estimated on 2026-11-14 live data from published top pools, about 50 of the 73 coins with an affected pool rise: LUSD 72 to about 91, sUSDe 52 to 78, GUSD 47 to 66, scrvUSD 69 to 88, DAI 57 to 72 and frxUSD 68 to 81. Pool Quality carries most of the move; effective TVL, and so TVL Depth, rise with it.",
+      "Each coin reads its own side: Curve pools resolve coins by address, then symbol, as Curve DEX price observations do; direct-API pools use the token's share against its target weight, Balancer weights included; Tezos pools compare uUSD with its stable quote. A Curve or direct-API coin that cannot be located keeps the former min/max ratio.",
+      "Published pool balanceRatio, weightedBalanceRatio and pool stress use the same tracked-side ratio, so DEWS pool-balance drift no longer reads a pool short of the tracked coin as stress; the DEWS formula and weights are unchanged. balanceDetails still publishes the raw split. The Curve DEX price-observation gate keeps the min/max ratio at 0.3 or more, because it guards price reliability, not exit depth.",
+      "Retained TVL is unchanged, so this adds no TVL-basis break, and component weights are unchanged. Staged and remembered pool rows keep their stored ratio until their next observation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.1",
     "title": "Curve metapools count their base-pool LP leg",
     "date": "2026-11-14",

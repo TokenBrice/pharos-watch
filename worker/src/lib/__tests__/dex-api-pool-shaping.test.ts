@@ -43,7 +43,7 @@ describe("Orca balance evidence", () => {
     expect(shape(pool).ammExecutionModel).toBeUndefined();
     const measured = shape({
       ...pool, tokens: pool.tokens.map((token) => ({ ...token, decimals: 6 })),
-      balances: [0, 1], balancesNormalized: true,
+      balances: [1, 0], balancesNormalized: true,
     });
     expect(measured.measurement?.balanceMeasured).toBe(true);
     expect(measured.balanceRatio).toBe(0);
@@ -70,7 +70,7 @@ describe("Fluid reserve evidence", () => {
     const metric = initSourcePoolGraph("usdc-circle", "USDC");
     addSecondaryPoolContribution(new Map([["usdc-circle", metric]]), "usdc-circle", "USDC", partial);
     expect(metric.pools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
-    expect(shape({ ...pool, balances: [0, 100], balancesNormalized: true })).toMatchObject({
+    expect(shape({ ...pool, balances: [100, 0], balancesNormalized: true })).toMatchObject({
       balanceRatio: 0, measurement: { balanceMeasured: true },
     });
   });
