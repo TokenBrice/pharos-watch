@@ -38,6 +38,7 @@ interface ActiveEventsResult {
   error: Error | null;
   isFullyLoaded: boolean;
   isAutoLoadCapped: boolean;
+  failureCount?: number;
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
   meta: ApiMeta | null;
@@ -225,6 +226,13 @@ describe("TimelineClient", () => {
     rerender(<TimelineClient />);
     expect(row().textContent!.startsWith(before)).toBe(true);
     expect(row().textContent).toContain("1 open incident");
+    expect(document.querySelector("[data-event-id]")).not.toBeNull();
+  });
+
+  it("paints the tape once the census's first attempt fails, with retries still pending", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([], { isLoading: true, data: undefined, isFullyLoaded: false, failureCount: 1 });
+    render(<TimelineClient />);
     expect(document.querySelector("[data-event-id]")).not.toBeNull();
   });
 
@@ -548,11 +556,15 @@ describe("TimelineClient", () => {
   ])("fails closed for a $label instead of retaining it", ({ label: _label, ...overrides }) => {
     mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
     mockActiveEvents([activeEvent()], overrides);
-    render(<TimelineClient />);
+    const { rerender } = render(<TimelineClient />);
     expect(screen.queryByRole("region", { name: /Currently open|Open at last observation/ })).toBeNull();
-    // A failed census still settles the tape gate: the feed paints.
+    // A failed census still settles the tape gate: the feed paints, and a later refetch
+    // (back to pending) must not remount it.
     expect(document.querySelector("[data-event-id]")).not.toBeNull();
     expect(screen.getByRole("region", { name: "Active incident status" }).textContent).toMatch(/unavailable/);
+    mockActiveEvents([], { data: undefined, error: null, isLoading: true, isFullyLoaded: false });
+    rerender(<TimelineClient />);
+    expect(document.querySelector("[data-event-id]")).not.toBeNull();
   });
 
   it("recovers a retained cohort to current activity on a fresh complete read", () => {

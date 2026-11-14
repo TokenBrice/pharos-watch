@@ -14,7 +14,7 @@ import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeFilterState } from "@/components/tape/tape-filters";
 import type { ActiveFilterChip, TimelineFeedController } from "./timeline-controller";
-import { eventDomId, tapeSlotSettled } from "./timeline-feed-helpers";
+import { eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
 import { getLogoSrc } from "@/lib/logos";
 import type { TimelineActiveStatus } from "./use-timeline-feed-data";
@@ -30,6 +30,8 @@ interface TimelineFeedProps {
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
   activeStatus: TimelineActiveStatus;
+  /** Latched by the client once the census's first read settles (`tapeSlotSettled`). */
+  tapeSettled: boolean;
   activeHealth: DataHealthInfo;
   refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
@@ -69,6 +71,7 @@ export function TimelineFeed({
   visibleEvents,
   openIncidents,
   activeStatus,
+  tapeSettled,
   activeHealth,
   refetchActive,
   digestedDays,
@@ -102,7 +105,6 @@ export function TimelineFeed({
   // land above the tape after it has painted, so the tape holds the pre-clock skeleton
   // until the census's first read settles and then mounts (a new node) at its final
   // offset; the swapped slot carries a different key so React replaces it, never moves it.
-  const tapeSettled = tapeSlotSettled(activeStatus);
 
   let permalinkRetracted = false;
   if (permalinkBufferError instanceof ApiFetchError && permalinkBufferError.status === 404 && permalinkBufferError.bodyText) {
@@ -173,7 +175,7 @@ export function TimelineFeed({
       </div>
 
       {/* The viewport floor keeps the footer from being exposed then displaced as rows arrive. */}
-      <section key={tapeSettled ? "tape" : "tape-pending"} id="data" aria-label="Event tape" tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
+      <section key={tapeSettled ? "tape" : "tape-pending"} id="data" aria-label="Event tape" aria-busy={tapeSettled ? undefined : true} tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
         <div id="tape-feed" className="space-y-4">
         {tapeSettled ? <>
           {bufferEvent ? (

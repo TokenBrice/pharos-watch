@@ -57,8 +57,9 @@ export function retainedIncidentPrefix(event: DepegEvent, observedAtMs: number):
 /**
  * The open-incidents census paints above the tape and grows with the open count, so the
  * tape slot mounts only after the census's first read settles. Only an in-flight first
- * read waits; failed, retained or incomplete cohorts settle immediately.
+ * attempt waits; a failed attempt (retries pending), failed, retained or incomplete
+ * cohorts settle immediately. Callers latch the result so a later refetch never remounts.
  */
-export function tapeSlotSettled(status: TimelineActiveStatus): boolean {
-  return status !== "loading";
+export function tapeSlotSettled(status: TimelineActiveStatus, failureCount = 0): boolean {
+  return status !== "loading" || failureCount > 0;
 }

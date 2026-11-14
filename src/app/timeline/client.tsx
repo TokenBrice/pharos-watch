@@ -1,7 +1,7 @@
 "use client";
 
 import "./phosphor.css";
-import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import {
   TapeFilters,
@@ -183,7 +183,10 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     dataUpdatedAt,
   } = feed.events;
   const hasData = feed.events.pages?.[0] != null;
-  const tapeSettled = tapeSlotSettled(feed.activeStatus);
+  // Latched in render (not an effect, which would paint the census one commit early): a later
+  // census refetch (Retry, reconnect, polling) resets the query to pending but never remounts the tape.
+  const [tapeSettled, setTapeSettled] = useState(false);
+  if (!tapeSettled && tapeSlotSettled(feed.activeStatus, feed.activeIncidents.failureCount)) setTapeSettled(true);
 
   const interactions = useTimelineFeedInteractions({
     filterSignature: feedController.filterSignature,
@@ -292,6 +295,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
         activeStatus={feed.activeStatus}
+        tapeSettled={tapeSettled}
         activeHealth={feed.activeHealth}
         refetchActive={() => void feed.activeIncidents.refetch()}
         digestedDays={feed.digestedDays}
