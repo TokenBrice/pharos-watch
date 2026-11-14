@@ -68,10 +68,11 @@ describe("depeg event indexing policy", () => {
 
 describe("depeg event noindex tier", () => {
   const DAY = EPOCH + 30 * 86_400;
-  const event = (slug: string, overrides: Partial<{ stablecoinId: string; startedAt: number; peakDeviationBps: number; pendingReason: string | null }> = {}) => ({
+  const event = (slug: string, overrides: Partial<{ stablecoinId: string; startedAt: number; endedAt: number | null; peakDeviationBps: number; pendingReason: string | null }> = {}) => ({
     slug,
     stablecoinId: "coin-a",
     startedAt: DAY,
+    endedAt: DAY + 3_600,
     peakDeviationBps: -600,
     pendingReason: null,
     ...overrides,
@@ -96,14 +97,25 @@ describe("depeg event noindex tier", () => {
     expect([...noindex].sort()).toEqual(["a-1", "a-3"]);
   });
 
-  it("noindexes low-confidence events and never picks one as the cluster lead", () => {
+  it("noindexes low-confidence events only while they are still open", () => {
     const noindex = buildNoindexDepegEventSlugs([
-      event("solo-low", { stablecoinId: "coin-c", pendingReason: "low-confidence" }),
-      event("big-low", { peakDeviationBps: -2_000, pendingReason: "confirmation-window+low-confidence" }),
+      event("solo-open", { stablecoinId: "coin-c", endedAt: null, pendingReason: "low-confidence" }),
+      event("solo-closed", { stablecoinId: "coin-d", pendingReason: "low-confidence" }),
+      event("big-low", { peakDeviationBps: -2_000, endedAt: null, pendingReason: "confirmation-window+low-confidence" }),
       event("small-trusted", { startedAt: DAY + 60, peakDeviationBps: -600 }),
     ]);
 
-    expect([...noindex].sort()).toEqual(["big-low", "solo-low"]);
+    expect([...noindex].sort()).toEqual(["big-low", "solo-open"]);
+  });
+
+  it("leads an all-low-confidence cluster with its largest closed event", () => {
+    const noindex = buildNoindexDepegEventSlugs([
+      event("low-small", { startedAt: DAY + 60, peakDeviationBps: -600, pendingReason: "low-confidence" }),
+      event("low-mid", { startedAt: DAY + 7_200, peakDeviationBps: -900, pendingReason: "low-confidence" }),
+      event("low-big-open", { peakDeviationBps: -2_000, endedAt: null, pendingReason: "low-confidence" }),
+    ]);
+
+    expect([...noindex].sort()).toEqual(["low-big-open", "low-small"]);
   });
 
   it("never noindexes a page with recent search impressions", () => {
