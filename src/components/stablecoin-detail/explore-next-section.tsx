@@ -16,7 +16,7 @@ import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
-import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildComparePrefillUrl } from "@/lib/compare-links";
 import {
   buildBackingTaxonomyUrl,
   buildGovernanceTaxonomyUrl,
@@ -97,7 +97,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
     });
   }
   const actionLinks: Array<{ href: string; label: string }> = [
-    { href: buildLiveCompareUrl([coin.id]), label: `Open ${coin.symbol} in live compare` },
+    { href: buildComparePrefillUrl([coin.id]), label: `Open ${coin.symbol} in live compare` },
     { href: "/compare/", label: "Browse stablecoin comparisons" },
     { href: "/digest/", label: "Read the daily digest" },
     { href: "/api/", label: "Use the Pharos API" },
