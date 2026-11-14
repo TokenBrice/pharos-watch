@@ -52,7 +52,6 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
     tvl: 1_000_000,
     registryId: "stableswap",
     isMetaPool: false,
-    metapoolAdjustedTvl: 900_000,
     creationTs: 0,
     balanceDetails: [],
     tokenPrices: {},
@@ -91,11 +90,9 @@ describe("processPoolMetrics", () => {
   });
 
   it.each([
-    { ratio: null, scope: "full-pool", measured: false },
-    { ratio: 0, scope: "full-pool", measured: true },
-    { ratio: null, scope: "base-pool-excluded", measured: false },
-    { ratio: 0.5, scope: "base-pool-excluded", measured: false },
-  ] as const)("persists Curve balance availability and scope ($ratio, $scope)", async ({ ratio, scope, measured }) => {
+    { ratio: null, measured: false },
+    { ratio: 0, measured: true },
+  ] as const)("persists Curve balance availability ($ratio)", async ({ ratio, measured }) => {
     const { db, sqlite } = createLatestSchemaSqlite();
     const nowSec = 1_790_000_000;
     try {
@@ -112,9 +109,7 @@ describe("processPoolMetrics", () => {
             { symbol: "USDC", balancePct: 0, isTracked: true },
             { symbol: "USDT", balancePct: 100, isTracked: false },
           ],
-          tvl: scope === "full-pool" ? 100_000 : 200_000,
-          metapoolAdjustedTvl: 100_000, isMetaPool: scope !== "full-pool",
-          balanceTvlScope: "full-pool", contributionTvlScope: scope,
+          tvl: 100_000,
         })]]),
         ...noV3(), volumeObservedAtSec: nowSec,
       });
@@ -235,8 +230,7 @@ describe("processPoolMetrics", () => {
       "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
       "0xd533a949740bb3306d119cc777fa900ba034cd52",
     ];
-    const native = makeCurveEntry({ poolAddress: address, tvl: 2_800_000,
-      metapoolAdjustedTvl: 2_800_000, registryId: "factory-tricrypto" });
+    const native = makeCurveEntry({ poolAddress: address, tvl: 2_800_000, registryId: "factory-tricrypto" });
     const pool = makePool({ pool: "llama-pool-uuid", symbol: "CRVUSD-WETH-CRV",
       underlyingTokens: tokens, tvlUsd: 2_900_000 });
     const { metrics } = processPoolMetrics({
@@ -336,7 +330,6 @@ describe("processPoolMetrics", () => {
           A: 700,
           balanceRatio: 0.2,
           registryId: "factory-stable-ng",
-          metapoolAdjustedTvl: 1_000_000,
           balanceDetails: [
             { symbol: "USDT", balancePct: 80, isTracked: true },
             { symbol: "USDC", balancePct: 20, isTracked: true },
@@ -397,9 +390,6 @@ describe("processPoolMetrics", () => {
           balanceRatio: 0.8,
           registryId: "main-stableswap",
           tvl: 900_000,
-          balanceTvlScope: "full-pool",
-          contributionTvlScope: "full-pool",
-          metapoolAdjustedTvl: 900_000,
           creationTs: Math.floor(nowMs / 1000) - 200 * 86_400,
           balanceDetails: [
             { symbol: "USDT", balancePct: 0.52, isTracked: true },
@@ -414,9 +404,6 @@ describe("processPoolMetrics", () => {
           balanceRatio: 0.5,
           registryId: "tricrypto-factory",
           isMetaPool: true,
-          metapoolAdjustedTvl: 300_000,
-          balanceTvlScope: "full-pool",
-          contributionTvlScope: "base-pool-excluded",
           permanentLiquidity: { lpShare: 0.5, chain: "ethereum", lpToken: "0x1", holder: "0x2", proof: "burn-address", verifiedAtBlock: 1 },
           creationTs: Math.floor(nowMs / 1000) - 100 * 86_400,
           balanceDetails: [
@@ -735,10 +722,8 @@ describe("processPoolMetrics", () => {
     expect(metrics.get("usdt-tether")?.pools[0]?.project).toBe("orca");
   });
 
-  it("Curve metapool dedup: uses metapoolAdjustedTvl not raw usdTotal for effective and protocol TVL", () => {
-    // F15 regression: a Curve metapool with basePoolAddress should surface
-    // usdTotalExcludingBasePool (60M) via metapoolAdjustedTvl in scoring paths,
-    // NOT the raw usdTotal (100M). Prevents base-pool TVL double-counting.
+  it("Curve metapool counts its base-LP leg: full usdTotal, not Curve's base-pool-excluded total", () => {
+    // LUSD/3Crv regression: excluding the 3Crv leg published $4.3M of a $12.9M pool.
 
     const symbolToIds = new Map<string, string[]>([
       ["USDC", ["usdc-circle"]],
@@ -758,8 +743,7 @@ describe("processPoolMetrics", () => {
           balanceRatio: 1,
           registryId: "factory-meta",
           isMetaPool: true,
-          tvl: 100_000_000, // raw usdTotal
-          metapoolAdjustedTvl: 60_000_000, // usdTotalExcludingBasePool
+          tvl: 100_000_000,
           balanceDetails: [
             { symbol: "USDC", balancePct: 50, isTracked: true },
             { symbol: "USDT", balancePct: 50, isTracked: true },
@@ -774,7 +758,7 @@ describe("processPoolMetrics", () => {
           pool: "0xmetapool",
           project: "curve",
           symbol: "USDC-USDT",
-          tvlUsd: 100_000_000, // DL raw usdTotal includes base-pool TVL
+          tvlUsd: 100_000_000,
           underlyingTokens: ["0xusdc", "0xusdt"],
           count: 5,
         }),
@@ -789,17 +773,12 @@ describe("processPoolMetrics", () => {
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
     const rebuiltUsdc = rebuildMetricsFromPools(usdc?.pools ?? []);
-    // totalTvlUsd (and protocolTvl) rebuilt from metapoolAdjustedTvl, not raw 100M
-    expect(rebuiltUsdc.totalTvlUsd).toBe(60_000_000);
-    expect(rebuiltUsdc.protocolTvl.curve).toBe(60_000_000);
-    // Top-pool row mirrors the metapool-adjusted TVL — not the raw $100M DL number
-    expect(usdc?.pools[0]?.tvlUsd).toBe(60_000_000);
-    // Quality and effective TVL both use Curve's base-pool-excluded value,
-    // keeping the quality numerator on the retained TVL denominator's basis.
-    expect(rebuiltUsdc.qualityAdjustedTvl).toBe(51_000_000);
-    expect(rebuiltUsdc.effectiveTvl).toBe(51_000_000);
-    expect(usdc?.pools[0]?.extra?.qualityAdjustedTvl).toBe(51_000_000);
-    expect(usdc?.pools[0]?.extra?.effectiveTvl).toBe(51_000_000);
+    expect(rebuiltUsdc.totalTvlUsd).toBe(100_000_000);
+    expect(rebuiltUsdc.protocolTvl.curve).toBe(100_000_000);
+    expect(usdc?.pools[0]?.tvlUsd).toBe(100_000_000);
+    expect(usdc?.pools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
+    expect(rebuiltUsdc.qualityAdjustedTvl).toBe(85_000_000);
+    expect(rebuiltUsdc.effectiveTvl).toBe(85_000_000);
   });
 
 
@@ -817,7 +796,6 @@ describe("processPoolMetrics", () => {
     const entry = makeCurveEntry({
       A: 200,
       registryId: "factory-stable-ng",
-      metapoolAdjustedTvl: 900_000,
       executionCoins: [
         { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
         { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9995 },
@@ -849,8 +827,8 @@ describe("processPoolMetrics", () => {
     const usdc = metrics.get("usdc-circle");
     expect(usdc).toBeDefined();
     const topPool = usdc!.pools[0]!;
-    // Address-grade fingerprint match: metapool-adjusted TVL replaces the row's own TVL.
-    expect(topPool.tvlUsd).toBe(900_000);
+    // Address-grade fingerprint match: Curve's TVL replaces the row's own TVL.
+    expect(topPool.tvlUsd).toBe(1_000_000);
     const model = topPool.extra?.ammExecutionModel;
     expect(model).toBeDefined();
     expect(model).toMatchObject({
@@ -932,7 +910,6 @@ describe("processPoolMetrics", () => {
       apiIsBroken: false,
       A: 50_000,
       tvl: 46_403_371,
-      metapoolAdjustedTvl: 46_403_371,
       registryId: "factory-twocrypto",
       executionCoins: [
         { address: CRVUSD, symbol: "crvUSD", decimals: 18, balance: 23_000_000, usdPrice: 1 },
@@ -943,7 +920,6 @@ describe("processPoolMetrics", () => {
       ...candidate,
       poolAddress: ACTIVE_SIBLING,
       tvl: 7_494_912,
-      metapoolAdjustedTvl: 7_494_912,
     };
     const retainedPool = makePool({
       pool: "128b253a-0903-476f-9a70-6007b336e395",

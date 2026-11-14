@@ -59,7 +59,7 @@ describe("normalizeProtocol Aero", () => {
 });
 
 describe("computePoolQualityContribution", () => {
-  it("uses retained base-pool-excluded TVL for both Curve quality and effective contributions", () => {
+  it("uses one retained TVL for quality and effective contributions", () => {
     const contribution = computePoolQualityContribution({
       qualityTvlUsd: 60_000_000,
       effectiveTvlUsd: 60_000_000,

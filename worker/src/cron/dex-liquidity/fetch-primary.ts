@@ -551,10 +551,6 @@ export async function buildCurveLookups(
             }))
           : undefined;
 
-        // v2: Use metapool-adjusted TVL when available
-        const metapoolAdjustedTvl =
-          pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0 ? pool.usdTotalExcludingBasePool : pool.usdTotal;
-
         const coinSymbols = pool.coins
           .map((c) => normalizeDexSymbol(c.symbol))
           .sort()
@@ -645,16 +641,14 @@ export async function buildCurveLookups(
           apiIsBroken: false,
           A,
           balanceRatio,
-          balanceTvlScope: "full-pool",
-          contributionTvlScope: pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0
-            ? "base-pool-excluded" : "full-pool",
+          // A metapool's TVL includes its base-LP leg: that leg is the counterparty
+          // depth, and no tracked coin is credited with it through this pool.
           tvl: pool.usdTotal,
           registryId: pool.registryId ?? "",
           isMetaPool: pool.isMetaPool ?? false,
           ...(pool.basePoolAddress && retainCompositePoolIdentity
             ? { basePoolAddress: pool.basePoolAddress }
             : {}),
-          metapoolAdjustedTvl,
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
           tokenPrices,
@@ -720,7 +714,7 @@ export async function buildCurveLookups(
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
-        if (metapoolAdjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
+        if (pool.usdTotal >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
           const identity = buildPoolIdentity({
             chain,
             protocol: "curve",
@@ -741,7 +735,7 @@ export async function buildCurveLookups(
             obs.push({
               price: coin.usdPrice,
               observedAt: json.observedAt ?? null,
-              tvl: metapoolAdjustedTvl,
+              tvl: pool.usdTotal,
               chain,
               protocol: "curve",
               ...buildDexPriceObservationIdentity(identity),

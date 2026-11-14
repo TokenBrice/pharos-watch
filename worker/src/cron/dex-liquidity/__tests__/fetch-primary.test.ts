@@ -483,7 +483,7 @@ describe("buildCurveLookups", () => {
       new Map([["USDC", ["usdc-circle"]]]), new Map(), new Map(),
     );
     expect(curvePoolMap.get(`ethereum:${address}`)).toMatchObject({
-      poolAddress: address, tvl: 200_000, metapoolAdjustedTvl: 200_000, balanceRatio: null,
+      poolAddress: address, tvl: 200_000, balanceRatio: null,
     });
     expect(curvePoolMap.get(`ethereum:${address}`)?.balanceDetails).toBeUndefined();
     expect(curvePoolMap.get(`ethereum:${address}`)?.executionCoins).toBeUndefined();
@@ -630,7 +630,6 @@ describe("buildCurveLookups", () => {
       registryId: "factory-stable-ng",
       isBroken: false,
       virtualPrice: "1",
-      usdTotalExcludingBasePool: input.isMetaPool ? 100_000 : 0,
       creationTs: 123,
       basePoolAddress: input.basePoolAddress ?? null,
       gaugeCrvApy: null,
@@ -781,7 +780,6 @@ describe("buildCurveLookups", () => {
       registryId: "factory",
       isBroken: false,
       virtualPrice: "1",
-      usdTotalExcludingBasePool: 303_622,
       creationTs: 0,
       basePoolAddress,
       gaugeCrvApy: null,
@@ -809,8 +807,6 @@ describe("buildCurveLookups", () => {
       curvePoolMap.get(`avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`),
     ).toMatchObject({
       basePoolAddress,
-      balanceTvlScope: "full-pool",
-      contributionTvlScope: "base-pool-excluded",
       poolCoins: [
         { symbol: "NXUSD", decimals: 18, isBasePoolLpToken: false },
         { symbol: "av3CRV", decimals: 18, isBasePoolLpToken: true },
@@ -986,6 +982,7 @@ describe("buildCurveLookups", () => {
     if (!fingerprint) throw new Error("expected a complete LUSD/3Crv fingerprint");
     const addressEntry = curvePoolMap.get(`ethereum:${CURVE_LUSD_3CRV_METAPOOL_ADDRESS}`);
     expect(addressEntry?.registryId).toBe("factory");
+    expect(addressEntry?.tvl).toBe(11_900_000); // with the 3Crv leg, not usdTotalExcludingBasePool
     expect(curvePoolMap.get(fingerprint)).toBe(addressEntry);
     expect(curvePoolCandidatesByFingerprint.get(fingerprint)).toEqual([addressEntry]);
     expect(buildCurveCompositeMeasuredExecutionTarget({
@@ -1037,7 +1034,6 @@ describe("buildCurveLookups", () => {
             registryId: "factory-stable-ng",
             isBroken: false,
             virtualPrice: "1",
-            usdTotalExcludingBasePool: 0,
             creationTs: 123,
             basePoolAddress: null,
             gaugeCrvApy: null,

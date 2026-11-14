@@ -56,7 +56,6 @@ function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
     tvl: 10_000_000,
     registryId: "factory-stable-ng",
     isMetaPool: false,
-    metapoolAdjustedTvl: 10_000_000,
     creationTs: 0,
     balanceDetails: [],
     tokenPrices: {},
@@ -148,13 +147,12 @@ function compositeCapability(
 
 describe("buildCurveStableswapExecutionModel", () => {
   it.each([2_000_000, 5_000_000])(
-    "keeps quality retention on the retained metapool basis of %s through scoring",
+    "keeps quality retention on the Curve metapool TVL of %s through scoring",
     (retainedTvl) => {
       const poolAddress = "0x1111111111111111111111111111111111111111";
       const curveData = entry({
         poolAddress, isMetaPool: true, registryId: "factory",
-        balanceRatio: 0.5, metapoolAdjustedTvl: retainedTvl,
-        balanceTvlScope: "base-pool-excluded", contributionTvlScope: "base-pool-excluded",
+        balanceRatio: 0.5, tvl: retainedTvl,
       });
       const pool: LlamaPool = {
         pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
@@ -190,34 +188,6 @@ describe("buildCurveStableswapExecutionModel", () => {
       expect(result.score!).toBeLessThan(inflated.score!);
     },
   );
-  it.each([undefined, "full-pool"] as const)("withholds mismatched metapool balance scope %s from retained quality and diagnostics", (balanceTvlScope) => {
-    const poolAddress = "0x1111111111111111111111111111111111111111";
-    const curveData = entry({
-      poolAddress, isMetaPool: true, registryId: "factory", balanceRatio: 0.1,
-      metapoolAdjustedTvl: 2_000_000, balanceTvlScope, contributionTvlScope: "base-pool-excluded",
-    });
-    const pool: LlamaPool = {
-      pool: poolAddress, chain: "ethereum", project: "curve", symbol: "USDC-USDT",
-      tvlUsd: 10_000_000, volumeUsd1d: 250_000, volumeUsd7d: 1_750_000,
-      stablecoin: true, underlyingTokens: [USDC, USDT],
-      apyBase: 1, apyReward: 0, apy: 1, sigma: 0, exposure: "multi", count: 100,
-    };
-    const { metrics } = processPoolMetrics({
-      pools: [pool], dexProjects: new Set(["curve"]), chainAddressToId,
-      symbolToChainScopedIds: new Map(), curvePoolMap: new Map([[`ethereum:${poolAddress}`, curveData]]),
-      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), volumeObservedAtSec: 1_000,
-    });
-    const metric = scorePoolGraph(metrics.get("usdc-circle")!);
-    expect(metric.totalTvlUsd).toBe(2_000_000);
-    expect(metric.qualityAdjustedTvl).toBe(1_700_000);
-    expect(metric.effectiveTvl).toBe(1_700_000);
-    expect(metric.totalTvlForBalance).toBe(0);
-    expect(metric.topPools[0]?.extra?.measurement?.balanceMeasured).toBe(false);
-    expect(metric.topPools[0]?.extra?.balanceRatio).toBeUndefined();
-    expect(metric.topPools[0]?.extra?.balanceDetails).toBeUndefined();
-  });
-
-
   it("builds a schema-valid stableswap model with the tracked input token", () => {
     const model = buildCurveStableswapExecutionModel(entry(), "ethereum", "usdc-circle", chainAddressToId);
     expect(model).not.toBeNull();
@@ -449,7 +419,6 @@ describe("buildCurveStableswapExecutionModel", () => {
       registryId: "main",
       A: 4_000,
       tvl: 160_047_206,
-      metapoolAdjustedTvl: 160_047_206,
       executionCoins: [
         { address: DAI_3POOL, symbol: "DAI", decimals: 18, balance: 28_348_143, usdPrice: 1.0001 },
         { address: USDC_3POOL, symbol: "USDC", decimals: 6, balance: 28_486_107, usdPrice: 1 },
@@ -564,7 +533,6 @@ describe("buildCurveStableswapExecutionModel", () => {
       registryId: "factory-stable-ng",
       A: 3_000,
       tvl: 20_501_133,
-      metapoolAdjustedTvl: 20_501_133,
       executionCoins: [
         { address: USDG_NG, symbol: "USDG", decimals: 6, balance: 10_297_747, usdPrice: 1 },
         { address: USDC_NG, symbol: "USDC", decimals: 6, balance: 10_203_386, usdPrice: 1 },
@@ -634,7 +602,6 @@ describe("buildCurveStableswapExecutionModel", () => {
       registryId: "factory-stable-ng",
       A: 1_000,
       tvl: 27_477,
-      metapoolAdjustedTvl: 27_477,
       executionCoins: [
         { address: USDC_NG, symbol: "USDC", decimals: 6, balance: 6_877_268_070, usdPrice: 1 },
         { address: DUSD_NG, symbol: "DUSD", decimals: 18, balance: 19_939.689669, usdPrice: 1.033115 },
@@ -682,14 +649,12 @@ describe("buildCurveStableswapExecutionModel", () => {
       apiIsBroken: false,
       registryId: "factory-twocrypto",
       tvl: 46_403_371,
-      metapoolAdjustedTvl: 46_403_371,
     });
     const sibling = entry({
       poolAddress: "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373",
       apiIsBroken: false,
       registryId: "factory-twocrypto",
       tvl: 7_494_912,
-      metapoolAdjustedTvl: 7_494_912,
     });
 
     expect(resolveActiveCurveCryptoSwapCandidateByTvl([active, sibling], 46_360_886, "ethereum")).toBe(active);
@@ -728,13 +693,11 @@ describe("buildCurveStableswapExecutionModel", () => {
       registryId: "factory-crypto",
       A: 200_000_000,
       tvl: 164_849,
-      metapoolAdjustedTvl: 164_849,
     });
     const stableTwin = entry({
       poolAddress: "0x2cf99a343e4ecf49623e82f2ec6a9b62e16ff3fe",
       A: 750,
       tvl: 51_629,
-      metapoolAdjustedTvl: 51_629,
     });
     const candidates = [cryptoTwin, stableTwin];
 
