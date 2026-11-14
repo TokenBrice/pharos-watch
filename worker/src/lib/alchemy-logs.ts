@@ -8,7 +8,7 @@ import { rethrowIfAborted, throwIfAborted } from "./abort";
 import { requestJsonRpcAtUrl } from "./evm-rpc";
 import { logWorkerEvent } from "./structured-log";
 import type { CacheRetentionPolicy } from "./db-cache";
-import { runWithOverloadRetry } from "./d1-overload-retry";
+import { isD1ResourceWindowError, isRetriableD1OverloadError, runWithOverloadRetry } from "./d1-overload-retry";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
@@ -848,6 +848,15 @@ async function fetchBlockTimestampBatch(
   }
 }
 
+/**
+ * The persistent timestamp cache only saves RPC calls, so an overloaded D1 read
+ * or write is a cache miss, not a reason to fail the run: the resolved RPC
+ * timestamps stay authoritative. Aborts and every other error still propagate.
+ */
+function isOptionalTimestampCacheD1Error(err: unknown): boolean {
+  return isRetriableD1OverloadError(err) || isD1ResourceWindowError(err);
+}
+
 export async function resolveBlockTimestamps(
   alchemyUrl: string,
   blockNumbers: number[],
@@ -908,6 +917,18 @@ export async function resolveBlockTimestamps(
           localCache?.set(localKey(row.block_number), row.timestamp);
         }
       }
+    } catch (err) {
+      rethrowIfAborted(err, timeout?.signal ?? options?.signal);
+      if (!isOptionalTimestampCacheD1Error(err)) throw err;
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_block_timestamp_cache_read_failed",
+        message: "Block timestamp cache read failed; resolving the remaining timestamps from RPC",
+        provider: "alchemy",
+        metadata: { chainId: persistentCache.chainId, blocks: unresolved.length },
+        error: err,
+      });
     } finally {
       timeout?.dispose();
     }
@@ -979,10 +1000,24 @@ export async function resolveBlockTimestamps(
         )
         .bind(persistentCache.chainId, block, ts, nowSec, freshHashes.get(block) ?? null),
     );
-    await batchExecute(persistentCache.db, stmts, {
-      chunkSize: TIMESTAMP_CACHE_READ_CHUNK,
-      signal: options?.signal,
-    });
+    try {
+      await batchExecute(persistentCache.db, stmts, {
+        chunkSize: TIMESTAMP_CACHE_READ_CHUNK,
+        signal: options?.signal,
+      });
+    } catch (err) {
+      rethrowIfAborted(err, options?.signal);
+      if (!isOptionalTimestampCacheD1Error(err)) throw err;
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_block_timestamp_cache_write_failed",
+        message: "Block timestamp cache write failed; returning the resolved timestamps",
+        provider: "alchemy",
+        metadata: { chainId: persistentCache.chainId, rows: stmts.length },
+        error: err,
+      });
+    }
   }
 
   return timestamps;
