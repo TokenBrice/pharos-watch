@@ -16,7 +16,7 @@ export function FreezeWatchRegistryBlock() {
         <p className="pharos-label">Registry</p>
         <h2 className="pharos-section-title">Reviewed exposure classes and tracked assets</h2>
         <p className="pharos-meta max-w-3xl">
-          Reviewed holder-control exposure for active coins. These are classifications, not observed freezes.
+          Can the issuer or an admin freeze holder balances? Reviewed answers for active coins; these are classifications, not observed freezes.
         </p>
       </div>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
