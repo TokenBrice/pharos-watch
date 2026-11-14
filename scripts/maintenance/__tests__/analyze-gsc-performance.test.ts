@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { analyzeGscPerformanceInputs, expectedCtr, renderGscPerformanceReport, runCli } from "../analyze-gsc-performance.mjs";
+import { analyzeGscPerformanceInputs, expectedCtr, isSyntheticQuery, renderGscPerformanceReport, runCli } from "../analyze-gsc-performance.mjs";
+import { defaultWindow, foldPages, postWithRetry, queryAll, toCsv } from "../fetch-gsc-search-analytics.mjs";
 
 const directories: string[] = [];
 afterEach(() => directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })));
@@ -176,6 +177,29 @@ describe("GSC performance expectations and sitelinks", () => {
     });
   });
 
+  it("maps compare, blog, changelog, upcoming, api and about to their own families", async () => {
+    const csv = "Page,Clicks,Impressions,Position\n/compare/,0,10,4\n/blog/x/,0,10,4\n/changelog/,0,10,4\n/upcoming/,0,10,4\n/api/,0,10,4\n/about/,0,10,4\n";
+    const report = await analyzeGscPerformanceInputs([capture({ "Pages.csv": csv })]);
+    expect(report.pages.map((page) => page.family).sort()).toEqual(["about", "api", "blog", "changelog", "compare-hub", "upcoming"]);
+  });
+
+  it("tags synthetic queries, splits them out and keeps them from opportunities", async () => {
+    const rules: Record<string, string | null> = {
+      "site:pharos.watch usdt": "search-operator", "a OR b": "search-operator", '"usdt reserves"': "quoted-string",
+      "pharos.watch/api/x": "url-or-path", "flows.csv": "url-or-path", [`0x${"a".repeat(40)}`]: "address-or-long-token",
+      "one two three four five six seven eight": "long-query", "evaluate usdt": "prompt-style",
+      "which stablecoin is safest for me?": null, "https usdt": null, "usdt depeg": null,
+    };
+    for (const [query, rule] of Object.entries(rules)) expect(isSyntheticQuery(query), query).toBe(rule);
+    expect(isSyntheticQuery("a b c", 3)).toBe("long-query");
+    const csv = 'Page,Query,Clicks,Impressions,Position\n/compare/,"""usdt reserves""",0,300,2\n/compare/,usdt depeg,1,100,3\n';
+    const report = await analyzeGscPerformanceInputs([capture({ "page-query.csv": csv })], { minImpressions: 10 });
+    expect(report.querySplit.synthetic).toMatchObject({ impressions: 300 });
+    expect(report.syntheticFamilies).toEqual([{ family: "compare-hub", impressions: 400, syntheticImpressions: 300 }]);
+    expect(report.topSyntheticQueries[0]).toMatchObject({ query: '"usdt reserves"', syntheticRule: "quoted-string" });
+    expect(report.queryOpportunities.map((query) => query.query)).toEqual(["usdt depeg"]);
+  });
+
   it("accepts --brand-pattern on the CLI", async () => {
     let stdout = "";
     const directory = capture({ "Queries.csv": "Query,Clicks,Impressions,Position\nacme,0,500,3\n" });
@@ -183,5 +207,25 @@ describe("GSC performance expectations and sitelinks", () => {
       { write: () => undefined })).toBe(0);
     expect(stdout).toContain("Brand query pattern: /acme/i");
     expect(stdout).toContain("- brand | impressions=500");
+  });
+});
+
+describe("GSC Search Analytics fetch helpers", () => {
+  it("picks the default window, folds page variants and writes CSV", () => {
+    expect(defaultWindow(new Date("2026-11-14T10:00:00Z"))).toEqual({ start: "2026-08-14", end: "2026-11-11" });
+    const row = (page: string, clicks: number, impressions: number, position: number) => ({ keys: [page, "q,1"], clicks, impressions, position });
+    const folded = foldPages([row("https://p.w/a/", 1, 100, 2), row("http://p.w/a?x=1#y", 0, 300, 6), row("https://other.p.w/a/", 9, 9, 9)], "https://p.w");
+    expect(folded).toEqual([{ keys: ["https://p.w/a/", "q,1"], clicks: 1, impressions: 400, ctr: 0.0025, position: 5 }]);
+    expect(toCsv(["Page", "Query"], folded)).toBe('Page,Query,Clicks,Impressions,CTR,Position\nhttps://p.w/a/,"q,1",1,400,0.002500,5.00\n');
+  });
+
+  it("pages until a short page and retries thrown and non-2xx failures", async () => {
+    const calls: number[] = [];
+    const full = Array.from({ length: 25_000 }, () => ({ keys: ["x"], clicks: 0, impressions: 1, position: 1 }));
+    const rows = await queryAll(async (body: { startRow: number }) => { calls.push(body.startRow); return { rows: body.startRow ? [full[0]] : full }; }, {});
+    expect([rows.length, calls]).toEqual([25_001, [0, 25_000]]);
+    const answers = [() => { throw new TypeError("fetch failed"); }, () => ({ ok: false, status: 503 }), () => ({ ok: true, json: async () => ({ rows: [] }) })];
+    const fake = async () => answers.shift()!();
+    expect(await postWithRetry(fake as never, "u", "t", {}, { delayMs: 0 })).toEqual({ rows: [] });
   });
 });

@@ -31,6 +31,7 @@ const CTR_CURVE_CAP = 0.6;
 const DEFAULT_BRAND_PATTERN = "pharos";
 const DEFAULT_MIN_IMPRESSIONS = 100;
 const DEFAULT_TOP_COUNT = 20;
+const DEFAULT_SYNTHETIC_MIN_WORDS = 8;
 const SITE_ORIGIN = "https://pharos.watch";
 const STABLECOIN_COINS_DIR = fileURLToPath(new URL("../../shared/data/stablecoins/coins/", import.meta.url));
 
@@ -56,6 +57,19 @@ const DASHBOARD_PATHS = new Set([
   "/compliance/",
   "/screener/",
 ]);
+
+/** Returns the name of the rule marking a query as automated (operators, quotes, URLs, addresses, long text, tracker-prompt openers), else null. */
+export function isSyntheticQuery(query, minWords = DEFAULT_SYNTHETIC_MIN_WORDS) {
+  const q = String(query ?? "").trim();
+  const words = q.split(/\s+/).filter(Boolean);
+  if (/(?:^|\s)(?:-?site|inurl|intitle|filetype):/i.test(q) || / OR /.test(q)) return "search-operator";
+  if (/"[^"]*"/.test(q)) return "quoted-string";
+  if (/https?:\/\/|\.csv|\.json|\/api\//i.test(q)) return "url-or-path";
+  if (/0x[0-9a-fA-F]{40}/.test(q) || words.some((word) => word.length >= 32)) return "address-or-long-token";
+  if (words.length >= minWords) return "long-query";
+  if (/^(?:evaluate |what risks should)/i.test(q)) return "prompt-style";
+  return null;
+}
 
 /** Expected CTR at an average position on the site curve; null without a usable position. */
 export function expectedCtr(position) {
@@ -174,8 +188,13 @@ function pageFamilyForPath(pathname, stablecoinStatusById) {
   if (pathname.startsWith("/stablecoins/")) return "peg-taxonomy-detail";
   if (pathname === "/chains/") return "chains-hub";
   if (pathname.startsWith("/chains/")) return "chain-detail";
-  if (pathname === "/compare/") return "non-indexable-or-retired";
+  if (pathname === "/compare/") return "compare-hub";
   if (pathname.startsWith("/compare/")) return "compare-detail";
+  if (pathname.startsWith("/blog/")) return "blog";
+  if (pathname.startsWith("/changelog/")) return "changelog";
+  if (pathname.startsWith("/upcoming/")) return "upcoming";
+  if (pathname.startsWith("/api/")) return "api";
+  if (pathname.startsWith("/about/")) return "about";
   if (pathname === "/digest/") return "digest-hub";
   if (pathname.startsWith("/digest/")) return "digest-detail";
   if (pathname === "/docs/") return "docs-hub";
@@ -298,7 +317,7 @@ function parsePerformanceRows(entry, table) {
   return { rows, skippedMetricRows };
 }
 
-function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, stablecoinStatusById }) {
+function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, syntheticMinWords, stablecoinStatusById }) {
   const siteAggregate = emptyAggregate();
   const pages = new Map();
   const queries = new Map();
@@ -396,13 +415,30 @@ function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, b
   const queryRows = [...queries.values()].map((query) => ({
     ...finishAggregate(query),
     brand: brandPattern.test(query.query),
+    syntheticRule: isSyntheticQuery(query.query, syntheticMinWords),
     sources: [...query.sources].sort(compareText),
   }));
   const queryAggregates = [...queries.values()];
   const querySplit = {
     brand: finishAggregate(sumAggregates(queryAggregates.filter((query) => brandPattern.test(query.query)))),
     nonBrand: finishAggregate(sumAggregates(queryAggregates.filter((query) => !brandPattern.test(query.query)))),
+    organic: finishAggregate(sumAggregates(queryAggregates.filter((query) => !isSyntheticQuery(query.query, syntheticMinWords)))),
+    synthetic: finishAggregate(sumAggregates(queryAggregates.filter((query) => isSyntheticQuery(query.query, syntheticMinWords)))),
   };
+  const syntheticByFamily = new Map();
+  for (const row of pathRows.filter((row) => row.grain === "page-query" && row.page && row.query)) {
+    const family = pageFamilyForPath(row.page.path, stablecoinStatusById);
+    const entry = syntheticByFamily.get(family) ?? { family, impressions: 0, syntheticImpressions: 0 };
+    entry.impressions += row.impressions;
+    if (isSyntheticQuery(row.query, syntheticMinWords)) entry.syntheticImpressions += row.impressions;
+    syntheticByFamily.set(family, entry);
+  }
+  const syntheticFamilies = [...syntheticByFamily.values()].filter((entry) => entry.syntheticImpressions > 0)
+    .sort((left, right) => right.syntheticImpressions - left.syntheticImpressions || compareText(left.family, right.family));
+  const topSyntheticQueries = queryRows
+    .filter((query) => query.syntheticRule)
+    .sort((left, right) => right.impressions - left.impressions || compareText(left.query, right.query))
+    .slice(0, topCount);
   const familyRows = [...families.values()]
     .map((family) => ({
       ...finishAggregate(family),
@@ -440,7 +476,7 @@ function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, b
     .slice(0, Math.min(topCount, 10));
 
   const queryOpportunities = queryRows
-    .filter((query) => !query.brand && query.impressions >= minImpressions && query.clickGap > 0)
+    .filter((query) => !query.brand && !query.syntheticRule && query.impressions >= minImpressions && query.clickGap > 0)
     .sort((left, right) => {
       const byGap = compareClickGap(left, right);
       if (byGap !== 0) return byGap;
@@ -453,6 +489,8 @@ function aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, b
   return {
     site: finishAggregate(siteAggregate),
     querySplit,
+    syntheticFamilies,
+    topSyntheticQueries,
     fragmentRowCount: rows.length - pathRows.length,
     fragmentNotes,
     families: familyRows,
@@ -470,6 +508,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
   const brandPattern = parseBrandPattern(brandPatternSource);
   const stablecoinStatusById = options.stablecoinStatusById ?? loadStablecoinStatusById();
   const minImpressions = options.minImpressions ?? DEFAULT_MIN_IMPRESSIONS;
+  const syntheticMinWords = options.syntheticMinWords ?? DEFAULT_SYNTHETIC_MIN_WORDS;
   const topCount = options.topCount ?? DEFAULT_TOP_COUNT;
   const collected = collectInputEntries(inputPaths);
   const notes = [...collected.notes];
@@ -490,7 +529,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
     queryOnlyRows += parsed.rows.filter((row) => !row.page && row.query).length;
   }
 
-  const aggregates = aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, stablecoinStatusById });
+  const aggregates = aggregatePerformanceRows(rows, { targetCtr, minImpressions, topCount, brandPattern, syntheticMinWords, stablecoinStatusById });
   if (aggregates.fragmentRowCount > 0) {
     notes.push(`Folded ${aggregates.fragmentRowCount} #fragment sitelink rows into per-page notes; they are not summed into page totals.`);
   }
@@ -504,6 +543,7 @@ export async function analyzeGscPerformanceInputs(inputPaths, options = {}) {
       targetCtr,
       brandPattern: brandPatternSource,
       minImpressions,
+      syntheticMinWords,
       topCount,
     },
     parsedFileCounts: {
@@ -588,7 +628,8 @@ export function renderGscPerformanceReport(report) {
       report.options.targetCtr === null
         ? `Expected CTR: site position curve min(${formatCtr(CTR_CURVE_CAP)}, ${CTR_CURVE_A} x position^-${CTR_CURVE_B})`
         : `Expected CTR: flat --target-ctr override ${formatCtr(report.options.targetCtr)}`,
-      `Brand query pattern: /${report.options.brandPattern}/i (excluded from query opportunities)`,
+      `Brand query pattern: /${report.options.brandPattern}/i (excluded from query opportunities, as are synthetic queries)`,
+      `Synthetic query rules: operators, quotes, URLs/paths, addresses/long tokens, ${report.options.syntheticMinWords}+ words, prompt-style openings`,
       `Minimum impressions for priority rows: ${formatInteger(report.options.minImpressions)}`,
       "Analyze 28-day exports: three-month windows carry decayed news-spike impressions.",
     ],
@@ -612,7 +653,17 @@ export function renderGscPerformanceReport(report) {
   lines.push("Query CTR by brand match:");
   lines.push(`- brand | ${formatAggregateMetrics(report.querySplit.brand)}`);
   lines.push(`- non-brand | ${formatAggregateMetrics(report.querySplit.nonBrand)}`);
+  lines.push(`- organic | ${formatAggregateMetrics(report.querySplit.organic)}`);
+  lines.push(`- synthetic | ${formatAggregateMetrics(report.querySplit.synthetic)}`);
   lines.push("");
+
+  appendGscReportSection(lines, "Synthetic query share of impressions by family (page+query rows only):", report.syntheticFamilies, (entry) =>
+    `${entry.family} | synthetic=${formatInteger(entry.syntheticImpressions)} of ${formatInteger(entry.impressions)} impressions (${((entry.syntheticImpressions / entry.impressions) * 100).toFixed(1)}%)`,
+  );
+
+  appendGscReportSection(lines, "Top synthetic queries (audit the rule):", report.topSyntheticQueries, (query) =>
+    `${query.query} | rule=${query.syntheticRule} | impressions=${formatInteger(query.impressions)} | clicks=${formatInteger(query.clicks)}`,
+  );
 
   appendGscReportSection(lines, "Family CTR gaps:", report.families, (family) =>
     `${family.family} | pages=${formatInteger(family.pageCount)} | ${formatAggregateMetrics(family)}${formatSources(family.sources)}`,
@@ -651,6 +702,7 @@ function usage() {
     `  --target-ctr <value>      Flat target CTR (fraction or percent) instead of the site position curve`,
     `  --brand-pattern <regex>  Case-insensitive brand query pattern, default ${DEFAULT_BRAND_PATTERN}`,
     `  --min-impressions <n>    Minimum impressions for priority rows, default ${DEFAULT_MIN_IMPRESSIONS}`,
+    `  --synthetic-min-words <n> Word count at which a query counts as synthetic, default ${DEFAULT_SYNTHETIC_MIN_WORDS}`,
     `  --top <n>                Number of page/query opportunities to print, default ${DEFAULT_TOP_COUNT}`,
   ]);
 }
@@ -667,6 +719,7 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
     brandPattern: DEFAULT_BRAND_PATTERN,
     minImpressions: DEFAULT_MIN_IMPRESSIONS,
     topCount: DEFAULT_TOP_COUNT,
+    syntheticMinWords: DEFAULT_SYNTHETIC_MIN_WORDS,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -694,6 +747,11 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
         "--min-impressions",
         { integer: true },
       );
+    } else if (arg === "--synthetic-min-words") {
+      options.syntheticMinWords = parsePositiveNumber(argv[index + 1], "--synthetic-min-words", { integer: true });
+      index += 1;
+    } else if (arg.startsWith("--synthetic-min-words=")) {
+      options.syntheticMinWords = parsePositiveNumber(arg.slice("--synthetic-min-words=".length), "--synthetic-min-words", { integer: true });
     } else if (arg === "--top") {
       options.topCount = parsePositiveNumber(argv[index + 1], "--top", { integer: true });
       index += 1;

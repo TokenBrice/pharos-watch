@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { createSign } from "node:crypto";
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
+import { serviceAccountAccessToken } from "../lib/google-service-account.mjs";
 import { parseCliInteger, parseStrictCliArgs, runDirectCli, writeFileResolved } from "../lib/cli-args.mjs";
 
 export const VITAL_BUDGETS = { LCP: 2500, INP: 200, CLS: 0.1, TTFB: 800, "fresh_data_ready:home-hero": 10_000, "fresh_data_ready:detail-summary": 10_000 };
@@ -78,20 +78,7 @@ export async function readGa4Rows(property, accessToken, days, fetcher = fetch) 
 async function accessToken(env) {
   if (env.GA4_ACCESS_TOKEN) return env.GA4_ACCESS_TOKEN;
   if (!env.GOOGLE_APPLICATION_CREDENTIALS) throw new Error("Missing GA4 credentials: set GA4_ACCESS_TOKEN or GOOGLE_APPLICATION_CREDENTIALS (service-account JSON file with property Viewer access)");
-  const credentials = JSON.parse(readFileSync(env.GOOGLE_APPLICATION_CREDENTIALS, "utf8"));
-  if (!credentials.client_email || !credentials.private_key) throw new Error("GOOGLE_APPLICATION_CREDENTIALS must name a service-account JSON file with client_email and private_key");
-  const now = Math.floor(Date.now() / 1000);
-  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
-  const unsigned = `${encode({ alg: "RS256", typ: "JWT" })}.${encode({ iss: credentials.client_email,
-    scope: "https://www.googleapis.com/auth/analytics.readonly", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 })}`;
-  const signature = createSign("RSA-SHA256").update(unsigned).sign(credentials.private_key, "base64url");
-  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", redirect: "error", body: new URLSearchParams({
-    grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${unsigned}.${signature}`,
-  }), signal: AbortSignal.timeout(30_000) });
-  if (!response.ok) throw new Error(`GA4 service-account token exchange failed (HTTP ${response.status})`);
-  const token = await response.json();
-  if (typeof token.access_token !== "string") throw new Error("GA4 token exchange returned no access_token");
-  return token.access_token;
+  return serviceAccountAccessToken(env.GOOGLE_APPLICATION_CREDENTIALS, "https://www.googleapis.com/auth/analytics.readonly", "GA4");
 }
 
 runDirectCli(import.meta.url, async () => {
