@@ -2,7 +2,7 @@
   "id": "usd-bank-consortium",
   "name": "Bank Consortium USD Stablecoin",
   "symbol": "USD-CONSORTIUM",
-  "oneLiner": "A pre-launch dollar stablecoin from a joint venture of 21 financial institutions including Bank of America, Citi, and Goldman Sachs, targeted for H1 2027.",
+  "oneLiner": "A pre-launch dollar stablecoin from 21 financial institutions including Citi and Goldman Sachs, targeted for H1 2027; Bloomberg reports it as Project Faro.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
@@ -26,7 +26,7 @@
   "announcedDate": "2026-09-01",
   "expectedLaunchDate": "2027-H1",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced September 1 2026 in a joint press release issued from London and New York: twenty-one financial institutions committed to establish a new jointly owned company in H2 2026, subject to closing conditions, to support the issuance of a stablecoin. The company name will be announced in due course. The group comprises Bank of America, Capital One, Citi, Fidelity Investments, Goldman Sachs, PNC Financial Services, Scotiabank, TD Bank Group, Wells Fargo, and WisdomTree (North America); Banco Santander, BBVA, Commerzbank, Credit Agricole, Deutsche Bank, Lloyds Banking Group, Cooperatieve Rabobank U.A., and UBS (Europe); MUFG Bank (East Asia); Sirius International Holding (Middle East); and Standard Bank (Africa). The initial focus is a USD-denominated stablecoin, with a longer-term ambition to expand into additional G7 currencies and a EUR offering as a priority, and the group aims for its stablecoin solution to go to market in the first half of 2027. The initiative follows an October 2025 announcement in which an initial group of ten banks explored a 1:1 reserve-backed form of digital money on public blockchains, and it intends to be GENIUS Act and MiCA-compliant, as applicable. No company name, ticker, chain, contracts, reserve composition, custodian, or attestation arrangement has been announced.",
+  "launchPhaseDetail": "Announced September 1 2026 in a joint press release issued from London and New York: twenty-one financial institutions committed to establish a new jointly owned company in H2 2026, subject to closing conditions, to support the issuance of a stablecoin. The company name will be announced in due course. The group comprises Bank of America, Capital One, Citi, Fidelity Investments, Goldman Sachs, PNC Financial Services, Scotiabank, TD Bank Group, Wells Fargo, and WisdomTree (North America); Banco Santander, BBVA, Commerzbank, Credit Agricole, Deutsche Bank, Lloyds Banking Group, Cooperatieve Rabobank U.A., and UBS (Europe); MUFG Bank (East Asia); Sirius International Holding (Middle East); and Standard Bank (Africa). The initial focus is a USD-denominated stablecoin, with a longer-term ambition to expand into additional G7 currencies and a EUR offering as a priority, and the group aims for its stablecoin solution to go to market in the first half of 2027. The initiative follows an October 2025 announcement in which an initial group of ten banks explored a 1:1 reserve-backed form of digital money on public blockchains, and it intends to be GENIUS Act and MiCA-compliant, as applicable. On November 10 2026 Bloomberg reported, citing people familiar with the matter, that the institutions had committed about $270 million to cover five years of operating costs for the venture, which the report calls Project Faro and expects to be incorporated in the United States. As of November 14 2026 neither the figure nor the name appears in the institutions' own announcements. No company name, ticker, chain, contracts, reserve composition, custodian, or attestation arrangement has been announced.",
   "featuredContent": [
     {
       "type": "article",
@@ -40,6 +40,13 @@
       "url": "https://www.coindesk.com/business/2026/09/01/citi-goldman-other-global-banks-and-asset-managers-team-up-on-stablecoin-venture",
       "title": "Citi, Goldman, other global banks and asset managers team up on stablecoin venture",
       "source": "CoinDesk"
+    },
+    {
+      "type": "article",
+      "url": "https://www.bloomberg.com/news/articles/2026-11-10/goldman-citi-among-banks-in-270-million-stablecoin-backing",
+      "title": "Goldman, Citi Among Banks in $270 Million Stablecoin Backing",
+      "description": "Bloomberg reports, citing people familiar with the matter, about $270 million committed for five years of operating costs at the venture, which it calls Project Faro.",
+      "source": "Bloomberg"
     }
   ],
   "milestones": [
