@@ -2,7 +2,7 @@
   "id": "usd-bank-consortium",
   "name": "Bank Consortium USD Stablecoin",
   "symbol": "USD-CONSORTIUM",
-  "oneLiner": "A pre-launch dollar stablecoin from 21 financial institutions including Citi and Goldman Sachs; Bloomberg reports the venture as Project Faro.",
+  "oneLiner": "A pre-launch dollar stablecoin from 21 financial institutions including Bank of America, Citi and Goldman Sachs; Bloomberg reports the venture as Project Faro.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
