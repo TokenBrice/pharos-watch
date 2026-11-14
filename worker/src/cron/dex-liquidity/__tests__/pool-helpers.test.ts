@@ -15,8 +15,8 @@ import {
   computePoolQualityContribution,
   computePoolStress,
   normalizeProtocol,
-  trackedSideBalanceRatio,
 } from "../pool-helpers";
+import { trackedSideBalanceRatio } from "../../../lib/dex-cron-constants";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../../lib/chain-registry";
 import { initMetrics, withCompleteVolume } from "./scoring-test-builders";
 import { rebuildMetricsFromPools } from "../scoring-helpers";

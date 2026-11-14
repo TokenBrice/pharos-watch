@@ -1,12 +1,11 @@
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters } from "../cron/dex-liquidity/types";
 import type { SymbolLookups } from "../cron/dex-liquidity/types";
-import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
+import { QUALITY_MULTIPLIERS, normalizeDexSymbol, trackedSideBalanceRatio } from "./dex-cron-constants";
 import {
   buildDexPriceObservationIdentity,
   buildPoolIdentity,
 } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
-import { trackedSideBalanceRatio } from "../cron/dex-liquidity/pool-helpers";
 import type { PriceValidationReferences } from "./price-validation";
 import type {
   DexAmmExecutionModel,

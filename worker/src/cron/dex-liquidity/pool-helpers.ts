@@ -135,19 +135,6 @@ export interface PoolQualityContribution {
   effectiveTvl: number;
 }
 
-/**
- * Balance ratio seen from the tracked coin's side (v7.2). A pool holding no
- * more than its target share of the coin scores 1: extra counter-asset is
- * more exit depth, not less. Above target, it is the rest of the pool's
- * normalised share over the coin's (two equal-weight coins: the other
- * reserve over the coin's). Null when the shares are not a measurement.
- */
-export function trackedSideBalanceRatio(share: number, targetShare: number): number | null {
-  if (!(share >= 0 && share <= 1) || !(targetShare > 0 && targetShare < 1)) return null;
-  if (share <= targetShare) return 1;
-  return (1 - share) / (1 - targetShare) / (share / targetShare);
-}
-
 export function computePoolQualityContribution({
   qualityTvlUsd,
   effectiveTvlUsd,

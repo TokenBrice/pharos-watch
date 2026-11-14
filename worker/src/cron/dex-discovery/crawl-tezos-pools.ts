@@ -7,7 +7,7 @@ import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitive
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
-import { trackedSideBalanceRatio } from "../dex-liquidity/pool-helpers";
+import { trackedSideBalanceRatio } from "../../lib/dex-cron-constants";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { buildStageSignal, toStagedPool, type CrawlStageContext } from "./staged-pool";
 import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck, type StagedPool } from "./types";

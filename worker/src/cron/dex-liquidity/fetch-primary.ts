@@ -6,7 +6,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants"
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/cache";
-import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import { normalizeDexSymbol, trackedSideBalanceRatio } from "../../lib/dex-cron-constants";
 import type {
   LlamaPool,
   CurveApiPayload,
@@ -29,7 +29,6 @@ import {
   classifyPoolType,
   isCryptoSwap,
   buildPoolFingerprint,
-  trackedSideBalanceRatio,
 } from "./pool-helpers";
 import { resolvePermanentLiquidity } from "./permanent-liquidity";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
