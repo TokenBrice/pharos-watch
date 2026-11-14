@@ -396,7 +396,7 @@ describe("depeg canary checks", () => {
 
   it("validates the blind review registry and rejects duplicates", () => {
     for (const entry of DEPEG_BLIND_EVENT_REVIEWS) {
-      const at = entry.eventId === 89787 ? 1794521280 : [90807, 90808].includes(entry.eventId) ? 1794519660 : entry.eventId === 91042 ? 1794515340 : 1794513840;
+      const at = entry.eventId === 91044 ? 1794694800 : entry.eventId === 89787 ? 1794521280 : [90807, 90808].includes(entry.eventId) ? 1794519660 : entry.eventId === 91042 ? 1794515340 : 1794513840;
       expect([DepegBlindEventReviewSchema.safeParse(entry).success, entry.reviewedAt, entry.expiresAt]).toEqual([true, at, at + 604800]);
     }
     expect([...resolveDepegBlindEventReviews(1794521280).keys()]).toEqual([91042, 91040, 90793, 90786, 90748, 84563, 90804, 91037, 90807, 90808, 89787]);

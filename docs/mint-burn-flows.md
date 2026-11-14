@@ -371,7 +371,7 @@ pressureShift = clamp(-100, 100, z * 50)
 
 Per-coin UI and API now answer two different questions explicitly:
 
-1. **Net Flow 24h** — current direction and magnitude from raw mint-minus-burn totals
+1. **Net Flow 24h** — current direction and magnitude from raw mint-minus-burn totals. Excludes bridge transfers; covers tracked chains only, not global issuance.
    - `minting`: `netFlow24hUsd > 0`
    - `burning`: `netFlow24hUsd < 0`
    - `flat`: `netFlow24hUsd = 0` with activity
@@ -656,6 +656,7 @@ Detail health monitors the coin flow lane only when it renders (coin row, loadin
 | All coins have null pressure shift | Gauge score returns `null`; the overview displays `NR` without a gauge marker |
 | Alchemy API error for a config | `apiErrors` increments; a partially successful scan may stage the shared safe frontier, while a failed event definition with no covered prefix holds advancement |
 | Incomplete timestamp resolution | `apiErrors`/`errors` incremented; sync state advances only to the safe coverage frontier (`earliestMissingTimestamp - 1`), or not at all when no safe frontier exists |
+| Block timestamp cache read or write overloaded (D1) | One warning; the read treats the remaining blocks as cache misses and the write is skipped, because the persistent cache only saves RPC calls and resolved RPC timestamps stay authoritative |
 | Undecodable event amount | Hold at the safe frontier for two retries; on the third observation quarantine only that log as `amount-decode-retry-exhausted`; coverage remains unproved and retryable |
 | Subrequest budget exhausted | Remaining configs skipped; picked up in next cron cycle |
 | Finalized head unavailable or unsupported | Named `finality-head-unavailable` coverage, no tip scans or cursor advance; unaffected chains continue and cron status degrades immediately |

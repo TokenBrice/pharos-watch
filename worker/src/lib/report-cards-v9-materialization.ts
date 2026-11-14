@@ -213,11 +213,14 @@ export function v9StagedPublicMaterializationStatements(
       ...identity, ...identity, m.fragments.length, ...identity, staged.siteCount, ...identity, marker, now)];
   for (const table of ["safety_score_public_manifests", "safety_score_site_manifests"] as const) {
     // SAFETY: Table identifiers come only from the fixed literal list above.
+    // Match only rows whose value changes: rewriting the selected generation's live rows
+    // NULL -> NULL on every materialization cost about 110k D1 rows written a day.
     statements.push(db.prepare(`UPDATE ${table} SET retired_at = CASE
       WHEN generation_id = ? AND projection_version = ? AND payload_sha256 = ? THEN NULL
       ELSE coalesce(retired_at, ?) END
-      WHERE retired_at IS NULL OR (generation_id = ? AND projection_version = ? AND payload_sha256 = ?)`)
-      .bind(...identity, now, ...identity));
+      WHERE (retired_at IS NULL AND NOT (generation_id IS ? AND projection_version IS ? AND payload_sha256 IS ?))
+        OR (retired_at IS NOT NULL AND generation_id = ? AND projection_version = ? AND payload_sha256 = ?)`)
+      .bind(...identity, now, ...identity, ...identity));
     // SAFETY: Table identifiers come only from the fixed literal list above.
     statements.push(db.prepare(`DELETE FROM ${table} WHERE retired_at < ? AND generation_id != ?`)
       .bind(now - V9_PUBLIC_READ_GRACE_SEC, m.safetyScoreIdentity.publicationGenerationId));

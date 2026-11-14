@@ -30,6 +30,8 @@ interface TimelineFeedProps {
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
   activeStatus: TimelineActiveStatus;
+  /** Latched by the client once the census's first read settles (`tapeSlotSettled`). */
+  tapeSettled: boolean;
   activeHealth: DataHealthInfo;
   refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
@@ -69,6 +71,7 @@ export function TimelineFeed({
   visibleEvents,
   openIncidents,
   activeStatus,
+  tapeSettled,
   activeHealth,
   refetchActive,
   digestedDays,
@@ -98,6 +101,11 @@ export function TimelineFeed({
   sentinelRef,
 }: TimelineFeedProps) {
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
+  // Layout Instability scores nodes that move, not nodes that appear. The census rows
+  // land above the tape after it has painted, so the tape holds the pre-clock skeleton
+  // until the census's first read settles and then mounts (a new node) at its final
+  // offset; the swapped slot carries a different key so React replaces it, never moves it.
+
   let permalinkRetracted = false;
   if (permalinkBufferError instanceof ApiFetchError && permalinkBufferError.status === 404 && permalinkBufferError.bodyText) {
     try {
@@ -167,8 +175,9 @@ export function TimelineFeed({
       </div>
 
       {/* The viewport floor keeps the footer from being exposed then displaced as rows arrive. */}
-      <section id="data" aria-label="Event tape" tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
+      <section key={tapeSettled ? "tape" : "tape-pending"} id="data" aria-label="Event tape" aria-busy={tapeSettled ? undefined : true} tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
         <div id="tape-feed" className="space-y-4">
+        {tapeSettled ? <>
           {bufferEvent ? (
             <div className="border-y border-border/60 bg-amber-500/5">
               <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -247,6 +256,11 @@ export function TimelineFeed({
                 </p>
               ) : null}
             </div>
+          </div>
+        )}
+        </> : (
+          <div>
+            <EventSkeleton />
           </div>
         )}
         </div>

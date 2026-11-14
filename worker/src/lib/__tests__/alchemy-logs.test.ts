@@ -41,6 +41,7 @@ function makeDbForTimestampCache(
   opts: {
     cachedRows?: Array<{ block_number: number; timestamp: number; chain_id?: string; updated_at?: number; block_hash?: string | null }>;
     onCacheReadBindCount?: (count: number) => void;
+    onCacheWrite?: () => void;
   } = {},
 ): D1Database {
   const { sqlite } = timestampFixtures.open();
@@ -51,6 +52,7 @@ function makeDbForTimestampCache(
   }
   return createSqliteD1(sqlite, {
     onAll: (sql) => opts.onCacheReadBindCount?.((sql.match(/\?/g) ?? []).length),
+    onRun: (sql) => { if (sql.includes("INTO block_timestamp_cache")) opts.onCacheWrite?.(); },
   });
 }
 
@@ -808,14 +810,14 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(0);
   });
 
-  it.each(["ok", "recover", "abort", "deadline", "exhaust"])("persistent timestamp cache %s holds progress on failed reads", async (mode) => {
+  it.each(["ok", "recover", "abort", "deadline"])("persistent timestamp cache %s holds progress on failed reads", async (mode) => {
     vi.useFakeTimers();
     let reads = 0;
     const error = new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
     const db = makeDbForTimestampCache({
       cachedRows: [{ block_number: 100, timestamp: 200 }],
       onCacheReadBindCount: () => {
-        if (++reads === 1 && mode !== "ok" || mode === "exhaust") throw error;
+        if (++reads === 1 && mode !== "ok") throw error;
       },
     });
     const controller = new AbortController();
@@ -833,9 +835,22 @@ describe("resolveBlockTimestamps", () => {
     await vi.runAllTimersAsync();
     if (success) expect([...await pending]).toEqual([[100, 200]]);
     else { await checked; expect(localCache.size).toBe(0); }
-    expect(reads).toBe(mode === "recover" || mode === "exhaust" ? 2 : 1);
+    expect(reads).toBe(mode === "recover" ? 2 : 1);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(budget.count).toBe(0);
+  });
+
+  it.each([
+    ["read", "D1 DB is overloaded. Too many resources consumed within a 10 second window"],
+    ["write", "D1 DB is overloaded"],
+  ])("returns RPC timestamps when the cache %s stays overloaded", async (side, message) => {
+    vi.useFakeTimers();
+    const fail = () => { throw new Error(message); };
+    const db = makeDbForTimestampCache(side === "read" ? { onCacheReadBindCount: fail } : { onCacheWrite: fail });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([{ id: 0, result: header(100, "0x12c") }])));
+    const pending = resolveBlockTimestamps(url, [100], createBudget(1), { persistentCache: { db, chainId: "ethereum" } });
+    await vi.runAllTimersAsync();
+    expect([...await pending]).toEqual([[100, 300]]);
   });
 
   it("excludes other chains and expired persistent timestamps", async () => {
