@@ -219,10 +219,13 @@ describe("TimelineClient", () => {
     const { rerender } = render(<TimelineClient />);
     const row = () => screen.getByText("1 event").closest("p")!;
     const before = row().textContent!;
+    // The tape waits for the census's first read: arriving rows displace no feed.
+    expect(document.querySelector("[data-event-id]")).toBeNull();
     mockActiveEvents([activeEvent()]);
     rerender(<TimelineClient />);
     expect(row().textContent!.startsWith(before)).toBe(true);
     expect(row().textContent).toContain("1 open incident");
+    expect(document.querySelector("[data-event-id]")).not.toBeNull();
   });
 
   it("keeps timeline pagination manual on initial page load", () => {
@@ -547,6 +550,8 @@ describe("TimelineClient", () => {
     mockActiveEvents([activeEvent()], overrides);
     render(<TimelineClient />);
     expect(screen.queryByRole("region", { name: /Currently open|Open at last observation/ })).toBeNull();
+    // A failed census still settles the tape gate: the feed paints.
+    expect(document.querySelector("[data-event-id]")).not.toBeNull();
     expect(screen.getByRole("region", { name: "Active incident status" }).textContent).toMatch(/unavailable/);
   });
 
