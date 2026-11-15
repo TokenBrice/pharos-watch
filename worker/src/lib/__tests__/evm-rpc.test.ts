@@ -955,6 +955,15 @@ describe("evm-rpc helpers", () => {
     expect(block).toBe(90);
   });
 
+  it("interpolates between known anchors before the exact search", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(97, "0x3ca") }))
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(98, "0x3d6") }));
+    expect(await resolveClosestBlockAtOrBeforeTimestamp("ethereum", 975, {
+      latestBlockNumber: 100, blockTimestampByNumber: new Map([[10, 100], [100, 1000]]),
+    }, { extraRpcUrls: ["https://rpc.example"] })).toBe(97);
+  });
+
   it("brackets a near-tip scoring clock without probing pruned deep history", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(rpcResponse({ result: blockResult(99, "0x3e3") }))
