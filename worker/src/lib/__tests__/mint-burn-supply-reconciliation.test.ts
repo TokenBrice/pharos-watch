@@ -6,7 +6,7 @@ import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { reconcileMintBurnSupplyReceipt, readMintBurnSupplyReconciliation, runMintBurnSupplyReconciliation } from "../mint-burn-supply-reconciliation";
-import { fetchEvmUint256AtBlock, fetchEvmBlockHeader, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
+import { fetchEvmUint256AtBlock, fetchEvmBlockHeader, resolveClosestBlockAtOrBeforeTimestamp as closestBlock } from "../evm-rpc";
 
 const day = 86_400;
 const start = Date.parse("2026-11-07T00:00:00Z") / 1000;
@@ -20,7 +20,6 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 beforeEach(() => vi.clearAllMocks());
 const config = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usds-sky")!;
-const chains = [config, MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usdai-usd-ai")!];
 const row = (amount_raw: string | null, direction: "mint" | "burn" = "mint", burn_type: "review_required" | "effective_burn" | null = null) =>
   ({ amount_raw, direction, burn_type, flow_type: "standard" as const, burn_review_reason: burn_type === "review_required" ? "proof-missing" : null });
 function base(delta = 10): Receipt {
@@ -74,17 +73,17 @@ async function setup(target = config) {
   for (let i = 0; i < 2; i++) event.run(String(i), target.stablecoinId, target.chain.chainId, start + i * day + 100);
   return { ...fixture, input };
 }
-it.each(chains)("chains daily endpoints/windows on $chainId, reuses supply, and never rebuilds pruned or immutable days", async (target) => {
+it.each([config, MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usdai-usd-ai")!])("chains daily endpoints/windows on $chain.chainId, reuses supply, and never rebuilds pruned or immutable days", async (target) => {
   const { db, sqlite, input } = await setup(target);
   await runMintBurnSupplyReconciliation(input);
   await runMintBurnSupplyReconciliation(input);
   expect(fetchEvmUint256AtBlock).toHaveBeenCalledTimes(3);
-  expect(vi.mocked(resolveClosestBlockAtOrBeforeTimestamp).mock.calls[1]![2].blockTimestampByNumber.has(100)).toBe(true);
+  expect(vi.mocked(closestBlock).mock.calls[1][2].blockTimestampByNumber.has(100)).toBe(true);
   sqlite.exec("DELETE FROM mint_burn_events");
   await runMintBurnSupplyReconciliation({ ...input, now: start + 10 * day });
   expect(sqlite.prepare("SELECT count(*) AS n FROM mint_burn_supply_reconciliation WHERE day_ts < ?").get(start + 2 * day)?.n).toBe(2);
   // Fill seven continuous days from the two genuine fixtures to exercise exact window summation.
-  const first = JSON.parse((sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE day_ts = ?").get(start) as { receipt_json: string }).receipt_json) as Receipt;
+  const first = JSON.parse(String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE day_ts = ?").get(start)!.receipt_json)) as Receipt;
   for (let i = 2; i < 7; i++) {
     const r = { ...first, day: start + i * day, checkedAt: start + 7 * day,
       opening: { ...first.opening!, number: 100 + 2 * i, hash: hash(100 + 2 * i), timestamp: start + i * day - 1, supplyRaw: String(1000 + 10 * i) },
@@ -97,7 +96,7 @@ it.each(chains)("chains daily endpoints/windows on $chainId, reuses supply, and 
   const complete = (await readMintBurnSupplyReconciliation(db, [target], start + 7 * day)).get(first.configKey)!;
   expect(complete.windows.find((w) => w.days === 7)).toMatchObject({ status: "ok", supplyDeltaRaw: "70", residualRaw: "0",
     classes: { counted: { mintRaw: "70", burnRaw: "0", eventCount: 7 } } });
-  const second = JSON.parse((sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE day_ts = ?").get(start + day) as { receipt_json: string }).receipt_json) as Receipt;
+  const second = JSON.parse(String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE day_ts = ?").get(start + day)!.receipt_json)) as Receipt;
   const broken = { ...second, opening: { ...second.opening!, hash: hash(999) } };
   sqlite.prepare("UPDATE mint_burn_supply_reconciliation SET receipt_json = ? WHERE day_ts = ?").run(JSON.stringify(broken), start + day);
   const reread = (await readMintBurnSupplyReconciliation(db, [target], start + 7 * day)).get(first.configKey)!;

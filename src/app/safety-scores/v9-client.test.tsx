@@ -107,6 +107,8 @@ async function render(ui: Parameters<typeof renderSync>[0]) {
   return result;
 }
 
+const renderPreview = () => render(<ReportCardsV9Client initialPreview={makePreview()} />);
+
 /** The fixture expired on 2026-10-30: hold the viewer clock inside its lifetime, or the post-mount clock tick races the assertion. */
 const holdPreviewClock = () => vi.useFakeTimers({ toFake: ["Date"], now: (PREVIEW_PUBLISHED_AT_SEC + 600) * 1000 });
 
@@ -352,7 +354,7 @@ describe("ReportCardsV9Client", () => {
       isLoading: false,
       error: new Error("Ratings unavailable"),
     });
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expectPreviewFacts();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -362,7 +364,7 @@ describe("ReportCardsV9Client", () => {
       updatedAt: PREVIEW_PUBLISHED_AT_SEC,
       cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
     })));
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
@@ -372,7 +374,7 @@ describe("ReportCardsV9Client", () => {
       updatedAt: PREVIEW_PUBLISHED_AT_SEC,
       cards: [],
     })));
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
     expect(screen.getByText(/No coins match this filter/)).toBeTruthy();
   });
@@ -382,7 +384,7 @@ describe("ReportCardsV9Client", () => {
       updatedAt: PREVIEW_PUBLISHED_AT_SEC + 600,
       cards: [makeV9Card({ id: "asset-a", grade: "F", score: 30 })],
     })));
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
@@ -395,7 +397,7 @@ describe("ReportCardsV9Client", () => {
       })),
       error: new Error("Refetch failed"),
     });
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
@@ -406,7 +408,7 @@ describe("ReportCardsV9Client", () => {
       updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
       cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
     })));
-    const { unmount } = await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    const { unmount } = await renderPreview();
     expectPreviewFacts();
     unmount();
 
@@ -420,7 +422,7 @@ describe("ReportCardsV9Client", () => {
     };
     changed.methodology = { ...changed.methodology, version: "9.1" };
     mocks.useReportCardsV9.mockReturnValue(query(changed));
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
@@ -455,7 +457,7 @@ describe("ReportCardsV9Client", () => {
     vi.setSystemTime(new Date("2026-10-31T00:00:00Z"));
     mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: false });
     mocks.useStablecoins.mockReturnValue(query(undefined));
-    await render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    await renderPreview();
     act(() => {
       vi.advanceTimersByTime(0);
     });
