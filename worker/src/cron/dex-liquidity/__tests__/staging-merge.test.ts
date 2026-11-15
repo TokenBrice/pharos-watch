@@ -1090,6 +1090,16 @@ describe("mergeStagedPools", () => {
         refreshed_at: now,
         raw_json: undefined,
       }),
+      makeStagedPoolRow({
+        pool_id: "sonic:0x615a8330c9bd50d8ee73a8a9588915b135aba93c",
+        stablecoin_id: "scusd-rings",
+        source: "cg_onchain",
+        chain: "sonic",
+        protocol: "beets-v3-sonic",
+        dex_id: "beets-v3-sonic",
+        tvl_usd: 15980.44,
+        volume_24h: 0,
+      }),
     ]);
     const metrics = new Map();
 
@@ -1100,21 +1110,17 @@ describe("mergeStagedPools", () => {
       now,
       new Map(),
       undefined,
-      makeAuthoritativeConfirmationIndex([{ protocol: "balancer", chains: ["plasma"] }]),
+      makeAuthoritativeConfirmationIndex([{ protocol: "balancer", chains: ["plasma", "sonic"] }]),
     );
 
     expect(result.mergedCount).toBe(0);
-    expect(result.skippedCount).toBe(1);
-    expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
+    expect(result.skippedCount).toBe(2);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(2);
     expect(metrics.size).toBe(0);
     expect(result.priceObservations.get("usdai-usd-ai")).toBeUndefined();
     expect(result.skipDimensions).toEqual([
-      {
-        reason: "authoritative_confirmation_missing",
-        protocol: "balancer",
-        chain: "plasma",
-        count: 1,
-      },
+      { reason: "authoritative_confirmation_missing", protocol: "beets-v3-sonic", chain: "sonic", count: 1 },
+      { reason: "authoritative_confirmation_missing", protocol: "balancer", chain: "plasma", count: 1 },
     ]);
   });
 
