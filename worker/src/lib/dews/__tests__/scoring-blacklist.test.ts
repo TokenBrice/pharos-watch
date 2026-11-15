@@ -6,17 +6,15 @@ import { emptyDewsDependencyDiagnostics } from "./source-state.test-support";
 
 function createAsset(id: string, symbol = "USDA"): StablecoinData {
   return {
-    id,
-    name: id,
-    symbol,
-    pegType: "peggedUSD",
-    price: 1,
-    priceConfidence: "high",
+    id, name: id, symbol, pegType: "peggedUSD", price: 1, priceConfidence: "high",
     circulating: { peggedUSD: 10_000_000 },
     circulatingPrevDay: { peggedUSD: 10_000_000 },
     circulatingPrevWeek: { peggedUSD: 10_000_000 },
   } as unknown as StablecoinData;
 }
+
+const scoreRows = (assetById: Map<string, StablecoinData>, sourceState: DewsSourceState) =>
+  buildDewsScoringResult({ assetById, pegRates: {}, sourceState, registerMalformedPersistedInput: () => {} }).results;
 
 function createSourceState(): DewsSourceState {
   const dependencyDiagnostics = emptyDewsDependencyDiagnostics();
@@ -52,8 +50,7 @@ describe("buildDewsScoringResult peg reference admission", () => {
       priceConfidence: i ? "low" : "fallback", circulating: { peggedUSD: 1e10 },
       circulatingPrevDay: { peggedUSD: i ? 1.08e10 : 1e11 }, circulatingPrevWeek: { peggedUSD: i ? 1.08e10 : 1e11 } }));
     assets.forEach((a, i) => sourceState.dexPrices.dexPriceMap.set(a.id, { dexPriceUsd: i ? 0.99 : 0.9, sourceTotalTvl: 2e6, updatedAt: 1 }));
-    const score = () => buildDewsScoringResult({ assetById: new Map(assets.map((a) => [a.id, a])),
-      sourceState, pegRates: {}, registerMalformedPersistedInput: () => {} }).results.find((r) => r.stablecoinId === "usdc-circle")!;
+    const score = () => scoreRows(new Map(assets.map((a) => [a.id, a])), sourceState).find((r) => r.stablecoinId === "usdc-circle")!;
     const base = score();
     sourceState.mintBurn.mintBurnAgeSecById.set("usdc-circle", 0);
     sourceState.mintBurn.mintBurnMap.set("usdc-circle", { isolated: true, burn24h: 3e6, mint24h: 5e5,
@@ -67,12 +64,8 @@ describe("buildDewsScoringResult peg reference admission", () => {
   });
   it("fails a missing peg type closed instead of scoring a non-USD coin against $1", () => {
     const eurc = {
-      ...createAsset("eurc-circle"),
-      pegType: undefined,
-      price: 1.09,
-      priceConfidence: "high",
-      circulating: { peggedEUR: 50_000_000 },
-      circulatingPrevDay: { peggedEUR: 50_000_000 },
+      ...createAsset("eurc-circle"), pegType: undefined, price: 1.09, priceConfidence: "high",
+      circulating: { peggedEUR: 50_000_000 }, circulatingPrevDay: { peggedEUR: 50_000_000 },
       circulatingPrevWeek: { peggedEUR: 50_000_000 },
     } as unknown as StablecoinData;
 
@@ -116,26 +109,20 @@ describe("buildDewsScoringResult blacklist attribution", () => {
     const asset = { ...createAsset("usdt-tether"), price: 0.98, priceSource: "mento-broker", agreeSources: confirmed === 1 ? ["kraken"] : [], priceConfidence: "fallback" as const };
     const state = createSourceState();
     if (confirmed === 2) state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd: 0.98, independentPrices: [0.98], sourceTotalTvl: 1e6, updatedAt: 1 });
-    const row = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), pegRates: {},
-      sourceState: state, registerMalformedPersistedInput: () => {} }).results[0];
+    const row = scoreRows(new Map([[asset.id, asset]]), state)[0];
     expect(row.band).toBe(confirmed ? "ALERT" : "WATCH");
     expect(row.evidenceKinds.includes("market-price")).toBe(!!confirmed);
     expect(asset.price).toBe(0.98);
   });
 
   it("applies blacklist counts only to the tracker stablecoin id for same-symbol assets", () => {
-    const result = buildDewsScoringResult({
-      assetById: new Map([
-        ["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")],
-        ["xusd-babelfish", createAsset("xusd-babelfish", "XUSD")],
-      ]),
-      pegRates: {},
-      sourceState: createSourceState(),
-      registerMalformedPersistedInput: () => {},
-    });
+    const result = scoreRows(new Map([
+      ["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")],
+      ["xusd-babelfish", createAsset("xusd-babelfish", "XUSD")],
+    ]), createSourceState());
 
-    const straitsx = result.results.find((row) => row.stablecoinId === "xusd-straitsx");
-    const babelfish = result.results.find((row) => row.stablecoinId === "xusd-babelfish");
+    const straitsx = result.find((row) => row.stablecoinId === "xusd-straitsx");
+    const babelfish = result.find((row) => row.stablecoinId === "xusd-babelfish");
 
     expect(straitsx?.signals.black).toMatchObject({
       available: true,
@@ -156,18 +143,8 @@ describe("buildDewsScoringResult blacklist attribution", () => {
     failedState.blacklist.blacklistSourceOk = false;
 
     const assetById = new Map([["xusd-straitsx", createAsset("xusd-straitsx", "XUSD")]]);
-    const observedZero = buildDewsScoringResult({
-      assetById,
-      pegRates: {},
-      sourceState: observedZeroState,
-      registerMalformedPersistedInput: () => {},
-    }).results[0]!;
-    const sourceFailed = buildDewsScoringResult({
-      assetById,
-      pegRates: {},
-      sourceState: failedState,
-      registerMalformedPersistedInput: () => {},
-    }).results[0]!;
+    const observedZero = scoreRows(assetById, observedZeroState)[0]!;
+    const sourceFailed = scoreRows(assetById, failedState)[0]!;
     expect(observedZero.signals.black).toMatchObject({ value: 0, available: true });
     expect(sourceFailed.signals.black).toMatchObject({
       value: 0,

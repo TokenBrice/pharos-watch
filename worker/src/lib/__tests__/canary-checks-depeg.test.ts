@@ -22,7 +22,7 @@ const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
 const authored = psi.slice();
-const [review] = DEPEG_BLIND_EVENT_REVIEWS;
+const [, review] = DEPEG_BLIND_EVENT_REVIEWS; // USD: no reference-market hold
 
 afterEach(() => {
   fixtures.closeAll();
@@ -242,7 +242,7 @@ describe("depeg canary checks", () => {
 
   it.each([[9_060, 0], [2e5, 1]])("exempts metal-market holds; a gap %ss old stays blind: %s", async (age, blind) => {
     const db = pending({ severe_recent: 0 }, [{ stablecoin_id: "xaut-tether", first_seen_at: NOW - age, reason: "large-cap" }]);
-    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: blind ? "error" : "ok", metadata: { metalMarketHeldCount: 1 } });
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: blind ? "error" : "ok", metadata: { referenceMarketHeldCount: 1 } });
     const now = Date.UTC(2026, 10, 15, 16) / 1000;
     const { db: events, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price,

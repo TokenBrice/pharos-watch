@@ -8,8 +8,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
-import { getMetalMarketClosureStart, isMetalMarketClosed } from "@shared/lib/metal-market-hours";
-import { isCommodityPeg } from "@shared/lib/filter-tags";
+import { getReferenceMarket, getReferenceMarketClosureStart, isMetalMarketClosed, type ReferenceMarket } from "@shared/lib/reference-market-hours";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { z } from "zod";
 import {
@@ -75,11 +74,18 @@ function unavailableFinding(error: unknown): DepegCanaryFinding {
   return failedFinding("canary-source-unavailable", { error: message.length <= 800 ? message : `${message.slice(0, 800)}...` });
 }
 
-/** Commodity ids a metal-market closure holds at `observedAt` or held until less than `graceSec` before it. */
-function metalMarketHeld(observedAt: number, graceSec: number): { since: number | null; ids: Set<string> } {
-  const since = getMetalMarketClosureStart(observedAt) ?? getMetalMarketClosureStart(observedAt - graceSec);
-  return { since, ids: new Set(since == null ? [] : [...PSI_ELIGIBLE_META_BY_ID.values()]
-    .filter((meta) => isCommodityPeg(meta.flags.pegCurrency)).map((meta) => meta.id)) };
+/** Closure start per asset a closed reference market holds at `observedAt`, or held until less than `graceSec` before it. */
+function referenceMarketHeld(observedAt: number, graceSec: number): Map<string, number> {
+  const since = (market: ReferenceMarket) =>
+    getReferenceMarketClosureStart(market, observedAt) ?? getReferenceMarketClosureStart(market, observedAt - graceSec);
+  const byMarket = { metal: since("metal"), fx: since("fx") };
+  const held = new Map<string, number>();
+  for (const meta of PSI_ELIGIBLE_META_BY_ID.values()) {
+    const market = getReferenceMarket(meta.flags.pegCurrency);
+    const start = market == null ? null : byMarket[market];
+    if (start != null) held.set(meta.id, start);
+  }
+  return held;
 }
 
 function unavailableShare(census: { eligibleCount: number; unavailableCount: number }): number | null {
@@ -93,7 +99,8 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
     scheduledMarketClosure: [] as string[],
     reviewedPriceGap: [] as string[],
   };
-  // A metal-market closure holds commodity pegs by schedule: acknowledged by count, and only
+  // A reference-market closure holds FX and metal pegs by schedule (metal hours contain FX hours):
+  // acknowledged by count, and only
   // when the census clock is inside a closure, so an off-schedule hold stays actionable.
   const marketClosedCount = isMetalMarketClosed(census.evaluatedAt)
     ? census.reasonCounts["reference-market-closed"] ?? 0
@@ -257,9 +264,9 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
     }
     const pending = await loadPendingCandidates(db);
     const olderThanBase = pending.filter((row) => row.first_seen_at <= observedAt - baseExpirySec);
-    // Confirmation waits on commodity candidates while the metal market is shut;
+    // Confirmation waits on FX and metal candidates while their reference market is shut;
     // the first run after the reopen expires or promotes them.
-    const held = metalMarketHeld(observedAt, stalledGraceSec);
+    const held = referenceMarketHeld(observedAt, stalledGraceSec);
     // A non-extreme candidate cannot outlive the extended limit; an extreme
     // move gets the severe limit. One producer interval of grace keeps the
     // run that may still keep the row from being reported before the next run
@@ -267,8 +274,8 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
     const stalled = pending.filter((row) => {
       const limitSec = isExtremeMovePending(row.reason) ? severeExpirySec : extendedExpirySec;
       // Only a candidate that was not already stalled when the closure began is held.
-      const heldByClosure = held.since != null && held.ids.has(row.stablecoin_id) &&
-        row.first_seen_at >= held.since - limitSec - stalledGraceSec;
+      const since = held.get(row.stablecoin_id);
+      const heldByClosure = since != null && row.first_seen_at >= since - limitSec - stalledGraceSec;
       return !heldByClosure && row.first_seen_at < observedAt - limitSec - stalledGraceSec;
     });
     const oldestFirstSeen = pending[0]?.first_seen_at ?? null;
@@ -277,8 +284,7 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
       oldestPendingAgeSec: oldestFirstSeen == null ? null : Math.max(0, observedAt - oldestFirstSeen),
       olderThanBaseExpiryCount: olderThanBase.length,
       stalledExpiredCount: stalled.length,
-      ...(held.since != null && { metalMarketHeldSince: held.since,
-        metalMarketHeldCount: pending.filter((row) => held.ids.has(row.stablecoin_id)).length }),
+      ...(held.size > 0 && { referenceMarketHeldCount: pending.filter((row) => held.has(row.stablecoin_id)).length }),
       unconfirmedSevereRecent: Number(summary.severe_recent),
       unconfirmedSevereLookbackSec: STATUS_DEPEG_DETECTION_THRESHOLDS.unconfirmedSevereLookbackSec,
       baseExpirySec,
@@ -539,9 +545,9 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
       ? freshDepegDeadBandNotices(run.census.deadBandNotices, observedAt)
         .filter((notice) => notice.evaluatedAt === run.census!.evaluatedAt) : [];
     const blindBefore = observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec;
-    // Detection holds commodity events blind while the metal market is shut; a gap
+    // Detection holds FX and metal events blind while their reference market is shut; a gap
     // that was already blind when the closure began stays actionable.
-    const held = metalMarketHeld(observedAt, STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec);
+    const held = referenceMarketHeld(observedAt, STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec);
     const rows = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -558,8 +564,10 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
              AND stablecoin_id NOT IN (SELECT value FROM json_each(?))
              AND (last_trusted_price_at IS NOT NULL OR price_coverage_gap_started_at IS NOT NULL)
              AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
-             AND NOT (stablecoin_id IN (SELECT value FROM json_each(?))
-               AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) >= ?)
+             AND NOT EXISTS (SELECT 1 FROM json_each(?) AS hold
+               WHERE json_extract(hold.value, '$.id') = depeg_events.stablecoin_id
+                 AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0))
+                   >= json_extract(hold.value, '$.after'))
            )
            SELECT *, COUNT(*) OVER () AS total_count, SUM(acknowledged) OVER () AS acknowledged_count,
              (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 1) AS acknowledged_ids_json,
@@ -569,8 +577,8 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
            LIMIT 25`,
         )
         .bind(JSON.stringify([...reviews.values()].map(({ eventId, stablecoinId }) => ({ eventId, stablecoinId }))),
-          JSON.stringify(notices), JSON.stringify([...FROZEN_IDS]), blindBefore, JSON.stringify([...held.ids]),
-          (held.since ?? 0) - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec)
+          JSON.stringify(notices), JSON.stringify([...FROZEN_IDS]), blindBefore, JSON.stringify([...held].map(([id, since]) =>
+            ({ id, after: since - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec }))))
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];
@@ -619,7 +627,7 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
       acknowledgedBlindEventsTruncated: acknowledgedBlindEventCount > acknowledgedBlindEvents.length,
       actionableBlindEventsTruncated: actionableBlindEventCount > actionableBlindEvents.length,
       blindMaxAgeSec: STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec,
-      ...(held.since != null && { metalMarketHeldSince: held.since }),
+      ...(held.size > 0 && { referenceMarketHeldAssetCount: held.size }),
       events,
     };
     // The persistence envelope truncates oversized metadata as a whole. Do not

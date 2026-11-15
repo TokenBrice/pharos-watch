@@ -7,11 +7,12 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
 }));
 
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "../../lib/stablecoins-cache";
 import { computeAndStoreStabilityIndex } from "../stability-index";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import type { NativePegQuote } from "../../lib/native-peg-quotes";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/stability-index";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
@@ -19,9 +20,50 @@ import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-reg
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const CNGN_ID = "cngn-compliant-naira";
 
 interface TestDb extends D1Database {
   sqlite: DatabaseSync;
+}
+
+interface PsiSnapshot {
+  contributors: Array<{ id: string; bps: number; mcapUsd: number; factor: number; ageDays: number }>;
+  totalMcapUsd: number;
+  mcap7dChangePct: number;
+  dewsStressBreadth: number;
+  degradedComponents: string[];
+  openDepegsWithoutPrice: number;
+  replayPriceFallbackCount: number;
+  depegCount: number;
+  carriedSupplyIds: string[];
+  supplyUnavailableIds: string[];
+  trendUnavailableIds: string[];
+  universeCoverage: {
+    expected: number; present: number; admittedSupply: number;
+    status: string; missingFromCacheIds: string[];
+  };
+}
+
+interface PsiMetadata {
+  reason?: string;
+  fallbackMode?: string;
+  dewsUnavailable?: boolean;
+  dewsFailureReason?: string;
+  dewsRowsRead?: number;
+  dewsLatestComputedAt?: number | null;
+  dewsMaxAgeSec?: number;
+  dewsStressBreadth?: number;
+  preservedCurrentSample?: boolean;
+  depegEventsUnavailable?: boolean;
+  depegEventsFailureReason?: string;
+  carriedSupplyIds?: string[];
+  carriedSupplyCount?: number;
+  supplyUnavailableIds?: string[];
+  trendUnavailableIds?: string[];
+  openDepegsWithoutPrice?: number;
+  degradedComponents?: string[];
+  quality: { reasons: string[] };
+  universeCoverage?: { expected: number; admittedSupply: number; status: string };
 }
 
 function makeStabilityAsset(overrides: Partial<StablecoinData> = {}): StablecoinData {
@@ -48,6 +90,28 @@ function makeUnpricedFalconAsset(): StablecoinData {
   });
 }
 
+function cacheOk(
+  peggedAssets: StablecoinData[],
+  updatedAt = Math.floor(Date.now() / 1000),
+): StablecoinsCacheLoadOk {
+  return { kind: "ok", payload: { peggedAssets }, updatedAt };
+}
+
+function depegRow(stablecoin_id: string, started_at: number) {
+  return { stablecoin_id, peg_reference: 1, started_at };
+}
+
+function cngnQuotes(price: number, updatedAt: number, pegCurrency = "NGN"): Map<string, NativePegQuote> {
+  return new Map([[CNGN_ID, {
+    stablecoinId: CNGN_ID, geckoId: "compliant-naira", pegCurrency,
+    vsCurrency: "ngn", price, updatedAt,
+  }]]);
+}
+
+function metadataOf(result: { metadata?: string }): PsiMetadata {
+  return JSON.parse(result.metadata ?? "{}") as PsiMetadata;
+}
+
 function failAll(statement: D1PreparedStatement, message: string): D1PreparedStatement {
   return {
     ...statement,
@@ -63,17 +127,14 @@ function makeDb(opts: {
   dewsPublishedAt?: number | null;
   dewsRows?: Array<{ stablecoin_id: string; score: number; band: string; computed_at: number }>;
   depegQueryFails?: boolean;
-  depegRows?: Array<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
+  depegRows?: Array<ReturnType<typeof depegRow>>;
   priceCacheRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
 } = {}): TestDb {
   const { sqlite, db } = fixtures.open();
   const nowSec = Math.floor(Date.now() / 1000);
-  const configuredDewsRows = opts.dewsRows ?? [{
-    stablecoin_id: "usdt-tether",
-    score: 72,
-    band: "WARNING",
-    computed_at: nowSec - 300,
-  }];
+  const configuredDewsRows = opts.dewsRows ?? [
+    { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: nowSec - 300 },
+  ];
   const hasExplicitPublishedAt = Object.prototype.hasOwnProperty.call(opts, "dewsPublishedAt");
   const dewsPublishedAt = hasExplicitPublishedAt
     ? opts.dewsPublishedAt ?? null
@@ -85,11 +146,7 @@ function makeDb(opts: {
         ended_at, start_price, peak_price, peg_reference, source)
      VALUES (?, ?, 'peggedUSD', 'below', -100, ?, NULL, 1, 0.99, ?, 'live')`,
   );
-  for (const row of opts.depegRows ?? [{
-    stablecoin_id: "usdt-tether",
-    peg_reference: 1,
-    started_at: nowSec - 3600,
-  }]) {
+  for (const row of opts.depegRows ?? [depegRow("usdt-tether", nowSec - 3600)]) {
     insertDepeg.run(row.stablecoin_id, row.stablecoin_id, row.started_at, row.peg_reference);
   }
 
@@ -145,12 +202,12 @@ function makeDb(opts: {
   return Object.assign(db, { sqlite }) as TestDb;
 }
 
-function readInsertedInputSnapshot(db: TestDb): Record<string, unknown> {
+function readInsertedInputSnapshot(db: TestDb): PsiSnapshot {
   const row = db.sqlite.prepare(
     "SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
   ).get() as { input_snapshot: string } | undefined;
   if (!row) throw new Error("Expected stability_index_samples insert");
-  return JSON.parse(row.input_snapshot) as Record<string, unknown>;
+  return JSON.parse(row.input_snapshot) as PsiSnapshot;
 }
 
 function persistedSampleCount(db: TestDb): number {
@@ -162,50 +219,30 @@ describe("computeAndStoreStabilityIndex", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-05T12:00:00Z"));
-    vi.mocked(loadStablecoinsCache).mockReset().mockResolvedValue({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset(),
-        ],
-      },
-      updatedAt: Math.floor(Date.now() / 1000),
-    });
+    vi.mocked(loadStablecoinsCache).mockReset().mockResolvedValue(cacheOk([makeStabilityAsset()]));
   });
 
   it.each([30 * 86400 + 1, 30 * 86400 + 51839, 30 * 86400 + 51841, 31 * 86400])(
     "persists exact contributor inputs for a %s-second-old chronic depeg",
     async (ageSec) => {
       const now = Math.floor(Date.now() / 1000);
-      const db = makeDb({
-        depegRows: [{ stablecoin_id: "usdt-tether", peg_reference: 1, started_at: now - ageSec }],
-      });
-      vi.mocked(loadStablecoinsCache).mockResolvedValue({
-        kind: "ok", updatedAt: now,
-        payload: { peggedAssets: [
-          makeStabilityAsset({ price: 0.99, circulating: { peggedUSD: 1e9 } }),
-          makeStabilityAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 1e9 } }),
-        ] },
-      });
+      const db = makeDb({ depegRows: [depegRow("usdt-tether", now - ageSec)] });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([
+        makeStabilityAsset({ price: 0.99, circulating: { peggedUSD: 1e9 } }),
+        makeStabilityAsset({ id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 1e9 } }),
+      ], now));
 
       await computeAndStoreStabilityIndex(db);
       const snapshot = readInsertedInputSnapshot(db);
-      const [contributor] = snapshot.contributors as Array<{
-        bps: number; mcapUsd: number; factor: number; ageDays: number;
-      }>;
+      const [contributor] = snapshot.contributors;
       const exactFactor = getDepreciationFactor(ageSec / 86400);
       expect(contributor.factor).toBe(exactFactor);
-      const reproduced = computePsiDepegContribution({
-        ...contributor, totalMcapUsd: snapshot.totalMcapUsd as number,
-      });
-      const scored = computePsiDepegContribution({
-        bps: -100, mcapUsd: 1e9, totalMcapUsd: 2e9, factor: exactFactor,
-      });
+      const reproduced = computePsiDepegContribution({ ...contributor, totalMcapUsd: snapshot.totalMcapUsd });
+      const scored = computePsiDepegContribution({ bps: -100, mcapUsd: 1e9, totalMcapUsd: 2e9, factor: exactFactor });
       expect(reproduced).toEqual(scored);
       const result = computeStabilityIndex({
         depegs: [{ bps: -100, mcapUsd: 1e9, depegAgeDays: ageSec / 86400 }],
-        totalMcapUsd: 2e9, mcap7dChangePct: snapshot.mcap7dChangePct as number,
-        dewsStressBreadth: snapshot.dewsStressBreadth as number,
+        totalMcapUsd: 2e9, mcap7dChangePct: snapshot.mcap7dChangePct, dewsStressBreadth: snapshot.dewsStressBreadth,
       });
       const row = db.sqlite.prepare("SELECT components FROM stability_index_samples")
         .get() as { components: string };
@@ -217,27 +254,20 @@ describe("computeAndStoreStabilityIndex", () => {
     },
   );
 
-
   it.each([
     ["eurc-circle", "peggedEUR", 1.08],
     ["jpyc-jpyc", "peggedJPY", 0.0067],
     ["usdt-tether", "peggedUSD", 0.98],
   ])("keeps %s event evidence in its quote domain", async (id, pegType, usdPrice) => {
     const now = Math.floor(Date.now() / 1000);
-    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 60 }] });
+    const db = makeDb({ depegRows: [depegRow(id, now - 60)] });
     db.sqlite.prepare("UPDATE depeg_events SET peg_type = ?, start_price = 0.98").run(pegType);
-    vi.mocked(loadStablecoinsCache).mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: [makeStabilityAsset({ id, pegType, price: usdPrice })] },
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([makeStabilityAsset({ id, pegType, price: usdPrice })], now));
     await computeAndStoreStabilityIndex(db);
     const first = readInsertedInputSnapshot(db);
     expect(first.contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
     if (pegType !== "peggedUSD") {
-      vi.mocked(loadStablecoinsCache).mockResolvedValue({
-        kind: "ok", updatedAt: now,
-        payload: { peggedAssets: [makeStabilityAsset({ id, pegType, price: usdPrice * 1.2 })] },
-      });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([makeStabilityAsset({ id, pegType, price: usdPrice * 1.2 })], now));
       await computeAndStoreStabilityIndex(db);
       expect(readInsertedInputSnapshot(db).contributors).toEqual(first.contributors);
       db.sqlite.prepare("UPDATE depeg_events SET started_at = ?").run(now - 6 * 3600);
@@ -251,17 +281,12 @@ describe("computeAndStoreStabilityIndex", () => {
 
   it("computes cNGN's long-open native event from the producer's persisted upstream quote", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const id = "cngn-compliant-naira";
-    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 77 * 86400 }] });
+    const db = makeDb({ depegRows: [depegRow(CNGN_ID, now - 77 * 86400)] });
     db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN', start_price = 0.95").run();
-    vi.mocked(loadStablecoinsCache).mockResolvedValue({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: [makeStabilityAsset({ id, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 })] },
-    });
-    await persistActiveNativeEventQuotes(db, new Map([[id, {
-      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
-      vsCurrency: "ngn", price: 0.98, updatedAt: now - 60,
-    }]]));
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([
+      makeStabilityAsset({ id: CNGN_ID, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 }),
+    ], now));
+    await persistActiveNativeEventQuotes(db, cngnQuotes(0.98, now - 60));
     const retained = db.sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
       .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`) as { value: string; updated_at: number };
     expect(JSON.parse(retained.value)).toEqual({ value: 0.98, observedAt: now - 60, source: "coingecko" });
@@ -269,21 +294,15 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(1);
-    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("psi-sample-published");
-    expect(readInsertedInputSnapshot(db).contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
+    expect(metadataOf(result).reason).toBe("psi-sample-published");
+    expect(readInsertedInputSnapshot(db).contributors).toEqual([expect.objectContaining({ id: CNGN_ID, bps: -200 })]);
     expect(readInsertedInputSnapshot(db).degradedComponents).toEqual(["universe-coverage"]);
 
-    await persistActiveNativeEventQuotes(db, new Map([[id, {
-      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
-      vsCurrency: "ngn", price: 0.9, updatedAt: now - 120,
-    }]]));
+    await persistActiveNativeEventQuotes(db, cngnQuotes(0.9, now - 120));
     expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toEqual({ value: retained.value });
     db.sqlite.prepare("UPDATE depeg_events SET ended_at = ? WHERE id = 90738").run(now);
-    await persistActiveNativeEventQuotes(db, new Map([[id, {
-      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
-      vsCurrency: "ngn", price: 0.98, updatedAt: now - 60,
-    }]]));
+    await persistActiveNativeEventQuotes(db, cngnQuotes(0.98, now - 60));
     expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toBeUndefined();
   });
@@ -292,13 +311,11 @@ describe("computeAndStoreStabilityIndex", () => {
     "keeps open-depeg-no-price for %s persisted native evidence",
     async (kind) => {
       const now = Math.floor(Date.now() / 1000);
-      const id = "cngn-compliant-naira";
-      const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 77 * 86400 }] });
+      const db = makeDb({ depegRows: [depegRow(CNGN_ID, now - 77 * 86400)] });
       db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN', start_price = 0.95").run();
-      vi.mocked(loadStablecoinsCache).mockResolvedValue({
-        kind: "ok", updatedAt: now,
-        payload: { peggedAssets: [makeStabilityAsset({ id, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 })] },
-      });
+      vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([
+        makeStabilityAsset({ id: CNGN_ID, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 }),
+      ], now));
       if (kind !== "absent") {
         const observedAt = kind === "stale" ? now - PSI_NATIVE_EVIDENCE_MAX_AGE_SEC : now + 1;
         db.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
@@ -309,7 +326,7 @@ describe("computeAndStoreStabilityIndex", () => {
       }
       const result = await computeAndStoreStabilityIndex(db);
       expect(result.status).toBe("ok");
-      expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
+      expect(metadataOf(result).quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
       const snapshot = readInsertedInputSnapshot(db);
       expect(snapshot.contributors).toEqual([]);
       expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
@@ -324,13 +341,9 @@ describe("computeAndStoreStabilityIndex", () => {
     { price: 0.98, age: 60, currency: "EUR" },
   ])("does not persist invalid, stale, future, or wrong-domain producer quotes: %j", async ({ price, age, currency }) => {
     const now = Math.floor(Date.now() / 1000);
-    const id = "cngn-compliant-naira";
-    const db = makeDb({ depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: now - 86400 }] });
+    const db = makeDb({ depegRows: [depegRow(CNGN_ID, now - 86400)] });
     db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN'").run();
-    await persistActiveNativeEventQuotes(db, new Map([[id, {
-      stablecoinId: id, geckoId: "compliant-naira", pegCurrency: currency,
-      price, updatedAt: now - age,
-    }]]));
+    await persistActiveNativeEventQuotes(db, cngnQuotes(price, now - age, currency));
     expect(db.sqlite.prepare("SELECT value FROM cache WHERE key = ?")
       .get(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}90738`)).toBeUndefined();
   });
@@ -342,7 +355,7 @@ describe("computeAndStoreStabilityIndex", () => {
     if (sql) db.sqlite.exec(sql);
     const result = await computeAndStoreStabilityIndex(db);
     expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    expect(metadataOf(result)).toMatchObject({
       fallbackMode: "dews-unavailable", dewsUnavailable: true,
       dewsFailureReason: expect.stringContaining(reason), preservedCurrentSample: true,
     });
@@ -356,13 +369,7 @@ describe("computeAndStoreStabilityIndex", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
-      dewsUnavailable: boolean;
-      dewsFailureReason: string | null;
-      dewsRowsRead: number;
-      preservedCurrentSample: boolean;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("has no rows");
@@ -375,27 +382,13 @@ describe("computeAndStoreStabilityIndex", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
     const db = makeDb({
-      dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: staleComputedAt,
-        },
-      ],
+      dewsRows: [{ stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: staleComputedAt }],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
-      dewsUnavailable: boolean;
-      dewsFailureReason: string | null;
-      dewsLatestComputedAt: number | null;
-      dewsRowsRead: number;
-      dewsMaxAgeSec: number;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("stale");
@@ -409,34 +402,18 @@ describe("computeAndStoreStabilityIndex", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const staleComputedAt = nowSec - CRON_INTERVALS["compute-dews"] * 2 - 1;
     const freshComputedAt = nowSec - 60;
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset(),
-          makeStabilityAsset({
-            id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin",
-            circulating: { peggedUSD: 200_000_000 }, circulatingPrevDay: { peggedUSD: 199_000_000 },
-            circulatingPrevWeek: { peggedUSD: 198_000_000 }, circulatingPrevMonth: { peggedUSD: 197_000_000 },
-          }),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset(),
+      makeStabilityAsset({
+        id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin",
+        circulating: { peggedUSD: 200_000_000 }, circulatingPrevDay: { peggedUSD: 199_000_000 },
+        circulatingPrevWeek: { peggedUSD: 198_000_000 }, circulatingPrevMonth: { peggedUSD: 197_000_000 },
+      }),
+    ], nowSec));
     const db = makeDb({
       dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: staleComputedAt,
-        },
-        {
-          stablecoin_id: "usdc-circle",
-          score: 12,
-          band: "NORMAL",
-          computed_at: freshComputedAt,
-        },
+        { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: staleComputedAt },
+        { stablecoin_id: "usdc-circle", score: 12, band: "NORMAL", computed_at: freshComputedAt },
       ],
     });
 
@@ -444,13 +421,7 @@ describe("computeAndStoreStabilityIndex", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
-      dewsUnavailable: boolean;
-      dewsFailureReason: string | null;
-      dewsLatestComputedAt: number | null;
-      dewsRowsRead: number;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("usdt-tether");
@@ -468,27 +439,14 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       dewsPublishedAt: null,
       dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: beyondWindowAt,
-        },
-        {
-          stablecoin_id: "usdt-tether",
-          score: 60,
-          band: "WARNING",
-          computed_at: freshAt,
-        },
+        { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: beyondWindowAt },
+        { stablecoin_id: "usdt-tether", score: 60, band: "WARNING", computed_at: freshAt },
       ],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
 
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      dewsRowsRead: number;
-      dewsLatestComputedAt: number | null;
-    };
+    const metadata = metadataOf(result);
     expect(result.status).toBe("degraded");
     expect(metadata.dewsRowsRead).toBe(0);
     expect(metadata.dewsLatestComputedAt).toBeNull();
@@ -500,29 +458,15 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       dewsPublishedAt: publishedAt,
       dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: publishedAt + 120,
-        },
-        {
-          stablecoin_id: "usdt-tether",
-          score: 12,
-          band: "CALM",
-          computed_at: publishedAt,
-        },
+        { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: publishedAt + 120 },
+        { stablecoin_id: "usdt-tether", score: 12, band: "CALM", computed_at: publishedAt },
       ],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      dewsStressBreadth: number;
-      dewsRowsRead: number;
-      dewsLatestComputedAt: number | null;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
     expect(metadata.dewsStressBreadth).toBe(0);
@@ -535,28 +479,15 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       dewsPublishedAt: publishedAt,
       dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 72,
-          band: "WARNING",
-          computed_at: publishedAt,
-        },
-        {
-          stablecoin_id: "benji-franklin-templeton",
-          score: 95,
-          band: "DANGER",
-          computed_at: staleComputedAt,
-        },
+        { stablecoin_id: "usdt-tether", score: 72, band: "WARNING", computed_at: publishedAt },
+        { stablecoin_id: "benji-franklin-templeton", score: 95, band: "DANGER", computed_at: staleComputedAt },
       ],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      dewsRowsRead: number;
-      dewsLatestComputedAt: number | null;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
   });
@@ -566,28 +497,15 @@ describe("computeAndStoreStabilityIndex", () => {
     const db = makeDb({
       dewsPublishedAt: publishedAt,
       dewsRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          score: 12,
-          band: "CALM",
-          computed_at: publishedAt,
-        },
-        {
-          stablecoin_id: "susds-sky",
-          score: 95,
-          band: "DANGER",
-          computed_at: publishedAt,
-        },
+        { stablecoin_id: "usdt-tether", score: 12, band: "CALM", computed_at: publishedAt },
+        { stablecoin_id: "susds-sky", score: 95, band: "DANGER", computed_at: publishedAt },
       ],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      dewsRowsRead: number;
-      dewsStressBreadth: number;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsStressBreadth).toBe(0);
   });
@@ -598,11 +516,7 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
-      depegEventsUnavailable: boolean;
-      depegEventsFailureReason: string | null;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.fallbackMode).toBe("depeg-events-unavailable");
     expect(metadata.depegEventsUnavailable).toBe(true);
     expect(metadata.depegEventsFailureReason).toContain("depeg_events");
@@ -615,32 +529,22 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("ok");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      dewsUnavailable: boolean;
-      dewsStressBreadth: number;
-    };
+    const metadata = metadataOf(result);
     expect(metadata.dewsUnavailable).toBe(false);
     expect(metadata.dewsStressBreadth).toBeGreaterThan(0);
   });
 
   it("excludes current market cap without observed prev-week supply from the trend ratio", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset(),
-          makeStabilityAsset({
-            id: "xaut-tether", name: "Tether Gold", symbol: "XAUT", geckoId: "tether-gold",
-            pegType: "peggedGOLD", pegMechanism: "commodity-backed", price: 2_500,
-            priceSource: "coingecko", priceConfidence: "single-source", supplySource: "coingecko",
-            circulating: { peggedGOLD: 50_000_000 },
-            circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
-          }),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset(),
+      makeStabilityAsset({
+        id: "xaut-tether", name: "Tether Gold", symbol: "XAUT", geckoId: "tether-gold",
+        pegType: "peggedGOLD", pegMechanism: "commodity-backed", price: 2_500,
+        priceSource: "coingecko", priceConfidence: "single-source", supplySource: "coingecko",
+        circulating: { peggedGOLD: 50_000_000 },
+        circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
+      }),
+    ]));
 
     const db = makeDb({ dewsUnavailable: false });
     const result = await computeAndStoreStabilityIndex(db);
@@ -675,97 +579,56 @@ describe("computeAndStoreStabilityIndex", () => {
 
   it("falls back to recent replay-safe cached prices for open depegs missing current snapshot prices", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeUnpricedFalconAsset(),
-        ],
-      },
-      updatedAt: nowSec,
-    });
-
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeUnpricedFalconAsset()], nowSec));
     const db = makeDb({
-      depegRows: [
-        {
-          stablecoin_id: "usdf-falcon",
-          peg_reference: 1,
-          started_at: nowSec - 3_600,
-        },
-      ],
-      priceCacheRows: [
-        {
-          asset_id: "usdf-falcon",
-          price: 0.5413,
-          updated_at: nowSec - 300,
-        },
-      ],
+      depegRows: [depegRow("usdf-falcon", nowSec - 3_600)],
+      priceCacheRows: [{ asset_id: "usdf-falcon", price: 0.5413, updated_at: nowSec - 300 }],
     });
     db.sqlite.prepare("UPDATE price_cache SET source = 'coingecko' WHERE asset_id = 'usdf-falcon'").run();
 
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
-    const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors as Array<Record<string, unknown>> : [];
 
     expect(result.status).toBe("ok");
     expect(snapshot.replayPriceFallbackCount).toBe(1);
     expect(snapshot.depegCount).toBe(1);
-    expect(contributors).toHaveLength(1);
-    expect(contributors[0]?.id).toBe("usdf-falcon");
-    expect(contributors[0]?.bps).toBe(-4587);
+    expect(snapshot.contributors).toHaveLength(1);
+    expect(snapshot.contributors[0]?.id).toBe("usdf-falcon");
+    expect(snapshot.contributors[0]?.bps).toBe(-4587);
   });
 
   it("maps legacy PSI depeg ids onto the canonical live cache asset", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset({
-            id: "ust-terra", name: "TerraUSD", symbol: "UST", geckoId: "terrausd",
-            pegMechanism: "algorithmic", price: 0.12, priceConfidence: "single-source",
-            circulating: { peggedUSD: 15_000_000_000 }, circulatingPrevDay: { peggedUSD: 17_000_000_000 },
-            circulatingPrevWeek: { peggedUSD: 18_500_000_000 }, circulatingPrevMonth: { peggedUSD: 18_500_000_000 },
-          }),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset({
+        id: "ust-terra", name: "TerraUSD", symbol: "UST", geckoId: "terrausd",
+        pegMechanism: "algorithmic", price: 0.12, priceConfidence: "single-source",
+        circulating: { peggedUSD: 15_000_000_000 }, circulatingPrevDay: { peggedUSD: 17_000_000_000 },
+        circulatingPrevWeek: { peggedUSD: 18_500_000_000 }, circulatingPrevMonth: { peggedUSD: 18_500_000_000 },
+      }),
+    ], nowSec));
 
-    const db = makeDb({
-      depegRows: [
-        {
-          stablecoin_id: "ust-terra-classic",
-          peg_reference: 1,
-          started_at: nowSec - 3_600,
-        },
-      ],
-    });
+    const db = makeDb({ depegRows: [depegRow("ust-terra-classic", nowSec - 3_600)] });
 
     await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
-    const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors as Array<Record<string, unknown>> : [];
 
     expect(snapshot.depegCount).toBe(1);
-    expect(contributors).toHaveLength(1);
-    expect(contributors[0]?.id).toBe("ust-terra");
-    expect(contributors[0]?.bps).toBe(-8800);
+    expect(snapshot.contributors).toHaveLength(1);
+    expect(snapshot.contributors[0]?.id).toBe("ust-terra");
+    expect(snapshot.contributors[0]?.bps).toBe(-8800);
   });
 
   it("does not turn a nominal par reference into observed calm for an open depeg", async () => {
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: { peggedAssets: [makeStabilityAsset({
-        price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
-        priceObservedAt: null,
-      })] },
-      updatedAt: Math.floor(Date.now() / 1000),
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset({
+      price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+      priceObservedAt: null,
+    })]));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
     expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
+    expect(metadataOf(result).quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(snapshot.openDepegsWithoutPrice).toBe(1);
     expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(snapshot.contributors).toEqual([]);
@@ -778,13 +641,9 @@ describe("computeAndStoreStabilityIndex", () => {
     ["usbd-bima", "protocol-par", "nominal_reference", false],
   ] as const)("admits replay price for %s from %s (%s) only when it is replay-safe", async (id, source, observedAtMode, observed) => {
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: { peggedAssets: [makeStabilityAsset({ id, price: null })] },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset({ id, price: null })], nowSec));
     const db = makeDb({
-      depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: nowSec - 3600 }],
+      depegRows: [depegRow(id, nowSec - 3600)],
       priceCacheRows: [{ asset_id: id, price: 0.98, updated_at: nowSec - 60 }],
     });
     db.sqlite.prepare("UPDATE price_cache SET source = ?, observed_at_mode = ? WHERE asset_id = ?")
@@ -803,23 +662,10 @@ describe("computeAndStoreStabilityIndex", () => {
   });
 
   it("persists the PSI universe coverage and names a shortfall", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: { peggedAssets: [makeStabilityAsset()] },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset()]));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
-    const snapshot = readInsertedInputSnapshot(db) as {
-      universeCoverage: {
-        expected: number;
-        present: number;
-        admittedSupply: number;
-        status: string;
-        missingFromCacheIds: string[];
-      };
-    };
+    const snapshot = readInsertedInputSnapshot(db);
     const expected = snapshot.universeCoverage.expected;
     expect(expected).toBeGreaterThan(1);
     expect(snapshot.universeCoverage).toMatchObject({
@@ -829,16 +675,15 @@ describe("computeAndStoreStabilityIndex", () => {
     });
     expect(snapshot.universeCoverage.missingFromCacheIds).not.toContain("usdt-tether");
     expect(snapshot.universeCoverage.missingFromCacheIds).toHaveLength(expected - 1);
-    expect(JSON.parse(result.metadata ?? "{}").universeCoverage).toMatchObject({
+    expect(metadataOf(result).universeCoverage).toMatchObject({
       expected,
       admittedSupply: 1,
       status: "error",
     });
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+    expect(metadataOf(result).quality.reasons).toContain("universe-coverage");
   });
 
   it("classifies universe coverage without netting PSI-historical assets against missing core members", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
     const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
     const missing = new Set(coreIds.slice(0, 4));
     const peggedAssets = coreIds
@@ -847,94 +692,53 @@ describe("computeAndStoreStabilityIndex", () => {
     for (const id of PSI_HISTORICAL_IDS) {
       peggedAssets.push(makeStabilityAsset({ id, symbol: id.slice(0, 6) }));
     }
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: { peggedAssets },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk(peggedAssets));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
-    const snapshot = readInsertedInputSnapshot(db) as {
-      universeCoverage: {
-        expected: number;
-        present: number;
-        status: string;
-        missingFromCacheIds: string[];
-      };
-    };
+    const snapshot = readInsertedInputSnapshot(db);
     expect(snapshot.universeCoverage.missingFromCacheIds).toHaveLength(4);
     expect(snapshot.universeCoverage).toMatchObject({
       expected: coreIds.length,
       present: coreIds.length - 4,
       status: "degraded",
     });
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+    expect(metadataOf(result).quality.reasons).toContain("universe-coverage");
   });
 
   it("keeps an unreadable core supply out of the universe-coverage finding", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
     const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
     const noSupply = new Set(coreIds.filter((id) => id !== "usdt-tether").slice(0, 4));
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: coreIds.map((id) => makeStabilityAsset({
-          id,
-          symbol: id.slice(0, 6),
-          ...(noSupply.has(id) ? { circulating: {} } : {}),
-        })),
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk(coreIds.map((id) => makeStabilityAsset({
+      id,
+      symbol: id.slice(0, 6),
+      ...(noSupply.has(id) ? { circulating: {} } : {}),
+    }))));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
-    const snapshot = readInsertedInputSnapshot(db) as {
-      universeCoverage: {
-        present: number;
-        admittedSupply: number;
-        status: string;
-      };
-    };
+    const snapshot = readInsertedInputSnapshot(db);
     expect(snapshot.universeCoverage).toMatchObject({
       present: coreIds.length,
       admittedSupply: coreIds.length - 4,
       status: "ok",
     });
-    const reasons = JSON.parse(result.metadata ?? "{}").quality.reasons;
+    const reasons = metadataOf(result).quality.reasons;
     expect(reasons).toContain("supply-unavailable");
     expect(reasons).not.toContain("universe-coverage");
   });
 
   it("flags an outage-fallback restore without admitting it as an observed core member", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset(),
-          makeStabilityAsset({
-            id: "usdc-circle", symbol: "USDC", supplyRestored: true,
-            supplyRestoreMode: "outage-fallback",
-            circulating: { peggedUSD: 50_000_000 },
-          }),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset(),
+      makeStabilityAsset({
+        id: "usdc-circle", symbol: "USDC", supplyRestored: true,
+        supplyRestoreMode: "outage-fallback",
+        circulating: { peggedUSD: 50_000_000 },
+      }),
+    ]));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
-    const snapshot = readInsertedInputSnapshot(db) as {
-      totalMcapUsd: number;
-      carriedSupplyIds: string[];
-      universeCoverage: { present: number; admittedSupply: number };
-      degradedComponents: string[];
-    };
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      carriedSupplyIds: string[];
-      carriedSupplyCount: number;
-      supplyUnavailableIds: string[];
-      quality: { reasons: string[] };
-    };
+    const snapshot = readInsertedInputSnapshot(db);
+    const metadata = metadataOf(result);
 
     // The carried weight still sizes the index, but coverage names it instead
     // of counting it among the members this generation observed (R6).
@@ -948,33 +752,17 @@ describe("computeAndStoreStabilityIndex", () => {
   });
 
   it("keeps a routine main-path carry as an observed weight", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeStabilityAsset(),
-          makeStabilityAsset({
-            id: "usdc-circle", symbol: "USDC", supplyRestored: true,
-            circulating: { peggedUSD: 50_000_000 },
-          }),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset(),
+      makeStabilityAsset({
+        id: "usdc-circle", symbol: "USDC", supplyRestored: true,
+        circulating: { peggedUSD: 50_000_000 },
+      }),
+    ]));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
-    const snapshot = readInsertedInputSnapshot(db) as {
-      totalMcapUsd: number;
-      carriedSupplyIds: string[];
-      universeCoverage: { present: number; admittedSupply: number };
-      degradedComponents: string[];
-    };
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      carriedSupplyIds: string[];
-      carriedSupplyCount: number;
-      quality?: { reasons: string[] };
-    };
+    const snapshot = readInsertedInputSnapshot(db);
+    const metadata = metadataOf(result);
 
     // A chain-dropout repair published on the main path keeps today's treatment:
     // it is a published weight, not an outage restore (issue #1836 scope).
@@ -982,50 +770,26 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(snapshot.universeCoverage).toMatchObject({ present: 2, admittedSupply: 2 });
     expect(snapshot.degradedComponents).not.toContain("carried-supply");
     expect(metadata).toMatchObject({ carriedSupplyIds: [], carriedSupplyCount: 0 });
-    expect(metadata.quality?.reasons ?? []).not.toContain("carried-supply");
+    expect(metadata.quality.reasons).not.toContain("carried-supply");
   });
 
   it("publishes ok with explicit input quality when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok",
-      payload: {
-        peggedAssets: [
-          makeUnpricedFalconAsset(),
-        ],
-      },
-      updatedAt: nowSec,
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeUnpricedFalconAsset()], nowSec));
 
     const db = makeDb({
-      depegRows: [
-        {
-          stablecoin_id: "usdf-falcon",
-          peg_reference: 1,
-          started_at: nowSec - 3_600,
-        },
-      ],
-      priceCacheRows: [
-        {
-          asset_id: "usdf-falcon",
-          price: 0.5413,
-          updated_at: nowSec - (6 * 60 * 60) - 1,
-        },
-      ],
+      depegRows: [depegRow("usdf-falcon", nowSec - 3_600)],
+      priceCacheRows: [{ asset_id: "usdf-falcon", price: 0.5413, updated_at: nowSec - (6 * 60 * 60) - 1 }],
     });
 
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      reason?: string;
-      openDepegsWithoutPrice: number;
-      degradedComponents: string[];
-    };
+    const metadata = metadataOf(result);
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(1);
     expect(metadata.reason).toBe("psi-sample-published");
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
+    expect(metadata.quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(metadata.openDepegsWithoutPrice).toBe(1);
     expect(metadata.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
@@ -1040,17 +804,12 @@ describe("computeAndStoreStabilityIndex", () => {
     ["overflow", { peggedUSD: Number.MAX_VALUE, peggedEUR: Number.MAX_VALUE }],
   ])("omits %s current supply from denominators, stressed weights and contributors", async (_label, circulating) => {
     const now = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: [
-        makeStabilityAsset({ price: 0.98 }),
-        makeStabilityAsset({ id: "usdc-circle", symbol: "USDC", circulating, price: 0.9 }),
-      ] },
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset({ price: 0.98 }),
+      makeStabilityAsset({ id: "usdc-circle", symbol: "USDC", circulating, price: 0.9 }),
+    ], now));
     const db = makeDb({
-      depegRows: ["usdt-tether", "usdc-circle"].map((stablecoin_id) => ({
-        stablecoin_id, peg_reference: 1, started_at: now - 60,
-      })),
+      depegRows: ["usdt-tether", "usdc-circle"].map((stablecoin_id) => depegRow(stablecoin_id, now - 60)),
       dewsRows: ["usdt-tether", "usdc-circle"].map((stablecoin_id) => ({
         stablecoin_id, score: 72, band: "WARNING", computed_at: now - 300,
       })),
@@ -1063,32 +822,24 @@ describe("computeAndStoreStabilityIndex", () => {
       supplyUnavailableIds: ["usdc-circle"],
       contributors: [expect.objectContaining({ id: "usdt-tether", mcapUsd: 100_000_000 })],
     });
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("supply-unavailable");
+    expect(metadataOf(result).quality.reasons).toContain("supply-unavailable");
   });
 
   it("admits explicit zero current supply rather than reporting absence", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok", updatedAt: now,
-      payload: { peggedAssets: [makeStabilityAsset(), makeStabilityAsset({
-        id: "usdc-circle", circulating: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 0 },
-      })] },
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset(), makeStabilityAsset({
+      id: "usdc-circle", circulating: { peggedUSD: 0 }, circulatingPrevWeek: { peggedUSD: 0 },
+    })]));
     const result = await computeAndStoreStabilityIndex(makeDb());
     expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata ?? "{}").supplyUnavailableIds).toEqual([]);
-    expect(JSON.parse(result.metadata ?? "{}").trendUnavailableIds).toEqual([]);
+    expect(metadataOf(result).supplyUnavailableIds).toEqual([]);
+    expect(metadataOf(result).trendUnavailableIds).toEqual([]);
   });
 
   it.each<[Record<string, number> | undefined]>([[undefined], [{}], [{ peggedUSD: NaN }], [{ peggedUSD: -1 }]])(
     "excludes unavailable previous-week supply from both trend sides", async (circulatingPrevWeek) => {
-      const now = Math.floor(Date.now() / 1000);
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        kind: "ok", updatedAt: now,
-        payload: { peggedAssets: [makeStabilityAsset(), makeStabilityAsset({
-          id: "usdc-circle", circulating: { peggedUSD: 900_000_000 }, circulatingPrevWeek,
-        })] },
-      });
+      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset(), makeStabilityAsset({
+        id: "usdc-circle", circulating: { peggedUSD: 900_000_000 }, circulatingPrevWeek,
+      })]));
       const db = makeDb();
       const result = await computeAndStoreStabilityIndex(db);
       expect(result.status).toBe("ok");
@@ -1106,14 +857,11 @@ describe("computeAndStoreStabilityIndex", () => {
       await computeAndStoreStabilityIndex(db);
       const priorSnapshot = readInsertedInputSnapshot(db);
       vi.advanceTimersByTime(1_800_000);
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        kind: "ok", updatedAt: Math.floor(Date.now() / 1000),
-        payload: { peggedAssets: [makeStabilityAsset({ circulatingPrevWeek })] },
-      });
+      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([makeStabilityAsset({ circulatingPrevWeek })]));
       const result = await computeAndStoreStabilityIndex(db);
       expect(result.status).toBe("degraded");
       expect(result.itemCount).toBe(0);
-      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      expect(metadataOf(result)).toMatchObject({
         reason: "trend-inputs-unavailable", mcap7dChangePct: null, preservedCurrentSample: true,
       });
       expect(persistedSampleCount(db)).toBe(1);
@@ -1122,17 +870,14 @@ describe("computeAndStoreStabilityIndex", () => {
   );
 
   it.each([0, -1, Number.MAX_VALUE])("holds a nonpositive or overflowing aggregate market cap (%s)", async (amount) => {
-    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-      kind: "ok", updatedAt: Math.floor(Date.now() / 1000),
-      payload: { peggedAssets: [
-        makeStabilityAsset({ circulating: { peggedUSD: amount } }),
-        makeStabilityAsset({ id: "usdc-circle", circulating: { peggedUSD: amount } }),
-      ] },
-    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cacheOk([
+      makeStabilityAsset({ circulating: { peggedUSD: amount } }),
+      makeStabilityAsset({ id: "usdc-circle", circulating: { peggedUSD: amount } }),
+    ]));
     const db = makeDb();
     const result = await computeAndStoreStabilityIndex(db);
     expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("insufficient-market-cap");
+    expect(metadataOf(result).reason).toBe("insufficient-market-cap");
     expect(persistedSampleCount(db)).toBe(0);
   });
 

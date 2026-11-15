@@ -3,7 +3,7 @@ import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } fr
 import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { isCommodityDeviationHeld } from "@shared/lib/metal-market-hours";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { computeDEWS } from "../dews";
@@ -183,12 +183,12 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0
       : 0;
     const price = isObservedPrice(asset) ? asset.price ?? null : null;
-    // A closed metal market holds the reference unless an admitted leg (primary or DEX) moved severely.
+    // A closed FX or metal market holds the reference unless an admitted leg (primary or DEX) moved severely.
     const legMoves = [price, dexPrice?.dexPriceUsd ?? null].flatMap((leg) => {
       const signal = leg == null ? null : deriveDepegSignal(leg, pegRef);
       return signal ? [signal.absRawBps] : [];
     });
-    const referenceMarketClosed = pegRef > 0 && nowSec != null && isCommodityDeviationHeld(
+    const referenceMarketClosed = pegRef > 0 && nowSec != null && isReferenceDeviationHeld(
       meta.flags?.pegCurrency, nowSec, legMoves.length > 0 ? Math.max(...legMoves) : Number.NaN,
     );
     const pegReferenceUnavailableReason = pegType == null

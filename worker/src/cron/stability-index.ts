@@ -4,7 +4,7 @@ import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
-import { getMetalMarketClosureStart, isCommodityDeviationHeld } from "@shared/lib/metal-market-hours";
+import { getReferenceMarket, getReferenceMarketClosureStart, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
@@ -311,8 +311,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     PSI_ELIGIBLE_META_BY_ID,
     stablecoinsCache.payload.fxFallbackRates,
   );
-  const metalMarketClosedSince = getMetalMarketClosureStart(now);
-  let preClosure: Awaited<ReturnType<typeof loadPreClosureContributorBps>> | undefined;
+  const closedSince = { metal: getReferenceMarketClosureStart("metal", now), fx: getReferenceMarketClosureStart("fx", now) };
+  const baselines = new Map<number, Awaited<ReturnType<typeof loadPreClosureContributorBps>>>();
   const heldContributorIds: string[] = [];
 
   for (const [coinId, events] of grouped) {
@@ -360,19 +360,21 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     }
 
     let { worstBps, earliestStart } = aggregate;
-    // A closed metal market holds a coin at its pre-closure contribution, even when unpriced
+    const market = getReferenceMarket(meta?.flags.pegCurrency);
+    const coinClosedSince = market == null ? null : closedSince[market];
+    // A closed FX or metal market holds a coin at its pre-closure contribution, even when unpriced
     // now, while detection has trusted none of its events since the closure began; a severe
     // reading or promotion inside the closure keeps it live. No admissible baseline is
     // unknown evidence, not calm.
     if (
-      metalMarketClosedSince != null &&
-      events.every((e) => Math.max(e.started_at, e.last_trusted_price_at ?? 0) < metalMarketClosedSince) &&
-      isCommodityDeviationHeld(meta?.flags.pegCurrency, now, worstAbsRawBps)
+      coinClosedSince != null &&
+      events.every((e) => Math.max(e.started_at, e.last_trusted_price_at ?? 0) < coinClosedSince) &&
+      isReferenceDeviationHeld(meta?.flags.pegCurrency, now, worstAbsRawBps)
     ) {
-      if (preClosure === undefined) {
-        preClosure = await loadPreClosureContributorBps(db, metalMarketClosedSince);
+      if (!baselines.has(coinClosedSince)) {
+        baselines.set(coinClosedSince, await loadPreClosureContributorBps(db, coinClosedSince));
       }
-      const held = preClosure?.bpsById.get(coinId);
+      const held = baselines.get(coinClosedSince)?.bpsById.get(coinId);
       if (held == null) {
         openDepegsWithoutPrice++;
         continue;
@@ -462,8 +464,12 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
           status: universeCoverageStatus,
         },
         contributors,
-        ...(metalMarketClosedSince != null
-          ? { metalMarketClosedSince, metalMarketBaselineAt: preClosure?.storedAt ?? null, heldContributorIds }
+        ...(closedSince.metal != null || closedSince.fx != null
+          ? {
+            referenceMarketClosedSince: closedSince,
+            referenceMarketBaselineAt: Object.fromEntries([...baselines].map(([since, base]) => [since, base?.storedAt ?? null])),
+            heldContributorIds,
+          }
           : {}),
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),

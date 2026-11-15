@@ -1,7 +1,8 @@
-import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD } from "@shared/lib/depeg-config";
 import type { DepegPrimaryTrust } from "@shared/types/price";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
+import { getPrimaryPriceAgeSec } from "@shared/lib/depeg-primary-trust";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -55,7 +56,7 @@ import {
 } from "./native-quote-policy";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import { isCommodityDeviationHeld } from "@shared/lib/metal-market-hours";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -436,9 +437,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   if (pegSignal.kind === "rejected") {
     return { kind: "skip", decision: emptyDecision(trackedCoinId, { kind: "unavailable", reason: pegSignal.reason }) };
   }
-  // A closed metal market leaves the commodity reference at its last close: hold
-  // live state (no onset, peak, direction or recovery) until it trades again.
-  if (isCommodityDeviationHeld(meta.flags.pegCurrency, now, pegSignal.signal.absRawBps ?? pegSignal.signal.absBps)) {
+  // A closed FX or metal market leaves the reference at its last close: hold live
+  // state (no onset, peak, direction or recovery) until it trades again.
+  if (isReferenceDeviationHeld(meta.flags.pegCurrency, now, pegSignal.signal.absRawBps ?? pegSignal.signal.absBps)) {
     const decision = emptyDecision(trackedCoinId, { kind: "unavailable", reason: "reference-market-closed" });
     if (existing) decision.seenEventIds.push(existing.id);
     return { kind: "skip", decision };
@@ -716,9 +717,41 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
 }
 
 /**
+ * How long a confirm-required single-source primary must stay inside the recovery
+ * band before it may retire an event that has no trusted corroboration at all.
+ */
+const DEPEG_SUSTAINED_PRIMARY_RECOVERY_SEC = 24 * 3_600;
+
+/**
+ * A CoinGecko-only primary can never be depeg-authoritative and its DEX liquidity may
+ * stay below the aggregate floor, so neither trusted recovery lane can ever fire. A
+ * full day of continuous in-band observations is the only admissible evidence there;
+ * any contradiction (a fresh trusted DEX price outside the band, any challenger pool still
+ * past the threshold in the event's direction, or an admitted native quote outside the band)
+ * keeps today's clear-recovery behaviour.
+ */
+function isSustainedPrimaryRecoveryEligible(ctx: DecisionContext, existing: DepegDetectionRow): boolean {
+  const { asset, now, primaryTrust, recoveryThreshold } = ctx;
+  return !isNativePegEvent(existing) &&
+    primaryTrust === "confirm_required" &&
+    asset.priceSource !== "cached" && asset.priceObservedAtMode === "upstream" &&
+    (asset.priceConfidence === "single-source" || asset.priceConfidence === "high") &&
+    getPrimaryPriceAgeSec(asset, now) <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC &&
+    signalIsWithinThreshold(ctx.primarySignal, recoveryThreshold) &&
+    // A liquid DEX lane whose evidence is stale or unclocked is missing evidence, not an
+    // absence of contradiction.
+    !(ctx.dexRow != null && ctx.dexRow.source_total_tvl >= DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD &&
+      !isAffirmativeDexPriceRow(ctx.dexRow, now, "depeg")) &&
+    !(isDexFresh(ctx.dexRow, ctx.dexAbsBps, now) && ctx.dexAbsBps! > recoveryThreshold) &&
+    !ctx.poolRecoveryVeto && !ctx.dexRecoveryChallenged &&
+    (ctx.nativeSignal == null || signalIsWithinThreshold(ctx.nativeSignal, recoveryThreshold));
+}
+
+/**
  * Handles an existing open event where price has recovered below threshold.
  * Closes via an authoritative/multi-source primary, a corroborated aggregate
- * DEX row, or a corroborating challenger-pool majority; otherwise keeps open.
+ * DEX row, a corroborating challenger-pool majority, or a day of sustained
+ * single-source recovery; otherwise keeps open.
  */
 function decideRecovery(
   ctx: DecisionContext,
@@ -788,6 +821,32 @@ function decideRecovery(
         endedAt: now,
         ...recovery,
       });
+    } else {
+      commands.push({ type: "continue-recovery", id: existing.id, lastSeenAt: now });
+      seenEventIds.push(existing.id);
+    }
+  } else if (isSustainedPrimaryRecoveryEligible(ctx, existing)) {
+    const recoveryFirstSeenAt = existing.recovery_first_seen_at;
+    const recoveryLastSeenAt = existing.recovery_last_seen_at;
+    const continuousWithPrevious =
+      recoveryLastSeenAt != null &&
+      now - recoveryLastSeenAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
+    if (recoveryFirstSeenAt == null || !continuousWithPrevious) {
+      commands.push({ type: "begin-recovery", id: existing.id, firstSeenAt: now, lastSeenAt: now });
+      seenEventIds.push(existing.id);
+    } else if (now - recoveryFirstSeenAt >= DEPEG_SUSTAINED_PRIMARY_RECOVERY_SEC) {
+      commands.push({
+        type: "close-event",
+        id: existing.id,
+        endedAt: now,
+        recoveryPrice: recoveryPriceForEvent(existing, price),
+        closeReason: "recovered-primary",
+      });
+      diagnostics.push(withDiagnostic(
+        "log",
+        `[depeg] Closing live event for ${asset.symbol} after ` +
+        `${DEPEG_SUSTAINED_PRIMARY_RECOVERY_SEC / 3_600} h of sustained single-source recovery`,
+      ));
     } else {
       commands.push({ type: "continue-recovery", id: existing.id, lastSeenAt: now });
       seenEventIds.push(existing.id);

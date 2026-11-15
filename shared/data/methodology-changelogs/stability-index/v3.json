@@ -1,14 +1,14 @@
 [
   {
     "version": "3.68",
-    "title": "Current non-USD references and metal-market closure holds",
+    "title": "Current non-USD references and closed-market holds",
     "date": "2026-11-15",
-    "effectiveAt": 1794787200,
-    "summary": "Live PSI scores open non-USD events against the current authoritative reference, as detection does, instead of the reference stored when the event opened, and holds gold and silver contributions at their pre-closure values while the metal market is shut.",
+    "effectiveAt": 1794783600,
+    "summary": "Live PSI scores open non-USD events against the current authoritative reference, as detection does, instead of the reference stored when the event opened, and holds FX and gold/silver contributions at their pre-closure values while their reference market is shut.",
     "impact": [
       "A USD-domain event on a non-USD peg (gold, silver or fiat FX) measures its current USD price against the current authoritative reference derived from the published stablecoins payload; without one the event is unpriced (`open-depeg-no-price`) rather than scored against its stored open-time reference. USD-peg and native-domain events are unchanged. On 15 November 2026 the open XAUm event, opened on 22 October with a $4,051.22 gold reference, scored -4.30% against that stored reference while trading 0.49% above the current gold reference; XAGm still carried a $65.27 September silver reference against $48.65 spot.",
-      "While the metal market is closed, a GOLD or SILVER coin whose live deviation is below the 2,500 bps severe band (raw bps; an unpriced reading counts as held) keeps the deviation it had in the last sample published before the closure, within the six-hour replay-price budget, while detection has trusted none of its events since the closure began; a promotion or trusted severe reading inside the closure keeps it live. A held coin missing from that sample, or an unreadable sample, is unpriced (`open-depeg-no-price`), never zero. Samples written during a closure record `metalMarketClosedSince`, `metalMarketBaselineAt` and `heldContributorIds`.",
-      "Historical replay is unchanged and still scores stored references. Formula weights, caps and bands are unchanged. Activation is provisional (2026-11-16 00:00 UTC); re-date effectiveAt at release."
+      "While its reference market is closed (`shared/lib/reference-market-hours.ts`), a non-USD fiat or GOLD/SILVER coin whose live deviation is below the 2,500 bps severe band (raw bps; an unpriced reading counts as held) keeps the deviation it had in the last sample published before the closure, within the six-hour replay-price budget, while detection has trusted none of its events since the closure began; a promotion or trusted severe reading inside the closure keeps it live. A held coin missing from that sample, or an unreadable sample, is unpriced (`open-depeg-no-price`), never zero. Samples written during a closure record `referenceMarketClosedSince`, `referenceMarketBaselineAt` and `heldContributorIds`.",
+      "Historical replay is unchanged and still scores stored references. Formula weights, caps and bands are unchanged."
     ],
     "commits": [],
     "reconstructed": false

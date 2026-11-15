@@ -78,6 +78,7 @@ const PLAN_CASES: Spec[] = [
   { label: "waits for a closed metal market to reopen", row: { id: 14 }, meta: goldMeta, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
   { label: "holds on today's price, not a stale severe reading", row: { id: 15, last_seen_bps: -3000 }, asset: { price: 3_880, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
   { label: "requires severe confirmers while the metal market is closed", row: { id: 16, last_seen_bps: -2800 }, asset: { price: 2_800, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "ready", peg: 3_880, threshold: 2_500 },
+  { label: "holds a native-origin FX candidate while the FX market is closed", row: { id: 17, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.98, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativePrice: 0.98, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
 ];
 
 function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanInput {
@@ -129,13 +130,7 @@ describe("buildConfirmationPlan", () => {
   it("withholds an implausible native-origin sample as unavailable evidence", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 14, stablecoin_id: "ceur-celo", symbol: "EURm", peg_type: "peggedEUR",
-        direction: "above", first_seen_bps: 15_984, first_price: 2.598389348610164,
-        last_seen_bps: 15_984, last_price: 2.598389348610164,
-        peak_seen_bps: 15_984, peak_price: 2.598389348610164,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 14, stablecoin_id: "ceur-celo", symbol: "EURm", peg_type: "peggedEUR", direction: "above", first_seen_bps: 15_984, first_price: 2.598389348610164, last_seen_bps: 15_984, last_price: 2.598389348610164, peak_seen_bps: 15_984, peak_price: 2.598389348610164, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: { id: "ceur-celo", symbol: "EURm", pegType: "peggedEUR", price: 1.16 },
       meta: eurMeta,
       rates: { peggedEUR: 1.16 },
@@ -156,13 +151,7 @@ describe("buildConfirmationPlan", () => {
   it("admits an extreme native-origin sample corroborated by an independent source family", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 15, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
-        direction: "below", first_seen_bps: -6_000, first_price: 0.4,
-        last_seen_bps: -6_000, last_price: 0.4,
-        peak_seen_bps: -6_000, peak_price: 0.4,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 15, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "below", first_seen_bps: -6_000, first_price: 0.4, last_seen_bps: -6_000, last_price: 0.4, peak_seen_bps: -6_000, peak_price: 0.4, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: nativeBrz(0.075),
       meta: brlMeta,
       rates: { peggedREAL: 0.18765951 },
@@ -181,13 +170,7 @@ describe("buildConfirmationPlan", () => {
   it("does not record a recovery from an implausible native-origin sample", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 16, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
-        direction: "below", first_seen_bps: -940, first_price: 0.17,
-        last_seen_bps: -940, last_price: 0.17,
-        peak_seen_bps: -940, peak_price: 0.17,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 16, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "below", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: nativeBrz(0.18765951),
       meta: brlMeta,
       rates: { peggedREAL: 0.18765951 },
