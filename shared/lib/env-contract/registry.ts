@@ -79,6 +79,20 @@ const ENV_BINDING_DEFINITIONS = [
     },
   },
   {
+    key: "NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK",
+    valueType: "string",
+    description: "Default-off browser site-session check; public Pages build Variable, set to `true` to enable Turnstile session acquisition.",
+    example: { section: "frontend", value: "" },
+    runtimes: { frontend: { status: "optional" } },
+  },
+  {
+    key: "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    valueType: "string",
+    description: "Public Turnstile site key supplied as a Pages build Variable for the site-session check.",
+    example: { section: "frontend", value: "" },
+    runtimes: { frontend: { status: "optional" } },
+  },
+  {
     key: "DB",
     valueType: "D1Database",
     description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.",
@@ -193,6 +207,18 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "required", optionalAtIngress: true } },
   },
   {
+    key: "SITE_SESSION_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Browser site-session budget (300 per 60 seconds per verified sid); observe logs, enforce rejects over-budget or unavailable bindings. Automation tokens are exempt.",
+    runtimes: { worker: { status: "required", optionalAtIngress: true } },
+  },
+  {
+    key: "SITE_SOURCE_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Browser site-session client-network budget (1200 per 60 seconds, Pages-forwarded IPv4 or IPv6 /64); observe logs, enforce rejects over-budget or unavailable bindings.",
+    runtimes: { worker: { status: "required", optionalAtIngress: true } },
+  },
+  {
     key: "FEEDBACK_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
     description: "Cloudflare per-client-network rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
@@ -235,6 +261,37 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: {
       worker: { status: "optional" },
     },
+  },
+  {
+    key: "SITE_SESSION_SIGNING_KEY",
+    valueType: "string",
+    description: "Required Worker and Pages secret signing browser/automation site sessions; also a script/CI repository secret for minting automation tokens. Missing key reports an env issue; observe continues, enforce returns 503.",
+    example: { section: "workerRequired", value: "" },
+    runtimes: {
+      worker: { status: "required", optionalAtIngress: true },
+      pagesSiteData: { status: "required", optionalAtIngress: true },
+    },
+  },
+  {
+    key: "SITE_SESSION_SIGNING_KEY_PREVIOUS",
+    valueType: "string",
+    description: "Optional Wrangler-managed Worker overlap secret for site-session signing-key rotation; retain for 24 hours after issuers switch to the new current key.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "SITE_SESSION_ENFORCEMENT",
+    valueType: "string",
+    description: "Optional Wrangler-managed Worker rollout switch: only literal `enforce` rejects invalid site sessions and browser budget failures; unset or any other value uses `observe`.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: { worker: { status: "optional" } },
+  },
+  {
+    key: "TURNSTILE_SECRET_KEY",
+    valueType: "string",
+    description: "Required Pages secret used to verify Turnstile site-data challenges before issuing browser sessions.",
+    example: { section: "pagesSiteDataRequired", value: "" },
+    runtimes: { pagesSiteData: { status: "required", optionalAtIngress: true } },
   },
   {
     key: "API_KEY_HASH_PEPPER",

@@ -182,6 +182,22 @@ namespace_id = "2026111501"
   limit = 300
   period = 60
 
+[[ratelimits]]
+name = "SITE_SESSION_RATE_LIMIT"
+namespace_id = "2026111502"
+
+  [ratelimits.simple]
+  limit = 300
+  period = 60
+
+[[ratelimits]]
+name = "SITE_SOURCE_RATE_LIMIT"
+namespace_id = "2026111503"
+
+  [ratelimits.simple]
+  limit = 1200
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

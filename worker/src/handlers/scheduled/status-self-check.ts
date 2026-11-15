@@ -26,6 +26,7 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
           reportProgress,
           ctx: runtime.ctx,
           siteApiSharedSecret: runtime.env.SITE_API_SHARED_SECRET,
+          siteSessionSigningKey: runtime.env.SITE_SESSION_SIGNING_KEY,
           d1StatusConfig: resolveCloudflareD1StatusConfig(runtime.env) ?? undefined,
           coingeckoApiKey: runtime.coingeckoApiKey,
           workerCanaryMode: normalizeWorkerCanaryMode(runtime.env.WORKER_CANARY_MODE),
