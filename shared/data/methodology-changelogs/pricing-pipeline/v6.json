@@ -3,7 +3,7 @@
     "version": "6.83",
     "title": "Velodrome Slipstream direct-API observations retired",
     "date": "2026-11-15",
-    "effectiveAt": 1794787200,
+    "effectiveAt": 1794762000,
     "summary": "Optimism Velodrome Slipstream's direct Sugar reader is retired alongside Liquidity v7.3. The `velodrome-dex` promoted protocol lane and the `dex:velodrome-slipstream` depeg family remain; they are now supplied only by surviving CoinGecko Onchain and GeckoTerminal rows plus any registry row still inside its confidence horizon.",
     "impact": [
       "No consensus, pool-challenge, freshness, trust or depeg-authority rule changes. The direct-API fetch stops; the last rows it wrote keep their original 24-hour price, 72-hour volume and 336-hour inventory clocks.",
