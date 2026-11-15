@@ -25750,6 +25750,39 @@
           "sourceUrl": "https://usd-plus.com/learn-more"
         }
       }
+    },
+    {
+      "assetId": "copm-minteo",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-11-15",
+      "sources": [
+        {
+          "label": "Minteo reserve policy (issuer bank-custody claim, retrieved 2026-11-15)",
+          "url": "https://transparency.minteo.com/reserves"
+        },
+        {
+          "label": "Minteo tokenization and redemption (manual business onboarding and conditional charges, retrieved 2026-11-15)",
+          "url": "https://transparency.minteo.com/tokenizationAndRedemtion"
+        },
+        {
+          "label": "BDO ISAE 3000 limited assurance: August 31, 2026 reserves and Polygon, Solana and Celo liabilities; signed October 19, 2026",
+          "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+        }
+      ],
+      "notes": "Evidence review completed 2026-11-15T22:52:58.047Z; the calendar-day pin conservatively admits after that UTC day. Reviewed issuer reserve and redemption pages and the complete three-page BDO report on 2026-11-15. BDO compares bank balances held in Minteo (WAGMI S.A.S.) accounts with COPM liabilities on Polygon, Solana and Celo at August 31, 2026; this is limited assurance, not a financial-statement audit or proof of current balances. No enforceable holder-priority or reserve-segregation terms, named banks, custody concentration, replacement procedure or insolvency continuity protections are established by these sources. claimAndSegregation and custodyContinuity therefore remain unavailable rather than receiving an unsupported quality grade. assuranceAndReconciliation is deliberately omitted so the separately dated proofOfReserves.latestReport controls financial-assurance admission. Retrieved originals are pinned by SHA-256 in the lane evidence packet; the report digest is 136efc82505c5fbb6bf651a5276e8ab6ccb939a79547f3189b29fec06b0055c1. No current reserve-to-liability measurement is extrapolated from the historical report.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed redemption page describes manual business onboarding and par tokenization/redemption but does not establish enforceable holder priority, reserve ownership or legal segregation. BDO verifies sufficiency of Minteo bank balances at the historical report date, not holder rights or bankruptcy remoteness.",
+          "sourceUrl": "https://transparency.minteo.com/tokenizationAndRedemtion"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reserve page describes financial-institution custody, and the BDO report verifies bank balances without identifying the banks, account shares, replacement arrangements or insolvency continuity protections. These sources do not establish custody continuity.",
+          "sourceUrl": "https://transparency.minteo.com/reserves"
+        }
+      }
     }
   ]
 }

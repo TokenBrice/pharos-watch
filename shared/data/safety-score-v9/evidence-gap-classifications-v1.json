@@ -65615,6 +65615,58 @@
         "surface:7ac47c06c66c7f8a04be21a1"
       ],
       "rationale": "The current mechanism review remains applicable but cannot grade complete fund duration and realizable liquidity. Current Brix backing, collateral-management, mint/redemption and token-terms sources disclose a DLF money-market-fund basket and a limited instant buffer; they publish no maximum fund-share maturity, whole-book realization bound or unconditional completed-receipt deadline. The Accountable aggregate dashboard supplies no maturity ladder or full execution capacity. This is researched issuer nondisclosure, not an inferred zero-liquidity or unsafe-reserve finding."
+    },
+    {
+      "id": "copm-minteo-20261115-bank-deposit-liquidity",
+      "assetId": "copm-minteo",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:2624140d2ba9664df101ddef",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T23:06:09Z",
+      "reviewer": "Pharos COPM reserve evidence review",
+      "sourcesRefs": [
+        "source:fac1467733cd5a7498a430bb",
+        "source:79a27f4907831f6b05701e30"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:84e1ac01e59af28d6f1f60e7",
+        "surface:6aefad280823e3c5f00270c1",
+        "surface:36f9d7986cd37d2558182e28"
+      ],
+      "rationale": "The reviewed reserve policy and complete August 31 bank-deposit schedule establish the asset category and historical balances, but do not publish the bank-account withdrawal rights, availability restrictions or a completed-cash realization deadline. No immediate-liquidity horizon is inferred from the word cash or the historical bank balance."
+    },
+    {
+      "id": "copm-minteo-20261115-bank-deposit-maturity",
+      "assetId": "copm-minteo",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "exposureId": "reserve:2624140d2ba9664df101ddef",
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T23:06:09Z",
+      "reviewer": "Pharos COPM reserve evidence review",
+      "sourcesRefs": [
+        "source:fac1467733cd5a7498a430bb",
+        "source:79a27f4907831f6b05701e30"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:84e1ac01e59af28d6f1f60e7",
+        "surface:6aefad280823e3c5f00270c1",
+        "surface:36f9d7986cd37d2558182e28"
+      ],
+      "rationale": "The reviewed reserve policy and complete August 31 bank-deposit schedule publish no deposit contracts or legally binding maximum maturity covering the reserve book. The separate zero cash-equivalents/short-term-deposits category does not establish contractual tenor or withdrawal rights for the bank-account balances."
     }
   ],
   "sourceObservations": [
@@ -98672,6 +98724,28 @@
         "excerpt": "The Company makes no representations or warranties regarding the amount of time needed to complete processing.",
         "assertion": "The terms disclaim a redemption completion time and establish no fund-share maturity or fully realizable liquidity bound."
       }
+    },
+    {
+      "id": "source:fac1467733cd5a7498a430bb",
+      "value": {
+        "url": "https://transparency.minteo.com/reserves",
+        "observedAt": "2026-11-15T22:49:06Z",
+        "datumAsOf": null,
+        "location": "Reserve Allocation Strategy / Asset Security",
+        "excerpt": "Our reserve assets are securely stored in highly reputable financial institutions",
+        "assertion": "The reserve policy describes financial-institution custody but publishes no named bank, deposit contract, maturity ceiling or contractual withdrawal deadline."
+      }
+    },
+    {
+      "id": "source:79a27f4907831f6b05701e30",
+      "value": {
+        "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf",
+        "observedAt": "2026-11-15T22:49:48Z",
+        "datumAsOf": "2026-08-31",
+        "location": "Annex 1, three-page report, bank-account reserve category (visually inspected)",
+        "excerpt": "Efectivo en cuentas bancarias",
+        "assertion": "The dated complete reserve schedule identifies bank-account cash without bank identities, account contracts, withdrawal terms or a legally binding maximum maturity."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -113298,6 +113372,18 @@
     {
       "id": "surface:7ac47c06c66c7f8a04be21a1",
       "value": "https://accountable.brix.money:8443/dashboard"
+    },
+    {
+      "id": "surface:84e1ac01e59af28d6f1f60e7",
+      "value": "https://transparency.minteo.com/reserves"
+    },
+    {
+      "id": "surface:6aefad280823e3c5f00270c1",
+      "value": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+    },
+    {
+      "id": "surface:36f9d7986cd37d2558182e28",
+      "value": "https://transparency.minteo.com/transparency"
     }
   ]
 }

@@ -166,6 +166,7 @@
     "usdu-universal": "core-stablecoin",
     "fxusd-f-x-protocol": "core-stablecoin",
     "fxsave-f-x-protocol": "stablecoin-variant",
+    "copm-minteo": "core-stablecoin",
     "usdn-noble": "stablecoin-variant",
     "usdn-smardex": "core-stablecoin",
     "mim-abracadabra": "core-stablecoin",

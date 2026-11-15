@@ -1,0 +1,93 @@
+{
+  "id": "copm-minteo",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Minteo describes COPM as a transferable digital Colombian peso, backed by COP reserves and redeemable 1:1 by approved customers. Its payment and settlement purpose supports this research classification; no U.S. offer or permission is inferred.",
+      "references": [
+        {
+          "label": "Minteo COPM introduction",
+          "url": "https://transparency.minteo.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "Minteo tokenization and redemption",
+          "url": "https://transparency.minteo.com/tokenizationAndRedemtion",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-15"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "WAGMI S.A.S. (Minteo)",
+    "issuerDomicile": "Colombia",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://transparency.minteo.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Review dated November 15 2026. The BDO reserve report identifies Minteo as WAGMI S.A.S. in Colombia. Issuer compliance material establishes AML/KYC procedures but does not identify a token-specific U.S. GENIUS approval, application or foreign-issuer registration. The public monthly report series is present, with reporting lag recorded separately by the canonical reserve-report metadata. No partner license, general regulatory-alignment statement or bank-custody assertion is treated as COPM issuance authorization. MiCA remains unassessed because reviewed sources do not establish an EU offering, authorization or exact-token restriction.",
+    "references": [
+      {
+        "label": "Minteo COPM introduction",
+        "url": "https://transparency.minteo.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "Minteo tokenization and redemption",
+        "url": "https://transparency.minteo.com/tokenizationAndRedemtion",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "BDO COPM limited-assurance report naming Minteo (WAGMI S.A.S.)",
+        "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-10-19",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications, reviewed November 15 2026",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "NYDFS Virtual Currency Business Licensing regulated-entity list, reviewed November 15 2026",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-11-15"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Minteo introduction, compliance, tokenization/redemption and transparency pages; BDO report identifying WAGMI S.A.S.",
+        "OCC Digital Assets Licensing Applications public pending-applicant table",
+        "NYDFS Virtual Currency Business Licensing regulated-entity table",
+        "Targeted exact-name web searches for Minteo, WAGMI S.A.S. and COPM on OCC, Federal Register and NYDFS domains"
+      ],
+      "summary": "No qualifying public U.S. GENIUS approval, official application or foreign-issuer registration naming WAGMI S.A.S. or its COPM token was found in these reviewed surfaces. This is a dated, bounded negative-evidence finding, not proof that no private application or other permission exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-15",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications, reviewed November 15 2026",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "NYDFS Virtual Currency Business Licensing regulated-entity list, reviewed November 15 2026",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-11-15"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-15"
+  }
+}

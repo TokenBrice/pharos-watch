@@ -13730,6 +13730,117 @@
       "windows": [],
       "reviewedAt": "2026-10-28",
       "reviewer": "W2-tron live JSON-RPC capability review"
+    },
+    {
+      "chainId": "polygon",
+      "stablecoinId": "copm-minteo",
+      "address": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code",
+        "sourceVerified": true,
+        "contractName": "UUPSProxy -> TokenV1 (OpenZeppelin ERC20Upgradeable)",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x056d93f19fa2559e10ae69628ea97483b4d336be",
+          "implementationSourceVerified": true,
+          "note": "Pinned getImplementation() matches the Etherscan-verified implementation; EIP-1967 slot and 18-decimal reads agree at all three conservation boundaries, with no Upgraded events across either window."
+        },
+        "externalMatches": [
+          {
+            "source": "issuer",
+            "value": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+            "matches": true,
+            "detail": "https://transparency.minteo.com/contract-directory publishes this exact Polygon COPM address; current pinned symbol COPM and name COP Minteo."
+          },
+          {
+            "source": "defillama",
+            "llamaId": 460,
+            "value": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+            "matches": true,
+            "detail": "DefiLlama 460 identifies COPM by Minteo, Polygon address matching the primary issuer directory."
+          }
+        ],
+        "onChain": {
+          "block": 97385031,
+          "blockHash": "0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402",
+          "timestamp": 1794783016,
+          "decimals": 18,
+          "symbol": "COPM",
+          "name": "COP Minteo",
+          "totalSupplyRaw": "4156202969754852048213337676",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "TokenV1 onlyRole(MINTER_ROLE) calls inherited _mint, which increments _totalSupply and emits exactly one Transfer(address(0),account,amount); zero recipient reverts."
+        },
+        {
+          "function": "burn(uint256) / burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Inherited ERC20BurnableUpgradeable burns caller or allowance-authorized account, then _burn decrements _totalSupply and emits exactly one Transfer(account,address(0),amount)."
+        },
+        {
+          "function": "burnFrozen(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FREEZER_ROLE may thaw, burn and refreeze an arbitrary frozen account. The inherited _burn updates supply and emits the single canonical Transfer; custom BurnedFrozen duplicates the action and is not indexed."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ totalSupply() returns stored _totalSupply. The verified current implementation and inherited sources have no supply writer other than _mint/_burn. Freeze/thaw, pause, rescueFunds, permit and multicall do not independently rewrite supply."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Source review and two disjoint 18.75-hour hash-pinned windows establish the exact paired zero-address Transfer law for this current implementation. Each has nonempty burn history and residual zero; no mints were observed in those windows, while the verified source establishes the mint pairing. Full history since deployment was not summed. Start block 47,747,145 (2023-09-19T22:41:52Z) is independently bounded by archive code empty at the preceding block and present at deployment, plus matching factory-creation transaction receipt 0xab4c33c41d866115a2730b16da1813c0979bc086fb5d3638ea47ba415e5ebef4, block hash 0x54569f7ae601f62fba93eb93525e7a78ece579427399b3ce9721e3363bf9eee5. Issuer API also offers cross-chain burn/mint transfers; no transaction-specific bridge attribution was established, so no guessed bridge-exclusion addresses are authored. This config covers Polygon issuance events, not whole-asset cash subscriptions/redemptions. Celo is excluded because runtime buildAlchemyUrl has no admitted mapping, and Solana has no mint/burn decoder.",
+      "windows": [
+        {
+          "fromBlock": 97294068,
+          "fromBlockHash": "0x732281739f4c97e442f41bed54f26876a5c7a85f9100d952e87a484b35e218b2",
+          "fromTimestamp": 1794646571,
+          "toBlock": 97339068,
+          "toBlockHash": "0x2d07fa6b02f24464298573d7413834f8fad3fda3b6597f7e1ea9bc20ce68babb",
+          "toTimestamp": 1794714071,
+          "mintRaw": "0",
+          "burnRaw": "75847240000000000000000000",
+          "supplyDeltaRaw": "-75847240000000000000000000",
+          "residualRaw": "0",
+          "logCount": 67,
+          "journalSha256": "2a0258f10411410980658d3957ed63805bcc444c77a16434a0959fe09b9ec5ff"
+        },
+        {
+          "fromBlock": 97339068,
+          "fromBlockHash": "0x2d07fa6b02f24464298573d7413834f8fad3fda3b6597f7e1ea9bc20ce68babb",
+          "fromTimestamp": 1794714071,
+          "toBlock": 97384068,
+          "toBlockHash": "0x52f2ab0478b420db068dc50af66049d1081c5907a468f10c43b00a32c34749b1",
+          "toTimestamp": 1794781571,
+          "mintRaw": "0",
+          "burnRaw": "5057495000000000000000000",
+          "supplyDeltaRaw": "-5057495000000000000000000",
+          "residualRaw": "0",
+          "logCount": 19,
+          "journalSha256": "36cf4664f74bb358ff73a4d09d9845d2143c60816d3b0b4703e6e4db3a3fe10d"
+        }
+      ],
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos COPM mint/burn source and pinned conservation review"
     }
   ]
 }

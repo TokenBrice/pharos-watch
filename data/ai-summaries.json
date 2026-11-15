@@ -6185,6 +6185,14 @@
     "model": "claude-opus-5-5",
     "factsAsOf": "2026-10-18"
   },
+  "copm-minteo": {
+    "title": "Minteo's Bank-Backed Colombian Peso",
+    "text": "COPM by Minteo is a Colombian-peso token backed by bank deposits, with issuer redemption aimed at businesses that pass manual compliance checks. Its practical exit depends on Minteo's onboarding and banking process: the public terms describe par conversion but do not establish a maximum payout time or an all-in cost ceiling. Monthly BDO reports provide independent limited assurance over historical bank balances and token liabilities across Polygon, Celo and Solana. They do not establish legal segregation, name the reserve banks or prove that cash is available when a holder wants to redeem. On-chain control remains with the issuer, including powers to mint, pause and freeze tokens; Solana also grants a permanent delegate. Transferable tokens therefore remain dependent on issuer-controlled fiat access and bank custody.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
   "usdplus-streamflow": {
     "title": "Daily token yield on M0 infrastructure",
     "text": "Streamflow USD+ is a dollar-pegged Solana token built on M0 infrastructure. Its holder return arrives as additional tokens distributed daily, so a stable market price does not measure the income holders receive. Streamflow describes Treasury-backed reserves, while its published integration routes USD+ through an M vault.\n\nThat technical relationship does not establish a complete deployed wrapper invariant or a direct legal claim on M0 collateral. Pharos therefore records the M0 infrastructure lineage without applying a parent variant relationship. Live tracking compares the local M vault with minted USD+ at one finalized Solana bank. The linked M0 dashboard concerns upstream reserves; independent financial reconciliation and the full custody-provider partition remain unverified.\n\nPublic pool swaps provide a market exit, with execution dependent on liquidity. Accessible issuer materials do not establish a direct fiat-redemption timetable, minimum or fee schedule. The durable constraint is the combination of local Solana controls, upstream collateral access and an issuer-distributed yield process whose current holder rate is not yet tracked.",

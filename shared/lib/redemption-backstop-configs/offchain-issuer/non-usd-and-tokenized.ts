@@ -111,6 +111,43 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "The disclosed Fast Access Vault is a routine buffer, not proved whole-book capacity. Its observed zero available balance does not establish exhaustion of other issuer resources.",
     ],
   },
+  "copm-minteo": {
+    ...issuerBase,
+    reviewedAt: "2026-11-15",
+    accessModel: "issuer-api",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    routeStatus: "unknown",
+    routeExitCorrelation: "independent-issuer-rail",
+    unresolvedOutputAssetKeys: ["fiat:COP"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Minteo discloses customer-specific local tax withholding before each redemption. Customers pay outgoing wallet gas and their own outgoing bank fees; no complete issuer, bank, tax or network cost ceiling is published.",
+      "documented-variable",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Minteo's public documentation establishes manually approved business AML/KYC access, gross 1:1 COPM redemption, and API orders from the customer's own wallet to the customer's own bank account. The COP 10,000 minimum is a native-currency threshold, not a USD amount. No current executable capacity, unconditional completed bank-credit deadline or complete all-in redemption cost is established. The days category is conservative diagnostic metadata rather than a settlement SLA; fiat:COP requires admitted captured FX for valuation.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("Minteo tokenization and redemption, reviewed November 15 2026", "https://transparency.minteo.com/tokenizationAndRedemtion", ["route", "access", "fees"]),
+        sourceRef("Minteo Create an Order API: customer wallet to own bank account, COPM minimum", "https://docs.minteo.com/orders/create-order", ["route", "access", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Minteo tokenization and redemption, reviewed November 15 2026", "https://transparency.minteo.com/tokenizationAndRedemtion", ["route", "access", "fees"]),
+      sourceRef("Minteo Create an Order API: customer wallet to own bank account, COPM minimum", "https://docs.minteo.com/orders/create-order", ["route", "access", "settlement"]),
+    ],
+    notes: [
+      "Businesses request manual onboarding and must pass Minteo's AML/KYC approval. The API supports redemption only from the customer's own wallet to the customer's own bank account; third-party payouts are a separate service.",
+      "The published minimum for both tokenization and redemption is COP 10,000. No static minRedeemUsd conversion is authored, and gross 1:1 COP redemption does not imply a dollar payout or a zero-cost route.",
+      "The reserve report corroborates historical backing, not immediately executable redemption inventory. Capacity remains unquantified, current openness unknown, and bank-credit timing and all-in fees unbounded.",
+    ],
+  },
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
