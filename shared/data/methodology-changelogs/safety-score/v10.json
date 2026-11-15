@@ -1,5 +1,22 @@
 [
   {
+    "version": "10.45",
+    "title": "LayerZero provider review and thBILL lane exemptions",
+    "date": "2026-11-15",
+    "effectiveAt": 1794765600,
+    "summary": "The first LayerZero provider review discloses the KelpDAO LayerZero Labs DVN compromise as a verifier compromise with exposure from 2026-03-06 through 2026-05-20 (owner rulings 2026-11-15, #1778). thBILL's four LayerZero OFT lanes (Arbitrum, Base, HyperEVM, Stable) each carry a bracketed exemption: three pinned archive reads inside the exposure show that every inbound path requires at least one DVN other than LayerZero Labs, unchanged across the reads. With a thBILL issuer-surface review, route provider keys and reviewed emitter descriptors, each lane can close once the producer admits its own clean lane certificate. Weights, thresholds, rules and the evaluator are unchanged.",
+    "impact": [
+      "Curation only: one LayerZero dvn-set provider review, one thBILL issuer-surface review, providerKeys [\"layerzero\"] on the four thBILL OFT routes and four reviewed emitter-inventory lanes (route-only contributor *, the Sourcify-verified ThBillOFT emitting five vocabulary admin events, decoded runtime pins read at pinned blocks). The frozen screening policy, the three-witness join and the OQ-1 rule are unchanged.",
+      "The disclosure lists every LayerZero Labs DVN (standard and lzRead) on Arbitrum, Base, Ethereum, HyperEVM and Stable as compromised. Exemption reads at 2026-03-06, 2026-04-12 and 2026-05-19 (block numbers and hashes in the review) show app-set receive libraries, no receive-library timeout and three required DVNs per peered eid (two for HyperEVM's Plasma path), never LayerZero Labs alone. The Ethereum OFT adapter that releases the canonical thBILL showed the same property. Five application-side LayerZero OApp exploits (Yala, GriffinAI, Aethir, Stake DAO, The Sandbox) are disclosed as third-party-app-exploit and name no covered lane.",
+      "uty-xsy is not unlocked. Its Base lockbox adapter 0xc6fe7c50…d3f1, which releases the canonical UTY behind the Avalanche and Katana spokes, required only the LayerZero Labs DVN for Katana messages from Base block 43276068 (2026-03-12) through 44883573 (2026-04-18), inside the exposure, so no exemption can be authored for its Avalanche lane. The owner ruled on 2026-11-15 that UTY stays uncovered.",
+      "Every other LayerZero-keyed lane stays unknown, as before: the KelpDAO disclosure now applies to it under OQ-1, and no review covers or exempts it.",
+      "Replays of the accepted 2026-11-15 captures at 14:16Z, 15:17Z and 16:17Z change no card (0 of 384) against main; only the fact-set digest and research-overlay generation rotate. The 16:17Z capture postdates both reviews but carries no thBILL certificate. A labelled what-if adds the four descriptors and clean certificates from a local run of the production screener to that capture. It closes the four lanes: thBILL control evidence moves from C and U to U and local cause gaps from 26 to 17, with no score, grade or rating-status change for any asset. Production closure begins when the producer first admits each lane certificate after deploy, and that accepted cycle attributes it.",
+      "Activation is 2026-11-15 18:00 UTC (1794765600), the first round hour after the planned deploy; move it to the first round hour after the actual deploy if that lands later."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.44",
     "title": "Neutral Exit pricing for negligible DEX observations",
     "date": "2026-11-10",

@@ -453,9 +453,11 @@ this section tracks current closure rules; authored identity admission began in 
   verification. That config proof is one read plus an interval config-change log, or (owner
   ruling 2026-11-01, issue #1778) at least three bracketing reads of distinct blocks (number
   and hash) inside the exposure, each excluding compromised-only verification, plus exactly one
-  disclosed change for each consecutive pair of reads whose configuration differs. No
-  current review uses bracketing yet. No observed exploit/current config is an exemption;
-  only verifier compromise permits exemptions. Other classes cannot name covered lanes.
+  disclosed change for each consecutive pair of reads whose configuration differs. Since
+  v10.45 the LayerZero provider review brackets thBILL's four OFT lanes against the KelpDAO
+  LayerZero Labs DVN exposure, 2026-03-06 to 2026-05-20 (owner ruling 2026-11-15). No
+  observed exploit/current config is an exemption; only verifier compromise permits
+  exemptions. Other classes cannot name covered lanes.
   Unreadable foreign reviews never quarantine the local asset: affected provider lanes stay
   unknown with `bridge.diagnostics.incidentClosureFailures` code
   `provider-incident-disclosures-unreadable`, naming lane, provider and foreign assets.
