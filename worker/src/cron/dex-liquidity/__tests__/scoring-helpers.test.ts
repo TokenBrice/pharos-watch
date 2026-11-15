@@ -485,7 +485,7 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
 describe("quarantineProtocolTvlOutliers", () => {
   it.each([
     "cg_onchain", "gecko_terminal", "dexscreener", "cg_tickers", "horizon", "aquarius",
-    "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap",
+    "tezos", "icon-balanced", "kava-swap", "osmosis-sqs", "noble-swap", "sundaeswap",
   ] as const)("rejects the entire oversized %s group, preserving raw and modeled values", (source) => {
     const trusted = makePool({ source: "direct_api", tvlUsd: 150_000 });
     const fallback = makePool({

@@ -18,6 +18,7 @@ export const LiquidityPoolSourceFamilySchema = z.enum([
   "kava-swap",
   "osmosis-sqs",
   "noble-swap",
+  "sundaeswap",
   "direct_api",
 ]);
 export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;

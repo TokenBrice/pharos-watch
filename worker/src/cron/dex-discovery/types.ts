@@ -28,7 +28,8 @@ export interface StagedPool {
     | "icon-balanced"
     | "kava-swap"
     | "osmosis-sqs"
-    | "noble-swap";
+    | "noble-swap"
+    | "sundaeswap";
   chain: string;
   protocol: string;
   dexId: string | null;
