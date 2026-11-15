@@ -60,6 +60,13 @@ const EMPTY_OG_TABLES: MockTableConfig[] = [
 ];
 
 describe("stablecoin OG card data", () => {
+  it.each(["%75sdt-tether", "usdt%2dtether", "%2575sdt-tether", "usdt%2Ftether"])("rejects encoded path id %s before reading or rendering", async (id) => {
+    const db = mockD1([]);
+    const response = await handleOg(db, `/api/og/stablecoin/${id}`);
+    expect(response?.status).toBe(404);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
   it("derives flow7d and sparkline data", () => {
     const data = deriveStablecoinOgCardData({
       coin: {

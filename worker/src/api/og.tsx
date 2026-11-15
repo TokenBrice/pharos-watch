@@ -1080,7 +1080,8 @@ const OG_ROUTES: readonly OgRoute[] = [
     pattern: STABLECOIN_OG_PATTERN,
     resolveCapture: (raw) => {
       try {
-        return decodeURIComponent(raw);
+        const decoded = decodeURIComponent(raw);
+        return encodeURIComponent(decoded) === raw ? decoded : ogErrorResponse("Not found", 404);
       } catch {
         return ogErrorResponse("Malformed URI", 400);
       }

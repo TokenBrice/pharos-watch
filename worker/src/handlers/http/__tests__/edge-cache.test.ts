@@ -34,9 +34,13 @@ describe("createEdgeCacheContext", () => {
     expect(context.cacheKey.url).toBe("https://api.pharos.watch/api/og/chain/ethereum");
   });
 
-  it("coalesces tracking-query variants for routes declared query-free", () => {
-    const bareRequest = new Request("https://api.pharos.watch/api/stablecoins");
-    const trackedRequest = new Request("https://api.pharos.watch/api/stablecoins?utm_source=campaign");
+  it.each([
+    "/api/stablecoins", "/api/homepage-snapshot", "/api/homepage-history",
+    "/api/stablecoin-summary/usdt-tether", "/api/stablecoin-reserves/iusd-infinifi",
+    "/api/snapshots/2026-05-16.json", "/api/snapshot/2026-05-16/stablecoin/usdt-tether",
+  ])("coalesces tracking-query variants for query-free %s", (path) => {
+    const bareRequest = new Request(`https://api.pharos.watch${path}`);
+    const trackedRequest = new Request(`${bareRequest.url}?utm_source=campaign`);
 
     const bare = createEdgeCacheContext(bareRequest, new URL(bareRequest.url));
     const tracked = createEdgeCacheContext(trackedRequest, new URL(trackedRequest.url));
