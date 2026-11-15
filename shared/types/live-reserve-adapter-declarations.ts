@@ -2056,10 +2056,13 @@ const xprAccountBalancesParamsSchema = z
 
 // The Bridge transparency stablecoin key: the final path segment of the
 // configured primary URL, e.g. "usd_sui" or "path_usd". The adapter refuses to
-// fetch a URL whose slug does not match this identity pin.
+// fetch a URL whose slug does not match this identity pin. A coin may also
+// declare the band on the non-itemized reserve remainder it publishes as an
+// unclassified residual slice; without it the remainder stays warning-only.
 const bridgeTransparencyParamsSchema = z
   .object({
     slug: z.string().min(1),
+    maxUnattributedResidualShare: z.number().finite().positive().max(1).optional(),
   })
   .strict();
 

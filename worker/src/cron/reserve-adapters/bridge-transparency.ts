@@ -4,6 +4,7 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  computeUnknownExposurePct,
   fetchJsonAdapterInput,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
@@ -27,6 +28,19 @@ const COMPONENT_SUM_TOLERANCE_USD = 1;
  *  (pathUSD: +$29.32 on $42.16M, ~0.00007%). Beyond 0.01% the composition is
  *  impossible and degrades. */
 const COMPONENT_EXCESS_REL_TOLERANCE = 1e-4;
+/** Published remainder for a coin whose params declare `maxUnattributedResidualShare`.
+ *  The exact reported reserve total minus the itemized components is reserve assets
+ *  the issuer reports but neither allocates nor names (OUSD's ~$2.0M collateral
+ *  cushion). It is published as one unclassified slice instead of being normalized
+ *  away, and a share above the declared band fails the attempt rather than being
+ *  clamped into it. */
+const UNATTRIBUTED_RESIDUAL_SOURCE_KEY = "bridge-transparency:unclassified-residual";
+const UNATTRIBUTED_RESIDUAL_NAME = "Unclassified reserve balance";
+
+export interface BridgeTransparencyResidualOptions {
+  /** Registry-declared band on the non-itemized remainder, e.g. 0.01 for 1%. */
+  maxUnattributedResidualShare?: number;
+}
 
 interface BridgeReserveComponent {
   type?: string;
@@ -96,7 +110,11 @@ const CASH_COMPONENT_CONFIG: Record<string, BridgeComponentConfig> = {
 
 const parseStrictAmount = strictAmountParser(ADAPTER_KEY);
 
-export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug: string): AdapterResult {
+export function adaptBridgeTransparency(
+  payload: BridgeTransparencyPayload,
+  slug: string,
+  options?: BridgeTransparencyResidualOptions,
+): AdapterResult {
   if (!Array.isArray(payload.reserves) || payload.reserves.length === 0) {
     throw new Error(`${ADAPTER_KEY} payload missing reserves`);
   }
@@ -142,6 +160,7 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
     issuerOrObligor?: string;
   }> = [];
   const componentConfig = slug === "cash" ? CASH_COMPONENT_CONFIG : BRIDGE_COMPONENT_CONFIG;
+  let unmappedComponentUsd = 0;
   for (const [type, amount] of componentTotals) {
     if (amount <= 0) continue;
     const config = Object.prototype.hasOwnProperty.call(componentConfig, type) ? componentConfig[type] : undefined;
@@ -150,6 +169,7 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
         "unknown-component",
         `Unmapped ${ADAPTER_KEY} reserve component: ${type} ($${amount.toFixed(2)})`,
       ));
+      unmappedComponentUsd += amount;
       sliceInputs.push({ name: `${type} (unmapped)`, value: amount, risk: "high" });
       continue;
     }
@@ -170,6 +190,29 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
   const componentSumUsd = sliceInputs.reduce((sum, slice) => sum + slice.value, 0);
   const driftVsReservesUsd = componentSumUsd - reservesUsd;
   const driftVsLiabilitiesUsd = componentSumUsd - liabilitiesUsd;
+  const residualVsReservesUsd = reservesUsd - componentSumUsd;
+  const maxUnattributedResidualShare = options?.maxUnattributedResidualShare;
+  const unattributedBackingUsd = maxUnattributedResidualShare != null
+    ? Math.max(residualVsReservesUsd, 0)
+    : 0;
+  if (maxUnattributedResidualShare != null) {
+    if (unattributedBackingUsd > reservesUsd * maxUnattributedResidualShare) {
+      throw new Error(
+        `${ADAPTER_KEY} non-itemized reserve remainder $${unattributedBackingUsd.toFixed(2)} is `
+        + `${(unattributedBackingUsd / reservesUsd * 100).toFixed(4)}% of published reserve assets, above the `
+        + `declared ${(maxUnattributedResidualShare * 100).toFixed(4)}% band`,
+      );
+    }
+    if (unattributedBackingUsd > 0) {
+      sliceInputs.push({
+        sourceKey: UNATTRIBUTED_RESIDUAL_SOURCE_KEY,
+        name: UNATTRIBUTED_RESIDUAL_NAME,
+        value: unattributedBackingUsd,
+        risk: "high",
+        assetClass: "other",
+      });
+    }
+  }
   if (-driftVsLiabilitiesUsd > COMPONENT_SUM_TOLERANCE_USD) {
     warnings.push(reserveDegradedWarning(
       "bridge-itemized-backing-shortfall",
@@ -188,11 +231,10 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
     ));
   } else if (-driftVsLiabilitiesUsd <= COMPONENT_SUM_TOLERANCE_USD
     && Math.abs(driftVsReservesUsd) > COMPONENT_SUM_TOLERANCE_USD) {
-    const residualUsd = reservesUsd - componentSumUsd;
     warnings.push(reserveInfoWarning(
       "bridge-unitemized-reserve-surplus",
       `Published reserve assets ($${reservesUsd.toFixed(2)}) differ from itemized components `
-      + `($${componentSumUsd.toFixed(2)}) by a signed $${residualUsd.toFixed(2)} residual; `
+      + `($${componentSumUsd.toFixed(2)}) by a signed $${residualVsReservesUsd.toFixed(2)} residual; `
       + `itemized components cover the on-chain liability`,
     ));
   }
@@ -211,19 +253,40 @@ export function adaptBridgeTransparency(payload: BridgeTransparencyPayload, slug
     componentSumUsd,
     driftVsReservesUsd,
     driftVsLiabilitiesUsd,
+    ...(maxUnattributedResidualShare != null
+      ? {
+          unattributedBackingUsd,
+          unattributedBackingShare: unattributedBackingUsd / reservesUsd,
+        }
+      : {}),
   };
   if (payload.collateralization_ratio != null) {
     details.reportedCollateralizationRatio = parseStrictAmount(payload.collateralization_ratio, "collateralization_ratio");
   }
 
+  const slices = slicesFromValues(sliceInputs);
+  if (unattributedBackingUsd > 0) {
+    const residual = slices.find((slice) => slice.sourceKey === UNATTRIBUTED_RESIDUAL_SOURCE_KEY)!;
+    residual.unclassifiedResidual = true;
+    residual.residualReason = "insufficient-evidence";
+  }
+
   return {
-    slices: slicesFromValues(sliceInputs),
+    slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
       totalReserveUsd: reservesUsd,
       supplyUsd: liabilitiesUsd,
       collateralizationRatio,
+      ...(maxUnattributedResidualShare != null
+        ? {
+            unknownExposurePct: computeUnknownExposurePct(
+              unattributedBackingUsd + unmappedComponentUsd,
+              reservesUsd,
+            ),
+          }
+        : {}),
       details,
     },
   };
@@ -244,5 +307,7 @@ export async function fetchBridgeTransparencyReserves(
     );
   }
   const payload = await fetchJsonAdapterInput<BridgeTransparencyPayload>(config, ADAPTER_KEY, signal, 12_000, ctx);
-  return adaptBridgeTransparency(payload, params.slug);
+  return adaptBridgeTransparency(payload, params.slug, {
+    maxUnattributedResidualShare: params.maxUnattributedResidualShare,
+  });
 }
