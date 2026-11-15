@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { StablecoinChartResponseSchema } from "@shared/types/supply";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
@@ -709,11 +709,18 @@ describe("api contract validation policy", () => {
 });
 
 describe("browser session gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-16T12:00:00Z"));
+  });
+
   afterEach(() => {
+    vi.clearAllTimers();
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.resetModules();
   });
 
   async function setup(flag = "true", siteKey = "test-site-key") {
@@ -831,7 +838,6 @@ describe("browser session gate", () => {
 
   it("fetches after three seconds even while the shared challenge is still pending, and honors abort", async () => {
     const { api, session } = await setup();
-    vi.useFakeTimers();
     session.registerSiteSessionChallenge((signal) => new Promise((_resolve, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason), { once: true });
     }));
@@ -852,7 +858,6 @@ describe("browser session gate", () => {
 
   it("backs off, caps attempts at three, tolerates blocked storage and never restarts from unavailable", async () => {
     const { api, session, storage } = await setup();
-    vi.useFakeTimers();
     storage.getItem.mockImplementation(() => { throw new Error("blocked"); });
     storage.removeItem.mockImplementation(() => { throw new Error("blocked"); });
     const challenge = vi.fn(async () => { throw new Error("blocked"); });
@@ -888,7 +893,6 @@ describe("browser session gate", () => {
 
   it("renews only within the one-hour window in a visible tab, even when expiry writes are blocked", async () => {
     const { session, storage } = await setup();
-    vi.useFakeTimers();
     const start = Date.now();
     storage.setItem("pharos-site-session-exp", String(Math.floor(start / 1000) + 7200));
     storage.setItem.mockImplementation(() => { throw new Error("blocked"); });
@@ -913,7 +917,6 @@ describe("browser session gate", () => {
 
   it.each(["", "NaN", "1.5", "9999999999999999"])("rejects an invalid session expiry %s without persisting it", async (expiry) => {
     const { session, storage } = await setup();
-    vi.useFakeTimers();
     session.registerSiteSessionChallenge(async () => "token");
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, {
       status: 204, headers: { "X-Pharos-Session-Expires": expiry },
