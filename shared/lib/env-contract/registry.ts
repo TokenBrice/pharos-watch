@@ -189,7 +189,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "API_KEY_LOOKUP_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare client-network limiter for uncached public API key prefixes (300 per 60 seconds); missing or failing binding warns and proceeds with authentication.",
+    description: "Cloudflare client-network limiter charged after invalid well-formed API credentials (300 per 60 seconds); local rejection memos block uncached prefixes before D1 until the minute ends. Valid credentials are uncharged; missing or failing binding warns and proceeds.",
     runtimes: { worker: { status: "required", optionalAtIngress: true } },
   },
   {
