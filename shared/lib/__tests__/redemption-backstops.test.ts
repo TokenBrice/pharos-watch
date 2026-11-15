@@ -33,6 +33,7 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it.each([
+    ["rcusd-r25", "issuer-api", "verified-customer"],
     ["mantrausd-mantra", "issuer-api", "whitelisted-primary"],
     ["usdm-moneta", "manual", "whitelisted-primary"],
     ["usdrf-realfi", "manual", "whitelisted-primary"],

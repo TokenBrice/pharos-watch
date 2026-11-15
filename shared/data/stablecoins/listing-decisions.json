@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "policyVersion": "1.0",
   "listingClassById": {
+    "rcusd-r25": "stable-value-investment",
     "usdt-tether": "core-stablecoin",
     "susdt-spark": "stablecoin-variant",
     "steakusdt-steakhouse": "stablecoin-variant",

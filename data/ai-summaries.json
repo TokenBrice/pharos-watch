@@ -1,4 +1,12 @@
 {
+  "rcusd-r25": {
+    "title": "A fixed-dollar claim on an undisclosed reserve mix",
+    "text": "rcUSD is R25's fixed-dollar token on Sui, issued by RiftWriter Company Limited. Its purchase and redemption agreements set a $1 face value, while yield is attached to the separate rcUSDp staking receipt. R25 describes backing from tokenized money-market funds and stablecoins, but current fund identities, allocation weights and reserve custody remain unresolved. Pharos therefore retains an unresolved mechanism review rather than treating the portfolio description as a verified Treasury allocation. The purchase agreement states that tokens are not secured by the issuer's assets. Eligible holders can request USDC redemption after token delivery and satisfactory KYC, at the issuer-published USD/USDC exchange rate. Published terms leave executable capacity, total fees and completed-payout timing unquantified. A transferable on-chain balance therefore depends on a permissioned issuer obligation whose reserve coverage and settlement terms remain incomplete.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
   "gbpq-quantoz": {
     "title": "Deployed sterling token with no circulation",
     "text": "Quantoz Payments has deployed GBPQ on Ethereum and Stellar, but its token roster says no GBPQ is in circulation and no reserve exists yet. An Ethereum read on November 15 2026 returned six decimals and zero total supply, behind the same implementation, proxy admin and owner contracts as Quantoz's PLNQ. On Stellar, one account holds 1,000,000 GBPQ alongside about one million EURQ and one million USDQ, and the issuer account there can revoke trustline authorization and claw back balances. The white paper describes 1:1 sterling reserves held by Stichting Quantoz, a bankruptcy-remote foundation, with at least 30% in bank deposits, and par redemption for registered holders after compliance checks. Deployment and MiCA notification do not yet establish a circulating supply or an operating holder exit.",
