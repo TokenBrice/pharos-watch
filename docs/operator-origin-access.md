@@ -78,6 +78,20 @@ Build-time and release-time fetchers in `scripts/lib/sync-from-api.ts` attach `S
 
 ## Pages Functions Proxy
 
+### Website-data sessions
+
+`POST /_site-data/session` is handled by `functions/_site-data/session.ts`; the static segment takes precedence over `[[path]].ts` under [Pages route specificity](https://developers.cloudflare.com/pages/functions/routing/#route-specificity). It uses the lane's `Origin` / `Referer` admission and only issues sessions on the request hosts `pharos.watch` and `ops.pharos.watch`; Pages aliases and hash hosts return `404`. Other methods return `405` with `Allow: POST`.
+
+The endpoint requires Pages secrets `SITE_SESSION_SIGNING_KEY` and `TURNSTILE_SECRET_KEY` (`500` when missing), accepts at most 4 KiB of JSON with a nonempty string `token` (`413` for overflow, `400` for invalid input), and limits attempts to 10 per minute per client network per isolate. IPv6 callers share a /64 bucket; missing or invalid addresses share an unknown bucket. Limiter keys are hashed; state is bounded to 5,000 keys, resets on recycle, and is not a global quota. Exhaustion returns `429` with `Retry-After: 60`.
+
+Turnstile siteverify receives the secret, token and `CF-Connecting-IP` as form fields. Issuance requires `success === true`, the request hostname and action `site-data`; rejection returns `403`. Transport, HTTP, malformed-response and 10-second deadline failures return `503` with `Retry-After: 60`. The deadline includes bounded response-body consumption. Success returns an empty `204`, `X-Pharos-Session-Expires` (Unix seconds), and `__Secure-pharos-session` with `Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=43200`. Every endpoint response carries `Cache-Control: no-store` and `X-Robots-Tag: noindex, nofollow`.
+
+For allowlisted GET reads, the Pages proxy forwards only the session cookie value as `X-Pharos-Site-Session`; automation uses the same cookie. The Worker authenticates the token. Client session-header, proxy-secret, client-IP, API-key and `CF-Access-*` headers are excluded; the proxy injects its own secret and edge-provided client IP. Worker `X-Pharos-Session` hints and `Retry-After` survive the response proxy. Session issuance does not change page middleware or existing token-free proxy admission; Worker enforcement owns the session requirement.
+
+Server-side selector recomputation and the Worker's authenticated site-health probe attach short-lived automation tokens from `SITE_SESSION_SIGNING_KEY`; without a key they retain the existing proxy-secret-only requests.
+
+### Operator proxy
+
 - `functions/api/admin/[[path]].ts`
 - same-origin admin requests from `ops.pharos.watch` to `/api/admin/*`
 - Pages Functions forwarding to `ops-api.pharos.watch`
