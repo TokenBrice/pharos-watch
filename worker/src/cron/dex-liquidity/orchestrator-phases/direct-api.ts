@@ -399,25 +399,6 @@ export function buildDexDirectApiFetchers(params: {
       }),
     },
     {
-      name: "Velodrome Slipstream",
-      circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
-      normalizedProtocol: "velodrome",
-      poolSource: "velodrome-slipstream",
-      supportedChains: ["optimism"],
-      // Same Sugar extract as Aerodrome Slipstream above.
-      censusScope: "bounded-sample",
-      fn: (signal) =>
-        fetchSlipstreamPools(
-          "velodrome-slipstream",
-          params.chainAddressToId,
-          params.symbolToChainScopedIds,
-          params.stablecoinPriceById,
-          signal,
-          params.chainRpcs,
-          params.db,
-        ),
-    },
-    {
       name: "Aero Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERO_SLIPSTREAM_API,
       normalizedProtocol: "aero",

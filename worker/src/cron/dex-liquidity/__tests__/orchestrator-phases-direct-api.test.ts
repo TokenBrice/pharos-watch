@@ -724,7 +724,6 @@ describe("direct API census scope declarations", () => {
     { name: "Orca", censusScope: "exhaustive", stop: "four-page budget; contiguous exhausted run only" },
     { name: "Aerodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
     { name: "Uniswap V3 BSC shadow", censusScope: "bounded-sample", stop: "bounded staged exact-pool recovery" },
-    { name: "Velodrome Slipstream", censusScope: "bounded-sample", stop: "tracked priceable reserve extract" },
   ];
   const fetchers = buildDexDirectApiFetchers({
     db: makeNoopD1(),

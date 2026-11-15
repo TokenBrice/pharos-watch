@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.82",
+    "title": "Velodrome Slipstream direct-API observations retired",
+    "date": "2026-11-15",
+    "effectiveAt": 1794787200,
+    "summary": "Optimism Velodrome Slipstream's direct Sugar reader is retired alongside Liquidity v7.3. The `velodrome-dex` promoted protocol lane and the `dex:velodrome-slipstream` depeg family remain; they are now supplied only by surviving CoinGecko Onchain and GeckoTerminal rows plus any registry row still inside its confidence horizon.",
+    "impact": [
+      "No consensus, pool-challenge, freshness, trust or depeg-authority rule changes. The direct-API fetch stops; the last rows it wrote keep their original 24-hour price, 72-hour volume and 336-hour inventory clocks.",
+      "The protocol lane, family label and provenance key stay registered so published `velodrome-dex` rows and depeg provenance still render. The circuit key moves to retired scope, so the orphan circuit row no longer counts as a public outage.",
+      "Coins that used a direct-API Velodrome observation lose one soft DEX candidate; the next hourly publication re-picks consensus from their remaining sources. Supply, fallback and replay rules are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.81",
     "title": "The chain-dropout guard covers every coin supplied by DefiLlama's list",
     "date": "2026-11-13",

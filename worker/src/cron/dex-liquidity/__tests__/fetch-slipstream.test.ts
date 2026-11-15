@@ -62,7 +62,6 @@ describe("getSlipstreamPoolFeeBps", () => {
 describe("getSugarClStartOffset", () => {
   it("accounts for Sugar's skipped V2 convertor and its 30,000-pool cap", () => {
     expect(getSugarClStartOffset("aerodrome-slipstream", 30_002)).toBe(30_000);
-    expect(getSugarClStartOffset("velodrome-slipstream", 10)).toBe(9);
   });
 });
 
@@ -386,15 +385,15 @@ describe("fetchSlipstreamPools", () => {
       price: 1,
     });
   });
-  it.each(["coherent", "unavailable-header", "changed-header", "zero-balance", "untracked-token", "velodrome"])(
+  it.each(["coherent", "unavailable-header", "changed-header", "zero-balance", "untracked-token"])(
     "keeps seven staged candidates coherent across the slot0/balance chunk boundary: %s",
     async (scenario) => {
       const actualRpc = await vi.importActual<{ fetchEvmMulticall3Aggregate3AtBlock: typeof fetchEvmMulticall3Aggregate3AtBlock }>("../../../lib/evm-rpc");
       vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(actualRpc.fetchEvmMulticall3Aggregate3AtBlock);
       vi.mocked(fetchEvmCallHexAtBlock).mockResolvedValue(null);
-      const protocol = scenario === "velodrome" ? "velodrome-slipstream" : "aerodrome-slipstream";
-      const chain = scenario === "velodrome" ? "optimism" : "base";
-      const factory = scenario === "velodrome" ? "0xcc0bddb707055e04e497ab22a59c2af4391cd12f" : "0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a";
+      const protocol = "aerodrome-slipstream";
+      const chain = "base";
+      const factory = "0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a";
       const token0 = "0x00000000000000000000000000000000000000bb";
       const token1 = "0x00000000000000000000000000000000000000cc";
       const pools = Array.from({ length: 7 }, (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}`);

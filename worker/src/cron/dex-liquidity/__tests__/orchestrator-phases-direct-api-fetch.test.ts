@@ -499,7 +499,6 @@ describe("runDirectApiFetchPhase", () => {
       ["Orca", "orca-api", "exhaustive"],
       ["Aerodrome Slipstream", "aerodrome-slipstream-api", "bounded-sample"],
       ["Uniswap V3 BSC shadow", "uniswap-v3-bsc-shadow", "bounded-sample"],
-      ["Velodrome Slipstream", "velodrome-slipstream-api", "bounded-sample"],
       ["Aero Slipstream", "aero-slipstream-api", "bounded-sample"],
       ["Aero Basic", "aero-basic-api", "bounded-sample"],
     ]);
@@ -512,7 +511,6 @@ describe("runDirectApiFetchPhase", () => {
       "pancakeswap:ethereum",
       "pancakeswap:base",
       "aerodrome-slipstream:base",
-      "velodrome-slipstream:optimism",
       "raydium:solana",
       "orca:solana",
       "uniswap-v3-shadow:bsc",

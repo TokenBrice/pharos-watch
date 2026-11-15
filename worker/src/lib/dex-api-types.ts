@@ -30,7 +30,6 @@ export interface DexApiPool {
     | "meteora"
     | "pancakeswap"
     | "aerodrome-slipstream"
-    | "velodrome-slipstream"
     | "aero-slipstream"
     | "aero-basic"
     | "uniswap-v3-shadow";
