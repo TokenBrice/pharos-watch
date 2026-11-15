@@ -43,12 +43,21 @@ describe("MOVEUSD reviewed Orca mark", () => {
   const read = vi.mocked(fetchSolanaAccounts);
   const id = "moveusd-cfx";
   let bank: Awaited<ReturnType<typeof fetchSolanaAccounts>>;
+  const ticks = (p: string, s: number) => {
+    const d = new Uint8Array(9988);
+    d.set([69, 97, 189, 190, 110, 7, 66, 187]);
+    new DataView(d.buffer).setInt32(8, s, true);
+    d.set(publicKeyBytes(p), 9956);
+    return { owner: ORCA_WHIRLPOOL_PROGRAM_ID, data: d };
+  };
   beforeEach(() => {
     read.mockReset().mockImplementation(async (addresses) => {
+      if (addresses.length === 4) return { accounts: new Map(addresses.map((address, i) => [address,
+        i ? ticks(addresses[0], 880 * (1 - i)) : bank.accounts.get(address)!])), observedBlock: bank.observedBlock };
       const [pool, a, b, va, vb] = addresses;
       const data = [653, 82, 82, 165, 165].map((size) => new Uint8Array(size));
       data[0].set([63, 149, 209, 12, 225, 128, 99, 9]);
-      data[0][41] = data[0][43] = data[0][49] = data[0][73] = 1;
+      data[0][41] = data[0][43] = 10; data[0][53] = 200; data[0][73] = 1;
       for (const [offset, address] of [[101, a], [133, va], [181, b], [213, vb]] as const) data[0].set(publicKeyBytes(address), offset);
       for (const i of [1, 2]) { data[i][44] = 6; data[i][45] = 1; }
       for (const i of [3, 4]) {
@@ -70,10 +79,10 @@ describe("MOVEUSD reviewed Orca mark", () => {
     ctx.assetsById.get("usdc-circle")!.priceObservedAtMode = "local_fetch";
     expect(await price(ctx)).toMatchObject({ price: 1.02, observedAtMode: "local_fetch" });
     expect(await moveusdOrcaProvider.fetchLivePrice!(freshParent(id, 1, "coingecko"), ctx)).toBeNull();
-    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(4);
   });
-  it.each([[0, 0, 0], [0, 101, 0], [0, 133, 0], [1, 44, 9], [2, 45, 0], [3, 108, 2], [4, 32, 0], [4, 66, 0]])(
-    "rejects invalid identity or inventory (%s/%s)", async (index, offset, value) => {
+  it.each([[0, 0, 0], [0, 101, 0], [0, 133, 0], [0, 53, 27], [1, 44, 9], [2, 45, 0], [3, 108, 2], [4, 32, 0], [4, 66, 0]])(
+    "rejects invalid identity, inventory or quote (%s/%s)", async (index, offset, value) => {
       await price();
       [...bank.accounts.values()][index]!.data[offset] = value;
       expect(await price()).toBeNull();
@@ -82,8 +91,12 @@ describe("MOVEUSD reviewed Orca mark", () => {
     await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
     expect(await price()).toBeNull();
   });
-  it("withholds on RPC failure and missing parent", async () => {
-    read.mockRejectedValue(new Error("unavailable"));
+  it("withholds on an unreadable quote, RPC failure and missing parent", async () => {
+    await price();
+    read.mockRejectedValue(new Error("unavailable")).mockResolvedValueOnce(bank);
+    const ctx: LivePriceContext = context();
+    expect(await price(ctx)).toBeNull();
+    expect(ctx.lastRejectionReason).toBe("orca-exact:quote-unavailable");
     expect(await price()).toBeNull();
     expect(await price({ assetsById: new Map() })).toBeNull();
   });
