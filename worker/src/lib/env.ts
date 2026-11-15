@@ -36,6 +36,7 @@ export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
     | "DONOR_KEY_CLAIM_RATE_LIMIT"
     | "SAFETY_GRADES_RATE_LIMIT"
     | "FEEDBACK_PREAUTH_RATE_LIMIT"
+    | "API_KEY_LOOKUP_RATE_LIMIT"
   >>;
 
 export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY"> & {

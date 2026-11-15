@@ -177,7 +177,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "DONOR_KEY_CLAIM_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-IP rate limiter for anonymous supporter (donor) API key claims, checked before the request body is read.",
+    description: "Cloudflare per-client-network rate limiter for anonymous supporter (donor) API key claims, checked before the request body is read.",
     runtimes: { worker: { status: "required" } },
   },
   {
@@ -187,9 +187,15 @@ const ENV_BINDING_DEFINITIONS = [
     runtimes: { worker: { status: "required" } },
   },
   {
+    key: "API_KEY_LOOKUP_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare client-network limiter for uncached public API key prefixes (300 per 60 seconds); missing or failing binding warns and proceeds with authentication.",
+    runtimes: { worker: { status: "required", optionalAtIngress: true } },
+  },
+  {
     key: "FEEDBACK_PREAUTH_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-IP rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
+    description: "Cloudflare per-client-network rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
     runtimes: { worker: { status: "required" } },
   },
   {

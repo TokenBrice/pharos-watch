@@ -172,6 +172,8 @@ const _ak = new IsolateLocalState(() => ({
   apiKeyCache: new Map<string, CachedApiKeyEntry>(),
   apiKeyLastUsageUpdateById: new Map<number, number>(),
   apiKeyFallbackRateLimitById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
+  apiKeyOverQuotaById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
+  apiKeyLookupBlockedBySubject: new Map<string, number>(),
   apiKeyRateLimitDependencyCircuit: {
     consecutiveFailures: 0,
     openUntilMs: 0,
@@ -187,6 +189,8 @@ export function getApiKeyRuntimeSnapshotForTests() {
     apiKeyCache: new Map([...state.apiKeyCache].map(([key, value]) => [key, { ...value, row: { ...value.row } }])),
     apiKeyLastUsageUpdateById: new Map(state.apiKeyLastUsageUpdateById),
     apiKeyFallbackRateLimitById: new Map([...state.apiKeyFallbackRateLimitById].map(([key, value]) => [key, { ...value }])),
+    apiKeyOverQuotaById: new Map([...state.apiKeyOverQuotaById].map(([key, value]) => [key, { ...value }])),
+    apiKeyLookupBlockedBySubject: new Map(state.apiKeyLookupBlockedBySubject),
     apiKeyRateLimitDependencyCircuit: { ...state.apiKeyRateLimitDependencyCircuit },
   };
 }
@@ -219,6 +223,33 @@ function pruneExpiredApiKeyCache(nowMs: number): void {
 
 export function resetApiKeyStateForTests(): void {
   _ak.reset();
+}
+
+export function isApiKeyLookupBlocked(subject: string): boolean {
+  const blocked = _ak.state.apiKeyLookupBlockedBySubject;
+  const bucket = blocked.get(subject);
+  if (bucket === Math.floor(getNowSec() / 60)) return true;
+  blocked.delete(subject);
+  return false;
+}
+
+export function blockApiKeyLookup(subject: string): void {
+  const blocked = _ak.state.apiKeyLookupBlockedBySubject;
+  blocked.delete(subject);
+  blocked.set(subject, Math.floor(getNowSec() / 60));
+  pruneOldestMapEntries(blocked, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+}
+
+export function isApiKeyOverQuota(apiKeyId: number, limit: number, bucketStart: number): boolean {
+  const memo = _ak.state.apiKeyOverQuotaById.get(apiKeyId);
+  return memo?.bucketStart === bucketStart && memo.count > limit;
+}
+
+export function memoizeApiKeyOverQuota(apiKeyId: number, bucketStart: number, count: number): void {
+  const memo = _ak.state.apiKeyOverQuotaById;
+  memo.delete(apiKeyId);
+  memo.set(apiKeyId, { bucketStart, count });
+  pruneOldestMapEntries(memo, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
 }
 
 export function getNowSec(nowSec?: number): number {

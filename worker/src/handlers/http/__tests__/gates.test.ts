@@ -12,6 +12,7 @@ const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
     recordApiKeyRateLimitDependencySuccess: vi.fn(),
     recordApiKeyUsage: vi.fn(),
     resolveIsolateFallbackApiKeyRateLimit: vi.fn(),
+    getCachedApiKeyByPrefix: vi.fn(),
   },
 }));
 
@@ -20,12 +21,15 @@ vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   return { ...actual, verifyAccessJwt };
 });
 
-vi.mock("../../../lib/api-key-auth", () => ({
+vi.mock("../../../lib/api-key-auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/api-key-auth")>(),
   authenticateApiKey: apiKeyMocks.authenticateApiKey,
   authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
 }));
 
-vi.mock("../../../lib/api-key-core", () => ({
+vi.mock("../../../lib/api-key-core", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/api-key-core")>(),
+  getCachedApiKeyByPrefix: apiKeyMocks.getCachedApiKeyByPrefix,
   isApiKeyRateLimitDependencyCircuitOpen: apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen,
   recordApiKeyRateLimitDependencyFailure: apiKeyMocks.recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess: apiKeyMocks.recordApiKeyRateLimitDependencySuccess,
@@ -44,7 +48,15 @@ import {
   evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode,
 } from "../gates";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeApiKeyPrefixLookup, makeAuthenticatedApiKeyRow } from "../../../test-helpers/api-key-test-support";
+import { clearApiKeyCache, lookupApiKeyByPrefix, resetApiKeyStateForTests } from "../../../lib/api-key-core";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
+
+async function useRealApiKeyAuth() {
+  apiKeyMocks.authenticateApiKey.mockImplementation((await vi.importActual<typeof import("../../../lib/api-key-auth")>("../../../lib/api-key-auth")).authenticateApiKey);
+  apiKeyMocks.getCachedApiKeyByPrefix.mockImplementation((await vi.importActual<typeof import("../../../lib/api-key-core")>("../../../lib/api-key-core")).getCachedApiKeyByPrefix);
+}
 
 const validKey = {
   id: 7,
@@ -69,6 +81,7 @@ function makeEnv() {
 
 describe("evaluateAccessGate", () => {
   beforeEach(() => {
+    resetApiKeyStateForTests();
     apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValue(false);
     apiKeyMocks.recordApiKeyRateLimitDependencyFailure.mockReturnValue({
       consecutiveFailures: 1,
@@ -79,6 +92,8 @@ describe("evaluateAccessGate", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    resetApiKeyStateForTests();
     verifyAccessJwt.mockReset();
     for (const mock of Object.values(apiKeyMocks)) {
       mock.mockReset();
@@ -99,6 +114,103 @@ describe("evaluateAccessGate", () => {
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
     env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+  });
+
+  it.each([false, true])("shares IPv6 /64 anonymous buckets (Pages=%s)", async (siteProxy) => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.SAFETY_GRADES_RATE_LIMIT = { limit };
+    for (const ip of ["2001:db8:1:2::1", "2001:0DB8:1:0002:ffff::abcd"]) {
+      const request = new Request(`https://${siteProxy ? "site-api" : "api"}.pharos.watch/api/dependency-scenarios/v1`, {
+        headers: { "CF-Connecting-IP": siteProxy ? "192.0.2.1" : ip,
+          ...(siteProxy ? { "X-Pharos-Site-Proxy-Secret": "site-secret", "X-Pharos-Client-IP": ip } : {}) },
+      });
+      expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+    }
+    expect(limit.mock.calls).toEqual([[{ key: "2001:db8:1:2::/64" }], [{ key: "2001:db8:1:2::/64" }]]);
+  });
+
+  it("blocks uncached prefixes after invalid attempts until the minute ends", async () => {
+    await useRealApiKeyAuth();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(60_000);
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    const limit = vi.fn().mockResolvedValueOnce({ success: true }).mockResolvedValue({ success: false });
+    env.API_KEY_LOOKUP_RATE_LIMIT = { limit };
+    env.DB = mockD1([makeApiKeyPrefixLookup({ prefix: "0123456789abcdef" }),
+      makeApiKeyPrefixLookup({ prefix: "fedcba9876543210" })]);
+    const request = (prefix: string, ip = "2001:db8:1:2::1") => new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "CF-Connecting-IP": ip, "X-API-Key": `ph_live_${prefix}_abcdefghijklmnopqrstuvwxyzABCDEF` },
+    });
+    const first = request("0123456789abcdef");
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response?.status).toBe(401);
+    const rotated = request("fedcba9876543210", "2001:0db8:1:0002::ffff");
+    const denied = (await evaluateAccessGate(rotated, new URL(rotated.url), env)).response;
+    expect(denied?.status).toBe(429);
+    expect(denied?.headers.get("Retry-After")).toBe("60");
+    const reads = () => (env.DB as ReturnType<typeof mockD1>).getHistory().length;
+    expect(reads()).toBe(2);
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response?.status).toBe(429);
+    expect(reads()).toBe(2);
+    expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledTimes(2);
+    expect(limit.mock.calls).toEqual([[{ key: "2001:db8:1:2::/64" }], [{ key: "2001:db8:1:2::/64" }]]);
+    env.DB = mockD1([makeApiKeyPrefixLookup({ row: await makeAuthenticatedApiKeyRow() }),
+      makeApiKeyPrefixLookup({ prefix: "fedcba9876543210" })]);
+    await lookupApiKeyByPrefix(env.DB, "0123456789abcdef");
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response).toBeNull();
+    const malformed = request("bad");
+    expect((await evaluateAccessGate(malformed, new URL(malformed.url), env)).response?.status).toBe(401);
+    expect(limit).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(120_000);
+    limit.mockResolvedValue({ success: true });
+    expect((await evaluateAccessGate(rotated, new URL(rotated.url), env)).response?.status).toBe(401);
+    expect(limit).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([["standard", "pepper"], ["donor", "old"], ["self-serve", "old"]])("rejects cached wrong secrets without D1 and never charges valid %s keys", async (tier, pepper) => {
+    await useRealApiKeyAuth();
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    env.API_KEY_HASH_PEPPER_PREVIOUS = "old";
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.API_KEY_LOOKUP_RATE_LIMIT = { limit };
+    const db = mockD1([makeApiKeyPrefixLookup({ row: await makeAuthenticatedApiKeyRow({ tier, pepper }) }),
+      { match: "api_key_self_serve_revocations", rows: [] }, { match: "UPDATE api_keys", rows: [] }]);
+    env.DB = db;
+    const request = (secret: string) => new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": `ph_live_0123456789abcdef_${secret}` },
+    });
+    const wrong = request("_".repeat(32));
+    for (let i = 0; i < 10; i++) expect((await evaluateAccessGate(wrong, new URL(wrong.url), env)).response?.status).toBe(401);
+    const reads = () => db.getHistory().filter(({ sql }) => sql.includes("FROM api_keys")).length;
+    expect(reads()).toBe(1);
+    expect(limit).toHaveBeenCalledTimes(10);
+    limit.mockResolvedValue({ success: false });
+    const valid = request("abcdefghijklmnopqrstuvwxyzABCDEF");
+    for (let i = 0; i < 2; i++) {
+      clearApiKeyCache("0123456789abcdef");
+      expect((await evaluateAccessGate(valid, new URL(valid.url), env)).response).toBeNull();
+    }
+    expect(reads()).toBe(3);
+    expect(limit).toHaveBeenCalledTimes(10);
+  });
+
+  it.each(["missing", "throws"])("authenticates when lookup limiter %s", async (mode) => {
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    env.API_KEY_LOOKUP_RATE_LIMIT = mode === "missing" ? undefined : { limit: vi.fn().mockRejectedValue(new Error("offline")) };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+    });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+    expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledOnce();
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "invalid" });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(401);
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({ event: "api_key_lookup_rate_limit_unavailable" }));
+    warn.mockRestore();
   });
 
   it.each(["site-api.pharos.watch", "pharos-api.example.workers.dev"])(

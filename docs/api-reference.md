@@ -82,7 +82,11 @@ The `403 ineligible` body additionally returns `ledgerUpdatedAt` (Unix seconds),
 
 One key is issued per wallet, atomically with its `api_key_donor_claims` row. Existing claim lookup precedes grading; later grade changes do not alter already-issued keys. Re-signing never rotates a key. For a lost key or record removal, message [@TokenBrice on Telegram](https://t.me/TokenBrice), with [@PharosWatch on X](https://x.com/PharosWatch) as secondary. An operator verifies the donating wallet before rotating a lost key. Claim outcome logs contain codes only, not signed messages, signatures, or wallet addresses.
 
-Claims are enabled by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`. The `DONOR_KEY_CLAIM_RATE_LIMIT` binding admits `10` attempts per `60` seconds per client IP before reading the body. Donor keys always use D1-backed auth and quotas, not the isolate fast-cache path. Migration `0238_api_key_donor_claims.sql` must precede deployment; `docs/api-page.md` owns the live claim, quota, replay, and access-gate acceptance sequence.
+Claims are enabled by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`. The `DONOR_KEY_CLAIM_RATE_LIMIT` binding admits `10` attempts per `60` seconds per client network (IPv4 address or canonical IPv6 /64) before reading the body. Donor keys always use D1-backed auth and quotas, not the isolate fast-cache path. Migration `0238_api_key_donor_claims.sql` must precede deployment; `docs/api-page.md` owns the live claim, quota, replay, and access-gate acceptance sequence.
+
+Invalid well-formed API credentials charge a native ceiling of `300` per `60` seconds per client network (`429`, `Retry-After: 60`). Rejection blocks uncached prefixes from that network locally until the minute ends without D1; fresh cached wrong secrets also skip D1. Valid credentials are uncharged. A missing or failing binding logs a warning and authentication proceeds. D1-confirmed per-key over-quota verdicts are memoized for the same minute without further counter writes, and a raised quota is rechecked against D1.
+
+`POST /api/feedback` admits `3` submissions per rolling `10` minutes per salted client-network hash and `30` per rolling hour across all sources. Its native pre-auth limiter uses the same network subject (`20` per `60` seconds). IPv4-mapped IPv6 uses the IPv4 address; unusable or missing addresses share the existing `unknown` bucket. Durable quota rejection returns `429` before GitHub issue creation; known GitHub rejection releases the reservation, while an uncertain outcome retains it.
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
@@ -266,7 +270,7 @@ Client best practices:
 
 ## Rate Limits
 
-Protected public API traffic is limited per key; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `120` requests per `60` seconds per client IP, with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Telegram ingress and supporter claims use separate limiters and authentication.
+Protected public API traffic is limited per key; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `120` requests per `60` seconds per client network (IPv4 address or IPv6 /64), with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Telegram ingress and supporter claims use separate limiters and authentication.
 
 Missing or invalid keys receive `401` with `Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.` Supporter claim throttling is separate from the issued key's quota; see [Public API Auth](#public-api-auth).
 
@@ -395,6 +399,8 @@ Producer-written `blacklist-summary` snapshots also publish optional `refresh: {
 Blacklist summary publication checks the evidence generation captured before construction. Cold request builders also compare their exact, unexpired 120-second claim and the captured snapshot value atomically, so they cannot overwrite a concurrent producer publication. A superseded request serves the winning snapshot if one exists; otherwise it returns `503`, `Cache-Control: no-store`, and `error: "blacklist-summary-superseded"`. Summary construction reads gap evidence directly rather than reusing diagnostic gap caches.
 
 ## Mint-Burn Scan Availability
+
+`GET /api/mint-burn-flows` accepts `hours` from 1 through 720. Per-coin requests persist only the 24-hour cache row, at most once per 60 seconds; aggregate requests persist only the cron-published 24- and 168-hour windows. Other windows are computed and returned without a cache write. Persisted rows retain publication-policy fencing and cached fallback behavior.
 
 Mint/Burn v6.41 includes positive sub-threshold events in counted hourly/window event counts, volumes and activity flags, subject to the same pricing and classification gates as larger rows. Unresolved dust is still unresolved. The event feed excludes flagged rows in every `scope`, as do Tape and `largestEvent24h`; their visible population therefore differs from the accounting counts. Native display thresholds remain additional to any USD `minAmount` filter. Hours materialized before the v6.41 writer retain the old cutoff; windows spanning activation mix accounting scopes. See [dust accounting and its historical boundary](./mint-burn-flows.md#dust-in-accounting).
 
