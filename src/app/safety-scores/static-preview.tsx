@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import type { SafetyScoresPreview, SafetyScoresPreviewRow } from "@/lib/safety-grade-snapshot";
+import { cn } from "@/lib/utils";
 
 const PREVIEW_GRID_CLASS =
   "grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
@@ -20,7 +22,15 @@ function PreviewCard({ row }: { row: SafetyScoresPreviewRow }) {
             <span className="truncate text-sm font-medium" title={row.name}>{row.name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{row.symbol}</span>
           </div>
-          <SafetyGradeBadge grade={row.grade} size="lg" />
+          {/* SafetyGradeBadge's `lg` pill without its methodology wrappers: their client
+              modules would join this server-rendered first flush's eager JS. */}
+          <Badge
+            variant="outline"
+            className={cn("px-3 py-1 font-mono tabular-nums text-xl font-bold", getSafetyGradeBadgeClassName(row.grade))}
+            aria-label={`Safety grade ${row.grade}`}
+          >
+            {row.grade}
+          </Badge>
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span className="pharos-numeric text-sm font-semibold text-foreground">{row.score}/100</span>
             {row.provisional ? (

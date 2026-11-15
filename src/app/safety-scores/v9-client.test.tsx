@@ -24,6 +24,8 @@ vi.mock("@/components/query-freshness-notices", () => ({
 }));
 
 import { ReportCardsV9Client } from "./v9-client";
+import { SafetyScoresLiveIsland } from "./live-island";
+import { SafetyScoresContentLoadingState } from "./loading-state";
 
 function query(data: unknown) {
   return {
@@ -323,16 +325,22 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
   });
 
-  it("server-renders and hydrates the dated preview while the native query is pending", async () => {
+  it("hands the prerendered preview to the pending live client unchanged", async () => {
     holdPreviewClock();
     mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: true });
     mocks.useStablecoins.mockReturnValue(query(undefined));
     const preview = makePreview();
+    const page = <SafetyScoresLiveIsland initialPreview={preview}><SafetyScoresContentLoadingState preview={preview} /></SafetyScoresLiveIsland>;
 
-    const html = renderToStaticMarkup(<ReportCardsV9Client initialPreview={preview} />);
+    const html = renderToStaticMarkup(page);
     expect(html).toContain("Grades as of 2026-10-27");
     expect(html).toContain('href="/stablecoin/asset-a/"');
-    await render(<ReportCardsV9Client initialPreview={preview} />);
+    mocks.useReportCardsV9.mockClear();
+    const { container } = renderSync(page);
+    const flush = container.innerHTML;
+    await act(() => import("./v9-client"));
+    expect(mocks.useReportCardsV9).toHaveBeenCalled();
+    expect(container.innerHTML).toBe(flush);
     expectPreviewFacts();
     // Hero and controls stay neutral: no preview-derived aggregate.
     expect(screen.getByRole("group", { name: "Ecosystem safety overview" }).textContent).not.toMatch(/[0-9]/);
