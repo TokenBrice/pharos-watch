@@ -3,7 +3,7 @@
     "version": "6.82",
     "title": "MOVEUSD's Orca mark must survive a 10,000-token sell quote",
     "date": "2026-11-15",
-    "effectiveAt": 1794742260,
+    "effectiveAt": 1794758400,
     "summary": "MOVEUSD's reviewed Orca mark now has to be executable for a 10,000 MOVEUSD sale into the pool's USDC side.",
     "impact": [
       "The reviewed pool is read again with its sell-side tick arrays in a second atomic finalized bank at or after the identity/vault bank; the re-read pool must match the reviewed mints and vaults again, and the mark and quote then describe one state. A 10,000 MOVEUSD exact-in quote, the sibling exact adapters' 10,000-unit depth notional, must realise at least 95% of the mark, their reviewed 5% impact bound. The pool's thin MOVEUSD side is not the depth that matters: the USDC side absorbs a holder's sale.",
