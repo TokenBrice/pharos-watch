@@ -329,7 +329,15 @@ describe("provider-wide incident review admission (M-6)", () => {
       creationTxHash: `0x${"1".repeat(64)}`, creationBlock: 300, creationTimestampSec: 2001,
     };
     expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, exemptions: [deployed] }).success).toBe(true);
+    const reads = [0, 1, 2].map((index) => ({ blockNumber: 100 + index, blockHash: `0x${String(index).repeat(64)}`,
+      blockTimestampSec: 1500 + index, receiveLibrary: index < 2 ? EMITTER_ADDRESS : OTHER_EMITTER_ADDRESS, eids: exemption.eids }));
+    const bracketed = { assetId: ASSET, routeId: ROUTE_ETHEREUM, kind: "bracketed-threshold-excludes-compromised-verifier",
+      chain: "ethereum", reads, configChanges: [{ fromBlockNumber: 101, toBlockNumber: 102, summary: "rotated" }] };
+    expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, exemptions: [bracketed] }).success).toBe(true);
     for (const invalid of [
+      { exemptions: [{ ...bracketed, reads: reads.slice(0, 2), configChanges: [] }] },
+      { exemptions: [{ ...bracketed, configChanges: [] }] },
+      { exemptions: [{ ...bracketed, reads: reads.map((read) => ({ ...read, blockHash: reads[0]!.blockHash })) }] },
       { exemptions: [{ ...deployed, creationTimestampSec: 999 }] },
       { exemptions: [{ ...deployed, creationTimestampSec: 2000 }] },
       { exposureEndSec: null, exemptions: [deployed] },

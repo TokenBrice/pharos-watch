@@ -182,11 +182,13 @@ const V9_PROVIDER_INCIDENT_CLASS_VALUES = [
 const V9ProviderIncidentClassSchema = z.enum(V9_PROVIDER_INCIDENT_CLASS_VALUES);
 
 /**
- * One lane-level exemption from a `verifier-compromise` exposure interval. Both
- * kinds are point-in-time evidence, never a current configuration:
+ * One lane-level exemption from a `verifier-compromise` exposure interval. Every
+ * kind is point-in-time evidence, never a current configuration:
  * `deployed-after-exposure` proves the lane did not exist during the exposure;
  * `threshold-excludes-compromised-verifier` is a pinned read of the effective
- * verification config plus pinned log evidence that it did not change.
+ * verification config plus pinned log evidence that it did not change;
+ * `bracketed-threshold-excludes-compromised-verifier` replaces that log
+ * evidence with bracketing reads.
  */
 const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
   .object({
@@ -199,6 +201,18 @@ const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
   })
   .strict();
 
+const V9ProviderIncidentInboundEidsSchema = canonicalArrayBy(
+  z.object({
+    eid: z.number().int().nonnegative().safe(),
+    requiredDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 1, "required DVN"),
+    optionalDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 0, "optional DVN"),
+    optionalThreshold: z.number().int().nonnegative().safe(),
+  }).strict(),
+  (row) => String(row.eid),
+  1,
+  "inbound eid",
+);
+
 const V9ProviderIncidentThresholdExemptionSchema = z
   .object({
     assetId: CanonicalKeySchema,
@@ -208,24 +222,42 @@ const V9ProviderIncidentThresholdExemptionSchema = z
     blockNumber: z.number().int().nonnegative().safe(),
     blockTimestampSec: UnixSecondsSchema,
     receiveLibrary: EvmAddressSchema,
-    eids: canonicalArrayBy(
-      z.object({
-        eid: z.number().int().nonnegative().safe(),
-        requiredDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 1, "required DVN"),
-        optionalDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 0, "optional DVN"),
-        optionalThreshold: z.number().int().nonnegative().safe(),
-      }).strict(),
-      (row) => String(row.eid),
-      1,
-      "inbound eid",
-    ),
+    eids: V9ProviderIncidentInboundEidsSchema,
     configChangeLogSourceUrl: z.string().url(),
+  })
+  .strict();
+
+/**
+ * Bracketing (owner ruling 2026-11-01, #1778 Q4) replaces the interval log
+ * sweep: at least three pinned reads of the effective receive configuration
+ * inside the exposure, each excluding a compromised-only path, and exactly one
+ * disclosed change per consecutive pair of reads whose configuration differs.
+ */
+const V9ProviderIncidentBracketedThresholdExemptionSchema = z
+  .object({
+    assetId: CanonicalKeySchema,
+    routeId: DeploymentIdSchema,
+    kind: z.literal("bracketed-threshold-excludes-compromised-verifier"),
+    chain: CanonicalKeySchema,
+    reads: canonicalArrayBy(z.object({
+      blockNumber: z.number().int().nonnegative().safe(),
+      blockHash: EvmBytes32Schema,
+      blockTimestampSec: UnixSecondsSchema,
+      receiveLibrary: EvmAddressSchema,
+      eids: V9ProviderIncidentInboundEidsSchema,
+    }).strict(), (read) => String(read.blockNumber).padStart(16, "0"), 3, "bracketing read"),
+    configChanges: canonicalArrayBy(z.object({
+      fromBlockNumber: z.number().int().nonnegative().safe(),
+      toBlockNumber: z.number().int().nonnegative().safe(),
+      summary: CanonicalTextSchema,
+    }).strict(), (change) => String(change.fromBlockNumber).padStart(16, "0"), 0, "config change"),
   })
   .strict();
 
 const V9ProviderIncidentExemptionSchema = z.discriminatedUnion("kind", [
   V9ProviderIncidentDeployedAfterExposureExemptionSchema,
   V9ProviderIncidentThresholdExemptionSchema,
+  V9ProviderIncidentBracketedThresholdExemptionSchema,
 ]);
 
 /**
@@ -269,13 +301,24 @@ export const V9ProviderIncidentDisclosureSchema = z
       } else {
         const compromised = new Set((incident.compromisedVerifiers ?? [])
           .filter((row) => row.chain === exemption.chain).map((row) => row.address));
-        valid &&= exemption.chain === exemption.routeId.split(":")[0] &&
-          exemption.blockTimestampSec >= incident.exposureStartSec &&
-          (incident.exposureEndSec === null || exemption.blockTimestampSec <= incident.exposureEndSec) &&
-          compromised.size > 0 &&
-          exemption.eids.every((eid) => eid.optionalThreshold <= eid.optionalDVNs.length &&
-            !(eid.requiredDVNs.every((address) => compromised.has(address)) &&
-              eid.optionalDVNs.filter((address) => compromised.has(address)).length >= eid.optionalThreshold));
+        const reads = exemption.kind === "threshold-excludes-compromised-verifier" ? [exemption] : exemption.reads;
+        valid &&= exemption.chain === exemption.routeId.split(":")[0] && compromised.size > 0 &&
+          reads.every((read, readIndex) => read.blockTimestampSec >= incident.exposureStartSec &&
+            (incident.exposureEndSec === null || read.blockTimestampSec <= incident.exposureEndSec) &&
+            (readIndex === 0 || read.blockTimestampSec >= reads[readIndex - 1]!.blockTimestampSec) &&
+            read.eids.every((eid) => eid.optionalThreshold <= eid.optionalDVNs.length &&
+              !(eid.requiredDVNs.every((address) => compromised.has(address)) &&
+                eid.optionalDVNs.filter((address) => compromised.has(address)).length >= eid.optionalThreshold)));
+        if (exemption.kind === "bracketed-threshold-excludes-compromised-verifier") {
+          const changed = exemption.reads.slice(1).flatMap((read, readIndex) => {
+            const previous = exemption.reads[readIndex]!;
+            return previous.receiveLibrary === read.receiveLibrary && JSON.stringify(previous.eids) === JSON.stringify(read.eids)
+              ? [] : [`${previous.blockNumber}-${read.blockNumber}`];
+          });
+          // Distinct heights must be distinct pinned blocks.
+          valid &&= new Set(exemption.reads.map((read) => read.blockHash)).size === exemption.reads.length &&
+            changed.join() === exemption.configChanges.map((change) => `${change.fromBlockNumber}-${change.toBlockNumber}`).join();
+        }
       }
       if (!valid) issue(ctx, ["exemptions", index], "Lane exemption does not prove exclusion from the exposure");
     }
