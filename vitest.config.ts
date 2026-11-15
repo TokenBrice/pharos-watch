@@ -172,6 +172,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "server-only": path.resolve(__dirname, "node_modules/next/dist/compiled/server-only/empty.js"),
       // Match Wrangler's Text module without a runtime-specific loader branch.
       "@shared/data/stablecoins/coins.worker-full.generated.json":
         `${path.resolve(__dirname, "shared/data/stablecoins/coins.worker-full.generated.json")}?raw`,

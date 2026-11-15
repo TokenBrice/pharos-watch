@@ -22,6 +22,10 @@
  */
 
 export const FEATURE_FLAGS = {
+  // owner: tokenbrice
+  // retirementCriterion: remove after browser-session rollout acceptance and enforced production stability.
+  // expiresAt: 2027-01-14 — review the default-off browser check after rollout acceptance
+  siteSessionCheck: process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true",
   // Default-enabled after W3 launch. Set
   // `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` explicitly to disable.
   // owner: tokenbrice
@@ -54,6 +58,11 @@ export type FeatureFlagLifecycle = {
 };
 
 export const FEATURE_FLAG_LIFECYCLE = {
+  siteSessionCheck: {
+    owner: "tokenbrice",
+    expiresAt: "2027-01-14",
+    retirementCriterion: "remove after browser-session rollout acceptance and enforced production stability",
+  },
   heroVerdict: {
     owner: "tokenbrice",
     retirementCriterion: "keep permanently after the W3 launch; remove only if the hero verdict is retired",
@@ -79,6 +88,10 @@ export const FEATURE_FLAG_LIFECYCLE = {
     retirementCriterion: "remove with DDR after 30 deployed rollback-free days on the accepted baseline and populated reviewer evidence",
   },
 } satisfies Record<keyof typeof FEATURE_FLAGS, FeatureFlagLifecycle>;
+
+export function isSiteSessionCheckEnabled(): boolean {
+  return FEATURE_FLAGS.siteSessionCheck && Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+}
 
 export function isHeroVerdictEnabled(): boolean {
   return FEATURE_FLAGS.heroVerdict;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { HomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
+import type { HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 import type { ApiMeta } from "@/lib/api";
 import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE } from "@/lib/chart-colors";
 import { HomeAltHeroChartGate } from "@/components/homepage/home-alt-hero-chart-gate";
