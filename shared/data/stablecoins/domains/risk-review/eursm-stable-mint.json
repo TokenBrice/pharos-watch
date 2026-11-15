@@ -1,0 +1,23 @@
+{
+  "id": "eursm-stable-mint",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Current issuer deployment roster and control architecture",
+        "url": "https://stablemint.io/stablecoins/"
+      },
+      {
+        "label": "Verified current Etherlink implementation",
+        "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x31f9c14c777e210b33ca35e875c7d1ee6dbeefb4"
+      },
+      {
+        "label": "EURSM Etherlink deployment",
+        "url": "https://explorer.etherlink.com/address/0x6a02e153bcbf9e6be45c0b49f7f0abc82859ebd5"
+      }
+    ],
+    "evidence": "At Etherlink block 58095676 (2026-11-15T22:48:35Z), the sole issuer-listed EURSM deployment points to implementation 0x31f9c14c777e210b33ca35e875c7d1ee6dbeefb4. Its verified addToBlacklist function targets arbitrary addresses and _update rejects transfers from or to listed holders. hasRole(BLACKLIST_ROLE, 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd) is true; the same address is defaultAdmin and returns empty runtime bytecode. This establishes a current holder-targeted control, without implying that a freeze has occurred.",
+    "reviewer": "Pharos discovery launched review",
+    "reviewedAt": "2026-11-15"
+  }
+}

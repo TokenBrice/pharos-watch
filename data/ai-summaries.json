@@ -6208,5 +6208,45 @@
     "authoredBy": "ai",
     "model": "gpt-6",
     "factsAsOf": "2026-11-15"
+  },
+  "squsd-squads": {
+    "title": "Bridge-issued dollar with a delegated seizure power",
+    "text": "SQUSD is issued on Solana through Bridge, which publishes its supply and reserve categories. Its reserve total does not reconcile to the listed categories. The Treasury category includes money-market funds, leaving the underlying fund allocation and custody structure unresolved. Its Token-2022 mint retains a permanent delegate that can move or burn holder balances. New token accounts default to initialized and the transfer hook is unset. Pharos keeps SQUSD outside live monitoring because no admitted price lane is available. Published reserve totals do not establish an independently reconciled reserve book or a holder-specific redemption route.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eurod-oddo-bhf": {
+    "title": "Euro claim on ODDO’s bank balance sheet",
+    "text": "EUROD gives holders a euro claim on ODDO BHF SCA, a French credit institution. The white paper describes par redemption after eligibility and compliance checks. Backing consists of the bank's general balance sheet, and holders are unsecured creditors. This differs from a segregated electronic-money reserve. The token runs on Polygon with issuer-described freeze and forced-transfer powers. Pharos records public issuance but withholds live monitoring while no admitted price lane exists. Bank authorization does not establish a separately safeguarded token reserve or an executable market price.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eursm-stable-mint": {
+    "title": "Malta-issued euro with direct blacklist controls",
+    "text": "EURSM is Stable mint Ltd’s euro electronic-money token on Etherlink. Its published terms give holders par redemption after onboarding and compliance checks. The issuer describes cash and liquid financial backing, but current asset weights and an independently reconciled reserve report remain unavailable. A verified current blacklist role can block transfers involving selected holders. Pharos records the announced launch and positive on-chain issuance while keeping the asset outside live monitoring until an admitted price lane is available. The legal redemption claim depends on issuer access and the reserve evidence remains incomplete.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eury-eurodollar": {
+    "title": "Danish euro token awaiting market data",
+    "text": "EURY is Eurodollar ApS’s euro electronic-money token on Ethereum. Issuer materials describe a par redemption claim and safeguarded reserve assets, and current issuance is visible on-chain. The asset’s published record supports an authorized Danish issuer, but does not disclose current reserve weights, named custody providers or an independent reconciliation. The white paper describes issuer freeze powers and the contract includes pause and blacklist checks. Pharos retains the issued token outside live monitoring because it has no admitted price lane. Public issuance and regulatory standing do not establish secondary-market liquidity.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "heur-heuro": {
+    "title": "French euro token with unresolved mainnet identity",
+    "text": "HEUR is HEURO SAS’s euro electronic-money token. Its white paper describes cash and liquid financial backing, public-chain transfers and par redemption after compliance checks. ESMA identifies the issuer under its OuiTrust commercial name. The issuer says HEUR is issued on Ethereum and Solana, but verified mainnet addresses and positive supply remain unavailable. Pharos therefore retains an announced record without a launch date. The reviewed contract design includes issuer controls; current mainnet authorities remain unresolved. Authorization and an issuance statement do not establish a verified circulating token or an admitted market-data lane.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
   }
 }

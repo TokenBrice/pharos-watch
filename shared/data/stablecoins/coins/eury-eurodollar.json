@@ -1,0 +1,71 @@
+{
+  "status": "pre-launch",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "pegCurrency": "EUR"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "id": "eury-eurodollar",
+  "name": "Eurodollar EURY",
+  "symbol": "EURY",
+  "oneLiner": "EURY is Eurodollar ApS’s euro token on Ethereum, with a legal right to par redemption and safeguarded reserve assets.",
+  "collateral": "Issuer-described one-for-one euro reserve assets held in safeguarded accounts; current asset weights, banks, custodians and independent reconciliations are unpublished.",
+  "pegMechanism": "A euro-denominated claim on Eurodollar ApS, redeemable at par after identity and bank-account checks; client reserve assets are described as segregated from issuer assets.",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x96ecfbde9b4681f29cc3179dd6a4258fb3148ff2",
+      "decimals": 6
+    }
+  ],
+  "jurisdiction": {
+    "country": "Denmark",
+    "regulator": "Finanstilsynet",
+    "license": "Electronic money institution"
+  },
+  "launchDate": "2026-07-23",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Public on-chain issuance is verified from July 23, 2026. The issuer says EURY is in circulation; no admitted price lane is available.",
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "No admitted price lane: exact-contract CoinGecko and DefiLlama quotes and DexScreener pools were unavailable on review. Positive Ethereum issuance is verified.",
+    "reviewBy": "2027-01-15"
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://olbra.org/faq.html",
+    "provider": "Eurodollar ApS / issuer-published Olbra brand reserve policy; reserve reports and third-party attestations are not published",
+    "attestorTier": "self",
+    "cadence": "undisclosed"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.stablecoin.dk/tokens/eury"
+    },
+    {
+      "label": "White paper",
+      "url": "https://www.stablecoin.dk/tokens/eury/white-paper"
+    },
+    {
+      "label": "Issuer contract verification",
+      "url": "https://olbra.org/verify"
+    },
+    {
+      "label": "Public Ethereum issuance, July 23, 2026",
+      "url": "https://etherscan.io/tx/0x4d7d6e9b2f6d2eba0f55e0e8e4cdf2a3073e90b173b8e080457b2b59925a5433"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-07-23",
+      "type": "milestone",
+      "title": "EURY issuance is recorded on Ethereum",
+      "description": "An observed mint creates 5,000 EURY on the issuer-linked Ethereum deployment. The issuer separately confirms that EURY is in public issue.",
+      "sourceUrl": "https://etherscan.io/tx/0x4d7d6e9b2f6d2eba0f55e0e8e4cdf2a3073e90b173b8e080457b2b59925a5433"
+    }
+  ]
+}

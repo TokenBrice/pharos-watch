@@ -505,6 +505,11 @@
     "eurgh-gatehub": "core-stablecoin",
     "rdusd-rd-technologies": "core-stablecoin",
     "chfs-safirum": "core-stablecoin",
-    "gbpq-quantoz": "core-stablecoin"
+    "gbpq-quantoz": "core-stablecoin",
+    "squsd-squads": "core-stablecoin",
+    "eurod-oddo-bhf": "core-stablecoin",
+    "eursm-stable-mint": "core-stablecoin",
+    "eury-eurodollar": "core-stablecoin",
+    "heur-heuro": "core-stablecoin"
   }
 }
