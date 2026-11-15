@@ -9,7 +9,7 @@ name = "stablecoin-api"
 main = "src/index.ts"
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
+preview_urls = false
 minify = true
 keep_names = true
 upload_source_maps = true
@@ -80,6 +80,13 @@ fallthrough = true
 `;
 
 describe("check-worker-wrangler-config", () => {
+  it.each(["public", "heavy"] as const)("rejects enabled or omitted previews on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    for (const replacement of ["preview_urls = true", ""]) {
+      expect(evaluateWorkerWranglerConfig(toml.replace("preview_urls = false", replacement), { workerRole }).issues)
+        .toContain(`${workerRole} [root].preview_urls must be false.`);
+    }
+  });
   it("bounds public Queue consumption and permits mode-only rollback", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
       'WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "off"',

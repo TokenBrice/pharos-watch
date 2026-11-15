@@ -22,7 +22,7 @@ Still true:
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = true` remains enabled for CI/site-proxy rehearsals
+- `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = false` disables public Worker version previews
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---

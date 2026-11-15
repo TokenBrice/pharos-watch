@@ -47,7 +47,7 @@ describe("doc-sync Worker runtime documentation", () => {
   it.each([
     ["compatibility_date", /^compatibility_date\s*=.*$/gm, '"wrong-date"'],
     ["compatibility_flags", /^compatibility_flags\s*=.*$/gm, "[]"],
-    ["preview_urls", /^preview_urls\s*=.*$/gm, "false"],
+    ["preview_urls", /^preview_urls\s*=.*$/gm, "true"],
     ["minify", /^minify\s*=.*$/gm, "false"],
     ["keep_names", /^keep_names\s*=.*$/gm, "false"],
     ['"#pharos-full-catalog"', /^"#pharos-full-catalog"\s*=.*$/gm, '"./wrong-catalog.ts"'],
