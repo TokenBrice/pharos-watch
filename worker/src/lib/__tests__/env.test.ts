@@ -27,11 +27,14 @@ it("preserves manifest-derived HTTP, scheduled and heavy ingress types", () => {
   expectTypeOf<Env["CF_VERSION_METADATA"]>().toEqualTypeOf<WorkerVersionMetadata>();
   expectTypeOf<Env["TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT"]>().toEqualTypeOf<RateLimit>();
   expectTypeOf<Env["API_KEY_LOOKUP_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
+  expectTypeOf<Env["SITE_SESSION_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
+  expectTypeOf<Env["SITE_SOURCE_RATE_LIMIT"]>().toEqualTypeOf<RateLimit | undefined>();
+  expectTypeOf<Env["SITE_SESSION_SIGNING_KEY"]>().toEqualTypeOf<string | undefined>();
   expectTypeOf<Env["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket | undefined>();
   expectTypeOf<Env["HEAVY_EXECUTOR"]>().toEqualTypeOf<Fetcher | undefined>();
   expectTypeOf<Env["RESERVE_CONTINUATION_QUEUE"]>().toEqualTypeOf<Queue<ReserveContinuationMessage | SlotCatchUpMessage> | undefined>();
   expectTypeOf<RequiredKeys<ScheduledEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA">();
-  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT" | "API_KEY_LOOKUP_RATE_LIMIT">>().toEqualTypeOf<never>();
+  expectTypeOf<Extract<keyof ScheduledEnv, "CORS_ORIGIN" | "SAFETY_GRADES_RATE_LIMIT" | "FEEDBACK_PREAUTH_RATE_LIMIT" | "API_KEY_LOOKUP_RATE_LIMIT" | "SITE_SESSION_RATE_LIMIT" | "SITE_SOURCE_RATE_LIMIT">>().toEqualTypeOf<never>();
   expectTypeOf<RequiredKeys<HeavyEnv>>().toEqualTypeOf<"DB" | "CF_VERSION_METADATA" | "SAFETY_CAPTURE_ARCHIVE">();
   expectTypeOf<HeavyEnv["SAFETY_CAPTURE_ARCHIVE"]>().toEqualTypeOf<R2Bucket>();
   expectTypeOf<Extract<keyof HeavyEnv, "M0_API_KEY">>().toEqualTypeOf<never>();
@@ -104,6 +107,7 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_OPS_API_AUD: "aud",
       CF_ACCESS_TEAM_DOMAIN: "team",
       SITE_API_SHARED_SECRET: "site-secret",
+      SITE_SESSION_SIGNING_KEY: "session-key",
       API_KEY_HASH_PEPPER: "pepper",
       GITHUB_PAT: "ghp_test_token",
       FEEDBACK_IP_SALT: "feedback",
@@ -122,6 +126,8 @@ describe("validateWorkerEnvContract", () => {
     ["partial Access", { CF_ACCESS_TEAM_DOMAIN: undefined }, ["ops-access-partial-config"]],
     ["partial D1 status", { CLOUDFLARE_D1_STATUS_API_TOKEN: undefined }, ["d1-status-partial-config"]],
     ["missing site secret", { SITE_API_SHARED_SECRET: undefined }, ["site-api-secret-misconfigured"]],
+    ["missing session key", { SITE_SESSION_SIGNING_KEY: undefined }, ["site-session-signing-key-missing"]],
+    ["blank session key", { SITE_SESSION_SIGNING_KEY: "  " }, ["site-session-signing-key-missing"]],
     ["missing API pepper", { API_KEY_HASH_PEPPER: undefined }, ["public-api-auth-pepper-missing"]],
     ["missing Banxico token", { BANXICO_TOKEN: undefined }, ["banxico-token-missing"]],
     ["missing feedback binding", { GITHUB_PAT: undefined }, ["feedback-env-misconfigured"]],

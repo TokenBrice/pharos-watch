@@ -26,6 +26,7 @@ function buildScriptSrc(options: ContentSecurityPolicyOptions): string {
     ...(options.nonce ? [`'nonce-${options.nonce}'`] : []),
     ...(options.telegramMiniApp ? ["https://telegram.org"] : []),
     ...(!options.telegramMiniApp ? ["https://www.googletagmanager.com"] : []),
+    "https://challenges.cloudflare.com",
   ];
   return scriptSrc.join(" ");
 }
@@ -48,6 +49,7 @@ export function buildStaticContentSecurityPolicy(options: ContentSecurityPolicyO
     `img-src 'self' https://coin-images.coingecko.com${googleImageSources} https://pbs.twimg.com https://abs.twimg.com data:`,
     `connect-src 'self' ${API_ORIGIN}${googleConnectSources}`,
     "font-src 'self'",
+    "frame-src https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

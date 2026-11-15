@@ -30,6 +30,10 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
 };
 
 
+const SiteSession = process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
+  ? lazy(() => import("./site-session").then((mod) => ({ default: mod.SiteSession })))
+  : null;
+
 const CommandPalette = lazy(() =>
   import("./command-palette/command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
 );
@@ -192,6 +196,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SourceNavigationProvider>
           <GlobalSearchProvider>
+            {SiteSession && process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && (
+              <Suspense fallback={null}>
+                <SiteSession />
+              </Suspense>
+            )}
             {children}
             <Suspense fallback={null}>
               <RouteProviders />

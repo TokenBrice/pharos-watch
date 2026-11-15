@@ -3,7 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStaticExportServer } from "../maintenance/serve-static-export";
 
@@ -224,6 +224,14 @@ describe("serve-static-export", () => {
     }
     expect((await rawGet(baseUrl, "/_site-data/not-allowlisted")).status).toBe(404);
     expect(requests).toBe(0);
+  });
+
+  it("emulates the session bootstrap locally without proxying", () => {
+    const { server } = createStaticExportServer();
+    const response = { writeHead: vi.fn(), end: vi.fn() };
+    server.emit("request", { method: "POST", url: "/_site-data/session" }, response);
+    expect(response.writeHead).toHaveBeenCalledWith(204, { "X-Pharos-Session-Expires": expect.stringMatching(/^\d+$/) });
+    expect(response.end).toHaveBeenCalledWith();
   });
 
   it("refuses POST to static and site-data routes", async () => {

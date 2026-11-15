@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { StablecoinChartResponseSchema } from "@shared/types/supply";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
@@ -22,6 +22,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
+import { PUBLIC_API_ACCEPT } from "../api-request-policy";
 
 /** Minimal schema-valid live-reserve payload; override only the field under test. */
 function reserveBody(overrides: Record<string, unknown> = {}) {
@@ -704,5 +705,226 @@ describe("api contract validation policy", () => {
       ageSeconds: 30,
       status: "fresh",
     });
+  });
+});
+
+describe("browser session gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-16T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  async function setup(flag = "true", siteKey = "test-site-key") {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", flag);
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", siteKey);
+    vi.stubEnv("NEXT_PUBLIC_API_BASE", "");
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => { values.set(key, value); }),
+      removeItem: vi.fn((key: string) => { values.delete(key); }),
+    };
+    vi.stubGlobal("window", {
+      location: { hostname: "pharos.watch", origin: "https://pharos.watch", pathname: "/" },
+      localStorage: storage,
+    });
+    const api = await import("../api");
+    expect((await import("../site-session-gate")).getSiteSessionGate()).toBeNull();
+    return { api, session: await import("../site-session-client"), storage };
+  }
+  const sessionResponse = () => new Response(null, {
+    status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200) },
+  });
+  const required = () => new Response("session required", { status: 401, headers: { "X-Pharos-Session": "required" } });
+
+  it.each([["false", "key"], ["true", ""]])("keeps the existing fetch path with flag=%s and key=%s", async (flag, key) => {
+    const { api, session } = await setup(flag, key);
+    const challenge = vi.fn();
+    session.registerSiteSessionChallenge(challenge);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(required());
+    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/_site-data/stablecoins");
+    expect(challenge).not.toHaveBeenCalled();
+  });
+
+  it("loads the manager when a request arrives before the widget", async () => {
+    await setup();
+    vi.resetModules();
+    const api = await import("../api");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+      url === "/_site-data/session" ? sessionResponse() : jsonResponse({ ok: true }));
+    const pending = api.apiFetch("/api/stablecoins");
+    const session = await import("../site-session-client");
+    session.registerSiteSessionChallenge(async () => "token");
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(session.hasValidSiteSession()).toBe(true);
+  });
+
+  it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skewSec) => {
+    const { api, session, storage } = await setup();
+    let release!: (token: string) => void;
+    const challenge = vi.fn(() => new Promise<string>((resolve) => { release = resolve; }));
+    session.registerSiteSessionChallenge(challenge);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+      url === "/_site-data/session" ? new Response(null, {
+        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200 + skewSec) },
+      }) : jsonResponse({ ok: true }));
+    const reads = [api.apiFetch("/api/stablecoins"), api.apiFetch("/api/daily-digest")];
+    await Promise.resolve();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(challenge).toHaveBeenCalledOnce();
+    release("single-use-token");
+    await expect(Promise.all(reads)).resolves.toEqual([{ ok: true }, { ok: true }]);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[0]).toEqual(["/_site-data/session", expect.objectContaining({
+      method: "POST", credentials: "same-origin", body: '{"token":"single-use-token"}',
+    })]);
+    expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
+    expect(session.getSiteSessionState()).toBe("ready");
+    expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 43200, 0);
+  });
+
+  it.each([200, 401])("invalidates a stale expiry and retries a hinted 401 once (final %s)", async (status) => {
+    const { api, session, storage } = await setup();
+    storage.setItem("pharos-site-session-exp", String(Math.floor(Date.now() / 1000) + 7200));
+    const challenge = vi.fn(async () => "token");
+    const recover = vi.fn();
+    session.registerSiteSessionRecovery(recover);
+    session.registerSiteSessionChallenge(challenge);
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(required()).mockResolvedValueOnce(sessionResponse())
+      .mockResolvedValueOnce(status === 200 ? jsonResponse({ ok: true }) : required());
+    const result = api.apiFetch("/api/stablecoins");
+    if (status === 200) await expect(result).resolves.toEqual({ ok: true });
+    else {
+      await expect(result).rejects.toMatchObject({ name: "ApiFetchError", status: 401, bodyText: "session required" });
+      await expect(result).rejects.toBeInstanceOf(api.SiteSessionRequiredError);
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(storage.removeItem).toHaveBeenCalledWith("pharos-site-session-exp");
+    expect(challenge).toHaveBeenCalledOnce();
+    expect(session.hasValidSiteSession()).toBe(status === 200);
+    expect(recover).toHaveBeenCalledOnce();
+  });
+
+  it("adopts a hinted bootstrap 401 as no bootstrap and enters the ordinary session fetch", async () => {
+    const { api, session } = await setup();
+    session.registerSiteSessionChallenge(async () => "token");
+    window.__pharosDataBootstrap = {
+      version: 1, route: "/", expiresAt: Date.now() + 10000, discard: vi.fn(),
+      entries: new Map([[JSON.stringify(["test"]), {
+        url: "/_site-data/stablecoins", accept: PUBLIC_API_ACCEPT, controller: new AbortController(),
+        outcome: Promise.resolve({ ok: true as const, body: {
+          status: 401, headers: [["X-Pharos-Session", "required"]] as [string, string][], bodyText: "required",
+        } }),
+      }]]),
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(sessionResponse()).mockResolvedValueOnce(jsonResponse({ ok: true }));
+    await expect(api.apiFetch("/api/stablecoins", undefined, undefined, undefined, { bootstrapQueryKey: ["test"] })).resolves.toEqual({ ok: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("fetches after three seconds even while the shared challenge is still pending, and honors abort", async () => {
+    const { api, session } = await setup();
+    session.registerSiteSessionChallenge((signal) => new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    }));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const pending = api.apiFetch("/api/stablecoins");
+    const controller = new AbortController();
+    const aborted = expect(api.apiFetch("/api/stablecoins", undefined, undefined, undefined, { signal: controller.signal }))
+      .rejects.toMatchObject({ name: "AbortError" });
+    controller.abort();
+    await aborted;
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(pending).resolves.toEqual({ ok: true });
+    await vi.advanceTimersByTimeAsync(50_000);
+    expect(session.getSiteSessionState()).toBe("unavailable");
+  });
+
+  it("backs off, caps attempts at three, tolerates blocked storage and never restarts from unavailable", async () => {
+    const { api, session, storage } = await setup();
+    storage.getItem.mockImplementation(() => { throw new Error("blocked"); });
+    storage.removeItem.mockImplementation(() => { throw new Error("blocked"); });
+    const challenge = vi.fn(async () => { throw new Error("blocked"); });
+    session.registerSiteSessionChallenge(challenge);
+    const first = session.ensureSession();
+    expect(session.ensureSession()).toBe(first);
+    const failed = expect(first).rejects.toThrow("unavailable");
+    await vi.advanceTimersByTimeAsync(999);
+    expect(challenge).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(2001);
+    await failed;
+    expect(challenge).toHaveBeenCalledTimes(3);
+    expect(session.getSiteSessionState()).toBe("unavailable");
+    expect(session.isSiteSessionPaused()).toBe(false);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => required());
+    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(challenge).toHaveBeenCalledTimes(3);
+    expect(session.isSiteSessionPaused()).toBe(true);
+  });
+
+  it("keeps admin and direct API requests outside the gate", async () => {
+    const { api, session } = await setup();
+    const challenge = vi.fn();
+    session.registerSiteSessionChallenge(challenge);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => required());
+    await expect(api.apiFetch("/api/admin/status")).rejects.toBeInstanceOf(api.ApiFetchError);
+    vi.stubEnv("NEXT_PUBLIC_API_BASE", "https://api.pharos.watch");
+    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(challenge).not.toHaveBeenCalled();
+  });
+
+  it("renews only within the one-hour window in a visible tab, even when expiry writes are blocked", async () => {
+    const { session, storage } = await setup();
+    const start = Date.now();
+    storage.setItem("pharos-site-session-exp", String(Math.floor(start / 1000) + 7200));
+    storage.setItem.mockImplementation(() => { throw new Error("blocked"); });
+    const challenge = vi.fn(async () => "renewal-token");
+    session.registerSiteSessionChallenge(challenge);
+    vi.stubGlobal("document", { visibilityState: "visible" });
+    session.renewSiteSessionIfNeeded();
+    expect(session.getSiteSessionState()).toBe("ready");
+    expect(challenge).not.toHaveBeenCalled();
+    vi.setSystemTime(start + 3601_000);
+    vi.stubGlobal("document", { visibilityState: "hidden" });
+    session.renewSiteSessionIfNeeded();
+    expect(challenge).not.toHaveBeenCalled();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(sessionResponse());
+    vi.stubGlobal("document", { visibilityState: "visible" });
+    session.renewSiteSessionIfNeeded();
+    await session.ensureSession(true);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(session.hasValidSiteSession()).toBe(true);
+    expect(session.getSiteSessionState()).toBe("ready");
+  });
+
+  it.each(["", "NaN", "1.5", "9999999999999999"])("rejects an invalid session expiry %s without persisting it", async (expiry) => {
+    const { session, storage } = await setup();
+    session.registerSiteSessionChallenge(async () => "token");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, {
+      status: 204, headers: { "X-Pharos-Session-Expires": expiry },
+    }));
+    const failed = expect(session.ensureSession()).rejects.toThrow("unavailable");
+    await vi.advanceTimersByTimeAsync(3000);
+    await failed;
+    expect(storage.setItem).not.toHaveBeenCalled();
+    expect(session.hasValidSiteSession()).toBe(false);
   });
 });

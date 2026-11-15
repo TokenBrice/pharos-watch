@@ -7,6 +7,8 @@ import {
   fetchWithRetry,
   preserveExistingJsonArrayOnFetchFailure,
 } from "../lib/sync-from-api";
+import { siteSessionHeaders, siteSessionCookie, isTrustedSiteSessionUrl } from "../lib/site-session";
+import { verifySiteSessionToken } from "@shared/lib/site-session-token";
 import { createTempRepoTracker } from "./helpers/test-state";
 
 const { cleanup, makeRoot } = createTempRepoTracker("pharos-sync-fallback");
@@ -19,30 +21,35 @@ describe("fetchWithRetry", () => {
     cleanup();
   });
 
-  it("keeps the site API credential off untrusted or unresolved API reads", () => {
+  it("keeps the site API credential off untrusted or unresolved API reads", async () => {
     vi.stubEnv("DIGEST_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
+    vi.stubEnv("SITE_SESSION_SIGNING_KEY", "egress-test-key");
 
-    expect(apiFetchHeaders(["DIGEST_API_KEY"])).toEqual({
+    expect(await apiFetchHeaders(["DIGEST_API_KEY"])).toEqual({
       Accept: "application/json",
       "X-API-Key": "public-key",
     });
-    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://attacker.example/api/digest-archive" })).toEqual({
+    expect(await apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://attacker.example/api/digest-archive" })).toEqual({
       Accept: "application/json",
       "X-API-Key": "public-key",
+    });
+    expect(await apiFetchHeaders([], { url: "https://attacker.example/_site-data/digest-archive" })).toEqual({
+      Accept: "application/json", Origin: "https://pharos.watch",
     });
   });
 
-  it("adds the site API credential only for trusted direct site API reads", () => {
+  it("adds the site API credential only for trusted direct site API reads", async () => {
+    vi.stubEnv("SITE_SESSION_SIGNING_KEY", "");
     vi.stubEnv("DIGEST_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
 
-    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://site-api.pharos.watch/api/digest-archive" })).toEqual({
+    expect(await apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://site-api.pharos.watch/api/digest-archive" })).toEqual({
       Accept: "application/json",
       "X-Pharos-Site-Proxy-Secret": "site-secret",
     });
     expect(
-      apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
+      await apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
     ).toEqual({
       Accept: "application/json",
       "X-API-Key": "public-key",
@@ -50,7 +57,7 @@ describe("fetchWithRetry", () => {
 
     vi.stubEnv("SITE_API_SHARED_SECRET_TRUSTED_ORIGINS", "https://pharos-watch-preview.workers.dev");
     expect(
-      apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
+      await apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
     ).toEqual({
       Accept: "application/json",
       "X-Pharos-Site-Proxy-Secret": "site-secret",
@@ -58,18 +65,49 @@ describe("fetchWithRetry", () => {
   });
 
 
-  it("keeps site-data release reads browser-shaped", () => {
+  it.each(["", "automation-test-key"])("keeps site-data release reads browser-shaped (signing key: %s)", async (key) => {
+    vi.stubEnv("SITE_SESSION_SIGNING_KEY", key);
     vi.stubEnv("DIGEST_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
 
     expect(
-      apiFetchHeaders(["DIGEST_API_KEY"], {
+      await apiFetchHeaders(["DIGEST_API_KEY"], {
         url: "https://stablecoin-dashboard.pages.dev/_site-data/digest-archive",
       }),
     ).toEqual({
       Accept: "application/json",
       Origin: "https://pharos.watch",
+      ...(key ? { "X-Pharos-Site-Session": expect.any(String), Cookie: expect.stringContaining("__Secure-pharos-session=") } : {}),
     });
+    const direct = await apiFetchHeaders([], { url: "https://site-api.pharos.watch/api/stablecoins" });
+    expect(Boolean(direct["X-Pharos-Site-Session"])).toBe(Boolean(key));
+    expect(direct.Cookie).toBeUndefined();
+  });
+
+  it("caches automation tokens until under two minutes remain and scopes the browser cookie", async () => {
+    const env = { SITE_SESSION_SIGNING_KEY: "helper-test-key" };
+    const url = "https://pharos.watch";
+    const first = await siteSessionHeaders(url, env, 1000);
+    expect(await siteSessionHeaders(url, env, 1780)).toEqual(first);
+    const renewed = await siteSessionHeaders(url, env, 1781);
+    expect(renewed).not.toEqual(first);
+    expect(await verifySiteSessionToken({ token: renewed["X-Pharos-Site-Session"], keys: [env.SITE_SESSION_SIGNING_KEY], nowSec: 1781 }))
+      .toMatchObject({ ok: true, payload: { kind: "automation", iat: 1781, exp: 2681 } });
+    expect(await siteSessionCookie(url, env, 1781)).toEqual({ name: "__Secure-pharos-session", value: renewed["X-Pharos-Site-Session"],
+      path: "/_site-data", secure: true, httpOnly: true, sameSite: "Strict", expires: 1781 + 43200 });
+    expect(await siteSessionHeaders(url, {}, 1781)).toEqual({});
+    expect(await siteSessionCookie(url, {}, 1781)).toBeNull();
+    expect(await siteSessionHeaders(url, { SITE_SESSION_SIGNING_KEY: " " }, 1781)).toEqual({});
+    expect(await siteSessionHeaders(url, { SITE_SESSION_SIGNING_KEY: "rotated-key" }, 1781)).not.toEqual(renewed);
+    for (const target of ["https://ops.pharos.watch", "https://site-api.pharos.watch/api/health", "https://stablecoin-dashboard.pages.dev", "https://hash.stablecoin-dashboard.pages.dev", "http://localhost:3000", "http://127.0.0.1:3000"]) {
+      expect(isTrustedSiteSessionUrl(target)).toBe(true);
+      expect(await siteSessionCookie(target, env, 1781)).not.toBeNull();
+    }
+    for (const target of ["bad", "https://attacker.example/_site-data/stablecoins", "http://pharos.watch", "https://pharos.watch.attacker.example", "https://stablecoin-dashboard.pages.dev.attacker.example", "https://user@pharos.watch", "https://api.pharos.watch"]) {
+      expect(isTrustedSiteSessionUrl(target)).toBe(false);
+      expect(await siteSessionHeaders(target, env, 1781)).toEqual({});
+      expect(await siteSessionCookie(target, env, 1781)).toBeNull();
+    }
   });
 
   it("cancels a failed streaming body before retrying", async () => {

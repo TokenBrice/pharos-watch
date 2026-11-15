@@ -6,6 +6,7 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { siteDataSessionHeaders } from "../lib/site-session";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import {
   circulatingForStablecoinRow,
@@ -814,9 +815,10 @@ function resolveGeneratedAt(options: CliOptions, loaded: LoadedInputs): string {
 
 async function loadInputs(options: CliOptions, cwd: string, fetchImpl: typeof fetch): Promise<LoadedInputs> {
   if (options.source === "prod") {
+    const headers = { Referer: PROD_REFERER, ...await siteDataSessionHeaders(PROD_PEG_SUMMARY_URL) };
     const [pegSummary, stablecoins] = await Promise.all([
-      fetchJson(PROD_PEG_SUMMARY_URL, fetchImpl, undefined, { Referer: PROD_REFERER }),
-      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, { Referer: PROD_REFERER }),
+      fetchJson(PROD_PEG_SUMMARY_URL, fetchImpl, undefined, headers),
+      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, headers),
     ]);
     return { mode: "prod", pegSummary, stablecoins };
   }

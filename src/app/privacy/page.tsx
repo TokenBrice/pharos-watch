@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: October 27, 2026"]}
+      leadParagraphs={["Last updated: November 15, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -216,7 +216,15 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Cookies</h2>
           <p>
-            On GA4-enabled public website routes, the only cookies set by Pharos are those required by Google Analytics
+            When the browser check is enabled, Pharos sets one strictly necessary first-party security cookie before
+            serving live data. Cloudflare Turnstile is a browser check that helps distinguish people from automated
+            traffic. The cookie proves the browser passed that check, holds a random session ID and expiry with no
+            personal data, and lasts 12 hours. Only its expiry is saved in localStorage so the browser can renew it;
+            the cookie itself cannot be read by page scripts. If the check does not complete, build-time data remains
+            available without live refresh.
+          </p>
+          <p>
+            On GA4-enabled public website routes, Pharos also uses cookies required by Google Analytics
             4 (e.g.,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga</code>,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga_*</code>) for distinguishing unique visitors. No

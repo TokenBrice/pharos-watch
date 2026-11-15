@@ -31,6 +31,12 @@
           },
           "SITE_API_SHARED_SECRET": {
             "type": "secret_text"
+          },
+          "SITE_SESSION_SIGNING_KEY": {
+            "type": "secret_text"
+          },
+          "TURNSTILE_SECRET_KEY": {
+            "type": "secret_text"
           }
         },
         "d1Bindings": [

@@ -59,7 +59,7 @@ export function CoinNotices({ notices }: CoinNoticesProps) {
           >
             <span className={s.icon}>{ICONS[notice.type]}</span>
             <div className="min-w-0">
-              <p className={`text-sm font-semibold ${s.title}`}>{notice.title}</p>
+              {notice.title ? <p className={`text-sm font-semibold ${s.title}`}>{notice.title}</p> : null}
               <p className="mt-0.5 text-sm text-muted-foreground">{notice.message}</p>
             </div>
           </div>

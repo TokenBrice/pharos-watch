@@ -248,6 +248,9 @@ class DependencyGraph {
         const asset = resolve(dirname(absolute), specifier);
         if (specifier.startsWith(".") && existsSync(asset) && !SOURCE_EXTENSIONS.has(extname(asset))) {
           result.dependencies.push(repoPath(this.root, realpathSync(asset)));
+        } else if (specifier === "server-only") {
+          // Provided by the Next.js compiler (next/dist/compiled/server-only); not an installed package.
+          result.dependencies.push("package:server-only");
         } else result.errors.push(`unresolved dependency ${specifier}`);
       }
     };

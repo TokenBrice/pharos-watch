@@ -13,7 +13,7 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host.
+- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host. After those checks the Worker verifies `X-Pharos-Site-Session` using the current or previous signing key. `SITE_SESSION_ENFORCEMENT` defaults to `observe`; only exact `enforce` rejects invalid sessions (`401`, `X-Pharos-Session: required`, `Cache-Control: no-store`), or a missing signing key (`503`). Valid browser sessions have native per-session (`300/min`) and client-network (`1,200/min`) budgets; enforce returns `429` with `Retry-After: 60` over budget or `503` on binding failure, while observe logs and continues. Automation tokens skip these budgets.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and subdomains of `stablecoin-dashboard.pages.dev`. Document requests to the bare `stablecoin-dashboard.pages.dev` host answer `301` to the same path and query on `pharos.watch`, except `/__pharos_release.json`; `/_site-data/*`, `/_next/*` and Functions-excluded assets such as `/sitemap.xml` are not redirected by the middleware. Its `Origin` / `Referer` gate is a caller-shape signal, not authentication, so admitted reads also carry a per-isolate, per-client-IP ceiling of `1,200` requests per `60` seconds (`429` with `Retry-After: 60`); see [Worker & API Limits](./worker-and-api-limits.md#worker-runtime).
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
@@ -37,6 +37,8 @@ Production Pages does not proxy public `/api/*` POST requests. `https://pharos.w
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. Pages `/_site-data/*` forwards the upstream cache policy, `Age`, and `Date` without adding a second Cache API lifetime, so it cannot make a nearly expired Worker response fresh again.
 
 ## Public API Auth
+
+The website site-session gate is separate from public API keys and Access-authenticated admin traffic. It covers both credentialed site-api and preview reads; observe logs without rejecting, while enforce requires a valid browser or automation token and applies browser budgets. See [Surface Split](#surface-split).
 
 Unless a route is explicitly called out below as exempt, requests to `https://api.pharos.watch` must send:
 

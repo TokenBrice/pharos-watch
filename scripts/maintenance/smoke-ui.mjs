@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import {
   assert,
   chunkContiguous,
@@ -754,6 +757,8 @@ export async function run() {
 
     const runSmokeSession = async (smokeConfig, stepLabel) => {
       const context = await browser.newContext();
+      const sessionCookie = await siteSessionCookie(url);
+      if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(url).hostname }]);
       // Local GA smoke: the site admits loopback hosts only after this browser-side opt-in.
       if (config.expectedGaId) await context.addInitScript(() => localStorage.setItem("pharos-ga-loopback", "1"));
       const page = await context.newPage();

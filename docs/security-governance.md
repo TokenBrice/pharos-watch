@@ -67,7 +67,8 @@ To get a key: https://console.cloud.google.com/apis/library/safebrowsing.googlea
 Production HTML CSP is nonce-backed by `functions/_middleware.ts`:
 
 ```
-script-src 'self' 'nonce-<per-request-value>' https://www.googletagmanager.com
+script-src 'self' 'nonce-<per-request-value>' https://www.googletagmanager.com https://challenges.cloudflare.com
+frame-src https://challenges.cloudflare.com
 ```
 
 The Pages middleware generates a random nonce per HTML request, rewrites inline `<script>` tags to carry that nonce, and overwrites the response CSP. `public/_routes.json` must include the single broad `/*` include so static document routes such as `/`, `/chains/*`, and `/stablecoins/*` pass through the middleware; keep only static asset prefixes excluded from function routing because Cloudflare rejects overlapping include splats. The broad static fallback in `public/_headers` also omits script `unsafe-inline`, so a middleware miss fails closed instead of permitting arbitrary inline JavaScript. HTML responses get `Cloudflare-CDN-Cache-Control: no-store` / `CDN-Cache-Control: no-store` because a nonce-bearing response must not be shared from the CDN cache.
@@ -80,7 +81,23 @@ Cloudflare Email Obfuscation is off for `pharos.watch` paths `/cemetery` and `/c
 
 Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 
-Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface. `shared/lib/site-csp.ts` permits `'self' https://telegram.org` plus the per-request nonce in runtime HTML, drops Google Analytics script/image/connect origins, and sets `frame-ancestors https://telegram.org https://*.telegram.org`. Its static fallback has no nonce. Do not broaden that exception to other pages.
+Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface. `shared/lib/site-csp.ts` permits `'self' https://telegram.org https://challenges.cloudflare.com` plus the per-request nonce in runtime HTML, drops Google Analytics script/image/connect origins, and sets `frame-ancestors https://telegram.org https://*.telegram.org`. Its static fallback has no nonce. Do not broaden that exception to other pages.
+
+All variants (runtime nonce, static fallback, Mini App and ops asset responses) allow only `https://challenges.cloudflare.com` for Turnstile scripts and frames; the shared builder owns both directives.
+
+## Browser session gate
+
+`SiteSession`, mounted by `providers.tsx`, is inert unless `NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK=true` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is nonempty. Its effect creates the external Turnstile script element, like the analytics component: keeping executable scripts out of shared layouts preserves the inline-script discipline above. The widget uses `action: "site-data"`, `appearance: "interaction-only"` and explicit rendering.
+
+The module singleton shares one attempt sequence, backs off one then two seconds between attempts, and caps all attempts (including renewals) at three per page view, with a 15-second deadline per attempt. It posts the single-use challenge token only in the JSON body of same-origin `POST /_site-data/session` with same-origin credentials. No token enters a URL, persistent browser storage or logs. Only a local expiry derived from the browser-session lifetime at acquisition is stored in guarded localStorage, so server/browser clock differences do not reject a valid session; the session cookie is HttpOnly. Visible tabs check for renewal every minute and on visibility changes when less than one hour remains.
+
+Only same-origin `/_site-data/` reads wait up to three seconds for a session before fetching anyway. A hinted `401` invalidates the expiry, waits again and retries once; a hinted bootstrap `401` falls through to that normal path. Final hinted failures use a recognizable subtype of the existing API error; a successful acquisition after rejection refetches active queries with that error once. Only an actual hinted rejection followed by unavailable acquisition shows the reload notice; challenge failure alone leaves working observe-mode reads without a notice. No further challenge attempts run after the cap on that page view. [Privacy](./privacy-page.md#browser-security-session) describes the 12-hour security cookie.
+
+The shared token helper trims signing keys in both mint and verify, treats blank keys as absent, and rejects empty session IDs or lifetimes above the token kind's limit (12 hours for browser sessions, 15 minutes for automation).
+
+All detailed `site_session_gate` events share a 60-event cap per isolate per UTC minute, including valid decisions sampled at 1 in 16. The first decision in the next active minute emits one `site_session_gate_summary` for the completed window, with its minute and exact unsampled counts per outcome and mode; isolate recycle discards unflushed counters.
+
+Turnstile replay detection is eventually consistent, so one solved challenge submitted concurrently can mint more than one session; the per-network budget bounds the effect.
 
 ## Positive trust signals (already shipped)
 

@@ -318,7 +318,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
   });
   const outputPaths = resolveOutputPaths(options.output);
   const previousEntries = readExistingDepegEntries(outputPaths.dataDir);
-  const headers = new Headers(apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
+  const headers = new Headers(await apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 

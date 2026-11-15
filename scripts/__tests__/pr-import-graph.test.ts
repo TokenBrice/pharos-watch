@@ -129,8 +129,11 @@ describe("static import-graph PR test selection", () => {
       ...BASE_FILES,
       "scripts/lib/index.ts": "export {};\n",
       "scripts/lib/helper.mjs": "export const helper = 1;\n",
+      "node_modules/next/dist/compiled/server-only/empty.js": "",
     });
     const options = { cwd: CWD, fs };
+    expect(resolveModuleSpecifier("server-only", "src/lib/homepage-static-snapshot.ts", options))
+      .toEqual({ kind: "file", file: "node_modules/next/dist/compiled/server-only/empty.js" });
     expect(resolveModuleSpecifier("@/components/badge.tsx", "scripts/x.test.ts", options)).toEqual({ kind: "file", file: "src/components/badge.tsx" });
     expect(resolveModuleSpecifier("@shared/lib/registry", "scripts/x.test.ts", options)).toEqual({ kind: "file", file: "shared/lib/registry.ts" });
     expect(resolveModuleSpecifier("./helper.mjs", "scripts/lib/runner.ts", options)).toEqual({ kind: "file", file: "scripts/lib/helper.mjs" });

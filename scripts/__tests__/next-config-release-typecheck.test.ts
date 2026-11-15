@@ -153,6 +153,11 @@ afterEach(() => {
 });
 
 describe("release Next.js typecheck handoff", () => {
+  it.each([undefined, "false", "true"])("inlines the session flag with a default-off value (%s)", (flag) => {
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", flag);
+    expect(createNextConfig("phase-production-build").env?.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK).toBe(flag ?? "false");
+  });
+
   it("keeps Next build typechecking enabled by default", () => {
     vi.stubEnv("PHAROS_RELEASE_PR_TYPECHECKED", "");
 
@@ -213,6 +218,8 @@ describe("client bundle excludes release-refreshed data", () => {
     const { dependencies, unresolved } = buildClientDependencies(process.cwd(), clientModules);
     expect(unresolved).toEqual([]);
     expect(findExcludedClientImports(clientModules, dependencies)).toEqual([]);
+    expect(dependencies.has("src/lib/homepage-static-snapshot.ts")).toBe(false);
+    expect([...dependencies.keys()].filter((file) => /process\.env\.SITE_SESSION_SIGNING_KEY\b/u.test(readFileSync(file, "utf8")))).toEqual([]);
     // Every byte the bundle can reach is a build-ID input, so a change that can
     // alter client JavaScript/CSS cannot keep the ID.
     const unhashed = [...dependencies.keys()]

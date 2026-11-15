@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addNonceToInlineScripts, buildContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
+import { addNonceToInlineScripts, buildContentSecurityPolicy, buildStaticContentSecurityPolicy, isTelegramMiniAppPath } from "../site-csp";
 
 describe("isTelegramMiniAppPath", () => {
   it("matches the exact app path", () => {
@@ -29,7 +29,12 @@ describe("buildStaticContentSecurityPolicy", () => {
         const [name, ...sources] = directive.split(" ");
         return [name, sources] as const;
       }));
-    expect(directives.get("script-src")).toEqual(["'self'", `'nonce-${nonce}'`, origin]);
+    expect(directives.get("script-src")).toEqual(["'self'", `'nonce-${nonce}'`, origin, "https://challenges.cloudflare.com"]);
+    expect(directives.get("frame-src")).toEqual(["https://challenges.cloudflare.com"]);
+    const fallback = buildStaticContentSecurityPolicy({ telegramMiniApp });
+    expect(fallback).toContain(`script-src 'self' ${origin} https://challenges.cloudflare.com;`);
+    expect(fallback).toContain("frame-src https://challenges.cloudflare.com;");
+    expect(fallback).not.toMatch(/nonce-|unsafe-eval|script-src[^;]*unsafe-inline/);
     expect(directives.get("img-src")).toEqual(
       telegramMiniApp
         ? ["'self'", "https://coin-images.coingecko.com", "https://pbs.twimg.com", "https://abs.twimg.com", "data:"]

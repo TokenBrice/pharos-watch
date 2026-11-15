@@ -145,6 +145,7 @@ interface SelectorSnapshotEnv {
   OPS_UI_ORIGIN?: string;
   SITE_API_ORIGIN?: string;
   SITE_API_SHARED_SECRET?: string;
+  SITE_SESSION_SIGNING_KEY?: string;
   SELECTOR_SNAPSHOT_IP_HASH_SECRET?: string;
 }
 
