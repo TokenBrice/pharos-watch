@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "usdrf-realfi",
+  "captureId": "report-cards:v9:v1:914f939a3386181d4f8d45fc40482cd5d7ffa5321ccc53ae8cf39f640cb4372b+admit:usdrf-realfi",
+  "captureClockSec": 1794770274,
+  "registryFingerprint": "473a98b75493305098d781be321cb1be1d75bde9b37dd40f3941a03e3bfefa4d",
+  "card": {
+    "id": "usdrf-realfi",
+    "openBucketQuestionsCarried": 5,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 5,
+    "documentationObligationsCarried": 2,
+    "issuerNondisclosureReviewedAtSec": 1794767296
+  },
+  "questions": [
+    {
+      "questionKey": "usdrf-realfi|component|deployment-controls",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|mechanism-risk-review",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|control|authored:usdrf-realfi|asset:usdrf-realfi|RealFi role-signed issuance approvals",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|reserve-composition",
+      "bucket": "issuer",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-reserve-composition",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|access:transfer",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-access-review",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "usdrf-realfi|component|economic-control:mint",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-mint-authority",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}
