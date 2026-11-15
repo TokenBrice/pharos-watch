@@ -2,6 +2,98 @@
   "schemaVersion": 1,
   "incidents": [
     {
+      "incidentId": "ausd-agora-ausd0-initia-2026-10-23-lockbox-release",
+      "assetId": "ausd-agora",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2026-10-23",
+      "resolvedAt": null,
+      "status": "mitigated",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:ausd-agora:69930efef776c860abe9"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-11-15",
+      "reviewer": "IR provisional screening 2026-11-15 (#1778 Q9 owner ruling 2026-11-15; Initia full post-mortem unpublished; re-review by 2026-12-01)",
+      "primarySources": [
+        {
+          "label": "Ethereum block 26256090 (2026-10-23T15:01:47Z) pin: AUSD0 lockbox 0x38b8b7ca28e672018a299b20565aca8cf200c844 held 1,976,141.044594 AUSD with peers(30326) = Initia AUSD0 OApp and peers(30383) = Plasma AUSD0 adapter; Agora's MintBurnOFTAdapter 0x9cab7ede13dc56652e44d2404e969c212f22689b returned zero for both peers",
+          "url": "https://etherscan.io/block/26256090",
+          "publishedAt": "2026-10-23"
+        },
+        {
+          "label": "Ethereum transaction in block 26256091 (2026-10-23T15:01:59Z): the AUSD0 lockbox emitted OFTReceived from eid 30326 (Initia) and released 1,400,000 AUSD to 0xdd922c841d85e12dac2dc2eef5a5e29cfff6edfa, leaving 576,141.044594",
+          "url": "https://etherscan.io/tx/0x034c1076a08091b3221ef1e7bbcfb47dfeda93a6e460888f2d1bc124be17f3b6",
+          "publishedAt": "2026-10-23"
+        },
+        {
+          "label": "Initia AUSD0 bank supply read with x-cosmos-block-height: 1,689,663.715709 at height 23364883, 289,663.715709 at 23364884 (2026-10-23T15:00:48Z) and 89,663.715709 by 23365100 (15:08:53Z), while the iUSD vault 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a held 1,689,661.157541 AUSD0 at every read from 23364800 through 23366400; 1,689,663.715709 again from height 23365926, whose finalize events carry the restart's module publication and sudo transfers from the attacker address before block 23365927 (2026-11-02T02:01:21Z), and 1,641,451.089064 at the 2026-11-10 halt height 23680323",
+          "url": "https://initia-api.polkachu.com/cosmos/bank/v1beta1/supply/by_denom?denom=move/8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef",
+          "publishedAt": "2026-10-23"
+        },
+        {
+          "label": "Plasma block 37800000 (2026-11-15T11:49:44Z) pin: AUSD0 totalSupply 1.5; the AUSD0 adapter 0x38b8b7ca28e672018a299b20565aca8cf200c844 returned the Ethereum lockbox for peers(30101) and zero for peers(30326)",
+          "url": "https://plasmascan.to/block/37800000",
+          "publishedAt": "2026-11-15"
+        },
+        {
+          "label": "Initia official exploit statement (2026-10-24): MoveVM script-caching bug credited unbacked WETH, iUSD and USDC without changing total supply; about 1.4M AUSD0 bridged out over LayerZero before the L1 and rollups were halted",
+          "url": "https://x.com/initia/status/2113915002008612945",
+          "publishedAt": "2026-10-24"
+        },
+        {
+          "label": "Agora (2026-10-23): the AUSD smart contract is not deployed on Initia and no AUSD was minted on Initia; a separate third-party product not operated by Agora that uses AUSD on Ethereum was impacted",
+          "url": "https://x.com/withAUSD/status/2113681155585368432",
+          "publishedAt": "2026-10-23"
+        }
+      ],
+      "finding": "Unbacked release from the escrow that backs this asset's Plasma AUSD0 representation. AUSD0 is a third-party LayerZero OFT representation of AUSD: its Ethereum lock/release adapter 0x38b8b7ca28e672018a299b20565aca8cf200c844 (token() = AUSD, approvalRequired() = true) is peered with the Initia AUSD0 OApp (eid 30326) and the Plasma AUSD0 adapter (eid 30383), and the Plasma adapter's Ethereum peer is that lockbox while it has no Initia peer, so Plasma's exposure is the shared escrow. Initia states (2026-10-24) that on 2026-10-23 an attacker exploited a MoveVM script-caching bug, credited itself unbacked tokens without changing total supply and bridged out about 1.4M AUSD0 over LayerZero before the halt. Pinned reads show the AUSD0 leg was unbacked: Initia AUSD0 supply fell by 1,400,000 and then 200,000 to 89,663.715709 while the iUSD vault alone kept holding 1,689,661.157541 AUSD0, and at Ethereum block 26256091 (2026-10-23T15:01:59Z) the lockbox released 1,400,000 real AUSD to 0xdd922c841d85e12dac2dc2eef5a5e29cfff6edfa on a message from eid 30326, about 71% of its 1,976,141.044594 balance. Agora states (2026-10-23) that the AUSD contract is not deployed on Initia, that no AUSD was minted there and that a separate third-party product was impacted; at blocks 26256090 and 26420000 Agora's own MintBurnOFTAdapter has no Initia or Plasma peer. This row therefore binds only bridge-meta:ausd-agora:69930efef776c860abe9 (route plasma:0x00000000efe302beaa2b3e6e1b18d08d69a9012a), not Agora's mint, upgrade or Ethereum adapter controls. Plasma AUSD0 supply was 1.5 at Plasma block 37800000; no holder loss, per-holder figure or exposure share is published, so none is asserted. Provisional screening under the 2026-11-15 owner ruling (#1778 Q9): Initia's full post-mortem is unpublished at reviewedAt, so how the unbacked balance arose is not independently established; re-review when it is published or by 2026-12-01, whichever comes first.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-11-15",
+        "summary": "Backing restoration is verified at the escrow, but resolution is held open. The Initia Foundation approved funding on 2026-10-28 for verified shortfalls up to 1.4M AUSD0. Two plain AUSD transfers from 0xd93bd67dab17d83081982fff6ecedd0d3d0a4149 (Ethereum blocks 26323117 and 26323124, the second at 2026-11-01T23:11:59Z) returned the lockbox to exactly 1,976,141.044594 AUSD; Initia restarted at height 23365927 (2026-11-02T02:01:21Z) with AUSD0 supply back at 1,689,663.715709 and stated on 2026-11-02 that AUSD0 backing was fully restored. At Ethereum block 26420000 (2026-11-15T11:07:23Z) the lockbox held 1,989,306.529966 AUSD against 1,641,451.089064 AUSD0 on Initia at its current halt height 23680323 and 1.5 on Plasma; supply on the lockbox's five other peers was not read, so mesh-wide conservation is not verified. A separate infrastructure compromise halted the Initia L1 at 06:18 UTC on 2026-11-10: Initia's statements name rollup escrow unlocks and TIA, USDC.inj and Noble USDC withdrawals, and the lockbox emitted no OFTReceived between Ethereum blocks 26373600 and 26383500, but the Initia lane remains suspended. Mitigated, not resolved: resolution waits for Initia's full post-mortem, promised on 2026-11-02 and unpublished at 2026-11-15.",
+        "sources": [
+          {
+            "label": "Ethereum block 26420000 (2026-11-15T11:07:23Z) pin: AUSD0 lockbox held 1,989,306.529966 AUSD with peers(30326) = Initia AUSD0 OApp and peers(30383) = Plasma AUSD0 adapter; Agora's MintBurnOFTAdapter returned zero for both peers",
+            "url": "https://etherscan.io/block/26420000",
+            "publishedAt": "2026-11-15"
+          },
+          {
+            "label": "Ethereum transaction in block 26323124 (2026-11-01T23:11:59Z): 1,399,999 AUSD transferred into the AUSD0 lockbox, after 1 AUSD in block 26323117, restoring 1,976,141.044594",
+            "url": "https://etherscan.io/tx/0x357dd25538ba145849c22a2669692c0dd421a710656d20b7556af102510a3d6c",
+            "publishedAt": "2026-11-01"
+          },
+          {
+            "label": "Initia (2026-11-02): the backing of AUSD0, USDC.n and WETH has been fully restored; a full post-mortem to follow later that week",
+            "url": "https://x.com/initia/status/2117120741011530044",
+            "publishedAt": "2026-11-02"
+          },
+          {
+            "label": "Initia (2026-11-10): L1 halted at 06:18 UTC after unauthorized transfers from L1 escrow accounts holding assets bridged to rollups",
+            "url": "https://x.com/initia/status/2120050740626628972",
+            "publishedAt": "2026-11-10"
+          },
+          {
+            "label": "Initia (2026-11-10): a compromised GCP key exposed credentials and Anvil access; forged IBC withdrawals from five rollups unlocked L1 escrow assets; about $3.27M moved, 13.4k TIA, 8k USDC.inj and 597k Noble USDC withdrawn",
+            "url": "https://x.com/initia/status/2120195620442910943",
+            "publishedAt": "2026-11-10"
+          },
+          {
+            "label": "Initia Foundation (2026-10-28): funding approved to restore 1:1 backing of affected Noble USDC, WETH and AUSD0 held as iUSD collateral, for verified shortfalls up to 1.08M USDC, 105 ETH and 1.4M AUSD0",
+            "url": "https://x.com/initiaFDN/status/2115345150369038598",
+            "publishedAt": "2026-10-28"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "avalon-usda-2026-10-issuer-exploitation",
       "assetId": "usda-avalon",
       "domain": "control",
