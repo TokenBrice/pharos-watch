@@ -133,6 +133,8 @@ export interface StablecoinDetailStaleQuery {
   /** First fetch in flight: the freshness banner waits instead of reporting "not populated". */
   isLoading?: boolean;
   awaitingLiveRead?: boolean;
+  /** The served generation is the designed daily-history fallback, not a live detail refresh. */
+  dailySnapshot?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;

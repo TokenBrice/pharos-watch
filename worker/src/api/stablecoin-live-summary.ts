@@ -55,7 +55,11 @@ export async function handleStablecoinLiveSummary(
   // One verdict per response (R3): the generic freshness header names the same
   // status and reason the body publishes, never the pre-enrichment detail clock.
   headers.set("X-Data-Freshness", meta.status);
-  if ("reason" in meta && meta.reason) headers.set("X-Data-Freshness-Reason", meta.reason);
+  // A known-clock verdict carries no reason in the envelope; the upstream header
+  // is its only machine reason and must survive so a designed history fallback
+  // stays distinguishable from a genuinely stale read (R4).
+  const reason = ("reason" in meta && meta.reason) || (meta.status === "fresh" ? null : headers.get("X-Data-Freshness-Reason"));
+  if (reason) headers.set("X-Data-Freshness-Reason", reason);
   else headers.delete("X-Data-Freshness-Reason");
   return jsonResponse({ ...summary, _meta: meta }, {
     status: response.status,

@@ -9,7 +9,7 @@ import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../
 import { logWorkerEvent } from "../../lib/structured-log";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import { buildFreshnessMeta } from "../../lib/api-freshness";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, DETAIL_HISTORY_FALLBACK_REASON } from "@shared/lib/api-freshness";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -240,7 +240,7 @@ export function createDetailResponseHelpers(config: {
       ? { ...buildFreshnessMeta(observedAt, DETAIL_HISTORY_MAX_AGE_SECONDS, "stablecoin-detail", {
           assessedAt: now, freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
           degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
-        }), status: "stale" as const, reason: "detail-history-fallback" }
+        }), status: "stale" as const, reason: DETAIL_HISTORY_FALLBACK_REASON }
       : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
           freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
           reason: assessment.reason };
@@ -248,7 +248,7 @@ export function createDetailResponseHelpers(config: {
     response.headers.set("X-Data-Updated-At", meta.updatedAt == null ? "unknown" : String(meta.updatedAt));
     response.headers.set("X-Data-Age", meta.ageSeconds == null ? "unavailable" : String(meta.ageSeconds));
     response.headers.set("X-Data-Freshness", meta.status);
-    response.headers.set("X-Data-Freshness-Reason", meta.reason ?? "detail-history-fallback");
+    response.headers.set("X-Data-Freshness-Reason", meta.reason ?? DETAIL_HISTORY_FALLBACK_REASON);
     response.headers.set("Warning", '110 - "Stablecoin detail history is retained fallback data"');
     return response;
   };

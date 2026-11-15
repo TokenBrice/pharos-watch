@@ -632,6 +632,8 @@ describe("HeroIdentityHeader", () => {
       expect(prerender.replaceAll("Updated —", "Updated 12m ago")).toBe(markup);
       expect(markup).not.toMatch(/amber|text-warning/);
       expect(render(0)).not.toContain("Updated");
+      expect(renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={now} dailySnapshot />))
+        .toContain("Daily snapshot of Oct 21, 2026");
     } finally {
       hydration.hydrated = false;
       vi.restoreAllMocks();
