@@ -2,14 +2,14 @@
   "id": "usdrf-realfi",
   "name": "RealFi USDrf",
   "symbol": "USDrf",
-  "oneLiner": "USDrf is RealFi's Cardano dollar token backed by off-chain credit, with a Treasury liquidity buffer and institution-only direct redemption.",
+  "oneLiner": "USDrf is RealFi's Cardano dollar token backed by off-chain credit, with a stated Treasury liquidity buffer and institution-only direct redemption.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Off-chain Treasury bills, money market funds, floating-rate credit, CLO ETFs and private credit; published allocation ranges describe strategy rather than verified current holdings.",
-  "pegMechanism": "Whitelisted institutions mint and redeem through a human-approved FIFO queue with daily and monthly limits. Retail exits depend on secondary markets. Protocol first-loss reserves and the junior sUSDrf tranche absorb losses before USDrf.",
+  "collateral": "U.S. Treasury bills and tokenized government money market funds, emerging-market floating-rate corporate bonds, investment-grade CLO ETFs, private credit funds and direct private loans. Published allocation ranges describe strategy, not verified holdings, and no reserve attestation has been published.",
+  "pegMechanism": "Whitelisted institutions mint and redeem at $1 less fees through a human-approved FIFO queue whose daily and monthly limits are unpublished; timing is not guaranteed and RealFi can suspend redemptions. Holders without an institutional account have no direct claim and exit on Cardano DEXes. A first-loss reserve of undisclosed size and the junior sUSDrf tranche absorb losses before USDrf.",
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "445",
   "geckoId": "realfi-usdrf",
@@ -27,11 +27,14 @@
       "decimals": 6
     }
   ],
-  "status": "pre-launch",
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "unknown",
+  "governanceQuality": "multisig",
   "announcedDate": "2026-04-20",
   "launchDate": "2026-10-01",
-  "launchPhase": "launched",
-  "launchPhaseDetail": "RealFi launched USDrf, a dollar token backed by off-chain credit, and its junior staked token sUSDrf on Cardano mainnet on October 1 2026. Supply was 5,403,937 USDrf on Cardano on November 1 2026. Direct minting and redemption are limited to whitelisted institutions under an Institutional Minting Agreement, through a human-approved first-in-first-out queue with daily and monthly limits. Retail holders exit by trading on decentralized exchanges. RealFi's docs name TxPipe, Anastasia Labs and Halborn as auditors and HT Digital as reserve attestation provider, but no audit report or attestation had been published by November 1 2026. On November 8 2026 CoinGecko's realfi-usdrf listing carried a fresh price near $1 and a market cap of about $5.1 million. DefiLlama 445 still applies a fill price shared by over 100 list assets, which puts its list supply at about $299 against 5.41 million tokens, so Pharos keeps USDrf pre-launch until the row moves to CoinGecko's supplemental route and completes its Mint Authority and admission reviews.",
   "featuredContent": [
     {
       "type": "blog",
@@ -63,10 +66,5 @@
       "description": "RealFi announced its Cardano mainnet launch with USDrf and the junior staked token sUSDrf.",
       "sourceUrl": "https://realfi.co/blog/realfi-is-live-on-cardano"
     }
-  ],
-  "listingStatusReview": {
-    "changedAt": "2026-10-28",
-    "reason": "Missing lane: supply. CoinGecko now prices realfi-usdrf with a fresh market cap, but DefiLlama 445 scales its list supply by a fill price shared across many assets (about $299), so no admitted supply lane exists until the row moves to CoinGecko's route.",
-    "reviewBy": "2026-12-27"
-  }
+  ]
 }

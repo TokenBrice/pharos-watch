@@ -3,11 +3,51 @@
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sources": [
+      { "label": "RealFi USDrf Terms of Use, last updated 2026-07-23: §3(d) address blocking and freezing", "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use" },
+      { "label": "RealFi USDrf Institutional Minting Agreement: order rejection, suspension and limits", "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement" },
+      { "label": "RealFi AML/KYC framework: whitelisting and geo-blocking", "url": "https://docs.realfi.co/compliance/aml-kyc-framework" },
+      { "label": "Cardano developer docs: a minting policy runs only when its tokens are minted or burned", "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/" },
+      { "label": "Cardano native asset transfer semantics", "url": "https://developers.cardano.org/docs/learn/core-concepts/assets/" },
+      { "label": "Koios script_info: USDr policy 7d9e4a0e… (PlutusV3, 472 bytes, decoded)", "url": "https://api.koios.rest/api/v1/script_info" },
+      { "label": "Koios asset_addresses: USDr holders at block 14204828", "url": "https://api.koios.rest/api/v1/asset_addresses?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae&_asset_name=55534472" },
+      { "label": "Koios credential_utxos: treasury and RealFi multisig holdings at block 14204845", "url": "https://api.koios.rest/api/v1/credential_utxos" },
+      { "label": "AdaStat: 0.032258 USDr staking-vault burn, 2026-09-21", "url": "https://adastat.net/transactions/b4dc31e71550ad9251b6c7894dbfffc1c407c4e6310460144c045caf15baae90" },
+      { "label": "RealFi sUSDrf: staking vault and loss burns", "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf" },
       { "label": "RealFi USDrf reserve model", "url": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin" },
-      { "label": "RealFi reserve strategy", "url": "https://docs.realfi.co/real-world-backing/real-world-backing" }
+      { "label": "RealFi reserve strategy", "url": "https://docs.realfi.co/real-world-backing/real-world-backing" },
+      { "label": "Circle: USDCx on Cardano via Circle xReserve", "url": "https://www.circle.com/blog/usdcx-on-cardano-now-available-via-circle-xreserve" }
     ],
-    "evidence": "Pre-launch issuer-model review: RealFi's base-token and backing pages read by HTTP GET on 2026-10-28 at 09:52:06 UTC describe the entire external reserve as managed Treasury, money-market and credit claims. All declared reserve categories depend on off-chain issuer or custodian control, so the model implies 100% upstream exposure regardless of undisclosed allocation weights. This is structural documentation, not a measured current reserve balance or attestation. The AML/KYC framework does not independently establish a holder-transfer freeze on the Cardano native asset; no direct freeze power is asserted.",
-    "reviewer": "Codex registry sweep",
-    "reviewedAt": "2026-10-28"
+    "evidence": "Reviewed 2026-11-15 for the active promotion, replacing the 2026-10-28 pre-launch structural note. Material deployment: the only catalogued deployment is the Cardano native asset USDr, policy 7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae with asset name 55534472 and six decimals, carrying 100% of supply; Koios asset_info returned 5,585,703.878529 at tip block 14204762 (2026-11-15T16:54:02Z) and asset_addresses read at block 14204828 (2026-11-15T17:14:07Z) sums to the same across 94 addresses. Contractual right: the USDrf Terms of RealFi Reserve Ltd., last updated 2026-07-23, §3(d) reserve the right, in the Company's sole discretion, to block addresses and freeze associated USDrf temporarily or permanently, to freeze USDrf sent to or received from a Blocked Address, to treat the holder's rights including redemption as forfeited, and to freeze on a valid government order; §3(f) repeats blocking and freezing as enforcement. Technical reach: the USDr policy is an immutable PlutusV3 script (472 bytes, decoded, hash recomputed) that runs only when a transaction mints or burns under it, and it defers that decision to RealFi's role-signed approvals validator. Ordinary transfers are validated by the Cardano ledger and need only the spent output's own key or script witness, so no token-level blacklist, address freeze, transfer pause, transfer allowlist, forced transfer or seizure exists. A burn must consume the output holding the tokens, so RealFi can burn only USDr in its own scripts or deposited into its request queue, never an arbitrary holder's balance. RealFi's five-of-seven config multisig can replace the mint and burn validators without delay, but that cannot alter native transfer semantics, so it is mint-only authority, not an upgradeable holder-facing implementation. The §3(d) freeze is therefore enforceable only through RealFi's own rails: rejecting, delaying or suspending institutional mint and redeem orders, removing whitelisted addresses, front-end geo-blocking, and voiding the redemption claim; FreezeWatch step 5 treats issuer redemption desks and protocol mint and redeem switches as non-holder-facing. Protocol-held positions are separate: USDr in the staking vault (3,049,328.954626 USDr at block 14204828, backing sUSDrf) can be burned by the three-of-five yield role for loss absorption, as in a 0.032258 USDr vault burn on 2026-09-21, which is savings-share exposure for sUSDrf holders, not a control over freely held USDrf. Direct verdict on the material deployment: no Yes and no Possible. Upstream reserve test: RealFi documents the reserve as tokenized Treasury and money-market instruments, floating-rate corporate bonds, CLO ETFs and private credit funds and loans, all custodial or fund-manager claims; deposited USDCx, itself Circle xReserve USDC that Circle can freeze, is withdrawn from the treasury script to RealFi multisigs and moved off-chain, leaving 0.861912 USDCx in the treasury at block 14204845. Weights are undisclosed and no attestation has been published, but every declared category qualifies, so the qualifying share is 100% of the declared external backing, above the strict 50% threshold, independently of weights; USDrf and sUSDrf are excluded from numerator and denominator. Verdict: Upstream. This classifies disclosed reserve categories; it does not verify balances.",
+    "reviewer": "Claude USDrf promotion controls lane 2026-11-15",
+    "reviewedAt": "2026-11-15"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "No external oracle prices USDrf issuance, redemption or valuation. Deposit mints and redemptions convert USDCx at a fixed one-to-one ratio stored in RealFi's configuration record, which its five-of-seven multisig can change; weekly yield mints are sized by RealFi Treasury's own reconciliation of off-chain repayments; and reserve marks are issuer-reported. None of the 70 USDr mint or burn transactions read any input beyond reference scripts and that record.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Claude USDrf promotion controls lane 2026-11-15",
+      "rationale": "USDrf has no borrower markets, collateral positions or liquidation engine. Its price-sensitive authorities are top-level: the conversion ratio applied to deposit mints and redemptions, the issuer-sized weekly yield mints, and the issuer's mark-to-market reserve valuation. Each is a single privileged pricing path, so declaring borrower branches would invent them.",
+      "sources": [
+        { "label": "Koios utxo_info: config UTxO with the USDCx entry and its one-to-one ratio", "url": "https://api.koios.rest/api/v1/utxo_info" },
+        { "label": "RealFi sUSDrf: USDrf redeems at the fixed ratio set in protocol settings", "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf" },
+        { "label": "RealFi USDrf Institutional Minting Agreement: one USDrf per US dollar of eligible assets", "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement" }
+      ]
+    },
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Claude USDrf promotion controls lane 2026-11-15",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Koios script_info: USDr policy and approvals validator, decoded with no oracle parameter", "url": "https://api.koios.rest/api/v1/script_info" },
+      { "label": "Koios tx_info: inputs and reference inputs of all 70 USDr mint and burn transactions", "url": "https://api.koios.rest/api/v1/tx_info" },
+      { "label": "Koios utxo_info: current config UTxO 242935a0…#0", "url": "https://api.koios.rest/api/v1/utxo_info" },
+      { "label": "RealFi docs: yield minted as new USDrf after RealFi Treasury reconciliation", "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user" },
+      { "label": "RealFi docs: Transparency Portal mark-to-market reserve valuations", "url": "https://docs.realfi.co/glass-box-approach/overview" },
+      { "label": "RealFi sUSDrf: fixed redemption ratio set in protocol settings", "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf" },
+      { "label": "RealFi USDrf Institutional Minting Agreement, revised 2026-07-23", "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement" }
+    ]
   }
 }

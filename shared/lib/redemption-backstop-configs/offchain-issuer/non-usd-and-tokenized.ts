@@ -409,6 +409,41 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "Wire prices are rail-specific components. No generic minimum, zero gas, uniform basis-point fee, complete cost ceiling or guaranteed settlement delay is authored for the aggregate issuer route.",
     ],
   },
+  "usdrf-realfi": {
+    ...issuerBase,
+    reviewedAt: "2026-11-15",
+    accessModel: "manual",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "queued",
+    capacityModel: { kind: "unquantified" },
+    costModel: undisclosedReviewedFee(
+      "RealFi Reserve's Institutional Minting Agreement section 7 says it currently charges no fee of its own but may charge fees disclosed when an order is initiated. Cardano network, wallet and bank charges are separate. No fee schedule or all-in cost ceiling is published.",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The July 23, 2026 Institutional Minting Agreement limits direct redemption to whitelisted institutional Mint Users of RealFi Reserve Ltd. at one U.S. dollar, or an equivalent Eligible Asset, per USDrf less applicable fees. RealFi's redemption FAQ describes a human-approved first-in-first-out queue under daily and monthly throttle limits whose amounts are unpublished; timing depends on queue position and reserve composition and is not guaranteed within any window. Section 8 promises only commercially reasonable processing efforts and permits suspension on a reserve adequacy or liquidity breach, and section 9 lets the issuer set or change limits at its discretion. No executable same-notional capacity, completed-payout maximum or all-in cost bound is established.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("RealFi FAQ: How can I redeem USDrf?", "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf", ["route", "access", "capacity", "settlement"]),
+        sourceRef("USDrf Institutional Minting Agreement, July 23, 2026, sections 7-9", "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement", ["route", "access", "capacity", "settlement", "fees"]),
+      ],
+    },
+    docs: [
+      sourceRef("RealFi FAQ: How can I redeem USDrf?", "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf", ["route", "access", "capacity", "settlement"]),
+      sourceRef("USDrf Institutional Minting Agreement, July 23, 2026, sections 1-2 and 6-10", "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement", ["route", "access", "capacity", "settlement", "fees"]),
+      sourceRef("USDrf Terms, July 23, 2026, sections 2 and 4: no direct redemption claim without an issuer account", "https://docs.realfi.co/essential-policies/usdrf-terms-of-use", ["access"]),
+      sourceRef("RealFi peg stability: queued institutional path, market-maker PSM and circuit breakers", "https://docs.realfi.co/glass-box-approach/peg-stability", ["route", "capacity", "settlement"]),
+    ],
+    notes: [
+      "Only legal entities onboarded through KYB as Mint Users, with a whitelisted Cardano address, can redeem; U.S. and EU entities are ineligible. The USDrf Terms give holders without an issuer account no direct redemption claim, and whitelisting may be denied, suspended or revoked. Retail holders exit through Cardano DEX liquidity, which this issuer route does not model.",
+      "Mint Users choose the Eligible Asset for each Redeem Order: U.S. dollars to a connected bank account, USDC, or other assets the issuer accepts from time to time. The fiat USD output follows the base redemption obligation; no stablecoin payout identity is asserted.",
+      "The daily and monthly throttle limits are unpublished, and RealFi says automated circuit breakers will slow redemptions as liquidity coverage approaches minimum thresholds. Throttles, discretionary limits and suspension rights leave capacity unquantified.",
+      "RealFi's stated buffer of 10-20% of TVL in Treasuries and money market funds, its 10% floor and its target of liquid reserves covering 120% of expected 7-day net redemptions are unverified reserve policy. No attestation was published by 2026-11-15, so these targets establish no executable capacity.",
+      "The peg-stability page also describes a PSM that market makers use for near-instant swaps under limits. No contract, access terms, fees or capacity are published for it, so it is not modeled as a holder route.",
+    ],
+  },
   "cash-phantom": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
