@@ -38,6 +38,7 @@ import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildStaticCompareHref } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
+import { formatLiveCardAsOf } from "@/lib/stablecoin-detail-hero-metrics";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
@@ -311,6 +312,9 @@ function DetailSummaryRail({
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
+  // The live card's own clock, so the rail Safety card keeps its dated line
+  // (and its height) once the live card replaces the dated release grade.
+  const liveSafetyAsOf = formatLiveCardAsOf(viewModel.reportCardsResponse?.updatedAt);
   // Hold the Backing KPI footprint only while live reserve evidence is still
   // pending; a settled read without a KPI hides the card, never "unavailable".
   const reservesPending = viewModel.featureStates.reserves.status === "loading" || viewModel.featureStates.reserves.status === "deferred";
@@ -331,6 +335,7 @@ function DetailSummaryRail({
           navToken={viewModel.isNavToken}
           frozen={viewModel.coin.status === "frozen"}
           gradeRead={viewModel.gradeRead}
+          liveAsOf={liveSafetyAsOf}
         />
         {sharedModules.backingMetrics || (viewModel.coin.liveReservesConfig && reservesPending) ? (
           <div className="min-h-64" data-rail-slot="collateralization">

@@ -40,6 +40,7 @@ export function RailSafetySummary({
   navToken = false,
   frozen = false,
   gradeRead = "settled",
+  liveAsOf = null,
 }: {
   items: HeroSignalRailItem[];
   /** NAV tokens have no peg stress layer; their DEWS row reads "N/A · NAV". */
@@ -52,6 +53,12 @@ export function RailSafetySummary({
    * failed read says the grade is unavailable.
    */
   gradeRead?: "settled" | "pending" | "failed";
+  /**
+   * The live card's own clock ("as of 2026-11-14 22:03 UTC"). The dated line
+   * holds its height in both graded states, so the modules below never move
+   * when the live card lands.
+   */
+  liveAsOf?: string | null;
 }) {
   const [hero, ...rest] = items;
   if (!hero) return null;
@@ -103,9 +110,14 @@ export function RailSafetySummary({
           {frozen ? <span className="text-sm text-muted-foreground">· not scored</span> : null}
         </p>
       )}
-      {graded && hero.note ? (
-        // A saved release grade names its date until the live card arrives.
-        <p className="mt-1 text-2xs text-muted-foreground" data-safety-state="saved">{hero.note}</p>
+      {graded ? (
+        // One dated line under the grade in either state: the saved release
+        // names its date, the live card its own clock. The row reserves the
+        // text-2xs line height even without a stamp, so the cards below the
+        // rail summary never shift when the live card replaces the saved one.
+        <p className="mt-1 min-h-4 text-2xs text-muted-foreground" data-safety-state={hero.note ? "saved" : "live"}>
+          {hero.note ?? liveAsOf ?? null}
+        </p>
       ) : null}
       <div className="mt-3 divide-y divide-border/40 border-t border-border/40">
         {rest.map((item) => {
