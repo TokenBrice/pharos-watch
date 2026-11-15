@@ -1,11 +1,13 @@
 import {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+  DEPEG_SEVERITY_BPS,
 } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/price";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
+import { getReferenceMarket, isReferenceDeviationHeld, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
 import {
@@ -117,7 +119,7 @@ export type ConfirmationPlan =
     }
   | {
       kind: "wait";
-      reason: "too-young" | "peg-reference-unavailable";
+      reason: "too-young" | "peg-reference-unavailable" | "reference-market-closed";
     }
   | ConfirmationPlanReady;
 
@@ -358,6 +360,15 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       : row.peg_reference;
   const outcomeState: PendingDepegState = { ...pendingState, pegReference };
 
+  // A closed reference market can neither confirm nor clear an FX or metal candidate unless today's
+  // price moved severely; an unknown current deviation also waits for the reopen. The USD price
+  // is read against the refreshed USD-domain reference, as detection does: a native-origin row's
+  // stored reference of 1 is in native units and would make every USD price look severe.
+  const currentMove = asset?.price == null ? null : deriveDepegSignal(asset.price, refreshedPegRef);
+  if (meta && isReferenceDeviationHeld(meta.flags.pegCurrency, now, currentMove?.absRawBps ?? Number.NaN)) {
+    return { kind: "wait", reason: "reference-market-closed" };
+  }
+
   if (!Number.isFinite(pegReference) || pegReference <= 0) {
     if (asset && meta && !refreshedPegReferenceIsAuthoritative) {
       return { kind: "wait", reason: "peg-reference-unavailable" };
@@ -377,7 +388,11 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     };
   }
 
-  const threshold = getDepegThresholdBps(pegType ?? row.peg_type);
+  // Only a severe candidate gets here during a closure; its confirmers must be severe too,
+  // since an ordinary threshold reading is just drift against the frozen close.
+  const threshold = meta && isReferenceMarketClosed(getReferenceMarket(meta.flags.pegCurrency), now)
+    ? DEPEG_SEVERITY_BPS.severe
+    : getDepegThresholdBps(pegType ?? row.peg_type);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
   const rawNativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
   const rawNativeStatus = classifyDirectionalSignal(rawNativeSignal, threshold, pendingState.direction);

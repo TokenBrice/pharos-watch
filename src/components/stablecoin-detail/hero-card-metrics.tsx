@@ -108,14 +108,19 @@ function CompactMetricCell({
 function formatPriceReferenceLine({
   deviationBps,
   pegReferenceUnavailable,
+  referenceMarketClosed,
   isNavToken,
 }: {
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
+  referenceMarketClosed: boolean;
   isNavToken: boolean;
 }): string {
+  // A peg with no fixture, or no usable reference, has a real state of its own; only a
+  // published deviation actually read against a closed market is held.
   if (pegReferenceUnavailable) return "Peg reference unavailable";
   if (isNavToken) return "NAV token — no fixed peg";
+  if (referenceMarketClosed) return "Reference market closed";
   return deviationBps == null ? "N/A" : formatBps(deviationBps);
 }
 
@@ -123,7 +128,7 @@ export function HeroPriceMetric({
   variant,
   coin,
   coinData,
-  price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
+  price: { pegRef, deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
   const observed = hasObservedDisplayPrice(coinData);
   const pegCurrency = coin.flags.pegCurrency ?? "USD";
@@ -141,8 +146,8 @@ export function HeroPriceMetric({
     ? "Observed price unavailable"
     : frozenAt
       ? `Last observed · ${frozenAt}`
-      : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken });
-  const referenceClass = !observed || pegReferenceUnavailable || frozenAt
+      : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken });
+  const referenceClass = !observed || pegReferenceUnavailable || referenceMarketClosed || frozenAt
     ? "text-muted-foreground"
     : isNavToken
       ? DIRECTION_TONE_CLASSES.up

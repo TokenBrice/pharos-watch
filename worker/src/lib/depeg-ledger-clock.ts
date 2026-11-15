@@ -35,6 +35,7 @@ const CENSUS_GAP_REASONS: readonly DepegObservationGapReason[] = [
   "invalid-price",
   "native-quote-unavailable",
   "native-quote-implausible",
+  "reference-market-closed",
 ];
 
 /** One producer run's detection evidence, decoded from `cron_runs.metadata`. */

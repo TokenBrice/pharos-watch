@@ -15,6 +15,7 @@ import {
   getDdrTierVocabulary,
   type DdrTierVocabulary,
 } from "@shared/lib/classification";
+import { isCurrentDeviationHeld } from "@/lib/current-peg";
 
 type DdrRelatedContext = DdrV2PredictionRow["frozen"]["relatedContext"];
 
@@ -228,7 +229,7 @@ export function getPeakDeviationBps(row: DdrV2ResponseRow): number | null {
  */
 export function getDisplayedLivePeakDeviationBps(row: DdrV2ResponseRow): number | null {
   const peak = row.live.peakDeviationBps;
-  const current = row.live.currentDeviationBps;
+  const current = getLiveCurrentDeviationBps(row);
   if (peak == null) return current;
   if (current == null || row.live.eventState !== "active") return peak;
   const directionSign = row.direction === "below" ? -1 : 1;
@@ -241,8 +242,18 @@ export function getCurrentDeviationBps(row: DdrV2ResponseRow): number | null {
   return row.kind === "prediction" ? row.frozen.sourceRow.currentDeviationBps : row.live.currentDeviationBps;
 }
 
+/** Null while held by a closed reference market, so no reader ranks or prints weekend drift. */
 export function getLiveCurrentDeviationBps(row: DdrV2ResponseRow): number | null {
-  return row.live.currentDeviationBps;
+  return isLiveCurrentDeviationHeld(row) ? null : row.live.currentDeviationBps;
+}
+
+/**
+ * A live deviation read while its peg's reference market was shut repeats the last close.
+ * The DDR payload carries no price-observation clock, so the overlay's own generation time
+ * (`live.updatedAt`) places the reading — the same data clock the payload was built from.
+ */
+export function isLiveCurrentDeviationHeld(row: DdrV2ResponseRow): boolean {
+  return isCurrentDeviationHeld(row.pegCurrency, row.live.updatedAt, row.live.currentDeviationBps);
 }
 
 export function formatDurationSec(seconds: number): string {

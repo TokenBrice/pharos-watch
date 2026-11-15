@@ -687,7 +687,10 @@ describe("handlePegSummary", () => {
     });
   });
 
-  it("measures the DEX cross-check and at-peg threshold against the live peg unit, not an older cached pegType", async () => {
+  // Wednesday and Sunday 16:00 UTC: on Sunday the closed FX market holds the row out of the aggregates.
+  it.each([[1_795_017_600, 1], [1_794_758_400, 0]])("measures the DEX cross-check and at-peg threshold against the live peg unit, not an older cached pegType (%s)", async (nowSec, atPeg) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
     const price = 1.08 * (1 + 120 / 10_000);
     const asset = makeAsset({
       id: "eurc-circle",
@@ -701,7 +704,7 @@ describe("handlePegSummary", () => {
     });
     const stablecoinsValue = JSON.stringify({ peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.08 } });
     const pegAnalyticsValue = JSON.stringify({
-      computedAtSec: sameDayCachedAt(60),
+      computedAtSec: nowSec - 60,
       depegEventsToday: 0,
       depegEventsYesterday: 0,
       pegData: [makeCachedPegCoin({
@@ -744,7 +747,7 @@ describe("handlePegSummary", () => {
 
     const body = await readJsonResponse(await handlePegSummary(db), 200) as {
       coins: PegSummaryCoin[];
-      summary: { coinsAtPeg: number };
+      summary: { coinsAtPeg: number; totalTracked: number };
     };
     const coin = body.coins.find((entry) => entry.id === "eurc-circle");
     expect(coin?.pegType).toBe("peggedEUR");
@@ -752,7 +755,7 @@ describe("handlePegSummary", () => {
     expect(coin?.dexPriceCheck).toMatchObject({ dexDeviationBps: 120, agrees: true });
     // 120 bps is inside the non-USD band; the cached USD label would have
     // selected the 100 bps USD band and dropped the row from coinsAtPeg.
-    expect(body.summary.coinsAtPeg).toBe(1);
+    expect(body.summary).toMatchObject({ coinsAtPeg: atPeg, totalTracked: atPeg });
   });
 
   it("includes navToken coins with peg signals withheld", async () => {

@@ -125,6 +125,7 @@ export function DetailLiquidityActivitySections({
                 consensusSources={viewModel.consensusSources}
                 agreeSources={viewModel.agreeSources}
                 dexPriceCheck={viewModel.dexPriceCheck}
+                navToken={viewModel.isNavToken}
               />
             </LazySection>
           </section>

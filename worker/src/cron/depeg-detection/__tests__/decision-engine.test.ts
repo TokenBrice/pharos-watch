@@ -6,222 +6,91 @@ import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
 import type { DepegDetectionRow } from "../types";
 
-const usdPeg = {
-  pegRates: { peggedUSD: 1 },
-  pegRateSources: { peggedUSD: "median" as const },
-  pegRateCounts: { peggedUSD: 4 },
-};
-const brlPeg = {
-  pegRates: { peggedREAL: 0.191895 },
-  pegRateSources: { peggedREAL: "median" as const },
-  pegRateCounts: { peggedREAL: 3 },
-};
+const usdPeg = { pegRates: { peggedUSD: 1 }, pegRateSources: { peggedUSD: "median" as const }, pegRateCounts: { peggedUSD: 4 } };
+const brlPeg = { pegRates: { peggedREAL: 0.191895 }, pegRateSources: { peggedREAL: "median" as const }, pegRateCounts: { peggedREAL: 3 } };
 
 const usdMeta: StablecoinMeta = {
-  id: "usdt-tether",
-  name: "Tether",
-  symbol: "USDT",
-  flags: {
-    backing: "rwa-backed",
-    pegCurrency: "USD",
-    governance: "centralized",
-    yieldBearing: false,
-    rwa: true,
-    navToken: false,
-  },
+  id: "usdt-tether", name: "Tether", symbol: "USDT",
+  flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
   geckoId: "tether",
 };
-
-const brlMeta: StablecoinMeta = {
-  id: "brz-transfero",
-  name: "Brazilian Digital Token",
-  symbol: "BRZ",
-  flags: { ...usdMeta.flags, pegCurrency: "BRL" },
-  geckoId: "brz",
-};
-
-const chfMeta: StablecoinMeta = {
-  id: "vchf-vnx",
-  name: "VNX Swiss Franc",
-  symbol: "VCHF",
-  flags: { ...usdMeta.flags, pegCurrency: "CHF" },
-  geckoId: "vnx-swiss-franc",
-};
-
+const brlMeta: StablecoinMeta = { id: "brz-transfero", name: "Brazilian Digital Token", symbol: "BRZ", flags: { ...usdMeta.flags, pegCurrency: "BRL" }, geckoId: "brz" };
+const chfMeta: StablecoinMeta = { id: "vchf-vnx", name: "VNX Swiss Franc", symbol: "VCHF", flags: { ...usdMeta.flags, pegCurrency: "CHF" }, geckoId: "vnx-swiss-franc" };
 const goldMeta: StablecoinMeta = {
-  id: "vnxau-vnx",
-  name: "VNX Gold",
-  symbol: "VNXAU",
-  flags: { ...usdMeta.flags, pegCurrency: "GOLD" },
-  geckoId: "vnx-gold",
-  commodityOunces: 0.0321507466,
+  id: "vnxau-vnx", name: "VNX Gold", symbol: "VNXAU", flags: { ...usdMeta.flags, pegCurrency: "GOLD" }, geckoId: "vnx-gold", commodityOunces: 0.0321507466,
 };
 
 // Local copy of the ZARm metadata the native-domain recovery path reads; the
 // catalog entry's PSI-eligible membership is guarded by
 // sync-stablecoins/__tests__/supply-gap-reconciliation.test.ts.
 const zarMeta: StablecoinMeta = {
-  id: "zarm-mento",
-  name: "Mento South African Rand",
-  symbol: "ZARm",
-  flags: {
-    backing: "crypto-backed",
-    pegCurrency: "ZAR",
-    governance: "centralized-dependent",
-    yieldBearing: false,
-    rwa: false,
-    navToken: false,
-  },
+  id: "zarm-mento", name: "Mento South African Rand", symbol: "ZARm",
+  flags: { backing: "crypto-backed", pegCurrency: "ZAR", governance: "centralized-dependent", yieldBearing: false, rwa: false, navToken: false },
   geckoId: "celo-south-african-rand",
 };
+const usdInput = { now: 1_750_259_200, meta: usdMeta, ...usdPeg };
 
 function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
-  return {
-    id: "usdt-tether",
-    symbol: "USDT",
-    price: 0.98,
-    priceSource: "pyth",
-    priceConfidence: "single-source",
-    priceUpdatedAt: 1_750_000_000 - 60,
-    pegType: "peggedUSD",
-    circulating: { ethereum: 50_000_000 },
-    ...overrides,
-  };
+  return { id: "usdt-tether", symbol: "USDT", price: 0.98, priceSource: "pyth", priceConfidence: "single-source",
+    priceUpdatedAt: 1_750_259_200 - 60, pegType: "peggedUSD", circulating: { ethereum: 50_000_000 }, ...overrides };
 }
 
 function makeExistingEvent(overrides: Partial<DepegDetectionRow> = {}): DepegDetectionRow {
   return {
-    ...makeDepegRow({
-      id: 7,
-      stablecoin_id: "brz-transfero",
-      symbol: "BRZ",
-      peg_type: "peggedREAL",
-      direction: "above",
-      peak_deviation_bps: 180,
-      started_at: 1_750_000_000 - 3600,
-      start_price: 0.1909,
-      peak_price: 0.191,
-      peg_reference: 0.18765951,
-    }),
-    confirmation_sources: null,
-    pending_reason: null,
-    ...overrides,
+    ...makeDepegRow({ id: 7, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "above", peak_deviation_bps: 180,
+      started_at: 1_750_259_200 - 3600, start_price: 0.1909, peak_price: 0.191, peg_reference: 0.18765951 }),
+    confirmation_sources: null, pending_reason: null, ...overrides,
   };
 }
 
 function makeDexRow(dex_price_usd: number, overrides = {}) {
-  return {
-    dex_price_usd,
-    stablecoin_id: "usdt-tether",
-    deviation_from_primary_bps: null,
-    source_pool_count: 2,
-    source_total_tvl: 5_000_000,
-    updated_at: 1_750_000_840,
-    aggregateObservedAt: 1_750_000_840,
-    ...overrides,
-  };
+  return { dex_price_usd, stablecoin_id: "usdt-tether", deviation_from_primary_bps: null, source_pool_count: 2,
+    source_total_tvl: 5_000_000, updated_at: 1_750_260_040, aggregateObservedAt: 1_750_260_040, ...overrides };
 }
 
 function makeUsdEvent(overrides: Partial<DepegDetectionRow> = {}, pricing = true): DepegDetectionRow {
-  return makeExistingEvent({
-    stablecoin_id: "usdt-tether",
-    symbol: "USDT",
-    peg_type: "peggedUSD",
-    direction: "below",
-    ...(pricing ? { peak_deviation_bps: -200, start_price: 0.98, peak_price: 0.98 } : {}),
-    peg_reference: 1,
-    ...overrides,
-  });
+  return makeExistingEvent({ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below",
+    ...(pricing ? { peak_deviation_bps: -200, start_price: 0.98, peak_price: 0.98 } : {}), peg_reference: 1, ...overrides });
 }
 
-function assertNativeOpening({
-  circulating,
-  nativePrice,
-  expectedBps,
-  expectedReason,
-  expectSeenEventIds = false,
-  dexCorroboration,
-  admitted = true,
-}: {
-  circulating: Record<string, number>;
-  nativePrice: number;
-  expectedBps: number;
-  expectedReason: string;
-  expectSeenEventIds?: boolean;
-  dexCorroboration?: { price: number; tvl: number; aggregateObservedAt?: number };
-  admitted?: boolean;
+const brzAsset = (price: number, overrides: Partial<PegAssetBase> = {}) =>
+  makeAsset({ id: "brz-transfero", symbol: "BRZ", price, pegType: "peggedREAL", ...overrides });
+const brzQuote = (price: number) => ({ stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price, updatedAt: 1_750_259_200 - 60 });
+const withheldBrz = [{ level: "warn", message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move" }];
+
+function assertNativeOpening({ circulating, nativePrice, expectedBps, expectedReason, expectSeenEventIds = false, dexCorroboration, admitted = true }: {
+  circulating: Record<string, number>; nativePrice: number; expectedBps: number; expectedReason: string; expectSeenEventIds?: boolean;
+  dexCorroboration?: { price: number; tvl: number; aggregateObservedAt?: number }; admitted?: boolean;
 }) {
-  const protocolSources = dexCorroboration
-    ? [
-        { protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: dexCorroboration.price, tvl: dexCorroboration.tvl, updatedAt: 1_750_000_000 - 60 },
-        { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "uniswap-v3", price: dexCorroboration.price, tvl: dexCorroboration.tvl, updatedAt: 1_750_000_000 - 60 },
-      ]
-    : undefined;
+  const updatedAt = 1_750_259_200 - 60;
   const decision = decideDepegAsset({
-    now: 1_750_000_000,
-    asset: makeAsset({
-      id: "brz-transfero",
-      symbol: "BRZ",
-      price: 0.191187,
-      priceSource: "coingecko",
-      pegType: "peggedREAL",
-      circulating,
-    }),
-    meta: brlMeta,
-    ...brlPeg,
-    dexRow: dexCorroboration
-      ? {
-          stablecoin_id: "brz-transfero",
-          dex_price_usd: dexCorroboration.price,
-          deviation_from_primary_bps: null,
-          source_pool_count: 2,
-          source_total_tvl: dexCorroboration.tvl,
-          updated_at: 1_750_000_000 - 60,
-          aggregateObservedAt: dexCorroboration.aggregateObservedAt,
-        }
-      : undefined,
-    protocolSources,
-    nativePegQuote: {
-      stablecoinId: "brz-transfero",
-      geckoId: "brz",
-      pegCurrency: "BRL",
-      price: nativePrice,
-      updatedAt: 1_750_000_000 - 60,
-    },
+    now: 1_750_259_200, asset: brzAsset(0.191187, { priceSource: "coingecko", circulating }), meta: brlMeta, ...brlPeg,
+    dexRow: dexCorroboration && makeDexRow(dexCorroboration.price, { stablecoin_id: "brz-transfero",
+      source_total_tvl: dexCorroboration.tvl, updated_at: updatedAt, aggregateObservedAt: dexCorroboration.aggregateObservedAt }),
+    protocolSources: dexCorroboration && ["curve", "uniswap-v3"].map((protocol) => ({
+      protocol, chain: "ethereum", sourceFamily: protocol, price: dexCorroboration.price, tvl: dexCorroboration.tvl, updatedAt })),
+    nativePegQuote: brzQuote(nativePrice),
   });
 
   expect(decision.trackedCoinId).toBe("brz-transfero");
   if (expectSeenEventIds) expect(decision.seenEventIds).toEqual([]);
   if (!admitted) {
     expect(decision.commands).toEqual([]);
-    expect(decision.diagnostics).toEqual([{
-      level: "warn", message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
-    }]);
+    expect(decision.diagnostics).toEqual(withheldBrz);
     return;
   }
   expect(decision.commands).toHaveLength(1);
-  expect(decision.commands[0]).toMatchObject({
-    type: "upsert-pending",
-    payload: {
-      stablecoinId: "brz-transfero",
-      direction: "below",
-      bps: expectedBps,
-      price: nativePrice,
-      pegReference: 1,
-      reason: expectedReason,
-    },
-  });
+  expect(decision.commands[0]).toMatchObject({ type: "upsert-pending", payload: {
+    stablecoinId: "brz-transfero", direction: "below", bps: expectedBps, price: nativePrice, pegReference: 1, reason: expectedReason,
+  } });
   expect(decision.diagnostics).toEqual([
-    {
-      level: "log",
-      message: `[depeg] Pending native-peg confirmation for BRZ: ${expectedBps}bps against BRL quote`,
-    },
+    { level: "log", message: `[depeg] Pending native-peg confirmation for BRZ: ${expectedBps}bps against BRL quote` },
   ]);
 }
 
 describe("decideDepegAsset", () => {
   describe("original aggregate clocks", () => {
-    const now = 1_750_000_000;
+    const now = 1_750_259_200;
     it.each([null, now - 6 * 3600, now - 60])("separates affirmative evidence from vetoes at %s", (aggregateObservedAt) => {
       const fresh = aggregateObservedAt === now - 60;
       const sample = (price: number, dexPrice: number, authoritative = false) => ({
@@ -289,27 +158,14 @@ describe("decideDepegAsset", () => {
       for (const existing of [undefined, makeExistingEvent({
         stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1,
       })]) {
-        const decision = decideDepegAsset({
-          now: 1_750_000_000,
-          asset: makeAsset({ price, priceConfidence: "high", ...provenance }),
-          meta: usdMeta,
-          existing,
-          ...usdPeg,
-        });
+        const decision = decideDepegAsset({ now: 1_750_259_200, asset: makeAsset({ price, priceConfidence: "high", ...provenance }), meta: usdMeta, existing, ...usdPeg });
         expect(decision.commands).toEqual([]);
       }
     }
   });
 
   describe("observation outcome", () => {
-    const usdInput = {
-      now: 1_750_000_000,
-      meta: usdMeta,
-      ...usdPeg,
-    };
-    const usdEvent = () => makeExistingEvent({
-      stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1, direction: "below",
-    });
+    const usdEvent = () => makeExistingEvent({ stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1, direction: "below" });
 
     it.each([
       ["missing price", { price: null }],
@@ -337,23 +193,14 @@ describe("decideDepegAsset", () => {
       ["non-authoritative-reference", { peggedREAL: "median" as const }, { peggedREAL: 1 }, { peggedREAL: 0.19 }],
       ["invalid-reference", { peggedREAL: "median" as const }, { peggedREAL: 4 }, { peggedREAL: 0 }],
     ])("records the %s peg-signal rejection", (reason, pegRateSources, pegRateCounts, pegRates) => {
-      const decision = decideDepegAsset({
-        now: 1_750_000_000,
-        asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.19 }),
-        meta: brlMeta, pegRates, pegRateSources, pegRateCounts,
-      });
+      const decision = decideDepegAsset({ now: 1_750_259_200, asset: brzAsset(0.19), meta: brlMeta, pegRates, pegRateSources, pegRateCounts });
       expect(decision.observation).toEqual({ kind: "unavailable", reason });
     });
 
     it("records a native-domain event without a native quote as native-quote-unavailable", () => {
       const decision = decideDepegAsset({
-        now: 1_750_000_000,
-        asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.1876 }),
-        meta: brlMeta,
-        existing: makeExistingEvent({ peg_reference: 1, source: "live" }),
-        pegRates: { peggedREAL: 0.18765951 },
-        pegRateSources: { peggedREAL: "median" },
-        pegRateCounts: { peggedREAL: 3 },
+        now: 1_750_259_200, asset: brzAsset(0.1876), meta: brlMeta, existing: makeExistingEvent({ peg_reference: 1, source: "live" }),
+        pegRates: { peggedREAL: 0.18765951 }, pegRateSources: { peggedREAL: "median" }, pegRateCounts: { peggedREAL: 3 },
       });
       expect(decision.observation).toEqual({ kind: "unavailable", reason: "native-quote-unavailable" });
     });
@@ -361,7 +208,7 @@ describe("decideDepegAsset", () => {
     it.each([
       ["at par", { price: 1 }],
       ["confirmation-required depeg", {}],
-      ["stale (confirmation-required) price", { priceUpdatedAt: 1_750_000_000 - 30 * 86400 }],
+      ["stale (confirmation-required) price", { priceUpdatedAt: 1_750_259_200 - 30 * 86400 }],
     ])("counts a usable %s context as observed", (_label, overrides) => {
       const decision = decideDepegAsset({ ...usdInput, asset: makeAsset(overrides) });
       expect(decision.observation).toEqual({ kind: "observed" });
@@ -376,43 +223,17 @@ describe("decideDepegAsset", () => {
   });
 
   it("routes an authoritative small-cap depeg through pending confirmation", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset(),
-      meta: usdMeta,
-      ...usdPeg,
-    });
+    const decision = decideDepegAsset({ ...usdInput, asset: makeAsset() });
 
     expect(decision.trackedCoinId).toBe("usdt-tether");
     expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "usdt-tether",
-        direction: "below",
-        bps: -200,
-        price: 0.98,
-        pegReference: 1,
-        reason: "confirmation-window",
-      },
-    });
-    expect(decision.diagnostics).toEqual([{
-      level: "log",
-      message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window)",
-    }]);
+    expect(decision.commands[0]).toMatchObject({ type: "upsert-pending", payload: {
+      stablecoinId: "usdt-tether", direction: "below", bps: -200, price: 0.98, pegReference: 1, reason: "confirmation-window",
+    } });
+    expect(decision.diagnostics).toEqual([{ level: "log", message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window)" }]);
 
-    const directionFlip = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({ price: 1.02 }),
-      meta: usdMeta,
-      existing: makeUsdEvent({}, false),
-      ...usdPeg,
-    });
-    expect(directionFlip.commands[0]).toMatchObject({
-      type: "close-event",
-      recoveryPrice: null,
-      closeReason: "superseded-direction",
-    });
+    const directionFlip = decideDepegAsset({ ...usdInput, asset: makeAsset({ price: 1.02 }), existing: makeUsdEvent({}, false) });
+    expect(directionFlip.commands[0]).toMatchObject({ type: "close-event", recoveryPrice: null, closeReason: "superseded-direction" });
   });
 
   it("returns pending command diagnostics without logging as a side effect", () => {
@@ -420,29 +241,13 @@ describe("decideDepegAsset", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     try {
-      const decision = decideDepegAsset({
-        now: 1_750_000_000,
-        asset: makeAsset({ circulating: { ethereum: 2_000_000_000 } }),
-        meta: usdMeta,
-        ...usdPeg,
-      });
+      const decision = decideDepegAsset({ ...usdInput, asset: makeAsset({ circulating: { ethereum: 2_000_000_000 } }) });
 
       expect(decision.commands).toHaveLength(1);
       expect(decision.commands[0]).toMatchObject({
-        type: "upsert-pending",
-        payload: {
-          stablecoinId: "usdt-tether",
-          direction: "below",
-          bps: -200,
-          reason: "confirmation-window+large-cap",
-        },
+        type: "upsert-pending", payload: { stablecoinId: "usdt-tether", direction: "below", bps: -200, reason: "confirmation-window+large-cap" },
       });
-      expect(decision.diagnostics).toEqual([
-        {
-          level: "log",
-          message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window+large-cap)",
-        },
-      ]);
+      expect(decision.diagnostics).toEqual([{ level: "log", message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window+large-cap)" }]);
       expect(logSpy).not.toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
     } finally {
@@ -451,202 +256,71 @@ describe("decideDepegAsset", () => {
     }
   });
 
-  it("routes near-threshold market-cap weak-source severe moves to pending", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        price: 0.975,
-        circulating: { ethereum: 999_000_000 },
-        agreeSources: ["pyth"],
-      }),
-      meta: usdMeta,
-      ...usdPeg,
-    });
+  it.each<[string, Partial<PegAssetBase>, number, string]>([
+    ["routes near-threshold market-cap weak-source severe moves to pending",
+      { price: 0.975, circulating: { ethereum: 999_000_000 }, agreeSources: ["pyth"] }, -250, "confirmation-window+large-cap"],
+    ["requires the confirmation window even with strong primary evidence", { price: 0.985, priceSource: "binance+pyth", priceConfidence: "high",
+      agreeSources: ["binance", "pyth"], circulating: { ethereum: 999_000_000 } }, -150, "confirmation-window"],
+    ["keeps same-family extreme moves pending even when two source labels agree", { price: 0.2, priceSource: "coingecko+coingecko-low-volume",
+      priceConfidence: "high", agreeSources: ["coingecko", "coingecko-low-volume"], circulating: { ethereum: 20_000_000 } },
+      -8000, "confirmation-window+extreme-move+low-confidence"],
+  ])("%s", (_title, asset, bps, reason) => {
+    const decision = decideDepegAsset({ ...usdInput, asset: makeAsset(asset) });
 
     expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "usdt-tether",
-        direction: "below",
-        bps: -250,
-        reason: "confirmation-window+large-cap",
-      },
-    });
-  });
-
-  it("requires the confirmation window even with strong primary evidence", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        price: 0.985,
-        priceSource: "binance+pyth",
-        priceConfidence: "high",
-        agreeSources: ["binance", "pyth"],
-        circulating: { ethereum: 999_000_000 },
-      }),
-      meta: usdMeta,
-      ...usdPeg,
-    });
-
-    expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "usdt-tether",
-        direction: "below",
-        bps: -150,
-        reason: "confirmation-window",
-      },
-    });
+    expect(decision.commands[0]).toMatchObject({ type: "upsert-pending", payload: { stablecoinId: "usdt-tether", direction: "below", bps, reason } });
   });
 
   it("does not start confirmation when only the rounded value reaches the threshold", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({ price: 0.99005 }),
-      meta: usdMeta,
-      ...usdPeg,
-    });
-
-    expect(decision.commands).toEqual([]);
+    expect(decideDepegAsset({ ...usdInput, asset: makeAsset({ price: 0.99005 }) }).commands).toEqual([]);
   });
 
   it("requires the confirmation window for independent multi-source extreme moves", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "msusd-main-street",
-        symbol: "msUSD",
-        price: 0.2,
-        priceSource: "coingecko+defillama-list",
-        priceConfidence: "high",
-        agreeSources: ["coingecko", "defillama-list"],
-        circulating: { ethereum: 20_000_000 },
-      }),
-      meta: {
-        ...usdMeta,
-        id: "msusd-main-street",
-        name: "Main Street USD",
-        symbol: "msUSD",
-        geckoId: "main-street-usd",
-      },
-      ...usdPeg,
+      ...usdInput,
+      asset: makeAsset({ id: "msusd-main-street", symbol: "msUSD", price: 0.2, priceSource: "coingecko+defillama-list", priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"], circulating: { ethereum: 20_000_000 } }),
+      meta: { ...usdMeta, id: "msusd-main-street", name: "Main Street USD", symbol: "msUSD", geckoId: "main-street-usd" },
     });
 
     expect(decision.trackedCoinId).toBe("msusd-main-street");
     expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "msusd-main-street",
-        direction: "below",
-        bps: -8000,
-        price: 0.2,
-        reason: "confirmation-window+extreme-move+low-confidence",
-      },
-    });
+    expect(decision.commands[0]).toMatchObject({ type: "upsert-pending", payload: {
+      stablecoinId: "msusd-main-street", direction: "below", bps: -8000, price: 0.2, reason: "confirmation-window+extreme-move+low-confidence",
+    } });
     expect(decision.diagnostics).toHaveLength(1);
-  });
-
-  it("keeps same-family extreme moves pending even when two source labels agree", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        price: 0.2,
-        priceSource: "coingecko+coingecko-low-volume",
-        priceConfidence: "high",
-        agreeSources: ["coingecko", "coingecko-low-volume"],
-        circulating: { ethereum: 20_000_000 },
-      }),
-      meta: usdMeta,
-      ...usdPeg,
-    });
-
-    expect(decision.commands).toHaveLength(1);
-    expect(decision.commands[0]).toMatchObject({
-      type: "upsert-pending",
-      payload: {
-        stablecoinId: "usdt-tether",
-        direction: "below",
-        bps: -8000,
-        reason: "confirmation-window+extreme-move+low-confidence",
-      },
-    });
   });
 
   it("suppresses a live mutation when the native quote shows recovery", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.190587,
-        pegType: "peggedREAL",
-      }),
-      meta: brlMeta,
-      pegRates: { peggedREAL: 0.18765951 },
-      pegRateSources: { peggedREAL: "fallback" },
-      pegRateCounts: { peggedREAL: 2 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.995,
-        updatedAt: 1_750_000_000 - 60,
-      },
+      now: 1_750_259_200, asset: brzAsset(0.190587), meta: brlMeta, nativePegQuote: brzQuote(0.995),
+      pegRates: { peggedREAL: 0.18765951 }, pegRateSources: { peggedREAL: "fallback" }, pegRateCounts: { peggedREAL: 2 },
     });
 
     expect(decision.trackedCoinId).toBe("brz-transfero");
     expect(decision.commands).toHaveLength(0);
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "warn",
-        message: "[depeg] Suppressed live depeg mutation for BRZ: primary=156bps but BRL quote=-50bps",
-      },
-    ]);
+    expect(decision.diagnostics).toEqual([{ level: "warn", message: "[depeg] Suppressed live depeg mutation for BRZ: primary=156bps but BRL quote=-50bps" }]);
   });
 
-  it("routes a supported native-peg depeg through pending confirmation", () => {
-    assertNativeOpening({
-      circulating: { gnosis: 22_000_000 },
-      nativePrice: 0.9758,
-      expectedBps: -242,
-      expectedReason: "confirmation-window+native-origin",
-    });
-  });
-
-  it("routes large-cap native-peg openings to pending confirmation", () => {
-    assertNativeOpening({
-      circulating: { gnosis: 2_000_000_000 },
-      nativePrice: 0.9758,
-      expectedBps: -242,
-      expectedReason: "confirmation-window+large-cap+native-origin",
-      expectSeenEventIds: true,
-    });
+  it.each([
+    ["a supported native-peg depeg through pending confirmation", 22_000_000, "confirmation-window+native-origin", false],
+    ["large-cap native-peg openings to pending confirmation", 2_000_000_000, "confirmation-window+large-cap+native-origin", true],
+  ])("routes %s", (_label, gnosis, expectedReason, expectSeenEventIds) => {
+    assertNativeOpening({ circulating: { gnosis }, nativePrice: 0.9758, expectedBps: -242, expectedReason, expectSeenEventIds });
   });
 
   it.each([60, 21_600, undefined])("routes extreme native-peg openings only with fresh original DEX clocks (%s)", (age) => {
     assertNativeOpening({
-      circulating: { gnosis: 22_000_000 },
-      nativePrice: 0.2,
-      expectedBps: -8000,
-      expectedReason: "confirmation-window+extreme-move+native-origin",
-      expectSeenEventIds: true,
-      dexCorroboration: { price: 0.038379, tvl: 2_500_000,
-        aggregateObservedAt: age == null ? undefined : 1_750_000_000 - age },
+      circulating: { gnosis: 22_000_000 }, nativePrice: 0.2, expectedBps: -8000, expectedReason: "confirmation-window+extreme-move+native-origin",
+      expectSeenEventIds: true, dexCorroboration: { price: 0.038379, tvl: 2_500_000, aggregateObservedAt: age == null ? undefined : 1_750_259_200 - age },
       admitted: age === 60,
     });
   });
 
   it.each([60, 21_600, undefined])("preserves the extreme native-quote veto at original DEX age %s", (age) => {
-    const now = 1_750_000_000;
-    const decision = decideDepegAsset({ now, meta: brlMeta, ...brlPeg,
-      asset: makeAsset({ id: brlMeta.id, symbol: "BRZ", pegType: "peggedREAL", price: 0.191895 * 1.03 }),
-      nativePegQuote: { stablecoinId: brlMeta.id, geckoId: "brz", pegCurrency: "BRL", price: 0.2, updatedAt: now - 60 },
-      dexRow: { stablecoin_id: brlMeta.id, dex_price_usd: 0.038379, deviation_from_primary_bps: null,
-        source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: now - 60,
-        aggregateObservedAt: age == null ? undefined : now - age },
+    const now = 1_750_259_200;
+    const decision = decideDepegAsset({ now, meta: brlMeta, ...brlPeg, asset: brzAsset(0.191895 * 1.03), nativePegQuote: brzQuote(0.2),
+      dexRow: makeDexRow(0.038379, { stablecoin_id: brlMeta.id, updated_at: now - 60, aggregateObservedAt: age == null ? undefined : now - age }),
       protocolSources: ["curve", "uniswap-v3"].map((protocol) => ({
         protocol, sourceFamily: protocol, chain: "ethereum", price: 0.038379, tvl: 2_500_000, updatedAt: now - 60,
       })),
@@ -655,157 +329,50 @@ describe("decideDepegAsset", () => {
     expect(decision.diagnostics.some(({ message }) => message.includes("Suppressed live depeg mutation"))).toBe(true);
   });
 
-  it("withholds an uncorroborated extreme native-peg opening as unavailable evidence", () => {
+  it.each([
+    ["an uncorroborated extreme native-peg opening as unavailable evidence", undefined],
+    ["an extreme native quote when a trusted DEX aggregate stays at peg",
+      makeDexRow(0.1919, { stablecoin_id: "brz-transfero", updated_at: 1_750_259_200 - 60, aggregateObservedAt: 1_750_259_200 - 60 })],
+  ])("withholds %s", (_label, dexRow) => {
     const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.191187,
-        priceSource: "coingecko",
-        pegType: "peggedREAL",
-        circulating: { gnosis: 22_000_000 },
-      }),
-      meta: brlMeta,
-      ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.2,
-        updatedAt: 1_750_000_000 - 60,
-      },
+      now: 1_750_259_200, asset: brzAsset(0.191187, { priceSource: "coingecko", circulating: { gnosis: 22_000_000 } }), meta: brlMeta, ...brlPeg,
+      dexRow, nativePegQuote: brzQuote(0.2),
     });
 
     expect(decision.commands).toEqual([]);
-    expect(decision.diagnostics).toEqual([{
-      level: "warn",
-      message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
-    }]);
-  });
-
-  it("withholds an extreme native quote when a trusted DEX aggregate stays at peg", () => {
-    const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.191187,
-        priceSource: "coingecko",
-        pegType: "peggedREAL",
-        circulating: { gnosis: 22_000_000 },
-      }),
-      meta: brlMeta,
-      ...brlPeg,
-      dexRow: {
-        stablecoin_id: "brz-transfero",
-        dex_price_usd: 0.1919,
-        deviation_from_primary_bps: null,
-        source_pool_count: 2,
-        source_total_tvl: 5_000_000,
-        updated_at: 1_750_000_000 - 60,
-        aggregateObservedAt: 1_750_000_000 - 60,
-      },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.2,
-        updatedAt: 1_750_000_000 - 60,
-      },
-    });
-
-    expect(decision.commands).toEqual([]);
-    expect(decision.diagnostics).toEqual([{
-      level: "warn",
-      message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
-    }]);
+    expect(decision.diagnostics).toEqual(withheldBrz);
   });
 
   it("withholds an above-peg native quote instead of opening a pending row", () => {
-    const eurMeta: StablecoinMeta = {
-      id: "ceur-celo",
-      name: "Celo EUR",
-      symbol: "EURm",
-      flags: {
-        backing: "rwa-backed",
-        pegCurrency: "EUR",
-        governance: "centralized",
-        yieldBearing: false,
-        rwa: true,
-        navToken: false,
-      },
-      geckoId: "celo-euro",
-    };
+    const eurMeta: StablecoinMeta = { id: "ceur-celo", name: "Celo EUR", symbol: "EURm", flags: { ...usdMeta.flags, pegCurrency: "EUR" }, geckoId: "celo-euro" };
     const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "ceur-celo",
-        symbol: "EURm",
-        price: 1.16,
-        priceSource: "coingecko",
-        pegType: "peggedEUR",
-        circulating: { celo: 22_000_000 },
-      }),
-      meta: eurMeta,
-      pegRates: { peggedEUR: 1.16 },
-      pegRateSources: { peggedEUR: "fx" },
-      pegRateCounts: { peggedEUR: 4 },
-      nativePegQuote: {
-        stablecoinId: "ceur-celo",
-        geckoId: "celo-euro",
-        pegCurrency: "EUR",
-        price: 2.598389348610164,
-        updatedAt: 1_750_000_000 - 60,
-      },
+      now: 1_750_259_200,
+      asset: makeAsset({ id: "ceur-celo", symbol: "EURm", price: 1.16, priceSource: "coingecko", pegType: "peggedEUR", circulating: { celo: 22_000_000 } }),
+      meta: eurMeta, pegRates: { peggedEUR: 1.16 }, pegRateSources: { peggedEUR: "fx" }, pegRateCounts: { peggedEUR: 4 },
+      nativePegQuote: { stablecoinId: "ceur-celo", geckoId: "celo-euro", pegCurrency: "EUR", price: 2.598389348610164, updatedAt: 1_750_259_200 - 60 },
     });
 
     expect(decision.commands).toEqual([]);
-    expect(decision.diagnostics).toEqual([{
-      level: "warn",
-      message: "[depeg] Withheld implausible EUR native quote for EURm: reason=native-quote-above-peg-reference-band",
-    }]);
+    expect(decision.diagnostics).toEqual([{ level: "warn", message: "[depeg] Withheld implausible EUR native quote for EURm: reason=native-quote-above-peg-reference-band" }]);
   });
 
   it("keeps an existing event open when the native quote still supports it", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_000,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.18765951,
-        pegType: "peggedREAL",
-      }),
-      meta: brlMeta,
-      existing: makeExistingEvent(),
-      pegRates: { peggedREAL: 0.18765951 },
-      pegRateSources: { peggedREAL: "fallback" },
-      pegRateCounts: { peggedREAL: 2 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 1.02,
-        updatedAt: 1_750_000_000 - 60,
-      },
+      now: 1_750_259_200, asset: brzAsset(0.18765951), meta: brlMeta, existing: makeExistingEvent(), nativePegQuote: brzQuote(1.02),
+      pegRates: { peggedREAL: 0.18765951 }, pegRateSources: { peggedREAL: "fallback" }, pegRateCounts: { peggedREAL: 2 },
     });
 
     expect(decision.trackedCoinId).toBe("brz-transfero");
     expect(decision.seenEventIds).toEqual([7]);
     expect(decision.commands).toHaveLength(0);
-    expect(decision.diagnostics).toEqual([
-      {
-        level: "warn",
-        message: "[depeg] Kept BRZ open despite primary recovery: primary=0bps but BRL quote=200bps",
-      },
-    ]);
+    expect(decision.diagnostics).toEqual([{ level: "warn", message: "[depeg] Kept BRZ open despite primary recovery: primary=0bps but BRL quote=200bps" }]);
   });
 
   it("recovers a native-domain row from its native quote under a nominal USD primary", () => {
     const meta = zarMeta;
 
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({
         id: "zarm-mento",
         symbol: "ZARm",
@@ -826,45 +393,26 @@ describe("decideDepegAsset", () => {
         peg_type: "peggedZAR",
         direction: "below",
         peak_deviation_bps: -400,
-        started_at: 1_750_000_900 - 3_600,
+        started_at: 1_750_260_100 - 3_600,
         start_price: 0.96,
         peak_price: 0.96,
         peg_reference: 1,
-        recovery_first_seen_at: 1_750_000_900 - 1_000,
-        recovery_last_seen_at: 1_750_000_900 - 450,
+        recovery_first_seen_at: 1_750_260_100 - 1_000,
+        recovery_last_seen_at: 1_750_260_100 - 450,
       }),
       pegRates: { peggedZAR: 0.0552 },
       pegRateSources: { peggedZAR: "fx" },
       pegRateCounts: { peggedZAR: 4 },
-      nativePegQuote: {
-        stablecoinId: "zarm-mento",
-        geckoId: "celo-south-african-rand",
-        pegCurrency: "ZAR",
-        price: 0.999,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "zarm-mento", geckoId: "celo-south-african-rand", pegCurrency: "ZAR", price: 0.999, updatedAt: 1_750_260_040 },
     });
 
-    expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 7,
-        endedAt: 1_750_000_900,
-        recoveryPrice: 0.999,
-        closeReason: "recovered-native",
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: 0.999, closeReason: "recovered-native" }]);
   });
 
   it("closes a native-peg event after sustained recovery in native units", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.1919,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
       meta: brlMeta,
       existing: makeExistingEvent({
         direction: "below",
@@ -872,73 +420,42 @@ describe("decideDepegAsset", () => {
         start_price: 0.9758,
         peak_price: 0.9758,
         peg_reference: 1,
-        recovery_first_seen_at: 1_750_000_000,
-        recovery_last_seen_at: 1_750_000_000,
+        recovery_first_seen_at: 1_750_259_200,
+        recovery_last_seen_at: 1_750_259_200,
       }),
       ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.997,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.997, updatedAt: 1_750_260_040 },
     });
 
-    expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 7,
-        endedAt: 1_750_000_900,
-        recoveryPrice: 0.997,
-        closeReason: "recovered-native",
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: 0.997, closeReason: "recovered-native" }]);
   });
 
   it.each(["pyth", "coingecko"])("closes a USD-domain row from native-only recovery without inventing a USD price (%s)", (priceSource) => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({
         id: "brz-transfero", symbol: "BRZ", price: 0.18, pegType: "peggedREAL",
-        priceSource, priceUpdatedAt: 1_750_000_840,
+        priceSource, priceUpdatedAt: 1_750_260_040,
       }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        quote_mode: "usd", direction: "below", peg_reference: 0.19,
-        recovery_first_seen_at: 1_750_000_000, recovery_last_seen_at: 1_750_000_000,
-      }),
+      existing: makeExistingEvent({ quote_mode: "usd", direction: "below", peg_reference: 0.19, recovery_first_seen_at: 1_750_259_200, recovery_last_seen_at: 1_750_259_200 }),
       pegRates: { peggedREAL: 0.19 },
       pegRateSources: { peggedREAL: "fx" },
       pegRateCounts: { peggedREAL: 3 },
-      nativePegQuote: {
-        stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL",
-        price: 1, updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 1, updatedAt: 1_750_260_040 },
     });
     expect(decision.commands).toEqual([{
-      type: "close-event", id: 7, endedAt: 1_750_000_900,
+      type: "close-event", id: 7, endedAt: 1_750_260_100,
       recoveryPrice: null, closeReason: "recovered-native",
     }]);
   });
 
   it("holds a native-peg event open when the native quote is missing", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.1919,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        direction: "below",
-        peak_deviation_bps: -242,
-        start_price: 0.9758,
-        peak_price: 0.9758,
-        peg_reference: 1,
-      }),
+      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
       ...brlPeg,
     });
 
@@ -948,96 +465,42 @@ describe("decideDepegAsset", () => {
 
   it("does not supersede a native event from an opposite USD-domain signal", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.195,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.195, pegType: "peggedREAL" }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        direction: "below",
-        peak_deviation_bps: -242,
-        start_price: 0.9758,
-        peak_price: 0.9758,
-        peg_reference: 1,
-      }),
+      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
       ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.9758,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.9758, updatedAt: 1_750_260_040 },
     });
 
     expect(decision.seenEventIds).toEqual([7]);
-    expect(decision.commands).not.toContainEqual(expect.objectContaining({
-      type: "close-event",
-      closeReason: "superseded-direction",
-    }));
+    expect(decision.commands).not.toContainEqual(expect.objectContaining({ type: "close-event", closeReason: "superseded-direction" }));
   });
 
   it("supersedes a native-peg event when the native quote reverses direction", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.1919,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        direction: "below",
-        peak_deviation_bps: -242,
-        start_price: 0.9758,
-        peak_price: 0.9758,
-        peg_reference: 1,
-      }),
+      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
       ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 1.03,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 1.03, updatedAt: 1_750_260_040 },
     });
 
     expect(decision.seenEventIds).toEqual([]);
     expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 7,
-        endedAt: 1_750_000_900,
-        recoveryPrice: null,
-        closeReason: "superseded-direction",
-      },
+      { type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: null, closeReason: "superseded-direction" },
       expect.objectContaining({
         type: "upsert-pending",
-        payload: expect.objectContaining({
-          stablecoinId: "brz-transfero",
-          direction: "above",
-          bps: 300,
-          price: 1.03,
-          pegReference: 1,
-          reason: expect.stringContaining("native-origin"),
-        }),
+        payload: expect.objectContaining({ stablecoinId: "brz-transfero", direction: "above", bps: 300, price: 1.03, pegReference: 1, reason: expect.stringContaining("native-origin") }),
       }),
     ]);
   });
 
   it("keeps a live event when an untrusted primary reading reverses direction", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        price: 1.02,
-        priceSource: "cached",
-        priceConfidence: "low",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ price: 1.02, priceSource: "cached", priceConfidence: "low" }),
       meta: usdMeta,
       existing: makeUsdEvent({}),
       ...usdPeg,
@@ -1055,7 +518,7 @@ describe("decideDepegAsset", () => {
 
   it("closes a live event when circulating coverage falls below the event floor", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ circulating: { ethereum: 1 } }),
       meta: usdMeta,
       existing: makeUsdEvent({}, false),
@@ -1063,15 +526,7 @@ describe("decideDepegAsset", () => {
     });
 
     expect(decision.seenEventIds).toEqual([]);
-    expect(decision.commands).toEqual([
-      {
-        type: "close-event",
-        id: 7,
-        endedAt: 1_750_000_900,
-        recoveryPrice: null,
-        closeReason: "coverage-lost-supply",
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: null, closeReason: "coverage-lost-supply" }]);
     expect(decision.diagnostics).toEqual([
       {
         level: "log",
@@ -1085,7 +540,7 @@ describe("decideDepegAsset", () => {
     { label: "wholly invalid buckets", circulating: { ethereum: Number.NaN } },
   ])("keeps a live event open when current supply is unavailable ($label)", ({ circulating }) => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ circulating }),
       meta: usdMeta,
       existing: makeUsdEvent({}, false),
@@ -1104,27 +559,20 @@ describe("decideDepegAsset", () => {
 
   it("still closes a live event on an explicit observed zero supply", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ circulating: { ethereum: 0 } }),
       meta: usdMeta,
       existing: makeUsdEvent({}, false),
       ...usdPeg,
     });
 
-    expect(decision.commands).toEqual([
-      { type: "close-event", id: 7, endedAt: 1_750_000_900, recoveryPrice: null, closeReason: "coverage-lost-supply" },
-    ]);
+    expect(decision.commands).toEqual([{ type: "close-event", id: 7, endedAt: 1_750_260_100, recoveryPrice: null, closeReason: "coverage-lost-supply" }]);
   });
 
   it("preserves a live event when a thin fiat peg reference is not authoritative", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.1919,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1919, pegType: "peggedREAL" }),
       meta: brlMeta,
       existing: makeExistingEvent(),
       pegRates: { peggedREAL: 0.191895 },
@@ -1144,12 +592,10 @@ describe("decideDepegAsset", () => {
 
   it("keeps an ongoing event open when only the aggregate DEX price disagrees", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset(),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        started_at: 1_749_997_300,
-      }),
+      existing: makeUsdEvent({ started_at: 1_750_256_500 }),
       ...usdPeg,
       dexRow: makeDexRow(1.001, { source_pool_count: 5, }),
     });
@@ -1166,28 +612,14 @@ describe("decideDepegAsset", () => {
 
   it("suppresses a new event when independent DEX protocols show recovery", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset(),
       meta: usdMeta,
       ...usdPeg,
       dexRow: makeDexRow(0.999),
       protocolSources: [
-        {
-          protocol: "curve",
-          chain: "ethereum",
-          sourceFamily: "curve",
-          price: 0.999,
-          tvl: 2_500_000,
-          updatedAt: 1_750_000_840,
-        },
-        {
-          protocol: "uniswap-v3",
-          chain: "ethereum",
-          sourceFamily: "uniswap-v3",
-          price: 1.001,
-          tvl: 2_500_000,
-          updatedAt: 1_750_000_840,
-        },
+        { protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: 0.999, tvl: 2_500_000, updatedAt: 1_750_260_040 },
+        { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "uniswap-v3", price: 1.001, tvl: 2_500_000, updatedAt: 1_750_260_040 },
       ],
     });
 
@@ -1203,32 +635,15 @@ describe("decideDepegAsset", () => {
 
   it("clears recovery progress when independent DEX protocols still show the depeg", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        recovery_first_seen_at: 1_750_000_300,
-        recovery_last_seen_at: 1_750_000_840,
-      }),
+      existing: makeUsdEvent({ recovery_first_seen_at: 1_750_259_500, recovery_last_seen_at: 1_750_260_040 }),
       ...usdPeg,
       dexRow: makeDexRow(0.98),
       protocolSources: [
-        {
-          protocol: "curve",
-          chain: "ethereum",
-          sourceFamily: "curve",
-          price: 0.98,
-          tvl: 2_500_000,
-          updatedAt: 1_750_000_840,
-        },
-        {
-          protocol: "uniswap-v3",
-          chain: "ethereum",
-          sourceFamily: "uniswap-v3",
-          price: 0.981,
-          tvl: 2_500_000,
-          updatedAt: 1_750_000_840,
-        },
+        { protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: 0.98, tvl: 2_500_000, updatedAt: 1_750_260_040 },
+        { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "uniswap-v3", price: 0.981, tvl: 2_500_000, updatedAt: 1_750_260_040 },
       ],
     });
 
@@ -1244,26 +659,13 @@ describe("decideDepegAsset", () => {
 
   it("keeps a recovered reading open when DEX recovery lacks independent support", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        price: 1.001,
-        priceSource: "cached",
-        priceConfidence: "low",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ price: 1.001, priceSource: "cached", priceConfidence: "low" }),
       meta: usdMeta,
       existing: makeUsdEvent({}),
       ...usdPeg,
       dexRow: makeDexRow(0.999, { source_pool_count: 1, }),
-      protocolSources: [
-        {
-          protocol: "curve",
-          chain: "ethereum",
-          sourceFamily: "curve",
-          price: 0.999,
-          tvl: 5_000_000,
-          updatedAt: 1_750_000_840,
-        },
-      ],
+      protocolSources: [{ protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: 0.999, tvl: 5_000_000, updatedAt: 1_750_260_040 }],
     });
 
     expect(decision.seenEventIds).toEqual([7]);
@@ -1278,37 +680,23 @@ describe("decideDepegAsset", () => {
 
   it("continues recovery after a recent confirming observation", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        recovery_first_seen_at: 1_750_000_600,
-        recovery_last_seen_at: 1_750_000_840,
-      }),
+      existing: makeUsdEvent({ recovery_first_seen_at: 1_750_259_800, recovery_last_seen_at: 1_750_260_040 }),
       ...usdPeg,
     });
 
     expect(decision.seenEventIds).toEqual([7]);
-    expect(decision.commands).toEqual([
-      {
-        type: "continue-recovery",
-        id: 7,
-        lastSeenAt: 1_750_000_900,
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "continue-recovery", id: 7, lastSeenAt: 1_750_260_100 }]);
   });
 
   it("clears recovery progress when the primary price returns to the depeg", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset(),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        peak_deviation_bps: -300,
-        peak_price: 0.97,
-        recovery_first_seen_at: 1_750_000_600,
-        recovery_last_seen_at: 1_750_000_840,
-      }),
+      existing: makeUsdEvent({ peak_deviation_bps: -300, peak_price: 0.97, recovery_first_seen_at: 1_750_259_800, recovery_last_seen_at: 1_750_260_040 }),
       ...usdPeg,
     });
 
@@ -1317,16 +705,13 @@ describe("decideDepegAsset", () => {
   });
 
   it("keeps an event open until the full recovery window elapses", () => {
-    const now = 1_750_000_900;
+    const now = 1_750_260_100;
     const tolerance = DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
     const decisions = [tolerance - 1, tolerance, tolerance + 1].map((gap) => decideDepegAsset({
       now,
       asset: makeAsset({ price: 1.001 }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        recovery_first_seen_at: now - gap - 900,
-        recovery_last_seen_at: now - gap,
-      }),
+      existing: makeUsdEvent({ recovery_first_seen_at: now - gap - 900, recovery_last_seen_at: now - gap }),
       ...usdPeg,
     }));
 
@@ -1342,12 +727,10 @@ describe("decideDepegAsset", () => {
 
   it("clears a partial recovery when price returns to the deadband", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
+      now: 1_750_260_100,
       asset: makeAsset({ price: 0.993 }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        recovery_first_seen_at: 1_750_000_300,
-      }),
+      existing: makeUsdEvent({ recovery_first_seen_at: 1_750_259_500 }),
       ...usdPeg,
     });
 
@@ -1357,76 +740,30 @@ describe("decideDepegAsset", () => {
 
   it("updates a native-peg event peak from the native quote domain", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.1879,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.1879, pegType: "peggedREAL" }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        direction: "below",
-        peak_deviation_bps: -242,
-        start_price: 0.9758,
-        peak_price: 0.9758,
-        peg_reference: 1,
-      }),
+      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
       ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.97,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.97, updatedAt: 1_750_260_040 },
     });
 
-    expect(decision.commands).toEqual([
-      {
-        type: "update-peak",
-        id: 7,
-        peakDeviationBps: -300,
-        peakPrice: 0.97,
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "update-peak", id: 7, peakDeviationBps: -300, peakPrice: 0.97 }]);
   });
 
   it("updates a native-peg event peak when the USD primary is inside the trigger threshold", () => {
     const decision = decideDepegAsset({
-      now: 1_750_000_900,
-      asset: makeAsset({
-        id: "brz-transfero",
-        symbol: "BRZ",
-        price: 0.19,
-        pegType: "peggedREAL",
-      }),
+      now: 1_750_260_100,
+      asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", price: 0.19, pegType: "peggedREAL" }),
       meta: brlMeta,
-      existing: makeExistingEvent({
-        direction: "below",
-        peak_deviation_bps: -242,
-        start_price: 0.9758,
-        peak_price: 0.9758,
-        peg_reference: 1,
-      }),
+      existing: makeExistingEvent({ direction: "below", peak_deviation_bps: -242, start_price: 0.9758, peak_price: 0.9758, peg_reference: 1 }),
       ...brlPeg,
-      nativePegQuote: {
-        stablecoinId: "brz-transfero",
-        geckoId: "brz",
-        pegCurrency: "BRL",
-        price: 0.95,
-        updatedAt: 1_750_000_840,
-      },
+      nativePegQuote: { stablecoinId: "brz-transfero", geckoId: "brz", pegCurrency: "BRL", price: 0.95, updatedAt: 1_750_260_040 },
     });
 
     expect(decision.observation).toEqual({ kind: "observed" });
     expect(decision.seenEventIds).toEqual([7]);
-    expect(decision.commands).toContainEqual({
-      type: "update-peak",
-      id: 7,
-      peakDeviationBps: -500,
-      peakPrice: 0.95,
-    });
+    expect(decision.commands).toContainEqual({ type: "update-peak", id: 7, peakDeviationBps: -500, peakPrice: 0.95 });
   });
 
   it("keeps an existing event open when a high-TVL pool challenger contradicts primary recovery", () => {
@@ -1442,13 +779,7 @@ describe("decideDepegAsset", () => {
         priceUpdatedAt: 1_780_629_940,
         circulating: { ethereum: 353_000_000 },
       }),
-      meta: {
-        ...usdMeta,
-        id: "apxusd-apyx",
-        name: "apxUSD",
-        symbol: "apxUSD",
-        geckoId: "apxusd",
-      },
+      meta: { ...usdMeta, id: "apxusd-apyx", name: "apxUSD", symbol: "apxUSD", geckoId: "apxusd" },
       existing: makeExistingEvent({
         id: 90089,
         stablecoin_id: "apxusd-apyx",
@@ -1462,15 +793,7 @@ describe("decideDepegAsset", () => {
         peg_reference: 1,
       }),
       ...usdPeg,
-      challengerPools: [
-        {
-          price: 0.952866583,
-          tvlUsd: 52_000_000,
-          protocol: "curve",
-          chain: "ethereum",
-          sourceFamily: "geckoterminal",
-        },
-      ],
+      challengerPools: [{ price: 0.952866583, tvlUsd: 52_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" }],
     });
 
     expect(decision.trackedCoinId).toBe("apxusd-apyx");
@@ -1496,32 +819,13 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        id: 42,
-        peak_deviation_bps: -250,
-        started_at: 1_780_600_000,
-      }),
+      existing: makeUsdEvent({ id: 42, peak_deviation_bps: -250, started_at: 1_780_600_000 }),
       ...usdPeg,
-      challengerPools: [
-        {
-          price: 0.985,
-          tvlUsd: 250_000,
-          protocol: "curve",
-          chain: "ethereum",
-          sourceFamily: "geckoterminal",
-        },
-      ],
+      challengerPools: [{ price: 0.985, tvlUsd: 250_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" }],
     });
 
     expect(decision.seenEventIds).toEqual([42]);
-    expect(decision.commands).toEqual([
-      {
-        type: "begin-recovery",
-        id: 42,
-        firstSeenAt: 1_780_630_000,
-        lastSeenAt: 1_780_630_000,
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "begin-recovery", id: 42, firstSeenAt: 1_780_630_000, lastSeenAt: 1_780_630_000 }]);
   });
 
   it("allows primary recovery when two dormant diverging pools are outvoted by four at-peg pools", () => {
@@ -1571,14 +875,7 @@ describe("decideDepegAsset", () => {
 
     expect(decision.trackedCoinId).toBe("vchf-vnx");
     expect(decision.seenEventIds).toEqual([90792]);
-    expect(decision.commands).toEqual([
-      {
-        type: "begin-recovery",
-        id: 90792,
-        firstSeenAt: now,
-        lastSeenAt: now,
-      },
-    ]);
+    expect(decision.commands).toEqual([{ type: "begin-recovery", id: 90792, firstSeenAt: now, lastSeenAt: now }]);
     expect(decision.diagnostics).toEqual([]);
   });
 
@@ -1595,14 +892,7 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        id: 42,
-        direction: "above",
-        peak_deviation_bps: 250,
-        started_at: now - 3_600,
-        start_price: 1.025,
-        peak_price: 1.025,
-      }),
+      existing: makeUsdEvent({ id: 42, direction: "above", peak_deviation_bps: 250, started_at: now - 3_600, start_price: 1.025, peak_price: 1.025 }),
       ...usdPeg,
       challengerPools: [
         { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
@@ -1634,14 +924,7 @@ describe("decideDepegAsset", () => {
         circulating: { ethereum: 353_000_000 },
       }),
       meta: usdMeta,
-      existing: makeUsdEvent({
-        id: 42,
-        direction: "above",
-        peak_deviation_bps: 250,
-        started_at: now - 3_600,
-        start_price: 1.025,
-        peak_price: 1.025,
-      }),
+      existing: makeUsdEvent({ id: 42, direction: "above", peak_deviation_bps: 250, started_at: now - 3_600, start_price: 1.025, peak_price: 1.025 }),
       ...usdPeg,
       challengerPools: [
         { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
@@ -1709,7 +992,7 @@ describe("decideDepegAsset", () => {
     });
 
     expect(decision.seenEventIds).toEqual([90781]);
-    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 90781 }]);
+    expect(decision.commands).toEqual([{ type: "continue-recovery", id: 90781, lastSeenAt: now }]);
     expect(decision.diagnostics).toEqual([]);
   });
 
@@ -1754,9 +1037,54 @@ describe("decideDepegAsset", () => {
     });
 
     expect(decision.seenEventIds).toEqual([90760]);
-    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 90760 }]);
+    expect(decision.commands).toEqual([{ type: "continue-recovery", id: 90760, lastSeenAt: now }]);
     expect(decision.diagnostics).toEqual([]);
   });
+
+  it.each([
+    ["begins", null, null, false, ["begin-recovery"]],
+    ["continues under 24 h", 3_600, 600, false, ["continue-recovery"]],
+    ["closes at 24 h", 86_400, 600, false, ["close-event"]],
+    ["stops on a pool veto", 3_600, 600, "pool", ["clear-recovery"]],
+    ["stops on a stale liquid DEX lane", 3_600, 600, "dex", ["clear-recovery"]],
+    ["stops on a fresh DEX outside the band", 3_600, 600, "band", ["clear-recovery"]],
+    ["needs an upstream-dated quote", 3_600, 600, "local", ["clear-recovery"]],
+  ] as const)("sustained single-source recovery %s", (_label, firstSeenAge, lastSeenAge, veto, expected) => {
+    const now = 1_790_231_427; // Thursday
+    const decision = decideDepegAsset({
+      now, meta: usdMeta, ...usdPeg,
+      asset: makeAsset({ price: 0.999, priceSource: "coingecko", priceConfidence: "single-source", priceObservedAtMode: veto === "local" ? "local_fetch" : "upstream",
+        priceObservedAt: now - 60, circulating: { ethereum: 5_000_000 } }),
+      existing: makeUsdEvent(firstSeenAge == null ? {} : { recovery_first_seen_at: now - firstSeenAge, recovery_last_seen_at: now - (lastSeenAge ?? 0) }),
+      challengerPools: veto === "pool"
+        ? [{ price: 0.98, tvlUsd: 6_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "cg_onchain" }]
+        : undefined,
+      ...(veto === "dex" || veto === "band" ? { dexRow: makeDexRow(veto === "dex" ? 0.999 : 0.992,
+        { updated_at: now - (veto === "dex" ? 7_200 : 60), aggregateObservedAt: now - (veto === "dex" ? 7_200 : 60) }) } : {}),
+    });
+    expect(decision.commands.map(({ type }) => type)).toEqual(expected);
+    if (expected[0] === "close-event") {
+      expect(decision.commands[0]).toMatchObject({ recoveryPrice: 0.999, closeReason: "recovered-primary" });
+      expect(decision.diagnostics).toEqual([{ level: "log", message: "[depeg] Closing live event for USDT after 24 h of sustained single-source recovery" }]);
+    }
+  });
+
+  it.each([
+    [134, goldMeta, { peggedGOLD: 4285 }, { kind: "unavailable", reason: "reference-market-closed" }, []],
+    [100, goldMeta, { peggedGOLD: 4285 }, { kind: "observed" }, ["upsert-pending"]],
+    [0.1919, brlMeta, brlPeg.pegRates, { kind: "unavailable", reason: "reference-market-closed" }, []],
+  ] as const)(
+    "holds a sub-severe reference-peg move while its market is closed (price %s)",
+    (price, meta, pegRates, observation, commands) => {
+      const now = 1_794_758_400; // Sunday 16:00 UTC
+      const decision = decideDepegAsset({
+        now, asset: makeAsset({ id: meta.id, symbol: meta.symbol, price, priceUpdatedAt: now, pegType: `pegged${meta.flags.pegCurrency}` }), meta,
+        pegRates, pegRateSources: { peggedGOLD: "median", peggedREAL: "median" }, pegRateCounts: { peggedGOLD: 4, peggedREAL: 3 },
+      });
+      expect(decision.observation).toEqual(observation);
+      expect(decision.commands.map((command) => command.type)).toEqual(commands);
+    },
+  );
 
   it("keeps an in-band soft-source event open when a high-TVL challenger pool still shows the depeg", () => {
     // Reproduced 2026-09-24 from live D1 (event 90786, hollar-hydrated): the
@@ -1854,13 +1182,11 @@ describe("decideDepegAsset", () => {
       pegRates: { peggedAUD: 0.7067137809187279 },
       pegRateSources: { peggedAUD: "fx" },
       pegRateCounts: { peggedAUD: 4 },
-      challengerPools: [
-        { price: 0.704981734354013, tvlUsd: 111_651.66302719248, protocol: "curve", chain: "ethereum", sourceFamily: "dl" },
-      ],
+      challengerPools: [{ price: 0.704981734354013, tvlUsd: 111_651.66302719248, protocol: "curve", chain: "ethereum", sourceFamily: "dl" }],
     });
 
     expect(decision.seenEventIds).toEqual([90777]);
-    expect(decision.commands).toEqual([]);
+    expect(decision.commands).toEqual([{ type: "begin-recovery", id: 90777, firstSeenAt: now, lastSeenAt: now }]);
     expect(decision.diagnostics).toEqual([]);
   });
 

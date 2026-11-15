@@ -352,6 +352,7 @@ export async function generateDailyDigest(
     "stablecoins-cache-stale",
     "active-depeg-supply-unavailable",
     "active-depeg-reference-unavailable",
+    "active-depeg-reference-market-closed",
   ].some((reason) =>
     degradedReasons.includes(reason) || (inputData.degradedSources ?? []).includes(reason),
   );

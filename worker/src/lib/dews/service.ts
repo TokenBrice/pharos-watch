@@ -178,6 +178,7 @@ async function computeAndStoreDEWSWithDb(
   await reportDewsProgress(reportProgress, "scoring", { validationFailures });
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
     assetById,
+    nowSec,
     pegRates,
     pegRateSources,
     pegRateContributorCounts,

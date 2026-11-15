@@ -15,6 +15,7 @@ export function buildDetailHero(overrides: Partial<HeroParams> & Pick<HeroParams
     pegRef: 1,
     deviationBps: 0,
     pegReferenceUnavailable: false,
+    referenceMarketClosed: false,
     pegScoreResult: null,
     liquidityData: undefined,
     yieldRanking: null,

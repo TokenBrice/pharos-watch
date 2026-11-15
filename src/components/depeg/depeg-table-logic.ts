@@ -1,6 +1,6 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
-import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { attentionScore, isDeviationHeld, type DepegTrackerRow } from "@/lib/depeg-sort";
 
 export type DepegTableSortKey =
   | "__attention"
@@ -19,7 +19,7 @@ type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
 const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number | null> = {
   pegScore: (r) => r.coin.pegScore,
   dewsScore: (r) => r.dews?.score ?? null,
-  currentDeviationBps: (r) => r.coin.currentDeviationBps == null ? null : Math.abs(r.coin.currentDeviationBps),
+  currentDeviationBps: (r) => r.coin.currentDeviationBps == null || isDeviationHeld(r) ? null : Math.abs(r.coin.currentDeviationBps),
   pegPct: (r) => r.coin.pegPct,
   eventCount: (r) => r.coin.eventCount,
   worstDeviationBps: (r) => r.coin.worstDeviationBps == null ? null : Math.abs(r.coin.worstDeviationBps),
