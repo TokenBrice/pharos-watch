@@ -30,7 +30,7 @@ const SUGAR_ABI = parseAbi([
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
 ]);
 
-type SlipstreamProtocol = "aerodrome-slipstream" | "velodrome-slipstream";
+type SlipstreamProtocol = "aerodrome-slipstream";
 
 type SugarPool = {
   lp: string;
@@ -164,9 +164,10 @@ export function projectSugarTokens(decoded: readonly SugarToken[]): Map<string, 
 
 
 /**
- * Sugar walks at most this many pools of one factory (`MAX_ITERATIONS()` on both reviewed
- * deployments), so the next factory starts right after them once a factory holds more.
- * Aerodrome's V2 factory passed it on 2026-11-12 (30,002 pools; CL segment at offset 30,000).
+ * Sugar walks at most this many pools of one factory (`MAX_ITERATIONS()` on the
+ * reviewed deployment), so the next factory starts right after them once a
+ * factory holds more. Aerodrome's V2 factory passed it on 2026-11-12 (30,002
+ * pools; CL segment at offset 30,000).
  */
 const SUGAR_MAX_FACTORY_ITERATIONS = 30_000;
 

@@ -10,11 +10,9 @@ describe("classifyClPoolType", () => {
   });
   it("Slipstream variants keep the existing 1/5/30 bp scheme (A6 deferred)", () => {
     for (const fee of [1, 5, 30]) expect(classifyClPoolType("aerodrome-slipstream", fee)).toBe(`aerodrome-slipstream-${fee}bp`);
-    expect(classifyClPoolType("velodrome-slipstream", 5)).toBe("velodrome-slipstream-5bp");
   });
   it("classifies observed Slipstream 100 bp fees into their own bucket", () => {
-    for (const protocol of ["aerodrome-slipstream", "velodrome-slipstream"] as const)
-      expect(classifyClPoolType(protocol, 100)).toBe(`${protocol}-100bp`);
+    expect(classifyClPoolType("aerodrome-slipstream", 100)).toBe("aerodrome-slipstream-100bp");
   });
 
   it("maps every fee-bearing bucket to an explicit quality multiplier", () => {
@@ -22,7 +20,6 @@ describe("classifyClPoolType", () => {
       ...([1, 5, 25, 30, 100] as const).map((fee) => classifyClPoolType("pancakeswap", fee)),
       ...([1, 5, 30, 100] as const).flatMap((fee) => [
         classifyClPoolType("aerodrome-slipstream", fee),
-        classifyClPoolType("velodrome-slipstream", fee),
         classifyClPoolType("aero-slipstream", fee),
       ]),
     ];
@@ -30,7 +27,6 @@ describe("classifyClPoolType", () => {
       expect(Number.isFinite(QUALITY_MULTIPLIERS[bucket]), `${bucket} must have an explicit multiplier`).toBe(true);
     }
     expect(QUALITY_MULTIPLIERS["aerodrome-slipstream-100bp"]).toBe(0.4);
-    expect(QUALITY_MULTIPLIERS["velodrome-slipstream-100bp"]).toBe(0.4);
     expect(QUALITY_MULTIPLIERS["aero-slipstream-100bp"]).toBe(0.4);
     expect(classifyClPoolType("aero-slipstream", 200)).toBe("aero-slipstream-100bp");
     expect(QUALITY_MULTIPLIERS["aero-stable"]).toBe(0.85);
@@ -40,7 +36,6 @@ describe("classifyClPoolType", () => {
   it("publishes the neutral bucket instead of a fabricated tier for an unknown fee", () => {
     for (const fee of [null, undefined, 0]) expect(classifyClPoolType("pancakeswap", fee)).toBe("pancakeswap-v3-unknown-fee");
     expect(classifyClPoolType("aerodrome-slipstream", null)).toBe("aerodrome-slipstream-unknown-fee");
-    expect(classifyClPoolType("velodrome-slipstream", Number.NaN)).toBe("velodrome-slipstream-unknown-fee");
   });
 });
 
