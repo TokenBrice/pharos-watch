@@ -1,4 +1,20 @@
 {
+  "gbpq-quantoz": {
+    "title": "Deployed sterling token with no circulation",
+    "text": "Quantoz Payments has deployed GBPQ on Ethereum and Stellar, but its token roster says no GBPQ is in circulation and no reserve exists yet. An Ethereum read on November 15 2026 returned six decimals and zero total supply, behind the same implementation, proxy admin and owner contracts as Quantoz's PLNQ. On Stellar, one account holds 1,000,000 GBPQ alongside about one million EURQ and one million USDQ, and the issuer account there can revoke trustline authorization and claw back balances. The white paper describes 1:1 sterling reserves held by Stichting Quantoz, a bankruptcy-remote foundation, with at least 30% in bank deposits, and par redemption for registered holders after compliance checks. Deployment and MiCA notification do not yet establish a circulating supply or an operating holder exit.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-15"
+  },
+  "chfs-safirum": {
+    "title": "A Whitelisted Swiss Franc on Solana",
+    "text": "CHF-S is Safirum AG's Swiss franc stablecoin on Solana, launched on November 3 2026, later than its original third-quarter target. Safirum says each token is backed by Swiss francs held in segregated accounts at Swiss-based banks, but its releases do not name the banks and no reserve attestation has been published. Access is permissioned at the token level: every user must pass identity verification, and CHF-S moves only between approved wallets on an on-chain whitelist maintained through a four-party multi-signature arrangement. Removing a wallet from that list blocks its holder. Transfers carry a 0.05% fee capped at 0.50 CHF-S. Safirum is a member of the VQF, a self-regulatory organisation recognised by FINMA. No mint address has been published, so Pharos has no price or supply lane to track and keeps the coin in launched, awaiting data status. Every transfer depends on both wallets staying on the approved list.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-15"
+  },
   "eurgh-gatehub": {
     "title": "A Slovenian E-Money Euro on the XRP Ledger",
     "text": "GateHub Euro is Dinaro's euro e-money token, distributed through GateHub with SEPA funding and at-par redemption. Dinaro is a Slovenian electronic money institution whose white paper dates the public offer or admission to trading to September 1, 2026. GateHub describes access through XRP Ledger and Xahau wallets, subject to legal and verification requirements. Public XRPL reads confirm outstanding issuance. The issuer retains freeze capability and has enabled clawback, so holder balances remain subject to issuer intervention. Pharos keeps EURGH in launched, awaiting data status because neither a price lane nor a supply lane has been admitted. The documented redemption promise sits alongside issuer controls and incomplete market-data coverage.",

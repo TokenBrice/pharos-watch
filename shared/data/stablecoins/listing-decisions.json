@@ -499,6 +499,8 @@
     "usdrf-realfi": "stable-value-investment",
     "zlusd-zelle": "core-stablecoin",
     "eurgh-gatehub": "core-stablecoin",
-    "rdusd-rd-technologies": "core-stablecoin"
+    "rdusd-rd-technologies": "core-stablecoin",
+    "chfs-safirum": "core-stablecoin",
+    "gbpq-quantoz": "core-stablecoin"
   }
 }
