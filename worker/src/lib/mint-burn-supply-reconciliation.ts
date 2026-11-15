@@ -235,7 +235,7 @@ interface PassInput {
 
 async function boundary(input: PassInput, config: MintBurnContractConfig, day: number,
   caches: Map<string, EvmBlockSearchCache>, pins: Map<string, Omit<Checkpoint, "supplyRaw">>,
-  options: EvmRpcOptions, previous?: Checkpoint): Promise<Checkpoint | null> {
+  options: EvmRpcOptions, previous?: Checkpoint, anchor?: Checkpoint): Promise<Checkpoint | null> {
   const chainId = config.chain.chainId;
   const pinKey = `${chainId}:${day}`;
   const header = pins.get(pinKey) ?? (previous ? await fetchEvmBlockHeader(chainId, previous.number, options) : null);
@@ -252,6 +252,11 @@ async function boundary(input: PassInput, config: MintBurnContractConfig, day: n
         .bind(chainId, input.heads.get(chainId) ?? 0, day, day).all<{ block_number: number; timestamp: number }>();
       cache = { latestBlockNumber: input.heads.get(chainId), blockTimestampByNumber: new Map(rows.results.map((row) => [row.block_number, row.timestamp])) };
       caches.set(pinKey, cache);
+    }
+    // The day's opening checkpoint is an exact, already-validated header. Seeding it
+    // skips the walk back from the head that fast-block chains cannot afford.
+    if (anchor && !cache.blockTimestampByNumber.has(anchor.number)) {
+      cache.blockTimestampByNumber.set(anchor.number, anchor.timestamp);
     }
     number = await resolveClosestBlockAtOrBeforeTimestamp(chainId, day - 1, cache, options) ?? undefined;
     // Persist probes even on a capped search: the next opportunity continues its bracket.
@@ -349,7 +354,8 @@ export async function runMintBurnSupplyReconciliation(input: PassInput): Promise
           const prior = receipts.get(day - POLICY.daySec);
           const previous = prior && prior.status !== "unavailable" && prior.status !== "unsupported-law" ? prior.closing ?? undefined : undefined;
           receipt.opening = await boundary(input, config, day, caches, pins, options, previous);
-          receipt.closing = await boundary(input, config, day + POLICY.daySec, caches, pins, options);
+          receipt.closing = await boundary(input, config, day + POLICY.daySec, caches, pins, options, undefined,
+            receipt.opening ?? undefined);
           receipt.priceUsd = resolveMintBurnEventPrice(config.stablecoinId, now, input.priceContext)?.price ?? null;
           receipt = reconcileMintBurnSupplyReceipt(receipt, events.results as LedgerRow[], allowsFalseZeroTransfers(config));
           ledgerSnapshot = JSON.stringify((events.results as LedgerRow[]).map((row) =>

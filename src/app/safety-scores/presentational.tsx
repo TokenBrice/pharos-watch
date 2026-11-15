@@ -1,8 +1,5 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import Link from "next/link";
-import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,72 +7,11 @@ import {
   type SafetyGradeSupplyMix,
 } from "@/components/safety-scores/safety-grade-distribution-bar";
 import { UniverseChip } from "@/components/universe-chip";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { cn } from "@/lib/utils";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
+import { SafetyMapPreview } from "./map-preview";
 import type { GradeFilter, PegFilter, V9PillarAverage } from "./v9-view-model";
-
-const SAFETY_MAP_PATH = "/safety-scores/map/";
-const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.webp";
-const SAFETY_MAP_FALLBACK_IMAGE_PATH = "/safety-scores/map.png";
-
-function SafetyMapPreview() {
-  const [imagePath, setImagePath] = useState(SAFETY_MAP_IMAGE_PATH);
-  const { unavailable, onError } = useImageUnavailable();
-  const handleImageError = useCallback(() => {
-    if (imagePath === SAFETY_MAP_IMAGE_PATH) {
-      setImagePath(SAFETY_MAP_FALLBACK_IMAGE_PATH);
-    } else {
-      onError();
-    }
-  }, [imagePath, onError]);
-  const checkAlreadyFailed = useCallback((image: HTMLImageElement | null) => {
-    // A failed request can settle before hydration attaches the error handler.
-    if (image && image.complete && image.naturalWidth === 0) handleImageError();
-  }, [handleImageError]);
-
-  return (
-    <Link
-      href={SAFETY_MAP_PATH}
-      className="pharos-focus-ring group flex min-h-48 min-w-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background/50 transition-colors hover:border-border hover:bg-muted/30"
-      aria-label="Open the Safety Score Map"
-    >
-      <div className="flex min-h-32 flex-1 items-center justify-center overflow-hidden bg-[#05070d]">
-        {unavailable ? (
-          <div className="flex flex-col items-center gap-2 text-center text-white/80">
-            <MapIcon className="h-7 w-7" aria-hidden="true" />
-            <span className="pharos-label text-white/60">Full market map</span>
-          </div>
-        ) : (
-          <img
-            ref={checkAlreadyFailed}
-            src={imagePath}
-            alt=""
-            width={800}
-            height={450}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-            onError={handleImageError}
-          />
-        )}
-      </div>
-      <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3">
-        <div className="min-w-0">
-          <p className="pharos-label">Safety score map</p>
-          <p className="mt-1 truncate text-sm font-medium text-foreground">Explore every grade band</p>
-        </div>
-        <ArrowUpRight
-          className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-          aria-hidden="true"
-        />
-      </div>
-    </Link>
-  );
-}
 
 /** Three pillar ecosystem means side by side; the weakest is tagged, never only tinted. */
 function PillarAveragesRow({
@@ -143,12 +79,13 @@ interface SafetyScoresHeroData {
   pillarAverages?: readonly V9PillarAverage[];
 }
 
-export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData | null; loading: boolean }) {
+/** Loaded ratings only: the pending frame is `SafetyScoresContentLoadingState`'s server-rendered skeleton. */
+export function SafetyScoresHero({ data }: { data: SafetyScoresHeroData | null }) {
   const [avg, abSupply] = data?.stats ?? [];
   const pillarAverages = data?.pillarAverages ?? [];
   const gradeClass = avg ? REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade] : undefined;
 
-  if (!loading && !avg) {
+  if (!data || !avg) {
     return (
       <div className="pharos-card-shell p-5 sm:p-6 lg:p-7" role="group" aria-label="Ecosystem safety overview">
         <div className="max-w-sm"><SafetyMapPreview /></div>
@@ -159,9 +96,9 @@ export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData
   return (
     <FeatureHeroSplit
       ariaLabel="Ecosystem safety overview"
-      beamLabel={avg?.label ?? <span className="inline-block h-3.5 w-28 animate-pulse rounded-sm bg-accent" />}
+      beamLabel={avg.label}
       beamValue={
-        avg ? <span className="inline-flex items-baseline gap-3">
+        <span className="inline-flex items-baseline gap-3">
           {avg.value}
           {/* Grade is a semantic scale, so it alone carries color. */}
           <span
@@ -172,18 +109,13 @@ export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData
           >
             Grade {avg.detail}
           </span>
-        </span> : <span className="inline-block h-10 w-32 animate-pulse rounded-md bg-accent" />
+        </span>
       }
-      universe={data ? <UniverseChip universe="scored" value={`${data.scoredCount} of ${data.cardCount} active`} /> : <Skeleton className="h-6 w-40 rounded-full" />}
+      universe={<UniverseChip universe="scored" value={`${data.scoredCount} of ${data.cardCount} active`} />}
       expand={{ href: "#data", label: "Jump to the full grade table" }}
       subKicker="Ecosystem read"
       sub={
-        !data ? (
-          <div className="space-y-3 py-2">
-            <Skeleton className="h-4 w-full rounded-sm" />
-            <Skeleton className="h-4 w-4/5 rounded-sm" />
-          </div>
-        ) : abSupply || pillarAverages.length > 0 ? (
+        abSupply || pillarAverages.length > 0 ? (
           <div className="divide-y divide-border/50">
             {abSupply ? (
               <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
@@ -197,9 +129,7 @@ export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData
     >
       <div className="grid h-full gap-4 p-5 sm:p-6 lg:grid-cols-3 lg:p-7">
         <div className="flex min-w-0 flex-col justify-center lg:col-span-2">
-          {data ? (
-            <SafetyGradeDistributionBar gradeCounts={data.gradeCounts} totalCards={data.totalCards} supplyMix={data.supplyMix} />
-          ) : <Skeleton className="h-48 w-full rounded-md" variant="shimmer" />}
+          <SafetyGradeDistributionBar gradeCounts={data.gradeCounts} totalCards={data.totalCards} supplyMix={data.supplyMix} />
         </div>
         <SafetyMapPreview />
       </div>

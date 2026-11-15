@@ -53,9 +53,7 @@ const PREVIEW: SafetyScoresPreview = {
 describe("SafetyScoresContentLoadingState", () => {
   afterEach(cleanupFrontendTest);
 
-  it("renders no results region for the route-level fallback", () => {
-    // The route's `loading` prop is this neutral shape: the dated preview is
-    // rendered once by the client's pending branch, never here as well.
+  it("prerenders no results region without an admissible preview", () => {
     const html = renderToStaticMarkup(<SafetyScoresContentLoadingState />);
     expect(html).not.toContain('aria-label="Safety score cards"');
     expect(html).not.toContain("Grades as of");

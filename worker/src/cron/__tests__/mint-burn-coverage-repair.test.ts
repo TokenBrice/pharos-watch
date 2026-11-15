@@ -106,10 +106,12 @@ describe("bounded scanner coverage repair", () => {
         toSupplyRaw: String(1000 - logs.filter((log) => Number(log.blockNumber) <= range.toBlock).length) }])));
     const batch = db.batch.bind(db);
     let exhausted = false;
+    const rows = () => Number(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events").get()!.n);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
-      if (exhausted && statements.length === 100) { vi.setSystemTime(now * 1000 + 121_000); throw overload; }
-      const result = await batch(statements);
-      vi.setSystemTime(Date.now() + statements.length * 400);
+      if (exhausted) { exhausted = false; vi.setSystemTime(now * 1000 + 121_000); throw overload; }
+      const before = rows(), result = await batch(statements);
+      // Four-row statements keep each row's enqueue+insert cost.
+      vi.setSystemTime(Date.now() + (statements.length + (rows() - before) * 2) * 400);
       return result;
     });
     const ranges: number[][] = [], accepted: number[] = [];

@@ -101,6 +101,7 @@ export function ChainContractTable({
         Showing {shown.length} of {candidates.length} recorded deployments
       </p>
       <ContentTable
+        variant="lean"
         tableId="chain-contract-addresses"
         tableAriaLabel={`Recorded contract addresses on ${chainName}`}
         columns={COLUMNS}

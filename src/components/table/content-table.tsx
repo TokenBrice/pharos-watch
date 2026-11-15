@@ -38,7 +38,19 @@ export interface ContentTableProps
   rows: readonly ContentTableRow[];
   headerRowClassName?: string;
   rowHeaderColumnId?: string;
+  /**
+   * `lean` renders bounded, server-only previews: shared cell geometry moves
+   * from every cell to the table once, so a 20-row preview does not repeat
+   * ~140 bytes of utilities on each of its cells in both the static HTML and
+   * the RSC payload. Cells keep `data-slot`, `scope`, column classes and the
+   * `px-3`/`py-2`/`h-10` hooks the density tokens override.
+   */
+  variant?: "default" | "lean";
 }
+
+const LEAN_TABLE_CLASS_NAME =
+  "[&_td]:align-middle [&_th]:align-middle [&_th]:font-medium [&_th]:text-left [&_th[scope=row]]:text-foreground";
+const LEAN_BODY_CLASS_NAME = "[&_tr]:border-b";
 
 function getContentTableCellKeyIssues(
   columns: readonly ContentTableColumn[],
@@ -110,6 +122,8 @@ export function ContentTable({
   viewportProps,
   chrome = "content",
   density = "compact",
+  variant = "default",
+  tableClassName,
   ...frameProps
 }: ContentTableProps) {
   // Run unconditionally: this is a static export, so SSG executes under
@@ -117,6 +131,8 @@ export function ContentTable({
   // letting a column/row mismatch ship as a silently broken table. The
   // O(columns×rows) check is negligible.
   assertContentTableRowsMatchColumns(columns, rows, rowHeaderColumnId);
+  const lean = variant === "lean";
+  const lastColumnIndex = columns.length - 1;
 
   return (
     <TableFrame
@@ -124,19 +140,22 @@ export function ContentTable({
       density={density}
       viewportProps={{ mobileScrollHint: false, ...viewportProps }}
       {...frameProps}
+      tableClassName={lean ? cn(LEAN_TABLE_CLASS_NAME, tableClassName) : tableClassName}
     >
       <TableHeader>
         <TableRow
           rowIntent="static"
-          className={cn("text-left", headerRowClassName)}
+          lean={lean}
+          className={lean ? headerRowClassName : cn("text-left", headerRowClassName)}
         >
           {columns.map((column, index) => (
             <TableHead
               key={column.id}
               scope="col"
+              lean={lean}
               className={cn(
-                "py-2 text-foreground",
-                index < columns.length - 1 && "pr-4",
+                lean ? "h-10 whitespace-nowrap px-3 py-2 text-foreground" : "py-2 text-foreground",
+                index < lastColumnIndex && "pr-4",
                 column.headerClassName,
               )}
             >
@@ -145,16 +164,16 @@ export function ContentTable({
           ))}
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className={lean ? LEAN_BODY_CLASS_NAME : undefined}>
         {rows.map((row) => (
-          <TableRow key={row.id} rowIntent="static" className={row.className}>
+          <TableRow key={row.id} rowIntent="static" lean={lean} className={row.className}>
             {columns.map((column, index) => {
               const isRowHeader =
                 column.rowHeader || column.id === rowHeaderColumnId;
               const cellClassName = cn(
-                "py-2",
-                index < columns.length - 1 && "pr-4",
-                isRowHeader && "h-auto text-foreground",
+                lean ? "whitespace-nowrap px-3 py-2" : "py-2",
+                index < lastColumnIndex && "pr-4",
+                isRowHeader && !lean && "h-auto text-foreground",
                 column.cellClassName,
                 row.cellClassNames?.[column.id],
               );
@@ -163,12 +182,13 @@ export function ContentTable({
                 <TableHead
                   key={column.id}
                   scope="row"
+                  lean={lean}
                   className={cellClassName}
                 >
                   {row.cells[column.id]}
                 </TableHead>
               ) : (
-                <TableCell key={column.id} className={cellClassName}>
+                <TableCell key={column.id} lean={lean} className={cellClassName}>
                   {row.cells[column.id]}
                 </TableCell>
               );

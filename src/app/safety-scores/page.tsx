@@ -4,11 +4,13 @@ import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { Button } from "@/components/ui/button";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ShareButton } from "@/components/share-button";
-import { buildApiOgImageUrl } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading-state";
-import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { SafetyScoresLiveIsland } from "@/app/safety-scores/live-island";
 import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -55,51 +57,53 @@ const FAQ_ITEMS = [
 
 const initialPreview = getSafetyScoresPreview();
 
-const route = createClientFeaturePage({
-  path: "/safety-scores/",
-  metadata: {
-    title: "Safety Scores: Stablecoin Safety Grades",
-    description: reportCardsDescription,
-    ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
-  },
-  loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
-  clientProps: { initialPreview },
-  // The route-level fallback stays the neutral skeleton: the client's pending
-  // branch renders the preview once, and Next streams that render instead.
-  loading: <SafetyScoresContentLoadingState />,
-  shell: {
-    breadcrumbName: "Safety Scores",
-    title: "Safety Scores",
-    methodology: {
-      version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
-      changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-    },
-    header: "instrument",
-    headerActions: (
-      <>
-        {/* Server-rendered so the map stays crawlable from the homepage. */}
-        <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
-          <Link href="/safety-scores/map/" aria-label="Map: every grade band as a single image">
-            <MapIcon aria-hidden="true" />
-            <span>Map</span>
-          </Link>
-        </Button>
-        <AlertsHeaderLink
-          href="/pharoswatchbot/#getting-started"
-          description="Get notified when a safety grade changes"
-        />
-        <ShareButton ogPath="/api/og/safety-scores" />
-      </>
-    ),
-    preface: (
-      <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest"))} />
-    ),
-    leadParagraphs: [
-      "Every active stablecoin graded on Backing, Exit, and Economic Control, distilled into one safety grade.",
-    ],
-  },
-  afterClient: (
-    <>
+export const metadata = buildPageMetadata({
+  canonical: "/safety-scores/",
+  title: "Safety Scores: Stablecoin Safety Grades",
+  description: reportCardsDescription,
+  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
+});
+
+export default function SafetyScoresPage() {
+  return (
+    <FeaturePageShell
+      path="/safety-scores/"
+      breadcrumbName="Safety Scores"
+      title="Safety Scores"
+      methodology={{
+        version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+        changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      header="instrument"
+      headerActions={
+        <>
+          {/* Server-rendered so the map stays crawlable from the homepage. */}
+          <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
+            <Link href="/safety-scores/map/" aria-label="Map: every grade band as a single image">
+              <MapIcon aria-hidden="true" />
+              <span>Map</span>
+            </Link>
+          </Button>
+          <AlertsHeaderLink
+            href="/pharoswatchbot/#getting-started"
+            description="Get notified when a safety grade changes"
+          />
+          <ShareButton ogPath="/api/og/safety-scores" />
+        </>
+      }
+      preface={<JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest"))} />}
+      leadParagraphs={[
+        "Every active stablecoin graded on Backing, Exit, and Economic Control, distilled into one safety grade.",
+      ]}
+    >
+      <SectionErrorBoundary name="Safety Scores" supportingText="This section failed to load. Try refreshing the page.">
+        {/* First flush, outside Suspense: a server-side dynamic() would outline
+            the hero, LCP image and dated preview into a hidden segment and
+            still load the live chunk eagerly. */}
+        <SafetyScoresLiveIsland initialPreview={initialPreview}>
+          <SafetyScoresContentLoadingState preview={initialPreview} />
+        </SafetyScoresLiveIsland>
+      </SectionErrorBoundary>
       <CalloutBanner
         icon={<Bell className="h-4 w-4" />}
         className="border-state-info bg-state-info-subtle text-state-info-bright"
@@ -113,9 +117,6 @@ const route = createClientFeaturePage({
         </Link>
       </CalloutBanner>
       <FaqSection items={FAQ_ITEMS} includeJsonLd />
-    </>
-  ),
-});
-
-export const metadata = route.metadata;
-export default route.Page;
+    </FeaturePageShell>
+  );
+}

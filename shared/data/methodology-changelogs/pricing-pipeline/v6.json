@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.82",
+    "title": "MOVEUSD's Orca mark must survive a 10,000-token sell quote",
+    "date": "2026-11-15",
+    "effectiveAt": 1794758400,
+    "summary": "MOVEUSD's reviewed Orca mark now has to be executable for a 10,000 MOVEUSD sale into the pool's USDC side.",
+    "impact": [
+      "The reviewed pool is read again with its sell-side tick arrays in a second atomic finalized bank at or after the identity/vault bank; the re-read pool must match the reviewed mints and vaults again, and the mark and quote then describe one state. A 10,000 MOVEUSD exact-in quote, the sibling exact adapters' 10,000-unit depth notional, must realise at least 95% of the mark, their reviewed 5% impact bound. The pool's thin MOVEUSD side is not the depth that matters: the USDC side absorbs a holder's sale.",
+      "Missing, unreadable or inconsistent tick arrays and any quote that cannot fill inside the fetched window reject as orca-exact:quote-unavailable; a quote beyond the bound rejects as orca-exact:quote-depth. Both withhold the price instead of publishing the mark. The unchanged $50,000 inventory floor, 15-minute bank and parent clocks, fallback confidence and weak-source publication guards still apply, and the extra read is serial inside the existing six-second candidate with no new trigger or parallel fan-out.",
+      "Production acceptance requires the first successful post-deploy read and stablecoins publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.81",
     "title": "The chain-dropout guard covers every coin supplied by DefiLlama's list",
     "date": "2026-11-13",

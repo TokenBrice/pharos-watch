@@ -846,8 +846,10 @@
           "mintEvidence": "source-only",
           "guard": {
             "kind": "implementation",
-            "status": "required-unavailable",
-            "reason": "agora-packed-implementation-dispatch-guard-not-reviewed"
+            "status": "pinned",
+            "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+            "expected": "0xc1e3c7d486d6a92fbe920232e439eec2ceb112da",
+            "changeTopic": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b"
           }
         },
         "receiptEvent": { "signature": "Burned(address,address,uint256)", "topicHash": "0x6ab368f832c266c8eb942b84fbcaa20aedc24a699d2a05fae2568028733b1d09", "topicArity": 3, "dataWords": 1, "accountTopic": 2, "amountSlot": 0 }
@@ -863,7 +865,8 @@
           "isProxy": true,
           "kind": "eip1967",
           "implementation": "0xc1e3c7d486d6a92fbe920232e439eec2ceb112da",
-          "implementationSourceVerified": true
+          "implementationSourceVerified": true,
+          "note": "Packed EIP-1967 implementation slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc: the low 160 bits are the implementation and the upper 96 bits carry pause/dispatch flags (StorageLib.sol:218-230,266-330). Guard review 2026-11-15: eth_getStorageAt at block 26419849 (hash 0xd18baa7f616d7e27062e53f1ade1766f5933eb660f85da4947f145606e8dec66) returned the raw word 0x000000000000000000000000c1e3c7d486d6a92fbe920232e439eec2ceb112da, decoding to implementation 0xc1e3c7d486d6a92fbe920232e439eec2ceb112da with all upper 96 bits zero; the identity block 26035730 (0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9) returned the same word. The range guard pins that whole word, so any flag or implementation change at a boundary fails it closed. Implementation runtime code at that block: keccak256 0x076caa003f1bf1ca31b968cfcbd386d2a82146571c58bb714326106a73391085."
         },
         "externalMatches": [
           {

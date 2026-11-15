@@ -14,6 +14,7 @@ import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-de
 import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
+import { formatShortDate } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { THREAT_BAND_STYLES } from "@shared/lib/classification";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
@@ -107,8 +108,14 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
 /**
  * Neutral provenance for the dossier: when the detail snapshot was produced. Never
  * colored; material staleness is the page's public health banner, not this stamp.
+ * A designed daily-history fallback names its day instead of an age: it is a daily
+ * snapshot, not a refresh that ran hours ago (ADR-42).
  */
-function HeroUpdatedStamp({ updatedAtMs, className }: { updatedAtMs: number; className?: string }) {
+function HeroUpdatedStamp({ updatedAtMs, dailySnapshot = false, className }: {
+  updatedAtMs: number;
+  dailySnapshot?: boolean;
+  className?: string;
+}) {
   const hydrated = useHydrated();
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -117,10 +124,12 @@ function HeroUpdatedStamp({ updatedAtMs, className }: { updatedAtMs: number; cla
   }, []);
   if (updatedAtMs <= 0) return null;
   // Keep the stamp's row while the relative age awaits the reader's clock.
-  const age = hydrated ? formatRelativeAgeSeconds((nowMs - updatedAtMs) / 1000, { nowLabel: "just now" }) : "—";
+  const text = dailySnapshot
+    ? `Daily snapshot of ${formatShortDate(new Date(updatedAtMs), { utc: true })}`
+    : `Updated ${hydrated ? formatRelativeAgeSeconds((nowMs - updatedAtMs) / 1000, { nowLabel: "just now" }) : "—"}`;
   return (
     <p className={cn("text-xs text-muted-foreground", className)} title={formatDataHealthTimestamp(updatedAtMs)}>
-      Updated {age}
+      {text}
     </p>
   );
 }
@@ -131,6 +140,7 @@ export function HeroIdentityHeader({
   onOpenFeedback,
   gradeRead = "settled",
   updatedAtMs = 0,
+  dailySnapshot = false,
 }: {
   /** The page's h1 text: `{name} ({SYMBOL})`, or the name alone when they match. */
   heading?: string;
@@ -140,6 +150,8 @@ export function HeroIdentityHeader({
   gradeRead?: "settled" | "pending" | "failed";
   /** Detail snapshot generation (ms); 0 hides the stamp. */
   updatedAtMs?: number;
+  /** The generation is the designed daily-history fallback; the stamp names its day. */
+  dailySnapshot?: boolean;
 }) {
   const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
   const links = (coin.links ?? []).slice(0, 3);
@@ -237,9 +249,9 @@ export function HeroIdentityHeader({
               <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
             </span>
           </div>
-          <HeroUpdatedStamp updatedAtMs={updatedAtMs} className="col-span-2 text-right lg:hidden" />
+          <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="col-span-2 text-right lg:hidden" />
         </div>
-        <HeroUpdatedStamp updatedAtMs={updatedAtMs} className="hidden lg:block" />
+        <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="hidden lg:block" />
       </div>
     </div>
   );

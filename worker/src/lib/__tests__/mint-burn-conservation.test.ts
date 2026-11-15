@@ -1187,13 +1187,13 @@ describe("conditional range destruction proofs", () => {
     expect(completeMintBurnRangeSupplyProof(args)).toMatchObject({ status: "residual", reason: "false-zero-transfer-residual",
       residualRaw: `-${zero}` });
   });
-  it("requires the reviewed family and keeps AUSD ineligible without its dispatch guard", () => {
+  it("requires the reviewed family and admits AUSD behind its reviewed dispatch guard", () => {
     for (const token of MINT_BURN_CONFIGS) {
       const eligibility = getMintBurnRangeProofEligibility(token);
       if (eligibility.supported) expect(getMintBurnConservationRuntimeEntry(token)?.unsupportedReason)
         .toMatch(/^zero-address-transfer-without-supply-change:/);
     }
-    expect(getMintBurnRangeProofEligibility(MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "ausd-agora")!).supported).toBe(false);
+    expect(getMintBurnRangeProofEligibility(MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "ausd-agora")!).supported).toBe(true);
     expect(getMintBurnRangeProofEligibility(MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "m-m0")!).supported).toBe(false);
     const args = sample("dai-makerdao", 2n, 1n);
     const entry = getMintBurnConservationRuntimeEntry(args.config)!;
@@ -1227,7 +1227,7 @@ describe("conditional range destruction proofs", () => {
     applyMintBurnRangeSupplyProof(rows, proof);
     expect(rows[0]).toMatchObject({ burn_type: "review_required", burn_review_reason: "range-mint-evidence-required" });
   });
-  it.each(["usyc-hashnote", "eurs-stasis"])("requires both %s pins and an exhaustive change-free range", (id) => {
+  it.each(["usyc-hashnote", "eurs-stasis", "ausd-agora"])("requires both %s pins and an exhaustive change-free range", (id) => {
     const args = sample(id, 0n, 1n);
     expect(completeMintBurnRangeSupplyProof({ ...args, boundary: { ...args.boundary, views: undefined } }).reason)
       .toBe("range-guard-evidence-missing");

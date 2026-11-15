@@ -42,7 +42,7 @@ import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-
 import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 import { parseDataHealthWarnings } from "@/lib/data-health";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { API_FRESHNESS_MAX_AGE_SEC, DETAIL_HISTORY_FALLBACK_REASON } from "@shared/lib/api-freshness";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -314,6 +314,29 @@ export function resolveDetailFlowMeta(flows: Pick<DetailFlowsInput, "data" | "me
   return meta;
 }
 
+/**
+ * The designed daily-history fallback is served from the newest retained `supply_history` row, so
+ * its `stale` floor means "not a live detail snapshot", not "past the age budget". Read that
+ * verdict against its own published budget (R3/ADR-42): the served row is provenance while it is
+ * inside the budget, and the reader banner returns once it is genuinely past it.
+ */
+function detailSnapshotStaleQuery(
+  liveSummary: StablecoinDetailViewModelQueryInputs["liveSummary"],
+): StablecoinDetailStaleQuery {
+  const snapshot = staleQueryFrom("stablecoins", liveSummary, (data) => data !== undefined);
+  const label = "Detail snapshot";
+  const meta = snapshot.meta;
+  // A clockless verdict names unavailable history, not this fallback.
+  if (!meta || meta.updatedAt == null || meta.reason !== DETAIL_HISTORY_FALLBACK_REASON) {
+    return { ...snapshot, label };
+  }
+  const { ageSeconds, freshBudgetSec } = meta;
+  const dailySnapshot = { ...snapshot, label, dailySnapshot: true };
+  return typeof ageSeconds === "number" && typeof freshBudgetSec === "number" && ageSeconds <= freshBudgetSec
+    ? { ...dailySnapshot, meta: { ...meta, status: "degraded" } }
+    : dailySnapshot;
+}
+
 export function buildDetailStaleQueries(
   queries: StablecoinDetailViewModelQueryInputs,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
@@ -329,10 +352,7 @@ export function buildDetailStaleQueries(
       : coinWarning ? { status: "degraded", warning: coinWarning } : null;
   }
   const result: StablecoinDetailStaleQuery[] = [
-    {
-      ...staleQueryFrom("stablecoins", queries.liveSummary, (data) => data !== undefined),
-      label: "Detail snapshot",
-    },
+    detailSnapshotStaleQuery(queries.liveSummary),
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => Boolean(data?.coins?.length)),
     liquidity,
     staleQueryFrom("reportCards", queries.reportCards, (data) => Boolean(data?.cards?.length)),

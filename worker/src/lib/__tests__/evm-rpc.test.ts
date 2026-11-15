@@ -933,26 +933,14 @@ describe("evm-rpc helpers", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_getBlockByNumber failed across 1 RPCs"));
   });
 
-  it("resolves the closest block at or before a target timestamp", async () => {
-    fetchWithRetryMock
-      .mockResolvedValueOnce(rpcResponse({ result: blockResult(95, "0x3b6") }))
-      .mockResolvedValueOnce(rpcResponse({ result: blockResult(92, "0x398") }))
-      .mockResolvedValueOnce(rpcResponse({ result: blockResult(91, "0x38e") }));
-
-    const block = await resolveClosestBlockAtOrBeforeTimestamp(
-      "ethereum",
-      900,
-      {
-        latestBlockNumber: 100,
-        blockTimestampByNumber: new Map([
-          [100, 1000],
-          [90, 900],
-        ]),
-      },
-      { extraRpcUrls: ["https://rpc.example"] },
-    );
-
-    expect(block).toBe(90);
+  it.each([
+    ["resolves the closest block at or before a target timestamp", 900, [[100, 1000], [90, 900]], [[95, "0x3b6"], [92, "0x398"], [91, "0x38e"]], 90],
+    ["interpolates between known anchors before the exact search", 975, [[10, 100], [100, 1000]], [[97, "0x3ca"], [98, "0x3d6"]], 97],
+  ] as const)("%s", async (_, target, anchors, probes, block) => {
+    for (const [n, t] of probes) fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: blockResult(n, t) }));
+    expect(await resolveClosestBlockAtOrBeforeTimestamp("ethereum", target, {
+      latestBlockNumber: 100, blockTimestampByNumber: new Map(anchors),
+    }, { extraRpcUrls: ["https://rpc.example"] })).toBe(block);
   });
 
   it("brackets a near-tip scoring clock without probing pruned deep history", async () => {
