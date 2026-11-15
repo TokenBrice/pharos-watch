@@ -755,8 +755,9 @@ const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
  * ruling 5a). The router writes it; nobody authors it, so it restates no join a
  * second time (R5). Every witness is named (R6): the provider review per route
  * provider key, the asset issuer-surface review, the descriptor's screening set,
- * the newest admitted certificate for that set, and the exact contributor ids
- * this fact covers. Certificates are joined by
+ * the newest admitted certificate for that set, the same-chain lanes'
+ * certificates that screened any cross-chain emitter, and the exact contributor
+ * ids this fact covers. Certificates are joined by
  * `(subjectDeploymentKey, screeningSetId)`, never by an authored id, and the
  * budget lives in `semantic.evidence.laneIncidentCertificateMaxAgeSec`.
  */
@@ -769,6 +770,7 @@ export const V9IncidentCoverageSchema = z
     issuerSurfaceReviewId: CanonicalKeySchema,
     screeningSetId: CanonicalKeySchema,
     certificateId: CanonicalKeySchema,
+    crossChainCertificateIds: canonicalArrayBy(CanonicalKeySchema, (certificateId) => certificateId, 1, "cross-chain certificate").optional(),
     contributorControlIds: canonicalArrayBy(CanonicalTextSchema, (controlId) => controlId, 1, "contributor control id"),
   })
   .strict();

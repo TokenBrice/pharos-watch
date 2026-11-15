@@ -121,6 +121,23 @@ function harness(options: HarnessOptions = {}) {
   return { logCalls, maxInFlight: () => maxInFlight };
 }
 
+function spanRpcs(maxLogBlockSpan: number) {
+  return new Map([[CHAIN, {
+    ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
+    endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan }],
+  }]]);
+}
+
+/** Refuses pages wider than 5,000 blocks, so each refused page is narrowed once. */
+function refuseWidePages(toBlock: number) {
+  return harness({
+    finalizedNumber: toBlock,
+    logsOverride: ({ fromBlock: pageFrom, toBlock: pageTo }) => (pageTo - pageFrom + 1 > 5_000
+      ? { results: [undefined], errors: [{ index: 0, code: -32005, message: "block range is too wide" }] }
+      : { results: [[]], errors: [] }),
+  });
+}
+
 function target(emitters: readonly LaneAdminEventEmitter[], overrides: Partial<LaneAdminEventScreeningTarget> = {}): LaneAdminEventScreeningTarget {
   return { subjectDeploymentKey: SUBJECT, fromBlock: 900, toBlock: FINALIZED_NUMBER, emitters, ...overrides };
 }
@@ -225,10 +242,7 @@ describe("pinned multi-emitter lane screening", () => {
   });
 
   it("fails closed when a later log page cannot be read", async () => {
-    const chainRpcs = new Map([[CHAIN, {
-      ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
-      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 10 }],
-    }]]);
+    const chainRpcs = spanRpcs(10);
     const { logCalls } = harness({
       logsOverride: ({ fromBlock }) => (fromBlock <= 909 ? { results: [[]], errors: [] } : null),
     });
@@ -243,18 +257,10 @@ describe("pinned multi-emitter lane screening", () => {
   it("fails closed instead of certifying a partial prefix when the page budget is exhausted", async () => {
     // A provider that refuses 10,000-block pages narrows the served span to
     // 5,000, so a 216,000-block bootstrap cannot be read within 32 pages.
-    const chainRpcs = new Map([[CHAIN, {
-      ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
-      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 10_000 }],
-    }]]);
+    const chainRpcs = spanRpcs(10_000);
     const fromBlock = 900;
     const toBlock = fromBlock + 216_000 - 1;
-    const { logCalls } = harness({
-      finalizedNumber: toBlock,
-      logsOverride: ({ fromBlock: pageFrom, toBlock: pageTo }) => (pageTo - pageFrom + 1 > 5_000
-        ? { results: [undefined], errors: [{ index: 0, code: -32005, message: "block range is too wide" }] }
-        : { results: [[]], errors: [] }),
-    });
+    const { logCalls } = refuseWidePages(toBlock);
 
     const result = await screenLaneAdminEvents(
       target([emitter(OAPP, ["Paused"])], { fromBlock, toBlock }),
@@ -268,20 +274,12 @@ describe("pinned multi-emitter lane screening", () => {
   });
 
   it("certifies a complete read that spends the full page budget after a range refusal", async () => {
-    const chainRpcs = new Map([[CHAIN, {
-      ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
-      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 10_000 }],
-    }]]);
+    const chainRpcs = spanRpcs(10_000);
     const fromBlock = 900;
     // One refused 10,000-block page plus 31 five-thousand-block pages is exactly
     // the 32-page budget, yet it reads the whole planned window.
     const toBlock = fromBlock + 31 * 5_000 - 1;
-    const { logCalls } = harness({
-      finalizedNumber: toBlock,
-      logsOverride: ({ fromBlock: pageFrom, toBlock: pageTo }) => (pageTo - pageFrom + 1 > 5_000
-        ? { results: [undefined], errors: [{ index: 0, code: -32005, message: "block range is too wide" }] }
-        : { results: [[]], errors: [] }),
-    });
+    const { logCalls } = refuseWidePages(toBlock);
 
     const certificate = admitted(await screenLaneAdminEvents(
       target([emitter(OAPP, ["Paused"])], { fromBlock, toBlock }),

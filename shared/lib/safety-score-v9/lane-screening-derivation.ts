@@ -123,7 +123,7 @@ export interface LaneIncidentCertificateScreeningSetInput {
   subjectDeploymentKey: string;
   screeningPolicyDigest: string;
   contributorControlIds: readonly string[];
-  emitters: readonly { address: string; expectedRuntimeCodeSha256: string }[];
+  emitters: readonly { address: string; expectedRuntimeCodeSha256: string; chain?: string }[];
 }
 
 /**
@@ -139,7 +139,9 @@ export function laneIncidentCertificateScreeningSetId(
     subjectDeploymentKey: screeningSet.subjectDeploymentKey,
     screeningPolicyDigest: screeningSet.screeningPolicyDigest,
     contributorControlIds: [...screeningSet.contributorControlIds].sort(compareText),
+    // A cross-chain emitter is screened by its own chain's lane, not this set.
     emitters: screeningSet.emitters
+      .filter((emitter) => emitter.chain === undefined)
       .map(({ address, expectedRuntimeCodeSha256 }) => ({ address, expectedRuntimeCodeSha256 }))
       .sort((left, right) => compareText(left.address, right.address)),
   }));
@@ -149,7 +151,7 @@ const sourceSchema = z.object({
   subjectDeploymentKey: z.string(),
   emitters: z.array(z.object({
     address: z.string(), expectedRuntimeCodeSha256: z.string().regex(/^[0-9a-f]{64}$/),
-    families: z.array(z.string()).min(1),
+    families: z.array(z.string()).min(1), chain: z.string().optional(),
   }).strict()).min(1),
   lookbackBlocks: z.number().int().min(50_000),
   provenance: z.object({
@@ -179,10 +181,14 @@ export function adaptLaneEmitterCatalog(rows: readonly unknown[], policyDigest =
     const fail = (reason: string) => reasons.push(`${reason}:${row.subjectDeploymentKey}`);
     if (policyDigest !== LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST) { fail("lane-descriptor-policy-mismatch"); continue; }
     const controls = new Set(row.provenance.controlIds);
+    const subjectChain = row.subjectDeploymentKey.split(":")[0];
+    const chainOf = (address: string) => row.emitters.find((emitter) => emitter.address === address)?.chain ?? subjectChain;
     const reviewed = inventory.lanes.find((lane) => lane.subjectDeploymentKey === row.subjectDeploymentKey);
-    if (reviewed === undefined || row.emitters.some((emitter) =>
-      reviewed.emitters.find((entry) => entry.address === emitter.address)?.runtimeIdentity !==
-        `sha256-decoded-runtime-bytes:${emitter.expectedRuntimeCodeSha256}`)) {
+    if (reviewed === undefined || row.emitters.some((emitter) => {
+      const entry = reviewed.emitters.find((candidate) => candidate.address === emitter.address);
+      return entry?.runtimeIdentity !== `sha256-decoded-runtime-bytes:${emitter.expectedRuntimeCodeSha256}` ||
+        entry.chain !== (emitter.chain ?? subjectChain);
+    })) {
       fail("lane-descriptor-pin-mismatch"); continue;
     }
     const addresses = new Set(row.emitters.map((emitter) => emitter.address));
@@ -199,7 +205,8 @@ export function adaptLaneEmitterCatalog(rows: readonly unknown[], policyDigest =
         row.provenance.contributors.some((entry) => !controls.has(entry.controlId) || entry.emitterAddresses.some((address) => !addresses.has(address))) ||
         row.provenance.emitters.length !== addresses.size ||
         new Set(row.provenance.emitters.map((entry) => entry.address)).size !== addresses.size ||
-        row.provenance.emitters.some((entry) => !addresses.has(entry.address) || entry.chain !== row.subjectDeploymentKey.split(":")[0])) {
+        row.emitters.some((emitter) => emitter.chain === subjectChain) ||
+        row.provenance.emitters.some((entry) => !addresses.has(entry.address) || entry.chain !== chainOf(entry.address))) {
       fail("lane-descriptor-provenance-mismatch"); continue;
     }
     const screeningSetId = laneIncidentCertificateScreeningSetId({
@@ -210,7 +217,8 @@ export function adaptLaneEmitterCatalog(rows: readonly unknown[], policyDigest =
       schemaVersion: 1, assetId, subjectDeploymentKey: row.subjectDeploymentKey,
       contributorControlIds: row.provenance.controlIds, screeningPolicyDigest: policyDigest, screeningSetId,
       emitters: row.emitters.map((emitter) => ({ address: emitter.address,
-        reviewedRuntimePin: `sha256-decoded-runtime-bytes:${emitter.expectedRuntimeCodeSha256}`, families: emitter.families })),
+        reviewedRuntimePin: `sha256-decoded-runtime-bytes:${emitter.expectedRuntimeCodeSha256}`, families: emitter.families,
+        ...(emitter.chain === undefined ? {} : { chain: emitter.chain }) })),
     }));
     if (mapped.some((entry) => !entry.success)) { fail("lane-descriptor-unmappable"); continue; }
     for (const entry of mapped) if (entry.success) descriptors.push(entry.data);

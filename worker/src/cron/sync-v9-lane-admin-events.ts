@@ -80,8 +80,12 @@ const MAX_DETAIL_LENGTH = 240;
 export interface LaneScreeningDescriptor {
   /** Normalized lane/controller deployment (`chain:contractAddress`). */
   subjectDeploymentKey: string;
-  /** Every contract whose admin events this lane depends on; at least one. */
-  emitters: readonly LaneAdminEventEmitter[];
+  /**
+   * Every contract whose admin events this lane depends on; at least one on the
+   * subject chain. A cross-chain emitter (`chain` set) is screened by its own
+   * chain's lane and never by this lane's certificate.
+   */
+  emitters: readonly (LaneAdminEventEmitter & { chain?: string })[];
   /** Bootstrap range length (blocks) when the lane has no certificate yet. */
   lookbackBlocks: number;
   provenance: { controlIds: readonly string[] };
@@ -229,7 +233,7 @@ export function selectLaneScreeningCandidates(input: {
       !isWellFormedDeploymentId(key) ||
       !Number.isSafeInteger(descriptor.lookbackBlocks) ||
       descriptor.lookbackBlocks < 1 ||
-      descriptor.emitters.length === 0
+      !descriptor.emitters.some((emitter) => emitter.chain === undefined)
     ) {
       deferred.push({ subjectDeploymentKey: key, reason: "invalid-descriptor" });
       continue;
@@ -486,7 +490,7 @@ export async function syncV9LaneAdminEvents(
       subjectDeploymentKey: descriptor.subjectDeploymentKey,
       fromBlock: window.fromBlock,
       toBlock: window.toBlock,
-      emitters: descriptor.emitters,
+      emitters: descriptor.emitters.filter((emitter) => emitter.chain === undefined),
     };
     let result;
     try {

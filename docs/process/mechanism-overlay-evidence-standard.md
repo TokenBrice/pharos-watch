@@ -436,6 +436,12 @@ this section tracks current closure rules; authored identity admission began in 
   descriptor/fact contributor parity and the newest v2 certificate for
   `(subjectDeploymentKey, screeningSetId)`: `no-material-admin-event`, contiguous coverage
   and a window end within `laneIncidentCertificateMaxAgeSec`. Missing/v1 certificates close nothing.
+- A route that no authored control names is a lane with contributor `*`. A descriptor
+  emitter on another EVM chain (`chain`, a governed contract) stays out of the lane's
+  screening set and certificate. Every reviewed lane on that chain whose descriptor screens it
+  under the same pin must then hold a clean, current admitted certificate, and one of those
+  descriptors must screen every reviewed family; `incidentCoverage.crossChainCertificateIds`
+  names the certificates.
 - Certificate identifiers are never authored. `laneScreeningRefs` and `coveredControls`
   are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
   `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident

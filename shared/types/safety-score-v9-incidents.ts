@@ -804,6 +804,11 @@ const V9LaneDescriptorEmitterSchema = z
       .string()
       .regex(/^sha256-decoded-runtime-bytes:[0-9a-f]{64}$/u, "Expected a sha256-decoded-runtime-bytes:<64 hex> runtime pin"),
     families: canonicalArrayBy(V9LaneAdminEventFamilySchema, (family) => family, 1, "emitted family"),
+    /**
+     * Cross-chain governed contract only (absent means the subject's chain). It is
+     * screened by the lane on its own chain, never by this lane's certificate.
+     */
+    chain: CanonicalKeySchema.optional(),
   })
   .strict();
 

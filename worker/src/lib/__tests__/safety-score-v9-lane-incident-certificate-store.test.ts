@@ -81,6 +81,10 @@ function target() {
   }) };
 }
 
+function load(db: D1Database) {
+  return loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
+}
+
 function expectCurrent(read: LaneIncidentCertificateRead) {
   expect(read.state).toBe("current");
   if (read.state !== "current") throw new Error(`Expected a current lane certificate, got ${read.state}`);
@@ -100,7 +104,7 @@ describe("lane incident certificate store", () => {
   it.each(["bad", "9007199254740992-0000000000000001"])("rejects malformed window key %s", async (window) => {
     const key = `lane-incident-certificate:v1|${LANE}|${target().screeningSetId}|${window}|0000000000000001-0000000000000002`;
     const db = mockD1([{ match: "SELECT key FROM cache WHERE key >=", rows: [{ key }] }]);
-    expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).toMatchObject({
+    expect(await load(db)).toMatchObject({
       state: "malformed-row", cacheKey: key, detail: "cache key is not a lane incident certificate identity",
     });
   });
@@ -111,7 +115,7 @@ describe("lane incident certificate store", () => {
       { match: "SELECT key FROM cache WHERE key >=", rows: [{ key }] },
       { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
     ]);
-    expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).toMatchObject({
+    expect(await load(db)).toMatchObject({
       state: "malformed-row", cacheKey: key, detail: expect.stringContaining("disappeared"),
     });
   });
@@ -121,7 +125,7 @@ describe("lane incident certificate store", () => {
     const [current] = chain();
     const foreign = { ...chain()[1], screeningPolicyDigest: "f".repeat(64), toBlock: 999 };
     await persistLaneIncidentCertificates(db, rows(current, foreign), NOW);
-    expect(expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).certificate).toEqual(current);
+    expect(expectCurrent(await load(db)).certificate).toEqual(current);
     expect((await loadLaneIncidentCertificate(db, { ...target(), screeningSetId: "0".repeat(64) }, { nowSec: NOW })).state).toBe("missing");
   });
   it("round trips a canonical row", async () => {
@@ -139,7 +143,7 @@ describe("lane incident certificate store", () => {
     expect(row.updated_at).toBe(NOW);
     expect(JSON.parse(row.value)).toEqual(first);
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
+    const read = expectCurrent(await load(db));
     expect(read.certificate).toEqual(first);
     expect(read.coveredFromSec).toBe(NOW - 4_000);
     expect(read.coveredThroughSec).toBe(NOW - 3_000);
@@ -153,7 +157,7 @@ describe("lane incident certificate store", () => {
     const [first, second] = chain();
     await persistLaneIncidentCertificates(db, rows(first, second), NOW);
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
+    const read = expectCurrent(await load(db));
     expect(read.certificate).toEqual(second);
     expect(read.coveredFromSec).toBe(NOW - 4_000);
     expect(read.coveredThroughSec).toBe(NOW - 2_000);
@@ -171,7 +175,7 @@ describe("lane incident certificate store", () => {
     });
     await persistLaneIncidentCertificates(db, rows(first, afterGap), NOW);
 
-    const read = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
+    const read = await load(db);
     expect(read).toEqual(expect.objectContaining({ state: "coverage-gap", gapFromBlock: 200, gapToBlock: 202, certificate: afterGap }));
   });
 
@@ -205,7 +209,7 @@ describe("lane incident certificate store", () => {
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
 
     insert.run(key, JSON.stringify({ schemaVersion: 1 }), NOW);
-    const invalidSchema = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
+    const invalidSchema = await load(db);
     expect(invalidSchema).toMatchObject({ state: "malformed-row", cacheKey: key });
     for (const [value, detail] of [
       ["{not json", "not valid JSON"],
@@ -213,7 +217,7 @@ describe("lane incident certificate store", () => {
       [stableJsonStringifyV1({ ...only, toBlock: 201 }), "does not match"],
     ]) {
       sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, key);
-      expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }))
+      expect(await load(db))
         .toMatchObject({ state: "malformed-row", cacheKey: key, detail: expect.stringContaining(detail) });
     }
   });
@@ -224,7 +228,7 @@ describe("lane incident certificate store", () => {
       rows: [],
       throwError: new Error("d1 unavailable"),
     }]);
-    await expect(loadLaneIncidentCertificate(db, target(), { nowSec: NOW }))
+    await expect(load(db))
       .rejects.toThrow("d1 unavailable");
   });
 
@@ -263,7 +267,7 @@ describe("lane incident certificate store", () => {
       if (index >= LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP) expect(result.pruned).toBe(1);
     }
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
+    const read = expectCurrent(await load(db));
     expect(read.windowCount).toBe(LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP);
     expect(read.coveredFromSec).toBe(windows[2]?.windowStartSec);
     expect(read.certificate).toEqual(windows[windows.length - 1]);
