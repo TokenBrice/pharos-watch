@@ -1571,6 +1571,15 @@
       "disposition": "unsupported",
       "unsupportedReason": "tron-historical-state-unavailable",
       "eventSet": "config-events"
+    },
+    {
+      "chainId": "polygon",
+      "stablecoinId": "copm-minteo",
+      "address": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
     }
   ]
 }
