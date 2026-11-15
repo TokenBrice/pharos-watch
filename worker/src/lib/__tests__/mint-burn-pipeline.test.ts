@@ -134,7 +134,7 @@ describe("mint-burn shared pipeline modules", () => {
       Array.from({ length: 56 }, (_, index) => makeRow({ id: `id-${index + 1}`, tx_hash: `0xtx-${index + 1}` })),
     );
 
-    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([100, 12]);
+    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([14, 3]);
     expect(sqlite.prepare("SELECT rowid FROM mint_burn_dirty_hours").all()).toEqual([{ rowid: 1 }]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_events").get()).toEqual({ count: 56 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_dirty_hours").get()).toEqual({ count: 1 });

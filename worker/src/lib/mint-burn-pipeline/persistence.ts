@@ -1,4 +1,4 @@
-import { batchExecute, executeAtomicBatch } from "../db";
+import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../db";
 import { throwIfAborted } from "../abort";
 import { reconcileAtomicRoundtripGroups } from "./roundtrip-detection";
 import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternalFlows } from "./reviewed-protocol-flows";
@@ -7,6 +7,16 @@ import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuati
 import { mintBurnHourlyBucketAggregatesSql } from "./hourly-aggregates";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
+/** `prepareMultiRowInsertStatements` packs four rows per statement under D1's 100-bind ceiling. */
+const MINT_BURN_EVENT_INSERT_SQL = `INSERT OR IGNORE INTO mint_burn_events
+       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
+        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type, amount_raw,
+        below_display_threshold, supply_proof_id)`;
+/** One guarded enqueue per chunk: a row that already exists keeps its hour out of this batch. */
+const MINT_BURN_DIRTY_HOUR_ENQUEUE_SQL = `INSERT OR IGNORE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
+      SELECT json_extract(r.value, '$[0]'), json_extract(r.value, '$[1]'), json_extract(r.value, '$[2]')
+      FROM json_each(?) r
+      WHERE NOT EXISTS (SELECT 1 FROM mint_burn_events WHERE id = json_extract(r.value, '$[3]'))`;
 
 export interface MintBurnPersistenceOptions {
   signal?: AbortSignal;
@@ -22,49 +32,42 @@ export async function insertMintBurnRows(
   if (rows.length === 0) return { inserted: 0, ignored: 0 };
   throwIfAborted(options.signal);
 
-  const mutations = rows.map((row) => [
-    db.prepare(`INSERT OR IGNORE INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
-      SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM mint_burn_events WHERE id = ?)`)
-      .bind(row.stablecoin_id, row.chain_id, Math.floor(row.timestamp / 3600) * 3600, row.id),
-    db.prepare(
-      `INSERT OR IGNORE INTO mint_burn_events
-       (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type, amount_raw,
-        below_display_threshold, supply_proof_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(
-      row.id,
-      row.stablecoin_id,
-      row.symbol,
-      row.chain_id,
-      row.direction,
-      row.amount,
-      row.amount_usd,
-      row.price_used,
-      row.price_timestamp,
-      row.price_source,
-      row.burn_type,
-      row.burn_review_reason,
-      row.counterparty,
-      row.tx_hash,
-      row.block_number,
-      row.timestamp,
-      row.explorer_tx_url,
-      row.flow_type,
-      row.amount_raw,
-      row.below_display_threshold,
-      row.supply_proof_id ?? null,
-    ),
-  ]);
-
   // Enqueue before inserting: only new rows invalidate their hour, including an
   // admitted replay interrupted before the in-memory affected-hour registration.
+  // One multi-row VALUES statement per four rows replaces a statement pair per row.
   let inserted = 0;
-  for (let offset = 0; offset < mutations.length; offset += MINT_BURN_EVENT_INSERT_BATCH_SIZE) {
-    const results = await executeAtomicBatch(db, mutations.slice(offset, offset + MINT_BURN_EVENT_INSERT_BATCH_SIZE).flat(), {
-      signal: options.signal, returnResults: true,
-    });
-    for (let index = 1; index < results.length; index += 2) inserted += Number(results[index]?.meta?.changes ?? 0);
+  for (let offset = 0; offset < rows.length; offset += MINT_BURN_EVENT_INSERT_BATCH_SIZE) {
+    const chunk = rows.slice(offset, offset + MINT_BURN_EVENT_INSERT_BATCH_SIZE);
+    const enqueue = db.prepare(MINT_BURN_DIRTY_HOUR_ENQUEUE_SQL).bind(JSON.stringify(chunk.map((row) => [
+      row.stablecoin_id, row.chain_id, Math.floor(row.timestamp / 3600) * 3600, row.id,
+    ])));
+    const results = await executeAtomicBatch(db, [
+      enqueue,
+      ...prepareMultiRowInsertStatements(db, MINT_BURN_EVENT_INSERT_SQL, chunk.map((row) => [
+        row.id,
+        row.stablecoin_id,
+        row.symbol,
+        row.chain_id,
+        row.direction,
+        row.amount,
+        row.amount_usd,
+        row.price_used,
+        row.price_timestamp,
+        row.price_source,
+        row.burn_type,
+        row.burn_review_reason,
+        row.counterparty,
+        row.tx_hash,
+        row.block_number,
+        row.timestamp,
+        row.explorer_tx_url,
+        row.flow_type,
+        row.amount_raw,
+        row.below_display_threshold,
+        row.supply_proof_id ?? null,
+      ])),
+    ], { signal: options.signal, returnResults: true });
+    for (const result of results.slice(1)) inserted += Number(result?.meta?.changes ?? 0);
   }
   const ignored = Math.max(0, rows.length - inserted);
   return { inserted, ignored };
