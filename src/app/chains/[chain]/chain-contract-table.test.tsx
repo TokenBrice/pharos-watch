@@ -84,6 +84,7 @@ describe("ChainContractTable", () => {
     // addresses, so rows need no per-deployment fragment.
     expect(html.match(/href="\/stablecoin\/fixture-usd#contracts"/g)).toHaveLength(2);
     expect(html).not.toContain("contract-base");
+    expect(html).toContain('<td data-slot="table-cell" class="whitespace-nowrap px-3 py-2">');
   });
 
   it("caps rows at 20 while the caption reports the complete candidate total", () => {
