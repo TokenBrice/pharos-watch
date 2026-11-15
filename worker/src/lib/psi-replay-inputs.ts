@@ -1,6 +1,8 @@
 import { PEG_SCORE_EXCLUDED_AUDIT_VERDICTS, type DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { replayReferenceMarketEventStart } from "@shared/lib/reference-market-hours";
 import { auditVerdictNotInSql } from "./depeg-audit";
 import { buildInClause } from "./db";
 import { getHistoricalPsiSupplyWindow } from "./psi-history-universe";
@@ -46,6 +48,8 @@ export async function loadPsiEligibleDepegEvents(
     excludedIds?: readonly number[];
     auditVerdicts?: ReadonlyMap<number, DepegAuditVerdict>;
     onEligibilityChange?: (event: PsiDepegEventRow) => void;
+    /** False returns stored starts, for the reference-market artifact repair's before-replay. */
+    replayClosureRule?: boolean;
   } = {},
 ): Promise<PsiEligibleDepegEventRow[]> {
   const predicates: string[] = [];
@@ -71,11 +75,24 @@ export async function loadPsiEligibleDepegEvents(
      ${predicates.length ? `WHERE ${predicates.join(" AND ")}` : ""}
      ORDER BY e.started_at`,
   ).bind(...binds).all<PsiEligibleDepegEventRow>();
-  return (rows.results ?? []).filter((row) => {
+  return (rows.results ?? []).flatMap((row) => {
     const verdict = options.auditVerdicts?.get(row.id) ?? row.audit_verdict;
     if (isPegScoreExcludedAuditVerdict(verdict) !== isPegScoreExcludedAuditVerdict(row.audit_verdict)) {
       options.onEligibilityChange?.(row);
     }
-    return !isPegScoreExcludedAuditVerdict(verdict);
+    return isPegScoreExcludedAuditVerdict(verdict) ? [] : [row];
+  }).flatMap((row) => options.replayClosureRule === false ? [row] : applyReferenceMarketClosureRule([row]));
+}
+
+/**
+ * Replays the closure rule detection has applied since depeg-dews v6.47 over stored rows: an
+ * artifact is dropped, and a longer event that began during a closure counts from the reopen.
+ */
+export function applyReferenceMarketClosureRule<T extends PsiDepegEventRow>(rows: readonly T[]): T[] {
+  return rows.flatMap((row) => {
+    const countedFrom = replayReferenceMarketEventStart(
+      getPegTaxonomyByType(row.peg_type)?.currency, row.started_at, row.ended_at, row.peak_deviation_bps,
+    );
+    return countedFrom == null ? [] : [countedFrom === row.started_at ? row : { ...row, counted_from: countedFrom }];
   });
 }
