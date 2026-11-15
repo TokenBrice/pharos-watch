@@ -1,0 +1,27 @@
+{
+  "id": "gbpq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "GBPQ whitepaper",
+        "url": "https://www.quantoz.com/documents/gbpq-wp-v1.1-30-4-2026.pdf"
+      },
+      {
+        "label": "Ethereum GBPQ contract",
+        "url": "https://etherscan.io/token/0xb92e69fd39bf33ee1f81e56b0b7933bdc49df46e"
+      },
+      {
+        "label": "Ethereum GBPQ owner contract",
+        "url": "https://etherscan.io/address/0x284df7b9d9f471554e9257bd9b116189f7997d45"
+      },
+      {
+        "label": "Stellar GBPQ issuer account (Horizon)",
+        "url": "https://horizon.stellar.org/accounts/GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE"
+      }
+    ],
+    "evidence": "GBPQ whitepaper section F.3 says Quantoz Payments will enable freeze, unfreeze, address blacklisting and recovery functionality in the GBPQ ERC-20 contracts on Ethereum and Polygon and for GBPQ on Algorand and Xahau, so that tokens on blacklisted addresses can be frozen and, where laws or a competent authority require, recovered to the issuing account. Public Ethereum RPC reads on 2026-11-15 at block 26421417 (0xd9a8f90a80a30d930223aed3b15df20680601d4b24012e50aa3148bce6934701) returned zero totalSupply, EIP-1967 implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e, admin 0xa6724f792002d5677a7bc370986e1b580b8773e7 and owner() 0x284df7b9d9f471554e9257bd9b116189f7997d45, the same contracts recorded for PLNQ. Stellar Horizon on 2026-11-15 (ledger 65494373) reported the GBPQ issuer account GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE with auth_revocable and auth_clawback_enabled set, so the issuer can revoke trustline authorization and claw back GBPQ there. Owner signature thresholds, nested proxy-admin authorization and upgrade delays were not verified.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-15"
+  }
+}

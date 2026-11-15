@@ -1,0 +1,51 @@
+{
+  "id": "chfs-safirum",
+  "name": "CHF-S",
+  "symbol": "CHF-S",
+  "brand": "Safirum",
+  "oneLiner": "CHF-S is Safirum's Swiss franc stablecoin on Solana, backed by francs at Swiss banks and transferable only between approved wallets.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "CHF",
+    "governance": "centralized"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.safirum.com/"
+    },
+    {
+      "label": "Press releases",
+      "url": "https://www.safirum.com/press"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Switzerland"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-06-22",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Safirum AG of Canton Zug announced CHF-S on June 22 2026 as a Swiss franc stablecoin on Solana's Token-2022 standard, with wallet-level KYC whitelisting built into the token and a launch planned for the third quarter of 2026. Safirum launched CHF-S on November 3 2026, and Maverix Securities says it was the first company to mint it. Safirum states that the token is fully backed by Swiss francs held in segregated accounts at Swiss-based banks, that every user must pass identity verification, and that CHF-S can only be transferred between approved wallets. Transfers carry a fee of 0.05% of the amount, capped at 0.50 CHF-S, plus network fees. Safirum is a member of the VQF, a self-regulatory organisation recognised by FINMA, and its launch release cites FINMA Supervisory Notice 06/2024 as a design requirement. Its releases do not name the reserve banks, and Safirum has published no mint address, supply figure or reserve attestation. Pharos keeps CHF-S pre-launch because neither a price lane nor a supply lane has been admitted.",
+  "milestones": [
+    {
+      "date": "2026-06-22",
+      "type": "announcement",
+      "title": "Safirum announces CHF-S, a Swiss franc stablecoin on Solana",
+      "description": "Safirum AG announced CHF-S on Solana's Token-2022 standard, backed by Swiss franc reserves in segregated accounts at Swiss custodian banks, with wallet-level KYC whitelisting built into the token and a launch planned for the third quarter of 2026.",
+      "sourceUrl": "https://www.safirum.com/press"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "milestone",
+      "title": "CHF-S launches on Solana",
+      "description": "Safirum announced that CHF-S had launched that day, fully backed by Swiss francs held at Swiss-based banks and transferable only between approved wallets after identity verification. Maverix Securities says it was the first company to mint CHF-S. The release gives no mint address, supply figure or attestation.",
+      "sourceUrl": "https://www.safirum.com/press"
+    }
+  ],
+  "launchDate": "2026-11-03",
+  "listingStatusReview": {
+    "changedAt": "2026-11-15",
+    "reason": "Missing lanes: price and supply. Safirum has not published the CHF-S mint address, and neither CoinGecko nor DefiLlama lists the token.",
+    "reviewBy": "2027-01-14"
+  }
+}

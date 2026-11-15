@@ -25630,6 +25630,1273 @@
       ]
     },
     {
+      "reviewId": "provider-layerzero-dvn-set-20261115",
+      "scope": {
+        "kind": "provider",
+        "providerKey": "layerzero",
+        "surface": "dvn-set",
+        "coveredRoutes": [
+          {
+            "assetId": "thbill-theo",
+            "routeId": "arbitrum:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          {
+            "assetId": "thbill-theo",
+            "routeId": "base:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          {
+            "assetId": "thbill-theo",
+            "routeId": "hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          {
+            "assetId": "thbill-theo",
+            "routeId": "stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          }
+        ]
+      },
+      "reviewedAt": "2026-11-15T16:00:00Z",
+      "reviewer": "Pharos #1778 Q4 LayerZero provider review, 2026-11-15 (owner rulings 2026-11-15: KelpDAO LayerZero Labs DVN exposure 2026-03-06 to 2026-05-20; one bracketed exemption per covered thBILL lane; uty-xsy not covered)",
+      "windowStartSec": 1754272238,
+      "windowEndSec": 1794754800,
+      "conclusion": "no-known-incident",
+      "providerIncidents": [
+        {
+          "incidentKey": "layerzero-aethir-oft-adapter-admin-takeover-20260409",
+          "class": "third-party-app-exploit",
+          "surface": "dvn-set",
+          "occurredAt": "2026-04-09",
+          "exposureStartSec": 1775692800,
+          "exposureEndSec": 1775779199,
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks"
+          ],
+          "exemptions": []
+        },
+        {
+          "incidentKey": "layerzero-griffinai-peer-validation-misconfiguration-20250924",
+          "class": "third-party-app-exploit",
+          "surface": "dvn-set",
+          "occurredAt": "2025-09-24",
+          "exposureStartSec": 1758672000,
+          "exposureEndSec": 1758758399,
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks",
+            "https://rekt.news/leaderboard/"
+          ],
+          "exemptions": []
+        },
+        {
+          "incidentKey": "layerzero-labs-dvn-compromise-kelpdao-rseth-20260418",
+          "class": "verifier-compromise",
+          "surface": "dvn-set",
+          "occurredAt": "2026-04-18",
+          "exposureStartSec": 1772755200,
+          "exposureEndSec": 1779321599,
+          "compromisedVerifiers": [
+            {
+              "chain": "arbitrum",
+              "address": "0x1308151a7ebac14f435d3ad5ff95c34160d539a5"
+            },
+            {
+              "chain": "arbitrum",
+              "address": "0x2f55c492897526677c5b68fb199ea31e2c126416"
+            },
+            {
+              "chain": "base",
+              "address": "0x9e059a54699a285714207b43b055483e78faac25"
+            },
+            {
+              "chain": "base",
+              "address": "0xb1473ac9f58fb27597a21710da9d1071841e8163"
+            },
+            {
+              "chain": "ethereum",
+              "address": "0x589dedbd617e0cbcb916a9223f4d1300c294236b"
+            },
+            {
+              "chain": "ethereum",
+              "address": "0xdb979d0a36af0525afa60fc265b1525505c55d79"
+            },
+            {
+              "chain": "hyperevm",
+              "address": "0x7ffd4989882a006ac51f324b4889b3087d71b716"
+            },
+            {
+              "chain": "hyperevm",
+              "address": "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+            },
+            {
+              "chain": "stable",
+              "address": "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+            }
+          ],
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks",
+            "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+            "https://rekt.news/leaderboard/"
+          ],
+          "exemptions": [
+            {
+              "assetId": "thbill-theo",
+              "routeId": "arbitrum:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+              "kind": "bracketed-threshold-excludes-compromised-verifier",
+              "chain": "arbitrum",
+              "reads": [
+                {
+                  "blockNumber": 438930513,
+                  "blockHash": "0x1f7175ead8cf0d29b7c3a8841f3bbb56cfc13f051ca7ab690b8b89f877cf4f44",
+                  "blockTimestampSec": 1772798400,
+                  "receiveLibrary": "0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0x5756a74e8e18d8392605ba667171962b2b2826b5",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 451709445,
+                  "blockHash": "0x0b07fa05566210149c4f3b3fb81dddc4ce8140213679189877eb5e14b75953bf",
+                  "blockTimestampSec": 1775995200,
+                  "receiveLibrary": "0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0x5756a74e8e18d8392605ba667171962b2b2826b5",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 464452654,
+                  "blockHash": "0xa182576102bf3cc74a0e24e2ccf6ce775ab02912f4c4f8b8d16c74e289b4af3f",
+                  "blockTimestampSec": 1779192000,
+                  "receiveLibrary": "0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0xb3ce0a5d132cd9bf965aba435e650c55edce0062",
+                        "0xeae839784e5f6c79bbaf34b6023a2f62e134ab39",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0x5756a74e8e18d8392605ba667171962b2b2826b5",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xf2e380c90e6c09721297526dbc74f870e114dfcb"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x19670df5e16bea2ba9b9e68b48c054c5baea06b8",
+                        "0x2f55c492897526677c5b68fb199ea31e2c126416",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                }
+              ],
+              "configChanges": []
+            },
+            {
+              "assetId": "thbill-theo",
+              "routeId": "base:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+              "kind": "bracketed-threshold-excludes-compromised-verifier",
+              "chain": "base",
+              "reads": [
+                {
+                  "blockNumber": 43004526,
+                  "blockHash": "0x25ef1a966c7dfbed4e2d1312be6bd8b38ea755a43400abbfc3cc77910a93ff30",
+                  "blockTimestampSec": 1772798399,
+                  "receiveLibrary": "0xc70ab6f32772f59fbfc23889caf4ba3376c84baf",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6",
+                        "0xcdf31d62140204c08853b547e64707110fbc6680"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 44602926,
+                  "blockHash": "0x0ddaa87d639879f05c153512799634c562336585bf0b3213b685fcbeb6bda4ca",
+                  "blockTimestampSec": 1775995199,
+                  "receiveLibrary": "0xc70ab6f32772f59fbfc23889caf4ba3376c84baf",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6",
+                        "0xcdf31d62140204c08853b547e64707110fbc6680"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 46201326,
+                  "blockHash": "0x04f27057ab23ad5c943edf3b1ce123f12ceabb831126b6bc3ba3e764ed4b1c7c",
+                  "blockTimestampSec": 1779191999,
+                  "receiveLibrary": "0xc70ab6f32772f59fbfc23889caf4ba3376c84baf",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0x5b6735c66d97479ccd18294fc96b3084ecb2fa3f",
+                        "0xc2a0c36f5939a14966705c7cec813163faeea1f0"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6",
+                        "0xcdf31d62140204c08853b547e64707110fbc6680"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x554833698ae0fb22ecc90b01222903fd62ca4b47",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x9e059a54699a285714207b43b055483e78faac25",
+                        "0xa7b5189bca84cd304d8553977c7c614329750d99",
+                        "0xcd37ca043f8479064e10635020c65ffc005d36f6"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                }
+              ],
+              "configChanges": []
+            },
+            {
+              "assetId": "thbill-theo",
+              "routeId": "hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+              "kind": "bracketed-threshold-excludes-compromised-verifier",
+              "chain": "hyperevm",
+              "reads": [
+                {
+                  "blockNumber": 29019758,
+                  "blockHash": "0x330a9ee26a0ebf0e94cf8fec562cee5094f61bd07150d7e70f8b9bdf25453277",
+                  "blockTimestampSec": 1772798400,
+                  "receiveLibrary": "0x7cacbe439ead55fa1c22790330b12835c6884a91",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 32269573,
+                  "blockHash": "0x826109ed5c0f325f0d698c6925ad0c4e9a1f34e3614a276d60f4c380258cbea7",
+                  "blockTimestampSec": 1775995200,
+                  "receiveLibrary": "0x7cacbe439ead55fa1c22790330b12835c6884a91",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 35519237,
+                  "blockHash": "0xfccfc3b2e4dd8202f15ac5d4b3d514c46b91a6c247ca7aa9e7dae15336181743",
+                  "blockTimestampSec": 1779192000,
+                  "receiveLibrary": "0x7cacbe439ead55fa1c22790330b12835c6884a91",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x32ffd21260172518a8844fec76a88c8f239c384b",
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0xc7423626016bc40375458bc0277f28681ec91c8e"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x83342ec538df0460e730a8f543fe63063e2d44c4",
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30396,
+                      "requiredDVNs": [
+                        "0x8e49ef1dfae17e547ca0e7526ffda81fbaca810a",
+                        "0xbb83ecf372cbb6daa629ea9a9a53bec6d601f229",
+                        "0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                }
+              ],
+              "configChanges": []
+            },
+            {
+              "assetId": "thbill-theo",
+              "routeId": "stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+              "kind": "bracketed-threshold-excludes-compromised-verifier",
+              "chain": "stable",
+              "reads": [
+                {
+                  "blockNumber": 15726564,
+                  "blockHash": "0x7eb86b170b2d3416fe3e349883d8cbb970a20a792b18158217e2f4067aa2d399",
+                  "blockTimestampSec": 1772798400,
+                  "receiveLibrary": "0x15e51701f245f6d5bd0fee87bcaf55b0841451b3",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x8d6cc20d84fbeb5733c60436ceb8957da2ac02c8",
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 20287883,
+                  "blockHash": "0x4c1a0e753688d7b356b4a93c6d0a3a9d50ca421ffe1d628afb647df28e940ab4",
+                  "blockTimestampSec": 1775995200,
+                  "receiveLibrary": "0x15e51701f245f6d5bd0fee87bcaf55b0841451b3",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x8d6cc20d84fbeb5733c60436ceb8957da2ac02c8",
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                },
+                {
+                  "blockNumber": 24838802,
+                  "blockHash": "0x4b16a53b97ea7612b20261928517110f39811784988a9a461c2e06d2f6676bca",
+                  "blockTimestampSec": 1779192000,
+                  "receiveLibrary": "0x15e51701f245f6d5bd0fee87bcaf55b0841451b3",
+                  "eids": [
+                    {
+                      "eid": 30101,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30102,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30110,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30181,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30184,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30367,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30383,
+                      "requiredDVNs": [
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196",
+                        "0x9c061c9a4782294eef65ef28cb88233a987f4bdd"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    },
+                    {
+                      "eid": 30390,
+                      "requiredDVNs": [
+                        "0x8d6cc20d84fbeb5733c60436ceb8957da2ac02c8",
+                        "0x965a80dc87cec5848310e612dead84b543aef874",
+                        "0x9bcd17a654bffaa6f8fea38d19661a7210e22196"
+                      ],
+                      "optionalDVNs": [],
+                      "optionalThreshold": 0
+                    }
+                  ]
+                }
+              ],
+              "configChanges": []
+            }
+          ]
+        },
+        {
+          "incidentKey": "layerzero-sandbox-sand-oft-delegate-hijack-20260822",
+          "class": "third-party-app-exploit",
+          "surface": "dvn-set",
+          "occurredAt": "2026-08-22",
+          "exposureStartSec": 1787356800,
+          "exposureEndSec": 1787443199,
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks"
+          ],
+          "exemptions": []
+        },
+        {
+          "incidentKey": "layerzero-stake-dao-oft-peer-deployer-key-20260527",
+          "class": "third-party-app-exploit",
+          "surface": "dvn-set",
+          "occurredAt": "2026-05-27",
+          "exposureStartSec": 1779840000,
+          "exposureEndSec": 1779926399,
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks"
+          ],
+          "exemptions": []
+        },
+        {
+          "incidentKey": "layerzero-yala-oft-deployment-key-compromise-20250914",
+          "class": "third-party-app-exploit",
+          "surface": "dvn-set",
+          "occurredAt": "2025-09-14",
+          "exposureStartSec": 1757808000,
+          "exposureEndSec": 1757894399,
+          "affectedRoutes": [],
+          "sourceUrls": [
+            "https://api.llama.fi/hacks"
+          ],
+          "exemptions": []
+        }
+      ],
+      "searchedSurfacesRefs": [
+        "surface:63fe0b9d194a78c5c1f1a339",
+        "surface:a3c338b8d84760a8f914a2a0",
+        "surface:84b851295c4b750c42d2672a",
+        "surface:bece66c30d9ad5b6c56da7cc",
+        "surface:e7658e8085fbaf2823d0436e",
+        "surface:7e799f6fe376b6e2d8ec5d0a",
+        "surface:31f16005aa727e40578252ba",
+        "surface:4bef12919a2d4513dac7cdb1",
+        "surface:5de2c6f0cada9182dca36437"
+      ],
+      "sourcesRefs": [
+        "source:39a298bc4c82cf7df93f37f6",
+        "source:d3f7f46d3bdca67f85e1a4b2",
+        "source:0c0f65721d4445fa07173340",
+        "source:1f8d0d90cd3ffd76e21c109f",
+        "source:a41f489ce454db2f113c858b",
+        "source:09dfaa7fe01c27a51abaabfe",
+        "source:67711ff2e3472bbfd560444b",
+        "source:8ea2c478b8e110bc459227bd",
+        "source:b66b1d5bd5b20c34657e1211",
+        "source:1a76ffc60eb76efe94a5237c",
+        "source:94aee288ecb492387d79fa67",
+        "source:66737e7812f113bd10047ccc"
+      ]
+    },
+    {
       "reviewId": "issuer-surface-usdc-circle-20261029",
       "assetId": "usdc-circle",
       "scope": {
@@ -26062,6 +27329,48 @@
         "reviewer": "Safety unknowns campaign 2026-11-06 — k-ttr",
         "reason": "The covered Plume route has a currently paused Portal, so this issuer-surface no-known-incident review no longer supports every named lane. Pinned eth_call paused() (0x5c975abb) on Plume Portal 0x36f586a30502ae3afb555b8aa4dcc05d233c2ece at block 104100000, hash 0xf011eb7f2f2db0013c74ab4362087aa6eac4809c129d9452080398ad16cc01d0 (2026-11-06T16:44:41Z), returned true via https://rpc.plume.org, observed 2026-11-06T18:26:32.375Z. Independent storage read at the same pin confirms the Pausable bool slot equals 1. Retire this aggregate witness without inventing pause onset, a control compromise, holder loss, or freshly reviewed coverage for the other routes. At the same pin, supportedBridgingPath(wM,1,wM)=true and bridge()=0x51dce104e5ba88fabc19a2c519f955bb834b0dc3, binding the paused Portal to this exact authored lane."
       }
+    },
+    {
+      "reviewId": "issuer-surface-thbill-theo-20261115",
+      "assetId": "thbill-theo",
+      "scope": {
+        "kind": "issuer-surface",
+        "coveredRoutes": [
+          "arbitrum:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "base:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+        ]
+      },
+      "reviewedAt": "2026-11-15T16:00:00Z",
+      "reviewer": "Pharos #1778 Q4 issuer-surface review (thbill-theo), 2026-11-15",
+      "windowStartSec": 1754272238,
+      "windowEndSec": 1794754800,
+      "conclusion": "no-known-incident",
+      "sourcesRefs": [
+        "source:1dc8dec9ecfb831873ee7371",
+        "source:653f735849f9f7b0dc74ad71",
+        "source:d881b26b070e566945801b0e",
+        "source:0c0f65721d4445fa07173340",
+        "source:9796ffe2e778d89011868ff9",
+        "source:31d66282a9f76ca270154ace",
+        "source:f16f528f4ae65c4ba2a764b9",
+        "source:a880dedeb4fc19eae2244748",
+        "source:2d937413721a7a83cef45265",
+        "source:0cc4595cbff794c2a906aecb",
+        "source:a4422535b8025065f1813ba7",
+        "source:4e6498c7a1ccc99842d2c193"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:c424a21e4c843fcdf53dae30",
+        "surface:e9c60758b0a3b55756a9b583",
+        "surface:f141640c760ce32af015fd7b",
+        "surface:8b3dda8317f21feb15e23543",
+        "surface:a9817a0647cea0d932c002f2",
+        "surface:1b91e3550e6d4488e6c06fa3",
+        "surface:fb11a741648630f8035b7229",
+        "surface:62612b9f57fb602fa5b447d9"
+      ]
     },
     {
       "reviewId": "ir-iss-m-frnt-wyoming-ethereum-native-minter-20261030",
@@ -65085,6 +66394,236 @@
         "location": "Full issuer security page",
         "excerpt": "The retrieved issuer security page presents security/monitoring practices and routes users to status and support; it supplies no dated Celo wARS route incident postmortem. Generic certification and vulnerability-prevention claims are not controller custody or incident-clearance proof."
       }
+    },
+    {
+      "id": "source:39a298bc4c82cf7df93f37f6",
+      "value": {
+        "label": "LayerZero Labs KelpDAO incident report",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "observedAt": "2026-11-15T15:10:00Z",
+        "location": "Byline (May 20, 2026) and executive summary",
+        "excerpt": "The breach began on March 6, 2026, when an attacker socially engineered a LayerZero Labs developer... poison internal RPC nodes... forcing the LayerZero Labs DVN signing service to rely exclusively on two compromised internal nodes. On April 18, 2026, the KelpDAO rsETH bridge, built on the LayerZero crosschain messaging protocol, was attacked. No other OApps, channels or transactions were compromised. LayerZero Labs will refuse to sign as the sole required attestor on any channel."
+      }
+    },
+    {
+      "id": "source:d3f7f46d3bdca67f85e1a4b2",
+      "value": {
+        "label": "DefiLlama hacks dataset query (LayerZero rail)",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-15T15:09:38Z",
+        "location": "Full JSON response, 1355 rows dated 2011-06-19 to 2026-11-14; case-insensitive name/description filter layerzero|layer zero|oft|dvn|stargate|kelp from 2025-08-04",
+        "excerpt": "Kelp, 2026-04-18, Cross-Chain Message Spoofing, $293M (attackers compromised LayerZero's RPC nodes; Kelp's 1-of-1 verifier configuration). Third-party OApp rows: Yala 2025-09-14 (Solana LayerZero OFT bridge deployment keys compromised), GriffinAI 2025-09-24 (misconfigured LayerZero peer validation, fake peer mint), Aethir 2026-04-09 (AethirOFTAdapter takeover via unprotected admin function), Stake DAO 2026-05-27 (compromised deployer key reconfigured the LayerZero v2 OFT peer), The Sandbox 2026-08-22 (approveAndCall abuse on the Base SAND OFT hijacked LayerZero delegate permissions). No row names Theo or a thBILL contract."
+      }
+    },
+    {
+      "id": "source:0c0f65721d4445fa07173340",
+      "value": {
+        "label": "rekt.news leaderboard",
+        "url": "https://rekt.news/leaderboard/",
+        "observedAt": "2026-11-15T15:14:00Z",
+        "location": "Complete leaderboard, 331 entries, newest Mercado Bitcoin (2026-11-02)",
+        "excerpt": "KelpDao - Rekt, $290,000,000, 4/18/2026; GriffinAI - Rekt, $3,000,000, 9/24/2025. No entry names LayerZero itself, Theo, thBILL or Hyperdrive."
+      }
+    },
+    {
+      "id": "source:1f8d0d90cd3ffd76e21c109f",
+      "value": {
+        "label": "GitHub security advisories, LayerZero-v2",
+        "url": "https://github.com/LayerZero-Labs/LayerZero-v2/security/advisories",
+        "observedAt": "2026-11-15T15:10:00Z",
+        "location": "Security advisories index, all states",
+        "excerpt": "There aren't any published security advisories"
+      }
+    },
+    {
+      "id": "source:a41f489ce454db2f113c858b",
+      "value": {
+        "label": "LayerZero blog index",
+        "url": "https://layerzero.network/blog",
+        "observedAt": "2026-11-15T15:11:30Z",
+        "location": "First index page (14 posts, load-more not followed)",
+        "excerpt": "Introducing ATLAS; Zero: Technical Positioning Paper; Ecosystem Update - 11.3.26; Ecosystem Update - 10.15.26; Blockaid launches Bridge Sentinel, a new DVN; no incident, outage or post-mortem title on the page"
+      }
+    },
+    {
+      "id": "source:09dfaa7fe01c27a51abaabfe",
+      "value": {
+        "label": "LayerZero documentation index",
+        "url": "https://docs.layerzero.network/llms.txt",
+        "observedAt": "2026-11-15T15:11:03Z",
+        "location": "Complete page index",
+        "excerpt": "Configuring LayerZero Contracts; Migrating from a Single-DVN Configuration; Production DVN Configuration; Message Channel Security; no status, incident or security-advisory page is listed"
+      }
+    },
+    {
+      "id": "source:67711ff2e3472bbfd560444b",
+      "value": {
+        "label": "LayerZero DVN metadata registry",
+        "url": "https://metadata.layerzero-api.com/v1/metadata/dvns",
+        "observedAt": "2026-11-15T15:19:49Z",
+        "location": "dvns entries with id layerzero-labs for arbitrum, base, hyperliquid, stable and ethereum",
+        "excerpt": "Arbitrum: 0x1308151a7ebac14f435d3ad5ff95c34160d539a5, 0x2f55c492897526677c5b68fb199ea31e2c126416; Base: 0x9e059a54699a285714207b43b055483e78faac25, 0xb1473ac9f58fb27597a21710da9d1071841e8163; HyperEVM: 0x7ffd4989882a006ac51f324b4889b3087d71b716, 0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f; Stable: 0x9c061c9a4782294eef65ef28cb88233a987f4bdd; Ethereum: 0x589dedbd617e0cbcb916a9223f4d1300c294236b, 0xdb979d0a36af0525afa60fc265b1525505c55d79. Other DVNs in the thBILL configurations resolve to P2P, Deutsche Telekom, Canary, Stargate, Twinstake (id nethermind) and Horizen."
+      }
+    },
+    {
+      "id": "source:8ea2c478b8e110bc459227bd",
+      "value": {
+        "label": "Pinned Arbitrum reads: thBILL OFT receive configuration at three bracketing blocks",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-11-15T14:58:52Z",
+        "location": "eth_call batches (peers, getReceiveLibrary, receiveLibraryTimeout, getUlnConfig per peered eid) at blocks 438930513 (hash 0x1f7175ead8cf0d29b7c3a8841f3bbb56cfc13f051ca7ab690b8b89f877cf4f44, 2026-03-06T12:00:00Z), 451709445 (hash 0x0b07fa05566210149c4f3b3fb81dddc4ce8140213679189877eb5e14b75953bf, 2026-04-12T12:00:00Z), 464452654 (hash 0xa182576102bf3cc74a0e24e2ccf6ce775ab02912f4c4f8b8d16c74e289b4af3f, 2026-05-19T12:00:00Z)",
+        "excerpt": "Arbitrum OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a: getReceiveLibrary returned the app-set ReceiveUln302 0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30181 Mantle, 30184 Base, 30367 HyperEVM: P2P, Deutsche Telekom, Canary; 30383 Plasma: LayerZero Labs, Stargate, Twinstake; 30390 Monad: Horizen, Twinstake, Canary; 30396 Stable: Horizen, LayerZero Labs, Twinstake). The configuration is identical at all three reads."
+      }
+    },
+    {
+      "id": "source:b66b1d5bd5b20c34657e1211",
+      "value": {
+        "label": "Pinned Base reads: thBILL OFT receive configuration at three bracketing blocks",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-11-15T14:59:04Z",
+        "location": "eth_call batches (peers, getReceiveLibrary, receiveLibraryTimeout, getUlnConfig per peered eid) at blocks 43004526 (hash 0x25ef1a966c7dfbed4e2d1312be6bd8b38ea755a43400abbfc3cc77910a93ff30, 2026-03-06T11:59:59Z), 44602926 (hash 0x0ddaa87d639879f05c153512799634c562336585bf0b3213b685fcbeb6bda4ca, 2026-04-12T11:59:59Z), 46201326 (hash 0x04f27057ab23ad5c943edf3b1ce123f12ceabb831126b6bc3ba3e764ed4b1c7c, 2026-05-19T11:59:59Z)",
+        "excerpt": "Base OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a: getReceiveLibrary returned the app-set ReceiveUln302 0xc70ab6f32772f59fbfc23889caf4ba3376c84baf (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30367 HyperEVM: Canary, P2P, Deutsche Telekom; 30383 Plasma: LayerZero Labs, Twinstake, Stargate; 30390 Monad: Canary, Horizen, Twinstake; 30396 Stable: LayerZero Labs, Horizen, Twinstake). The configuration is identical at all three reads. UTY exclusion, same endpoint: UTY's Base ShareOFTAdapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1 (code from block 43269122, 2026-03-12T14:59:51Z) required only LayerZero Labs DVN 0x9e059a54699a285714207b43b055483e78faac25 for Katana eid 30375 from block 43276068 (hash 0x531e50168d7d4d9dac5a0d69723b09e33ea6dc4db29b16fb196bc2a4d5ca1c73, 2026-03-12T18:51:23Z) through block 44883573 (hash 0xd178655d688f05a3d579c66b868197ea840ea4beed3ca8de6039c45383fcb1ee, 2026-04-18T23:54:53Z); block 44883574 (hash 0xec1092813fb940369920cd25eea8b6ddcc49939126c90f07164fe7f02524103d) requires LayerZero Labs and Twinstake 0xcd37ca043f8479064e10635020c65ffc005d36f6."
+      }
+    },
+    {
+      "id": "source:1a76ffc60eb76efe94a5237c",
+      "value": {
+        "label": "Pinned HyperEVM reads: thBILL OFT receive configuration at three bracketing blocks",
+        "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com",
+        "observedAt": "2026-11-15T14:59:17Z",
+        "location": "eth_call batches (peers, getReceiveLibrary, receiveLibraryTimeout, getUlnConfig per peered eid) at blocks 29019758 (hash 0x330a9ee26a0ebf0e94cf8fec562cee5094f61bd07150d7e70f8b9bdf25453277, 2026-03-06T12:00:00Z), 32269573 (hash 0x826109ed5c0f325f0d698c6925ad0c4e9a1f34e3614a276d60f4c380258cbea7, 2026-04-12T12:00:00Z), 35519237 (hash 0xfccfc3b2e4dd8202f15ac5d4b3d514c46b91a6c247ca7aa9e7dae15336181743, 2026-05-19T12:00:00Z)",
+        "excerpt": "HyperEVM OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a: getReceiveLibrary returned the app-set ReceiveUln302 0x7cacbe439ead55fa1c22790330b12835c6884a91 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 2 or 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base: Deutsche Telekom, Canary, P2P; 30383 Plasma: Twinstake, LayerZero Labs; 30390 Monad: Canary, Twinstake, Horizen; 30396 Stable: Twinstake, Horizen, LayerZero Labs). The configuration is identical at all three reads."
+      }
+    },
+    {
+      "id": "source:94aee288ecb492387d79fa67",
+      "value": {
+        "label": "Pinned Stable reads: thBILL OFT receive configuration at three bracketing blocks",
+        "url": "https://api-stable-mainnet.n.dwellir.com",
+        "observedAt": "2026-11-15T14:59:28Z",
+        "location": "eth_call batches (peers, getReceiveLibrary, receiveLibraryTimeout, getUlnConfig per peered eid) at blocks 15726564 (hash 0x7eb86b170b2d3416fe3e349883d8cbb970a20a792b18158217e2f4067aa2d399, 2026-03-06T12:00:00Z), 20287883 (hash 0x4c1a0e753688d7b356b4a93c6d0a3a9d50ca421ffe1d628afb647df28e940ab4, 2026-04-12T12:00:00Z), 24838802 (hash 0x4b16a53b97ea7612b20261928517110f39811784988a9a461c2e06d2f6676bca, 2026-05-19T12:00:00Z)",
+        "excerpt": "Stable OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a: getReceiveLibrary returned the app-set ReceiveUln302 0x15e51701f245f6d5bd0fee87bcaf55b0841451b3 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base, 30367 HyperEVM, 30383 Plasma: Horizen, Twinstake, LayerZero Labs; 30390 Monad: Canary, Horizen, Twinstake). The configuration is identical at all three reads."
+      }
+    },
+    {
+      "id": "source:66737e7812f113bd10047ccc",
+      "value": {
+        "label": "Pinned Ethereum reads: thBILL OFT adapter receive configuration at three bracketing blocks",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com",
+        "observedAt": "2026-11-15T14:59:40Z",
+        "location": "eth_call batches at blocks 24598274 (hash 0x7d98938de909ce587e251b21d3dd64013ed4077a8ca73ff913ccfac746fd3b55, 2026-03-06T11:59:59Z), 24863530 (hash 0xf8b9fb4321905dbb161a5e5a48696035d21607ea317e7fa8a2beca0473e15a0a, 2026-04-12T11:59:59Z), 25129126 (hash 0x859ebcd49e2e04d6e72d69cda1e7994dbadc02a136edf278d0c9fe1a11af6a01, 2026-05-19T11:59:59Z)",
+        "excerpt": "Ethereum adapter 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a (NRSAdapter lockbox for the canonical thBILL): getReceiveLibrary returned the app-set ReceiveUln302 0xc02ab410f0734efa3f14628780e6e695156024c2 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base, 30367 HyperEVM: P2P, Deutsche Telekom, Canary; 30383 Plasma: LayerZero Labs, Stargate, Twinstake; 30390 Monad: Horizen, Canary, Twinstake; 30396 Stable: Horizen, LayerZero Labs, Twinstake). The configuration is identical at all three reads."
+      }
+    },
+    {
+      "id": "source:1dc8dec9ecfb831873ee7371",
+      "value": {
+        "label": "Theo blog index",
+        "url": "https://theo.xyz/blog",
+        "observedAt": "2026-11-15T15:12:04Z",
+        "location": "Complete article list, newest first",
+        "excerpt": "Introducing thSLVR: Silver That Works for You, Sep 30, 2026; Gold Leasing Case Study: Mustafa Centre, Aug 7, 2026; From Good To Great: thBILL, Jul 3, 2026; Theo Adds Fidelity International's FILQ to thBILL: Powered by Chainlink Data Standard, Jun 30, 2026; Announcing the thUSD Points Program, Jun 25, 2026; How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield, Jun 4, 2026; What Is Gold Leasing?, May 28, 2026; StableEarn is Live, May 26, 2026; Wall Street Veteran Iggy Ioppe Joins Theo as Chief Investment Officer, May 13, 2026"
+      }
+    },
+    {
+      "id": "source:653f735849f9f7b0dc74ad71",
+      "value": {
+        "label": "DefiLlama hacks dataset query (Theo and thBILL)",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-15T15:09:38Z",
+        "location": "Full JSON response, 1355 rows dated 2011-06-19 to 2026-11-14; case-insensitive name/description filter theo|thbill",
+        "excerpt": "One row: Hyperdrive HL Lending, 2025-09-27, Access Control / Arbitrary External Call, $782,000: attackers exploited an arbitrary router call vulnerability, making repeated withdrawals from the Primary USDT0 Market and Treasury USDT Market and extracting ~673,000 USDT0 and 110,244 thBILL. No row reports a Theo or thBILL contract compromise."
+      }
+    },
+    {
+      "id": "source:d881b26b070e566945801b0e",
+      "value": {
+        "label": "The Block: Hyperliquid-based Hyperdrive loses $782,000 after smart contract exploit",
+        "url": "https://www.theblock.co/news/ecosystems/2025-09-28-hyperliquid-based-hyperdrive-loses-782000-after-smart-contract-exploit-372662",
+        "observedAt": "2026-11-15T15:13:30Z",
+        "location": "Article body, published September 28, 2025",
+        "excerpt": "repeatedly exploited an arbitrary call in the router... Primary USDT0 Market and Treasury USDT Market... about 673,000 USDT0 stablecoins and 110,244 thBILL, worth around $782,000 combined."
+      }
+    },
+    {
+      "id": "source:9796ffe2e778d89011868ff9",
+      "value": {
+        "label": "Pinned Arbitrum reads: thBILL OFT creation, runtime code and admin-event screening",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-11-15T15:06:11Z",
+        "location": "Creation block 364722303 (hash 0x04a533c1ced8302da75399fcdef1e162bfb1199f1341321bd17d2faa76d383e1); eth_getCode at block 524487957 (hash 0xefb31c74452823c1e5f399ec205c926bc74ee484b45bdd184ec63ef1bc93c87c); eth_getLogs 524437958-524487957",
+        "excerpt": "Code first present at block 364722303 (2025-08-04T01:50:38Z), absent at 364722302. Runtime code sha256 dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b at block 524487957. Production lane screener over 524437958-524487957 (to-block hash 0xefb31c74452823c1e5f399ec205c926bc74ee484b45bdd184ec63ef1bc93c87c): EnforcedOptionSet 0, MsgInspectorSet 0, OwnershipTransferred 0, PeerSet 0, PreCrimeSet 0; finding no-material-admin-event; log digest 762b1baf6216045f7d26d15a1b1619dd9d1a03e3bcfe3142f3373e14578f26cc."
+      }
+    },
+    {
+      "id": "source:31d66282a9f76ca270154ace",
+      "value": {
+        "label": "Sourcify verification and deployment record: ThBillOFT on Arbitrum",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "observedAt": "2026-11-15T15:00:00Z",
+        "location": "match, compilation, abi, proxyResolution and deployment fields",
+        "excerpt": "ThBillOFT (contracts/ThBillOFT.sol), runtime exact_match, not a proxy; admin events EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet, PreCrimeSet; no pause, freeze, blacklist or rate-limit function; deployment transaction 0xda6fad46bdd8764834f937756dc044417b7083adb1b18535227b129c13595d49 at block 364722303."
+      }
+    },
+    {
+      "id": "source:f16f528f4ae65c4ba2a764b9",
+      "value": {
+        "label": "Pinned Base reads: thBILL OFT creation, runtime code and admin-event screening",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-11-15T15:06:11Z",
+        "location": "Creation block 33741446 (hash 0x69c8f15396be370cee3ff0277e48587e8283e36b99466f3722742ea8207954f1); eth_getCode at block 57816061 (hash 0xf1baea778cc99f1a146a19995951d1c3f9123590224b8f8a50563d69f178ba21); eth_getLogs 57766062-57816061",
+        "excerpt": "Code first present at block 33741446 (2025-08-04T01:50:39Z), absent at 33741445. Runtime code sha256 dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b at block 57816061. Production lane screener over 57766062-57816061 (to-block hash 0xf1baea778cc99f1a146a19995951d1c3f9123590224b8f8a50563d69f178ba21): EnforcedOptionSet 0, MsgInspectorSet 0, OwnershipTransferred 0, PeerSet 0, PreCrimeSet 0; finding no-material-admin-event; log digest 1b0bdcc82acbd401653f5eb3fca78241840209f3efd666c1e23059827f26eab8."
+      }
+    },
+    {
+      "id": "source:a880dedeb4fc19eae2244748",
+      "value": {
+        "label": "Sourcify verification and deployment record: ThBillOFT on Base",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "observedAt": "2026-11-15T15:00:00Z",
+        "location": "match, compilation, abi, proxyResolution and deployment fields",
+        "excerpt": "ThBillOFT (contracts/ThBillOFT.sol), runtime exact_match, not a proxy; admin events EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet, PreCrimeSet; no pause, freeze, blacklist or rate-limit function; deployment transaction 0x83a553ddac55086ac97768b434a65c52c290f77a6f463a784bf9827843ee50a8 at block 33741446."
+      }
+    },
+    {
+      "id": "source:2d937413721a7a83cef45265",
+      "value": {
+        "label": "Pinned HyperEVM reads: thBILL OFT creation, runtime code and admin-event screening",
+        "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com",
+        "observedAt": "2026-11-15T15:06:13Z",
+        "location": "Creation block 10187883 (hash 0x9577d9bfb2c84e10cd61182daf619c30aabb2882beecbab940085f67efdbce23); eth_getCode at block 51339239 (hash 0x6ca2cbece6b8b496239220691319420731ba2d87de30f7e407c76fba2e8f43db); eth_getLogs 51289240-51339239",
+        "excerpt": "Code first present at block 10187883 (2025-08-04T01:52:00Z), absent at 10187882. Runtime code sha256 bb2037c0143b294d5c7b3372988a32c5e480f69dfe6062393762a79e3a45cd0c at block 51339239. Production lane screener over 51289240-51339239 (to-block hash 0x6ca2cbece6b8b496239220691319420731ba2d87de30f7e407c76fba2e8f43db): EnforcedOptionSet 0, MsgInspectorSet 0, OwnershipTransferred 0, PeerSet 0, PreCrimeSet 0; finding no-material-admin-event; log digest db13fcba6625f742005dfac408588c2a1be5f86e75e6e6b3a4bd6e18dcc57869."
+      }
+    },
+    {
+      "id": "source:0cc4595cbff794c2a906aecb",
+      "value": {
+        "label": "Sourcify verification and deployment record: ThBillOFT on HyperEVM",
+        "url": "https://sourcify.dev/server/v2/contract/999/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "observedAt": "2026-11-15T15:00:00Z",
+        "location": "match, compilation, abi, proxyResolution and deployment fields",
+        "excerpt": "ThBillOFT (contracts/ThBillOFT.sol), runtime exact_match, not a proxy; admin events EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet, PreCrimeSet; no pause, freeze, blacklist or rate-limit function; deployment transaction 0x61c4c5861af59f582ed8b747e11920548c26783c92aa7b777018f879cc1d7a3d at block 10187883."
+      }
+    },
+    {
+      "id": "source:a4422535b8025065f1813ba7",
+      "value": {
+        "label": "Pinned Stable reads: thBILL OFT creation, runtime code and admin-event screening",
+        "url": "https://api-stable-mainnet.n.dwellir.com",
+        "observedAt": "2026-11-15T15:06:14Z",
+        "location": "Creation block 1875980 (hash 0x5bcd792b2b311ce97f885dd9854bc7469d425b0d8b464ff816098463d9805934); eth_getCode at block 46967475 (hash 0xa0c61c54b229719f720702ac24b5416822f88caafd948d2f5a94ba711e93f553); eth_getLogs 46917476-46967475",
+        "excerpt": "Code first present at block 1875980 (2025-11-13T18:45:10Z), absent at 1875979. Runtime code sha256 a6adb7c034823fcfe39a55c6af9a5d9f963c8721040a90ebbffbbc1d88e5bbbf at block 46967475. Production lane screener over 46917476-46967475 (to-block hash 0xa0c61c54b229719f720702ac24b5416822f88caafd948d2f5a94ba711e93f553): EnforcedOptionSet 0, MsgInspectorSet 0, OwnershipTransferred 0, PeerSet 0, PreCrimeSet 0; finding no-material-admin-event; log digest 1a52772e27d83e3e43a43a1a34f89db13bcf697f068599917c746142e3f698bc."
+      }
+    },
+    {
+      "id": "source:4e6498c7a1ccc99842d2c193",
+      "value": {
+        "label": "Sourcify verification and deployment record: ThBillOFT on Stable",
+        "url": "https://sourcify.dev/server/v2/contract/988/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "observedAt": "2026-11-15T15:00:00Z",
+        "location": "match, compilation, abi, proxyResolution and deployment fields",
+        "excerpt": "ThBillOFT (contracts/ThBillOFT.sol), runtime exact_match, not a proxy; admin events EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet, PreCrimeSet; no pause, freeze, blacklist or rate-limit function; no deployment record."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -80318,6 +81857,142 @@
         "kind": "issuer-announcements",
         "url": "https://github.com/ripio/latam-stables/security/advisories",
         "finding": "The exact issuer-owned latam-stables security-advisories page and public API were both read: no published advisories, API[]. Ripio/security README directs responsible disclosure to HackerOne; the issuer security page contains generic security practices and vulnerability-prevention claims, not a route incident chronology. Private/unpublished reports are unexposed. Source-matched Celo BridgeDeposit implements issuer-operated offchain role-based fulfillment; no external verifier-provider identity is inferred from the analyst planning hint. These searched issuer security surfaces disclose no exact Celo wARS control incident, but do not establish that all security reports are public. All13 public issue/PR objects were read. Adverse source-history lead PR6(created and mergedDecember30,2025) describes feeCollector=0 plus a specified fulfillment fee omitting the fee mint. Its exact source diff changes the fee-bearing fulfillment branch. The exact currently deployed Celo runtime/source instead exposes six-argument fulfillBridgeMint without that fee parameter/branch, and current feeCollector is nonzero0x2b839174fe62466067c22e2a4c8054071f9d8d68. No live exploitation, affected Celo deployment or outstanding holder loss is disclosed by that PR. Open PR8 is an unmerged AI-audit draft with design/configuration findings, not a live incident report or assurance proof; open issues10/11 concern deployment-verifier/network-selection tooling and explicitly state no verified live-chain impact. None is silently treated as a clean deployed-security certificate; authority/cap/upgrade/custody uncertainty remains unchanged."
+      }
+    },
+    {
+      "id": "surface:63fe0b9d194a78c5c1f1a339",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+        "finding": "LayerZero Labs' KelpDAO incident report (dated 2026-05-20): the breach began on 2026-03-06 with social engineering of a LayerZero Labs developer and poisoned internal RPC nodes that the LayerZero Labs DVN signing service came to rely on; KelpDAO rsETH, configured with LayerZero Labs as its single required verifier, was attacked on 2026-04-18; the report states no other OApps, channels or transactions were compromised. Disclosed as the verifier-compromise provider incident with exposure 2026-03-06 through 2026-05-20 (owner ruling 2026-11-15, #1778), so every covered lane needs a point-in-time exemption."
+      }
+    },
+    {
+      "id": "surface:a3c338b8d84760a8f914a2a0",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://layerzero.network/blog",
+        "finding": "First page of the LayerZero blog index read at access (14 posts; only Ecosystem Update 11.3.26 and 10.15.26 carry dates). The page is narrower than this review's 2025-08-04 start; the incident history is carried by the KelpDAO report and the trackers below. No incident, outage or post-mortem title appears on the page."
+      }
+    },
+    {
+      "id": "surface:84b851295c4b750c42d2672a",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://docs.layerzero.network/llms.txt",
+        "finding": "LayerZero publishes no public status page: status.layerzero.network does not resolve (DNS failure at 2026-11-15T15:11Z) and the documentation index lists no status, incident or security-advisory page, only configuration guidance (including single-DVN migration). The LayerZero-v2 GitHub repository lists no published security advisory. Absence recorded, never treated as a clean search."
+      }
+    },
+    {
+      "id": "surface:bece66c30d9ad5b6c56da7cc",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "DefiLlama hacks dataset (1355 rows to 2026-11-14) and the rekt.news leaderboard (331 entries) read for the LayerZero rail since 2025-08-04. Kelp (2026-04-18, $293M) is the verifier compromise disclosed above. Yala (2025-09-14), GriffinAI (2025-09-24), Aethir (2026-04-09), Stake DAO (2026-05-27) and The Sandbox (2026-08-22) are application-side OApp failures (deployment or deployer keys, peer validation, unprotected adapter admin, delegate hijack); each is disclosed as a third-party-app-exploit on its dataset date and none names a covered lane. Rows that do not name LayerZero, an OFT or a DVN are not attributed to the rail. Neither tracker lists the 2026-10-23 Initia exploit: a pinned receipt read at Ethereum block 26256091 (hash 0x3cb212a419a848146779c84f15411efd48510b0345f95d5720b8e23f15d4275a) shows the third-party AUSD0 lockbox 0x38b8b7ca28e672018a299b20565aca8cf200c844 releasing 1,400,000 AUSD on a packet delivered from Initia (eid 30326), and this file's incident ausd-agora-ausd0-initia-2026-10-23-lockbox-release attributes the unbacked AUSD0 to an exploit of the sending chain, citing Initia. It is recorded here as a sending-chain fault, not a LayerZero verification failure, and names no covered lane. Both trackers are bounded public datasets, not exhaustive archives."
+      }
+    },
+    {
+      "id": "surface:e7658e8085fbaf2823d0436e",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned archive reads (block number and hash, never latest) of thBILL Arbitrum OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a inside the exposure: blocks 438930513 (hash 0x1f7175ead8cf0d29b7c3a8841f3bbb56cfc13f051ca7ab690b8b89f877cf4f44, 2026-03-06T12:00:00Z), 451709445 (hash 0x0b07fa05566210149c4f3b3fb81dddc4ce8140213679189877eb5e14b75953bf, 2026-04-12T12:00:00Z), 464452654 (hash 0xa182576102bf3cc74a0e24e2ccf6ce775ab02912f4c4f8b8d16c74e289b4af3f, 2026-05-19T12:00:00Z). getReceiveLibrary returned the app-set ReceiveUln302 0x7b9e184e07a6ee1ac23eae0fe8d6be2f663f05e6 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30181 Mantle, 30184 Base, 30367 HyperEVM: P2P, Deutsche Telekom, Canary; 30383 Plasma: LayerZero Labs, Stargate, Twinstake; 30390 Monad: Horizen, Twinstake, Canary; 30396 Stable: Horizen, LayerZero Labs, Twinstake). The configuration is identical at all three reads. Every inbound path needs at least one DVN other than LayerZero Labs, so the compromised verifier alone could not satisfy it; recorded as this lane's bracketed exemption."
+      }
+    },
+    {
+      "id": "surface:7e799f6fe376b6e2d8ec5d0a",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned archive reads (block number and hash, never latest) of thBILL Base OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a inside the exposure: blocks 43004526 (hash 0x25ef1a966c7dfbed4e2d1312be6bd8b38ea755a43400abbfc3cc77910a93ff30, 2026-03-06T11:59:59Z), 44602926 (hash 0x0ddaa87d639879f05c153512799634c562336585bf0b3213b685fcbeb6bda4ca, 2026-04-12T11:59:59Z), 46201326 (hash 0x04f27057ab23ad5c943edf3b1ce123f12ceabb831126b6bc3ba3e764ed4b1c7c, 2026-05-19T11:59:59Z). getReceiveLibrary returned the app-set ReceiveUln302 0xc70ab6f32772f59fbfc23889caf4ba3376c84baf (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30367 HyperEVM: Canary, P2P, Deutsche Telekom; 30383 Plasma: LayerZero Labs, Twinstake, Stargate; 30390 Monad: Canary, Horizen, Twinstake; 30396 Stable: LayerZero Labs, Horizen, Twinstake). The configuration is identical at all three reads. Every inbound path needs at least one DVN other than LayerZero Labs, so the compromised verifier alone could not satisfy it; recorded as this lane's bracketed exemption. uty-xsy is not covered: its Base lockbox adapter 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1, which releases the canonical UTY backing its Avalanche and Katana spokes, required only the LayerZero Labs DVN for Katana (eid 30375) inbound messages from block 43276068 (2026-03-12T18:51:23Z) through 44883573 (2026-04-18T23:54:53Z), inside the exposure, so no exemption is authored for its Avalanche lane."
+      }
+    },
+    {
+      "id": "surface:31f16005aa727e40578252ba",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com",
+        "finding": "Pinned archive reads (block number and hash, never latest) of thBILL HyperEVM OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a inside the exposure: blocks 29019758 (hash 0x330a9ee26a0ebf0e94cf8fec562cee5094f61bd07150d7e70f8b9bdf25453277, 2026-03-06T12:00:00Z), 32269573 (hash 0x826109ed5c0f325f0d698c6925ad0c4e9a1f34e3614a276d60f4c380258cbea7, 2026-04-12T12:00:00Z), 35519237 (hash 0xfccfc3b2e4dd8202f15ac5d4b3d514c46b91a6c247ca7aa9e7dae15336181743, 2026-05-19T12:00:00Z). getReceiveLibrary returned the app-set ReceiveUln302 0x7cacbe439ead55fa1c22790330b12835c6884a91 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 2 or 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base: Deutsche Telekom, Canary, P2P; 30383 Plasma: Twinstake, LayerZero Labs; 30390 Monad: Canary, Twinstake, Horizen; 30396 Stable: Twinstake, Horizen, LayerZero Labs). The configuration is identical at all three reads. Every inbound path needs at least one DVN other than LayerZero Labs, so the compromised verifier alone could not satisfy it; recorded as this lane's bracketed exemption."
+      }
+    },
+    {
+      "id": "surface:4bef12919a2d4513dac7cdb1",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-stable-mainnet.n.dwellir.com",
+        "finding": "Pinned archive reads (block number and hash, never latest) of thBILL Stable OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a inside the exposure: blocks 15726564 (hash 0x7eb86b170b2d3416fe3e349883d8cbb970a20a792b18158217e2f4067aa2d399, 2026-03-06T12:00:00Z), 20287883 (hash 0x4c1a0e753688d7b356b4a93c6d0a3a9d50ca421ffe1d628afb647df28e940ab4, 2026-04-12T12:00:00Z), 24838802 (hash 0x4b16a53b97ea7612b20261928517110f39811784988a9a461c2e06d2f6676bca, 2026-05-19T12:00:00Z). getReceiveLibrary returned the app-set ReceiveUln302 0x15e51701f245f6d5bd0fee87bcaf55b0841451b3 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30101 Ethereum, 30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base, 30367 HyperEVM, 30383 Plasma: Horizen, Twinstake, LayerZero Labs; 30390 Monad: Canary, Horizen, Twinstake). The configuration is identical at all three reads. Every inbound path needs at least one DVN other than LayerZero Labs, so the compromised verifier alone could not satisfy it; recorded as this lane's bracketed exemption."
+      }
+    },
+    {
+      "id": "surface:5de2c6f0cada9182dca36437",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com",
+        "finding": "Pinned archive reads of the Ethereum thBILL OFT adapter 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, the lockbox whose release backs every covered lane, at blocks 24598274 (hash 0x7d98938de909ce587e251b21d3dd64013ed4077a8ca73ff913ccfac746fd3b55, 2026-03-06T11:59:59Z), 24863530 (hash 0xf8b9fb4321905dbb161a5e5a48696035d21607ea317e7fa8a2beca0473e15a0a, 2026-04-12T11:59:59Z), 25129126 (hash 0x859ebcd49e2e04d6e72d69cda1e7994dbadc02a136edf278d0c9fe1a11af6a01, 2026-05-19T11:59:59Z): getReceiveLibrary returned the app-set ReceiveUln302 0xc02ab410f0734efa3f14628780e6e695156024c2 (isDefault false) and receiveLibraryTimeout returned no timeout library for every peered eid; the app ULN config sets 3 required DVNs, no optional DVNs and threshold 0 (30102 BNB Chain, 30110 Arbitrum, 30181 Mantle, 30184 Base, 30367 HyperEVM: P2P, Deutsche Telekom, Canary; 30383 Plasma: LayerZero Labs, Stargate, Twinstake; 30390 Monad: Horizen, Canary, Twinstake; 30396 Stable: Horizen, LayerZero Labs, Twinstake). The configuration is identical at all three reads. No inbound path into the lockbox could be satisfied by the LayerZero Labs DVN alone. Lane admin-event screening is the runtime lane certificate's surface, joined at evaluation; this review binds none."
+      }
+    },
+    {
+      "id": "surface:c424a21e4c843fcdf53dae30",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://theo.xyz/blog",
+        "finding": "Theo blog index read at access: nine dated articles from 2026-05-13 to 2026-09-30, all product, partnership, yield or hiring announcements (latest: Introducing thSLVR, 2026-09-30; From Good To Great: thBILL, 2026-07-03; FILQ added to thBILL, 2026-06-30). No incident, pause, exploit, post-mortem or wind-down notice. The index is narrower than this review's 2025-08-04 start; earlier history is carried by the trackers below."
+      }
+    },
+    {
+      "id": "surface:e9c60758b0a3b55756a9b583",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://status.theo.xyz",
+        "finding": "status.theo.xyz, trust.theo.xyz and docs.theo.xyz returned HTTP 403 to automated reads at 2026-11-15T15:11Z, so no status, trust-centre or documentation content could be read. Recorded as unreadable surfaces, not a clean search."
+      }
+    },
+    {
+      "id": "surface:f141640c760ce32af015fd7b",
+      "value": {
+        "kind": "social",
+        "url": "https://x.com/Theo_Network",
+        "finding": "Theo's X account (linked from theo.xyz) returned HTTP 402 to the automated fetch, so post content could not be read. Recorded as an unreadable surface, not a clean search."
+      }
+    },
+    {
+      "id": "surface:8b3dda8317f21feb15e23543",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "DefiLlama hacks dataset (1355 rows to 2026-11-14) filtered for theo|thbill: one row, Hyperdrive HL Lending (2025-09-27, $782K), a third-party lending venue on HyperEVM whose router allowed arbitrary calls; thBILL appears only as an asset drained from Hyperdrive's Treasury USDT market, and The Block attributes the loss to Hyperdrive's router. No thBILL or Theo contract, OFT lane, adapter escrow, mint, admin or verification configuration was reported affected, so this resolved venue event is recorded here, not concluded. The rekt.news leaderboard (331 entries) lists no Theo, thBILL or Hyperdrive entry. Autheo's THEO token incidents concern a different project. Both trackers are bounded public datasets."
+      }
+    },
+    {
+      "id": "surface:a9817a0647cea0d932c002f2",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned reads of thBILL Arbitrum OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, never latest. Creation: code first present at block 364722303 (2025-08-04T01:50:38Z), deployment transaction 0xda6fad46bdd8764834f937756dc044417b7083adb1b18535227b129c13595d49 per Sourcify. A local run of the production lane screener (screenLaneAdminEvents through the Worker RPC registry) over blocks 524437958-524487957 (finalized head hash 0xefb31c74452823c1e5f399ec205c926bc74ee484b45bdd184ec63ef1bc93c87c, 2026-11-15T14:38:30Z) found no EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet or PreCrimeSet event, the five admin events of the Sourcify-verified ThBillOFT ABI, with runtime code sha256 dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b matching the reviewed pin. The verified ABI exposes no pause, freeze, blacklist or rate-limit state, so no emergency-state read exists. Lane certificates are runtime rows joined at evaluation; this review binds none."
+      }
+    },
+    {
+      "id": "surface:1b91e3550e6d4488e6c06fa3",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned reads of thBILL Base OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, never latest. Creation: code first present at block 33741446 (2025-08-04T01:50:39Z), deployment transaction 0x83a553ddac55086ac97768b434a65c52c290f77a6f463a784bf9827843ee50a8 per Sourcify. A local run of the production lane screener (screenLaneAdminEvents through the Worker RPC registry) over blocks 57766062-57816061 (finalized head hash 0xf1baea778cc99f1a146a19995951d1c3f9123590224b8f8a50563d69f178ba21, 2026-11-15T14:39:47Z) found no EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet or PreCrimeSet event, the five admin events of the Sourcify-verified ThBillOFT ABI, with runtime code sha256 dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b matching the reviewed pin. The verified ABI exposes no pause, freeze, blacklist or rate-limit state, so no emergency-state read exists. Lane certificates are runtime rows joined at evaluation; this review binds none."
+      }
+    },
+    {
+      "id": "surface:fb11a741648630f8035b7229",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com",
+        "finding": "Pinned reads of thBILL HyperEVM OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, never latest. Creation: code first present at block 10187883 (2025-08-04T01:52:00Z), deployment transaction 0x61c4c5861af59f582ed8b747e11920548c26783c92aa7b777018f879cc1d7a3d per Sourcify. A local run of the production lane screener (screenLaneAdminEvents through the Worker RPC registry) over blocks 51289240-51339239 (finalized head hash 0x6ca2cbece6b8b496239220691319420731ba2d87de30f7e407c76fba2e8f43db, 2026-11-15T14:56:08Z) found no EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet or PreCrimeSet event, the five admin events of the Sourcify-verified ThBillOFT ABI, with runtime code sha256 bb2037c0143b294d5c7b3372988a32c5e480f69dfe6062393762a79e3a45cd0c matching the reviewed pin. The verified ABI exposes no pause, freeze, blacklist or rate-limit state, so no emergency-state read exists. Lane certificates are runtime rows joined at evaluation; this review binds none."
+      }
+    },
+    {
+      "id": "surface:62612b9f57fb602fa5b447d9",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-stable-mainnet.n.dwellir.com",
+        "finding": "Pinned reads of thBILL Stable OFT 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, never latest. Creation: code first present at block 1875980 (2025-11-13T18:45:10Z); Sourcify has no deployment record, so the block comes from a code-presence search. A local run of the production lane screener (screenLaneAdminEvents through the Worker RPC registry) over blocks 46917476-46967475 (finalized head hash 0xa0c61c54b229719f720702ac24b5416822f88caafd948d2f5a94ba711e93f553, 2026-11-15T14:56:09Z) found no EnforcedOptionSet, MsgInspectorSet, OwnershipTransferred, PeerSet or PreCrimeSet event, the five admin events of the Sourcify-verified ThBillOFT ABI, with runtime code sha256 a6adb7c034823fcfe39a55c6af9a5d9f963c8721040a90ebbffbbc1d88e5bbbf matching the reviewed pin. The verified ABI exposes no pause, freeze, blacklist or rate-limit state, so no emergency-state read exists. Lane certificates are runtime rows joined at evaluation; this review binds none."
       }
     }
   ]

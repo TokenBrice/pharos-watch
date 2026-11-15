@@ -1,0 +1,86 @@
+{
+  "id": "gbpq-quantoz",
+  "name": "Quantoz GBPQ",
+  "symbol": "GBPQ",
+  "oneLiner": "GBPQ is Quantoz's pre-launch pound sterling e-money token, deployed on Ethereum and Stellar while Quantoz reports none in circulation.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized"
+  },
+  "collateral": "Planned 1:1 GBP reserve backing held by Stichting Quantoz, a bankruptcy-remote foundation separate from Quantoz Payments: at least 30% in deposits with credit institutions, with the remainder in assets such as GBP-backed bonds. The issuer currently states GBPQ has no circulation and no reserve.",
+  "pegMechanism": "Quantoz Payments describes redemption at par value at any time for registered GBPQ account holders who have passed KYC/AML checks and provided bank details. Requests go to Quantoz Payments, which acknowledges them within two business days subject to compliance checks; the holder then transfers GBPQ to an issuer address and receives pounds. Par is a contractual claim, not a market quote.",
+  "mechanismArchetype": "fiat-cash",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb92e69fd39bf33ee1f81e56b0b7933bdc49df46e",
+      "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "GBPQ-GCA6KZBWPBOEF6M2MZBTXRMKLMWRZOUCL2JFSIDT3WTDBOFIVDC4C4CE",
+      "decimals": 7
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.quantoz.com/"
+    },
+    {
+      "label": "Token identities",
+      "url": "https://www.quantoz.com/tokens/"
+    },
+    {
+      "label": "GBPQ whitepaper",
+      "url": "https://www.quantoz.com/documents/gbpq-wp-v1.1-30-4-2026.pdf"
+    },
+    {
+      "label": "Ethereum token contract",
+      "url": "https://etherscan.io/token/0xb92e69fd39bf33ee1f81e56b0b7933bdc49df46e"
+    },
+    {
+      "label": "ESMA EMT issuer register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "De Nederlandsche Bank (DNB)",
+    "license": "Electronic Money Institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-04-07",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Quantoz announced GBPQ with PLNQ on April 14 2026, to be issued first on Ethereum with Polygon, Stellar, XRPL, Algorand and Xahau to follow and Zodia Markets supporting initial distribution. Quantoz's token page lists an Ethereum contract and a Stellar issuer account and states that no tokens are in circulation, so there is no supply outstanding and no reserve. An Ethereum read at block 26421417 on November 15 2026 returned the name Quantoz GBPQ, six decimals and zero total supply, behind the same implementation, proxy admin and owner contracts as PLNQ. Stellar Horizon on the same day reported 1,000,000 GBPQ in a single account that also holds about one million EURQ and one million USDQ. The white paper cover states AFM notification on April 6 2026, while ESMA records notification on April 7 and the white paper was amended on April 30. No launch date or CoinGecko identity has been published.",
+  "milestones": [
+    {
+      "date": "2026-04-06",
+      "type": "regulatory",
+      "title": "White paper cover states original AFM notification",
+      "description": "The document's I.01 field instead gives March 6 2026; the cover date is retained as an attributed statement.",
+      "sourceUrl": "https://www.quantoz.com/documents/gbpq-wp-v1.1-30-4-2026.pdf"
+    },
+    {
+      "date": "2026-04-07",
+      "type": "regulatory",
+      "title": "ESMA records GBPQ white paper notification",
+      "description": "Not a confirmed circulation date or approval of the white paper.",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "date": "2026-04-14",
+      "type": "announcement",
+      "title": "Quantoz Payments announces PLNQ and GBPQ",
+      "description": "Quantoz announced PLNQ and GBPQ as MiCA electronic money tokens to be issued initially on Ethereum, with Polygon, Stellar, XRPL, Algorand and Xahau planned later and Zodia Markets supporting initial institutional distribution. The release gives no circulation figure.",
+      "sourceUrl": "https://www.quantoz.com/blog/quantoz-payments-becomes-europes-leading-stablecoin-issuer-with-five-licensed-tokens-adding-polish-zloty-and-british-pound"
+    },
+    {
+      "date": "2026-04-30",
+      "type": "milestone",
+      "title": "GBPQ white paper amended to version 1.1",
+      "sourceUrl": "https://www.quantoz.com/documents/gbpq-wp-v1.1-30-4-2026.pdf"
+    }
+  ]
+}

@@ -6,6 +6,21 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## LayerZero Lane Unlock: thBILL — 2026-11-15
+
+[#1778](https://github.com/TokenBrice/pharos-watch/issues/1778) Q4, owner rulings of November 15: the KelpDAO LayerZero Labs DVN exposure runs 2026-03-06 to 2026-05-20, and each lane needs three pinned in-window reads showing it never relied on that verifier alone. v10.45 adds review `provider-layerzero-dvn-set-20261115`, the authority for full hashes, DVN addresses and sources. It also adds `issuer-surface-thbill-theo-20261115`, `providerKeys`, and inventory lanes for OFT `0xfdd22ce6…5a5a`. Reads were taken on 03-06, 04-12 and 05-19:
+
+| Lane | Receive library | Blocks | Required DVNs (LZ = LayerZero Labs, DT = Deutsche Telekom) |
+| --- | --- | --- | --- |
+| Arbitrum | `0x7b9e…05e6` | 438930513, 451709445, 464452654 | P2P+DT+Canary ×5; Plasma LZ+Stargate+Twinstake; Monad Horizen+Twinstake+Canary; Stable Horizen+LZ+Twinstake |
+| Base | `0xc70a…4baf` | 43004526, 44602926, 46201326 | Same four sets |
+| HyperEVM | `0x7cac…4a91` | 29019758, 32269573, 35519237 | Same, except Plasma: Twinstake+LZ |
+| Stable | `0x15e5…51b3` | 15726564, 20287883, 24838802 | Horizen+Twinstake+LZ ×7; Monad Canary+Horizen+Twinstake |
+
+Libraries are app-set with no timeout and no optional DVNs. No path is LayerZero Labs alone, and nothing changed between reads; the Ethereum lockbox adapter showed the same. Under the owner's November 15 ruling, UTY stays uncovered: its Base lockbox `0xc6fe7c50…d3f1` required only LayerZero Labs for Katana messages from Base block 43276068 (03-12) through 44883573 (04-18).
+
+Replay: the accepted 14:16Z, 15:17Z and 16:17Z captures reproduce at their production commits, and no card moves against main (0 of 384). A what-if adding the four descriptors and local screener certificates to the 16:17Z capture closes all four lanes, with no score, grade or status change. thBILL Control evidence moves from C and U to U, and local gaps fall from 26 to 17.
+
 ## AUSD Initia/LayerZero Route, Provisional Screening — 2026-11-15
 
 Issue [#1778](https://github.com/TokenBrice/pharos-watch/issues/1778) Q9: the owner ruled on November 15 to screen this route now. The screening stays provisional until Initia publishes its full post-mortem, which its [November 2 update](https://x.com/initia/status/2117120741011530044) promised that week and which was still unpublished on November 15. Re-review when it is published or by **2026-12-01**, whichever comes first.

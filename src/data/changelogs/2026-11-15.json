@@ -1,0 +1,146 @@
+{
+  "dateRange": {
+    "from": "2026-11-09",
+    "to": "2026-11-15"
+  },
+  "headline": "Mint/burn nets now wait for complete classification, and supply gap-fills need a reviewed on-chain pair.",
+  "fieldNotes": "A roster-wide check against archive supply found four coins publishing materially wrong mint/burn nets. DAI showed +$19.2B over 30 days while its supply fell. Eleven releases withheld those nets, fixed the bridge and internal-burn classification behind them and added a daily reconciliation against on-chain supply. Supply work applied the same test to provider data: refused gap-fills removed USDf's $163.6M double count, and GHO's redefinition was accepted with its earlier anchors withheld.",
+  "summary": [
+    {
+      "label": "Mint/burn 6.46",
+      "tag": "feature",
+      "description": "Eleven releases, 6.36 to 6.46. Bridge and internal-burn fixes replace the holds on four coins' wrong nets, daily receipts reconcile the ledger with on-chain supply, and /flows/ shows a labelled subset net instead of NR.",
+      "href": "/methodology/mint-burn-flow-changelog/"
+    },
+    {
+      "label": "Pricing 6.83",
+      "tag": "feature",
+      "description": "Eight releases, 6.76 to 6.83. Supply gap-fills need a reviewed on-chain pair, ending USDf's $163.6M double count. GHO publishes about $268M after a reviewed provider redefinition, and 15 more coins gain dropout guards.",
+      "href": "/methodology/pricing-pipeline-changelog/"
+    },
+    {
+      "label": "Liquidity Score 7.3",
+      "tag": "feature",
+      "description": "Three releases, 7.1 to 7.3. Curve metapools count their base-pool LP leg, and balance health no longer penalises a pool for holding less of the tracked coin than its target. The DEX card shows LUSD/3CRV's unmovable LP.",
+      "href": "/methodology/liquidity-score-changelog/"
+    },
+    {
+      "label": "Safety Score 10.44",
+      "tag": "feature",
+      "description": "Negligible DEX observations no longer replace unknown Exit pricing. Backing curation settles three gaps from primary evidence, and 28 AI summaries drop pillar rankings that the live cards contradicted.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Depeg detection 6.46",
+      "tag": "feature",
+      "description": "Two releases, 6.45 and 6.46. A proven outflow on an isolated canonical leg can raise DEWS stress but never lower it, and a lone Mento Broker quote can no longer lift a coin's DEWS band above WATCH.",
+      "href": "/methodology/depeg-changelog/"
+    },
+    {
+      "label": "Status verdicts",
+      "tag": "infra",
+      "description": "The status page and operator light colour only confirmed, material problems, and unreadable evidence holds a component's last confirmed state. Indexed reads and an hourly-capped reliability rollup relieve D1 overload.",
+      "href": "/status/"
+    },
+    {
+      "label": "Search and page speed",
+      "tag": "feature",
+      "description": "Closed low-confidence depeg events become indexable, FreezeWatch checks an address from its hero and releases ping IndexNow. Safety Scores and Portfolio deliver their main content earlier, without waiting for JavaScript."
+    },
+    {
+      "label": "Catalog and sources",
+      "tag": "coverage",
+      "description": "BUIDL supply reads on-chain across ten deployments after DefiLlama stopped updating it, and IDRT's on-chain stock becomes primary. DLLR and XUSD stay active with redemption routes suspended after the Sovryn halt."
+    },
+    {
+      "label": "Codebase untangle",
+      "tag": "infra",
+      "description": "Clean-up runs cut import cycles, removed the shared types barrel, grouped components into per-domain folders and generated the Worker cron arrays from the schedule table, while 89 tests switched to asserting outcomes."
+    }
+  ],
+  "stats": {
+    "totalCommits": 303
+  },
+  "commits": [
+    {
+      "hash": "d60f4246",
+      "message": "data(funding): record three Ethereum donations from 13 to 15 November"
+    },
+    {
+      "hash": "3b86dcee",
+      "message": "data(prelaunch): add CHF-S and GBPQ stubs"
+    },
+    {
+      "hash": "ae120d49",
+      "message": "data(prelaunch): weekly refresh of milestones, dates and record corrections"
+    },
+    {
+      "hash": "8332b35f",
+      "message": "docs(safety): log the provisional AUSD Initia/LayerZero screening (#1778 Q9)"
+    },
+    {
+      "hash": "72020a6b",
+      "message": "data(safety): provisionally screen AUSD's Initia-peered AUSD0 lane (#1778 Q9)"
+    },
+    {
+      "hash": "b6b7ffcf",
+      "message": "docs(d1): record the operated drop of four mint_burn_events indexes"
+    },
+    {
+      "hash": "57b510a7",
+      "message": "data(safety-score): classify OUSD's unitemized reserve remainder as issuer non-disclosure"
+    },
+    {
+      "hash": "1c29bb92",
+      "message": "test(dex): expect one Slipstream fetch after the Velodrome reader retirement"
+    },
+    {
+      "hash": "65983d0a",
+      "message": "data(methodology): set Pricing v6.83 and Liquidity v7.3 activation to the planned release hour"
+    },
+    {
+      "hash": "9fcd6514",
+      "message": "data(methodology): set Pricing v6.82's activation to the planned release hour"
+    },
+    {
+      "hash": "78327e0f",
+      "message": "feat(liquidity): retire the Optimism Velodrome Slipstream direct reader"
+    },
+    {
+      "hash": "9b0b9faa",
+      "message": "fix(mint-burn): let the daily invariant find Arbitrum's midnight blocks in budget"
+    },
+    {
+      "hash": "1b9c5a5e",
+      "message": "fix(liquidity): confirm Beets pools against the Balancer census"
+    },
+    {
+      "hash": "4fc381ca",
+      "message": "feat(safety-v9): lane descriptors for route-only lanes and cross-chain emitters"
+    },
+    {
+      "hash": "3c760870",
+      "message": "feat(safety-v9): admit bracketed verifier-compromise exemptions (#1778 Q4)"
+    },
+    {
+      "hash": "4dde7861",
+      "message": "data(reserves): publish OUSD's non-itemized Bridge remainder as a residual slice"
+    },
+    {
+      "hash": "d00fcb68",
+      "message": "fix(stablecoin): show an in-budget daily-history fallback as provenance, not a banner"
+    },
+    {
+      "hash": "58c689e0",
+      "message": "fix(pricing): require MOVEUSD's Orca mark to survive a sell quote (v6.82)"
+    },
+    {
+      "hash": "b26f35ab",
+      "message": "perf(mint-burn): batch event inserts into multi-row statements"
+    },
+    {
+      "hash": "a4d0715a",
+      "message": "data(mint-burn): pin AUSD's packed implementation guard for range proofs"
+    }
+  ]
+}

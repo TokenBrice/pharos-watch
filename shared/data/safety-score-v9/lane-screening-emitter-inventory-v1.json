@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-10-30",
+  "reviewedAt": "2026-11-15",
   "policy": {
     "laneIdentity": "bridge-route-deployment",
     "subjectRule": "subjectDeploymentKey is the reviewed bridge route id (`bridgeRouteRisk.routes[].id`, `chain:contractAddress`), never a controller: IR-1c closure compares certificate.subjectDeploymentKey with the compiled bridge control's deploymentKey.",
@@ -22,7 +22,9 @@
     "ethereum": 216000,
     "arbitrum": 200000,
     "base": 50000,
-    "optimism": 50000
+    "hyperevm": 50000,
+    "optimism": 50000,
+    "stable": 50000
   },
   "lanes": [
     {
@@ -387,6 +389,126 @@
           "adminEvents": ["AdministratorSet", "ManagerSet"],
           "sources": [
             { "label": "Verified YieldFi LockBox implementation", "url": "https://eth.blockscout.com/address/0x19056eb5ea89f22202ae1c9cefe685193a894d64?tab=contract" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "arbitrum:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "assetIds": ["thbill-theo"],
+      "rail": "layerzero",
+      "contributors": [
+        { "controlId": "*", "emitterAddresses": ["0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"] }
+      ],
+      "emitters": [
+        {
+          "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "chain": "arbitrum",
+          "role": "route-deployment",
+          "label": "thBILL LayerZero OFT (ThBillOFT, not a proxy)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b",
+          "observedBlock": 524487957,
+          "observedAt": "2026-11-15T15:06:11Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "arbitrum",
+            "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b",
+            "verifiedSourceUrl": "https://sourcify.dev/server/v2/contract/42161/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          "adminEvents": ["EnforcedOptionSet", "MsgInspectorSet", "OwnershipTransferred", "PeerSet", "PreCrimeSet"],
+          "sources": [
+            { "label": "Sourcify exact match: ThBillOFT on Arbitrum", "url": "https://sourcify.dev/server/v2/contract/42161/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "base:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "assetIds": ["thbill-theo"],
+      "rail": "layerzero",
+      "contributors": [
+        { "controlId": "*", "emitterAddresses": ["0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"] }
+      ],
+      "emitters": [
+        {
+          "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "chain": "base",
+          "role": "route-deployment",
+          "label": "thBILL LayerZero OFT (ThBillOFT, not a proxy)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b",
+          "observedBlock": 57816061,
+          "observedAt": "2026-11-15T15:06:11Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "base",
+            "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:dcd5602d8ef8b6db9cdad2cf83833df4de1fb1d9255c46ad7b6d891359b0a55b",
+            "verifiedSourceUrl": "https://sourcify.dev/server/v2/contract/8453/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          "adminEvents": ["EnforcedOptionSet", "MsgInspectorSet", "OwnershipTransferred", "PeerSet", "PreCrimeSet"],
+          "sources": [
+            { "label": "Sourcify exact match: ThBillOFT on Base", "url": "https://sourcify.dev/server/v2/contract/8453/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "hyperevm:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "assetIds": ["thbill-theo"],
+      "rail": "layerzero",
+      "contributors": [
+        { "controlId": "*", "emitterAddresses": ["0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"] }
+      ],
+      "emitters": [
+        {
+          "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "chain": "hyperevm",
+          "role": "route-deployment",
+          "label": "thBILL LayerZero OFT (ThBillOFT, not a proxy)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:bb2037c0143b294d5c7b3372988a32c5e480f69dfe6062393762a79e3a45cd0c",
+          "observedBlock": 51339239,
+          "observedAt": "2026-11-15T15:06:13Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "hyperevm",
+            "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:bb2037c0143b294d5c7b3372988a32c5e480f69dfe6062393762a79e3a45cd0c",
+            "verifiedSourceUrl": "https://sourcify.dev/server/v2/contract/999/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          "adminEvents": ["EnforcedOptionSet", "MsgInspectorSet", "OwnershipTransferred", "PeerSet", "PreCrimeSet"],
+          "sources": [
+            { "label": "Sourcify exact match: ThBillOFT on HyperEVM", "url": "https://sourcify.dev/server/v2/contract/999/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "assetIds": ["thbill-theo"],
+      "rail": "layerzero",
+      "contributors": [
+        { "controlId": "*", "emitterAddresses": ["0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"] }
+      ],
+      "emitters": [
+        {
+          "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+          "chain": "stable",
+          "role": "route-deployment",
+          "label": "thBILL LayerZero OFT (ThBillOFT, not a proxy)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:a6adb7c034823fcfe39a55c6af9a5d9f963c8721040a90ebbffbbc1d88e5bbbf",
+          "observedBlock": 46967475,
+          "observedAt": "2026-11-15T15:06:14Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "stable",
+            "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:a6adb7c034823fcfe39a55c6af9a5d9f963c8721040a90ebbffbbc1d88e5bbbf",
+            "verifiedSourceUrl": "https://sourcify.dev/server/v2/contract/988/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          },
+          "adminEvents": ["EnforcedOptionSet", "MsgInspectorSet", "OwnershipTransferred", "PeerSet", "PreCrimeSet"],
+          "sources": [
+            { "label": "Sourcify exact match: ThBillOFT on Stable", "url": "https://sourcify.dev/server/v2/contract/988/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a" }
           ]
         }
       ]

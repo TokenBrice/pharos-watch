@@ -1,8 +1,8 @@
 {
   "id": "eur-qivalis",
   "name": "Qivalis Euro",
-  "symbol": "QEUR",
-  "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 37-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
+  "symbol": "EURqi",
+  "oneLiner": "EURqi is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 37-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -23,7 +23,9 @@
     }
   ],
   "jurisdiction": {
-    "country": "Netherlands"
+    "country": "Netherlands",
+    "regulator": "De Nederlandsche Bank (DNB)",
+    "license": "Electronic Money Institution"
   },
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "regulated-entity",
@@ -31,7 +33,7 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-institution consortium across 15 countries (May 20 expansion added 25 new member banks to 12 existing members, including new arrivals ABN AMRO, Intesa Sanpaolo, Rabobank and Nordea; Raiffeisen Bank International was already a member); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release.",
+  "launchPhaseDetail": "37-institution consortium across 15 countries (May 20 expansion added 25 new member banks to 12 existing members, including new arrivals ABN AMRO, Intesa Sanpaolo, Rabobank and Nordea; Raiffeisen Bank International was already a member); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer. Qivalis has not itself published a ticker; Pharos uses EURqi, the name ESMA's interim MiCA register gives the white paper Qivalis notified on October 21 2026, and the register's qivalis.eu link to that document returned a 404 error on November 15 2026. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release.",
   "featuredContent": [
     {
       "type": "article",
@@ -153,6 +155,13 @@
       "title": "De Nederlandsche Bank authorises Qivalis as an electronic money institution",
       "description": "Qivalis announced that DNB granted it electronic money institution authorisation, making it eligible to issue euro electronic money tokens. Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published. No launch date or ticker was given.",
       "sourceUrl": "https://qivalis.eu/press/news/qivalis-receives-authorisation-as-an-electronic-money-institution-from-de-nederlandsche-bank"
+    },
+    {
+      "date": "2026-10-21",
+      "type": "regulatory",
+      "title": "ESMA records the EURqi white paper notification",
+      "description": "ESMA's interim MiCA register lists a Qivalis B.V. white paper titled EURqi white paper, notified on October 21 2026 with DNB as competent authority. Notification is not white paper approval or evidence of circulation, and Qivalis had not published the document or a ticker by November 15 2026.",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
     }
   ]
 }

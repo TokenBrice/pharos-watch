@@ -30,9 +30,8 @@
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",
-  "expectedLaunchDate": "2026",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; OKRW is planned as a won-pegged stablecoin, but no issuer has been named and Tiger Research reported on September 17 2026 that issuer eligibility was still under discussion",
+  "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; Hashed's testnet release says mainnet will follow security audits and gives no date; OKRW is planned as a won-pegged stablecoin, but no issuer has been named and Tiger Research reported on September 17 2026 that issuer eligibility was still under discussion. Pharos cleared the 2026 expectation on November 15 2026 because no Hashed or Maroo source states a mainnet year.",
   "featuredContent": [
     {
       "type": "article",
@@ -56,6 +55,12 @@
       "title": "Maroo L1 testnet launches with OKRW as native KRW stablecoin",
       "description": "First sovereign L1 blockchain purpose-built for KRW stablecoins; dual-track regulated and open paths.",
       "sourceUrl": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a"
+    }
+  ],
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-11-15"
     }
   ]
 }
