@@ -230,6 +230,7 @@ function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undef
     source === "kava-swap" ||
     source === "osmosis-sqs" ||
     source === "noble-swap" ||
+    source === "sundaeswap" ||
     source === "direct_api"
   ) {
     return source;

@@ -61,6 +61,7 @@ export function evaluateWorkerWranglerConfig(
   expectValue("d1_databases", "binding", '"DB"');
   expectValue("d1_databases", "database_id", '"8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"');
   expectValue("root", "upload_source_maps", "true");
+  expectValue("root", "preview_urls", "false");
   expectValue("limits", "cpu_ms", "300000");
   expectValue("observability", "head_sampling_rate", role === "public" ? "0.1" : "1");
   expectValue("observability", "enabled", "true");
@@ -114,7 +115,6 @@ export function evaluateWorkerWranglerConfig(
   }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
-    expectValue("root", "preview_urls", "false");
     expectValue("r2_buckets", "binding", '"SAFETY_CAPTURE_ARCHIVE"');
     expectValue("r2_buckets", "bucket_name", '"pharos-measurements"');
     if (assignments.some(({ section, key }) => section.startsWith("ratelimits") || key === "CORS_ORIGIN")) {

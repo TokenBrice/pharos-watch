@@ -1,5 +1,21 @@
 [
   {
+    "version": "7.4",
+    "title": "SundaeSwap pools join Cardano discovery",
+    "date": "2026-11-15",
+    "effectiveAt": 1794780000,
+    "summary": "Discovery now reads SundaeSwap's keyless GraphQL pool index for every tracked Cardano deployment. CoinGecko Onchain, until now Pharos's only Cardano source, indexes Minswap and SaturnSwap but not SundaeSwap. A SundaeSwap pool is valued only when its other asset is an active tracked Cardano stablecoin with a usable peg reference; any other pool keeps its observed identity with no USD value. Component weights and quality tiers are unchanged.",
+    "impact": [
+      "Constant-product pools (V1, V3 and V4 constant-product) count twice the counter stablecoin's value at its peg reference, and the implied price of the tracked coin must pass the shared plausibility gate, as for Stellar Horizon. Stable-curve pools (Stableswaps, V4 stableswap and constant-sum) with a 1:1 configured rate and equal decimals count twice their smaller side, as for TzKT, so an unmatched excess of either coin is never valued. They stage no price: a reserve ratio is not a stable-curve price, and a constant-sum rate is configuration, not a market observation.",
+      "ADA pairs and other volatile pairs stay unvalued, because the pipeline has no admitted ADA price. A valued pool below the $10K retained-pool floor is not staged. Pools take the generic 0.3x tier, as CoinGecko's Minswap rows do, with balance unmeasured and no volume: SundaeSwap's tick feed reports undocumented per-asset volumes that differ by protocol version, so it gives no provable 24h USD reading. A coin that gains a SundaeSwap pool publishes a partial 24h volume window (USDM: about 91% of retained TVL admitted, still rated).",
+      "The provider is supplemental: SundaeSwap is one Cardano venue, so its own empty answer never certifies absence. Because the token-pool indexes miss SundaeSwap pools, a completed-empty Cardano census from CoinGecko Onchain, GeckoTerminal or DexScreener now certifies no pools only beside a clean SundaeSwap answer for that deployment; a SundaeSwap failure, degraded answer or open breaker leaves the census non-exhaustive. `pools.byAsset` stops at 50 rows without pagination, so a full page, a GraphQL error or a malformed row degrades the check. Pool identity is SundaeSwap's own pool id (`cardano:<id>`), the id DexScreener already uses for these pools, so one physical pool resolves to one registry view. Each crawl records one optional `sundaeswap-discovery` breaker outcome. Any failed read counts against it and stops further requests that crawl: a timeout, network error, unparseable or over-cap body, or non-2xx status, including a 422 query rejection. The one retry shares the read's eight-second budget, and a read ended by the coin's crawl deadline records nothing.",
+      "On 2026-11-15 live data, USDM gains its USDCx/USDM stableswap at $230K (the pool holds $115K of USDCx against $700K of USDM): retained TVL rises about 10%, and its Liquidity Score is estimated to move from 53 to 54. USDC gains the same pool. USDA, DJED and iUSD gain no valued pool, because their SundaeSwap pools pair ADA or other volatile tokens or fall below $10K. Pre-launch USDrf's USDCx/USDrf constant-sum pool would count $702K once the coin is active; its USDrf/sUSDrf pool stays unvalued because sUSDrf has no admitted price. SundaeSwap is USDrf's only DEX venue and supplies no volume reading, so once active its Liquidity Score is not rated until a volume source exists; its pools and TVL still publish.",
+      "This widens discovery admission to a new venue and measures no already-retained pool differently: an unvalued SundaeSwap row is dropped before registry resolution, so it never displaces another source's value for the same pool, and no pool SundaeSwap valued on 2026-11-15 was already retained from another source. It therefore adds no TVL-basis break, as with CHFSAFO's Aquarius identity in 6.95. An affected coin's first SundaeSwap crawl adds its pools in one step, so USDM's 7-day TVL change will include that one-time increase."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.3",
     "title": "Optimism Velodrome Slipstream's direct reader is retired",
     "date": "2026-11-15",

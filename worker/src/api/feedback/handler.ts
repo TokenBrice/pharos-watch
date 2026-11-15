@@ -7,6 +7,7 @@ import {
   FEEDBACK_REQUEST_MAX_BYTES,
   parseFeedbackRequest,
   prepareFeedbackSubmission,
+  resolveFeedbackClientIp,
   validateFeedbackSubmission,
 } from "./request";
 import { submitFeedback } from "./submission";
@@ -30,7 +31,7 @@ export async function handleFeedbackRequest(
   }
   try {
     const limited = await env.FEEDBACK_PREAUTH_RATE_LIMIT.limit({
-      key: request.headers.get("CF-Connecting-IP") ?? "unknown",
+      key: resolveFeedbackClientIp(request),
     });
     if (!limited.success) {
       return errorResponse(429, "Too many submissions. Please wait a few minutes.", {

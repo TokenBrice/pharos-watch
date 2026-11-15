@@ -200,6 +200,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup, context.policy);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup, context.policy, hours === 24);
   });
 }

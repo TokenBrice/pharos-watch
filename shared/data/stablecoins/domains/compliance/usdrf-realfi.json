@@ -1,0 +1,150 @@
+{
+  "id": "usdrf-realfi",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USDrf Terms, July 23, 2026, section 3(b): USDrf is not offered to persons in the European Union",
+        "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use"
+      },
+      {
+        "label": "RealFi jurisdictional eligibility: EU and EEA users excluded and geo-blocked",
+        "url": "https://docs.realfi.co/compliance/jurisdictional-eligibility"
+      },
+      {
+        "label": "ESMA interim MiCA register: no RealFi or USDrf entry in the EMT, ART, CASP, non-compliant or other white-paper files on 2026-11-15",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "CoinGecko realfi-usdrf tickers on 2026-11-15: SundaeSwap markets only, no EU trading platform",
+        "url": "https://api.coingecko.com/api/v3/coins/realfi-usdrf/tickers"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "RealFi markets USDrf as a USD stablecoin for everyday digital transactions and trading, designed to track $1. Its July 23, 2026 Terms and Institutional Minting Agreement give holders who open an account with RealFi Reserve Ltd. the right to redeem for an equivalent amount of U.S. dollars, at one dollar per USDrf less fees and payable to a connected bank account, and state that USDrf pays no interest or return. Account-gated access and the off-chain credit reserve do not remove the fixed-value national-currency redemption obligation that GENIUS section 2(22) uses to define a payment stablecoin. The docs' risk disclaimer that USDrf provides exposure to a portfolio of real-world financial instruments describes reserve risk, not a variable redemption value.",
+      "references": [
+        {
+          "label": "RealFi docs: USDrf (base stablecoin)",
+          "url": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "USDrf Terms, section 2: redemption for U.S. dollars and no yield",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-23",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "USDrf Institutional Minting Agreement, sections 2 and 8: one U.S. dollar per USDrf less fees",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-23",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-11-15"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "RealFi Reserve Ltd.",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-11-15. The USDrf Terms and Institutional Minting Agreement name RealFi Reserve Ltd., a British Virgin Islands company, as issuer and redemption counterparty. RealFi Yield Ltd. issues sUSDrf and the Cayman Islands RealFi Foundation governs the protocol; neither is the USDrf issuer. RealFi states that USDrf is not classified as a regulated financial instrument under current BVI virtual asset guidelines. That is an issuer statement, not a regulator determination, and no licence is recorded. U.S. persons and U.S.-organized entities cannot hold USDrf or become Mint Users, and the app geo-blocks restricted jurisdictions. These are issuer eligibility restrictions, not a GENIUS exclusion, foreign exception or DASP restriction; DASP posture reflects the pre-effective regime only. The Institutional Minting Agreement publishes operative redemption terms, so redemptionPolicyPresent is true. RealFi names HT Digital as reserve attestation provider, but on 2026-11-15 its attestation page still said documentation would be available shortly and no report was found, so monthlyAttestationPresent is false. The transparency portal at realfi.co/transparency redirected to a geo-restriction page from the review location and was not inspected, and the docs publish allocation strategy only, so reserveDisclosurePresent is not asserted. The negative authorization and enforcement findings are bounded by the sources checked and do not exclude nonpublic filings.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and foreign-issuer provisions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "RealFi docs: Regulatory status of the protocol entities",
+        "url": "https://docs.realfi.co/compliance/regulatory-status-of-the-protocol-entities",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "RealFi docs: Jurisdictional eligibility",
+        "url": "https://docs.realfi.co/compliance/jurisdictional-eligibility",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "USDrf Terms",
+        "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-23",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "USDrf Institutional Minting Agreement",
+        "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-23",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "RealFi docs: Reserve Attestation (HT Digital named; no report published)",
+        "url": "https://docs.realfi.co/resources/reserve-attestation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "Federal Register exact-term RealFi search through November 15, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22RealFi%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-11-15&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-11-15"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "2026-11-15: Federal Register API exact-term queries for \"RealFi\", \"RealFi Reserve\" and \"USDrf\" through 2026-11-15 each returned count 0",
+        "2026-11-15: OCC digital assets licensing applications table, populated with current applicants: no RealFi entity listed",
+        "2026-11-15: NYDFS virtual currency businesses page returned HTTP 403 to a non-browser fetch and was not inspected; no NYDFS finding is made",
+        "2026-11-15: RealFi docs on entity regulatory status, jurisdictional eligibility and AML/KYC, plus the USDrf Terms and Institutional Minting Agreement: no GENIUS pathway, application or foreign-registration statement, and U.S. persons are excluded",
+        "2026-11-15: Web searches pairing RealFi or USDrf with regulator, warning, enforcement, cease-and-desist and sanction terms found no action naming either"
+      ],
+      "summary": "As of 2026-11-15, the checked Federal Register queries, OCC application table and issuer materials identified no GENIUS permitted-issuer approval, state qualification, official application or registered foreign-issuer exception for RealFi Reserve Ltd. or USDrf, and no public enforcement action naming either. The issuer excludes U.S. persons and states no GENIUS pathway. This bounded public-source finding does not exclude nonpublic filings and is not a legal determination.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-15",
+      "references": [
+        {
+          "label": "Federal Register exact-term RealFi search through November 15, 2026",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22RealFi%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-11-15&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-11-15"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-15"
+  }
+}

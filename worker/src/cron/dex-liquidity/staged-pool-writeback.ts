@@ -38,6 +38,7 @@ const LIVE_LANE_SOURCE_FAMILY: Record<LiquidityPoolSourceFamily, boolean> = {
   "kava-swap": false,
   "osmosis-sqs": false,
   "noble-swap": false,
+  sundaeswap: false,
 };
 
 export interface StagedPoolWriteback {

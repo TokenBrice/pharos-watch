@@ -6,6 +6,7 @@ import { route, resolveRoute } from "../../router";
 import { ROUTER_STATIC_PATHS } from "../../routes/registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { routeContextFactory } from "../../test-helpers/__shared/routes";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 // This suite verifies route registration and method/auth behavior. Handler-level
 // D1 contracts are covered by the dedicated endpoint suites, so D1 is incidental
@@ -128,6 +129,16 @@ describe("router contract: strict frontend paths are routable", () => {
     expect(response!.status).toBe(400);
     expect(response!.headers.get("Content-Type")).toBe("text/plain");
     await expect(response!.text()).resolves.toBe("Malformed URI");
+  });
+
+  it.each(["usdt-tether", "%75sdt-tether", "usdt%2dtether", "%2575sdt-tether", "usdt%2Ftether"])("admits only canonical dynamic ids: %s", async (id) => {
+    const coinDb = mockD1([{ match: "FROM cache", rows: [{ key: "stablecoins", updated_at: Math.floor(Date.now() / 1000),
+      value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }) }] }]);
+    const url = new URL(`https://api.pharos.watch/api/stablecoin-summary/${id}`);
+    const response = await route(makeRouteCtx({ db: coinDb, url, request: new Request(url) }));
+    expect(response?.status).toBe(id === "usdt-tether" ? 200 : 404);
+    if (id === "usdt-tether") expect(await response!.json()).toMatchObject({ id });
+    else expect(coinDb.getHistory()).toHaveLength(0);
   });
 
   it("rejects HEAD on dynamic OG routes before entering the renderer", async () => {

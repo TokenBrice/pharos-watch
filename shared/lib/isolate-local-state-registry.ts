@@ -212,8 +212,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["_ak"],
     owner: "API-key authentication and fallback limiting",
     kind: "cache",
-    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage and fallback limiter maps cap at 4,096 entries, with prune and dependency-circuit coordination resetting with the isolate.",
-    durableTruth: "D1 API-key, rate-limit, and last-used rows are authoritative; local fallback limiting is emergency-only.",
+    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage, fallback limiter, lookup-block and D1 over-quota memo maps cap at 4,096 entries. Lookup blocks expire at the minute boundary; over-quota memos apply only to the same minute and a limit below the observed count; all reset with the isolate.",
+    durableTruth: "D1 API-key, rate-limit, and last-used rows are authoritative; lookup blocks reuse native limiter rejection, over-quota memos reuse only D1-confirmed rejection, and local fallback limiting is emergency-only.",
   },
   {
     sourcePath: "worker/src/lib/auth.ts",

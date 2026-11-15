@@ -65415,6 +65415,116 @@
         "surface:7bc75a9864421b4627938a4a"
       ],
       "rationale": "The bridge-transparency:unclassified-residual sourceKey maps to the exact captured residual exposure: the published reserve total less the itemized cash and treasury lines. The issuer API itemizes only those two lines and the dashboard calls the excess overcollateralization, but neither names an instrument, custodian or obligor for it; the transparency documentation, FAQ, reserve-management page and stablecoin terms add no allocation. The remainder is issuer-undisclosed, not unresearched."
+    },
+    {
+      "id": "usdrf-20261115-reserve-composition",
+      "assetId": "usdrf-realfi",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T18:28:16Z",
+      "reviewer": "Claude USDrf promotion safety lane 2026-11-15",
+      "sourcesRefs": [
+        "source:e2904e3d5ecfa1f3f5fd1441",
+        "source:37f8b846d16e22c4b3664f1c",
+        "source:06ba2e91d29d747c06a37266"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:c947585fd5777f23bcc17f94",
+        "surface:d3045ee7f8b3d57a8051df50",
+        "surface:561a34ee7e20108bb2751140",
+        "surface:752584661f0ce59c97f5cb1f",
+        "surface:1a8c36d119cf5f37b1c01add",
+        "surface:73eae11889103fcf12258df2",
+        "surface:90d9c4ae40ab4755131ce18d"
+      ],
+      "rationale": "No dated whole-book reserve composition is disclosed. The backing page lists strategy sleeves and partial ranges that it calls indicative of the launch strategy, not a fixed allocation; the attestation page names HT Digital but says documentation will follow; and the transparency portal redirects to a jurisdiction-restriction page from the review location, so no holdings, sleeve weights, instruments or obligors could be pinned."
+    },
+    {
+      "id": "usdrf-20261115-redemption-capacity",
+      "assetId": "usdrf-realfi",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:9b1e99b4-9a96-4eef-a80c-35c96cdfe0a8:redemption:usdrf-realfi:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T18:28:16Z",
+      "reviewer": "Claude USDrf promotion safety lane 2026-11-15",
+      "sourcesRefs": [
+        "source:2d133e61f529b910d28c353f",
+        "source:c7d5c13db66c705cd16afaa4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8b6d923772697237f2542c3f",
+        "surface:77097e277c6f58b833e346d0",
+        "surface:86edf533e1cb5f12394d7701",
+        "surface:73eae11889103fcf12258df2"
+      ],
+      "rationale": "No funded or executable redemption capacity is disclosed. The redemption FAQ describes a human-approved first-in-first-out queue under daily and monthly throttle limits without publishing their amounts, and Institutional Minting Agreement section 9 lets the issuer set or change individual and aggregate limits at its discretion. The 10% buffer floor and 120% seven-day coverage target are liquidity policies, not a published capacity figure."
+    },
+    {
+      "id": "usdrf-20261115-redemption-settlement",
+      "assetId": "usdrf-realfi",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:9b1e99b4-9a96-4eef-a80c-35c96cdfe0a8:redemption:usdrf-realfi:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T18:28:16Z",
+      "reviewer": "Claude USDrf promotion safety lane 2026-11-15",
+      "sourcesRefs": [
+        "source:8ce4d42c5556de7589877af4",
+        "source:4524de5fa0102ff69939b175"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8b6d923772697237f2542c3f",
+        "surface:77097e277c6f58b833e346d0",
+        "surface:551b0a3b18d7071eb79af000"
+      ],
+      "rationale": "No end-to-end redemption completion maximum is disclosed. Institutional Minting Agreement section 8 promises only commercially reasonable efforts, disclaims any warranty on processing time, adds time for large or unusual requests and permits suspension on a reserve adequacy or liquidity breach; the FAQ says timing depends on queue position and is not guaranteed within any window."
+    },
+    {
+      "id": "usdrf-20261115-redemption-cost",
+      "assetId": "usdrf-realfi",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:9b1e99b4-9a96-4eef-a80c-35c96cdfe0a8:redemption:usdrf-realfi:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "cost"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T18:28:16Z",
+      "reviewer": "Claude USDrf promotion safety lane 2026-11-15",
+      "sourcesRefs": [
+        "source:be8aa3c495d480e95bae4abb",
+        "source:b472d6c95119598e9d922974"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8b6d923772697237f2542c3f",
+        "surface:77097e277c6f58b833e346d0",
+        "surface:551b0a3b18d7071eb79af000"
+      ],
+      "rationale": "No all-in redemption cost bound is disclosed. Institutional Minting Agreement section 7 says RealFi Reserve currently charges no fee of its own but reserves the right to charge fees, which it discloses only when an order is initiated, and leaves bank, wallet and Cardano network charges to third parties without an estimate or ceiling."
     }
   ],
   "sourceObservations": [
@@ -98340,6 +98450,105 @@
         "excerpt": "Underlying reserve assets (cash and treasuries) that back the stablecoin",
         "assertion": "Bridge's transparency documentation defines the published reserve categories as cash and treasuries and provides no category or disclosure for reserve assets held outside those lines."
       }
+    },
+    {
+      "id": "source:e2904e3d5ecfa1f3f5fd1441",
+      "value": {
+        "url": "https://docs.realfi.co/real-world-backing/real-world-backing",
+        "observedAt": "2026-11-15T17:08:12Z",
+        "datumAsOf": null,
+        "location": "Footnote 1",
+        "excerpt": "The composition disclosed below is indicative of the strategy at launch and does not represent a fixed allocation.",
+        "assertion": "The backing page publishes strategy sleeves and partial ranges, not a dated composition with weights, holdings or obligors."
+      }
+    },
+    {
+      "id": "source:37f8b846d16e22c4b3664f1c",
+      "value": {
+        "url": "https://docs.realfi.co/resources/reserve-attestation",
+        "observedAt": "2026-11-15T17:08:21Z",
+        "datumAsOf": null,
+        "location": "Reserve Attestation",
+        "excerpt": "further documentation will be available here shortly.",
+        "assertion": "The named attestation provider has published no report, so no attested composition is available."
+      }
+    },
+    {
+      "id": "source:06ba2e91d29d747c06a37266",
+      "value": {
+        "url": "https://realfi.co/transparency",
+        "observedAt": "2026-11-15T18:25:48Z",
+        "datumAsOf": null,
+        "location": "Redirect to https://app.realfi.co/restricted.html",
+        "excerpt": "RealFi services aren't available in your location.",
+        "assertion": "The transparency portal is jurisdiction-restricted from the review location, so any holdings it shows could not be inspected or pinned."
+      }
+    },
+    {
+      "id": "source:2d133e61f529b910d28c353f",
+      "value": {
+        "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+        "observedAt": "2026-11-15T17:09:37Z",
+        "datumAsOf": "2026-07-23",
+        "location": "Section 9 Transaction Limits",
+        "excerpt": "The Company reserves the right to change the mint, redemption, transfer, and velocity limits as\nwe deem necessary.",
+        "assertion": "The governing agreement makes redemption limits discretionary and publishes no amount."
+      }
+    },
+    {
+      "id": "source:c7d5c13db66c705cd16afaa4",
+      "value": {
+        "url": "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf",
+        "observedAt": "2026-11-15T17:08:03Z",
+        "datumAsOf": null,
+        "location": "How can I redeem USDrf?",
+        "excerpt": "subject to daily and monthly throttle limits designed to protect reserve liquidity",
+        "assertion": "Daily and monthly throttle limits exist but their amounts are unpublished, so no executable redemption capacity is quantified."
+      }
+    },
+    {
+      "id": "source:8ce4d42c5556de7589877af4",
+      "value": {
+        "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+        "observedAt": "2026-11-15T17:09:37Z",
+        "datumAsOf": "2026-07-23",
+        "location": "Section 8 Minting and Redemption",
+        "excerpt": "the Company makes no representations or warranties\nregarding the amount of time needed to complete processing",
+        "assertion": "The governing agreement disclaims any completion-time warranty, so no redemption settlement maximum is established."
+      }
+    },
+    {
+      "id": "source:4524de5fa0102ff69939b175",
+      "value": {
+        "url": "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf",
+        "observedAt": "2026-11-15T17:08:03Z",
+        "datumAsOf": null,
+        "location": "How can I redeem USDrf?",
+        "excerpt": "Redemption timing depends on queue position and reserve composition and is not guaranteed within any specific window.",
+        "assertion": "The issuer states no guaranteed redemption window."
+      }
+    },
+    {
+      "id": "source:be8aa3c495d480e95bae4abb",
+      "value": {
+        "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+        "observedAt": "2026-11-15T17:09:37Z",
+        "datumAsOf": "2026-07-23",
+        "location": "Section 7 Fees",
+        "excerpt": "We will disclose the amount of fees we will charge or pass through to you\nfor the applicable Service at the time you initiate a transaction through the Services.",
+        "assertion": "Issuer fees are disclosed per order at initiation; no fee schedule or ceiling is published in advance."
+      }
+    },
+    {
+      "id": "source:b472d6c95119598e9d922974",
+      "value": {
+        "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement",
+        "observedAt": "2026-11-15T17:09:37Z",
+        "datumAsOf": "2026-07-23",
+        "location": "Section 7 Fees",
+        "excerpt": "We\ncurrently do not charge fees ourselves, although we reserve the right to charge fees for our\nServices in the future.",
+        "assertion": "A current zero issuer fee is stated, but future fees are reserved and bank, wallet and network charges are separate, so no all-in cost bound is established."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -112918,6 +113127,50 @@
     {
       "id": "surface:330bab3cf21e50c459755f81",
       "value": "https://docs.axis.to/risk/asset-selection.md"
+    },
+    {
+      "id": "surface:c947585fd5777f23bcc17f94",
+      "value": "https://docs.realfi.co/real-world-backing/real-world-backing"
+    },
+    {
+      "id": "surface:d3045ee7f8b3d57a8051df50",
+      "value": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin"
+    },
+    {
+      "id": "surface:561a34ee7e20108bb2751140",
+      "value": "https://docs.realfi.co/frequently-asked-questions/what-backs-usdrf"
+    },
+    {
+      "id": "surface:752584661f0ce59c97f5cb1f",
+      "value": "https://docs.realfi.co/resources/reserve-attestation"
+    },
+    {
+      "id": "surface:1a8c36d119cf5f37b1c01add",
+      "value": "https://docs.realfi.co/resources/audit-reports"
+    },
+    {
+      "id": "surface:73eae11889103fcf12258df2",
+      "value": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+    },
+    {
+      "id": "surface:90d9c4ae40ab4755131ce18d",
+      "value": "https://realfi.co/transparency"
+    },
+    {
+      "id": "surface:8b6d923772697237f2542c3f",
+      "value": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement"
+    },
+    {
+      "id": "surface:77097e277c6f58b833e346d0",
+      "value": "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf"
+    },
+    {
+      "id": "surface:86edf533e1cb5f12394d7701",
+      "value": "https://docs.realfi.co/glass-box-approach/peg-stability"
+    },
+    {
+      "id": "surface:551b0a3b18d7071eb79af000",
+      "value": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use"
     }
   ]
 }

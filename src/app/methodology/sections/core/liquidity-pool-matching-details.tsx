@@ -33,6 +33,15 @@ export function LiquidityPoolMatchingDetails() {
           and fail closed rather than inheriting synthetic coverage.
         </p>
         <p>
+          Since v7.4, Cardano discovery also reads SundaeSwap&apos;s pool index, keyed by SundaeSwap&apos;s own pool
+          id. A pool is valued only when its other asset is an active tracked Cardano stablecoin with a usable peg
+          reference: constant-product pools count twice that counter&apos;s value and must imply a plausible price,
+          while stable-curve pools with a 1:1 rate count twice their smaller side and stage no price. ADA pairs stay
+          unvalued, pools below $10K are not staged, and pools take the generic 0.3x tier with no volume reading.
+          SundaeSwap is one venue, so its empty answer never certifies that a coin has no Cardano pools, and
+          without a clean SundaeSwap answer the token-pool indexes, which miss its pools, cannot certify it either.
+        </p>
+        <p>
           Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
           unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
           dropped instead of being remapped by symbol. A token pair is a matching candidate, not a pool identity:

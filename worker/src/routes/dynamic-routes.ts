@@ -26,6 +26,7 @@ async function decodeAndResolveStablecoinId(
   } catch {
     return errorResponse(400, malformedMessage);
   }
+  if (encodeURIComponent(id) !== raw) return errorResponse(404, "Not found");
   const { resolveOrReject } = await import("../lib/api-params");
   return resolveOrReject(id);
 }

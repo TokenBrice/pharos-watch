@@ -120,7 +120,7 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
 
   // Exact alias host only; the release pipeline still reads its marker here.
   if (url.hostname === PAGES_APP_HOSTNAME && url.pathname !== "/__pharos_release.json") {
-    return Response.redirect(new URL(url.pathname + url.search, SITE_ORIGIN).toString(), 301);
+    return Response.redirect(`${SITE_ORIGIN}${url.pathname}${url.search}`, 301);
   }
 
   const directMarkdownCanonicalPath = getCanonicalPathForMarkdownAsset(url.pathname);

@@ -25552,6 +25552,101 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "usdrf-realfi",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-11-15",
+      "sources": [
+        {
+          "label": "RealFi docs: Real-world backing, strategy sleeves and partial ranges with a footnote calling the disclosed composition indicative of the launch strategy, not a fixed allocation; retrieved 2026-11-15T17:08:12Z",
+          "url": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        {
+          "label": "RealFi docs: How the returns reach the user, 10% minimum liquidity buffer and reserves covering at least 120% of expected 7-day net redemptions (policy); retrieved 2026-11-15T17:08:13Z",
+          "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+        },
+        {
+          "label": "RealFi docs: Multi-layered defence, 1.25-year weighted-average-life cap and jurisdiction limits (policy); retrieved 2026-11-15T17:08:14Z",
+          "url": "https://docs.realfi.co/glass-box-approach/multi-layered-defence"
+        },
+        {
+          "label": "RealFi docs: sUSDrf, loss order (first-loss reserves, then the subordinated staked pool, before any USDrf holder) and the staking vault address; retrieved 2026-11-15T17:08:11Z",
+          "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf"
+        },
+        {
+          "label": "RealFi docs: In summary, USDrf as the most senior asset and sUSDrf as subordinated; retrieved 2026-11-15T17:08:11Z",
+          "url": "https://docs.realfi.co/realfi-tokens/in-summary"
+        },
+        {
+          "label": "RealFi docs: Reserve Attestation, HT Digital named with documentation still to follow; retrieved 2026-11-15T17:08:21Z",
+          "url": "https://docs.realfi.co/resources/reserve-attestation"
+        },
+        {
+          "label": "USDrf Terms of Use, last updated 23 July 2026: section 1 senior token, section 2 no direct redemption claim without an issuer account, section 8 risk the issuer may not redeem; text retrieved 2026-11-15T17:09:37Z",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use"
+        },
+        {
+          "label": "USDrf Institutional Minting Agreement, last updated 23 July 2026: section 2 Mint User redemption right, section 3 no custody, fiduciary or trust services, section 8 suspension on a reserve adequacy or liquidity breach; text retrieved 2026-11-15T17:09:37Z",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement"
+        },
+        {
+          "label": "Koios asset_addresses for USDrf at Cardano block 14205037 (2026-11-15T18:24:03Z), retrieved 2026-11-15T18:24:12Z: the staking vault holds 3,049,558.706933 of 5,585,703.878529 USDrf",
+          "url": "https://api.koios.rest/api/v1/asset_addresses?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae&_asset_name=55534472"
+        },
+        {
+          "label": "RealFi transparency portal, redirected to app.realfi.co/restricted.html from the review location at 2026-11-15T18:21:48Z and 18:25:48Z; contents not inspected",
+          "url": "https://realfi.co/transparency"
+        }
+      ],
+      "notes": "Reviewed 2026-11-15 for USDrf's promotion to active. The evidence set is pinned at 2026-11-15T18:25:48Z: RealFi documentation pages retrieved 2026-11-15T17:07:57Z to 17:08:23Z; the USDrf Terms of Use and the USDrf Institutional Minting Agreement, both last updated 23 July 2026, retrieved 2026-11-15T17:09:37Z; a Koios asset_addresses read at Cardano block 14205037 (hash f5b2a9d3819b27c6d84e4b2a34bb2ed490c080bc77a64c9329e00164840327fa, 2026-11-15T18:24:03Z, tip unchanged before and after the read) listing 94 holders of 5,585,703.878529 USDrf, of which the documented sUSDrf staking vault addr1wyh04daelcpkgahkuz2ld885w2y3wa27r7w82gzdeagsazgtwduhf holds 3,049,558.706933 (54.5958%), leaving 2,536,145.171596 outside the vault; and the transparency portal, which redirected to a jurisdiction-restriction page at 18:21:48Z and 18:25:48Z, so its contents were not inspected. SENIORITY limited: Terms section 1 calls USDrf the senior token, and the sUSDrf page sets the loss order (the protocol's first-loss reserves, then the subordinated staked pool, before any USDrf holder), executed by burning USDrf from the staking vault; the on-chain read anchors the staked pool at 54.5958% of supply. The ordering is an issuer-operated protocol mechanism described in documentation, not an enforceable inter-creditor or trust structure, and the first-loss reserve size is undisclosed. LEGAL ENFORCEABILITY weak, on documented deficiency: USDrf only represents a right to require RealFi Reserve Ltd. (British Virgin Islands) to redeem, available to holders who open an account and accept the Institutional Minting Agreement; Terms section 2 states that persons without an account have no direct redemption claim against the Company. Agreement section 3 disclaims any fiduciary or trust service, no segregation, security interest or bankruptcy-remote vehicle is published, and section 8 permits suspension on a reserve adequacy or liquidity breach. RECOVERY limited: the documented buffers are the first-loss reserves, of undisclosed size, and the staked pool measured above; the issuer decides loss recognition and executes the vault burn, and no recovery waterfall for USDrf holders in an issuer default is published. CREDIT QUALITY, VALUATION CADENCE, MATURITY AND LIQUIDITY and CUSTODY are unavailable as sourced nondisclosures: the backing page publishes strategy sleeves and partial ranges it calls indicative of the launch strategy, not dated holdings, weights, obligors, ratings, maturities or custodians; the attestation page names HT Digital but says documentation will follow; the weekly sUSDrf epochs distribute realized income and do not value the reserve book. Both metrics are unavailable: the 1.25-year weighted-average-life cap, the 10% buffer floor and the 120% seven-day coverage target are policies, not measurements, and no valuation cadence is published. No metric is derived from policy ranges.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The multi-layered defence page caps the portfolio's weighted average life at 1.25 years and cites sleeve-level maturity limits as policy, but no dated maturity schedule or measured weighted average maturity is published; a policy cap is not a measurement.",
+          "sourceUrl": "https://docs.realfi.co/glass-box-approach/multi-layered-defence"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "No reserve valuation or NAV cadence is published: the named attestation provider has published no report, and the weekly staking epochs distribute realized income rather than value the reserve book.",
+          "sourceUrl": "https://docs.realfi.co/resources/reserve-attestation"
+        }
+      },
+      "components": {
+        "creditQuality": {
+          "applicability": "unavailable",
+          "rationale": "The backing page lists strategy sleeves (a Treasury bill and tokenized money market fund buffer, emerging-market floating-rate corporate bonds, CLO ETFs, private credit funds and direct loans) with partial ranges, and its footnote calls the disclosed composition indicative of the launch strategy, not a fixed allocation. No dated holdings, obligors, ratings or sleeve weights are published, the attestation provider has published no report, and the transparency portal was jurisdiction-restricted from the review location.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "weak"
+        },
+        "valuationCadence": {
+          "applicability": "unavailable",
+          "rationale": "No dated NAV or reserve valuation cadence is published. The attestation page names HT Digital but says documentation will follow, and the weekly sUSDrf epochs mint realized income to stakers rather than revalue the reserve book; the issuer's own mark is internal.",
+          "sourceUrl": "https://docs.realfi.co/resources/reserve-attestation"
+        },
+        "maturityAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The issuer states liquidity and duration policies (a 10% minimum liquidity buffer, reserves covering at least 120% of expected 7-day net redemptions, a 1.25-year weighted-average-life cap) but publishes no dated buffer balance, maturity ladder or measured liquidity profile; policy targets are not measurements.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+        },
+        "custody": {
+          "applicability": "unavailable",
+          "rationale": "No custodian, bank, broker, transfer agent or fund administrator is named for the off-chain reserve. The Institutional Minting Agreement covers only the noncustodial mint and redeem service, and the backing and attestation pages publish no custody arrangement.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

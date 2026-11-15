@@ -193,9 +193,15 @@ function materializeTree(commit: string, root: string, cwd: string): string {
   const tree = join(root, commit.slice(0, 12));
   rmSync(tree, { recursive: true, force: true });
   mkdirSync(tree, { recursive: true });
-  const archived = spawnSync("bash", ["-c", `git archive ${commit} | tar -x -C ${JSON.stringify(tree)}`], { cwd, encoding: "utf8" });
-  if (archived.error) throw archived.error;
-  if (archived.status !== 0) throw new Error(`git archive ${commit} failed: ${String(archived.stderr ?? "").trim()}`);
+  const tarball = `${tree}.tar`;
+  try {
+    git(["archive", "--format=tar", `--output=${tarball}`, commit], cwd);
+    const extracted = spawnSync("tar", ["-xf", tarball, "-C", tree], { encoding: "utf8" });
+    if (extracted.error) throw extracted.error;
+    if (extracted.status !== 0) throw new Error(`tar -x ${commit} failed: ${String(extracted.stderr ?? "").trim()}`);
+  } finally {
+    rmSync(tarball, { force: true });
+  }
   for (const target of ["node_modules", "worker/node_modules"]) {
     const source = resolve(cwd, target);
     if (existsSync(source)) symlinkSync(source, join(tree, target), "dir");

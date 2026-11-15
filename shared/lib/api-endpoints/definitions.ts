@@ -365,6 +365,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     key: "stablecoin-summary",
     path: DYNAMIC_API_PATHS.stablecoinSummary.template,
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
     probePath: API_PATHS.stablecoinSummary("usdt-tether"),
   }),
@@ -372,6 +373,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     key: "stablecoin-reserves",
     path: DYNAMIC_API_PATHS.stablecoinReserves.template,
+    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
     probePath: API_PATHS.stablecoinReserves("iusd-infinifi"),
   }),
@@ -384,12 +386,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "homepage-snapshot",
     path: API_PATHS.homepageSnapshot(),
+    cacheKeyIgnoresQuery: true,
     publicApiAccess: "site-only",
     strictContract: true,
   }),
   publicGet({
     key: "homepage-history",
     path: API_PATHS.homepageHistory(),
+    cacheKeyIgnoresQuery: true,
     publicApiAccess: "site-only",
     strictContract: true,
   }),
@@ -527,12 +531,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-day",
     path: DYNAMIC_API_PATHS.snapshotDay.template,
+    cacheKeyIgnoresQuery: true,
   }),
   publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-coin",
     path: DYNAMIC_API_PATHS.snapshotCoin.template,
+    cacheKeyIgnoresQuery: true,
   }),
   publicGet({
     key: "yield-rankings",
