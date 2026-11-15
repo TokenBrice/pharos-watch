@@ -12,7 +12,7 @@ import type {
 } from "@shared/types/yield";
 import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { formatCurrency, formatIsoDate, formatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatIsoDate, formatIsoTimestamp, formatSignedPercent } from "@shared/lib/format";
 import {
   DIRECTION_TONE_CLASSES,
   QUALITY_TIER_3_CLASSES,
@@ -52,6 +52,12 @@ export const HERO_PENDING_DEWS_DISPLAY: HeroDewsDisplay = { ...HERO_PENDING_DISP
 /** "as of 2026-10-22": the release date a saved value was published. */
 export function formatSavedAssessmentAsOf(asOfMs: number): string {
   return `as of ${formatIsoDate(asOfMs / 1000)}`;
+}
+
+/** "as of 2026-11-14 22:03 UTC": the live report card's own update clock; null without one. */
+export function formatLiveCardAsOf(updatedAtSec: number | null | undefined): string | null {
+  if (updatedAtSec == null || !Number.isFinite(updatedAtSec) || updatedAtSec <= 0) return null;
+  return `as of ${formatIsoTimestamp(updatedAtSec).slice(0, 16).replace("T", " ")} UTC`;
 }
 
 /** A saved release DEWS band, dated; null when the release has none. */

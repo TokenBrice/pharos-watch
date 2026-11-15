@@ -104,4 +104,9 @@ describe("RailSafetySummary", () => {
     expect(headline?.textContent).not.toContain("Frozen");
   });
 
+  it("dates a live grade", () => {
+    render(<RailSafetySummary items={signals({ grade: "A-", dews: "12" })} liveAsOf="as of 2026-11-14 22:03 UTC" />);
+    expect(screen.getByText("as of 2026-11-14 22:03 UTC")).toBeTruthy();
+  });
+
 });
