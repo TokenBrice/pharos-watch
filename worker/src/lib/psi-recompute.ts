@@ -32,6 +32,12 @@ export interface PsiDepegEventRow extends NativeEventPriceEvidence {
   peg_reference: number;
   started_at: number;
   ended_at: number | null;
+  /**
+   * First second the event counts toward a replayed day, when later than `started_at`: an event
+   * that began while its reference market was closed counts from the reopen. Scoring still keys
+   * on `started_at`, so the reopen day keeps the treatment it had.
+   */
+  counted_from?: number;
 }
 
 export interface PsiSupplyRow {
@@ -125,7 +131,7 @@ export function buildStabilityInputForDay(
 ): StabilityInputForDay {
   const dayEnd = day + DAY_SECONDS;
   const activeDepegs = depegEvents.filter(
-    (event) => event.started_at < dayEnd && (event.ended_at === null ? day <= now : event.ended_at > day),
+    (event) => (event.counted_from ?? event.started_at) < dayEnd && (event.ended_at === null ? day <= now : event.ended_at > day),
   );
 
   const grouped = new Map<string, PsiDepegEventRow[]>();

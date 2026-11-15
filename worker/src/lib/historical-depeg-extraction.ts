@@ -9,6 +9,8 @@ import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { binarySearchNearest } from "./binary-search";
 
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import {
   buildPriceValidationContext,
   type PriceReasonablenessOptions,
@@ -133,6 +135,7 @@ export function extractDepegEvents(
   options?: BackfillEventExtractionOptions,
 ): BackfillEvent[] {
   const threshold = getDepegThresholdBps(pegType);
+  const pegCurrency = getPegTaxonomyByType(pegType)?.currency;
   const confirmationMinPoints = Math.max(1, options?.confirmationMinPoints ?? BACKFILL_MIN_CONFIRM_POINTS);
   const confirmationMaxGapSec = Math.max(1, options?.confirmationMaxGapSec ?? BACKFILL_PENDING_MAX_GAP_SEC);
   const extremeSinglePointBps = options?.extremeSinglePointBps ?? null;
@@ -205,6 +208,9 @@ export function extractDepegEvents(
     const depegSignal = deriveDepegSignal(price, pegRef);
     if (!depegSignal) continue;
     const { bps, absBps, direction } = depegSignal;
+    // A closed FX or metal reference repeats its last close, so a sub-severe reading there is no
+    // observation: it opens, extends and ends nothing, as in live detection since depeg-dews v6.47.
+    if (isReferenceDeviationHeld(pegCurrency, timestamp, absBps)) continue;
     const isLargeCap = supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
 
     if (absBps >= threshold) {
