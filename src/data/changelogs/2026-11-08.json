@@ -48,94 +48,99 @@
       "description": "Indexed history reads and paced retention reduce D1 load. Import-based PR planning and nightly registry sweeps cut CI work; data-only deploys reuse build IDs, and shared parsers replace duplicated helpers."
     },
     {
+      "label": "Guarded lifecycles",
+      "tag": "infra",
+      "description": "Three releases fence state transitions in Telegram, cron watchdogs, pricing recovery, detail refresh and blacklist repair, each with a failing-first test, and page state now belongs to the attempt that started it."
+    },
+    {
       "label": "Accessible analytical tables",
       "tag": "design",
       "description": "Liquidity, flow and chain tables keep native row semantics and real identity links. Focus rings and confidence labels meet contrast checks, charts honor reduced motion, and failed wide-range reads can retry."
     }
   ],
   "stats": {
-    "totalCommits": 335
+    "totalCommits": 359
   },
   "commits": [
     {
-      "hash": "dfb855bd",
-      "message": "fix(status): judge a lease blocker's heartbeat at its skip observation"
+      "hash": "2304cdff",
+      "message": "fix(scripts): report Pages-impact script outcomes honestly"
     },
     {
-      "hash": "5c8627bb",
-      "message": "fix: reconcile integration fallout from the PHT/FXD lifecycle and MOVEUSD reader"
+      "hash": "4a3c55ed",
+      "message": "fix(ui): attempt-owned component state and payload-bound copy feedback"
     },
     {
-      "hash": "d4bc3e02",
-      "message": "fix(dex): persist owner-accepted chain TVL baselines"
+      "hash": "adab9127",
+      "message": "fix(ui): attempt-owned page state for freezewatch, picker, safety scores, learn and timeline"
     },
     {
-      "hash": "c9b14782",
-      "message": "fix(dex): produce native USDA and Tempo price observations"
+      "hash": "0a79f48c",
+      "message": "fix(ui): attempt-owned async state in shared hooks and RequestSequence"
     },
     {
-      "hash": "34aa9dca",
-      "message": "fix(pricing): fail closed when the Orca exact source has no age budget"
+      "hash": "5e79909c",
+      "message": "fix(mini-app): keep the watchlist draft owned by its attempt"
     },
     {
-      "hash": "8ec63c4d",
-      "message": "fix(supply): admit JTRSY X Layer and Arc deployments"
+      "hash": "0a2b8a4c",
+      "message": "fix(blacklist): fence Tron repair and balance debt; keep RPC failover on local body caps"
     },
     {
-      "hash": "7a006dda",
-      "message": "fix(status): honor verified lease contention within producer grace"
+      "hash": "a5b86e3e",
+      "message": "fix(api): fence detail refresh, DEX acquisition and depeg-resolver accounting"
     },
     {
-      "hash": "cf0c7199",
-      "message": "fix(pricing): read MOVEUSD's reviewed Orca pool on-chain"
+      "hash": "69696948",
+      "message": "fix(pricing): fence supply, redemption and cache recovery transitions"
     },
     {
-      "hash": "c91bff98",
-      "message": "fix(ops): review blocked wM supply carries by source"
+      "hash": "37a7ce0f",
+      "message": "fix(cron): fence watchdog and producer-state transitions"
     },
     {
-      "hash": "10d9ac7b",
-      "message": "data(lifecycle): delist PHT and freeze Fathom FXD"
+      "hash": "295fdfc0",
+      "message": "fix(telegram): fence preference, Undo, digest and lifecycle transitions"
     },
     {
-      "hash": "eacd7f0f",
-      "message": "fix(dex): review chain TVL levels after coverage checks"
+      "hash": "d9b05a6f",
+      "message": "docs: lifecycle-transition rule and verified doc corrections"
     },
     {
-      "hash": "994fb6fa",
-      "message": "fix(supply): bound native remainders and record Pricing v6.74"
+      "hash": "219d9f1d",
+      "message": "fix(scripts): fail honestly in dev supervision and Safety Map publication"
     },
     {
-      "hash": "8aaef677",
-      "message": "fix(supply): keep native repairs publishable during list price outages"
+      "hash": "0b65c685",
+      "message": "fix(ci): serialize issue-writing workflows"
     },
     {
-      "hash": "95cfd950",
-      "message": "fix(ops): scope depeg reviews and yield exclusions precisely"
+      "hash": "369a4208",
+      "message": "fix(detail): show the published price the peg deviation measures"
     },
     {
-      "hash": "095e9006",
-      "message": "fix(supply): add a fallback RPC for Robinhood chain reads"
+      "hash": "f59e1e43",
+      "message": "chore: drop unused severity hex tokens and fix stale comments"
     },
     {
-      "hash": "d94cd5a4",
-      "message": "fix(yield): keep opportunity holds in their own registry module"
+      "hash": "b4023a17",
+      "message": "fix(psi): treat unverified legacy DEWS coverage as DEWS-unavailable"
     },
     {
-      "hash": "bd4a7845",
-      "message": "fix(pricing): distinguish fetched quotes from list fill attribution"
+      "hash": "bc13e8e0",
+      "message": "fix(yield): publish scoreQualified from the final qualification"
     },
     {
-      "hash": "1ae0693a",
-      "message": "fix(ops): review structural blind depeg coverage"
+      "hash": "58e9a152",
+      "message": "feat(docs): generate the lane-freshness matrix from CRON_JOB_DEFINITIONS"
     },
     {
-      "hash": "0249e03f",
-      "message": "fix(supply): rebaseline GBPA after its reviewed collapse release"
+      "hash": "3f8d1e66",
+      "message": "test(stablecoins): expect supply as USDrf's missing lane"
     },
     {
-      "hash": "3fcf59b4",
-      "message": "fix(dex): review evidenced Plasma liquidity withdrawal"
+      "hash": "c96b7579",
+      "message": "fix(dex): accept reviewed Rootstock and Mezo TVL levels"
     }
   ]
 }
