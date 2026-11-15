@@ -31,6 +31,10 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
   });
 }
 
+function reserveLane(params: Parameters<typeof buildStablecoinDetailViewModel>[0], id = "usdt-tether") {
+  return buildDetailStaleQueries(params.queries, params.supplemental, id).find((entry) => entry.label === "Live Reserves")!;
+}
+
 describe("stablecoin detail view-model builder", () => {
   it.each([true, false])("preserves the unsettled-seed flag on both seeded lanes (%s)", (awaitingLiveRead) => {
     const params = makeBuildStablecoinDetailViewModelParams({ queries: {
@@ -43,13 +47,12 @@ describe("stablecoin detail view-model builder", () => {
       .every((query) => query.awaitingLiveRead === undefined)).toBe(true);
   });
 
-  it.each([[22, false], [80, true]] as const)("reads a %sh daily-history fallback as provenance, banner %s", (ageHours, warns) => {
-    const updatedAt = 1_790_000_000;
-    const meta = { updatedAt, ageSeconds: ageHours * 3600, status: "stale" as const, reason: "detail-history-fallback", freshBudgetSec: 259_200 };
-    const params = makeReadyDetailParams({ id: "usdt-tether", coin: TRACKED_META_BY_ID.get("usdt-tether")!, queries: { liveSummary: { meta } } });
-    const lane = buildDetailStaleQueries(params.queries, params.supplemental, params.core.id).find((q) => q.label === "Detail snapshot")!;
+  it.each([[22, false], [80, true]] as const)("reads a %sh daily-history fallback as provenance, banner %s", (h, warns) => {
+    const params = makeReadyDetailParams({ id: "usdt-tether", coin: TRACKED_META_BY_ID.get("usdt-tether")!, queries: { liveSummary: {
+      meta: { updatedAt: 1e9 - h * 3600, ageSeconds: h * 3600, status: "stale", reason: "detail-history-fallback", freshBudgetSec: 259_200 } } } });
+    const lane = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")[0];
     expect(lane.dailySnapshot).toBe(true);
-    expect(isPublicWarning(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...lane }, updatedAt * 1000 + ageHours * 3_600_000))).toBe(warns);
+    expect(isPublicWarning(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...lane }, 1e12))).toBe(warns);
   });
 
   it("keeps a cold summary read loading rather than classifying the tracked ID as absent", () => {
@@ -273,8 +276,7 @@ describe("stablecoin detail view-model builder", () => {
     const params = makeBuildStablecoinDetailViewModelParams({ supplemental: {
       reserves: { live, enabled: true, dataUpdatedAt: now },
     } });
-    const sourceQuery = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-      .find((entry) => entry.label === "Live Reserves")!;
+    const sourceQuery = reserveLane(params);
     expect(sourceQuery.dataUpdatedAt).toBe(sourceAt * 1000);
     expect(sourceQuery.meta).toMatchObject({ updatedAt: sourceAt, freshBudgetSec: 2 * 86400 });
     // 3 days against a 2-day source budget: past budget, but inside the 12x public band (ADR-42).
@@ -287,22 +289,19 @@ describe("stablecoin detail view-model builder", () => {
       (sourceAt + 12 * 2 * 86400) * 1000 + 1).state).toBe("stale");
     for (const mode of ["live-stale", "curated-fallback", "template-fallback", "unavailable"] as const) {
       params.supplemental.reserves.live = { ...live, mode, sync: { ...live.sync, stale: true } };
-      const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-        .find((entry) => entry.label === "Live Reserves")!;
+      const query = reserveLane(params);
       expect(deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now).state).not.toBe("fresh");
       expect(query.meta?.dependencies?.reserveEvidence.reason).toContain(mode);
       expect(query.dataUpdatedAt).not.toBe(now);
     }
     params.supplemental.reserves.live = { ...live, sync: undefined, liveAt: undefined };
-    const missing = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-      .find((entry) => entry.label === "Live Reserves")!;
+    const missing = reserveLane(params);
     expect(missing).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "unknown" } });
     for (const missingSource of [{ sourceTimestamp: null }, { sourceAgeBudgetSec: null }]) {
       params.supplemental.reserves.live = {
         ...live, sync: { ...live.sync, freshness: { ...live.sync.freshness, ...missingSource } },
       };
-      const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-        .find((entry) => entry.label === "Live Reserves")!;
+      const query = reserveLane(params);
       expect(query).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "unknown" } });
     }
   });
@@ -327,8 +326,7 @@ describe("stablecoin detail view-model builder", () => {
         },
       },
     } } });
-    const query = buildDetailStaleQueries(params.queries, params.supplemental, "il-compliant-naira")
-      .find((entry) => entry.label === "Live Reserves")!;
+    const query = reserveLane(params, "il-compliant-naira");
     expect(query).toMatchObject({ hasData: true, dataUpdatedAt: fetchedAt * 1000, meta: { updatedAt: fetchedAt } });
     const health = deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now);
     expect(health.state).toBe("fresh");
@@ -355,8 +353,7 @@ describe("stablecoin detail view-model builder", () => {
     const params = makeBuildStablecoinDetailViewModelParams({ supplemental: {
       reserves: { live, enabled: true, dataUpdatedAt: now },
     } });
-    const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-      .find((entry) => entry.label === "Live Reserves")!;
+    const query = reserveLane(params);
     // Source 1x expired first (N-29d) but its 12x band runs to N+301d; fetch's ends at N-1d.
     expect(query.dataUpdatedAt).toBe(fetchedAt * 1000);
     expect(query.meta).toMatchObject({ updatedAt: fetchedAt, freshBudgetSec: 2 * 86400, degradedBudgetSec: 24 * 86400, status: "stale" });
@@ -414,8 +411,7 @@ describe("stablecoin detail view-model builder", () => {
         },
       },
     } } });
-    const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
-      .find((entry) => entry.label === "Live Reserves")!;
+    const query = reserveLane(params);
     expect(query.meta).toMatchObject({ updatedAt: fetchedAt, status: "degraded" });
     expect(query.meta?.warning).toContain("uncertain-write");
     expect(deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now).state).toBe("degraded");

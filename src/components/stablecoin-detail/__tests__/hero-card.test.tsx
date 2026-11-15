@@ -620,8 +620,8 @@ describe("HeroIdentityHeader", () => {
     const model = buildStablecoinDetailHeroViewModel(makeHeroProps());
     const now = Date.parse("2026-10-21T12:00:00Z");
     vi.spyOn(Date, "now").mockReturnValue(now);
-    const render = (updatedAtMs: number) =>
-      renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={updatedAtMs} />);
+    const render = (updatedAtMs: number, daily?: boolean) =>
+      renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={updatedAtMs} dailySnapshot={daily} />);
     try {
       const prerender = render(now - 12 * 60_000);
       expect(prerender.match(/Updated —/g)).toHaveLength(2);
@@ -632,8 +632,7 @@ describe("HeroIdentityHeader", () => {
       expect(prerender.replaceAll("Updated —", "Updated 12m ago")).toBe(markup);
       expect(markup).not.toMatch(/amber|text-warning/);
       expect(render(0)).not.toContain("Updated");
-      expect(renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={now} dailySnapshot />))
-        .toContain("Daily snapshot of Oct 21, 2026");
+      expect(render(now, true)).toContain("Daily snapshot of Oct 21, 2026");
     } finally {
       hydration.hydrated = false;
       vi.restoreAllMocks();

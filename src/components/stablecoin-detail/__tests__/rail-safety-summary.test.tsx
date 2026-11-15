@@ -50,11 +50,12 @@ describe("RailSafetySummary", () => {
     expect(dewsRow().textContent).not.toContain("—");
   });
 
-  it("keeps a real DEWS reading for a NAV token untouched", () => {
-    render(<RailSafetySummary items={signals({ grade: "B+", dews: "12" })} navToken />);
+  it("dates a live grade and keeps a real DEWS reading for a NAV token untouched", () => {
+    render(<RailSafetySummary items={signals({ grade: "B+", dews: "12" })} navToken liveAsOf="as of 2026-11-14 22:03 UTC" />);
 
     expect(dewsRow().textContent).toContain("12");
     expect(dewsRow().textContent).not.toContain("N/A");
+    expect(screen.getByText("as of 2026-11-14 22:03 UTC")).toBeTruthy();
   });
 
   it("leaves an unavailable DEWS reading as unavailable for an ordinary coin", () => {
@@ -102,11 +103,6 @@ describe("RailSafetySummary", () => {
     const headline = container.querySelector("[data-safety-state]");
     expect(headline?.textContent).toContain("Not scored");
     expect(headline?.textContent).not.toContain("Frozen");
-  });
-
-  it("dates a live grade", () => {
-    render(<RailSafetySummary items={signals({ grade: "A-", dews: "12" })} liveAsOf="as of 2026-11-14 22:03 UTC" />);
-    expect(screen.getByText("as of 2026-11-14 22:03 UTC")).toBeTruthy();
   });
 
 });

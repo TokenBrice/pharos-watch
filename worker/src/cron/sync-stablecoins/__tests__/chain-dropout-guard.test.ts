@@ -258,7 +258,7 @@ describe("chain dropout guard", () => {
     };
     expect(SupplyChainGuardProvenanceSchema.parse(legacy)).toEqual(legacy);
     expect(ChainDropoutStateSchema.safeParse({ version: 1, pairs: {
-      "[\"usdg-paxos\",\"xlayer\"]": { assetId: "usdg-paxos", ...baseline("xlayer", 1_427_900_000, NOW - DAY), baselineSource: "seed" },
+      '["usdg-paxos","xlayer"]': { assetId: "usdg-paxos", ...baseline("xlayer", 1_427_900_000, NOW - DAY), baselineSource: "seed" },
     } }).success).toBe(true);
     expect(SupplyChainGuardProvenanceSchema.safeParse({
       ...legacy, chains: [{ ...legacy.chains[0], observedAtKind: "fetch-time" }],
@@ -1074,7 +1074,7 @@ describe("chain dropout guard", () => {
     ["usdglo-glo", "base", "Base", "peggedUSD", 1_018_000, 91_319.484821, "2026-11-04T09:03:51Z"],
   ] as const)("accepts only dated reviewed %s / %s reductions, not omitted or later incidents", async (assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate) => {
     const reviewedAt = Date.parse(reviewDate) / 1000;
-    expect(REVIEWED_CHAIN_SUPPLY_COLLAPSES.some((entry) => entry.assetId === assetId && entry.chainId === chainId && entry.reviewedAt === reviewedAt)).toBe(true);
+    expect(REVIEWED_CHAIN_SUPPLY_COLLAPSES).toContainEqual(expect.objectContaining({ assetId, chainId, reviewedAt }));
     const key = JSON.stringify([assetId, chainId]);
     const makeState = (quarantinedSince = reviewedAt - DAY): ChainDropoutState => (savedState(assetId, { chainId, chainLabel, baselineUsd: baseline, baselineObservedAt: quarantinedSince - 900, quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 20_000_000 }));
     const companionLabel = chainLabel === "Ethereum" ? "Avalanche" : "Ethereum";

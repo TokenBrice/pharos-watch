@@ -44,16 +44,15 @@ describe("MOVEUSD reviewed Orca mark", () => {
   const id = "moveusd-cfx";
   let bank: Awaited<ReturnType<typeof fetchSolanaAccounts>>;
   const ticks = (p: string, s: number) => {
-    const d = new Uint8Array(9988);
+    const d = Buffer.alloc(9988);
     d.set([69, 97, 189, 190, 110, 7, 66, 187]);
-    new DataView(d.buffer).setInt32(8, s, true);
+    d.writeInt32LE(s, 8);
     d.set(publicKeyBytes(p), 9956);
     return { owner: ORCA_WHIRLPOOL_PROGRAM_ID, data: d };
   };
   beforeEach(() => {
     read.mockReset().mockImplementation(async (addresses) => {
-      if (addresses.length === 4) return { accounts: new Map(addresses.map((address, i) => [address,
-        i ? ticks(addresses[0], 880 * (1 - i)) : bank.accounts.get(address)!])), observedBlock: bank.observedBlock };
+      if (addresses.length === 4) return { ...bank, accounts: new Map(addresses.map((k, i) => [k, i ? ticks(addresses[0], 880 * (1 - i)) : bank.accounts.get(k)!])) };
       const [pool, a, b, va, vb] = addresses;
       const data = [653, 82, 82, 165, 165].map((size) => new Uint8Array(size));
       data[0].set([63, 149, 209, 12, 225, 128, 99, 9]);
@@ -94,9 +93,9 @@ describe("MOVEUSD reviewed Orca mark", () => {
   it("withholds on an unreadable quote, RPC failure and missing parent", async () => {
     await price();
     read.mockRejectedValue(new Error("unavailable")).mockResolvedValueOnce(bank);
-    const ctx: LivePriceContext = context();
+    const ctx = context();
     expect(await price(ctx)).toBeNull();
-    expect(ctx.lastRejectionReason).toBe("orca-exact:quote-unavailable");
+    expect(ctx).toHaveProperty("lastRejectionReason", "orca-exact:quote-unavailable");
     expect(await price()).toBeNull();
     expect(await price({ assetsById: new Map() })).toBeNull();
   });

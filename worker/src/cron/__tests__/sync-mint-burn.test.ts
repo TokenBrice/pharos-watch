@@ -624,7 +624,7 @@ describe("syncMintBurn", () => {
     expect(usdt?.missingTimestampCount).toBe(0);
     expect(usdt?.rowsDropped).toBe(0);
     expect(meta.rowsParsed).toBe(2);
-    expect(mintBurnEventInsertBinds.flat().filter((_, index) => index % 21 === 19)).toEqual([1, 1]);
+    expect(mintBurnEventInsertBinds.flat().filter((_, i) => i % 21 === 19)).toEqual([1, 1]);
     expect(usdt?.advanceReason).toBe("full-success-events");
     expect(usdt?.advancedTo).toBe(22_000_000);
     expect(meta.retention).toMatchObject({

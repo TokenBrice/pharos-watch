@@ -24,8 +24,8 @@ vi.mock("@/components/query-freshness-notices", () => ({
 }));
 
 import { ReportCardsV9Client } from "./v9-client";
-import { SafetyScoresLiveIsland } from "./live-island";
-import { SafetyScoresContentLoadingState } from "./loading-state";
+import { SafetyScoresLiveIsland as Island } from "./live-island";
+import { SafetyScoresContentLoadingState as Loading } from "./loading-state";
 
 function query(data: unknown) {
   return {
@@ -330,14 +330,13 @@ describe("ReportCardsV9Client", () => {
     mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: true });
     mocks.useStablecoins.mockReturnValue(query(undefined));
     const preview = makePreview();
-    const page = <SafetyScoresLiveIsland initialPreview={preview}><SafetyScoresContentLoadingState preview={preview} /></SafetyScoresLiveIsland>;
+    const page = <Island initialPreview={preview}><Loading preview={preview} /></Island>;
 
     const html = renderToStaticMarkup(page);
     expect(html).toContain("Grades as of 2026-10-27");
     expect(html).toContain('href="/stablecoin/asset-a/"');
     mocks.useReportCardsV9.mockClear();
-    const { container } = renderSync(page);
-    const flush = container.innerHTML;
+    const { container } = renderSync(page), flush = container.innerHTML;
     await act(() => import("./v9-client"));
     expect(mocks.useReportCardsV9).toHaveBeenCalled();
     expect(container.innerHTML).toBe(flush);
