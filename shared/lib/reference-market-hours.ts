@@ -57,6 +57,37 @@ export function getReferenceMarketClosureStart(market: ReferenceMarket | null, n
   return start;
 }
 
+/** First trading second after the closure containing `nowSec`, or null while the market trades. */
+export function getReferenceMarketReopen(market: ReferenceMarket | null, nowSec: number): number | null {
+  if (!isReferenceMarketClosed(market, nowSec)) return null;
+  let reopen = Math.floor(nowSec / HOUR_SECONDS) * HOUR_SECONDS + HOUR_SECONDS;
+  for (let hours = 0; hours < 24 * 8 && isReferenceMarketClosed(market, reopen); hours += 1) {
+    reopen += HOUR_SECONDS;
+  }
+  return reopen;
+}
+
+/** How long references get to reprice after a reopen before a stored deviation counts as open-market evidence. */
+export const REFERENCE_MARKET_REOPEN_GRACE_SEC = 6 * HOUR_SECONDS;
+
+/**
+ * The closure rule replayed over a stored event, for history built before the rule existed: a
+ * sub-severe event that opened while its reference market was shut would not have opened then.
+ * It counts from the reopen instead, or is dropped (null) when it ended within the reopen grace.
+ * Other events keep their start. History keeps no closed-session deviation, so the stored peak
+ * decides severity.
+ */
+export function replayReferenceMarketEventStart(
+  pegCurrency: string | null | undefined,
+  startedAt: number,
+  endedAt: number | null,
+  peakBps: number,
+): number | null {
+  if (!isReferenceDeviationHeld(pegCurrency, startedAt, peakBps)) return startedAt;
+  const reopen = getReferenceMarketReopen(getReferenceMarket(pegCurrency), startedAt)!;
+  return endedAt != null && endedAt <= reopen + REFERENCE_MARKET_REOPEN_GRACE_SEC ? null : reopen;
+}
+
 /**
  * A deviation read while the peg's reference market is closed compares a trading token with a
  * repeated close, so callers hold it rather than act on it. A move at the severe band or beyond

@@ -17,7 +17,7 @@ function envelope(results: unknown[] = [], changes = 0): string {
 
 describe("one-shot backfill operator lane", () => {
   it("removes every migrated job from HTTP routing and the admin action catalog", () => {
-    expect(ONE_SHOT_BACKFILL_JOBS).toHaveLength(12);
+    expect(ONE_SHOT_BACKFILL_JOBS).toHaveLength(13);
     for (const job of ONE_SHOT_BACKFILL_JOBS) {
       expect(getEndpointDefinition(`/api/${job}`)).toBeUndefined();
       expect(getStatusPageActions().some((action) => action.path.startsWith(`/api/${job}`))).toBe(false);
