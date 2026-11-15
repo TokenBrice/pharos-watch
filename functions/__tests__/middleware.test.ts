@@ -47,6 +47,8 @@ function imgSrc(csp: string | null): string {
 describe("alias host redirect", () => {
   it.each([
     ["https://stablecoin-dashboard.pages.dev/depeg/x?a=1", 301, "https://pharos.watch/depeg/x?a=1"],
+    ["https://stablecoin-dashboard.pages.dev//example.com/?a=1", 301, "https://pharos.watch//example.com/?a=1"],
+    ["https://stablecoin-dashboard.pages.dev/\\example.com/?a=1", 301, "https://pharos.watch//example.com/?a=1"],
     ["https://stablecoin-dashboard.pages.dev/__pharos_release.json", 200, null],
     ["https://abc123.stablecoin-dashboard.pages.dev/depeg/x", 200, null],
   ])("%s", async (url, status, location) => {
