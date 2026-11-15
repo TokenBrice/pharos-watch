@@ -53,6 +53,7 @@ describe("DEX deployment coverage ownership", () => {
       // completed empty response is a certifiable known-empty census.
       "osmosis-sqs": true,
       "noble-swap": true,
+      sundaeswap: false,
     });
   });
 
@@ -72,6 +73,8 @@ describe("DEX deployment coverage ownership", () => {
     expect(getDexDiscoveryProviders("tezos", `${tezosAddress}x`)).toEqual([]);
     expect(isIconBalancedDiscoveryDeployment("icon", iconAddress.toUpperCase())).toBe(true);
     expect(getDexDiscoveryProviders("icon", iconAddress.toUpperCase())).toEqual(["icon-balanced"]);
+    expect(getDexDiscoveryProviders("cardano", "ab".repeat(30))).toEqual(["coingecko", "geckoterminal", "dexscreener", "sundaeswap"]);
+    expect(getDexDiscoveryProviders("cardano", "ab".repeat(30) + "a")).not.toContain("sundaeswap");
     expect(isKavaSwapDiscoveryDeployment("kava", " USDX ")).toBe(true);
     // Kava's CoinGecko/GeckoTerminal/DexScreener networks are Kava EVM, so the
     // native bank denom may only rest on the chain-native x/swap census and the

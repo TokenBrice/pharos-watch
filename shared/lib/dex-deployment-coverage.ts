@@ -24,7 +24,8 @@ export type DexDiscoveryProvider =
   | "icon-balanced"
   | "kava-swap"
   | "osmosis-sqs"
-  | "noble-swap";
+  | "noble-swap"
+  | "sundaeswap";
 
 export type DexDiscoveryCrawlerLeafId =
   | "coingecko"
@@ -36,7 +37,8 @@ export type DexDiscoveryCrawlerLeafId =
   | "tezos"
   | "icon-balanced"
   | "kava-swap"
-  | "cosmos";
+  | "cosmos"
+  | "sundaeswap";
 
 export interface DexDiscoveryProviderAdapter {
   providerId: DexDiscoveryProvider;
@@ -50,6 +52,13 @@ export interface DexDiscoveryProviderAdapter {
    * `supplemental` — never certifies an empty scope.
    */
   scope: "exhaustive" | "paginated-exhaustive" | "supplemental";
+  /**
+   * A venue the exhaustive token-pool indexes do not cover: where it is
+   * registered, their completed-empty census certifies absence only beside
+   * this provider's clean answer (failure, degradation or an open breaker
+   * withholds it).
+   */
+  gatesEmptyCensus?: true;
   requestCostMs: number;
   executionOrder: number;
   crawlerLeaf?: DexDiscoveryCrawlerLeafId;
@@ -249,6 +258,16 @@ export function isNobleSwapDiscoveryDeployment(chain: string, address?: string):
 }
 
 /**
+ * Whether a Cardano native asset can be queried through SundaeSwap's pool
+ * index: a 28-byte policy id followed by an asset name of at most 32 bytes,
+ * lowercase hex with no separator (the catalog identity). One venue cannot
+ * prove chain-wide absence, so the provider is supplemental.
+ */
+export function isSundaeSwapDiscoveryDeployment(chain: string, address?: string): boolean {
+  return chain === "cardano" && address != null && /^[0-9a-f]{56,120}$/u.test(address) && address.length % 2 === 0;
+}
+
+/**
  * CoinGecko onchain, GeckoTerminal and DexScreener are EVM token-pool queries.
  * A chain can also carry a Cosmos bank rail (Kava, Osmosis), whose native
  * denoms have no identity in those namespaces: a lookup "miss" there would be a
@@ -429,6 +448,10 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
     providerId: "noble-swap", lifecycle: "active", supports: isNobleSwapDiscoveryDeployment,
     scope: "exhaustive", requestCostMs: 2_000, executionOrder: 110, crawlerLeaf: "cosmos",
   },
+  {
+    providerId: "sundaeswap", lifecycle: "active", supports: isSundaeSwapDiscoveryDeployment,
+    scope: "supplemental", gatesEmptyCensus: true, requestCostMs: 1_500, executionOrder: 120, crawlerLeaf: "sundaeswap",
+  },
 ] as const;
 
 export interface DexCoverageWaiver {
@@ -476,6 +499,11 @@ export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscovery
   Object.fromEntries(
     DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [provider.providerId, provider.scope === "exhaustive"]),
   ) as Record<DexDiscoveryProvider, boolean>;
+
+/** Providers whose clean answer an empty census also needs where they are registered. */
+export const DEX_DISCOVERY_EMPTY_CENSUS_GATES: ReadonlySet<DexDiscoveryProvider> = new Set(
+  DEX_DISCOVERY_PROVIDER_REGISTRY.filter((provider) => provider.gatesEmptyCensus).map((provider) => provider.providerId),
+);
 
 /** Providers that owe a run-scoped `paginationComplete` claim before certifying an empty scope. */
 export const DEX_DISCOVERY_PAGINATED_PROVIDERS: Readonly<Record<DexDiscoveryProvider, boolean>> =

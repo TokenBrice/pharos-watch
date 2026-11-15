@@ -507,6 +507,7 @@ const STAGED_SOURCE_FAMILY: Record<StagedPool["source"], LiquidityPoolSourceFami
   "kava-swap": "kava-swap",
   "osmosis-sqs": "osmosis-sqs",
   "noble-swap": "noble-swap",
+  sundaeswap: "sundaeswap",
 };
 
 /**

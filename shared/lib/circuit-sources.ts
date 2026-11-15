@@ -13,6 +13,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   CG_MCAP: { key: "coingecko-mcap", scope: "source-wide" },
   CG_ONCHAIN: { key: "coingecko-onchain", scope: "source-wide" },
   HORIZON_DISCOVERY: { key: "stellar-horizon-discovery", scope: "source-wide" },
+  SUNDAESWAP_DISCOVERY: { key: "sundaeswap-discovery", scope: "optional" },
   DEXSCREENER_PRICES: { key: "dexscreener-prices", scope: "source-wide" },
   DEXSCREENER_PRICES_REFRESH: { key: "dexscreener-prices-refresh", scope: "source-wide" },
   DEXSCREENER_LIQUIDITY: { key: "dexscreener-liquidity", scope: "optional" },

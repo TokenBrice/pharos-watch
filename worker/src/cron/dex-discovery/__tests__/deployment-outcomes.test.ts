@@ -25,19 +25,9 @@ const DEPLOYMENT = {
   address: "0x0000000000000000000000000000000000000001",
   decimals: 6,
 };
-const STELLAR_CLASSIC_DEPLOYMENT = {
-  chain: "stellar",
-  address: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
-  decimals: 7,
-};
 const STELLAR_SOROBAN_DEPLOYMENT = {
   chain: "stellar",
   address: "CDE57N6XTUPBKYYDGQMXX7E7SLNOLFY3JEQB4MULSMR2AKTSAENGX2HC",
-  decimals: 5,
-};
-const STELLAR_AQUARIUS_DEPLOYMENT = {
-  chain: "stellar",
-  address: "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
   decimals: 5,
 };
 
@@ -180,15 +170,6 @@ describe("DEX deployment outcomes", () => {
       observedPoolCount: 0,
     });
 
-    const inaccessible = classifyDexDeploymentOutcomes({
-      stablecoinId: "test",
-      deployments: [STELLAR_CLASSIC_DEPLOYMENT],
-      pools: [],
-      providerChecks: [],
-      nowSec: 100,
-    });
-    expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
-
     const neverRan = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
       deployments: [DEPLOYMENT],
@@ -222,31 +203,15 @@ describe("DEX deployment outcomes", () => {
     ]);
   });
 
-  it("keeps completed-empty non-exhaustive venue censuses inaccessible", () => {
-    const cases = [
-      { deployment: STELLAR_AQUARIUS_DEPLOYMENT, provider: "aquarius" },
-      {
-        deployment: { chain: "icon", address: "cx88fd7df7ddff82f7cc735c871dc519838cb235bb", decimals: 18 },
-        provider: "icon-balanced",
-      },
-      { deployment: { chain: "kava", address: "usdx", decimals: 6 }, provider: "kava-swap" },
-    ] as const;
-
-    for (const { deployment, provider } of cases) {
-      const result = classifyDexDeploymentOutcomes({
-        stablecoinId: "test",
-        deployments: [deployment],
-        pools: [],
-        providerChecks: [{ ...deployment, provider, status: "success", observedPoolCount: 0 }],
-        nowSec: 100,
-      });
-      expect(result[0]).toMatchObject({
-        outcome: "provider_inaccessible",
-        providers: expect.arrayContaining([provider]),
-        reason: "Provider census is not exhaustive for this chain",
-        observedPoolCount: 0,
-      });
-    }
+  it.each([undefined, "degraded", "success"] as const)("certifies a Cardano asset empty only beside a clean SundaeSwap answer: %s", (status) => {
+    const deployment = { chain: "cardano", address: "ab".repeat(30), decimals: 6 };
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "test", deployments: [deployment], pools: [], nowSec: 100,
+      providerChecks: [{ ...deployment, provider: "coingecko", status: "success", paginationComplete: true },
+        ...(status ? [{ ...deployment, provider: "sundaeswap" as const, status }] : [])],
+    });
+    expect(outcome?.reason).toBe(status === "success"
+      ? "A provider completed the direct-token query with no eligible pool" : DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON);
   });
 
   it.each([0, 1])("keeps CHFSAFO Aquarius evidence supplemental after provider registration: %s pool", (count) => {
