@@ -1469,7 +1469,8 @@ export function buildSafetyScoresPreviewExpectation({
 
 /**
  * B1 semantic sentinels for `/safety-scores/`: exactly one results region in the
- * whole exported document (the hidden streamed segment included), a `<time>`
+ * whole exported document (hidden streamed segments included), visible without
+ * JavaScript, a `<time>`
  * grade date, the projected canonical profile links with their exact grades and
  * scores, and a caption denominator taken from the full admitted set rather
  * than from the rendered slice.
@@ -1494,9 +1495,8 @@ function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation)
   const html = stripNonElementMarkup(document);
   const tags = collectElementTags(html);
 
-  // The client's pending render lands in the streamed segment Next swaps in on
-  // parse. Count every region, hidden or not: a duplicated preview (route
-  // fallback plus client render) is two result sets for the same facts.
+  // Count every region, hidden or not: a duplicated preview (a streamed copy
+  // beside the first-flush one) is two result sets for the same facts.
   const regions = openingElementTags(tags, (tag) => tag.attrs.get("aria-label") === SAFETY_RESULTS_REGION_LABEL);
   if (expectation?.status !== "ok") {
     // Without an admissible dated projection the page keeps the neutral
@@ -1553,6 +1553,10 @@ function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation)
       errors.push(
         `${route}: preview caption reports Top ${shown} of ${eligible}, but the projected dataset admits Top ${preview.rows.length} of ${preview.eligibleRatedCount} rated active stablecoins (source counts are never inferred from the slice)`,
       );
+    }
+    // No-JS readers see only the first flush, never a hidden streamed segment.
+    if (!extractVisibleText(document).includes(captionMatches[0])) {
+      errors.push(`${route}: preview is not visible without JavaScript (hidden streamed segment)`);
     }
   }
 

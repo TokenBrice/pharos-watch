@@ -914,10 +914,9 @@ describe("safety scores dated preview", () => {
     expect(scores).toEqual([...scores].sort((left, right) => right - left));
   });
 
-  it.each([false, true])("accepts one projected results region (streamed %s)", async (streamed) => {
+  it("accepts one projected results region", async () => {
     const root = await makeOutDir();
-    const region = safetyPreviewRegion();
-    await writeSafetyScoresPage(root, streamed ? `<div hidden id="S:0">${region}</div>` : region);
+    await writeSafetyScoresPage(root, safetyPreviewRegion());
 
     const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
     expect(result.errors).toEqual([]);
@@ -939,10 +938,10 @@ describe("safety scores dated preview", () => {
     const root = await makeOutDir();
     await writeSafetyScoresPage(
       root,
-      `<div hidden id="S:0">${safetyPreviewRegion({
+      safetyPreviewRegion({
         datetime: expectation.preview.publishedAtIso,
         dateText: expectation.preview.publishedDate,
-      })}</div>`,
+      }),
     );
     expect(collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: expectation }).errors).toEqual([]);
 
@@ -967,6 +966,7 @@ describe("safety scores dated preview", () => {
         `${safetyPreviewRegion()}<div hidden id="S:0">${safetyPreviewRegion()}</div>`,
         'expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2',
       ],
+      ["streamed", `<div hidden id="S:0">${safetyPreviewRegion()}</div>`, "preview is not visible without JavaScript"],
       ["time", safetyPreviewRegion({ omitTime: true }), "must carry exactly one <time> grade date (found 0)"],
       ["datetime", safetyPreviewRegion({ datetime: "2026-01-01T00:00:00.000Z" }), "is not the publication clock"],
       ["datetext", safetyPreviewRegion({ dateText: "2026-10-01" }), `preview <time> does not carry "Grades as of ${SAFETY_PREVIEW.publishedDate}"`],
