@@ -28,6 +28,7 @@ import { getScoresLatestSnapshotRow, type ScoresLatestSnapshotRow } from "../../
 import {
   fetchWithRetry,
   generatorFetchHeaders,
+  GENERATOR_API_KEY_ENV_NAMES,
   resolveApiPathUrl,
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
@@ -247,8 +248,7 @@ function loadBuildAuthentication(): void {
 }
 
 function hasGeneratorCredential(): boolean {
-  return Object.keys(generatorFetchHeaders(`${API_ORIGIN}/api/stablecoins`))
-    .some((name) => !["accept", "origin"].includes(name.toLowerCase()));
+  return GENERATOR_API_KEY_ENV_NAMES.some((name) => process.env[name]?.trim());
 }
 
 /**
@@ -264,8 +264,8 @@ export function resolveSnapshotApiBase(): string {
   return `${PAGES_APP_ORIGIN}${SITE_DATA_PATH_PREFIX}`;
 }
 
-function authenticatedGeneratorHeaders(url: string): Record<string, string> {
-  const headers = generatorFetchHeaders(url);
+async function authenticatedGeneratorHeaders(url: string): Promise<Record<string, string>> {
+  const headers = await generatorFetchHeaders(url);
   const isSiteDataRequest = new URL(url).pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`);
   const hasCredential = Object.keys(headers).some((name) => !["accept", "origin"].includes(name.toLowerCase()));
   if (!isSiteDataRequest && !hasCredential) {
@@ -275,7 +275,7 @@ function authenticatedGeneratorHeaders(url: string): Record<string, string> {
 }
 
 async function fetchDetailSnapshotJson(url: string): Promise<{ data: unknown; updatedAt: number | null }> {
-  const response = await fetchWithRetry(url, { headers: authenticatedGeneratorHeaders(url) }, {
+  const response = await fetchWithRetry(url, { headers: await authenticatedGeneratorHeaders(url) }, {
     logLabel: "stablecoin-detail-snapshots",
   });
   if (!response.ok) {

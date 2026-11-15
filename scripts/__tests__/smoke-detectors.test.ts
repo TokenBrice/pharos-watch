@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { resolveMissingYieldWorkbenchRedirect } from "../../functions/stablecoin/[[path]]";
 import { assertOgImageResult, isRetryableStatus } from "../maintenance/smoke-api.mjs";
 import {
@@ -14,7 +14,7 @@ import {
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
 } from "../maintenance/smoke-ops.mjs";
-import { verifyBrowserPass, verifyDocument } from "../maintenance/smoke-pages-assets.mjs";
+import { fetchTopYieldIds, verifyBrowserPass, verifyDocument } from "../maintenance/smoke-pages-assets.mjs";
 import {
   findFrameworkErrorMarker,
   getTopYieldRankingIds,
@@ -254,9 +254,22 @@ describe("Pages asset-coherence smoke helpers", () => {
     )).rejects.toThrow("landed on unexpected URL");
   });
 
-  it("rejects malformed or undersized ranking payloads", () => {
+  it("rejects malformed rankings and authenticates only trusted site-data rankings", async () => {
     expect(() => getTopYieldRankingIds({}, 1)).toThrow("missing rankings[]");
     expect(() => getTopYieldRankingIds({ rankings: [{ id: "not valid" }] }, 1)).toThrow("only 0 valid unique id(s)");
+    vi.stubEnv("SITE_SESSION_SIGNING_KEY", "rankings-test-key");
+    try {
+      for (const [url, admitted] of [["https://pharos.watch/_site-data/yield-rankings", true], ["https://attacker.example/_site-data/yield-rankings", false]] as const) {
+        vi.stubEnv("SMOKE_PAGES_ASSET_RANKINGS_URL", url);
+        const fetcher = vi.fn(async () => Response.json({ rankings: [{ id: "usdc-circle" }] }));
+        vi.stubGlobal("fetch", fetcher);
+        expect(await fetchTopYieldIds("https://pharos.watch", "production", 1)).toEqual(["usdc-circle"]);
+        expect(Boolean((fetcher.mock.calls[0] as unknown as [string, { headers: Record<string, string> }])[1].headers.Cookie)).toBe(admitted);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 
   it("validates static asset MIME types", () => {

@@ -217,6 +217,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+      SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
 
   post-deploy-acceptance:
     needs:

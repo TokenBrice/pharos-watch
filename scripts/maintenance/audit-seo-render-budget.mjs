@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 import { getBrowserLaunchOptions, loadChromium } from "../lib/smoke-runtime.mjs";
 import {
@@ -382,6 +385,8 @@ export async function capturePageSnapshots(browser, url, { waitMs, counters, fai
   });
   try {
     const page = await context.newPage();
+    const sessionCookie = await siteSessionCookie(url);
+    if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(url).hostname }]);
     installFailureListeners(page, state);
     await blockAnalyticsCollection(page, counters, intentional);
     if (replay) {

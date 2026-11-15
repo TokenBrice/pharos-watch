@@ -146,6 +146,7 @@ jobs:
           node-modules-cache: "true"
       - name: Capture production dependency coverage
         env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
           DEPENDENCY_COVERAGE_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: npm run audit:coverage -- --domain=dependency-coverage --prod --json --report .tmp/dependency-coverage/audit.json
       - name: Evaluate published dependency structure

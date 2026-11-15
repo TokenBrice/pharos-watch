@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { findDuplicateSitemapLocs, parseSitemapLocs } from "../lib/seo-sitemap.mjs";
@@ -204,6 +207,8 @@ async function checkJsDisabled(baseUrl, errors) {
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({ javaScriptEnabled: false });
+    const sessionCookie = await siteSessionCookie(baseUrl);
+    if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(baseUrl).hostname }]);
     for (const check of JS_DISABLED_ROUTES) {
       const page = await context.newPage();
       const response = await page.goto(resolveRoute(baseUrl, check.route), {

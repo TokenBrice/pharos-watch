@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie, siteDataSessionHeaders } = await tsImport("../lib/site-session.ts", import.meta.url);
+const { SITE_ORIGIN } = await tsImport("../../shared/lib/runtime-origins.ts", import.meta.url);
+
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -78,12 +82,14 @@ function getApiKey() {
     .find(Boolean);
 }
 
-async function fetchTopYieldIds(baseUrl, mode, rankingCount) {
+export async function fetchTopYieldIds(baseUrl, mode, rankingCount) {
   const rankingsUrl = resolveRankingsUrl(baseUrl, mode);
   const apiKey = getApiKey();
   const response = await fetch(rankingsUrl, {
     headers: {
       Accept: "application/json",
+      ...(new URL(rankingsUrl).pathname.startsWith("/_site-data/")
+        ? { Origin: SITE_ORIGIN, ...await siteDataSessionHeaders(rankingsUrl) } : {}),
       ...(apiKey ? { "X-API-Key": apiKey } : {}),
     },
   });
@@ -235,6 +241,8 @@ export async function verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, l
 
 async function verifyBrowserRoute(browser, routeInfo, baseUrl, warmCacheIds, waitTimeoutMs, settleMs) {
   const context = await browser.newContext();
+  const sessionCookie = await siteSessionCookie(baseUrl);
+  if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(baseUrl).hostname }]);
   const expectedOrigin = new URL(baseUrl).origin;
   async function verifyNavigation(label) {
     const page = await context.newPage();
