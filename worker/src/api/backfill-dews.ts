@@ -131,6 +131,7 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
   } = assembled;
   const { results, insufficientDataCount } = buildDewsScoringResult({
     assetById,
+    nowSec,
     pegRates,
     pegRateSources,
     pegRateContributorCounts,

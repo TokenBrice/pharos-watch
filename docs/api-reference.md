@@ -661,7 +661,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.46"
+  "currentVersion": "6.47"
 }
 ```
 
@@ -699,7 +699,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.46"
+  "currentVersion": "6.47"
 }
 ```
 
@@ -908,8 +908,8 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ```json
 {
-  "currentVersion": "3.67",
-  "methodologyVersion": "3.67"
+  "currentVersion": "3.68",
+  "methodologyVersion": "3.68"
 }
 ```
 
@@ -1117,8 +1117,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.46",
-  "methodologyVersion": "6.46"
+  "currentVersion": "6.47",
+  "methodologyVersion": "6.47"
 }
 ```
 

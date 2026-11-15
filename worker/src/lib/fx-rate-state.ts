@@ -9,7 +9,7 @@ import { logWorkerEvent } from "./structured-log";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
-import { startOfUtcDaySec } from "@shared/lib/time-buckets";
+import { easterSundayUtcDaySec, startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { IsolateLocalState } from "./isolate-local-state";
 import { EXPECTED_FX_PEG_KEYS } from "./fx-config";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
@@ -275,31 +275,12 @@ const _fxCalendar = new IsolateLocalState(() => ({
   targetClosingDaysByYear: new Map<number, Set<string>>(),
 }));
 
-function computeEasterSundayDayStartSec(year: number): number {
-  // Meeus/Jones/Butcher Gregorian computus.
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return Math.floor(Date.UTC(year, month - 1, day) / 1000);
-}
-
 function getTargetClosingDays(year: number): Set<string> {
   const byYear = _fxCalendar.state.targetClosingDaysByYear;
   const cached = byYear.get(year);
   if (cached) return cached;
 
-  const easterSundaySec = computeEasterSundayDayStartSec(year);
+  const easterSundaySec = easterSundayUtcDaySec(year);
   const closingDays = new Set<string>([
     `${year}-01-01`,
     `${year}-05-01`,

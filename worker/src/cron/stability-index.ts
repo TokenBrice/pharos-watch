@@ -2,7 +2,10 @@ import { includePsiEventDeviation } from "../lib/psi-recompute";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
+import { getMetalMarketClosureStart, isCommodityDeviationHeld } from "@shared/lib/metal-market-hours";
+import { deriveAuthoritativePegSignal } from "./authoritative-peg-signal";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -24,10 +27,39 @@ import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-so
 import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
 
-type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string; current_native_quote: string | null };
+type PsiActiveDepegRow = NativeEventPriceEvidence & {
+  stablecoin_id: string;
+  current_native_quote: string | null;
+  last_trusted_price_at: number | null;
+};
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = DEWS_GENERATION_CONSUMER_MAX_AGE_SEC;
+
+/** Contributor bps of the last sample published before the closure, within the replay-price budget; null when unreadable. */
+async function loadPreClosureContributorBps(
+  db: D1Database,
+  closedSince: number,
+): Promise<{ storedAt: number; bpsById: Map<string, number> } | null> {
+  try {
+    const row = await db
+      .prepare("SELECT stored_at, input_snapshot FROM stability_index_samples WHERE stored_at < ? AND stored_at >= ? ORDER BY stored_at DESC LIMIT 1")
+      .bind(closedSince, closedSince - REPLAY_PRICE_CACHE_TTL_SEC)
+      .first<{ stored_at: number; input_snapshot: string }>();
+    const contributors = row ? (JSON.parse(row.input_snapshot) as { contributors?: unknown }).contributors : null;
+    if (!row || !Array.isArray(contributors)) return null;
+    const bpsById = new Map<string, number>();
+    for (const entry of contributors as Array<{ id?: unknown; bps?: unknown } | null>) {
+      if (typeof entry?.id === "string" && typeof entry.bps === "number" && Number.isFinite(entry.bps)) {
+        bpsById.set(entry.id, entry.bps);
+      }
+    }
+    return { storedAt: row.stored_at, bpsById };
+  } catch (error) {
+    logWorkerEventArgs("handler", "warn", "[stability-index] pre-closure sample unreadable:", error);
+    return null;
+  }
+}
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
@@ -135,7 +167,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   try {
     activeDepegs = await db
       .prepare(`SELECT e.stablecoin_id, e.peg_reference, e.started_at, e.peg_type, e.source,
-                       e.start_price, e.ended_at, e.recovery_price, p.quote_mode,
+                       e.start_price, e.ended_at, e.recovery_price, e.last_trusted_price_at, p.quote_mode,
                        nq.value AS current_native_quote
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
@@ -273,10 +305,20 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }[] = [];
   let replayPriceFallbackCount = 0;
   let openDepegsWithoutPrice = 0;
+  // Detection's reference derivation: a non-USD reference moves after an event opens.
+  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = derivePegRates(
+    stablecoinsCache.payload.peggedAssets,
+    PSI_ELIGIBLE_META_BY_ID,
+    stablecoinsCache.payload.fxFallbackRates,
+  );
+  const metalMarketClosedSince = getMetalMarketClosureStart(now);
+  let preClosure: Awaited<ReturnType<typeof loadPreClosureContributorBps>> | undefined;
+  const heldContributorIds: string[] = [];
 
   for (const [coinId, events] of grouped) {
     const mcapUsd = mcapById.get(coinId);
     if (mcapUsd == null) continue;
+    const meta = PSI_ELIGIBLE_META_BY_ID.get(coinId);
     const currentPrice = priceById.get(coinId);
     const replayPrice = replayPriceById.get(coinId);
     const usdPrice = currentPrice ?? replayPrice;
@@ -285,22 +327,63 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     }
 
     const aggregate = { worstBps: 0, earliestStart: Infinity };
+    let worstAbsRawBps = Number.NaN;
     let missingPrice = false;
     for (const e of events) {
-      const price = isNativePegEvent(e)
+      const native = isNativePegEvent(e);
+      const price = native
         ? getNativeEventPrice(e, now, decodeNativeEventQuote(e.current_native_quote))
         : usdPrice;
-      const depegSignal = price != null ? deriveDepegSignal(price, e.peg_reference) : null;
+      const nonUsd = !native && normalizePegType(e.peg_type) !== "peggedUSD";
+      const current = nonUsd && price != null && meta
+        ? deriveAuthoritativePegSignal({
+          price,
+          pegCurrency: meta.flags.pegCurrency,
+          pegType: e.peg_type,
+          pegRates,
+          pegRateSources,
+          pegRateCounts,
+          commodityOunces: meta.commodityOunces,
+        })
+        : null;
+      // A non-USD reference moves after the event opens: without today's authoritative
+      // reference the event is unpriced, never scored against its opening reference.
+      const depegSignal = nonUsd
+        ? current?.kind === "signal" ? current.signal : null
+        : price != null ? deriveDepegSignal(price, e.peg_reference) : null;
       if (!depegSignal) {
         missingPrice = true;
         continue;
       }
       includePsiEventDeviation(aggregate, depegSignal.bps, e.started_at);
+      worstAbsRawBps = Number.isNaN(worstAbsRawBps) ? depegSignal.absRawBps : Math.max(worstAbsRawBps, depegSignal.absRawBps);
     }
-    if (missingPrice) openDepegsWithoutPrice++;
 
-    const { worstBps, earliestStart } = aggregate;
-    if (earliestStart === Infinity) continue;
+    let { worstBps, earliestStart } = aggregate;
+    // A closed metal market holds a coin at its pre-closure contribution, even when unpriced
+    // now, while detection has trusted none of its events since the closure began; a severe
+    // reading or promotion inside the closure keeps it live. No admissible baseline is
+    // unknown evidence, not calm.
+    if (
+      metalMarketClosedSince != null &&
+      events.every((e) => Math.max(e.started_at, e.last_trusted_price_at ?? 0) < metalMarketClosedSince) &&
+      isCommodityDeviationHeld(meta?.flags.pegCurrency, now, worstAbsRawBps)
+    ) {
+      if (preClosure === undefined) {
+        preClosure = await loadPreClosureContributorBps(db, metalMarketClosedSince);
+      }
+      const held = preClosure?.bpsById.get(coinId);
+      if (held == null) {
+        openDepegsWithoutPrice++;
+        continue;
+      }
+      worstBps = held;
+      earliestStart = Math.min(...events.map((e) => e.started_at));
+      heldContributorIds.push(coinId);
+    } else {
+      if (missingPrice) openDepegsWithoutPrice++;
+      if (earliestStart === Infinity) continue;
+    }
     const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
 
     depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
@@ -379,6 +462,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
           status: universeCoverageStatus,
         },
         contributors,
+        ...(metalMarketClosedSince != null
+          ? { metalMarketClosedSince, metalMarketBaselineAt: preClosure?.storedAt ?? null, heldContributorIds }
+          : {}),
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
       PSI_METHODOLOGY_VERSION,

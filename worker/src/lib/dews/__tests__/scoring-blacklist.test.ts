@@ -98,6 +98,17 @@ describe("buildDewsScoringResult peg reference admission", () => {
     expect(row!.evidenceKinds).not.toContain("market-price");
     expect(row!.score).toBe(0);
   });
+  it.each([[1_794_844_800, true, 0, 0], [1_794_758_400, false, 0, 0], [1_794_758_400, true, 2_800, 0], [1_794_758_400, true, 0, 42]])(
+    "closed metal market withholds gold divergence (%s, %s, DEX %s, previous %s)", (nowSec, available, dex, prev) => {
+    const xaut = { ...createAsset("xaut-tether", "XAUT"), pegType: "peggedGOLD", price: 3_800 } as StablecoinData;
+    const sourceState = createSourceState();
+    if (dex) sourceState.dexPrices.dexPriceMap.set(xaut.id, { dexPriceUsd: dex, sourceTotalTvl: 2e6, updatedAt: 1 });
+    if (prev) sourceState.previousSignals.prevSignals.set(xaut.id, { signals: { diverg: { value: prev, available } }, computedAt: 1, ageSec: 1 });
+    const row = buildDewsScoringResult({ assetById: new Map([[xaut.id, xaut]]), nowSec, pegRates: { peggedGOLD: 3_880 },
+      pegRateSources: { peggedGOLD: "fallback" }, sourceState, registerMalformedPersistedInput: () => {} }).results[0];
+    expect(row.signals.diverg).toMatchObject(available ? { available, ...(prev && { value: prev }) }
+      : { available, unavailableReason: "reference-market-closed" });
+  });
 });
 
 describe("buildDewsScoringResult blacklist attribution", () => {

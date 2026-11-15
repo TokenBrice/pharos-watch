@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.46`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.47`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -132,7 +132,7 @@ A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not 
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
-The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`. Primary and independently admitted DEX deviations are evaluated separately against the admitted peg reference; cross-source spread exists only when both legs are observed, finite and positive. With neither valid leg, divergence is unavailable rather than a measured calm zero. A stressed DEX-only leg qualifies as `market-price` evidence and is not WATCH-capped merely because the primary observation is missing.
+The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`. Primary and independently admitted DEX deviations are evaluated separately against the admitted peg reference; cross-source spread exists only when both legs are observed, finite and positive. With neither valid leg, divergence is unavailable rather than a measured calm zero. A stressed DEX-only leg qualifies as `market-price` evidence and is not WATCH-capped merely because the primary observation is missing. Since v6.47, while the metal market is closed (`shared/lib/metal-market-hours.ts`) a GOLD/SILVER asset whose primary and DEX legs both sit below the 2,500 bps severe band (raw bps; no priced leg also counts as held) has no admitted reference, because spot and the tokens priced off it repeat the last close while the asset trades: divergence carries the asset's last available reading through the closure, so DEWS bands and PSI stress breadth do not step at the edges, and is unavailable with `reference-market-closed` only when there is no previous reading.
 
 - DEX publisher selection and input admission follow [Stage 1 of depeg detection](./depeg-detection.md#stage-1----detection). Hydrated source ages and snapshots use the original aggregate clock, never publication time or surviving protocol lanes; clock-unavailable rows are marked stale, never fresh evidence, with `missing` or canonical `aggregate-clock-*` decoder reasons; malformed eligible JSON retains decoder telemetry.
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`

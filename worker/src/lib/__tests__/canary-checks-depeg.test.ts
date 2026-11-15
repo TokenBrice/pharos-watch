@@ -161,6 +161,14 @@ describe("depeg canary checks", () => {
     } });
   });
 
+  it.each([[22, 0], [23, 2]])("acknowledges metal-market holds only inside a closure (Sunday %s:00 UTC)", (hour, actionable) => {
+    const evaluatedAt = Date.UTC(2026, 10, 15, hour) / 1000;
+    const gaps = assessDepegObservationGaps({ scope: "psi-non-nav-before-supply-floor", evaluatedAt, eligibleCount: 9,
+      observedCount: 7, unavailableCount: 2, belowFloorCount: 0, reasonCounts: { "reference-market-closed": 2 } }, evaluatedAt);
+    expect([gaps.actionableUnavailableCount, gaps.actionableReasonCounts])
+      .toEqual([actionable, actionable ? { "reference-market-closed": 2 } : {}]);
+  });
+
   it("projects the census from persisted cron_runs metadata", async () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
@@ -230,6 +238,16 @@ describe("depeg canary checks", () => {
       ...(expired ? { error: expect.stringContaining("outlived every dynamic expiry limit") } : {}),
       metadata: expired ? { stalledExpiredCount: 1 } : { olderThanBaseExpiryCount: 1, stalledExpiredCount: 0 },
     });
+  });
+
+  it.each([[9_060, 0], [2e5, 1]])("exempts metal-market holds; a gap %ss old stays blind: %s", async (age, blind) => {
+    const db = pending({ severe_recent: 0 }, [{ stablecoin_id: "xaut-tether", first_seen_at: NOW - age, reason: "large-cap" }]);
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: blind ? "error" : "ok", metadata: { metalMarketHeldCount: 1 } });
+    const now = Date.UTC(2026, 10, 15, 16) / 1000;
+    const { db: events, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price,
+      peg_reference, last_trusted_price_at) VALUES ('xaut-tether', 'XAUT', 'peggedGOLD', 'below', -200, ?, 3800, 3880, ?)`).run(now - 3e5, now - age);
+    expect(await checkDepegOpenCoverage(events, now)).toMatchObject({ metadata: { blindEventCount: blind } });
   });
 
   it("names open events whose trusted price stopped advancing", async () => {

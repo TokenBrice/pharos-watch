@@ -1333,6 +1333,22 @@ describe("decideDepegAsset", () => {
     expect(decision.diagnostics).toEqual([]);
   });
 
+  it.each([
+    [134, { kind: "unavailable", reason: "reference-market-closed" }, []],
+    [100, { kind: "observed" }, ["upsert-pending"]],
+  ])(
+    "holds a sub-severe gold move while the metal market is closed (price %s)",
+    (price, observation, commands) => {
+      const now = 1_794_758_400; // Sunday 16:00 UTC
+      const decision = decideDepegAsset({
+        now, asset: makeAsset({ id: "vnxau-vnx", price, priceUpdatedAt: now, pegType: "peggedGOLD" }), meta: goldMeta,
+        pegRates: { peggedGOLD: 4285 }, pegRateSources: { peggedGOLD: "median" }, pegRateCounts: { peggedGOLD: 4 },
+      });
+      expect(decision.observation).toEqual(observation);
+      expect(decision.commands.map((command) => command.type)).toEqual(commands);
+    },
+  );
+
   it("keeps an in-band soft-source event open when a high-TVL challenger pool still shows the depeg", () => {
     // Reproduced 2026-09-24 from live D1 (event 90786, hollar-hydrated): the
     // low-confidence CoinGecko print sat at -18 bps while every published

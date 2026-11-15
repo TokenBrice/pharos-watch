@@ -1,11 +1,14 @@
 import {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+  DEPEG_SEVERITY_BPS,
 } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/price";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
+import { isCommodityDeviationHeld, isMetalMarketClosed } from "@shared/lib/metal-market-hours";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
 import {
@@ -117,7 +120,7 @@ export type ConfirmationPlan =
     }
   | {
       kind: "wait";
-      reason: "too-young" | "peg-reference-unavailable";
+      reason: "too-young" | "peg-reference-unavailable" | "reference-market-closed";
     }
   | ConfirmationPlanReady;
 
@@ -358,6 +361,13 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       : row.peg_reference;
   const outcomeState: PendingDepegState = { ...pendingState, pegReference };
 
+  // A closed metal market can neither confirm nor clear a commodity candidate unless today's
+  // price moved severely; an unknown current deviation also waits for the reopen.
+  const currentMove = asset?.price == null ? null : deriveDepegSignal(asset.price, pegReference);
+  if (meta && isCommodityDeviationHeld(meta.flags.pegCurrency, now, currentMove?.absRawBps ?? Number.NaN)) {
+    return { kind: "wait", reason: "reference-market-closed" };
+  }
+
   if (!Number.isFinite(pegReference) || pegReference <= 0) {
     if (asset && meta && !refreshedPegReferenceIsAuthoritative) {
       return { kind: "wait", reason: "peg-reference-unavailable" };
@@ -377,7 +387,11 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     };
   }
 
-  const threshold = getDepegThresholdBps(pegType ?? row.peg_type);
+  // Only a severe candidate gets here during a closure; its confirmers must be severe too,
+  // since an ordinary threshold reading is just drift against the frozen close.
+  const threshold = meta && isCommodityPeg(meta.flags.pegCurrency) && isMetalMarketClosed(now)
+    ? DEPEG_SEVERITY_BPS.severe
+    : getDepegThresholdBps(pegType ?? row.peg_type);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
   const rawNativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
   const rawNativeStatus = classifyDirectionalSignal(rawNativeSignal, threshold, pendingState.direction);

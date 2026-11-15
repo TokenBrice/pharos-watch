@@ -55,6 +55,7 @@ import {
 } from "./native-quote-policy";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { isCommodityDeviationHeld } from "@shared/lib/metal-market-hours";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -434,6 +435,13 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   }
   if (pegSignal.kind === "rejected") {
     return { kind: "skip", decision: emptyDecision(trackedCoinId, { kind: "unavailable", reason: pegSignal.reason }) };
+  }
+  // A closed metal market leaves the commodity reference at its last close: hold
+  // live state (no onset, peak, direction or recovery) until it trades again.
+  if (isCommodityDeviationHeld(meta.flags.pegCurrency, now, pegSignal.signal.absRawBps ?? pegSignal.signal.absBps)) {
+    const decision = emptyDecision(trackedCoinId, { kind: "unavailable", reason: "reference-market-closed" });
+    if (existing) decision.seenEventIds.push(existing.id);
+    return { kind: "skip", decision };
   }
   const pegRef = pegSignal.pegReference;
   const primarySignal = pegSignal.signal;

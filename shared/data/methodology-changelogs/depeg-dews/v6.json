@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.47",
+    "title": "Metal-market closures hold commodity depeg state",
+    "date": "2026-11-15",
+    "effectiveAt": 1794787200,
+    "summary": "Gold and silver references repeat the last close while the metal market is shut, but the tokens keep trading. During a closure, detection, pending confirmation and DEWS hold commodity-peg state instead of comparing 24/7 token prices with a frozen close.",
+    "impact": [
+      "`shared/lib/metal-market-hours.ts` is the single closure authority: Friday 21:00 to Sunday 23:00 UTC (the union of the US daylight and standard-time sessions), from 21:00 UTC on the Thursday before Good Friday, from 22:00 UTC on 24 and 31 December, and all of 25 December and 1 January. On Sunday 15 November 2026 gold-api.com returned an unchanged XAU quote with a fresh `updatedAt` on every poll, Chainlink XAU/USD posted only its 24-hour heartbeat at the Friday level, and about half of the gold peer median were tokens quoted at that close.",
+      "While closed, a GOLD or SILVER asset below the existing 2,500 bps severe band opens no pending row and changes no open event: no peak, direction or recovery update, with blind price coverage until the reopen. The census records the gap as `reference-market-closed`, which the observation canaries acknowledge only when the census clock is inside a closure. Pending candidates wait instead of confirming, clearing or expiring, judged on today's price against the refreshed reference (an unknown current deviation also waits), and are evaluated against the live reference after the reopen. A severe candidate that proceeds during a closure needs severe confirmers (2,500 bps), because an ordinary threshold reading is drift against the frozen close. The pending-candidate and open-event coverage canaries exempt commodity assets for the closure plus one grace window; a candidate already stalled or a gap already blind when the closure began stays actionable.",
+      "A move at or beyond the severe band is not closed-session drift and is handled as before. During a closure DEWS carries each commodity asset's last divergence reading, so stress breadth does not step at the closure edges, and reports the signal unavailable (`reference-market-closed`) only when there is no previous reading; a severe primary or DEX leg (raw bps) is scored normally. Outside closures nothing changes.",
+      "On 14-15 November 2026 the previous rule opened PAXG and XAUT events on Saturday at 21:01 and 22:16 UTC and again on Sunday at 07:46 UTC, against references of $3,847-3,877 while gold-api.com repeated $3,887.60. Those events remain in history. Activation is provisional (2026-11-16 00:00 UTC); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.46",
     "title": "Lone Mento Broker quotes cannot establish DEWS escalation evidence",
     "date": "2026-11-11",

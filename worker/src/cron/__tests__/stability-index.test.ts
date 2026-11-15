@@ -654,6 +654,25 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(snapshot.mcap7dChangePct).toBeLessThan(3);
   });
 
+  const [mon, sun] = ["2026-11-16T12:00:00Z", "2026-11-15T16:00:00Z"];
+  it.each([[mon, null, 3_818, -42, -160, 1], [sun, null, 3_818, -42, -42, 1], [sun, 3_600, 3_818, -42, -160, 1],
+    [sun, null, null, -42, -42, 1], [sun, null, 3_818, null, null, 1], [mon, null, 3_818, -42, null, 0],
+  ])("scores gold on today's reference, held while closed (%s %s %s %s %s %s)", async (iso, trusted, price, base, bps, fx) => {
+    vi.setSystemTime(new Date(iso));
+    const at = (time: string) => Date.parse(time) / 1000;
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({ kind: "ok", updatedAt: at(iso), payload: { fxFallbackRates: fx ? { peggedGOLD: 3_880 } : {},
+      peggedAssets: [makeStabilityAsset(), makeStabilityAsset({ id: "xaut-tether", symbol: "XAUT", pegType: "peggedGOLD", price })] } });
+    const db = makeDb({ depegRows: [] });
+    db.sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price,
+      peg_reference, source, last_trusted_price_at) VALUES ('xaut-tether', 'XAUT', 'peggedGOLD', 'below', -575, ?, 3818, 4051, 'live', ?)`)
+      .run(at(iso) - 3e5, trusted && at(iso) - trusted);
+    db.sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, 90, 'x', '{}', ?)")
+      .run(at("2026-11-13T20:30:00Z"), JSON.stringify({ contributors: base == null ? [] : [{ id: "xaut-tether", bps: base }] }));
+    await computeAndStoreStabilityIndex(db);
+    const { contributors, openDepegsWithoutPrice } = readInsertedInputSnapshot(db);
+    expect([contributors, openDepegsWithoutPrice]).toMatchObject([bps == null ? [] : [{ id: "xaut-tether", bps }], bps == null ? 1 : 0]);
+  });
+
   it("falls back to recent replay-safe cached prices for open depegs missing current snapshot prices", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
