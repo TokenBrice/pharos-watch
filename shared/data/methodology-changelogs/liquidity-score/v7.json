@@ -1,5 +1,19 @@
 [
   {
+    "version": "7.3",
+    "title": "Optimism Velodrome Slipstream's direct reader is retired",
+    "date": "2026-11-15",
+    "effectiveAt": 1794762000,
+    "summary": "DefiLlama's velodrome-v3 TVL on Optimism was $1.61M on 2026-11-14, below the owner's $5M retirement line, so the protocol-native Sugar reader for Optimism Velodrome Slipstream stops. Its direct_api source family, circuit key and chain scope go with it; the 78 CoinGecko Onchain and GeckoTerminal Velodrome pools stay and keep the documented Velodrome tiers. Base Aerodrome Slipstream, Aero and every other direct reader are unchanged.",
+    "impact": [
+      "The 13 direct_api Velodrome pools ($0.71M on 2026-11-14) stop being collected. Their retained registry rows stay on the unchanged 336-hour confidence horizon: value decays from the last write-back and price evidence stops after 24 hours, so no row is relabelled, restamped or republished as a fresh observation.",
+      "Surviving provider rows keep the venue: the `velodrome-dex` soft-DEX price family, the `dex:velodrome-slipstream` depeg family and the Velodrome Slipstream quality tiers remain registered for CoinGecko Onchain and GeckoTerminal pools. No component weight, admission rule, formula or threshold changes.",
+      "The retired circuit key moves to retired scope so its orphan D1 row leaves public outage counts. Retained TVL changes only through that aged inventory, not a one-step remeasurement, so this release adds no TVL-basis break."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.2",
     "title": "Balance health penalises only an excess of the tracked coin",
     "date": "2026-11-14",

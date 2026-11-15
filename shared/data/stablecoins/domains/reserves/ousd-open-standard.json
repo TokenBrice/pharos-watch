@@ -4,7 +4,7 @@
     {
       "sourceKey": "bridge-transparency:cash",
       "name": "Cash",
-      "pct": 13.081,
+      "pct": 13.052,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Bridge-approved bank counterparties",
@@ -14,12 +14,22 @@
     {
       "sourceKey": "bridge-transparency:treasury",
       "name": "Treasury",
-      "pct": 86.919,
+      "pct": 86.727,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury and U.S. government money-market funds (fund identities undisclosed)",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
       "liquidityHorizon": "one-day"
+    },
+    {
+      "sourceKey": "bridge-transparency:unclassified-residual",
+      "name": "Unclassified reserve balance",
+      "pct": 0.221,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Unidentified reserve assets and counterparties in the Bridge Building Inc Reserve",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -29,6 +39,10 @@
     "sources": [
       {
         "label": "Bridge OUSD transparency API, observation 2026-10-30T19:10:33Z",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd"
+      },
+      {
+        "label": "Bridge OUSD transparency API, residual-capture confirmation last_updated 2026-11-15T10:40:35Z (read 2026-11-15T10:50:52Z): $963,741,049.00 reserve assets against $961,740,931.58664 on-chain liabilities, $103,848,838.23 cash, $857,892,095.78 Treasury and a $2,000,114.99 non-itemized remainder (0.2075%)",
         "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd"
       },
       {
@@ -64,14 +78,22 @@
         "url": "https://transparency.bridge.xyz/v0/stablecoins/open_usd"
       }
     ],
-    "rationale": "The ousd API observation at 2026-10-30T19:10:33Z reports $904,709,499.27 of reserve assets against $902,709,381.85664 of aggregate on-chain liabilities (collateralization_ratio 1.0022), with two itemized components: $118,084,585.77 cash and $784,625,164.51 Treasury. The components sum to $902,709,750.28, so normalizing them gives 13.0811% and 86.9189%, which is 100.0000% without normalization. The itemized components exceed the on-chain liability by $368.42 (100.0000408%), inside the bridge-transparency adapter's unitemized-surplus bound and consistent with the documented CASH/OUSD rounding excess, and they remain $1,999,748.99 (0.2210%) below the published reserve total, which equals the issuer's stated $2,000,117.41 overcollateralization within $368.42 of rounding: the itemized line is the liability itself and the excess sits in the reserve line the issuer neither allocates nor names. The cash/Treasury split moves materially intraday: 55.7456%/44.2544% at the September 30 observation (components equal to both reserves and liabilities), 12.2272%/87.7728% at the 2026-10-29T18:30:39Z observation (when the components were $2,221,474.84 below a $828,870,912.65 liability, 99.732% coverage, and the adapter emitted bridge-itemized-backing-shortfall with effect degraded), 18.1240%/81.8760% at the 2026-10-30T10:40:40Z observation and 13.0811%/86.9189% at the reviewed 2026-10-30T19:10:33Z observation, so the weights are dated to the observation used and are not a stable allocation; both source keys and the very-low legacy risk tiers are unchanged. The Treasury category includes money-market funds comprised of T-bill ladders with less than three-month duration; it is not evidence of a hard maximum maturity for every instrument. The dashboard identifies Open USD, joinopenstandard.com, and the Tempo, Ethereum, Base and Solana deployments, and its attestation index lists only an August 2026 report for period 2026-08-31, which is not a same-period composition source. The second API slug open_usd is still frozen at its 2026-09-28T18:50:31Z observation ($40,008,735.98 liabilities, $40,008,737.98 reserves), its dashboard route returns 404, and it is absent from the documented ticker list; its contract identity remains unresolved and none of its balances are included here. These are issuer-published measurements, not an independent reserve examination.",
-    "compositionBasis": "Bridge ousd API cash and Treasury dollar amounts divided by their itemized $902,709,750.28 total; three-decimal percentage rounding",
+    "rationale": "The ousd API observation at 2026-10-30T19:10:33Z reports $904,709,499.27 of reserve assets against $902,709,381.85664 of aggregate on-chain liabilities (collateralization_ratio 1.0022), with two itemized components: $118,084,585.77 cash and $784,625,164.51 Treasury. The components sum to $902,709,750.28, so they are 13.0522% and 86.7268% of the published reserve total, whose remaining $1,999,748.99 (0.2210%) is published as one unclassified residual row instead of normalizing the itemized line to 100%. The itemized components exceed the on-chain liability by $368.42 (100.0000408%), inside the bridge-transparency adapter's unitemized-surplus bound and consistent with the documented CASH/OUSD rounding excess, and they remain $1,999,748.99 (0.2210%) below the published reserve total, which equals the issuer's stated $2,000,117.41 overcollateralization within $368.42 of rounding: the itemized line is the liability itself and the excess sits in the reserve line the issuer neither allocates nor names. The cash/Treasury split moves materially intraday (the history below is stated on the itemized-components basis): 55.7456%/44.2544% at the September 30 observation (components equal to both reserves and liabilities), 12.2272%/87.7728% at the 2026-10-29T18:30:39Z observation (when the components were $2,221,474.84 below a $828,870,912.65 liability, 99.732% coverage, and the adapter emitted bridge-itemized-backing-shortfall with effect degraded), 18.1240%/81.8760% at the 2026-10-30T10:40:40Z observation and 13.0811%/86.9189% at the reviewed 2026-10-30T19:10:33Z observation, so the weights are dated to the observation used and are not a stable allocation; both source keys and the very-low legacy risk tiers are unchanged. The Treasury category includes money-market funds comprised of T-bill ladders with less than three-month duration; it is not evidence of a hard maximum maturity for every instrument. The dashboard identifies Open USD, joinopenstandard.com, and the Tempo, Ethereum, Base and Solana deployments, and its attestation index lists only an August 2026 report for period 2026-08-31, which is not a same-period composition source. The second API slug open_usd is still frozen at its 2026-09-28T18:50:31Z observation ($40,008,735.98 liabilities, $40,008,737.98 reserves), its dashboard route returns 404, and it is absent from the documented ticker list; its contract identity remains unresolved and none of its balances are included here. These are issuer-published measurements, not an independent reserve examination.",
+    "compositionBasis": "Bridge ousd API cash and Treasury dollar amounts and the exact non-itemized remainder, divided by the reported $904,709,499.27 reserve-asset total; three-decimal percentage rounding",
     "compositionAsOf": "2026-10-30",
     "compositionSource": "live-adapter",
     "scope": "full-composition",
-    "knownUnknownExposure": "The two published categories itemize the issuer's whole allocation chart, and at the 2026-10-30T19:10:33Z observation they exceed the aggregate on-chain liability by $368.42 ($902,709,750.28 against $902,709,381.85664, 100.0000408%). The remaining $1,999,748.99 (0.2210%) of the $904,709,499.27 reported reserve assets is neither allocated to them nor named, and it matches the issuer's stated $2,000,117.41 overcollateralization within $368.42 of rounding. Bank allocations, specific Treasury/MMF holdings, fund identities, provider shares, the composition and obligor of the unitemized balance, and any repo or tokenized-instrument suballocation remain undisclosed. The eligible reserve envelope permits additional forms but does not establish that OUSD holds them. Cash banking-hour access and Treasury one-business-day redemption are provider statements, not independently measured exit capacity.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": []
+    "knownUnknownExposure": "The two published categories itemize the issuer's whole allocation chart, and at the 2026-10-30T19:10:33Z observation they exceed the aggregate on-chain liability by $368.42 ($902,709,750.28 against $902,709,381.85664, 100.0000408%). The remaining $1,999,748.99 (0.2210%) of the $904,709,499.27 reported reserve assets is neither allocated to them nor named, and it matches the issuer's stated $2,000,117.41 overcollateralization within $368.42 of rounding. Residual modeling reviewed 2026-11-15 (owner decision): that exact remainder is published as one unclassified residual row rather than normalized into the itemized line, and the adapter publishes it only inside the coin's declared 1% band, failing the attempt above it; the 2026-11-15T10:40:35Z capture reported a $2,000,114.99 remainder (0.2075%). Bank allocations, specific Treasury/MMF holdings, fund identities, provider shares, the composition and obligor of the unitemized balance, and any repo or tokenized-instrument suballocation remain undisclosed. The eligible reserve envelope permits additional forms but does not establish that OUSD holds them. Cash banking-hour access and Treasury one-business-day redemption are provider statements, not independently measured exit capacity.",
+    "knownUnknownExposurePct": 0.221,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unclassified reserve balance",
+        "pct": 0.221,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer reports these reserve assets above the itemized cash and Treasury lines but neither allocates nor names them; the amount matches its stated overcollateralization, and no instrument, custodian or obligor identity is published for it."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

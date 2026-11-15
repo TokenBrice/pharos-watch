@@ -43,8 +43,8 @@ import {
 /**
  * Stale-first registry refresh. Coin-cohort discovery revisits most footprints
  * weekly, so a retained CoinGecko-onchain row outlives its 24h volume reading
- * long before its coin is crawled again, and the Sugar-backed Aerodrome and
- * Velodrome Slipstream rows and factory-read Aero rows carry no 24h volume. This pass re-reads those
+ * long before its coin is crawled again, and the Sugar-backed Aerodrome
+ * Slipstream rows and factory-read Aero rows carry no 24h volume. This pass re-reads those
  * exact pools by address through CoinGecko's `/pools/multi` endpoint (same
  * provider, key, circuit and pacing as the discovery CG stage) and writes fresh
  * `cg_onchain` rows through the crawl's own admission policy and upsert path.

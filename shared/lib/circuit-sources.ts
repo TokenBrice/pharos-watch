@@ -61,7 +61,6 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   METEORA_API: { key: "meteora-api", scope: "source-wide" },
   PANCAKESWAP_API: { key: "pancakeswap-api", scope: "source-wide" },
   AERODROME_SLIPSTREAM_API: { key: "aerodrome-slipstream-api", scope: "source-wide" },
-  VELODROME_SLIPSTREAM_API: { key: "velodrome-slipstream-api", scope: "source-wide" },
   AERO_SLIPSTREAM_API: { key: "aero-slipstream-api", scope: "source-wide" },
   AERO_BASIC_API: { key: "aero-basic-api", scope: "source-wide" },
   UNISWAP_V3_BSC_SHADOW: { key: "uniswap-v3-bsc-shadow", scope: "source-wide" },
@@ -77,6 +76,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   JUSD_CITREA_BRIDGE: { key: "jusd-citrea-bridge", scope: "retired" },
   REDSTONE_PRICES: { key: "redstone-prices", scope: "retired" },
   USX_STABLE_POOLS: { key: "usx-stable-pools", scope: "retired" },
+  VELODROME_SLIPSTREAM_API: { key: "velodrome-slipstream-api", scope: "retired" },
 } as const satisfies Record<string, { key: string; scope: CircuitScope }>;
 
 export const CIRCUIT_SOURCE = Object.fromEntries(

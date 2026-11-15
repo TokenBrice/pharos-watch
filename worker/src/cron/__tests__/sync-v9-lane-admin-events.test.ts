@@ -62,6 +62,10 @@ function descriptor(subjectDeploymentKey = LANE, lookbackBlocks = 1_000): LaneSc
   return { subjectDeploymentKey, emitters: [EMITTER], lookbackBlocks, provenance: { controlIds: ["fixture-owner"] } };
 }
 
+function sync(db: D1Database, options: Parameters<typeof syncV9LaneAdminEvents>[3] = {}) {
+  return syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, { descriptors: [descriptor()], observedAtSec: NOW, ...options });
+}
+
 function certificate(
   lane: string,
   fromBlock: number,
@@ -273,7 +277,7 @@ describe("syncV9LaneAdminEvents", () => {
     mocks.screen.mockResolvedValue(admitted({
       ...certificate(LANE, 5_001, 10_000), screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     }));
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, { descriptors: [descriptor()], observedAtSec: NOW });
+    const result = await sync(db);
     expect(result.status).toBe("ok");
     expect(mocks.screen.mock.calls[0]![0]).toMatchObject({ fromBlock: 5_001, toBlock: 10_000 });
     expect(await certificateRows(db)).toBe(2);
@@ -288,9 +292,7 @@ describe("syncV9LaneAdminEvents", () => {
       vi.setSystemTime(deadlineMs);
       return null;
     });
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()], observedAtSec: NOW, deadlineMs,
-    });
+    const result = await sync(db, { deadlineMs });
     expect(JSON.parse(result.metadata!)).toMatchObject({
       deadlineExhausted: true, failed: 0, deferred: { deadline: 1 },
     });
@@ -326,9 +328,7 @@ describe("syncV9LaneAdminEvents", () => {
     });
     const lane = descriptor(LANE, 50_000);
     lane.emitters = [{ ...EMITTER, expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])) }];
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [lane], observedAtSec: NOW, deadlineMs, timeoutMs: 1_000,
-    });
+    const result = await sync(db, { descriptors: [lane], deadlineMs, timeoutMs: 1_000 });
     expect(Date.now()).toBeLessThan(deadlineMs);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       deadlineExhausted: true, deferred: { deadline: 1 },
@@ -341,9 +341,7 @@ describe("syncV9LaneAdminEvents", () => {
     // A deadline deferral must not impose the successful refresh hold or the
     // evidence-failure backoff on the next hosting slot.
     mocks.screen.mockResolvedValue(admitted(certificate(LANE, 1, 50_000)));
-    const resumed = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [lane], observedAtSec: NOW + 3,
-    });
+    const resumed = await sync(db, { descriptors: [lane], observedAtSec: NOW + 3 });
     expect(resumed.itemCount).toBe(1);
     expect(await certificateRows(db)).toBe(1);
     expect(await readAttempt(db)).toMatchObject({ outcome: "admitted", consecutiveFailures: 0 });
@@ -353,20 +351,14 @@ describe("syncV9LaneAdminEvents", () => {
     const { db } = fixtures.open();
     mocks.screen.mockResolvedValue(admitted(certificate(LANE, 9_001, 10_000)));
 
-    const first = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW,
-    });
+    const first = await sync(db);
     expect(first.status).toBe("ok");
     expect(first.itemCount).toBe(1);
     expect(await certificateRows(db)).toBe(1);
     expect(await readAttempt(db)).toMatchObject({ outcome: "admitted", fromBlock: 9_001, toBlock: 10_000 });
     expect(mocks.screen).toHaveBeenCalledTimes(1);
 
-    const second = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW,
-    });
+    const second = await sync(db);
     expect(second.status).toBe("skipped_neutral");
     expect(JSON.parse(second.metadata!).reason).toBe("no-due-lanes");
     expect(mocks.screen).toHaveBeenCalledTimes(1);
@@ -377,10 +369,7 @@ describe("syncV9LaneAdminEvents", () => {
     const { db } = fixtures.open();
     mocks.screen.mockResolvedValue(admitted(certificate(LANE, 9_001, 10_000)));
 
-    await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW,
-    });
+    await sync(db);
 
     expect(mocks.screen).toHaveBeenCalledWith(
       expect.objectContaining({ fromBlock: 9_001, toBlock: 10_000 }),
@@ -392,16 +381,16 @@ describe("syncV9LaneAdminEvents", () => {
       toBlock: 10_000,
       consecutiveFailures: 0,
     });
+    // A cross-chain emitter is screened by its own chain's lane, never by this one.
+    await sync(db, { descriptors: [{ ...descriptor("ethereum:0xbb"), emitters: [EMITTER, { ...EMITTER, address: "0x22", chain: "base" }] }] });
+    expect(mocks.screen.mock.lastCall![0].emitters).toEqual([EMITTER]);
   });
 
   it("records a failure with its machine reason and never writes a certificate", async () => {
     const { db } = fixtures.open();
     mocks.screen.mockResolvedValue(failed(LANE, "pruned-range"));
 
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW,
-    });
+    const result = await sync(db);
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata!)).toMatchObject({
@@ -417,10 +406,7 @@ describe("syncV9LaneAdminEvents", () => {
       consecutiveFailures: 1,
     });
 
-    await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW + 60,
-    });
+    await sync(db, { observedAtSec: NOW + 60 });
     expect(mocks.screen).toHaveBeenCalledTimes(1);
   });
 
@@ -430,11 +416,7 @@ describe("syncV9LaneAdminEvents", () => {
     mocks.screen.mockImplementation(async (target: { subjectDeploymentKey: string }) =>
       admitted(certificate(target.subjectDeploymentKey, 9_001, 10_000)));
 
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: lanes.map(lane => descriptor(lane)),
-      observedAtSec: NOW,
-      maxLanesPerInvocation: 2,
-    });
+    const result = await sync(db, { descriptors: lanes.map(lane => descriptor(lane)), maxLanesPerInvocation: 2 });
     expect(result.itemCount).toBe(2);
     expect(mocks.screen).toHaveBeenCalledTimes(2);
     expect(await certificateRows(db)).toBe(2);
@@ -443,10 +425,7 @@ describe("syncV9LaneAdminEvents", () => {
 
   it("skips every non-EVM lane before an RPC or a certificate write", async () => {
     const { db } = fixtures.open();
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor("tron:0xaa")],
-      observedAtSec: NOW,
-    });
+    const result = await sync(db, { descriptors: [descriptor("tron:0xaa")] });
     expect(result.status).toBe("skipped_neutral");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       reason: "no-due-lanes",
@@ -462,10 +441,7 @@ describe("syncV9LaneAdminEvents", () => {
     const { db } = fixtures.open();
     mocks.head.mockResolvedValue(null);
 
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [descriptor()],
-      observedAtSec: NOW,
-    });
+    const result = await sync(db);
     expect(result.status).toBe("degraded");
     expect(mocks.screen).not.toHaveBeenCalled();
     expect(await readAttempt(db)).toMatchObject({

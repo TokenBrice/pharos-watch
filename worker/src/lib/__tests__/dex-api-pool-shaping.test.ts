@@ -84,11 +84,6 @@ describe("isPreferredDirectApiPool", () => {
       volume24hUsd: 0,
     }))).toBe(true);
 
-    expect(isPreferredDirectApiPool(makeDirectPool({
-      source: "velodrome-slipstream",
-      tvlUsd: 150_000_000,
-      volume24hUsd: 0,
-    }))).toBe(true);
     for (const source of ["aero-slipstream", "aero-basic"] as const) {
       expect(isPreferredDirectApiPool(makeDirectPool({ source, tvlUsd: 150_000_000, volume24hUsd: null }))).toBe(true);
     }

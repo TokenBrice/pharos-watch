@@ -22,7 +22,12 @@ import {
 import type { LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 import { buildChainAddressKey } from "./token-resolution";
-export { buildPoolFingerprint, getGtDexQuality, normalizeProtocol } from "./pool-normalization";
+export {
+  buildPoolFingerprint,
+  getGtDexQuality,
+  normalizeProtocol,
+  resolveCensusProtocol,
+} from "./pool-normalization";
 
 /**
  * Pool Quality scoring thresholds (methodology v5.0+).

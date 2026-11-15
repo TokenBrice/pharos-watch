@@ -104,7 +104,7 @@ describe("refreshStaleRegistryPools", () => {
       { poolId: `base:${b(3)}`, chain: "base", source: "direct_api", poolType: "aerodrome-volatile", tvlUsd: 40_000_000, refreshedAt: NOW - HOUR },
       { poolId: `optimism:${b(4)}`, chain: "optimism", source: "direct_api", poolType: "velodrome-slipstream-5bp", tvlUsd: 3_000_000, refreshedAt: NOW - HOUR },
     ]);
-    const chainByNetwork: Record<string, keyof typeof USDC> = { eth: "ethereum", base: "base", optimism: "optimism" };
+    const chainByNetwork: Record<string, keyof typeof USDC> = { eth: "ethereum", base: "base" };
     const deps = makeDeps(async (network, addresses) => ({
       transportOk: true,
       schemaDegraded: false,
@@ -118,21 +118,20 @@ describe("refreshStaleRegistryPools", () => {
     expect(deps.fetchCgPoolsByAddressesWithStatus.mock.calls.map(([network, addresses]) => [network, addresses])).toEqual([
       ["base", [b(1)]],
       ["eth", [p(1), p(3), p(2)]],
-      ["optimism", [b(4)]],
     ]);
     expect(summary).toMatchObject({
-      outcome: "completed", poolsDue: 5, poolsSelected: 5, requests: 3, refreshed: 5, failed: 0, deferred: 0,
+      outcome: "completed", poolsDue: 4, poolsSelected: 4, requests: 2, refreshed: 4, failed: 0, deferred: 0,
       stalePoolsRemaining: 0, staleTvlRemaining: 0,
     });
     const rows = registryRows(sqlite);
     expect(rows).toEqual(expect.arrayContaining([
       { pool_id: `base:${b(1)}`, source: "cg_onchain", tvl_usd: 2_000_000, volume_24h: 750_000, refreshed_at: NOW },
-      { pool_id: `optimism:${b(4)}`, source: "cg_onchain", tvl_usd: 2_000_000, volume_24h: 750_000, refreshed_at: NOW },
       { pool_id: `ethereum:${p(3)}`, source: "cg_onchain", tvl_usd: 2_000_000, volume_24h: 750_000, refreshed_at: NOW },
       { pool_id: `ethereum:${p(4)}`, source: "cg_onchain", tvl_usd: 90_000_000, volume_24h: 1_000, refreshed_at: NOW - 2 * HOUR },
       { pool_id: `ethereum:${p(5)}`, source: "cg_onchain", tvl_usd: 99_000_000, volume_24h: 1_000, refreshed_at: NOW - 15 * 24 * HOUR },
     ]));
     expect(rows).not.toContainEqual(expect.objectContaining({ pool_id: `base:${b(3)}`, source: "cg_onchain" }));
+    expect(rows).not.toContainEqual(expect.objectContaining({ pool_id: `optimism:${b(4)}`, source: "cg_onchain" }));
   });
 
   it("refreshes direct Aero rows on CoinGecko networks and leaves Arc unsupported", async () => {

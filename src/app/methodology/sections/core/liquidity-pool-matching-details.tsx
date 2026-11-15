@@ -9,9 +9,10 @@ export function LiquidityPoolMatchingDetails() {
       <div className="space-y-3">
         <p>
           Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome
-          Slipstream, Velodrome Slipstream, and Aero Slipstream and basic pools) are treated as primary-grade inputs and
+          Slipstream, and Aero Slipstream and basic pools) are treated as primary-grade inputs and
           enter scoring before staged or
-          fallback discovery sources are merged.
+          fallback discovery sources are merged. Optimism Velodrome Slipstream&apos;s direct reader was retired in
+          Liquidity v7.3; its surviving CoinGecko Onchain and GeckoTerminal pools keep the venue&apos;s tiers.
         </p>
         <p>
           Discovery coverage is less page-fragile now: CoinGecko Onchain and GeckoTerminal token crawls read multiple
@@ -42,7 +43,7 @@ export function LiquidityPoolMatchingDetails() {
         </p>
         <p>
           Direct-source precedence is also measurement-aware. A protocol-native pool normally replaces an overlapping
-          DeFiLlama row only when it carries a positive measured 24h volume reading; Aerodrome, Velodrome and Aero
+          DeFiLlama row only when it carries a positive measured 24h volume reading; Aerodrome and Aero
           pools, whose on-chain pool-state rows publish no trailing volume, and pools whose tokens carry a reviewed
           price dependency are explicit exceptions that take precedence without volume. When several registry lanes
           observed the same pool, the reading that counts is the most trusted lane refreshed within 24 hours, else the
@@ -55,7 +56,7 @@ export function LiquidityPoolMatchingDetails() {
         <p>
           Discovery rows also need authoritative confirmation when they claim a protocol family that already has a clean
           protocol-native fetch on that chain. In practice, GT/CG/DS staging cannot invent new Balancer, Fluid, Raydium,
-          Orca, Meteora, PancakeSwap, Aerodrome, or Velodrome pools after the native source succeeded; if that native
+          Orca, Meteora, PancakeSwap, or Aerodrome pools after the native source succeeded; if that native
           fetch is degraded or unavailable, the scorer fails open and still allows staged recovery rows through.
         </p>
         <p>
@@ -68,8 +69,8 @@ export function LiquidityPoolMatchingDetails() {
           Slipstream integrations now contribute measured balances and fee detail instead of neutral placeholders.
           Balancer weighted pools are normalized against target token weights before the balance ratio is computed. Fluid
           reads reserves and fee detail from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon,
-          while Aerodrome and Velodrome Slipstream read pool state from the on-chain Sugar view contracts on Base and
-          Optimism. Aero, which publishes no Sugar view, is enumerated straight from its factories on Base, Ethereum,
+          while Aerodrome Slipstream reads pool state from the on-chain Sugar view contract on Base. Aero, which
+          publishes no Sugar view, is enumerated straight from its factories on Base, Ethereum,
           OP Mainnet, Arbitrum, Robinhood Chain, and Arc; each pool must prove factory membership at one pinned block,
           and stable-curve pools are admitted only when both tokens are independently priced.
           Curve requires complete USD-valued balances and Fluid both reserve halves. Incomplete evidence remains

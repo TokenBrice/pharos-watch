@@ -122,6 +122,8 @@ export interface LaneEmitter {
   address: `0x${string}`;
   expectedRuntimeCodeSha256: string;
   families: readonly V9LaneAdminEventFamily[];
+  /** Set only for a governed contract on another EVM chain, which that chain's lane screens. */
+  chain?: string;
 }
 
 export interface LaneScreeningDescriptor {
@@ -196,6 +198,7 @@ export interface LaneEmitterDescriptorsArtifact {
     lanesNonEvm: number;
     controls: {
       bridge: { total: number; withoutController: number };
+      routeOnly: { total: number; withoutController: number };
       mint: { total: number; withoutController: number };
       routeRefs: { total: number; nonEvm: number; malformed: number };
     };
@@ -467,7 +470,10 @@ function admitInventoryLane(input: {
 
   const emitters: LaneEmitter[] = [];
   for (const emitter of record.emitters) {
-    if (emitter.chain !== subjectChain) {
+    // The route deployment is the subject; a governed contract on another EVM
+    // chain may still emit a contributor's admin events (UTY's Base adapter).
+    const crossChain = emitter.chain !== subjectChain;
+    if (crossChain && (emitter.role !== "governed-contract" || evmChain(emitter.chain) === null)) {
       reasons.add("invalid-inventory-lane");
       continue;
     }
@@ -497,9 +503,12 @@ function admitInventoryLane(input: {
       address: emitter.address,
       expectedRuntimeCodeSha256: parsedDecodedRuntimeIdentity(emitter.runtimeIdentity)!,
       families: screened,
+      ...(crossChain ? { chain: emitter.chain } : {}),
     });
   }
-  if (new Set(emitterAddresses).size !== emitterAddresses.length) reasons.add("invalid-inventory-lane");
+  // ponytail: contributors name emitters by address, so one address per lane across chains.
+  if (new Set(emitterAddresses).size !== emitterAddresses.length ||
+      !record.emitters.some((emitter) => emitter.chain === subjectChain)) reasons.add("invalid-inventory-lane");
 
   const lookbackBlocks = inventory.lookbackBlocksByChain[subjectChain] ?? null;
   if (lookbackBlocks === null || lookbackBlocks < LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS) {
@@ -591,24 +600,28 @@ function admitInventoryLane(input: {
  * admin event would let a clean certificate assert absence for an unscreened
  * surface, so those lanes are listed as `no-reviewed-emitter` with the exact
  * missing pieces. Lanes with no inventory record are listed too, so the catalog
- * states the whole reviewed universe.
+ * states the whole reviewed universe; route-only (`*`) lanes are counted instead
+ * until inventoried.
  */
 export function deriveLaneEmitterDescriptors(input: LaneEmitterInputs): LaneEmitterDescriptorsArtifact {
   const lanes = new Map<string, LaneAccumulator>();
   const summaryControls = {
     bridge: { total: 0, withoutController: 0 },
+    routeOnly: { total: 0, withoutController: 0 },
     mint: { total: 0, withoutController: 0 },
     routeRefs: { total: 0, nonEvm: 0, malformed: 0 },
   };
   const nonEvmLaneKeys = new Set<string>();
+  const inventorySubjects = new Set(input.inventory.lanes.map((lane) => lane.subjectDeploymentKey));
 
   for (const record of input.records) {
     const isBridge = record.recordKind === "bridge-control";
-    summaryControls[isBridge ? "bridge" : "mint"].total += 1;
-    if (record.controllerChain === null || record.controllerAddress === null) {
-      summaryControls[isBridge ? "bridge" : "mint"].withoutController += 1;
-    }
+    const counter = summaryControls[!isBridge ? "mint" : record.controlId === "*" ? "routeOnly" : "bridge"];
+    counter.total += 1;
+    if (record.controllerChain === null || record.controllerAddress === null) counter.withoutController += 1;
     if (!isBridge) continue;
+    // ponytail: a route-only lane is listed only once inventoried (counted either way); listing all ~440 adds ~70 KB to the Worker-bundled catalog.
+    if (record.controlId === "*" && !record.routeRefs.some((ref) => inventorySubjects.has(normalizeDeploymentId(ref)))) continue;
     for (const routeRef of record.routeRefs) {
       summaryControls.routeRefs.total += 1;
       const normalizedChain = routeRef.includes(":") ? routeRef.slice(0, routeRef.indexOf(":")).trim().toLowerCase() : "";
@@ -700,6 +713,8 @@ export function deriveLaneEmitterDescriptors(input: LaneEmitterInputs): LaneEmit
       notes: [
         "subjectDeploymentKey is the reviewed bridge route id, because IR-1c closure compares certificate.subjectDeploymentKey with the compiled bridge control's deploymentKey; a controller is an emitter, never the lane.",
         "Emitters are the contracts that emit the lane's admin events: the route deployment plus every contributor's governed contract. Holder Safes and EOAs are not emitters. Each contributor is mapped to at least one emitter in the inventory and in each descriptor's provenance.",
+        "A governed contract on another EVM chain is a cross-chain emitter: it carries `chain`, stays out of this lane's screening set and certificate, and closes only when every reviewed lane on that chain that screens it under the same pin holds a clean, current admitted certificate. The route deployment stays on the subject chain, and one address appears once per lane.",
+        "A non-native route that no authored control names compiles one route-level fact without authored ids, so its lane contributor is the wildcard `*`. `summary.controls.routeOnly` counts every such route; its lane is listed once it has an inventory record.",
         "A lane is admitted only when every reviewed contributor is mapped and every emitter's reviewed ABI admin events are in the frozen vocabulary. Declared families are exactly those events, so a family is never screened on a contract that cannot emit it and an uncovered admin surface can never yield a clean certificate (R1/R2). Lanes that fail carry a machine reason and the exact uncovered events.",
         "Runtime pins are sha256 of decoded runtime bytes read with eth_getCode at the recorded pinned block. Proxy addresses are the emitters because their implementation's logs are emitted at the proxy; the reviewed ABI is the implementation ABI.",
         "Cross-chain ABI reuse is explicit: `same-runtime-code` requires identical proxy and implementation runtime hashes, `same-verified-type` requires the same verified contract type and byte length with chain-specific immutables, and `verified-source` names a verification on the emitter's own chain.",
@@ -744,9 +759,24 @@ export function loadLaneControlRecords(root: string): LaneEmitterInputs {
       if (!isRecord(sidecar)) continue;
       const assetId = stringField(sidecar, "id") ?? file.slice(0, -".json".length);
       const profile = sidecar[source.profileField];
-      if (!isRecord(profile) || !Array.isArray(profile.controls)) continue;
+      if (!isRecord(profile)) continue;
+      const controls: unknown[] = Array.isArray(profile.controls) ? profile.controls : [];
+      const controlledRoutes = new Set(controls.flatMap((control) =>
+        isRecord(control) && Array.isArray(control.routeRefs) ? control.routeRefs.map(String).map(normalizeDeploymentId) : []));
+      // A non-native route no authored control names compiles one route-level fact
+      // without authored ids (thBILL); its lane contributor is the wildcard.
+      for (const route of source.recordKind === "bridge-control" && Array.isArray(profile.routes) ? profile.routes : []) {
+        const routeId = isRecord(route) ? stringField(route, "id") : null;
+        if (routeId === null || !isRecord(route) || route.routeClass === "native" || route.issuanceModel === "native-issuance" ||
+            controlledRoutes.has(normalizeDeploymentId(routeId))) continue;
+        records.push({
+          recordKind: "bridge-control", assetId, controlId: "*", routeRefs: [routeId],
+          controllerChain: stringField(route, "controllerChain"), controllerAddress: stringField(route, "controllerAddress"),
+          runtimeIdentity: null,
+        });
+      }
 
-      for (const control of profile.controls) {
+      for (const control of controls) {
         if (!isRecord(control)) continue;
         const scope = isRecord(control.executionScope)
           ? control.executionScope

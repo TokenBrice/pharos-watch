@@ -37,6 +37,22 @@ export function normalizeProtocol(project: string): string {
   return project;
 }
 
+/**
+ * Fallback DEX ids that belong to a protocol's exhaustive direct-API census but
+ * keep their own scoring vocabulary. Beets is Balancer's front end on Sonic,
+ * Optimism and Base: the Balancer census reads its pools by address, so a staged
+ * Beets row is confirmed or vetoed there even though `normalizeProtocol` keeps
+ * "beets-…" as its own protocol label (and its own quality multiplier).
+ */
+const CENSUS_PROTOCOL_ALIAS_PREFIXES: readonly (readonly [string, string])[] = [["beets", "balancer"]];
+
+/** The protocol whose exhaustive census confirms a staged row's exact pool id. */
+export function resolveCensusProtocol(protocol: string): string {
+  const id = protocol.toLowerCase();
+  const alias = CENSUS_PROTOCOL_ALIAS_PREFIXES.find(([prefix]) => id.startsWith(prefix));
+  return alias ? alias[1] : protocol;
+}
+
 /** Candidate token-pair metadata for unique joins; never an exact aggregate key. */
 export function buildPoolFingerprint(chain: string, protocol: string, tokenAddresses: string[]): string | null {
   if (tokenAddresses.length < 2) return null;

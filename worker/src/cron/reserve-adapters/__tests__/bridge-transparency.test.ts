@@ -327,45 +327,40 @@ describe("fetchBridgeTransparencyReserves", () => {
     expectWarnings(result, []);
   });
 
-  it("reports Open USD's unitemized reserve surplus as info when components match liabilities", async () => {
+  it("publishes Open USD's non-itemized remainder as one unclassified residual slice", async () => {
     const { result, network } = await runAdapter("bridge-transparency", "ousd-open-standard", {
       network: { json: { [OUSD_ENDPOINT]: OUSD_PAYLOAD } },
       nowSec: CASH_NOW_SEC,
     });
 
     expect(network.requests.map((request) => request.url)).toEqual([OUSD_ENDPOINT]);
-    expect(result.slices).toHaveLength(2);
+    expect(result.slices).toHaveLength(3);
     expect(result.slices).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        sourceKey: "bridge-transparency:cash",
-        name: "Cash",
-        pct: expect.closeTo(12.072651089840452, 8),
-        risk: "very-low",
-        assetClass: "cash",
-      }),
-      expect.objectContaining({
-        sourceKey: "bridge-transparency:treasury",
-        name: "Treasury",
-        pct: expect.closeTo(87.92734891015954, 8),
-        risk: "very-low",
-        assetClass: "treasury-bill",
-      }),
+      expect.objectContaining({ sourceKey: "bridge-transparency:cash", name: "Cash", pct: expect.closeTo(12.039647678645897, 8), risk: "very-low", assetClass: "cash" }),
+      expect.objectContaining({ sourceKey: "bridge-transparency:treasury", name: "Treasury", pct: expect.closeTo(87.6869789674076, 8), risk: "very-low", assetClass: "treasury-bill" }),
+      expect.objectContaining({ sourceKey: "bridge-transparency:unclassified-residual", pct: expect.closeTo(0.273373353946496, 8), risk: "high", assetClass: "other", unclassifiedResidual: true, residualReason: "insufficient-evidence" }),
     ]));
+    expect(result.slices.reduce((sum, s) => sum + s.pct, 0)).toBeCloseTo(100, 9);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: 731_642_261.81,
       supplyUsd: 729_642_146.82,
       collateralizationRatio: expect.closeTo(731_642_261.81 / 729_642_146.82, 9),
       sourceTimestamp: Math.floor(Date.parse("2026-10-07T20:40:34Z") / 1000),
+      unknownExposurePct: expect.closeTo(0.273373353946496, 8),
       details: {
         slug: "ousd",
         componentSumUsd: expect.closeTo(729_642_146.82, 4),
         driftVsReservesUsd: expect.closeTo(-2_000_114.99, 4),
         driftVsLiabilitiesUsd: expect.closeTo(0, 4),
+        unattributedBackingUsd: expect.closeTo(2_000_114.99, 4),
       },
     });
     expectWarnings(result, ["bridge-unitemized-reserve-surplus"]);
     expect(result.warnings?.[0]).toMatchObject({ effect: "info" });
     expect(result.warnings?.[0]?.message).toContain("signed $2000114.99 residual");
+    // Above the declared band the same remainder fails the attempt instead of clamping.
+    expect(() => adaptBridgeTransparency({ ...OUSD_PAYLOAD, total_reserve_amount: "1459284293.64" }, "ousd", { maxUnattributedResidualShare: 0.01 }))
+      .toThrow("above the declared 1.0000% band");
   });
 
   it("measures CASH's single combined Treasury/MMF bucket without inventing instrument weights", async () => {

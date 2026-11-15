@@ -518,7 +518,7 @@ function assertPreviousReaderSource() {
     semantic: policy.semantic,
     reasonCodes: policy.reasonRegistry.filter(reason => reason.defaultTreatment !== "diagnostic").map(reason => reason.code),
   }));
-  if (hash.digest("hex") !== "70aed9eff8725101d518c1768ce91ec18a88ef0429088e170a0362f9324fe755") throw new Error("Pre-dust reader source/refinement inputs changed");
+  if (hash.digest("hex") !== "9f7187d133a46f01d54478ce18655740754ba5ab2e7756b9b39571313ca83c6c") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
