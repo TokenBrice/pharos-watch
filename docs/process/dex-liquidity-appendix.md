@@ -140,7 +140,7 @@ Meteora's successful bounded head reports partial pagination with its next page,
 | Provider evidence | Authority |
 | --- | --- |
 | Exhaustive clean same-run raw census | Can veto staged absence only for its covered family/chain. Missing declaration, empty identity set, malformed identity, bounded sample or incomplete/degraded chain withdraws veto (all chains if identity chain is unknown). Raw physical census keys are captured before normalization or tracked-token/economic filtering, so compaction cannot erase confirmation keys. Target-only shadow pools remain separate from scoring pools. |
-| Balancer / Raydium | Successful exhaustive captures retain veto. Balancer API `address`, not vault ID, is physical identity. Raydium unreadable TVL cannot imply a below-floor stop; malformed optional pool metadata falls back to ordinary AMM shape. |
+| Balancer / Raydium | Successful exhaustive captures retain veto. Balancer API `address`, not vault ID, is physical identity. Beets DEX ids resolve to this census (`resolveCensusProtocol`), so an empty pool whose indexer reserve stays positive is never confirmed. Raydium unreadable TVL cannot imply a below-floor stop; malformed optional pool metadata falls back to ordinary AMM shape. |
 | Orca | Requires absent stored tail or tail equal to refreshed head, contiguous actual exhaustion, no cap/degradation. Resumed-tail completion proves progress, not absence in skipped pages. Damaged identities also withhold cursor acknowledgement. |
 | Pancake / Meteora / Fluid / Slipstream / BSC recovery | No veto. Pancake remains a bounded rotating sample even on cycle completion. Below-$10K staged pools need no direct confirmation. Exact/derived/wildcard dedupe still applies. |
 

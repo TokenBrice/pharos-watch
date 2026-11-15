@@ -19,7 +19,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { buildCgTickerPriceObservations } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
-import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
+import { getGtDexQuality, normalizeProtocol, parsePoolSymbols, resolveCensusProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type {
   CgNewPool,
@@ -685,6 +685,10 @@ export async function mergeStagedPools(
     const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
     let priceEligible = view.price != null;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
+    // A fallback DEX id that only fronts another protocol still has to be
+    // confirmed by that protocol's census (Beets → Balancer): its own reserve
+    // reading is an indexer value, so an empty pool can still report TVL.
+    const censusProtocol = resolveCensusProtocol(normalizedProtocol);
     // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
     // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
     const firstColonIndex = stagedPool.poolId.indexOf(":");
@@ -738,14 +742,14 @@ export async function mergeStagedPools(
     if (
       requiresAuthoritativeProtocolConfirmation(
         authoritativeConfirmation,
-        normalizedProtocol,
+        censusProtocol,
         stagedPool.chain,
         poolType,
         dexId,
         stagedPool.tvlUsd,
       )
     ) {
-      const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);
+      const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(censusProtocol);
       if (!identity.exactPoolKey || !confirmedExactKeys?.has(identity.exactPoolKey)) {
         skippedCount++;
         authoritativeProtocolSkipped++;
