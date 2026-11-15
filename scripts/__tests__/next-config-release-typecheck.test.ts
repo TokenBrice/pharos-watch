@@ -153,6 +153,11 @@ afterEach(() => {
 });
 
 describe("release Next.js typecheck handoff", () => {
+  it.each([undefined, "false", "true"])("inlines the session flag with a default-off value (%s)", (flag) => {
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", flag);
+    expect(createNextConfig("phase-production-build").env?.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK).toBe(flag ?? "false");
+  });
+
   it("keeps Next build typechecking enabled by default", () => {
     vi.stubEnv("PHAROS_RELEASE_PR_TYPECHECKED", "");
 

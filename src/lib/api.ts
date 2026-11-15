@@ -18,9 +18,8 @@ import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summar
 import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import { requestResponse } from "@/lib/request";
 import { claimDataBootstrap } from "@/lib/data-bootstrap";
-import { isSiteSessionCheckEnabled } from "@/lib/feature-flags";
-import { hasValidSiteSession, invalidateSiteSession, waitForSiteSession } from "@/lib/site-session-client";
-import { SITE_SESSION_HINT_HEADER } from "@shared/lib/site-session-token";
+import { getSiteSessionGate, SITE_SESSION_CHECK_ENABLED } from "@/lib/site-session-gate";
+import { SITE_SESSION_HINT_HEADER } from "@shared/lib/site-session-constants";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
@@ -82,7 +81,7 @@ function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): numb
 }
 
 function needsSiteSession(url: string): boolean {
-  if (!isSiteSessionCheckEnabled() || typeof window === "undefined") return false;
+  if (!SITE_SESSION_CHECK_ENABLED || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || typeof window === "undefined") return false;
   const resolved = new URL(url, window.location.origin);
   return resolved.origin === window.location.origin && resolved.pathname.startsWith("/_site-data/");
 }
@@ -100,7 +99,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const requestInit = withPublicApiAcceptMarker(path, init);
   const url = buildRequestUrl(path, requestInit);
-  if (needsSiteSession(url)) {
+  if (process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && needsSiteSession(url)) {
+    const { hasValidSiteSession, invalidateSiteSession, waitForSiteSession } =
+      getSiteSessionGate() ?? await import("@/lib/site-session-client");
     const signal = options?.signal ?? requestInit?.signal;
     if (!hasValidSiteSession()) await waitForSiteSession(signal);
     const requestOptions = {
@@ -290,7 +291,9 @@ async function readApiJson(
     : undefined;
   if (adopted) {
     const body = await adopted;
-    if (needsSiteSession(buildRequestUrl(path, requestInit)) && sessionRequired(body.status, new Headers(body.headers))) {
+    if (process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
+      && needsSiteSession(buildRequestUrl(path, requestInit)) && sessionRequired(body.status, new Headers(body.headers))) {
+      const { invalidateSiteSession } = getSiteSessionGate() ?? await import("@/lib/site-session-client");
       invalidateSiteSession();
       return readApiJson(path, init, { ...options, bootstrapQueryKey: undefined }, nullOn404);
     }

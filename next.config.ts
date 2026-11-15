@@ -167,17 +167,22 @@ function devAllowedOrigins() {
 }
 
 export default function createNextConfig(phase: string): NextConfig {
+  const config: NextConfig = {
+    ...baseConfig,
+    ...releaseTypeScriptConfig(),
+    // Next leaves unset public vars uninlined; give dead-code elimination a literal off value.
+    env: { NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK: process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK ?? "false" },
+  };
   // The /api proxy is only useful in `next dev`.
   // Static exports rely on Cloudflare Pages `_redirects`, and leaving rewrites
   // enabled at build time triggers a noisy export warning from Next.js.
   if (phase === PHASE_DEVELOPMENT_SERVER) {
     return {
-      ...baseConfig,
-      ...releaseTypeScriptConfig(),
+      ...config,
       allowedDevOrigins: devAllowedOrigins(),
       rewrites: devRewrites,
     };
   }
 
-  return { ...baseConfig, ...releaseTypeScriptConfig() };
+  return config;
 }

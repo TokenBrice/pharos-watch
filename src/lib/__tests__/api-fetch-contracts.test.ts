@@ -731,7 +731,9 @@ describe("browser session gate", () => {
       location: { hostname: "pharos.watch", origin: "https://pharos.watch", pathname: "/" },
       localStorage: storage,
     });
-    return { api: await import("../api"), session: await import("../site-session-client"), storage };
+    const api = await import("../api");
+    expect((await import("../site-session-gate")).getSiteSessionGate()).toBeNull();
+    return { api, session: await import("../site-session-client"), storage };
   }
   const sessionResponse = () => new Response(null, {
     status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200) },
@@ -747,6 +749,20 @@ describe("browser session gate", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(fetchSpy.mock.calls[0]?.[0]).toBe("/_site-data/stablecoins");
     expect(challenge).not.toHaveBeenCalled();
+  });
+
+  it("loads the manager when a request arrives before the widget", async () => {
+    await setup();
+    vi.resetModules();
+    const api = await import("../api");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+      url === "/_site-data/session" ? sessionResponse() : jsonResponse({ ok: true }));
+    const pending = api.apiFetch("/api/stablecoins");
+    const session = await import("../site-session-client");
+    session.registerSiteSessionChallenge(async () => "token");
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(session.hasValidSiteSession()).toBe(true);
   });
 
   it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skewSec) => {

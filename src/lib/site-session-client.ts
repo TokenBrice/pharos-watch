@@ -1,5 +1,6 @@
+import { setSiteSessionGate } from "@/lib/site-session-gate";
 import { isSiteSessionCheckEnabled } from "@/lib/feature-flags";
-import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_CLOCK_LEEWAY_SEC, SITE_SESSION_EXPIRES_HEADER } from "@shared/lib/site-session-token";
+import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_CLOCK_LEEWAY_SEC, SITE_SESSION_EXPIRES_HEADER } from "@shared/lib/site-session-constants";
 
 type SessionState = "ready" | "pending" | "unavailable";
 type Challenge = (signal: AbortSignal) => Promise<string>;
@@ -140,3 +141,5 @@ export function renewSiteSessionIfNeeded(): void {
   if (!valid || expiry - Date.now() / 1000 < RENEW_WINDOW_SEC) void ensureSession(valid).catch(() => {});
   else if (state !== "ready") publish("ready");
 }
+
+setSiteSessionGate({ hasValidSiteSession, invalidateSiteSession, waitForSiteSession });

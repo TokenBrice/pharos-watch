@@ -9,7 +9,6 @@ import { isSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { SourceNavigationProvider } from "@/components/back-to-source";
 import { isEditorialPath } from "@/lib/editorial-routes";
 import { discardDataBootstrap } from "@/lib/data-bootstrap";
-import { SiteSession } from "@/components/site-session";
 
 /**
  * Custom event broadcast when the user presses a numeric key (1-9) to sort
@@ -30,6 +29,10 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
   },
 };
 
+
+const SiteSession = process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
+  ? lazy(() => import("./site-session").then((mod) => ({ default: mod.SiteSession })))
+  : null;
 
 const CommandPalette = lazy(() =>
   import("./command-palette/command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
@@ -193,7 +196,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SourceNavigationProvider>
           <GlobalSearchProvider>
-            <SiteSession />
+            {SiteSession && process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && (
+              <Suspense fallback={null}>
+                <SiteSession />
+              </Suspense>
+            )}
             {children}
             <Suspense fallback={null}>
               <RouteProviders />

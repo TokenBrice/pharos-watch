@@ -8,7 +8,9 @@ To disable a default-on flag locally, set that flag to the literal string `false
 
 To enable in prod: set the env var as a GitHub repository Variable. The Pages build runs in GitHub Actions, so Cloudflare Pages dashboard variables are runtime-only for this app and are not inlined into the static bundle.
 
-Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name. Their names are declared with empty values in the generated `.env.example` from `shared/lib/env-contract/registry.ts`; no `.env` value or `next.config.*` entry sets a default.
+Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name. Their names are declared with empty values in the generated `.env.example` from `shared/lib/env-contract/registry.ts`; no `.env` value sets a default. Next config supplies an explicit `"false"` build value for an unset session flag so the bundler can eliminate its disabled branches.
+
+The site-session widget and request manager load through flag-guarded dynamic imports. With the flag off, the eager API bridge has no session-manager, notice UI, query recovery, or token-crypto dependency; shared session constants live separately from the signing helper.
 
 ## Flags
 
