@@ -1301,6 +1301,21 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
     }
   }
 
+  // Known anchors bracket the target; interpolation converges on a fast-block
+  // chain's boundary in a few probes before the exact binary search below. Each
+  // probe only narrows the bracket, never decides it.
+  for (let step = 0; step < 6 && low > 0 && high > low + 1; step++) {
+    const lowTimestamp = cache.blockTimestampByNumber.get(low);
+    const highTimestamp = cache.blockTimestampByNumber.get(high);
+    if (lowTimestamp == null || highTimestamp == null || highTimestamp <= lowTimestamp) break;
+    const ratio = (targetTimestamp - lowTimestamp) / (highTimestamp - lowTimestamp);
+    const guess = Math.min(high - 1, Math.max(low + 1, low + Math.floor(ratio * (high - low))));
+    const timestamp = await getTimestamp(guess);
+    if (timestamp == null) return null;
+    if (timestamp <= targetTimestamp) low = guess;
+    else high = guess;
+  }
+
   // A scoring clock captured immediately before this lookup is commonly only
   // seconds behind the chain tip. Starting an unbounded binary search at block
   // zero makes the first probe deep history, which non-archive public RPCs may

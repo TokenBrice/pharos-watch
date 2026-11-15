@@ -6,7 +6,7 @@ import { mintBurnConfigKey } from "../mint-burn-contract-identity";
 import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { reconcileMintBurnSupplyReceipt, readMintBurnSupplyReconciliation, runMintBurnSupplyReconciliation } from "../mint-burn-supply-reconciliation";
-import { fetchEvmUint256AtBlock, fetchEvmBlockHeader } from "../evm-rpc";
+import { fetchEvmUint256AtBlock, fetchEvmBlockHeader, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 
 const day = 86_400;
 const start = Date.parse("2026-11-07T00:00:00Z") / 1000;
@@ -20,6 +20,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 beforeEach(() => vi.clearAllMocks());
 const config = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usds-sky")!;
+const chains = [config, MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usdai-usd-ai")!];
 const row = (amount_raw: string | null, direction: "mint" | "burn" = "mint", burn_type: "review_required" | "effective_burn" | null = null) =>
   ({ amount_raw, direction, burn_type, flow_type: "standard" as const, burn_review_reason: burn_type === "review_required" ? "proof-missing" : null });
 function base(delta = 10): Receipt {
@@ -54,30 +55,31 @@ it("keeps an unevaluated USD criterion unavailable and counts excluded classes o
   expect(result.status).toBe("ok");
   expect(Object.values(result.classes!).map((total) => total.eventCount)).toEqual([1, 0, 1, 1, 1]);
 });
-async function setup() {
+async function setup(target = config) {
   const fixture = fixtures.open();
   const { db, sqlite } = fixture;
   sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)")
     .run("mint-burn:daily-reconciliation-state", JSON.stringify({ firstDay: start, cursor: 0 }), start);
-  await upsertMintBurnSyncState(db, mintBurnConfigKey(config), 110, "monotonic-max", {
-    configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+  await upsertMintBurnSyncState(db, mintBurnConfigKey(target), 110, "monotonic-max", {
+    configKey: mintBurnConfigKey(target), configFingerprint: mintBurnScanFingerprint(target), chainId: target.chain.chainId,
     fromBlock: 99, toBlock: 110, fromTimestamp: start - 1, toTimestamp: start + 5 * day,
     finalizedBlock: 110, acceptedAt: start + 5 * day,
   });
-  const input = { db, configs: [config], now: start + 2 * day + 3600, budget: { count: 0, limit: 200 },
-    rpcEndpointsByChain: new Map(), heads: new Map([["ethereum", 110]]),
+  const input = { db, configs: [target], now: start + 2 * day + 3600, budget: { count: 0, limit: 200 },
+    rpcEndpointsByChain: new Map(), heads: new Map([[target.chain.chainId, 110]]),
     priceContext: { priceObservations: new Map(), priceHistory: new Map() }, deadlineMs: Date.now() + 60_000 };
   const event = sqlite.prepare(`INSERT INTO mint_burn_events
     (id,stablecoin_id,symbol,chain_id,direction,amount,amount_raw,flow_type,tx_hash,block_number,timestamp,explorer_tx_url)
-    VALUES (?,?,'USDS','ethereum','mint',1,'10','standard','tx',101,?,'url')`);
-  for (let i = 0; i < 2; i++) event.run(String(i), config.stablecoinId, start + i * day + 100);
+    VALUES (?,?,'USDS',?,'mint',1,'10','standard','tx',101,?,'url')`);
+  for (let i = 0; i < 2; i++) event.run(String(i), target.stablecoinId, target.chain.chainId, start + i * day + 100);
   return { ...fixture, input };
 }
-it("chains daily endpoints/windows, reuses supply, and never rebuilds pruned or immutable days", async () => {
-  const { db, sqlite, input } = await setup();
+it.each(chains)("chains daily endpoints/windows on $chainId, reuses supply, and never rebuilds pruned or immutable days", async (target) => {
+  const { db, sqlite, input } = await setup(target);
   await runMintBurnSupplyReconciliation(input);
   await runMintBurnSupplyReconciliation(input);
   expect(fetchEvmUint256AtBlock).toHaveBeenCalledTimes(3);
+  expect(vi.mocked(resolveClosestBlockAtOrBeforeTimestamp).mock.calls[1]![2].blockTimestampByNumber.has(100)).toBe(true);
   sqlite.exec("DELETE FROM mint_burn_events");
   await runMintBurnSupplyReconciliation({ ...input, now: start + 10 * day });
   expect(sqlite.prepare("SELECT count(*) AS n FROM mint_burn_supply_reconciliation WHERE day_ts < ?").get(start + 2 * day)?.n).toBe(2);
@@ -90,15 +92,15 @@ it("chains daily endpoints/windows, reuses supply, and never rebuilds pruned or 
     sqlite.prepare("INSERT OR REPLACE INTO mint_burn_supply_reconciliation VALUES (?,?,?,?,?)")
       .run(first.configKey, r.day, r.status, r.checkedAt, JSON.stringify(r));
   }
-  const leg = (await readMintBurnSupplyReconciliation(db, [config], start + 8 * day)).get(first.configKey)!;
+  const leg = (await readMintBurnSupplyReconciliation(db, [target], start + 8 * day)).get(first.configKey)!;
   expect(leg.windows.find((w) => w.days === 7)?.status).toBe("unavailable");
-  const complete = (await readMintBurnSupplyReconciliation(db, [config], start + 7 * day)).get(first.configKey)!;
+  const complete = (await readMintBurnSupplyReconciliation(db, [target], start + 7 * day)).get(first.configKey)!;
   expect(complete.windows.find((w) => w.days === 7)).toMatchObject({ status: "ok", supplyDeltaRaw: "70", residualRaw: "0",
     classes: { counted: { mintRaw: "70", burnRaw: "0", eventCount: 7 } } });
   const second = JSON.parse((sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation WHERE day_ts = ?").get(start + day) as { receipt_json: string }).receipt_json) as Receipt;
   const broken = { ...second, opening: { ...second.opening!, hash: hash(999) } };
   sqlite.prepare("UPDATE mint_burn_supply_reconciliation SET receipt_json = ? WHERE day_ts = ?").run(JSON.stringify(broken), start + day);
-  const reread = (await readMintBurnSupplyReconciliation(db, [config], start + 7 * day)).get(first.configKey)!;
+  const reread = (await readMintBurnSupplyReconciliation(db, [target], start + 7 * day)).get(first.configKey)!;
   expect(reread.windows.find((w) => w.days === 7)?.reason).toBe("daily-checkpoint-chain-broken");
   expect(reread.latest?.configFingerprint).toBeUndefined();
 });
