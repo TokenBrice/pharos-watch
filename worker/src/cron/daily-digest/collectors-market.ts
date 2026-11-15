@@ -6,7 +6,8 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getNativeEventPriceObservation, isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
@@ -102,6 +103,7 @@ export async function collectActiveDepegs(
     const activeDepegSignalKeys: string[] = [];
     let supplyUnavailable = false;
     let referenceUnavailable = false;
+    let heldDeviation = false;
 
     const withImpact = rows.flatMap((row) => {
       if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
@@ -159,9 +161,20 @@ export async function collectActiveDepegs(
       // observation. The published reference is the one a live deviation is
       // measured against this run.
       const liveReference = nativeEvent ? latchedReference : currentReference;
-      const currentBps = livePrice != null && liveReference != null
-        ? deriveDepegSignal(livePrice, liveReference)?.bps ?? null
+      const liveSignal = livePrice != null && liveReference != null
+        ? deriveDepegSignal(livePrice, liveReference)
         : null;
+      // A 24/7 token measured while its 24/5 reference market is shut compares
+      // against a repeated close: that is session drift, so the live deviation is
+      // unknown (R2) and the row falls back to its labelled stored peak exactly
+      // like an unavailable current reference.
+      const deviationHeld = liveSignal != null && isReferenceDeviationHeld(
+        TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency,
+        priceObservedAt ?? ctx.nowSec,
+        Math.abs(observation?.currentSignal?.rawBps ?? liveSignal.rawBps),
+      );
+      if (deviationHeld) heldDeviation = true;
+      const currentBps = deviationHeld ? null : liveSignal?.bps ?? null;
       const pegReference = nativeEvent ? latchedReference : currentReference;
       // A USD price without a live deviation is not a current observation:
       // publishing it would pair "(stored peak; live price unavailable)" with
@@ -261,6 +274,7 @@ export async function collectActiveDepegs(
     const qualityReasons = [
       ...(supplyUnavailable ? ["active-depeg-supply-unavailable"] : []),
       ...(referenceUnavailable ? ["active-depeg-reference-unavailable"] : []),
+      ...(heldDeviation ? ["active-depeg-reference-market-closed"] : []),
     ];
     return collectorResult(
       { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags },

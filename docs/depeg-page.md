@@ -204,6 +204,17 @@ An absent live deviation or DEWS reading yields a neutral `unknown` status, neve
 known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
 DEWS and deviation metrics sort last in both directions, separately from observed zero.
 
+A live deviation measured while the coin's FX or metal reference market is closed
+(`isCurrentDeviationHeld` in `src/lib/current-peg.ts`, decided from the price observation's own
+time so prerendered and hydrated output agree) is shown as "Mkt closed" ("Reference market closed"
+on the detail hero, compare table and OG cards), counts as unavailable for sorting and status, and
+never feeds the at-peg or health buckets. A move at or beyond the 2,500 bps severe band, in
+either direction, still prints. Native-currency prices still convert at the last close. The same rule covers the directory table, screener, command palette and the home
+active-depegs card. Resolver cards print "Reference market closed" in place of the live "Now"
+deviation and leave a held reading out of the peg ratio, the displayed live peak and urgency
+ordering; the DDR payload carries no price observation clock, so its overlay generation time
+(`live.updatedAt`) places the reading.
+
 The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
 
 Peg Health text and gauge share one tier from `getPegScoreTier` (90/70).

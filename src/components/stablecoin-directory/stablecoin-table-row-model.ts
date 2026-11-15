@@ -1,5 +1,5 @@
 import { getStablecoinTableRowRiskLevel, getSupplyChangePercent, resolveDisplayedNativePrice } from "@/components/stablecoin-directory/stablecoin-table-logic";
-import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
+import { resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-directory/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
@@ -41,7 +41,10 @@ export function buildStablecoinTableRowModel({
   // NAV tokens have no peg reference, but their observed price is still shown,
   // converted to the peg currency (USD fallback inside formatNativePrice).
   const displayedNativePrice = resolveDisplayedNativePrice(coin, pegSummary, pegScores);
-  const currentDeviationBps = resolveCurrentDeviationBps(coin, pegSummary);
+  // A NAV token prints NAV/CPI and has no fixed peg for a reference market to hold.
+  const { deviationBps: currentDeviationBps, referenceMarketClosed } = resolveCurrentDeviation(
+    coin, pegSummary, meta?.flags.navToken ? null : meta?.flags.pegCurrency,
+  );
   const absPegDeviationBps = currentDeviationBps == null ? null : Math.abs(currentDeviationBps);
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";
@@ -77,6 +80,7 @@ export function buildStablecoinTableRowModel({
     pegRef,
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
+    referenceMarketClosed,
     priceCell: displayedNativePrice == null
       ? "—"
       : formatNativePrice(coin.price, displayedNativePrice.currency, displayedNativePrice.reference),

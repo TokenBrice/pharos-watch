@@ -21,14 +21,18 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES, PRICE_SOURCE_STATUS_CLASSES } from "@shared/lib/classification";
 import { formatCurrency, formatUsdPriceAdaptive, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
-  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
   /** Null when neither the peg row nor the admitted summary was read: unread provenance, not zero sources. */
   consensusSources: string[] | null;
   agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
+  /** A NAV token's DEX check reads against its own NAV, never a peg reference market. */
+  navToken?: boolean;
 }
 
 interface SourceInfo {
@@ -319,6 +323,7 @@ export function PriceTransparencyCard({
   consensusSources,
   agreeSources,
   dexPriceCheck,
+  navToken = false,
   compact = false,
 }: PriceTransparencyCardProps & {
   /**
@@ -397,6 +402,13 @@ export function PriceTransparencyCard({
   // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
+  // The DEX check reads against the peg's reference, which repeats its last close while that
+  // market is shut: the deviation is held there. The row's peg type names the reference unit.
+  const dexDeviationHeld = isCurrentDeviationHeld(
+    navToken ? null : getPegTaxonomyByType(coinData.pegType)?.currency,
+    resolvePriceObservedAtSec(coinData),
+    dexPriceCheck?.dexDeviationBps,
+  );
   const priceLabel = !hasNoPrice && coinData.price != null ? formatUsdPrice(coinData.price, coinData.pegType) : "N/A";
   const rawConfidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
   // Sentence case: multi-word values never render as caps (three-register rule).
@@ -466,7 +478,7 @@ export function PriceTransparencyCard({
               <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
                 ·
               </span>
-              {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps dev
+              {dexDeviationHeld ? "Reference market closed" : `${Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps dev`}
             </p>
           </div>
         ) : null}
@@ -565,7 +577,7 @@ export function PriceTransparencyCard({
             <div className="mt-1 flex items-baseline gap-2">
               <span className="font-mono font-medium">{formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}</span>
               <span className="text-xs text-muted-foreground">
-                {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation
+                {dexDeviationHeld ? "Reference market closed" : `${Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation`}
               </span>
             </div>
           </div>

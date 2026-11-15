@@ -58,6 +58,7 @@ import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
 import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import {
   getNativeEventPriceObservation, isNativePegEvent,
   type NativeEventPriceEvidence,
@@ -696,6 +697,17 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
         peggedAssets: assets, fxFallbackRates: stablecoins.payload.fxFallbackRates, asOf: stablecoins.updatedAt,
       })
     : new Map<string, CurrentPegObservation>();
+  // A 24/7 token measured against a closed 24/5 reference market repeats the last
+  // close, so that deviation is unknown rather than "at peg" or "off peg" (R2).
+  const isHeldPegDeviation = (
+    coinId: string,
+    observedAtSec: number | null | undefined,
+    absBps: number,
+  ): boolean => isReferenceDeviationHeld(
+    TRACKED_META_BY_ID.get(coinId)?.flags.pegCurrency,
+    observedAtSec ?? stablecoins.updatedAt ?? now,
+    absBps,
+  );
   let totalCoins = 0;
   let coinsAtPeg = 0;
   for (const [id, observation] of observations) {
@@ -703,7 +715,8 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     const quoteAge = assessFreshnessTimestamp(now, asset?.priceObservedAt ?? asset?.priceUpdatedAt);
     if (!ACTIVE_IDS.has(id) || FROZEN_IDS.has(id) || observation.currentSupplyUnavailable ||
       observation.currentDeviationBps == null || quoteAge.reason != null ||
-      quoteAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stablecoins) continue;
+      quoteAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stablecoins ||
+      isHeldPegDeviation(id, asset?.priceObservedAt ?? asset?.priceUpdatedAt, Math.abs(observation.currentSignal?.rawBps ?? Number.NaN))) continue;
     totalCoins++;
     if (observation.currentSignal && !signalCrossesThreshold(observation.currentSignal, getDepegThresholdBps(asset?.pegType))) coinsAtPeg++;
   }
@@ -731,10 +744,21 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0 &&
       quoteAge.reason == null && quoteAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
     const currentPrice = nativeEvent ? nativeObservation?.value ?? null : usdAvailable ? asset.price! : null;
+    // A USD-domain row reads today's authoritative reference, as PSI does, never the one stored at opening.
+    const deviation = nativeEvent
+      ? currentPrice != null ? deriveDepegSignal(currentPrice, row.peg_reference) : null
+      : usdAvailable ? observations.get(row.stablecoin_id)?.currentSignal ?? null : null;
+    const deviationHeld = deviation != null && isHeldPegDeviation(
+      row.stablecoin_id,
+      nativeEvent ? nativeObservation?.observedAt : asset?.priceObservedAt ?? asset?.priceUpdatedAt,
+      deviation.absRawBps,
+    );
     return {
       symbol: row.symbol,
       name: TRACKED_META_BY_ID.get(row.stablecoin_id)?.name ?? row.symbol,
-      deviationBps: currentPrice != null ? deriveDepegSignal(currentPrice, row.peg_reference)?.bps ?? null : null,
+      // A held deviation is an unavailable current reading, never a peg move claim.
+      deviationBps: deviationHeld ? null : deviation?.bps ?? null,
+      ...(deviationHeld ? { deviationHeld } : {}),
       peakBps: row.direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps),
     };
   }).sort((a, b) => {

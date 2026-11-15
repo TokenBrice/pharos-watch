@@ -17,6 +17,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, OPEN_INCIDENT_EVIDENCE_LABELS, type OpenIncidentEvidence } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ interface ActiveRow {
   id: string;
   symbol: string;
   bps: number | null;
+  /** The peg's reference market was shut at the observation: the deviation is held. */
+  held: boolean;
   ageSec: number | null;
   evidence: OpenIncidentEvidence;
 }
@@ -50,10 +53,12 @@ export function ActiveDepegsCard(): React.JSX.Element {
     const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
     return activeCoins.map((coin: PegSummaryCoin) => {
       const event = eventsById.get(coin.id);
+      const held = isCurrentDeviationHeld(coin.pegCurrency, resolvePriceObservedAtSec(coin), coin.currentDeviationBps);
       return {
         id: coin.id,
         symbol: coin.symbol ?? event?.symbol ?? coin.id,
-        bps: coin.currentDeviationBps,
+        bps: held ? null : coin.currentDeviationBps,
+        held,
         ageSec: event && nowSec > 0 ? Math.max(0, nowSec - event.startedAt) : null,
         evidence: classifyOpenIncidentEvidence(data?.events, coin.id, nowSec),
       };
@@ -158,7 +163,9 @@ function DepegRow({
             ·
           </span>
           <span className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}>
-            {row.bps == null ? "Observation unavailable" : (
+            {row.held ? (
+              <span title="Reference market closed">Mkt closed</span>
+            ) : row.bps == null ? "Observation unavailable" : (
               <><span aria-hidden="true" className="mr-0.5">{arrow}</span>{Math.abs(row.bps).toFixed(0)}</>
             )}
           </span>

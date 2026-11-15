@@ -11,7 +11,7 @@ import satori from "satori";
 // The aliased standalone stub used by handleOg, mocked below so the handler
 // tests can inspect the element it would render.
 import satoriStandalone from "satori/standalone";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset, makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
@@ -46,6 +46,18 @@ afterEach(() => {
   resetOgWasmInitializationForTests();
   vi.restoreAllMocks();
 });
+
+function lastOgElement<T = unknown>() {
+  const calls = vi.mocked(satoriStandalone).mock.calls;
+  return calls[calls.length - 1]?.[0] as React.ReactElement<{ data: T }>;
+}
+
+const EMPTY_OG_TABLES: MockTableConfig[] = [
+  { match: "dex_liquidity", rows: [] }, { match: "stress_signals", rows: [] }, { match: "supply_history", rows: [] },
+  { match: "depeg_events", rows: [] }, { match: "mint_burn_hourly", rows: [] }, { match: "mint_burn_scan_coverage", rows: [] },
+  { match: "FROM mint_burn_admission", rows: [] }, { match: "FROM mint_burn_publication_policy", rows: [] },
+  { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+];
 
 describe("stablecoin OG card data", () => {
   it("derives flow7d and sparkline data", () => {
@@ -210,26 +222,22 @@ describe("stablecoin OG card data", () => {
         }));
       }
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
-      const beforeCalls = vi.mocked(satoriStandalone).mock.calls;
-      const before = beforeCalls[beforeCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const before = lastOgElement<StablecoinCardData>();
       expect(before.props.data.flow7dSource).toBe("mint-burn");
       expect(before.props.data.flow7d).toBe(100);
       sqlite.exec("UPDATE mint_burn_hourly SET mint_unresolved_event_count = 0, burn_unresolved_event_count = 1 WHERE chain_id = 'ethereum'");
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
-      const unresolvedCalls = vi.mocked(satoriStandalone).mock.calls;
-      const unresolved = unresolvedCalls[unresolvedCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const unresolved = lastOgElement<StablecoinCardData>();
       expect(unresolved.props.data.flow7dSource).not.toBe("mint-burn");
       sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 0 WHERE chain_id = 'ethereum'");
       sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")
         .run(end - 3600);
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
-      const afterCalls = vi.mocked(satoriStandalone).mock.calls;
-      const after = afterCalls[afterCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const after = lastOgElement<StablecoinCardData>();
       expect(after.props.data.flow7dSource).not.toBe("mint-burn");
       sqlite.exec("DROP TABLE mint_burn_admission");
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
-      const failedCalls = vi.mocked(satoriStandalone).mock.calls;
-      const failed = failedCalls[failedCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const failed = lastOgElement<StablecoinCardData>();
       expect(failed.props.data.flow7dSource).not.toBe("mint-burn");
     } finally {
       MINT_BURN_CONFIGS.splice(MINT_BURN_CONFIGS.indexOf(pending), 1);
@@ -245,29 +253,11 @@ describe("stablecoin OG card data", () => {
      * merely `{ id, pegScore }`: the cache read validates every field the
      * peg-summary route copies verbatim.
      */
-    function makePegAnalyticsCoin(
-      id: string,
-      symbol: string,
-      pegScore: number,
-      overrides: Record<string, unknown> = {},
-    ) {
+    function makePegAnalyticsCoin(id: string, symbol: string, pegScore: number, overrides: Record<string, unknown> = {}) {
       return {
-        id,
-        symbol,
-        name: id,
-        pegType: "peggedUSD",
-        pegCurrency: "USD",
-        governance: "centralized",
-        currentDeviationBps: 0,
-        pegScore,
-        pegPct: 99.9,
-        severityScore: 7,
-        spreadPenalty: 2,
-        eventCount: 1,
-        worstDeviationBps: -120,
-        activeDepeg: false,
-        lastEventAt: nowSec - 86_400,
-        trackingSpanDays: 400,
+        id, symbol, name: id, pegType: "peggedUSD", pegCurrency: "USD", governance: "centralized",
+        currentDeviationBps: 0, pegScore, pegPct: 99.9, severityScore: 7, spreadPenalty: 2, eventCount: 1,
+        worstDeviationBps: -120, activeDepeg: false, lastEventAt: nowSec - 86_400, trackingSpanDays: 400,
         methodologyVersion: "6.08",
         ...overrides,
       };
@@ -277,9 +267,7 @@ describe("stablecoin OG card data", () => {
       const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
       // Nav-inclusive payload, mirroring what the report-cards pass publishes.
       const pegAnalyticsValue = JSON.stringify({
-        computedAtSec: nowSec,
-        depegEventsToday: 0,
-        depegEventsYesterday: 0,
+        computedAtSec: nowSec, depegEventsToday: 0, depegEventsYesterday: 0,
         pegData: [
           makePegAnalyticsCoin("fpi-frax", "FPI", 87, { name: "Frax Price Index", pegType: "peggedVAR", pegCurrency: "VAR" }),
           makePegAnalyticsCoin("usdt-tether", "USDT", 99, { name: "Tether" }),
@@ -296,30 +284,14 @@ describe("stablecoin OG card data", () => {
               : []),
           ],
         },
-        { match: "dex_liquidity", rows: [] },
-        { match: "stress_signals", rows: [] },
-        { match: "supply_history", rows: [] },
-        { match: "depeg_events", rows: [] },
-        { match: "mint_burn_hourly", rows: [] },
-        { match: "mint_burn_scan_coverage", rows: [] },
-        { match: "FROM mint_burn_admission", rows: [] },
-        { match: "FROM mint_burn_publication_policy", rows: [] },
-        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+        ...EMPTY_OG_TABLES,
       ]);
     }
 
     function activeV9(updatedAt = nowSec) {
       const snapshot = makeWorkerReportCardsV9Response({
-        lifecycle: "active",
-        asOfSec: updatedAt - 60,
-        updatedAt,
-        cards: [
-          makeWorkerV9Card({
-            id: "usdt-tether",
-            score: 88,
-            grade: "A+",
-          }),
-        ],
+        lifecycle: "active", asOfSec: updatedAt - 60, updatedAt,
+        cards: [makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A+" })],
       });
       return {
         kind: "v9" as const,
@@ -335,13 +307,10 @@ describe("stablecoin OG card data", () => {
     }
 
     async function renderedCardData(db: D1Database, path: string): Promise<StablecoinCardData> {
-      const satoriMock = vi.mocked(satoriStandalone);
-      satoriMock.mockClear();
+      vi.mocked(satoriStandalone).mockClear();
       const res = await handleOg(db, path);
       expect(res?.status).toBe(200);
-      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-        data: StablecoinCardData;
-      }>;
+      const element = lastOgElement<StablecoinCardData>();
       expect(element.type).toBe(StablecoinCard);
       return element.props.data;
     }
@@ -373,15 +342,7 @@ describe("stablecoin OG card data", () => {
           match: "cache",
           rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
         },
-        { match: "dex_liquidity", rows: [] },
-        { match: "stress_signals", rows: [] },
-        { match: "supply_history", rows: [] },
-        { match: "depeg_events", rows: [] },
-        { match: "mint_burn_hourly", rows: [] },
-        { match: "mint_burn_scan_coverage", rows: [] },
-        { match: "FROM mint_burn_admission", rows: [] },
-        { match: "FROM mint_burn_publication_policy", rows: [] },
-        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+        ...EMPTY_OG_TABLES,
       ]);
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -389,10 +350,7 @@ describe("stablecoin OG card data", () => {
 
       expect(res?.status).toBe(200);
       expect(res?.headers.get("Content-Type")).toBe("image/png");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
-        data: StablecoinCardData;
-      }>;
+      const element = lastOgElement<StablecoinCardData>();
       expect(element.type).toBe(StablecoinCard);
       expect(element.props.data.pegScore).toBeNull();
       expect(
@@ -421,8 +379,7 @@ describe("stablecoin OG card data", () => {
       expect(res?.status).toBe(200);
       expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const element = lastOgElement<StablecoinCardData>();
       expect(element.props.data).toMatchObject({
         grade: "Unavailable",
         lastUpdated: expect.stringContaining("Safety DEGRADED: V9 safety score unavailable"),
@@ -438,10 +395,7 @@ describe("stablecoin OG card data", () => {
 
       expect(res?.headers.get("X-Safety-Score-Model")).toBe("v9");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("current");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
-        data: StablecoinCardData;
-      }>;
+      const element = lastOgElement<StablecoinCardData>();
       expect(element.props.data).toMatchObject({
         grade: "A+",
         safetyModel: "v9",
@@ -455,14 +409,12 @@ describe("stablecoin OG card data", () => {
       vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
       await handleOg(db, "/api/og/stablecoin/usdt-tether");
-      let calls = vi.mocked(satoriStandalone).mock.calls;
-      let element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      let element = lastOgElement<StablecoinCardData>();
       expect(element.props.data.grade).toBe("Pipeline gap");
       expect(renderToStaticMarkup(element)).not.toContain(">NR<");
       source.snapshot.cards = [makeReportCardsV9PartialCard("exit", "B", { id: "usdt-tether" })];
       await handleOg(db, "/api/og/stablecoin/usdt-tether");
-      calls = vi.mocked(satoriStandalone).mock.calls;
-      element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      element = lastOgElement<StablecoinCardData>();
       expect(renderToStaticMarkup(element)).toContain("Partial evidence: pipeline gap");
     });
 
@@ -476,10 +428,7 @@ describe("stablecoin OG card data", () => {
       expect(res?.headers.get("X-Safety-Score-Model")).toBe("v9");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
-        data: StablecoinCardData;
-      }>;
+      const element = lastOgElement<StablecoinCardData>();
       expect(element.props.data).toMatchObject({
         grade: "Unavailable",
         safetyModel: null,
@@ -501,8 +450,7 @@ describe("stablecoin OG card data", () => {
     it("keeps the supplied average score ungraded without inventing a weekly trend", async () => {
       vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
       await handleOg(makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]), "/api/og/safety-scores");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      const element = lastOgElement<SafetyScoresCardData>();
       expect(element.props.data.pulseScore).toBe(88);
       const markup = renderToStaticMarkup(element);
       expect(markup).toContain(">88.0<");
@@ -517,10 +465,7 @@ describe("stablecoin OG card data", () => {
       const res = await handleOg(db, "/api/og/safety-scores");
 
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
-        data: SafetyScoresCardData;
-      }>;
+      const element = lastOgElement<SafetyScoresCardData>();
       expect(element.props.data.pulseScore).toBeNull();
       expect(element.props.data.coverageRatio).toBeNull();
       const markup = renderToStaticMarkup(element);
@@ -538,8 +483,7 @@ describe("stablecoin OG card data", () => {
         vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(source);
       }
       await handleOg(makeOgDb([makeAsset({ id: "usdt-tether" })]), "/api/og/safety-scores");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      const element = lastOgElement<SafetyScoresCardData>();
       expect(element.props.data.coverageRatio).toBe(state === "observed-zero" ? 0 : null);
       const markup = renderToStaticMarkup(element);
       if (state === "observed-zero") expect(markup).toContain(">0%");
@@ -564,8 +508,7 @@ describe("stablecoin OG card data", () => {
       });
       await handleOg(makeOgDb([makeAsset({ id: "rated-0", symbol: "RATED" })]), "/api/og/safety-scores");
 
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      const element = lastOgElement<SafetyScoresCardData>();
       expect(element.props.data.coverageRatio).toBeCloseTo(623 / 624, 6);
       expect(element.props.data.totalCoins).toBe(624);
       const markup = renderToStaticMarkup(element);
@@ -596,28 +539,13 @@ describe("stablecoin OG card data", () => {
         {
           match: "cache",
           rows: [
-            {
-              key: "stablecoins",
-              value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })] }),
-              updated_at: nowSec,
-            },
-            {
-              key: "peg-analytics",
-              value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }),
-              updated_at: nowSec,
-            },
+            { key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })] }), updated_at: nowSec },
+            { key: "peg-analytics", value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }), updated_at: nowSec },
           ],
         },
-        { match: "dex_liquidity", rows: [] },
-        { match: "stress_signals", rows: [] },
         { match: "current_snapshot", rows: [], first: { current_price: 1.02, current_date: nowSec - 3600, prev_day_price: 0.99, prev_day_date: nowSec - 3600 - 86400 } },
         { match: "supply_history", rows: [{ price: 1.02 }, { price: 0.99 }] },
-        { match: "depeg_events", rows: [] },
-        { match: "mint_burn_hourly", rows: [] },
-        { match: "mint_burn_scan_coverage", rows: [] },
-        { match: "FROM mint_burn_admission", rows: [] },
-        { match: "FROM mint_burn_publication_policy", rows: [] },
-        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+        ...EMPTY_OG_TABLES,
       ]);
 
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
@@ -638,14 +566,7 @@ describe("stablecoin OG card data", () => {
         },
         { match: "dex_deployment_outcomes", rows: [] },
         { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: liquidityAt })] },
-        { match: "stress_signals", rows: [] },
-        { match: "supply_history", rows: [] },
-        { match: "depeg_events", rows: [] },
-        { match: "mint_burn_hourly", rows: [] },
-        { match: "mint_burn_scan_coverage", rows: [] },
-        { match: "FROM mint_burn_admission", rows: [] },
-        { match: "FROM mint_burn_publication_policy", rows: [] },
-        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+        ...EMPTY_OG_TABLES,
       ]);
 
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
@@ -667,13 +588,8 @@ describe("stablecoin OG card data", () => {
           { key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", priceObservedAt: marketAt })] }), updated_at: marketAt },
           { key: "peg-analytics", value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }), updated_at: nowSec },
         ] },
-        { match: "dex_liquidity", rows: [] }, { match: "stress_signals", rows: [] },
         { match: "current_snapshot", rows: [], first: { current_price: 1.02, current_date, prev_day_date, prev_day_price } },
-        { match: "supply_history", rows: [] }, { match: "depeg_events", rows: [] }, { match: "mint_burn_hourly", rows: [] },
-        { match: "mint_burn_scan_coverage", rows: [] },
-        { match: "FROM mint_burn_admission", rows: [] },
-        { match: "FROM mint_burn_publication_policy", rows: [] },
-        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+        ...EMPTY_OG_TABLES,
       ]);
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.change24h).toBeNull();
@@ -691,15 +607,7 @@ describe("stablecoin OG card data", () => {
         match: "cache",
         rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [] }), updated_at: nowSec }],
       },
-      { match: "dex_liquidity", rows: [] },
-      { match: "stress_signals", rows: [] },
-      { match: "supply_history", rows: [] },
-      { match: "depeg_events", rows: [] },
-      { match: "mint_burn_hourly", rows: [] },
-      { match: "mint_burn_scan_coverage", rows: [] },
-      { match: "FROM mint_burn_admission", rows: [] },
-      { match: "FROM mint_burn_publication_policy", rows: [] },
-      { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+      ...EMPTY_OG_TABLES,
     ]);
 
     const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
@@ -737,13 +645,10 @@ describe("chain OG route", () => {
   }
 
   async function renderedChainData(db: D1Database): Promise<ChainCardData> {
-    const satoriMock = vi.mocked(satoriStandalone);
-    satoriMock.mockClear();
+    vi.mocked(satoriStandalone).mockClear();
     const res = await handleOg(db, "/api/og/chain/ethereum");
     expect(res?.status).toBe(200);
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-      data: ChainCardData;
-    }>;
+    const element = lastOgElement<ChainCardData>();
     expect(element.type).toBe(ChainCard);
     return element.props.data;
   }
@@ -785,8 +690,7 @@ describe("chain OG route", () => {
     // absent from the aggregate and must still resolve to a 200 PNG. Absence
     // is not an observed zero, so the card must not print "$0".
     const db = makeChainOgDb([makeAsset({ chainCirculating: {}, chains: [] })]);
-    const satoriMock = vi.mocked(satoriStandalone);
-    satoriMock.mockClear();
+    vi.mocked(satoriStandalone).mockClear();
 
     const res = await handleOg(db, "/api/og/chain/ethereum");
     expect(res?.status).toBe(200);
@@ -794,7 +698,7 @@ describe("chain OG route", () => {
     expect(res?.headers.get("X-Og-Status")).toBe("degraded");
     expect(res?.headers.get("X-Og-Reason")).toBe("chain-not-in-aggregate");
 
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement;
+    const element = lastOgElement();
     expect(element.type).toBe(ChainUnavailableCard);
     const markup = renderToStaticMarkup(element);
     expect(markup).toContain("Ethereum Stablecoins");
@@ -819,15 +723,12 @@ describe("chain OG route", () => {
         chains: ["Ethereum"],
       }),
     ]);
-    const satoriMock = vi.mocked(satoriStandalone);
-    satoriMock.mockClear();
+    vi.mocked(satoriStandalone).mockClear();
 
     const res = await handleOg(db, "/api/og/chain/ethereum");
     expect(res?.status).toBe(200);
 
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-      data: ChainCardData;
-    }>;
+    const element = lastOgElement<ChainCardData>();
     expect(element.props.data.change7dPercent).toBeCloseTo(8, 6);
     expect(renderToStaticMarkup(element)).toContain("8.0% 7d");
   });
@@ -857,15 +758,12 @@ describe("chain OG route", () => {
       match: "cache",
       rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset()] }), updated_at: marketUpdatedAt }],
     }]);
-    const satoriMock = vi.mocked(satoriStandalone);
-    satoriMock.mockClear();
+    vi.mocked(satoriStandalone).mockClear();
 
     const res = await handleOg(db, "/api/og/chain/ethereum");
     expect(res?.status).toBe(200);
 
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-      data: ChainCardData;
-    }>;
+    const element = lastOgElement<ChainCardData>();
     expect(element.type).toBe(ChainCard);
     expect(element.props.data.totalUsd).toBe(50_000_000);
     const marketStamp = `Market ${new Date(marketUpdatedAt * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
@@ -878,13 +776,10 @@ describe("chain OG route", () => {
 describe("depeg OG handler aggregation", () => {
   function captureDepegData(db: D1Database) {
     return (async () => {
-      const satoriMock = vi.mocked(satoriStandalone);
-      satoriMock.mockClear();
+      vi.mocked(satoriStandalone).mockClear();
       const res = await handleOg(db, "/api/og/depeg");
       expect(res?.status).toBe(200);
-      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-        data: DepegCardData;
-      }>;
+      const element = lastOgElement<DepegCardData>();
       expect(element.type).toBe(DepegCard);
       return element.props.data;
     })();
@@ -929,7 +824,7 @@ describe("depeg OG handler aggregation", () => {
     const aggregate = await captureDepegData(db);
     expect(aggregate.dewsDistribution).toEqual({ danger: 0, alert: 0, warning: 1, watch: 0, normal: 0 });
     await handleOg(db, "/api/og/stablecoin/usdt-tether");
-    const element = vi.mocked(satoriStandalone).mock.calls[vi.mocked(satoriStandalone).mock.calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+    const element = lastOgElement<StablecoinCardData>();
     expect(element.props.data.dewsBand).toBe("WARNING");
   });
 
@@ -1044,6 +939,31 @@ describe("depeg OG handler aggregation", () => {
     expect(data.newToday).toBe(2);
   });
 
+  it("holds a weekend metal deviation out of the at-peg cohort and the open-incident print", async () => {
+    // Sunday 16:00 UTC: spot metals repeat Friday's close while the token trades.
+    const now = 1_794_758_400;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const assets = [
+      makeAsset({ id: "xaum-matrixdock", symbol: "XAUm", pegType: "peggedGOLD", price: 3900, circulating: { peggedGOLD: 100e6 }, priceObservedAt: now - 60 }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: 1.002, priceObservedAt: now - 60 }),
+    ];
+    const data = await captureDepegData(mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: assets, fxFallbackRates: { peggedGOLD: 4000 } }), updated_at: now - 60 }] },
+      { match: "stability_index_samples", first: { score: 90, band: "BEDROCK", stored_at: now - 60 }, rows: [] },
+      { match: "stress_signals", rows: [] },
+      { match: "peak_deviation_bps", rows: [
+        { stablecoin_id: "xaum-matrixdock", symbol: "XAUm", direction: "below", peak_deviation_bps: 600, peg_reference: 4000 },
+      ] },
+      { match: "ended_at IS NOT NULL", rows: [] },
+      { match: "started_at >", rows: [], first: { count: 0 } },
+    ]));
+    // Held is unknown: the coin leaves the cohort instead of counting as at peg,
+    // and its incident names the closed reference market.
+    expect(data).toMatchObject({ coinsAtPeg: 1, totalCoins: 1 });
+    expect(data.activeDepegs[0]).toMatchObject({ symbol: "XAUm", deviationBps: null, deviationHeld: true, peakBps: -600 });
+    expect(renderToStaticMarkup(<DepegCard data={data} />)).toContain("Reference market closed; peak -600 bps");
+  });
+
   it("withholds the at-peg statistic and PSI when observations are absent instead of clamping cohorts", async () => {
     const db = mockD1([
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
@@ -1124,13 +1044,10 @@ const PSI_PRODUCER_INTERVAL_SEC = CRON_INTERVALS["stability-index"];
 describe("stability-index OG handler aggregation", () => {
   function captureStabilityData(db: D1Database) {
     return (async () => {
-      const satoriMock = vi.mocked(satoriStandalone);
-      satoriMock.mockClear();
+      vi.mocked(satoriStandalone).mockClear();
       const res = await handleOg(db, "/api/og/stability-index");
       expect(res?.status).toBe(200);
-      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-        data: StabilityIndexCardData;
-      }>;
+      const element = lastOgElement<StabilityIndexCardData>();
       expect(element.type).toBe(StabilityIndexCard);
       return element.props.data;
     })();
@@ -1156,8 +1073,7 @@ describe("stability-index OG handler aggregation", () => {
       }
       insert.run(sourceAt, lastScore);
       const response = await handleOg(db, "/api/og/stability-index");
-      const calls = vi.mocked(satoriStandalone).mock.calls;
-      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: StabilityIndexCardData }>;
+      const element = lastOgElement<StabilityIndexCardData>();
       expect(element.type).toBe(StabilityIndexCard);
       expect(element.props.data.delta24h).toBe(expected);
       expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
@@ -1241,8 +1157,7 @@ describe("stability-index OG handler aggregation", () => {
     expect(response?.headers.get("X-Data-Freshness")).toBe("stale");
     expect(response?.headers.get("X-Data-Assessed-At")).toBe(String(nowSec));
     expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
-    const calls = vi.mocked(satoriStandalone).mock.calls;
-    const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
+    const markup = renderToStaticMarkup(lastOgElement());
     expect(markup).toContain("Pharos Stability Index");
     expect(markup).toContain("Market-wide Peg Health");
     expect(markup).not.toContain("unavailable");
@@ -1271,8 +1186,7 @@ describe("stability-index OG handler aggregation", () => {
     expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(PSI_BUDGET));
     expect(response?.headers.get("X-Data-Freshness")).toBe(admitted ? null : "stale");
     expect(response?.headers.get("X-Data-Freshness-Reason")).toBe(admitted ? null : "psi-source-stale");
-    const calls = vi.mocked(satoriStandalone).mock.calls;
-    const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
+    const markup = renderToStaticMarkup(lastOgElement());
     expect(markup).not.toContain("stale");
     expect(markup.includes(">73.5<")).toBe(admitted);
     if (admitted) expect(markup).toContain(new Date(sourceAt * 1000).toISOString().slice(0, 16).replace("T", " "));
@@ -1289,9 +1203,7 @@ describe("stability-index OG handler aggregation", () => {
 
     const res = await handleOg(db, "/api/og/stability-index");
     expect(res?.status).toBe(200);
-    const calls = vi.mocked(satoriStandalone).mock.calls;
-    const element = calls[calls.length - 1]?.[0] as React.ReactElement;
-    const markup = renderToStaticMarkup(element);
+    const markup = renderToStaticMarkup(lastOgElement());
 
     expect(markup).toContain("Pharos Stability Index");
     expect(markup).not.toContain("unavailable");
@@ -1321,25 +1233,11 @@ describe("og cards render through satori", () => {
   const renderSvg = (element: React.ReactNode) => satori(element, { width: 1200, height: 628, fonts });
 
   const calmCoin: StablecoinCardData = {
-    name: "Tether",
-    symbol: "USDT",
-    grade: "B+",
-    pegPrice: 1.0003,
-    dewsBand: "CALM",
-    liquidityScore: 92,
-    mcap: 120_000_000_000,
-    flow7d: 250_000_000,
-    flow7dSource: "mint-burn",
+    name: "Tether", symbol: "USDT", grade: "B+", pegPrice: 1.0003, dewsBand: "CALM", liquidityScore: 92,
+    mcap: 120_000_000_000, flow7d: 250_000_000, flow7dSource: "mint-burn",
     sparklineData: [1.0001, 1.0002, 0.9999, 1.0, 1.0001, 1.0003, 1.0002],
-    hasActiveDepeg: false,
-    pegScore: 97.2,
-    backing: "rwa-backed",
-    governance: "centralized",
-    change24h: 0.01,
-    variantLabel: null,
-    variantParentSymbol: null,
-    isFrozen: false,
-    lastUpdated: "2026-06-10 07:30 UTC",
+    hasActiveDepeg: false, pegScore: 97.2, backing: "rwa-backed", governance: "centralized", change24h: 0.01,
+    variantLabel: null, variantParentSymbol: null, isFrozen: false, lastUpdated: "2026-06-10 07:30 UTC",
   };
 
   const OG_CARD_FIXTURES = [
@@ -1350,36 +1248,17 @@ describe("og cards render through satori", () => {
     {
       name: "renders the stablecoin card with depeg, frozen, and variant branches",
       element: <StablecoinCard data={{
-        ...calmCoin,
-        hasActiveDepeg: true,
-        dewsBand: "DANGER",
-        isFrozen: true,
-        variantLabel: "Savings",
-        variantParentSymbol: "USDT",
-        grade: "NR",
-        change24h: null,
-        flow7d: -5_000_000,
+        ...calmCoin, hasActiveDepeg: true, dewsBand: "DANGER", isFrozen: true, variantLabel: "Savings",
+        variantParentSymbol: "USDT", grade: "NR", change24h: null, flow7d: -5_000_000,
       }} />,
     },
     {
       name: "renders the safety-scores card",
       element: <SafetyScoresCard data={{
         gradeDistribution: {
-          "A+": 2,
-          A: 10,
-          "A-": 12,
-          "B+": 30,
-          B: 40,
-          "B-": 25,
-          "C+": 12,
-          C: 8,
-          "C-": 4,
-          D: 3,
-          F: 1,
+          "A+": 2, A: 10, "A-": 12, "B+": 30, B: 40, "B-": 25, "C+": 12, C: 8, "C-": 4, D: 3, F: 1,
         },
-        pulseScore: 78.4,
-        coverageRatio: 0.93,
-        totalCoins: 401,
+        pulseScore: 78.4, coverageRatio: 0.93, totalCoins: 401,
         topPerformers: [
           { symbol: "USDC", grade: "A+", score: 95 },
           { symbol: "PYUSD", grade: "A", score: 92 },
@@ -1397,56 +1276,29 @@ describe("og cards render through satori", () => {
       name: "renders the safety-scores unavailable aggregate without a numeric zero",
       element: <SafetyScoresCard data={{
         gradeDistribution: {
-          "A+": 0,
-          A: 0,
-          "A-": 0,
-          "B+": 0,
-          B: 0,
-          "B-": 0,
-          "C+": 0,
-          C: 0,
-          "C-": 0,
-          D: 0,
-          F: 0,
-          NR: 0,
+          "A+": 0, A: 0, "A-": 0, "B+": 0, B: 0, "B-": 0, "C+": 0, C: 0, "C-": 0, D: 0, F: 0, NR: 0,
         },
-        pulseScore: null,
-        coverageRatio: 0,
-        totalCoins: 401,
-        topPerformers: [],
-        bottomPerformers: [],
-        safetyModel: null,
-        lastUpdated: "DEGRADED: V9 safety score unavailable",
+        pulseScore: null, coverageRatio: 0, totalCoins: 401, topPerformers: [], bottomPerformers: [],
+        safetyModel: null, lastUpdated: "DEGRADED: V9 safety score unavailable",
       }} />,
     },
     {
       name: "renders the depeg card",
       element: <DepegCard data={{
-        activeDepegCount: 3,
-        psiScore: 88.2,
-        psiBand: "BEDROCK",
-        coinsAtPeg: 380,
-        totalCoins: 401,
+        activeDepegCount: 3, psiScore: 88.2, psiBand: "BEDROCK", coinsAtPeg: 380, totalCoins: 401,
         dewsDistribution: { danger: 2, alert: 5, warning: 12, watch: 34, normal: 348 },
         activeDepegs: [
           { symbol: "XAUM", name: "Matrixdock Gold", deviationBps: -312 },
           { symbol: "EURS", name: "STASIS EURO", deviationBps: 145 },
         ],
-        recoveredToday: 1,
-        newToday: 2,
-        lastUpdated: "2026-06-10 07:30 UTC",
+        recoveredToday: 1, newToday: 2, lastUpdated: "2026-06-10 07:30 UTC",
       }} />,
     },
     {
       name: "renders the chain card",
       element: <ChainCard data={{
-        name: "Ethereum",
-        totalUsd: 132_000_000_000,
-        change7dPercent: 1.8,
-        stablecoinCount: 214,
-        dominanceShare: 0.52,
-        healthScore: 74,
-        healthBand: "healthy",
+        name: "Ethereum", totalUsd: 132_000_000_000, change7dPercent: 1.8, stablecoinCount: 214,
+        dominanceShare: 0.52, healthScore: 74, healthBand: "healthy",
         topStablecoins: [
           { symbol: "USDT", share: 0.42, supplyUsd: 55_000_000_000 },
           { symbol: "USDC", share: 0.31, supplyUsd: 41_000_000_000 },
@@ -1458,36 +1310,22 @@ describe("og cards render through satori", () => {
     {
       name: "renders the chain card with zero tracked supply (degraded profile)",
       element: <ChainCard data={{
-        name: "Ethereum",
-        totalUsd: 0,
-        change7dPercent: 0,
-        stablecoinCount: 0,
-        dominanceShare: 0,
-        healthScore: null,
-        healthBand: null,
-        topStablecoins: [],
+        name: "Ethereum", totalUsd: 0, change7dPercent: 0, stablecoinCount: 0, dominanceShare: 0,
+        healthScore: null, healthBand: null, topStablecoins: [],
       }} />,
     },
     {
       name: "renders the chain card without health data",
       element: <ChainCard data={{
-        name: "Obscure Chain",
-        totalUsd: 1_200_000,
-        change7dPercent: -12.4,
-        stablecoinCount: 1,
-        dominanceShare: 0.000004,
-        healthScore: null,
-        healthBand: null,
+        name: "Obscure Chain", totalUsd: 1_200_000, change7dPercent: -12.4, stablecoinCount: 1,
+        dominanceShare: 0.000004, healthScore: null, healthBand: null,
         topStablecoins: [{ symbol: "XUSD", share: 1, supplyUsd: 1_200_000 }],
       }} />,
     },
     {
       name: "renders the stability-index card",
       element: <StabilityIndexCard data={{
-        psiScore: 92,
-        psiBand: "BEDROCK",
-        delta24h: 1.3,
-        sparklineData: [90, 92, 94],
+        psiScore: 92, psiBand: "BEDROCK", delta24h: 1.3, sparklineData: [90, 92, 94],
         bands: [
           { name: "BEDROCK", active: true },
           { name: "STEADY", active: false },
@@ -1496,9 +1334,7 @@ describe("og cards render through satori", () => {
           { name: "CRISIS", active: false },
           { name: "MELTDOWN", active: false },
         ],
-        avg7d: 91.2,
-        retainedSampleHigh: 97.5,
-        retainedSampleLow: 11.4,
+        avg7d: 91.2, retainedSampleHigh: 97.5, retainedSampleLow: 11.4,
         lastUpdated: "2026-06-10 07:30 UTC",
       }} />,
     },

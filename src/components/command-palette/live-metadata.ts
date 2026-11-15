@@ -14,6 +14,7 @@ import type {
 } from "@/components/command-palette/command-palette-model";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { compareFiniteDesc } from "@shared/lib/sort";
+import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
@@ -87,7 +88,8 @@ export function buildStablecoinLiveMetadata(
         });
       const reference = referenceIsAuthoritative ? getPegReference(peg, rates, meta?.commodityOunces) : null;
       const signal = reference != null ? deriveDepegSignal(asset.price, reference) : null;
-      if (signal != null) {
+      // A closed reference market repeats the last close: held, so it never reads as an alert.
+      if (signal != null && !isCurrentDeviationHeld(meta?.flags.pegCurrency, resolvePriceObservedAtSec(asset), signal.bps)) {
         const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
         health = {
           kind: "peg",

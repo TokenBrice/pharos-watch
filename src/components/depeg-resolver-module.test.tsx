@@ -227,7 +227,7 @@ describe("DepegResolverModule", () => {
   it.each(["GOLD", "USD"] as const)(
     "labels the %s peg-relative ratio without publishing a synthetic currency price",
     (pegCurrency) => {
-      const ratioRow = makePredictionRow(makeSourceRow({ pegCurrency }), { currentDeviationBps: -500 });
+      const ratioRow = makePredictionRow(makeSourceRow({ pegCurrency, startedAt: 1_795_017_600 }), { currentDeviationBps: -500 }); // a Wednesday
       render(<DepegResolverModule data={response({ rows: [ratioRow] })} />);
       expect(screen.getByText("95.00% of peg")).toBeTruthy();
       expect(screen.queryByText("$0.9500")).toBeNull();
