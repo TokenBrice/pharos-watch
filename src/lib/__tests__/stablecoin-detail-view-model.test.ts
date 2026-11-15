@@ -43,6 +43,15 @@ describe("stablecoin detail view-model builder", () => {
       .every((query) => query.awaitingLiveRead === undefined)).toBe(true);
   });
 
+  it.each([[22, false], [80, true]] as const)("reads a %sh daily-history fallback as provenance, banner %s", (ageHours, warns) => {
+    const updatedAt = 1_790_000_000;
+    const meta = { updatedAt, ageSeconds: ageHours * 3600, status: "stale" as const, reason: "detail-history-fallback", freshBudgetSec: 259_200 };
+    const params = makeReadyDetailParams({ id: "usdt-tether", coin: TRACKED_META_BY_ID.get("usdt-tether")!, queries: { liveSummary: { meta } } });
+    const lane = buildDetailStaleQueries(params.queries, params.supplemental, params.core.id).find((q) => q.label === "Detail snapshot")!;
+    expect(lane.dailySnapshot).toBe(true);
+    expect(isPublicWarning(deriveDataHealth({ ...DATA_HEALTH_PRESETS.stablecoins, ...lane }, updatedAt * 1000 + ageHours * 3_600_000))).toBe(warns);
+  });
+
   it("keeps a cold summary read loading rather than classifying the tracked ID as absent", () => {
     const params = makeBuildStablecoinDetailViewModelParams({ queries: { liveSummary: { isLoading: true } } });
     expect(buildStablecoinDetailViewModel(params).status).toBe("loading");

@@ -21,7 +21,12 @@ import { claimDataBootstrap } from "@/lib/data-bootstrap";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
-export type ApiMeta = ApiMetaEnvelope;
+/**
+ * The client envelope adds the response's machine freshness reason: a known-clock verdict keeps no
+ * `reason` in the body schema, so `X-Data-Freshness-Reason` is its only machine-readable cause
+ * (R4). Readers must still age that verdict against its own published budget (ADR-42).
+ */
+export type ApiMeta = ApiMetaEnvelope & { reason?: string | null };
 
 /**
  * The coin's row in the release's scores-latest dataset. Display-only: it is
@@ -337,17 +342,18 @@ export async function apiFetchWithMeta<T>(
   const ageHeader = res.headers.get("X-Data-Age");
   const updatedAtHeader = res.headers.get("X-Data-Updated-At");
   const freshnessHeader = res.headers.get("X-Data-Freshness");
+  const freshnessReason = res.headers.get("X-Data-Freshness-Reason");
   // A Safety Score consumer fail-close (1h) is not reader staleness: with a known clock it floors
   // `degraded`, and reader health ages the publication against its own band (ADR-42).
   const headerStatus = freshnessHeader === "stale"
-    && res.headers.get("X-Data-Freshness-Reason") === SAFETY_SCORE_PUBLICATION_AGE_REASON
+    && freshnessReason === SAFETY_SCORE_PUBLICATION_AGE_REASON
     ? "degraded"
     : freshnessHeader === "stale" || freshnessHeader === "degraded" ? freshnessHeader : "fresh";
   const unknownClockMeta = (): ApiMeta => ({
     updatedAt: null,
     ageSeconds: null,
     status: freshnessHeader === "stale" ? "stale" : "unknown",
-    reason: res.headers.get("X-Data-Freshness-Reason") ?? "producer-timestamp-unavailable",
+    reason: freshnessReason ?? "producer-timestamp-unavailable",
   });
 
   // Header-only responses name their absolute producer clock. A present but
@@ -397,6 +403,11 @@ export async function apiFetchWithMeta<T>(
     meta = meta
       ? { ...meta, warning: bodyWarning }
       : ApiMetaWarningOnlySchema.parse({ status: "degraded", warning: bodyWarning });
+  }
+  // A known-clock verdict keeps no reason in the body envelope, so the header is its only
+  // machine-readable cause: keep it, never a receipt clock or a sibling lane's reason (R4).
+  if (meta && freshnessReason && meta.status !== "fresh" && meta.reason == null) {
+    meta = { ...meta, reason: freshnessReason };
   }
 
   // Validate the stripped body. A failure here is not recoverable by

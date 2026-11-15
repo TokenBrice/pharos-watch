@@ -102,9 +102,16 @@ interface DetailContentProps {
 }
 
 /** The producer generation, never the browser's request receipt; unknown hides the stamp. */
-function detailSnapshotGenerationMs(queries: ReadyDetailViewModel["staleQueries"]): number {
-  const updatedAt = queries.find((query) => query.label === "Detail snapshot")?.meta?.updatedAt;
-  return updatedAt != null && updatedAt > 0 ? updatedAt * 1000 : 0;
+function detailSnapshotProvenance(queries: ReadyDetailViewModel["staleQueries"]): {
+  updatedAtMs: number;
+  dailySnapshot: boolean;
+} {
+  const lane = queries.find((query) => query.label === "Detail snapshot");
+  const updatedAt = lane?.meta?.updatedAt;
+  return {
+    updatedAtMs: updatedAt != null && updatedAt > 0 ? updatedAt * 1000 : 0,
+    dailySnapshot: lane?.dailySnapshot === true,
+  };
 }
 
 function DetailIdentity({
@@ -120,6 +127,7 @@ function DetailIdentity({
   onOpenFeedback: () => void;
   viewModel: ReadyDetailViewModel;
 }) {
+  const snapshot = detailSnapshotProvenance(viewModel.staleQueries);
   return (
     <>
       {/* The identity header's visible title is the page's only h1. */}
@@ -135,7 +143,8 @@ function DetailIdentity({
         model={heroModel}
         onOpenFeedback={onOpenFeedback}
         gradeRead={viewModel.gradeRead}
-        updatedAtMs={detailSnapshotGenerationMs(viewModel.staleQueries)}
+        updatedAtMs={snapshot.updatedAtMs}
+        dailySnapshot={snapshot.dailySnapshot}
       />
       <MobileStickySummary
         coin={viewModel.coin}

@@ -82,6 +82,14 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
 /** Last-valid DEWS presentation window; not the endpoint freshness SLO. */
 export const STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8;
 
+/**
+ * Machine reason for the designed detail history fallback: the detail response is served from the
+ * newest retained `supply_history` row, so its `stale` floor means "not a live detail snapshot",
+ * not "past the age budget". Reader health ages that row against the published history budget
+ * (ADR-42): provenance inside it, the stale band beyond it.
+ */
+export const DETAIL_HISTORY_FALLBACK_REASON = "detail-history-fallback";
+
 /** Telegram tolerates six-hour flow context without claiming endpoint freshness. */
 export const TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC = 6 * 3600;
 
