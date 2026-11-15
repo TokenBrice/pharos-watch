@@ -74,7 +74,7 @@ The registry supplies all 46 logical jobs; owner-review prose lives in `scripts/
 
 Safety Score lane-witness admission is not a cron lane. [Mechanism overlay evidence: Incident reviews and lane closure](mechanism-overlay-evidence-standard.md#incident-reviews-and-lane-closure-v1038) owns the review-admission, witness-currency and OQ-1 rules; [Report Cards Appendix](report-cards-appendix.md#campaign-admission-rules) owns the incident join. The 30-day `laneIncidentCertificateMaxAgeSec` budget is measured from pinned `windowEndSec`; gapped, expired, future, malformed or failed reads leave the lane unknown and emit `lane-incident-certificate-<state>:<lane>` (read failure `lane-incident-certificates-unavailable:<reason>`). Producer lookback is at least 50,000 recent blocks, preferably 30 days, not an evaluation threshold.
 
-The release was owner-approved on 2026-11-05 and activated as v10.43; fresh mover measurement follows the first accepted production cycle; the five-lane catalog is screening coverage, not closure authority.
+The release was owner-approved on 2026-11-05 and activated as v10.43; fresh mover measurement follows the first accepted production cycle; the reviewed lane catalog (nine lanes since v10.45) is screening coverage, not closure authority.
 
 ## Sign-off boundary
 
