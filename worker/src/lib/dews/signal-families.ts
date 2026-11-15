@@ -327,6 +327,13 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
 export function computeDivergSignal(input: DEWSInput): SignalResult {
   const { price, dexPriceUsd, pegRef, pegType } = input;
 
+  // A closed metal market repeats the last close: carry the last reading through the
+  // closure instead of measuring the trading legs against it.
+  if (input.pegReferenceUnavailableReason === "reference-market-closed" && input.prevDivergAvailable === true &&
+    input.prevDivergValue !== undefined) {
+    return { value: input.prevDivergValue, available: true };
+  }
+
   // Admit each observed price leg independently against the same peg reference.
   if (input.pegReferenceAvailable === false || !Number.isFinite(pegRef) || pegRef <= 0) {
     return {

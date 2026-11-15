@@ -119,9 +119,10 @@ function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<num
 }
 
 // The two endpoints are the all-time worst tracked deviation and the current
-// published deviation; this is a range, not a 30-day history window.
-function buildPegDeviationSeries(asset: StablecoinData | undefined, pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
-  const current = resolveCurrentDeviationBps(asset, pegCoin);
+// published deviation; this is a range, not a 30-day history window. Null means
+// the row has no fixed peg (NAV), so no reference market can hold its reading.
+function buildPegDeviationSeries(asset: StablecoinData | undefined, pegCoin: PegSummaryCoin | undefined, referenceCurrency: string | null): ReadonlyArray<number | null> | undefined {
+  const current = resolveCurrentDeviationBps(asset, pegCoin, referenceCurrency);
   return current == null ? undefined : [pegCoin?.worstDeviationBps ?? current, current];
 }
 
@@ -269,7 +270,8 @@ export function ScreenerClient() {
         mintAuthorityScoreBandLabel: mintAuthorityScore?.bandLabel ?? null,
         mintAuthorityScoreBadgeClassName: mintAuthorityScore?.badgeClassName ?? null,
         mintAuthorityScoreDetail: mintAuthorityScore?.detail ?? null,
-        pegDeviationSeries: buildPegDeviationSeries(assetById.get(meta.id), pegCoin),
+        // The registry peg unit owns the reference market; a NAV token has none to close.
+        pegDeviationSeries: buildPegDeviationSeries(assetById.get(meta.id), pegCoin, meta.flags.navToken ? null : meta.flags.pegCurrency),
         supplySeries: supplySeriesById.get(meta.id),
       });
     }

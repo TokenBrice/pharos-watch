@@ -19,6 +19,8 @@ export interface DepegCardData {
     symbol: string;
     name: string;
     deviationBps: number | null;
+    /** The deviation exists but its FX or metal reference market is closed. */
+    deviationHeld?: boolean;
     peakBps?: number;
   }>;
   recoveredToday: number;
@@ -123,7 +125,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
                   }}
                 >
                   {depeg.deviationBps == null
-                    ? `Current unavailable; peak ${depeg.peakBps ?? "N/A"} bps`
+                    ? `${depeg.deviationHeld ? "Reference market closed" : "Current unavailable"}; peak ${depeg.peakBps ?? "N/A"} bps`
                     : `${depeg.deviationBps > 0 ? "+" : ""}${depeg.deviationBps} bps${depeg.peakBps != null ? ` (peak ${depeg.peakBps})` : ""}`}
                 </span>
               </div>

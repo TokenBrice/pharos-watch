@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import satoriStandalone from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -17,11 +17,23 @@ vi.mock("../../lib/stress-signals-current-rows", () => ({
 }));
 
 const nativeQuoteFixtures = createLatestSchemaFixtureTracker();
+// Wednesday 16:00 UTC: the FX reference market is open, so an EUR fixture reads a
+// live deviation instead of a closed-market hold.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(1_795_017_600 * 1000);
+});
 afterEach(() => {
   nativeQuoteFixtures.closeAll();
   resetOgWasmInitializationForTests();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
+
+function lastDepegElement() {
+  const calls = vi.mocked(satoriStandalone).mock.calls;
+  return calls[calls.length - 1][0] as ReactElement<{ data: DepegCardData }>;
+}
 
 describe("depeg OG independent source availability", () => {
   it.each([false, true])("does not manufacture DEWS zeroes from absent rows; observed=%s", async (observed) => {
@@ -38,8 +50,7 @@ describe("depeg OG independent source availability", () => {
     ]);
     const response = await handleOg(db, "/api/og/depeg");
     expect(response?.status).toBe(200);
-    const calls = vi.mocked(satoriStandalone).mock.calls;
-    const element = calls[calls.length - 1][0] as ReactElement<{ data: DepegCardData }>;
+    const element = lastDepegElement();
     expect(element.type).toBe(DepegCard);
     expect(element.props.data.dewsDistribution).toEqual(observed ? { danger: 0, alert: 0, warning: 0, watch: 0, normal: 1 } : null);
     expect(element.props.data.newToday).toBe(observed ? 0 : null);
@@ -56,7 +67,7 @@ describe("depeg OG independent source availability", () => {
     ["native missing", "live", "native-peg", "missing", 86400, 1, null],
     ["native expired", "live", "native-peg", "expired", 86400, 1, null],
     ["legacy USD reference", "backfill", null, "fresh", 86400, 1.1, 0],
-    ["explicit USD provenance", "live", "usd", "fresh", 86400, 1, 1000],
+    ["explicit USD provenance", "live", "usd", "fresh", 86400, 1, 0], // today's EUR reference, not the stored 1
   ] as const)("renders %s in its event domain from joined SQLite evidence", async (_label, source, quoteMode, quoteState, startAge, reference, expectedBps) => {
     const { db, sqlite } = nativeQuoteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
@@ -75,8 +86,7 @@ describe("depeg OG independent source availability", () => {
     if (quoteState !== "missing") sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .run(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}101`, JSON.stringify({ value: 0.98, observedAt: quoteAt, source: "coingecko" }), quoteAt);
     expect((await handleOg(db, "/api/og/depeg"))?.status).toBe(200);
-    const calls = vi.mocked(satoriStandalone).mock.calls;
-    const element = calls[calls.length - 1][0] as ReactElement<{ data: DepegCardData }>;
+    const element = lastDepegElement();
     expect(element.props.data.activeDepegs).toEqual([
       expect.objectContaining({ symbol: "EURC", deviationBps: expectedBps, peakBps: -500 }),
     ]);

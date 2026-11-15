@@ -107,6 +107,11 @@ export function StabilityIndexMethodologySection() {
         stable-value investment products remain browsable but do not count as independent supply.
       </p>
       <p>
+        Methodology v3.68 scores open depegs on gold, silver and FX pegs against today&apos;s reference rather than
+        the reference on the day they opened, and holds FX, gold and silver contributions at their last pre-closure
+        value while their market is shut.
+      </p>
+      <p>
         Methodology v3.67 can change repaired historical scores without changing formula weights or bands.
         Audit repairs and bounded backfills share canonical daily-price, native-domain and DEWS archive inputs
         with a twenty-one-day supply lookback. Historical trend compares paired admitted supply identities;
@@ -214,6 +219,12 @@ export function StabilityIndexMethodologySection() {
             <li>
               <span className="text-foreground font-medium">Per-coin deduplication:</span> active events are grouped by
               coin; each coin contributes once using the worst current deviation.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">Current references:</span> a non-USD event (gold, silver,
+              fiat FX) is scored against today&apos;s reference, as detection does, not the gold or FX price on the day it
+              opened; without a trustworthy reference it is left unpriced. While its FX or metal market is closed (weekends and
+              listed holidays), an FX, gold or silver token keeps the deviation it had at the close unless it moves 25% or more.
             </li>
             <li>
               <span className="text-foreground font-medium">Native quote domains:</span> non-USD native events never

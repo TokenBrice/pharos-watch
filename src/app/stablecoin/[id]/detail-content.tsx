@@ -379,6 +379,7 @@ function DetailSummaryRail({
             consensusSources={viewModel.consensusSources}
             agreeSources={viewModel.agreeSources}
             dexPriceCheck={viewModel.dexPriceCheck}
+            navToken={viewModel.isNavToken}
             compact
           />
         ) : null}

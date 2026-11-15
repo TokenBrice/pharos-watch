@@ -2,6 +2,8 @@ import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { computeDEWS } from "../dews";
@@ -104,6 +106,7 @@ function readTopPools(
 export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): DewsScoringResult {
   const {
     assetById,
+    nowSec,
     pegRates,
     pegRateContributorCounts = {},
     pegRateSources = {},
@@ -179,13 +182,24 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const pegRef = pegReferenceTrusted && pegType != null
       ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0
       : 0;
+    const price = isObservedPrice(asset) ? asset.price ?? null : null;
+    // A closed FX or metal market holds the reference unless an admitted leg (primary or DEX) moved severely.
+    const legMoves = [price, dexPrice?.dexPriceUsd ?? null].flatMap((leg) => {
+      const signal = leg == null ? null : deriveDepegSignal(leg, pegRef);
+      return signal ? [signal.absRawBps] : [];
+    });
+    const referenceMarketClosed = pegRef > 0 && nowSec != null && isReferenceDeviationHeld(
+      meta.flags?.pegCurrency, nowSec, legMoves.length > 0 ? Math.max(...legMoves) : Number.NaN,
+    );
     const pegReferenceUnavailableReason = pegType == null
       ? "peg-type-unavailable"
       : !hasPegReference
         ? "peg-reference-missing"
-        : pegReferenceTrusted
-          ? null
-          : "peg-reference-untrusted";
+        : !pegReferenceTrusted
+          ? "peg-reference-untrusted"
+          : referenceMarketClosed
+            ? "reference-market-closed"
+            : null;
     const input: DEWSInput = {
       stablecoinId: meta.id,
       mcapUsd: current,
@@ -205,11 +219,11 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       tvl7dAgo: liqHist?.tvl ?? null,
       priceConfidence: asset.priceConfidence ?? null,
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
-      price: isObservedPrice(asset) ? asset.price ?? null : null,
+      price,
       priceSource: asset.priceSource ?? null,
       agreeSources: asset.agreeSources,
       pegRef,
-      pegReferenceAvailable: pegReferenceTrusted,
+      pegReferenceAvailable: pegReferenceTrusted && !referenceMarketClosed,
       pegReferenceUnavailableReason,
       pegRateSource,
       pegRateContributorCount,

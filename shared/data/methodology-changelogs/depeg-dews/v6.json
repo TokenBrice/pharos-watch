@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.47",
+    "title": "Closed FX and metal markets hold depeg state; sustained single-source recovery",
+    "date": "2026-11-15",
+    "effectiveAt": 1794783600,
+    "summary": "FX and spot metals trade 24/5 while the stablecoins pegged to them trade 24/7. During a reference-market closure, detection, pending confirmation and DEWS hold FX and gold/silver state instead of comparing weekend prices with a frozen close. Open events whose own price source shows 24 hours of sustained recovery can now close.",
+    "impact": [
+      "`shared/lib/reference-market-hours.ts` is the single closure authority. FX closes Friday 21:00 to Sunday 23:00 UTC (the union of the US daylight and standard-time sessions), from 22:00 UTC on 24 and 31 December, and all of 25 December and 1 January; metals follow the same hours and also close from 21:00 UTC on the Thursday before Good Friday through Good Friday. On Sunday 15 November 2026 gold-api.com returned an unchanged XAU quote with a fresh `updatedAt` on every poll, Chainlink XAU/USD posted only its 24-hour heartbeat at the Friday level, and about half of the gold peer median were tokens quoted at that close.",
+      "While closed, a non-USD fiat or GOLD/SILVER asset below the existing 2,500 bps severe band opens no pending row and changes no open event: no peak, direction or recovery update, with blind price coverage until the reopen. The census records the gap as `reference-market-closed`, which the observation canaries acknowledge only when the census clock is inside a closure. Pending candidates wait instead of confirming, clearing or expiring, judged on today's price against the refreshed reference (an unknown current deviation also waits). A severe candidate that proceeds during a closure needs severe confirmers. The pending-candidate and open-event coverage canaries exempt held assets for the closure plus one grace window; a candidate already stalled or a gap already blind when the closure began stays actionable.",
+      "During a closure DEWS carries each held asset's last divergence reading, so stress breadth does not step at the closure edges, and reports the signal unavailable (`reference-market-closed`) only when there is no previous reading; a severe primary or DEX leg (raw bps) is scored normally. Site surfaces show \"Reference market closed\" instead of a held current deviation; API row values are unchanged, while the peg-summary aggregates and the OG at-peg cohort leave held rows out.",
+      "Sustained single-source recovery: a USD-domain open event whose fresh, upstream-dated `confirm_required` primary (a non-cached single-source or high-confidence quote that cannot be depeg-authoritative, such as CoinGecko alone) stays inside the recovery band for 24 continuous hours, with no fresh trusted DEX price outside the band, no stale or unaffirmed liquid DEX row, no DEX recovery challenge, no pool veto and no admitted native quote outside the band, closes as `recovered-primary`. Trusted evidence keeps its 15-minute rule. Events such as XAUm (22 October), VNXAU (22 October) and XAGm (22 September) opened on pool and temporal confirmation but had no evidence path that could ever close them, because CoinGecko is never depeg-authoritative and their DEX liquidity is below the $1M floor.",
+      "On 14-15 November 2026 the previous rule opened PAXG and XAUT events on Saturday at 21:01 and 22:16 UTC and again on Sunday at 07:46 UTC, against references of $3,847-3,877 while gold-api.com repeated $3,887.60. Those events remain in history."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.46",
     "title": "Lone Mento Broker quotes cannot establish DEWS escalation evidence",
     "date": "2026-11-11",

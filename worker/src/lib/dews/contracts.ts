@@ -194,6 +194,8 @@ export interface DewsSourceState {
 
 export interface DewsScoringState {
   assetById: Map<string, StablecoinData>;
+  /** Evaluation clock; without it no metal-market closure is applied. */
+  nowSec?: number;
   pegRates: Record<string, number>;
   pegRateSources?: Record<string, PegRateSource>;
   pegRateContributorCounts?: Record<string, number>;

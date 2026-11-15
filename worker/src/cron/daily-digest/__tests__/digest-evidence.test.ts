@@ -131,7 +131,9 @@ describe("canonical comparable digest evidence", () => {
   it("evaluates a native-peg depeg under the six-hour event-native budget", async () => {
     const NATIVE_QUOTE_AGE_SEC = 20 * 60;
     const DAY_SECONDS = 86_400;
-    const now = Math.floor(Date.now() / 1000);
+    // Wednesday 16:00 UTC, with the prior run also inside FX trading hours, so
+    // both legs are live native deviations rather than a closed-market hold.
+    const now = 1_795_017_600;
     const collect = async (at: number, quote: number) => {
       const ctx = makeCollectorCtx(mockD1([{
         match: "FROM depeg_events",

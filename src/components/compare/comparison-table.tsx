@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { hasObservedDisplayPrice, resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
+import { hasObservedDisplayPrice, resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
 import { memo, useId, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
@@ -237,7 +237,19 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
             return formatNativePrice(hasObservedDisplayPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, ref);
           },
         },
-        { key: "deviation", label: "Peg deviation", numeric: true, render: (coin) => formatComparisonBps(resolveCurrentDeviationBps(coin.data, coin.pegDetails)) },
+        {
+          key: "deviation",
+          label: "Peg deviation",
+          numeric: true,
+          render: (coin) => {
+            const read = resolveCurrentDeviation(
+              coin.data, coin.pegDetails, coin.meta.flags.navToken ? null : coin.meta.flags.pegCurrency,
+            );
+            return read.referenceMarketClosed
+              ? <span className="text-muted-foreground">Reference market closed</span>
+              : formatComparisonBps(read.deviationBps);
+          },
+        },
         { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
         { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
         { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
