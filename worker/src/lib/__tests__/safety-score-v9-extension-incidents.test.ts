@@ -53,6 +53,16 @@ const NEGATIVE = V9NegativeIncidentReviewSchema.parse({
   ],
 });
 
+function unknownMintControl() {
+  return { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
+}
+
+function controlIncidentFixture() {
+  const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NOW).find((row) => row.domain === "control")!;
+  if (original.domain !== "control") throw new Error("Expected control incident fixture");
+  return original;
+}
+
 function routeFixture(controls: ControlOverlay[], reviews: readonly NegativeIncidentScope[], closure?: LaneIncidentClosureInputs) {
   return routeNegatives(controls, "fixture", NOW, reviews, [], closure);
 }
@@ -86,9 +96,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
       scope: "deployment" as const, incidentState: "unknown" as const };
     const sibling = { ...target, controlKey: "bridge:sibling",
       deploymentKey: "base:0x2222222222222222222222222222222222222222" };
-    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NOW)
-      .find((row) => row.domain === "control")!;
-    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const original = controlIncidentFixture();
     const incident = V9ReviewedIncidentSchema.parse({
       ...original, assetId: "fixture", status: "active", resolvedAt: null,
       scope: { kind: "deployment", deploymentKey: target.deploymentKey, exposureShare: 0.1 },
@@ -114,9 +122,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
     const sibling = { ...target, controlKey: "bridge-meta:fixture:sibling" };
     const root = { ...control("mint-meta:fixture:root"), incidentState: "unknown" as const };
     const wrongKind = { ...target, controlKey: "bridge-meta:fixture:upgrade", controlKind: "upgrade" as const };
-    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NOW)
-      .find((row) => row.domain === "control")!;
-    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const original = controlIncidentFixture();
     const incident = V9ReviewedIncidentSchema.parse({
       ...original, assetId: "fixture", status, resolvedAt: status === "active" ? null : original.remediation.lastVerifiedAt,
       remediation: { ...original.remediation, state: "verified" },
@@ -143,10 +149,8 @@ describe("Safety Score v9 independent negative incident routing", () => {
   });
 
   it("prioritizes active exact-control incidents in either order", () => {
-    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
-    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NOW)
-      .find((row) => row.domain === "control")!;
-    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const target = unknownMintControl();
+    const original = controlIncidentFixture();
     const historical = V9ReviewedIncidentSchema.parse({ ...original, assetId: "fixture", status: "resolved",
       resolvedAt: original.remediation.lastVerifiedAt, remediation: { ...original.remediation, state: "verified" },
       posture: { ...original.posture, incidentState: "resolved" },
@@ -175,7 +179,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
   });
 
   it("preserves known states and actual incidents", () => {
-    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
+    const target = unknownMintControl();
     for (const incidentState of ["active", "resolved", "none"] as const) {
       const known = { ...target, incidentState };
       expect(routeFixture([known], [NEGATIVE])[0]).toBe(known);
@@ -350,7 +354,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       { retired: { reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Orphaned by route re-authoring" } },
     );
     expect(retired.retired?.reason).toBe("Orphaned by route re-authoring");
-    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
+    const target = unknownMintControl();
     expect(routeFixture([target], [retired])[0]).toBe(target);
     const builder = new ReviewEvidenceBuilder("fixture", NOW);
     addSafetyScoreV9NegativeIncidentEvidence(builder, [retired]);
@@ -420,6 +424,10 @@ describe("Safety Score v9 authored incident-review identity", () => {
     };
   }
 
+  function certificateMap(overrides: Partial<Record<string, unknown>> = {}) {
+    return new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate(overrides) }]]);
+  }
+
   function closureInputs(overrides: Partial<{
     descriptors: unknown[];
     certificates: Map<string, unknown>;
@@ -430,7 +438,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       contributorControls: overrides.contributorControls ?? [{ id: "alpha", routeRefs: [ROUTE_A],
         authorityType: "validator-quorum" as const, failureDomainKeys: ["messaging:chainlink-ccip:fixture"] }],
       descriptors: (overrides.descriptors ?? [descriptor()]) as never,
-      certificates: (overrides.certificates ?? new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate() }]])) as never,
+      certificates: (overrides.certificates ?? certificateMap()) as never,
       routes: (overrides.routes ?? new Map([[ROUTE_A, { rail: null, providerKeys: ["layerzero"], routeClass: "native" }]])) as never,
     };
   }
@@ -501,8 +509,8 @@ describe("Safety Score v9 authored incident-review identity", () => {
       providerIncidents: [incidentKey === exempted.incidentKey ? { ...exempted, exemptions: [] } : incident] }),
       assetId: "other-asset", scope: { kind: "provider" as const, providerKey: "layerzero" as const,
         surface: "dvn-set" as const, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
-    const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
-    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+    const runtime = await vi.importActual<{ default: Record<string, unknown> }>(registryPath);
+    vi.doMock(registryPath, () => ({
       default: { ...runtime.default, negativeReviews: [provider, issuerRow(), foreign,
         { ...foreign, reviewId: provider.reviewId, providerIncidents: [{ ...exempted, exemptions: [] }] }] },
     }));
@@ -527,7 +535,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
         [target], "fixture", NOW, reviews.filter((review) => review.reviewId !== foreign.reviewId),
         [], closureInputs())[0]!.incidentState).toBe("none");
     } finally {
-      vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+      vi.doUnmock(registryPath);
       vi.resetModules();
     }
   });
@@ -567,8 +575,8 @@ describe("Safety Score v9 authored incident-review identity", () => {
     const certificate = laneCertificate({ subjectDeploymentKey: routeId });
     const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: contributors });
     const laneDescriptor = { ...descriptor(), assetId, subjectDeploymentKey: routeId, contributorControlIds: contributors, screeningSetId };
-    const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
-    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+    const runtime = await vi.importActual<{ default: Record<string, unknown> }>(registryPath);
+    vi.doMock(registryPath, () => ({
       default: { ...runtime.default, negativeReviews: [issuer, foreign, issuerOperated
         ? { ...provider, assetId: "witness", scope: { ...provider.scope, coveredRoutes: [{ assetId: "witness", routeId: ROUTE_B }] } }
         : provider] },
@@ -619,7 +627,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       }
     } finally {
       vi.restoreAllMocks();
-      vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+      vi.doUnmock(registryPath);
       vi.resetModules();
     }
   }, 60_000);
@@ -663,24 +671,22 @@ describe("Safety Score v9 authored incident-review identity", () => {
       [closureInputs(), [NegativeIncidentRuntimeSchema.parse({ ...provider, scope: { ...provider.scope, coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_B }] } }), issuer]],
       [closureInputs({ routes: route({ providerKeys: ["wormhole"] }) }), [provider, issuer]],
       [closureInputs({ routes: route({ providerKeys: [] }) }), [provider, issuer]],
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID,
-        certificate: laneCertificate({ windowEndSec: NOW + 1, observedAtSec: NOW + 2 }) }]]) }), [provider, issuer]],
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID,
-        certificate: laneCertificate({ observedAtSec: NOW + 1 }) }]]) }), [provider, issuer]],
+      [closureInputs({ certificates: certificateMap({ windowEndSec: NOW + 1, observedAtSec: NOW + 2 }) }), [provider, issuer]],
+      [closureInputs({ certificates: certificateMap({ observedAtSec: NOW + 1 }) }), [provider, issuer]],
       [closureInputs({ descriptors: [] }), [provider, issuer]],
       [closureInputs({ descriptors: [descriptor({ contributorControlIds: ["alpha", "beta"] })] }), [provider, issuer]],
       [closureInputs({ certificates: new Map() }), [provider, issuer]],
       [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: "set-2", certificate: laneCertificate() }]]) }), [provider, issuer]],
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
+      [closureInputs({ certificates: certificateMap({
         finding: "material-event",
         materialEvents: [{ address: EMITTER, family: "OwnershipTransferred", transactionHash: `0x${"2".repeat(64)}`, blockNumber: 150, logIndex: 0 }],
         eventCounts: { OwnershipTransferred: 1 },
-      }) }]]) }), [provider, issuer]],
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
+      }) }), [provider, issuer]],
+      [closureInputs({ certificates: certificateMap({
         windowStartSec: NOW - 4_000_000,
         windowEndSec: NOW - 3_000_000,
         observedAtSec: NOW - 3_000_000,
-      }) }]]) }), [provider, issuer]],
+      }) }), [provider, issuer]],
     ] as const;
     for (const [inputs, reviews] of cases) {
       expect(closeLane(target, [...reviews], inputs))
@@ -693,6 +699,23 @@ describe("Safety Score v9 authored incident-review identity", () => {
     const sibling = { ...target, deploymentKey: ROUTE_B };
     const mint = { ...target, controlKind: "mint" as const };
     expect(routeFixture([sibling, mint], [provider, issuer], closureInputs())).toEqual([sibling, mint]);
+  });
+
+  it.each([[NOW - 3_600, "none"], [NOW - 3_000_000, "unknown"], [null, "unknown"]] as const)(
+    "closes cross-chain emitters only through their chain's lane certificates: %s", (windowEndSec, state) => {
+    const [pin] = descriptor().emitters;
+    const address = ROUTE_B.slice(5);
+    const base = laneCertificate({ subjectDeploymentKey: ROUTE_B, emitters: [{ ...laneCertificate().emitters[0]!, address }],
+      ...windowEndSec === null ? {} : { windowStartSec: windowEndSec, windowEndSec, observedAtSec: windowEndSec } });
+    const screeningSetId = laneIncidentCertificateScreeningSetId({ ...base, contributorControlIds: ["alpha"] });
+    const inputs = (families: readonly string[] = pin!.families) => closureInputs({ descriptors: [
+      descriptor({ emitters: [pin, { ...pin!, address, chain: "base", families }] }),
+      descriptor({ subjectDeploymentKey: ROUTE_B, screeningSetId, emitters: [{ ...pin!, address }] })],
+      certificates: new Map([...certificateMap(), ...windowEndSec === null ? [] : [[ROUTE_B, { screeningSetId, certificate: base }] as const]]) });
+    const closed = closeLane(laneTarget(), undefined, inputs());
+    expect(closed.incidentState).toBe(state);
+    expect(closed.incidentCoverage?.crossChainCertificateIds).toEqual(state === "none" ? [base.certificateId] : undefined);
+    expect(closeLane(laneTarget(), undefined, inputs([...pin!.families, "Upgraded"])).incidentState).toBe("unknown");
   });
 
   it.each(["route", "exposure"] as const)("never closes a %s scope fact", (scope) => {

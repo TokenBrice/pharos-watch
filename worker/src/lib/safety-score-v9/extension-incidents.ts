@@ -278,6 +278,7 @@ type LaneClosureWitnesses = {
   issuerSurfaceReviewId: string;
   descriptor: V9LaneEmitterDescriptor;
   certificate: V9LaneIncidentCertificate;
+  crossChainCertificateIds: readonly string[];
 };
 
 const LANE_INCIDENT_CERTIFICATE_MAX_AGE_SEC =
@@ -381,6 +382,49 @@ function newestReview(reviews: readonly NegativeIncidentScope[]): NegativeIncide
 }
 
 /**
+ * The newest admitted certificate for a descriptor's own screening set when it is
+ * clean and current: exact set and frozen policy, the reviewed same-chain emitter
+ * pins and families, and a window end inside the certificate budget.
+ */
+function admittedCleanCertificate(
+  descriptor: V9LaneEmitterDescriptor,
+  certificates: LaneIncidentClosureInputs["certificates"],
+  clockSec: number,
+): V9LaneIncidentCertificate | null {
+  const routeId = descriptor.subjectDeploymentKey;
+  const read = certificates.get(routeId);
+  if (read === undefined || read.screeningSetId !== descriptor.screeningSetId) return null;
+  const certificate = read.certificate;
+  if (certificate.subjectDeploymentKey !== routeId) return null;
+  if (certificate.screeningPolicyDigest !== descriptor.screeningPolicyDigest) return null;
+  if (descriptor.screeningPolicyDigest !== LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST) return null;
+  // Cross-chain emitters belong to their own chain's lanes, not this certificate.
+  const ownEmitters = descriptor.emitters.filter((emitter) => emitter.chain === undefined);
+  const descriptorEmitters = ownEmitters.map((emitter) => ({
+    address: emitter.address,
+    expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.slice("sha256-decoded-runtime-bytes:".length),
+  }));
+  const identity = {
+    subjectDeploymentKey: routeId,
+    contributorControlIds: descriptor.contributorControlIds,
+    screeningPolicyDigest: descriptor.screeningPolicyDigest,
+  };
+  if (laneIncidentCertificateScreeningSetId({ ...identity, emitters: descriptorEmitters }) !== descriptor.screeningSetId ||
+      laneIncidentCertificateScreeningSetId({ ...identity, emitters: certificate.emitters }) !== read.screeningSetId) return null;
+  if (ownEmitters.length !== certificate.emitters.length ||
+      ownEmitters.some((emitter) => {
+        const screened = certificate.emitters.find((row) => row.address === emitter.address);
+        return screened === undefined ||
+          emitter.reviewedRuntimePin !== `sha256-decoded-runtime-bytes:${screened.expectedRuntimeCodeSha256}` ||
+          emitter.families.some((family) => !screened.families.includes(family));
+      })) return null;
+  if (certificate.finding !== "no-material-admin-event") return null;
+  if (certificate.windowEndSec > clockSec || certificate.observedAtSec > clockSec) return null;
+  if (clockSec - certificate.windowEndSec > LANE_INCIDENT_CERTIFICATE_MAX_AGE_SEC) return null;
+  return certificate;
+}
+
+/**
  * Three-witness closure of a bridge lane (OP-IR ruling 5a): the rail witness
  * (one current provider review per provider key the route authors, or the
  * issuer surface on an issuer-operated rail, OQ-2), the asset's issuer-surface
@@ -411,34 +455,25 @@ function laneIncidentClosureWitnesses(
     (row) => row.subjectDeploymentKey === routeId && row.assetId === assetId);
   if (descriptor === undefined) return null;
   if (!sameControlIdSet(descriptor.contributorControlIds, contributorIds)) return null;
-
-  const read = inputs.certificates.get(routeId);
-  if (read === undefined || read.screeningSetId !== descriptor.screeningSetId) return null;
-  const certificate = read.certificate;
-  if (certificate.subjectDeploymentKey !== routeId) return null;
-  if (certificate.screeningPolicyDigest !== descriptor.screeningPolicyDigest) return null;
-  if (descriptor.screeningPolicyDigest !== LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST) return null;
-  const descriptorEmitters = descriptor.emitters.map((emitter) => ({
-    address: emitter.address,
-    expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.slice("sha256-decoded-runtime-bytes:".length),
-  }));
-  const identity = {
-    subjectDeploymentKey: routeId,
-    contributorControlIds: descriptor.contributorControlIds,
-    screeningPolicyDigest: descriptor.screeningPolicyDigest,
-  };
-  if (laneIncidentCertificateScreeningSetId({ ...identity, emitters: descriptorEmitters }) !== descriptor.screeningSetId ||
-      laneIncidentCertificateScreeningSetId({ ...identity, emitters: certificate.emitters }) !== read.screeningSetId) return null;
-  if (descriptor.emitters.length !== certificate.emitters.length ||
-      descriptor.emitters.some((emitter) => {
-        const screened = certificate.emitters.find((row) => row.address === emitter.address);
-        return screened === undefined ||
-          emitter.reviewedRuntimePin !== `sha256-decoded-runtime-bytes:${screened.expectedRuntimeCodeSha256}` ||
-          emitter.families.some((family) => !screened.families.includes(family));
-      })) return null;
-  if (certificate.finding !== "no-material-admin-event") return null;
-  if (certificate.windowEndSec > clockSec || certificate.observedAtSec > clockSec) return null;
-  if (clockSec - certificate.windowEndSec > LANE_INCIDENT_CERTIFICATE_MAX_AGE_SEC) return null;
+  const certificate = admittedCleanCertificate(descriptor, inputs.certificates, clockSec);
+  if (certificate === null) return null;
+  // A cross-chain emitter closes only through the reviewed lanes on its chain that
+  // screen it under the same pin: every one holds a clean, current admitted
+  // certificate, and one of them screens every reviewed family.
+  const crossChainCertificateIds = new Set<string>();
+  for (const emitter of descriptor.emitters) {
+    if (emitter.chain === undefined) continue;
+    const screening = inputs.descriptors.filter((row) => row.subjectDeploymentKey.startsWith(`${emitter.chain}:`) &&
+      row.emitters.some((screened) => screened.chain === undefined && screened.address === emitter.address &&
+        screened.reviewedRuntimePin === emitter.reviewedRuntimePin));
+    if (!screening.some((row) => row.emitters.some((screened) => screened.chain === undefined &&
+        screened.address === emitter.address && emitter.families.every((family) => screened.families.includes(family))))) return null;
+    for (const lane of screening) {
+      const witness = admittedCleanCertificate(lane, inputs.certificates, clockSec);
+      if (witness === null) return null;
+      crossChainCertificateIds.add(witness.certificateId);
+    }
+  }
 
   const current = reviews.filter((review) =>
     review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
@@ -479,6 +514,7 @@ function laneIncidentClosureWitnesses(
     issuerSurfaceReviewId: issuerReview.reviewId,
     descriptor,
     certificate,
+    crossChainCertificateIds: [...crossChainCertificateIds].sort(compareText),
   };
 }
 
@@ -618,6 +654,7 @@ export function routeSafetyScoreV9NegativeIncidentReviews(
         issuerSurfaceReviewId: witnesses.issuerSurfaceReviewId,
         screeningSetId: witnesses.descriptor.screeningSetId,
         certificateId: witnesses.certificate.certificateId,
+        ...(witnesses.crossChainCertificateIds.length === 0 ? {} : { crossChainCertificateIds: [...witnesses.crossChainCertificateIds] }),
         contributorControlIds: [...laneContributorIds(control) ?? []],
       },
     };

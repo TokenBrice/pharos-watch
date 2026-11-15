@@ -55,13 +55,18 @@ function emitter(overrides: Record<string, unknown> = {}): Record<string, unknow
   };
 }
 
-function inventory(lanes: readonly Record<string, unknown>[] = [{
-  subjectDeploymentKey: SUBJECT,
-  assetIds: ["fixture-asset"],
-  rail: "chainlink-ccip",
-  contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
-  emitters: [emitter()],
-}]): LaneScreeningEmitterInventory {
+function lane(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    subjectDeploymentKey: SUBJECT,
+    assetIds: ["fixture-asset"],
+    rail: "chainlink-ccip",
+    contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+    emitters: [emitter()],
+    ...overrides,
+  };
+}
+
+function inventory(lanes: readonly Record<string, unknown>[] = [lane()]): LaneScreeningEmitterInventory {
   return {
     schemaVersion: 1,
     reviewedAt: "2026-10-30",
@@ -115,13 +120,7 @@ describe("lane emitter descriptor admission", () => {
 
   it("closes a lane whose emitter ABI has an admin event outside the frozen vocabulary", () => {
     const artifact = derive({
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
-        emitters: [emitter({ adminEvents: ["OwnershipTransferred", "UnreviewedAdminEvent"] })],
-      }]),
+      inventory: inventory([lane({ emitters: [emitter({ adminEvents: ["OwnershipTransferred", "UnreviewedAdminEvent"] })] })]),
     });
     expect(artifact.summary.covered).toBe(0);
     expect(artifact.noReviewedEmitter[0]).toMatchObject({
@@ -134,16 +133,10 @@ describe("lane emitter descriptor admission", () => {
   it("closes a lane when a reviewed contributor has no mapped emitter", () => {
     const artifact = derive({
       records: [bridgeControl(), bridgeControl({ controlId: "second-control", routeRefs: [SUBJECT] })],
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [
-          { controlId: "fixture-control", emitterAddresses: [TOKEN] },
-          { controlId: "second-control", emitterAddresses: ["0x3333333333333333333333333333333333333333"] },
-        ],
-        emitters: [emitter()],
-      }]),
+      inventory: inventory([lane({ contributors: [
+        { controlId: "fixture-control", emitterAddresses: [TOKEN] },
+        { controlId: "second-control", emitterAddresses: ["0x3333333333333333333333333333333333333333"] },
+      ] })]),
     });
     expect(artifact.noReviewedEmitter[0]).toMatchObject({
       reason: "contributor-without-emitter",
@@ -153,13 +146,7 @@ describe("lane emitter descriptor admission", () => {
 
   it("closes a lane whose contributor set disagrees with the reviewed controls", () => {
     const artifact = derive({
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [{ controlId: "unreviewed-control", emitterAddresses: [TOKEN] }],
-        emitters: [emitter()],
-      }]),
+      inventory: inventory([lane({ contributors: [{ controlId: "unreviewed-control", emitterAddresses: [TOKEN] }] })]),
     });
     expect(artifact.noReviewedEmitter[0]).toMatchObject({
       reason: "contributor-mismatch",
@@ -169,13 +156,7 @@ describe("lane emitter descriptor admission", () => {
 
   it("refuses an emitter pin outside the decoded-runtime domain", () => {
     const artifact = derive({
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
-        emitters: [emitter({ runtimeIdentity: `sha256:${HASH}` })],
-      }]),
+      inventory: inventory([lane({ emitters: [emitter({ runtimeIdentity: `sha256:${HASH}` })] })]),
     });
     expect(artifact.noReviewedEmitter[0]?.reason).toBe("emitter-pin-not-decoded");
   });
@@ -192,28 +173,25 @@ describe("lane emitter descriptor admission", () => {
 
   it("deduplicates and validates emitters per lane", () => {
     const artifact = derive({
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
-        emitters: [emitter(), emitter({ address: TOKEN.toUpperCase().replace("0X", "0x") as `0x${string}` })],
-      }]),
+      inventory: inventory([lane({ emitters: [emitter(), emitter({ address: TOKEN.toUpperCase().replace("0X", "0x") as `0x${string}` })] })]),
     });
     expect(artifact.noReviewedEmitter[0]?.reason).toBe("invalid-inventory-lane");
   });
 
   it("rejects a chain mismatch between the lane and an emitter", () => {
     const artifact = derive({
-      inventory: inventory([{
-        subjectDeploymentKey: SUBJECT,
-        assetIds: ["fixture-asset"],
-        rail: "chainlink-ccip",
-        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
-        emitters: [emitter({ chain: "arbitrum" })],
-      }]),
+      inventory: inventory([lane({ emitters: [emitter({ chain: "arbitrum" })] })]),
     });
     expect(artifact.noReviewedEmitter[0]?.reason).toBe("invalid-inventory-lane");
+  });
+
+  it("admits route-only wildcard lanes with cross-chain governed emitters", () => {
+    const artifact = derive({ records: [bridgeControl({ controlId: "*" })], inventory: inventory([lane({
+      contributors: [{ controlId: "*", emitterAddresses: [TOKEN, POOL] }],
+      emitters: [emitter(), emitter({ address: POOL, chain: "base", role: "governed-contract" })] })]) });
+    expect(artifact.descriptors[0]).toMatchObject({
+      emitters: [{ address: TOKEN }, { address: POOL, chain: "base" }], provenance: { controlIds: ["*"] } });
+    expect(artifact.summary.controls.routeOnly.total).toBe(1);
   });
 
   it("reproduces the same bytes for the same input", () => {
@@ -244,5 +222,6 @@ describe("lane screening emitter inventory loader", () => {
     expect(artifact.summary.covered).toBe(inventoryLanes.length);
     expect(artifact.pilot.every((lane) => lane.admission.admitted)).toBe(true);
     expect(artifact.summary.inventory.uncoveredEvents).toEqual([]);
+    expect(artifact.summary.controls.routeOnly.total).toBeGreaterThan(0);
   });
 });
