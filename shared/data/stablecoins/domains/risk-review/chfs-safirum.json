@@ -1,0 +1,19 @@
+{
+  "id": "chfs-safirum",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Safirum press releases of June 22 and November 3 2026",
+        "url": "https://www.safirum.com/press"
+      },
+      {
+        "label": "Safirum website, CHF-S compliance section",
+        "url": "https://www.safirum.com/"
+      }
+    ],
+    "evidence": "Issuer-documented transfer controls. Safirum's November 3 2026 launch release says every user must pass identity verification and that CHF-S can only be transferred between approved wallets. Its June 22 2026 release says wallet-level KYC whitelisting is embedded in the token's smart contract, and its website says only verified addresses can hold CHF-S, with the whitelist maintained on-chain by a four-party multi-signature system. Removing an address from that whitelist stops it from transacting, so the issuer side can block holders. The CHF-S mint address has not been published, so the whitelist authority and any freeze or permanent-delegate settings were not verified on-chain in this review.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-15"
+  }
+}

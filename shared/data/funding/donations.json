@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1793529773,
+  "last_updated_at": 1794757691,
   "donations": [
     {
       "chain": "ethereum",
@@ -1078,6 +1078,45 @@
       "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "amount_decimal": 10,
       "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x688f2b37851a997153a63338b43a0ce5a441971c50314b9a173442d34b77c9a8",
+      "block_timestamp": 1794581111,
+      "from_address": "0x1fc4c8930207aef0136eae96c166dee858f44d21",
+      "display": "0x1fc4c8...4d21",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x8236d32e05cfd550b8015ed5ec13231df425ce07a9df7201b4b54b0eed3c84e6",
+      "block_timestamp": 1794717467,
+      "from_address": "0x6e5363af589ef1be083213710b5b0c7e0e4b8377",
+      "display": "0x6e5363...8377",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "token_address": null,
+      "amount_decimal": 0.0056,
+      "usd_at_receipt": 9.9,
+      "price_note": "coingecko-historical-2026-11-15"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x18033f17d951cf34c35b69d470f6b4b7c315b0f0a191347a5c54cc8b398d312b",
+      "block_timestamp": 1794717671,
+      "from_address": "0x6e5363af589ef1be083213710b5b0c7e0e4b8377",
+      "display": "0x6e5363...8377",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "token_address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount_decimal": 10.624854,
+      "usd_at_receipt": 10.624854,
       "price_note": "stablecoin-1-to-1"
     }
   ]
