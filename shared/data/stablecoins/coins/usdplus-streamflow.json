@@ -1,0 +1,109 @@
+{
+  "id": "usdplus-streamflow",
+  "name": "Streamflow USD+",
+  "symbol": "USD+",
+  "oneLiner": "USD+ is Streamflow's Solana dollar token on M0 infrastructure, with Treasury-derived yield distributed as additional tokens and market-swap exits.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true
+  },
+  "infrastructures": [
+    "m0"
+  ],
+  "collateral": "Streamflow describes Treasury-backed M0 infrastructure; its published Solana integration routes USD+ through an M vault. USD+-specific legal reserve ownership, custody-provider shares and independent reserve-to-liability assurance remain unverified.",
+  "pegMechanism": "USD+ targets one U.S. dollar. Streamflow's published integration describes M-vault wrap and unwrap paths, while the public interface routes swaps through on-chain pools and third parties. Holders receive variable Treasury-derived yield as additional USD+ tokens daily. Market liquidity is an exit path; accessible issuer materials do not establish direct fiat redemption eligibility, settlement deadlines, minimums or fees. The published integration is not proof that every deployed mint path enforces a fixed-unit M claim.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Streamflow USD+ addition review",
+    "rationale": "The issuer identifies Treasury-backed M0 infrastructure and daily additional-token distributions, supporting the Treasury mechanism without NAV appreciation. M0 lineage establishes infrastructure membership; a complete deployed fixed-unit parent claim has not been proved, so no variant relationship is asserted.",
+    "sources": [
+      {
+        "label": "Streamflow USD+ issuer guide",
+        "url": "https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026"
+      },
+      {
+        "label": "Streamflow USD+ product disclosures",
+        "url": "https://usd-plus.com/learn-more"
+      }
+    ]
+  },
+  "llamaId": "426",
+  "geckoId": "usd-2",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://dashboard.m0.org/",
+    "provider": "M0 parent collateral dashboard; USD+-specific reconciliation not verified",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usd-plus.com/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://usd-plus.com/learn-more"
+    },
+    {
+      "label": "Issuer guide",
+      "url": "https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation"
+    },
+    {
+      "label": "M0 Dashboard",
+      "url": "https://dashboard.m0.org/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "M0 Treasury yield distributed daily",
+    "yieldType": "rebase"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption and reserve coverage",
+      "message": "Live reserves compare the local M vault with minted USD+; they do not establish upstream financial assurance, complete bridge liabilities or executable redemption. No modeled direct issuer redemption backstop is established. Holder yield is distributed in additional tokens and has no reviewed live APY reader."
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "m0-solana-wrapper",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "m0-solana-wrapper:usdplus-streamflow",
+    "display": {
+      "url": "https://solscan.io/account/67GWo9en5KtPfeZn5LWrCyhL2w31rf1oqeCoszPUKsAs",
+      "label": "USD+ M vault"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-solana"
+      }
+    },
+    "params": {
+      "program": "extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg",
+      "globalAccount": "DrmdLHLJYhmiiTJxgmsnDJbqEBurUmWpJPVT8HXq66Ru",
+      "wrapperMint": "usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia",
+      "underlyingMint": "mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH",
+      "underlyingVault": "67GWo9en5KtPfeZn5LWrCyhL2w31rf1oqeCoszPUKsAs",
+      "assetLabel": "M0 M held in the Streamflow USD+ extension vault"
+    }
+  }
+}

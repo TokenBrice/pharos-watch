@@ -385,6 +385,7 @@
     "cdp-enosys": "core-stablecoin",
     "vcred-vcred": "excluded",
     "susd-hedgecore": "core-stablecoin",
+    "usdplus-streamflow": "cash-equivalent",
     "iusd-indigo-protocol": "core-stablecoin",
     "luausd-lumi-finance": "cash-equivalent",
     "xtusd-xt": "core-stablecoin",

@@ -25705,6 +25705,51 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "usdplus-streamflow",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T22:54:20Z",
+      "sources": [
+        {
+          "label": "Streamflow USD+ product disclosures reviewed 2026-11-15",
+          "url": "https://usd-plus.com/learn-more"
+        },
+        {
+          "label": "Streamflow issuer guide dated May 18, 2026; reviewed 2026-11-15",
+          "url": "https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026"
+        },
+        {
+          "label": "Pinned Streamflow integration identifying the USD+ global and M vault",
+          "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+        },
+        {
+          "label": "Alchemy Solana Account Archive: exact accounts at finalized slot 469901684, block GxPPJSLigxokMCSpfJbZG8e3KT41mm5cUTPSUQK9GQYi, 2026-11-15T22:44:58Z",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "notes": "Reviewed issuer product disclosures, structured integration code and exact Solana Account Archive bytes at finalized slot 469901684 (2026-11-15T22:44:58Z). The extension global identifies the exact USD+ mint and legacy M reserve mint; its derived vault holds approximately 1599182.732707 indexed M units against 1599062.791523 minted USD+. This corroborates the operational M reserve relationship and supports limited fundClaimAndSeniority only: no direct legal seniority over Treasury collateral, segregation or complete deployed fixed-unit mint invariant is established. The observation is not financial assurance or a circulating-supply override. Accessible issuer materials do not publish an independently administered USD+-specific valuation/reconciliation method, complete current maturity/liquidity schedule, or enforceable holder loss waterfall. Those three components remain sourced unavailable rather than measured weakness. The linked USD+-specific terms returned 404; that failure itself is not a nondisclosure assertion. The upstream M0 dashboard is not a USD+-specific assurance report.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ product and issuer guide describe the target dollar peg and daily additional-token income but publish no independently administered USD+-specific NAV or reserve-to-liability valuation method and dated reconciliation. The exact vault balance is technical evidence, not an independent valuation engagement.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ disclosures identify short-term Treasury backing through M0 but publish no USD+-specific current holdings maturity ladder, hard maturity maximum or whole-reserve cash-realization deadline. Observed pool liquidity and one M-vault balance do not establish those terms.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ product disclosures describe M0 backing but publish no enforceable USD+ holder loss waterfall, priority over upstream collateral or recapitalization obligation. No USD+-specific independent financial assurance report was established.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        }
+      }
     }
   ]
 }

@@ -1,0 +1,81 @@
+{
+  "id": "usdplus-streamflow",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "The extension mints against M, while an undelayed three-of-five multisig can replace its mint logic.",
+    "summary": "USD+ is minted by its Solana extension's mint-authority PDA. An observed Wrap transfers M into the exact extension vault before minting USD+. The extension remains upgradeable by a Squads vault requiring three of five members with no execution delay, so no immutable economic issuance bound is established. This is an asset-local control review; M0 platform membership does not substitute for USD+ control or assurance evidence.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "8YpABqeKbg1xLWQAVrmGV87K5SPSnNXZ6AzS32o8UXy5",
+        "deploymentRefs": ["solana:usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia"],
+        "label": "USD+ extension mint-authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 469901684,
+        "sources": [
+          { "label": "Alchemy exact-slot Solana Account Archive and pinned transaction reads", "url": "https://solana-mainnet.g.alchemy.com/v2/" },
+          { "label": "Observed USD+ Wrap and Meteora swap", "url": "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX" },
+          { "label": "Pinned Streamflow extension and authority derivation", "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs" }
+        ],
+        "evidence": "At exact finalized slot 469901684, USD+ mintAuthority was 8YpABqeKbg1xLWQAVrmGV87K5SPSnNXZ6AzS32o8UXy5. PDA derivation under executable extension extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg with seed mint_authority and bump 254 matches exactly. Pinned transaction 61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX at slot 469862702, block CpcQKNUsTiXUHUuT8vP43DzoXFeRy4EBg7qY7jtgz282 (2026-11-15T20:25:17Z), successfully invoked extension Wrap, transferred 80848777 raw M principal units to vault 67GWo9en5KtPfeZn5LWrCyhL2w31rf1oqeCoszPUKsAs and minted 89000000 raw USD+ through this PDA. This proves the sampled live issuance path, not an exhaustive entrypoint census or source/executable equivalence. The current global names admin EjjtqowbWktLgxStoC3oNmusD2bFgMHtiZAZQChd3FyL, three wrap authorities and NoYield state; complete administrative economics and yield-distribution operations are not certified. No deposit-only bound or continuous reconciliation credit is claimed."
+      },
+      {
+        "chain": "solana",
+        "address": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "deploymentRefs": ["solana:usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia"],
+        "label": "USD+ extension program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 469901684,
+        "sources": [
+          { "label": "Alchemy exact-slot Solana Account Archive", "url": "https://solana-mainnet.g.alchemy.com/v2/" },
+          { "label": "Squads v4 multisig state layout", "url": "https://github.com/Squads-Protocol/v4/blob/3a39735d0c56249bf2ce4b16b3229d7be87ad55f/programs/squads_multisig_program/src/state/multisig.rs" }
+        ],
+        "evidence": "At exact slot 469901684, extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg used BPFLoaderUpgradeable with ProgramData 2CW4e4tjScmwtKVssYcLxiSLaNPzpX4BQEf1ocDjRQCX and upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. This off-curve authority is Squads v4 vault index zero of multisig BKEgAKFUBAYee5JuTAf6HjMHAiFLqvNtAKxxZb5aay5F, verified by PDA derivation. Exact state has threshold three, five members each with permissions seven, zero external config authority and zero timelock. Upgrade authority can replace the code that signs mintTo with the mint-authority PDA; the ordinary M-deposit-before-mint path therefore supplies no immutable bound. Member beneficial ownership and independent key custody are not established. Executable payload SHA-256: 8a0b74627e5dbe1cabea8797ca4019f72935386bd1f98b83f5baf35a08e3fe21."
+      }
+    ],
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": ["solana:usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia"],
+      "proxyAddresses": ["extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg"],
+      "implementationAddresses": ["2CW4e4tjScmwtKVssYcLxiSLaNPzpX4BQEf1ocDjRQCX"],
+      "adminAddresses": ["9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USD+ extension program upgrade authority",
+      "observedAt": "2026-11-15",
+      "observedBlock": 469901684,
+      "sources": [
+        { "label": "Alchemy exact-slot Solana Account Archive", "url": "https://solana-mainnet.g.alchemy.com/v2/" }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        { "label": "Alchemy exact-slot Account Archive: finalized slot 469901684, block GxPPJSLigxokMCSpfJbZG8e3KT41mm5cUTPSUQK9GQYi, 2026-11-15T22:44:58Z", "url": "https://solana-mainnet.g.alchemy.com/v2/" },
+        { "label": "Observed USD+ Wrap and Meteora swap", "url": "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX" },
+        { "label": "Pinned Streamflow extension integration", "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs" },
+        { "label": "Streamflow USD+ product disclosures", "url": "https://usd-plus.com/learn-more" }
+      ],
+      "evidence": "Exact-slot bytes, matching slot context and before/after block headers establish the mint authority, extension global, ProgramData authority and current Squads upgrade threshold. The sampled Wrap independently proves which program signs USD+ minting and transfers M into its backing vault. Known undelayed upgrade reach keeps economic cap semantics unbounded; no full deployed execution certificate, immutable deposit-only constraint or signer-independence credit is asserted. Accessible USD+ disclosures do not establish a complete recurring reserve-to-all-liability reconciliation or token-specific supervised issuing entity. Parent M validator collateral monitoring does not resolve those USD+-local questions. Freeze authority is separately reviewed under FreezeWatch and is not treated as a mint power. The underlying M cross-chain transport is not native USD+ issuance and is not duplicated here as bridge-mint authority.",
+      "reviewer": "Pharos Streamflow USD+ addition review",
+      "reviewedAt": "2026-11-15",
+      "disposition": "scoreable"
+    }
+  }
+}
