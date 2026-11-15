@@ -254,6 +254,28 @@ export async function observeErc4626InstantExit(args: {
     }
     return minted > 0n && uint(receipt[5]!.returnData) + amount === totalSupply + minted;
   }
+  async function proveVaultEscrow(
+    calls: readonly { target: `0x${string}`; allowFailure: boolean; callData: `0x${string}` }[],
+    receipt: readonly { success: boolean; returnData: `0x${string}` }[],
+    shares: bigint,
+  ) {
+    // An async vault (yoUSD) queues an illiquid redeem by moving the shares into
+    // its own balance instead of burning them. Re-execute the IDENTICAL receipt
+    // with the vault's share balance read around it; only that exact escrow counts.
+    if (externalShares) return false;
+    const escrow = { target: shareToken, allowFailure: false, callData: calldata("balanceOf", [vault]) };
+    const proofCalls = [escrow, ...calls, escrow];
+    const proof = await batch([{ to: HOLDER, data: encodeFunctionData({
+      abi: MULTICALL_ABI, functionName: "aggregate3", args: [proofCalls],
+    }) }], shares);
+    const result = decodeFunctionResult({
+      abi: MULTICALL_ABI, functionName: "aggregate3", data: proof[0] as `0x${string}`,
+    });
+    return result.length === proofCalls.length &&
+      receipt.every((entry, index) => entry.success === result[index + 1]!.success &&
+        entry.returnData.toLowerCase() === result[index + 1]!.returnData.toLowerCase()) &&
+      uint(result[proofCalls.length - 1]!.returnData) === uint(result[0]!.returnData) + shares;
+  }
   const points: ExitExecutionRequestPoint[] = [];
   let provenShares = 0n;
   for (const request of args.requests) {
@@ -340,19 +362,21 @@ export async function observeErc4626InstantExit(args: {
       canonicalAttempt.reason = "erc4626-redeem-reverted";
     } else if (canonicalAttempt.receivedRawOutput === "0") {
       // A successful queue acceptance is classified only after proving the
-      // original full burn, zero return and same-call supply/fee reconciliation.
+      // original full burn (or vault escrow), zero return and same-call supply/fee reconciliation.
       const canonicalSupplyAfter = BigInt(canonicalAttempt.totalSupplyAfter);
       if (canonicalAttempt.shareBalanceBefore !== simulated.toString() || canonicalAttempt.shareBalanceAfter !== "0" ||
           canonicalAttempt.returnedRawOutput !== "0" ||
           (canonicalSupplyAfter + simulated !== totalSupply &&
-            !(canonicalSupplyAfter + simulated > totalSupply && await proveFeeShareMint(calls, results, simulated, simulated)))) {
+            !(canonicalSupplyAfter + simulated > totalSupply && (
+              (canonicalSupplyAfter === totalSupply && await proveVaultEscrow(calls, results, simulated)) ||
+              await proveFeeShareMint(calls, results, simulated, simulated))))) {
         throw new Erc4626CanonicalAttemptError(canonicalAttempt);
       }
       canonicalAttempt.outcome = "accepted-but-unfunded";
       canonicalAttempt.reason = "erc4626-canonical-accepted-but-unfunded";
     }
-    // Some vaults accept an illiquid redeem into a queue and burn shares but
-    // transfer no assets. That is not synchronous execution. A smaller fresh
+    // Some vaults accept an illiquid redeem into a queue and burn or escrow shares
+    // but transfer no assets. That is not synchronous execution. A smaller fresh
     // simulation may prove an instant lower bound, never the queued balance.
     const deferredReceipt = canonicalAttempt.outcome === "accepted-but-unfunded";
     if (!results[2]!.success || deferredReceipt) {

@@ -28,7 +28,7 @@ const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
-  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false, zeroPreviewAt: 0n, preview: "ok",
+  deferIlliquid: false, escrow: false, optimisticMax: false, corruptOnlyFunded: false, zeroPreviewAt: 0n, preview: "ok",
   totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false,
   feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
 const initialState = { ...state };
@@ -62,6 +62,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         const succeeds = !state.redeemFails && (state.deferIlliquid || executed <= state.liquidity) && !(state.rejectPartial && executed < shares);
         const received = state.deferIlliquid && executed > state.liquidity ? 0n
           : executed * (10_000n - state.feeBps) / 10_000n - state.outputDust;
+        const escrowed = state.escrow && !received;
         let redeemed = false;
         const receipt = innerCalls.map((entry) => {
           const innerSelector = entry.callData.slice(0, 10);
@@ -76,7 +77,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
             return { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" as `0x${string}` };
           }
           if (innerSelector === toFunctionSelector("totalSupply()")) return {
-            success: true, returnData: word(state.totalSupply + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
+            success: true, returnData: word(state.totalSupply + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly || escrowed ? 0n : executed) : 0n)),
           };
           if (innerSelector === toFunctionSelector("balanceOf(address)")) {
             const owner = BigInt("0x" + entry.callData.slice(10, 74));
@@ -86,7 +87,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
               success: true, returnData: word(7n + (redeemed ? received + (state.realizedMismatch && (!state.corruptOnlyFunded || received > 0n) ? 1n : 0n) : 0n)),
             };
             if (holder) return { success: true, returnData: word(shares - (redeemed ? executed - (state.holderBurnMismatch ? 1n : 0n) : 0n)) };
-            return { success: !state.feeBalanceFails, returnData: word(123n + (redeemed ? state.feeRecipientDelta ?? state.feeShares : 0n)) };
+            return { success: !state.feeBalanceFails, returnData: word(123n + (redeemed ? state.feeRecipientDelta ?? state.feeShares + (escrowed && owner === BigInt(VAULT) ? executed : 0n) : 0n)) };
           }
           if (innerSelector === toFunctionSelector(`${state.feeGetter}()`)) return {
             success: true, returnData: word(state.feeRecipient + (redeemed && state.feeGetterChanged ? 1n : 0n)),
@@ -367,8 +368,8 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
     expect(points.every(point => point.executableUsd === 0 && point.certification === "diagnostic" && point.reason === "erc4626-redeem-reverted")).toBe(true);
   });
-  it("certifies only the transferred instant lower bound when a larger redeem burns shares into a queue", async () => {
-    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 10_000_000_000n;
+  it.each([false, true])("certifies only the transferred instant lower bound when a larger redeem burns (or escrows: %s) shares into a queue", async (escrow) => {
+    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 10_000_000_000n; state.escrow = escrow;
     const result = await observeErc4626InstantExit(args);
     expect(result.points[0]).toMatchObject({
       requestedRawInput: "100000000000", executedRawInput: "9375000000", executableUsd: 9_375,
@@ -422,8 +423,9 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       },
     });
   });
-  it.each(["burn", "return", "supply"])("rejects an inconsistent canonical queue %s receipt before smaller probes", async (fault) => {
+  it.each(["burn", "return", "supply", "escrow"])("rejects an inconsistent canonical queue %s receipt before smaller probes", async (fault) => {
     state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 10_000_000_000n;
+    if (fault === "escrow") { state.escrow = true; state.feeRecipientDelta = 1n; }
     if (fault === "burn") state.holderBurnMismatch = true;
     if (fault === "return") state.grossReturn = true;
     if (fault === "supply") state.unexplainedSupplyDelta = 1n;
