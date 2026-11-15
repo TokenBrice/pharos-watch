@@ -90,8 +90,10 @@
           "mintEvidence": "source-only",
           "guard": {
             "kind": "implementation",
-            "status": "required-unavailable",
-            "reason": "agora-packed-implementation-dispatch-guard-not-reviewed"
+            "status": "pinned",
+            "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+            "expected": "0xc1e3c7d486d6a92fbe920232e439eec2ceb112da",
+            "changeTopic": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b"
           }
         },
         "receiptEvent": {
