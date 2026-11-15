@@ -1575,6 +1575,10 @@
     "32": "/logos/compact/usdr-ring.webp",
     "100": "/logos/compact/usdr-ring-100.webp"
   },
+  "/logos/usdrf-realfi.png": {
+    "32": "/logos/compact/usdrf-realfi.webp",
+    "100": "/logos/compact/usdrf-realfi-100.webp"
+  },
   "/logos/usdrif-rif.webp": {
     "32": "/logos/compact/usdrif-rif.webp",
     "100": "/logos/compact/usdrif-rif-100.webp"
