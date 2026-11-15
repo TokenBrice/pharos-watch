@@ -107,6 +107,11 @@ export function StabilityIndexMethodologySection() {
         stable-value investment products remain browsable but do not count as independent supply.
       </p>
       <p>
+        Methodology v3.69 applies the same closed-market rule to history: a gold, silver or FX depeg that began while
+        its market was shut and stayed under 25% no longer counts if it ended within six hours of the reopen, and
+        otherwise counts from the reopen. Past daily scores were corrected by removing only those events&apos; effect.
+      </p>
+      <p>
         Methodology v3.68 scores open depegs on gold, silver and FX pegs against today&apos;s reference rather than
         the reference on the day they opened, and holds FX, gold and silver contributions at their last pre-closure
         value while their market is shut.

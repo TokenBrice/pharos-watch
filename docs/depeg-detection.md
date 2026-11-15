@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.47`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.48`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -342,6 +342,8 @@ Pending rows that pass the 45-minute base expiry but still have same-direction p
 ## Historical Backfill Validation
 
 Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: rounded absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample inside the full trigger threshold. They do not inherit live tiered large-cap flags or the half-threshold/15-minute recovery window. A deeper sample replaces an open episode's peak only when another sample of the same episode is within 1,000 bps of it: a lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak. An episode whose opening print is never corroborated (and is not extreme) is withheld at close instead of publishing that print as the peak; extreme single-point crashes keep their existing exemption.
+
+Since v6.48 the replay applies the reference-market closure rule (`isReferenceDeviationHeld` in `extractDepegEvents`): a sub-severe sample read while its FX or metal reference market was closed is no observation, so it opens, extends and ends nothing, as in live detection since v6.47. A weekend-only deviation leaves no backfill row, and a longer one starts at the first open-market sample that still crosses the threshold. History recorded before the rule was repaired once with the `repair-reference-market-artifacts` operator job ([runbook](./runbooks/one-shot-backfills.md#repair-reference-market-artifacts)): a sub-severe event that began during a closure was deleted when it ended within six hours of the reopen; a longer one keeps its row, and PSI counts it from the reopen. Events in a depeg-resolver incident are append-only and stay as recorded; PSI excludes their artifacts through its replay rule.
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 

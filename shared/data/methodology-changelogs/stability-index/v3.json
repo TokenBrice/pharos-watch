@@ -1,5 +1,19 @@
 [
   {
+    "version": "3.69",
+    "title": "Historical replay applies the reference-market closure rule",
+    "date": "2026-11-16",
+    "effectiveAt": 1794787200,
+    "summary": "Replayed and repaired PSI history no longer counts gold, silver and FX depeg events that the v3.68 closed-market hold would never have opened, and a one-time repair removes those events' effect from published daily rows.",
+    "impact": [
+      "Every historical replay (the PSI backfill, audit repairs and the repair job) applies `replayReferenceMarketEventStart` (`shared/lib/reference-market-hours.ts`): an event on a gold, silver or FX peg that began while its reference market was closed and peaked below 2,500 bps is dropped if it ended within six hours of the reopen, and otherwise counts from the reopen while keeping its stored start for scoring. History keeps no closed-session deviation, so the stored peak decides severity. Replay rows record `referenceMarketRule: true`.",
+      "The one-time `repair-reference-market-artifacts` job changes each affected published day by only those events' effect: a replay-built row by the difference between replays with and without them, a live daily average by the mean per-sample difference over its complete set of 30-minute samples. On production data it raises 124 daily rows, 45 by a point or more, up to 16.4 points on 14 March 2020 (PAXG and XAUT) and 9.0 on 9 August 2020 (XAUT); 13-15 November 2026 follows once its daily rows exist. 21 days stay as published: 20 live days from June to August 2026 whose samples have expired, and 2 March 2026, which has no DEWS archive. Every evaluated row records `referenceMarketRepair`.",
+      "Live scoring, formula weights, caps and bands are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "3.68",
     "title": "Current non-USD references and closed-market holds",
     "date": "2026-11-15",
