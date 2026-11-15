@@ -4954,20 +4954,12 @@
     ]
   },
   "witry-brix": {
-    "title": "Wrapped Turkish Lira Yield",
-    "text": "wiTRY is Brix's ERC-4626 staking wrapper over iTRY, a {{term:yield-bearing}}yield-bearing{{/term}} claim that accrues fund yield against a token backed by shares of the Digital Liquidity Fund, a regulated basket of Turkish-lira money-market funds. The Ethereum wrapper can be verified on-chain, and Brix's Accountable dashboard publishes an assets-and-liabilities snapshot showing reserves matching iTRY and wiTRY supply. The snapshot omits the fund look-through: the underlying money-market funds, their weights, and their maturities stay undisclosed, so Pharos carries the whole reserve as one high-risk {{term:rwa}}RWA{{/term}} fund-share position. Exit runs through a cooldown unstake or a fee-bearing fast {{term:redemption}}redemption{{/term}} into iTRY, with final lira exposure inheriting the iTRY issuer and its Zodia Custody arrangement. Supply is now split almost evenly between Ethereum and MegaETH. Pharos rates wiTRY {{grade}}, with exit the weakest pillar: the track record is under six months, and no reviewed same-notional exit route exists across that multi-chain supply. The undisclosed fund look-through remains the durable constraint.",
-    "updatedAt": "2026-10-19",
+    "title": "Staked Turkish-lira fund exposure",
+    "text": "wiTRY is Brix's ERC-4626 staking share in iTRY. Fund-derived rewards increase the amount of iTRY represented by each share, so its value can rise against the fixed Turkish-lira parent. Pharos tracks that direct claim as a savings wrapper and counts the parent in monetary aggregates. The Ethereum reserve adapter reads the exact underlying iTRY asset; linking it to the parent exposes the issuer and fund risks through the dependency graph. Unstaking uses a cooldown or a fee-bearing fast {{term:redemption}}redemption{{/term}} route into iTRY, which still leaves the holder to complete an eligible issuer redemption or find a market counterparty. LayerZero representations add separate bridge controls beyond the canonical Ethereum vault. The parent holds DLF money-market-fund exposure with undisclosed constituent weights and maturity bounds. Wrapper accounting identifies the immediate claim, while final exit and recovery remain dependent on iTRY's issuer and reserve structure.",
+    "updatedAt": "2026-11-15",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
-    "claimTokens": [
-      {
-        "token": "grade",
-        "placeholder": "{{grade}}",
-        "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
-      }
-    ]
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
   },
   "srusd-reservoir": {
     "title": "Reservoir Savings Token",
@@ -6184,5 +6176,13 @@
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
     "factsAsOf": "2026-10-18"
+  },
+  "itry-brix": {
+    "title": "Fund-backed Turkish-lira token",
+    "text": "iTRY is Brix's fixed Turkish-lira token, backed by Digital Liquidity Fund tokens representing a basket of Turkish money-market funds. Ethereum transfers currently require whitelisted callers and counterparties, while the MegaETH representation has transfers enabled. Holding iTRY earns no automatic yield; the separate wiTRY staking share receives fund-derived rewards. Direct {{term:redemption}}redemption{{/term}} is restricted to onboarded, whitelisted customers and pays supported digital assets at a Turkish-lira notional value. The issuer can change payout assets and fees, and the reviewed terms establish no unconditional completion deadline. Accountable publishes aggregate assets and liabilities, while the underlying funds, their weights and maturities remain undisclosed. Zodia holds most onchain collateral, with a limited Fast Access Vault buffer, but those disclosures establish no complete executable exit capacity. The token terms give reserve ownership to the issuer and deny holders direct rights in those reserves. Access to a whitelisted issuer route and an opaque fund basket remain the central constraints.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
   }
 }

@@ -80,6 +80,37 @@ const allunityBase: RedemptionBackstopConfig = {
 };
 
 export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "itry-brix": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-11-15",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "days",
+    executionModel: "opaque",
+    outputAssetType: "mixed-collateral",
+    unresolvedOutputDisposition: "issuer-undisclosed",
+    costModel: undisclosedReviewedFee("iTRY Token Terms section 15 permits request-specific fees and changes; no complete numeric all-in redemption fee schedule is published."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "Eligible whitelisted customers may redeem for one TRY notional in issuer-selected supported digital assets. No exact funded same-notional capacity, complete payout identity set, unconditional completed-receipt maximum or all-in fee bound is established. Operational delays and issuer suspension remain possible.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("iTRY Token Terms sections 5, 7 and 15", "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md", ["route", "access", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("iTRY Token Terms sections 5, 7 and 15", "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Brix primary-market eligibility", "https://docs.brix.money/itry/eligibility.md", ["route", "access"]),
+      sourceRef("Brix mint and redemption interface", "https://docs.brix.money/itry/mint-and-redemption.md", ["route", "access"]),
+      sourceRef("Brix collateral management: limited fast buffer and larger-redemption delays", "https://docs.brix.money/technical/collateral-management.md", ["capacity", "settlement"]),
+    ],
+    notes: [
+      "KYC/AML approval and onchain whitelisting are required. Payout is supported digital assets at a TRY notional, not a guaranteed TRY bank payment; the complete current output set remains unknown.",
+      "The Company may decline or suspend redemption for compliance, operational, risk or solvency reasons. The days category is diagnostic, not an unconditional completion bound.",
+      "The disclosed Fast Access Vault is a routine buffer, not proved whole-book capacity. Its observed zero available balance does not establish exhaustion of other issuer resources.",
+    ],
+  },
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

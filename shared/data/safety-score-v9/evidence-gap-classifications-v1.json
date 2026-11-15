@@ -65525,6 +65525,96 @@
         "surface:551b0a3b18d7071eb79af000"
       ],
       "rationale": "No all-in redemption cost bound is disclosed. Institutional Minting Agreement section 7 says RealFi Reserve currently charges no fee of its own but reserves the right to charge fees, which it discloses only when an order is initiated, and leaves bank, wallet and Cardano network charges to third parties without an estimate or ceiling."
+    },
+    {
+      "id": "discovery-itry-brix-reserve-liquidity-20261115",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8b5f5caa8977bbe45f8110ed",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T22:53:59Z",
+      "reviewer": "Pharos discovery iTRY review",
+      "sourcesRefs": [
+        "source:2aebcd24f830ba68e46fdb8c",
+        "source:b7f800f7767cc8dd8072ccb5",
+        "source:f74b9d54e344127c7d464165"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e388100b512f22de075ef4f9",
+        "surface:fc38560e7c81f7827d77232d",
+        "surface:98e09e161bab5ee3b1b0a34b",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:7ac47c06c66c7f8a04be21a1"
+      ],
+      "rationale": "The exact maximum maturity and whole-position liquidity horizon of the DLF fund-share reserve are undisclosed. Current backing, collateral-management, proof-of-reserves, mint/redemption and token-terms sources identify a Turkish money-market-fund basket and a limited instant buffer, not a maximum fund-share maturity, complete realization bound or unconditional completed-redemption deadline. The Accountable dashboard reconciles aggregate reserves and liabilities but does not publish constituent maturities or a realizable liquidity ladder. Money-market-fund descriptions and an instant-buffer claim do not establish those missing reserve facts."
+    },
+    {
+      "id": "discovery-itry-brix-reserve-maturity-20261115",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "exposureId": "reserve:8b5f5caa8977bbe45f8110ed",
+        "factorKey": "maturity",
+        "routeKey": null,
+        "requiredDatum": "maturityDaysMax"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T22:53:59Z",
+      "reviewer": "Pharos discovery iTRY review",
+      "sourcesRefs": [
+        "source:2aebcd24f830ba68e46fdb8c",
+        "source:b7f800f7767cc8dd8072ccb5",
+        "source:f74b9d54e344127c7d464165"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e388100b512f22de075ef4f9",
+        "surface:fc38560e7c81f7827d77232d",
+        "surface:98e09e161bab5ee3b1b0a34b",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:7ac47c06c66c7f8a04be21a1"
+      ],
+      "rationale": "The exact maximum maturity and whole-position liquidity horizon of the DLF fund-share reserve are undisclosed. Current backing, collateral-management, proof-of-reserves, mint/redemption and token-terms sources identify a Turkish money-market-fund basket and a limited instant buffer, not a maximum fund-share maturity, complete realization bound or unconditional completed-redemption deadline. The Accountable dashboard reconciles aggregate reserves and liabilities but does not publish constituent maturities or a realizable liquidity ladder. Money-market-fund descriptions and an instant-buffer claim do not establish those missing reserve facts."
+    },
+    {
+      "id": "discovery-itry-brix-mechanism-duration-liquidity-20261115",
+      "assetId": "itry-brix",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "mechanism-review:durationAndLiquidity",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "mechanism-review:durationAndLiquidity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T23:14:36Z",
+      "reviewer": "Pharos discovery iTRY review",
+      "sourcesRefs": [
+        "source:2aebcd24f830ba68e46fdb8c",
+        "source:b7f800f7767cc8dd8072ccb5",
+        "source:f74b9d54e344127c7d464165"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e388100b512f22de075ef4f9",
+        "surface:fc38560e7c81f7827d77232d",
+        "surface:98e09e161bab5ee3b1b0a34b",
+        "surface:947acaaeab25cbfca4a21480",
+        "surface:6f9f4723ca76c84ab10e5329",
+        "surface:7ac47c06c66c7f8a04be21a1"
+      ],
+      "rationale": "The current mechanism review remains applicable but cannot grade complete fund duration and realizable liquidity. Current Brix backing, collateral-management, mint/redemption and token-terms sources disclose a DLF money-market-fund basket and a limited instant buffer; they publish no maximum fund-share maturity, whole-book realization bound or unconditional completed-receipt deadline. The Accountable aggregate dashboard supplies no maturity ladder or full execution capacity. This is researched issuer nondisclosure, not an inferred zero-liquidity or unsafe-reserve finding."
     }
   ],
   "sourceObservations": [
@@ -98549,6 +98639,39 @@
         "excerpt": "We\ncurrently do not charge fees ourselves, although we reserve the right to charge fees for our\nServices in the future.",
         "assertion": "A current zero issuer fee is stated, but future fees are reserved and bank, wallet and network charges are separate, so no all-in cost bound is established."
       }
+    },
+    {
+      "id": "source:2aebcd24f830ba68e46fdb8c",
+      "value": {
+        "url": "https://docs.brix.money/itry/backing.md",
+        "observedAt": "2026-11-15T22:47:34Z",
+        "datumAsOf": null,
+        "location": "Backing and Custody",
+        "excerpt": "iTRY is fully backed by the Digital Liquidity Fund\u2019s DLF token.",
+        "assertion": "Identifies Turkish money-market-fund shares, daily fund NAV and hybrid custody, but states neither a maximum underlying fund-claim maturity nor a complete realization horizon."
+      }
+    },
+    {
+      "id": "source:b7f800f7767cc8dd8072ccb5",
+      "value": {
+        "url": "https://docs.brix.money/technical/collateral-management.md",
+        "observedAt": "2026-11-15T22:53:59Z",
+        "datumAsOf": null,
+        "location": "Collateral Management",
+        "excerpt": "A limited portion is held onchain in the Fast Access Vault smart contract to support instant redemptions.",
+        "assertion": "Only a limited buffer is instant. The current buffer size, whole-book liquidity horizon, larger-redemption completion bound and maximum fund maturity are not quantified."
+      }
+    },
+    {
+      "id": "source:f74b9d54e344127c7d464165",
+      "value": {
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "observedAt": "2026-11-15T22:47:33Z",
+        "datumAsOf": "2026-03-25",
+        "location": "Section 5, Minting and Redeeming the Tokens",
+        "excerpt": "The Company makes no representations or warranties regarding the amount of time needed to complete processing.",
+        "assertion": "The terms disclaim a redemption completion time and establish no fund-share maturity or fully realizable liquidity bound."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -113171,6 +113294,10 @@
     {
       "id": "surface:551b0a3b18d7071eb79af000",
       "value": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use"
+    },
+    {
+      "id": "surface:7ac47c06c66c7f8a04be21a1",
+      "value": "https://accountable.brix.money:8443/dashboard"
     }
   ]
 }

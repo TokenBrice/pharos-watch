@@ -294,6 +294,9 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps tracked variant parents active and canonical", () => {
+    expect(ACTIVE_META_BY_ID.get("witry-brix")).toMatchObject({
+      variantOf: "itry-brix", variantKind: "savings-passthrough", pegReferenceId: "itry-brix",
+    });
     for (const coin of ACTIVE_STABLECOINS.filter((entry) => entry.variantOf != null)) {
       expect(ACTIVE_META_BY_ID.has(coin.variantOf!), coin.id).toBe(true);
       expect(coin.pegReferenceId, coin.id).toBe(coin.variantOf);

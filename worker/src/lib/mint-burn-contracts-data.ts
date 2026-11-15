@@ -228,6 +228,17 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   },
   {
     chain: ETHEREUM,
+    stablecoinId: "itry-brix",
+    contractSource: "primary",
+    dustThreshold: 10_000,
+    startBlock: 24_637_760,
+    tier: "extended",
+    startBlockSource: "ethereum-creation-receipt-0x53179a8beec0f2c914984fe2a8d551d9f4eda068d72bd686ee2876d8bdce1296-reviewed-2026-11-15",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
+    chain: ETHEREUM,
     stablecoinId: "fdusd-first-digital",
     dustThreshold: 10_000,
     startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,

@@ -9293,6 +9293,67 @@
       }
     },
     {
+      "assetId": "itry-brix",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T23:01:48Z",
+      "sources": [
+        {
+          "label": "Brix iTRY Token Terms, updated March 25 2026; issuer owns reserves and holding users have no reserve rights (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md"
+        },
+        {
+          "label": "Brix backing documentation: DLF Turkish money-market fund basket, daily administrator NAV, hybrid custody (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/backing.md"
+        },
+        {
+          "label": "Brix oracle documentation: Redstone conveys administrator NAV for mint/redeem and reward calculations (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/technical/oracles.md"
+        },
+        {
+          "label": "Accountable Brix assets-and-liabilities JSON, source timestamp November 15 2026 22:31:00.165 UTC",
+          "url": "https://accountable.brix.money:8443/dashboard"
+        },
+        {
+          "label": "Brix proof-of-reserves disclosure: Accountable read-only custody-location verification (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/proof-of-reserves.md"
+        },
+        {
+          "label": "Brix mint/redemption documentation: permissioned primary route and potentially delayed larger redemptions (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/mint-and-redemption.md"
+        },
+        {
+          "label": "iTRY Ethereum token and issuer verified deployments; pinned total supply and DLF custody accounting at block 26423424",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "Ethereum Alchemy RPC, block 26423424 hash 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, November 15 2026 22:33:59 UTC",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Current iTRY issuer oracle pointer and administrator replacement powers, pinned Ethereum block 26423424",
+          "url": "https://etherscan.io/address/0x9a40dce442013e6664c308016206da4ba2a9e824#code"
+        }
+      ],
+      "notes": "Evidence re-opened November 15 2026 at 22:47 UTC. Fund claim and seniority is weak: the iTRY Token Terms identify iTRY Limited as issuer, explicitly deny holders rights in the company-owned reserves and restrict primary redemption to onboarded, whitelisted users. iTRY is a fixed-TRY issuer obligation, not a DLF fund share owned directly by holders; the terms provide no protected holder priority. NAV valuation is limited: Brix documents a business-day licensed-administrator NAV and Redstone relay, while Accountable publishes itemized reserve/liability totals, a dated DLF NAV check and current onchain collateral quantities. The named fund administrator, underlying constituent positions and independently verified valuation methodology remain undisclosed. Duration and liquidity remains unavailable: the docs promise a limited fast-redemption buffer but establish no current capacity, complete realization horizon, fund maturity maximum or same-notional completion bound. Loss recovery design is limited solely as an operational reconciliation control: Accountable's November 15 22:31 UTC response reports TRY 105531241.50 of reserves versus TRY 105526365.31 of iTRY liabilities and separately shows wiTRY shares/underlying iTRY value, with DLF NAV timestamp November 13 07:30 UTC. This is source-reported cryptographic/onchain proof, not an independently reviewed financial audit or legal recovery waterfall; cryptographic signatures and whole-book custodial rights have not been independently validated. No fund look-through, maturity, segregation, bankruptcy-remoteness or holder recovery priority is inferred. Onchain reads acquired at 22:53 UTC at Ethereum block 26423424 (hash 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, block time 22:33:59 UTC) corroborate iTRY totalSupply 105526365.307175497186410053, issuer collateralToken 0x861e702e9d0fa68eae8f8735080b6ad1f5878f54 and getCollateralUnderCustody 80527695.886401242458870551 DLF units. The Fast Access Vault getAvailableBalance is zero at that block; this measures only its local available buffer and establishes neither exhaustion nor zero realizable value of the complete custody book. transferState is WHITELIST_ENABLED at the same pin, so permissionless secondary transfer is not asserted. The pinned current issuer oracle pointer differs from the older published NAV-feed address. Redstone is the documented publication arrangement, not a verified identity or signer characterization of the current replacement feed.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        },
+        "navValuation": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "Brix discloses a limited fast-redemption buffer and possible larger-redemption delay but publishes no current executable buffer amount, complete fund realization bound or maximum maturity.",
+          "sourceUrl": "https://docs.brix.money/itry/mint-and-redemption.md"
+        },
+        "lossRecoveryDesign": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
       "assetId": "witry-brix",
       "archetype": "tbill",
       "reviewedAt": "2026-07-20",
@@ -9318,7 +9379,7 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "Brix's contracts documentation establishes wiTRY as an ERC-4626 staking vault over iTRY with an issuer-run NAV oracle publishing valuation data for supply expansion, a cooldown contract holding iTRY during unstake, and a FastAccessVault liquidity vault for instant redemption. Verified on-chain 2026-07-20 via eth_call at Ethereum block 25572099: the vault's asset() is the iTRY token 0xb492B4aFD9658093694CF9452D5C272e8230F3B0, convertToAssets(1e18) returned 1.108632187121665300 iTRY per wiTRY (matching totalAssets 338,939,480.5296085 iTRY over totalSupply 305,727,620.4559736 wiTRY), iTRY totalSupply was 417,190,335.90564764, and cooldownDuration() returned 300 seconds at block 25572133; the Code4rena audit documents the admin-configurable cooldown, fast-redeem fee deductions, and the custodian-topped FastAccessVault buffer, plus three medium findings on cross-chain unstake and fast-redeem failure modes. These support limited fund claim and seniority (the wrapper share claim is verified on-chain, but legal seniority and custody over the underlying Turkish-lira money-market funds were not established), limited NAV valuation (the mechanism is documented and the on-chain exchange rate verified, but the NAV oracle is issuer-run and the underlying fund valuation is unverified), and limited duration and liquidity (cooldown and fast-redeem paths are documented with a measured 300-second cooldown parameter, but underlying fund liquidity and duration are undisclosed and the audit documents cross-chain redemption failure modes). Loss recovery design is limited: the Accountable third-party proof-of-solvency dashboard is live, but the 2026-07-15 coin-file review observed reserve data last updated 2026-06-24, so an independent reconciliation control exists with an unresolved freshness caveat; Turkish fund identities, custodians, and the legal claim structure remain unestablished.",
+      "notes": "Brix's contracts documentation establishes wiTRY as an ERC-4626 staking vault over iTRY with an issuer-run NAV oracle publishing valuation data for supply expansion, a cooldown contract holding iTRY during unstake, and a FastAccessVault liquidity vault for instant redemption. Verified on-chain 2026-07-20 via eth_call at Ethereum block 25572099: the vault's asset() is the iTRY token 0xb492B4aFD9658093694CF9452D5C272e8230F3B0, convertToAssets(1e18) returned 1.108632187121665300 iTRY per wiTRY (matching totalAssets 338,939,480.5296085 iTRY over totalSupply 305,727,620.4559736 wiTRY), iTRY totalSupply was 417,190,335.90564764, and cooldownDuration() returned 300 seconds at block 25572133; the Code4rena audit documents the admin-configurable cooldown, fast-redeem fee deductions, and the custodian-topped FastAccessVault buffer, plus three medium findings on cross-chain unstake and fast-redeem failure modes. These support limited fund claim and seniority (the wrapper share claim is verified on-chain, but legal seniority and custody over the underlying Turkish-lira money-market funds were not established), limited NAV valuation (the mechanism is documented and the on-chain exchange rate verified, but the NAV oracle is issuer-run and the underlying fund valuation is unverified), and limited duration and liquidity (cooldown and fast-redeem paths are documented with a measured 300-second cooldown parameter, but underlying fund liquidity and duration are undisclosed and the audit documents cross-chain redemption failure modes). The 2026-11-15 tracked-parent review removes the inherited Accountable loss-recovery override: parent reserve assurance and legal fund claim belong to itry-brix. The retained July observations support only wrapper accounting, exchange-rate mechanics and local withdrawal parameters; they do not establish parent solvency or recovery. Their original review clock remains unchanged.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -9328,9 +9389,6 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
-          "quality": "limited"
-        },
-        "lossRecoveryDesign": {
           "quality": "limited"
         }
       }

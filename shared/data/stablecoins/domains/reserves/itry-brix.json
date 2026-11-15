@@ -1,0 +1,93 @@
+{
+  "id": "itry-brix",
+  "reserves": [
+    {
+      "name": "Digital Liquidity Fund tokens (Turkish money-market fund basket)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Digital Liquidity Fund / iTRY Limited",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "legal",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery iTRY review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Brix iTRY backing and custody documentation",
+        "url": "https://docs.brix.money/itry/backing.md"
+      },
+      {
+        "label": "Brix collateral management: Zodia and Fast Access Vault",
+        "url": "https://docs.brix.money/technical/collateral-management.md"
+      },
+      {
+        "label": "Brix iTRY Token Terms, sections 1, 5, 7 and 15 (updated 2026-03-25)",
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md"
+      },
+      {
+        "label": "Brix Accountable dashboard: 2026-11-15 aggregate TRY snapshot",
+        "url": "https://accountable.brix.money:8443/dashboard"
+      }
+    ],
+    "rationale": "Brix states that iTRY is fully backed by DLF tokens representing shares of a regulated Turkish money-market-fund basket. The Accountable dashboard observed on 2026-11-15 reports TRY 105,531,241.50 of aggregate reserves against TRY 105,526,365.31 of liabilities, with its latest upstream timestamp on the same day and fund NAV dated 2026-11-13. reserves_split identifies only the Ethereum custody location, not constituent funds. The 100% row represents the disclosed DLF backing category, not a fabricated look-through allocation. Individual funds, allocations, instruments, obligors, maturity bounds and executable liquidity are unestablished. The Token Terms give legal title to reserves to the Company and deny token holders rights in those reserves.",
+    "compositionBasis": "Brix fully DLF-backed iTRY disclosure, corroborated by Accountable aggregate assets and liabilities; fund constituents undisclosed",
+    "compositionAsOf": "2026-11-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The DLF basket is identified, but current constituent funds, weights, issuers, maturity bounds and executable liquidity allocations are not disclosed. Aggregate solvency does not resolve look-through exposure.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Digital Liquidity Fund tokens (Turkish money-market fund basket)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The disclosed DLF backing category and aggregate Accountable proof do not expose constituent holdings or weights sufficient for tracked-asset look-through links."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zodia Custody",
+        "role": "custodian"
+      },
+      {
+        "name": "Brix Fast Access Vault",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery iTRY review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Brix iTRY backing and custody documentation",
+        "url": "https://docs.brix.money/itry/backing.md"
+      },
+      {
+        "label": "Brix collateral management: Zodia and Fast Access Vault",
+        "url": "https://docs.brix.money/technical/collateral-management.md"
+      },
+      {
+        "label": "Brix iTRY Token Terms, sections 1, 5, 7 and 15 (updated 2026-03-25)",
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md"
+      }
+    ],
+    "uncertainty": "Issuer disclosures name Zodia as custodian for the majority of onchain collateral and the Fast Access Vault for a limited portion; regulated banking partners hold underlying fund assets. Provider shares, fund custodians, legal segregation, insolvency protection and reuse restrictions are not established. Terms state that the Company owns reserves and holders have no reserve property rights.",
+    "knownUnknownExposurePct": 100
+  }
+}

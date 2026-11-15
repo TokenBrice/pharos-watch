@@ -1,0 +1,84 @@
+{
+  "id": "itry-brix",
+  "name": "Brix iTRY",
+  "symbol": "iTRY",
+  "oneLiner": "iTRY is Brix's Turkish-lira token backed by DLF money-market-fund shares, with issuer redemption for whitelisted users into supported digital assets.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "TRY",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Digital Liquidity Fund DLF tokens representing a regulated basket of Turkish money-market funds; constituent funds, weights and maturities are not disclosed in the reviewed reserve dashboard",
+  "pegMechanism": "iTRY targets one Turkish lira. KYC-approved, onchain-whitelisted users can request issuer minting or redemption at a one-TRY notional in supported digital assets. Payout assets, fees and operational timing remain subject to issuer terms; secondary holders rely on market liquidity or eligible counterparties. Fund yield accrues separately through wiTRY staking rather than plain iTRY balances. At the reviewed Ethereum pin, the caller, sender and recipient must all be whitelisted for ordinary transfers; the MegaETH representation has transfers enabled.",
+  "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery iTRY review",
+    "rationale": "Issuer backing documentation identifies DLF shares in a regulated basket of Turkish money-market funds as iTRY's full backing. This matches the supported short-duration fund-backed tbill archetype. Plain iTRY maintains a fixed TRY claim and does not accrue NAV; only the separately tracked wiTRY savings wrapper accrues fund yield. The cash-equivalent listing class follows the tbill rule without setting navToken on the parent.",
+    "sources": [
+      {
+        "label": "Brix iTRY backing",
+        "url": "https://docs.brix.money/itry/backing"
+      },
+      {
+        "label": "Brix iTRY price stability",
+        "url": "https://docs.brix.money/itry/price-stability"
+      },
+      {
+        "label": "Brix staking yield separation",
+        "url": "https://docs.brix.money/itry/staking"
+      }
+    ]
+  },
+  "llamaId": "459",
+  "detailProvider": "defillama",
+  "geckoId": "brix-itry",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://brix.money/itry"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/brix_money"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.brix.money/itry/overview"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://accountable.brix.money/"
+    },
+    {
+      "label": "Token Terms",
+      "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+      "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x996ce957408804fec19237d866799d9c7076e48c",
+      "decimals": 18
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "mixed",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.brix.money/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "daily"
+  }
+}

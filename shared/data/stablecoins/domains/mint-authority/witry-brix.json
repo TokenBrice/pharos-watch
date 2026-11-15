@@ -1,54 +1,72 @@
 {
   "id": "witry-brix",
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
-    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. At Ethereum block 26095937, the wrapper owner is contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner is Brix Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662. The underlying iTRY owner remains Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. Both terminal Safes remain 3-of-5 with the same signer set. The wrapper's immediate owner is therefore not the Safe itself; issuer control remains concentrated through the intermediate contract.",
+    "headline": "wiTRY inherits iTRY\u2019s issuance controls and adds administrator-controlled staking and withdrawal gates.",
+    "summary": "wiTRY is an ERC4626 staking share over iTRY. Canonical shares are minted against deposited iTRY; parent native issuance is inherited from itry-brix. At Ethereum block 26423424, asset() returned the tracked parent and owner() returned StakediTryAdmin, controlled by the Brix wrapper Safe. The administrator retains wrapper parameters, roles and restricted-share redistribution, without a local unbacked-share mint path. Satellite share minting remains in Bridge Risk.",
+    "inheritedFrom": "itry-brix",
     "upgradeability": {
-      "model": "custom",
+      "model": "immutable",
       "deploymentRefs": [
         "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
       ],
-      "proxyAddresses": [
-        "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
-      ],
-      "implementationAddresses": [
-        "0x0679eaa2443e5fea70eea7ac9508fd357406fdad"
-      ],
-      "adminAddresses": [
-        "0xbdb430adf64ff1c8201c10221ddb846fa62613b6"
-      ],
-      "canChangeMintLogic": true,
-      "delaySec": 0,
-      "controlRef": "iTRY underlying token owner (Brix Safe 3/5)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25580037,
+      "canChangeMintLogic": false,
+      "controlRef": "wiTRY staking wrapper",
+      "observedAt": "2026-11-15",
+      "observedBlock": 26423424,
       "sources": [
         {
-          "label": "Brix iTRY product and wrapper disclosure",
-          "url": "https://brix.money/itry"
-        },
-        {
-          "label": "iTRY Ethereum proxy",
-          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
-        },
-        {
-          "label": "wiTRY Ethereum wrapper",
+          "label": "Verified canonical wiTRY wrapper and inherited ERC4626 source",
           "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Verified wiTRY administrator contract",
+          "url": "https://etherscan.io/address/0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47#code"
+        },
+        {
+          "label": "Ethereum pinned block 26423424",
+          "url": "https://etherscan.io/block/26423424"
         }
       ]
     },
     "controls": [
       {
-        "label": "wiTRY wrapper controller owner (Brix Safe 3/5)",
-        "role": "minter-admin",
+        "label": "wiTRY staking wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
+        "deploymentRefs": [
+          "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+        ],
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423424,
+        "sources": [
+          {
+            "label": "Verified canonical wiTRY wrapper and inherited ERC4626 source",
+            "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
+          },
+          {
+            "label": "Verified wiTRY administrator contract",
+            "url": "https://etherscan.io/address/0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47#code"
+          },
+          {
+            "label": "Ethereum pinned block 26423424",
+            "url": "https://etherscan.io/block/26423424"
+          }
+        ],
+        "evidence": "asset() returned iTRY 0xb492b4afd9658093694cf9452d5c272e8230f3b0 and the implementation slot was zero. Verified deployed StakediTryCrosschain and its inherited sources contain no upgrade or arbitrary delegatecall entry point. ERC4626 deposit/mint transfers actual underlying before _mint; depositByComposer delegates to deposit. redistributeLockedAmount burns existing shares before at-most-equal reissue. transferInRewards transfers actual iTRY from the rewarder rather than creating shares."
+      },
+      {
+        "label": "wiTRY administrator owner Safe",
+        "role": "other",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "parameter-only",
         "chain": "ethereum",
         "address": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
         "deploymentRefs": [
@@ -56,11 +74,10 @@
         ],
         "threshold": 3,
         "signerCount": 5,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095937,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
           "owners": [
             "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
             "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
@@ -72,84 +89,69 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedAt": "2026-10-01",
-          "observedBlock": 26095937,
+          "observedAt": "2026-11-15",
+          "observedBlock": 26423424,
           "source": "onchain"
         },
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423424,
         "sources": [
           {
-            "label": "Brix wiTRY",
-            "url": "https://brix.money/itry"
-          }
-        ],
-        "evidence": "At Ethereum block 25295016, wiTRY owner() returned Safe 0x7ac3bb10225a4ef27134bcf54454d545a1738662. At block 26095937 on 2026-10-01, wiTRY owner() instead returned contract 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47, whose owner() returned the same Brix Safe. Pinned Safe getOwners()/getThreshold() confirmed the recorded five signers and threshold 3; getModulesPaginated() returned an empty list with sentinel next pointer, the guard-manager slot was zero, VERSION() returned 1.4.1, and the fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99."
-      },
-      {
-        "label": "iTRY underlying token owner (Brix Safe 3/5)",
-        "role": "direct-minter",
-        "authorityType": "safe",
-        "directMintAbility": "direct",
-        "chain": "ethereum",
-        "address": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
-        "deploymentRefs": [
-          "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
-        ],
-        "threshold": 3,
-        "signerCount": 5,
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095937,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "owners": [
-            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
-            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
-            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
-            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
-            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedAt": "2026-10-01",
-          "observedBlock": 26095937,
-          "source": "onchain"
-        },
-        "sources": [
+            "label": "Verified canonical wiTRY wrapper and inherited ERC4626 source",
+            "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
+          },
           {
-            "label": "Brix wiTRY",
-            "url": "https://brix.money/itry"
+            "label": "Verified wiTRY administrator contract",
+            "url": "https://etherscan.io/address/0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47#code"
+          },
+          {
+            "label": "Ethereum pinned block 26423424",
+            "url": "https://etherscan.io/block/26423424"
           }
         ],
-        "evidence": "Historical Ethereum block 25295016 identified iTRY owner Safe 0xbdb430adf64ff1c8201c10221ddb846fa62613b6 and its five signers with threshold 3. At block 26095937 on 2026-10-01, owner(), getOwners() and getThreshold() confirmed the same owner and signer set. getModulesPaginated() returned an empty list with sentinel next pointer, the guard-manager slot was zero, VERSION() returned 1.4.1, and the fallback-handler slot returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Both terminal Safes still share the same signer set."
+        "evidence": "Pinned wrapper owner() is StakediTryAdmin 0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47; that contract owner() is this Safe. Its verified source exposes explicit role, cooldown, fast-redeem-fee, rescue and restricted-share redistribution methods; it has no arbitrary-call or unbacked-share mint method. The Safe is three-of-five with the same five signer addresses as the parent Safe; modules are empty and guard slot zero at the pin. This records distinct wrapper-local capabilities, while native iTRY issuance remains in the parent profile."
       }
     ],
-    "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25295016: wiTRY wrapper owner and iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3/5, same 5 signers) confirming issuer-controlled architecture. MegaETH OFT adapter (0x15b271d9012b5820fc42b1c495b4c1e206547de5) owner could not be confirmed, MegaETH public RPCs returned errors, but the Ethereum primary chain is fully verified. MegaETH is a bridged deployment; the Ethereum Safe controls the canonical supply. Accountable independently reconciles the iTRY and wiTRY liabilities to backing assets. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-24, so the observed evidence supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision over wiTRY issuance. Economic-posture fields reviewed 2026-08-15: common Brix Safe signers control direct mint and upgrades, while dated Accountable assets-and-liabilities snapshots support periodic attestation-only oversight.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "disposition": "scoreable",
+      "evidence": "The new tracked parent relation makes parent native issuance explicit without claiming a wrapper can independently mint iTRY. At Ethereum block 26423424, asset() matches the parent; totalAssets=77616559523085805176503975 raw iTRY and convertToAssets(1e18)=1223459869096993134 raw iTRY. Matching block headers bind the reads to hash 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, timestamp 2026-11-15T22:33:59Z. No parent proxy or parent minter is represented as a local wrapper mint control. Direct holder restrictions remain owned by the existing FreezeWatch review.",
+      "reviewer": "Pharos Brix control review",
+      "reviewedAt": "2026-11-15",
       "sources": [
         {
-          "label": "Brix iTRY",
-          "url": "https://brix.money/itry"
+          "label": "Verified canonical wiTRY wrapper and inherited ERC4626 source",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
         },
         {
-          "label": "Brix",
-          "url": "https://brix.money/"
+          "label": "Verified wiTRY administrator contract",
+          "url": "https://etherscan.io/address/0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47#code"
         },
         {
-          "label": "wiTRY Ethereum token",
-          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+          "label": "Ethereum pinned block 26423424",
+          "url": "https://etherscan.io/block/26423424"
+        }
+      ]
+    },
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "For the exact deployed StakediTryCrosschain wrapper, inherited ERC4626 _deposit transfers iTRY from the caller before share _mint, and depositByComposer delegates to that same deposit path. transferInRewards transfers actual iTRY from the rewarder. The only privileged share _mint found is redistribution after burning at least the same existing share count; it creates no new unbacked shares. The deployed wrapper has no upgrade/delegatecall entry point and its EIP1967 implementation slot is zero at Ethereum block 26423424. Parameter and restricted-holder powers remain disclosed separately; parent iTRY native issuance is inherited and is not covered by this local bound.",
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos Brix control review",
+      "sources": [
+        {
+          "label": "Verified canonical wiTRY wrapper and inherited ERC4626 source",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
         },
         {
-          "label": "Accountable independent Brix proof of solvency",
-          "url": "https://accountable.brix.money/"
+          "label": "Verified wiTRY administrator contract",
+          "url": "https://etherscan.io/address/0x15bf1ac31c5b8c0e0960d656de02ba5593b19c47#code"
+        },
+        {
+          "label": "Ethereum pinned block 26423424",
+          "url": "https://etherscan.io/block/26423424"
         }
       ]
     }
