@@ -138,7 +138,8 @@
       }
     },
     "params": {
-      "slug": "ousd"
+      "slug": "ousd",
+      "maxUnattributedResidualShare": 0.01
     }
   },
   "notices": [
