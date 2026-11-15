@@ -41,11 +41,11 @@ import {
   persistChainDropoutState,
   type ChainDropoutState,
 } from "../chain-dropout-guard";
-import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "../chain-dropout-seed";
+import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "../chain-dropout-seed";
 
 const NOW = Date.parse("2026-10-09T06:00:00Z") / 1000;
 const DAY = 86400;
-const AFTER_SEED = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+const LATE_NOW = Date.parse("2026-11-10T00:00:00Z") / 1000;
 const xlayerContract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
 
 const RWA_AMOUNTS = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: 5_000_000 };
@@ -247,7 +247,7 @@ describe("chain dropout guard", () => {
     expect(published.supplyChainGuard).toEqual(asset.supplyChainGuard);
   });
 
-  it("parses legacy guard provenance without observedAtKind", () => {
+  it("parses legacy guard provenance without observedAtKind and pre-lapse seed baselines", () => {
     const legacy = {
       reason: "supply-chain-dropout", status: "repaired",
       chains: [{
@@ -257,6 +257,9 @@ describe("chain dropout guard", () => {
       }],
     };
     expect(SupplyChainGuardProvenanceSchema.parse(legacy)).toEqual(legacy);
+    expect(ChainDropoutStateSchema.safeParse({ version: 1, pairs: {
+      "[\"usdg-paxos\",\"xlayer\"]": { assetId: "usdg-paxos", ...baseline("xlayer", 1_427_900_000, NOW - DAY), baselineSource: "seed" },
+    } }).success).toBe(true);
     expect(SupplyChainGuardProvenanceSchema.safeParse({
       ...legacy, chains: [{ ...legacy.chains[0], observedAtKind: "fetch-time" }],
     }).success).toBe(false);
@@ -276,7 +279,7 @@ describe("chain dropout guard", () => {
     const first = await runGuard(day1);
     expect(day1).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined", quarantinedSince: NOW } });
     expect(day1.chainCirculating!["X Layer"].current).toBeNull();
-    expect(getCirculatingRawOrNull(day1)).toBe(1_645_300_000 + 1_427_912_807 + 63_630_836 + 1_193_158);
+    expect(getCirculatingRawOrNull(day1)).toBe(1_645_300_000 + 1_427_900_000 + 63_600_000 + 1_200_000);
     await persistChainDropoutState({} as D1Database, first, NOW);
     const saved = ChainDropoutStateSchema.parse(JSON.parse(mocks.setCache.mock.calls[0][2]));
     mocks.getCache.mockResolvedValue({ value: JSON.stringify(saved), updatedAt: NOW });
@@ -285,7 +288,7 @@ describe("chain dropout guard", () => {
     for (const label of ["X Layer", "Ink", "Hyperliquid L1"]) day2.chainCirculating![label].circulatingPrevDay = 0;
     const second = await runGuard(day2, { now: NOW + DAY, ...loaded });
     expect(second.flagged).toBe(3);
-    expect(day2.supplyChainGuard?.chains[0]).toMatchObject({ baselineSource: "state", baselineUsd: 1_427_912_807, baselineObservedAt: Date.parse("2026-10-08T00:00:00Z") / 1000 });
+    expect(day2.supplyChainGuard?.chains[0]).toMatchObject({ baselineSource: "state", baselineUsd: 1_427_900_000, baselineObservedAt: NOW - DAY });
     expect(day2.supplyChainGuard?.quarantinedSince).toBe(NOW);
     const day8 = usdg();
     for (const label of ["X Layer", "Ink", "Hyperliquid L1"]) day8.chainCirculating![label].circulatingPrevDay = 0;
@@ -409,7 +412,7 @@ describe("chain dropout guard", () => {
   });
 
   it.each([false, true])("keeps carried history only while its chain bucket equals the baseline (aged day: %s)", async (aged) => {
-    const now = AFTER_SEED;
+    const now = LATE_NOW;
     const state: ChainDropoutState = { version: 1, pairs: {} };
     if (aged) state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])] = {
       assetId: "usdg-paxos", ...baseline("xlayer", 100_000_000, now - DAY, now - DAY), baselineSource: "state",
@@ -450,8 +453,7 @@ describe("chain dropout guard", () => {
         Sonic: leg(0, 80_000_000),
       },
     };
-    // Pin the vetted fixture baseline; the incident seed has a different
-    // real-world USDC/Sonic amount and intentionally outranks list prev-day.
+    // Pin the vetted fixture baseline so it outranks list prev-day.
     const state: ChainDropoutState = savedState("usdc-circle", baseline("sonic", 80_000_000, NOW - DAY));
     const first = await runGuard(initial, { state });
     expect(getCirculatingRawOrNull(initial)).toBe(100_000_000);
@@ -488,7 +490,7 @@ describe("chain dropout guard", () => {
     const hyperevmKey = JSON.stringify(["usdg-paxos", "hyperevm"]);
     // frxUSD-shaped: a persisted ambiguous hold on an omitted chain with no recovered observation.
     function setup(baselineUsd: number, quarantinedAgoSec: number) {
-      const now = AFTER_SEED;
+      const now = LATE_NOW;
       const quarantinedSince = now - quarantinedAgoSec;
       const state: ChainDropoutState = savedState("usdg-paxos", { chainLabel: "HyperEVM", chainId: "hyperevm", baselineUsd, baselineObservedAt: quarantinedSince - 5 * DAY, quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 95_000_000 + baselineUsd });
       const asset: PeggedAsset = {
@@ -773,7 +775,7 @@ describe("chain dropout guard", () => {
     ["native zero", 0, 0, 25_000_000],
     ["native below list", 30_000_000, 10_000_000, 35_000_000],
   ])("keeps a %s confirmation despite a concurrent healthy-chain gain", async (_case, listUsd, nativeUsd, expectedTotal) => {
-    const now = AFTER_SEED;
+    const now = LATE_NOW;
     mocks.onchain.mockResolvedValue(BigInt(nativeUsd) * XLAYER_SCALE);
     const state: ChainDropoutState = savedState("usdg-paxos", baseline("xlayer", 100_000_000, now - 900), baseline("ethereum", 20_000_000, now - 900));
     const asset: PeggedAsset = {
@@ -793,7 +795,7 @@ describe("chain dropout guard", () => {
   });
 
   it("publishes unavailable, not a partial held total, when an ambiguous asset has a chain with no reference or current", async () => {
-    const now = AFTER_SEED;
+    const now = LATE_NOW;
     const state: ChainDropoutState = savedState("usdg-paxos", baseline("xlayer", 100_000_000, now - 900), baseline("ethereum", 20_000_000, now - 900));
     const asset: PeggedAsset = {
       ...usdg(),
@@ -812,7 +814,7 @@ describe("chain dropout guard", () => {
   });
 
   it("makes a persisted ambiguous hold unknown, never a clamped zero, when another chain is later natively confirmed", async () => {
-    const now = AFTER_SEED;
+    const now = LATE_NOW;
     mocks.onchain.mockResolvedValue(0n * XLAYER_SCALE);
     // Frozen $100M packet held for Solana (B=$80M) when X Layer (A) was $20M; A then grew to $100M
     // as an independent baseline before burning to a natively confirmed zero.
@@ -883,7 +885,7 @@ describe("chain dropout guard", () => {
     expect(mocks.setCache).not.toHaveBeenCalled();
   });
 
-  it("recovers a non-seeded quarantine from the last publication when the state read fails on a later outage day", async () => {
+  it("recovers a quarantine from the last publication when the state read fails on a later outage day", async () => {
     const outage = (prevDay: number): PeggedAsset => ({
       ...usdg(),
       circulating: { peggedUSD: 321_300_000 },
@@ -938,8 +940,7 @@ describe("chain dropout guard", () => {
     ["full", 100_000_000],
     ["partial", 85_000_000],
   ])("never double-counts a %s source reattribution of a dropped destination, across two persisted runs", async (_case, source) => {
-    // Past the incident seed so baselines come only from the asset's own healthy history.
-    const start = AFTER_SEED;
+    const start = LATE_NOW;
     const bridged = (sourceUsd: number, destinationUsd: number): PeggedAsset => ({
       ...usdg(),
       circulating: { peggedUSD: sourceUsd + destinationUsd },
@@ -987,7 +988,7 @@ describe("chain dropout guard", () => {
     expect(asset.supplyChainGuard?.chains[0].observedAtKind).toBeUndefined();
     expect(getCirculatingRawOrNull(asset)).toBeGreaterThan(0);
     const xlayer = Object.values(result.state.pairs).find((pair) => pair.chainId === "xlayer")!;
-    expect(xlayer).toMatchObject({ quarantinedSince: NOW, baselineSource: "seed", ambiguousSince: NOW });
+    expect(xlayer).toMatchObject({ quarantinedSince: NOW, baselineSource: "list-prev-day", ambiguousSince: NOW });
     expect(xlayer.baselineUsd).toBeGreaterThan(1_400_000_000);
     expect(xlayer.releasedAt).toBeUndefined();
   });
@@ -1073,6 +1074,7 @@ describe("chain dropout guard", () => {
     ["usdglo-glo", "base", "Base", "peggedUSD", 1_018_000, 91_319.484821, "2026-11-04T09:03:51Z"],
   ] as const)("accepts only dated reviewed %s / %s reductions, not omitted or later incidents", async (assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate) => {
     const reviewedAt = Date.parse(reviewDate) / 1000;
+    expect(REVIEWED_CHAIN_SUPPLY_COLLAPSES.some((entry) => entry.assetId === assetId && entry.chainId === chainId && entry.reviewedAt === reviewedAt)).toBe(true);
     const key = JSON.stringify([assetId, chainId]);
     const makeState = (quarantinedSince = reviewedAt - DAY): ChainDropoutState => (savedState(assetId, { chainId, chainLabel, baselineUsd: baseline, baselineObservedAt: quarantinedSince - 900, quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 20_000_000 }));
     const companionLabel = chainLabel === "Ethereum" ? "Avalanche" : "Ethereum";
@@ -1168,20 +1170,13 @@ describe("chain dropout guard", () => {
     expect(mocks.chart.mock.calls[0][0]).toContain("Unknown%209");
   });
 
-  it("bootstraps from prevDay after seed expiry and respects threshold boundaries", async () => {
+  it("bootstraps from prevDay and respects threshold boundaries", async () => {
     const asset = usdg();
     asset.chainCirculating = { "X Layer": leg(500_000, 1_000_000), Ink: leg(0, 999_999) };
-    await runGuard(asset, { now: CHAIN_DROPOUT_SEED_VALID_UNTIL + 1 });
+    await runGuard(asset);
     expect(asset.supplyChainGuard?.chains).toHaveLength(1);
     expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ baselineSource: "list-prev-day", baselineUsd: 1_000_000 });
     expect(asset.chainCirculating!.Ink.current).toBe(0);
-  });
-
-  it("retains seeds for noncanonical chain labels", async () => {
-    const seed = CHAIN_DROPOUT_SEED.find((entry) => entry.chainLabel === "XDC")!;
-    const asset: PeggedAsset = { ...usdg(), id: seed.assetId, chainCirculating: { XDC: leg(0) } };
-    await runGuard(asset);
-    expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ chainLabel: "XDC", baselineUsd: seed.baselineUsd, baselineSource: "seed" });
   });
 
   it("ignores frozen, other-lane restored and reconciled assets", async () => {
@@ -1200,7 +1195,6 @@ describe("chain dropout guard", () => {
       expect(hasRegistryRpc(rpcs.get(pair.chainId))).toBe(pair.chainId !== "pharos");
       expect(ACTIVE_META_BY_ID.get(pair.assetId)?.contracts?.filter((entry) => entry.chain === pair.chainId)).toHaveLength(1);
     }
-    expect(CHAIN_DROPOUT_SEED).toHaveLength(39);
     expect(ChainDropoutStateSchema.parse({ version: 1, pairs: {} })).toEqual({ version: 1, pairs: {} } satisfies ChainDropoutState);
     const rows = Object.fromEntries(CHAIN_DROPOUT_ONCHAIN_ROSTER.filter((pair) => pair.assetId === "rwausdi-multipli")
       .map(({ chainId }) => [chainId, leg(1, 24_000_000)]));

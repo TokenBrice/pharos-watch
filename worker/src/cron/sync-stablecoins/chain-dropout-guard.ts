@@ -20,7 +20,7 @@ import { fetchSolanaTokenSupply } from "../../lib/chain-observation";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import { supplyObservationClock } from "./shared";
 import type { PeggedAsset } from "./enrich-prices-shared";
-import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL, REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "./chain-dropout-seed";
+import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "./chain-dropout-seed";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 
 const CHAIN_DROPOUT_STATE_KEY = "sync-stablecoins:chain-dropout-state";
@@ -48,6 +48,7 @@ const PairStateSchema = z.object({
   chainId: z.string().optional(),
   baselineUsd: z.number().finite().nonnegative(),
   baselineObservedAt: TimestampSchema,
+  // `seed` stays readable: pairs written before the 2026-11-09 seed lapse may still carry it.
   baselineSource: z.enum(["state", "seed", "list-prev-day"]),
   quarantinedSince: TimestampSchema.nullable(),
   chartPoint: z.object({ valueUsd: z.number().finite().nonnegative(), pointDate: TimestampSchema, fetchedAt: TimestampSchema }).optional(),
@@ -55,7 +56,7 @@ const PairStateSchema = z.object({
   chartAttemptedAt: TimestampSchema.optional(),
   // Set when a flagged pair is released at a confirmed level (corroboration, reviewed release or
   // immaterial chart release). Such a pair is never pruned, so a confirmed low baseline is never
-  // replaced by the stale incident seed or an aged previous-day value.
+  // replaced by an aged previous-day value.
   releasedAt: TimestampSchema.optional(),
   // Attribution became ambiguous (a concurrent healthy-chain gain could explain the drop). While the
   // pair stays flagged, repairs stay withheld and a material drop holds this pre-ambiguity vetted
@@ -81,10 +82,6 @@ export interface SupplyChainGuardResult {
 
 function pairKey(assetId: string, identity: string): string {
   return JSON.stringify([assetId, identity]);
-}
-function findSeed(assetId: string, chainId: string | undefined, chainLabel: string, now: number) {
-  if (now >= CHAIN_DROPOUT_SEED_VALID_UNTIL) return undefined;
-  return CHAIN_DROPOUT_SEED.find((entry) => entry.assetId === assetId && (entry.chainId ? entry.chainId === chainId : entry.chainLabel === chainLabel));
 }
 function warn(event: string, message: string, metadata: Record<string, unknown>, error?: unknown): void {
   logWorkerEvent({ scope: "lib", job: "sync-stablecoins", level: "warn", event, message, metadata, ...(error ? { error } : {}) });
@@ -239,7 +236,7 @@ async function readChart(candidate: Candidate, now: number, signal?: AbortSignal
  * (frozen baseline, first detection, held ambiguous total, or a confirmed native-low level), then every
  * other published chain current except the CoinGecko gap-fill remainder as its accepted level,
  * including a confirmed low/zero whose guard sidecar disappeared once the chain stopped being flagged.
- * Only unpublished chains bootstrap from seed. One exception: a reviewed `retire-baseline` entry is
+ * One exception: a reviewed `retire-baseline` entry is
  * code, not state, so it removes a recovered pair holding exactly its reviewed baseline on this run too.
  * A `stale` pair counts as missing (the state write after that publication may have failed), but only a
  * guarded chain or a fresh DefiLlama list row replaces it; a replaced pair leaves `stale` and is compared.
@@ -332,7 +329,7 @@ export async function guardChainDropouts(input: {
   const candidates: Candidate[] = [];
   const fillDefaultAssets = new Map<PeggedAsset, number>();
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
-  // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
+  // (each chain at its persisted/prev-day reference, before this run moves any baseline).
   const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
   const knownPairsByAssetId = new Map<string, PairState[]>();
   for (const [key, pair] of Object.entries(state.pairs)) {
@@ -385,10 +382,9 @@ export async function guardChainDropouts(input: {
           previous = undefined;
         } else Object.assign(previous, { baselineUsd: observation.current, baselineObservedAt: now });
       }
-      const seed = findSeed(meta.id, group.chainId, label, now);
-      const baseline = previous?.baselineUsd ?? seed?.baselineUsd ?? observation.circulatingPrevDay;
-      const baselineSource = previous ? "state" : seed ? "seed" : "list-prev-day";
-      const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: seed ? CHAIN_DROPOUT_SEED_OBSERVED_AT : Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
+      const baseline = previous?.baselineUsd ?? observation.circulatingPrevDay;
+      const baselineSource = previous ? "state" : "list-prev-day";
+      const pair: PairState = previous ?? { assetId: meta.id, chainLabel: label, ...(group.chainId ? { chainId: group.chainId } : {}), baselineUsd: baseline ?? 0, baselineObservedAt: Math.max(0, now - 86400), baselineSource, quarantinedSince: null };
       const reviewed = REVIEWED_CHAIN_SUPPLY_COLLAPSES.find((entry) => entry.assetId === meta.id && entry.chainId === group.chainId
         && entry.policy !== "retire-baseline" && entry.reviewedAt >= (pair.quarantinedSince ?? now) && entry.reviewedAt <= now);
       if (observation.current == null && reviewed?.policy === "exclude-omitted" && now < reviewed.excludeOmittedUntil) {
@@ -789,8 +785,7 @@ export async function guardChainDropouts(input: {
     }
   }
   for (const [key, pair] of Object.entries(state.pairs)) {
-    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null
-      && !findSeed(pair.assetId, pair.chainId, pair.chainLabel, now)) delete state.pairs[key];
+    if (pair.baselineUsd < CHAIN_DROPOUT_POLICY.minBaselineUsd && pair.quarantinedSince == null && pair.releasedAt == null) delete state.pairs[key];
   }
   if (result.flagged > 0) warn("supply-chain-dropout", "Guarded anomalous DefiLlama chain supply observations", { reason: "supply-chain-dropout", flagged: result.flagged, repaired: result.repaired, quarantinedAssetIds: result.quarantinedAssetIds, unavailableAssetIds: result.unavailableAssetIds, historyFetches: result.historyFetches, stateReadFailed: result.stateReadFailed });
   return result;
