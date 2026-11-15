@@ -36,7 +36,7 @@ import { mintBurnScanCoverageAdmits, mintBurnWindowAdmits, buildMintBurnLegacySp
 import { mintBurnConfigKey } from "./mint-burn-contract-identity";
 import { MINT_BURN_HOURLY_CLASSIFICATION_TALLY_SQL, type MintBurnClassificationTallyRow, readMintBurnClassificationTallyRow, MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
-import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
+import { aggregateFlowCacheKey, FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import {
   decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
   persistMintBurnAdmissions, persistMintBurnQuarantines, persistMintBurnResumptions,
@@ -628,23 +628,35 @@ export async function finalizeMintBurnFlowResponse(
   body: Record<string, unknown>,
   freshness: CronTimestampLookupResult,
   publicationPolicy?: string,
+  persist = true,
 ): Promise<Response> {
   const { responseBody, response } = buildMintBurnFlowResponse(body, freshness);
-  if (publicationPolicy === undefined) {
-    await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
-  } else {
-    // A kill switch can race a slow producer. Its old scope must never restore the purged cache.
-    const written = await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at)
-      SELECT ?, ?, ? WHERE COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') = ?
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-      WHERE cache.updated_at <= excluded.updated_at`)
-      .bind(cacheKey, JSON.stringify(responseBody), syncStartSec, publicationPolicy).run());
-    if (written.meta.changes === 0) {
-      const current = await prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>();
+  const respondWithoutWrite = async (): Promise<Response> => {
+    if (publicationPolicy !== undefined) {
+      const current = await runWithOverloadRetry(() => prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>());
       if ((current?.disabled_keys ?? "[]") !== publicationPolicy) {
         return jsonResponse({ error: "Mint/burn publication scope changed; retry", reason: "mint-burn-publication-scope-changed" }, { status: 503 });
       }
     }
+    return response;
+  };
+  if (!persist || (cacheKey.startsWith(`${FLOW_CACHE_PREFIX}:aggregate:`)
+    && !MINT_BURN_AGGREGATE_PUBLISH_WINDOWS.some((hours) => cacheKey === aggregateFlowCacheKey(hours)))) return respondWithoutWrite();
+  const minWriteIntervalSec = cacheKey.startsWith(`${FLOW_CACHE_PREFIX}:coin:`) ? 60 : 0;
+  if (minWriteIntervalSec > 0) {
+    const cached = await getCache(db, cacheKey);
+    if (cached && syncStartSec - cached.updatedAt < minWriteIntervalSec) return respondWithoutWrite();
+  }
+  if (publicationPolicy === undefined && minWriteIntervalSec === 0) {
+    await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
+  } else {
+    // A kill switch can race a slow producer. Its old scope must never restore the purged cache.
+    const written = await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at)
+      SELECT ?, ?, ? WHERE (? IS NULL OR COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') = ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+      WHERE cache.updated_at <= excluded.updated_at - ?`)
+      .bind(cacheKey, JSON.stringify(responseBody), syncStartSec, publicationPolicy ?? null, publicationPolicy ?? null, minWriteIntervalSec).run());
+    if (written.meta.changes === 0) return respondWithoutWrite();
   }
   return response;
 }

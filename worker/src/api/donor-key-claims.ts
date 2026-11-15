@@ -1,4 +1,5 @@
 import donationsAsset from "@shared/data/funding/donations.json";
+import { clientAddressLimiterSubject } from "@shared/lib/client-ip-hash";
 import { DONOR_CLAIM_SIWE_DOMAIN, buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
 import { isEligibleDonor, summarizeDonorKeyEligibility } from "@shared/lib/funding/donor-eligibility";
 import { DonationsFileSchema } from "@shared/lib/funding/schema";
@@ -150,7 +151,7 @@ export async function handleDonorKeyClaim(
   }
   let limited: { success: boolean };
   try {
-    limited = await deps.rateLimiter.limit({ key: request.headers.get("CF-Connecting-IP") ?? "unknown" });
+    limited = await deps.rateLimiter.limit({ key: clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown" });
   } catch {
     return claimError(503, UNAVAILABLE_MESSAGE, "rate_limit_unavailable");
   }

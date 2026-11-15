@@ -10,6 +10,8 @@ import {
   shouldRecordApiKeyUsage,
   markApiKeyUsageRecorded,
   getNowSec,
+  isApiKeyOverQuota,
+  memoizeApiKeyOverQuota,
   type ApiKeyDb,
   type AuthenticatedApiKey,
 } from "./api-key-core";
@@ -53,6 +55,9 @@ export async function checkApiKeyRateLimit(
   execCtx?: ExecutionContext,
 ): Promise<Response | null> {
   const { bucketStart, retryAfterSec } = apiKeyRateLimitBucket(nowSec);
+  if (isApiKeyOverQuota(apiKeyId, limit, bucketStart)) {
+    return apiKeyRateLimitExceededResponse(retryAfterSec);
+  }
   const row = await db.prepare(
     `INSERT INTO api_key_rate_limit (api_key_id, bucket_start, count, last_seen_at)
      VALUES (?, ?, 1, ?)
@@ -77,7 +82,9 @@ export async function checkApiKeyRateLimit(
     );
   }
 
-  if ((row?.count ?? 0) > limit) {
+  const count = row?.count ?? 0;
+  if (count > limit) {
+    memoizeApiKeyOverQuota(apiKeyId, bucketStart, count);
     return apiKeyRateLimitExceededResponse(retryAfterSec);
   }
 

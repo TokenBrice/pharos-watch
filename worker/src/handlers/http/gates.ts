@@ -2,6 +2,7 @@ import { API_PATHS, getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-
 import { isAnonymousThrottlePath } from "@shared/lib/api-endpoints/definitions";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
+import { clientAddressLimiterSubject } from "@shared/lib/client-ip-hash";
 import {
   SITE_DATA_ALLOWED_METHOD,
   SITE_DATA_CLIENT_IP_HEADER,
@@ -12,9 +13,13 @@ import { errorResponse, methodNotAllowedResponse } from "../../lib/api-response"
 import {
   authenticateApiKeyFromFreshCache,
   authenticateApiKey,
+  parseApiKeyToken,
 } from "../../lib/api-key-auth";
 import {
   isApiKeyRateLimitDependencyCircuitOpen,
+  getCachedApiKeyByPrefix,
+  isApiKeyLookupBlocked,
+  blockApiKeyLookup,
   recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess,
   type AuthenticatedApiKey,
@@ -139,11 +144,12 @@ async function limitAnonymousPublicationRead(
 ): Promise<Response | null> {
   // The Pages proxy forwards the edge-verified client IP after the shared
   // secret authenticates the lane; direct callers cannot reach this branch.
-  const key = options.siteProxy
+  const address = options.siteProxy
     ? request.headers.get(SITE_DATA_CLIENT_IP_HEADER)?.trim()
       || request.headers.get("CF-Connecting-IP")
       || "unknown"
     : request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const key = clientAddressLimiterSubject(address) ?? "unknown";
   try {
     const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({ key });
     return result.success ? null : errorResponse(429, "Too many requests", { retryAfterSec: 60 });
@@ -223,12 +229,40 @@ export async function evaluateAccessGate(
     return gateResult("public-api");
   }
 
+  const parsedKey = parseApiKeyToken(request.headers.get("X-API-Key"));
+  const lookupSubject = clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown";
+  if (parsedKey && !getCachedApiKeyByPrefix(parsedKey.prefix) && isApiKeyLookupBlocked(lookupSubject)) {
+    return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
+  }
   const apiKeyAuth = await authenticateApiKey(
     env.DB,
     request.headers.get("X-API-Key"),
     env.API_KEY_HASH_PEPPER,
     env.API_KEY_HASH_PEPPER_PREVIOUS,
   );
+  if (parsedKey && apiKeyAuth.kind === "invalid") {
+    try {
+      if (!env.API_KEY_LOOKUP_RATE_LIMIT) throw new Error("API key lookup rate-limit binding missing");
+      const result = await env.API_KEY_LOOKUP_RATE_LIMIT.limit({
+        key: lookupSubject,
+      });
+      if (!result.success) {
+        blockApiKeyLookup(lookupSubject);
+        return gateResult("public-api", errorResponse(429, "Too many requests", { retryAfterSec: 60 }));
+      }
+    } catch (error) {
+      logWorkerEvent({
+        scope: "http",
+        level: "warn",
+        event: "api_key_lookup_rate_limit_unavailable",
+        route: "public-api-auth",
+        requestLane: "public-api",
+        message: "API key lookup rate limiter unavailable; proceeding with authentication",
+        error,
+      });
+    }
+  }
+
   if (apiKeyAuth.kind !== "valid") {
     return gateResult(
       "public-api",

@@ -98,12 +98,13 @@ interface ReleaseArtifact {
   name: string;
   expired: boolean;
   created_at: string;
-  workflow_run?: { id: number; head_branch: string; head_sha: string };
+  workflow_run?: { id: number; head_branch: string; head_sha: string; head_repository_id: number; repository_id: number };
 }
-interface ReleaseRun { conclusion: string; head_branch: string; head_sha: string; path: string }
+interface ReleaseRun { conclusion: string; head_branch: string; head_sha: string; path: string; event: string; head_repository?: { full_name: string } }
 
 export function selectPagesReleaseArtifacts(artifacts: readonly ReleaseArtifact[]): ReleaseArtifact[] {
   return artifacts.filter((artifact) => !artifact.expired && artifact.workflow_run?.head_branch === "main"
+    && artifact.workflow_run.head_repository_id === artifact.workflow_run.repository_id
     && artifact.name === `pages-release-data-${artifact.workflow_run.head_sha}`
     && /^[a-f0-9]{40}$/.test(artifact.workflow_run.head_sha))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -119,6 +120,7 @@ function acquireReleaseData(directory: string, repoRoot: string): AcquiredReleas
   for (const artifact of selectPagesReleaseArtifacts(pages.flatMap((page) => page.artifacts))) {
     const run = JSON.parse(gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/runs/${artifact.workflow_run!.id}`]).toString()) as ReleaseRun;
     if (run.conclusion !== "success" || run.head_branch !== "main" || run.head_sha !== artifact.workflow_run!.head_sha
+      || !["push", "schedule", "workflow_dispatch"].includes(run.event) || run.head_repository?.full_name !== REPOSITORY
       || ![".github/workflows/deploy-cloudflare.yml", ".github/workflows/rebuild-pages.yml"].includes(run.path)) continue;
     const zip = join(directory, "release-data.zip");
     writeFileSync(zip, gh(["api", "--method", "GET", `repos/${REPOSITORY}/actions/artifacts/${artifact.id}/zip`]));

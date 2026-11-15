@@ -630,6 +630,18 @@ describe("POST /api/donor-key-claims", () => {
     expect(countApiKeys()).toBe(0);
   });
 
+  it.each([["2001:0DB8:1:0002::abcd", "2001:db8:1:2::/64"], ["::ffff:192.0.2.1", "192.0.2.1"], ["garbage", "unknown"]])(
+    "normalizes claim limiter source %s before reading the body", async (ip, key) => {
+      const limit = vi.fn().mockResolvedValue({ success: false });
+      const response = await handleDonorKeyClaim(db, new Request(CLAIM_URL, {
+        method: "POST", headers: { "CF-Connecting-IP": ip }, body: "bad",
+      }), { rateLimiter: { limit }, pepper: PEPPER }, NOW_SEC);
+      expect(response.status).toBe(429);
+      expect(limit).toHaveBeenCalledWith({ key });
+      expect(countApiKeys()).toBe(0);
+    },
+  );
+
   it("answers 503 when the rate limit binding is missing", async () => {
     const response = await claim(claimMessage(donorAccount), { limiter: undefined });
 

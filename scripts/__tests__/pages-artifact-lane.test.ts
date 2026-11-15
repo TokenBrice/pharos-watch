@@ -13,7 +13,7 @@ import {
 } from "../ci/run-pages-artifact-lane.ts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
-import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
+import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, preparePagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -24,6 +24,7 @@ afterEach(() => { vi.unstubAllEnvs(); cleanup(); });
 const spawn = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async (importOriginal) => ({
   ...(await importOriginal<typeof ChildProcess>()),
+  execFileSync: vi.fn((await importOriginal<typeof ChildProcess>()).execFileSync),
   spawnSync: spawn,
 }));
 
@@ -237,14 +238,29 @@ describe("Pages artifact input profile", () => {
 
   it("considers only unexpired identity-matched main artifacts, newest first", () => {
     const sha = "a".repeat(40);
-    const artifact = { id: 1, name: `pages-release-data-${sha}`, expired: false, created_at: "2026-10-07", workflow_run: { id: 10, head_branch: "main", head_sha: sha } };
+    const artifact = { id: 1, name: `pages-release-data-${sha}`, expired: false, created_at: "2026-10-07", workflow_run: { id: 10, head_branch: "main", head_sha: sha, head_repository_id: 100, repository_id: 100 } };
     expect(selectPagesReleaseArtifacts([
       artifact,
       { ...artifact, id: 2, created_at: "2026-10-08" },
       { ...artifact, id: 3, expired: true },
       { ...artifact, id: 4, name: "pages-release-data-other" },
       { ...artifact, id: 5, workflow_run: { ...artifact.workflow_run, head_branch: "candidate" } },
+      { ...artifact, id: 6, workflow_run: { ...artifact.workflow_run, head_repository_id: 200 } },
     ]).map((entry) => entry.id)).toEqual([2, 1]);
+    const gh = vi.mocked(execFileSync).mockClear();
+    for (const [event, repo, accepted] of [["pull_request", "TokenBrice/pharos-watch", false],
+      ["push", "fork/pharos-watch", false], ["push", undefined, false],
+      ...["push", "schedule", "workflow_dispatch"].map((event) => [event, "TokenBrice/pharos-watch", true])] as const) {
+      gh.mockReturnValueOnce(Buffer.from(JSON.stringify([{ artifacts: [artifact] }])))
+        .mockReturnValueOnce(Buffer.from(JSON.stringify({ conclusion: "success", head_branch: "main", head_sha: sha,
+          path: ".github/workflows/deploy-cloudflare.yml", event, head_repository: repo ? { full_name: repo } : undefined })));
+      if (accepted) {
+        gh.mockImplementationOnce(() => { throw new Error("pages-artifact-data-invalid: download reached"); });
+        expect(() => preparePagesReleaseData(makeRoot(), makeRoot())).toThrow("download reached");
+      } else expect(preparePagesReleaseData(makeRoot(), makeRoot()).dataStatus).toBe("degraded-data");
+      expect(gh).toHaveBeenCalledTimes(accepted ? 3 : 2);
+      gh.mockClear();
+    }
   });
 });
 

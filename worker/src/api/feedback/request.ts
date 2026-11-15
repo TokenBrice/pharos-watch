@@ -13,6 +13,7 @@ import {
   type ValidatedFeedbackSubmission,
 } from "./types";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { clientAddressLimiterSubject } from "@shared/lib/client-ip-hash";
 
 const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
 export const FEEDBACK_REQUEST_MAX_BYTES = 16 * 1024;
@@ -142,5 +143,5 @@ export function resolveFeedbackClientIp(request: Request): string {
   // a caller rotate the IP-scoped rate-limit bucket. If CF-Connecting-IP is
   // absent (e.g. off-edge), all such requests collapse into one fixed sentinel
   // bucket rather than attacker-chosen ones.
-  return request.headers.get("CF-Connecting-IP") ?? "unknown";
+  return clientAddressLimiterSubject(request.headers.get("CF-Connecting-IP")) ?? "unknown";
 }

@@ -251,6 +251,8 @@ jobs:
           fi
 
       - name: Collect the test files added in the window
+        env:
+          SINCE: ${{ steps.window.outputs.since }}
         # The walk reads `origin/main`, the ref this fetch deepens, never the
         # checkout's own shallow root. `--shallow-since` carries one day of
         # margin so the shallow boundary sits before the window and its parent
@@ -266,7 +268,7 @@ jobs:
         # job instead of publishing an empty window as "nothing was added".
         run: |
           set -euo pipefail
-          since="${{ steps.window.outputs.since }}"
+          since="${SINCE}"
           fetch_since="$(date -u -d "${since} -1 day" +%Y-%m-%dT%H:%M:%SZ)"
           git fetch --no-tags --filter=blob:none --shallow-since="${fetch_since}" \
             origin +refs/heads/main:refs/remotes/origin/main
@@ -319,14 +321,17 @@ jobs:
           fi
 
       - name: Render the weekly report
+        env:
+          SINCE: ${{ steps.window.outputs.since }}
+          UNTIL: ${{ steps.window.outputs.until }}
         run: |
           set -euo pipefail
           out=".tmp/ci-weekly/report.md"
           args=(
             --runs .tmp/ci-weekly/runs.json
             --jobs .tmp/ci-weekly/jobs.json
-            --since "${{ steps.window.outputs.since }}"
-            --until "${{ steps.window.outputs.until }}"
+            --since "${SINCE}"
+            --until "${UNTIL}"
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             --output "${out}"
           )

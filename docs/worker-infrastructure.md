@@ -21,7 +21,7 @@ Worker runtime safety and telemetry controls are declared in both Wrangler confi
 ```toml
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
+preview_urls = false
 minify = true
 keep_names = true
 upload_source_maps = true
