@@ -1,0 +1,24 @@
+{
+  "id": "eurdt-stabillon",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "KNF",
+    "authorizedEntity": "StaBillon sp. z o.o.",
+    "references": [
+      {
+        "label": "ESMA EMT register: StaBillon EMI, KNF, no exemption (reviewed November 15 2026)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "StaBillon whitepaper: EURODT and PLNDT, issuer identity and authorization",
+        "url": "https://stabillon.com/wp-content/uploads/2025/10/ENG-White-Paper-Stabillon.pdf"
+      },
+      {
+        "label": "StaBillon legal disclosure: KIPE1/2019",
+        "url": "https://stabillon.com/legal-and-compliance/"
+      }
+    ]
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "eurdt-stabillon",
+  "name": "StaBillon EUR",
+  "symbol": "EURdt",
+  "oneLiner": "EURdt is StaBillon's euro e-money token, backed by currency-matched reserves and redeemable at par after account and identity checks.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "collateral": "The issuer describes segregated EUR bank deposits and eligible liquid EUR instruments backing each euro token one-for-one. A current allocation and named reserve institutions have not been verified.",
+  "pegMechanism": "StaBillon's whitepaper grants par redemption without an issuer redemption fee, subject to an account and AML checks. Additional verification can extend settlement to five business days. This is a documented issuer route, not a modeled Pharos backstop.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stabillon.com/stablecoins/"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://stabillon.com/wp-content/uploads/2025/10/ENG-White-Paper-Stabillon.pdf"
+    },
+    {
+      "label": "Issuer news",
+      "url": "https://pl.linkedin.com/company/stabillon"
+    },
+    {
+      "label": "Ethereum token",
+      "url": "https://eth.blockscout.com/token/0xecb111183d46e51049341e4984cf1e7157e20978"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Poland",
+    "regulator": "KNF",
+    "license": "Electronic money institution KIPE1/2019"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xecb111183d46e51049341e4984cf1e7157e20978",
+      "decimals": 3
+    }
+  ],
+  "status": "pre-launch",
+  "announcedDate": "2025-10-02",
+  "launchDate": "2026-08",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "StaBillon's company news says EURdt and PLNdt have been live and used by customers since August 2026. Positive Ethereum token stock and three decimals were verified on November 15. Billon Unified Blockchain is also described by the issuer but is not a registered Pharos chain; its supply and the whole-asset reconciliation remain unverified. No current admitted price or whole-asset supply lane is established.",
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "No admitted price lane: the exact Ethereum quote is stale. No admitted whole-asset supply lane: Ethereum issuance is positive, but Billon DLT supply reconciliation is unverified.",
+    "reviewBy": "2027-01-15",
+    "source": {
+      "label": "Issuer lifecycle evidence",
+      "url": "https://stabillon.com/stablecoins/"
+    }
+  },
+  "milestones": [
+    {
+      "date": "2025-10-02",
+      "type": "announcement",
+      "title": "StaBillon publishes its European e-money token whitepaper",
+      "description": "The whitepaper names EURODT and PLNDT among its currency tokens and describes reserve, redemption and holder-control arrangements. Its October 2025 pilot schedule is not evidence of public launch.",
+      "sourceUrl": "https://stabillon.com/wp-content/uploads/2025/10/ENG-White-Paper-Stabillon.pdf"
+    },
+    {
+      "date": "2026-08",
+      "type": "milestone",
+      "title": "Issuer reports EURdt and PLNdt in customer use",
+      "description": "StaBillon's company news dates live customer use to August 2026 without naming an exact day.",
+      "sourceUrl": "https://pl.linkedin.com/company/stabillon"
+    },
+    {
+      "date": "2026-11-15",
+      "type": "milestone",
+      "title": "Public Ethereum issuance verified",
+      "description": "Pinned Ethereum block 26423509 confirms a positive EURdt totalSupply and three decimals. This establishes Ethereum token stock, not circulating market cap or complete Billon DLT liabilities.",
+      "sourceUrl": "https://eth.blockscout.com/token/0xecb111183d46e51049341e4984cf1e7157e20978"
+    }
+  ]
+}

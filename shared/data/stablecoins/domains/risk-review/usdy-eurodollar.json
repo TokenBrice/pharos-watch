@@ -1,0 +1,23 @@
+{
+  "id": "usdy-eurodollar",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Ethereum verified implementation",
+        "url": "https://eth.blockscout.com/address/0xa5547edabc8f857c2f5a6dc38543d45964ea0015?tab=contract"
+      },
+      {
+        "label": "Ethereum token proxy",
+        "url": "https://etherscan.io/address/0xf25c3c8972378eed5093195fae274db5a6065b7f"
+      },
+      {
+        "label": "USDY white paper",
+        "url": "https://www.stablecoin.dk/tokens/usdy/white-paper.md"
+      }
+    ],
+    "evidence": "Ethereum is the only verified deployment. At block 26423496 (hash 0xc1d5ed8d37190adf2465193ce5dd94359206bfe6ed436dc821e5ba6a0d3010e4), pinned reads on 15 November 2026 returned zero total supply, 6 decimals, paused=false and implementation 0xa5547edabc8f857c2f5a6dc38543d45964ea0015. With no circulating stock, a deployment share cannot be measured and Ethereum is treated as material. The verified StablecoinBase implementation has AccessManager-restricted UUPS upgrades, a global transfer pause and blacklist(address) checks on both sender and recipient. Current authority members and their ability to exercise blacklisting have not been resolved, so the review records Possible rather than asserting an active Yes power. There is no declared parent. Proposed custodial fiat backing is not a measured current reserve book and is not used to establish Upstream.",
+    "reviewer": "Pharos pre-launch research",
+    "reviewedAt": "2026-11-15"
+  }
+}

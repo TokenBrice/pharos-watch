@@ -1,0 +1,52 @@
+{
+  "id": "plny-eurodollar",
+  "name": "Eurodollar PLNY",
+  "symbol": "PLNY",
+  "oneLiner": "PLNY is Eurodollar ApS's unissued Polish zloty e-money token, with a deployed Ethereum contract and proposed par redemption.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "PLN",
+    "governance": "centralized"
+  },
+  "collateral": "The white paper proposes 1:1 PLN reserve backing and segregated customer funds. No tokens have been issued; a token-specific reserve composition, named reserve banks and independent reserve report are not published on the reviewed issuer verification page.",
+  "pegMechanism": "Each PLNY is intended to be a claim on Eurodollar ApS for one Polish zloty, redeemable at par under the notified e-money token terms. The issuer describes ordinary redemption without a fee, minimum or holding period, subject to required checks. Ethereum contract deployment does not establish issuance or a live market.",
+  "mechanismArchetype": "fiat-cash",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x31a7d123b0faab85b1013e736c4d0a0f85013b47",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.stablecoin.dk/tokens/plny.md"
+    },
+    {
+      "label": "White paper",
+      "url": "https://www.stablecoin.dk/tokens/plny/white-paper.md"
+    },
+    {
+      "label": "Issuer deployment verification",
+      "url": "https://olbra.org/verify"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Denmark",
+    "regulator": "Finanstilsynet",
+    "license": "Electronic money institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-02-11",
+  "launchPhaseDetail": "The issuer states that the Ethereum smart contract is deployed but no PLNY tokens have been issued. Its white paper is dated 11 February 2026, with a management disclosure correction on 9 October 2026. Olbra markets the same deployment under the same company number and LEI; the ESMA register and GLEIF still name Eurodollar ApS. No launch date is stated.",
+  "milestones": [
+    {
+      "date": "2026-02-11",
+      "type": "regulatory",
+      "title": "PLNY white paper records notification to Finanstilsynet",
+      "description": "The issuer publishes terms for its Polish zloty e-money token. This is a white-paper notification, not public token issuance or approval of the white paper.",
+      "sourceUrl": "https://www.stablecoin.dk/tokens/plny/white-paper.md"
+    }
+  ]
+}

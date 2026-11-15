@@ -1,0 +1,55 @@
+{
+  "id": "verusd-verona",
+  "name": "Verona USD",
+  "symbol": "verUSD",
+  "oneLiner": "verUSD is Verona's announced dollar payment token for AI agents, issued by Brale with stated 1:1 USD reserves and redemption through Verona.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized"
+  },
+  "collateral": "Brale and Verona describe 1:1 USD reserves held with regulated U.S. financial institutions. Exact instruments, allocations and a verUSD-specific reserve report remain unverified.",
+  "pegMechanism": "The issuer announcement describes redemption through Verona's verUSD program. General holder eligibility, the legal redemption claim, fees and settlement terms remain unverified; Pharos has no modeled redemption backstop.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://verona.dev/"
+    },
+    {
+      "label": "Brale announcement",
+      "url": "https://brale.xyz/blog/verona-verusd-launch/"
+    },
+    {
+      "label": "Verona announcement",
+      "url": "https://www.globenewswire.com/news-release/2026/09/28/3369902/0/en/verona-launches-first-stablecoin-for-ai-agents-with-100-million-in-institutional-launch-commitments.html"
+    },
+    {
+      "label": "Issuer API identity",
+      "url": "https://docs.brale.xyz/coverage/value-types"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-09-28",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Verona announced verUSD on September 28 2026, and Brale described native issuance on October 6. Pharos retains the announced phase because no exact deployment with positive public token supply has been independently verified. The scope question is whether general holders can transfer verUSD and exercise an ordinary redemption claim beyond Verona's payment program. The statement that users are not being asked to hold verUSD does not itself settle those rights. Both admitted price and supply lanes remain unavailable. Verona/Xion is not a registered Pharos chain.",
+  "milestones": [
+    {
+      "date": "2026-09-28",
+      "type": "announcement",
+      "title": "Verona announces Brale-issued verUSD",
+      "description": "Verona's release describes a dollar payment token for AI agents, native issuance on seven external chains and redemption through Verona. Institutional commitments are not verified token supply or reserves.",
+      "sourceUrl": "https://www.globenewswire.com/news-release/2026/09/28/3369902/0/en/verona-launches-first-stablecoin-for-ai-agents-with-100-million-in-institutional-launch-commitments.html"
+    },
+    {
+      "date": "2026-10-06",
+      "type": "milestone",
+      "title": "Brale describes verUSD's native issuance program",
+      "description": "Brale says it issues verUSD across supported chains and manages the reserve-backed program. The post does not publish exact deployments, supply observations or complete holder terms.",
+      "sourceUrl": "https://brale.xyz/blog/verona-verusd-launch/"
+    }
+  ]
+}

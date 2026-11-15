@@ -6185,6 +6185,70 @@
     "model": "claude-opus-5-5",
     "factsAsOf": "2026-10-18"
   },
+  "eurpa-gr8-pay": {
+    "title": "GR8 Pay's unissued euro token",
+    "text": "GR8 Pay SIA proposes EUR.PA as a transferable euro e-money token with customer par redemption. The published white paper states that the token has not yet been issued, and no deployed contract or verified decimals are available. Its Latvian electronic money institution authorization and ESMA register entry establish the issuer framework. Customers must complete onboarding to issue or redeem directly. Other holders may transfer or trade the token once available, while exceptional non-customer redemption remains discretionary. The planned contract design includes address restrictions, freezing and global pauses. Safeguarded fiat and permitted liquid investments are the proposed backing, but a current reserve allocation is not established. An announced offer-start date does not demonstrate public issuance.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "plny-eurodollar": {
+    "title": "Eurodollar's unissued zloty token",
+    "text": "Eurodollar ApS proposes PLNY as a redeemable Polish zloty claim on Ethereum. The issuer has deployed the contract but states that no tokens have been issued. Its Danish electronic money institution authorization establishes the issuer framework; notification of a white paper does not establish a public launch. The proposed reserve model uses segregated customer funds, while token-specific reserve composition and independent reserve reports remain unpublished. The contract supports upgrades, transfer pauses and address blacklisting, but the current authority set has not been fully reviewed. Public issuance and a supported price and supply path are still required before Pharos can admit PLNY to live monitoring.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdpa-gr8-pay": {
+    "title": "GR8 Pay's unissued US dollar token",
+    "text": "GR8 Pay SIA proposes USD.PA as a transferable US dollar e-money token with customer par redemption. The published white paper states that the token has not yet been issued, and no deployed contract or verified decimals are available. Its Latvian electronic money institution authorization and ESMA register entry establish the issuer framework. Customers must complete onboarding to issue or redeem directly. Other holders may transfer or trade the token once available, while exceptional non-customer redemption remains discretionary. The planned contract design includes address restrictions, freezing and global pauses. Safeguarded fiat and permitted liquid investments are the proposed backing, but a current reserve allocation is not established. An announced offer-start date does not demonstrate public issuance.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdy-eurodollar": {
+    "title": "Eurodollar's unissued dollar token",
+    "text": "Eurodollar ApS proposes USDY as a redeemable US dollar claim on Ethereum. This is a separate instrument from Ondo's USDY and does not carry Ondo's yield claim. The issuer has deployed the contract but states that no tokens have been issued. Its Danish electronic money institution authorization establishes the issuer framework; notification of a white paper does not establish a public launch. The proposed reserve model uses segregated customer funds, while token-specific reserve composition and independent reserve reports remain unpublished. The contract supports upgrades, transfer pauses and address blacklisting, but the current authority set has not been fully reviewed. Public issuance and a supported price and supply path are still required before Pharos can admit USDY to live monitoring.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdau-allunity": {
+    "title": "AllUnity's dollar token awaits market data",
+    "text": "USDAU extends AllUnity's regulated e-money model to the US dollar. AllUnity announced public availability on six chains on September 30, 2026, with direct minting and redemption for onboarded institutional clients. Holders have a statutory par redemption right subject to identity, compliance and banking checks. The reserve model permits USD cash and eligible USD liquid assets in separate accounts at EU credit institutions. Banking Circle is named as a reserve-banking partner, but current allocations and USDAU-specific independent report coverage remain unverified. The issuer also reserves address-blocking powers, while the current control paths across the deployments need further review. Pharos retains USDAU as launched but outside live monitoring because neither a price lane nor an aggregate supply lane is admitted. A public deployment establishes identity; active tracking still requires usable market data.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eurdt-stabillon": {
+    "title": "StaBillon's euro issuance",
+    "text": "EURdt brings StaBillon's regulated e-money model to a euro token. Its whitepaper describes currency-matched reserves, segregated bank accounts and redemption at par, with account and identity checks before payout. That legal route depends on the issuer's banking and compliance process. It does not establish immediate market liquidity. StaBillon reports customer use since August 2026, and Ethereum issuance has been independently verified. Pharos keeps the token outside live monitoring because an admitted price and whole-asset supply path remain unavailable. Billon Unified Blockchain is another described issuance rail whose stock has not been reconciled with Ethereum. A current reserve allocation and the complete issuance ledger remain unresolved.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
+  "plndt-stabillon": {
+    "title": "StaBillon's zloty issuance",
+    "text": "PLNdt brings StaBillon's regulated e-money model to a Polish zloty token. Its whitepaper describes currency-matched reserves, segregated bank accounts and redemption at par, with account and identity checks before payout. That legal route depends on the issuer's banking and compliance process. It does not establish immediate market liquidity. StaBillon reports customer use since August 2026, and Ethereum issuance has been independently verified. Pharos keeps the token outside live monitoring because an admitted price and whole-asset supply path remain unavailable. Billon Unified Blockchain is another described issuance rail whose stock has not been reconciled with Ethereum. A current reserve allocation and the complete issuance ledger remain unresolved.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
+  "verusd-verona": {
+    "title": "Verona payments through a Brale dollar",
+    "text": "verUSD is Verona's proposed payment asset for AI agents, with issuance and reserve management provided by Brale. The announcement describes one-for-one dollar backing and redemption through the Verona program. It also describes native issuance across several chains, rather than a third-party wrapped token. Pharos retains an announced-phase record because an exact public deployment and positive token supply have not been independently verified. The issuer's launch language does not settle the holder scope: general transferability and an ordinary redemption claim beyond the payment program still need exact terms. An admitted price and supply path, together with those holder rights, are prerequisites for live tracking.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
   "copm-minteo": {
     "title": "Minteo's Bank-Backed Colombian Peso",
     "text": "COPM by Minteo is a Colombian-peso token backed by bank deposits, with issuer redemption aimed at businesses that pass manual compliance checks. Its practical exit depends on Minteo's onboarding and banking process: the public terms describe par conversion but do not establish a maximum payout time or an all-in cost ceiling. Monthly BDO reports provide independent limited assurance over historical bank balances and token liabilities across Polygon, Celo and Solana. They do not establish legal segregation, name the reserve banks or prove that cash is available when a holder wants to redeem. On-chain control remains with the issuer, including powers to mint, pause and freeze tokens; Solana also grants a permanent delegate. Transferable tokens therefore remain dependent on issuer-controlled fiat access and bank custody.",

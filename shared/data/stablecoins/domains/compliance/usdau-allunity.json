@@ -1,0 +1,20 @@
+{
+  "id": "usdau-allunity",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "BaFin",
+    "authorizedEntity": "AllUnity GmbH",
+    "references": [
+      {
+        "label": "ESMA EMT register: AllUnity GmbH, USDAU V.1.0",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "AllUnity USDAU whitepaper v1.0",
+        "url": "https://framerusercontent.com/assets/sPpJ0HkkQ4ACpeSeqJbuGC433QQ.html"
+      }
+    ]
+  }
+}

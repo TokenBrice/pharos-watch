@@ -1,0 +1,15 @@
+{
+  "id": "usdpa-gr8-pay",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "USD.PA white paper, sections E.2 and F.4",
+        "url": "https://gr8.money/usd.pa/wp"
+      }
+    ],
+    "evidence": "The issuer white paper describes planned Ethereum ERC-20 controls including pause, freeze, confiscation and address restrictions. It also explicitly states that USD.PA has not yet been issued. No contract, implementation or current authority member is verified, so Possible records the documented holder-control design without claiming an active deployed Yes power. No circulating deployment shares can be measured. No parent is declared; the proposed safeguarded fiat reserve model is not a measured current reserve book and is not used to establish Upstream.",
+    "reviewer": "Pharos pre-launch research",
+    "reviewedAt": "2026-11-15"
+  }
+}

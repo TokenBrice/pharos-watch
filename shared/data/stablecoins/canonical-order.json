@@ -506,5 +506,13 @@
   "eursm-stable-mint",
   "eury-eurodollar",
   "heur-heuro",
-  "gbpq-quantoz"
+  "gbpq-quantoz",
+  "eurdt-stabillon",
+  "plndt-stabillon",
+  "usdau-allunity",
+  "verusd-verona",
+  "usdy-eurodollar",
+  "plny-eurodollar",
+  "eurpa-gr8-pay",
+  "usdpa-gr8-pay"
 ]
