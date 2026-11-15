@@ -1081,25 +1081,15 @@ describe("mergeStagedPools", () => {
         volume_24h: 0,
         pool_type: "stable",
         fee_tier: null,
-        balance_ratio: null,
         base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
         quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         quote_symbol: "USDT0",
-        locked_liq_pct: null,
         discovered_at: now - 86400,
         refreshed_at: now,
         raw_json: undefined,
       }),
-      makeStagedPoolRow({
-        pool_id: "sonic:0x615a8330c9bd50d8ee73a8a9588915b135aba93c",
-        stablecoin_id: "scusd-rings",
-        source: "cg_onchain",
-        chain: "sonic",
-        protocol: "beets-v3-sonic",
-        dex_id: "beets-v3-sonic",
-        tvl_usd: 15980.44,
-        volume_24h: 0,
-      }),
+      makeStagedPoolRow({ pool_id: "sonic:0x615a8330c9bd50d8ee73a8a9588915b135aba93c", stablecoin_id: "scusd-rings",
+        source: "cg_onchain", chain: "sonic", protocol: "beets-v3-sonic", dex_id: "beets-v3-sonic", tvl_usd: 15980.44, volume_24h: 0 }),
     ]);
     const metrics = new Map();
 

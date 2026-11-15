@@ -12,7 +12,7 @@ describe("reviewed lane emitter catalog", () => {
     expect(new Set(result.descriptors.map((row) => row.assetId)))
       .toEqual(new Set(catalog.descriptors.flatMap((row) => row.provenance.assetIds)));
     for (const row of result.descriptors) {
-      const emitters = row.emitters.map((emitter) => ({ ...emitter, expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.split(":")[1]! }));
+      const emitters = row.emitters.map((e) => ({ ...e, expectedRuntimeCodeSha256: e.reviewedRuntimePin.split(":")[1]! }));
       expect(row.screeningSetId).toBe(laneIncidentCertificateScreeningSetId({ ...row, emitters }));
       expect(laneIncidentCertificateScreeningSetId({ ...row, emitters: [...emitters, { ...emitters[0]!, chain: "base" }] }))
         .toBe(row.screeningSetId);
@@ -30,8 +30,8 @@ describe("reviewed lane emitter catalog", () => {
       { ...source, provenance: { ...source.provenance, assetIds: [] } },
       { ...source, emitters: [{ ...source.emitters[0], expectedRuntimeCodeSha256: "bad-pin" }] },
       { ...source, emitters: [{ ...source.emitters[0], expectedRuntimeCodeSha256: "a".repeat(64) }, ...source.emitters.slice(1)] },
-      { ...source, emitters: [{ ...source.emitters[0], chain: "base" }, ...source.emitters.slice(1)],
-        provenance: { ...source.provenance, emitters: [{ ...source.provenance.emitters[0], chain: "base" }, ...source.provenance.emitters.slice(1)] } },
+      { ...source, emitters: source.emitters.map((e, i) => i ? e : { ...e, chain: "base" }),
+        provenance: { ...source.provenance, emitters: source.provenance.emitters.map((e, i) => i ? e : { ...e, chain: "base" }) } },
     ]) {
       const result = adaptLaneEmitterCatalog([bad, source]);
       expect(result.descriptors).toHaveLength(1);

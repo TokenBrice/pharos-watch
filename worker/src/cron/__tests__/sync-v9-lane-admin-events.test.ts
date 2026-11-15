@@ -328,9 +328,7 @@ describe("syncV9LaneAdminEvents", () => {
     });
     const lane = descriptor(LANE, 50_000);
     lane.emitters = [{ ...EMITTER, expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])) }];
-    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [lane], observedAtSec: NOW, deadlineMs, timeoutMs: 1_000,
-    });
+    const result = await sync(db, { descriptors: [lane], deadlineMs, timeoutMs: 1_000 });
     expect(Date.now()).toBeLessThan(deadlineMs);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       deadlineExhausted: true, deferred: { deadline: 1 },
@@ -343,9 +341,7 @@ describe("syncV9LaneAdminEvents", () => {
     // A deadline deferral must not impose the successful refresh hold or the
     // evidence-failure backoff on the next hosting slot.
     mocks.screen.mockResolvedValue(admitted(certificate(LANE, 1, 50_000)));
-    const resumed = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
-      descriptors: [lane], observedAtSec: NOW + 3,
-    });
+    const resumed = await sync(db, { descriptors: [lane], observedAtSec: NOW + 3 });
     expect(resumed.itemCount).toBe(1);
     expect(await certificateRows(db)).toBe(1);
     expect(await readAttempt(db)).toMatchObject({ outcome: "admitted", consecutiveFailures: 0 });

@@ -69,7 +69,7 @@ function routeFixture(controls: ControlOverlay[], reviews: readonly NegativeInci
 
 describe("Safety Score v9 independent negative incident routing", () => {
   it("admits bounded negative research", () => {
-    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const, executionScopeComplete: false, scopedQuestionFresh: true };
+    const target = { ...unknownMintControl(), executionScopeComplete: false, scopedQuestionFresh: true };
     const other = { ...target, controlKey: "mint-meta:fixture:other" };
     const routed = routeFixture([target, other], [NEGATIVE]);
     expect(routed[0]).toEqual({ ...target, incidentState: "none" });
@@ -164,7 +164,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
   });
 
   it("rejects future, expired and premature date-only reviews", () => {
-    const target = { ...control(NEGATIVE.scope.kind === "control" ? NEGATIVE.scope.controlKey : ""), incidentState: "unknown" as const };
+    const target = unknownMintControl();
     for (const [clockSec, review] of [
       [NOW - 1, NEGATIVE],
       [NOW + V9_REVIEW_EVIDENCE_MAX_AGE_SEC + 1, NEGATIVE],
@@ -702,20 +702,20 @@ describe("Safety Score v9 authored incident-review identity", () => {
   });
 
   it.each([[NOW - 3_600, "none"], [NOW - 3_000_000, "unknown"], [null, "unknown"]] as const)(
-    "closes cross-chain emitters only through their chain's lane certificates: %s", (windowEndSec, state) => {
-    const [pin] = descriptor().emitters;
+    "closes cross-chain emitters only through their chain's lane certificates: %s", (end, state) => {
+    const pin = descriptor().emitters[0]!;
     const address = ROUTE_B.slice(5);
     const base = laneCertificate({ subjectDeploymentKey: ROUTE_B, emitters: [{ ...laneCertificate().emitters[0]!, address }],
-      ...windowEndSec === null ? {} : { windowStartSec: windowEndSec, windowEndSec, observedAtSec: windowEndSec } });
+      ...end === null ? {} : { windowStartSec: end, windowEndSec: end, observedAtSec: end } });
     const screeningSetId = laneIncidentCertificateScreeningSetId({ ...base, contributorControlIds: ["alpha"] });
-    const inputs = (families: readonly string[] = pin!.families) => closureInputs({ descriptors: [
-      descriptor({ emitters: [pin, { ...pin!, address, chain: "base", families }] }),
-      descriptor({ subjectDeploymentKey: ROUTE_B, screeningSetId, emitters: [{ ...pin!, address }] })],
-      certificates: new Map([...certificateMap(), ...windowEndSec === null ? [] : [[ROUTE_B, { screeningSetId, certificate: base }] as const]]) });
+    const inputs = (families: readonly string[] = pin.families) => closureInputs({ descriptors: [
+      descriptor({ emitters: [pin, { ...pin, address, chain: "base", families }] }),
+      descriptor({ subjectDeploymentKey: ROUTE_B, screeningSetId, emitters: [{ ...pin, address }] })],
+      certificates: new Map([...certificateMap(), ...end === null ? [] : [[ROUTE_B, { screeningSetId, certificate: base }] as const]]) });
     const closed = closeLane(laneTarget(), undefined, inputs());
     expect(closed.incidentState).toBe(state);
     expect(closed.incidentCoverage?.crossChainCertificateIds).toEqual(state === "none" ? [base.certificateId] : undefined);
-    expect(closeLane(laneTarget(), undefined, inputs([...pin!.families, "Upgraded"])).incidentState).toBe("unknown");
+    expect(closeLane(laneTarget(), undefined, inputs([...pin.families, "Upgraded"])).incidentState).toBe("unknown");
   });
 
   it.each(["route", "exposure"] as const)("never closes a %s scope fact", (scope) => {
