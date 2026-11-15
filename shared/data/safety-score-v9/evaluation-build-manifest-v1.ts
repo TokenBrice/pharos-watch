@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "6e4d8a345a2297b33260f81810fab041e9d6806362f892971c89e81d38e5d3d9"
+      "sha256": "cf1fec58f9c7b561f9b5a9682e560a196b70016750e19a6cccbac4a622a5fc64"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
@@ -26,11 +26,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
-      "sha256": "ff5f7b8f66b22c379f1031a7f5c8de15ae5b40fc6413cdb4e789bc96c2ac2e42"
+      "sha256": "08c81d1b0d4ab201c2a0fb23831dcce4134c3fcf485ccfb9f89747992fb38f46"
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "53adad1282e684f1a370b721e493ad5f63cdb231d0da55268f077387e4fedaa4"
+      "sha256": "e404984bcaa29049cc1820ab7567952c9145e2df67f51a43f8c3b92c148c2048"
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
@@ -1311,7 +1311,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-15-block-26420009-shock-coverage.json.gz"
     }
   ],
-  "digest": "88e768772d728bd43dc572f13e14b1210b7d1b02cb7ebb151e6ae0e0785835cb"
+  "digest": "34cfa859461367ca33181f5163f0880a57c27c7b2b3e3b268529c2ed02cd80e0"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

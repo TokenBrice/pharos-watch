@@ -65385,6 +65385,36 @@
         "surface:dc1fdb560b054d5ae1a02ddc"
       ],
       "rationale": "The cash_fiat sourceKey maps to the exact captured exposure. Four assets and currency/account examples provide no withdrawal restrictions, settlement calendars, FX timing or class-wide horizon. Settlement-dependent illustrative scenarios do not establish the slice availability."
+    },
+    {
+      "id": "n16-20261115-ousd-open-standard-reserveClassification",
+      "assetId": "ousd-open-standard",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-residual",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": "reserve:6ab01299e2eee79e1066a25f",
+        "requiredDatum": "reserveClassification"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-15T14:40:04Z",
+      "reviewer": "OUSD residual cause review 2026-11-15 (owner ruling)",
+      "sourcesRefs": [
+        "source:465ea5643f55ec14d89f0e48",
+        "source:5fe6a89d0f5f173510112fd1",
+        "source:b24ad8e42241c04d1f664b73"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:2fe628d28ae532c00a9aa117",
+        "surface:38524f7551a1f4d826b4aed2",
+        "surface:31ed585a6f263f967f807a4e",
+        "surface:0eac7142b371c5b2c3416b12",
+        "surface:09ac747381a8bdc2cccc04d8",
+        "surface:7bc75a9864421b4627938a4a"
+      ],
+      "rationale": "The bridge-transparency:unclassified-residual sourceKey maps to the exact captured residual exposure: the published reserve total less the itemized cash and treasury lines. The issuer API itemizes only those two lines and the dashboard calls the excess overcollateralization, but neither names an instrument, custodian or obligor for it; the transparency documentation, FAQ, reserve-management page and stablecoin terms add no allocation. The remainder is issuer-undisclosed, not unresearched."
     }
   ],
   "sourceObservations": [
@@ -98276,6 +98306,39 @@
         "location": "Readiness, Economics and Evidence and ongoing checks",
         "excerpt": "documented volume and funding behavior",
         "assertion": "The eligibility framework describes hedge readiness, liquidity and monitoring without an exhaustive current instrument roster or binding hard maximum maturity."
+      }
+    },
+    {
+      "id": "source:465ea5643f55ec14d89f0e48",
+      "value": {
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd",
+        "observedAt": "2026-11-15T14:39:23Z",
+        "datumAsOf": "2026-11-15T14:30:38Z",
+        "location": "total_reserve_amount and reserves",
+        "excerpt": "\"total_reserve_amount\":\"963668020.54\",\"reserves\":[{\"type\":\"cash\",\"amount\":\"103775809.77\"},{\"type\":\"treasury\",\"amount\":\"857892095.78\"}]",
+        "assertion": "The issuer API itemizes only cash ($103,775,809.77) and treasury ($857,892,095.78), which total $961,667,905.55, $2,000,114.99 (0.2076%) below its $963,668,020.54 reserve total; no reserves entry names, categorizes or places that remainder."
+      }
+    },
+    {
+      "id": "source:5fe6a89d0f5f173510112fd1",
+      "value": {
+        "url": "https://reserves.bridge.xyz/ousd",
+        "observedAt": "2026-11-15T14:39:31Z",
+        "datumAsOf": "2026-11-15T14:20:00Z",
+        "location": "Reserve Assets summary and Reserve Assets and Investment Allocation (page last updated Nov 15, 2026, 2:20 PM UTC)",
+        "excerpt": "$2,000,117 overcollateralized",
+        "assertion": "The issuer dashboard presents the reserve-asset excess over circulating supply as overcollateralization, while its allocation lists only Cash ($103,784,590, 10.8%) and Treasury ($857,892,096, 89.2%); it names no instrument, custodian or obligor for the overcollateralized amount."
+      }
+    },
+    {
+      "id": "source:b24ad8e42241c04d1f664b73",
+      "value": {
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "observedAt": "2026-11-15T14:39:31Z",
+        "datumAsOf": null,
+        "location": "Realtime transparency",
+        "excerpt": "Underlying reserve assets (cash and treasuries) that back the stablecoin",
+        "assertion": "Bridge's transparency documentation defines the published reserve categories as cash and treasuries and provides no category or disclosure for reserve assets held outside those lines."
       }
     }
   ],
