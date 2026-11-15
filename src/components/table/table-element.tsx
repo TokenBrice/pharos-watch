@@ -45,11 +45,14 @@ export function TableBody({
 
 export interface TableRowProps extends React.ComponentProps<"tr"> {
   rowIntent?: TableRowIntent;
+  /** Skip the shared row utilities when the owning table already styles its rows. */
+  lean?: boolean;
 }
 
 export function TableRow({
   className,
   rowIntent = "interactive",
+  lean = false,
   ...props
 }: TableRowProps) {
   return (
@@ -57,7 +60,7 @@ export function TableRow({
       {...props}
       data-slot="table-row"
       data-row-intent={rowIntent}
-      className={cn(
+      className={lean ? className : cn(
         "border-b transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted",
         className,
       )}
@@ -65,15 +68,21 @@ export function TableRow({
   );
 }
 
+export interface TableHeadProps extends React.ComponentProps<"th"> {
+  /** Skip the shared cell utilities when the owning table already styles its cells. */
+  lean?: boolean;
+}
+
 export function TableHead({
   className,
+  lean = false,
   ...props
-}: React.ComponentProps<"th">) {
+}: TableHeadProps) {
   return (
     <th
       {...props}
       data-slot="table-head"
-      className={cn(
+      className={lean ? className : cn(
         "h-10 whitespace-nowrap px-3 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className,
       )}
@@ -81,15 +90,21 @@ export function TableHead({
   );
 }
 
+export interface TableCellProps extends React.ComponentProps<"td"> {
+  /** Skip the shared cell utilities when the owning table already styles its cells. */
+  lean?: boolean;
+}
+
 export function TableCell({
   className,
+  lean = false,
   ...props
-}: React.ComponentProps<"td">) {
+}: TableCellProps) {
   return (
     <td
       {...props}
       data-slot="table-cell"
-      className={cn(
+      className={lean ? className : cn(
         "whitespace-nowrap px-3 py-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className,
       )}
