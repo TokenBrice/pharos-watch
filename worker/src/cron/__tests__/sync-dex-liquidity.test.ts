@@ -998,7 +998,7 @@ describe("dex liquidity scoring stage cycle", () => {
       expect(fetchMeteoraPools).toHaveBeenCalledOnce();
       expect(fetchRaydiumPools).toHaveBeenCalledOnce();
       expect(fetchOrcaPools).toHaveBeenCalledOnce();
-      expect(fetchSlipstreamPools).toHaveBeenCalledTimes(2);
+      expect(fetchSlipstreamPools).toHaveBeenCalledOnce();
       expect(directResult.pools).toEqual([]);
       expect(pancakeResult.pools).toEqual([]);
       return sourceData;
