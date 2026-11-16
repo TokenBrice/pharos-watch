@@ -115,14 +115,27 @@ describe("FreezeSeizureModule", () => {
     expect(section?.textContent).toContain(SUMMARY.statusLabel);
   });
 
-  it("projects the Possible classification into the visible and spoken rail", () => {
+  it("names the possible classification Restrictable in the badge, rail and spoken rail, matching its verdict", () => {
     const summary = { ...SUMMARY, status: "possible" as const, statusLabel: "Possible" };
     renderModule({ summary });
     const drawn = rail();
-    expect(drawn.textContent).toContain(summary.statusLabel);
-    expect(drawn.getAttribute("aria-label")).toContain(summary.statusLabel.toLowerCase());
-    expect(drawn.textContent).not.toMatch(/freezable/i);
+    expect(drawn.textContent).toContain("Restrictable");
+    expect(drawn.getAttribute("aria-label")).toContain("restrictable, no holder-targeted freeze");
+    expect(drawn.textContent).not.toMatch(/freezable|possible/i);
     expect(drawn.getAttribute("aria-label")).not.toMatch(/freezable/i);
+    // The badge never says more than the prose: no holder-targeted freeze, an admin control could restrict.
+    const root = document.getElementById("freeze-seizure")!;
+    expect(root.querySelector("[data-slot='badge']")?.textContent).toBe("Restrictable");
+    expect(root.textContent).toMatch(/No power to freeze one holder was found, but an admin control/);
+  });
+
+  it.each([
+    ["freezable", "Freezable"],
+    ["not-freezable", "Not freezable"],
+    ["inherited", "Upstream freeze risk"],
+  ] as const)("labels the %s badge in the shared freeze vocabulary", (status, label) => {
+    renderModule({ summary: { ...SUMMARY, status, upstreamLabel: null } });
+    expect(document.getElementById("freeze-seizure")!.querySelector("[data-slot='badge']")?.textContent).toBe(label);
   });
 
   it("feeds an inherited power from the named upstream asset", () => {
@@ -264,6 +277,21 @@ it.each([
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
   expect(screen.queryByText(/refresh failed/i)).toBeNull();
   expect(rail().getAttribute("aria-label")).toMatch(/used/i);
+});
+
+it("shows usage freshness in the header beside the status, never in the footer", () => {
+  usageResult(statsFor("USDT", { events: 1, addresses: 1, frozen: 100, destroyed: 0 }));
+  const { container } = renderModule();
+  const time = container.querySelector("time");
+  expect(time).toBeTruthy();
+  expect(time!.closest("[aria-labelledby]")?.firstElementChild?.contains(time)).toBe(true);
+});
+
+it("draws the stacked connector under the chip column, not under the kickers", () => {
+  usageResult(statsFor("USDT", { events: 1, addresses: 1, frozen: 100, destroyed: 0 }));
+  renderModule();
+  const connector = rail().querySelector("span[aria-hidden='true']");
+  expect(connector?.className).toContain("ml-23");
 });
 
 it("ages retained freeze usage without changing its observation generation", () => {

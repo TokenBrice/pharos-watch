@@ -108,10 +108,21 @@ describe("AccessPosturePanel", () => {
     expect(strip?.querySelector("h3")).not.toBeNull();
 
     const cells = screen.getByRole("group", { name: /access/i });
-    for (const row of scoredRows) {
-      expect(within(cells).getByText(row.label)).toBeTruthy();
-      expect(within(cells).getByText(row.value)).toBeTruthy();
+    // Reader labels and values: the primary exit is the best exit path, and
+    // freeze exposure uses the Freeze & seizure module's words.
+    const shown: [string, string][] = [
+      ["Transfer", "Restrictable"],
+      ["Freeze exposure", "Freezable"],
+      ["Best exit path", "Issuer redemption"],
+      ["Governance", "Multisig"],
+    ];
+    for (const [label, value] of shown) {
+      expect(within(cells).getByText(label)).toBeTruthy();
+      // Enum words read in the sans, never mono capitals.
+      expect(within(cells).getByText(value).className).not.toContain("uppercase");
     }
+    expect(within(cells).queryByText("Primary exit")).toBeNull();
+    expect(within(cells).getByText("Best exit path").closest("[title]")?.getAttribute("title")).toMatch(/Exit pillar/);
 
     // Look-through diagnostics are not scored enums: they fold, off the row.
     const diagnostic = screen.getByText(diagnosticRow.label);
@@ -125,5 +136,14 @@ describe("AccessPosturePanel", () => {
 
     rerender(<AccessPosturePanel rows={scoredRows} review={{ ...review, mixedPosture: true }} variant="strip" />);
     expect(document.querySelectorAll("section [data-slot='badge']").length).toBe(chipsWithout + 1);
+    // The chip says it once: the verification fold does not restate it as a sentence.
+    expect(document.querySelector("section")!.textContent).not.toContain("Posture differs by chain");
+  });
+
+  it("keeps three scored facts on one row instead of stranding the third", () => {
+    render(<AccessPosturePanel rows={scoredRows.slice(0, 3)} variant="strip" />);
+    const grid = document.querySelector("[aria-label='Scored access posture']")!;
+    expect(grid.children).toHaveLength(3);
+    expect(grid.className).toContain("grid-cols-3");
   });
 });

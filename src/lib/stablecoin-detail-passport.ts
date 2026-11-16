@@ -56,8 +56,6 @@ export interface HeroPassportItemViewModel {
   ariaLabel: string;
   /** Hover detail lines (Figma coin template: jurisdiction authority stack). */
   tooltipLines?: string[];
-  /** Render the value inside a pill chip (Figma coin template: chain count). */
-  chip?: boolean;
 }
 
 /** Structural slice of MintAuthorityDetailViewModel the passport needs. */
@@ -131,20 +129,21 @@ function buildFreezePassportItem(
       return {
         key: "freeze",
         category: "Freeze",
-        value: "Possible",
+        // One freeze vocabulary with the Freeze & seizure module.
+        value: "Restrictable",
         href,
         valueClass: FREEZE_TONE_RESTRICTED,
         ariaLabel:
-          "Possible freeze — admin surfaces could enable freezing but no active address-level freezing is confirmed",
+          "Restrictable — admin surfaces could pause or restrict transfers but no holder-targeted freezing is confirmed",
       };
     case "inherited":
       return {
         key: "freeze",
         category: "Freeze",
-        value: "Upstream",
+        value: "Upstream risk",
         href,
         valueClass: FREEZE_TONE_RESTRICTED,
-        ariaLabel: "Upstream freeze — freezing is inherited from an upstream issuer or collateral asset",
+        ariaLabel: "Upstream freeze risk — freezing is inherited from an upstream issuer or collateral asset",
       };
     default:
       return {
@@ -270,7 +269,6 @@ export function buildHeroPassportItems({
       category: "Chains",
       value: String(chainCount),
       href: (coin.contracts?.length ?? 0) > 0 ? "#contracts" : "#info",
-      chip: true,
       ariaLabel: `Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"} — jump to contract deployments`,
     });
   }

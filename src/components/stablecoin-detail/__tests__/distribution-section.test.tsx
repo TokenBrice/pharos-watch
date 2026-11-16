@@ -111,8 +111,8 @@ describe("chain-dropout carry", () => {
     const contents = within(figure.parentElement!);
     // Shares of the full displayed total, which equals the headline: Tempo 5.08%, Ethereum 18.99%.
     expect(contents.getByText("Tempo")).toBeTruthy();
-    expect(contents.getByText("5%")).toBeTruthy();
-    expect(contents.getByText("19%")).toBeTruthy();
+    expect(contents.getByText("5.1%")).toBeTruthy();
+    expect(contents.getByText("19.0%")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -139,27 +139,28 @@ it.each(["not-yet-registered-chain", "sUSDe unattributed OFT escrow", "savUSD un
     const figure = screen.getByRole("figure");
     expect(figure.getAttribute("aria-label")).toBe("Circulating supply distribution across 1 chain, plus $100.00K Unattributed supply");
     expect(screen.getByText("Unattributed")).toBeTruthy();
-    expect(screen.getAllByText("50%")).toHaveLength(2);
+    expect(screen.getAllByText("50.0%")).toHaveLength(2);
     expect(screen.queryByText("100%")).toBeNull();
   },
 );
 
 
 
-it("keeps a chain at exactly the Other threshold as its own slice", () => {
-  // 2% is the fold threshold: Arbitrum sits exactly on it and stays named,
-  // while the two 1% chains merge into Other.
+it("names the top six chains and folds the rest into a counted Other row", () => {
   useStablecoinsMock.mockReturnValue({
     data: {
       peggedAssets: [
         {
           id: "usdc-circle",
           chainCirculating: {
-            Ethereum: { current: 90_000 },
-            Base: { current: 6_000 },
-            Arbitrum: { current: 2_000 },
-            Solana: { current: 1_000 },
-            Tron: { current: 1_000 },
+            Ethereum: { current: 60_000 },
+            Base: { current: 10_000 },
+            Arbitrum: { current: 9_000 },
+            Solana: { current: 8_000 },
+            Tron: { current: 7_000 },
+            Polygon: { current: 3_000 },
+            Avalanche: { current: 2_000 },
+            Optimism: { current: 1_000 },
           },
         },
       ],
@@ -179,17 +180,40 @@ it("keeps a chain at exactly the Other threshold as its own slice", () => {
 
   render(<DistributionSection stablecoinId="usdc-circle" />);
 
-  expect(screen.getByRole("figure", { name: "Circulating supply distribution across 5 chains" })).toBeTruthy();
-  expect(screen.getByText("90%")).toBeTruthy();
-  expect(screen.getByText("6%")).toBeTruthy();
-  expect(screen.getByText("Other")).toBeTruthy();
-  // Arbitrum at the threshold and the merged 2% remainder.
-  expect(screen.getAllByText("2%")).toHaveLength(2);
+  const figure = screen.getByRole("figure", { name: "Circulating supply distribution across 8 chains" });
+  // The headline counts every chain; grouping changes neither the total nor the shares.
+  expect(figure.textContent).toContain("across 8 chains");
+  expect(within(figure).getAllByRole("listitem")).toHaveLength(7);
+  expect(within(figure).getByText("60.0%")).toBeTruthy();
+  expect(within(figure).getByText("Other (2 chains)")).toBeTruthy();
+  // Polygon's 3% and the folded Avalanche + Optimism remainder.
+  expect(within(figure).getAllByText("3.0%")).toHaveLength(2);
+  expect(within(figure).queryByText("Avalanche")).toBeNull();
+});
+
+it("keeps a dominant chain in the ranked list and flags deployments without tracked supply", () => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [{
+      id: "bold-liquity",
+      chainCirculating: { Ethereum: { current: 99_700 }, Base: { current: 300 } },
+      contracts: ["ethereum", "base", "arbitrum", "sonic"].map((chain) => ({ chain, address: "0x0", decimals: 18 })),
+    }] },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({ data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn() });
+  render(<DistributionSection stablecoinId="bold-liquity" />);
+  const figure = screen.getByRole("figure", { name: "Circulating supply distribution across 2 chains" });
+  // The same bar list as a spread-out coin, so the chain card balances its protocol twin.
+  expect(within(figure).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+    "Ethereum99.7%$99.70K",
+    "Base0.3%$300.00",
+  ]);
+  expect(figure.textContent).toContain("Deployed on 4 chains; supply is tracked on 2.");
 });
 
 it.each([
-  { name: "three members folded into Other", protocolTvl: { curve: 97_000, aave: 1_000, uniswap: 1_000, balancer: 1_000, zero: 0, invalid: -1 }, count: 4, other: true, shares: ["97%", "3%"] },
-  { name: "all small members folded into Other", protocolTvl: Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`protocol-${i}`, 1_000])), count: 51, other: true, shares: ["100%"] },
+  { name: "a dominant protocol in the ranked list", protocolTvl: { curve: 97_000, aave: 1_000, uniswap: 1_000, balancer: 1_000, zero: 0, invalid: -1 }, count: 4, other: false, shares: ["97.0%"] },
+  { name: "small members folded into Other", protocolTvl: Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`protocol-${i}`, 1_000])), count: 51, other: true, shares: ["88.2%"] },
   { name: "one positive category", protocolTvl: { curve: 100_000, zero: 0 }, count: 1, other: false, shares: ["100%"] },
 ])("announces underlying categories, not display groups ($name)", ({ protocolTvl, count, other, shares }) => {
   useStablecoinsMock.mockReturnValue({
@@ -204,7 +228,7 @@ it.each([
   expect(screen.getByRole("figure", { name: "Circulating supply distribution across 1 chain" })).toBeTruthy();
   const figure = screen.getByRole("figure", { name: `DEX liquidity TVL distribution across ${count} ${count === 1 ? "protocol" : "protocols"}` });
   const contents = within(figure.parentElement!);
-  expect(contents.queryByText("Other") != null).toBe(other);
+  expect(contents.queryByText(/^Other \(/) != null).toBe(other);
   for (const share of shares) expect(contents.getByText(share)).toBeTruthy();
 });
 
@@ -249,10 +273,10 @@ it("preserves observed positive shares alongside an explicit zero chain balance"
   render(<DistributionSection stablecoinId="usdc-circle" />);
 
   expect(screen.getByRole("figure", { name: "Circulating supply distribution across 2 chains" })).toBeTruthy();
-  expect(screen.getByText("60%")).toBeTruthy();
-  expect(screen.getByText("40%")).toBeTruthy();
+  expect(screen.getByText("60.0%")).toBeTruthy();
+  expect(screen.getByText("40.0%")).toBeTruthy();
   expect(screen.queryByText("Solana")).toBeNull();
-  expect(screen.queryByText("Other")).toBeNull();
+  expect(screen.queryByText(/^Other/)).toBeNull();
 });
 
 it("keeps cached distribution visible without a notice through a failed refresh and its recovery", () => {
@@ -280,13 +304,13 @@ it("keeps cached distribution visible without a notice through a failed refresh 
   // Error must not win over data that is still worth showing, and a failed
   // refresh over that data is operator signal, not a reader notice.
   expect(screen.queryByText(/Chain distribution data refresh failed/)).toBeNull();
-  expect(screen.getByText("60%")).toBeTruthy();
+  expect(screen.getByText("60.0%")).toBeTruthy();
 
   useStablecoinsMock.mockReturnValue({ ...cached, error: null });
   rerender(<DistributionSection stablecoinId="usdc-circle" />);
 
   expect(screen.queryByText(/refresh failed/i)).toBeNull();
-  expect(screen.getByText("60%")).toBeTruthy();
+  expect(screen.getByText("60.0%")).toBeTruthy();
 });
 
 it.each([

@@ -24,7 +24,7 @@ vi.mock("@/components/chart-primitives/mcap-chart", () => ({
 }));
 
 vi.mock("@/components/chart-primitives/peg-deviation-chart", () => ({
-  PegDeviationChart: () => <div />,
+  PegDeviationChart: () => <div data-testid="peg-chart" />,
 }));
 
 
@@ -149,7 +149,7 @@ describe("MarketDataSection history expansion", () => {
     expect(container.querySelector("time")?.getAttribute("data-state")).toBe("stale");
   });
 
-  it.each(["All", "1Y"])("keeps the seed visibly bounded while %s loads", async (range) => {
+  it.each(["All", "1y"])("keeps the seed visibly bounded while %s loads", async (range) => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
     renderSeededSection();
     fireEvent.click(screen.getByRole("button", { name: range }));
@@ -159,7 +159,7 @@ describe("MarketDataSection history expansion", () => {
     expect(screen.getByRole("button", { name: range }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it.each(["All", "1Y"])("discloses failed %s coverage, preserves the source clock and retries only the expanded key", async (range) => {
+  it.each(["All", "1y"])("discloses failed %s coverage, preserves the source clock and retries only the expanded key", async (range) => {
     let failing = true;
     const requests: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
@@ -189,7 +189,7 @@ describe("MarketDataSection history expansion", () => {
     }
   });
 
-  it.each(["All", "1Y"])("distinguishes a successful empty %s expansion from a transport failure", async (range) => {
+  it.each(["All", "1y"])("distinguishes a successful empty %s expansion from a transport failure", async (range) => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json([])));
     renderSeededSection();
     fireEvent.click(screen.getByRole("button", { name: range }));
@@ -306,7 +306,7 @@ describe("MarketDataSection history expansion", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderSeededSection();
 
-    fireEvent.click(screen.getByRole("button", { name: "1Y" }));
+    fireEvent.click(screen.getByRole("button", { name: "1y" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("days=365");
     expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("range=");
@@ -317,7 +317,7 @@ describe("MarketDataSection history expansion", () => {
       String(Math.max(ANNUAL_HISTORY[ANNUAL_HISTORY.length - 1].date - 365 * DAY, ANNUAL_HISTORY[0].date) * 1000),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "90D" }));
+    fireEvent.click(screen.getByRole("button", { name: "90d" }));
     expect(marketCapDomain()).toBe(SEED_DOMAIN);
   });
 
@@ -364,8 +364,46 @@ describe("MarketDataSection history expansion", () => {
     // A selection made on 90d cannot survive a domain change.
     fireEvent.keyDown(slider, { key: "ArrowRight" });
     expect(screen.getByRole("button", { name: "Clear" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "30D" }));
+    fireEvent.click(screen.getByRole("button", { name: "30d" }));
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
     expect(slider.getAttribute("aria-valuenow")).toBe(slider.getAttribute("aria-valuemin"));
+  });
+});
+
+describe("MarketDataSection peg panel", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function renderWithPeg(pegCurrency: string) {
+    return render(
+      <QueryClientProvider client={makeSeededQueryClient()}>
+        <MarketDataSection
+          stablecoinId="usdt-tether"
+          supplyHistory={SEED_HISTORY}
+          pegCurrency={pegCurrency}
+          current={{ mcap: 189, prevDay: 188, price: 1.2, deviationBps: -29 }}
+        />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("charts a USD peg, whose reference is $1 on every day", () => {
+    renderWithPeg("USD");
+    expect(screen.getByTestId("peg-chart")).toBeTruthy();
+    expect(screen.queryByText(/^Peg vs/)).toBeNull();
+  });
+
+  it("states a non-USD peg's live deviation instead of charting USD prices against an undated reference", () => {
+    renderWithPeg("CHF");
+    expect(screen.queryByTestId("peg-chart")).toBeNull();
+    expect(screen.getByText("Peg vs Swiss Franc:")).toBeTruthy();
+    expect(screen.getByText("-29 bps")).toBeTruthy();
+    expect(screen.getByText(/Daily history is not charted/)).toBeTruthy();
+  });
+
+  it("keeps the drag brush off touch pointers, which keep the range presets", () => {
+    renderWithPeg("USD");
+    expect(screen.getByText("Brush").closest("div.border-t")?.className).toContain("pointer-coarse:hidden");
   });
 });

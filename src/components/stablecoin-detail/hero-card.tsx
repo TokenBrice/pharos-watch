@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { IntentLink } from "@/components/intent-link";
-import { ArrowLeftRight, ArrowRight, BookOpen, Flag } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Bell, BookOpen, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
-import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
@@ -15,10 +14,10 @@ import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import { formatShortDate } from "@shared/lib/format";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
 import { cn } from "@/lib/utils";
-import { THREAT_BAND_STYLES } from "@shared/lib/classification";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
-import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
 import {
   HeroCardDesktopSection,
   HeroCardMobileSection,
@@ -29,21 +28,40 @@ import {
 } from "./hero-card-sections";
 import { HeroVariantChip, SafetyGradeHero } from "./hero-card-identity";
 import { HeroPassportStrip } from "./hero-passport-strip";
-import { linkIconFor } from "./link-icon";
 
 interface HeroCardProps {
   model: HeroCardViewModel;
+  /**
+   * The mechanism's own headline figure (a CDP's collateral ratio), read from
+   * the Backing KPI. It takes the fourth hero cell for coins without native yield.
+   */
+  keyMetric?: HeroTertiaryMetricConfig | null;
 }
 
-function isDewsDisplay(display: HeroTertiaryMetricViewModel["display"]): display is HeroDewsDisplay {
-  return "band" in display;
+/**
+ * The fourth hero figure is chosen by what the coin is, never a fixed slot:
+ * native yield vs T-bill for yield-bearing and NAV tokens; otherwise the
+ * mechanism's headline (collateral ratio); otherwise 1Y vs USD for non-dollar
+ * pegs; otherwise the live depeg warning. "30d Excess" on a coin that pays no
+ * yield (it measured a third-party venue) is never shown in the hero.
+ */
+function resolveFourthMetric(
+  model: HeroCardViewModel,
+  metrics: HeroTertiaryMetricConfig[],
+  keyMetric: HeroTertiaryMetricConfig | null,
+): HeroTertiaryMetricConfig | null {
+  const nativeYield = model.coin.flags.yieldBearing === true || model.coin.flags.navToken === true;
+  const excess = metrics.find((metric) => metric.key === "excess-yield");
+  if (nativeYield && excess) return excess;
+  if (keyMetric) return keyMetric;
+  return metrics.find((metric) => metric.key === "performance-vs-usd")
+    ?? metrics.find((metric) => metric.key === "dews")
+    ?? null;
 }
 
 function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode {
-  const display = metric.display;
-
   // A first read in flight holds the value's line box without claiming "unavailable".
-  if (display.pending) {
+  if (metric.display.pending) {
     return (
       <span
         aria-hidden="true"
@@ -51,25 +69,13 @@ function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode
       />
     );
   }
-
-  if (isDewsDisplay(display) && display.band) {
-    return (
-      <Badge
-        variant="outline"
-        className={`px-2 py-0.5 text-xs font-semibold tracking-tight ${THREAT_BAND_STYLES[display.band].cls}`}
-      >
-        {display.value}
-      </Badge>
-    );
-  }
-
-  return display.value;
+  // The DEWS band prints as a word in its band tone, like every other figure.
+  return metric.display.value;
 }
 
-// The mobile metric chips put label, value and sub-line on one line, so the
-// help affordance is an inline glyph sized to the 24px minimum tap target
-// rather than the full-size circular button, which crowded values into
-// truncation.
+// The mobile metric tiles carry the help affordance as an inline glyph sized
+// to the 24px minimum tap target rather than the full-size circular button; a
+// label too long for a narrow tile truncates, never wraps.
 const MOBILE_HINT_BUTTON_CLASS =
   "h-6 w-6 border-transparent bg-transparent text-muted-foreground hover:border-transparent hover:bg-transparent hover:text-foreground dark:text-muted-foreground";
 
@@ -78,8 +84,8 @@ function renderMetricLabel(metric: HeroTertiaryMetricViewModel, mobile = false):
   if (!metric.methodologyTopic) return label;
   if (!mobile) return <MethodologyLabel topic={metric.methodologyTopic}>{label}</MethodologyLabel>;
   return (
-    <span className="inline-flex items-center gap-1">
-      <span>{label}</span>
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="truncate">{label}</span>
       <MethodologyHint topic={metric.methodologyTopic} buttonClassName={MOBILE_HINT_BUTTON_CLASS} />
     </span>
   );
@@ -93,17 +99,25 @@ function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetric
     value: renderMetricValue(metric),
     subValue: metric.display.sub,
     colorClass: metric.display.color,
-    accentClass: metric.accentClass,
   };
 }
 
 /**
+ * The ShareButton (the row's one menu trigger) is an outline Button with its
+ * own drop shadow and surface; beside the hero's pill actions it takes their
+ * border, surface, ink, padding and flat elevation, so the row reads as one set.
+ */
+const SHARE_BUTTON_MATCH_CLASS =
+  "[&>[aria-haspopup=menu]]:border-border/70 [&>[aria-haspopup=menu]]:bg-card [&>[aria-haspopup=menu]]:px-3 [&>[aria-haspopup=menu]]:text-foreground/85 [&>[aria-haspopup=menu]]:shadow-none";
+
+/**
  * The dossier's one identity header, at every width: logo, ticker and name
- * (plus the variant chip), the one-line description, then the action cluster
- * [Bluechip] · [resource links] · [compare/flag/share]. Below `lg` the Safety
- * Score card is far down the scroll, so the grade sits beside the name; at
- * `lg+` the summary rail owns it. Rendered by the detail page above the
- * content/rail grid (not inside HeroCard) so the rail top-aligns with the card.
+ * (plus the variant chip), the one-line description and, below `xl`, the
+ * captioned grade with its one-line reason; then the labelled actions
+ * (Alerts · Compare · Share) and the quiet Report-a-data-issue control. No
+ * external rating sits beside the Pharos grade. At `xl` the summary rail
+ * owns the grade. Rendered by the detail page above the content/rail grid
+ * (not inside HeroCard) so the rail top-aligns with the card.
  */
 /**
  * Neutral provenance for the dossier: when the detail snapshot was produced. Never
@@ -141,6 +155,7 @@ export function HeroIdentityHeader({
   gradeRead = "settled",
   updatedAtMs = 0,
   dailySnapshot = false,
+  hasSummary = false,
 }: {
   /** The page's h1 text: `{name} ({SYMBOL})`, or the name alone when they match. */
   heading?: string;
@@ -152,16 +167,25 @@ export function HeroIdentityHeader({
   updatedAtMs?: number;
   /** The generation is the designed daily-history fallback; the stamp names its day. */
   dailySnapshot?: boolean;
+  /**
+   * An editorial summary follows the hero and opens with the same sentence, so
+   * on a phone the one-liner yields its two lines to the metrics.
+   */
+  hasSummary?: boolean;
 }) {
   const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
-  const links = (coin.links ?? []).slice(0, 3);
   const verdictId = isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
-  // 44px tap targets below lg, the compact 32px cluster at lg+.
-  const actionClass =
-    "pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:size-8";
+  const verdictLine = buildSafetyVerdictLine(reportCard);
+  // Labelled actions: what a holder does next (alerts, compare, share), then
+  // the quiet report-issue control. Resource links live in Key links.
+  // One row at every width: only the compare label gives way (truncates).
+  const labelledActionClass =
+    "pharos-focus-ring inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-sm font-medium text-foreground/85 transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:min-h-9 lg:rounded-md";
+  const iconActionClass =
+    "pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:size-9 lg:rounded-md";
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-5">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-3">
           {/* Content-sized (no flex-grow) so the morph from a linking row
@@ -188,70 +212,64 @@ export function HeroIdentityHeader({
             </div>
           </StablecoinIdentityTransition>
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
-          <div className="ml-auto shrink-0 self-stretch lg:hidden">
+          {/* Below xl the summary rail is absent, so the grade sits beside the name. */}
+          <div className="ml-auto shrink-0 self-stretch xl:hidden">
             <SafetyGradeHero reportCard={reportCard} savedGrade={model.savedGrade} read={gradeRead} mobile />
           </div>
         </div>
         {coin.oneLiner ? (
-          <p className="mt-2 max-w-none text-pretty text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+          <p
+            className={cn(
+              "mt-2 text-pretty text-sm leading-relaxed text-muted-foreground",
+              hasSummary && "hidden sm:block",
+            )}
+          >
+            {coin.oneLiner}
+          </p>
+        ) : null}
+        {verdictLine ? (
+          // The grade's reason, beside it wherever the rail is absent. Inline
+          // text with the separator bound by no-break spaces, so a wrap never
+          // leaves it at a line's end or start.
+          <p className="mt-2 text-sm leading-snug xl:hidden" data-safety-verdict-line>
+            <span className="font-medium text-foreground">{verdictLine.lead}</span>
+            <span aria-hidden="true" className="text-muted-foreground/60">{"\u00a0·\u00a0"}</span>
+            <span className="text-muted-foreground">{verdictLine.detail}</span>
+          </p>
         ) : null}
       </div>
-      {/* At lg+ the stamp sits bottom-right, level with the one-liner, so it adds no row. */}
-      <div className="contents lg:flex lg:shrink-0 lg:flex-col lg:items-end lg:justify-between lg:gap-2 lg:self-stretch">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 lg:grid-cols-[8rem_auto] lg:pt-1">
-          {/* The live badge has its own cell so it cannot move the actions. */}
-          <div className="flex min-h-11 min-w-0 items-center gap-1.5 lg:min-h-8">
-            <BluechipHeaderBadge stablecoinId={coin.id} />
-            <span aria-hidden="true" className="mx-1 hidden h-4 w-px shrink-0 bg-border/60 sm:block sm:first:hidden" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            {links.map((link) => {
-              const Icon = linkIconFor(link.label);
-              return (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  // Below sm the in-flow Key Links card carries these, so the
-                  // action row stays on one line.
-                  className={cn(actionClass, "hidden sm:inline-flex")}
-                  aria-label={link.label}
-                  title={link.label}
-                >
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              );
-            })}
-            {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
+      <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+        <div className={cn("flex items-center gap-2", SHARE_BUTTON_MATCH_CLASS)}>
+          {isActiveStablecoinMeta(coin) ? (
             <IntentLink
-              href={header.compareHref}
-              className={actionClass}
-              aria-label={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
-              title={header.benchmarkSymbol ? `Compare vs ${header.benchmarkSymbol}` : "Compare"}
+              href="/pharoswatchbot/#getting-started"
+              className={labelledActionClass}
+              aria-label={`Alerts: get Telegram alerts for ${coin.symbol} depegs and risk changes`}
             >
-              <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <Bell className="size-4" aria-hidden="true" />
+              <span>Alerts</span>
             </IntentLink>
-            <button
-              type="button"
-              onClick={onOpenFeedback}
-              className={actionClass}
-              aria-label="Report issue"
-              title="Report issue"
-            >
-              <Flag className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            {/* Labelled with a full-size target below lg; the compact icon at lg+. */}
-            <span className="lg:hidden">
-              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
-            </span>
-            <span className="hidden lg:flex">
-              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
-            </span>
-          </div>
-          <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="col-span-2 text-right lg:hidden" />
+          ) : null}
+          <IntentLink
+            href={header.compareHref}
+            className={cn(labelledActionClass, "min-w-0 shrink")}
+            aria-label={header.benchmarkSymbol ? `Compare ${coin.symbol} vs ${header.benchmarkSymbol}` : `Compare ${coin.symbol}`}
+          >
+            <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{header.benchmarkSymbol ? `vs ${header.benchmarkSymbol}` : "Compare"}</span>
+          </IntentLink>
+          <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
+          <button
+            type="button"
+            onClick={onOpenFeedback}
+            className={iconActionClass}
+            aria-label="Report a data issue"
+            title="Report a data issue"
+          >
+            <Flag className="size-4" aria-hidden="true" />
+          </button>
         </div>
-        <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="hidden lg:block" />
+        <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="lg:text-right" />
       </div>
     </div>
   );
@@ -259,18 +277,22 @@ export function HeroIdentityHeader({
 
 function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewModel["caseStudyCallout"]> }) {
   return (
+    // One row at every width: on a phone the label stacks over a title of at
+    // most two lines; from sm the title truncates to one.
     <IntentLink
       href={callout.href}
       aria-label={`Read the case study: ${callout.title} (outcome: ${callout.outcomeLabel})`}
-      className="pharos-focus-ring group flex flex-col gap-2 rounded-b-xl border-t border-border/60 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/45 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5"
+      className="pharos-focus-ring group flex items-center gap-3 rounded-b-xl border-t border-border/60 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/45 sm:px-5"
     >
-      <span className="flex min-w-0 items-center gap-2.5">
+      <span className="flex min-w-0 flex-1 items-center gap-2.5">
         <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="pharos-label shrink-0">Case study</span>
-        <span aria-hidden="true" className="hidden h-3 w-px shrink-0 bg-border sm:block" />
-        <span className="min-w-0 text-sm font-medium leading-snug text-foreground sm:truncate">{callout.title}</span>
+        <span className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2.5">
+          <span className="pharos-label shrink-0">Case study</span>
+          <span aria-hidden="true" className="hidden h-3 w-px shrink-0 bg-border sm:block" />
+          <span className="line-clamp-2 min-w-0 text-sm font-medium leading-snug text-foreground sm:line-clamp-1">{callout.title}</span>
+        </span>
       </span>
-      <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
+      <span className="flex shrink-0 items-center gap-2">
         <Badge
           variant="outline"
           className={`px-1.5 py-0 text-3xs font-semibold uppercase ${callout.outcomeChipClass}`}
@@ -286,7 +308,7 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
   );
 }
 
-export function HeroCard({ model }: HeroCardProps) {
+export function HeroCard({ model, keyMetric = null }: HeroCardProps) {
   const {
     coin,
     coinData,
@@ -295,8 +317,19 @@ export function HeroCard({ model }: HeroCardProps) {
     market,
     peg,
   } = model;
-  const tertiaryMetrics = model.tertiaryMetrics.map(toMetricConfig);
-  const desktopTertiaryMetrics = model.desktopTertiaryMetrics.map(toMetricConfig);
+  // A tile without a reading (no DEWS signal, no peg for a NAV token, no
+  // scored liquidity) is left out rather than shown as a dash; the grid lays
+  // out the real tiles only.
+  const allMetrics = model.tertiaryMetrics
+    .filter((metric) => metric.display.pending || metric.display.value !== "—")
+    .map(toMetricConfig);
+  const fourth = resolveFourthMetric(model, allMetrics, keyMetric);
+  // Signals first (DEWS, Peg, Liquidity), then the coin's fourth figure.
+  const signalKeys = new Set(["dews", "peg-score", "liquidity"]);
+  const tertiaryMetrics = [
+    ...allMetrics.filter((metric) => signalKeys.has(metric.key)),
+    ...(fourth && !signalKeys.has(fourth.key) ? [fourth] : []),
+  ];
   const sectionBaseProps: HeroSectionBaseProps = {
     coin,
     coinData,
@@ -311,9 +344,9 @@ export function HeroCard({ model }: HeroCardProps) {
       <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
       <HeroCardDesktopSection
         {...sectionBaseProps}
-        tertiaryMetrics={desktopTertiaryMetrics}
+        fourthMetric={fourth}
       />
-      <HeroPassportStrip items={model.passportItems} compactDesktop />
+      <HeroPassportStrip items={model.passportItems} pendingKeys={model.passportPendingKeys} compactDesktop />
       {model.caseStudyCallout ? <HeroCaseStudyCallout callout={model.caseStudyCallout} /> : null}
     </Card>
   );

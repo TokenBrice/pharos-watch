@@ -118,16 +118,17 @@ describe("buildBackingMetricsView", () => {
   });
 
   it("renders unavailable denominator and original observation clocks without inventing a ratio", () => {
-    const view = build({ liveMetadata: {
+    // Another reading leads; the unavailable ratio stays a folded detail.
+    const view = build({ backing: synthetic, liveMetadata: {
       ratioUnavailableReason: "not-comparable",
       liabilityScope: { basis: "not-comparable", canonicalChain: "kinesis", reason: "Ethereum is a subset" },
       reserveObservedAt: 1_780_000_000,
       supplyObservedAt: { min: 1_780_000_010, max: 1_780_000_020 }, ratioSkewSec: 20,
     } });
-    expect(view?.headline.value).toBe("Unavailable");
-    expect(view?.visual).toBeNull();
+    expect(view?.headline.source).toBe("metric");
+    expect(JSON.stringify(view)).not.toContain("not-comparable\"");
     expect(view?.details).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: "ratio-unavailable", value: "not-comparable", note: "Ethereum is a subset" }),
+      expect.objectContaining({ key: "ratio-unavailable", value: "Not comparable", note: "Ethereum is a subset" }),
       expect.objectContaining({ key: "ratio-observation-clocks", note: expect.stringContaining("maximum skew 20 seconds") }),
     ]));
   });
@@ -299,6 +300,9 @@ describe("buildBackingMetricsView", () => {
 
     const report = build({ liveRatio: 1.00057, liveFreshnessLabel: "Report as of 2026-10-25 · Checked 2026-10-26 00:00 UTC" });
     expect(report?.freshness.live).toBe("Report as of 2026-10-25 · Checked 2026-10-26 00:00 UTC");
+    // A check on the source's own day keeps only its time.
+    expect(build({ liveRatio: 1.01, liveFreshnessLabel: "Source as of 2026-11-16 · Checked 2026-11-16 16:13 UTC" })?.freshness.live)
+      .toBe("Source as of 2026-11-16 · Checked 16:13 UTC");
     expect(report?.freshness).not.toHaveProperty("stale");
   });
 
@@ -376,6 +380,22 @@ describe("BackingMetricsCard", () => {
     const view = build({ collateralization: reviewed, oracle });
     const { container } = render(<BackingMetricsCard view={view!} />);
     expect(container.querySelector('[data-gauge-marker="threshold"]') != null).toBe(marked);
+  });
+
+  it("hides the card when a live feed only proves no comparable coverage ratio exists", () => {
+    // The dossier never frames an empty module: no reading, no card.
+    expect(build({ liveMetadata: { ratioUnavailableReason: "not-comparable" } })).toBeNull();
+    expect(build({ liveMetadata: { nativeQuantityBasis: true } as never })).toBeNull();
+  });
+
+  it("explains a metric headline in plain words under the figure", () => {
+    const view = build({ backing: { ...synthetic, metrics: synthetic.metrics.slice(2) } })!;
+    expect(view.headline).toMatchObject({ value: "1.5%", basis: "loss absorption", hint: "Reserve fund over supply." });
+    for (const props of [{ anchorTwin: true }, { id: "collateralization" }]) {
+      const { container } = render(<BackingMetricsCard view={view} {...props} />);
+      expect(within(container).getByText("Reserve fund over supply.")).toBeTruthy();
+      cleanup();
+    }
   });
 
   it("keeps the citation in the folded details", () => {

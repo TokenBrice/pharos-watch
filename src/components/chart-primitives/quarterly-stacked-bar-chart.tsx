@@ -69,6 +69,7 @@ export function QuarterlyStackedBarChart<T extends object>({
               key={dataKey}
               dataKey={dataKey}
               stackId="a"
+              maxBarSize={48}
               fill={color}
               fillOpacity={fillOpacity}
               {...(radius === undefined ? {} : { radius })}

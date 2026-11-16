@@ -8,9 +8,12 @@ import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@share
  * module headers, the rail Evidence index (`size="compact"`) and the
  * deployment-strip legend.
  *
- * - `limiting`: a filled diamond inside a solid outline, the outline the
- *   deployment strip draws around the component(s) at the eligible minimum.
- * - `diagnostic`: a dashed hollow diamond inside a dashed outline, the dashed
+ * Both draw the page's standard neutral pill (the chip-row shape), so the
+ * role reads as a qualifier beside the score pill, never as a status of its
+ * own; the glyph and the outline pattern carry the role:
+ *
+ * - `limiting`: a filled diamond in a solid pill.
+ * - `diagnostic`: a dashed hollow diamond in a dashed pill, the dashed
  *   track of a component outside the eligible set.
  * - `eligible` / `excluded`: nothing. An eligible component above the minimum
  *   is the default reading, and an unscored one already reads "NR" or "–".
@@ -25,6 +28,12 @@ type MarkedRole = Extract<ControlComponentRole, "limiting" | "diagnostic">;
 const ROLE_WORDS: Record<MarkedRole, string> = {
   limiting: "Limiting",
   diagnostic: "Diagnostic",
+};
+
+/** What the role means for the score, in plain words: the tooltip and the spoken tail. */
+export const CONTROL_ROLE_HINTS: Record<MarkedRole, string> = {
+  limiting: "The lowest eligible Control input: it sets the Economic Control score",
+  diagnostic: "Shown for context: outside the inputs that set the Economic Control score",
 };
 
 function isMarkedRole(role: ControlComponentRole | null | undefined): role is MarkedRole {
@@ -72,23 +81,25 @@ export function ControlRoleTag({
   const label = CONTROL_COMPONENT_ROLE_LABELS[role];
   const word = ROLE_WORDS[role];
   // Screen readers and copy-paste get the whole published label
-  // ("Limiting input · before adjustments"); the eye gets glyph + word.
+  // ("Limiting input · before adjustments") and what it means for the score;
+  // the eye gets glyph + word, with the plain meaning on hover.
   const remainder = label.startsWith(word) ? label.slice(word.length) : ` · ${label}`;
+  const hint = CONTROL_ROLE_HINTS[role];
   return (
     <span
       data-control-role={role}
-      title={label}
+      title={hint}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-2xs leading-tight",
-        size === "compact" ? "px-1 py-px" : "px-1.5 py-0.5",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border text-2xs font-medium leading-tight",
+        size === "compact" ? "px-1.5 py-px" : "px-2 py-0.5",
         role === "limiting"
-          ? "border-[1.5px] border-foreground/80 font-medium text-foreground"
-          : "border border-dashed border-muted-foreground/70 text-muted-foreground",
+          ? "border-border/60 bg-muted/30 text-foreground"
+          : "border-dashed border-muted-foreground/50 text-muted-foreground",
       )}
     >
       <ControlRoleGlyph role={role} className={size === "compact" ? "size-2" : undefined} />
       {word}
-      <span className="sr-only">{remainder}</span>
+      <span className="sr-only">{`${remainder}. ${hint}.`}</span>
     </span>
   );
 }

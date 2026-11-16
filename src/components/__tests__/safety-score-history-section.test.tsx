@@ -88,13 +88,19 @@ describe("SafetyScoreHistorySection", () => {
     // The dated streak spans both mobile columns so its label fits on one line at 390px.
     expect(html).toContain('class="pharos-inset px-3 py-1.5 col-span-2 sm:col-span-1"><p class="pharos-label">Streak as of');
 
-    expect(html).toContain("Upgraded from B");
+    // One row grammar: a direction glyph, then "from X"; the verb stays for assistive tech.
+    expect(html).toContain('<span class="sr-only">Upgraded </span>from B');
+    expect(html).toContain("▲");
+    expect(html).not.toContain("Upgraded from B");
 
     // Initial grade still present
     expect(html).toContain("Initial grade");
     expect(html).toContain(`Safety Score history as of ${new Date((NOW_SEC - 3_600) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`);
     expect(html).toContain(`Legacy history as of ${new Date((NOW_SEC - 7_200) * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`);
-    expect(html).not.toContain("Updated");
+    // The header chip is the age chip every module carries, dated at the
+    // lane's producer generation, never a bare calendar date.
+    expect(html).toContain(`dateTime="${new Date((NOW_SEC - 3_600) * 1000).toISOString()}"`);
+    expect(html).not.toMatch(/>\d{4}-\d{2}-\d{2}<\/span>/);
     expect(html).not.toMatch(/\bnow\b/i);
   });
 
@@ -147,10 +153,71 @@ describe("SafetyScoreHistorySection", () => {
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="nusd-neutrl" />);
 
-    expect(html).toContain("Methodology baseline");
+    // A re-baselined row names its source grade with a neutral glyph and a quiet tag.
+    expect(html).toContain('<span aria-hidden="true">▼ </span>from C+');
+    expect(html).toContain(">Methodology</span>");
+    expect(html).not.toContain("Methodology baseline");
     expect(html).toContain('aria-label="Safety grade D, score 49"');
     expect(html).toContain("Streak as of ");
     expect(html).not.toContain("Show 1 more");
+  });
+
+  describe("methodology blips, timeline axis and the live grade", () => {
+    const DAY = 86_400;
+    const baseline = (date: number, grade: string, score: number, version: string) => ({
+      date, grade, score, prevGrade: null, prevScore: null,
+      transitionKind: "methodology-boundary-baseline", safetyScoreIdentity: makeV9Identity(version, `g-${version}`),
+    });
+    beforeEach(() => {
+      useSafetyScoreHistoryMock.mockReturnValue({ data: [], meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" }, isLoading: false, error: null });
+      useSafetyScoreHistoryV2Mock.mockReturnValue({
+        data: { schemaVersion: 2, history: [
+          baseline(NOW_SEC - 3 * DAY, "A+", 90, "9.90"),
+          baseline(NOW_SEC - 2 * DAY, "C", 55, "9.92"),
+          baseline(NOW_SEC - DAY, "A+", 90, "9.94"),
+          baseline(NOW_SEC - 600, "B", 72, "9.95"),
+        ] },
+        meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" },
+        isLoading: false,
+        error: null,
+      });
+    });
+
+    it("keeps a reverted one-day methodology blip out of the lowest grade and names it", () => {
+      const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdc-circle" />);
+      const lowest = html.slice(html.indexOf("Lowest grade"), html.indexOf("Streak as of"));
+      expect(lowest).toContain('aria-label="Safety grade B, score 72"');
+      expect(lowest).not.toContain('aria-label="Safety grade C, score 55"');
+      // The note sits under the tiles, so it never leaves the Best tile half empty.
+      expect(lowest).not.toContain("Excludes");
+      expect(html).toContain("Lowest grade excludes a one-day methodology blip: C (55)");
+      expect(html).toContain("Methodology · reverted next day");
+      // The grade that did not revert keeps its plain methodology tag.
+      expect(html.match(/reverted next day/g)).toHaveLength(1);
+    });
+
+    it("dates the grade strip at its start, middle and end and keys its colours", () => {
+      const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdc-circle" />);
+      const ticks = [...html.matchAll(/<span class="text-(?:left|center|right)">([^<]+)<\/span>/g)].map((match) => match[1]);
+      expect(ticks).toHaveLength(3);
+      expect(ticks[0]).toBe(new Date((NOW_SEC - 3 * DAY) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }));
+      expect(html).toContain('aria-label="Timeline legend"');
+      expect(html).toContain("A grades");
+      expect(html).toContain("B grades");
+      expect(html).toContain("C grades");
+    });
+
+    it("says when today's daily close differs from the live grade", () => {
+      const live = renderToStaticMarkup(
+        <SafetyScoreHistorySection stablecoinId="xaut-tether" liveGrade={{ grade: "A-", score: 81 }} />,
+      );
+      expect(live).toContain("today&#x27;s row reads B (72), while the live Safety Score is A- (81)");
+      const same = renderToStaticMarkup(
+        <SafetyScoreHistorySection stablecoinId="xaut-tether" liveGrade={{ grade: "B", score: 73 }} />,
+      );
+      expect(same).not.toContain("data-grade-history-live-note");
+      expect(renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="xaut-tether" />)).not.toContain("live Safety Score");
+    });
   });
 
   it("omits lane provenance and the streak when history meta is unavailable", () => {
@@ -244,7 +311,7 @@ describe("SafetyScoreHistorySection", () => {
   it("renders retained rows while a sibling lane is loading, and nothing when both are unavailable", () => {
     useSafetyScoreHistoryMock.mockReturnValue({ data: undefined, meta: null, isLoading: true, error: null });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: V2_ROWS, meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" }, isLoading: false, error: null });
-    expect(renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />)).toContain("Upgraded from B");
+    expect(renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />)).toContain("Upgraded </span>from B");
 
     useSafetyScoreHistoryMock.mockReturnValue({ data: undefined, meta: null, isLoading: false, error: new Error("legacy down") });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: undefined, meta: null, isLoading: false, error: new Error("v2 down") });
@@ -260,7 +327,9 @@ describe("SafetyScoreHistorySection", () => {
   it("keeps a retained refresh failure silent and warns only on material lane age", () => {
     useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, error: new Error("refetch failed") });
     const silent = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(silent).not.toContain('role="status"');
+    // The age chip's live region stays empty; no notice is drawn.
+    expect(silent).not.toMatch(/role="status"[^>]*>[^<]/);
+    expect(silent).not.toContain("Showing an older snapshot");
 
     useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, meta: { updatedAt: NOW_SEC - 30 * 86_400, ageSeconds: 30 * 86_400, status: "stale" } });
     const stale = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);

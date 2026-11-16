@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, type MouseEvent } from "react";
+import { Fragment, useEffect, useMemo, type MouseEvent } from "react";
 import {
   Circle,
   CircleCheck,
@@ -53,20 +53,31 @@ const SUBHEADING_CLASS = "text-sm font-semibold tracking-tight text-foreground";
 /** A figure-bearing token (digit or currency sign) or a ticker stays mono; words read in sans. */
 const MONO_TOKEN = /[\d$€£¥]|^[A-Z][A-Z0-9]{1,5}$/;
 
+/** One step down for a sub-unit magnitude: "0.808M" reads "808K", "0.5B" reads "500M". */
+const SMALLER_SUFFIX: Readonly<Record<string, string>> = { M: "K", B: "M", T: "B" };
+
+function tidyFigureToken(token: string): string {
+  const smaller = SMALLER_SUFFIX[token.slice(-1)];
+  const amount = Number(token.slice(0, -1));
+  if (!smaller || !token.startsWith("0.") || !Number.isFinite(amount)) return token;
+  return `${Number((amount * 1000).toFixed(3))}${smaller}`;
+}
+
 /**
  * Key figures mix numbers and words ("48 hours", "7.04bn SKY", "No surplus").
  * Mono is for the figure token only; the authored casing is kept, never
- * uppercased.
+ * uppercased. The separating spaces stay outside the mono spans, so "5 of 10"
+ * never shows a monospace-wide gap.
  */
 function ScenarioFigureValue({ value }: { value: string }) {
   const tokens = value.trim().split(/\s+/);
   return (
     <>
       {tokens.map((token, index) => (
-        <span key={index} className={MONO_TOKEN.test(token) ? "pharos-numeric" : undefined}>
-          {index > 0 ? " " : ""}
-          {token}
-        </span>
+        <Fragment key={index}>
+          {index > 0 ? " " : null}
+          <span className={MONO_TOKEN.test(token) ? "pharos-numeric" : undefined}>{tidyFigureToken(token)}</span>
+        </Fragment>
       ))}
     </>
   );
@@ -212,21 +223,20 @@ function Exposure({ scenario }: { scenario: FailureScenario }) {
   );
 }
 
-function ReviewStamp({ selection }: { selection: FailureScenarioSelection }) {
-  const { review, evidencePin } = selection.scenario;
-  if (review.status === "approved") {
-    return (
-      <>
-        Approved by {review.reviewedBy} on{" "}
-        <span className="pharos-numeric whitespace-nowrap">{review.reviewedAt.slice(0, 10)}</span> · state at block{" "}
-        <span className="pharos-numeric">{formatBlock(evidencePin.block)}</span>
-      </>
-    );
+/**
+ * The footer stamp: the state pin, then the review date the footer prints in
+ * every module's grammar. Each part stays on one line, so a narrow footer
+ * wraps between them and never strands the block number.
+ */
+function StateStamp({ selection }: { selection: FailureScenarioSelection }) {
+  const block = <span className="pharos-numeric">{formatBlock(selection.scenario.evidencePin.block)}</span>;
+  if (selection.scenario.review.status === "approved") {
+    return <span className="whitespace-nowrap">State at block {block}</span>;
   }
   return (
     <>
-      <span className={cn("font-medium", SEVERITY_TONE_CLASS.watch.text)}>Draft, not approved</span> · state at block{" "}
-      <span className="pharos-numeric">{formatBlock(evidencePin.block)}</span>
+      <span className={cn("whitespace-nowrap font-medium", SEVERITY_TONE_CLASS.watch.text)}>Draft, not approved</span> ·{" "}
+      <span className="whitespace-nowrap">state at block {block}</span>
     </>
   );
 }
@@ -256,7 +266,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
   const numberedSources = useMemo(() => numberSources(scenario.sources), [scenario.sources]);
   const route = useMemo(() => buildScenarioRoute(scenario), [scenario]);
   const clock = useMemo(() => buildScenarioClock(scenario, route), [scenario, route]);
-  const reviewedAt = scenario.review.status === "approved" ? scenario.review.reviewedAt : undefined;
+  const approval = scenario.review.status === "approved" ? scenario.review : undefined;
   const sharedLabel = "Shared path";
   const draftNote = scenario.review.status === "draft" ? scenario.review.note : undefined;
   const summaryDraftNote = draftNote && findSummaryBudgetViolations(
@@ -305,10 +315,6 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
               <FilePen aria-hidden="true" />
               Draft — not approved
             </Badge>
-          ) : reviewedAt ? (
-            <Badge variant="outline" className={NEUTRAL_CHIP_CLASS}>
-              Reviewed <span className="pharos-numeric">{reviewedAt.slice(0, 10)}</span>
-            </Badge>
           ) : null}
         </>
       }
@@ -317,17 +323,18 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
           sources={scenario.sources.map((source) => ({ label: source.label, url: source.url }))}
           numberedSources
           foldId={`${FAILURE_SCENARIO_MODULE_ID}-sources`}
-          trailing={<ReviewStamp selection={selection} />}
-        >
-          <span>Hypothetical premise · evidence labeled per claim</span>
-        </EvidenceFooter>
+          sourcesFootnote={approval ? <>Approved by {approval.reviewedBy}.</> : undefined}
+          trailing={<StateStamp selection={selection} />}
+          reviewed={approval?.reviewedAt}
+        />
       }
       verdict={scenario.thesis}
       folds={
         <>
+          {/* The map above already names every step; the fold adds their detail. */}
           <ModuleDisclosure
             id={`${FAILURE_SCENARIO_MODULE_ID}-path`}
-            label="Scenario path, step by step"
+            label={clock ? "Timeline & step details" : "Step details"}
           >
             <div className="space-y-5 pt-2">
               {foldPremise ? (
@@ -394,7 +401,9 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
           label: figure.label,
           value: <ScenarioFigureValue value={figure.value} />,
           valueStyle: "text",
-          valueClassName: "text-foreground text-base font-semibold",
+          // Values sit on the row's floor, so a two-line label never drops its
+          // value below its neighbours'.
+          valueClassName: "mt-auto pt-0.5 text-foreground text-base font-semibold",
           title: EVIDENCE_LABEL[figure.evidence],
         }))}
       />

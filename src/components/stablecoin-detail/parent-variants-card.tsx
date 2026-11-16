@@ -1,71 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { useContext, useState } from "react";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { logosById } from "@/lib/logos";
-import { getVariantDisplay } from "@shared/lib/variant-display";
-import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { DependencyRow, ListedDependencyIdsContext, variantKindLabel } from "./collateral-usage-section";
 
-// 5 bordered rows, matching the Used-by preview, keep the Dependency Context
-// split balanced even for parents with dozens of variants (USDC).
-const PREVIEW_COUNT = 5;
+// Matches the Used-by preview so the two Dependency context columns stay
+// balanced even for parents with dozens of variants (USDC).
+const PREVIEW_COUNT = 8;
 
 interface ParentVariantsCardProps {
   variants: StablecoinClientMeta[];
 }
 
+/**
+ * The parent's tracked variants that "Used by" does not already rank: a
+ * variant with a published dependency link reads there, with its exposure and
+ * kind. When some moved, the heading says "Other variants"; when all did, the
+ * card renders nothing.
+ */
 export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
-  const logos = logosById;
   const [showAll, setShowAll] = useState(false);
+  const rankedIds = useContext(ListedDependencyIdsContext);
+  const listed = variants.filter((variant) => !rankedIds.has(variant.id));
 
-  if (variants.length === 0) return null;
+  if (listed.length === 0) return null;
 
-  const needsCollapse = variants.length > PREVIEW_COUNT;
-  const visible = showAll ? variants : variants.slice(0, PREVIEW_COUNT);
+  const visible = showAll ? listed : listed.slice(0, PREVIEW_COUNT);
 
   return (
-    <section className="space-y-2.5">
-      <h3 className={`px-2.5 ${DETAIL_MODULE_TITLE_CLASS}`}>
-        Variants <span className="ml-1 font-normal text-muted-foreground tabular-nums">{variants.length}</span>
+    <section aria-labelledby="parent-variants-title" className="space-y-2">
+      <h3 id="parent-variants-title" className={DETAIL_MODULE_TITLE_CLASS}>
+        {listed.length < variants.length ? "Other variants" : "Variants"}{" "}
+        <span className="ml-1 font-mono font-normal tabular-nums">{listed.length}</span>
       </h3>
-      <div className={`grid gap-1.5 ${showAll ? "max-h-96 overflow-y-auto" : ""}`}>
+      <ul className={showAll && listed.length > PREVIEW_COUNT ? "-mx-2 max-h-[30rem] space-y-0.5 overflow-y-auto" : "-mx-2 space-y-0.5"}>
         {visible.map((variant) => {
-          const display = variant.variantKind ? getVariantDisplay(variant.variantKind) : null;
-
+          const kind = variant.variantKind ? variantKindLabel(variant.variantKind) : null;
           return (
-            <Link
+            <DependencyRow
               key={variant.id}
-              href={buildStablecoinUrl(variant.id)}
-              className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-2.5 py-2 transition-colors hover:border-border/80 hover:bg-muted/40"
-            >
-              <StablecoinLogo src={logos?.[variant.id]} name={variant.name} size={28} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="text-sm font-semibold text-foreground">{variant.name}</span>
-                  <span className="font-mono text-xs text-muted-foreground">{variant.symbol}</span>
-                </div>
-              </div>
-              {display ? (
-                <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-2xs font-semibold ${display.badgeClass}`}>
-                  {display.shortLabel}
-                </span>
-              ) : null}
-            </Link>
+              id={variant.id}
+              name={variant.name}
+              symbol={variant.symbol}
+              detail={kind ? `${kind} · ${variant.name}` : variant.name}
+              ariaLabel={`${variant.name} (${variant.symbol})${kind ? `, ${kind.toLowerCase()} variant` : ""}`}
+            />
           );
         })}
-      </div>
-      {needsCollapse && (
+      </ul>
+      {listed.length > PREVIEW_COUNT ? (
         <ShowAllToggle
           open={showAll}
           onToggle={() => setShowAll((prev) => !prev)}
-          total={variants.length}
+          total={listed.length}
           noun="variants"
+          className="-ml-2.5"
         />
-      )}
+      ) : null}
     </section>
   );
 }

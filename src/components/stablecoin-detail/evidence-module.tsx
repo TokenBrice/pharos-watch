@@ -2,7 +2,7 @@
 
 import { Children, Fragment, isValidElement, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, CircleDashed, CircleSlash, Hourglass } from "lucide-react";
-import { MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { MODULE_FOLD_BAR_CLASS, MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -81,10 +81,10 @@ export interface EvidenceModuleProps {
   /**
    * One score pill **or** one status chip, then an optional ops chip. Status
    * only. Pass the chips as one fragment so the shell can tell the primary
-   * chip (the first) from the rest. No chip is ever shrunk or ellipsized: at
-   * `md+` the slot sits beside the title and wraps under it when both do not
-   * fit; below `md` it always takes its own row under the title, and a folded
-   * tile or strip shows the primary chip only.
+   * chip (the first) from the rest. No chip is ever shrunk or ellipsized: the
+   * slot sits beside the title (before a phone accordion's chevron) and wraps
+   * under it only when both do not fit; a folded tile or strip shows the
+   * primary chip only.
    */
   headerRight?: ReactNode;
   /** The required visual summary: spectrum, rail, bar, matrix or strip. */
@@ -127,9 +127,17 @@ export interface EvidenceModuleProps {
   className?: string;
   /**
    * Fold the whole module to its header below `md` (phone only, decision S8).
-   * Defaults to true for tiles and strips, false for full-width modules.
+   * Defaults to true for tiles and strips, false for full-width modules. A
+   * module folds only when its folded header still shows its key figure: a
+   * status chip (`headerRight`) or `foldedSummary`.
    */
   collapsibleOnMobile?: boolean;
+  /**
+   * The key figure a folded phone header shows when the module has no status
+   * chip (e.g. "1.5% loss absorption"). Hidden once the module opens and at
+   * `md+`, where the body carries it.
+   */
+  foldedSummary?: ReactNode;
 }
 
 /**
@@ -160,11 +168,11 @@ function splitHeaderChips(headerRight: ReactNode) {
  * density tier.
  *
  * The header wraps rather than truncates. The title row keeps the help glyph
- * directly after the title (and, on a phone accordion, the chevron at the
- * right edge). At `md+` the status chips sit at the right of that row and
- * drop under the title, left-aligned, only when both do not fit. Below `md`
- * they always take their own row under the title. A score or status chip
- * never shrinks or ellipsizes: it is the module's verdict.
+ * directly after the title. The status chips (or a folded phone header's
+ * key figure) sit at the right of that row, then a phone accordion's chevron,
+ * and drop under the title, left-aligned, only when both do not fit, at
+ * every width. A score or status chip never shrinks or ellipsizes: it is the
+ * module's verdict.
  *
  * At `md+` the summary layer never folds and no toggle exists. Below `md`, a
  * tile or strip becomes an APG accordion (`<h3><button aria-expanded
@@ -192,10 +200,15 @@ export function EvidenceModule({
   bodyLayout,
   className,
   collapsibleOnMobile,
+  foldedSummary,
 }: EvidenceModuleProps) {
   const layout: EvidenceModuleVariant = stripForm ? "strip" : variant;
   const isStrip = layout === "strip";
-  const collapsible = collapsibleOnMobile ?? variant !== "module";
+  const headerChips = splitHeaderChips(headerRight);
+  const hasFoldedSummary = foldedSummary != null && foldedSummary !== false;
+  // Never fold a module to a bare title: its folded header must still state
+  // the module's key figure.
+  const collapsible = (collapsibleOnMobile ?? variant !== "module") && (headerChips !== null || hasFoldedSummary);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const interactive = collapsible && !isDesktop;
   const [open, setOpen] = useState(false);
@@ -203,7 +216,6 @@ export function EvidenceModule({
   const generatedId = useId();
   const headingId = id ? `${id}-title` : `${generatedId}-title`;
   const bodyId = id ? `${id}-body` : `${generatedId}-body`;
-  const headerChips = splitHeaderChips(headerRight);
 
   // Deep links arrive on load (before lazy sections settle) and while the page
   // is open, when only `hashchange` fires. A target anywhere inside the module
@@ -265,19 +277,13 @@ export function EvidenceModule({
           )}
         </StablecoinModuleTitle>
         {methodology ? <span className={METHODOLOGY_SLOT_CLASS}>{methodology}</span> : null}
-        {interactive ? (
-          <ChevronDown
-            aria-hidden="true"
-            className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-data-[expanded=true]/evidence:rotate-180 md:hidden"
-          />
-        ) : null}
       </div>
       {headerChips ? (
-        // Its own row below `md`; beside the title at `md+` when it fits.
+        // Beside the title when it fits, at every width; under it otherwise.
         // Alone on a row too narrow for every chip, the chips wrap, not clip.
         // The chips (not the row) sit above the accordion overlay, so a tap
         // beside them still toggles the module.
-        <div className="flex min-w-0 basis-full flex-wrap items-center gap-2 md:basis-auto [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal [&>*]:relative [&>*]:shrink-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 [&_[data-slot=badge]]:max-w-full [&_[data-slot=badge]]:whitespace-normal [&>*]:relative [&>*]:shrink-0">
           {headerChips.primary}
           {headerChips.secondary.length > 0 ? (
             // A folded band keeps the primary chip only; `contents` lets the
@@ -287,6 +293,20 @@ export function EvidenceModule({
             </span>
           ) : null}
         </div>
+      ) : collapsible && hasFoldedSummary ? (
+        // The folded header's key figure; the open body and md+ carry it.
+        <div className="relative flex min-w-0 flex-wrap items-center gap-2 group-data-[expanded=true]/evidence:hidden md:hidden">
+          {foldedSummary}
+        </div>
+      ) : null}
+      {/* Last on the row, after the chips; `ml-auto` keeps it on the right
+          edge when the chips wrap under the title (the growing title row
+          leaves it no free space otherwise). */}
+      {interactive ? (
+        <ChevronDown
+          aria-hidden="true"
+          className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-data-[expanded=true]/evidence:rotate-180 md:hidden"
+        />
       ) : null}
     </div>
   );
@@ -312,12 +332,12 @@ export function EvidenceModule({
       id={bodyId}
       className={cn(
         DETAIL_MODULE_BODY_CLASS,
-        "min-w-0 space-y-4",
+        "flex min-w-0 flex-1 flex-col space-y-4",
         MODULE_FOLD_RHYTHM_CLASS,
         collapsible && "border-t border-border/40",
         // `data-expanded` stays "false" at md+, so the override must beat the
         // group selector's specificity: `!` keeps the body visible on desktop.
-        collapsible && "group-data-[expanded=false]/evidence:hidden md:!block",
+        collapsible && "group-data-[expanded=false]/evidence:hidden md:!flex",
       )}
     >
       {split ? (
@@ -343,11 +363,17 @@ export function EvidenceModule({
           {summary}
         </>
       )}
-      {/* One fold run, in fixed order, as direct children of the body so
-          `MODULE_FOLD_RHYTHM_CLASS` closes the gaps between them. */}
       {visualFoldNode}
-      {folds}
-      {footer}
+      {/* The collapsed folds and the provenance footer share one block at
+          the card's foot (`mt-auto`): in a tile stretched to its row's
+          height they sit on the bottom edge instead of leaving a blank band
+          under them. The block keeps the fold rhythm and the inline bar. */}
+      {folds != null || footer != null ? (
+        <div className={cn("mt-auto", MODULE_FOLD_RHYTHM_CLASS, MODULE_FOLD_BAR_CLASS)}>
+          {folds}
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -360,7 +386,7 @@ export function EvidenceModule({
       data-expanded={collapsible ? String(open) : undefined}
       className={cn(
         DETAIL_MODULE_SHELL_CLASS,
-        "group/evidence @container/evidence",
+        "group/evidence @container/evidence flex flex-col",
         isStrip && "col-span-full",
         id ? SECTION_SCROLL_MT : undefined,
         className,
@@ -451,10 +477,12 @@ export function EvidenceStateStrip({
         <span aria-hidden="true" className="text-muted-foreground/50">·</span>
         <span className="text-sm text-muted-foreground">{EVIDENCE_STATE_LABEL[state]}</span>
         {reason ? (
-          <>
-            <span aria-hidden="true" className="text-muted-foreground/50">·</span>
-            <span className="min-w-0 text-xs leading-snug text-muted-foreground">{reason}</span>
-          </>
+          // The separator travels with the reason, so a wrapped reason never
+          // strands a trailing "·" at the end of the line above.
+          <span className="min-w-0 text-xs leading-snug text-muted-foreground">
+            <span aria-hidden="true" className="mr-2 text-muted-foreground/50">·</span>
+            {reason}
+          </span>
         ) : null}
       </div>
     </section>

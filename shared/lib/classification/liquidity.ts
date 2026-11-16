@@ -79,14 +79,15 @@ export function buildLiquidityVerdictLine(components: DexLiquidityData["scoreCom
 
   const strengthClause =
     strengths.length === 2
-      ? `${strengths[0]!.label} ${strengths[0]!.value} and ${strengths[1]!.label.toLowerCase()} ${strengths[1]!.value} carry the score`
+      ? `${strengths[0]!.label} ${strengths[0]!.value} and ${strengths[1]!.label} ${strengths[1]!.value} carry the score`
       : strengths.length === 1
         ? `${strengths[0]!.label} ${strengths[0]!.value} carries the score`
         : "No component clears 70";
+  // Component names keep the casing of the breakdown bars they point at ("TVL Depth").
   const weakClause =
     weakest.value < LIQUIDITY_VERDICT_DRAG_MAX
-      ? `${weakest.label.toLowerCase()} ${weakest.value} is the drag`
-      : `${weakest.label.toLowerCase()} ${weakest.value} is the softest`;
+      ? `${weakest.label} ${weakest.value} is the drag`
+      : `${weakest.label} ${weakest.value} is the softest`;
 
   return `${strengthClause}; ${weakClause}.`;
 }

@@ -41,15 +41,19 @@ function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
   const methodology = METHODOLOGY_CONTEXT.safetyScore;
   return (
     <div className="flex shrink-0 items-center gap-2">
+      {/* On a phone the title and its three 44px actions share one row; the
+          freshness chip yields (the rail-less page dates the grade in the hero). */}
       {updatedAtMs !== null ? (
-        <FreshnessIndicator
-          compact
-          updatedAtMs={updatedAtMs}
-          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000}
-          labelPrefix="Updated"
-        />
+        <span className="hidden items-center gap-2 sm:inline-flex">
+          <FreshnessIndicator
+            compact
+            updatedAtMs={updatedAtMs}
+            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.reportCards * 1000}
+            labelPrefix="Updated"
+          />
+          <span className="text-muted-foreground/50" aria-hidden="true">·</span>
+        </span>
       ) : null}
-      {updatedAtMs !== null ? <span className="text-muted-foreground/50" aria-hidden="true">·</span> : null}
       <MethodologyHint topic="safetyScore" buttonClassName={HEADER_ICON_BUTTON_CLASS} />
       {methodology.changelogPath ? (
         <IntentLink
@@ -74,18 +78,27 @@ function ScoreModifiers({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) 
   const { stages } = card.scoreTrace;
   const items: Array<{ key: string; label: string; title: string }> = [];
   if (stages.pegMultiplier !== null && Math.abs(stages.pegMultiplier - 1) >= 0.005) {
-    items.push({ key: "peg", label: `× peg ${stages.pegMultiplier.toFixed(2)}`, title: "Measured peg history multiplies the pillar score" });
+    items.push({ key: "peg", label: `Peg history ×${stages.pegMultiplier.toFixed(2)}`, title: "Measured peg history multiplies the pillar score" });
   }
   if (stages.deploymentAdjustmentPoints !== null && stages.deploymentAdjustmentPoints >= 0.05) {
-    items.push({ key: "common-mode", label: `−${stages.deploymentAdjustmentPoints.toFixed(1)} shared exposure`, title: "Deployments sharing a chain or bridge that can fail together" });
+    items.push({ key: "common-mode", label: `Shared exposure −${stages.deploymentAdjustmentPoints.toFixed(1)} pts`, title: "Deployments sharing a chain or bridge that can fail together" });
   }
   if (card.bindingCap) {
-    items.push({ key: "cap", label: `capped at ${card.bindingCap.limit.toFixed(0)}`, title: card.bindingCap.reason });
+    items.push({ key: "cap", label: `Capped at ${card.bindingCap.limit.toFixed(0)}`, title: card.bindingCap.reason });
   }
   if (items.length === 0) return null;
   return (
-    <span className="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-xs text-muted-foreground">
-      {items.map((item) => <span key={item.key} title={item.title}>{item.label}</span>)}
+    // Words, not a formula: each adjustment is a quiet chip with its why on hover.
+    <span className="flex basis-full flex-wrap gap-1.5 pt-1 sm:basis-auto sm:pt-0" aria-label="Score adjustments">
+      {items.map((item) => (
+        <span
+          key={item.key}
+          title={item.title}
+          className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground"
+        >
+          {item.label}
+        </span>
+      ))}
     </span>
   );
 }
@@ -121,8 +134,10 @@ export function StablecoinSafetyScoreV9Card({
         </div>
         <HeaderActions updatedAtMs={updatedAtMs} />
       </CardHeader>
-      <CardContent className="px-0 py-0">
-        <div className="space-y-4 px-4 py-5 sm:px-5">
+      {/* A flex column down to the folds: beside a taller Reserves card the
+          stretched card pins its folds to the foot, never a blank band. */}
+      <CardContent className="flex flex-1 flex-col px-0 py-0">
+        <div className="flex flex-1 flex-col space-y-4 px-4 py-5 sm:px-5">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pt-1">
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <span
@@ -134,8 +149,10 @@ export function StablecoinSafetyScoreV9Card({
                 {card.grade === null ? "Pipeline gap" : card.grade}
               </span>
               {card.score !== null ? (
+                // The separating space sits inside the smaller span: at the
+                // 4xl mono size it alone was a ~22 px hole before the slash.
                 <span className="pharos-numeric text-4xl font-extrabold leading-none tracking-tight text-foreground">
-                  {card.score.toFixed(0)} <span className="text-2xl font-bold text-muted-foreground">/ 100</span>
+                  {card.score.toFixed(0)}<span className="text-2xl font-bold text-muted-foreground"> / 100</span>
                 </span>
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">{card.ratingStatus === "pipeline-gap" ? "No Safety Score published" : "Not rated"}</span>
@@ -190,23 +207,25 @@ export function StablecoinSafetyScoreV9Card({
 
           <ScoreAdjustment card={card} />
           <CapSection card={card} />
-          <ScoreConstructionPanel card={card} />
-          {presentation.primaryReasons.length > 0 ? (
-            <section className="border-b border-border/40 pb-3" aria-label="Rating notes">
-              <ModuleDisclosure label="Rating notes" count={presentation.primaryReasons.length}>
-                <SafetyScoreReasonList messages={presentation.primaryReasons} className="mt-1 text-xs" />
-              </ModuleDisclosure>
-            </section>
-          ) : null}
-        </div>
-        <div className="mx-4 mb-5 sm:mx-5">
-          <ShowYourWorkPanel
-            kind="report-card-v9"
-            card={card}
-            methodologyVersion={identity.methodologyVersion}
-            stablecoinId={card.id}
-            stablecoinName={stablecoinName}
-          />
+          {/* The folds close the card with no trailing divider; the score
+              inputs panel renders nothing until the reader turns it on. */}
+          <div className="mt-auto space-y-4">
+            <ScoreConstructionPanel card={card} />
+            {presentation.primaryReasons.length > 0 ? (
+              <section aria-label="Rating notes">
+                <ModuleDisclosure label="Rating notes" count={presentation.primaryReasons.length}>
+                  <SafetyScoreReasonList messages={presentation.primaryReasons} className="mt-1 text-xs" />
+                </ModuleDisclosure>
+              </section>
+            ) : null}
+            <ShowYourWorkPanel
+              kind="report-card-v9"
+              card={card}
+              methodologyVersion={identity.methodologyVersion}
+              stablecoinId={card.id}
+              stablecoinName={stablecoinName}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

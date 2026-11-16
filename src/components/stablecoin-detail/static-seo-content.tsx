@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { IntentLink } from "@/components/intent-link";
 import { Fragment, type ReactNode } from "react";
-import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
+import { ArrowRight, Bell, ChevronDown, Code2, Rss } from "lucide-react";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
@@ -52,6 +52,7 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { stripTermMarkup } from "@/lib/term-markup";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
@@ -96,14 +97,10 @@ function summarizeText(text: string, maxLength = 280): string {
   return complete.trimEnd() || sentences[0]!.segment.trim();
 }
 
-function formatJurisdiction(coin: StablecoinMeta): string {
+function formatJurisdiction(coin: StablecoinMeta): string | null {
   const jurisdiction = coin.jurisdiction;
-
-  if (!jurisdiction) {
-    return "Not disclosed in the static profile.";
-  }
-
-  return [jurisdiction.country, jurisdiction.regulator, jurisdiction.license].filter(Boolean).join(" / ");
+  if (!jurisdiction) return null;
+  return [jurisdiction.country, jurisdiction.regulator, jurisdiction.license].filter(Boolean).join(" / ") || null;
 }
 
 function renderInlineList(items: readonly ReactNode[]): ReactNode {
@@ -119,10 +116,6 @@ function ContractSummary({ coin }: { coin: StablecoinMeta }) {
   const { count, sample, chainNames, remaining: remainingCount, deploymentLabel } = buildContractDeploymentParts(
     coin.contracts,
   );
-
-  if (count === 0) {
-    return <span>No contract deployments are listed in the static profile.</span>;
-  }
 
   const sampleChains = sample.map((contract, index) => {
     const meta = CHAIN_META[contract.chain];
@@ -199,17 +192,6 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
   );
 }
 
-function buildProfileSentence(coin: StablecoinMeta): string {
-  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
-  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const pegLabel = getProfilePegLabel(
-    coin.flags,
-    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
-  );
-
-  return `${coin.name} (${coin.symbol}) static profile: governance model ${governanceLabel}; backing model ${backingLabel}; peg ${pegLabel}.`;
-}
-
 function describeReserveEvidence(coin: StablecoinMeta): string {
   const proof = coin.proofOfReserves;
   if (proof) {
@@ -217,12 +199,12 @@ function describeReserveEvidence(coin: StablecoinMeta): string {
     return proof.provider ? `${label} from ${proof.provider}` : label;
   }
   if (coin.liveReservesConfig) {
-    return "live reserve feed configured";
+    return "a live reserve feed";
   }
   if (coin.reserves?.length) {
-    return "curated reserve profile";
+    return "a reviewed reserve composition";
   }
-  return "no linked reserve proof in the static profile";
+  return "no proof-of-reserves report listed";
 }
 
 function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): string {
@@ -232,7 +214,7 @@ function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): 
   const freezeControl = describeFreezeControl(buildFreezeControlDescriptor(coin, getResolvedBlacklistStatus(coin.id))).sentence;
 
   if (coin.status === "frozen") {
-    return `${coin.name} is a frozen Pharos archive, not a current safety endorsement. The archived static profile records a ${governanceLabel} governance model, ${backingLabel} backing, ${reserveEvidence}, and notes that ${freezeControl}.`;
+    return `${coin.name} is a frozen Pharos archive, not a current safety endorsement. The archived profile records a ${governanceLabel} governance model, ${backingLabel} backing, ${reserveEvidence}, and notes that ${freezeControl}.`;
   }
 
   if (coin.status === "quarantined" || coin.status === "delisted") {
@@ -479,8 +461,8 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
         : `${coin.name} (${coin.symbol}) is a ${backingLabel} stablecoin tracking ${pegLabel}, with a ${governanceLabel} governance model.`,
     coin.pegMechanism
       ? coin.flags.navToken
-        ? `The static profile records its ${pegLabel} accounting mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
-        : `The static profile records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+        ? `Pharos records its ${pegLabel} accounting mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
+        : `Pharos records its ${pegLabel} peg mechanism as: ${summarizeText(coin.pegMechanism, 240)}`
       : coin.flags.navToken
         ? `Its accounting reference is ${pegLabel}.`
         : `Its peg target is ${pegLabel}.`,
@@ -517,11 +499,30 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: Snapshot
   ];
 }
 
-function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {
+/**
+ * Never asserts an absence the live dossier contradicts: a coin without a
+ * report but with live or reviewed reserve evidence says so and points at the
+ * Reserves module; only a coin with none of the three reads "none listed".
+ */
+function ProofOfReservesValue({ coin, linkReserves }: { coin: StablecoinMeta; linkReserves: boolean }) {
   const proof = coin.proofOfReserves;
 
   if (!proof) {
-    return <span>No proof-of-reserves entry in the static profile.</span>;
+    if (!coin.liveReservesConfig && !coin.reserves?.length) return <span>No proof-of-reserves report listed.</span>;
+    return (
+      <span>
+        {`No attestation report listed; Pharos tracks ${coin.liveReservesConfig ? "a live reserve feed" : "a reviewed reserve composition"}`}
+        {linkReserves ? (
+          <>
+            {" "}in{" "}
+            <a href="#reserves" className={INLINE_LINK_CLASS}>
+              Reserves
+            </a>
+          </>
+        ) : null}
+        .
+      </span>
+    );
   }
 
   const style = getProofOfReservesStyle(proof);
@@ -567,9 +568,152 @@ export function StablecoinDetailSeoContent({
   const alertCommand = buildAlertCommand(coin);
   const [identityAnswer, safetyAnswer] = buildStablecoinFaqItems(coin);
   const historicalContext = STABLECOIN_HISTORICAL_CONTEXT[coin.id];
+  const jurisdiction = formatJurisdiction(coin);
+  const hasContracts = (coin.contracts?.length ?? 0) > 0;
+  const active = isActiveStablecoinMeta(coin);
+
+  // Below the dossier the folded profile is one more module in the page's
+  // run, so its title takes the module scale ("Explore next" above it), not
+  // the pre-hydration card's section scale.
+  const profileHeading = (
+    <h2
+      id="stablecoin-static-profile-title"
+      className={afterDossier ? DETAIL_MODULE_TITLE_CLASS : "text-lg font-semibold tracking-tight text-foreground"}
+    >
+      About {coin.symbol}
+    </h2>
+  );
+  // Facts the record actually carries; a missing field is omitted rather than
+  // printed as "not specified".
+  const profileBody = (
+    <div className="space-y-4">
+      <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4" aria-label="Stablecoin taxonomy">
+        <div>
+          <dt className={FACT_LABEL_CLASS}>Governance</dt>
+          <dd className="mt-1">
+            <IntentLink
+              href={buildGovernanceTaxonomyUrl(coin.flags.governance)}
+              className={LINK_PILL_CLASS}
+              aria-label={`Browse ${governanceLabel} stablecoins`}
+            >
+              {governanceLabel}
+            </IntentLink>
+          </dd>
+        </div>
+        <div>
+          <dt className={FACT_LABEL_CLASS}>Backing</dt>
+          <dd className="mt-1">
+            <IntentLink
+              href={buildBackingTaxonomyUrl(coin.flags.backing)}
+              className={LINK_PILL_CLASS}
+              aria-label={`Browse ${backingLabel} stablecoins`}
+            >
+              {backingLabel}
+            </IntentLink>
+          </dd>
+        </div>
+        <div>
+          <dt className={FACT_LABEL_CLASS}>{coin.flags.navToken ? "Denomination" : "Peg"}</dt>
+          <dd className="mt-1">
+            {pegHref ? (
+              <IntentLink href={pegHref} className={LINK_PILL_CLASS} aria-label={`Browse ${pegLabel} stablecoins`}>
+                {pegLabel}
+              </IntentLink>
+            ) : (
+              <span className={STATIC_PILL_CLASS}>{pegLabel}</span>
+            )}
+          </dd>
+        </div>
+        {(coin.infrastructures ?? []).length > 0 ? (
+          <div>
+            <dt className={FACT_LABEL_CLASS}>Infrastructure</dt>
+            <dd className="mt-1 flex flex-wrap gap-2">
+              {(coin.infrastructures ?? []).map((infrastructure) => (
+                <IntentLink
+                  key={infrastructure}
+                  href={buildInfrastructureTaxonomyUrl(infrastructure)}
+                  className={LINK_PILL_CLASS}
+                  aria-label={`Browse ${getInfrastructureLabel(infrastructure)} infrastructure stablecoins`}
+                >
+                  {getInfrastructureLabel(infrastructure)}
+                </IntentLink>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+        {coin.collateral ? (
+          <div className="col-span-full">
+            <dt className={FACT_LABEL_CLASS}>Collateral</dt>
+            <dd className={FACT_VALUE_CLASS}>{coin.collateral}</dd>
+          </div>
+        ) : null}
+        {coin.pegMechanism ? (
+          <div className="col-span-full">
+            <dt className={FACT_LABEL_CLASS}>{coin.flags.navToken ? "Accounting mechanism" : "Peg mechanism"}</dt>
+            <dd className={FACT_VALUE_CLASS}>{coin.pegMechanism}</dd>
+          </div>
+        ) : null}
+        {jurisdiction ? (
+          <div>
+            <dt className={FACT_LABEL_CLASS}>Jurisdiction</dt>
+            <dd className={FACT_VALUE_CLASS}>{jurisdiction}</dd>
+          </div>
+        ) : null}
+        <div>
+          <dt className={FACT_LABEL_CLASS}>Proof of reserves</dt>
+          <dd className={FACT_VALUE_CLASS}>
+            <ProofOfReservesValue coin={coin} linkReserves={afterDossier && active} />
+          </dd>
+        </div>
+        {hasContracts ? (
+          <div>
+            <dt className={FACT_LABEL_CLASS}>Contracts</dt>
+            <dd className={FACT_VALUE_CLASS}>
+              <ContractSummary coin={coin} />
+            </dd>
+          </div>
+        ) : null}
+        {coin.identifiers?.isin ? (
+          <div>
+            <dt className={FACT_LABEL_CLASS}>ISIN</dt>
+            <dd className={FACT_VALUE_CLASS}>{coin.identifiers.isin.join(", ")}</dd>
+          </div>
+        ) : null}
+      </dl>
+
+      <VariantRelationshipSummary coin={coin} />
+
+      <SameTickerStablecoins coin={coin} />
+
+      {summary ? (
+        <div className="pharos-inset px-3 py-2.5">
+          <p className="pharos-label">
+            AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
+          {(() => {
+            const disclosure = buildAiDisclosureLine(summary);
+            return disclosure ? (
+              <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{disclosure}</p>
+            ) : null;
+          })()}
+        </div>
+      ) : null}
+
+      <p className="border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
+        From Pharos&apos;s reviewed coin profile.
+        {active
+          ? afterDossier
+            ? " Live price, supply, reserve, liquidity and safety data are in the dossier above"
+            : " Live price, supply, reserve, liquidity and safety data load in the dossier on this page"
+          : " This inactive record is not part of current live monitoring"}
+        {summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
+      </p>
+    </div>
+  );
 
   return (
-    <div className="mb-6 space-y-4">
+    <div className={afterDossier ? "mb-2 space-y-4" : "mb-6 space-y-4"}>
       {includeHeading ? (
         <h1 className="sr-only">
           {coin.status === "frozen"
@@ -611,159 +755,67 @@ export function StablecoinDetailSeoContent({
       </section>
       )}
 
-      <section
-        aria-labelledby="stablecoin-static-profile-title"
-        className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5"
-      >
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-          <div className="space-y-3">
-            <div>
-              <p className="pharos-label mb-2">Profile</p>
-              <h2 id="stablecoin-static-profile-title" className="text-lg font-semibold tracking-tight">
-                {coin.symbol} profile facts
-              </h2>
-            </div>
-
-            <p className="text-sm leading-relaxed text-muted-foreground">{buildProfileSentence(coin)}</p>
-
-            <div className="flex flex-wrap gap-2" aria-label="Stablecoin taxonomy">
-              <IntentLink
-                href={buildGovernanceTaxonomyUrl(coin.flags.governance)}
-                className={LINK_PILL_CLASS}
-                aria-label={`Browse ${governanceLabel} stablecoins`}
-              >
-                {governanceLabel}
-              </IntentLink>
-              <IntentLink
-                href={buildBackingTaxonomyUrl(coin.flags.backing)}
-                className={LINK_PILL_CLASS}
-                aria-label={`Browse ${backingLabel} stablecoins`}
-              >
-                {backingLabel}
-              </IntentLink>
-              {pegHref ? (
-                <IntentLink href={pegHref} className={LINK_PILL_CLASS} aria-label={`Browse ${pegLabel} stablecoins`}>
-                  {pegLabel}
+      {afterDossier ? (
+        // Below the dossier the profile repeats what the modules show live, so
+        // it folds closed; the facts stay in the server HTML for crawlers.
+        <section aria-labelledby="stablecoin-static-profile-title" className="border-t border-border/50 pt-4">
+          <details className="group/about">
+            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg py-1 sm:min-h-9 [&::-webkit-details-marker]:hidden">
+              {profileHeading}
+              <span className="hidden text-sm text-muted-foreground sm:inline">Classification, backing and deployments</span>
+              <ChevronDown
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open/about:rotate-180 motion-reduce:transition-none"
+              />
+            </summary>
+            <div className="mt-3">{profileBody}</div>
+          </details>
+        </section>
+      ) : (
+        <section aria-labelledby="stablecoin-static-profile-title" className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
+          {profileHeading}
+          <div className="mt-3">{profileBody}</div>
+          <div className="mt-4 border-t border-border/50 pt-4">
+            <div className="pharos-inset px-3 py-3">
+              <p className="pharos-label">Next actions</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {isActiveStablecoinMeta(coin) ? (
+                  <IntentLink href={compareHref} className={ACTION_LINK_CLASS}>
+                    <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
+                    Compare {coin.symbol}
+                  </IntentLink>
+                ) : null}
+                {isActiveStablecoinMeta(coin) ? (
+                  <IntentLink href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
+                    <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
+                    Telegram alerts
+                  </IntentLink>
+                ) : null}
+                <a href="/feed/digest.xml" className={ACTION_LINK_CLASS}>
+                  <Rss aria-hidden="true" className={ACTION_ICON_CLASS} />
+                  Digest RSS
+                </a>
+                <IntentLink href="/api/" className={ACTION_LINK_CLASS}>
+                  <Code2 aria-hidden="true" className={ACTION_ICON_CLASS} />
+                  API access
                 </IntentLink>
-              ) : (
-                <span className={STATIC_PILL_CLASS}>{pegLabel}</span>
-              )}
-              {(coin.infrastructures ?? []).map((infrastructure) => (
-                <IntentLink
-                  key={infrastructure}
-                  href={buildInfrastructureTaxonomyUrl(infrastructure)}
-                  className={LINK_PILL_CLASS}
-                  aria-label={`Browse ${getInfrastructureLabel(infrastructure)} infrastructure stablecoins`}
-                >
-                  {getInfrastructureLabel(infrastructure)}
-                </IntentLink>
-              ))}
-            </div>
-
-            <VariantRelationshipSummary coin={coin} />
-
-            <SameTickerStablecoins coin={coin} />
-
-            {summary ? (
-              <div className="pharos-inset px-3 py-2.5">
-                <p className="pharos-label">
-                  AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
+              </div>
+              {isActiveStablecoinMeta(coin) ? (
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  Alert command:{" "}
+                  <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
+                    {alertCommand}
+                  </code>
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
-                {(() => {
-                  const disclosure = buildAiDisclosureLine(summary);
-                  return disclosure ? (
-                    <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{disclosure}</p>
-                  ) : null;
-                })()}
-              </div>
-            ) : null}
+              ) : (
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  This record preserves static and historical context; live actions are available only for active assets.
+                </p>
+              )}
+            </div>
           </div>
-
-          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
-            <div>
-              <dt className={FACT_LABEL_CLASS}>Collateral</dt>
-              <dd className={FACT_VALUE_CLASS}>{coin.collateral ?? "Not specified in the static profile."}</dd>
-            </div>
-            <div>
-              <dt className={FACT_LABEL_CLASS}>Peg mechanism</dt>
-              <dd className={FACT_VALUE_CLASS}>{coin.pegMechanism ?? "Not specified in the static profile."}</dd>
-            </div>
-            <div>
-              <dt className={FACT_LABEL_CLASS}>Jurisdiction</dt>
-              <dd className={FACT_VALUE_CLASS}>{formatJurisdiction(coin)}</dd>
-            </div>
-            <div>
-              <dt className={FACT_LABEL_CLASS}>Proof of reserves</dt>
-              <dd className={FACT_VALUE_CLASS}>
-                <ProofOfReservesValue coin={coin} />
-              </dd>
-            </div>
-            <div>
-              <dt className={FACT_LABEL_CLASS}>Contracts</dt>
-              <dd className={FACT_VALUE_CLASS}>
-                <ContractSummary coin={coin} />
-              </dd>
-            </div>
-            {coin.identifiers?.isin ? (
-              <div>
-                <dt className={FACT_LABEL_CLASS}>ISIN</dt>
-                <dd className={FACT_VALUE_CLASS}>{coin.identifiers.isin.join(", ")}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </div>
-
-        {afterDossier ? null : (
-        <div className="mt-4 border-t border-border/50 pt-4">
-          <div className="pharos-inset px-3 py-3">
-            <p className="pharos-label">Next actions</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {isActiveStablecoinMeta(coin) ? (
-                <IntentLink href={compareHref} className={ACTION_LINK_CLASS}>
-                  <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
-                  Compare {coin.symbol}
-                </IntentLink>
-              ) : null}
-              {isActiveStablecoinMeta(coin) ? (
-                <IntentLink href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
-                  <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
-                  Telegram alerts
-                </IntentLink>
-              ) : null}
-              <a href="/feed/digest.xml" className={ACTION_LINK_CLASS}>
-                <Rss aria-hidden="true" className={ACTION_ICON_CLASS} />
-                Digest RSS
-              </a>
-              <IntentLink href="/api/" className={ACTION_LINK_CLASS}>
-                <Code2 aria-hidden="true" className={ACTION_ICON_CLASS} />
-                API access
-              </IntentLink>
-            </div>
-            {isActiveStablecoinMeta(coin) ? (
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Alert command:{" "}
-                <code className="rounded-sm bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
-                  {alertCommand}
-                </code>
-              </p>
-            ) : (
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                This record preserves static and historical context; live actions are available only for active assets.
-              </p>
-            )}
-          </div>
-        </div>
-        )}
-
-        <p className="mt-4 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
-          Source: Pharos registry profile fields.
-          {isActiveStablecoinMeta(coin)
-            ? " Live price, supply, reserve, liquidity, event, and safety data load in the interactive dossier on this page"
-            : " This inactive record does not participate in current live monitoring"}
-          {summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
-        </p>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

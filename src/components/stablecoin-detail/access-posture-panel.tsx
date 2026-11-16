@@ -11,6 +11,7 @@ import { EvidenceModule } from "@/components/stablecoin-detail/evidence-module";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
+import { FREEZE_STATUS_DISPLAY } from "@/components/stablecoin-detail/freeze-seizure-card";
 import { ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE } from "@shared/lib/classification";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewDeployment, TransferReviewView } from "@/lib/transfer-review";
@@ -27,6 +28,39 @@ const SCORED_ACCESS_KEYS: Record<string, true> = {
 };
 
 const MIXED_POSTURE_NOTE = "Posture differs by chain. The scored values summarise the strictest.";
+
+/**
+ * Reader copy per scored row. "Primary exit" is the best route the Exit
+ * pillar scores, often a market, so it reads "Best exit path" and never
+ * against the hero's issuer redeemability (USDe: whitelisted redemption, a
+ * permissionless market exit).
+ */
+const SCORED_ROW_COPY: Record<string, { label?: string; hint: string }> = {
+  transfer: { hint: "Whether anyone can send and receive the token, or only approved addresses." },
+  freezeExposure: { hint: "Whether a holder's balance can be frozen, directly or through upstream assets." },
+  primaryExit: {
+    label: "Best exit path",
+    hint: "Access needed for the best exit route the Exit pillar scores. This is often a market, not issuer redemption.",
+  },
+  governance: { hint: "Who can change the token's contracts and parameters." },
+};
+
+/** Freeze exposure in the Freeze & seizure module's words; "None known" stays as published. */
+const FREEZE_EXPOSURE_WORDS: Record<string, string> = {
+  Direct: FREEZE_STATUS_DISPLAY.freezable.label,
+  Upstream: FREEZE_STATUS_DISPLAY.inherited.label,
+  Possible: FREEZE_STATUS_DISPLAY.possible.label,
+};
+
+type AccessRowView = StablecoinSafetyScoreV9AccessRow & { hint?: string };
+
+/** A scored row with its reader label, value and hint; other rows pass through. */
+function presentRow(row: StablecoinSafetyScoreV9AccessRow): AccessRowView {
+  const copy = SCORED_ROW_COPY[row.key];
+  if (!copy) return row;
+  const value = row.key === "freezeExposure" ? (FREEZE_EXPOSURE_WORDS[row.value] ?? row.value) : row.value;
+  return { key: row.key, label: copy.label ?? row.label, value, hint: copy.hint };
+}
 
 export type AccessPostureVariant = "rail" | "strip";
 
@@ -69,13 +103,25 @@ function collectReviewSources(review: TransferReviewView): EvidenceFooterSource[
   return [...byKey.values()];
 }
 
-/** "How this was verified · N deployments": the per-chain evidence behind the enums. */
-function VerificationDisclosure({ review, children }: { review: TransferReviewView; children?: ReactNode }) {
+/**
+ * "How this was verified · N deployments": the per-chain evidence behind the
+ * enums. `mixedNote` states that posture differs by chain; the strip leaves it
+ * out, since its "Strictest across chains" chip already says so.
+ */
+function VerificationDisclosure({
+  review,
+  mixedNote = true,
+  children,
+}: {
+  review: TransferReviewView;
+  mixedNote?: boolean;
+  children?: ReactNode;
+}) {
   const count = review.deployments.length;
   return (
     <ModuleDisclosure label={`How this was verified · ${count} ${count === 1 ? "deployment" : "deployments"}`}>
       <div className="mt-1 border-t border-border/50 pt-3">
-        {review.mixedPosture ? (
+        {mixedNote && review.mixedPosture ? (
           <p className="mb-2 text-2xs leading-snug text-muted-foreground">{MIXED_POSTURE_NOTE}</p>
         ) : null}
         <ul className="space-y-3">
@@ -146,7 +192,8 @@ export function AccessPosturePanel({
 }) {
   if (rows.length === 0) return null;
 
-  const scored = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] === true);
+  const scored: AccessRowView[] = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] === true).map(presentRow);
+  const railRows: readonly AccessRowView[] = scored.length > 0 ? scored : rows;
   const diagnostics = rows.filter((row) => SCORED_ACCESS_KEYS[row.key] !== true);
 
   if (variant === "rail") {
@@ -158,9 +205,9 @@ export function AccessPosturePanel({
       >
         <div className="px-4 pb-4">
           <dl className="space-y-1">
-            {(scored.length > 0 ? scored : rows).map((row) => (
+            {railRows.map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-3 text-xs">
-                <dt className="text-muted-foreground">{row.label}</dt>
+                <dt className="text-muted-foreground" title={row.hint}>{row.label}</dt>
                 <dd className="text-right font-medium text-foreground">{row.value}</dd>
               </div>
             ))}
@@ -198,7 +245,10 @@ export function AccessPosturePanel({
         scored.length > 0 ? (
           <FactGrid
             aria-label="Scored access posture"
-            items={scored.map((row) => ({ key: row.key, label: row.label, value: row.value }))}
+            // Three facts share one row at every width: two tracks would strand the third.
+            className={scored.length === 3 ? "grid-cols-3" : undefined}
+            // Enum words read in the sans, never mono capitals.
+            items={scored.map((row) => ({ key: row.key, label: row.label, value: row.value, valueStyle: "text", title: row.hint }))}
           />
         ) : null
       }
@@ -212,7 +262,7 @@ export function AccessPosturePanel({
       folds={
         <>
           {diagnostics.length > 0 ? <DiagnosticsDisclosure rows={diagnostics} /> : null}
-          {review !== null ? <VerificationDisclosure review={review} /> : null}
+          {review !== null ? <VerificationDisclosure review={review} mixedNote={false} /> : null}
         </>
       }
       footer={

@@ -124,7 +124,7 @@ describe("BlacklistSection", () => {
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
   });
 
-  it("folds the event log behind a counted summary and tags a shared amount source once", () => {
+  it("shows the event log open and tags a shared amount source once", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
     vi.mocked(useBlacklistEventsPage).mockReturnValueOnce({
       ...ONE_EVENT_PAGE,
@@ -136,9 +136,10 @@ describe("BlacklistSection", () => {
 
     render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
 
-    const fold = screen.getByTestId("stablecoin-blacklist-events-table").closest("details");
-    expect(fold?.open).toBe(false);
-    expect(fold?.querySelector("summary")?.textContent).toMatch(/Latest events.*2/);
+    // The log is the card's content: no fold, and no count in the copy that could disagree with it.
+    expect(screen.getByTestId("stablecoin-blacklist-events-table").closest("details")).toBeNull();
+    expect(screen.queryByText(/Latest 10/)).toBeNull();
+    expect(screen.getAllByRole("row")).toHaveLength(3);
     expect(screen.getAllByText(/historical/i).map((el) => el.textContent)).toEqual(["Amount source: historical"]);
   });
 

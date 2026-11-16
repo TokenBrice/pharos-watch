@@ -217,6 +217,8 @@ describe("MintAuthoritySection", () => {
 
     const tags = container.querySelectorAll("[data-control-role='limiting']");
     expect(tags).toHaveLength(tagged ? 1 : 0);
+    // The tag's tooltip says what the role means for the score, in plain words.
+    if (tagged) expect(tags[0]!.getAttribute("title")).toBe("The lowest eligible Control input: it sets the Economic Control score");
     expect(container.textContent!.includes(CONTROL_COMPONENT_ROLE_LABELS.limiting)).toBe(tagged);
   });
 
@@ -239,9 +241,24 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
-    expect(html).toContain(">70 · Governed<");
+    // The pill names its score; the figure in mono, the words in the sans.
+    expect(html).toContain('Mint score <span class="pharos-numeric">70</span> · Governed<');
     expect(html).toContain("Inherits USDe mint risk");
     expect(html).toMatch(/href="\/stablecoin\/usde-ethena\/?#mint-authority"/);
+  });
+
+  it("names a band without a published figure once, in the band's own word", () => {
+    const html = renderToStaticMarkup(
+      <MintAuthoritySection
+        profile={{
+          ...REVIEWED_PROFILE,
+          score: { ...REVIEWED_PROFILE.score!, score: null, bandKey: "hardened", bandLabel: "Hardened", compactLabel: "Hardened · no privileged mint" },
+        }}
+        symbol="BOLD"
+      />,
+    );
+    expect(html).not.toContain("no privileged mint<");
+    expect(html).toMatch(/data-slot="badge"[^>]*>Hardened</);
   });
 
   it("renders control and source link destinations and keeps methodology in the title's help glyph only", () => {

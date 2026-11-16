@@ -59,15 +59,15 @@ export function StablecoinModuleTitle({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       {resolvedSymbol ? (
-        <>
-          <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={26} />
-          <span className="shrink-0 text-sm font-semibold text-foreground" aria-hidden="true">
-            {resolvedSymbol}
-          </span>
-          <span className="text-muted-foreground/50" aria-hidden="true">
-            ·
-          </span>
-        </>
+        // The subject tag is for cards read out of context (screenshots,
+        // shares) at md+. On a phone the page already names the coin above,
+        // so ~25 repeated "logo TICKER ·" prefixes would only push titles to
+        // wrap; the heading keeps the symbol for assistive tech.
+        <span className="hidden shrink-0 items-center gap-2 md:inline-flex">
+          <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={20} />
+          <span className="text-sm font-semibold text-foreground/80" aria-hidden="true">{resolvedSymbol}</span>
+          <span className="text-muted-foreground/50" aria-hidden="true">·</span>
+        </span>
       ) : null}
       <DetailSectionTitle as={as} className={className} id={id}>
         {/* The ticker above is visual only. The heading itself names the coin

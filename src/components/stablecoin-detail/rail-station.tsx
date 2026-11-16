@@ -105,7 +105,7 @@ export function RailArrow({
           <div className={cn("hidden items-center", classes.horizontal)}>
             <HorizontalArrowHead />
           </div>
-          <div className={cn("ml-4 flex h-4 flex-col items-center", classes.vertical)}>
+          <div className={cn("ml-4 flex h-4 flex-col items-center self-start", classes.vertical)}>
             <VerticalArrowHead />
           </div>
         </div>
@@ -113,7 +113,7 @@ export function RailArrow({
     }
     return (
       <div className={classes.labelled}>
-        <div aria-hidden="true" className={cn("ml-4 flex h-4 flex-col items-center", classes.vertical)}>
+        <div aria-hidden="true" className={cn("ml-4 flex h-4 flex-col items-center self-start", classes.vertical)}>
           <VerticalArrowHead />
         </div>
         {labelNode}

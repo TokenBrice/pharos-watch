@@ -3,9 +3,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, render, within } from "@testing-library/react";
-import { RedemptionRouteSection } from "../redemption-backstop-card";
+import { buildExitRouteUsage, RedemptionRouteSection, type ExitRouteUsageRow } from "../redemption-backstop-card";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
-import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus, resolveScoreTier5, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
+import {
+  formatRedemptionDocsProvenance,
+  formatRedemptionRouteStatus,
+  resolveScoreTier5,
+  SCORE_TIER_5_CLASSES,
+  SCORE_TIER_5_POLICY,
+} from "@shared/lib/classification";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
@@ -74,6 +80,23 @@ function moduleRoot(): HTMLElement {
   return root;
 }
 
+/** "How Exit uses this route" as cells keyed by role; throws when the card has no Exit breakdown. */
+function usageCells(
+  card: SafetyScoreV9CurrentCard,
+  entry: RedemptionBackstopEntry | null,
+): Partial<Record<ExitRouteUsageRow["key"], ExitRouteUsageRow>> {
+  const rows = buildExitRouteUsage(card, entry);
+  if (!rows) throw new Error("no Exit usage rows");
+  return Object.fromEntries(rows.map((row) => [row.key, row]));
+}
+
+/** Each cell's why stays within eight words. */
+function expectShortNotes(cells: ReturnType<typeof usageCells>) {
+  for (const row of Object.values(cells)) {
+    if (row?.note) expect(row.note.trim().split(/\s+/).length).toBeLessThanOrEqual(8);
+  }
+}
+
 /** The one match on the summary layer; the folds may restate the same text. */
 function onSummaryLayer(matches: readonly HTMLElement[]): HTMLElement {
   const visible = matches.filter((element) => element.closest("details") === null);
@@ -114,7 +137,8 @@ describe("RedemptionBackstopCard", () => {
     if (tier === null) {
       expect(spectrum).toBeNull();
     } else {
-      expect(spectrum?.getAttribute("aria-label")).toBe(`Route score ${score} of 100 on the redemption score track.`);
+      const band = SCORE_TIER_5_POLICY.find((entry) => entry.key === tier)!.label;
+      expect(spectrum?.getAttribute("aria-label")).toBe(`Route score ${score} of 100, in the ${band} band of the redemption score track.`);
       expect(spectrum?.querySelectorAll(".h-1\\.5")[["t0", "t35", "t50", "t65", "t80"].indexOf(tier)]?.className)
         .toContain(SCORE_TIER_5_CLASSES[tier].fill);
       expect(Array.from(spectrum!.querySelectorAll("[aria-hidden='true'] > span")).map((node) => node.textContent))
@@ -174,11 +198,11 @@ describe("RedemptionBackstopCard", () => {
       components: primary.components.map((component) => ({ ...component, score: 100 })),
       capsApplied: [],
     };
-    render(<RedemptionRouteSection entry={entry} reportCard={card} coinId={entry.stablecoinId} />);
-    const line = within(moduleRoot()).getByText(
-      (content, element) => element?.tagName === "SPAN" && content.includes(`as ${Math.round(total)}, not 65`),
-    );
-    expect(line.textContent).toContain("standalone score carries");
+    const cells = usageCells(card, entry);
+    expect(cells.counted?.figure).toBe(Math.round(total));
+    expect(cells.counted?.note).toMatch(/^Route score carries its offchain-issuer cap at \d+$/);
+    expect(cells.best?.value).toBe("This route");
+    expectShortNotes(cells);
   });
 
   it.each(["new"])("reconciles exact route identity across opaque generation %s", (generation) => {
@@ -189,8 +213,9 @@ describe("RedemptionBackstopCard", () => {
       routeId: `redemption:${BASE_ENTRY.stablecoinId}:${BASE_ENTRY.routeFamily}`,
       lane: "redemption", score: BASE_ENTRY.score,
     };
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
-    expect(within(moduleRoot()).getByText(/counts this route at the same score/)).toBeTruthy();
+    const cells = usageCells(card, BASE_ENTRY);
+    expect(cells.counted).toMatchObject({ figure: BASE_ENTRY.score, note: "Same as the route score" });
+    expect(cells.best?.value).toBe("This route");
   });
 
   it.each([
@@ -210,25 +235,42 @@ describe("RedemptionBackstopCard", () => {
       score: 37, included: true, exclusionReason: null, confidenceDimensions: null,
       capacityEvidenceTier: "documented", rawSameNotionalCostBps: null, capacity: null,
     }] as unknown as typeof exit.alternatives;
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
-    expect(within(moduleRoot()).queryByText(/counts this route|scores this route at/)).toBeNull();
-    expect(within(moduleRoot()).getByText(/Exit pillar selects/)).toBeTruthy();
+    const selected = usageCells(card, BASE_ENTRY);
+    expect(selected.counted).toMatchObject({ figure: null, value: "Not counted", note: "Not in the Exit evaluation" });
+    expect(selected.best?.figure).toBe(BASE_ENTRY.score);
+    expect(selected.best?.value).not.toBe("This route");
     exit.primaryRoute.score = null;
-    const noQualifiedRoute = renderToStaticMarkup(
-      <RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />,
-    );
-    expect(noQualifiedRoute).toContain("is not in the Exit evaluation");
-    expect(noQualifiedRoute).not.toContain("Exit cannot score it");
-    expect(noQualifiedRoute).not.toContain("37 in Exit");
+    const noQualifiedRoute = usageCells(card, BASE_ENTRY);
+    expect(noQualifiedRoute.counted).toMatchObject({ figure: null, value: "Not counted" });
+    expect(noQualifiedRoute.best?.value).toBe("None counted");
   });
 
   it("presents one standalone route score without the legacy effective exit score", () => {
-    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
+    render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
+    const root = moduleRoot();
+    const pills = Array.from(root.querySelectorAll<HTMLElement>("[data-slot='badge'][title^=\"This route's own score\"]"));
 
-    expect(html).toContain("Issuer redemption route");
-    expect(html).toContain("Standalone route score");
-    expect(html).toContain("65/100");
-    expect(html).not.toContain("58/100");
+    expect(within(root).getByRole("heading", { name: /Issuer redemption route/ })).toBeTruthy();
+    // The pill names what it scores: words in the sans, the figure in mono.
+    expect(pills.length).toBeGreaterThan(0);
+    expect(pills[0]!.textContent).toBe("Route score 65");
+    expect(pills[0]!.querySelector(".pharos-numeric")?.textContent).toBe("65");
+    expect(root.textContent).not.toContain("58");
+  });
+
+  it("states the route score only in the pill and on its track, and no verdict restating the rail", () => {
+    const card = makeV9Card();
+    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    const root = moduleRoot();
+    const summary = Array.from(root.querySelectorAll<HTMLElement>("p, [role='group']"))
+      .filter((node) => node.closest("details") === null && node.closest("[data-slot='badge']") === null)
+      .map((node) => node.textContent ?? "")
+      .join(" ");
+    expect(summary).not.toContain("Route score");
+    expect(Array.from(root.querySelectorAll("p.text-pretty")).filter((node) => node.closest("details") === null)).toHaveLength(0);
+    // The track runs the full width of the module when it stacks over the rail.
+    const track = root.querySelector('[aria-label^="Route score"]')!.parentElement!;
+    expect(track.className).not.toContain("max-w-");
   });
 
   it("reconciles a different Exit score for the same route in place, naming the published cause", () => {
@@ -258,13 +300,15 @@ describe("RedemptionBackstopCard", () => {
         score: standalone[component.key] ?? component.score,
       })),
     };
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    const cells = usageCells(card, BASE_ENTRY);
+    expect(cells.counted).toMatchObject({ figure: 58, note: "0.9 evidence-confidence factor" });
+    expectShortNotes(cells);
 
-    const line = within(moduleRoot()).getByText(
-      (content, element) => element?.tagName === "SPAN" && content.includes("58") && content.includes("65"),
-    );
-    expect(line.textContent).toMatch(/0\.9/);
-    expect((line.textContent ?? "").trim().split(/\s+/).length).toBeLessThanOrEqual(25);
+    // The two cells sit on the summary layer as one labelled group.
+    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
+    const group = within(moduleRoot()).getByRole("group", { name: "How Exit uses this route" });
+    expect(group.closest("details")).toBeNull();
+    expect(group.textContent).toContain("Counted in Exit58");
   });
 
   it("explains why no route qualifies when the Exit pillar credits none, with the pillar score", () => {
@@ -288,14 +332,12 @@ describe("RedemptionBackstopCard", () => {
       rawSameNotionalCostBps: null,
       capacity: null,
     }];
-    render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={card} coinId={BASE_ENTRY.stablecoinId} />);
-
-    const line = within(moduleRoot()).getByText(
-      (content, element) =>
-        element?.tagName === "SPAN" && content.includes("65") && content.includes(String(Math.round(pillarScore))),
-    );
-    expect(line.closest("details")).toBeNull();
-    expect((line.textContent ?? "").trim().split(/\s+/).length).toBeLessThanOrEqual(25);
+    const cells = usageCells(card, BASE_ENTRY);
+    expect(cells.counted).toMatchObject({ figure: null, value: "Not counted" });
+    expect(cells.counted?.note).toMatch(/^No supported quote /);
+    expect(cells.best).toMatchObject({ figure: null, value: "None counted" });
+    expect(cells.best?.note).toContain(String(Math.round(pillarScore)));
+    expectShortNotes(cells);
   });
 
   describe("an unrated route the Exit pillar still scores", () => {
@@ -330,36 +372,34 @@ describe("RedemptionBackstopCard", () => {
       };
     }
 
-    /** The summary-layer verdict and the reconciliation line naming Exit's score. */
+    /** The summary-layer verdict, the "Not rated" pills and Exit's cells for this route. */
     function renderSummary(place: typeof asAlternative, tier: Tier, entry = unrated) {
       const card = makeV9Card();
       if (!card.breakdowns?.exit.primaryRoute) throw new Error("fixture lacks an Exit primary route");
       place(card, tier);
+      const cells = usageCells(card, entry);
       const { unmount } = render(<RedemptionRouteSection entry={entry} reportCard={card} coinId={entry.stablecoinId} />);
       const root = moduleRoot();
-      const line = within(root).getByText(
-        (content, element) =>
-          element?.tagName === "SPAN" && element.closest("details") === null && content.includes(String(EXIT_SCORE)),
-      );
-      const reconciliation = line.textContent ?? "";
-      const verdict = (line.closest("p")?.textContent ?? "").replace(reconciliation, "").trim();
-      const pills = within(root).queryAllByText(buildRedemptionBackstopCardViewModel(entry).heroScoreLabel).length;
+      const verdict = root.querySelector("p.text-sm")?.textContent ?? "";
+      const pills = root.querySelectorAll("[data-slot='badge'][title^='Not rated: ']").length;
       unmount();
-      return { verdict, reconciliation, pills };
+      return { verdict, cells, pills };
     }
 
     it.each([
       ["Exit selects another route", asAlternative],
       ["Exit selects this route", asPrimary],
-    ])("keeps the NR pill and names Exit's own score with the evidence it read when %s", (_, place) => {
+    ])("keeps the Not rated pill and names Exit's own score with the evidence it read when %s", (_, place) => {
       const documented = renderSummary(place, "documented");
       const live = renderSummary(place, "live-direct");
 
       expect(documented.pills).toBeGreaterThan(0);
+      expect(documented.verdict).toBe("Only eventual capacity is published, and the route score needs immediate capacity.");
       expect(documented.verdict).not.toContain(String(EXIT_SCORE));
-      // The Exit number is explained by its evidence, so the line follows the published tier.
-      expect(documented.reconciliation).not.toBe(live.reconciliation);
-      expect(documented.reconciliation.trim().split(/\s+/).length).toBeLessThanOrEqual(25);
+      expect(documented.cells.counted?.figure).toBe(EXIT_SCORE);
+      // The Exit number is explained by its evidence, so the why follows the published tier.
+      expect(documented.cells.counted?.note).not.toBe(live.cells.counted?.note);
+      expectShortNotes(documented.cells);
     });
 
   });
@@ -463,6 +503,7 @@ describe("RedemptionBackstopCard", () => {
       score: null,
       sourceMode: "static",
       resolutionState: "missing-capacity",
+      routeStatus: "unknown",
       modelConfidence: "low",
     };
     const scoredImages = render(<RedemptionBackstopCard entry={BASE_ENTRY} />).container.querySelectorAll("[role='img']").length;
@@ -473,13 +514,47 @@ describe("RedemptionBackstopCard", () => {
     // `MethodologyHint` draws its trigger once per breakpoint branch (sheet
     // below md, popover from md), one of them CSS-hidden, so the pill may
     // occur twice in the DOM.
-    expect(within(container).getAllByText(viewModel.heroScoreLabel).length).toBeGreaterThan(0);
+    expect(within(container).getAllByText("Not rated").length).toBeGreaterThan(0);
     expect(onSummaryLayer(within(container).getAllByText(viewModel.modelConfidenceLabel))).toBeTruthy();
-    const resolutionState = viewModel.resolutionStateLabel.toLowerCase();
-    expect(within(container).getByText((content) => content.toLowerCase() === resolutionState)).toBeTruthy();
+    // The verdict states the gap once; no "missing capacity" or "status unknown" chip restates it.
+    expect(onSummaryLayer(within(container).getAllByText("No executable redemption capacity could be measured."))).toBeTruthy();
+    expect(container.textContent).not.toMatch(/missing capacity|status unknown/i);
 
     const summary = within(container).getByText(viewModel.resolutionSummary!);
     expect(summary.closest("details")?.querySelector("summary")?.textContent).toMatch(/Review notes/);
+  });
+
+  it("collapses an unrated route Exit does not count into one line and promotes Exit's best route", () => {
+    const unrated: RedemptionBackstopEntry = {
+      ...BASE_ENTRY, score: null, capacityScore: null, resolutionState: "missing-capacity", routeStatus: "unknown",
+    };
+    const card = makeV9Card();
+    const primary = card.breakdowns!.exit.primaryRoute!;
+    card.breakdowns!.exit.alternatives = [{
+      key: `redemption:gen-1:redemption:${unrated.stablecoinId}:${unrated.routeFamily}`,
+      routeId: `redemption:${unrated.stablecoinId}:${unrated.routeFamily}`,
+      lane: "redemption",
+      label: "Issuer redemption",
+      routeFamily: "issuer-redemption",
+      score: null,
+      included: false,
+      exclusionReason: "unresolved-exit-output",
+      confidenceDimensions: null,
+      capacityEvidenceTier: "unknown",
+      rawSameNotionalCostBps: null,
+      capacity: null,
+    }];
+    render(<RedemptionRouteSection entry={unrated} reportCard={card} coinId={unrated.stablecoinId} />);
+    const root = moduleRoot();
+
+    expect(root.querySelector("p.text-sm")?.textContent).toBe(
+      "No executable redemption capacity could be measured; Exit does not count it either (output asset unresolved).",
+    );
+    // What is known is promoted as one plain fact, not a half-empty inset.
+    const best = within(root).getByRole("group", { name: "How Exit uses this route" });
+    expect(best.textContent).toContain(`Exit's best route${Math.round(primary.score!)}`);
+    expect(best.closest(".pharos-inset")).toBeNull();
+    expect(root.textContent).not.toMatch(/Not counted|Not credited|status unknown|missing capacity/i);
   });
 
   it("puts source citations and provenance inside the fold and the review date on the footer line", () => {
@@ -513,7 +588,7 @@ describe("RedemptionBackstopCard", () => {
     const root = moduleRoot();
 
     // One pill per `MethodologyHint` breakpoint branch; see above.
-    expect(within(root).getAllByText("NR").length).toBeGreaterThan(0);
+    expect(within(root).getAllByText("Not rated").length).toBeGreaterThan(0);
     const routeStatus = formatRedemptionRouteStatus("degraded").toLowerCase();
     expect(within(root).getByText((content) => content.toLowerCase() === routeStatus)).toBeTruthy();
     expect(within(root).getByText(reason).closest("details")).not.toBeNull();
@@ -578,7 +653,7 @@ describe("RedemptionRouteSection without a scored route", () => {
     (row) => NO_HOLDER_REASON_CODES.includes(row.reasonCode) && row.evidenceUrls.length > 0,
   );
 
-  it("renders the reviewed no-holder disposition as a strip with its reason, reconciliation and folded notes", () => {
+  it("renders the reviewed no-holder disposition as a strip with its reason, Exit's best route and folded notes", () => {
     if (!disposition) throw new Error("no reviewed no-holder disposition with evidence");
     const card = makeV9Card();
     const primary = card.breakdowns?.exit.primaryRoute;
@@ -589,12 +664,11 @@ describe("RedemptionRouteSection without a scored route", () => {
 
     expect(root.getAttribute("data-evidence-module")).toBe("strip");
     expect(root.querySelector("h3")).not.toBeNull();
-    // Verdict and reconciliation share the always-visible summary paragraph.
-    const routeScore = String(Math.round(primary.score));
-    const summaryParagraphs = Array.from(root.querySelectorAll("p")).filter(
-      (paragraph) => paragraph.closest("details") === null && (paragraph.textContent ?? "").includes(routeScore),
-    );
-    expect(summaryParagraphs).toHaveLength(1);
+    // Exit's best route sits on the summary layer as one labelled cell.
+    const group = within(root).getByRole("group", { name: "Where the Exit pillar looks instead" });
+    expect(group.closest("details")).toBeNull();
+    expect(group.textContent).toContain(`Exit's best route${Math.round(primary.score)}`);
+    expect(usageCells(card, null)).toEqual({ best: expect.objectContaining({ figure: Math.round(primary.score) }) });
 
     const notes = within(root).getByText(disposition.blocker);
     expect(notes.closest("details")?.open).toBe(false);

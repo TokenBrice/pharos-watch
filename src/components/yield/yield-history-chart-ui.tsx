@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ControlPillToggle } from "@/components/control-pill-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatChartDate } from "@shared/lib/format";
-import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK } from "@/lib/chart-theme";
 import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import { toTimestampMs } from "@/lib/time";
@@ -41,7 +41,7 @@ interface AxisTickProps {
   };
 }
 
-interface WarningDotProps {
+interface MarkerDotProps {
   cx?: number;
   cy?: number;
   payload?: YieldHistoryChartSeriesPoint;
@@ -90,28 +90,7 @@ export function YAxisTick({
   );
 }
 
-export function WarningDot({ cx, cy, payload, active = false }: WarningDotProps) {
-  if (typeof cx !== "number" || typeof cy !== "number" || !payload || payload.apy == null || (selectInvestmentWarningSignals(payload.warningSignals).length === 0 && payload.warningSignalsStatus !== "unreadable")) {
-    return null;
-  }
-
-  if (payload.warningSignalsStatus === "unreadable") {
-    return <circle cx={cx} cy={cy} r={active ? 5 : 4} fill="var(--color-background)" stroke="var(--color-muted-foreground)" strokeWidth={2} aria-label="Warnings unreadable" />;
-  }
-
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={active ? 5 : 4}
-      fill={CHART_AMBER}
-      stroke="var(--color-background)"
-      strokeWidth={active ? 2 : 1.5}
-    />
-  );
-}
-
-export function SourceSwitchDot({ cx, cy, payload, active = false }: WarningDotProps) {
+export function SourceSwitchDot({ cx, cy, payload, active = false }: MarkerDotProps) {
   if (typeof cx !== "number" || typeof cy !== "number" || !payload?.sourceSwitch) {
     return null;
   }
@@ -241,6 +220,8 @@ export function YieldHistoryTooltip({
   );
 }
 
+const formatRangeLabel = (days: number) => (days === 365 ? "1y" : `${days}d`);
+
 export function Controls({
   compact,
   days,
@@ -277,31 +258,16 @@ export function Controls({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup
-          type="single"
-          value={String(days)}
-          onValueChange={(value) => {
-            if (!value) return;
-            onDaysChange(Number(value));
-          }}
-          variant="outline"
-          size={compact ? "sm" : "default"}
-          className="rounded-full border border-border/60 bg-background/60 p-1"
-          aria-label="Select yield history time range"
-        >
-          {PRESET_DAYS.map((preset) => (
-            <ToggleGroupItem
-              key={preset}
-              value={String(preset)}
-              className={cn(
-                "rounded-full border-0 font-mono text-xs text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-                compact ? "h-7 px-2.5" : "h-8 px-3",
-              )}
-            >
-              {preset === 365 ? "1y" : `${preset}d`}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        {/* The page's one range control: the segmented track Market data uses too. */}
+        <ControlPillToggle
+          variant="segmented"
+          ariaLabel="Select yield history time range"
+          options={PRESET_DAYS}
+          value={days}
+          onChange={onDaysChange}
+          formatLabel={formatRangeLabel}
+          buttonClassName={compact ? "min-h-7 px-2.5" : undefined}
+        />
 
         {availableSources.length > 0 && !hideSourceSelector && onSourceChange ? (
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">

@@ -13,7 +13,6 @@ import {
   REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
   type RedemptionCoverageReasonCode,
 } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
-import { countSummaryWords, SUMMARY_VERDICT_MAX_WORDS } from "@shared/lib/summary-budget";
 import { formatPercent, formatV9PresentationUsd } from "@shared/lib/format";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
@@ -31,6 +30,7 @@ import { MethodologyHint } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { EvidenceModule, type EvidenceModuleVariant } from "@/components/stablecoin-detail/evidence-module";
+import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { StationLabel } from "@/components/stablecoin-detail/rail-station";
 import { RedemptionRouteRail } from "@/components/stablecoin-detail/redemption-route-rail";
@@ -99,15 +99,14 @@ const STANDALONE_CAP_LABELS: Record<string, string> = {
   "config-cap": "Reviewed route cap",
 };
 
-/** Verb phrases for an Exit route the pillar evaluated but did not credit. */
-const EXIT_EXCLUSION_CLAUSES: Record<string, (notional: string | null) => string> = {
-  "unsupported-same-notional-route": (notional) =>
-    `lacks supported ${notional ? `${notional} ` : ""}same-notional evidence`,
-  "missing-same-notional-route": (notional) => `has no ${notional ? `${notional} ` : ""}same-notional measurement`,
-  "unproven-settlement-bound": () => "has no proven settlement bound",
-  "unresolved-exit-output": () => "has an unresolved output asset",
-  "missing-runtime-route-evidence": () => "lacks current runtime evidence",
-  "incomparable-route-requests": () => "was measured against a different request",
+/** Why the Exit pillar evaluated this route but did not credit it, in at most eight words. */
+const EXIT_EXCLUSION_NOTES: Record<string, (size: string) => string> = {
+  "unsupported-same-notional-route": (size) => `No supported quote ${size}`,
+  "missing-same-notional-route": (size) => `Not measured ${size}`,
+  "unproven-settlement-bound": () => "No proven settlement time",
+  "unresolved-exit-output": () => "Output asset unresolved",
+  "missing-runtime-route-evidence": () => "Lacks current runtime evidence",
+  "incomparable-route-requests": () => "Measured against a different request",
 };
 
 function MetadataBadgeList({ items }: { items: readonly { label: string; value: string }[] }) {
@@ -134,26 +133,39 @@ const NO_HOLDER_ROUTE_REASONS: Partial<Record<RedemptionCoverageReasonCode, stri
 };
 
 /**
- * Why the standalone route score is missing. Each sentence names the
- * standalone score, so it never reads as the route being unscored everywhere:
- * the Exit pillar can still score the same route from its own evidence.
+ * Why the route has no score, without a "not rated" prefix: the header pill
+ * says "Not rated", so the verdict states only the reason. The Exit pillar
+ * can still score the same route from its own evidence.
  */
 const NOT_RATED_REASONS: Record<Exclude<RedemptionBackstopEntry["resolutionState"], "resolved">, string> = {
-  "missing-capacity": "No standalone route score: no executable redemption capacity could be measured.",
-  "missing-cache": "No standalone route score: the asset was missing from the current supply snapshot.",
-  impaired: "No standalone route score: current evidence contradicts par redemption on this route.",
-  failed: "No standalone route score: the last route refresh failed.",
+  "missing-capacity": "No executable redemption capacity could be measured",
+  "missing-cache": "The asset was missing from the current supply snapshot",
+  impaired: "Current evidence contradicts par redemption on this route",
+  failed: "The last route refresh failed",
 };
 
-/** A resolved route without a score has eventual capacity only; the standalone score reads immediate capacity. */
+/** A resolved route without a score has eventual capacity only; the route score reads immediate capacity. */
 function notRatedReason(entry: RedemptionBackstopEntry): string {
   if (entry.resolutionState !== "resolved") return NOT_RATED_REASONS[entry.resolutionState];
   return entry.capacityScore == null
-    ? "No standalone route score: only eventual capacity is published, and the standalone score needs immediate capacity."
-    : "No standalone route score is published for this route.";
+    ? "Only eventual capacity is published, and the route score needs immediate capacity"
+    : "No route score is published for this route";
 }
 
-/** What the Exit pillar read to score a route, for "scores this route at N from …". */
+/**
+ * The unrated route's one verdict line: why it has no score and, when the
+ * Exit pillar does not count it either, why not. Exit's own figures stay in
+ * the usage cells.
+ */
+function notRatedVerdict(entry: RedemptionBackstopEntry, usage: readonly ExitRouteUsageRow[] | null): string {
+  const counted = usage?.find((row) => row.key === "counted");
+  const exclusion = counted && counted.figure === null && counted.note
+    ? `; Exit does not count it either (${counted.note.startsWith("Exit ") ? counted.note : counted.note.charAt(0).toLowerCase() + counted.note.slice(1)})`
+    : "";
+  return `${notRatedReason(entry)}${exclusion}.`;
+}
+
+/** What the Exit pillar read to score a route the standalone score leaves unrated. */
 const EXIT_CAPACITY_EVIDENCE_PHRASES: Record<ExitAlternativeRoute["capacityEvidenceTier"], string> = {
   "live-direct": "live capacity readings",
   "live-queue-proxy": "live queue readings",
@@ -162,19 +174,31 @@ const EXIT_CAPACITY_EVIDENCE_PHRASES: Record<ExitAlternativeRoute["capacityEvide
   unknown: "its own capacity evidence",
 };
 
+/** The redemption band a score falls in ("65–79"), for the track's accessible name. */
+function resolveScoreBandLabel(score: number): string {
+  const tier = resolveScoreTier5(score);
+  return SCORE_TIER_5_POLICY.find((band) => band.key === tier)?.label ?? "unbanded";
+}
+
 /**
- * The Exit pillar's score for a route that has no standalone score, with what
- * that number is: Exit's own re-score from its capacity evidence at the stress
- * size, not a standalone value. The stress size drops out where the sentence
- * already names the Exit outcome.
+ * The score printed over the spectrum's own marker, so the notch carries a
+ * number; it anchors inward near either end so it never leaves the track.
  */
-function exitOwnScoreClause(
-  tier: ExitAlternativeRoute["capacityEvidenceTier"],
-  score: number,
-  stressSize: string | null,
-): string {
-  const evidence = `scores this route at ${score} from ${EXIT_CAPACITY_EVIDENCE_PHRASES[tier]}`;
-  return stressSize ? `${evidence} at ${stressSize}` : evidence;
+function SpectrumScoreLabel({ score }: { score: number }) {
+  const left = Math.min(Math.max(score, 0), 100);
+  return (
+    <div aria-hidden="true" className="relative h-4">
+      <span
+        style={{ left: `${left}%` }}
+        className={cn(
+          "pharos-numeric absolute bottom-0 text-sm font-semibold leading-none text-foreground",
+          left < 6 ? undefined : left > 94 ? "-translate-x-full" : "-translate-x-1/2",
+        )}
+      >
+        {score}
+      </span>
+    </div>
+  );
 }
 
 /** Opaque publication keys may change across generations; only typed identity joins routes. */
@@ -210,39 +234,42 @@ function formatFactor(value: number): string {
   return String(Number(value.toFixed(2)));
 }
 
-/** The Exit cap that bound the route's score, as a clause. */
-function exitCapClause(capsApplied: readonly string[], stressSize: string, notional: string | null): string | null {
-  if (capsApplied.includes("zero-executable-capacity")) return `it clears nothing at ${stressSize}`;
-  if (capsApplied.includes("immaterial-executable-capacity")) return `it clears an immaterial amount at ${stressSize}`;
-  if (capsApplied.includes("evidence-kind:documented-terms")) return "its documented-terms cap applies";
+/** The Exit cap that bound the route's score, as a short note. */
+function exitCapNote(capsApplied: readonly string[], size: string): string | null {
+  if (capsApplied.includes("zero-executable-capacity")) return `Clears nothing ${size}`;
+  if (capsApplied.includes("immaterial-executable-capacity")) return `Clears too little ${size}`;
+  if (capsApplied.includes("evidence-kind:documented-terms")) return "Documented-terms cap applies";
   const horizon = capsApplied.find((cap) => cap.startsWith("capacity-horizon:"));
-  if (horizon) return `its ${horizon.slice("capacity-horizon:".length)}-capacity cap applies`;
-  if (capsApplied.includes("route-family:queue-redeem")) return "its queue-redeem cap applies";
-  if (capsApplied.includes("route-family:offchain-issuer")) return "its offchain-issuer cap applies";
+  if (horizon) return `${sentenceCase(horizon.slice("capacity-horizon:".length))}-capacity cap applies`;
+  if (capsApplied.includes("route-family:queue-redeem")) return "Queue-redeem cap applies";
+  if (capsApplied.includes("route-family:offchain-issuer")) return "Offchain-issuer cap applies";
   const completion = capsApplied.find((cap) => cap.startsWith("insufficient-completion:"));
-  if (completion) return `it fills too little of ${notional ?? "the request"}, capping it at ${completion.split(":")[1]}`;
+  if (completion) return `Fills too little; capped at ${completion.split(":")[1]}`;
   return null;
+}
+
+function sentenceCase(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
 /**
  * Why the Exit pillar's score for this same route differs from the standalone
- * route score: the single largest published effect pushing in the direction
- * of the difference. Exit re-scores the six components at its stress size,
- * multiplies by evidence confidence, then caps; the
- * standalone score carries its own caps.
+ * route score, in at most eight words: the single largest published effect
+ * pushing in the direction of the difference. Exit re-scores the six
+ * components at its stress size, multiplies by evidence confidence, then
+ * caps; the standalone score carries its own caps.
  */
-function exitDivergenceClause(
+function exitDivergenceNote(
   route: ExitScoredRoute,
   exitScore: number,
   entry: RedemptionBackstopEntry,
   routeScore: number,
-  stressSize: string,
-  notional: string | null,
+  size: string,
 ): string | null {
   const direction = Math.sign(exitScore - routeScore);
   const ceiling = route.supportedComponentCeiling ?? exitScore;
   const confidence = route.confidenceFactor;
-  const candidates: { effect: number; clause: string }[] = [];
+  const candidates: { effect: number; note: string }[] = [];
 
   for (const component of route.components) {
     const mapping = EXIT_COMPONENT_ROUTE_FIELDS[component.key];
@@ -253,17 +280,14 @@ function exitDivergenceClause(
     if (exitValue === routeValue) continue;
     candidates.push({
       effect: resolveV9EffectiveScoringWeight(component) * (component.score - standalone),
-      clause: `${mapping.label} scores ${exitValue} at ${stressSize}, not ${routeValue}`,
+      note: `${sentenceCase(mapping.label)} ${exitValue} (vs ${routeValue}) ${size}`,
     });
   }
   if (confidence < 1) {
-    candidates.push({
-      effect: ceiling * (confidence - 1),
-      clause: `a ${formatFactor(confidence)} evidence-confidence factor applies`,
-    });
+    candidates.push({ effect: ceiling * (confidence - 1), note: `${formatFactor(confidence)} evidence-confidence factor` });
   }
-  const capClause = exitCapClause(route.capsApplied, stressSize, notional);
-  if (capClause) candidates.push({ effect: exitScore - ceiling * confidence, clause: capClause });
+  const capNote = exitCapNote(route.capsApplied, size);
+  if (capNote) candidates.push({ effect: exitScore - ceiling * confidence, note: capNote });
 
   const standaloneCaps = entry.capsApplied ?? [];
   const routeCap = standaloneCaps.find((cap) => cap.endsWith("-cap"));
@@ -272,7 +296,7 @@ function exitDivergenceClause(
     if (weighted !== null) {
       candidates.push({
         effect: weighted - routeScore,
-        clause: `the standalone score carries its ${(STANDALONE_CAP_LABELS[routeCap] ?? humanizeSafetyScoreV9Value(routeCap)).toLowerCase()}`,
+        note: `Route score carries its ${(STANDALONE_CAP_LABELS[routeCap] ?? humanizeSafetyScoreV9Value(routeCap)).toLowerCase()}`,
       });
     }
   }
@@ -280,112 +304,143 @@ function exitDivergenceClause(
   const best = candidates
     .filter((candidate) => Math.sign(candidate.effect) === direction && Math.abs(candidate.effect) >= 0.5)
     .sort((left, right) => Math.abs(right.effect) - Math.abs(left.effect))[0];
-  return best?.clause ?? null;
+  return best?.note ?? null;
 }
 
-/** Verb phrase for this route when the Exit pillar evaluated but did not credit it. */
-function exitExclusionClause(route: ExitAlternativeRoute, stressSize: string, notional: string | null): string {
-  if (route.capacity?.executableUsd === 0) return `clears nothing at ${stressSize}`;
-  if (route.exclusionReason === null) return "is not credited";
-  const clause = EXIT_EXCLUSION_CLAUSES[route.exclusionReason];
-  return clause ? clause(notional) : `is not credited (${humanizeSafetyScoreV9Value(route.exclusionReason).toLowerCase()})`;
+/** Why the Exit pillar evaluated this route but did not credit it. */
+function exitExclusionNote(route: ExitAlternativeRoute, size: string): string {
+  if (route.capacity?.executableUsd === 0) return `Clears nothing ${size}`;
+  if (route.exclusionReason === null) return "Evaluated, not counted";
+  const note = EXIT_EXCLUSION_NOTES[route.exclusionReason];
+  return note ? note(size) : humanizeSafetyScoreV9Value(route.exclusionReason);
 }
+
+/** One cell of "How Exit uses this route": a score and/or words, then a why of at most eight words. */
+export interface ExitRouteUsageRow {
+  key: "counted" | "best";
+  label: string;
+  figure: number | null;
+  value: string | null;
+  note: string | null;
+}
+
+const SAME_SCORE_NOTE = "Same as the route score";
+/** The one word for a route the Exit pillar leaves out, whatever the reason. */
+const NOT_COUNTED = "Not counted";
 
 /**
- * A sentence naming the selected Exit route; the venue drops out when it would
- * push the sentence past the verdict budget, and the score stays.
+ * How the Exit pillar uses this route, as labelled cells built from the
+ * published Exit breakdown: what Exit counts this route as (and why, when it
+ * differs from the route score), and the best exit the pillar actually relies
+ * on. The route score itself is stated once, by the header pill and its
+ * track. Null without an Exit breakdown, or when no route qualifies and the
+ * pillar publishes no score.
  */
-function withSelectedRoute(route: ExitScoredRoute, score: number, sentence: (selected: string) => string): string {
-  const named = sentence(`${describeExitRouteVenue(route)} (${score})`);
-  return countSummaryWords(named) <= SUMMARY_VERDICT_MAX_WORDS ? named : sentence(`another route (${score})`);
-}
-
-/**
- * How the Exit pillar relates to this route, in one sentence (≤ 25 words),
- * from the published Exit breakdown. Every number the module shows that the
- * Exit strip shows differently is named and explained here:
- *
- * - Exit scores this same route: the same number, or "counts this route as
- *   74, not 75: <largest published cause>".
- * - Exit selects another route: its venue and score, then how Exit treated
- *   this route (re-scored, not credited and why, or absent).
- * - No route qualifies: why this route did not, and the resulting Exit score.
- * - No standalone score: never "counts as N" beside the NR pill; Exit's own
- *   score for the route is named with the capacity evidence it read.
- */
-function describeExitReconciliation(
+export function buildExitRouteUsage(
   reportCard: SafetyScoreV9CurrentCard | null | undefined,
   entry: RedemptionBackstopEntry | null,
-): string | null {
+): ExitRouteUsageRow[] | null {
   const breakdown = reportCard?.breakdowns?.exit ?? null;
   if (reportCard == null || breakdown === null) return null;
   const notional = breakdown.stressRequest ? formatV9PresentationUsd(breakdown.stressRequest.requestedNotionalUsd) : null;
-  const stressSize = notional ? `the ${notional} stress size` : "the Exit stress size";
+  const size = notional ? `for a ${notional} exit` : "at the Exit size";
   const ownRoute = entry === null ? null : (breakdown.alternatives.find((route) => isEntryRoute(route, entry)) ?? null);
   const primary = breakdown.primaryRoute;
   const primaryRawScore = primary?.score ?? null;
+  const rows: ExitRouteUsageRow[] = [];
+  const counted = (figure: number | null, value: string | null, note: string | null) =>
+    rows.push({ key: "counted", label: "Counted in Exit", figure, value, note });
+  const best = (figure: number | null, value: string, note: string | null) =>
+    rows.push({ key: "best", label: "Exit's best route", figure, value, note });
+  const evidenceNote = (tier: ExitAlternativeRoute["capacityEvidenceTier"]) =>
+    `From ${EXIT_CAPACITY_EVIDENCE_PHRASES[tier]} ${size}`;
 
   if (primary === null || primaryRawScore === null) {
     const pillarScore = reportCard.pillars.exit.score;
     if (pillarScore === null) return null;
-    const exitScore = Math.round(pillarScore);
-    const outcome = `no route qualifies, so Exit is ${exitScore}.`;
-    if (entry === null) {
-      return `For ${notional ? `a ${notional} exit` : "the Exit stress request"}, ${outcome}`;
+    if (entry !== null) {
+      if (primary !== null && isEntryRoute(primary, entry)) counted(null, NOT_COUNTED, "Exit cannot score this route");
+      else if (ownRoute === null) counted(null, NOT_COUNTED, "Not in the Exit evaluation");
+      else if (ownRoute.included && ownRoute.score !== null) {
+        counted(Math.round(ownRoute.score), null, entry.score == null ? evidenceNote(ownRoute.capacityEvidenceTier) : null);
+      } else counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size));
     }
-    // An unrated route's verdict already names the missing standalone score.
-    const unrated = entry.score == null;
-    const subject = unrated ? "This route" : `This route scores ${entry.score} but`;
-    if (primary !== null && isEntryRoute(primary, entry)) {
-      return unrated ? `Exit cannot score this route either; ${outcome}` : `${subject} Exit cannot score it; ${outcome}`;
-    }
-    if (ownRoute === null) return `${subject} is not in the Exit evaluation; ${outcome}`;
-    if (ownRoute.included && ownRoute.score !== null) {
-      const counted = Math.round(ownRoute.score);
-      return unrated
-        ? `Exit ${exitOwnScoreClause(ownRoute.capacityEvidenceTier, counted, null)}, but no route qualifies, so Exit is ${exitScore}.`
-        : `This route scores ${entry.score}, ${counted} in Exit, but no route qualifies, so Exit is ${exitScore}.`;
-    }
-    return `${subject} ${exitExclusionClause(ownRoute, stressSize, notional)}; ${outcome}`;
+    best(null, "None counted", `So the Exit pillar scores ${Math.round(pillarScore)}`);
+    return rows;
   }
 
   const primaryScore = Math.round(primaryRawScore);
   if (entry === null) {
-    return withSelectedRoute(primary, primaryScore, (selected) => `The Exit pillar relies on market routes instead (best: ${selected}).`);
+    best(primaryScore, describeExitRouteVenue(primary), null);
+    return rows;
   }
   if (isEntryRoute(primary, entry)) {
-    if (entry.score == null) {
-      return `The Exit pillar ${exitOwnScoreClause(primary.capacityEvidenceTier, primaryScore, stressSize)}.`;
-    }
-    if (primaryScore === entry.score) return `The Exit pillar counts this route at the same score (${primaryScore}).`;
-    const head = `The Exit pillar counts this route as ${primaryScore}, not ${entry.score}`;
-    const clause = exitDivergenceClause(primary, primaryRawScore, entry, entry.score, stressSize, notional);
-    return clause ? `${head}: ${clause}.` : `${head}, re-scored at ${stressSize}.`;
+    const note = entry.score == null
+      ? evidenceNote(primary.capacityEvidenceTier)
+      : primaryScore === entry.score
+        ? SAME_SCORE_NOTE
+        : (exitDivergenceNote(primary, primaryRawScore, entry, entry.score, size) ?? `Re-scored ${size}`);
+    counted(primaryScore, null, note);
+    best(null, "This route", null);
+    return rows;
   }
-
-  let routeClause: string;
   if (ownRoute !== null && ownRoute.included && ownRoute.score !== null) {
-    const counted = Math.round(ownRoute.score);
-    routeClause = entry.score == null
-      ? `it ${exitOwnScoreClause(ownRoute.capacityEvidenceTier, counted, stressSize)}`
-      : `it counts this route as ${counted}${counted !== entry.score ? `, not ${entry.score}` : ""}`;
+    const score = Math.round(ownRoute.score);
+    counted(
+      score,
+      null,
+      entry.score == null ? evidenceNote(ownRoute.capacityEvidenceTier) : score === entry.score ? SAME_SCORE_NOTE : `Re-scored ${size}`,
+    );
   } else if (ownRoute !== null) {
-    routeClause = `this route ${exitExclusionClause(ownRoute, stressSize, notional)}`;
+    counted(null, NOT_COUNTED, exitExclusionNote(ownRoute, size));
   } else {
-    routeClause = entry.score == null ? "this route is not in its evaluation" : `this route scores ${entry.score}`;
+    counted(null, NOT_COUNTED, "Not in the Exit evaluation");
   }
-  return withSelectedRoute(primary, primaryScore, (selected) => `The Exit pillar selects ${selected}; ${routeClause}.`);
+  best(primaryScore, describeExitRouteVenue(primary), null);
+  return rows;
 }
 
-/** Verdict sentence, then the route-vs-pillar reconciliation as a muted second line. */
-function RouteVerdict({ verdict, reconciliation }: { verdict: string; reconciliation: string | null }) {
+/** A cell's score on top in mono, then its words, then the muted why. */
+function ExitUsageValue({ row }: { row: ExitRouteUsageRow }) {
   return (
-    <>
-      {verdict}
-      {reconciliation ? (
-        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{reconciliation}</span>
+    <span className="flex min-w-0 flex-col gap-0.5">
+      {row.figure !== null ? (
+        <span className="pharos-numeric text-lg font-semibold leading-tight text-foreground">{row.figure}</span>
       ) : null}
-    </>
+      {row.value ? (
+        <span className={row.figure !== null ? "text-xs text-foreground" : "text-sm font-medium leading-tight text-foreground"}>
+          {row.value}
+        </span>
+      ) : null}
+      {row.note ? <span className="text-2xs font-normal leading-snug text-muted-foreground">{row.note}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * "How Exit uses this route": two labelled cells side by side in an inset.
+ * A lone cell (Exit's best route for a route Exit does not use) reads as one
+ * plain fact instead: no inset, no heading and no empty second column.
+ */
+function ExitRouteUsage({ rows, heading }: { rows: readonly ExitRouteUsageRow[]; heading: string }) {
+  if (rows.length === 0) return null;
+  if (rows.length === 1) {
+    return (
+      <FactGrid
+        aria-label={heading}
+        className="grid-cols-1"
+        items={rows.map((row) => ({ key: row.key, label: row.label, valueStyle: "text", value: <ExitUsageValue row={row} /> }))}
+      />
+    );
+  }
+  return (
+    <div className="pharos-inset space-y-2 px-3 py-2.5">
+      <h4 className="text-xs font-semibold text-foreground">{heading}</h4>
+      <FactGrid
+        aria-label={heading}
+        items={rows.map((row) => ({ key: row.key, label: row.label, valueStyle: "text", value: <ExitUsageValue row={row} /> }))}
+      />
+    </div>
   );
 }
 
@@ -434,7 +489,7 @@ export function RedemptionRouteSection({
       <RedemptionBackstopCard
         entry={entry}
         freshness={freshness}
-        reconciliation={describeExitReconciliation(reportCard, entry)}
+        usage={buildExitRouteUsage(reportCard, entry)}
         variant={variant}
         stripForm={stripForm}
       />
@@ -443,6 +498,7 @@ export function RedemptionRouteSection({
   const noHolder = noHolderRouteReason(coinId);
   if (!noHolder) return null;
   const { disposition, reason } = noHolder;
+  const usage = buildExitRouteUsage(reportCard, null);
   return (
     <EvidenceModule
       id="redemption"
@@ -450,8 +506,10 @@ export function RedemptionRouteSection({
       variant={variant}
       stripForm
       methodology={methodologyHint}
-      headerRight={<ScorePill label="No holder route" title="No holder redemption route exists, so none is scored" />}
-      verdict={<RouteVerdict verdict={reason} reconciliation={describeExitReconciliation(reportCard, null)} />}
+      headerRight={
+        <ScorePill label="No holder route" title="No holder redemption route exists, so none is scored" className="font-sans" />
+      }
+      verdict={reason}
       footer={
         <EvidenceFooter
           notes={<p>{disposition.blocker}</p>}
@@ -460,7 +518,9 @@ export function RedemptionRouteSection({
           reviewed={disposition.reviewedDate}
         />
       }
-    />
+    >
+      {usage ? <ExitRouteUsage rows={usage} heading="Where the Exit pillar looks instead" /> : null}
+    </EvidenceModule>
   );
 }
 
@@ -570,7 +630,7 @@ function RouteScoreBreakdown({
               <TableRow rowIntent="static" className="border-b-0">
                 <TableHead scope="row" colSpan={3} className="h-auto px-0 pt-1 pr-3 font-medium text-foreground">Route score</TableHead>
                 <TableCell className={cn("pharos-numeric px-0 py-0 pt-1 text-right text-sm font-semibold", entry.score == null ? undefined : "text-foreground")}>
-                  {entry.score ?? "NR"}
+                  {entry.score ?? "Not rated"}
                 </TableCell>
               </TableRow>
             </tfoot>
@@ -617,13 +677,13 @@ function RouteScoreBreakdown({
 
 function RedemptionBackstopCard({
   entry,
-  reconciliation,
+  usage,
   variant,
   stripForm,
   freshness,
 }: {
   entry: RedemptionBackstopEntry;
-  reconciliation: string | null;
+  usage: ExitRouteUsageRow[] | null;
   variant: EvidenceModuleVariant;
   stripForm: boolean;
   freshness?: RedemptionFreshnessLane;
@@ -639,34 +699,37 @@ function RedemptionBackstopCard({
   };
   const nowMs = useFreshnessBoundary([healthInput]);
   const health = deriveDataHealth(healthInput, nowMs ?? healthInput.dataUpdatedAt);
-  const verdict = viewModel.score == null
-    ? notRatedReason(entry)
-    : `${viewModel.accessLabel} access; ${viewModel.settlementLabel.toLowerCase()} settlement into ${viewModel.outputAssetLabel.toLowerCase()}.`;
-  // One active-state chip at most: a non-open route status outranks an
-  // unresolved snapshot, whose consequence the not-rated verdict already states.
-  const stateLabel = viewModel.showRouteStatusBadge
-    ? viewModel.routeStatusLabel
-    : viewModel.showResolutionStateBadge
-      ? viewModel.resolutionStateLabel
-      : null;
-  // Both vocabularies are lower case; chips read sentence case.
+  // A rated route needs no verdict: the track and the rail already draw its
+  // access, settlement and output. An unrated one gets one line saying why.
+  const unrated = viewModel.score == null;
+  const verdict = unrated ? notRatedVerdict(entry, usage) : null;
+  // The verdict carries Exit's exclusion of an unrated route, so only Exit's
+  // own figures stay as cells (Exit's best route, promoted).
+  const usageRows = unrated ? usage?.filter((row) => row.key !== "counted" || row.figure !== null) ?? null : usage;
+  // One active-state chip at most, and only for a real non-open state
+  // (degraded, paused, suspended, cohort limited): an unknown status or an
+  // unresolved snapshot is a gap the not-rated verdict already states.
+  const stateLabel = viewModel.showRouteStatusBadge ? viewModel.routeStatusLabel : null;
+  // The vocabulary is lower case; chips read sentence case.
   const stateChip = stateLabel ? `${stateLabel.charAt(0).toUpperCase()}${stateLabel.slice(1)}` : null;
 
   // Score track and route side by side once the module is wide enough for
-  // both (a full-width module at lg+); stacked, track first, below that.
+  // both (a full-width module at lg+); stacked, track first and full width,
+  // below that.
   const visual = (
     <div className="@container/route">
       <div className="flex flex-col gap-4 @4xl/route:flex-row @4xl/route:items-start @4xl/route:gap-8">
         {viewModel.score != null ? (
-          <div className="flex w-full max-w-md min-w-0 flex-col gap-1 @4xl/route:w-72 @4xl/route:shrink-0">
+          <div className="flex w-full min-w-0 flex-col gap-1 @4xl/route:w-72 @4xl/route:shrink-0">
             <StationLabel>Route score</StationLabel>
+            <SpectrumScoreLabel score={viewModel.score} />
             <ScoreBandSpectrum
               mode="range"
               bands={REDEMPTION_SCORE_BANDS}
               cutoffs={REDEMPTION_SCORE_CUTOFFS}
               activeKey={resolveScoreTier5(viewModel.score) ?? ""}
               score={viewModel.score}
-              ariaLabel={`Route score ${viewModel.score} of 100 on the redemption score track.`}
+              ariaLabel={`Route score ${viewModel.score} of 100, in the ${resolveScoreBandLabel(viewModel.score)} band of the redemption score track.`}
             />
           </div>
         ) : null}
@@ -695,16 +758,27 @@ function RedemptionBackstopCard({
         // A low-confidence score keeps the broken outline so it does not read
         // as firm as a well-evidenced one.
         <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
-          <ScorePill
-            label={viewModel.heroScoreLabel}
-            toneClass={viewModel.scoreToneClass}
-            title="Standalone route score. Tone follows the 80/65/50/35 score cutoffs on the track below."
-            className={viewModel.isLowConfidence ? "border-dashed" : undefined}
-          />
+          <Badge
+            variant="outline"
+            title={viewModel.score == null
+              ? `Not rated: ${notRatedReason(entry)}.`
+              : "This route's own score. Tone follows the 80/65/50/35 cutoffs on the track below."}
+            className={cn(
+              "px-2 py-0.5 text-sm",
+              viewModel.scoreToneClass,
+              viewModel.isLowConfidence && "border-dashed",
+            )}
+          >
+            {viewModel.score == null ? "Not rated" : (
+              <>
+                Route score <span className="pharos-numeric">{viewModel.score}</span>
+              </>
+            )}
+          </Badge>
         </ScoreBadgeWrapper>
       }
       visual={visual}
-      verdict={<RouteVerdict verdict={verdict} reconciliation={reconciliation} />}
+      verdict={verdict}
       chipRow={
         <>
           <Badge variant="outline" className={CHIP_CLASS}>
@@ -793,6 +867,8 @@ function RedemptionBackstopCard({
           />
         </EvidenceFooter>
       }
-    />
+    >
+      {usageRows ? <ExitRouteUsage rows={usageRows} heading="How Exit uses this route" /> : null}
+    </EvidenceModule>
   );
 }

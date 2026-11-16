@@ -12,6 +12,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,11 @@ interface ChartBrushProps {
   onChange: (next: BrushedRange) => void;
   /** Strip height in px. */
   height?: number;
+  /**
+   * Overview series drawn as a miniature under the selection, so the strip
+   * reads as the chart in small rather than a bare track.
+   */
+  series?: ReadonlyArray<{ ts: number; value: number }>;
   className?: string;
 }
 
@@ -108,7 +114,7 @@ interface ChartBrushProps {
  *   - Drag either edge handle to resize.
  *   - Double-click clears the brush.
  */
-export function ChartBrush({ domain, value, onChange, height = 28, className }: ChartBrushProps) {
+export function ChartBrush({ domain, value, onChange, height = 28, series, className }: ChartBrushProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   const dragRef = useRef<
@@ -241,6 +247,17 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
     onChange([lo, hi]);
   };
 
+  const overview = useMemo(() => {
+    const points = series?.filter((point) => Number.isFinite(point.value) && point.ts >= domainFrom && point.ts <= domainTo) ?? [];
+    if (points.length < 2 || width <= 0) return null;
+    const values = points.map((point) => point.value);
+    const min = Math.min(...values);
+    const range = Math.max(...values) - min || 1;
+    const coords = points.map((point) => `${tsToPx(point.ts).toFixed(1)},${(2 + (1 - (point.value - min) / range) * (height - 4)).toFixed(1)}`);
+    const line = `M${coords.join("L")}`;
+    return { line, area: `${line}L${tsToPx(points[points.length - 1]!.ts).toFixed(1)},${height}L${tsToPx(points[0]!.ts).toFixed(1)},${height}Z` };
+  }, [domainFrom, domainTo, height, series, tsToPx, width]);
+
   const fromPx = value ? tsToPx(value[0]) : 0;
   const toPx = value ? tsToPx(value[1]) : 0;
 
@@ -269,7 +286,14 @@ export function ChartBrush({ domain, value, onChange, height = 28, className }: 
         onKeyDown={handleKeyDown}
         style={{ touchAction: "none" }}
       >
-        <rect x={0} y={height / 2 - 2} width={width} height={4} rx={2} fill="var(--color-border)" fillOpacity={0.4} />
+        {overview ? (
+          <g aria-hidden="true" pointerEvents="none">
+            <path d={overview.area} fill={CHART_BLUE} fillOpacity={0.12} />
+            <path d={overview.line} fill="none" stroke={CHART_BLUE} strokeOpacity={0.6} strokeWidth={1} />
+          </g>
+        ) : (
+          <rect x={0} y={height / 2 - 2} width={width} height={4} rx={2} fill="var(--color-border)" fillOpacity={0.4} />
+        )}
         <rect
           x={0}
           y={0}

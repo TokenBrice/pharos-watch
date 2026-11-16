@@ -190,6 +190,12 @@ describe("shipped coins (dossier audit 2026-10-06, defect 6)", () => {
     expect(shippedTemplate("dai-makerdao").stressFootnote).toMatch(/\bDAI\b/);
   });
 
+  it("names a PSM only for the CDP coins that run one", () => {
+    expect(shippedTemplate("bold-liquity").steps[1].label).toBe("Vault");
+    expect(shippedTemplate("bold-liquity").description).not.toMatch(/peg-stability module|PSM/);
+    expect(shippedTemplate("dai-makerdao").steps[1].label).toBe("Vault + PSM");
+  });
+
   it("routes USDe's carry to sUSDe stakers in the override", () => {
     const usde = shippedTemplate("usde-ethena");
     expect(usde.steps[2].subtitle).toBe("yield to sUSDe stakers");

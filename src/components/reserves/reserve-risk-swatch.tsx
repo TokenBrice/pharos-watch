@@ -2,13 +2,13 @@ import type { ReserveRisk } from "@shared/types/reserves";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { formatDecimal } from "@shared/lib/format";
 
-/** A risk-tier swatch is the tile itself in miniature: same fill, same accent border. */
+/** A risk-tier swatch is the composition bar's segment in miniature: the same solid tier hue. */
 export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
   return (
     <span
       aria-hidden="true"
-      className="size-2.5 shrink-0 rounded-xs border"
-      style={{ backgroundColor: RESERVE_RISK_PRESENTATION[risk].fillColor, borderColor: RESERVE_RISK_PRESENTATION[risk].accentColor }}
+      className="size-2.5 shrink-0 rounded-xs"
+      style={{ backgroundColor: RESERVE_RISK_PRESENTATION[risk].accentColor }}
     />
   );
 }

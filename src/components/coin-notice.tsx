@@ -58,7 +58,7 @@ export function CoinNotices({ notices }: CoinNoticesProps) {
             className={`flex items-start gap-3 rounded-lg border ${s.banner} px-4 py-3`}
           >
             <span className={s.icon}>{ICONS[notice.type]}</span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className={`text-sm font-semibold ${s.title}`}>{notice.title}</p>
               <p className="mt-0.5 text-sm text-muted-foreground">{notice.message}</p>
             </div>

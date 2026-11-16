@@ -82,7 +82,7 @@ export function ShowAllToggle({
         className,
       )}
     >
-      {open ? "Show less" : `Show all ${total} ${noun}`}
+      {open ? "Show less" : `Show all ${total.toLocaleString("en-US")} ${noun}`}
     </button>
   );
 }

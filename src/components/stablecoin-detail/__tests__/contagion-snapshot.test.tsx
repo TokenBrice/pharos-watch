@@ -52,6 +52,16 @@ vi.mock("next/dynamic", () => ({
 
 
 import { ContagionSnapshot } from "../contagion-snapshot";
+import { ParentVariantsCard } from "../parent-variants-card";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+
+/** The graph mounts only once its fold first opens. */
+function openGraph() {
+  const details = screen.getByText("Dependency graph").closest("details")!;
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+  return screen.getByTestId("contagion-graph");
+}
 
 function basketOn(upstreamAssetId: string) {
   return {
@@ -107,7 +117,7 @@ describe("ContagionSnapshot", () => {
     }));
     useReportCardsV9Mock.mockReturnValue({ data: detail, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    const graph = screen.getByTestId("contagion-graph");
+    const graph = openGraph();
     expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
     const cards = JSON.parse(graph.getAttribute("data-cards")!) as Array<Record<string, unknown>>;
     expect(cards).toHaveLength(2);
@@ -126,16 +136,21 @@ describe("ContagionSnapshot", () => {
     data.cards[0] = { ...data.cards[0], grade, partialEvidence };
     useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    const cards = JSON.parse(screen.getByTestId("contagion-graph").getAttribute("data-cards") ?? "[]");
+    const cards = JSON.parse(openGraph().getAttribute("data-cards") ?? "[]");
     expect(cards.find((card: { id: string }) => card.id === "usdc-circle")).toMatchObject({
       grade, partialEvidence,
     });
   });
 
-  it("renders the published dependent beside the dependency map with a focused deep link", () => {
+  it("leads with the ranked dependent list and keeps the graph folded until asked", () => {
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /USDe Collateral 80%/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^USDe, Collateral, 80% of backing, \$4\.00B known exposure/ })).toBeTruthy();
+    // Deferred mount, and never inline on phones where pan/zoom fights scroll.
+    expect(screen.queryByTestId("contagion-graph")).toBeNull();
+    const fold = screen.getByText("Dependency graph").closest("details")!;
+    expect(fold.parentElement?.className.split(" ")).toEqual(expect.arrayContaining(["hidden", "sm:block"]));
+    expect(openGraph()).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open in Dependency Map" }).getAttribute("href"))
       .toBe("/dependency-map?focus=usdc-circle");
   });
@@ -156,10 +171,40 @@ describe("ContagionSnapshot", () => {
     });
     useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     const { rerender } = render(<ContagionSnapshot stablecoinId="usds-sky" />);
-    expect(screen.getByRole("link", { name: "spUSDC Mechanism" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^spUSDC, Mechanism,/ })).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
     rerender(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    expect(screen.getByRole("link", { name: "spUSDC Wrapper" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^spUSDC, Wrapper,/ })).toBeTruthy();
+  });
+
+  it("lists each token once: a variant ranked in Used by leaves the variants card", () => {
+    const data = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle" }),
+        makeV9Card({ id: "susdc-spark", dependencies: {
+          serial: [{ upstreamAssetId: "usdc-circle", score: 84, ratingStatus: "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], blocked: false, dependencyType: "wrapper", wrapperForm: "pure" }],
+          basket: [], cycleBlocked: false, reasonCodes: [],
+        } }),
+      ],
+    });
+    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    const spark = CLIENT_TRACKED_META_BY_ID.get("susdc-spark")!;
+    const keyrock = CLIENT_TRACKED_META_BY_ID.get("krusdc-keyrock")!;
+    const { rerender } = render(
+      <ContagionSnapshot stablecoinId="usdc-circle" variantRelationshipCard={<ParentVariantsCard variants={[spark, keyrock]} />} />,
+    );
+    // The ranked row carries the variant kind the variants card would have shown.
+    expect(screen.getByRole("link", { name: /^spUSDC, Wrapper, Savings,/ })).toBeTruthy();
+    expect(screen.getAllByText("spUSDC")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "Other variants 1" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^Keyrock Prime USDC \(krUSDC\)/ })).toBeTruthy();
+
+    rerender(<ContagionSnapshot stablecoinId="usdc-circle" variantRelationshipCard={<ParentVariantsCard variants={[spark]} />} />);
+    expect(screen.queryByRole("heading", { name: /variants/i })).toBeNull();
+    // The emptied side column collapses, so Used by takes the whole row.
+    const usedBy = screen.getByRole("heading", { name: "Used by 1" }).closest("section")!;
+    expect(usedBy.parentElement!.nextElementSibling?.className).toContain("empty:hidden");
+    expect(usedBy.parentElement!.nextElementSibling?.childElementCount).toBe(0);
   });
 
   it("uses the published relationship type for plain wrappers even with no wrapper form or variantOf", () => {
@@ -174,7 +219,7 @@ describe("ContagionSnapshot", () => {
     });
     useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    expect(screen.getByRole("link", { name: "PUSD Wrapper" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^PUSD, Wrapper,/ })).toBeTruthy();
   });
 
   it.each([
@@ -193,7 +238,7 @@ describe("ContagionSnapshot", () => {
     });
     useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    expect(screen.getByRole("link", { name: `${symbol} ${label}` })).toBeTruthy();
+    expect(screen.getByRole("link", { name: (name) => name.startsWith(`${symbol}, ${label},`) })).toBeTruthy();
   });
 
   it.each([
@@ -218,11 +263,11 @@ describe("ContagionSnapshot", () => {
     });
     useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId={upstream} />);
-    expect(screen.getByRole("link", { name: (name) => name.includes(`${symbol} Collateral ${weight * 100}%`) })).toBeTruthy();
+    expect(screen.getByRole("link", { name: (name) => name.startsWith(`${symbol}, Collateral, ${weight * 100}% of backing`) })).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
     expect(screen.queryByText("ebUSD")).toBeNull();
     expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "What depends on me" }).textContent).toContain("1 direct dependent");
+    expect(screen.getByRole("region", { name: "Dependency summary" }).textContent).toContain("1 as collateral");
   });
   it("ignores edges whose counterparty is not a published V9 card", () => {
     useReportCardsV9Mock.mockReturnValue({
@@ -264,10 +309,16 @@ describe("ContagionSnapshot", () => {
 
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
     expect(screen.queryByTestId("contagion-graph")).toBeNull();
-    expect(screen.getByRole("region", { name: "Known, not in the scored graph" }).textContent).toContain("stale-evidence");
-    expect(screen.queryByRole("region", { name: "What I depend on" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Scored role dependencies (not drawn)" })).toBeNull();
+    const coverage = screen.getByRole("region", { name: "Known but not scored" });
+    expect(coverage.textContent).toContain("Evidence is out of date");
+    expect(coverage.textContent).not.toContain("stale-evidence");
+    expect(screen.queryByRole("region", { name: "USDe depends on" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Scored dependency roles" })).toBeNull();
+    // Both empty directions collapse to one muted sentence, not display-size "None" cells.
+    const summary = screen.getByRole("region", { name: "Dependency summary" });
+    expect(summary.querySelector("dl")).toBeNull();
+    expect(summary.textContent).toBe("No tracked stablecoin depends on USDe, and its backing has no scored links to other stablecoins.");
+    expect(screen.queryByText("Dependency graph")).toBeNull();
   });
 
   it("renders an unavailable notice instead of falling back to V8", () => {
@@ -313,7 +364,7 @@ describe("ContagionSnapshot", () => {
 
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(openGraph().getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
   });
 
   it("still draws the dependency map when supply data is missing entirely", () => {
@@ -326,7 +377,7 @@ describe("ContagionSnapshot", () => {
 
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
 
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(openGraph().getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });
@@ -341,7 +392,7 @@ describe("ContagionSnapshot", () => {
 
     render(<ContagionSnapshot stablecoinId="usde-ethena" />);
 
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(openGraph().getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -378,7 +429,7 @@ describe("ContagionSnapshot", () => {
     rerender(<ContagionSnapshot stablecoinId="usde-ethena" />);
 
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(openGraph().getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
   });
   it("counts a null-supply dependent but excludes it from direct USD exposure", () => {
     const data = makeReportCardsV9Response({
@@ -394,26 +445,31 @@ describe("ContagionSnapshot", () => {
       meta: { updatedAt: 1_752_534_000 }, error: null, dataUpdatedAt: 1, refetch: vi.fn(),
     });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    const summary = screen.getByRole("region", { name: "What depends on me" });
-    expect(summary.textContent).toContain("2 direct dependents");
-    expect(summary.textContent).toContain("$4.00B known direct exposure");
-    expect(summary.textContent).toContain("1 dependent has unavailable market cap");
+    const summary = screen.getByRole("region", { name: "Dependency summary" });
+    expect(summary.textContent).toContain("2 as collateral");
+    expect(summary.textContent).toContain("Known direct exposure$4.00B");
+    expect(summary.textContent).toContain("1 dependent without a market cap is left out of the exposure total.");
     expect(screen.getByRole("heading", { name: "Used by 2" })).toBeTruthy();
+    // The unknown-supply dependent ranks last with an unavailable figure, never $0.
+    const rows = screen.getAllByRole("link", { name: /Collateral, 80% of backing/ });
+    expect(rows.map((row) => row.getAttribute("aria-label"))).toEqual([
+      "USDe, Collateral, 80% of backing, $4.00B known exposure, Safety grade A-",
+      "sUSDe, Collateral, 80% of backing, exposure unavailable, Safety grade A-",
+    ]);
   });
 
   it("does not report zero USD exposure when every dependent's supply is unavailable", () => {
     useStablecoinsMock.mockReturnValue({ data: undefined, error: null, dataUpdatedAt: 0, refetch: vi.fn() });
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    const summary = screen.getByRole("region", { name: "What depends on me" });
-    expect(summary.textContent).toContain("1 direct dependent");
+    const summary = screen.getByRole("region", { name: "Dependency summary" });
+    expect(summary.textContent).toContain("1 as collateral");
     expect(summary.textContent).toContain("Direct USD exposure unavailable");
     expect(summary.textContent).not.toContain("$0");
   });
 
   it("keeps the drawn graph in a shrinkable grid slot so long inspection options cannot widen it", () => {
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
-    const graph = screen.getByTestId("contagion-graph");
-    expect(graph.parentElement?.parentElement?.className).toContain("min-w-0");
+    expect(openGraph().parentElement?.className).toContain("min-w-0");
   });
 
 });

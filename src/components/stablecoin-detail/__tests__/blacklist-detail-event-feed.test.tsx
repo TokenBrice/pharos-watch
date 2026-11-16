@@ -61,7 +61,9 @@ describe("BlacklistDetailEventFeed retention", () => {
     page({ isError: true, error: new Error("refetch failed") });
     render(<BlacklistDetailEventFeed symbol="USDT" />);
     expect(screen.getByTestId("stablecoin-blacklist-events-table")).toBeTruthy();
-    expect(screen.getByText(/Latest events/)).toBeTruthy();
+    // The log is open: no fold hides it behind a count.
+    expect(screen.queryByText(/Latest events/)).toBeNull();
+    expect(document.querySelector("details")).toBeNull();
     expect(screen.queryByText(/Unable to load blacklist events/)).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });

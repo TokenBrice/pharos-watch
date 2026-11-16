@@ -11,7 +11,6 @@ import {
   resolveBridgingDeploymentsForm,
   type BridgingDeploymentsForm,
 } from "@/components/stablecoin-detail/bridging-card";
-import type { EvidenceState } from "@/components/stablecoin-detail/evidence-module";
 import { hasMintAuthorityModuleData } from "@/components/stablecoin-detail/mint-authority-section";
 import { hasRedemptionRouteModule, isEntryRoute } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { formatReserveSnapshotLabel } from "@/components/stablecoin-detail/reserve-presentation";
@@ -29,8 +28,9 @@ import {
   buildSafetyScoreV9AccessRows,
   type StablecoinSafetyScoreV9AccessRow,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
-import { BRIDGE_TIER_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
+import { resolveMechanismArchetype, resolveScoreTier5, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { findV9NativeMintComponent } from "@shared/lib/safety-score-v9/control-component-keys";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
@@ -41,20 +41,15 @@ export interface EvidenceIndexChip {
 
 /**
  * One rail Evidence index row (plan §5, decision S9): a main-column evidence
- * module, its published score or verdict chip, and whether it is the Control
- * pillar's limiting input. It links to the module's single in-flow mount.
+ * module, its published score or verdict as one chip, and whether it is the
+ * Control pillar's limiting input. It links to the module's single in-flow
+ * mount. Scores and verdicts share the chip grammar ("75", "79 · not
+ * counted", "Segregated"), toned as the module header's own pill.
  */
 export interface EvidenceIndexRow {
   key: string;
   title: string;
   anchorId: string;
-  /** Published score the module's header pill carries; null when it carries a chip instead. */
-  score: number | null;
-  /**
-   * How the score enters its pillar when it does not set it directly, e.g. a
-   * redemption route the Exit pillar does not count ("79 · not counted").
-   */
-  scoreNote: string | null;
   chip: EvidenceIndexChip | null;
   /** Eligible Control component at the minimum (plan §6), ties included. */
   limiting: boolean;
@@ -64,16 +59,6 @@ export interface EvidenceIndexGroup {
   pillar: "backing" | "exit" | "control";
   label: string;
   rows: EvidenceIndexRow[];
-}
-
-/**
- * The explicit one-line state (decision S14) a module renders in its usual
- * slot when the coin lacks it: "Not reviewed", or "Not applicable" with a
- * reason. Frozen coins keep their reduced dossier and get none of these.
- */
-export interface EvidencePlaceholder {
-  state: EvidenceState;
-  reason?: string;
 }
 
 type RedemptionEvidence =
@@ -107,34 +92,43 @@ export interface DetailSharedModules {
   hasMintAuthority: boolean;
   /** Null when neither a bridge review nor shared failure domains exist. */
   bridgingForm: BridgingDeploymentsForm | null;
-  /** The Bridging slot's S14 line when `bridgingForm` is null; null renders nothing. */
-  bridgingPlaceholder: EvidencePlaceholder | null;
+  /**
+   * A multi-chain live coin without bridging evidence (decision S14). A
+   * single-chain coin has nothing to bridge, so its slot stays empty.
+   */
+  bridgingNotReviewed: boolean;
   failureDomains: FailureDomainsView | null;
   controlPosture: ControlPostureView | null;
   regulatoryStanding: RegulatoryStandingView | null;
   /** No regulatory review is published for a live coin (decision S14). */
   regulatoryNotReviewed: boolean;
-  /** The DEWS slot's S14 line (frozen archive, NAV token); null mounts the live module. */
-  dewsPlaceholder: EvidencePlaceholder | null;
+  /** False for a frozen archive or a NAV token: no peg stress layer applies, so DEWS mounts nothing. */
+  showDews: boolean;
   evidenceIndex: EvidenceIndexGroup[];
 }
 
 const NOT_REVIEWED_CHIP: EvidenceIndexChip = { label: "Not reviewed", toneClass: SEVERITY_TONE_CLASS.neutral.pill };
 
-const SINGLE_CHAIN_LABEL = BRIDGE_TIER_LABELS["single-chain-or-native"];
+/** The Control strip's restrained score tint, as on the Price feed header pill. */
+const CONTROL_SCORE_TONE_CLASS: Record<ControlComponentRoles["components"][number]["tone"], string> = {
+  neutral: SEVERITY_TONE_CLASS.neutral.pill,
+  warn: SEVERITY_TONE_CLASS.watch.pill,
+  critical: SEVERITY_TONE_CLASS.alert.pill,
+};
+
+function formatIndexScore(score: number): string {
+  return score > 0 && score < 1 ? "<1" : score.toFixed(0);
+}
 
 /**
  * Bridging without a review: a coin on one chain (or native to a chain Pharos
  * does not track, so no contract is stored) has nothing to bridge, which is
- * "not applicable", not a missing review. Spec §5: single-chain coins read
- * "Single-chain / native".
+ * not a missing review; only a multi-chain coin claims one is missing.
  */
-function resolveBridgingPlaceholder(viewModel: ReadyDetailViewModel): EvidencePlaceholder {
+function isMultiChain(viewModel: ReadyDetailViewModel): boolean {
   const contractChains = new Set((viewModel.coin.contracts ?? []).map((contract) => contract.chain));
   const trackedChains = viewModel.coinData.chains?.length ?? 0;
-  return contractChains.size <= 1 && trackedChains <= 1
-    ? { state: "not-applicable", reason: SINGLE_CHAIN_LABEL }
-    : { state: "not-reviewed" };
+  return contractChains.size > 1 || trackedChains > 1;
 }
 
 /**
@@ -225,17 +219,13 @@ export function buildDetailSharedModules({
   const failureDomains = buildFailureDomainsView(card);
   const bridgeSummary = coin.bridgeRouteRiskSummary ?? null;
   const bridgingForm = resolveBridgingDeploymentsForm(bridgeSummary, failureDomains);
-  const bridgingPlaceholder = bridgingForm === null && !frozen ? resolveBridgingPlaceholder(viewModel) : null;
+  const bridgingNotReviewed = bridgingForm === null && !frozen && isMultiChain(viewModel);
   const regulatoryStanding = buildRegulatoryStandingView(coin);
-  const dewsPlaceholder: EvidencePlaceholder | null = frozen
-    ? { state: "not-applicable", reason: "frozen archive" }
-    : viewModel.isNavToken
-      ? { state: "not-applicable", reason: "NAV tokens are priced by NAV, not peg" }
-      : null;
-  const oracleSummary = coin.oracleRiskSummary ?? null;
+  // A reviewed "no liquidation oracle" is not a module: it mounts nothing.
+  const oracleSummary = coin.oracleRiskSummary?.notApplicable ? null : (coin.oracleRiskSummary ?? null);
   const blacklistabilitySummary = coin.blacklistabilitySummary ?? null;
   const roleComponents = controlRoles?.components ?? [];
-  const mintComponent = roleComponents.find((component) => component.kind === "mint") ?? null;
+  const mintComponent = findV9NativeMintComponent(roleComponents);
   const oracleComponent = roleComponents.find((component) => component.kind === "oracle") ?? null;
 
   const backingRows: EvidenceIndexRow[] = [];
@@ -244,8 +234,6 @@ export function buildDetailSharedModules({
       key: "custody",
       title: "Custody",
       anchorId: "custody",
-      score: null,
-      scoreNote: null,
       chip: custody ? { label: custody.postureLabel, toneClass: custody.postureToneClass } : NOT_REVIEWED_CHIP,
       limiting: false,
     });
@@ -256,17 +244,18 @@ export function buildDetailSharedModules({
     const entry = viewModel.redemptionBackstop ?? null;
     const score = entry?.score ?? null;
     const exitNote = entry ? resolveRedemptionExitNote(card, entry) : null;
+    const scoreTier = resolveScoreTier5(score);
     exitRows.push({
       key: "redemption",
       title: "Redemption route",
       anchorId: "redemption",
-      score,
-      scoreNote: score !== null ? exitNote : null,
-      // An unrated route reads "NR", with how Exit treats it, never a blank row.
+      // The route score toned as the module's header pill, with how Exit
+      // treats it; an unrated route reads "NR", never a blank row.
       chip: entry
-        ? score === null
-          ? { label: exitNote ? `NR · ${exitNote}` : "NR", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
-          : null
+        ? {
+            label: `${score === null ? "NR" : formatIndexScore(score)}${exitNote ? ` · ${exitNote}` : ""}`,
+            toneClass: scoreTier === null ? SEVERITY_TONE_CLASS.neutral.pill : SCORE_TIER_5_CLASSES[scoreTier].pill,
+          }
         : redemptionEvidence.kind === "route"
           ? { label: "No holder route", toneClass: SEVERITY_TONE_CLASS.neutral.pill }
           : { label: redemptionEvidence.label, toneClass: SEVERITY_TONE_CLASS.neutral.pill },
@@ -279,8 +268,6 @@ export function buildDetailSharedModules({
       key: "mintAuthority",
       title: "Mint Authority",
       anchorId: "mint-authority",
-      score: null,
-      scoreNote: null,
       chip: !hasMintAuthority
         ? NOT_REVIEWED_CHIP
         : viewModel.mintAuthority.score
@@ -295,24 +282,20 @@ export function buildDetailSharedModules({
       key: "oracle",
       title: oracleSummary.title,
       anchorId: "oracle",
-      score: oracleScore,
-      scoreNote: null,
-      chip: oracleScore === null ? { label: oracleSummary.tierLabel, toneClass: oracleSummary.tierToneClass } : null,
+      chip: oracleComponent && oracleScore !== null
+        ? { label: formatIndexScore(oracleScore), toneClass: CONTROL_SCORE_TONE_CLASS[oracleComponent.tone] }
+        : { label: oracleSummary.tierLabel, toneClass: oracleSummary.tierToneClass },
       limiting: oracleComponent?.role === "limiting",
     });
   }
-  if (bridgingForm !== null || bridgingPlaceholder !== null) {
+  if (bridgingForm !== null || bridgingNotReviewed) {
     controlRows.push({
       key: "bridging",
       title: "Bridging & deployments",
       anchorId: "bridging",
-      score: null,
-      scoreNote: null,
       chip: bridgingForm !== null
         ? buildBridgingDeploymentsIndexChip(bridgeSummary, failureDomains, controlRoles)
-        : bridgingPlaceholder?.state === "not-applicable"
-          ? { label: SINGLE_CHAIN_LABEL, toneClass: SEVERITY_TONE_CLASS.neutral.pill }
-          : NOT_REVIEWED_CHIP,
+        : NOT_REVIEWED_CHIP,
       limiting: bridgingForm !== null
         && roleComponents.some((component) => component.kind === "bridge" && component.role === "limiting"),
     });
@@ -322,8 +305,6 @@ export function buildDetailSharedModules({
       key: "freezeSeizure",
       title: "Freeze & seizure",
       anchorId: "freeze-seizure",
-      score: null,
-      scoreNote: null,
       chip: { label: blacklistabilitySummary.statusLabel, toneClass: blacklistabilitySummary.statusToneClass },
       limiting: false,
     });
@@ -345,14 +326,14 @@ export function buildDetailSharedModules({
     accessRows: card ? buildSafetyScoreV9AccessRows(card) : [],
     hasMintAuthority,
     bridgingForm,
-    bridgingPlaceholder,
+    bridgingNotReviewed,
     failureDomains,
     controlPosture: buildControlPostureView(coin, viewModel.variantParent),
     regulatoryStanding,
     // A curated profile that resolves to no reader-facing regime (a reviewed
     // out-of-scope GENIUS record) is not "not reviewed".
     regulatoryNotReviewed: regulatoryStanding === null && !coin.genius && !coin.mica && !frozen,
-    dewsPlaceholder,
+    showDews: !frozen && !viewModel.isNavToken,
     evidenceIndex,
   };
 }

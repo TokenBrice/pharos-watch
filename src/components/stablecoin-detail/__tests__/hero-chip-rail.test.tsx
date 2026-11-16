@@ -21,9 +21,18 @@ describe("detail verdict lane", () => {
     rerender(<HeroChipRail coin={coin} verdict={{ archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" }} />);
     const lane = container.querySelector("[data-hero-verdict-lane]")!;
     expect(lane.textContent).toContain("Yield-Bearing Hybrid");
-    const taxonomy = lane.nextElementSibling!;
-    expect(taxonomy.innerHTML).toBe(initialTaxonomy);
-    expect(taxonomy.textContent).not.toContain("Yield-Bearing Hybrid");
+    // The verdict leads the taxonomy chip row instead of taking a line of its own.
+    expect(lane.parentElement!.firstElementChild).toBe(lane);
+    lane.remove();
+    expect(container.firstElementChild!.firstElementChild!.innerHTML).toBe(initialTaxonomy);
+  });
+
+  it("ends the chip row with the launch date, so it sits inline wherever the row has room", () => {
+    const coin = makeStablecoinMeta({ id: "zchf-frankencoin", name: "Frankencoin", symbol: "ZCHF", launchDate: "2023-10-28" });
+    const { getByText } = render(<HeroChipRail coin={coin} verdict={{ archetype: "uncategorized", label: "Uncategorized" }} />);
+    const date = getByText("Oct 28, 2023");
+    expect(date.parentElement!.lastElementChild).toBe(date);
+    expect(date.parentElement!.querySelectorAll("a").length).toBeGreaterThan(0);
   });
 
   it("renders no lane and no chip for the internal institutional-default archetype", () => {

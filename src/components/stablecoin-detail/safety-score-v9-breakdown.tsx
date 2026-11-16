@@ -390,31 +390,11 @@ export function SafetyScoreV9PillarRow({
         aria-expanded={hasDetails ? open : undefined}
         aria-controls={hasDetails ? detailsId : undefined}
       >
+        {/* Title row: name left, score · grade · chevron right; the
+            evidence lines then run the full width under it, so a phone
+            never squeezes them into half a column. */}
         <span className="flex min-w-0 items-center gap-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-foreground">{pillar.label}</span>
-            <span
-              className="mt-0.5 block text-2xs text-muted-foreground"
-              title={pillar.evidenceDescription ?? undefined}
-            >
-              {pillar.evidenceSummary}
-            </span>
-            {unknownNote ? (
-              <span className="mt-1 block text-2xs text-foreground/85">{unknownNote}</span>
-            ) : null}
-            {exposure ? (
-              <span className="mt-1 block text-2xs text-foreground/85">{formatLocalAuthorityExposure(exposure)}</span>
-            ) : null}
-            {pillar.breakdown?.exitHighlight ? (
-              <span className="mt-1 block text-2xs text-foreground/85">
-                Best exit: {pillar.breakdown.exitHighlight.venueLabel}
-                {pillar.breakdown.exitHighlight.capacityLine !== null ? ` · ${pillar.breakdown.exitHighlight.capacityLine}` : ""}
-                {pillar.breakdown.exitHighlight.redundancyCredit > 0
-                  ? ` · backup route +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(0)}`
-                  : ""}
-              </span>
-            ) : null}
-          </span>
+          <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">{pillar.label}</span>
           <span className={cn(
             "whitespace-nowrap font-mono text-sm font-semibold tabular-nums",
             unknownNote ? "text-muted-foreground" : "text-foreground",
@@ -436,6 +416,27 @@ export function SafetyScoreV9PillarRow({
             aria-hidden="true"
           />
         </span>
+        <span
+          className="mt-0.5 block text-2xs text-muted-foreground"
+          title={pillar.evidenceDescription ?? undefined}
+        >
+          {pillar.evidenceSummary}
+        </span>
+        {unknownNote ? (
+          <span className="mt-1 block text-2xs text-foreground/85">{unknownNote}</span>
+        ) : null}
+        {exposure ? (
+          <span className="mt-1 block text-2xs text-foreground/85">{formatLocalAuthorityExposure(exposure)}</span>
+        ) : null}
+        {pillar.breakdown?.exitHighlight ? (
+          <span className="mt-1 block text-2xs text-foreground/85">
+            Best exit: {pillar.breakdown.exitHighlight.venueLabel}
+            {pillar.breakdown.exitHighlight.capacityLine !== null ? ` · ${pillar.breakdown.exitHighlight.capacityLine}` : ""}
+            {pillar.breakdown.exitHighlight.redundancyCredit > 0
+              ? ` · backup route +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(0)}`
+              : ""}
+          </span>
+        ) : null}
       </button>
       {/* Outside the button so its label does not pad the button's name. A
           score bar carries its band color so bar and grade pill state the

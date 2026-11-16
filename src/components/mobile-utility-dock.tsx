@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronUp, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,12 +13,20 @@ export function MobileUtilityDock() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [scrollingUp, setScrollingUp] = useState(false);
+  const lastScrollY = useRef(0);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     function onScroll() {
-      setShowFeedback(window.scrollY > 24);
-      setShowScrollTop(window.scrollY > 400);
+      const y = window.scrollY;
+      // Back-to-top surfaces when the reader turns back up, so the pill
+      // never parks over the content they are reading on the way down.
+      if (y < lastScrollY.current - 4) setScrollingUp(true);
+      else if (y > lastScrollY.current + 4) setScrollingUp(false);
+      lastScrollY.current = y;
+      setShowFeedback(y > 24);
+      setShowScrollTop(y > 400);
     }
 
     onScroll();
@@ -27,8 +35,12 @@ export function MobileUtilityDock() {
   }, []);
 
   if (pathname === "/") return null;
-  const feedbackEnabled = !isFeedbackHiddenPath(pathname);
-  const showDock = showScrollTop || (feedbackEnabled && showFeedback);
+  // A stablecoin dossier carries its own "Report a data issue" action in the
+  // identity header, so its reading column stays clear of the feedback pill.
+  const dossierRoute = pathname?.startsWith("/stablecoin/") === true;
+  const feedbackEnabled = !isFeedbackHiddenPath(pathname) && !dossierRoute;
+  const scrollTopVisible = showScrollTop && scrollingUp;
+  const showDock = scrollTopVisible || (feedbackEnabled && showFeedback);
 
   return (
     <>
@@ -64,10 +76,10 @@ export function MobileUtilityDock() {
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" })}
             aria-label="Scroll to top"
-            tabIndex={showScrollTop ? undefined : -1}
+            tabIndex={scrollTopVisible ? undefined : -1}
             className={cn(
               "pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-[opacity,transform,color,background-color,border-color] duration-200",
-              showScrollTop ? "opacity-100" : "invisible pointer-events-none -translate-y-1 opacity-0",
+              scrollTopVisible ? "opacity-100" : "invisible pointer-events-none -translate-y-1 opacity-0",
             )}
           >
             <ChevronUp className="h-4 w-4" />

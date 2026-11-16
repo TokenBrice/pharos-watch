@@ -168,32 +168,49 @@ describe("HeroPassportStrip", () => {
     expect(getByRole("group", { name: "Verification passport" })).toBeTruthy();
     const links = getAllByRole("link");
     expect(links).toHaveLength(7);
+    // How the token works, then who stands behind it, whatever the input order.
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "#mechanism",
-      "#attestation",
-      "#jurisdiction",
       "#redemption",
       "#mint-authority",
       "#blacklist",
       "#contracts",
+      "#jurisdiction",
+      "#attestation",
     ]);
   });
 
-  it("reserves supplemental passport tracks without inventing facts or section links", () => {
-    const initial = ITEMS.filter((item) => item.key !== "redeemability" && item.key !== "minting");
-    const { container, rerender } = render(<HeroPassportStrip items={initial} compactDesktop />);
+  it("holds a pending fact's slot in both layouts without inventing a fact or a section link", () => {
+    const initial = ITEMS.filter((item) => item.key !== "redeemability");
+    const { container, rerender } = render(<HeroPassportStrip items={initial} pendingKeys={["redeemability"]} compactDesktop />);
+    // One reserve in the scrolling mobile row, one blank cell in the desktop
+    // grid; a fact that is not pending (no record for a NAV token) has no slot.
     expect(container.querySelectorAll('[data-passport-reserve="redeemability"]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-passport-reserve="minting"]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-passport-reserve="record"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-passport-reserve="record"]')).toHaveLength(0);
     expect(container.querySelector('a[href="#redemption"]')).toBeNull();
-    expect(container.querySelector('a[href="#mint-authority"]')).toBeNull();
+    const desktopCells = () => container.querySelectorAll(".\\@container > div > *");
+    expect(desktopCells()).toHaveLength(6);
     const chains = container.querySelector('a[href="#contracts"]')!;
     expect(chains.className).toContain("w-40");
     rerender(<HeroPassportStrip items={ITEMS} compactDesktop />);
-    expect(container.querySelectorAll('[data-passport-reserve="redeemability"]')).toHaveLength(0);
-    expect(container.querySelectorAll('[data-passport-reserve="minting"]')).toHaveLength(0);
+    expect(container.querySelectorAll("[data-passport-reserve]")).toHaveLength(0);
+    // The landed fact takes the reserved slot: the desktop grid keeps its cell count.
+    expect(desktopCells()).toHaveLength(6);
     expect(container.querySelector('a[href="#contracts"]')).toBe(chains);
-    expect(chains.className).toContain("w-40");
+  });
+
+  it("balances the desktop rows instead of leaving an orphan cell", () => {
+    const facts = (["redeemability", "minting", "freeze", "record", "chains", "jurisdiction", "mica", "genius"] as const)
+      .map((key) => ({ ...ITEMS[0], key, ariaLabel: key, href: `#${key}` }));
+    const { container, rerender } = render(<HeroPassportStrip items={[ITEMS[0], ...facts]} compactDesktop />);
+    const cellClass = () => container.querySelector('.\\@container a[href="#minting"]')!.className;
+    // Eight facts: one row when each gets 8.5rem, else two rows of four.
+    expect(cellClass()).toContain("basis-1/4 @[68rem]:basis-0");
+    rerender(<HeroPassportStrip items={[ITEMS[0], ...facts.slice(0, 7)]} compactDesktop />);
+    expect(cellClass()).toContain("basis-1/4 @[59.5rem]:basis-0");
+    rerender(<HeroPassportStrip items={[ITEMS[0], ...facts.slice(0, 5)]} compactDesktop />);
+    expect(cellClass()).toContain("basis-0");
+    expect(cellClass()).not.toContain("basis-1/");
   });
 
   it("does not publish a zero-chain fact when no contract record exists", () => {
@@ -211,6 +228,21 @@ describe("HeroPassportStrip", () => {
 
     expect(queryByRole("link", { name: /Deployed on 0 chains/ })).toBeNull();
     expect(queryByText("Chains")).toBeNull();
+  });
+
+  it("keeps the card's rounded corner and prints the chain count like every other fact", () => {
+    const { getByRole } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
+    const strip = getByRole("group", { name: "Verification passport" });
+    // Docked last in the card, the strip clips to its bottom corners; the
+    // scroll fade belongs to the scrolling mobile row only.
+    expect(strip.className).toContain("overflow-hidden");
+    expect(strip.className).toContain("last:rounded-b-xl");
+    const fade = strip.querySelector(".pointer-events-none")!;
+    expect(fade.className).toContain("lg:hidden");
+    expect(fade.className).not.toContain("xl:block");
+    for (const chains of strip.querySelectorAll('a[href="#contracts"]')) {
+      expect(chains.querySelector(".rounded-full")).toBeNull();
+    }
   });
 
   it("renders nothing when fewer than three facts resolve", () => {

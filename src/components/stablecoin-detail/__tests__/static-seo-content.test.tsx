@@ -141,7 +141,7 @@ describe("StablecoinDetailSeoContent", () => {
     };
 
     const { container } = render(<StablecoinDetailSeoContent coin={navCoin} />);
-    expect(container.textContent).toContain("peg US Dollar-denominated NAV");
+    expect(screen.getByText("Denomination").nextElementSibling?.textContent).toBe("US Dollar-denominated NAV");
     expect(container.textContent).toContain("yield-bearing token with US Dollar-denominated NAV");
   });
 
@@ -153,10 +153,12 @@ describe("StablecoinDetailSeoContent", () => {
     expect(headings[0]?.className).toContain("sr-only");
     expect(headings[0]?.textContent).toContain("Test Dollar (TSTD) stablecoin analytics");
 
-    expect(screen.getByRole("heading", { name: "TSTD profile facts" })).toBeTruthy();
-    expect(
-      screen.getByText(/governance model CeFi-Dependent; backing model Real-World Asset Backed; peg US Dollar/),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "About TSTD" })).toBeTruthy();
+    // Each classification is a labelled fact, never a registry-field sentence.
+    expect(screen.getByText("Governance").nextElementSibling?.textContent).toBe("CeFi-Dependent");
+    expect(screen.getByText("Backing").nextElementSibling?.textContent).toBe("Real-World Asset Backed");
+    expect(screen.getByText("Peg").nextElementSibling?.textContent).toBe("US Dollar");
+    expect(container.textContent).not.toMatch(/static profile|registry profile fields/);
 
     expect(screen.getByRole("link", { name: "Browse CeFi-Dependent stablecoins" }).getAttribute("href")).toBe(
       "/stablecoins/governance/cefi-dependent/",
@@ -208,7 +210,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByRole("link", { name: "Digest RSS" }).getAttribute("href")).toBe("/feed/digest.xml");
     expect(screen.getByRole("link", { name: "API access" }).getAttribute("href")).toBe("/api/");
     expect(screen.getByText("/subscribe dews,depeg,safety test-dollar")).toBeTruthy();
-    expect(container.textContent).toContain("Source: Pharos registry profile fields.");
+    expect(container.textContent).toContain("From Pharos's reviewed coin profile.");
     expect(container.textContent).toContain("the summary above was last updated May 2, 2026");
   });
 
@@ -450,9 +452,9 @@ describe("StablecoinDetailSeoContent", () => {
   it("keeps the provider and reserve-source link when no assurance report exists", () => {
     const noProof = { ...coin, proofOfReserves: undefined };
     const { container } = render(<StablecoinDetailSeoContent coin={noProof} />);
-    expect(container.textContent).toContain("No proof-of-reserves entry in the static profile.");
+    expect(container.textContent).toContain("No proof-of-reserves report listed.");
     expect(buildStablecoinFaqItems(noProof)[2].answer).toContain(
-      "Reserve evidence: no linked reserve proof in the static profile.",
+      "Reserve evidence: no proof-of-reserves report listed.",
     );
     expect(buildStablecoinFaqItems(noProof)[2].answer).not.toMatch(/Audit|Examination/);
   });
@@ -492,6 +494,36 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText(items[2].answer)).toBeTruthy();
     const faqJsonLd = faq.container.querySelector('script[type="application/ld+json"]');
     expect(faqJsonLd?.textContent).toContain(items[2].answer);
+  });
+
+  it("never claims no reserve evidence for a coin the live dossier tracks", () => {
+    const live = { ...coin, proofOfReserves: undefined, liveReservesConfig: {} } as unknown as StablecoinMeta;
+    const { container } = render(<StablecoinDetailSeoContent coin={live} includeHeading={false} afterDossier />);
+    expect(container.textContent).not.toContain("No proof-of-reserves report listed");
+    expect(container.textContent).toContain("Pharos tracks a live reserve feed in Reserves.");
+    expect(screen.getByRole("link", { name: "Reserves" }).getAttribute("href")).toBe("#reserves");
+    expect(buildStablecoinFaqItems(live)[2].answer).toContain("Reserve evidence: a live reserve feed.");
+  });
+
+  it("folds the after-dossier profile closed while keeping its facts and marker in the server HTML", () => {
+    const { container } = render(<StablecoinDetailSeoContent coin={coin} includeHeading={false} afterDossier />);
+    const fold = container.querySelector("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary #stablecoin-static-profile-title")?.textContent).toBe("About TSTD");
+    expect(fold?.textContent).toContain("Cash, Treasury bills, and overnight repos.");
+    expect(fold?.textContent).toContain("in the dossier above");
+    // Next actions and the answer-first block belong to the standalone profile only.
+    expect(screen.queryByText("Next actions")).toBeNull();
+    expect(screen.queryByText("Answer first")).toBeNull();
+  });
+
+  it("omits facts the record does not carry instead of printing placeholders", () => {
+    const sparse = { ...coin, collateral: undefined, pegMechanism: undefined, jurisdiction: undefined, contracts: [] };
+    const { container } = render(<StablecoinDetailSeoContent coin={sparse} />);
+    for (const label of ["Collateral", "Peg mechanism", "Jurisdiction", "Contracts"]) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(container.textContent).not.toMatch(/not (specified|disclosed)|No contract deployments/);
   });
 
   it("renders the ISIN fact row only for coins with an authored ISIN", () => {

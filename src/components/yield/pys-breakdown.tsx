@@ -10,7 +10,7 @@ import {
   PYS_SUSTAINABILITY_FLOOR,
   computeSourceRiskScoreFromPenalty,
 } from "@shared/lib/yield-scoring";
-import { formatPercent, formatScore } from "@shared/lib/format";
+import { formatPercent, formatScoreTrimmed } from "@shared/lib/format";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -435,14 +435,14 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
 
       <div
         className="flex items-baseline justify-between gap-3"
-        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100${scalingFactor !== 1 ? ` (× ${scalingFactor} scaling factor)` : ""}`}
+        aria-label={`Pharos Yield Score ${formatScoreTrimmed(score)} out of 100${scalingFactor !== 1 ? ` (× ${scalingFactor} scaling factor)` : ""}`}
       >
         <span aria-hidden="true" className="font-medium text-foreground">{scalingFactor !== 1 ? `× ${scalingFactor} → PYS` : "PYS"}</span>
         <span
           aria-hidden="true"
           className={cn("font-mono text-sm font-semibold tabular-nums", toneClass)}
         >
-          {formatScore(score)}
+          {formatScoreTrimmed(score)}
         </span>
       </div>
 
@@ -486,8 +486,11 @@ export function PysBreakdown(props: PysBreakdownProps) {
   return (
     <TooltipProvider delayDuration={220}>
       <details className="group relative inline-flex min-w-0 flex-col">
-        <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
-          <span className={cn("font-mono text-2xl tabular-nums", props.toneClass)}>{props.score.toFixed(1)}</span>
+        {/* The 44 px hit area is cancelled by equal negative margins, so the score
+            sits on the same line box as a plain stat figure beside it. */}
+        <summary className="pharos-focus-ring -mx-1 -my-2 inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
+          {/* Scores are whole numbers on this page; a fraction prints only when it is real. */}
+          <span className={cn("font-mono text-xl leading-7 tabular-nums", props.toneClass)}>{formatScoreTrimmed(props.score)}</span>
           <span className="flex items-center gap-0.5 text-2xs font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
             <span className="group-open:hidden">Breakdown</span>
             <span className="hidden group-open:inline">Hide</span>

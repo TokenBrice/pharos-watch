@@ -224,20 +224,23 @@ export function PegStabilityCard({
   const peg = splitProse(meta.pegMechanism);
   if (peg.folded) notes.push({ label: "Peg mechanism", text: peg.folded });
 
+  // Reserves draws the reviewed composition, so the collateral prose folds
+  // and a one-line pointer sits under the peg paragraph, which keeps the
+  // full width instead of sharing it with a one-line column.
   let collateral: ReactNode = null;
+  let collateralPointer: ReactNode = null;
   if (meta.collateral && hasReviewedReserves) {
     notes.push({ label: "Collateral", text: closeSentence(meta.collateral) });
-    collateral = (
-      <section>
-        <h3 className={SUBHEADING_CLASS}>Collateral</h3>
-        <p className={cn(PROSE_CLASS, "text-muted-foreground")}>
-          Drawn as the reviewed composition in{" "}
-          <a href="#reserves" className="pharos-prose-link">
-            Reserves
-          </a>
-          .
-        </p>
-      </section>
+    collateralPointer = (
+      <p className="mt-2 text-xs text-muted-foreground">
+        <span className="font-semibold">Collateral</span>
+        <span aria-hidden="true" className="text-muted-foreground/50"> · </span>
+        drawn as the reviewed composition in{" "}
+        <a href="#reserves" className="pharos-prose-link">
+          Reserves
+        </a>
+        .
+      </p>
     );
   } else if (meta.collateral) {
     const split = splitProse(meta.collateral);
@@ -326,7 +329,10 @@ export function PegStabilityCard({
             collateral ? "@3xl:grid-cols-2" : undefined,
           )}
         >
-          <ProseColumn heading="Peg mechanism" line={peg.line} folded={peg.folded !== null} />
+          <div>
+            <ProseColumn heading="Peg mechanism" line={peg.line} folded={peg.folded !== null} />
+            {collateralPointer}
+          </div>
           {collateral}
         </div>
       </div>

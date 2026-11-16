@@ -78,10 +78,11 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
     ariaLabel: (symbol) =>
       `Users overcollateralize crypto in a vault to mint ${symbol} as debt; the position is liquidated if collateral falls below the safety ratio.`,
     description: (symbol) =>
-      `Users deposit crypto collateral worth more than the debt they want to issue; a vault or peg-stability module mints ${symbol} as debt against the collateral; the position is liquidated if the collateral value falls below the configured safety ratio.`,
+      `Users deposit crypto collateral worth more than the debt they want to issue; a vault mints ${symbol} as debt against the collateral; the position is liquidated if the collateral value falls below the configured safety ratio.`,
     defaultSteps: (symbol) => [
       { label: "Crypto collateral", subtitle: "overcollateralized" },
-      { label: "Vault / PSM", subtitle: "mint debt vs collateral" },
+      // A PSM is coin-specific (DAI, USDS): their overrides name it.
+      { label: "Vault", subtitle: "mint debt vs collateral" },
       { label: `${symbol} minted`, subtitle: "liquidates below ratio" },
     ],
     returnArrow: {

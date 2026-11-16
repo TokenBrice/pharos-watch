@@ -210,7 +210,8 @@ describe("OracleLiquidationSection", () => {
     const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} controlRoles={rolesWithOracle("limiting")} />);
     const spectrum = ladder(container);
     expect(spectrum?.getAttribute("aria-label")).toContain("Privileged internal pricing");
-    expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length}`);
+    // The unknown band is a state, not a rung: the ladder counts only the quality rungs.
+    expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length - 1}`);
   });
 
   it("names the ladder the scored tier, so a mixed-tier coin's verdict keeps the reviewed tier", () => {
@@ -233,17 +234,17 @@ describe("OracleLiquidationSection", () => {
     }
   });
 
-  it("draws an empty provider list as a missing source station, not an undisclosed one", () => {
+  it("starts the path at the aggregator when the review names no source, saying why only in its name", () => {
     const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} />);
     const path = pricePath(container)!;
     expect(path).not.toBeNull();
     expect(path.getAttribute("aria-label")).toContain("sources not itemized");
     expect(path.getAttribute("aria-label")).not.toContain("undisclosed");
-    expect(path.textContent).toContain("—");
-    expect(path.textContent).not.toContain("Undisclosed");
+    expect(path.textContent).not.toMatch(/Sources|—|Undisclosed/);
+    expect(path.textContent).toMatch(/^Aggregator/);
   });
 
-  it("keeps Undisclosed for an opaque review with no itemized feeds", () => {
+  it("names undisclosed sources for an opaque review and draws no unknown rung", () => {
     const { container } = render(
       <OracleLiquidationSection
         summary={{ ...PRICE_FEED, tier: "opaque-or-unknown", tierLabel: "Opaque / unknown" }}
@@ -251,7 +252,15 @@ describe("OracleLiquidationSection", () => {
     );
     const path = pricePath(container)!;
     expect(path.getAttribute("aria-label")).toContain("sources undisclosed");
-    expect(path.textContent).toContain("Undisclosed");
+    expect(path.textContent).not.toContain("Sources");
+    // The dashed aggregator chip states the unknown tier; no ladder lights an "unknown" rung.
+    expect(path.textContent).toContain("Opaque / unknown");
+    expect(ladder(container)).toBeNull();
+  });
+
+  it("puts each stacked arrow under its station's chips, not centred across the column", () => {
+    const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
+    expect(pricePath(container)!.firstElementChild!.className).toContain("items-start");
   });
 
   it("names the reviewed providers and the liquidation engine for collateral pricing", () => {
@@ -353,13 +362,39 @@ describe("OracleLiquidationSection", () => {
   });
 
   it("shows the oracle's price delay and the liquidation delay as separate facts", () => {
-    const delayed: OracleRiskClientSummary = { ...SUMMARY, priceDelayLabel: "OSM", maxLiquidationDelayLabel: "None" };
-    const { getByRole } = render(<OracleLiquidationSection summary={delayed} />);
+    const delayed: OracleRiskClientSummary = { ...SUMMARY, priceDelayLabel: "OSM", maxLiquidationDelayLabel: "none" };
+    const { getByRole, getByText } = render(<OracleLiquidationSection summary={delayed} />);
     const facts = getByRole("group", { name: `${SUMMARY.title} facts` });
     expect(facts.textContent).toContain("Price delay");
     expect(facts.textContent).toContain("OSM");
     expect(facts.textContent).toContain("Liquidation delay");
     expect(facts.textContent).not.toContain("Liq. delay");
+    // A wordy delay reads sentence case, never as a mono "NONE" error code.
+    expect(getByText("None").className).not.toContain("uppercase");
+  });
+
+  it("draws only quality rungs, with hyphenated tier names that never break at the hyphen", () => {
+    const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
+    const ladder = container.querySelector("#oracle-visual [role='img']")!;
+    expect(ladder.textContent).not.toMatch(/Opaque|Unknown/);
+    expect(container.textContent).not.toMatch(/\(U \d+|cause unavailable/);
+    expect(ladder.textContent).toContain("Single\u2011source");
+    expect(ladder.textContent).not.toContain("Single-source");
+  });
+
+  it("states every fact in one sans style at the label's size", () => {
+    const { getByRole } = render(
+      <OracleLiquidationSection summary={{ ...SUMMARY, worstMaxLtvPct: 90.91, worstMinCrPct: 110, maxLiquidationDelayLabel: "none" }} />,
+    );
+    const facts = getByRole("group", { name: `${SUMMARY.title} facts` });
+    const values = Array.from(facts.querySelectorAll(":scope > div > span:last-child"));
+    expect(values.length).toBeGreaterThanOrEqual(3);
+    for (const value of values) {
+      expect(value.className).toContain("text-xs");
+      expect(value.className).not.toMatch(/font-mono|uppercase/);
+    }
+    // The facts run the module's full width, like the branch table under them.
+    expect(facts.closest("[class*='max-w-']")).toBeNull();
   });
 
   it("caps the inline branch rows at 5, sorted by debt share, with the rest in the detail fold", () => {

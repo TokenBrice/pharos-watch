@@ -7,9 +7,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceArea,
   ReferenceLine,
   ReferenceDot,
 } from "recharts";
+import { RefreshCw } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { PysHistorySparkline, type PysHistorySparklinePoint } from "@/components/yield/pys-history-sparkline";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -24,6 +26,7 @@ import {
   BRAND_ACCENT,
   DEFAULT_DAYS,
   formatChartNumber,
+  resolveReferenceLineLabels,
   type YieldHistoryChartProps,
   useYieldHistoryChartModel,
 } from "./yield-history-chart-model";
@@ -34,12 +37,44 @@ import {
   renderAxisTick,
   SourceStrip,
   SourceSwitchDot,
-  WarningDot,
   YAxisTick,
   YieldHistoryTooltip,
 } from "./yield-history-chart-ui";
 
 const SPIKE_COLOR = "oklch(0.72 0.18 35)";
+/** A label within this many px of the plot top sits under its line instead of over it. */
+const REFERENCE_LABEL_HEIGHT_PX = 14;
+
+/**
+ * Reference-line label set beside its line, never on it (a dashed line through
+ * the text read as struck through), haloed in the chart background so a series
+ * passing behind it cannot cross the glyphs.
+ */
+function ReferenceLabel({
+  viewBox,
+  text,
+  below,
+}: {
+  viewBox?: { x?: number; y?: number; width?: number };
+  text: string;
+  below: boolean;
+}) {
+  return (
+    <text
+      x={(viewBox?.x ?? 0) + (viewBox?.width ?? 0) - 4}
+      y={(viewBox?.y ?? 0) + (below ? 12 : -5)}
+      textAnchor="end"
+      fill="var(--color-muted-foreground)"
+      fontSize={10}
+      stroke="var(--color-background)"
+      strokeWidth={3}
+      strokeLinejoin="round"
+      paintOrder="stroke"
+    >
+      {text}
+    </text>
+  );
+}
 
 type NullableBenchmarkYieldHistoryChartProps = YieldHistoryChartProps;
 
@@ -92,16 +127,31 @@ export function YieldHistoryChart({
       { trailingAvg: s.trailingAvg, ratio: s.ratio, windowDays: s.windowDays },
     ]),
   );
-  // A reference clamped to the domain edge misstates its rate while carrying
-  // the benchmark's name — mark it off-scale on the inline label (E25).
-  const benchmarkReferenceLabel = benchmarkRate == null
-    ? null
-    : `${benchmarkLabel ?? "Benchmark"}${
-        benchmarkRate > domainMax ? " ↑ off scale" : benchmarkRate < domainMin ? " ↓ off scale" : ""
-      }`;
-  const medianReferenceLabel = medianApy == null ? null : `Median${
-    medianApy > domainMax ? " ↑ off scale" : medianApy < domainMin ? " ↓ off scale" : ""
-  }`;
+  const chartMargin = compact ? { top: 8, right: 8, bottom: 8, left: 0 } : { top: 12, right: 18, bottom: 12, left: 0 };
+  const xAxisHeight = compact ? 26 : 30;
+  const plotHeight = Math.max(1, height - chartMargin.top - chartMargin.bottom - xAxisHeight);
+  // Off-scale references say so (E25); near-coincident ones share one label.
+  const referenceLabels = resolveReferenceLineLabels({
+    benchmark: benchmarkRate == null ? null : { rate: benchmarkRate, label: benchmarkLabel ?? "Benchmark" },
+    median: medianApy == null ? null : { rate: medianApy, label: "Median" },
+    domain: model.yDomain,
+    plotHeight,
+  });
+  // Compact charts carry no inline labels; the legend chips name both lines.
+  const referenceLabel = (text: string | null, rate: number) => {
+    if (compact || !text) return undefined;
+    const fromTop = domainMax > domainMin ? ((domainMax - Math.min(Math.max(rate, domainMin), domainMax)) / (domainMax - domainMin)) * plotHeight : 0;
+    return <ReferenceLabel text={text} below={fromTop < REFERENCE_LABEL_HEIGHT_PX} />;
+  };
+  // A warning run is a band; a one-observation run still gets a visible sliver.
+  const firstTs = model.mergedChartData[0]?.date ?? 0;
+  const lastTs = model.mergedChartData[model.mergedChartData.length - 1]?.date ?? 0;
+  const minRunMs = (lastTs - firstTs) * 0.004;
+  const warningBands = model.warningRuns.map((run) => {
+    const end = Math.min(Math.max(run.end, run.start + minRunMs), lastTs);
+    return { ...run, start: Math.max(firstTs, Math.min(run.start, end - minRunMs)), end };
+  });
+  const hasSourceSwitch = model.chartData.some((point) => point.sourceSwitch);
   const MAX_SPIKE_MARKERS = 3;
   const visibleSpikes = [...spikeAnnotations]
     .sort((a, b) => b.ratio - a.ratio)
@@ -121,29 +171,66 @@ export function YieldHistoryChart({
   const showSourceStrip = distinctSourceCount > 1 && sourceSegments.length > 0;
   const sourceStripStart = sourceSegments[0]?.startTs ?? 0;
   const sourceStripEnd = sourceSegments[sourceSegments.length - 1]?.endTs ?? 0;
-  /* insideRight keeps the inline benchmark/peer-median labels within the plot
-     bounds — position "right" rendered them into the margin, truncating them
-     at the chart edge. */
-  const referenceLabelStyle = compact
-    ? undefined
-    : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "insideRight" as const };
-
   if (model.mergedChartData.length === 0 && model.sourceQueries.every((source) => source.isLoading)) {
+    // The loading frame is the final layout (controls, then chart), not a placeholder pill.
     return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex h-8 items-center rounded-md border border-border/60 bg-muted/30 px-2 text-xs text-muted-foreground">
-            Loading history
-          </div>
-        </div>
-        <div className={cn("overflow-hidden rounded-xl border border-border/60 bg-background/40", compact ? "p-2.5" : "p-3.5")}>
+      <div className="space-y-3" aria-busy="true">
+        <Controls
+          compact={compact}
+          days={model.days}
+          onDaysChange={model.setDays}
+          hasBreakdown={false}
+          showBreakdown={model.effectiveShowBreakdown}
+          onShowBreakdownChange={model.setShowBreakdown}
+          availableSources={availableSources}
+          selectedSourceKey={model.selectedSourceKey}
+          onSourceChange={model.onSourceChange}
+          hideSourceSelector={hideSourceSelector}
+        />
+        <ChartShell compact={compact}>
+          <p role="status" className="sr-only">Loading history</p>
           <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
-        </div>
+        </ChartShell>
       </div>
     );
   }
 
   if (model.mergedChartData.length === 0) {
+    // Every requested source failed with nothing retained: one compact state
+    // with its retry, not a red alert stacked over an empty chart frame.
+    const allFailed = model.sourceQueries.length > 0 && model.sourceQueries.every((source) => source.error && !source.hasData);
+    if (allFailed) {
+      return (
+        <div className="space-y-3">
+          <Controls
+            compact={compact}
+            days={model.days}
+            onDaysChange={model.setDays}
+            hasBreakdown={false}
+            showBreakdown={model.effectiveShowBreakdown}
+            onShowBreakdownChange={model.setShowBreakdown}
+            availableSources={availableSources}
+            selectedSourceKey={model.selectedSourceKey}
+            onSourceChange={model.onSourceChange}
+            hideSourceSelector={hideSourceSelector}
+          />
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border px-4 py-4 text-sm text-muted-foreground"
+          >
+            <span>Yield history could not be loaded right now.</span>
+            <button
+              type="button"
+              onClick={() => model.sourceQueries.forEach((source) => source.onRetry?.())}
+              className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border/70 bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted/60"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-3">
         {sourceNotices}
@@ -214,9 +301,20 @@ export function YieldHistoryChart({
               width={width}
               height={height}
               data={model.mergedChartData}
-              margin={compact ? { top: 8, right: 8, bottom: 8, left: 0 } : { top: 12, right: 18, bottom: 12, left: 0 }}
+              margin={chartMargin}
             >
               <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray={CHART_GRID_DASH} vertical={false} />
+              {warningBands.map((run) => (
+                <ReferenceArea
+                  key={`${run.kind}-${run.start}`}
+                  x1={run.start}
+                  x2={run.end}
+                  fill={run.kind === "warning" ? CHART_AMBER : "var(--color-muted-foreground)"}
+                  fillOpacity={run.kind === "warning" ? 0.1 : 0.08}
+                  strokeOpacity={0}
+                  ifOverflow="hidden"
+                />
+              ))}
               <XAxis
                 dataKey="date"
                 type="number"
@@ -225,7 +323,7 @@ export function YieldHistoryChart({
                 ticks={model.tickValues}
                 tickLine={false}
                 axisLine={false}
-                height={compact ? 26 : 30}
+                height={xAxisHeight}
                 tick={(props) => (
                   <AxisTick
                     {...props}
@@ -253,11 +351,7 @@ export function YieldHistoryChart({
                   stroke={CHART_SLATE}
                   strokeOpacity={0.8}
                   strokeDasharray="6 4"
-                  label={
-                    referenceLabelStyle
-                      ? { ...referenceLabelStyle, value: benchmarkReferenceLabel }
-                      : undefined
-                  }
+                  label={referenceLabel(referenceLabels.benchmark, benchmarkRate)}
                 />
               ) : null}
               {medianApy != null ? (
@@ -266,11 +360,7 @@ export function YieldHistoryChart({
                   stroke={CHART_BLUE}
                   strokeOpacity={0.45}
                   strokeDasharray="3 3"
-                  label={
-                    referenceLabelStyle
-                      ? { ...referenceLabelStyle, value: medianReferenceLabel }
-                      : undefined
-                  }
+                  label={referenceLabel(referenceLabels.median, medianApy)}
                 />
               ) : null}
               <Line
@@ -307,16 +397,6 @@ export function YieldHistoryChart({
                   isAnimationActive={false}
                 />
               ) : null}
-              <Line
-                type="monotone"
-                dataKey="apy"
-                stroke="transparent"
-                strokeWidth={0}
-                dot={<WarningDot />}
-                activeDot={<WarningDot active />}
-                legendType="none"
-                isAnimationActive={false}
-              />
               <Line
                 type="monotone"
                 dataKey="apy"
@@ -398,7 +478,7 @@ export function YieldHistoryChart({
           {medianApy != null ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
               <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>
-              Global TVL-weighted median (tracked selected rows)
+              Median of tracked yields (TVL-weighted)
             </span>
           ) : null}
           {model.overlayLabels.map((source) => (
@@ -413,29 +493,36 @@ export function YieldHistoryChart({
             </span>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-3xs text-muted-foreground/80">
-          <span className="pharos-label">Markers</span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
-            warning
-          </span>
-          {model.chartData.some((point) => point.warningSignalsStatus === "unreadable") ? (
-            <span className="inline-flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full border border-muted-foreground" />
-              warnings unreadable
-            </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-xs" style={{ backgroundColor: CHART_BLUE }} />
-            source change
-          </span>
-          {spikeAnnotations.length > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: SPIKE_COLOR }} />
-              spike
-            </span>
-          ) : null}
-        </div>
+        {/* The key lists only markers this window actually draws. */}
+        {warningBands.length > 0 || hasSourceSwitch || spikeAnnotations.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-3xs text-muted-foreground/80">
+            <span className="pharos-label">Markers</span>
+            {warningBands.some((run) => run.kind === "warning") ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-3 rounded-xs opacity-40" style={{ backgroundColor: CHART_AMBER }} />
+                warning
+              </span>
+            ) : null}
+            {warningBands.some((run) => run.kind === "unreadable") ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-3 rounded-xs bg-muted-foreground/25" />
+                warnings unreadable
+              </span>
+            ) : null}
+            {hasSourceSwitch ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-xs" style={{ backgroundColor: CHART_BLUE }} />
+                source change
+              </span>
+            ) : null}
+            {spikeAnnotations.length > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: SPIKE_COLOR }} />
+                spike
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Line, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
-import { TimeRangeButtons } from "@/components/time-range-buttons";
+import { ChartRangeToggle } from "@/components/chart-primitives/scale-toggle";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { computePegYAxis, ewma } from "@/lib/peg-chart-math";
@@ -83,6 +83,11 @@ interface PegDeviationChartProps {
   cardClassName?: string;
   /** When true, drop the outer Card chrome so the chart can be embedded in a grouped panel. */
   embedded?: boolean;
+  /**
+   * The live quote and its deviation from the peg reference (what the hero shows).
+   * When given, the header reads these; the line stays on daily snapshots.
+   */
+  current?: { price: number | null; deviationBps: number | null };
 }
 
 export function PegDeviationChart({
@@ -91,6 +96,7 @@ export function PegDeviationChart({
   controlledRange,
   cardClassName,
   embedded = false,
+  current,
 }: PegDeviationChartProps) {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -135,13 +141,14 @@ export function PegDeviationChart({
   // the controlled range's latest observation, not the brushed window, so a brush
   // drag cannot turn an old print into the "current" one.
   const readout = useMemo(() => {
-    if (filteredData.length === 0) return null;
     const last = filteredData[filteredData.length - 1];
-    const bps = Math.round((last.price - 1) * 10_000);
+    const price = current ? current.price : last?.price;
+    const bps = current ? current.deviationBps : last ? Math.round((last.price - 1) * 10_000) : null;
+    if (price == null || bps == null) return null;
     const band = classifyDeviation(bps);
     const sign = bps > 0 ? "+" : "";
     return {
-      price: last.price,
+      price,
       bps,
       sign,
       bandLabel: band.label,
@@ -149,7 +156,7 @@ export function PegDeviationChart({
       bandSvgColor: band.svgColor,
       isInBand: band.label === "in-band",
     };
-  }, [filteredData]);
+  }, [current, filteredData]);
 
   const dot = useMemo(() => {
     if (visibleData.length === 0) return null;
@@ -240,14 +247,6 @@ export function PegDeviationChart({
             stroke="var(--color-foreground)"
             strokeOpacity={0.45}
             strokeWidth={1}
-            label={{
-              value: "$1.000",
-              position: "insideLeft",
-              fill: "var(--color-muted-foreground)",
-              fontSize: 10,
-              fontFamily: "var(--font-mono, monospace)",
-              offset: 6,
-            }}
           />
 
           <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
@@ -291,31 +290,29 @@ export function PegDeviationChart({
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Peg deviation</DetailSectionTitle>
+        <DetailSectionTitle as={embedded ? "h3" : "h2"} className={DETAIL_MODULE_TITLE_CLASS}>Peg deviation</DetailSectionTitle>
         {readout ? (
-          <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
-            <span className="text-foreground/85">${readout.price.toFixed(4)}</span>
-            <span aria-hidden="true" className="text-muted-foreground/60">
-              ·
-            </span>
-            <span style={{ color: readout.bandCssColor }}>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="pharos-numeric text-lg font-semibold text-foreground">${readout.price.toFixed(4)}</span>
+            <span className="pharos-numeric text-xs" style={{ color: readout.bandCssColor }}>
               {readout.sign}
               {readout.bps} bps
             </span>
             <span
-              className="rounded-sm px-1.5 py-0.5 text-3xs uppercase"
+              className="rounded-sm px-1.5 py-0.5 text-2xs"
               style={{
                 color: readout.bandCssColor,
                 backgroundColor: readout.isInBand ? "transparent" : `${readout.bandSvgColor}1a`,
                 border: `1px solid ${readout.isInBand ? "var(--color-border)" : readout.bandSvgColor + "55"}`,
               }}
             >
-              {readout.bandLabel}
+              {readout.bandLabel.charAt(0).toUpperCase() + readout.bandLabel.slice(1).replace("-", " ")}
             </span>
+            <span className="text-2xs text-muted-foreground">Line: daily UTC snapshots</span>
           </div>
         ) : null}
       </div>
-      {controlledRange ? null : <TimeRangeButtons options={options} value={range} onChange={setRange} />}
+      {controlledRange ? null : <ChartRangeToggle options={options} value={range} onChange={setRange} />}
     </div>
   );
 

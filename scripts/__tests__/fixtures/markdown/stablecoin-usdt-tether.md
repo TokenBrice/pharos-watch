@@ -33,15 +33,15 @@ Fixture mechanism
 
 ### What is Fixture Dollar (FIX)?
 
-Fixture Dollar (FIX) is a Real-World Asset Backed stablecoin tracking US Dollar, with a Centralized (CeFi) governance model. The static profile records its US Dollar peg mechanism as: Fixture mechanism.
+Fixture Dollar (FIX) is a Real-World Asset Backed stablecoin tracking US Dollar, with a Centralized (CeFi) governance model. Pharos records its US Dollar peg mechanism as: Fixture mechanism.
 
 ### Is FIX safe?
 
-As of Oct 22, 2026, Pharos grades FIX A (83/100) on its Safety Score. Pharos classifies its backing as Real-World Asset Backed, with no linked reserve proof in the static profile. That grade is in the Score's upper band, which does not rule out losses. The grade moves as reserve, redemption, peg and control evidence changes; the live Safety Score on this page shows the current reading.
+As of Oct 22, 2026, Pharos grades FIX A (83/100) on its Safety Score. Pharos classifies its backing as Real-World Asset Backed, with no proof-of-reserves report listed. That grade is in the Score's upper band, which does not rule out losses. The grade moves as reserve, redemption, peg and control evidence changes; the live Safety Score on this page shows the current reading.
 
 ### What backs FIX?
 
-FIX's collateral, per its Pharos profile: Fixture collateral Reserve evidence: no linked reserve proof in the static profile. Pharos classifies the backing as Real-World Asset Backed.
+FIX's collateral, per its Pharos profile: Fixture collateral Reserve evidence: no proof-of-reserves report listed. Pharos classifies the backing as Real-World Asset Backed.
 
 ### Can FIX be frozen or blacklisted?
 

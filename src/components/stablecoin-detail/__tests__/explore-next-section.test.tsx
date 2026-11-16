@@ -64,7 +64,7 @@ describe("ExploreNextSection", () => {
 
   it.each(["mouseEnter", "focus"] as const)("keeps compact research links quiet until %s intent", (intent) => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
-    const tracker = screen.getByRole("link", { name: "See all CDP stablecoins" });
+    const tracker = screen.getByRole("link", { name: "All CDP stablecoins" });
     const action = screen.getByRole("link", { name: "Browse stablecoin comparisons" });
     expect(tracker.getAttribute("data-prefetch")).toBe("disabled");
     expect(action.getAttribute("data-prefetch")).toBe("disabled");
@@ -75,17 +75,30 @@ describe("ExploreNextSection", () => {
   });
 
 
+  it("leads with the coin's compare and alert actions, alerts only for active coins", () => {
+    const { rerender } = render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
+    const links = screen.getAllByRole("link");
+    expect(links[0].textContent).toBe("Open TCDP in live compare");
+    expect(links[0].getAttribute("href")).toBe("/compare/#coins=test-cdp-dollar");
+    expect(links[1].textContent).toBe("Set TCDP Telegram alerts");
+    expect(links[1].getAttribute("href")).toBe("/pharoswatchbot/#getting-started");
+    // The generic destinations sit in their own column, not among the coin actions.
+    expect(screen.getByText("More from Pharos")).toBeTruthy();
+    rerender(<ExploreNextSection coin={{ ...coin, status: "frozen" }} related={[]} staticComparisonPages={[]} logos={{}} />);
+    expect(screen.queryByRole("link", { name: "Set TCDP Telegram alerts" })).toBeNull();
+  });
+
   it("links mechanism tracker CTAs to the canonical active screener filter", () => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
 
-    expect(screen.getByRole("link", { name: "See all CDP stablecoins" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "All CDP stablecoins" }).getAttribute("href")).toBe(
       "/screener/?mechanisms=cdp&lifecycle=active",
     );
     expect(screen.getByRole("link", { name: "Browse stablecoin comparisons" }).getAttribute("href")).toBe("/compare/");
     expect(screen.queryByRole("link", { name: /watchlist.*preset/i })).toBeNull();
   });
 
-  it("names the peer category with its canonical peg label and hub, without the generic action", () => {
+  it("names the peer category once, in Taxonomy, with its canonical peg label and hub", () => {
     for (const { peg, slug, label } of [
       { peg: "GBP" as const, slug: "gbp", label: "British Pound" },
       { peg: "SILVER" as const, slug: "silver", label: "Silver" },
@@ -99,8 +112,9 @@ describe("ExploreNextSection", () => {
           logos={{}}
         />,
       );
+      // Peers no longer repeat the first Taxonomy link in their header.
       const actions = screen.getAllByRole("link", { name: `All ${label} stablecoins` });
-      expect(actions).toHaveLength(2);
+      expect(actions).toHaveLength(1);
       for (const action of actions) {
         expect(action.getAttribute("href")).toBe(`/stablecoins/${slug}/`);
         expect(action.getAttribute("data-prefetch")).toBe("disabled");
@@ -156,18 +170,31 @@ describe("ExploreNextSection", () => {
     );
 
     // Every tile up to the cap renders unhidden; each one past it keeps the
-    // link in the DOM behind `hidden lg:flex` so it stays crawlable. Asserted
+    // link in the DOM behind `hidden lg:inline-flex` so it stays crawlable. Asserted
     // per tile, so hiding any single card inside the cap fails.
     for (const tile of tiles.slice(0, 4)) {
       expect(tile.className).not.toContain("hidden");
     }
     for (const tile of tiles.slice(4)) {
-      expect(tile.className).toContain("hidden lg:flex");
+      expect(tile.className).toContain("hidden lg:inline-flex");
     }
 
-    expect(screen.getByRole("link", { name: /\+2 more comparison briefs/ }).getAttribute("href")).toBe(
-      "/stablecoins/usd/",
-    );
+    // The overflow link closes the chip row (lg:hidden) and leads to the comparisons hub.
+    const overflow = screen.getByRole("link", { name: "2 more comparison briefs" });
+    expect(overflow.getAttribute("href")).toBe("/compare/");
+    expect(overflow.textContent).toBe("+2 more");
+    expect(overflow.className).toContain("lg:hidden");
+    expect(overflow.parentElement).toBe(tiles[0].parentElement);
+  });
+
+  it("names cohorts as the hero chips do and leaves the case study to the hero", () => {
+    const usdc = { ...coin, id: "usdc-circle", flags: { ...coin.flags, governance: "centralized-dependent" } } as StablecoinMeta;
+    render(<ExploreNextSection coin={usdc} related={[]} staticComparisonPages={[]} logos={{}} />);
+
+    expect(screen.getByRole("link", { name: "Centralized-Dependent stablecoins" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Crypto-Backed stablecoins" })).toBeTruthy();
+    expect(screen.queryByText(/CeFi-Dependent|Crypto-Collateralized/)).toBeNull();
+    expect(screen.queryByText("Case study")).toBeNull();
   });
 });
 

@@ -59,8 +59,6 @@ export { THREAT_BAND_HEX } from "@shared/lib/classification";
 // Extracted inline chart colors -- previously defined inside components.
 // ---------------------------------------------------------------------------
 
-/** In-block label ink for the tinted reserve treemap fills. */
-export const RESERVE_TREEMAP_LABEL_COLOR = "var(--color-foreground)";
 
 
 /** Per-DEWS-signal chart colors (from dews-detail.tsx) */

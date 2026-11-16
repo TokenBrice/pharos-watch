@@ -1,18 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import {
-  TableCell,
-  TableRow,
-} from "@/components/table";
-import { Badge } from "@/components/ui/badge";
-import { FLOW_EVENT_BADGE_CLASSES } from "@shared/lib/classification";
+import { TableCell, TableRow } from "@/components/table";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
-import { TablePagination } from "@/components/table-pagination";
 import { ExternalLink } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
+import { EventFeedSkeleton } from "@/components/event-feed-state";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import {
   formatCurrency,
   formatAddress,
@@ -34,66 +29,45 @@ const DEFAULT_PAGE_SIZE = 25;
 const COLLAPSED_EVENT_COUNT = 6;
 const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
   { id: "time", label: "Time" },
-  { id: "direction", label: "Direction" },
-  { id: "amount", label: "Amount", className: "text-right" },
+  { id: "type", label: "Type", className: "hidden sm:table-cell" },
+  // No column takes all the slack: on a wide card that stranded Time, Type and
+  // Chain at the left edge and the amounts at the far right.
   { id: "chain", label: "Chain", className: "hidden sm:table-cell" },
-  { id: "tx", label: "Tx", className: "text-center" },
+  { id: "amount", label: "Amount", className: "text-right" },
+  { id: "tx", label: <><span className="sm:hidden">Chain</span><span className="sr-only">Transaction</span></>, className: "text-right" },
 ] as const;
+/** Event types are flows, not risk: one neutral chip, the sign lives on the amount. */
+const EVENT_CHIP_CLASS =
+  "inline-flex items-center whitespace-nowrap rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-foreground";
 
 function chainName(chainId: string): string {
   return CHAIN_META[chainId]?.name ?? chainId;
 }
 
-function getEventBadge(event: MintBurnEvent): {
-  label: string;
-  className: string;
-} {
-  if (event.flowType === "atomic_roundtrip") {
-    return {
-      label: "Roundtrip",
-      className: `${FLOW_EVENT_BADGE_CLASSES.roundtrip} text-xs`,
-    };
-  }
-
-  if (event.flowType === "bridge_transfer") {
-    return {
-      label: "Bridge transfer",
-      className: `${FLOW_EVENT_BADGE_CLASSES.bridgeTransfer} text-xs`,
-    };
-  }
-
-  if (event.flowType === "protocol_internal") {
-    return {
-      label: "Protocol-internal",
-      className: `${FLOW_EVENT_BADGE_CLASSES.protocolInternal} text-xs`,
-    };
-  }
-
-  if (event.direction === "burn" && event.burnType === "review_required") {
-    return {
-      label: "Review burn",
-      className: `${FLOW_EVENT_BADGE_CLASSES.reviewBurn} text-xs`,
-    };
-  }
-
-  if (event.direction === "mint") {
-    return {
-      label: "Mint",
-      className: `${FLOW_EVENT_BADGE_CLASSES.mint} text-xs`,
-    };
-  }
-
-  return {
-    label: "Burn",
-    className: `${FLOW_EVENT_BADGE_CLASSES.burn} text-xs`,
-  };
+function getEventLabel(event: MintBurnEvent): string {
+  if (event.flowType === "atomic_roundtrip") return "Roundtrip";
+  if (event.flowType === "bridge_transfer") return "Bridge";
+  if (event.flowType === "protocol_internal") return "Internal";
+  if (event.direction === "burn" && event.burnType === "review_required") return "Burn · review";
+  return event.direction === "mint" ? "Mint" : "Burn";
 }
 
-function FeedError({ message }: { message: string }) {
+function formatFlowAmount(evt: MintBurnEvent): ReactNode {
+  const sign = evt.direction === "mint" ? "+" : "−";
+  if (evt.amountUsd != null) return `${sign}${formatCurrency(evt.amountUsd)}`;
+  if (evt.amount > 0) {
+    return (
+      <>
+        {sign}{formatTokenAmount(evt.amount)} {evt.symbol}
+        <span className="ml-1 font-sans text-2xs text-muted-foreground">unpriced</span>
+      </>
+    );
+  }
   return (
-    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-      Unable to load event data. {message}
-    </div>
+    <span className="text-muted-foreground">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">Amount unavailable</span>
+    </span>
   );
 }
 
@@ -102,17 +76,24 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   const [page, setPage] = useState(0);
   const [showAllEvents, setShowAllEvents] = useState(false);
 
-  const { data, isLoading, isError } = useMintBurnEvents(stablecoinId, {
+  const { data, isLoading, isError, refetch } = useMintBurnEvents(stablecoinId, {
     scope,
     limit: pageSize,
     offset: page * pageSize,
   });
 
   if (isLoading) return <EventFeedSkeleton variant="flow" />;
-  if (isError) return <FeedError message="Please try again in a few moments." />;
-  if (!data || data.events.length === 0) {
-    if (page === 0) return <EventFeedEmpty variant="flow" />;
-    // If we paginated past the end, show the table with a "no more" message
+  if (isError) return <QueryStateNotice state="unavailable" label="Mint and burn event data" onRetry={refetch ? () => void refetch() : undefined} />;
+  if ((!data || data.events.length === 0) && page === 0) {
+    // The ledger keeps individual events only for a short recent window, while
+    // window nets come from longer-retained hourly totals, so an empty ledger
+    // must not read as "this coin never mints or burns".
+    return (
+      <p className="text-sm text-muted-foreground">
+        No {scope === "counted" ? "counted " : ""}mint or burn events in the recent event ledger. Individual events are kept
+        only for a short window; 30- and 90-day nets come from longer-kept hourly totals.
+      </p>
+    );
   }
 
   const events = data?.events ?? [];
@@ -120,13 +101,11 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   const isCollapsible = events.length > COLLAPSED_EVENT_COUNT;
   const visibleEvents = showAllEvents || !isCollapsible ? events : events.slice(0, COLLAPSED_EVENT_COUNT);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const showingStart = Math.min(page * pageSize + 1, total);
-  const showingEnd = Math.min((page + 1) * pageSize, total);
   const pagination = total > 0 && (showAllEvents || !isCollapsible) ? {
     page,
     totalPages,
-    rangeStart: showingStart,
-    rangeEnd: showingEnd,
+    rangeStart: Math.min(page * pageSize + 1, total),
+    rangeEnd: Math.min((page + 1) * pageSize, total),
     total,
     onPrevious: () => setPage((p) => Math.max(0, p - 1)),
     onNext: () => setPage((p) => Math.min(totalPages - 1, p + 1)),
@@ -135,58 +114,46 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
 
   return (
     <>
-      <ol className="space-y-2 md:hidden" aria-label="Compact mint and burn events">
-        {visibleEvents.map((evt) => (
-          <FlowEventCard key={evt.id} event={evt} />
-        ))}
-        {events.length === 0 ? (
-          <li className="rounded-xl border border-border/60 px-4 py-8 text-center text-sm text-muted-foreground">
-            No more events.
-          </li>
-        ) : null}
-      </ol>
-      {pagination ? (
-        <TablePagination
-          {...pagination}
-          className="mt-3 rounded-xl border border-border/60 md:hidden"
-        />
-      ) : null}
       <DataTableShell
         tableId="mint-burn-event-feed"
         testId="mint-burn-event-feed-table"
         columns={FLOW_EVENT_COLUMNS}
-        containerClassName="hidden rounded-xl border overflow-hidden md:block"
-        tableClassName="min-w-[420px]"
+        containerClassName="rounded-xl border overflow-hidden"
+        mobileScrollHint={false}
         pagination={pagination}
       >
-        {visibleEvents.map((evt) => {
-          const badge = getEventBadge(evt);
-          return (
-            <TableRow key={evt.id}>
-              <TableCell
-                className="whitespace-nowrap text-xs"
-                title={formatEventDate(evt.timestamp)}
+        {visibleEvents.map((evt) => (
+          <TableRow key={evt.id}>
+            <TableCell className="whitespace-nowrap px-2 font-mono text-xs text-muted-foreground sm:px-3">
+              <time dateTime={new Date(evt.timestamp * 1000).toISOString()} title={formatEventDate(evt.timestamp)}>
+                {timeAgo(evt.timestamp)}
+              </time>
+            </TableCell>
+            <TableCell className="hidden sm:table-cell">
+              <span className={EVENT_CHIP_CLASS}>{getEventLabel(evt)}</span>
+            </TableCell>
+            <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">{chainName(evt.chainId)}</TableCell>
+            <TableCell className="whitespace-nowrap px-2 text-right font-mono text-sm tabular-nums text-foreground sm:px-3">
+              {/* Below sm the type column folds away; the sign shows direction and this names it. */}
+              <span className="sr-only sm:hidden">{getEventLabel(evt)} </span>
+              {formatFlowAmount(evt)}
+            </TableCell>
+            <TableCell className="px-2 text-right sm:px-3">
+              <a
+                href={evt.explorerTxUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring inline-flex min-h-7 min-w-6 items-center justify-end gap-1 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-6"
+                aria-label={`View transaction ${formatAddress(evt.txHash)} on the ${chainName(evt.chainId)} block explorer`}
               >
-                <span className="font-mono">{timeAgo(evt.timestamp)}</span>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={badge.className}
-                >
-                  {badge.label}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right font-mono tabular-nums text-sm">
-                {formatFlowAmount(evt)}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-sm">
-                {chainName(evt.chainId)}
-              </TableCell>
-              <EventTransactionCell txHash={evt.txHash} href={evt.explorerTxUrl} />
-            </TableRow>
-          );
-        })}
+                {/* Phone: the chain name doubles as the explorer link label. */}
+                <span className="sm:hidden">{chainName(evt.chainId)}</span>
+                <span className="hidden font-mono md:inline">{formatAddress(evt.txHash)}</span>
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            </TableCell>
+          </TableRow>
+        ))}
         {events.length === 0 && (
           <DataTableEmptyRow colSpan={FLOW_EVENT_COLUMNS.length}>No more events.</DataTableEmptyRow>
         )}
@@ -200,61 +167,5 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
         />
       ) : null}
     </>
-  );
-}
-
-function formatFlowAmount(evt: MintBurnEvent): ReactNode {
-  if (evt.amountUsd != null) return formatCurrency(evt.amountUsd);
-  if (evt.amount > 0) {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
-        <Badge variant="outline" className="text-xs">
-          Unpriced
-        </Badge>
-      </div>
-    );
-  }
-  return <span className="text-muted-foreground">&mdash;</span>;
-}
-
-function FlowEventCard({ event }: { event: MintBurnEvent }) {
-  const badge = getEventBadge(event);
-
-  return (
-    <li className="pharos-inset px-3 py-2">
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-xs text-muted-foreground" title={formatEventDate(event.timestamp)}>
-            {timeAgo(event.timestamp)}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline" className={badge.className}>
-              {badge.label}
-            </Badge>
-            <span className="text-xs text-muted-foreground">{chainName(event.chainId)}</span>
-          </div>
-        </div>
-        <div className="shrink-0 text-right font-mono text-sm tabular-nums">
-          {event.amountUsd != null ? (
-            formatCurrency(event.amountUsd)
-          ) : event.amount > 0 ? (
-            <span>{formatTokenAmount(event.amount)} {event.symbol}</span>
-          ) : (
-            <span className="text-muted-foreground">&mdash;</span>
-          )}
-        </div>
-      </div>
-      <a
-        href={event.explorerTxUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-        aria-label="View transaction on block explorer"
-      >
-        {formatAddress(event.txHash)}
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-      </a>
-    </li>
   );
 }

@@ -1,18 +1,16 @@
 "use client";
 
 import type { ReactNode, Ref } from "react";
-import { ChartPie, Unlink } from "lucide-react";
+import { ChartPie, Scale, Unlink } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { BACKING_METRICS_ANCHOR_ID, BackingMetricsCard } from "@/components/stablecoin-detail/backing-metrics-card";
 import { BridgingDeploymentsModule } from "@/components/stablecoin-detail/bridging-card";
-import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import { CustodyModule } from "@/components/stablecoin-detail/custody-card";
 import { EvidenceStateStrip } from "@/components/stablecoin-detail/evidence-module";
 import { FailureScenarioModule } from "@/components/stablecoin-detail/failure-scenario/failure-scenario-module";
 import type { FailureScenarioSelection } from "@/components/stablecoin-detail/failure-scenario/scenario-model";
 import { FreezeSeizureModule } from "@/components/stablecoin-detail/freeze-seizure-card";
-import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import {
@@ -26,12 +24,11 @@ import type {
   PillarEvidenceBoardVisibility,
 } from "@/components/stablecoin-detail/safety-score-v9-breakdown";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
-import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import { DETAIL_MODULE_TITLE_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
-import { isCustodyStructureUndisclosed } from "@/lib/stablecoin-detail-custody-client";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
 import type { DetailSharedModules } from "./detail-shared-modules";
@@ -47,6 +44,9 @@ import {
 } from "./detail-lazy-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
+
+/** Beyond this many reviewed slices Reserves outgrows the Safety Score card, so the two stack. */
+const PAIRED_RESERVES_MAX_SLICES = 5;
 
 interface DetailRiskContextSectionsProps {
   activeBannerId: string;
@@ -92,7 +92,9 @@ function resolvePillarEvidenceAnchors(shared: DetailSharedModules): PillarEviden
  * One Safety Score pillar's board: a plain kicker `h2` with a trailing
  * hairline, then full-width signature modules, then the tile grid. The
  * pillar's grade and decomposition live on the Safety Score card, whose
- * pillar rows link to `id`.
+ * pillar rows link to `id`. Long list modules (Custody's holders and
+ * protection meter, Bridging's routes) always take a full-width row, so the
+ * grid pairs short tiles only and never stretches one beside a tall list.
  */
 function PillarBoard({
   id,
@@ -218,14 +220,15 @@ function BoardTileGrid({
   const placements = resolveBoardGridPlacement(tiles.length, twins.length);
   const items = [...tiles, ...twins];
   return (
-    <div className="grid items-start gap-4 @3xl/board:grid-cols-2 @7xl/board:grid-cols-6">
+    <div className="grid items-stretch gap-4 @3xl/board:grid-cols-2 @7xl/board:grid-cols-6">
       {items.map((item, index) => {
         const placement = placements[index]!;
         return (
           <div
             key={item.key}
             className={cn(
-              "min-w-0",
+              // Tiles in one row share its height; the module fills its cell.
+              "flex min-w-0 flex-col [&>*]:flex-1",
               ROW_AT_TWO_CLASS[placement.rowAtTwo],
               placement.halfTracksAtThree === null
                 ? "xl:hidden"
@@ -247,12 +250,9 @@ function BoardTileGrid({
 
 function BackingBoard({ shared, visibility }: { shared: DetailSharedModules; visibility: PillarEvidenceBoardVisibility }) {
   const { custody, backingMetrics } = shared;
-  const custodyUndisclosed = custody !== null && isCustodyStructureUndisclosed(custody);
-  const tiles: BoardTile[] = custody && !custodyUndisclosed
-    ? [{ key: "custody", render: (stripForm) => <CustodyModule summary={custody} variant="tile" stripForm={stripForm} /> }]
-    : [];
   // The xl rail carries the Backing KPI card; below xl this twin owns
-  // `#collateralization` and the `#backing-mechanics` alias.
+  // `#collateralization` and the `#backing-mechanics` alias. Custody takes
+  // its own full-width row above it, so the KPI twin is the lone grid item.
   const twins: BoardTile[] = backingMetrics
     ? [{
         key: "backing-metrics",
@@ -261,20 +261,13 @@ function BackingBoard({ shared, visibility }: { shared: DetailSharedModules; vis
         ),
       }]
     : [];
-  const rows: BoardRow[] = [];
-  if (custody && custodyUndisclosed) {
-    rows.push({ key: "custody", node: <CustodyModule summary={custody} variant="tile" stripForm /> });
-  }
-  if (shared.custodyNotReviewed) {
-    rows.push({
-      key: "custody",
-      node: <EvidenceStateStrip id="custody" title="Custody" state="not-reviewed" density="main" />,
-    });
-  }
-
   return (
     <PillarBoard id="backing-evidence" title="Backing evidence" visibility={visibility}>
-      <BoardTileGrid tiles={tiles} twins={twins} rows={rows} />
+      {custody ? <CustodyModule summary={custody} variant="tile" stripForm /> : null}
+      {shared.custodyNotReviewed ? (
+        <EvidenceStateStrip id="custody" title="Custody" state="not-reviewed" density="main" />
+      ) : null}
+      <BoardTileGrid tiles={[]} twins={twins} rows={[]} />
     </PillarBoard>
   );
 }
@@ -304,18 +297,32 @@ function ExitBoard({
         shared.redemptionEvidence.status === "empty" ? (
           <EvidenceStateStrip id="redemption" title="Redemption route" state="not-reviewed" density="main" />
         ) : (
-          <section id="redemption" aria-labelledby="redemption-heading" className={cn(SECTION_SCROLL_MT, "py-4")} data-nosnippet>
-            <h3 id="redemption-heading" className="pharos-label">Redemption route · {shared.redemptionEvidence.label}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {shared.redemptionEvidence.status === "unavailable"
-                ? "The redemption evidence could not be read."
-                : shared.redemptionEvidence.status === "deferred"
-                  ? "Redemption evidence loads when the Risk section approaches the viewport."
-                  : "Reading redemption evidence…"}
-            </p>
-            {shared.redemptionEvidence.status === "unavailable" ? (
-              <Button variant="outline" size="sm" className="mt-3" onClick={viewModel.handleRetryAll}>Retry redemption</Button>
-            ) : null}
+          // Same dashed state card as a not-reviewed module, so a pending or
+          // failed read keeps the module's footprint instead of loose text.
+          <section
+            id="redemption"
+            aria-labelledby="redemption-heading"
+            className={cn(SECTION_SCROLL_MT, "rounded-xl border border-dashed border-border px-4 py-4 sm:px-5")}
+            data-nosnippet
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h3 id="redemption-heading" className={DETAIL_MODULE_TITLE_CLASS}>
+                  Redemption route
+                  <span className="font-normal text-muted-foreground"> · {shared.redemptionEvidence.label}</span>
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {shared.redemptionEvidence.status === "unavailable"
+                    ? "The redemption evidence could not be read right now."
+                    : shared.redemptionEvidence.status === "deferred"
+                      ? "Redemption evidence loads when the Risk section approaches the viewport."
+                      : "Reading redemption evidence…"}
+                </p>
+              </div>
+              {shared.redemptionEvidence.status === "unavailable" ? (
+                <Button variant="outline" size="sm" aria-label="Retry redemption" onClick={viewModel.handleRetryAll}>Retry</Button>
+              ) : null}
+            </div>
           </section>
         )
       ) : null}
@@ -338,12 +345,11 @@ function ControlBoard({
   visibility: PillarEvidenceBoardVisibility;
 }) {
   const { coin } = viewModel;
-  const { controlRoles, failureDomains, bridgingForm, bridgingPlaceholder, regulatoryStanding } = shared;
-  const oracleSummary = coin.oracleRiskSummary ?? null;
-  const oracleSize = oracleSummary ? oracleModuleSize(oracleSummary) : null;
-  // Multi-branch collateral pricing needs the full width; a not-applicable
-  // review is one strip line. Both keep the Price feed's place after Mint.
-  const oracleFullWidth = oracleSummary !== null && (oracleSize === "module" || oracleSummary.notApplicable);
+  const { controlRoles, failureDomains, bridgingForm, regulatoryStanding } = shared;
+  // A reviewed "no liquidation oracle" has nothing to show: it mounts nothing.
+  const oracleSummary = coin.oracleRiskSummary?.notApplicable ? null : (coin.oracleRiskSummary ?? null);
+  // Multi-branch collateral pricing needs the full width, after Mint.
+  const oracleFullWidth = oracleSummary !== null && oracleModuleSize(oracleSummary) === "module";
   const bridgeSummary = coin.bridgeRouteRiskSummary ?? null;
   const blacklistabilitySummary = coin.blacklistabilitySummary ?? null;
 
@@ -353,20 +359,6 @@ function ControlBoard({
       key: "oracle",
       render: (stripForm) => (
         <OracleLiquidationSection summary={oracleSummary} controlRoles={controlRoles} variant="tile" stripForm={stripForm} />
-      ),
-    });
-  }
-  if (bridgingForm === "tile") {
-    tiles.push({
-      key: "bridging",
-      render: (stripForm) => (
-        <BridgingDeploymentsModule
-          summary={bridgeSummary}
-          failureDomains={failureDomains}
-          controlRoles={controlRoles}
-          variant="tile"
-          stripForm={stripForm}
-        />
       ),
     });
   }
@@ -393,34 +385,6 @@ function ControlBoard({
       }]
     : [];
   const rows: BoardRow[] = [];
-  if (bridgingForm === "strip") {
-    rows.push({
-      key: "bridging",
-      node: (
-        <BridgingDeploymentsModule
-          summary={bridgeSummary}
-          failureDomains={failureDomains}
-          controlRoles={controlRoles}
-          variant="tile"
-          stripForm
-        />
-      ),
-    });
-  }
-  if (bridgingPlaceholder) {
-    rows.push({
-      key: "bridging",
-      node: (
-        <EvidenceStateStrip
-          id="bridging"
-          title="Bridging & deployments"
-          state={bridgingPlaceholder.state}
-          reason={bridgingPlaceholder.reason}
-          density="main"
-        />
-      ),
-    });
-  }
   if (shared.regulatoryNotReviewed) {
     rows.push({
       key: "regulatory",
@@ -443,7 +407,20 @@ function ControlBoard({
         <EvidenceStateStrip id="mint-authority" title="Mint Authority" state="not-reviewed" density="main" />
       )}
       {oracleSummary && oracleFullWidth ? (
-        <OracleLiquidationSection summary={oracleSummary} controlRoles={controlRoles} variant={oracleSize ?? "module"} />
+        <OracleLiquidationSection summary={oracleSummary} controlRoles={controlRoles} variant="module" />
+      ) : null}
+      {/* Its route list runs long, so it takes a full-width row (strip form). */}
+      {bridgingForm !== null ? (
+        <BridgingDeploymentsModule
+          summary={bridgeSummary}
+          failureDomains={failureDomains}
+          controlRoles={controlRoles}
+          variant="tile"
+          stripForm
+        />
+      ) : null}
+      {shared.bridgingNotReviewed ? (
+        <EvidenceStateStrip id="bridging" title="Bridging & deployments" state="not-reviewed" density="main" />
       ) : null}
       <BoardTileGrid tiles={tiles} twins={twins} rows={rows} />
     </PillarBoard>
@@ -484,16 +461,26 @@ export function DetailRiskContextSections({
     : undefined;
   const showScoreCard = reportCard != null && reportCardsResponse != null;
   // Pair side by side only when a reviewed composition fills the Reserves
-  // half; a live-feed-only module would leave a mostly empty box beside the score.
-  const pairScoreAndReserves = showScoreCard && hasReviewedSlices;
+  // half (a live-feed-only module would leave a mostly empty box beside the
+  // score) and is short enough to sit level with the score.
+  // ponytail: the listed slice count stands in for Reserves' height (~53 px a
+  // row); measure both cards if the score card's height starts to vary widely.
+  const reviewedSliceCount = Math.max(
+    qualitySummary?.slices.length ?? 0,
+    viewModel.coin.reserves?.length ?? 0,
+    viewModel.coin.reserveLookThrough?.slices.length ?? 0,
+  );
+  const pairScoreAndReserves = showScoreCard && hasReviewedSlices && reviewedSliceCount <= PAIRED_RESERVES_MAX_SLICES;
   const evidenceAnchors = resolvePillarEvidenceAnchors(sharedModules);
 
   return (
     <>
       {/* Risk zone = the Safety Score's spine: the Mechanism primer, the
           score beside Reserves, the live stress layer, then each pillar's
-          evidence board in pillar order. */}
-      <div id="overview" ref={overviewGateRef} className="space-y-6 scroll-mt-32">
+          evidence board in pillar order. It opens on its own centred divider,
+          like every other zone; the divider's heading owns `#overview`. */}
+      <div ref={overviewGateRef} className="space-y-6">
+        <SectionBanner id="overview" label="Risk" icon={Scale} active={activeBannerId === "overview"} />
         {/* `#info` is the passport strip's fallback target for facts that live
             in the strip itself (launch date, jurisdiction without a regulatory
             review), so the section keeps the id even when the coin has no peg
@@ -518,11 +505,12 @@ export function DetailRiskContextSections({
           ) : null}
         </section>
         {/* Score left, Reserves right at lg+ when both exist and Reserves has
-            a reviewed composition; otherwise each takes the full width,
-            stacked. `items-start`: opening a disclosure in one half never
-            stretches the other. */}
-        <div className={cn("grid items-start gap-6", pairScoreAndReserves ? "lg:grid-cols-2" : undefined)}>
-          <section id="report-card" className={cn("min-w-0", SECTION_SCROLL_MT)}>
+            a short reviewed composition; otherwise each takes the full
+            width, stacked. Paired cards share one height so the row reads
+            as a unit; each pins its folds to its foot, so the shorter one's
+            slack sits above its folds, not as a blank band under them. */}
+        <div className={cn("grid gap-6", pairScoreAndReserves ? "items-stretch lg:grid-cols-2" : "items-start")}>
+          <section id="report-card" className={cn("min-w-0", SECTION_SCROLL_MT, pairScoreAndReserves && "lg:flex lg:flex-col lg:[&>*]:flex-1")}>
             {reportCard && reportCardsResponse ? (
               <StablecoinSafetyScoreV9Card
                 card={reportCard}
@@ -535,7 +523,7 @@ export function DetailRiskContextSections({
             ) : null}
           </section>
           {showReserves ? (
-            <div className="min-w-0">
+            <div className={cn("min-w-0", pairScoreAndReserves && "lg:flex lg:flex-col lg:[&>*]:flex-1")}>
               <ReservesSection
                 coin={viewModel.coin}
                 reserves={viewModel.reserves}
@@ -552,41 +540,14 @@ export function DetailRiskContextSections({
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
-        {/* How it breaks: a curated hypothetical failure path, rendered only
-            for a publishable record (a marked draft on a dev server). It sits
-            directly under the score and reserves, ahead of the pillar
-            evidence, because it narrates the path that evidence weighs. */}
-        {failureScenario ? (
-          <div className="space-y-6">
-            <SectionBanner
-              id="how-it-breaks"
-              label="How it breaks"
-              icon={Unlink}
-              active={activeBannerId === "how-it-breaks"}
-            />
-            <FailureScenarioModule selection={failureScenario} />
-          </div>
-        ) : null}
-        {/* Scrollspy marker: the Risk pill lights again below the interleaved
-            module, so the evidence boards are not labelled "How it breaks". */}
-        {failureScenario ? <div id="risk-evidence-resume" aria-hidden="true" /> : null}
-
         {/* The live stress layer sits beside the structural score, before the
-            pillar evidence (decision S4). A frozen archive or a NAV token
-            states why it is absent, under the module's own title. */}
-        {sharedModules.dewsPlaceholder ? (
-          <EvidenceStateStrip
-            title="Depeg Early Warning"
-            state={sharedModules.dewsPlaceholder.state}
-            reason={sharedModules.dewsPlaceholder.reason}
-            density="main"
-            headingLevel="h2"
-          />
-        ) : (
+            pillar evidence (decision S4). A frozen archive or a NAV token has
+            no peg stress layer, so nothing mounts. */}
+        {sharedModules.showDews ? (
           <LazySection minHeight={320}>
             <DEWSDetail stablecoinId={viewModel.id} />
           </LazySection>
-        )}
+        ) : null}
 
         <BackingBoard shared={sharedModules} visibility={evidenceAnchors.backing} />
         <ExitBoard
@@ -602,7 +563,9 @@ export function DetailRiskContextSections({
           visibility={evidenceAnchors.control}
         />
 
-        {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+        {/* Warning and info notices lead the page as Holder alerts (under the
+            hero); a frozen archive keeps them here as part of its record. */}
+        {viewModel.coin.status === "frozen" && overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
         {viewModel.hasFlows ? (
           <>
             {frozenNote}
@@ -613,10 +576,25 @@ export function DetailRiskContextSections({
         ) : null}
       </div>
 
-      {/* Without dependency context the zone holds only the below-xl reference
-          copies: no banner at any width (it would mislabel them), and at xl+
-          nothing renders, matching the scrollspy, which drops the pill. */}
-      <div className={cn("space-y-6", contextHasContent ? undefined : "xl:hidden")}>
+      {/* How it breaks: a curated hypothetical failure path, rendered only for
+          a publishable record. It follows the Risk zone's evidence (the
+          narrative weighs that evidence) as its own zone, so the section pills
+          read Risk → How it breaks → Dependencies in page order. */}
+      {failureScenario ? (
+        <div className="space-y-6">
+          <SectionBanner
+            id="how-it-breaks"
+            label="How it breaks"
+            icon={Unlink}
+            active={activeBannerId === "how-it-breaks"}
+          />
+          <FailureScenarioModule selection={failureScenario} />
+        </div>
+      ) : null}
+
+      {/* Without dependency context there is no banner (the scrollspy drops
+          the pill too); the snapshot renders nothing for an isolated coin. */}
+      <div className="space-y-6">
         {contextHasContent ? (
           <SectionBanner id="context" label="Dependencies" icon={ChartPie} active={activeBannerId === "context"} />
         ) : null}
@@ -628,15 +606,6 @@ export function DetailRiskContextSections({
             variantRelationshipCard={variantRelationshipCard}
           />
         )}
-        {/* The xl rail owns Key Links and Contracts; below xl these in-flow
-            copies keep the outbound links, the reserve attestation link and the
-            deployment list reachable — after the score and its evidence, never
-            ahead of them. Both own their anchors (`#attestation`, `#contracts`);
-            the rail copies are marked as their twins. */}
-        <div className="space-y-4 xl:hidden">
-          <KeyLinksCard meta={viewModel.coin} anchors />
-          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} />
-        </div>
       </div>
     </>
   );

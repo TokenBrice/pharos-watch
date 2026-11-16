@@ -1,12 +1,12 @@
 import { IntentLink } from "@/components/intent-link";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Bell } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { ExploreNextLink } from "@/components/stablecoin-detail/explore-next-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
-  BACKING_LABELS,
-  GOVERNANCE_LABELS,
+  HERO_CHIP_BACKING_LABELS,
+  HERO_CHIP_GOVERNANCE_LABELS,
   PEG_LABELS_SHORT,
   getMechanismArchetypeCtaNoun,
   resolveMechanismArchetype,
@@ -24,7 +24,6 @@ import {
 } from "@/lib/stablecoin-taxonomy-urls";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getLogoSrc } from "@/lib/logos";
 
 interface StaticComparisonEntry {
@@ -39,9 +38,16 @@ interface StaticComparisonEntry {
 
 /**
  * Below `lg` only the first cards render; the rest stay in the DOM behind
- * `hidden lg:flex` so the internal links remain crawlable.
+ * `hidden lg:inline-flex` so the internal links remain crawlable.
  */
 const COMPARISON_MOBILE_CARD_CAP = 4;
+
+/**
+ * Chip rows are inline boxes in a balanced block, so a wrapped row splits
+ * evenly instead of leaving one chip alone on the last line.
+ */
+const CHIP_ROW_CLASS = "-mt-2 text-balance";
+const CHIP_IN_ROW_CLASS = "mt-2 mr-2 align-top";
 
 interface ExploreNextSectionProps {
   coin: StablecoinMeta;
@@ -66,13 +72,14 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
           label: `All ${pegLabel} stablecoins`,
         }
       : null,
+    // The hero chips' names, so a cohort reads the same at both ends of the page.
     {
       href: buildGovernanceTaxonomyUrl(coin.flags.governance),
-      label: `${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoins`,
+      label: `${HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoins`,
     },
     {
       href: buildBackingTaxonomyUrl(coin.flags.backing),
-      label: `${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoins`,
+      label: `${HERO_CHIP_BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoins`,
     },
     firstInfrastructure
       ? {
@@ -93,83 +100,74 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
     // Use this slot for a screener deep-link instead to avoid a duplicate CTA.
     trackerLinks.push({
       href: `/screener/?mechanisms=${resolvedArchetype}&lifecycle=active`,
-      label: `See all ${getMechanismArchetypeCtaNoun(resolvedArchetype)} stablecoins`,
+      label: `All ${getMechanismArchetypeCtaNoun(resolvedArchetype)} stablecoins`,
     });
   }
-  const actionLinks: Array<{ href: string; label: string }> = [
-    { href: buildComparePrefillUrl([coin.id]), label: `Open ${coin.symbol} in live compare` },
+  // The two coin-specific actions lead the section as buttons; the generic
+  // Pharos destinations join the link columns.
+  const moreLinks: Array<{ href: string; label: string }> = [
     { href: "/compare/", label: "Browse stablecoin comparisons" },
     { href: "/digest/", label: "Read the daily digest" },
     { href: "/api/", label: "Use the Pharos API" },
   ];
-  if (isActiveStablecoinMeta(coin)) {
-    actionLinks.splice(1, 0, {
-      href: "/pharoswatchbot/#getting-started",
-      label: `Set ${coin.symbol} Telegram alerts`,
-    });
-  }
+  const linkGroups = [
+    { title: "Taxonomy", links: taxonomyLinks },
+    { title: "Trackers", links: trackerLinks },
+    { title: "More from Pharos", links: moreLinks },
+  ];
 
-  const caseStudy = CASE_STUDY_CLIENT_BY_COIN_ID[coin.id];
+  // The hero's case-study callout already links this coin's case study, so
+  // Explore does not repeat it.
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
-  const peersHref = pegSlug ? `/stablecoins/${pegSlug}/` : "/screener/";
   const hiddenComparisonCount = Math.max(0, staticComparisonPages.length - COMPARISON_MOBILE_CARD_CAP);
 
-  // The bleed must never exceed the page gutter (`MainContent`: px-4, lg:px-5,
-  // xl:px-9) or the document scrolls sideways. Below xl the gutter is the whole
-  // margin, so the panel becomes a flush full-width band; at xl it bleeds into
-  // part of the wider gutter and keeps its rounded frame.
+  // The panel sits on the card column's edges like every module above it; a
+  // bleed into the gutter made it overhang the column.
   return (
     <section
       id="explore-next"
-      className="mt-8 -mx-4 space-y-6 bg-muted/15 px-4 py-6 lg:-mx-5 lg:px-5 xl:-mx-6 xl:rounded-xl xl:px-6"
+      className="mt-8 space-y-6 rounded-xl bg-muted/15 px-4 py-6 sm:px-5"
       aria-labelledby="explore-next-heading"
     >
-      <div className="space-y-1.5">
-        <DetailSectionTitle id="explore-next-heading" className={DETAIL_MODULE_TITLE_CLASS}>Explore next</DetailSectionTitle>
-        <p className="text-sm text-muted-foreground">
-          Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add
-          context to what you just read.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0 space-y-1.5">
+          <DetailSectionTitle id="explore-next-heading" className={DETAIL_MODULE_TITLE_CLASS}>Explore next</DetailSectionTitle>
+          <p className="text-sm text-muted-foreground">
+            Compare {coin.symbol} with its peers, follow it, or browse related cohorts and trackers.
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <IntentLink
+            href={buildComparePrefillUrl([coin.id])}
+            className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/85 sm:min-h-9"
+          >
+            <ArrowLeftRight aria-hidden="true" className="h-4 w-4 shrink-0" />
+            Open {coin.symbol} in live compare
+          </IntentLink>
+          {isActiveStablecoinMeta(coin) ? (
+            <IntentLink
+              href="/pharoswatchbot/#getting-started"
+              className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border bg-background/70 px-4 text-sm font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-accent sm:min-h-9"
+            >
+              <Bell aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              Set {coin.symbol} Telegram alerts
+            </IntentLink>
+          ) : null}
+        </div>
       </div>
-
-      {caseStudy ? (
-        <IntentLink
-          href={`/learn/case-studies/${caseStudy.slug}/`}
-          className="pharos-focus-ring group flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/50 px-4 py-3 transition-colors hover:border-foreground/30 hover:bg-accent"
-        >
-          <span className="min-w-0">
-            <span className="pharos-label block text-frost-blue">Case study</span>
-            <span className="mt-0.5 block text-sm font-medium text-foreground">{caseStudy.title}</span>
-          </span>
-          <ArrowRight
-            aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
-          />
-        </IntentLink>
-      ) : null}
 
       {hasPeers ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <p className="pharos-label">Peers</p>
-            {pegSlug ? (
-              <IntentLink
-                href={`/stablecoins/${pegSlug}/`}
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                All {pegLabel} stablecoins
-                <ArrowRight aria-hidden="true" className="h-3 w-3" />
-              </IntentLink>
-            ) : null}
-          </div>
+          {/* The peg cohort link lives once, first in Taxonomy below. */}
+          <p className="pharos-label">Peers</p>
 
           {related.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className={CHIP_ROW_CLASS}>
               {related.slice(0, 6).map((peer) => (
                 <IntentLink
                   key={peer.id}
                   href={buildStablecoinUrl(peer.id)}
-                  className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-accent"
+                  className={`pharos-focus-ring ${CHIP_IN_ROW_CLASS} inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-accent`}
                   title={peer.name}
                 >
                   <StablecoinLogo src={getLogoSrc(logos, peer.id)} name={peer.name} size={16} />
@@ -181,46 +179,43 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
 
           {staticComparisonPages.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Static comparison briefs with structural context.</p>
-              {/* Hairlines are drawn per cell, not by a gap over a tinted
-                  container: a peer count that is not a multiple of the column
-                  count left the unfilled tracks showing that tint as a blank
-                  gray cell. The negative margins push the trailing borders
-                  under the frame, which `overflow-hidden` then clips. */}
-              <div className="overflow-hidden rounded-xl border border-border/60">
-                <div className="-mb-px -mr-px grid sm:grid-cols-2 xl:grid-cols-3">
+              <p className="text-xs text-muted-foreground">Head-to-head comparison briefs</p>
+              {/* Wrapping pills, not a fixed grid: one or two briefs never leave
+                  empty framed cells beside them. The overflow link closes the
+                  same row rather than taking a line of its own. */}
+              <div className={CHIP_ROW_CLASS}>
                 {staticComparisonPages.map((page, index) => (
                   <IntentLink
                     key={page.href}
                     href={page.href}
-                    className={`pharos-focus-ring group ${
-                      index < COMPARISON_MOBILE_CARD_CAP ? "flex" : "hidden lg:flex"
-                    } min-h-12 items-center gap-2.5 border-b border-r border-border/60 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent`}
+                    className={`pharos-focus-ring group ${CHIP_IN_ROW_CLASS} ${
+                      index < COMPARISON_MOBILE_CARD_CAP ? "inline-flex" : "hidden lg:inline-flex"
+                    } min-h-9 items-center gap-2 rounded-full border border-border/60 bg-background/70 py-1 pl-1.5 pr-3 text-sm text-foreground transition-colors hover:border-foreground/30 hover:bg-accent`}
                     aria-label={`Open static comparison brief: ${page.shortTitle}`}
                     title={page.counterpartName}
                   >
                     <StablecoinLogo src={getLogoSrc(logos, page.counterpartId)} name={page.counterpartName} size={18} />
-                    <span className="min-w-0 flex-1">
+                    <span>
                       <span className="text-muted-foreground">vs </span>
                       <span className="font-mono tabular-nums font-medium">{page.counterpartSymbol}</span>
                     </span>
                     <ArrowRight
                       aria-hidden="true"
-                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
                     />
                   </IntentLink>
                 ))}
-                </div>
+                {hiddenComparisonCount > 0 ? (
+                  <IntentLink
+                    href="/compare/"
+                    aria-label={`${hiddenComparisonCount} more comparison briefs`}
+                    className={`pharos-focus-ring ${CHIP_IN_ROW_CLASS} inline-flex min-h-9 items-center gap-1 rounded-sm px-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden`}
+                  >
+                    +{hiddenComparisonCount} more
+                    <ArrowRight aria-hidden="true" className="h-3 w-3" />
+                  </IntentLink>
+                ) : null}
               </div>
-              {hiddenComparisonCount > 0 ? (
-                <IntentLink
-                  href={peersHref}
-                  className="pharos-focus-ring inline-flex min-h-9 items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden"
-                >
-                  +{hiddenComparisonCount} more comparison briefs
-                  <ArrowRight aria-hidden="true" className="h-3 w-3" />
-                </IntentLink>
-              ) : null}
             </div>
           ) : null}
         </div>
@@ -229,41 +224,29 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
       {depegEvents.length > 0 ? (
         <div className="space-y-2">
           <p className="pharos-label">Depeg history</p>
-          <div className="-my-1 grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="-my-1 flex flex-wrap gap-x-8">
             {depegEvents.map((event) => (
-              <ExploreNextLink key={event.href} href={event.href} label={event.label} />
+              <div key={event.href} className="min-w-0 flex-1 basis-56">
+                <ExploreNextLink href={event.href} label={event.label} />
+              </div>
             ))}
           </div>
         </div>
       ) : null}
 
-      <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="space-y-2">
-          <p className="pharos-label">Taxonomy</p>
-          <div className="-my-1 flex flex-col">
-            {taxonomyLinks.map((link) => (
-              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
-            ))}
+      {/* Columns wrap by their own minimum width (13rem), so three groups sit
+          three across from tablet up and stack on phones, never 2 + 1. */}
+      <div className="flex flex-wrap gap-x-8 gap-y-5 border-t border-border/40 pt-5">
+        {linkGroups.map((group) => (
+          <div key={group.title} className="min-w-0 flex-1 basis-52 space-y-2">
+            <p className="pharos-label">{group.title}</p>
+            <div className="-my-1 flex flex-col">
+              {group.links.map((link) => (
+                <ExploreNextLink key={link.href} href={link.href} label={link.label} />
+              ))}
+            </div>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="pharos-label">Trackers</p>
-          <div className="-my-1 flex flex-col">
-            {trackerLinks.map((link) => (
-              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="pharos-label">Actions</p>
-          <div className="-my-1 flex flex-col">
-            {actionLinks.map((link) => (
-              <ExploreNextLink key={link.href} href={link.href} label={link.label} />
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );

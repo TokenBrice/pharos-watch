@@ -14,9 +14,6 @@ import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatIsoDate, formatIsoTimestamp, formatSignedPercent } from "@shared/lib/format";
 import {
-  DIRECTION_TONE_CLASSES,
-  QUALITY_TIER_3_CLASSES,
-  THREAT_BAND_ACCENT_CLASSES,
   THREAT_BAND_LABELS,
   THREAT_BAND_STYLES,
   isThreatBand,
@@ -26,8 +23,6 @@ import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type { SavedSafetyAssessment } from "@/lib/api";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
 
-export const HERO_POSITIVE_TREND_CLASS = DIRECTION_TONE_CLASSES.up;
-export const HERO_NEGATIVE_TREND_CLASS = DIRECTION_TONE_CLASSES.down;
 export const HERO_MUTED_CLASS = "text-muted-foreground";
 
 export interface HeroDisplayValue {
@@ -48,6 +43,35 @@ export interface HeroDewsDisplay {
 
 export const HERO_PENDING_DISPLAY: HeroDisplayValue = { value: "", color: HERO_MUTED_CLASS, pending: true };
 export const HERO_PENDING_DEWS_DISPLAY: HeroDewsDisplay = { ...HERO_PENDING_DISPLAY, band: null };
+
+const SAFETY_PILLAR_LABELS: Record<"backing" | "exit" | "control", string> = {
+  backing: "Backing",
+  exit: "Exit",
+  control: "Economic Control",
+};
+
+/** The one reason a reader needs beside a grade: the binding cap, else the weakest pillar. */
+export interface SafetyVerdictLine {
+  lead: string;
+  detail: string;
+}
+
+export function buildSafetyVerdictLine(card: {
+  score: number | null;
+  bindingCap: { binding?: boolean; limit?: number | null; reason?: string | null } | null;
+  weakestPillar: { pillar: "backing" | "exit" | "control"; score: number } | null;
+} | null): SafetyVerdictLine | null {
+  if (!card || card.score === null) return null;
+  const cap = card.bindingCap;
+  if (cap?.binding && typeof cap.limit === "number" && cap.reason) {
+    return { lead: `Capped at ${cap.limit}`, detail: cap.reason.trim().replace(/\.$/, "") };
+  }
+  const weakest = card.weakestPillar;
+  if (weakest) {
+    return { lead: "Weakest pillar", detail: `${SAFETY_PILLAR_LABELS[weakest.pillar]} ${Math.round(weakest.score)}/100` };
+  }
+  return null;
+}
 
 /** "as of 2026-10-22": the release date a saved value was published. */
 export function formatSavedAssessmentAsOf(asOfMs: number): string {
@@ -83,25 +107,14 @@ export function buildSavedLiquidityDisplay(saved: SavedSafetyAssessment | null):
   };
 }
 
-function buildPegScoreEventLine(
-  pegScoreResult: PegSummaryCoin | null,
-  recordedDepegEventCount: number | null,
-): string | null {
-  if (!pegScoreResult) return null;
-  // A coverage-limited event count is unmeasured, not an observed zero (R1).
-  if (pegScoreResult.depegEventCoverageLimited === true) return null;
-  const scoreWindowCount = pegScoreResult.eventCount;
-  const totalRecorded = recordedDepegEventCount;
-  if (totalRecorded == null || totalRecorded === scoreWindowCount) {
-    return `${scoreWindowCount.toLocaleString()} incident${scoreWindowCount !== 1 ? "s" : ""}`;
-  }
-  return `${totalRecorded.toLocaleString()} recorded · ${scoreWindowCount.toLocaleString()} scored incidents`;
-}
-
+/**
+ * The peg tile's figure. Its sub-line is the time at peg: the incident count
+ * belongs to the passport's Record field alone. A NAV token has no peg, so its
+ * tile carries no value and the hero leaves it out.
+ */
 export function buildPegScoreDisplay(
   isNavToken: boolean,
   pegScoreResult: PegSummaryCoin | null,
-  recordedDepegEventCount: number | null,
 ): HeroDisplayValue {
   const tooNewForPegScore =
     !isNavToken &&
@@ -109,16 +122,15 @@ export function buildPegScoreDisplay(
     pegScoreResult.pegScore === null &&
     pegScoreResult.trackingSpanDays > 0 &&
     pegScoreResult.trackingSpanDays < 7;
-  const pegScoreEventLine = buildPegScoreEventLine(pegScoreResult, recordedDepegEventCount);
 
-  if (isNavToken) return { value: "NAV", sub: "Token", color: HERO_MUTED_CLASS };
+  if (isNavToken) return { value: "—", color: HERO_MUTED_CLASS };
   if (pegScoreResult?.pegScore != null) {
     const early = pegScoreResult.trackingSpanDays < PEG_SCORE_EARLY_MAX_DAYS;
     return {
       value: String(pegScoreResult.pegScore),
       sub: early
         ? `Early score · ${pegScoreResult.trackingSpanDays}d tracked`
-        : (pegScoreEventLine ?? (pegScoreResult.pegPct == null ? "Peg coverage unavailable" : `${pegScoreResult.pegPct.toFixed(1)}% at peg`)),
+        : pegScoreResult.pegPct == null ? undefined : `${pegScoreResult.pegPct.toFixed(1)}% at peg`,
       color: pegScoreColor(pegScoreResult.pegScore),
     };
   }
@@ -165,21 +177,17 @@ export function buildExcessYieldDisplay(yieldRanking: YieldRanking | null): Hero
   return {
     value: formatSignedPercent(yieldRanking.excessYield),
     sub: getYieldBenchmarkGapReferenceText(yieldRanking),
-    color: yieldRanking.excessYield >= 0 ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS,
+    // A spread against T-bills is performance, not risk: neutral ink, the
+    // sign carries the direction.
+    color: "text-foreground",
   };
 }
 
 export function buildPerformanceVsUsdDisplay(performanceVsUsd1y: number | null): HeroDisplayValue | null {
   if (performanceVsUsd1y === null) return null;
-  return {
-    value: formatSignedPercent(performanceVsUsd1y),
-    color:
-      performanceVsUsd1y > 0
-        ? HERO_POSITIVE_TREND_CLASS
-        : performanceVsUsd1y < 0
-          ? HERO_NEGATIVE_TREND_CLASS
-          : HERO_MUTED_CLASS,
-  };
+  // A currency or commodity move against USD is context, not risk: neutral
+  // ink, the sign carries the direction.
+  return { value: formatSignedPercent(performanceVsUsd1y), color: "text-foreground" };
 }
 
 export function buildDewsDisplay(stressSignal: StressSignalEntry | null): HeroDewsDisplay {
@@ -191,37 +199,6 @@ export function buildDewsDisplay(stressSignal: StressSignalEntry | null): HeroDe
         color: THREAT_BAND_STYLES[stressSignal.band].textCls,
       }
     : { value: "—", band: null, color: HERO_MUTED_CLASS };
-}
-
-export function buildPegScoreAccent(pegScoreResult: PegSummaryCoin | null): string | undefined {
-  const score = pegScoreResult?.pegScore;
-  if (score == null) return undefined;
-  if (score < 50) return QUALITY_TIER_3_CLASSES.bad.borderL;
-  if (score < 70) return QUALITY_TIER_3_CLASSES.watch.borderL;
-  return undefined;
-}
-
-export function buildLiquidityAccent(liquidityData: DexLiquidityData | undefined): string | undefined {
-  return buildLiquidityScoreAccent(liquidityData?.liquidityScore ?? null);
-}
-
-export function buildLiquidityScoreAccent(score: number | null): string | undefined {
-  if (score == null) return undefined;
-  if (score < 30) return QUALITY_TIER_3_CLASSES.bad.borderL;
-  if (score < 50) return QUALITY_TIER_3_CLASSES.watch.borderL;
-  return undefined;
-}
-
-export function buildDewsAccent(stressSignal: StressSignalEntry | null): string | undefined {
-  return buildDewsBandAccent(stressSignal?.band ?? null);
-}
-
-export function buildDewsBandAccent(band: string | null): string | undefined {
-  if (!band || !isThreatBand(band)) return undefined;
-  if (band === "DANGER" || band === "WARNING") {
-    return THREAT_BAND_ACCENT_CLASSES[band].borderL;
-  }
-  return undefined;
 }
 
 export function buildLimitedDepegCoverageNote(

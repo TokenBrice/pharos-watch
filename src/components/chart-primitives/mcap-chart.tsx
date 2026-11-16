@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
-import { TimeRangeButtons } from "@/components/time-range-buttons";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
-import { formatChartDate, formatCurrency } from "@shared/lib/format";
+import { formatChartDate, formatCurrency, formatPercentChange, formatSignedPercent } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
-import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
+import { ChartRangeToggle, ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, useNiceValueAxis, useSvgId } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
@@ -44,6 +44,11 @@ interface McapChartProps {
   cardClassName?: string;
   /** When true, drop the outer Card chrome so the chart can be embedded in a grouped panel. */
   embedded?: boolean;
+  /**
+   * The hero's live market cap and its guarded prior-day value. When given, the
+   * header reads these so it agrees with the hero; the line stays on daily snapshots.
+   */
+  current?: { mcap: number | null; prevDay: number | null };
 }
 
 export function McapChart({
@@ -140,6 +145,7 @@ function McapChartBody({
   onControlledRangeChange,
   cardClassName,
   embedded = false,
+  current,
 }: McapChartProps) {
   const mcapGradientId = useSvgId("mcap");
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
@@ -215,37 +221,34 @@ function McapChartBody({
     };
   }, [stablecoinId, visibleData]);
 
-  const deltaColor =
-    readout?.deltaPct == null
-      ? "var(--color-muted-foreground)"
-      : readout.deltaPct > 0
-        ? "#22c55e"
-        : readout.deltaPct < 0
-          ? "#ef4444"
-          : "var(--color-muted-foreground)";
+  // A supply change is a flow, not a risk verdict: neutral ink, explicit sign.
+  const headerMcap = current ? current.mcap : readout?.mcap ?? null;
+  const headerDelta = current
+    ? current.mcap != null && current.prevDay != null && current.prevDay > 0
+      ? formatPercentChange(current.mcap, current.prevDay)
+      : null
+    : readout?.deltaPct != null ? formatSignedPercent(readout.deltaPct, 2) : null;
+  const Title = embedded ? DetailSectionTitle : StablecoinModuleTitle;
 
   const header = (
-    <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market cap</StablecoinModuleTitle>
-        {readout ? (
-          <div className="flex items-baseline gap-2 font-mono text-xs tabular-nums">
-            <span className="text-foreground/85">{formatCurrency(readout.mcap)}</span>
-            {readout.deltaPct != null ? (
-              <>
-                <span aria-hidden="true" className="text-muted-foreground/60">
-                  ·
-                </span>
-                <span style={{ color: deltaColor }}>
-                  {readout.deltaPct > 0 ? "+" : ""}
-                  {readout.deltaPct.toFixed(2)}% 24h
-                </span>
-              </>
+    // Full width even inside a flex card header, so the controls sit at the
+    // right edge (and stay right-aligned when they wrap under the title).
+    <div className="flex w-full flex-row flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <Title as={embedded ? "h3" : "h2"} className={DETAIL_MODULE_TITLE_CLASS}>Market cap</Title>
+        {readout || current ? (
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="pharos-numeric text-lg font-semibold text-foreground">
+              {headerMcap != null ? formatCurrency(headerMcap) : "—"}
+            </span>
+            {headerDelta != null ? (
+              <span className="pharos-numeric text-xs text-muted-foreground">{headerDelta} 24h</span>
             ) : null}
+            <span className="text-2xs text-muted-foreground">Line: daily UTC snapshots</span>
           </div>
         ) : null}
       </div>
-      <div className="flex min-w-0 max-w-full items-center gap-2">
+      <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
         <ChartScaleToggle
           value={useLog ? "log" : "lin"}
           onChange={(v) => setLogScale(v === "log")}
@@ -259,7 +262,7 @@ function McapChartBody({
           }
         />
         {controlledRange && !onControlledRangeChange ? null : (
-          <TimeRangeButtons
+          <ChartRangeToggle
             options={options}
             value={range}
             onChange={onControlledRangeChange ?? setRange}
@@ -286,12 +289,12 @@ function McapChartBody({
       variant="area"
     >
           <MonoYAxis
-            tickFormatter={(val: number) => formatCurrency(val)}
+            tickFormatter={(val: number) => formatCurrency(val).replace(/(\.\d*?)0+(?=[KMBT]$)/, "$1").replace(/\.(?=[KMBT]$)/, "")}
             {...valueAxis}
             scale={useLog ? "log" : "auto"}
             allowDataOverflow={useLog}
           />
-          <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market cap"]} />
+          <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market cap (daily)"]} />
           <Area
             type="monotone"
             dataKey="mcap"

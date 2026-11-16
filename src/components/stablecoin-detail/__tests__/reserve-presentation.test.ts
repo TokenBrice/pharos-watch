@@ -8,7 +8,6 @@ import type {
   ReserveDisplayBadgeView,
 } from "@shared/types/live-reserves";
 import {
-  condenseReserveSlices,
   buildReserveFetchNotice,
   buildReserveFootnoteModel,
   buildReserveCompositionNote,
@@ -18,6 +17,7 @@ import {
   liveCompositionDiffers,
   lookThroughCompositionSlices,
   reserveSliceLabel,
+  splitReserveCompositionRows,
   type ReserveCompositionSlice,
   formatReserveSnapshotLabel,
 } from "../reserve-presentation";
@@ -483,6 +483,9 @@ describe("dated reserve disclosures", () => {
     expect(buildReserveFootnoteModel(reserves, true, "commodity backed")?.text)
       .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
+    // Replaying the reviewed basket, it takes the review's composition date, never the totals clock.
+    expect(buildReserveFootnoteModel(reserves, true, "commodity backed", "2026-06-30")?.text)
+      .toBe("Composition as of 2026-06-30 · Checked 2026-09-27 12:14 UTC");
   });
 
   it.each(["live", "live-stale"] as const)("withholds retained legacy Tether composition dates without new metadata in %s mode", (mode) => {
@@ -495,6 +498,8 @@ describe("dated reserve disclosures", () => {
     const stale = "";
     expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
       .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
+    expect(buildReserveFootnoteModel(reserves, true, "rwa backed", "2026-06-30")?.text)
+      .toContain("Composition date unavailable");
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
   });
 
@@ -581,37 +586,35 @@ describe("dated reserve disclosures", () => {
   });
 });
 
-describe("condenseReserveSlices", () => {
-  const slice = (key: string, pct: number, role: string | null = null, risk: "very-low" | "low" = "very-low") =>
-    ({ key, label: key, pct, risk, detail: null, role });
+describe("splitReserveCompositionRows", () => {
+  const slice = (key: string, pct: number, risk: "very-low" | "low" | "high" = "very-low") =>
+    ({ key, label: key, pct, risk, detail: null, role: null });
 
-  it("passes short baskets through unchanged", () => {
-    const slices = [slice("a", 60), slice("b", 40)];
-    expect(condenseReserveSlices(slices)).toEqual({ shown: slices, rest: [], restPct: 0 });
+  it("lists a short basket whole, one bar segment per slice", () => {
+    const slices = [slice("a", 60), slice("b", 40, "low")];
+    expect(splitReserveCompositionRows(slices)).toEqual({
+      shown: slices,
+      rest: [],
+      restPct: 0,
+      segments: [{ key: "a", pct: 60, risk: "very-low" }, { key: "b", pct: 40, risk: "low" }],
+    });
   });
 
-  it("merges same-class same-tier slices, draws five groups and states the remainder share", () => {
+  it("folds slices past the eighth and merges them per risk tier in the bar, never into a mixed-risk Other", () => {
     const slices = [
-      slice("Repo A", 30, "Repo"), slice("Repo B", 20, "Repo"),
-      slice("c", 15), slice("d", 10), slice("e", 8), slice("f", 7), slice("g", 6), slice("h", 4, null, "low"),
+      slice("a", 30), slice("b", 20), slice("c", 15), slice("d", 10), slice("e", 8), slice("f", 7), slice("g", 4), slice("h", 2),
+      slice("i", 1.5, "high"), slice("j", 1.2), slice("k", 0.8, "high"), slice("l", 0.3, "low"),
     ];
-    const { shown, rest, restPct } = condenseReserveSlices(slices);
-    expect(shown).toHaveLength(5);
-    expect(shown[0]).toMatchObject({ label: "Repo (2 slices)", pct: 50, role: "Repo" });
-    expect(rest.map((s) => s.key)).toEqual(["g", "h"]);
-    expect(restPct).toBe(10);
-    expect(rest.map((s) => s.risk)).toEqual(["very-low", "low"]);
-    expect([...shown, ...rest].reduce((sum, s) => sum + s.pct, 0)).toBe(100);
-  });
-
-  it("keeps same-class mixed-risk reviewed remainder separate and preserves authored totals", () => {
-    const slices = [
-      slice("a", 40), slice("b", 20), slice("c", 12), slice("d", 10), slice("e", 8),
-      slice("cash A", 6, "Cash"), slice("cash B", 3.8, "Cash", "low"),
-    ];
-    const { shown, rest, restPct } = condenseReserveSlices(slices);
-    expect(rest).toEqual(slices.slice(5));
-    expect(restPct).toBe(9.8);
-    expect([...shown, ...rest].reduce((sum, s) => sum + s.pct, 0)).toBe(99.8);
+    const { shown, rest, restPct, segments } = splitReserveCompositionRows(slices);
+    expect(shown.map((s) => s.key)).toEqual(["a", "b", "c", "d", "e", "f", "g", "h"]);
+    expect(rest.map((s) => s.key)).toEqual(["i", "j", "k", "l"]);
+    expect(restPct).toBeCloseTo(3.8, 10);
+    expect(segments.slice(8)).toEqual([
+      { key: "rest:high", pct: 2.3, risk: "high" },
+      { key: "rest:very-low", pct: 1.2, risk: "very-low" },
+      { key: "rest:low", pct: 0.3, risk: "low" },
+    ]);
+    // Authored totals are preserved, never normalized to 100.
+    expect(segments.reduce((sum, s) => sum + s.pct, 0)).toBeCloseTo(slices.reduce((sum, s) => sum + s.pct, 0), 10);
   });
 });

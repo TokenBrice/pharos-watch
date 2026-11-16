@@ -11,14 +11,14 @@ import type {
  * The Mechanism module's flow: the resolved template as real DOM text, so
  * every glyph stays at body sizes (≥ 12 px) at any width instead of scaling
  * down with an SVG viewBox. Steps stack vertically in a narrow container and
- * run as one row of tracks from `@3xl` (48 rem) up; the return or carry loop
+ * run as one row of tracks from `@2xl` (42 rem) up; the return or carry loop
  * draws as a bracket under the row and reads as a caption when stacked.
  *
  * Wrappers draw the parent's flow, grouped under the parent's name, followed
  * by the wrapper layer as a fourth track.
  */
 
-/** Gutter between step tracks in the row layout; matches `@3xl:gap-x-10`. */
+/** Gutter between step tracks in the row layout; matches `@2xl:gap-x-10`. */
 const TRACK_GAP_REM = 2.5;
 const TRACK_COUNT = 3;
 
@@ -43,9 +43,9 @@ function Connector({ dashed }: { dashed: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-7 items-center justify-center text-muted-foreground/70 @3xl:absolute @3xl:inset-y-0 @3xl:right-full @3xl:h-auto @3xl:w-10"
+      className="flex h-7 items-center justify-center text-muted-foreground/70 @2xl:absolute @2xl:inset-y-0 @2xl:right-full @2xl:h-auto @2xl:w-10"
     >
-      <svg viewBox="0 0 10 20" width="10" height="20" className="@3xl:-rotate-90">
+      <svg viewBox="0 0 10 20" width="10" height="20" className="@2xl:-rotate-90">
         <line x1="5" y1="1" x2="5" y2="15" stroke="currentColor" strokeWidth="1.25" strokeDasharray={dashed ? "3 3" : undefined} />
         <polyline
           points="1.5,13.5 5,18.5 8.5,13.5"
@@ -123,7 +123,7 @@ function LoopBracket({ loop }: { loop: MechanismFlowLoop }) {
   const right = `calc(100% - ${trackCenter(Math.max(loop.from, loop.to))})`;
   const lineColor = loop.danger ? DANGER_COLOR : "var(--text-tertiary)";
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-9 @3xl:block">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-9 @2xl:block">
       <span
         className="absolute -translate-x-1/2 border-x-[4.5px] border-b-[6px] border-x-transparent"
         style={{ left: trackCenter(loop.to), top: 0, borderBottomColor: lineColor }}
@@ -151,7 +151,7 @@ function LoopBracket({ loop }: { loop: MechanismFlowLoop }) {
 function LoopCaption({ loop }: { loop: MechanismFlowLoop }) {
   return (
     <p
-      className={cn("mt-2 text-xs @3xl:sr-only", !loop.danger && "text-muted-foreground")}
+      className={cn("mt-2 text-xs @2xl:sr-only", !loop.danger && "text-muted-foreground")}
       style={loop.danger ? { color: DANGER_COLOR } : undefined}
     >
       <span aria-hidden="true">↺ </span>
@@ -167,8 +167,8 @@ function LoopCaption({ loop }: { loop: MechanismFlowLoop }) {
 function StepList({ template }: { template: MechanismFlowTemplate }) {
   return (
     <div className="flex flex-1 flex-col">
-      <div className={cn("relative flex flex-1 flex-col", template.loop && "@3xl:pb-10")}>
-        <ol className="grid flex-1 @3xl:grid-cols-3 @3xl:gap-x-10">
+      <div className={cn("relative flex flex-1 flex-col", template.loop && "@2xl:pb-10")}>
+        <ol className="grid flex-1 @2xl:grid-cols-3 @2xl:gap-x-10">
           {template.steps.map((step, index) => (
             <li key={step.label} className="relative flex flex-col">
               {index > 0 ? <Connector dashed={template.fragile} /> : null}
@@ -202,14 +202,14 @@ export function MechanismFlow({ template, wrapper = null, action = null }: Mecha
         {wrapper ? `${wrapper.ariaLabel} ${template.description}` : `${template.ariaLabel} ${template.description}`}
       </figcaption>
       {wrapper ? (
-        <div className="grid max-w-lg gap-y-3 @3xl:max-w-none @3xl:grid-cols-4 @3xl:gap-x-10">
-          <div className="flex min-w-0 flex-col @3xl:col-span-3">
+        <div className="grid gap-y-3 @2xl:grid-cols-4 @2xl:gap-x-10">
+          <div className="flex min-w-0 flex-col @2xl:col-span-3">
             <p className={GROUP_CAPTION_CLASS}>{wrapper.parentSymbol} mechanism</p>
             <StepList template={template} />
           </div>
           <div className="flex min-w-0 flex-col">
             <p className={GROUP_CAPTION_CLASS}>Wrapper layer</p>
-            <ol start={TRACK_COUNT + 1} className={cn("flex flex-1 flex-col", template.loop && "@3xl:pb-10")}>
+            <ol start={TRACK_COUNT + 1} className={cn("flex flex-1 flex-col", template.loop && "@2xl:pb-10")}>
               <li className="relative flex flex-1 flex-col">
                 <Connector dashed={false} />
                 <StepCard
@@ -222,7 +222,7 @@ export function MechanismFlow({ template, wrapper = null, action = null }: Mecha
           </div>
         </div>
       ) : (
-        <div className="flex max-w-lg flex-col @3xl:max-w-none">
+        <div className="flex flex-col">
           <StepList template={template} />
         </div>
       )}

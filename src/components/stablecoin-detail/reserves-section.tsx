@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
-import { formatReserveRiskTier, ReserveRiskSwatch } from "@/components/reserves/reserve-risk-swatch";
-import { ReserveTreemap } from "@/components/reserves/reserve-treemap";
+import {
+  formatReserveRiskTier,
+  formatReserveSharePct,
+  isWholeReserveShare,
+  ReserveRiskSwatch,
+} from "@/components/reserves/reserve-risk-swatch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { EvidenceFooter, type EvidenceFooterSource } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceFooter, FooterStamp, type EvidenceFooterSource } from "@/components/stablecoin-detail/evidence-footer";
 import { EvidenceModule, type EvidenceModuleVariant } from "@/components/stablecoin-detail/evidence-module";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -17,12 +21,13 @@ import {
   buildReserveFeedStatus,
   buildReserveFootnoteModel,
   buildReserveSourceChip,
+  compactReserveStamp,
   liveCompositionDiffers,
   compositionSlices,
-  condenseReserveSlices,
   lookThroughCompositionSlices,
   reserveSliceLabel,
   reviewedCompositionSlices,
+  splitReserveCompositionRows,
   type ReserveCompositionSlice,
   type ReserveFeedStatusModel,
 } from "@/components/stablecoin-detail/reserve-presentation";
@@ -38,6 +43,7 @@ import {
 } from "@/lib/stablecoin-detail-reserve-quality-client";
 import type { ReserveLookThroughClientSummary } from "@/lib/stablecoin-detail-reserve-look-through-client";
 import { cn } from "@/lib/utils";
+import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 
 import { findSummaryBudgetViolations } from "@shared/lib/summary-budget";
@@ -66,7 +72,6 @@ export interface ReservesSectionProps {
 const FEED_STATUS_ANCHOR_ID = "reserve-feed-status";
 const AMBER_VALUE_CLASS = "text-state-warn";
 const CHIP_CLASS = "text-2xs font-medium";
-const SUB_LINE_CLASS = "block font-sans text-2xs font-normal normal-case tracking-normal text-muted-foreground";
 const SLICE_LINE_CLASS = "text-xs leading-relaxed text-muted-foreground";
 
 /**
@@ -163,15 +168,17 @@ function RetryButton({ onRetry, isFetching }: { onRetry: () => Promise<unknown> 
 }
 
 /**
- * At most four facts, in reading order: how fast the basket exits, how much of
- * it has no identified obligor, its largest position, and the review's date.
- * A look-through drops the date fact: the module keeps one visible date (the
- * footer's review stamp) and folds the others into its provenance.
+ * The whole-basket figures the verdict does not already state, in reading
+ * order: how fast the basket exits, then how much of it the review left
+ * unresolved. The verdict is the reserve lede, whose first sentence always
+ * states the one-day convertibility and whose full text adds any unresolved
+ * exposure, so a fact never repeats it. Its largest position is the list's
+ * first row and its date is the footer's, so neither is a fact; a figure the
+ * issuer does not publish is left out, never "Not published".
  */
 function buildFacts(
   summary: ReserveQualityClientSummary | null,
-  slices: readonly ReserveCompositionSlice[],
-  { includeAsOf }: { includeAsOf: boolean },
+  { verdictStatesLiquidity, verdictStatesExposure }: { verdictStatesLiquidity: boolean; verdictStatesExposure: boolean },
 ): FactGridItem[] {
   const facts: FactGridItem[] = [];
 
@@ -182,22 +189,22 @@ function buildFacts(
     // within the day. A disclosure gap alone is the "Opaque exit" chip's job.
     const isBreach = liquid < LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT
       && liquid + unknown < LIQUID_WITHIN_ONE_DAY_WATCH_BELOW_PCT;
-    facts.push({
-      key: "liquid-one-day",
-      label: "Liquid ≤ 1 day",
-      value: unknown >= 100
-        ? "Not published"
-        : `${unknown > 0 ? "≥ " : ""}${formatReserveQualityPct(liquid)}`,
-      ...(isBreach ? { valueClassName: AMBER_VALUE_CLASS } : {}),
-      title: unknown > 0
-        ? `${formatReserveQualityPct(unknown)} of the basket has no published exit timeline`
-        : "Share of the basket convertible to cash within one day",
-    });
+    if (!verdictStatesLiquidity && unknown < 100) {
+      facts.push({
+        key: "liquid-one-day",
+        label: "Liquid ≤ 1 day",
+        value: `${unknown > 0 ? "≥ " : ""}${formatReserveQualityPct(liquid)}`,
+        ...(isBreach ? { valueClassName: AMBER_VALUE_CLASS } : {}),
+        title: unknown > 0
+          ? `${formatReserveQualityPct(unknown)} of the basket has no published exit timeline`
+          : "Share of the basket convertible to cash within one day",
+      });
+    }
 
-    if (summary.unidentifiedObligorsPct != null) {
+    if (!verdictStatesExposure && summary.unidentifiedObligorsPct != null) {
       facts.push({
         key: "unresolved-exposure",
-        label: "Unresolved reserve exposure",
+        label: "Unresolved exposure",
         value: formatReserveQualityPct(summary.unidentifiedObligorsPct),
         ...(summary.unidentifiedObligorsPct > 0 ? { valueClassName: AMBER_VALUE_CLASS } : {}),
         title: "Share of reserve dispositions the review left unresolved; it does not measure individually identified obligors",
@@ -205,48 +212,17 @@ function buildFacts(
     }
   }
 
-  const top = slices[0];
-  if (top && slices.length > 1 && summary?.evidenceBasis !== "contextual") {
-    facts.push({
-      key: "top-position",
-      label: "Top position",
-      value: (
-        <>
-          {formatReserveQualityPct(top.pct)}
-          <span className={SUB_LINE_CLASS}>{top.label}</span>
-        </>
-      ),
-      // The review flags a concentration finding only for a large medium-or-worse slice.
-      ...(summary?.topPositionName != null ? { valueClassName: AMBER_VALUE_CLASS } : {}),
-      title: top.detail ?? top.label,
-    });
-  }
-
-  if (includeAsOf && summary?.asOf) {
-    const source = summary.sources[0];
-    const sourceName = source ? reportName(source.label) : null;
-    facts.push({
-      key: "as-of",
-      label: "As of",
-      value: source ? (
-        <>
-          {summary.asOf}
-          <span className={SUB_LINE_CLASS}>{sourceName}</span>
-        </>
-      ) : summary.asOf,
-      ...(source ? { href: source.url, title: source.label } : {}),
-    });
-  }
-
   return facts;
 }
 
 /**
- * Source labels can carry reviewer page notes after the first ";": only the
- * report name belongs in the summary layer; the full label stays in the title.
+ * Source labels can carry reviewer page notes after the first ";", a
+ * parenthetical and an "as of …" clause: only the report name belongs in the
+ * summary layer, beside the date it already shows; the full label stays in the title.
  */
 function reportName(label: string): string {
-  return label.split(";")[0]!.trim();
+  const name = label.split(";")[0]!.trim();
+  return name.replace(/\s*\(.*$/, "").replace(/\s+as of\s.*$/i, "").trim() || name;
 }
 
 /** Slice data only: reviewer narrative folds with the sources, confidence sits in the chip row. */
@@ -255,6 +231,11 @@ function SliceDetail({ summary }: { summary: ReserveQualityClientSummary }) {
   return (
     <ModuleDisclosure label="Slice detail & risk factors">
       <div className="mt-3 space-y-3">
+        {summary.unidentifiedObligorsPct != null ? (
+          <p className={SLICE_LINE_CLASS}>
+            {`Unresolved exposure: ${formatReserveQualityPct(summary.unidentifiedObligorsPct)} of reserve dispositions the review left unresolved.`}
+          </p>
+        ) : null}
         {summary.selfExposurePct != null ? (
           <p className={SLICE_LINE_CLASS}>
             {`Issuer self-exposure: ${formatReserveQualityPct(summary.selfExposurePct)} of the basket is the issuer's own assets rather than independent collateral.`}
@@ -288,30 +269,115 @@ function SliceDetail({ summary }: { summary: ReserveQualityClientSummary }) {
 }
 
 /**
- * The reserve visual for long baskets: every group draws at its full weight;
- * only labels and details beyond the largest groups fold beneath it.
+ * A listed share at a fixed one decimal so the column aligns; positive dust
+ * stays "<0.1%", a near-whole share never rounds up to the whole, and a whole
+ * basket that float sums leave a few ULPs short still reads 100%.
  */
-function CondensedReserveVisual({ slices, subject }: { slices: readonly ReserveCompositionSlice[]; subject: string }) {
-  const { shown, rest, restPct } = condenseReserveSlices(slices);
+function formatListedSharePct(pct: number): string {
+  if (isWholeReserveShare(pct)) return "100%";
+  if (pct > 0 && pct < 0.1) return "<0.1%";
+  return pct.toFixed(1) === "100.0" ? ">99.9%" : `${pct.toFixed(1)}%`;
+}
+
+function CompositionRow({
+  swatch, name, context, pct, title, concentrated = false,
+}: { swatch: ReactNode; name: string; context: string; pct: number; title?: string; concentrated?: boolean }) {
   return (
-    <>
-      <ReserveTreemap slices={[...shown, ...rest]} subject={subject} labelLimit={shown.length} />
+    <li className="flex items-start gap-2.5 py-2" title={title}>
+      <span className="flex h-5 shrink-0 items-center">{swatch}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm leading-5 text-foreground">{name}</span>
+        <span className="block text-xs leading-4 text-muted-foreground">{context}</span>
+      </span>
+      <span className={cn("pharos-numeric shrink-0 text-sm leading-5", concentrated ? AMBER_VALUE_CLASS : "text-foreground")}>
+        {formatListedSharePct(pct)}
+        {concentrated ? <span className="sr-only"> (concentration finding)</span> : null}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * The risk tier is spelled out on every row, so the swatch is never the only
+ * channel. Obligor prose stays a hover title, as on the old tiles; the slice
+ * detail fold carries it in full.
+ */
+function SliceRow({ slice, concentrated }: { slice: ReserveCompositionSlice; concentrated?: boolean }) {
+  return (
+    <CompositionRow
+      swatch={<ReserveRiskSwatch risk={slice.risk} />}
+      name={slice.label}
+      context={slice.role ? `${formatReserveRiskTier(slice.risk)} · ${slice.role}` : formatReserveRiskTier(slice.risk)}
+      pct={slice.pct}
+      title={slice.detail ?? undefined}
+      concentrated={concentrated}
+    />
+  );
+}
+
+/**
+ * The module's reserve visual: one 100% stacked bar toned by reserve risk tier
+ * over a ranked list (swatch, full name, risk tier and asset class, share).
+ * Up to eight rows list; the rest fold with their count and share but keep
+ * their full weight and tier in the bar. A share short of the whole leaves a
+ * dashed unreviewed remainder, never a filled tier. The bar's accessible name
+ * carries every slice, folded ones included. The review's concentration
+ * finding (a large medium-or-worse top slice) tints that first row's share.
+ */
+function ReserveComposition({
+  slices,
+  subject,
+  topConcentrated = false,
+}: {
+  slices: readonly ReserveCompositionSlice[];
+  subject: string;
+  topConcentrated?: boolean;
+}) {
+  const { shown, rest, restPct, segments } = splitReserveCompositionRows(slices);
+  if (shown.length === 0) return null;
+  const totalPct = slices.reduce((sum, slice) => sum + slice.pct, 0);
+  const unreviewedPct = isWholeReserveShare(totalPct) ? 0 : Math.max(0, 100 - totalPct);
+  const ariaLabel = `${subject}: ${slices
+    .map((slice) => `${slice.label} ${formatReserveSharePct(slice.pct)} (${formatReserveRiskTier(slice.risk).toLowerCase()})`)
+    .join(", ")}${unreviewedPct > 0 ? `, Unreviewed remainder ${formatReserveSharePct(unreviewedPct)}` : ""}`;
+  return (
+    <div className="min-w-0">
+      <div role="figure" aria-label={ariaLabel} className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full">
+        {segments.map((segment) => (
+          <span
+            key={segment.key}
+            className="h-full min-w-0.5"
+            style={{ flex: `${segment.pct} 1 0%`, backgroundColor: RESERVE_RISK_PRESENTATION[segment.risk].accentColor }}
+          />
+        ))}
+        {unreviewedPct > 0 ? (
+          <span
+            className="h-full min-w-0.5 rounded-r-full border border-dashed border-muted-foreground/60"
+            style={{ flex: `${unreviewedPct} 1 0%` }}
+          />
+        ) : null}
+      </div>
+      <ol aria-label="Reserve composition, largest first" className="mt-2 divide-y divide-border/40">
+        {shown.map((slice, index) => (
+          <SliceRow key={slice.key} slice={slice} concentrated={topConcentrated && index === 0} />
+        ))}
+        {unreviewedPct > 0 ? (
+          <CompositionRow
+            swatch={<span className="size-2.5 rounded-xs border border-dashed border-muted-foreground/60" />}
+            name="Unreviewed remainder"
+            context="Not covered by the reviewed composition"
+            pct={unreviewedPct}
+          />
+        ) : null}
+      </ol>
       {rest.length > 0 ? (
-        <ModuleDisclosure
-          label={`${rest.length} more ${rest.length === 1 ? "group" : "groups"} · ${formatReserveQualityPct(restPct)}`}
-        >
-          <ul aria-label="Remaining reserve slices" className="mt-2 space-y-1">
-            {rest.map((slice) => (
-              <li key={slice.key} className={cn(SLICE_LINE_CLASS, "flex items-center gap-1.5")}>
-                <ReserveRiskSwatch risk={slice.risk} />
-                <span className="font-medium text-foreground">{slice.label}</span>
-                {` · ${formatReserveRiskTier(slice.risk)} · ${formatReserveQualityPct(slice.pct)}`}
-              </li>
-            ))}
-          </ul>
+        <ModuleDisclosure label={`${rest.length} more ${rest.length === 1 ? "slice" : "slices"} · ${formatListedSharePct(restPct)}`}>
+          <ol aria-label="Remaining reserve slices" className="divide-y divide-border/40">
+            {rest.map((slice) => <SliceRow key={slice.key} slice={slice} />)}
+          </ol>
         </ModuleDisclosure>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -434,9 +500,9 @@ function buildLookThroughVerdict(parentSymbol: string, slices: readonly ReserveC
 }
 
 /**
- * The one Reserves module (plan §8a): the risk-toned treemap of the *reviewed*
- * slices (the Safety Score basis), the lede as verdict, a chip row
- * (confidence · source type), up to four facts, then the folded ladder, slice
+ * The one Reserves module (plan §8a): the risk-toned composition bar and
+ * ranked list of the *reviewed* slices (the Safety Score basis), the lede as verdict, a chip row
+ * (confidence · source type), the figures the verdict does not state, then the folded ladder, slice
  * detail, dated live attestation/proof feed and feed status, and last the
  * merged review notes & sources fold above one footer line. The header carries
  * one status chip (liquidity) and, when the feed is unhealthy, the ops chip.
@@ -444,8 +510,7 @@ function buildLookThroughVerdict(parentSymbol: string, slices: readonly ReserveC
  * The summary is always the reviewed slices, or an explicit "no reviewed
  * composition" state: live figures never reach it. A wrapper whose one
  * reviewed slice is its parent draws the parent's reviewed slices instead,
- * labelled "via <parent>"; any other one-slice basket is a compact composition
- * bar. A live feed is always exposed in the dated "Live reserve feed" fold,
+ * labelled "via <parent>"; a one-slice basket is the bar and one row. A live feed is always exposed in the dated "Live reserve feed" fold,
  * worded by whether it differs from the reviewed slices. Also owns the
  * `#reserve-quality` alias the hero and FAQ link to, pinned to the module top.
  *
@@ -492,7 +557,8 @@ export function ReservesSection({
           <Skeleton className="h-4 w-36 rounded-sm" />
           <Skeleton className="h-5 w-10 rounded-full" />
         </div>
-        <Skeleton className="h-64 rounded-md sm:h-72" />
+        <Skeleton className="h-3 rounded-full" />
+        <Skeleton className="mt-3 h-40 rounded-md" />
         <span className="sr-only">Loading reserve composition</span>
       </section>
     );
@@ -509,25 +575,41 @@ export function ReservesSection({
   const wholeBasketSummary = qualitySummary?.populationId === populationId ? qualitySummary : null;
   const feedStatus = buildReserveFeedStatus(reserves, reserveFetchError);
   const sourceChip = buildReserveSourceChip(reserves);
+  const liveMatchesReviewed = hasReviewedBasis && liveSlices.length > 0 && !liveCompositionDiffers(liveSlices, reviewedSlices);
+  // A live feed replaying the reviewed basket shares its composition date, so
+  // the feed's stamp never says "date unavailable" beside a dated basket.
   const footnote = reserves
-    ? buildReserveFootnoteModel(reserves, !!coin.liveReservesConfig, coin.flags.backing.replace("-", " "))
+    ? buildReserveFootnoteModel(
+        reserves,
+        !!coin.liveReservesConfig,
+        coin.flags.backing.replace("-", " "),
+        liveMatchesReviewed ? (qualitySummary?.asOf ?? null) : null,
+      )
     : null;
   const isLiveFeed = reserves?.mode === "live" || reserves?.mode === "live-stale";
   // A live feed is always exposed in its dated disclosure, never promoted into the summary.
   const showLiveFeed = isLiveFeed && liveSlices.length > 0;
-  const facts = buildFacts(wholeBasketSummary, reviewedSlices, { includeAsOf: lookThroughView == null });
   const verdict = lookThroughView
     ? buildLookThroughVerdict(lookThroughView.parent.parentSymbol, lookThroughSlices)
     : buildVerdict(qualitySummary);
+  const ledeVerdict = lookThroughView == null && verdict != null;
+  const facts = buildFacts(wholeBasketSummary, {
+    verdictStatesLiquidity: ledeVerdict,
+    verdictStatesExposure: ledeVerdict && verdict === qualitySummary?.lede,
+  });
   const reviewedAt = qualitySummary?.reviewedAt ?? undefined;
   // A look-through stacks three more dates on one card (the parent's review,
   // the wrapper basis's as-of, the live check), so it keeps one visible date,
   // the footer's review stamp, and folds the rest into the provenance.
   const keepsOneDate = lookThroughView != null && reviewedAt != null;
-  // Footer line: the live feed's dated stamp on the left, the review date on
-  // the right. A fallback note ("showing curated reserve baseline") takes the
-  // right slot only when there is no review date, else it folds with the sources.
-  const liveStamp = isLiveFeed && !keepsOneDate ? (footnote?.text ?? null) : null;
+  // One provenance line: the reviewed composition's date beside its review
+  // date, on the right. The live feed's dates open its "Live reserve feed"
+  // fold, so they reach the line (left) only when that fold is absent. A
+  // fallback note ("showing curated reserve baseline") takes the right slot
+  // only when there is no other stamp there, else it folds with the sources.
+  const compositionAsOf = lookThroughView == null ? (wholeBasketSummary?.asOf ?? null) : null;
+  const asOfStamp = compositionAsOf && compositionAsOf !== reviewedAt ? `Reserves as of ${compositionAsOf}` : null;
+  const liveStamp = isLiveFeed && !keepsOneDate && !showLiveFeed && footnote?.text ? compactReserveStamp(footnote.text) : null;
   const baselineNote = isLiveFeed ? null : (footnote?.text ?? null);
 
   const sources: EvidenceFooterSource[] = [];
@@ -565,7 +647,7 @@ export function ReservesSection({
   // become review notes so the merged fold still carries them.
   const datesInFootnote = sources.length > 0 ? lookThroughDates : [];
   const provenanceSentence = sourceChip?.tooltip ?? null;
-  const foldedBaselineNote = reviewedAt ? baselineNote : null;
+  const foldedBaselineNote = reviewedAt || asOfStamp ? baselineNote : null;
   const sourcesFootnote = provenanceSentence || foldedBaselineNote || datesInFootnote.length > 0
     ? (
         <>
@@ -619,13 +701,17 @@ export function ReservesSection({
       {lookThroughView ? (
         <div className="space-y-3">
           <LookThroughCaption wrapper={lookThroughView.wrapper} lookThrough={lookThroughView.parent} />
-          <CondensedReserveVisual
+          <ReserveComposition
             slices={lookThroughSlices}
             subject={`${lookThroughView.parent.parentSymbol} reviewed reserve slices, held via ${lookThroughView.wrapper.label}`}
           />
         </div>
       ) : hasReviewedBasis ? (
-        <CondensedReserveVisual slices={reviewedSlices} subject={qualitySummary?.evidenceBasis === "contextual" ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"} />
+        <ReserveComposition
+          slices={reviewedSlices}
+          subject={qualitySummary?.evidenceBasis === "contextual" ? "Contextual reserve slices, not whole-token composition" : "Reviewed reserve slices"}
+          topConcentrated={wholeBasketSummary?.topPositionName != null && reviewedSlices.length > 1}
+        />
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
@@ -671,7 +757,7 @@ export function ReservesSection({
                 slices={liveSlices}
                 datedLabel={footnote?.text ?? null}
                 note={buildReserveCompositionNote(reserves)}
-                relation={!hasReviewedBasis ? "unreviewed" : liveCompositionDiffers(liveSlices, reviewedSlices) ? "differs" : "matches"}
+                relation={!hasReviewedBasis ? "unreviewed" : liveMatchesReviewed ? "matches" : "differs"}
               />
             ) : null}
             {feedStatus ? <FeedStatusDetail status={feedStatus} onRetry={onRetry} isFetching={isFetching} /> : null}
@@ -684,9 +770,11 @@ export function ReservesSection({
             notes={reviewNotes.length > 0 ? reviewNotes.map((note) => <p key={note}>{note}</p>) : undefined}
             notesCount={reviewNotes.length}
             reviewed={reviewedAt}
-            trailing={reviewedAt ? undefined : (baselineNote ?? undefined)}
+            trailing={asOfStamp ? (
+              <span className="whitespace-nowrap">{asOfStamp}</span>
+            ) : reviewedAt ? undefined : (baselineNote ?? undefined)}
           >
-            {liveStamp ? <span>{liveStamp}</span> : null}
+            {liveStamp ? <FooterStamp text={liveStamp} /> : null}
           </EvidenceFooter>
         }
       >

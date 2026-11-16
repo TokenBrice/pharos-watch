@@ -477,7 +477,9 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
             )}
           </div>
           {/* DEC-19: unavailable activity stays NR; its weight is not redistributed. */}
-          <span className="w-8 text-right font-mono tabular-nums">{value ?? "NR"}</span>
+          <span className="w-8 text-right font-mono tabular-nums" title={value == null ? "Not rated" : undefined}>
+            {value ?? <span aria-label="Not rated">–</span>}
+          </span>
         </div>
       ))}
     </div>

@@ -2,147 +2,285 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { DEPENDENCY_RELATIONSHIP_LABELS, DEPENDENCY_ROLE_LABELS } from "@shared/lib/classification";
+import { DEPENDENCY_ROLE_LABELS } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
-import type { DetailDependencyContext } from "./dependency-context-model";
+import {
+  DependencyRow,
+  dependencyEntryShare,
+  dependencyRoleDetail,
+  dependencyRowAriaLabel,
+  type PublishedCollateralUsageEntry,
+} from "./collateral-usage-section";
+import { formatDependencyShare, groupCoverageByReason, type DetailDependencyContext } from "./dependency-context-model";
 import { ShowAllToggle } from "./disclosure-toggles";
 import { DETAIL_MODULE_TITLE_CLASS } from "./section-title-class";
 
-const PREVIEW_COUNT = 5;
+const PREVIEW_COUNT = 6;
 
-function shareLabel(share: number | null): string {
-  if (share === null) return "Share unknown";
-  if (share > 0 && share < 0.0001) return "<0.01%";
-  return `${Number((share * 100).toFixed(4))}%`;
+function plural(count: number, noun: string): string {
+  return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
-function AssetLink({ id, label }: { id: string; label: string }) {
-  return <Link href={buildStablecoinUrl(id)} className="pharos-focus-ring font-medium hover:underline">{label}</Link>;
+function isoDate(epochSec: number | null): string | null {
+  return epochSec === null ? null : new Date(epochSec * 1000).toISOString().slice(0, 10);
 }
 
-/**
- * Rows grouped under one tag line per group (first-seen order) instead of the
- * same tag repeated on every row; the first five rows show, "Show all N" the rest.
- */
-function GroupedRows<T>({ items, groupLabel, rowKey, renderRow, noun }: {
-  items: readonly T[];
-  groupLabel: (item: T) => string;
-  rowKey: (item: T) => string;
-  renderRow: (item: T) => ReactNode;
-  noun: string;
-}) {
+function ListHeading({ title, count, caption }: { title: string; count?: number; caption?: string }) {
+  return (
+    <div className="space-y-0.5">
+      <h3 className={DETAIL_MODULE_TITLE_CLASS}>
+        {title}
+        {count === undefined ? null : <span className="ml-1.5 font-mono font-normal tabular-nums">{count}</span>}
+      </h3>
+      {caption ? <p className="text-xs text-muted-foreground">{caption}</p> : null}
+    </div>
+  );
+}
+
+function CappedList<T>({ items, render, noun }: { items: readonly T[]; render: (item: T) => ReactNode; noun: string }) {
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? items : items.slice(0, PREVIEW_COUNT);
-  const groups = new Map<string, T[]>();
-  for (const item of visible) {
-    const label = groupLabel(item);
-    groups.set(label, [...(groups.get(label) ?? []), item]);
-  }
-  const totals = new Map<string, number>();
-  for (const item of items) totals.set(groupLabel(item), (totals.get(groupLabel(item)) ?? 0) + 1);
   return (
     <>
-      <div className="space-y-3">
-        {[...groups].map(([label, rows]) => (
-          <div key={label} className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">
-              {label} <span className="font-mono tabular-nums">{totals.get(label)}</span>
-            </p>
-            <ul className="space-y-1.5 text-sm">
-              {rows.map((row) => <li key={rowKey(row)} className="flex flex-wrap items-baseline gap-x-2">{renderRow(row)}</li>)}
-            </ul>
-          </div>
-        ))}
-      </div>
+      {/* -mx-2: the rows' hover fill bleeds while their content keeps the card's text edge. */}
+      <ul className="-mx-2 space-y-0.5">{(showAll ? items : items.slice(0, PREVIEW_COUNT)).map(render)}</ul>
       {items.length > PREVIEW_COUNT ? (
-        <ShowAllToggle open={showAll} onToggle={() => setShowAll((prev) => !prev)} total={items.length} noun={noun} />
+        <ShowAllToggle
+          open={showAll}
+          onToggle={() => setShowAll((prev) => !prev)}
+          total={items.length}
+          noun={noun}
+          className="-ml-2.5"
+        />
       ) : null}
     </>
   );
 }
 
-export function DependencyContextDetails({ card, context, marketCapAsOf }: {
-  card: SafetyScoreV9CurrentCard;
+/** One track per cell (up to three), so two cells spread across the module instead of filling its left 40%. */
+const SUMMARY_COLUMNS_CLASS: Readonly<Record<number, string>> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-2 sm:grid-cols-3",
+};
+
+interface SummaryCell {
+  key: string;
+  label: string;
+  value: string | null;
+  sub: ReactNode;
+}
+
+/** How each relationship reads in the dependents breakdown ("46 as collateral · 35 wrappers"). */
+const RELATIONSHIP_BREAKDOWN: Readonly<Record<PublishedCollateralUsageEntry["relationshipType"], (count: number) => string>> = {
+  collateral: (count) => `${count} as collateral`,
+  wrapper: (count) => plural(count, "wrapper"),
+  mechanism: (count) => `${count} via mechanism`,
+  "serial-claim": (count) => plural(count, "serial claim"),
+};
+
+/**
+ * The dependency verdict as a compact strip: who depends on this coin, how much
+ * known USD rides on it, and what it depends on. An empty direction is one
+ * muted sentence, not a display-size "None". A total prints only when it is
+ * known (`directKnown`); otherwise "–" with the reason.
+ */
+export function DependencySummary({ symbol, context, usage, marketCapAsOf }: {
+  symbol: string;
   context: DetailDependencyContext;
+  usage: readonly PublishedCollateralUsageEntry[];
   marketCapAsOf: number | null;
 }) {
   const { exposure, directKnown, upstreams } = context;
   const direct = exposure?.direct;
   const dependentCount = exposure?.dependentCount ?? 0;
   const excludedCount = direct?.excludedSupplyUnknownIds.length ?? 0;
-  const roles = card.dependencies.roles;
-  const coverage = card.dependencyCoverage;
-  const hasDependents = dependentCount > 0;
-  const hasUpstreams = upstreams.length > 0;
-  const hasRoles = (roles?.length ?? 0) > 0;
-  const hasCoverage = (coverage?.length ?? 0) > 0;
-  const emptyQuadrants = [
-    !hasDependents ? "dependents" : null,
-    !hasUpstreams ? "upstream links" : null,
-    !hasRoles ? "scored roles" : null,
-    !hasCoverage ? "outside-graph relationships" : null,
-  ].filter((label): label is string => label !== null);
-  const emptySummary = new Intl.ListFormat("en", { type: "disjunction" }).format(emptyQuadrants);
+  const exposureKnown = Boolean(direct && directKnown);
+  const breakdown = (Object.keys(RELATIONSHIP_BREAKDOWN) as PublishedCollateralUsageEntry["relationshipType"][])
+    .map((kind) => ({ kind, count: usage.filter((entry) => entry.relationshipType === kind).length }))
+    .filter(({ count }) => count > 0)
+    .sort((a, b) => b.count - a.count)
+    .map(({ kind, count }) => RELATIONSHIP_BREAKDOWN[kind](count))
+    .join(" · ");
+  const upstreamSymbols = [...new Set(upstreams.map((entry) => entry.coin.symbol))];
+  const asOf = isoDate(marketCapAsOf);
+
+  const cells: SummaryCell[] = [];
+  if (dependentCount > 0) {
+    cells.push({
+      key: "dependents",
+      label: `Depend on ${symbol}`,
+      value: String(dependentCount),
+      sub: breakdown || plural(dependentCount, "direct dependent"),
+    }, {
+      key: "exposure",
+      label: "Known direct exposure",
+      value: exposureKnown ? formatCurrency(direct!.knownUsd) : null,
+      sub: exposureKnown
+        ? asOf === null ? "Market-cap date unavailable" : <>Market caps as of <span className="whitespace-nowrap">{asOf}</span></>
+        : "Direct USD exposure unavailable",
+    });
+  }
+  if (upstreamSymbols.length > 0) {
+    cells.push({
+      key: "upstreams",
+      label: `${symbol} depends on`,
+      value: String(upstreamSymbols.length),
+      sub: new Intl.ListFormat("en", { type: "conjunction" }).format(
+        upstreamSymbols.length > 3 ? [...upstreamSymbols.slice(0, 3), `${upstreamSymbols.length - 3} more`] : upstreamSymbols,
+      ),
+    });
+  }
+
+  const absence = dependentCount === 0 && upstreamSymbols.length === 0
+    ? `No tracked stablecoin depends on ${symbol}, and its backing has no scored links to other stablecoins.`
+    : dependentCount === 0 ? `No tracked stablecoin depends on ${symbol}.`
+      : upstreamSymbols.length === 0 ? `${symbol}'s own backing has no scored links to other stablecoins.`
+        : null;
+  const caveats = [
+    // When no dependent has a market cap the "unavailable" cell already says so.
+    exposureKnown && excludedCount > 0 ? `${plural(excludedCount, "dependent")} without a market cap ${excludedCount === 1 ? "is" : "are"} left out of the exposure total.` : null,
+    exposureKnown && direct!.unknownShareEdgeCount > 0 ? `${plural(direct!.unknownShareEdgeCount, "link")} ${direct!.unknownShareEdgeCount === 1 ? "has" : "have"} an unknown share, so the exposure total is incomplete.` : null,
+    direct?.integrityFlag ? "A dependent's published backing shares add up to more than 100%, so the exposure total is incomplete." : null,
+    absence,
+  ].filter((line): line is string => line !== null);
 
   return (
-    <div className={emptyQuadrants.length < 3 ? "grid gap-5 border-b border-border/40 pb-6 sm:grid-cols-2" : "space-y-3 border-b border-border/40 pb-6"}>
-      {hasDependents ? <section aria-label="What depends on me" className="space-y-2">
-        <h3 className={DETAIL_MODULE_TITLE_CLASS}>What depends on me</h3>
-        <p className="text-sm">
-          <span className="font-mono tabular-nums">{dependentCount}</span> direct {dependentCount === 1 ? "dependent" : "dependents"}.
-          {" "}{direct && directKnown ? <><span className="font-mono tabular-nums">{formatCurrency(direct.knownUsd)}</span> known direct exposure.</> : "Direct USD exposure unavailable."}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Published links weighted by dependent market cap{marketCapAsOf === null ? "; market-cap date unavailable" : ` as of ${new Date(marketCapAsOf * 1000).toISOString().slice(0, 10)}`}.
-        </p>
-        {excludedCount > 0 ? <p className="text-xs text-muted-foreground">{excludedCount} {excludedCount === 1 ? "dependent has" : "dependents have"} unavailable market cap and {excludedCount === 1 ? "is" : "are"} excluded from USD exposure.</p> : null}
-        {direct && direct.unknownShareEdgeCount > 0 ? <p className="text-xs text-muted-foreground">{direct.unknownShareEdgeCount} published {direct.unknownShareEdgeCount === 1 ? "link has" : "links have"} an unknown share; USD exposure is incomplete.</p> : null}
-        {direct?.integrityFlag ? <p className="text-xs text-muted-foreground">Published backing shares have an integrity warning; USD exposure is incomplete.</p> : null}
-      </section> : null}
-      {hasUpstreams ? <section aria-label="What I depend on" className="space-y-2">
-        <h3 className={DETAIL_MODULE_TITLE_CLASS}>What I depend on</h3>
-        <GroupedRows
-          items={upstreams}
-          groupLabel={(entry) => `${DEPENDENCY_RELATIONSHIP_LABELS[entry.relationshipType]} (${entry.edgeType})`}
-          rowKey={(entry) => `${entry.coin.id}:${entry.edgeType}`}
-          renderRow={(entry) => <>
-            <AssetLink id={entry.coin.id} label={entry.coin.symbol} />
-            <span className="font-mono text-xs tabular-nums">{entry.edgeType === "serial" ? "Full claim (100%)" : shareLabel(entry.weight)}</span>
-          </>}
-          noun="upstream links"
-        />
-      </section> : null}
-      {hasRoles ? <section aria-label="Scored role dependencies (not drawn)" className="space-y-2">
-        <h3 className={DETAIL_MODULE_TITLE_CLASS}>Scored role dependencies (not drawn)</h3>
-        <GroupedRows
-          items={roles ?? []}
-          groupLabel={(role) => DEPENDENCY_ROLE_LABELS[role.role]}
-          rowKey={(role) => role.edgeKey}
-          renderRow={(role) => <>
-            <AssetLink id={role.upstreamAssetId} label={CLIENT_TRACKED_META_BY_ID.get(role.upstreamAssetId)?.symbol ?? role.upstreamAssetId} />
-            <span className="font-mono text-xs tabular-nums">{shareLabel(role.weight)}</span>
-            <span className="text-xs text-muted-foreground">{role.score === null ? "Role score unavailable" : `Role score ${Math.round(role.score)}/100`}</span>
-          </>}
-          noun="scored roles"
-        />
-      </section> : null}
-      {hasCoverage ? <section aria-label="Known, not in the scored graph" className="space-y-2">
-        <h3 className={DETAIL_MODULE_TITLE_CLASS}>Known, not in the scored graph</h3>
-            <p className="text-xs text-muted-foreground">Excluded from the graph and exposure totals.</p>
-            <ul className="space-y-3 text-sm">
-              {coverage?.map((row, index) => <li key={`${row.upstreamAssetId ?? row.upstreamLabel}:${row.reason}:${index}`} className="space-y-1">
+    <section aria-label="Dependency summary" className="space-y-3 border-b border-border/40 pb-5">
+      {cells.length > 0 ? (
+        <dl className={`grid gap-x-6 gap-y-4 ${SUMMARY_COLUMNS_CLASS[cells.length]}`}>
+          {cells.map((cell) => (
+            <div key={cell.key} className="min-w-0 space-y-0.5">
+              <dt className="pharos-label">{cell.label}</dt>
+              <dd className={cell.value === null ? "font-mono text-lg text-muted-foreground" : "font-mono text-lg font-semibold tabular-nums text-foreground"}>
+                {cell.value ?? "–"}
+              </dd>
+              <dd className="text-xs text-muted-foreground">{cell.sub}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {caveats.length > 0 ? (
+        <ul className="space-y-0.5 text-xs text-muted-foreground">
+          {caveats.map((line) => <li key={line}>{line}</li>)}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+/** What this coin's backing rests on: published serial and basket links, by share. */
+export function UpstreamList({ symbol, upstreams }: {
+  symbol: string;
+  upstreams: readonly PublishedCollateralUsageEntry[];
+}) {
+  const rows = [...upstreams].sort((a, b) =>
+    (dependencyEntryShare(b) ?? -1) - (dependencyEntryShare(a) ?? -1) || a.coin.symbol.localeCompare(b.coin.symbol));
+  return (
+    <section aria-label={`${symbol} depends on`} className="space-y-2">
+      <ListHeading title={`${symbol} depends on`} count={rows.length} caption={`Share of ${symbol}'s backing held in each.`} />
+      <CappedList
+        items={rows}
+        noun="links"
+        render={(entry) => {
+          const detail = dependencyRoleDetail(entry);
+          return (
+            <DependencyRow
+              key={`${entry.coin.id}:${entry.edgeType}`}
+              id={entry.coin.id}
+              name={entry.coin.name}
+              symbol={entry.coin.symbol}
+              detail={entry.edgeType === "serial" ? `${detail} · full claim` : detail}
+              barFraction={dependencyEntryShare(entry)}
+              grade={entry.grade}
+              ariaLabel={dependencyRowAriaLabel(entry.coin.symbol, detail, [entry.grade ? `Safety grade ${entry.grade}` : null])}
+            />
+          );
+        }}
+      />
+    </section>
+  );
+}
+
+type Role = NonNullable<SafetyScoreV9CurrentCard["dependencies"]["roles"]>[number];
+
+/** Each upstream role the Safety Score charges (serial claim, basket, exit, control, oracle). */
+export function ScoredRoleList({ roles, gradeOf }: { roles: readonly Role[]; gradeOf: (id: string) => ReportCardGrade | null | undefined }) {
+  return (
+    <section aria-label="Scored dependency roles" className="space-y-2">
+      <ListHeading
+        title="Scored dependency roles"
+        count={roles.length}
+        caption="How the Safety Score charges each upstream. Figure: the role score out of 100."
+      />
+      <CappedList
+        items={roles}
+        noun="roles"
+        render={(role) => {
+          const meta = CLIENT_TRACKED_META_BY_ID.get(role.upstreamAssetId);
+          const symbol = meta?.symbol ?? role.upstreamAssetId;
+          const detail = `${DEPENDENCY_ROLE_LABELS[role.role]} · ${role.weight === null ? "weight unknown" : `${formatDependencyShare(role.weight)} weight`}`;
+          const score = role.score === null ? null : `${Math.round(role.score)}/100`;
+          return (
+            <DependencyRow
+              key={role.edgeKey}
+              id={role.upstreamAssetId}
+              name={meta?.name ?? symbol}
+              symbol={symbol}
+              detail={detail}
+              value={score}
+              grade={gradeOf(role.upstreamAssetId)}
+              ariaLabel={dependencyRowAriaLabel(symbol, detail, [score === null ? "role score unavailable" : `role score ${score}`])}
+            />
+          );
+        }}
+      />
+    </section>
+  );
+}
+
+type CoverageRow = NonNullable<SafetyScoreV9CurrentCard["dependencyCoverage"]>[number];
+
+function provenanceLine(identityVerified: boolean, sourceAsOf: string | null): string {
+  return `${identityVerified ? "Identity verified" : "Identity unverified"} · ${sourceAsOf ? `source as of ${sourceAsOf}` : "source date unavailable"}`;
+}
+
+/** Holdings named in reserves but outside the scored graph, grouped once per plain-language reason. */
+export function OutsideGraphList({ coverage }: { coverage: readonly CoverageRow[] }) {
+  const groups = groupCoverageByReason(coverage);
+  return (
+    <section aria-label="Known but not scored" className="@container space-y-3">
+      <ListHeading
+        title="Known but not scored"
+        count={coverage.length}
+        caption="Named in reserves but left out of the graph and exposure totals."
+      />
+      {groups.map((group) => (
+        <div key={group.label} className="space-y-1.5">
+          <p className="text-xs font-medium text-foreground">{group.label}</p>
+          <ul className="grid gap-x-8 gap-y-1.5 @xl:grid-cols-2 @4xl:grid-cols-3">
+            {group.rows.map((row, index) => (
+              <li key={`${row.upstreamAssetId ?? row.upstreamLabel}:${row.reason}:${index}`} className="min-w-0 text-sm">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  {row.identityVerified && row.upstreamAssetId ? <AssetLink id={row.upstreamAssetId} label={row.upstreamLabel} /> : <span className="font-medium">{row.upstreamLabel}</span>}
-                  <span className="font-mono text-xs tabular-nums">{shareLabel(row.share)}</span>
+                  {row.identityVerified && row.upstreamAssetId ? (
+                    <Link href={buildStablecoinUrl(row.upstreamAssetId)} className="pharos-focus-ring min-w-0 rounded-sm font-medium hover:underline">{row.upstreamLabel}</Link>
+                  ) : (
+                    <span className="min-w-0 font-medium">{row.upstreamLabel}</span>
+                  )}
+                  <span className={row.share === null ? "text-xs text-muted-foreground" : "font-mono text-sm tabular-nums text-muted-foreground"}>
+                    {row.share === null ? "Share unknown" : formatDependencyShare(row.share)}
+                  </span>
                 </div>
-                <p className="break-words text-xs text-muted-foreground">Reason: {row.reason}. {row.identityVerified ? "Identity verified." : "Identity unverified."} {row.sourceAsOf ? `Source as of ${row.sourceAsOf}.` : "Source date unavailable."}</p>
-              </li>)}
-            </ul>
-      </section> : null}
-      {emptyQuadrants.length > 0 ? <p className="text-xs text-muted-foreground sm:col-span-2">No {emptySummary} published.</p> : null}
-    </div>
+                {group.shared ? null : <p className="text-xs text-muted-foreground">{provenanceLine(row.identityVerified, row.sourceAsOf)}</p>}
+              </li>
+            ))}
+          </ul>
+          {group.shared ? <p className="text-xs text-muted-foreground">{provenanceLine(group.shared.identityVerified, group.shared.sourceAsOf)}</p> : null}
+        </div>
+      ))}
+    </section>
   );
 }

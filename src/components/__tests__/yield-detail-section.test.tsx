@@ -206,9 +206,27 @@ describe("YieldDetailSection", () => {
     })]);
     const { container } = render(<YieldDetailSection stablecoinId="zchf-frankencoin" />);
     expect(container.textContent).not.toContain("Holder yield");
-    expect(screen.getByText(/not yield from simply holding ZCHF/).closest("details")).toBeNull();
+    // The external-opportunity caveat leads the module, outside any fold.
+    expect(screen.getByText("Not yield from simply holding ZCHF.").closest("details")).toBeNull();
+    // Frankencoin Savings is the issuer's own opt-in module, not a third-party venue.
+    expect(screen.getAllByText("Opt-in protocol yield").some((node) => !node.closest("details"))).toBe(true);
+    expect(container.textContent).toContain("part of the issuer's own protocol");
+    expect(container.textContent).not.toContain("third-party venue");
+    // The venue chain reads as a display name, and the slug venue key is not printed.
+    expect(screen.getByText("Ethereum", { selector: "span" })).toBeTruthy();
+    expect(container.textContent).not.toContain("Venue: Frankencoin");
     expect(screen.queryByRole("link", { name: "Warning timeline" })).toBeNull();
     expect(screen.queryByRole("link", { name: "View yield opportunities" })).toBeNull();
+  });
+
+  it("names a third-party venue as an external opportunity", () => {
+    mockRankings([makeRanking({
+      id: "usdc-circle", symbol: "USDC", sourceRole: "external-opportunity", yieldSource: "3Jane senior credit tranche",
+      sourceRisk: { venueProtocol: "3jane-lending", deploymentPlace: "strategy-vault" },
+    })]);
+    const { container } = render(<YieldDetailSection stablecoinId="usdc-circle" />);
+    expect(screen.getAllByText("External opportunity").some((node) => !node.closest("details"))).toBe(true);
+    expect(container.textContent).toContain("third-party venue");
   });
 
   it("does not invent a destination or missing venue facts", () => {
@@ -370,15 +388,19 @@ describe("YieldDetailSection", () => {
 
   it("does not infer a missing chain for a published venue", () => {
     mockRankings([makeRanking({ sourceRole: "external-opportunity", sourceRisk: { venueProtocol: "Published venue" } })]);
-    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByText("Venue: Published venue").closest("details")).toBeNull();
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByText("Not yield from simply holding USDN.").closest("details")).toBeNull();
+    expect(container.textContent).not.toMatch(/· (Ethereum|ethereum)/);
     expect(screen.queryByText(/APY from depositing/)).toBeNull();
   });
 
   it("separates a benchmark spread from its negative reference level", () => {
     mockRankings([makeRanking({ excessYield: 3.55, benchmarkLabel: "CHF 3M compounded SARON", benchmarkRate: -0.05 })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
-    expect(screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON \(-0.05%\)/).textContent).toContain("+3.55 pp");
+    expect(screen.getByLabelText(/3.55 pp above CHF 3M compounded SARON \(-0.05%\)/).textContent?.replace(/\s+/g, " ")).toContain("+3.55 pp");
+    // The lead sentence spells the spread unit out; a move up is a glyph, not a colour.
+    expect(screen.getByText(/APY over 30 days, 3\.55 percentage points above CHF 3M compounded SARON \(-0\.05%\)\./)).toBeTruthy();
+    expect(screen.getByLabelText(/3.55 pp above/).textContent).toContain("▲");
   });
 
   it("keeps a USD history display fallback separate from the published foreign scoring hurdle", () => {

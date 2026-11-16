@@ -32,6 +32,24 @@ export function routeMapBreakpoint(length: number) {
   return HORIZONTAL_BREAKPOINTS.find(({ maxLength }) => length <= maxLength);
 }
 
+/**
+ * Below the one-row threshold a linear path of 6–10 steps wraps into two
+ * balanced rows (`ceil(n / 2)` columns) instead of dropping to the vertical
+ * spine, which would leave most of a tablet-width module blank. Each column
+ * keeps a ~140px node plus its 32px hop, and the same 56px padding reserve.
+ */
+const WRAPPED_BREAKPOINTS = [
+  { length: 6, basis: "basis-1/3", show: "hidden @[36rem]/evidence:block @[61rem]/evidence:hidden", hide: "@[36rem]/evidence:hidden" },
+  { length: 7, basis: "basis-1/4", show: "hidden @[46rem]/evidence:block @[61rem]/evidence:hidden", hide: "@[46rem]/evidence:hidden" },
+  { length: 8, basis: "basis-1/4", show: "hidden @[46rem]/evidence:block @[69rem]/evidence:hidden", hide: "@[46rem]/evidence:hidden" },
+  { length: 9, basis: "basis-1/5", show: "hidden @[57rem]/evidence:block @[78rem]/evidence:hidden", hide: "@[57rem]/evidence:hidden" },
+  { length: 10, basis: "basis-1/5", show: "hidden @[57rem]/evidence:block @[86rem]/evidence:hidden", hide: "@[57rem]/evidence:hidden" },
+];
+
+export function routeMapWrappedBreakpoint(route: ScenarioRoute) {
+  return route.lanes.length === 0 ? WRAPPED_BREAKPOINTS.find(({ length }) => length === route.length) : undefined;
+}
+
 /** Hop lines: solid into an established step, dashed into a hypothetical one. */
 const LINE_SOLID = "border-foreground/30";
 const LINE_DASHED = "border-dashed border-muted-foreground/70";
@@ -174,7 +192,8 @@ function HorizontalRouteMap({ route, anchorPrefix, onOpenStep }: RouteMapProps) 
   const placeTrunk = (steps: readonly RouteStep[]) => {
     steps.forEach((step, index) => {
       columns.push("minmax(0,1fr)");
-      place(step.stage.id, columns.length, allRows, "min-w-0 self-center", (
+      // A linear path is one row: its boxes stretch to the tallest title.
+      place(step.stage.id, columns.length, allRows, hasLanes ? "min-w-0 self-center" : "min-w-0", (
         <HorizontalNode step={step} terminal={isTerminal(step)} anchorPrefix={anchorPrefix} onOpenStep={onOpenStep} />
       ));
       const next = steps[index + 1];
@@ -307,6 +326,36 @@ function HorizontalRouteMap({ route, anchorPrefix, onOpenStep }: RouteMapProps) 
     >
       {cells}
     </div>
+  );
+}
+
+/**
+ * Two rows of the horizontal boxes and hops for a linear path; every box in a
+ * row shares the row's height. The hop ending a row leads on to the first
+ * step of the next.
+ */
+function WrappedRouteMap({ route, anchorPrefix, onOpenStep, basis }: RouteMapProps & { basis: string }) {
+  return (
+    <ol className="flex flex-wrap gap-y-2">
+      {route.pre.map((step, index) => {
+        const next = route.pre[index + 1];
+        return (
+          <li key={step.stage.id} className={cn("flex min-w-0", basis)}>
+            <div className="min-w-0 flex-1">
+              <HorizontalNode
+                step={step}
+                terminal={step.stage.id === route.terminalStageId}
+                anchorPrefix={anchorPrefix}
+                onOpenStep={onOpenStep}
+              />
+            </div>
+            <span className="relative w-8 shrink-0">
+              {next ? <HorizontalHop defense={step.stage.missingDefense} dashed={isHypotheticalStage(next.stage)} /> : null}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -493,12 +542,14 @@ function VerticalRouteMap({ route, anchorPrefix, onOpenStep, sharedLabel }: Rout
  * The at-a-glance attack path: every step title on its route, the fork drawn
  * as parallel routes that rejoin, and an open lock on every hop that lacks a
  * defense. Each node links to its step in the step-by-step list, which it
- * opens. Horizontal when the path fits (see `HORIZONTAL_BREAKPOINTS`),
- * vertical below that container width; the other drawing is `display: none`,
- * so assistive tech meets one copy.
+ * opens. Horizontal when the path fits (see `HORIZONTAL_BREAKPOINTS`), two
+ * wrapped rows below that for a long linear path (`WRAPPED_BREAKPOINTS`),
+ * vertical below either; the other drawings are `display: none`, so
+ * assistive tech meets one copy.
  */
 export function RouteMap({ route, anchorPrefix, onOpenStep, sharedLabel }: RouteMapProps & { sharedLabel: string }) {
   const breakpoint = routeMapBreakpoint(route.length);
+  const wrapped = routeMapWrappedBreakpoint(route);
   return (
     <TooltipProvider delayDuration={120}>
       {breakpoint ? (
@@ -506,7 +557,12 @@ export function RouteMap({ route, anchorPrefix, onOpenStep, sharedLabel }: Route
           <HorizontalRouteMap route={route} anchorPrefix={anchorPrefix} onOpenStep={onOpenStep} />
         </div>
       ) : null}
-      <div data-route-layout="vertical" className={breakpoint?.hide}>
+      {wrapped ? (
+        <div data-route-layout="wrapped" className={wrapped.show}>
+          <WrappedRouteMap route={route} anchorPrefix={anchorPrefix} onOpenStep={onOpenStep} basis={wrapped.basis} />
+        </div>
+      ) : null}
+      <div data-route-layout="vertical" className={(wrapped ?? breakpoint)?.hide}>
         <VerticalRouteMap route={route} anchorPrefix={anchorPrefix} onOpenStep={onOpenStep} sharedLabel={sharedLabel} />
       </div>
     </TooltipProvider>

@@ -56,6 +56,14 @@ describe("SafetyGradeHero read states", () => {
   });
 });
 
+describe("SafetyGradeHero score", () => {
+  it("keeps the score beside its grade, inside the grade's tap target", () => {
+    const { container } = render(<SafetyGradeHero reportCard={{ grade: "A", score: 84 } as V9ConsumerCard} mobile />);
+    // The trigger's 44px minimum width never opens a gap before "· 84/100".
+    expect(container.querySelector("[data-safety-grade-track] button")!.textContent).toBe("A· 84/100");
+  });
+});
+
 describe("HeroVariantChip", () => {
   it("names the wrapped parent and lets the chip wrap instead of clipping it", () => {
     const parent = { id: "usds-sky", name: "Sky Dollar", symbol: "USDS" } as StablecoinClientMeta;

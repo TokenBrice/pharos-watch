@@ -31,8 +31,8 @@ export function FlowHistorySection({ stablecoinId }: FlowHistorySectionProps) {
         title={<MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>}
         bodyClassName="space-y-4"
       >
-          <p className="mt-1 text-sm text-muted-foreground">
-            Counted economic flow only. Excludes bridge transfers, review-required burns, and atomic roundtrips.
+          <p className="text-sm text-muted-foreground">
+            Counted mints and burns only: excludes bridge transfers, burns under review and same-transaction roundtrips.
           </p>
           <FlowEventFeed stablecoinId={stablecoinId} limit={10} scope="counted" />
       </DetailModuleCard>

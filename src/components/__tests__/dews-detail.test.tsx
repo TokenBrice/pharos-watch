@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ApiFetchError } from "@/lib/api";
 
-import { DEWSDetail } from "@/components/dews/dews-detail";
+import { DEWSDetail, describeUnscoredSignal } from "@/components/dews/dews-detail";
 import type { ReactNode } from "react";
 
-const { useDetailMock, chartMock, areaMock, tooltipMock } = vi.hoisted(() => ({
-  useDetailMock: vi.fn(), chartMock: vi.fn(), areaMock: vi.fn(), tooltipMock: vi.fn(),
+const { useDetailMock, chartMock, areaMock, tooltipMock, bandAreaMock, yAxisMock } = vi.hoisted(() => ({
+  useDetailMock: vi.fn(), chartMock: vi.fn(), areaMock: vi.fn(), tooltipMock: vi.fn(), bandAreaMock: vi.fn(), yAxisMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({ useStressSignalDetail: useDetailMock }));
@@ -18,11 +18,11 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 vi.mock("recharts", () => ({
   AreaChart: (props: { children: ReactNode }) => { chartMock(props); return <div>{props.children}</div>; },
   Area: (props: unknown) => { areaMock(props); return null; },
-  ReferenceLine: () => null,
+  ReferenceArea: (props: unknown) => { bandAreaMock(props); return null; },
 }));
 vi.mock("@/components/chart-primitives/axes", () => ({
-  ChartAreaGradient: () => null, TimeGrid: () => null, TimeXAxis: () => null, MonoYAxis: () => null,
-  useSvgId: () => "dews-test",
+  TimeXAxis: () => null,
+  MonoYAxis: (props: unknown) => { yAxisMock(props); return null; },
   DateTooltip: (props: unknown) => { tooltipMock(props); return null; },
 }));
 vi.mock("@/components/show-your-work-panel", () => ({ ShowYourWorkPanel: () => null }));
@@ -73,9 +73,10 @@ describe("DEWSDetail retained evidence", () => {
     const { container } = render(<DEWSDetail stablecoinId="usdc-circle" />);
     act(() => vi.advanceTimersByTime(0));
     expect(screen.getByText("Depeg Early Warning")).toBeTruthy();
-    // Measured zero stays a reading; the failed sub-signal stays named unavailable.
-    expect(container.querySelector(".text-3xl")?.textContent).toBe("0");
-    expect(screen.getByText(/blacklist-source-failed/)).toBeTruthy();
+    // Measured zero stays a reading; the failed sub-signal is named with a plain reason.
+    expect(container.querySelector("[data-dews-score]")?.textContent).toBe("0");
+    expect(screen.getByText(/blacklist activity \(freeze tracker read failed\)/)).toBeTruthy();
+    expect(container.textContent).not.toContain("blacklist-source-failed");
     expect(chartMock.mock.calls.at(-1)![0].data.map((point: { supply: number | null }) => point.supply)).toEqual([30, null]);
     expect(screen.queryByText(/Connection issue|Failed to load|Waiting for first sync/)).toBeNull();
     expect(container.querySelector("[data-health-state]")).toBeNull();
@@ -147,16 +148,22 @@ describe("DEWSDetail", () => {
         { date: 4, score: 0, band: "CALM" },
       ],
     } });
-    render(<DEWSDetail stablecoinId="usdt-tether" />);
-    fireEvent.click(screen.getByRole("button", { name: "Signal Breakdown" }));
+    const { container } = render(<DEWSDetail stablecoinId="usdt-tether" />);
+    fireEvent.click(screen.getByRole("button", { name: "Signal breakdown" }));
     const points = chartMock.mock.calls.at(-1)![0].data;
     expect(points.map((point: { black: number | null }) => point.black)).toEqual([80, null, 0, null]);
     expect(areaMock.mock.calls.filter(([props]) => props.dataKey === "black").at(-1)![0].connectNulls).toBe(false);
     const formatter = tooltipMock.mock.calls.at(-1)![0].formatter;
     expect(formatter(null, "black")).toBeNull();
     expect(formatter(0, "black")[0]).toBe("0/100");
-    expect(screen.getByText(/blacklist-source-failed/).textContent).toContain("unavailable (blacklist-source-failed)");
+    expect(container.querySelector("[data-dews-unscored]")?.textContent).toContain("blacklist activity (freeze tracker read failed)");
+    expect(container.textContent).not.toContain("blacklist-source-failed");
     expect(screen.queryByText(/not applicable/)).toBeNull();
+    // Both modes read on the fixed 0–100 threat ladder, never an auto-scaled axis.
+    expect(yAxisMock.mock.calls.at(-1)![0].domain).toEqual([0, 100]);
+    expect(bandAreaMock.mock.calls.slice(-5).map(([props]) => [props.y1, props.y2, props.label.value])).toEqual([
+      [0, 15, "Calm"], [15, 35, "Watch"], [35, 55, "Alert"], [55, 75, "Warning"], [75, 100, "Danger"],
+    ]);
   });
 
   it("reserves not applicable for an explicit applicability reason", () => {
@@ -166,7 +173,27 @@ describe("DEWSDetail", () => {
       } } }, history: [],
     } });
     render(<DEWSDetail stablecoinId="fixture" />);
-    expect(screen.getByText(/not applicable/).textContent).toContain("not applicable (not-applicable)");
+    expect(screen.getByText(/not applicable/).textContent).toContain("blacklist activity (not applicable)");
+    expect(screen.getByText(/not applicable/).textContent).not.toContain("not-applicable");
+  });
+
+  it("maps every producer reason to plain text and never shows an unknown code", () => {
+    const producerCodes = [
+      "supply-history-anchors-missing", "price-evidence-unavailable", "invalid-price", "peg-type-unavailable",
+      "peg-reference-missing", "peg-reference-unavailable", "peg-reference-untrusted", "thin-reference",
+      "blacklist-source-failed", "mint-burn-data-missing", "mint-burn-baseline-too-short", "mint-burn-stale",
+      "mint-burn-valuation-partial", "mint-burn-valuation-unknown", "mint-burn-baseline-valuation-partial",
+      "mint-burn-baseline-valuation-unknown", "mint-burn-isolated-no-outflow", "mint-burn-isolated-no-stress-increase",
+      "yield-warnings-unscored", "not-applicable",
+    ];
+    for (const code of producerCodes) {
+      const text = describeUnscoredSignal("flow", code);
+      expect(text).not.toBe("no reading this cycle");
+      expect(text).not.toContain(code);
+    }
+    expect(describeUnscoredSignal("flow", "brand-new-code")).toBe("no reading this cycle");
+    expect(describeUnscoredSignal("black", undefined)).toBe("no freeze ledger");
+    expect(describeUnscoredSignal("yield", null)).toBe("no yield warnings");
   });
 
   it("sorts available signal rows by score and retains measured zero", () => {
@@ -178,9 +205,14 @@ describe("DEWSDetail", () => {
         diverg: { value: 80, available: true },
       } }, history: [],
     } });
-    render(<DEWSDetail stablecoinId="fixture" />);
-    const scores = screen.getAllByText(/^· \d+ \/ 100$/)
-      .map((element) => Number(element.textContent?.match(/\d+/)?.[0]));
-    expect(scores).toEqual([80, 55, 0, 80, 55, 0]);
+    const { container } = render(<DEWSDetail stablecoinId="fixture" />);
+    const rows = [...container.querySelectorAll<HTMLElement>("[data-dews-signal]")];
+    // One row-major list at every width; the odd last signal spans the lg row.
+    expect(rows.map((row) => row.dataset.dewsSignal)).toEqual(["diverg", "supply", "pool"]);
+    expect(screen.getAllByLabelText(/out of 100$/).map((element) => element.textContent)).toEqual(["80", "55", "0"]);
+    expect(rows.every((row) => row.className.includes("lg:odd:last:col-span-2"))).toBe(true);
+    // A measured zero reads at full contrast, not dimmed as if disabled.
+    expect(rows[2].className).not.toMatch(/opacity/);
+    expect(screen.getByText(/Largest input: cross-source divergence/)).toBeTruthy();
   });
 });

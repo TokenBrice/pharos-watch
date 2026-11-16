@@ -10,13 +10,13 @@ import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailArrow, RailStation } from "@/components/stablecoin-detail/rail-station";
 import { ScoreBandSpectrum } from "@/components/stablecoin-detail/score-band-spectrum";
-import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { DETAIL_MODULE_TITLE_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import type { ControlComponentRoles, ControlStripComponent, PillarStripTone } from "@/lib/pillar-evidence-strips";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   formatOraclePct,
   ORACLE_REVIEW_COPY,
+  ORACLE_TIER_POLICY_BANDS,
   oracleTierLabel,
   resolveOracleTierLadder,
   type OracleBranchClientRow,
@@ -58,6 +58,26 @@ const BRANCH_TIER_TAG_CLASS: Record<OracleRiskTier, string> = {
   "opaque-or-unknown": "border-dashed border-muted-foreground/50 text-muted-foreground",
 };
 
+/**
+ * The ladder's unknown band: "unknown" is a state of the review, not a rung of
+ * pricing quality, so the ladder never draws it. Bands map 1:1 onto the policy
+ * bands, in order.
+ */
+const UNKNOWN_BAND_INDEX = ORACLE_TIER_POLICY_BANDS.findIndex((band) => band.tiers.includes("opaque-or-unknown"));
+
+/**
+ * Hyphenated tier names ("Single-source") must not break at the hyphen when a
+ * band label wraps: a non-breaking hyphen moves the break to the spaces.
+ */
+function keepHyphenatedWords(label: string): string {
+  return label.replaceAll("-", "\u2011");
+}
+
+/** Every fact in one style: sentence-case sans at the label's size, "None" or a figure alike. */
+function fact(key: string, label: string, value: string, title?: string): FactGridItem {
+  return { key, label, value: `${value.charAt(0).toUpperCase()}${value.slice(1)}`, valueStyle: "text", title };
+}
+
 /** Which collateral figure the branch table prints, by what the review records. */
 type BranchRatioColumn = "min-cr" | "max-ltv";
 
@@ -80,12 +100,6 @@ const BRANCH_TABLE_TRACKS_CLASS: Record<"share-ratio" | "share" | "ratio" | "non
 const SUBLABEL_CLASS = "pharos-label leading-tight";
 /** `wrap-anywhere`: contract addresses in feed paths break instead of spilling on phones. */
 const DETAIL_LINE_CLASS = "text-xs leading-relaxed text-muted-foreground wrap-anywhere";
-/**
- * Reading width for the branch table and the facts in a full-width module: at
- * 1920 the body is ~1,440 px, which would put a branch name ~1,000 px from its
- * tier tag and spread four facts across the whole row.
- */
-const READING_WIDTH_CLASS = "max-w-[52rem]";
 
 /**
  * Full width for multi-branch collateral pricing (the branch table needs the
@@ -152,14 +166,17 @@ function renderOracleHeaderStatus(
 ): ReactNode {
   if (component != null && component.score !== null) {
     const score = Math.round(component.score);
+    // The pill names its score, as "Route score" and "Mint score" do: the
+    // first header chip is what a folded phone header shows.
     return (
       <>
-        <span className="sr-only">Oracle component score</span>
-        <ScorePill
-          label={String(score)}
-          toneClass={SCORE_PILL_TONE_CLASS[component.tone]}
+        <Badge
+          variant="outline"
           title={`Oracle component of the Control pillar: ${score} of 100 for ${oracleTierLabel(component.posture)}.`}
-        />
+          className={cn("px-2 py-0.5 text-sm", SCORE_PILL_TONE_CLASS[component.tone])}
+        >
+          Oracle score <span className="pharos-numeric">{score}</span>
+        </Badge>
         <ControlRoleTag role={component.role} />
       </>
     );
@@ -173,15 +190,26 @@ function renderOracleHeaderStatus(
 }
 
 /**
- * Sources → aggregator → consumer. Feeds are itemized per branch, so a reviewed
- * profile with no branch feeds is a dashed missing station, not a claim that the
- * issuer withheld its sources; only an opaque review is "Undisclosed". The
- * aggregator is the reviewed pricing tier, and the consumer follows the role.
+ * Sources → aggregator → consumer. Feeds are itemized per branch; a review
+ * that names no source draws no Sources station (the path then starts at the
+ * aggregator, and its accessible name says whether the sources are undisclosed
+ * or not itemized). The aggregator is the reviewed pricing tier, and the
+ * consumer follows the role.
  *
  * The rail reads its own width (`@container/rail`): in a ~480 px tile the
- * stations stack top to bottom with downward arrows, and from 36rem they run
- * left to right. Station names wrap rather than truncate, so nothing clips.
+ * stations stack top to bottom, each downward arrow under its station's chips,
+ * and from 36rem they run left to right with each arrow at chip height.
+ * Station names wrap rather than truncate, so nothing clips.
  */
+/** A path connector: from 36rem it drops to chip height, so it points chip to chip, not label to label. */
+function PathArrow() {
+  return (
+    <div className="flex flex-col @xl/rail:mt-6 @xl/rail:min-w-6 @xl/rail:flex-1">
+      <RailArrow orientation="container" />
+    </div>
+  );
+}
+
 function OraclePricePath({
   summary,
   tierLabel,
@@ -215,16 +243,22 @@ function OraclePricePath({
       // one unbroken token that must wrap inside a 390 px chip, not spill.
       className="@container/rail [&_span]:wrap-anywhere"
     >
-      <div className="flex flex-col gap-1 @xl/rail:flex-row @xl/rail:items-start @xl/rail:gap-3">
-        <RailStation
-          label="Sources"
-          value={providers.length > 0 ? sourceChips : sourcesUndisclosed ? "Undisclosed" : "—"}
-          tone={providers.length > 0 ? "default" : "unknown"}
-          title={providers.length > 0 ? providers.join(", ") : undefined}
-          wrap
-          className="@xl/rail:max-w-[40%]"
-        />
-        <RailArrow orientation="container" />
+      {/* `items-start` in both directions: stacked, the arrows sit under the
+          chips instead of centring across the column; in a row, the stations
+          top-align (the aggregator's caption must not shift its chip). */}
+      <div className="flex flex-col items-start gap-1 @xl/rail:flex-row @xl/rail:gap-3">
+        {providers.length > 0 ? (
+          <>
+            <RailStation
+              label="Sources"
+              value={sourceChips}
+              title={providers.join(", ")}
+              wrap
+              className="@xl/rail:max-w-[40%]"
+            />
+            <PathArrow />
+          </>
+        ) : null}
         <RailStation
           label="Aggregator"
           value={tierLabel}
@@ -232,7 +266,7 @@ function OraclePricePath({
           caption={caption || null}
           wrap
         />
-        <RailArrow orientation="container" />
+        <PathArrow />
         <RailStation label="Consumer" value={consumer} tone="terminal" wrap />
       </div>
     </div>
@@ -483,27 +517,23 @@ export function OracleLiquidationSection({
   // the chip row. The oracle's own price delay and the liquidation delay are
   // separate facts: "behind a price delay" never reads against "none".
   const facts: FactGridItem[] = [
-    ...(summary.worstMaxLtvPct != null
-      ? [{ key: "max-ltv", label: "Max LTV", value: formatOraclePct(summary.worstMaxLtvPct) }]
-      : []),
-    ...(summary.worstMinCrPct != null
-      ? [{ key: "min-cr", label: "Min CR", value: formatOraclePct(summary.worstMinCrPct) }]
-      : []),
+    ...(summary.worstMaxLtvPct != null ? [fact("max-ltv", "Max LTV", formatOraclePct(summary.worstMaxLtvPct))] : []),
+    ...(summary.worstMinCrPct != null ? [fact("min-cr", "Min CR", formatOraclePct(summary.worstMinCrPct))] : []),
     ...(summary.priceDelayLabel != null
-      ? [{
-          key: "price-delay",
-          label: "Price delay",
-          value: summary.priceDelayLabel,
-          title: "The oracle holds each new price for a delay before it is used. This is separate from the liquidation delay.",
-        }]
+      ? [fact(
+          "price-delay",
+          "Price delay",
+          summary.priceDelayLabel,
+          "The oracle holds each new price for a delay before it is used. This is separate from the liquidation delay.",
+        )]
       : []),
     ...(summary.maxLiquidationDelayLabel != null
-      ? [{
-          key: "liq-delay",
-          label: "Liquidation delay",
-          value: summary.maxLiquidationDelayLabel,
-          title: "The wait between a position becoming unsafe and its liquidation.",
-        }]
+      ? [fact(
+          "liq-delay",
+          "Liquidation delay",
+          summary.maxLiquidationDelayLabel,
+          "The wait between a position becoming unsafe and its liquidation.",
+        )]
       : []),
   ];
 
@@ -513,12 +543,18 @@ export function OracleLiquidationSection({
     </li>
   ));
 
-  const ladderNode = ladder ? (
+  // An unknown tier has no rung to light: the dashed aggregator chip says it.
+  const rungs = ladder && ladderTier !== "opaque-or-unknown"
+    ? ladder.bands
+      .filter((_, index) => index !== UNKNOWN_BAND_INDEX)
+      .map((band) => ({ ...band, label: keepHyphenatedWords(band.label), shortLabel: keepHyphenatedWords(band.shortLabel) }))
+    : null;
+  const ladderNode = ladder && rungs ? (
     <ScoreBandSpectrum
       mode="ordinal"
-      bands={ladder.bands}
+      bands={rungs}
       activeKey={ladder.activeKey}
-      ariaLabel={`${ladderName} ${tierLabel}: band ${ladder.position} of ${ladder.bands.length} in the published oracle tier order, weakest to strongest${
+      ariaLabel={`${ladderName} ${tierLabel}: band ${rungs.findIndex((band) => band.key === ladder.activeKey) + 1} of ${rungs.length} in the published oracle tier order, weakest to strongest${
         ladder.tiedTierLabels.length > 0 ? `; it shares its band with ${ladder.tiedTierLabels.join(" and ")}` : ""
       }.`}
     />
@@ -529,7 +565,7 @@ export function OracleLiquidationSection({
   ) : null;
 
   const branchesNode = showBranches ? (
-    <div className={cn("space-y-2", READING_WIDTH_CLASS)}>
+    <div className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h4 className={SUBLABEL_CLASS}>{sharesMeasured ? "Debt by branch" : "Branches"}</h4>
         <span className="text-2xs leading-tight text-muted-foreground">
@@ -562,6 +598,8 @@ export function OracleLiquidationSection({
       title={summary.title}
       variant={layout}
       stripForm={stripForm}
+      // Fills its grid cell, so tiles sharing a board row end level.
+      className={layout === "tile" && !stripForm ? "h-full" : undefined}
       headerRight={headerRight}
       visual={
         <div className="space-y-5">
@@ -639,7 +677,7 @@ export function OracleLiquidationSection({
       }
     >
       {facts.length > 0 ? (
-        <FactGrid aria-label={`${summary.title} facts`} items={facts} className={READING_WIDTH_CLASS} />
+        <FactGrid aria-label={`${summary.title} facts`} items={facts} />
       ) : null}
     </EvidenceModule>
   );

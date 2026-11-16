@@ -107,9 +107,27 @@ export const YIELD_SCORE_QUALIFICATION_LABELS: Record<YieldScoreQualification, s
   NR: "Not rated",
 };
 
+/**
+ * An "external opportunity" that is the issuer's own opt-in product (sUSDe,
+ * sfrxUSD, Frankencoin Savings) rather than a third-party venue: a native
+ * wrapper, or a venue whose protocol is the issuer named in the coin id
+ * (`zchf-frankencoin` · `frankencoin`, `gho-aave` · `aave-v3`). Either way
+ * holding the coin alone does not earn it; only the venue differs.
+ */
+export function isIssuerOwnYieldVenue(ranking: {
+  id: string;
+  sourceRisk?: { deploymentPlace?: string | null; venueProtocol?: string | null } | null;
+}): boolean {
+  if (ranking.sourceRisk?.deploymentPlace === "native-wrapper") return true;
+  const issuer = ranking.id.split("-")[1];
+  const venue = ranking.sourceRisk?.venueProtocol?.toLowerCase().split("-")[0];
+  return issuer != null && issuer !== "" && venue === issuer;
+}
+
 export const YIELD_SOURCE_FACT_LABELS = {
   holder: "Holder yield",
   external: "External opportunity",
+  issuerOptIn: "Opt-in protocol yield",
   estimated: "Estimated",
   changed: "source changed",
   venue: "Venue",

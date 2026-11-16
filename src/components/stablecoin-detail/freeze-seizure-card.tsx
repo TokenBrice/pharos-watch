@@ -25,6 +25,7 @@ import type {
   BlacklistabilityClientSummary,
 } from "@/lib/stablecoin-detail-blacklistability-client";
 import type { TransferReviewView } from "@/lib/transfer-review";
+import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -38,6 +39,32 @@ const METHODOLOGY_TOPIC: Record<BlacklistabilityClientStatus, MethodologyContext
   "not-freezable": "freezableNo",
   possible: "freezablePossible",
   inherited: "freezableUpstream",
+};
+
+/**
+ * The reader vocabulary for a reviewed freeze status: the header badge, the
+ * power station and the Access posture panel's freeze row say the same words.
+ * "possible" (an admin pause or upgrade path, no holder-targeted freeze)
+ * reads "Restrictable", the transfer-review word for the same power, so the
+ * badge never says more than the prose. Every status that leaves a holder
+ * exposed is amber; only "Not freezable" is green.
+ */
+export const FREEZE_STATUS_DISPLAY: Record<BlacklistabilityClientStatus, { label: string; tone: SeverityTone }> = {
+  freezable: { label: "Freezable", tone: "watch" },
+  "not-freezable": { label: "Not freezable", tone: "ok" },
+  possible: { label: "Restrictable", tone: "watch" },
+  inherited: { label: "Upstream freeze risk", tone: "watch" },
+};
+
+/**
+ * One plain sentence per status, in the badge's own words. The inherited
+ * note names the upstream issuer, so it stays the projection's.
+ */
+const FREEZE_STATUS_VERDICTS: Partial<Record<BlacklistabilityClientStatus, string>> = {
+  freezable: "The issuer or an admin can freeze or seize this token in a holder's wallet.",
+  "not-freezable": "No issuer or admin power to freeze, seize or blacklist a holder was found on its material deployments.",
+  possible:
+    "No power to freeze one holder was found, but an admin control, such as a global pause or upgrade, could restrict every holder.",
 };
 
 /** Transfer-review scopes, home deployment first (the `buildTransferReviewView` order). */
@@ -131,14 +158,14 @@ function buildPowerStations(summary: BlacklistabilityClientSummary): Station[] {
       return [{
         key: "power",
         label: "Power",
-        chips: [{ key: "power", content: summary.statusLabel, icon: ShieldQuestion, tone: "unknown" }],
-        spoken: `Freeze exposure: ${summary.statusLabel.toLowerCase()}`,
+        chips: [{ key: "power", content: FREEZE_STATUS_DISPLAY.possible.label, icon: ShieldQuestion, tone: "unknown" }],
+        spoken: `Freeze power: ${FREEZE_STATUS_DISPLAY.possible.label.toLowerCase()}, no holder-targeted freeze`,
       }];
     case "inherited": {
       const power: Station = {
         key: "power",
         label: "Power",
-        chips: [{ key: "power", content: summary.statusLabel, icon: Snowflake }],
+        chips: [{ key: "power", content: FREEZE_STATUS_DISPLAY.inherited.label, icon: Snowflake }],
         spoken: summary.upstreamLabel
           ? `Freeze power: inherited from ${summary.upstreamLabel}`
           : "Freeze power: inherited from upstream assets",
@@ -246,11 +273,15 @@ function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: stri
   return { key: "used", label: "Used", chips, spoken: `Used: ${spoken.join(", ")}` };
 }
 
-/** Downward connector for the stacked (tile) layout; the strip layout uses `RailArrow`. */
+/**
+ * Downward connector for the stacked (tile) layout, under the chip column
+ * (past the 4.5rem kicker track and its gap), not under the kickers; the
+ * strip layout uses `RailArrow`.
+ */
 function StationConnector() {
   return (
     <>
-      <span aria-hidden="true" className="flex h-3 w-3 flex-col items-center @[35rem]/freeze:hidden">
+      <span aria-hidden="true" className="ml-23 flex h-3 w-3 flex-col items-center @[35rem]/freeze:hidden">
         <span className="h-full w-px bg-border" />
         <span className="border-x-[3px] border-t-4 border-x-transparent border-t-border" />
       </span>
@@ -342,6 +373,7 @@ export function FreezeSeizureModule({
 
   if (!summary) return null;
 
+  const display = FREEZE_STATUS_DISPLAY[summary.status];
   const usageStats = tracked ? usageQuery.data?.stats : undefined;
   const usedStation = usageStats ? buildUsedStation(usageStats, symbol) : null;
   const stations = [
@@ -375,17 +407,35 @@ export function FreezeSeizureModule({
       title="Freeze & seizure"
       variant={variant}
       stripForm={stripForm}
+      // Fills its grid cell, so tiles sharing a board row end level.
+      className={variant === "tile" && !stripForm ? "h-full" : undefined}
       methodology={<MethodologyHint topic={METHODOLOGY_TOPIC[summary.status]} />}
+      // Status first; the usage freshness rides beside it, as on every
+      // module whose live data ages (a folded phone header keeps the status).
       headerRight={
-        <Badge variant="outline" className={cn("text-2xs font-medium", summary.statusToneClass)}>
-          {summary.statusLabel}
-        </Badge>
+        <>
+          <Badge variant="outline" className={cn("text-2xs font-medium", SEVERITY_TONE_CLASS[display.tone].pill)}>
+            {display.label}
+          </Badge>
+          {usedStation ? (
+            <FreshnessIndicator
+              compact
+              updatedAtMs={health.dataUpdatedAt}
+              staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
+              labelPrefix="Usage updated"
+            />
+          ) : null}
+        </>
       }
       visual={<FreezePowerRail stations={stations} />}
       visualFold="Power and scope"
       // The usage-stats gate rides on the always-visible verdict: the visual
       // sits in a closed fold, where it has no box to intersect.
-      verdict={<span ref={tracked ? usageGateRef : undefined}>{summary.statusNote}</span>}
+      verdict={
+        <span ref={tracked ? usageGateRef : undefined}>
+          {FREEZE_STATUS_VERDICTS[summary.status] ?? summary.statusNote}
+        </span>
+      }
       chipRow={
         <Badge
           variant="outline"
@@ -423,16 +473,7 @@ export function FreezeSeizureModule({
           notesCount={notesCount}
           sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
           reviewed={summary.reviewedAt ?? undefined}
-        >
-          {usedStation ? (
-            <FreshnessIndicator
-              compact
-              updatedAtMs={health.dataUpdatedAt}
-              staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
-              labelPrefix="Usage updated"
-            />
-          ) : null}
-        </EvidenceFooter>
+        />
       }
     >
       {usedStation ? <StaleDataBanner queries={[healthInput]} /> : null}

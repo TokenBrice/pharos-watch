@@ -4,9 +4,9 @@ import { act, fireEvent, render, renderHook, screen, within } from "@testing-lib
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
 import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
-import { deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, useYieldHistoryChartModel } from "@/components/yield/yield-history-chart-model";
+import { deriveWarningRuns, deriveYieldSourceSegments, getYieldHistorySourceDisplayLabel, resolveReferenceLineLabels, useYieldHistoryChartModel } from "@/components/yield/yield-history-chart-model";
 import { useYieldHistoryChartQueries } from "@/components/yield/yield-history-chart-queries";
-import { SourceStrip, WarningDot, YieldHistoryTooltip } from "@/components/yield/yield-history-chart-ui";
+import { SourceStrip, YieldHistoryTooltip } from "@/components/yield/yield-history-chart-ui";
 
 const { useYieldHistoryMock } = vi.hoisted(() => ({
   useYieldHistoryMock: vi.fn(),
@@ -44,6 +44,22 @@ afterEach(() => {
 });
 
 describe("YieldHistoryChart", () => {
+  it("states one compact failure with a retry when every requested source fails with nothing retained", () => {
+    const retry = vi.fn();
+    useYieldHistoryMock.mockImplementation(() => ({
+      data: undefined, meta: null, dataUpdatedAt: 0, isLoading: false, error: new Error("history read failed"), refetch: retry,
+    }));
+    render(<YieldHistoryChart stablecoinId="test" benchmarkRate={null} medianApy={null}
+      externalSourceKeys={["primary", "alternate"]}
+      availableSources={[{ sourceKey: "primary", yieldSource: "Primary" }, { sourceKey: "alternate", yieldSource: "Alternate" }]} />);
+    expect(screen.getByRole("status").textContent).toContain("Yield history could not be loaded right now.");
+    // No stacked per-source alerts and no empty chart frame beside it.
+    expect(screen.queryByLabelText("Primary history status")).toBeNull();
+    expect(screen.queryByText("Unable to load requested yield history")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(2);
+  });
+
   it.each(["error", "retained-error", "warning", "header-warning", "degraded", "loading", "stale", "primary-error"] as const)(
     "qualifies requested source %s without hiding successful observations",
     (state) => {
@@ -102,6 +118,22 @@ describe("YieldHistoryChart", () => {
     expect(screen.getByText(identities[1].label).parentElement?.textContent).toContain("9.00%");
     expect(screen.getByText("Other").parentElement?.textContent).toContain("Unavailable");
     if (primaryApy === null) expect(screen.queryByText("Primary source")).toBeNull();
+  });
+
+  it("joins reference labels that would print over each other, stating a shared off-scale note once", () => {
+    const domain = [5.5, 7.5] as const;
+    const benchmark = { rate: 4.32, label: "USD 3M T-Bill" };
+    // Both below the scale: one label on one line, not "USD 3M T-Bill ↓ off scale" over "Median ↓ off scale".
+    expect(resolveReferenceLineLabels({ benchmark, median: { rate: 4.97, label: "Median" }, domain, plotHeight: 206 }))
+      .toEqual({ benchmark: null, median: "Median · USD 3M T-Bill ↓ off scale" });
+    // Close but in scale: joined on the upper line.
+    expect(resolveReferenceLineLabels({ benchmark: { rate: 6.5, label: "SOFR" }, median: { rate: 6.55, label: "Median" }, domain, plotHeight: 206 }))
+      .toEqual({ benchmark: null, median: "Median · SOFR" });
+    // Far apart: each keeps its own label and off-scale note.
+    expect(resolveReferenceLineLabels({ benchmark, median: { rate: 7, label: "Median" }, domain, plotHeight: 206 }))
+      .toEqual({ benchmark: "USD 3M T-Bill ↓ off scale", median: "Median" });
+    expect(resolveReferenceLineLabels({ benchmark: null, median: { rate: 8, label: "Median" }, domain, plotHeight: 206 }))
+      .toEqual({ benchmark: null, median: "Median ↑ off scale" });
   });
 
   it("positions source intervals and point-only events at measured timestamps", () => {
@@ -231,7 +263,7 @@ describe("YieldHistoryChart", () => {
     expect(result.current.chartData.map((point) => point.apy)).toEqual([4]);
     render(<YieldHistoryChart {...props} />);
     expect(screen.getByText(/Selected source over time.*headline 30d APY/)).toBeTruthy();
-    expect(screen.queryByText(/Global TVL-weighted median/)).toBeNull();
+    expect(screen.queryByText(/Median of tracked yields/)).toBeNull();
   });
 
   it("preserves publication-cadence gaps and alternate-only timestamps", () => {
@@ -277,10 +309,15 @@ describe("YieldHistoryChart", () => {
     const point = { date: Date.UTC(2026, 8, 1), apy: 3, apyBase: null, apyReward: null,
       sourceTvlUsd: null, warningSignals: [], sourceKey: null, yieldSource: null,
       dataSource: null, isBest: true, sourceSwitch: false, warningSignalsStatus: "unreadable" as const };
-    const { rerender } = render(<svg><WarningDot cx={10} cy={20} payload={point} /></svg>);
-    expect(screen.getByLabelText("Warnings unreadable")).toBeTruthy();
-    rerender(<svg><WarningDot cx={10} cy={20} payload={{ ...point, warningSignalsStatus: undefined }} /></svg>);
-    expect(screen.queryByLabelText("Warnings unreadable")).toBeNull();
+    expect(deriveWarningRuns([point])).toEqual([{ kind: "unreadable", start: point.date, end: point.date }]);
+    expect(deriveWarningRuns([{ ...point, warningSignalsStatus: undefined }])).toEqual([]);
+    // Hourly warnings are one band per run, held until the next clean observation.
+    const hour = 3_600_000;
+    const at = (step: number, warningSignals: string[]) => ({ ...point, warningSignalsStatus: undefined, date: point.date + step * hour, warningSignals });
+    expect(deriveWarningRuns([at(0, ["yield-spike"]), at(1, ["yield-spike"]), at(2, []), at(3, ["yield-spike"])])).toEqual([
+      { kind: "warning", start: point.date, end: point.date + 2 * hour },
+      { kind: "warning", start: point.date + 3 * hour, end: point.date + 3 * hour },
+    ]);
     render(<YieldHistoryTooltip active label={point.date} payload={[{ dataKey: "apy", payload: point }]} showBreakdown={false} compact={false} />);
     expect(screen.getByText("Warnings unreadable")).toBeTruthy();
     expect(screen.queryByText("Warning signals")).toBeNull();
@@ -289,8 +326,7 @@ describe("YieldHistoryChart", () => {
     const point = { date: Date.UTC(2026, 8, 1), apy: 3, apyBase: null, apyReward: null,
       sourceTvlUsd: null, warningSignals: ["aging", "data-stale"], sourceKey: null, yieldSource: null,
       dataSource: null, isBest: true, sourceSwitch: false };
-    const { container } = render(<svg><WarningDot cx={10} cy={20} payload={point} /></svg>);
-    expect(container.querySelector("circle")).toBeNull();
+    expect(deriveWarningRuns([point])).toEqual([]);
     const mixed = { ...point, warningSignals: ["aging", "yield-spike"] };
     render(<YieldHistoryTooltip active label={mixed.date} payload={[{ dataKey: "apy", payload: mixed }]} showBreakdown={false} compact={false} />);
     expect(screen.getByText("Yield spike")).toBeTruthy();

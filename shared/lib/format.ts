@@ -90,7 +90,12 @@ const V9_PRESENTATION_USD = { compactNegative: false, decimals: { trillion: 1, b
 
 export const formatDexPricingAuditUsd = (value: number): string => formatCompactUsdWithOptions(value, DEX_PRICING_AUDIT_USD);
 export const formatSafetyMapUsd = (value: number): string => formatCompactUsdWithOptions(value < 0 ? Math.round(value / 1e3) * 1e3 : value, value < 0 ? { ...SAFETY_MAP_USD, maximumTier: "thousand" } : SAFETY_MAP_USD);
-export const formatV9PresentationUsd = (value: number): string => formatCompactUsdWithOptions(value, { ...V9_PRESENTATION_USD, decimals: { ...V9_PRESENTATION_USD.decimals, million: value >= 1e7 ? 0 : 1, thousand: value >= 1e4 ? 0 : 1 }, useGrouping: value < 1e3 });
+export const formatV9PresentationUsd = (value: number): string => {
+  // A figure that rounds up to 1,000 of its unit reads as the next unit:
+  // $999.6k is "$1.0m", never "$1000k".
+  const promoted = value >= 999_500 && value < 1e6 ? 1e6 : value >= 999_500_000 && value < 1e9 ? 1e9 : value;
+  return formatCompactUsdWithOptions(promoted, { ...V9_PRESENTATION_USD, decimals: { ...V9_PRESENTATION_USD.decimals, million: promoted >= 1e7 ? 0 : 1, thousand: promoted >= 1e4 ? 0 : 1 }, useGrouping: promoted < 1e3 });
+};
 
 function abbreviateNumber(value: number, decimals: number): string {
   return formatCompactUsdWithOptions(value, {

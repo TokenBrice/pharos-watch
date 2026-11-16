@@ -77,6 +77,28 @@ export function resolveMintAuthorityScoreDisplay(
 }
 
 
+/**
+ * A reviewed asset whose native supply no privileged party can mint (an
+ * immutable, user-collateralized CDP) publishes no native mint component: the
+ * scorer emits one only for an economically relevant mint path. Its band is
+ * the curated posture's (Hardened), with no numeric score to show. Bridged
+ * representations on other chains keep their own Bridging rows and never
+ * stand in for it.
+ */
+export function resolveNoPrivilegedMintDisplay(posture: string): MintAuthorityScoreDisplay {
+  return {
+    score: null,
+    posture,
+    scoreLabel: "No privileged mint",
+    compactLabel: "Hardened · no privileged mint",
+    bandKey: "hardened",
+    bandLabel: MINT_AUTHORITY_SCORE_FILTER_CONFIG.hardened.label,
+    badgeClassName: `${MINT_AUTHORITY_SCORE_DESCRIPTORS.hardened.badgeClassName} ${MINT_AUTHORITY_SCORE_DESCRIPTORS.hardened.textClassName}`,
+    textClassName: MINT_AUTHORITY_SCORE_DESCRIPTORS.hardened.textClassName,
+    detail: "Mint control posture: Hardened. No privileged party can mint native supply: new units only enter circulation through the protocol's own rules (for example, by depositing collateral and borrowing), so the Safety Score publishes no native mint component. Bridged copies on other chains are assessed under Bridging.",
+  };
+}
+
 export function resolveMintAuthorityStatus(
   summary?: MintAuthorityCoverageSummary | null,
 ): MintAuthorityStatusConfig {

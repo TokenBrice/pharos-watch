@@ -560,16 +560,18 @@ describe("stablecoin detail view-model builder", () => {
     if (viewModel.status !== "ready") return;
     expect(viewModel.mcap).toBe(200);
     expect(viewModel.hero.market.supply).toBe(200 / 0.98);
-    expect(viewModel.hero.market.prevDayTrendClass).toContain("text-red-700");
+    expect(viewModel.hero.market.prevDayTrendClass).toBe("text-foreground");
     expect(viewModel.hero.market.supplyTrend).toMatchObject({
       current: 150,
       safePrevWeek: 160,
       safePrevMonth: null,
       hasPrevMonth: false,
     });
-    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toContain("text-red-700");
-    expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display)
-      .toMatchObject({ value: "45", sub: "2 incidents" });
+    expect(viewModel.hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
+    // The incident count lives once, in the passport Record; the peg tile carries the score.
+    expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display.value).toBe("45");
+    expect(viewModel.hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display.sub ?? "").not.toContain("incident");
+    expect(viewModel.hero.passportItems.find((item) => item.key === "record")?.value).toBe("2 incidents");
     expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
       .toMatchObject({ primary: "B+", secondary: "79/100" });
   });

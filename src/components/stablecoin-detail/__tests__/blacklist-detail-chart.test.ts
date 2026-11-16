@@ -72,10 +72,11 @@ describe("BlacklistDetailChart", () => {
     expect(screen.getByTestId("plotted-Q2 '26").textContent).toBe(`Q2 '26${EVENT_LABELS.blacklist}4`);
   });
 
-  it("keeps the feature-owned empty state outside the shared chart", () => {
-    render(createElement(BlacklistDetailChart, { data: [], isLoading: false }));
+  it("hides the quarterly view when there is no quarter to draw", () => {
+    const { container } = render(createElement(BlacklistDetailChart, { data: [], isLoading: false }));
 
-    expect(screen.getByText(/Insufficient data/)).toBeTruthy();
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText(/Insufficient data/)).toBeNull();
     expect(quarterlyChartMock).not.toHaveBeenCalled();
   });
 });

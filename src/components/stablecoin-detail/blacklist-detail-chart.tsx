@@ -11,7 +11,8 @@ import {
 import type { BlacklistEventType, BlacklistQuarterlyEventTypePoint } from "@shared/types/blacklist";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 
-const CHART_HEIGHT = "h-[220px] sm:h-[260px]";
+// A handful of events per quarter needs no tall canvas.
+const CHART_HEIGHT = "h-[160px] sm:h-[180px]";
 
 const EVENT_TYPE_SERIES: QuarterlyStackedBarSeries[] = [
   { dataKey: "blacklist", color: EVENT_CHART_COLORS.blacklist, fillOpacity: 0.8 },
@@ -39,16 +40,8 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
     );
   }
 
-  if (chartData.length === 0) {
-    return (
-      <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-        <CardTitle as="h3" className="pharos-label">Events per quarter</CardTitle>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Insufficient data for the quarterly view on this asset yet.
-        </p>
-      </section>
-    );
-  }
+  // No quarter to draw: the view is hidden, not replaced by a placeholder.
+  if (chartData.length === 0) return null;
 
   return (
     <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">

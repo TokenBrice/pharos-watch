@@ -110,8 +110,16 @@ function domainRow(overrides: Partial<FailureDomainRow> & Pick<FailureDomainRow,
   };
 }
 
-function legendCounts(container: HTMLElement): number[] {
-  return [...container.querySelectorAll("[data-legend-count]")].map((node) => Number(node.textContent));
+/** Each route group's count ("30 routes"), in group order. */
+function groupCounts(container: HTMLElement): number[] {
+  return [...container.querySelectorAll("[data-group-count]")].map((node) => Number.parseInt(node.textContent ?? "", 10));
+}
+
+/** Route chips drawn with the solid limiting outline. */
+function outlinedRoutes(container: HTMLElement): (string | null)[] {
+  return [...container.querySelectorAll<HTMLElement>("[data-route]")]
+    .filter((chip) => chip.className.includes("border-foreground/80"))
+    .map((chip) => chip.getAttribute("data-route"));
 }
 
 const NATIVE = nativeRoute("ethereum:0xe");
@@ -165,11 +173,12 @@ describe("BridgingDeploymentsModule", () => {
       <BridgingDeploymentsModule summary={summary} failureDomains={null} controlRoles={roles} variant="tile" />,
     );
 
-    const outlined = [...container.querySelectorAll("[data-outlined]")].map((cell) => cell.getAttribute("data-cell"));
-    expect(outlined).toEqual([arbitrum.key]);
-    expect(container.querySelector("[data-band-outlined]")).toBeNull();
-    expect(container.querySelector(`[data-cell="${optimism.key}"]`)?.getAttribute("data-role")).toBe("diagnostic");
-    expect(container.querySelector(`[data-cell="${NATIVE.key}"]`)?.hasAttribute("data-role")).toBe(false);
+    // Arbitrum and Optimism share a group with different roles, so each chip carries its own.
+    expect(outlinedRoutes(container)).toEqual([arbitrum.key]);
+    expect(container.querySelector("[data-band-limiting]")).toBeNull();
+    expect(container.querySelector(`[data-route="${optimism.key}"]`)?.getAttribute("data-role")).toBe("diagnostic");
+    expect(container.querySelector(`[data-route="${optimism.key}"]`)?.className).toContain("border-dashed");
+    expect(container.querySelector(`[data-route="${NATIVE.key}"]`)?.hasAttribute("data-role")).toBe(false);
     expect(buildBridgingDeploymentsVerdict(summary, null, roles)).toMatch(/Arbitrum/);
   });
 
@@ -180,15 +189,18 @@ describe("BridgingDeploymentsModule", () => {
       <BridgingDeploymentsModule summary={summary} failureDomains={null} controlRoles={roles} variant="tile" />,
     );
 
-    expect(container.querySelectorAll("[data-cell]")).toHaveLength(32);
-    expect(container.querySelector("[data-outlined]")).toBeNull();
-    expect(container.querySelectorAll('[data-role="diagnostic"]')).toHaveLength(31);
+    // Two groups: the native home chain, then 31 diagnostic routes as eight chips and "+23 more".
+    expect(groupCounts(container)).toEqual([1, 31]);
+    expect(container.querySelectorAll("[data-route]")).toHaveLength(9);
+    expect(container.querySelector("[data-more]")?.textContent).toBe("+23 more");
+    expect(outlinedRoutes(container)).toEqual([]);
+    expect(container.querySelectorAll('[data-route][data-role="diagnostic"]')).toHaveLength(8);
 
     const chip = buildBridgingDeploymentsIndexChip(summary, null, roles)!;
     expect(chip.toneClass).toBe(SEVERITY_TONE_CLASS.neutral.pill);
     expect(chip.label).toMatch(/mostly/i);
     expect(chip.label.length).toBeLessThanOrEqual(18);
-    // The header carries neither role: the strip legend alone keys the diagnostic one.
+    // The header carries neither role: the route group alone tags the diagnostic one.
     const section = container.querySelector("section#bridging")!;
     expect(section.textContent).toContain(chip.label);
     expect(section.textContent).not.toContain(CONTROL_COMPONENT_ROLE_LABELS.limiting);
@@ -206,6 +218,9 @@ describe("BridgingDeploymentsModule", () => {
     const section = container.querySelector("section#bridging")!;
     expect(section.textContent).toContain(CONTROL_COMPONENT_ROLE_LABELS.limiting);
     expect(section.textContent).toMatch(/\b45\b/);
+    // The pill names its score and is the header's first chip, so a folded phone header shows it.
+    const headerChips = section.firstElementChild!.children[1]!;
+    expect(headerChips.firstElementChild?.textContent).toBe("Bridge score 45");
 
     const verdict = buildBridgingDeploymentsVerdict(summary, null, roles)!;
     expect(verdict).toMatch(/unverified bridge controls/i);
@@ -217,20 +232,20 @@ describe("BridgingDeploymentsModule", () => {
     expect(chip.label).toMatch(/unverified/i);
   });
 
-  it("outlines the whole strip when the limiting bridge controls map to no route (USTB shape)", () => {
+  it("states limiting bridge controls that map to no route once, above the groups (USTB shape)", () => {
     const { summary, roles } = ustbShape();
 
     const { container } = render(
       <BridgingDeploymentsModule summary={summary} failureDomains={null} controlRoles={roles} variant="tile" />,
     );
 
-    // Every cell is a reviewed native or burn & mint route, yet the strip may not read as safe.
-    expect(container.querySelector("[data-band-outlined]")).not.toBeNull();
-    expect(container.querySelector("[data-outlined]")).toBeNull();
-    expect(container.querySelector('[data-legend-role="limiting"]')?.textContent).toMatch(/unverified/i);
+    // Every route is a reviewed native or burn & mint route, yet the list may not read as safe.
+    expect(container.querySelector("[data-band-limiting]")?.textContent).toMatch(/unverified/i);
+    expect(container.querySelector("[data-band-limiting] [data-control-role='limiting']")).not.toBeNull();
+    expect(outlinedRoutes(container)).toEqual([]);
   });
 
-  it("names an undrawn limiting route on the caveat line instead of outlining the drawn ones", () => {
+  it("names an unlisted limiting route in the caption instead of outlining the listed ones", () => {
     const drawn = [NATIVE, route("base:0xb"), route("arbitrum:0xa", { tierKey: "external-lock-mint" })];
     const summary = summaryOf(drawn, {
       routeCount: 51,
@@ -246,9 +261,9 @@ describe("BridgingDeploymentsModule", () => {
       <BridgingDeploymentsModule summary={summary} failureDomains={null} controlRoles={roles} variant="tile" />,
     );
 
-    expect(container.querySelector("[data-band-outlined]")).toBeNull();
-    expect(container.querySelector("[data-outlined]")).toBeNull();
-    expect(container.querySelector("[data-strip-caveats]")?.textContent).toMatch(/limiting route/i);
+    expect(container.querySelector("[data-band-limiting]")).toBeNull();
+    expect(outlinedRoutes(container)).toEqual([]);
+    expect(container.querySelector("[data-route-caption]")?.textContent).toMatch(/limiting route is not among those listed/i);
   });
 
   it("leads with the majority instead of one unresolved route (USDC shape)", () => {
@@ -307,7 +322,7 @@ describe("BridgingDeploymentsModule", () => {
     expect(note.closest("details")).not.toBeNull();
   });
 
-  it("counts third-party routes from the same tiers the legend draws (EURC shape)", () => {
+  it("counts third-party routes from the same tiers the route groups list (EURC shape)", () => {
     const natives = ["ethereum", "base", "avalanche", "stellar", "solana", "arc", "plasma", "cronos", "worldchain"]
       .map((chain) => nativeRoute(`${chain}:0x`));
     const representations = [
@@ -319,15 +334,15 @@ describe("BridgingDeploymentsModule", () => {
     const summary = summaryOf([...natives, ...representations], { authoredTier: "single-chain-or-native" });
 
     const { container } = render(<BridgingDeploymentsModule summary={summary} failureDomains={null} variant="tile" />);
-    const legend = [...container.querySelectorAll("[data-legend-entry]")];
-    const thirdPartyDrawn = legend
-      .filter((entry) => /external/i.test(entry.textContent ?? ""))
-      .reduce((sum, entry) => sum + Number(entry.querySelector("[data-legend-count]")?.textContent), 0);
+    const groups = [...container.querySelectorAll("[data-route-group]")];
+    const thirdPartyListed = groups
+      .filter((group) => /external/i.test(group.textContent ?? ""))
+      .reduce((sum, group) => sum + Number.parseInt(group.querySelector("[data-group-count]")?.textContent ?? "", 10), 0);
 
-    expect(thirdPartyDrawn).toBe(4);
+    expect(thirdPartyListed).toBe(4);
     expect(buildBridgingDeploymentsVerdict(summary, null)).toMatch(/\b4 third-party\b/);
     // A multi-chain asset's native tier reads "Native", never "Single-chain".
-    expect(legend[0]?.textContent).toMatch(/^Native/);
+    expect(groups[0]?.textContent).toMatch(/^Native/);
     expect(container.textContent).not.toMatch(/single-chain/i);
   });
 
@@ -340,7 +355,18 @@ describe("BridgingDeploymentsModule", () => {
     expect(buildBridgingDeploymentsVerdict(summary, null)).not.toMatch(/weakest|third-party/i);
   });
 
-  it("brackets the cells a failure domain spans, keeping a partly known share and never '?'", () => {
+  it("names the domain deduction as the Safety Score card does, with a true minus", () => {
+    const summary = summaryOf([NATIVE, route("plasma:0xp", { tierKey: "external-lock-mint" })]);
+    const failureDomains: FailureDomainsView = {
+      rows: [domainRow({ key: "chain:Plasma", label: "Plasma", kind: "chain", span: { chainIds: ["plasma"], routeKeys: [], protocolKeys: [] } })],
+      totalAdjustmentPoints: 0.7,
+    };
+    const { container } = render(<BridgingDeploymentsModule summary={summary} failureDomains={failureDomains} variant="tile" />);
+    const chip = [...container.querySelectorAll("[data-slot='badge']")].find((node) => node.textContent?.startsWith("Shared"));
+    expect(chip?.textContent).toBe("Shared exposure \u22120.7 pts");
+  });
+
+  it("lists a failure domain's members in its fold, keeping a partly known share and never '?'", () => {
     const plasma = route("plasma:0xp", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
     const solana = route("solana:0xs", { tierKey: "external-lock-mint", protocolKey: "layerzero-v2" });
     const summary = summaryOf([NATIVE, plasma, solana]);
@@ -375,15 +401,11 @@ describe("BridgingDeploymentsModule", () => {
       <BridgingDeploymentsModule summary={summary} failureDomains={failureDomains} variant="tile" />,
     );
 
-    const partial = container.querySelector('[data-bracket="bridge:LayerZero V2"]');
-    const partialShare = partial?.querySelector("[data-bracket-share]")?.textContent ?? "";
-    expect(partialShare).toContain("≥21%");
-    expect(partialShare).toContain("1 unquantified");
-    expect(partial?.textContent).toContain("×3");
-    const quantified = container.querySelector('[data-bracket="chain:Plasma"] [data-bracket-share]')?.textContent;
-    expect(quantified).toMatch(/%$/);
-    const unquantified = container.querySelector('[data-bracket="chain:Solana"] [data-bracket-share]')?.textContent;
-    expect(unquantified).toBe("share unquantified");
+    const domains = [...container.querySelectorAll('#failure-domains ul[aria-label="Shared failure domains"] > li')]
+      .map((row) => row.textContent ?? "");
+    expect(domains[0]).toMatch(/^LayerZero V2×3.*≥21\.1% · 1 unquantified/);
+    expect(domains[1]).toMatch(/^Plasma.*10\.8%/);
+    expect(domains[2]).toMatch(/^Solana.*Share unquantified/);
     expect(container.querySelector("section#bridging")?.textContent).not.toContain("?");
 
     // The fold lists every member of a grouped domain with its own share and reason.
@@ -406,14 +428,14 @@ describe("BridgingDeploymentsModule", () => {
 
     expect(resolveBridgingDeploymentsForm(summary, null)).toBe("strip");
     expect(container.querySelector("section#bridging")?.getAttribute("data-evidence-module")).toBe("strip");
-    expect(container.querySelector("[data-cell]")).toBeNull();
+    expect(container.querySelector("[data-route]")).toBeNull();
     expect(container.textContent).toContain(BRIDGE_TIER_LABELS["single-chain-or-native"]);
     expect(buildBridgingDeploymentsVerdict(summary, null)).toMatch(/\bnative deployment\b/);
     expect(buildBridgingDeploymentsVerdict(summaryOf([route("plasma:0xp", { tierKey: "external-lock-mint" })]), null))
       .not.toMatch(/\bnative\b/);
   });
 
-  it("counts every route in a truncated strip's legend and says how many are drawn", () => {
+  it("counts every route in a capped list from the inventory totals", () => {
     const drawn = [NATIVE, route("base:0xb"), route("arbitrum:0xa", { tierKey: "external-lock-mint" })];
     const truncatedSummary = summaryOf(drawn, {
       routeCount: 51,
@@ -425,15 +447,16 @@ describe("BridgingDeploymentsModule", () => {
     const truncated = render(
       <BridgingDeploymentsModule summary={truncatedSummary} failureDomains={null} variant="tile" />,
     );
-    expect(legendCounts(truncated.container).reduce((sum, count) => sum + count, 0)).toBe(51);
-    const caveats = truncated.container.querySelectorAll("[data-strip-caveats]");
-    expect(caveats).toHaveLength(1);
-    expect(caveats[0]?.textContent).toContain("3 of 51");
+    expect(groupCounts(truncated.container)).toEqual([1, 30, 20]);
+    expect([...truncated.container.querySelectorAll("[data-more]")].map((more) => more.textContent)).toEqual([
+      "+29 more", "+19 more",
+    ]);
+    expect(truncated.container.textContent).toContain("Routes by type (51)");
     truncated.unmount();
 
     const complete = render(<BridgingDeploymentsModule summary={summaryOf(drawn)} failureDomains={null} variant="tile" />);
-    expect(legendCounts(complete.container)).toEqual([1, 1, 1]);
-    expect(complete.container.querySelector("[data-strip-caveats]")?.textContent).not.toMatch(/drawn/);
+    expect(groupCounts(complete.container)).toEqual([1, 1, 1]);
+    expect(complete.container.querySelector("[data-more]")).toBeNull();
   });
 
   it("keeps the authored summary and sources in one closed fold after the domain detail", () => {
