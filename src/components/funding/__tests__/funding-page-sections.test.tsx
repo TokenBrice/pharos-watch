@@ -1,17 +1,12 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import {
-  FundingKpiRow,
-  DonorList,
-} from "../funding-page-sections";
-import type { Donation } from "@shared/lib/funding/schema";
-import type { ComponentProps } from "react";
+import { render, screen, within } from "@testing-library/react";
+import { CostBreakdown, DonorList, FundingHero } from "../funding-page-sections";
+import type { CostLineItem, Donation } from "@shared/lib/funding/schema";
+import type { DonationSummary, MonthlyFunding } from "@shared/lib/funding/helpers";
 
-type KpiSummary = ComponentProps<typeof FundingKpiRow>["summary"];
-
-function kpiSummary(overrides: Partial<KpiSummary> = {}): KpiSummary {
+function summary(overrides: Partial<DonationSummary> = {}): DonationSummary {
   return {
     currentMonthCommunityUsd: 300,
     currentMonthFounderUsd: 1000,
@@ -22,45 +17,90 @@ function kpiSummary(overrides: Partial<KpiSummary> = {}): KpiSummary {
   };
 }
 
-describe("FundingKpiRow", () => {
-  it("renders numeric KPIs when there is community history", () => {
-    render(<FundingKpiRow summary={kpiSummary()} monthlyTargetUsd={1540} />);
-    expect(screen.getByText("This month coverage")).toBeTruthy();
-    // 300 / 1540 ≈ 19%
-    expect(screen.getByText("19%")).toBeTruthy();
-    const progress = screen.getByRole("progressbar", { name: "Monthly funding coverage" });
-    expect(progress.getAttribute("aria-valuenow")).toBe("19");
-    expect(screen.getByText("Community support")).toBeTruthy();
-    expect(screen.getByText(/from 2 supporters/)).toBeTruthy();
-    expect(screen.getByText("Recurring Giveth")).toBeTruthy();
-    expect(screen.getByText(/Donations keep Pharos freely accessible/)).toBeTruthy();
+const MONTHS: MonthlyFunding[] = [
+  { monthKey: "2026-03", label: "Mar 2026", communityUsd: 80, costUsd: null, isCurrent: false },
+  { monthKey: "2026-04", label: "Apr 2026", communityUsd: 427.5, costUsd: 1710, isCurrent: false },
+  { monthKey: "2026-05", label: "May 2026", communityUsd: 300, costUsd: 1540, isCurrent: true },
+];
+const LEDGER_AT = Math.floor(Date.UTC(2026, 4, 10) / 1000);
+
+describe("FundingHero", () => {
+  it("measures coverage against each month's own cost and names who covers the rest", () => {
+    render(<FundingHero summary={summary()} months={MONTHS} monthlyCostUsd={1540} founderUsd={8800} ledgerUpdatedAt={LEDGER_AT} />);
+    // The beam, plus the current month's cost in the figures table.
+    expect(screen.getAllByText("$1,540")).toHaveLength(2);
+    // 300 / 1540 this month; 427.5 / 1710 for April, never against today's cost.
+    const rows = within(screen.getByText("Who covers it").parentElement!);
+    expect(rows.getByText("19%")).toBeTruthy();
+    expect(rows.getByText("Community, Apr 2026")).toBeTruthy();
+    expect(rows.getByText("25%")).toBeTruthy();
+    expect(rows.getByText("$8,800")).toBeTruthy();
+    expect(rows.getByText(/2 supporters/)).toBeTruthy();
+    expect(screen.getByText(/Funding never buys a score/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Support Pharos" }).getAttribute("href")).toBe("#how-to-support");
+    // A closed month without a recorded cost stays unavailable in the figures table.
+    const march = screen.getByRole("rowheader", { name: "Mar 2026" }).closest("tr")!;
+    expect(within(march).getAllByText("—")).toHaveLength(2);
+    expect(screen.getByRole("rowheader", { name: "May 2026 (so far)" })).toBeTruthy();
   });
 
   it("renders <1% when monthly coverage is positive but rounds to zero", () => {
     render(
-      <FundingKpiRow
-        summary={kpiSummary({ currentMonthCommunityUsd: 1.24, lifetimeCommunityDonorCount: 1 })}
-        monthlyTargetUsd={1709}
+      <FundingHero
+        summary={summary({ currentMonthCommunityUsd: 1.24, lifetimeCommunityDonorCount: 1 })}
+        months={MONTHS}
+        monthlyCostUsd={1709}
+        founderUsd={0}
+        ledgerUpdatedAt={LEDGER_AT}
       />,
     );
-    expect(screen.getByText("<1%")).toBeTruthy();
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("<1%");
+    expect(within(screen.getByText("Who covers it").parentElement!).getByText("<1%")).toBeTruthy();
   });
 
-  it("shows cold-start copy when lifetime community is zero", () => {
+  it("shows cold-start copy and no chart before the first community donation", () => {
     render(
-      <FundingKpiRow
-        summary={kpiSummary({
-          currentMonthCommunityUsd: 0,
-          lifetimeCommunityUsd: 0,
-          lifetimeCommunityDonorCount: 0,
-        })}
-        monthlyTargetUsd={1540}
+      <FundingHero
+        summary={summary({ currentMonthCommunityUsd: 0, lifetimeCommunityUsd: 0, lifetimeCommunityDonorCount: 0 })}
+        months={[]}
+        monthlyCostUsd={1540}
+        founderUsd={0}
+        ledgerUpdatedAt={LEDGER_AT}
       />,
     );
     expect(screen.getByText("Tracking begins")).toBeTruthy();
     expect(screen.getByText("Be the first")).toBeTruthy();
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("Tracking begins");
+    expect(screen.getByText(/starts with the first community donation/)).toBeTruthy();
+  });
+});
+
+describe("CostBreakdown", () => {
+  const ITEMS: CostLineItem[] = [
+    { label: "Ike", category: "team", usd_per_month: 1500 },
+    { label: "Brice", category: "team", usd_per_month: 0, note: "Uncompensated" },
+    { label: "Small", category: "infra", usd_per_month: 0.4 },
+    { label: "Big", category: "infra", usd_per_month: 99.6, mark: "/media/big.svg" },
+    {
+      label: "Sponsor",
+      category: "infra",
+      usd_per_month: 0,
+      note: "RPC sponsored in kind",
+      sponsor: { logo: "/media/sponsor.svg", url: "https://www.sponsor.example", blurb: "Thank you, Sponsor.", announcement: "/blog/sponsor/" },
+    },
+  ];
+
+  it("splits paid infrastructure by share, keeps $0 lines and one-time spend apart", () => {
+    render(<CostBreakdown items={ITEMS} oneTime={[{ label: "Redesign", usd: 5800, paid_by: "founder" }]} lastReviewedAt={LEDGER_AT} />);
+    expect(screen.getByRole("img", { name: /infrastructure cost: Big 100%, Small <1%/ })).toBeTruthy();
+    expect(screen.getByText("$100 / month")).toBeTruthy();
+    expect(screen.getByText("$1,500 / month")).toBeTruthy();
+    const free = screen.getByText("Covered at no cost").closest("section")!;
+    expect(within(free).getByText("Thank you, Sponsor.")).toBeTruthy();
+    expect(within(free).getByRole("link", { name: "Read the announcement" }).getAttribute("href")).toMatch(/^\/blog\/sponsor\/?$/);
+    expect(within(free).getByText("Brice")).toBeTruthy();
+    // The sponsored line never reappears as a paid share.
+    expect(screen.getByRole("img", { name: /infrastructure cost/ }).getAttribute("aria-label")).not.toContain("Sponsor");
+    expect(screen.getByText("$5,800")).toBeTruthy();
+    expect(screen.getByText(/Costs reviewed/)).toBeTruthy();
   });
 });
 
@@ -104,6 +144,7 @@ describe("DonorList", () => {
   it("shows empty state when no community donations exist", () => {
     render(<DonorList donations={[]} lastUpdatedAt={now} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("keeps cents on sub-dollar receipts and never renders an unpriced donation as zero", () => {
@@ -140,7 +181,7 @@ describe("DonorList", () => {
     expect(screen.queryByText("$0")).toBeNull();
   });
 
-  it("counts the footer cap in donation rows, not supporters", () => {
+  it("folds earlier rows and counts the footer in donation rows, not supporters", () => {
     const donations: Donation[] = Array.from({ length: 25 }, (_, index) => ({
       chain: "ethereum",
       tx_hash: `0x${index.toString(16).padStart(4, "0")}`,
@@ -155,7 +196,9 @@ describe("DonorList", () => {
       price_note: "coingecko-historical-2026-04-18",
     }));
     render(<DonorList donations={donations} lastUpdatedAt={now} />);
-    expect(screen.getByText(/Showing most recent 20 of 25 donations\./)).toBeTruthy();
-    expect(screen.queryByText(/Showing most recent 20 of 25 supporters/)).toBeNull();
+    // The fold and footer count donation rows from the full ledger, not supporters or visible rows.
+    expect(screen.getByText("Show 15 earlier donations")).toBeTruthy();
+    expect(screen.getByText("25 donations in the public ledger, newest first.")).toBeTruthy();
+    expect(screen.getAllByRole("row")).toHaveLength(27);
   });
 });

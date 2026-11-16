@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCostsTotal,
-  computeMonthlyHistory,
+  buildMonthlyFunding,
   summarizeDonations,
 } from "../helpers";
 import type { CostLineItem, Donation } from "../schema";
@@ -70,42 +70,40 @@ describe("summarizeDonations", () => {
   });
 });
 
-describe("computeMonthlyHistory", () => {
+describe("buildMonthlyFunding", () => {
   const may = Date.UTC(2026, 4, 3) / 1000;
   const apr = Date.UTC(2026, 3, 15) / 1000;
-  const mar = Date.UTC(2026, 2, 15) / 1000;
+  const feb = Date.UTC(2026, 1, 15) / 1000;
+  const costs = { items: COSTS, monthly_totals: [{ month: "2026-02", usd: 1709 }, { month: "2026-04", usd: 1709 }] };
 
-  it("aggregates community totals per month, excluding the current month and founders", () => {
+  it("lists every month oldest first, with founders excluded and empty months as $0", () => {
     const rows: Donation[] = [
       D(may, "community", 5, "a"),
       D(apr, "community", 100, "a"),
       D(apr, "community", 50, "b"),
       D(apr, "founder", 999, "f"),
-      D(mar, "community", 25, "c"),
+      D(feb, "community", 25, "c"),
     ];
-    const history = computeMonthlyHistory(rows, may);
-    expect(history).toEqual([
-      { monthKey: "2026-04", label: "Apr 2026", communityUsd: 150 },
-      { monthKey: "2026-03", label: "Mar 2026", communityUsd: 25 },
+    expect(buildMonthlyFunding(rows, costs, may).map(({ monthKey, communityUsd }) => [monthKey, communityUsd])).toEqual([
+      ["2026-02", 25], ["2026-03", 0], ["2026-04", 150], ["2026-05", 5],
     ]);
   });
 
-  it("returns empty when there is no prior-month data", () => {
-    const rows: Donation[] = [D(may, "community", 5, "a")];
-    expect(computeMonthlyHistory(rows, may)).toEqual([]);
+  it("measures each month against its own recorded cost and never backfills today's", () => {
+    const months = buildMonthlyFunding([D(feb, "community", 25, "c")], costs, may);
+    expect(months.map(({ monthKey, costUsd, isCurrent }) => [monthKey, costUsd, isCurrent])).toEqual([
+      ["2026-02", 1709, false],
+      // No recorded total: unavailable, not the current cost.
+      ["2026-03", null, false],
+      ["2026-04", 1709, false],
+      // The current month uses today's line items.
+      ["2026-05", computeCostsTotal(COSTS), true],
+    ]);
+    expect(months[0].label).toBe("Feb 2026");
   });
 
-  it("lists months with no donations as $0 instead of skipping them", () => {
-    const rows: Donation[] = [
-      D(mar, "community", 25, "c"),
-      D(Date.UTC(2026, 0, 10) / 1000, "community", 40, "a"),
-    ];
-    const history = computeMonthlyHistory(rows, may);
-    expect(history).toEqual([
-      { monthKey: "2026-04", label: "Apr 2026", communityUsd: 0 },
-      { monthKey: "2026-03", label: "Mar 2026", communityUsd: 25 },
-      { monthKey: "2026-02", label: "Feb 2026", communityUsd: 0 },
-      { monthKey: "2026-01", label: "Jan 2026", communityUsd: 40 },
-    ]);
+  it("caps the window and returns nothing before the first community donation", () => {
+    expect(buildMonthlyFunding([D(feb, "community", 25, "c")], costs, may, 2).map((m) => m.monthKey)).toEqual(["2026-04", "2026-05"]);
+    expect(buildMonthlyFunding([D(apr, "founder", 999, "f")], costs, may)).toEqual([]);
   });
 });

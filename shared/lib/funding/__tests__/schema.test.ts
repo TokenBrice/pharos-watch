@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DonationSchema, DonationsFileSchema } from "../schema";
+import { CostsFileSchema, DonationSchema, DonationsFileSchema } from "../schema";
 import { makeDonation } from "./funding.test-support";
 
 const DONATION = makeDonation();
@@ -53,6 +53,21 @@ describe("funding schemas", () => {
       ...DONATION,
       usd_at_receipt: Number.NaN,
     })).toThrow();
+  });
+
+  it("keeps cost history ordered, sponsorships at $0 and artwork self-hosted", () => {
+    const costs = {
+      last_reviewed_at: DONATION.block_timestamp,
+      items: [{ label: "Sponsor", category: "infra", usd_per_month: 0, sponsor: { logo: "/media/s.svg", url: "https://s.example", blurb: "Thanks." } }],
+      monthly_totals: [{ month: "2026-04", usd: 1709 }, { month: "2026-05", usd: 1709 }],
+      one_time: [{ label: "Redesign", usd: 5800, paid_by: "founder" }],
+    };
+    expect(CostsFileSchema.parse(costs)).toEqual(costs);
+    const reject = (patch: Record<string, unknown>) => expect(CostsFileSchema.safeParse({ ...costs, ...patch }).success).toBe(false);
+    reject({ monthly_totals: [{ month: "2026-05", usd: 1 }, { month: "2026-04", usd: 1 }] });
+    reject({ monthly_totals: [{ month: "2026-13", usd: 1 }] });
+    reject({ items: [{ ...costs.items[0], usd_per_month: 10 }] });
+    reject({ items: [{ label: "Vendor", category: "infra", usd_per_month: 5, mark: "https://cdn.example/logo.svg" }] });
   });
 
   it("rejects unknown chains and extra fields", () => {

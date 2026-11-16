@@ -1,4 +1,4 @@
-import type { CostCategory, CostLineItem, Donation } from "./schema";
+import type { CostCategory, CostLineItem, CostsFile, Donation } from "./schema";
 
 const CATEGORY_ORDER: readonly CostCategory[] = ["team", "infra"];
 
@@ -52,58 +52,72 @@ export function formatCoveragePct(communityUsd: number, targetUsd: number): stri
   return `${rounded}%`;
 }
 
-export interface MonthlyCommunityCoverage {
+export interface MonthlyFunding {
   monthKey: string;
+  /** "Oct 2026". */
   label: string;
   communityUsd: number;
+  /**
+   * Monthly cost published for that month: the recorded `monthly_totals` row
+   * for a closed month, today's line items for the current month. `null` when
+   * a closed month has no recorded total: unavailable, never today's cost.
+   */
+  costUsd: number | null;
+  isCurrent: boolean;
+}
+
+function monthLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /**
- * Per-month community totals for months strictly before `nowSec`'s month.
- * Every month from the first community donation up to last month is listed,
- * so a month with no donations shows as $0 rather than disappearing.
- * Sorted most-recent first.
+ * Community donations per UTC month, oldest first, from the first community
+ * donation (or at most `maxMonths` back) through `nowSec`'s month. A month
+ * with no donations shows as $0 rather than disappearing; founder rows never
+ * count as community.
  */
-export function computeMonthlyHistory(
+export function buildMonthlyFunding(
   donations: readonly Donation[],
+  costs: Pick<CostsFile, "items" | "monthly_totals">,
   nowSec: number,
   maxMonths = 12,
-): MonthlyCommunityCoverage[] {
+): MonthlyFunding[] {
   const currentMonth = monthKey(nowSec);
   const totals = new Map<string, number>();
   let earliest: string | null = null;
   for (const d of donations) {
-    requireFinite(d.block_timestamp, "timestamp");
     requireFinite(d.usd_at_receipt, "donation amount");
     if (d.kind === "founder") continue;
     const key = monthKey(d.block_timestamp);
+    if (key > currentMonth) continue;
     if (earliest === null || key < earliest) earliest = key;
-    if (key === currentMonth) continue;
     totals.set(key, (totals.get(key) ?? 0) + d.usd_at_receipt);
   }
-  if (earliest === null || earliest >= currentMonth) return [];
+  if (earliest === null) return [];
 
-  const [nowY, nowM] = currentMonth.split("-").map(Number);
-  const history: MonthlyCommunityCoverage[] = [];
-  // Walk backwards from last month until the earliest community month.
-  let y = nowY;
-  let m = nowM - 1;
-  while (history.length < maxMonths) {
+  const recorded = new Map(costs.monthly_totals.map((row) => [row.month, row.usd]));
+  const currentCost = computeCostsTotal(costs.items);
+  const months: MonthlyFunding[] = [];
+  let [y, m] = currentMonth.split("-").map(Number);
+  while (months.length < maxMonths) {
+    const key = `${y}-${String(m).padStart(2, "0")}`;
+    if (key < earliest) break;
+    const isCurrent = key === currentMonth;
+    months.push({
+      monthKey: key,
+      label: monthLabel(key),
+      communityUsd: totals.get(key) ?? 0,
+      costUsd: isCurrent ? currentCost : (recorded.get(key) ?? null),
+      isCurrent,
+    });
+    m -= 1;
     if (m < 1) {
       m = 12;
       y -= 1;
     }
-    const key = `${y}-${String(m).padStart(2, "0")}`;
-    if (key < earliest) break;
-    const label = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-    history.push({ monthKey: key, label, communityUsd: totals.get(key) ?? 0 });
-    m -= 1;
   }
-  return history;
+  return months.reverse();
 }
 
 export interface DonationSummary {
