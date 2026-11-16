@@ -538,7 +538,10 @@ export function DetailRiskContextSections({
           ) : null}
         </div>
         {showDepegResolver ? (
-          <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
+          // Target of the first-fold outlook's "Full forecast and evidence" link.
+          <div id="depeg-resolver" className={SECTION_SCROLL_MT}>
+            <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
+          </div>
         ) : null}
         {/* The live stress layer sits beside the structural score, before the
             pillar evidence (decision S4). A frozen archive or a NAV token has

@@ -147,8 +147,9 @@ export const DDR_TIER_LABELS = {
       blurb: "Recovery is plausible but not assured — the kill signals are live.",
     },
     recovery_unlikely: {
-      label: "Recovery unlikely",
-      short: "Unlikely",
+      // No recovery is expected at all (no duration is estimated), not merely an unlikely one.
+      label: "No recovery expected",
+      short: "No recovery",
       blurb: "Comparable structural failures did not return to peg.",
     },
     insufficient_signal: {

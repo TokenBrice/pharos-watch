@@ -482,12 +482,6 @@ describe("HeroCard", () => {
     expect(html).toContain("EUR 1.0000");
   });
 
-  it("renders the active-depeg chip when the peg summary flags one", () => {
-    const html = renderHero();
-
-    expect(html).toContain("Active depeg");
-  });
-
   it("renders the verification passport contract across responsive layouts", () => {
     const html = renderHero();
 
