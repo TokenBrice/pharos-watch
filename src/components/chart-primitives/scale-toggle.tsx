@@ -1,5 +1,7 @@
 "use client";
 
+import { ControlPillToggle } from "@/components/control-pill-toggle";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -23,10 +25,12 @@ interface ChartScaleToggleProps {
   className?: string;
 }
 
+const SCALE_LABELS: Record<ChartScale, string> = { lin: "Lin", log: "Log" };
+
 /**
- * `LIN / LOG` scale toggle modelled on `TimeRangeButtons` so it reads as the
- * same control family. Used on supply / market-cap charts where the data
- * spans multiple orders of magnitude (USDT vs the long tail).
+ * `Lin / Log` scale toggle on the same segmented track as `ChartRangeToggle`,
+ * so a chart header carries one control family. Used on supply / market-cap
+ * charts where the data spans multiple orders of magnitude (USDT vs the long tail).
  *
  * IMPORTANT: log + stacked area = misleading (areas don't sum on a log axis).
  * Pass `disabled` in stacked layouts with a `disabledTitle` explanation.
@@ -41,31 +45,50 @@ export function ChartScaleToggle({
   const options: ChartScale[] = ["lin", "log"];
   return (
     <div
-      className={cn("flex gap-1", disabled && "opacity-50", className)}
-      role="radiogroup"
+      className={cn("pharos-segmented", disabled && "opacity-50", className)}
+      role="group"
       aria-label="Y-axis scale"
       title={disabled ? disabledTitle : undefined}
     >
-      {options.map((opt) => {
-        const isActive = value === opt;
-        return (
-          <button
-            key={opt}
-            type="button"
-            role="radio"
-            aria-checked={isActive}
-            disabled={disabled}
-            onClick={() => onChange(opt)}
-            className={cn(
-              "pharos-focus-ring pharos-control-pill px-2.5 sm:py-1 text-3xs",
-              isActive ? "pharos-control-pill-active" : "",
-              disabled && "cursor-not-allowed",
-            )}
-          >
-            {opt.toUpperCase()}
-          </button>
-        );
-      })}
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          aria-pressed={value === opt}
+          disabled={disabled}
+          onClick={() => onChange(opt)}
+          className={cn("pharos-focus-ring pharos-segmented-item", disabled && "cursor-not-allowed")}
+        >
+          {SCALE_LABELS[opt]}
+        </button>
+      ))}
     </div>
+  );
+}
+
+const formatRangeLabel = (range: TimeRangeOption) => (range === "all" ? "All" : range);
+
+/**
+ * The detail page's one time-range control: the shared segmented track, with
+ * durations in the page's lowercase unit style ("7d", "1y", like "24h").
+ */
+export function ChartRangeToggle({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly TimeRangeOption[];
+  value: TimeRangeOption;
+  onChange: (next: TimeRangeOption) => void;
+}) {
+  return (
+    <ControlPillToggle
+      variant="segmented"
+      ariaLabel="Chart time range"
+      options={options}
+      value={value}
+      onChange={onChange}
+      formatLabel={formatRangeLabel}
+    />
   );
 }

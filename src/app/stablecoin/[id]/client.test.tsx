@@ -465,7 +465,13 @@ describe("StablecoinDetailClient", () => {
       const ref = useCallback((node: HTMLDivElement | null) => {
         if (!node) return;
         const isOverviewFlows = node.style.minHeight === "440px";
-        const isActivityBlacklist = node.style.minHeight === "480px" && !node.closest("#dex-liquidity");
+        // The Activity blacklist gate reserves no height: it is the unreserved
+        // gate after the `#activity` divider and before `#history`.
+        const follows = (id: string) => {
+          const divider = document.getElementById(id);
+          return divider !== null && Boolean(divider.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+        };
+        const isActivityBlacklist = node.style.minHeight === "" && follows("activity") && !follows("history");
         setNear(!isOverviewFlows && !isActivityBlacklist);
       }, []);
       return { ref, near };
@@ -507,8 +513,9 @@ describe("StablecoinDetailClient", () => {
     );
     rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
-    expect(collateralization.className).toBe("min-h-64");
-    expect(container.querySelector('[data-rail-slot="access"]')!.className).toBe("min-h-48");
+    // Loaded cards take their own height: the reserve only holds a loading placeholder's footprint.
+    expect(collateralization.className).toBe("");
+    expect(container.querySelector('[data-rail-slot="access"]')!.className).toBe("");
   });
 
   it.each(["empty", "unavailable"])("hides the collateralization rail card once a %s reserve read settles without a KPI", (status) => {
@@ -656,17 +663,24 @@ describe("StablecoinDetailClient", () => {
   });
 
 
-  it("states that DEWS does not apply to NAV tokens instead of omitting it silently", () => {
+  it("mounts no DEWS module and no not-applicable strip for a NAV token", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ isNavToken: true }));
 
     const { container } = renderDetail(coin);
 
     expect(screen.queryByTestId("dews-detail")).toBeNull();
-    const notApplicable = container.querySelector('#overview [data-evidence-state="not-applicable"]');
-    expect(notApplicable).not.toBeNull();
-    const controlEvidence = container.querySelector("#control-evidence")!;
-    expect(notApplicable!.compareDocumentPosition(controlEvidence) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector('[data-evidence-state="not-applicable"]')).toBeNull();
+  });
+
+  it("opens the Risk zone on its own centred divider, which owns #overview", () => {
+    const { container } = renderDetail();
+
+    const heading = container.querySelector("#overview")!;
+    expect(heading.tagName).toBe("H2");
+    expect(heading.textContent).toContain("Risk");
+    const mechanism = container.querySelector("#info")!;
+    expect(heading.compareDocumentPosition(mechanism) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
 
@@ -844,15 +858,15 @@ describe("StablecoinDetailClient", () => {
     expect(row.textContent).toContain(expected);
   });
 
-  it("reads bridging on a single-chain coin as not applicable, not as a missing review", () => {
+  it("mounts no bridging slot or index row for a single-chain coin, which has nothing to bridge", () => {
     const coin = { ...TRACKED_META_BY_ID.get("usds-sky")!, contracts: [] };
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ coin }));
 
     const { container } = renderDetail(coin);
 
-    const bridging = container.querySelector("#bridging");
-    expect(bridging?.getAttribute("data-evidence-state")).toBe("not-applicable");
-    expect(bridging?.textContent).toContain(BRIDGE_TIER_LABELS["single-chain-or-native"]);
+    expect(container.querySelector("#bridging")).toBeNull();
+    expect(container.querySelector('[aria-label="Evidence index"] a[href="#bridging"]')).toBeNull();
+    expect(container.textContent).not.toContain(BRIDGE_TIER_LABELS["single-chain-or-native"]);
   });
 });
 
@@ -863,7 +877,7 @@ describe("StablecoinDetailClient (frozen S14)", () => {
   });
 
 
-  it("keeps the reduced dossier: DEWS reads frozen archive and no placeholder claims a missing review", () => {
+  it("keeps the reduced dossier: no DEWS, and no placeholder claims a missing review", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const reportCard = makeV9Card({ id: coin.id });
     useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), reportCard });
@@ -871,8 +885,7 @@ describe("StablecoinDetailClient (frozen S14)", () => {
     const { container } = renderDetail(coin);
 
     expect(screen.queryByTestId("dews-detail")).toBeNull();
-    const notApplicable = container.querySelector('#overview [data-evidence-state="not-applicable"]');
-    expect(notApplicable?.textContent).toContain("frozen archive");
+    expect(container.querySelector('[data-evidence-state="not-applicable"]')).toBeNull();
     // Mint Authority's own state is the only "Not reviewed" left.
     const notReviewed = Array.from(container.querySelectorAll('[data-evidence-state="not-reviewed"]'));
     expect(notReviewed.map((node) => node.id)).toEqual(["mint-authority"]);

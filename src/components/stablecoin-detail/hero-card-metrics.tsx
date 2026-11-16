@@ -14,11 +14,19 @@ import { hasObservedDisplayPrice } from "@/lib/current-peg";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
-import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 
 /** Label class shared by every hero metric cell — one casing across breakpoints. */
 const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
+
+/** A four-figure price (gold) reads as money: thousands separator and cents ("$3,834.22"). */
+function groupFourFigurePrice(formatted: string): string {
+  let start = 0;
+  while (start < formatted.length && (formatted[start]! < "0" || formatted[start]! > "9")) start += 1;
+  const value = Number(formatted.slice(start));
+  if (start >= formatted.length || !Number.isFinite(value) || Math.abs(value) < 1000) return formatted;
+  return `${formatted.slice(0, start)}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 /**
  * Hero price string. Several peg symbols have no glyph in the mono face — CHF's
@@ -31,7 +39,7 @@ export function formatHeroNativePrice(
   pegRef: number | null,
   decimals?: number,
 ): string {
-  const formatted = formatNativePrice(usdPrice, pegCurrency, pegRef, decimals);
+  const formatted = groupFourFigurePrice(formatNativePrice(usdPrice, pegCurrency, pegRef, decimals));
   const symbol = pegCurrencySymbol(pegCurrency);
   if (symbol === "$" || !formatted.startsWith(symbol)) return formatted;
   return `${pegCurrency} ${formatted.slice(symbol.length)}`;
@@ -44,7 +52,6 @@ export interface HeroTertiaryMetricConfig {
   value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
-  accentClass?: string;
 }
 
 export interface HeroSignalRailItem {
@@ -87,20 +94,28 @@ function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQ
   return <p className={cn(className, "text-muted-foreground")}>{supplyRestoredAsOf ? `Supply as of ${supplyRestoredAsOf}` : "Supply date unavailable"}</p>;
 }
 
+/**
+ * One desktop figure cell. The label line has a fixed height (a help glyph
+ * never pushes its figure down) and caveat notes follow the sub-line, so every
+ * cell's figure and delta sit on the same lines.
+ */
 function CompactMetricCell({
   label,
   children,
   subline,
+  note,
 }: {
   label: React.ReactNode;
   children: React.ReactNode;
   subline?: React.ReactNode;
+  note?: React.ReactNode;
 }) {
   return (
     <div className="min-h-[8.25rem] border-b border-border/40 px-5 py-5 last:border-b-0 sm:px-6 lg:border-b-0 lg:border-r lg:last:border-r-0">
-      <p className={HERO_METRIC_LABEL_CLASS}>{label}</p>
+      <p className={cn(HERO_METRIC_LABEL_CLASS, "flex h-5 items-center")}>{label}</p>
       <div className="mt-3">{children}</div>
       {subline ? <div className="pharos-label mt-2">{subline}</div> : null}
+      {note}
     </div>
   );
 }
@@ -147,30 +162,27 @@ export function HeroPriceMetric({
     : frozenAt
       ? `Last observed · ${frozenAt}`
       : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, referenceMarketClosed, isNavToken });
-  const referenceClass = !observed || pegReferenceUnavailable || referenceMarketClosed || frozenAt
+  // Only a peg deviation is a risk reading; every other reference line is neutral.
+  const referenceClass = !observed || pegReferenceUnavailable || referenceMarketClosed || frozenAt || isNavToken || deviationBps == null
     ? "text-muted-foreground"
-    : isNavToken
-      ? DIRECTION_TONE_CLASSES.up
-      : deviationBps == null
-        ? "text-muted-foreground"
-        : deviationColorClass(Math.abs(deviationBps));
+    : deviationColorClass(Math.abs(deviationBps));
 
   if (variant === "cell") {
     return (
       <CompactMetricCell
         label={priceLabel}
         subline={<span className={referenceClass}><FigureLeadText text={referenceLine} /></span>}
+        note={limitedDepegCoverageNote ? (
+          <p className="mt-2 max-w-[24ch] text-2xs leading-snug text-state-warn">
+            {limitedDepegCoverageNote}
+          </p>
+        ) : null}
       >
         <p
           className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)}`}
         >
           {price}
         </p>
-        {limitedDepegCoverageNote ? (
-          <p className="mt-2 max-w-[24ch] text-2xs leading-snug text-state-warn">
-            {limitedDepegCoverageNote}
-          </p>
-        ) : null}
       </CompactMetricCell>
     );
   }
@@ -208,34 +220,33 @@ function HeroMarketCapMetric({
   safePrevDay,
   prevDayTrendClass,
 }: HeroMarketCapMetricProps) {
+  // A non-dollar coin's cap is still counted in USD; the label says so, as the
+  // price label names its unit.
+  const label = coin.flags.pegCurrency === "USD" ? "Market cap" : "Market cap (USD)";
   if (variant === "cell") {
     return (
       <CompactMetricCell
-        label="Market cap"
+        label={label}
         subline={
           <span className={`pharos-numeric ${prevDayTrendClass}`}>
             {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24H</span>
           </span>
         }
+        note={<SupplyRestoredNotice coinData={coinData} className="mt-2 text-2xs text-state-warn" />}
       >
         <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">{mcap != null ? formatCurrency(mcap) : "—"}</p>
-        {coin.flags.pegCurrency !== "USD" ? (
-          <p className="mt-2 text-2xs text-muted-foreground">USD-normalized</p>
-        ) : null}
-        <SupplyRestoredNotice coinData={coinData} className="mt-2 text-2xs text-state-warn" />
       </CompactMetricCell>
     );
   }
 
   return (
     <div className="min-w-0 pharos-inset px-3 py-2.5">
-      <p className={HERO_METRIC_LABEL_CLASS}>Market cap</p>
+      <p className={HERO_METRIC_LABEL_CLASS}>{label}</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
-      {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}
-      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-state-warn" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
         {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24h</span>
       </p>
+      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-state-warn" />
     </div>
   );
 }
@@ -245,7 +256,13 @@ export function HeroSupplyMetric({
   supply,
   supplyTrend: { current, safePrevWeek, prevWeekTrendClass, hasPrevMonth, safePrevMonth, prevMonthTrendClass },
   coinSymbol,
-}: HeroSupplyFields & { coinSymbol: string; variant?: HeroMetricVariant }) {
+  wide = false,
+}: HeroSupplyFields & {
+  coinSymbol: string;
+  variant?: HeroMetricVariant;
+  /** Card variant: span two of the row's four tracks from sm (see `HeroMarketMetricGrid`). */
+  wide?: boolean;
+}) {
   if (variant === "cell") {
     return (
       <CompactMetricCell
@@ -272,27 +289,25 @@ export function HeroSupplyMetric({
     );
   }
 
+  // Same inset cell as Price and Market cap: one figure, its deltas under it.
   return (
-    <div className="mt-3 min-h-24 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
-      <div className="flex min-h-20 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <div>
-          <p className={HERO_METRIC_LABEL_CLASS}>Supply</p>
-          <p className="text-base font-bold pharos-numeric">
-            {supply != null ? formatSupply(supply) : "—"}{" "}
-            <span className="text-xs text-muted-foreground">{coinSymbol}</span>
-          </p>
-        </div>
-        <div className="text-right">
-          <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-            {formatTrendPercent(current, safePrevWeek)} <span className="text-muted-foreground">7d</span>
-          </p>
-          {hasPrevMonth && (
-            <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-              {formatTrendPercent(current, safePrevMonth)} <span className="text-muted-foreground">30d</span>
-            </p>
-          )}
-        </div>
-      </div>
+    <div className={cn("col-span-2 min-w-0 pharos-inset px-3 py-2.5", !wide && "sm:col-span-1")}>
+      <p className={HERO_METRIC_LABEL_CLASS}>Supply</p>
+      <p className="break-words text-lg font-bold pharos-numeric tracking-tight">
+        {supply != null ? formatSupply(supply) : "—"}{" "}
+        <span className="text-xs font-semibold text-muted-foreground">{coinSymbol}</span>
+      </p>
+      <p className="mt-1 text-xs pharos-numeric">
+        <span className={prevWeekTrendClass}>{formatTrendPercent(current, safePrevWeek)}</span>
+        <span className="text-muted-foreground"> 7d</span>
+        {hasPrevMonth ? (
+          <>
+            <span className="text-muted-foreground"> · </span>
+            <span className={prevMonthTrendClass}>{formatTrendPercent(current, safePrevMonth)}</span>
+            <span className="text-muted-foreground"> 30d</span>
+          </>
+        ) : null}
+      </p>
     </div>
   );
 }
@@ -315,6 +330,8 @@ interface HeroMarketMetricGridProps extends HeroPriceMetricProps {
   variant: HeroMetricVariant;
   market: HeroCardViewModel["market"];
   tertiaryMetric?: HeroTertiaryMetricConfig;
+  /** Card variant: how many signal tiles sit under this row, so both rows share column edges. */
+  tertiaryCount?: number;
   coinData: HeroPriceMetricProps["coinData"] & Pick<DetailQuote, "supplyRestored" | "supplyObservedAt" | "supplyExcludedChains">;
 }
 
@@ -325,30 +342,33 @@ export function HeroMarketMetricGrid({
   price,
   market,
   tertiaryMetric,
+  tertiaryCount = 0,
 }: HeroMarketMetricGridProps) {
   const supplyFields: HeroSupplyFields = { supply: market.supply, supplyTrend: market.supplyTrend };
 
   if (variant === "card") {
+    // Phone: Price · Market cap, then Supply across. From sm one row on the
+    // signal row's column edges: thirds over three signals, quarters (Supply
+    // spanning two) over two or four.
+    const quarters = tertiaryCount === 2 || tertiaryCount === 4;
     return (
-      <>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <HeroPriceMetric variant="card" coin={coin} coinData={coinData} price={price} />
-          <HeroMarketCapMetric
-            variant="card"
-            coin={coin}
-            coinData={coinData}
-            mcap={market.mcap}
-            safePrevDay={market.safePrevDay}
-            prevDayTrendClass={market.prevDayTrendClass}
-          />
-        </div>
-        <HeroSupplyMetric variant="card" coinSymbol={coin.symbol} {...supplyFields} />
-      </>
+      <div className={quarters ? "grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3" : "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3"}>
+        <HeroPriceMetric variant="card" coin={coin} coinData={coinData} price={price} />
+        <HeroMarketCapMetric
+          variant="card"
+          coin={coin}
+          coinData={coinData}
+          mcap={market.mcap}
+          safePrevDay={market.safePrevDay}
+          prevDayTrendClass={market.prevDayTrendClass}
+        />
+        <HeroSupplyMetric variant="card" coinSymbol={coin.symbol} wide={quarters} {...supplyFields} />
+      </div>
     );
   }
 
   return (
-    <div className={`grid lg:grid-cols-3 ${tertiaryMetric ? "xl:grid-cols-4" : ""}`}>
+    <div className={`grid ${tertiaryMetric ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
       <HeroPriceMetric variant="cell" coin={coin} coinData={coinData} price={price} />
       <HeroMarketCapMetric
         variant="cell"
@@ -364,46 +384,41 @@ export function HeroMarketMetricGrid({
   );
 }
 
+/**
+ * A signal tile. Label, figure and sub-line sit in the same place on every
+ * tile (the label line has a fixed height, so a help glyph never pushes its
+ * figure down); only a risk reading tints its figure.
+ */
 function MetricChip({
   label,
   value,
   subValue,
   colorClass = "text-foreground",
-  accentClass,
-  mobileHideSub = false,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
-  accentClass?: string;
-  mobileHideSub?: boolean;
 }) {
-  const isEmpty = value === "—";
-
   return (
-    // Passive stat chip — deliberately NOT .pharos-control-pill, which is
-    // reserved for interactive controls; accentClass stays a data-driven
-    // severity border (allowed carve-out).
-    <div
-      className={`rounded-lg border border-border/60 bg-background/45 grid min-h-20 w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-1 px-2.5 py-1.5 ${accentClass ?? ""}`}
-    >
-      {label ? (
-        <span className="pharos-label">{label}</span>
-      ) : null}
-      <span
-        className={`text-lg font-bold pharos-numeric ${colorClass}`}
-        aria-hidden={isEmpty ? "true" : undefined}
-      >
-        {value}
-      </span>
-      {isEmpty && <span className="sr-only">data unavailable</span>}
-      {subValue && !mobileHideSub && (
-        <span className="col-span-2 text-2xs text-muted-foreground">{subValue}</span>
-      )}
+    // Passive stat tile — deliberately NOT .pharos-control-pill, which is
+    // reserved for interactive controls.
+    <div className="flex min-h-16 min-w-0 flex-col rounded-lg border border-border/60 bg-background/45 px-3 py-2">
+      <span className="pharos-label flex h-6 min-w-0 items-center whitespace-nowrap">{label}</span>
+      <span className={`text-lg font-bold leading-tight pharos-numeric ${colorClass}`}>{value}</span>
+      {subValue ? <span className="mt-0.5 text-2xs text-muted-foreground">{subValue}</span> : null}
     </div>
   );
 }
+
+// Signal-row columns by tile count: never a lone tile across the row. From sm
+// the edges match the market row above (thirds or quarters).
+const TERTIARY_GRID_COLUMNS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-2 sm:grid-cols-4",
+};
 
 export function HeroTertiaryMetrics({
   metrics,
@@ -412,34 +427,19 @@ export function HeroTertiaryMetrics({
   metrics: HeroTertiaryMetricConfig[];
   activeDepeg: boolean;
 }) {
-  const regularMetrics = metrics.filter((metric) => metric.key !== "performance-vs-usd");
-  const performanceMetric = metrics.find((metric) => metric.key === "performance-vs-usd");
-
   return (
     <>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {regularMetrics.map((metric) => (
-          <MetricChip
-            key={metric.key}
-            label={metric.mobileLabel ?? metric.label}
-            value={metric.value}
-            subValue={metric.subValue}
-            colorClass={metric.colorClass}
-            accentClass={metric.accentClass}
-            mobileHideSub={metric.key === "excess-yield"}
-          />
-        ))}
-      </div>
-      {performanceMetric ? (
-        <div className="mt-2">
-          <MetricChip
-            label={performanceMetric.mobileLabel ?? performanceMetric.label}
-            value={performanceMetric.value}
-            subValue={performanceMetric.subValue}
-            colorClass={performanceMetric.colorClass}
-            accentClass={performanceMetric.accentClass}
-            mobileHideSub
-          />
+      {metrics.length > 0 ? (
+        <div className={cn("mt-2.5 grid gap-2.5 sm:mt-3 sm:gap-3", TERTIARY_GRID_COLUMNS[metrics.length])}>
+          {metrics.map((metric) => (
+            <MetricChip
+              key={metric.key}
+              label={metric.mobileLabel ?? metric.label}
+              value={metric.value}
+              subValue={metric.subValue}
+              colorClass={metric.colorClass}
+            />
+          ))}
         </div>
       ) : null}
 

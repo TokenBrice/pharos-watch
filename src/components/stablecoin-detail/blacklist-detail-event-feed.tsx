@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
-import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, timeAgo, formatEventDate } from "@shared/lib/format";
@@ -64,13 +63,13 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
   const sourceLabels = new Set(data.events.map(getBlacklistAmountSourceLabel));
   const sharedSourceLabel = sourceLabels.size === 1 ? [...sourceLabels][0] : null;
 
-  // The log folds by default; its summary keeps the event count visible.
+  // The log is the module's content, so it is open: a fold left the card a
+  // sentence and a collapsed toggle.
   return (
     <>
       {health}
-      <ModuleDisclosure label="Latest events" count={data.events.length}>
       {sharedSourceLabel ? (
-        <p className="pharos-label mt-2">Amount source: {sharedSourceLabel}</p>
+        <p className="pharos-label">Amount source: {sharedSourceLabel}</p>
       ) : null}
       <div className="mt-2">
       <DataTableShell
@@ -122,7 +121,6 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
         })}
       </DataTableShell>
       </div>
-      </ModuleDisclosure>
       <div className="mt-3 flex justify-end">
         <IntentLink
           href={`/freezewatch/?stablecoin=${symbol}`}

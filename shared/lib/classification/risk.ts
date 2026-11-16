@@ -15,17 +15,19 @@ const THREAT_BAND_DESCRIPTORS = {
     textCls: "text-green-700 dark:text-green-400",
     hex: "#22c55e",
   },
+  // One warming ramp, calm → danger: Watch is the first step away from
+  // green, never a second "good" teal.
   WATCH: {
     label: "Watch",
-    cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
-    textCls: "text-teal-700 dark:text-teal-400",
-    hex: "#14b8a6",
+    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/25",
+    textCls: "text-yellow-700 dark:text-yellow-400",
+    hex: "#eab308",
   },
   ALERT: {
     label: "Alert",
-    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-    textCls: "text-yellow-700 dark:text-yellow-400",
-    hex: "#eab308",
+    cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25",
+    textCls: "text-amber-700 dark:text-amber-400",
+    hex: "#f59e0b",
   },
   WARNING: {
     label: "Warning",

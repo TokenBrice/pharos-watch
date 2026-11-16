@@ -65,9 +65,12 @@ describe("EvidenceModule", () => {
     const { container } = render(shell(<Disclosures />, <Evidence />));
     const body = container.querySelector("#explicit-slots-body")!;
     expect(body.children[0]?.textContent).toBe("Visual summary.Current state.");
-    expect(body.children[1]?.tagName).toBe("DETAILS");
-    expect(body.children[1]?.textContent).toContain("Provider evidence.");
-    expect(body.lastElementChild?.textContent).toContain("Review basis.");
+    // Folds and footer share the full-width block pinned to the card's foot.
+    const foldRun = body.children[1]!;
+    expect(foldRun.className).toContain("mt-auto");
+    expect(foldRun.children[0]?.tagName).toBe("DETAILS");
+    expect(foldRun.children[0]?.textContent).toContain("Provider evidence.");
+    expect(foldRun.lastElementChild?.textContent).toContain("Review basis.");
   });
 
   it("folds a tile below md as an accordion whose button controls the body", () => {
@@ -93,6 +96,7 @@ describe("EvidenceModule", () => {
           id="custody"
           title="Custody"
           variant="tile"
+          headerRight={<span>Segregated</span>}
           methodology={<button type="button" aria-label="Custody methodology">?</button>}
         >
           <p>Custodian breakdown.</p>
@@ -114,6 +118,35 @@ describe("EvidenceModule", () => {
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(document.getElementById("custody-body")?.textContent).toContain("Custodian breakdown.");
+  });
+
+  it("keeps the status chip beside the title, before the phone accordion's chevron", () => {
+    const { container } = renderCustodyTile();
+    const header = container.querySelector("#custody")!.firstElementChild!;
+    const chevron = header.querySelector("svg.lucide-chevron-down")!;
+    expect(screen.getByText("Omnibus").compareDocumentPosition(chevron) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // No header row is forced onto its own line: the chips wrap only when they do not fit.
+    expect(header.innerHTML).not.toContain("basis-full");
+  });
+
+  it("never folds a tile to a bare title: it folds only with a status chip or a folded summary", () => {
+    const { unmount } = render(
+      <EvidenceModule id="access" title="Access posture" variant="strip">
+        <p>Transfer permissionless.</p>
+      </EvidenceModule>,
+    );
+    // No key figure for a folded header: the module stays open on a phone.
+    expect(screen.queryByRole("button", { name: "Access posture" })).toBeNull();
+    expect(document.getElementById("access")?.hasAttribute("data-expanded")).toBe(false);
+    unmount();
+
+    render(
+      <EvidenceModule id="backing" title="Backing mechanics" variant="tile" foldedSummary={<span>1.5% loss absorption</span>}>
+        <p>Reserve fund over supply.</p>
+      </EvidenceModule>,
+    );
+    expect(screen.getByRole("button", { name: "Backing mechanics" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText("1.5% loss absorption")).toBeTruthy();
   });
 
   it("never folds a full-width module unless asked to", () => {
@@ -148,7 +181,7 @@ describe("EvidenceModule", () => {
     render(
       <>
         <div id="reserves">Reserves</div>
-        <EvidenceModule id="custody" title="Custody" variant="tile">
+        <EvidenceModule id="custody" title="Custody" variant="tile" headerRight={<span>Segregated</span>}>
           <p>Custodian breakdown.</p>
         </EvidenceModule>
       </>,
@@ -203,7 +236,8 @@ describe("EvidenceStateStrip", () => {
 
     expect(screen.getByRole("heading", { level: 3, name: "DEWS" })).toBeTruthy();
     expect(container.querySelector("section")?.getAttribute("data-evidence-state")).toBe("not-applicable");
-    expect(screen.getByText("NAV tokens accrue by design")).toBeTruthy();
+    // The separator travels with the reason, so a wrapped reason never strands a trailing dot.
+    expect(screen.getByText("NAV tokens accrue by design").textContent).toMatch(/^·/);
     expect(container.textContent?.replace("NAV tokens accrue by design", "")).not.toBe(notReviewedText);
   });
 });

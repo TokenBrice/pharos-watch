@@ -52,7 +52,7 @@ export interface ReserveCompositionSlice {
   label: string;
   pct: number;
   risk: ReserveRisk;
-  /** Obligor / asset-class line for tooltips; never rendered as tile text. */
+  /** Obligor / asset-class line for the list row's hover title; never rendered as row text. */
   detail: string | null;
   /** The slice's reviewed role in the basket (its asset class label), when classified. */
   role?: string | null;
@@ -146,6 +146,24 @@ function formatReserveUpdatedAt(timestamp: number | undefined): string {
     : "the previous successful run";
 }
 
+/**
+ * The visible form of a reserve feed stamp: an unknown source or composition
+ * date drops out (the check already dates the reading), and a check on the
+ * dated day names only its time, so the stamp fits one footer line. The
+ * full label stays in the "Live reserve feed" fold.
+ */
+export function compactReserveStamp(label: string): string {
+  const parts = label.split(" · ");
+  const checked = parts.some((part) => part.startsWith("Checked "));
+  const sameDay = parts
+    .map((part) => /^(?:Source|Report|Composition) as of (\d{4}-\d{2}-\d{2})$/.exec(part)?.[1])
+    .find(Boolean);
+  return parts
+    .filter((part) => !(checked && /^(?:Source|Composition) date unavailable$/.test(part)))
+    .map((part) => (sameDay && part.startsWith(`Checked ${sameDay} `) ? `Checked ${part.slice(9 + sameDay.length)}` : part))
+    .join(" · ");
+}
+
 export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
   const sourceTimestamp = reserves.metadata?.sourceTimestamp;
   const sourceDate = typeof sourceTimestamp === "number" && Number.isFinite(sourceTimestamp)
@@ -159,7 +177,7 @@ export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
   return `${asOf} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
-function formatReserveCompositionLabel(reserves: ReserveResult): string {
+function formatReserveCompositionLabel(reserves: ReserveResult, reviewedCompositionAsOf: string | null): string {
   const details = reserves.metadata?.details;
   const compositionAsOf = details?.compositionAsOf;
   const hasCompositionDate = typeof compositionAsOf === "string"
@@ -170,8 +188,13 @@ function formatReserveCompositionLabel(reserves: ReserveResult): string {
     return formatReserveSnapshotLabel(reserves);
   }
 
-  // A totals observation cannot date a separately reviewed reserve mix.
-  const asOf = hasCompositionDate ? `Composition as of ${compositionAsOf}` : "Composition date unavailable";
+  // A totals observation cannot date a separately reviewed reserve mix. An
+  // undated reviewed-config feed replays the reviewed basket, so it takes the
+  // review's composition date, which the caller passes only when the two match.
+  const reviewedAsOf = details?.compositionSource === "reviewed-config" ? reviewedCompositionAsOf : null;
+  const asOf = hasCompositionDate
+    ? `Composition as of ${compositionAsOf}`
+    : reviewedAsOf ? `Composition as of ${reviewedAsOf}` : "Composition date unavailable";
   return `${asOf} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
@@ -189,18 +212,20 @@ export function buildReserveFootnoteModel(
   reserves: ReserveResult,
   isLiveEnabled: boolean,
   backingLabel: string,
+  /** The reviewed basket's as-of date, passed only when the live composition matches it. */
+  reviewedCompositionAsOf: string | null = null,
 ): ReserveFootnoteModel | null {
   const references = reserveReferenceLinks(reserves);
 
   switch (reserves.mode) {
     case "live":
       return {
-        text: formatReserveCompositionLabel(reserves),
+        text: formatReserveCompositionLabel(reserves, reviewedCompositionAsOf),
         references,
       };
     case "live-stale":
       return {
-        text: formatReserveCompositionLabel(reserves),
+        text: formatReserveCompositionLabel(reserves, reviewedCompositionAsOf),
         references,
       };
     case "curated-fallback":
@@ -495,44 +520,45 @@ export function liveCompositionDiffers(
   });
 }
 
-/** The Reserves visual labels at most this many groups; all groups retain geometry. */
-const RESERVE_VISUAL_SLICE_LIMIT = 5;
+/** Ranked rows the Reserves composition list shows before folding the rest. */
+const RESERVE_LIST_ROW_LIMIT = 8;
 
-export interface CondensedReserveSlices {
-  /** Labelled by the visual, largest first. */
+export interface ReserveCompositionSegment {
+  key: string;
+  pct: number;
+  risk: ReserveRisk;
+}
+
+export interface ReserveCompositionRows {
+  /** Ranked rows listed under the bar. */
   shown: ReserveCompositionSlice[];
-  /** Labels/details folded beneath the visual; these groups still occupy their full share. */
+  /** Rows folded beneath the list with their count and share. */
   rest: ReserveCompositionSlice[];
   restPct: number;
+  /**
+   * Bar segments: one per shown row, then the folded rows merged per risk
+   * tier, so every slice keeps its full weight and actual tier in the bar
+   * without a crumb per slice or an invented mixed-risk "Other".
+   */
+  segments: ReserveCompositionSegment[];
 }
 
 /**
- * Long baskets (USDT 11 slices, FRAX 45) drew a treemap of crumbs and
- * near-duplicate tiles. Above the limit, slices sharing an asset class (or,
- * unclassified, the same normalized name) and a risk tier merge into one
- * tile; only labels and details beyond the largest groups fold with their count
- * and share. Every group remains in the layout. Short baskets pass through unchanged.
+ * Splits a largest-first basket into the listed rows, the folded rest and the
+ * bar segments. Authored shares are never normalized to 100.
  */
-export function condenseReserveSlices(slices: readonly ReserveCompositionSlice[]): CondensedReserveSlices {
-  if (slices.length <= RESERVE_VISUAL_SLICE_LIMIT) return { shown: [...slices], rest: [], restPct: 0 };
-  const groups = new Map<string, ReserveCompositionSlice[]>();
-  for (const slice of slices) {
-    const key = `${slice.role ? `class:${slice.role}` : `name:${sliceIdentity(slice.label)}`}|${slice.risk}`;
-    groups.set(key, [...(groups.get(key) ?? []), slice]);
-  }
-  const merged = [...groups.entries()].map(([key, members]): ReserveCompositionSlice => {
-    const [first] = members as [ReserveCompositionSlice, ...ReserveCompositionSlice[]];
-    if (members.length === 1) return first;
-    return {
-      key: `group:${key}`,
-      label: `${first.role ?? first.label} (${members.length} slices)`,
-      pct: members.reduce((sum, member) => sum + member.pct, 0),
-      risk: first.risk,
-      detail: members.map((member) => member.label).join(" · "),
-      role: first.role ?? null,
-    };
-  }).sort((a, b) => b.pct - a.pct);
-  const shown = merged.slice(0, RESERVE_VISUAL_SLICE_LIMIT);
-  const rest = merged.slice(RESERVE_VISUAL_SLICE_LIMIT);
-  return { shown, rest, restPct: rest.reduce((sum, slice) => sum + slice.pct, 0) };
+export function splitReserveCompositionRows(slices: readonly ReserveCompositionSlice[]): ReserveCompositionRows {
+  const shown = slices.slice(0, RESERVE_LIST_ROW_LIMIT);
+  const rest = slices.slice(RESERVE_LIST_ROW_LIMIT);
+  const restByRisk = new Map<ReserveRisk, number>();
+  for (const slice of rest) restByRisk.set(slice.risk, (restByRisk.get(slice.risk) ?? 0) + slice.pct);
+  return {
+    shown,
+    rest,
+    restPct: rest.reduce((sum, slice) => sum + slice.pct, 0),
+    segments: [
+      ...shown.map(({ key, pct, risk }) => ({ key, pct, risk })),
+      ...[...restByRisk].sort((a, b) => b[1] - a[1]).map(([risk, pct]) => ({ key: `rest:${risk}`, pct, risk })),
+    ],
+  };
 }

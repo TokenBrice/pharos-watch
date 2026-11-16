@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
 import { ChevronDown } from "lucide-react";
 import { MODULE_DISCLOSURE_SUMMARY_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
@@ -41,6 +41,24 @@ function ScoreInputsDisclosure() {
         className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", enabled && "rotate-180")}
       />
     </button>
+  );
+}
+
+/**
+ * A dated provenance stamp ("Source as of 2026-11-16 · Checked 16:13 UTC")
+ * that wraps only between its " · " segments, never inside a date or a time,
+ * so a narrow footer never strands "UTC" alone on a line.
+ */
+export function FooterStamp({ text }: { text: string }) {
+  return (
+    <span>
+      {text.split(" · ").map((segment, index) => (
+        <Fragment key={segment}>
+          {index > 0 ? " · " : null}
+          <span className="whitespace-nowrap">{segment}</span>
+        </Fragment>
+      ))}
+    </span>
   );
 }
 
@@ -228,8 +246,10 @@ export function EvidenceFooter({
 
   if (!hasFold) return line;
 
+  // `contents`: the provenance fold joins the module's details bar beside
+  // the domain folds; the footer line, a block, still closes the module.
   return (
-    <div data-module-fold="" className={cn("space-y-3", className)}>
+    <div data-module-fold="" className={cn("contents [&>div]:mt-3", className)}>
       {fold}
       {line}
     </div>

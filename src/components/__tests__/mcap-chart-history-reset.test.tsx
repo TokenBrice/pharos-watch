@@ -99,7 +99,7 @@ describe("ExpandableHistoryMcapChart wide-read recovery", () => {
     render(<ControlledChart initialRange={failed ? "1y" : "all"} />);
     await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("90d"));
     expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
-    expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "90d" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("keeps the requested wide range in state while its read is in flight", async () => {
@@ -107,12 +107,12 @@ describe("ExpandableHistoryMcapChart wide-read recovery", () => {
     render(<ControlledChart initialRange="1y" />);
 
     await waitFor(() => expect(screen.getByTestId("requested-range").textContent).toBe("1y"));
-    expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "90d" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "1y" }).getAttribute("aria-pressed")).toBe("false");
   });
 
   it.each([
-    ["all", "All", "all", 4], ["365", "1Y", "1y", 3],
+    ["all", "All", "all", 4], ["365", "1y", "1y", 3],
   ] as const)("retries %s against its history key", async (key, button, range, points) => {
     setWindowState("all", { isError: true, error: new Error("upstream down") });
     render(<ControlledChart initialRange="all" />);
@@ -138,4 +138,14 @@ it.each([
   }));
   render(<McapChart stablecoinId={stablecoinId} data={data} />);
   expect(screen.queryByText(/% 24h/)?.textContent ?? null).toBe(delta);
+});
+
+it("headlines the hero's live market cap and 24h change instead of the last daily snapshot", () => {
+  render(<McapChart stablecoinId="bold-liquity" data={seed} current={{ mcap: 32_800_000, prevDay: 34_184_000 }} embedded />);
+  expect(screen.getByText("$32.80M")).toBeTruthy();
+  expect(screen.getByText("-4.05% 24h")).toBeTruthy();
+  // A missing prior day is no change at all, never a 0% one.
+  cleanup();
+  render(<McapChart stablecoinId="bold-liquity" data={seed} current={{ mcap: 32_800_000, prevDay: null }} embedded />);
+  expect(screen.queryByText(/% 24h/)).toBeNull();
 });

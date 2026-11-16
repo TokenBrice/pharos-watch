@@ -2,10 +2,10 @@
 
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Info } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { MODULE_FOLD_RHYTHM_CLASS, ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
@@ -31,11 +31,9 @@ import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
 } from "@/lib/yield-source-risk";
-import {
-  DIRECTION_CHIP_CLASSES,
-  DIRECTION_TONE_CLASSES,
-} from "@shared/lib/classification";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { YieldRankChangeAttribution } from "@shared/types/yield-evidence-schemas";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -44,15 +42,25 @@ import { useYieldDetailSectionModel } from "@/components/yield/yield-detail-sect
 import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield/yield-detail-section-alt-sources";
 import { PysBreakdown } from "@/components/yield/pys-breakdown";
-import { StatTile } from "@/components/stat-tile";
 import { YieldSourceRiskCard } from "@/components/yield/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield/yield-decision-ledger-card";
 import { classifyApyChange } from "@/lib/yield-change-attribution";
 import {
   formatSignedPysDelta, formatYieldBenchmarkSpread, formatYieldBenchmarkSpreadChip,
-  formatYieldDepositExplanation, formatYieldDriverContext,
-  YIELD_SOURCE_FACT_LABELS, YIELD_CALCULATION_MODE_LABELS, YIELD_SCORE_QUALIFICATION_LABELS,
+  formatYieldDriverContext,
+  YIELD_SOURCE_FACT_LABELS, YIELD_CALCULATION_MODE_LABELS, YIELD_SCORE_QUALIFICATION_LABELS, isIssuerOwnYieldVenue,
 } from "@/lib/yield-presentation";
+
+/**
+ * Inline facts separated by a dot that never ends or starts a wrapped line:
+ * each later item draws its dot in the gap before it, and the row clips the
+ * dot of whichever item opens a line (padding keeps focus rings unclipped).
+ */
+const DOT_SEPARATED_ROW_CLASS =
+  "-mx-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 overflow-x-clip px-1 [&>*+*]:relative [&>*+*]:before:absolute [&>*+*]:before:-left-2.5 [&>*+*]:before:text-muted-foreground/60 [&>*+*]:before:content-['·']";
+/** One label row and one numeric style across the three stat tiles, so their figures share a baseline. */
+const STAT_LABEL_CLASS = "pharos-label flex min-h-6 flex-wrap items-center gap-x-2 gap-y-1";
+const STAT_VALUE_CLASS = "font-mono text-xl leading-7 tabular-nums text-foreground";
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -73,7 +81,7 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
               {headerEnd}
             </div>
           </CardHeader>
-          <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>{children}</CardContent>
+          <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4", MODULE_FOLD_RHYTHM_CLASS)}>{children}</CardContent>
         </Card>
       </section>
     </TooltipProvider>
@@ -151,34 +159,49 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
   const { ranking } = view;
   const totalSourceCount = 1 + ranking.altSources.length;
-  const headerEnd = (
-    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", view.yieldTypeBadge)}>
-      {view.yieldTypeLabel}
-    </span>
-  );
   const workbenchLink = getYieldWorkbenchLink(stablecoinId);
   const hasWorkbench = workbenchLink.isWorkbench;
   const qualification = resolveYieldScoreQualification(ranking);
   const qualificationLabel = YIELD_SCORE_QUALIFICATION_LABELS[qualification as keyof typeof YIELD_SCORE_QUALIFICATION_LABELS];
+  const isExternal = ranking.sourceRole === "external-opportunity";
+  const issuerVenue = isExternal && isIssuerOwnYieldVenue(ranking);
   const rolePrefix = ranking.sourceRole === "canonical-holder"
     ? YIELD_SOURCE_FACT_LABELS.holder
-    : ranking.sourceRole === "external-opportunity"
-      ? YIELD_SOURCE_FACT_LABELS.external
+    : isExternal
+      ? issuerVenue ? YIELD_SOURCE_FACT_LABELS.issuerOptIn : YIELD_SOURCE_FACT_LABELS.external
       : ranking.sourceRole === "fallback-proxy" && qualification === "estimated"
         ? YIELD_SOURCE_FACT_LABELS.estimated : null;
+  // The role, not the yield-type abbreviation, is what a reader needs first:
+  // whether holding the coin earns this rate at all. A category: neutral.
+  const headerEnd = (
+    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", SEVERITY_TONE_CLASS.neutral.pill)}>
+      {rolePrefix ?? view.yieldTypeLabel}
+    </span>
+  );
   const confidence = ranking.provenance?.confidenceTier;
   const freshness = view.sourceExplorer.selectedSource.freshness;
-  const venue = ranking.sourceRisk?.venueProtocol;
-  const chain = ranking.sourceRisk?.venueChain;
+  const chainKey = ranking.sourceRisk?.venueChain;
+  const chain = chainKey ? CHAIN_META[chainKey.toLowerCase()]?.name ?? chainKey : null;
   const deployment = ranking.sourceRisk?.deploymentPlace;
   const calculationMode = ranking.provenance?.calculationMode;
   const excessYield = ranking.excessYield;
+  // An unmeasured stability is no tile at all, never a dash.
+  const hasStability = ranking.yieldStability != null;
   // An excess that prints as ±0.00% (|excess| below half of the last displayed
   // 0.01% digit) is a hurdle match, not a miss; the hurdle label is
   // schema-optional and needs a spoken default (E20).
   const excessWithinDisplayPrecision = excessYield != null && Math.abs(excessYield) < 0.005;
   const benchmarkHurdleLabel = view.ranking.benchmarkLabel ?? "benchmark";
   const publishedBenchmarkRate = view.ranking.benchmarkRate ?? null;
+  // Verdict first, from published figures: the 30-day APY and its spread over
+  // the benchmark hurdle. Prose spells the spread unit out; chips keep "pp".
+  const apyClause = view.ranking.apy30d != null ? `${formatPercent(view.ranking.apy30d)} APY over 30 days` : null;
+  const spreadClause = excessYield != null
+    ? formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate).replace(" pp ", " percentage points ")
+    : null;
+  const verdict = apyClause
+    ? `${rolePrefix && !isExternal ? `${rolePrefix}: ` : ""}${apyClause}${spreadClause ? `, ${spreadClause}` : ""}.`
+    : "APY trend against the current benchmark hurdle rate and peer median.";
   const historyChart = (
     <YieldHistoryChart
       stablecoinId={stablecoinId}
@@ -206,9 +229,23 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         }]}
       />
       <div className="space-y-3">
-        <div className="space-y-1 text-xs">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            {rolePrefix ? <span className="font-medium">{rolePrefix} ·</span> : null}
+        {/* An external opportunity is a deposit somewhere else, not the coin's
+            own yield: say so before any figure, in words, not only a chip. */}
+        {isExternal ? (
+          <p className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              <span className="font-medium text-foreground">Not yield from simply holding {ranking.symbol}.</span>{" "}
+              {issuerVenue
+                ? `This rate requires opting in: depositing ${ranking.symbol} in ${view.sourceExplorer.selectedSource.displayLabel}, part of the issuer's own protocol.`
+                : `This rate requires depositing ${ranking.symbol} with the third-party venue below.`}
+            </span>
+          </p>
+        ) : null}
+        <p className="text-sm text-foreground">{verdict}</p>
+        <div className={cn(DOT_SEPARATED_ROW_CLASS, "text-xs text-muted-foreground")}>
+          <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span>Source</span>
             <YieldSourceIdentity
               displayLabel={view.sourceExplorer.selectedSource.displayLabel}
               url={view.sourceExplorer.selectedSource.url}
@@ -216,33 +253,17 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               confidenceLabel={confidence ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidence].label : null}
               sourceChanged={view.sourceExplorer.sourceSwitch.changed}
             />
-            {freshness ? <YieldFreshnessLabel freshness={freshness} /> : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-            <span className={cn("rounded-full border px-2 py-0.5 text-3xs font-medium", view.dataSourceMeta.badge)}>
-              {view.dataSourceMeta.label}
-            </span>
-            {venue ? <span>{YIELD_SOURCE_FACT_LABELS.venue}: {venue}</span> : null}
-            {chain ? <span>{venue ? "· " : ""}{chain}</span> : null}
-            {deployment && deployment !== "price-derived" && deployment !== "rate-derived" ? (
-              <span>{venue || chain ? "· " : ""}{deployment.replaceAll("-", " ")}</span>
-            ) : null}
-            {ranking.sourceRole === "external-opportunity" && venue && chain ? (
-              <span>{formatYieldDepositExplanation(ranking.symbol, venue, chain)}</span>
-            ) : null}
-            {calculationMode === "price-return" ? <span>{YIELD_SOURCE_FACT_LABELS.priceReturn}</span>
-              : ranking.sourceRole === "fallback-proxy" && calculationMode
-                ? <span>{YIELD_CALCULATION_MODE_LABELS[calculationMode]}</span> : null}
-          </div>
+          </span>
+          {chain ? <span>{chain}</span> : null}
+          {deployment && deployment !== "price-derived" && deployment !== "rate-derived" ? (
+            <span>{deployment.replaceAll("-", " ")}</span>
+          ) : null}
+          <span>via {view.dataSourceMeta.label}</span>
+          {freshness ? <span><YieldFreshnessLabel freshness={freshness} /></span> : null}
+          {calculationMode === "price-return" ? <span>{YIELD_SOURCE_FACT_LABELS.priceReturn}</span>
+            : ranking.sourceRole === "fallback-proxy" && calculationMode
+              ? <span>{YIELD_CALCULATION_MODE_LABELS[calculationMode]}</span> : null}
         </div>
-        {/* Verdict line derived from published figures (excess yield vs the
-            benchmark hurdle, PYS after adjustments) — falls back to the
-            neutral caption when the hurdle comparison is unavailable. */}
-        <p className="text-sm text-muted-foreground">
-          {excessYield != null && view.ranking.apy30d != null
-            ? `APY ${formatPercent(view.ranking.apy30d)} is ${formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}; PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
-            : "APY trend against the current benchmark hurdle rate and peer median."}
-        </p>
 
       {view.warningSignals.length > 0 ? (
         <div className="space-y-1.5">
@@ -270,65 +291,80 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile label="Yield" variant="yield">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="font-mono text-2xl tabular-nums text-foreground">
-              {formatPercent(view.ranking.apy30d)}
-            </span>
-            {excessYield !== null ? (
-              <span
-                aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 font-mono text-3xs tabular-nums",
-                  excessWithinDisplayPrecision
-                    ? "bg-muted text-muted-foreground"
-                    : excessYield >= 0
-                      ? DIRECTION_CHIP_CLASSES.up
-                      : DIRECTION_CHIP_CLASSES.down,
-                )}
-              >
-                {formatYieldBenchmarkSpreadChip(excessYield)}
+      {/* One stat strip, not three tall cards: label, figure, one qualifier. */}
+      <dl className={cn("rounded-xl border border-border/60", hasStability ? "grid grid-cols-2 sm:grid-cols-3" : "grid sm:grid-cols-2")}>
+        <div className={cn("min-w-0 px-4 py-3", hasStability ? "border-r border-border/60" : "border-b border-border/60 sm:border-b-0 sm:border-r")}>
+          <dt className={STAT_LABEL_CLASS}>30-day APY</dt>
+          <dd className="mt-1">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className={STAT_VALUE_CLASS}>
+                {formatPercent(view.ranking.apy30d)}
               </span>
+              {excessYield !== null ? (
+                // One text run, not a flex row: a wrapped "vs benchmark" returns to
+                // the left edge instead of hanging under the figure after the arrow.
+                <span
+                  aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, publishedBenchmarkRate)}
+                  title="Spread over the benchmark, in percentage points"
+                  className="font-mono text-2xs tabular-nums text-muted-foreground"
+                >
+                  {excessWithinDisplayPrecision ? null : (
+                    <span aria-hidden="true">{excessYield >= 0 ? "▲\u00a0" : "▼\u00a0"}</span>
+                  )}
+                  {/* Breaks only between "+3.55 pp" and "vs benchmark" in a narrow cell. */}
+                  {formatYieldBenchmarkSpreadChip(excessYield).replace(" pp", "\u00a0pp").replace("vs ", "vs\u00a0")}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 text-2xs text-muted-foreground">
+              Current {formatPercent(view.ranking.currentApy)}
+              {view.benchmarkSubtitle ? ` · ${view.benchmarkSubtitle}` : ""}
+            </p>
+          </dd>
+        </div>
+        {/* Phones: APY and Stability share the first row; the score's
+            breakdown control needs the full width below them. */}
+        <div className={cn("min-w-0 px-4 py-3", hasStability && "order-last col-span-2 border-t border-border/60 sm:order-none sm:col-span-1 sm:border-r sm:border-t-0")}>
+          {/* The qualifier sits with the label so the score shares the other figures' baseline. */}
+          <dt className={STAT_LABEL_CLASS}>
+            <MethodologyLabel topic="pys">Pharos Yield Score</MethodologyLabel>
+            {qualificationLabel ? <span className="rounded-full border px-2 py-0.5 text-3xs font-normal text-muted-foreground">{qualificationLabel}</span> : null}
+          </dt>
+          <dd className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <PysBreakdown
+              mode="inline"
+              score={view.ranking.pharosYieldScore}
+              pysNullReason={ranking.pysNullReason}
+              toneClass={view.pysColor}
+              apy30d={view.ranking.apy30d}
+              effectiveYield={view.pysBreakdown.effectiveYield}
+              benchmarkAdjustment={view.pysBreakdown.benchmarkAdjustment}
+              benchmarkSpread={view.pysBreakdown.benchmarkSpread}
+              hurdleRebase={view.pysBreakdown.hurdleRebase}
+              benchmarkLabel={view.ranking.benchmarkLabel}
+              benchmarkSelectionMode={view.ranking.benchmarkSelectionMode}
+              sourceRiskPenalty={view.pysBreakdown.sourceRiskPenalty}
+              adjustedRiskPenalty={view.pysBreakdown.adjustedRiskPenalty}
+              sustainabilityMult={view.pysBreakdown.sustainabilityMult}
+              grade={view.ranking.safetyGrade}
+              safetyScore={view.ranking.safetyScore}
+              sourceRiskDrivers={view.sourceRiskDrivers}
+              scalingFactor={view.pysBreakdown.scalingFactor}
+            />
+            {view.ranking.provenance?.usedDefaultSafety ? (
+              <p className="w-full text-2xs text-state-warn-bright">Default safety inputs</p>
             ) : null}
+          </dd>
+        </div>
+        {hasStability ? (
+          <div className="min-w-0 px-4 py-3">
+            <dt className={STAT_LABEL_CLASS}>
+              <MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>
+            </dt>
+            <dd className={cn("mt-1", STAT_VALUE_CLASS)}>{view.stabilityValue}</dd>
           </div>
-          <p className="mt-0.5 text-2xs text-muted-foreground">
-            30d trailing · Current {formatPercent(view.ranking.currentApy)}
-            {view.benchmarkSubtitle ? ` · ${view.benchmarkSubtitle}` : ""}
-          </p>
-        </StatTile>
-        <StatTile label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>} variant="yield">
-          {qualificationLabel ? <span className="rounded-full border px-2 py-0.5 text-3xs text-muted-foreground">{qualificationLabel}</span> : null}
-          <PysBreakdown
-            mode="inline"
-            score={view.ranking.pharosYieldScore}
-            pysNullReason={ranking.pysNullReason}
-            toneClass={view.pysColor}
-            apy30d={view.ranking.apy30d}
-            effectiveYield={view.pysBreakdown.effectiveYield}
-            benchmarkAdjustment={view.pysBreakdown.benchmarkAdjustment}
-            benchmarkSpread={view.pysBreakdown.benchmarkSpread}
-            hurdleRebase={view.pysBreakdown.hurdleRebase}
-            benchmarkLabel={view.ranking.benchmarkLabel}
-            benchmarkSelectionMode={view.ranking.benchmarkSelectionMode}
-            sourceRiskPenalty={view.pysBreakdown.sourceRiskPenalty}
-            adjustedRiskPenalty={view.pysBreakdown.adjustedRiskPenalty}
-            sustainabilityMult={view.pysBreakdown.sustainabilityMult}
-            grade={view.ranking.safetyGrade}
-            safetyScore={view.ranking.safetyScore}
-            sourceRiskDrivers={view.sourceRiskDrivers}
-            scalingFactor={view.pysBreakdown.scalingFactor}
-          />
-          {view.ranking.provenance?.usedDefaultSafety ? (
-            <p className="mt-0.5 text-2xs text-state-warn-bright">Default safety inputs</p>
-          ) : null}
-        </StatTile>
-        <StatTile
-          label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>}
-          value={view.stabilityValue}
-          variant="yield"
-        />
-      </div>
+        ) : null}
+      </dl>
 
         {/* The chart folds behind a disclosure on phones (owner feedback: it
             dominated the mobile module while rarely being the key read). */}
@@ -394,30 +430,21 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       {hasWorkbench ? <nav
         aria-label="More yield analysis"
-        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
+        className={cn(DOT_SEPARATED_ROW_CLASS, "text-xs text-muted-foreground")}
       >
         <span className="pharos-label">More on yield</span>
-        <span aria-hidden="true" className="text-muted-foreground/40">
-          ·
-        </span>
         <Link
           href={buildStablecoinUrl(stablecoinId, "yield/#warning-signals")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Warning timeline
         </Link>
-        <span aria-hidden="true" className="text-muted-foreground/40">
-          ·
-        </span>
         <Link
           href={buildStablecoinUrl(stablecoinId, "yield/#source-switches")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Source switches
         </Link>
-        <span aria-hidden="true" className="text-muted-foreground/40">
-          ·
-        </span>
         <Link
           href={buildStablecoinUrl(stablecoinId, "yield/#source-comparison")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"

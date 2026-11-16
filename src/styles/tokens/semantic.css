@@ -121,15 +121,17 @@
 
   /* ── DEWS Threat Bands ────────────────────────────────────────── */
   --dews-calm: var(--p-green-500);
-  --dews-watch: var(--p-teal-400);
+  /* One warming ramp: Watch is the first step away from green (yellow),
+     Alert amber, Warning orange, Danger red. */
+  --dews-watch: light-dark(#a16207, #eab308);
   --dews-alert: light-dark(var(--p-amber-700), var(--p-amber-300));
   --dews-warning: var(--p-orange-500);
   --dews-danger: var(--p-red-500);
 
   /* ── DEWS hex values (for Recharts) ─────────────────────────── */
   --dews-calm-hex: #22c55e;
-  --dews-watch-hex: #14b8a6;
-  --dews-alert-hex: light-dark(#a16207, #eab308);
+  --dews-watch-hex: light-dark(#a16207, #eab308);
+  --dews-alert-hex: light-dark(#b45309, #f59e0b);
   --dews-warning-hex: #f97316;
   --dews-danger-hex: #ef4444;
   --dews-radar-spoke: oklch(0.54 0.01 260 / 0.22);

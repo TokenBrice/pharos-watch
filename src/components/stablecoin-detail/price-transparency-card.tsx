@@ -18,10 +18,10 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES, PRICE_SOURCE_STATUS_CLASSES } from "@shared/lib/classification";
+import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES } from "@shared/lib/classification";
 import { formatCurrency, formatUsdPriceAdaptive, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
-import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { getPegTaxonomyByCurrency, getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
@@ -31,6 +31,13 @@ interface PriceTransparencyCardProps {
   consensusSources: string[] | null;
   agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
+  /**
+   * The hero's peg unit (`coin.flags.pegCurrency`) and USD-per-unit reference.
+   * With both, a non-dollar peg reads in its own unit first, like the hero
+   * ("CHF 0.9979"), with the USD observation beside it.
+   */
+  pegCurrency?: string;
+  pegRef?: number | null;
   /** A NAV token's DEX check reads against its own NAV, never a peg reference market. */
   navToken?: boolean;
 }
@@ -41,19 +48,69 @@ interface SourceInfo {
   label: string;
 }
 
-function formatSourceDepthTargetLabel(sourceCount: number): string {
-  return sourceCount >= 3 ? "3+/3" : `${sourceCount}/3`;
-}
+/**
+ * Inline facts separated by a dot that never ends or starts a wrapped line:
+ * each later item draws its dot in the gap before it, and the row clips the
+ * dot of whichever item opens a line (padding keeps focus rings unclipped).
+ */
+const DOT_SEPARATED_ROW_CLASS =
+  "-mx-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 overflow-x-clip px-1 [&>*+*]:relative [&>*+*]:before:absolute [&>*+*]:before:-left-2.5 [&>*+*]:before:text-muted-foreground/60 [&>*+*]:before:content-['·']";
+
+/** Pharos aims for at least this many independent price sources per coin. */
+const SOURCE_DEPTH_TARGET = 3;
 
 /**
- * Every price on this card (consensus, DEX check, par reference) is USD. A
- * non-USD peg's hero prints its native price ("EUR 0.9996"), so the USD basis
- * is spelled out as an ISO prefix here instead of a bare `$` that reads as a
- * 12% gap beside the hero.
+ * The DEX check agrees when its deviation is within 50 bps of the primary
+ * price's deviation (`agrees` in shared/lib/current-peg-observations.ts).
+ * ponytail: display copy of that literal; import it once it is exported.
  */
-function formatUsdPrice(price: number, pegType: string): string {
-  const formatted = formatUsdPriceAdaptive(price);
-  return normalizePegType(pegType) === "peggedUSD" ? `$${formatted}` : `USD ${formatted}`;
+const DEX_AGREEMENT_THRESHOLD_LABEL = "0.5%";
+
+const CONFIDENCE_PHRASES: Record<string, string> = {
+  high: "High confidence",
+  "single-source": "Single source",
+  low: "Low confidence",
+  fallback: "Fallback price",
+};
+
+/** A price unit: an ISO code or `$`, and the USD value of one unit (null: USD itself). */
+interface PriceUnit {
+  code: string;
+  usdPerUnit: number | null;
+}
+
+const USD_UNIT: PriceUnit = { code: "USD", usdPerUnit: null };
+
+/**
+ * The hero's unit rule (`formatHeroNativePrice`): a non-dollar peg with a
+ * usable reference reads natively; commodity and dollar pegs read in `$`.
+ * Without the hero's peg inputs a non-USD peg keeps an explicit `USD` prefix,
+ * never a bare `$` that reads as a 12% gap beside a native hero price.
+ */
+function resolvePriceUnit(pegType: string, pegCurrency?: string, pegRef?: number | null): PriceUnit {
+  const taxonomy = getPegTaxonomyByCurrency(pegCurrency);
+  if (pegCurrency && taxonomy && taxonomy.symbol !== "$" && pegRef != null && Number.isFinite(pegRef) && pegRef > 0) {
+    return { code: pegCurrency, usdPerUnit: pegRef };
+  }
+  const dollar = normalizePegType(pegType) === "peggedUSD" || taxonomy?.nativePriceUsesUsdSymbol === true;
+  return dollar ? { code: "$", usdPerUnit: null } : USD_UNIT;
+}
+
+/** Thousands separators and cents from 1,000 up ("$3,844.03"); four decimals below. */
+function formatPriceIn(usdPrice: number, unit: PriceUnit): string {
+  const value = unit.usdPerUnit == null ? usdPrice : usdPrice / unit.usdPerUnit;
+  const digits = Math.abs(value) >= 1000
+    ? value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : formatUsdPriceAdaptive(value);
+  return unit.code === "$" ? `$${digits}` : `${unit.code} ${digits}`;
+}
+
+function formatBpsAsPercent(bps: number): string {
+  return `${(Math.abs(bps) / 100).toFixed(2)}%`;
+}
+
+function pluralize(count: number, singular: string): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
 }
 
 function formatCompactUpdatedAt(epochSec: number | null | undefined): string | null {
@@ -63,32 +120,25 @@ function formatCompactUpdatedAt(epochSec: number | null | undefined): string | n
 
 type RenderedSourceStatus = Exclude<SourceStatus, "not-applicable">;
 
-const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: string; badge: string; text: string }> = {
-  used: {
-    wrap: PRICE_SOURCE_STATUS_CLASSES.used.wrap,
-    label: "font-medium",
-    badge: PRICE_SOURCE_STATUS_CLASSES.used.badge,
-    text: "Used",
-  },
-  available: {
-    wrap: "border-border",
-    label: "font-medium text-muted-foreground",
-    badge: PRICE_SOURCE_STATUS_CLASSES.available.badge,
-    text: "Available",
-  },
-  "no-data": {
-    wrap: "border-border/60",
-    label: "font-medium text-muted-foreground/70",
-    badge: "bg-muted/40 text-muted-foreground border-border/40",
-    text: "No feed",
-  },
+/**
+ * Source roles read by grouping and shape, never by hue: what set the price,
+ * what was also read, and what had no feed are categories, not risk levels.
+ */
+const SOURCE_STATUS_TEXT: Record<RenderedSourceStatus, string> = {
+  used: "Used for price",
+  available: "Also checked",
+  "no-data": "No feed",
 };
 
-const SOURCE_DOT_CLASSES: Record<RenderedSourceStatus, string> = {
-  used: PRICE_SOURCE_STATUS_CLASSES.used.dot,
-  available: PRICE_SOURCE_STATUS_CLASSES.available.dot,
-  "no-data": "bg-muted-foreground/40",
+const SOURCE_MARK_CLASSES: Record<RenderedSourceStatus, string> = {
+  used: "bg-foreground/70",
+  available: "border border-muted-foreground/70",
+  "no-data": "bg-muted-foreground/25",
 };
+
+function SourceMark({ status }: { status: RenderedSourceStatus }) {
+  return <span className={cn("h-2 w-2 shrink-0 rounded-xs", SOURCE_MARK_CLASSES[status])} aria-hidden="true" />;
+}
 
 /** Source chips shown before the "Show N more sources" toggle in the full card. */
 const INLINE_SOURCE_CAP = 5;
@@ -172,54 +222,50 @@ function SourceLogo({ sourceKey, compact = false }: { sourceKey: string; compact
   );
 }
 
-function SourceChip({
-  sourceKey,
-  label,
-  status,
-  compact = false,
-}: {
-  sourceKey: string;
-  label: string;
-  status: RenderedSourceStatus;
-  compact?: boolean;
-}) {
-  const style = SOURCE_CHIP_STYLES[status];
-  if (compact) {
-    // Rail rendering (Figma coin template): source name + status square dot;
-    // the legend beneath the grid decodes the colors.
-    return (
-      <div className="flex min-w-0 items-center justify-between gap-2 py-1.5 text-sm">
-        <span className="flex min-w-0 items-center gap-2">
-          <SourceLogo sourceKey={sourceKey} compact />
-          <span className={cn("min-w-0 truncate", style.label)} title={label}>
-            {label}
-          </span>
-        </span>
-        <span
-          className={cn("h-2 w-2 shrink-0 rounded-xs", SOURCE_DOT_CLASSES[status])}
-          role="img"
-          aria-label={style.text}
-        />
-      </div>
-    );
-  }
+function SourceChip({ sourceKey, label, muted = false }: { sourceKey: string; label: string; muted?: boolean }) {
+  // One line per source: a long venue name truncates (full name on hover)
+  // instead of growing its row to two lines.
   return (
-    <div className={cn("flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm", style.wrap)}>
-      <span className={cn("min-w-0 truncate", style.label)} title={label}>
+    <li className="flex min-w-0 items-center gap-2 py-1 text-sm">
+      <SourceLogo sourceKey={sourceKey} compact />
+      <span className={cn("min-w-0 truncate leading-snug", muted ? "text-muted-foreground" : "text-foreground")} title={label}>
         {label}
       </span>
-      <Badge variant="outline" className={cn("shrink-0 text-2xs", style.badge)}>
-        {style.text}
-      </Badge>
+    </li>
+  );
+}
+
+/** One labelled group of sources; the heading names the role, so no legend is needed. */
+function SourceGroup({
+  title,
+  sources,
+  muted = false,
+  layoutClassName,
+}: {
+  title: string;
+  sources: { key: string; label: string }[];
+  muted?: boolean;
+  layoutClassName: string;
+}) {
+  if (sources.length === 0) return null;
+  return (
+    <div>
+      <p className="pharos-label">
+        {title} <span className="font-mono tabular-nums">({sources.length})</span>
+      </p>
+      <ul className={cn("mt-1", layoutClassName)} aria-label={title}>
+        {sources.map((source) => (
+          <SourceChip key={source.key} sourceKey={source.key} label={source.label} muted={muted} />
+        ))}
+      </ul>
     </div>
   );
 }
 
 /**
- * Full source registry modal (Figma coin template `dark-modal`/`light-modal`
- * frames): "Sources" header with the freshness pill, a two-column list of
- * every source with a status square (used / available / unused), and the
- * three-state legend in the footer. Opened from the rail Sources header.
+ * Full source registry dialog: every tracked source for this coin, grouped by
+ * role (used for price, also checked, no feed) with a shape key in the footer.
+ * Opened from the rail Sources header.
  */
 function SourcesModal({
   sources,
@@ -255,7 +301,7 @@ function SourcesModal({
       </DialogTrigger>
       <DialogContent className="gap-0 p-0 sm:max-w-2xl" showCloseButton={false}>
         <div className="flex items-center justify-between gap-3 border-b border-border/40 py-3 pl-5 pr-4">
-          <DialogTitle className="text-sm font-medium text-foreground">Sources</DialogTitle>
+          <DialogTitle className="text-sm font-medium text-foreground">Price sources</DialogTitle>
           <div className="flex items-center gap-2">
             {updatedAtLabel ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
@@ -275,43 +321,35 @@ function SourcesModal({
           </div>
         </div>
         <div className="max-h-[60vh] overflow-y-auto px-5 py-3">
-          <div className="grid gap-x-8 sm:grid-cols-2">
+          <ul className="grid gap-x-8 sm:grid-cols-2">
             {ordered.map((source) => (
-              <div key={source.key} className="flex items-center justify-between gap-3 py-2">
+              <li key={source.key} className="flex items-center justify-between gap-3 py-2">
                 <span className="flex min-w-0 items-center gap-2.5">
                   <SourceLogo sourceKey={source.key} />
                   <span
                     className={cn(
                       "truncate text-sm",
-                      source.status === "no-data" ? "text-muted-foreground/70" : "text-foreground",
+                      source.status === "used" ? "text-foreground" : "text-muted-foreground",
                     )}
                     title={source.label}
                   >
                     {source.label}
                   </span>
                 </span>
-                <span
-                  className={cn("h-2 w-2 shrink-0 rounded-xs", SOURCE_DOT_CLASSES[source.status])}
-                  role="img"
-                  aria-label={source.status === "no-data" ? "Unused" : SOURCE_CHIP_STYLES[source.status].text}
-                />
-              </div>
+                <span className="flex shrink-0 items-center" role="img" aria-label={SOURCE_STATUS_TEXT[source.status]}>
+                  <SourceMark status={source.status} />
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
-        <div className="flex items-center justify-center gap-3 border-t border-border/40 px-5 py-3">
-          <span className="pharos-label flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-xs", PRICE_SOURCE_STATUS_CLASSES.used.dot)} aria-hidden="true" />
-            Used
-          </span>
-          <span className="pharos-label flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-xs", PRICE_SOURCE_STATUS_CLASSES.available.dot)} aria-hidden="true" />
-            Available
-          </span>
-          <span className="pharos-label flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-xs bg-muted-foreground/40" aria-hidden="true" />
-            Unused
-          </span>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/40 px-5 py-3">
+          {(["used", "available", "no-data"] as const).map((status) => (
+            <span key={status} className="pharos-label flex items-center gap-1.5">
+              <SourceMark status={status} />
+              {SOURCE_STATUS_TEXT[status]}
+            </span>
+          ))}
         </div>
       </DialogContent>
     </Dialog>
@@ -323,11 +361,13 @@ export function PriceTransparencyCard({
   consensusSources,
   agreeSources,
   dexPriceCheck,
+  pegCurrency,
+  pegRef,
   navToken = false,
   compact = false,
 }: PriceTransparencyCardProps & {
   /**
-   * Rail rendering (Figma coin template): two-up source grid sized for the
+   * Rail rendering (Figma coin template): grouped source lists sized for the
    * ~22rem column and no `#price-transparency` anchor — the in-flow
    * Liquidity instance owns the id so dual-rendering never duplicates it.
    */
@@ -338,6 +378,8 @@ export function PriceTransparencyCard({
 
   const observed = isObservedPrice(coinData);
   const hasNoPrice = !observed || coinData.price == null;
+  const unit = resolvePriceUnit(coinData.pegType, pegCurrency, pegRef);
+  const nativeUnit = unit.usdPerUnit != null;
   const nominalReference = coinData.nominalPriceReference ?? (
     (coinData.priceObservedAtMode === "nominal_reference" || coinData.priceSource === "protocol-par") && coinData.price != null
       ? { price: coinData.price, source: coinData.priceSource ?? "protocol-par" }
@@ -345,12 +387,12 @@ export function PriceTransparencyCard({
   );
   const nominalReferenceNote = nominalReference ? (
     <p className="text-sm text-muted-foreground">
-      Nominal par reference: {formatUsdPrice(nominalReference.price, coinData.pegType)} ({nominalReference.source}). Not an observed price or a live redemption quote.
+      Nominal par reference: {formatPriceIn(nominalReference.price, unit)} ({getPricingSourceLabel(nominalReference.source)}). Not an observed price or a live redemption quote.
     </p>
   ) : null;
   const isProtocolRedeem = observed && isPricingSourceProtocolOverride(coinData.priceSource);
-  // Unread provenance cannot say a source was unused: withhold the source grid
-  // and the depth target instead of publishing an absent read as zero sources.
+  // Unread provenance cannot say a source was unused: withhold the source lists
+  // and the depth count instead of publishing an absent read as zero sources.
   const sourceProvenanceUnread = consensusSources == null || agreeSources == null;
   const knownConsensusSources = consensusSources ?? [];
   const knownAgreeSources = agreeSources ?? [];
@@ -369,37 +411,48 @@ export function PriceTransparencyCard({
     label: getPricingSourceLabel(key),
   }));
 
-  const usedSources = sources.filter((s): s is SourceInfo & { status: "used" } => s.status === "used");
-  const availableSources = sources.filter((s): s is SourceInfo & { status: "available" } => s.status === "available");
-  const noDataSources = sources.filter((s): s is SourceInfo & { status: "no-data" } => s.status === "no-data");
-  const sourceDepthCount = effectiveConsensusSources.length;
-  // Full-card source grid opens capped: used + available chips beyond the cap
-  // join the no-data sources behind the "Show N more sources" toggle.
-  const inlineSources = [
-    ...(isProtocolRedeem
-      ? [{ key: "protocol-redeem", label: "Protocol Redemption", status: "used" as const }]
-      : []),
-    ...usedSources,
-    ...availableSources,
+  const usedSources = [
+    ...(isProtocolRedeem ? [{ key: "protocol-redemption", label: "Protocol Redemption" }] : []),
+    ...sources.filter((s) => s.status === "used"),
   ];
-  const visibleInlineSources = showAll ? inlineSources : inlineSources.slice(0, INLINE_SOURCE_CAP);
-  const hiddenSourceCount = Math.max(0, inlineSources.length - INLINE_SOURCE_CAP) + noDataSources.length;
+  const availableSources = sources.filter((s) => s.status === "available");
+  const noDataCount = sources.filter((s) => s.status === "no-data").length;
+  const sourceDepthCount = effectiveConsensusSources.length;
+  // The full card opens capped: "also checked" sources beyond the cap sit
+  // behind one toggle; registry sources with no feed collapse to a count.
+  const inlineAvailableCap = Math.max(0, INLINE_SOURCE_CAP - usedSources.length);
+  const visibleAvailableSources = showAll ? availableSources : availableSources.slice(0, inlineAvailableCap);
+  const hiddenSourceCount = availableSources.length - visibleAvailableSources.length;
 
   // --- Derived once; both shells read the same locals ----------------------
-  // The two trees used to spell these independently, which is exactly how the
-  // DEX-agreement pill drifted to two opacity pairs and the source-depth pill
-  // acquired a one-off `amber-500/32`.
   const sourceDepthTone = sourceProvenanceUnread
-    ? SEVERITY_TONE_CLASS.neutral.pill
-    : sourceDepthCount >= 3
-      ? SEVERITY_TONE_CLASS.ok.pill
-      : sourceDepthCount === 2
-        ? SEVERITY_TONE_CLASS.watch.pill
-        : SEVERITY_TONE_CLASS.neutral.pill;
+    ? SEVERITY_TONE_CLASS.neutral
+    : sourceDepthCount >= SOURCE_DEPTH_TARGET
+      ? SEVERITY_TONE_CLASS.ok
+      : sourceDepthCount === SOURCE_DEPTH_TARGET - 1
+        ? SEVERITY_TONE_CLASS.watch
+        : SEVERITY_TONE_CLASS.neutral;
+  const sourceDepthLabel = sourceProvenanceUnread
+    ? "Source depth unavailable"
+    : sourceDepthCount >= SOURCE_DEPTH_TARGET
+      ? `${pluralize(sourceDepthCount, "source")} checked`
+      : `${sourceDepthCount} of ${SOURCE_DEPTH_TARGET} target sources`;
+  const sourceDepthTitle = `Pharos aims to read at least ${SOURCE_DEPTH_TARGET} independent price sources for each coin.`;
+  const agreementLine = hasNoPrice || sourceProvenanceUnread
+    ? null
+    : isProtocolRedeem
+      ? "Set by protocol redemption"
+      : usedSources.length === 0
+        ? null
+        : usedSources.length === 1
+          ? `Set by ${usedSources[0]!.label}`
+          : `Set by ${usedSources.length} agreeing sources`;
   const dexAgreementTone = dexPriceCheck?.agrees ? SEVERITY_TONE_CLASS.ok.pill : SEVERITY_TONE_CLASS.rose.pill;
   const dexAgreementLabel = dexPriceCheck?.agrees ? "Agrees" : "Disagrees";
-  // The glyph tracks the verdict: the compact pill used to render a check-mark
-  // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
+  const dexAgreementSentence = dexPriceCheck?.agrees
+    ? `DEX price is within ${DEX_AGREEMENT_THRESHOLD_LABEL} of the primary price.`
+    : `DEX price differs from the primary price by more than ${DEX_AGREEMENT_THRESHOLD_LABEL}.`;
+  // The glyph tracks the verdict. `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
   // The DEX check reads against the peg's reference, which repeats its last close while that
@@ -409,23 +462,32 @@ export function PriceTransparencyCard({
     resolvePriceObservedAtSec(coinData),
     dexPriceCheck?.dexDeviationBps,
   );
-  const priceLabel = !hasNoPrice && coinData.price != null ? formatUsdPrice(coinData.price, coinData.pegType) : "N/A";
-  const rawConfidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
-  // Sentence case: multi-word values never render as caps (three-register rule).
-  const confidenceLabel = rawConfidenceLabel.charAt(0).toUpperCase() + rawConfidenceLabel.slice(1);
-  const sourceDepthLabel = sourceProvenanceUnread
-    ? "Sources —"
-    : `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
+  const priceLabel = !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, unit) : "N/A";
+  const usdPriceLabel = nativeUnit && !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, USD_UNIT) : null;
+  const confidenceLabel = hasNoPrice
+    ? "No consensus"
+    : coinData.priceConfidence
+      ? CONFIDENCE_PHRASES[coinData.priceConfidence] ?? coinData.priceConfidence
+      : null;
+  const confidenceTone = hasNoPrice
+    ? "text-muted-foreground"
+    : CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground";
+  const dexPriceLabel = dexPriceCheck ? formatPriceIn(dexPriceCheck.dexPrice, unit) : null;
+  // Segments never break inside themselves ("0.01% / deviation"); the row's dots never orphan.
+  const dexDetail = dexPriceCheck
+    ? [
+        pluralize(dexPriceCheck.sourcePools, "DEX price source"),
+        `${formatCurrency(dexPriceCheck.sourceTvl)} TVL`,
+        dexDeviationHeld ? "Reference market closed" : `${formatBpsAsPercent(dexPriceCheck.dexDeviationBps)} from reference`,
+      ].map((segment) => (
+        <span key={segment} className="whitespace-nowrap">{segment}</span>
+      ))
+    : null;
+  const dexDeviationTitle = "Deviation of the DEX price from the peg (for NAV tokens, from the token's own reference price).";
+  const noFeedLine = noDataCount > 0 ? `${pluralize(noDataCount, "other tracked source")} had no feed for this coin.` : null;
 
   if (compact) {
     const updatedAtLabel = hydrated && !hasNoPrice ? formatCompactUpdatedAt(coinData.priceUpdatedAt) : null;
-    const displayedSources = [
-      ...(isProtocolRedeem
-        ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
-        : []),
-      ...usedSources,
-      ...availableSources,
-    ];
 
     return (
       <RailCard
@@ -445,19 +507,32 @@ export function PriceTransparencyCard({
             {priceLabel}
           </p>
           <p className="pharos-label mt-2">
-            {confidenceLabel}
-            <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-              ·
-            </span>
-            {sourceDepthLabel}
+            {usdPriceLabel ? (
+              <>
+                <span className="font-mono tabular-nums">{usdPriceLabel}</span>
+                <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">·</span>
+              </>
+            ) : null}
+            {confidenceLabel ? <span className={confidenceTone}>{confidenceLabel}</span> : null}
           </p>
-          {nominalReferenceNote}
+          {agreementLine || !sourceProvenanceUnread ? (
+            <p className="pharos-label mt-1">
+              {agreementLine}
+              {agreementLine && !sourceProvenanceUnread ? (
+                <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">·</span>
+              ) : null}
+              {!sourceProvenanceUnread ? (
+                <span className={sourceDepthTone.text} title={sourceDepthTitle}>{sourceDepthLabel}</span>
+              ) : null}
+            </p>
+          ) : null}
+          {nominalReferenceNote ? <div className="mt-2">{nominalReferenceNote}</div> : null}
         </div>
 
         {observed && dexPriceCheck ? (
           <div className="border-t border-border/50 px-4 py-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-muted-foreground">DEX Check</p>
+              <p className="text-sm font-medium text-muted-foreground">DEX check</p>
               <Badge
                 variant="outline"
                 className={cn("h-5 gap-1 rounded-full px-2 text-2xs font-medium", dexAgreementTone)}
@@ -466,20 +541,9 @@ export function PriceTransparencyCard({
                 {dexAgreementLabel}
               </Badge>
             </div>
-            <p className="mt-3 font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
-              {formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}
-            </p>
-            <p className="pharos-label mt-2">
-              {formatCurrency(dexPriceCheck.sourceTvl)} TVL
-              <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-                ·
-              </span>
-              {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"}
-              <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-                ·
-              </span>
-              {dexDeviationHeld ? "Reference market closed" : `${Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps dev`}
-            </p>
+            <p className="mt-2 font-mono text-lg font-semibold leading-none tabular-nums text-foreground">{dexPriceLabel}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{dexAgreementSentence}</p>
+            <p className={cn("pharos-label mt-1", DOT_SEPARATED_ROW_CLASS)} title={dexDeviationTitle}>{dexDetail}</p>
           </div>
         ) : null}
 
@@ -487,18 +551,15 @@ export function PriceTransparencyCard({
           <div className="border-t border-border/50 px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-muted-foreground">Sources</p>
-              {/* Compact-only slot: the full card reveals the no-data sources
-                  inline behind "Show N more sources" instead. */}
               <SourcesModal
                 sources={sources}
                 includeProtocolRedeem={isProtocolRedeem}
                 updatedAtLabel={hydrated && !hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
               />
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
-              {displayedSources.map((source) => (
-                <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} compact />
-              ))}
+            <div className="mt-2 space-y-3">
+              <SourceGroup title={SOURCE_STATUS_TEXT.used} sources={usedSources} layoutClassName="grid grid-cols-2 gap-x-4" />
+              <SourceGroup title={SOURCE_STATUS_TEXT.available} sources={availableSources} muted layoutClassName="grid grid-cols-2 gap-x-4" />
             </div>
           </div>
         )}
@@ -512,109 +573,83 @@ export function PriceTransparencyCard({
       title={<MethodologyLabel topic="priceTransparency">Price Transparency</MethodologyLabel>}
       bodyClassName="space-y-4"
     >
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-baseline gap-2">
-            <span className={cn("text-2xl font-bold font-mono tabular-nums", hasNoPrice && "text-muted-foreground")}>
-              {priceLabel}
-            </span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-2xs",
-                hasNoPrice
-                  ? "text-muted-foreground"
-                  : (CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ??
-                      "text-muted-foreground"),
-              )}
-            >
-              {confidenceLabel}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={cn("text-2xs tabular-nums", sourceDepthTone)}
-              title="Candidate source-depth target"
-            >
-              {sourceDepthLabel}
-            </Badge>
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className={cn("font-mono text-2xl font-semibold tabular-nums", hasNoPrice && "text-muted-foreground")}>
+                {priceLabel}
+              </span>
+              {usdPriceLabel ? (
+                <span className="font-mono text-sm tabular-nums text-muted-foreground">{usdPriceLabel}</span>
+              ) : null}
+            </div>
+            <p className={cn(DOT_SEPARATED_ROW_CLASS, "text-sm text-muted-foreground")}>
+              {confidenceLabel ? <span className={cn("font-medium", confidenceTone)}>{confidenceLabel}</span> : null}
+              {agreementLine ? <span>{agreementLine}</span> : null}
+            </p>
           </div>
-          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            {!hasNoPrice && !sourceProvenanceUnread && (
-              <span className="inline-flex items-center gap-1">
-                <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRICE_SOURCE_STATUS_CLASSES.used.dot)} />
-                {usedSources.length} used
-              </span>
-            )}
-            {availableSources.length > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRICE_SOURCE_STATUS_CLASSES.available.dot)} />
-                {availableSources.length} available
-              </span>
-            )}
-            {!hasNoPrice && (
-              <span>· Updated {!hydrated || coinData.priceUpdatedAt == null ? "\u2014" : timeAgo(coinData.priceUpdatedAt)}</span>
-            )}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {!sourceProvenanceUnread ? (
+              <Badge variant="outline" className={cn("text-2xs", sourceDepthTone.pill)} title={sourceDepthTitle}>
+                {sourceDepthLabel}
+              </Badge>
+            ) : null}
+            {!hasNoPrice ? (
+              <span>Updated {!hydrated || coinData.priceUpdatedAt == null ? "\u2014" : timeAgo(coinData.priceUpdatedAt)}</span>
+            ) : null}
           </div>
         </div>
         {nominalReferenceNote}
 
-        {/* DEX Price Check - Elevated. The container stays neutral: the verdict
-            pill alone carries tone (and glyph), so a disagreement never sits in
-            a green box. */}
+        {/* DEX check: the container stays neutral; the verdict pill alone
+            carries tone (and glyph), and the sentence names its threshold. */}
         {observed && dexPriceCheck ? (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">DEX Check</span>
-                <Badge variant="outline" className={cn("gap-1 text-2xs", dexAgreementTone)}>
-                  <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
-                  {dexAgreementLabel}
-                </Badge>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · {formatCurrency(dexPriceCheck.sourceTvl)} TVL
-              </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-xs font-medium text-muted-foreground">DEX check</span>
+              <Badge variant="outline" className={cn("gap-1 text-2xs", dexAgreementTone)}>
+                <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
+                {dexAgreementLabel}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{dexAgreementSentence}</span>
             </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-mono font-medium">{formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}</span>
-              <span className="text-xs text-muted-foreground">
-                {dexDeviationHeld ? "Reference market closed" : `${Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation`}
-              </span>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="font-mono font-medium tabular-nums">{dexPriceLabel}</span>
+              <span className={cn(DOT_SEPARATED_ROW_CLASS, "text-xs text-muted-foreground")} title={dexDeviationTitle}>{dexDetail}</span>
             </div>
           </div>
         ) : null}
 
-        {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width.
-            Widely-listed coins carry 15+ used sources, so the grid opens capped
-            at INLINE_SOURCE_CAP chips; the toggle reveals the rest plus the
-            no-data sources it always owned. */}
         {sourceProvenanceUnread ? null : (
-          <div className="space-y-2">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleInlineSources.map((source) => (
-                <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
-              ))}
-
-              {/* Expandable No-Data Sources (full card only; the rail exposes
-                  them through the Sources modal instead) */}
-              {showAll &&
-                noDataSources.map((source) => (
-                  <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
-                ))}
-            </div>
-
-            {hiddenSourceCount > 0 && (
+          <div className="space-y-3">
+            {/* In the main column the few sources flow inline: a column grid
+                left blank columns on wide cards and a lone last item on phones. */}
+            <SourceGroup
+              title={SOURCE_STATUS_TEXT.used}
+              sources={usedSources}
+              layoutClassName="flex flex-wrap gap-x-5"
+            />
+            <SourceGroup
+              title={SOURCE_STATUS_TEXT.available}
+              sources={visibleAvailableSources}
+              muted
+              layoutClassName="flex flex-wrap gap-x-5"
+            />
+            {hiddenSourceCount > 0 || showAll ? (
               <button
                 type="button"
                 onClick={() => setShowAll(!showAll)}
-                className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+                aria-expanded={showAll}
+                className="pharos-focus-ring inline-flex min-h-9 items-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ChevronDown
                   aria-hidden="true"
                   className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")}
                 />
-                {showAll ? "Show fewer sources" : `Show ${hiddenSourceCount} more sources`}
+                {showAll ? "Show fewer sources" : `Show ${hiddenSourceCount} more checked ${hiddenSourceCount === 1 ? "source" : "sources"}`}
               </button>
-            )}
+            ) : null}
+            {noFeedLine ? <p className="text-xs text-muted-foreground">{noFeedLine}</p> : null}
           </div>
         )}
 

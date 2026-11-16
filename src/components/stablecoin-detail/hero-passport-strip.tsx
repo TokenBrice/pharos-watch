@@ -8,6 +8,23 @@ import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport
 import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
 import { FigureLeadText } from "./figure-lead-text";
 
+const ORDERED_KEYS: HeroPassportItemViewModel["key"][] = [
+  "mechanism", "redeemability", "minting", "freeze", "record", "chains",
+  "jurisdiction", "mica", "genius", "attestor",
+];
+
+/**
+ * Desktop cell width by cell count. Every fact shares one row while the strip
+ * gives each 8.5rem; past that the cells wrap into two rows as even as
+ * possible (4 + 3, 4 + 4, 5 + 4), never an orphan stretched across the card.
+ * Six cells always fit one row at lg and up.
+ */
+const DESKTOP_CELL_BASIS: Record<number, string> = {
+  7: "basis-1/4 @[59.5rem]:basis-0",
+  8: "basis-1/4 @[68rem]:basis-0",
+  9: "basis-1/5 @[76.5rem]:basis-0",
+};
+
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome
   // clearance) and the page's scroll-behavior, including its reduced-motion
@@ -18,13 +35,7 @@ function alignSection(sectionId: string) {
 
 function PassportItemValue({ item, valueClassName }: { item: HeroPassportItemViewModel; valueClassName: string }) {
   const toneClass = item.valueClass ?? "text-foreground";
-  const valueNode = item.chip ? (
-    <span
-      className={`inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/40 px-2 py-px ${valueClassName} ${toneClass}`}
-    >
-      <FigureLeadText text={item.value} />
-    </span>
-  ) : (
+  const valueNode = (
     <span className={`${valueClassName} underline-offset-2 group-hover:underline ${toneClass}`}><FigureLeadText text={item.value} /></span>
   );
   if (!item.tooltipLines) return valueNode;
@@ -64,9 +75,12 @@ function withPassportTooltip(item: HeroPassportItemViewModel, trigger: React.Rea
  */
 export function HeroPassportStrip({
   items,
+  pendingKeys = [],
   compactDesktop = false,
 }: {
   items: HeroPassportItemViewModel[];
+  /** Facts whose read is in flight: each keeps its slot, so nothing reflows when it lands. */
+  pendingKeys?: readonly HeroPassportItemViewModel["key"][];
   compactDesktop?: boolean;
 }) {
   const stopScrollSyncRef = useRef<(() => void) | null>(null);
@@ -87,34 +101,32 @@ export function HeroPassportStrip({
     stopScrollSyncRef.current = alignAnchorAfterHydration(sectionId, false);
   }
 
-  // Supplemental facts own tracks before their reads settle. Empty tracks make
-  // no evidence claim and never become links to unavailable sections.
+  // A fact still being read owns its slot before the read settles. An empty
+  // slot makes no evidence claim and never links to an unavailable section; a
+  // fact that never resolves (no depeg record for a NAV token) has no slot.
   const resolvedByKey = new Map(items.map((item) => [item.key, item]));
-  const orderedKeys: HeroPassportItemViewModel["key"][] = [
-    "mechanism", "redeemability", "minting", "freeze", "record", "chains",
-    "jurisdiction", "mica", "genius", "attestor",
-  ];
-  const slotKeys = orderedKeys.filter((key) => resolvedByKey.has(key) || key === "redeemability" || key === "minting" || key === "record");
-  const slots = compactDesktop ? slotKeys.map((key) => ({ key, item: resolvedByKey.get(key) })) : items.map((item) => ({ key: item.key, item }));
-  const desktopSlots = slots.filter(({ item }) => item?.category !== "Mechanism");
+  const slots = ORDERED_KEYS
+    .filter((key) => resolvedByKey.has(key) || pendingKeys.includes(key))
+    .map((key) => ({ key, item: resolvedByKey.get(key) }));
+  const desktopSlots = slots.filter(({ key }) => key !== "mechanism");
+  const desktopCellBasis = DESKTOP_CELL_BASIS[desktopSlots.length] ?? "basis-0";
 
   return (
     <TooltipProvider>
+      {/* Docked last in the card, the strip clips to the card's bottom corners. */}
       <div
         className={
           compactDesktop
-            ? "relative border-t border-border/40 px-4 py-2.5 sm:px-5 lg:px-0 lg:py-0"
-            : "relative border-t border-border/30 px-4 py-2.5 sm:px-5"
+            ? "relative overflow-hidden border-t border-border/40 px-4 py-2.5 last:rounded-b-xl sm:px-5 lg:px-0 lg:py-0"
+            : "relative overflow-hidden border-t border-border/30 px-4 py-2.5 last:rounded-b-xl sm:px-5"
         }
         role="group"
         aria-label="Verification passport"
       >
-        {/* Scroll affordance for the two tiers that can run out of room: the
-            mobile row, and xl+, where the summary rail narrows the hero enough
-            that a dense strip scrolls rather than wrapping off its one row. */}
+        {/* Scroll affordance for the mobile row; from lg the facts wrap. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden xl:block xl:w-6"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden"
         />
         <div
           className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto ${
@@ -152,9 +164,22 @@ export function HeroPassportStrip({
           })}
         </div>
         {compactDesktop ? (
-          <div className="scrollbar-none hidden overflow-x-auto lg:flex">
+          // Wraps instead of scrolling: every fact stays visible at every
+          // desktop width. Cells draw right/bottom hairlines and the wrapper
+          // clips the outer ones, so a short last row never shows a stray rule.
+          <div className="@container hidden overflow-hidden lg:block">
+          <div className="-mb-px -mr-px flex flex-wrap">
             {desktopSlots.map(({ key, item }) => {
-              if (!item) return <span key={key} aria-hidden="true" data-passport-reserve={key} className="min-h-20 w-40 shrink-0 border-r border-border/40" />;
+              if (!item) {
+                return (
+                  <span
+                    key={key}
+                    aria-hidden="true"
+                    data-passport-reserve={key}
+                    className={`min-h-[4.5rem] grow border-b border-r border-border/40 ${desktopCellBasis}`}
+                  />
+                );
+              }
               const isHashJump = item.href.startsWith("#");
               return withPassportTooltip(
                 item,
@@ -170,7 +195,7 @@ export function HeroPassportStrip({
                         }
                       : undefined
                   }
-                  className="pharos-focus-ring group flex min-h-20 w-40 shrink-0 flex-col justify-center border-r border-border/40 px-4 py-3 last:border-r-0"
+                  className={`pharos-focus-ring group flex min-h-[4.5rem] grow flex-col justify-center border-b border-r border-border/40 px-4 py-3 transition-colors hover:bg-muted/30 ${desktopCellBasis}`}
                 >
                   <span className="pharos-label leading-tight">
                     {item.category}
@@ -184,6 +209,7 @@ export function HeroPassportStrip({
                 </IntentLink>,
               );
             })}
+          </div>
           </div>
         ) : null}
       </div>

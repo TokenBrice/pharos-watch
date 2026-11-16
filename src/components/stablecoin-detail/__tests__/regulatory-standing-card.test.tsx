@@ -83,9 +83,10 @@ describe("RegulatoryStandingCard", () => {
         references: [{ label: "Open issuance", url: "https://example.com/issuance", sourceKind: "issuer-disclosure" }],
       },
     });
-    render(<RegulatoryStandingCard view={view} density={density} />);
-    const summary = screen.getByText(/public materials signalling a GENIUS-era issuance path/);
-    expect(summary.textContent).not.toMatch(/announced intent|seek GENIUS authorization|filing pending|approved/);
+    const { container } = render(<RegulatoryStandingCard view={view} density={density} />);
+    const { value } = definition("GENIUS (US)");
+    expect(value.textContent).toContain(view.regimes[0]!.status.label);
+    expect(container.textContent).not.toMatch(/announced intent|seek GENIUS authorization|filing pending|approved/);
   });
 
   it("keeps regime rows to status and pathway, with issuer disclosures in their own labelled row", () => {
@@ -212,9 +213,8 @@ describe("RegulatoryStandingCard", () => {
     const factCount = view.regimes.reduce((sum, regime) => sum + regime.facts.length, 0);
     const expected = factCount + (view.reportNote ? 1 : 0) + (view.notes ? 1 : 0) + view.sources.length;
     expect(fold.querySelector("summary")?.textContent).toContain(`(${expected})`);
-    // The verdict stays in the always-visible summary layer, outside the fold.
-    expect(within(fold).queryByText(view.summary)).toBeNull();
-    expect(screen.getByText(view.summary)).toBeTruthy();
+    // Each regime's status is said once, on its row: no sentence restates the rows.
+    expect(container.textContent).not.toContain(view.summary);
   });
 
   it("renders the in-flow twin in the module grammar with the same fold and the review date", () => {
@@ -224,8 +224,10 @@ describe("RegulatoryStandingCard", () => {
     const section = container.querySelector("section#jurisdiction")!;
     expect(section.hasAttribute("data-evidence-module")).toBe(true);
     expect(within(section as HTMLElement).getByRole("heading", { name: /Regulatory standing/ })).toBeTruthy();
-    expect(screen.getByText(view.badgeLabel)).toBeTruthy();
-    expect(screen.getByText(view.summary)).toBeTruthy();
+    // The overall badge is only the folded phone header's stand-in for the
+    // hidden rows (`md:hidden`), never a third copy of a row's status.
+    expect(screen.getByText(view.badgeLabel).closest(".md\\:hidden")).not.toBeNull();
+    expect(container.textContent).not.toContain(view.summary);
 
     const folds = section.querySelectorAll("details");
     expect(folds).toHaveLength(1);

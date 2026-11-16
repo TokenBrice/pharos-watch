@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { ReactNode, Ref, RefObject } from "react";
-import { IntentLink } from "@/components/intent-link";
 import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
 import { AiSummary } from "@/components/ai-summary/ai-summary";
 import { BackToSource } from "@/components/back-to-source";
@@ -15,6 +14,7 @@ import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
+import { HolderAlerts } from "@/components/stablecoin-detail/holder-alerts";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -36,12 +36,9 @@ import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-su
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
-import { buildStaticCompareHref } from "@/lib/compare-links";
-import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { formatLiveCardAsOf } from "@/lib/stablecoin-detail-hero-metrics";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
-import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import type { AiSummaryClaimValues } from "@shared/types/editorial";
 import {
@@ -61,9 +58,7 @@ type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready"
 // zone ids stay fixed so existing deep links keep working. The Activity pill
 // takes its per-coin label from `activityZoneLabel`.
 const DETAIL_SECTIONS = [
-  // "How it breaks" is interleaved inside the Risk zone, directly under the
-  // score, so Risk resumes at the marker below that module.
-  { id: "overview", label: "Risk", icon: Scale, resumeAnchorIds: ["risk-evidence-resume"] },
+  { id: "overview", label: "Risk", icon: Scale },
   { id: "how-it-breaks", label: "How it breaks", icon: Unlink },
   { id: "context", label: "Dependencies", icon: ChartPie },
   { id: "liquidity", label: "Supply & Liquidity", icon: Droplet },
@@ -146,6 +141,7 @@ function DetailIdentity({
         gradeRead={viewModel.gradeRead}
         updatedAtMs={snapshot.updatedAtMs}
         dailySnapshot={snapshot.dailySnapshot}
+        hasSummary={Boolean(viewModel.summary)}
       />
       <MobileStickySummary
         coin={viewModel.coin}
@@ -211,24 +207,7 @@ function DetailNavigation({
       // overflow, unlike a wider pseudo-element). Full bleed below xl; at xl
       // the clip stops at the column's right edge so the band never paints
       // over the summary rail beside it.
-      className="mt-2 bg-background py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none xl:[clip-path:inset(0_0_0_-100vmax)]"
-      rightSlot={(
-        <div className="hidden items-center gap-2 text-xs sm:flex lg:hidden">
-          <IntentLink
-            href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
-            className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
-          </IntentLink>
-          <span className="text-border">|</span>
-          <IntentLink
-            href={buildStaticCompareHref([viewModel.coin.id])}
-            className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Compare
-          </IntentLink>
-        </div>
-      )}
+      className="mt-2 bg-background py-1.5 sm:py-2 shadow-[0_0_0_100vmax_var(--background)] [clip-path:inset(0_-100vmax)] lg:top-[calc(env(safe-area-inset-top)+3px+3.5rem)] lg:w-full lg:max-w-none lg:[&>div]:justify-center lg:[&_nav]:flex-none xl:[clip-path:inset(0_0_0_-100vmax)]"
     />
   );
 }
@@ -240,7 +219,60 @@ function DetailNavigation({
  * in-flow mount; the bounded re-alignment absorbs lazy sections settling above
  * the target, and focus moves to the module heading.
  */
+/**
+ * The evidence module currently under the reader's eye, so the bottom-pinned
+ * index doubles as an "on this page" navigator. Lazy modules mount after the
+ * first scan, so the observer re-scans for anchors it has not seen yet.
+ */
+function useActiveEvidenceAnchor(anchorIds: readonly string[]): string | null {
+  const [active, setActive] = useState<string | null>(null);
+  const key = anchorIds.join("|");
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined" || key === "") return;
+    const ids = key.split("|");
+    const tops = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) tops.set(entry.target.id, entry.boundingClientRect.top);
+          else tops.delete(entry.target.id);
+        }
+        let best: string | null = null;
+        let bestTop = Number.POSITIVE_INFINITY;
+        for (const [id, top] of tops) {
+          if (top < bestTop) {
+            best = id;
+            bestTop = top;
+          }
+        }
+        setActive(best);
+      },
+      // A module counts as "current" while it crosses the upper-middle band.
+      { rootMargin: "-25% 0px -55% 0px" },
+    );
+    const observed = new Set<Element>();
+    const scan = () => {
+      for (const id of ids) {
+        const element = document.getElementById(id);
+        if (element && !observed.has(element)) {
+          observed.add(element);
+          observer.observe(element);
+        }
+      }
+    };
+    scan();
+    const timer = window.setInterval(scan, 2000);
+    return () => {
+      observer.disconnect();
+      window.clearInterval(timer);
+    };
+  }, [key]);
+  return active;
+}
+
 function RailEvidenceIndex({ groups }: { groups: readonly EvidenceIndexGroup[] }) {
+  const anchorIds = useMemo(() => groups.flatMap((group) => group.rows.map((row) => row.anchorId)), [groups]);
+  const activeAnchor = useActiveEvidenceAnchor(anchorIds);
   if (groups.length === 0) return null;
   return (
     <RailCard title="Evidence index" ariaLabel="Evidence index">
@@ -250,7 +282,7 @@ function RailEvidenceIndex({ groups }: { groups: readonly EvidenceIndexGroup[] }
             <p className="pharos-label pb-1">{group.label}</p>
             <ul className="divide-y divide-border/40">
               {group.rows.map((row) => (
-                <RailEvidenceIndexRow key={row.key} row={row} />
+                <RailEvidenceIndexRow key={row.key} row={row} active={row.anchorId === activeAnchor} />
               ))}
             </ul>
           </div>
@@ -261,15 +293,17 @@ function RailEvidenceIndex({ groups }: { groups: readonly EvidenceIndexGroup[] }
 }
 
 /**
- * Title left, never truncated; the score or chip and the limiting tag right.
- * When both cannot share the 22rem line, the meta group wraps under the
- * title, right-aligned, instead of clipping the module name.
+ * Title left, never truncated; the score or verdict chip and the limiting tag
+ * right. When both cannot share the 22rem line, the meta group wraps under
+ * the title, right-aligned, instead of clipping the module name. The current
+ * row changes colour, never weight, so it keeps its width and never re-wraps.
  */
-function RailEvidenceIndexRow({ row }: { row: EvidenceIndexRow }) {
+function RailEvidenceIndexRow({ row, active = false }: { row: EvidenceIndexRow; active?: boolean }) {
   return (
     <li>
       <a
         href={`#${row.anchorId}`}
+        aria-current={active ? "location" : undefined}
         onClick={(event) => {
           event.preventDefault();
           window.history.pushState(null, "", `#${row.anchorId}`);
@@ -282,24 +316,17 @@ function RailEvidenceIndexRow({ row }: { row: EvidenceIndexRow }) {
           if (!focusTarget.hasAttribute("tabindex")) focusTarget.tabIndex = -1;
           focusTarget.focus({ preventScroll: true });
         }}
-        className="pharos-focus-ring group flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 rounded-sm py-1.5 text-sm"
+        className={cn(
+          "pharos-focus-ring group -mx-2 flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-1.5 text-sm transition-colors",
+          active ? "bg-muted/70" : "hover:bg-muted/40",
+        )}
       >
-        <span className="text-foreground/90 underline-offset-2 group-hover:underline">{row.title}</span>
+        <span className={cn("underline-offset-2 group-hover:underline", active ? "text-foreground" : "text-foreground/85")}>{row.title}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {row.chip ? (
             <Badge variant="outline" className={cn("text-2xs font-medium", row.chip.toneClass)}>
               {row.chip.label}
             </Badge>
-          ) : null}
-          {row.score !== null ? (
-            <span className="inline-flex items-baseline gap-1">
-              <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                {row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0)}
-              </span>
-              {row.scoreNote ? (
-                <span className="text-2xs text-muted-foreground">· {row.scoreNote}</span>
-              ) : null}
-            </span>
           ) : null}
           {/* One limiting grammar across the dossier; its text joins the link name. */}
           {row.limiting ? <ControlRoleTag role="limiting" size="compact" /> : null}
@@ -345,9 +372,12 @@ function DetailSummaryRail({
           frozen={viewModel.coin.status === "frozen"}
           gradeRead={viewModel.gradeRead}
           liveAsOf={liveSafetyAsOf}
+          card={viewModel.reportCard ?? null}
         />
+        {/* The loading placeholders reserve their card's footprint; a loaded
+            card takes its own height, so the rail never shows a blank gap. */}
         {sharedModules.backingMetrics || (viewModel.coin.liveReservesConfig && reservesPending) ? (
-          <div className="min-h-64" data-rail-slot="collateralization">
+          <div className={sharedModules.backingMetrics ? undefined : "min-h-64"} data-rail-slot="collateralization">
             {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : (
               <RailCard title="Collateralization" ariaLabel="Collateralization">
                 <p className="px-4 pb-4 text-xs text-muted-foreground">Waiting for reserve evidence.</p>
@@ -356,7 +386,7 @@ function DetailSummaryRail({
           </div>
         ) : null}
         {sharedModules.accessRows.length > 0 || viewModel.gradeRead === "pending" ? (
-          <div className="min-h-48" data-rail-slot="access">
+          <div className={sharedModules.accessRows.length > 0 ? undefined : "min-h-48"} data-rail-slot="access">
             {sharedModules.accessRows.length > 0 ? (
               <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
             ) : (
@@ -376,6 +406,8 @@ function DetailSummaryRail({
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
+            pegCurrency={viewModel.coin.flags.pegCurrency}
+            pegRef={viewModel.pegRef}
             consensusSources={viewModel.consensusSources}
             agreeSources={viewModel.agreeSources}
             dexPriceCheck={viewModel.dexPriceCheck}
@@ -383,11 +415,11 @@ function DetailSummaryRail({
             compact
           />
         ) : null}
+        <TapeForCoinTeaser coinId={viewModel.id} supplyUsd={viewModel.mcap} />
         <KeyLinksCard meta={viewModel.coin} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
         ) : null}
-        <TapeForCoinTeaser coinId={viewModel.id} />
         <RailEvidenceIndex groups={sharedModules.evidenceIndex} />
       </div>
     </aside>
@@ -455,6 +487,21 @@ export function DetailContent({
     mechanismReview,
     viewModel,
   }), [mechanismBacking, backingParent, mechanismCollateralization, mechanismReview, viewModel]);
+  // A collateral or hedge-coverage ratio read against par is the mechanism's
+  // own headline figure, so it earns the hero's fourth cell.
+  const backingHeadline = sharedModules.backingMetrics?.visual?.kind === "coverage-ratio"
+    ? sharedModules.backingMetrics
+    : null;
+  const heroKeyMetric = backingHeadline
+    ? {
+        key: "backing-ratio",
+        label: backingHeadline.title,
+        mobileLabel: backingHeadline.title === "Collateralization" ? "Collateral" : backingHeadline.title,
+        value: backingHeadline.headline.value,
+        subValue: backingHeadline.headline.basis,
+        colorClass: "text-foreground",
+      }
+    : null;
   const hasVariantCard = variantRelationshipCard !== null;
   const contextHasContent = useMemo(
     () => hasContextZoneContent(viewModel, hasVariantCard),
@@ -493,7 +540,7 @@ export function DetailContent({
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
         <div className="min-w-0">
           <div ref={heroRef} className="space-y-4">
-            <HeroCard model={heroModel} />
+            <HeroCard model={heroModel} keyMetric={heroKeyMetric} />
             {/* A frozen coin leads with its obituary; its past danger notice
                 follows as a muted record so the story is not told in red first. */}
             {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
@@ -508,6 +555,13 @@ export function DetailContent({
               tone={viewModel.coin.status === "frozen" ? "archive" : "alert"}
             />
             <ListingStateBanner coin={viewModel.coin} />
+            {viewModel.coin.status === "frozen" ? null : (
+              <HolderAlerts
+                notices={viewModel.coin.notices}
+                activeDepeg={!viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true}
+                symbol={viewModel.coin.symbol}
+              />
+            )}
           </div>
           {viewModel.summary ? (
             <div className="mt-4">

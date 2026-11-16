@@ -64,7 +64,7 @@ export const SCORE_TIER_4_CLASSES = {
   t0: { text: "text-red-700 dark:text-red-400", fill: "bg-red-500/70", scoreText: "text-state-danger", pill: "border-state-danger bg-state-danger-subtle text-state-danger" },
 } as const satisfies Record<ScoreTier4, { text: string; fill: string; scoreText: string; pill: string }>;
 
-export const SCORE_TIER_4_POLICY = [
+const SCORE_TIER_4_POLICY = [
   { key: "t0", min: 0 },
   { key: "t40", min: 40 },
   { key: "t60", min: 60 },

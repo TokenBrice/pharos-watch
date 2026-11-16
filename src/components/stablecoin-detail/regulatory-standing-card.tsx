@@ -196,17 +196,19 @@ export type RegulatoryStandingDensity = "rail" | "main";
 /**
  * Regulatory standing (plan §5, §7, decision S2): one row per regime that
  * applies (GENIUS / US, MiCA / EU: status and pathway or token type), the
- * issuer disclosures as their own labelled row, a one-line verdict, one
- * provenance fold (regulator facts, latest report dates, review notes,
- * sources) and the review date.
+ * issuer disclosures as their own labelled row, one provenance fold
+ * (regulator facts, latest report dates, review notes, sources) and the
+ * review date. Each regime's status is said once, on its row: no header
+ * chip or summary sentence restates it. Only a phone's folded tile, whose
+ * rows are hidden, shows the overall badge in their place.
  *
  * Mounted twice, at two densities:
  * - `rail` (the `xl+` rail copy, `anchorTwin`): `RailCard` shell, "Details &
  *   sources (N)" fold, the review date as the card's last line.
  * - `main` (the in-flow twin below `xl`, owning `id`): an `EvidenceModule`
- *   tile with the module header (logo · SYMBOL · title, status right), the
- *   standing capped at ~36rem with the verdict beside it on wide containers,
- *   and the `EvidenceFooter` fold and right-aligned `Reviewed <ISO date>`.
+ *   tile with the module header (logo · SYMBOL · title), the standing capped
+ *   at ~36rem, and the `EvidenceFooter` fold and right-aligned
+ *   `Reviewed <ISO date>`.
  *
  * Density defaults by usage: `main` when the copy owns `id` and is not an
  * anchor twin, `rail` otherwise. Renders nothing without a view; the caller
@@ -245,16 +247,11 @@ export function RegulatoryStandingCard({
         title={TITLE}
         variant="tile"
         stripForm={stripForm}
-        headerRight={badge}
+        foldedSummary={badge}
         className={className}
         visual={
-          <div className="@container/regulatory">
-            <div className="grid gap-x-10 gap-y-4 @3xl/regulatory:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-              <div className="min-w-0 max-w-xl">
-                <Standing view={view} />
-              </div>
-              <p className="text-sm leading-relaxed text-pretty text-foreground">{view.summary}</p>
-            </div>
+          <div className="min-w-0 max-w-xl">
+            <Standing view={view} />
           </div>
         }
         footer={
@@ -276,11 +273,9 @@ export function RegulatoryStandingCard({
       anchorTwin={anchorTwin ? (id ?? JURISDICTION_ANCHOR_ID) : undefined}
       title={TITLE}
       ariaLabel={TITLE}
-      trailing={badge}
     >
       <div className="px-4 pb-4">
         <Standing view={view} />
-        <p className="mt-3 text-sm leading-snug text-foreground">{view.summary}</p>
         {foldCount > 0 ? (
           <ModuleDisclosure label="Details & sources" count={foldCount} className="mt-3" summaryClassName="text-xs">
             <div className="mt-1 space-y-3 pb-1 text-xs leading-relaxed text-muted-foreground">

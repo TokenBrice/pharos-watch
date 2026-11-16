@@ -31,6 +31,7 @@ import {
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { cn } from "@/lib/utils";
 import { MINT_AUTHORITY_SCORE_DESCRIPTORS, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
+import { findV9NativeMintComponent } from "@shared/lib/safety-score-v9/control-component-keys";
 import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail/mint-authority-presentation";
 
 /** The five published V9 posture bands — ordinal, not score ranges: 9.1
@@ -122,6 +123,25 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
       <span className="text-xs text-foreground">{value}</span>
     </span>
   );
+}
+
+/**
+ * The header pill names its score ("Mint score 80 · Managed", only the figure
+ * in mono), as "Route score" does, so it never reads as a bare number beside
+ * another pillar's score. A band with no published figure (Hardened: no
+ * privileged mint) is the band alone; NR and an unavailable publication keep
+ * their own label.
+ */
+function MintScoreLabel({ score }: { score: MintAuthorityDetailScoreViewModel }) {
+  if (!score.publicationAvailable) return score.compactLabel;
+  if (score.score != null) {
+    return (
+      <>
+        Mint score <span className="pharos-numeric">{score.score}</span> · {score.bandLabel}
+      </>
+    );
+  }
+  return score.bandKey === "nr" ? score.compactLabel : score.bandLabel;
 }
 
 function plural(count: number, noun: string, pluralNoun = `${noun}s`): string {
@@ -408,7 +428,7 @@ export function MintAuthoritySection({
       ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
       : `${score.compactLabel}. Explain methodology.`
     : undefined;
-  const mintRole = controlRoles?.components.find((component) => component.kind === "mint")?.role ?? null;
+  const mintRole = findV9NativeMintComponent(controlRoles?.components)?.role ?? null;
   const unresolvedQuestions = profile.unresolvedQuestions ?? [];
   const hasVerificationGaps = !!profile.sourceFreeRationale || unresolvedQuestions.length > 0;
   const mintIncidents = profile.mintIncidents ?? [];
@@ -428,14 +448,16 @@ export function MintAuthoritySection({
     <>
       {score ? (
         <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
-          <ScorePill
-            label={score.compactLabel}
-            toneClass={score.badgeClassName}
+          <Badge
+            variant="outline"
             title={`${score.detail} ${MINT_AUTHORITY_TONE_NOTE}`}
-          />
+            className={cn("px-2 py-0.5 text-sm", score.badgeClassName)}
+          >
+            <MintScoreLabel score={score} />
+          </Badge>
         </ScoreBadgeWrapper>
       ) : (
-        <ScorePill label="NR" title="The mint control posture is not rated." />
+        <ScorePill label="Not rated" title="The mint control posture is not rated." className="font-sans" />
       )}
       <ControlRoleTag role={mintRole} />
     </>

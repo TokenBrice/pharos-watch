@@ -87,8 +87,8 @@ describe("PysBreakdown", () => {
   it("renders score, breakdown lines, and methodology link with version label", () => {
     const { container } = renderWithProvider(baseProps({ mode: "inline", score: 50 }));
 
-    // Score displayed in the inline summary (toFixed(1)).
-    expect(container.textContent ?? "").toContain("50.0");
+    // Whole scores print without a decimal; a real fraction keeps one.
+    expect(container.querySelector("summary")?.textContent).toMatch(/^50Breakdown/);
 
     expect(screen.getByLabelText(/Base APY 5\.00%/)).toBeTruthy();
     expect(screen.getByLabelText(/Effective yield 4\.50%/)).toBeTruthy();

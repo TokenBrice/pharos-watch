@@ -51,7 +51,15 @@ export function SafetyGradeHero({
   mobile?: boolean;
 }) {
   const letterClass = mobile ? "text-3xl" : "text-5xl";
+  // Beside the name (below xl) the grade needs its own caption: a bare letter
+  // reads as any rating.
+  const caption = mobile ? (
+    <span className="w-full text-right text-2xs font-medium text-muted-foreground">Safety Score</span>
+  ) : null;
   const scoreClass = mobile ? "text-xs" : "text-base";
+  // The score rides inside the grade's trigger: the trigger's 44px minimum tap
+  // width never opens a gap between the letter and its "· 87/100".
+  const gradeGroupClass = "inline-flex items-baseline gap-x-1.5";
   // Keep the saved grade's date row after the live read settles.
   const trackClass = mobile
     ? "flex min-h-16 w-32 shrink-0 flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1"
@@ -61,16 +69,19 @@ export function SafetyGradeHero({
     // The release's grade, dated, until the live card arrives.
     return (
       <div className={trackClass} data-safety-grade-track data-safety-state="saved">
+        {caption}
         <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
-          <span className={`pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(savedGrade.grade).pulse.accentClassName}`}>
-            {savedGrade.grade}
+          <span className={gradeGroupClass}>
+            <span className={`pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(savedGrade.grade).pulse.accentClassName}`}>
+              {savedGrade.grade}
+            </span>
+            {savedGrade.score !== null && (
+              <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
+                · {savedGrade.score}/100
+              </span>
+            )}
           </span>
         </ScoreBadgeWrapper>
-        {savedGrade.score !== null && (
-          <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
-            · {savedGrade.score}/100
-          </span>
-        )}
         <span className="w-full text-right text-2xs text-muted-foreground">{formatSavedAssessmentAsOf(savedGrade.asOfMs)}</span>
       </div>
     );
@@ -104,20 +115,23 @@ export function SafetyGradeHero({
   // carries only the grade and score.
   return (
     <div className={trackClass} data-safety-grade-track>
+      {caption}
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
-        <span
-          className={reportCard.grade === null
-            ? "text-right text-xs font-semibold leading-tight text-muted-foreground"
-            : `pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName}`}
-        >
-          {reportCard.grade === null ? "Pipeline gap" : reportCard.grade}
+        <span className={gradeGroupClass}>
+          <span
+            className={reportCard.grade === null
+              ? "text-right text-xs font-semibold leading-tight text-muted-foreground"
+              : `pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName}`}
+          >
+            {reportCard.grade === null ? "Pipeline gap" : reportCard.grade}
+          </span>
+          {reportCard.score !== null && (
+            <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
+              · {reportCard.score}/100
+            </span>
+          )}
         </span>
       </ScoreBadgeWrapper>
-      {reportCard.score !== null && (
-        <span className={`whitespace-nowrap font-mono text-muted-foreground ${scoreClass}`}>
-          · {reportCard.score}/100
-        </span>
-      )}
     </div>
   );
 }

@@ -3,15 +3,10 @@
 import { CircleCheck, CircleDashed } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ControlRoleTag } from "@/components/stablecoin-detail/control-role-tag";
-import {
-  DeploymentStrip,
-  type DeploymentStripBracket,
-  type DeploymentStripCell,
-} from "@/components/stablecoin-detail/deployment-strip";
+import { DeploymentRouteGroups, type DeploymentRoute } from "@/components/stablecoin-detail/deployment-strip";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { EvidenceModule, type EvidenceModuleVariant } from "@/components/stablecoin-detail/evidence-module";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import type { FailureDomainRow, FailureDomainShareSummary, FailureDomainsView } from "@/lib/failure-domains";
 import type { ControlComponentRoles, ControlStripComponent, PillarStripTone } from "@/lib/pillar-evidence-strips";
@@ -32,9 +27,6 @@ import {
 } from "@shared/lib/classification";
 import { countSummaryWords, SUMMARY_VERDICT_MAX_WORDS } from "@shared/lib/summary-budget";
 import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
-
-/** Brackets stacked over the strip; the rest stay in the "Shared failure domains" fold. */
-const BRACKET_LIMIT = 4;
 
 const ROLE_ORDER: readonly ControlComponentRole[] = ["limiting", "eligible", "diagnostic", "excluded"];
 
@@ -73,13 +65,6 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-/** Whole percent from 10 %, one decimal below it, and never "0.0%" for a real sliver. */
-function formatShare(share: number): string {
-  const pct = share * 100;
-  if (pct > 0 && pct < 0.1) return "<0.1%";
-  return `${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
-}
-
 /** One decimal at every size, for the fold's member detail, where rounding would lose the published share. */
 function formatPreciseShare(share: number): string {
   const pct = share * 100;
@@ -90,16 +75,12 @@ function formatPreciseShare(share: number): string {
 /**
  * A domain's share as a caption: the merged share, or, when part of the
  * domain is unquantified, the known members' share as a lower bound plus how
- * many members it leaves out. Null when no member is quantified. Bracket
- * captions pass the compact `formatShare`; the fold passes `formatPreciseShare`.
+ * many members it leaves out. Null when no member is quantified.
  */
-function describeDomainShare(
-  share: FailureDomainShareSummary,
-  format: (value: number) => string,
-): { label: string; note: string | null } | null {
-  if (share.status === "quantified") return { label: format(share.exposureShare), note: null };
+function describeDomainShare(share: FailureDomainShareSummary): { label: string; note: string | null } | null {
+  if (share.status === "quantified") return { label: formatPreciseShare(share.exposureShare), note: null };
   if (share.status === "unquantified") return null;
-  const known = format(share.knownShareLowerBound);
+  const known = formatPreciseShare(share.knownShareLowerBound);
   return {
     // "≥<0.1%" reads as nonsense; a positive sliver is simply more than nothing.
     label: known.startsWith("<") ? ">0%" : `≥${known}`,
@@ -108,7 +89,7 @@ function describeDomainShare(
 }
 
 function DomainShare({ share }: { share: FailureDomainShareSummary }) {
-  const caption = describeDomainShare(share, formatPreciseShare);
+  const caption = describeDomainShare(share);
   if (caption === null) return <span className="text-muted-foreground">Share unquantified</span>;
   return (
     <span className="text-muted-foreground">
@@ -141,7 +122,7 @@ export function resolveBridgingDeploymentsForm(
 
 /**
  * How the routes split by tier, over the full inventory (the counts the
- * legend shows), unresolved routes included. `all`: one reviewed tier and
+ * route groups show), unresolved routes included. `all`: one reviewed tier and
  * nothing unresolved; `mostly`: the largest tier holds a strict majority of
  * every route; `mixed`: no tier does; `unresolved`: nothing is reviewed. The
  * lead is the largest tier, the better one on a tie.
@@ -226,13 +207,13 @@ type BridgingHeader =
 
 /**
  * One status for the header and the rail index, read from the same fields the
- * strip draws:
+ * route groups list:
  *
  * - a bridge component at the eligible Control minimum → its score pill and
  *   the limiting tag, never a tier chip (and never green);
  * - otherwise one neutral chip describing the route mix ("Mostly lock &
  *   mint", "Mixed · 1 unresolved"), the same label in the header and the
- *   index. A diagnostic role is keyed by the strip legend, not the header.
+ *   index. A diagnostic role is tagged on its route group, not the header.
  *
  * A reviewed tier the route list disagrees with is stated in the notes fold,
  * not here.
@@ -302,7 +283,7 @@ function resolveUncelledLimiting(
       : band.every((component) => isUnverifiedFallback(component, routeByComponentKey))
         ? "Bridge controls unverified"
         : "Bridge control without a route mapping",
-    caveat: undrawn.length > 0 ? "the limiting route is not among those drawn" : null,
+    caveat: undrawn.length > 0 ? "the limiting route is not among those listed" : null,
   };
 }
 
@@ -343,9 +324,9 @@ function fitVerdict(candidates: readonly (readonly (string | null)[])[]): string
 
 /**
  * One generated sentence pair (≤ 25 words, `summary-budget.ts`) that agrees
- * with the drawn cells: what limits Control when a bridge component does,
+ * with the route groups: what limits Control when a bridge component does,
  * then route and chain counts led by the majority tier, the weakest reviewed
- * tier, the third-party count (the legend's third-party tiers) and any
+ * tier, the third-party count (the groups' third-party tiers) and any
  * unresolved routes. Never clipped from the authored summary.
  */
 export function buildBridgingDeploymentsVerdict(
@@ -429,22 +410,17 @@ function buildTierDisagreementNote(summary: BridgeRouteRiskClientSummary): strin
     : `The review rates the inventory ${authored} overall, better than its weakest listed route (${weakestLabel}).`;
 }
 
-interface RouteCell {
-  route: BridgeRouteClientRow;
-  cell: DeploymentStripCell;
-}
-
 /**
- * One cell per projected route. A chain carrying several routes names each by
- * protocol; only the first home-chain route (the native one: routes arrive
- * home first, then best tier) carries the home mark. A route's role comes
- * from its bound bridge component; unscored components make no claim.
+ * One listed route per projected route. A chain carrying several routes names
+ * each by protocol; only the first home-chain route (the native one: routes
+ * arrive home first, then best tier) carries the home mark. A route's role
+ * comes from its bound bridge component; unscored components make no claim.
  */
-function buildRouteCells(
+function buildListedRoutes(
   routes: readonly BridgeRouteClientRow[],
   homeChainId: string | null,
   roleByKey: ReadonlyMap<string, ControlComponentRole>,
-): RouteCell[] {
+): DeploymentRoute[] {
   const routesPerChain = new Map<string, number>();
   for (const route of routes) routesPerChain.set(route.chainId, (routesPerChain.get(route.chainId) ?? 0) + 1);
   const usedKeys = new Set<string>();
@@ -456,55 +432,22 @@ function buildRouteCells(
     if (home) homeMarked = true;
     const role = route.controlComponentKey ? roleByKey.get(route.controlComponentKey) : undefined;
     return {
-      route,
-      cell: {
-        key,
-        label: (routesPerChain.get(route.chainId) ?? 0) > 1
-          ? `${route.chainLabel} · ${route.protocolLabel ?? "native"}`
-          : route.chainLabel,
-        tierKey: route.tierKey,
-        tierLabel: route.reviewed ? route.tierLabel : UNRESOLVED_TIER_LABEL,
-        role: role === "excluded" ? undefined : role,
-        home,
-        unknown: !route.reviewed,
-      },
+      key,
+      label: (routesPerChain.get(route.chainId) ?? 0) > 1
+        ? `${route.chainLabel} · ${route.protocolLabel ?? "native"}`
+        : route.chainLabel,
+      tierKey: route.tierKey,
+      tierLabel: route.reviewed ? route.tierLabel : UNRESOLVED_TIER_LABEL,
+      role: role === "excluded" ? undefined : role,
+      home,
+      unknown: !route.reviewed,
     };
   });
 }
 
-/** Failure domains as brackets over the route cells they span, in the view's cost-then-share order. */
-function buildBrackets(
-  rows: readonly FailureDomainRow[],
-  cells: readonly RouteCell[],
-): { brackets: DeploymentStripBracket[]; spanningCount: number } {
-  const brackets: DeploymentStripBracket[] = [];
-  let spanningCount = 0;
-  for (const row of rows) {
-    const cellKeys = cells
-      .filter(({ route }) =>
-        row.span.chainIds.includes(route.chainId)
-        || row.span.routeKeys.includes(route.key)
-        || (route.protocolKey !== null && row.span.protocolKeys.includes(route.protocolKey)),
-      )
-      .map(({ cell }) => cell.key);
-    if (cellKeys.length === 0) continue;
-    spanningCount += 1;
-    if (brackets.length >= BRACKET_LIMIT) continue;
-    const share = describeDomainShare(row.share, formatShare);
-    brackets.push({
-      key: row.key,
-      label: row.members.length > 1 ? `${row.label} ×${row.members.length}` : row.label,
-      cellKeys,
-      shareLabel: share?.label,
-      shareNote: share?.note ?? undefined,
-    });
-  }
-  return { brackets, spanningCount };
-}
-
 /**
- * Legend totals per tier label over the whole inventory, keyed by the labels
- * the cells carry, so a truncated strip's legend still counts every route.
+ * Route totals per tier label over the whole inventory, keyed by the labels
+ * the listed routes carry, so a capped list still counts every route.
  */
 function buildLegendTotals(summary: BridgeRouteRiskClientSummary): Record<string, number> {
   const totals: Record<string, number> = {};
@@ -661,19 +604,21 @@ function DomainList({ view }: { view: FailureDomainsView }) {
  *   component sits at the eligible Control minimum (USTB's unverified bridge
  *   controls at 45); otherwise one neutral route-mix chip, short enough never
  *   to truncate in a tile header and the same label as the index chip. A
- *   diagnostic role (USDe's 31 OFT routes) is keyed by the strip legend and
- *   the Control strip, not the header. Chip, verdict and legend count the
+ *   diagnostic role (USDe's 31 OFT routes) is tagged on its route group and
+ *   the Control strip, not the header. Chip, verdict and groups count the
  *   same routes.
- * - Visual: a `DeploymentStrip` with one cell per route, filled by bridge tier
- *   in published policy order, home chain marked. A limiting route is
- *   outlined, a diagnostic one dashed in its tier's hue; a limiting component
- *   no route carries (unverified bridge controls) outlines the whole band
- *   with a caption. The legend counts the whole inventory. Failure domains
- *   bracket the cells they span; an unquantified share reads "share
- *   unquantified", never a percent, and a partly quantified one reads as a
- *   lower bound with its unquantified member count ("≥21% · 1 unquantified").
+ * - Visual: `DeploymentRouteGroups`, one group per route type in published
+ *   policy order with its count and chain chips (eight, then "+N more"), home
+ *   chain marked. A limiting route's chip is outlined, a diagnostic one
+ *   dashed; a limiting component no route carries (unverified bridge
+ *   controls) is stated once above the groups. Group counts cover the whole
+ *   inventory. Per-chain supply is unpublished, so nothing is sized by it.
+ *   Failure domains, with their shares, live in their own fold; an
+ *   unquantified share reads "share unquantified", never a percent, and a
+ *   partly quantified one reads as a lower bound with its unquantified
+ *   member count ("≥21% · 1 unquantified").
  * - A single-chain / native coin, a lone route, or failure domains without a
- *   bridge review degrade to strip form: no one-cell strip.
+ *   bridge review degrade to strip form: no one-route list.
  * - Disclosures in fixed order: Scoring breakdown → Shared failure domains
  *   (`#failure-domains`, on the fold itself) → Review notes & sources, which
  *   also states an authored tier the route list disagrees with.
@@ -695,9 +640,8 @@ export function BridgingDeploymentsModule({
   // Role components carry the same `key` / `kind` pair, so they bind routes when the raw list is not passed.
   const boundRoutes = summary ? bindBridgeRouteControlComponents(summary, controlComponents ?? roleComponents) : [];
   const roleByKey = new Map(roleComponents.map((component) => [component.key, component.role]));
-  const routeCells = summary && form === "tile" ? buildRouteCells(boundRoutes, summary.homeChainId, roleByKey) : [];
+  const listedRoutes = summary && form === "tile" ? buildListedRoutes(boundRoutes, summary.homeChainId, roleByKey) : [];
   const domainView = failureDomains && failureDomains.rows.length > 0 ? failureDomains : null;
-  const { brackets, spanningCount } = buildBrackets(domainView?.rows ?? [], routeCells);
 
   const bridgeComponents = roleComponents.filter((component) => component.kind === "bridge");
   const routeByComponentKey = new Map(
@@ -710,13 +654,8 @@ export function BridgingDeploymentsModule({
     routeByComponentKey,
     routesTruncated,
   );
-  const caveats = [
-    routesTruncated > 0 && summary
-      ? `${summary.routes.length} of ${summary.routeCount} routes drawn in proportion; legend counts all ${summary.routeCount}`
-      : null,
-    uncelledLimiting.caveat,
-    spanningCount > brackets.length ? `${brackets.length} of ${spanningCount} shared failure domains bracketed` : null,
-  ].filter((part): part is string => part !== null);
+  // Group counts come from the full inventory, so a capped list needs no caveat of its own.
+  const caveats = uncelledLimiting.caveat ? [uncelledLimiting.caveat] : [];
 
   const pointCost = domainView?.totalAdjustmentPoints ?? 0;
   const tierNote = summary ? buildTierDisagreementNote(summary) : null;
@@ -729,9 +668,15 @@ export function BridgingDeploymentsModule({
         Confidence: {summary.confidenceLabel}
       </Badge>
     ) : null,
+    // The Safety Score card's label and sign for the same deduction.
     pointCost > 0 ? (
-      <Badge key="cost" variant="outline" className={CHIP_CLASS}>
-        Shared domains <span className="font-mono tabular-nums text-foreground">−{pointCost.toFixed(1)}</span> pts
+      <Badge
+        key="cost"
+        variant="outline"
+        className={CHIP_CLASS}
+        title="Deployments sharing a chain or bridge that can fail together"
+      >
+        Shared exposure −{pointCost.toFixed(1)} pts
       </Badge>
     ) : null,
   ].filter((node) => node !== null);
@@ -740,13 +685,16 @@ export function BridgingDeploymentsModule({
     ? undefined
     : header.kind === "limiting"
       ? (
+        // The pill names its score, as every module header pill does; the
+        // first chip is what a folded phone header shows.
         <>
-          <span className="sr-only">Bridge component score</span>
-          <ScorePill
-            label={String(header.score)}
-            toneClass={header.toneClass}
+          <Badge
+            variant="outline"
             title={`Bridge component of the Control pillar: ${header.score} of 100, the Control minimum before adjustments.`}
-          />
+            className={cn("px-2 py-0.5 text-sm", header.toneClass)}
+          >
+            Bridge score <span className="pharos-numeric">{header.score}</span>
+          </Badge>
           <ControlRoleTag role="limiting" />
         </>
       )
@@ -762,18 +710,19 @@ export function BridgingDeploymentsModule({
       title="Bridging & deployments"
       variant={variant}
       stripForm={stripForm || form === "strip"}
+      // Fills its grid cell, so tiles sharing a board row end level.
+      className={form === "tile" && !stripForm ? "h-full" : undefined}
       headerRight={headerRight}
-      visual={routeCells.length > 1 && summary ? (
-        <DeploymentStrip
-          cells={routeCells.map(({ cell }) => cell)}
-          brackets={brackets}
-          ariaLabel="Bridge routes by tier"
-          legendTotals={buildLegendTotals(summary)}
+      visual={listedRoutes.length > 1 && summary ? (
+        <DeploymentRouteGroups
+          routes={listedRoutes}
+          ariaLabel="Bridge routes by type"
+          totals={buildLegendTotals(summary)}
           caveats={caveats}
           bandLimiting={uncelledLimiting.bandCaption ?? undefined}
         />
       ) : undefined}
-      visualFold={`Routes by chain (${routeCells.length})`}
+      visualFold={`Routes by type (${summary?.routeCount ?? listedRoutes.length})`}
       verdict={verdict}
       chipRow={chips.length > 0 ? chips : undefined}
       folds={

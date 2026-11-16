@@ -99,7 +99,8 @@ describe("BlacklistStats", () => {
       blacklistStatusBuckets={[]} supportDataLoading={false} />);
     const detailView = render(<BlacklistDetailStats symbol="USDC" stats={stats} isLoading={false} />);
     expect(within(headlineView.container).getAllByText(headline)).toHaveLength(1);
-    expect(within(detailView.container).getAllByText(detail)).toHaveLength(2);
+    // The dossier strip hides a zero or unavailable figure ("$0.00 destroyed" is not a finding).
+    expect(within(detailView.container).queryAllByText(detail)).toHaveLength(amount != null && Number.isFinite(amount) && amount !== 0 ? 2 : 0);
   });
 
   it("shows the tracked frozen subtotal without a partial marker when snapshots lack a USD value", () => {

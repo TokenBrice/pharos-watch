@@ -41,6 +41,14 @@ it("keeps the header readout on the range's latest observation after a brush dra
   expect(screen.getByText("-1 bps")).toBeTruthy();
 });
 
+it("headlines the live quote and its deviation when the caller supplies them", () => {
+  render(<PegDeviationChart data={history} pegCurrency="USD" controlledRange="all" current={{ price: 0.9991, deviationBps: -9 }} />);
+  expect(screen.getByText("$0.9991")).toBeTruthy();
+  expect(screen.getByText("-9 bps")).toBeTruthy();
+  expect(screen.getByText("In band")).toBeTruthy();
+  expect(screen.queryByText("$0.9999")).toBeNull();
+});
+
 it("labels only the observed price series 'Price' in the tooltip", async () => {
   const { container } = render(<PegDeviationChart data={history} pegCurrency="USD" controlledRange="all" />);
   const wrapper = container.querySelector(".recharts-wrapper")!;

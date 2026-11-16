@@ -66,8 +66,8 @@ function AccessGate({
  * output, with settlement annotated on the final leg. Every mark encodes a
  * published field (gate geometry = access model and holder eligibility, arrow
  * label = settlement, terminal chip = output asset). Below `sm` the same four
- * facts render as the passport FactGrid — the rail needs more width than a
- * phone column gives.
+ * facts render as the passport FactGrid, two by two in rail order — the rail
+ * needs more width than a phone column gives.
  */
 export function RedemptionRouteRail({
   accessModel,
@@ -133,9 +133,11 @@ export function RedemptionRouteRail({
         className="sm:hidden"
         aria-label="Route properties"
         items={[
-          { key: "access", label: "Access", value: accessLabel },
-          { key: "settlement", label: "Settlement", value: settlementLabel },
-          { key: "output", label: "Output", value: outputAssetLabel },
+          // Route words read in the sans, never mono capitals ("Multi-day").
+          { key: "access", label: "Access", value: accessLabel, valueStyle: "text" },
+          { key: "venue", label: "Venue", value: routeFamilyLabel, valueStyle: "text" },
+          { key: "settlement", label: "Settlement", value: settlementLabel, valueStyle: "text" },
+          { key: "output", label: "Output", value: outputAssetLabel, valueStyle: "text" },
         ]}
       />
     </>

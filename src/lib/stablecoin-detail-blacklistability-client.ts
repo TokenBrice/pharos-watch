@@ -33,18 +33,21 @@ export interface BlacklistabilityClientSummary {
   reviewedAt: string | null;
 }
 
+// One freeze vocabulary across the dossier (the Freeze & seizure module, its
+// Evidence index chip and Access posture): every exposed state is amber, only
+// "Not freezable" is green.
 const STATUS_LABELS: Record<BlacklistabilityClientStatus, string> = {
   freezable: "Freezable",
   "not-freezable": "Not freezable",
-  possible: "Possible",
-  inherited: "Upstream",
+  possible: "Restrictable",
+  inherited: "Upstream freeze risk",
 };
 
 const STATUS_TONES: Record<BlacklistabilityClientStatus, SeverityTone> = {
   freezable: "watch",
   "not-freezable": "ok",
   possible: "watch",
-  inherited: "info",
+  inherited: "watch",
 };
 
 function statusValue(value: unknown): BlacklistabilityClientStatus | null {

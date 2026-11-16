@@ -92,7 +92,3 @@ export const DIRECTION_TONE_CLASSES = {
   down: "text-red-700 dark:text-red-400",
 } as const satisfies Record<DirectionTone, string>;
 
-export const DIRECTION_CHIP_CLASSES = {
-  up: "bg-green-500/10 text-green-700 dark:text-green-400",
-  down: "bg-red-500/10 text-red-700 dark:text-red-400",
-} as const satisfies Record<DirectionTone, string>;

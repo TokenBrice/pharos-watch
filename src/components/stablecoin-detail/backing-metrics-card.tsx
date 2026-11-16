@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { CircleDashed, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { EvidenceFooter, FooterStamp } from "@/components/stablecoin-detail/evidence-footer";
 import { EvidenceModule } from "@/components/stablecoin-detail/evidence-module";
 import { resolveFactValueStyle } from "@/components/stablecoin-detail/fact-grid";
 import {
@@ -11,6 +11,7 @@ import {
   RailMetricCard,
   type RailMetricSubMetric,
 } from "@/components/stablecoin-detail/rail-card";
+import { compactReserveStamp } from "@/components/stablecoin-detail/reserve-presentation";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { SourceLinkList } from "@/components/stablecoin-detail/source-link-list";
 import {
@@ -27,7 +28,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { COLLATERAL_COVERAGE_LABELS, COLLATERAL_COVERAGE_PILL_CLASSES } from "@shared/lib/classification";
 import { timeAgo } from "@shared/lib/format";
-import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
+import type { LiabilityRatioUnavailableReason, LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 
 /** The in-flow copy owns this id; the `xl+` rail copy stands in for it. */
 export const BACKING_METRICS_ANCHOR_ID = "collateralization";
@@ -37,6 +38,8 @@ const BACKING_METRICS_ALIAS_ANCHOR_ID = "backing-mechanics";
 /**
  * Which source filled the headline, in the S7 fill order. A reviewed
  * not-applicable ruling never leads: it is a gap, and folds with the others.
+ * Live metadata proving no coverage ratio exists leads nothing either: with no
+ * other reading the card is hidden (the dossier never frames an empty module).
  */
 export type BackingHeadlineSource =
   | "live-ratio"
@@ -49,8 +52,13 @@ export interface BackingMetricsHeadline {
   source: BackingHeadlineSource;
   /** Formatted figure. */
   value: string;
-  /** What the figure is measured against: "vs debt", "hedge coverage · via USDe". Never empty. */
+  /**
+   * What the figure is measured against: "vs debt", "hedge coverage · via USDe".
+   * Never empty.
+   */
   basis: string;
+  /** What a metric headline measures, in plain words, as a muted line under it; null when the basis says it. */
+  hint: string | null;
 }
 
 export type BackingMetricsVisual =
@@ -168,6 +176,15 @@ const REVIEWED_RATIO_BASIS = "as reviewed";
 const BACKSTOP_LABEL = "Liquidation backstop";
 const BACKSTOP_HINT = "Capital committed to absorb liquidations.";
 const COLLATERAL_RATIO_NOTE_KEY = "metric:collateralizationRatio";
+/** Why a live feed withholds its coverage ratio, in plain words, for the folded details. */
+const RATIO_UNAVAILABLE_LABELS: Record<LiabilityRatioUnavailableReason, string> = {
+  "not-comparable": "Not comparable",
+  "liability-scope-unclassified-chain": "Chain not classified",
+  "included-supply-read-failed": "Supply read failed",
+  "reserve-supply-time-skew": "Readings too far apart",
+  "zero-liability-denominator": "Zero supply",
+  "reserve-supply-temporal-policy-unreviewed": "Timing rule not reviewed",
+};
 const HEDGE_COVERAGE_KEY = "hedgeCoverageRatio";
 
 /**
@@ -434,7 +451,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
 
   if (live != null) {
     const basis = input.liveRatioBasis || (showsSharedBook ? SHARED_BOOK_BASIS : UNKNOWN_LIVE_BASIS);
-    headline = { source: "live-ratio", value: formatRatioPct(live), basis };
+    headline = { source: "live-ratio", value: formatRatioPct(live), basis, hint: null };
     coverage = coverageFor(live);
     visual = {
       kind: "coverage-ratio",
@@ -445,7 +462,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     };
     pool = [backstopCandidate, ...metrics.map(metricCandidate)];
   } else if (collateralization?.ratio != null) {
-    headline = { source: "reviewed-ratio", value: formatRatioPct(collateralization.ratio), basis: REVIEWED_RATIO_BASIS };
+    headline = { source: "reviewed-ratio", value: formatRatioPct(collateralization.ratio), basis: REVIEWED_RATIO_BASIS, hint: null };
     coverage = coverageFor(collateralization.ratio);
     visual = {
       kind: "coverage-ratio",
@@ -460,7 +477,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     via = resolveLookThrough(input.parent, backing);
     const basis = via ? `${asCaption(lead.label)} · via ${via}` : asCaption(lead.label);
     const plan = planMetricVisual(backing!.archetype, metrics, via ? `${lead.label}, via ${via}` : lead.label);
-    headline = { source: "metric", value: formatBackingMetric(lead), basis };
+    headline = { source: "metric", value: formatBackingMetric(lead), basis, hint: lead.hint };
     if (lead.key === HEDGE_COVERAGE_KEY) {
       const tone = getCollateralCoverageTone(lead.value);
       coverage = { tone, label: HEDGE_COVERAGE_LABELS[tone] };
@@ -471,15 +488,15 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
       ...metrics.slice(1).filter((metric) => !plan.consumed.has(metric.key)).map(metricCandidate),
     ];
   } else if (backstop != null) {
-    headline = { source: "backstop", value: formatRatioPct(backstop), basis: "liquidation backstop" };
+    headline = { source: "backstop", value: formatRatioPct(backstop), basis: "liquidation backstop", hint: BACKSTOP_HINT };
     visual = { kind: "share", valuePct: ratioToPct(backstop), label: BACKSTOP_LABEL };
   } else if (facts.length > 0) {
     const lead = facts[0]!;
     headlineFactKey = lead.key;
-    headline = { source: "protocol-fact", value: lead.value, basis: asCaption(lead.label) };
-  } else if (input.liveMetadata?.ratioUnavailableReason || input.liveMetadata?.nativeQuantityBasis) {
-    headline = { source: "protocol-fact", value: "Unavailable", basis: "reserve coverage ratio" };
+    headline = { source: "protocol-fact", value: lead.value, basis: asCaption(lead.label), hint: null };
   } else {
+    // No reading to lead with (a live feed that only proves no comparable
+    // ratio exists included): the dossier hides an empty module.
     return null;
   }
 
@@ -542,7 +559,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
     details.push({
       key: "ratio-unavailable",
       label: "Coverage unavailable",
-      value: metadata.ratioUnavailableReason,
+      value: RATIO_UNAVAILABLE_LABELS[metadata.ratioUnavailableReason],
       note: metadata.liabilityScope?.basis === "not-comparable"
         ? metadata.liabilityScope.reason
         : "No compatible, complete and time-admitted liability denominator.",
@@ -642,14 +659,12 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
   const parentShown = parentBacking != null && details.some((row) => row.key.startsWith("parent:"));
 
   const liveShown = live != null || liveBackstop != null || metadata != null;
-  const labelParts = input.liveFreshnessLabel?.split(" · ") ?? null;
-  // "Source date unavailable · Checked …": the check time already dates the
-  // reading, so the missing source date would only push the stamp to two lines.
-  const checked = labelParts?.some((part) => part.startsWith("Checked ")) ?? false;
+  // One stamp grammar with the Reserves footer: no "date unavailable", and a
+  // same-day check names only its time, so the stamp fits one rail line.
   const liveStamp = !liveShown
     ? null
-    : labelParts != null
-      ? labelParts.filter((part) => !(checked && part === "Source date unavailable")).join(" · ")
+    : input.liveFreshnessLabel != null
+      ? compactReserveStamp(input.liveFreshnessLabel)
       : input.liveAtSec != null
         ? `Live · checked ${timeAgo(input.liveAtSec, input.nowSec)}`
         : "Live";
@@ -764,11 +779,13 @@ function BackingSplitBar({ exogenousPct, reflexivePct }: { exogenousPct: number;
 
 function BackingVisual({ view }: { view: BackingMetricsView }) {
   const { visual } = view;
-  if (!visual && !view.sharedBookNote) return null;
+  const { hint } = view.headline;
+  if (!visual && !view.sharedBookNote && !hint) return null;
 
   return (
     <div className="space-y-2">
-      {/* Capped so a twin spanning a 1,000 px row never strands the knob on an empty track. */}
+      {hint ? <p className="max-w-prose text-xs leading-snug text-muted-foreground">{hint}</p> : null}
+      {/* Full width of its card: the in-flow twin spans its board's row. */}
       {visual?.kind === "coverage-ratio" ? (
         <ThresholdGauge
           valuePct={visual.valuePct}
@@ -776,16 +793,13 @@ function BackingVisual({ view }: { view: BackingMetricsView }) {
           threshold={visual.threshold}
           shutdown={visual.shutdown}
           showValueLabel={false}
-          className="max-w-md"
         />
       ) : null}
       {visual?.kind === "share" ? (
-        <ShareMeter valuePct={visual.valuePct} ariaLabel={visual.label} className="max-w-md" />
+        <ShareMeter valuePct={visual.valuePct} ariaLabel={visual.label} />
       ) : null}
       {visual?.kind === "backing-split" ? (
-        <div className="max-w-md">
-          <BackingSplitBar exogenousPct={visual.exogenousPct} reflexivePct={visual.reflexivePct} />
-        </div>
+        <BackingSplitBar exogenousPct={visual.exogenousPct} reflexivePct={visual.reflexivePct} />
       ) : null}
       {visual?.kind === "duration-pair" ? (
         <ul aria-label="Loan book duration" className="flex flex-wrap gap-1.5">
@@ -837,7 +851,14 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
                 {row.label}
                 {row.note ? <span className="block text-2xs text-muted-foreground">{row.note}</span> : null}
               </dt>
-              <dd className="pharos-numeric shrink-0 font-semibold text-foreground">{row.value}</dd>
+              <dd
+                className={cn(
+                  "text-right text-foreground",
+                  resolveFactValueStyle(row.value) === "figure" ? "pharos-numeric shrink-0 font-semibold" : "min-w-0 font-medium",
+                )}
+              >
+                {row.value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -889,7 +910,7 @@ function LiveStamp({ freshness }: { freshness: BackingMetricsView["freshness"] }
   if (!freshness.live) return null;
   return (
     <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
-      <span>{freshness.live}</span>
+      <FooterStamp text={freshness.live} />
     </span>
   );
 }
@@ -904,44 +925,43 @@ function BackingFreshness({ freshness }: { freshness: BackingMetricsView["freshn
 }
 
 /**
- * The in-flow summary layer at main-column density: headline and visual on
- * the left, capped at the gauge's width; from a ~42rem body the sub-metric
- * rows move beside them instead of stacking under them.
+ * The in-flow summary layer at main-column density: the headline, its visual
+ * across the full width, then the sub-metrics as one row of label · value
+ * pairs beneath, wrapping only when they do not fit. A side column would
+ * hold one or two short rows beside a 70 px gauge and leave the rest blank.
  */
 function BackingModuleSummary({ view }: { view: BackingMetricsView }) {
   const headlineIsFigure = resolveFactValueStyle(view.headline.value) === "figure";
   return (
-    <div className="@container/kpi">
-      <div className="flex flex-col gap-4 @2xl/kpi:flex-row @2xl/kpi:items-start @2xl/kpi:gap-8">
-        <div className="w-full min-w-0 max-w-md">
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className={headlineIsFigure ? HEADLINE_FIGURE_CLASS : HEADLINE_TEXT_CLASS}>{view.headline.value}</span>
-            <span className="text-xs text-muted-foreground">{view.headline.basis}</span>
-          </p>
-          <div className="mt-3 empty:hidden">
-            <BackingVisual view={view} />
-          </div>
+    <div className="space-y-4">
+      <div className="min-w-0">
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className={headlineIsFigure ? HEADLINE_FIGURE_CLASS : HEADLINE_TEXT_CLASS}>{view.headline.value}</span>
+          <span className="text-xs text-muted-foreground">{view.headline.basis}</span>
+        </p>
+        <div className="mt-3 empty:hidden">
+          <BackingVisual view={view} />
         </div>
-        {view.subMetrics.length > 0 ? (
-          <dl className="min-w-0 flex-1 divide-y divide-border/40 border-t border-border/40 @2xl/kpi:border-l @2xl/kpi:border-t-0 @2xl/kpi:pl-6">
-            {view.subMetrics.map((row) => (
-              <div
-                key={row.key}
-                title={row.hint ?? undefined}
-                className="flex items-baseline justify-between gap-3 py-2 @2xl/kpi:first:pt-0"
-              >
-                <dt className={SUB_METRIC_LABEL_CLASS}>
-                  {row.label}
-                  {row.hint ? <span className="sr-only">, {row.hint}</span> : null}
-                </dt>
-                <dd className={SUB_METRIC_VALUE_CLASS}>
-                  <SubMetricValue row={row} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : null}
       </div>
+      {view.subMetrics.length > 0 ? (
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-border/40 pt-3">
+          {view.subMetrics.map((row) => (
+            <div
+              key={row.key}
+              title={row.hint ?? undefined}
+              className="flex min-w-0 items-baseline gap-3"
+            >
+              <dt className={SUB_METRIC_LABEL_CLASS}>
+                {row.label}
+                {row.hint ? <span className="sr-only">, {row.hint}</span> : null}
+              </dt>
+              <dd className={SUB_METRIC_VALUE_CLASS}>
+                <SubMetricValue row={row} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
   );
 }
@@ -982,6 +1002,14 @@ export function BackingMetricsCard({
         variant="tile"
         stripForm={stripForm}
         headerRight={chip}
+        // Folded on a phone without a coverage chip, the header still states
+        // the headline figure ("1.5% loss absorption").
+        foldedSummary={chip ? undefined : (
+          <span className="inline-flex items-baseline gap-1.5 text-sm">
+            <span className="pharos-numeric font-semibold text-foreground">{view.headline.value}</span>
+            <span className="text-xs text-muted-foreground">{view.headline.basis}</span>
+          </span>
+        )}
         visual={<BackingModuleSummary view={view} />}
         footer={
           <EvidenceFooter
@@ -1004,7 +1032,7 @@ export function BackingMetricsCard({
         chip={view.coverage ? { label: view.coverage.label, toneClass: COLLATERAL_COVERAGE_PILL_CLASSES[view.coverage.tone] } : null}
         value={view.headline.value}
         valueCaption={view.headline.basis}
-        visual={view.visual || view.sharedBookNote ? <BackingVisual view={view} /> : undefined}
+        visual={view.visual || view.sharedBookNote || view.headline.hint ? <BackingVisual view={view} /> : undefined}
         subMetrics={view.subMetrics.map((row): RailMetricSubMetric => ({
           label: row.label,
           hint: row.hint ?? undefined,

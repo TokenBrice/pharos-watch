@@ -10,10 +10,10 @@ import {
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
-import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";
 import { McapChart } from "@/components/chart-primitives/mcap-chart";
 import { PegDeviationChart } from "@/components/chart-primitives/peg-deviation-chart";
+import { ChartRangeToggle } from "@/components/chart-primitives/scale-toggle";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
@@ -23,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { deriveDataHealth, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { deviationColorClass } from "@/lib/severity-colors";
+import { formatBps } from "@shared/lib/format";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 
@@ -41,6 +44,8 @@ interface MarketDataSectionProps {
   updatedAtMs?: number;
   /** Optional frozen-state notice rendered above the chart pair. */
   frozenNote?: ReactNode;
+  /** The hero's live figures, so chart headers agree with it; lines stay on daily snapshots. */
+  current?: { mcap: number | null; prevDay: number | null; price: number | null; deviationBps: number | null };
 }
 
 /**
@@ -49,7 +54,7 @@ interface MarketDataSectionProps {
  * `controlledRange` prop on each chart; shared brushing and crosshairs keep
  * the ordinary price and market-cap series synchronized.
  */
-export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, updatedAtMs, frozenNote }: MarketDataSectionProps) {
+export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, updatedAtMs, frozenNote, current }: MarketDataSectionProps) {
   // 90d default: recent structure is the read this page optimizes for; "all"
   // compresses a decade of supply into an unreadable first paint.
   const [range, setRange] = useState<TimeRangeOption>("90d");
@@ -59,7 +64,8 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
   });
   const hasExpandedHistory = needsExpandedHistory && expandedHistoryQuery.data.length > 0;
   const activeHistory = hasExpandedHistory ? expandedHistoryQuery.data : supplyHistory;
-  const requestedRange = range === "all" ? "All" : "1Y";
+  // Notices name the range as its button does.
+  const requestedRange = range === "all" ? "All" : "1y";
   // One verdict for the retained expansion's chip and notice (ADR-42): its own producer
   // generation, budgets and server floor; null authority never renews from receipt.
   const expandedHealthInput = {
@@ -106,6 +112,7 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
         updatedAtMs={expandedHealth ? expandedHealth.dataUpdatedAt : updatedAtMs}
         health={expandedHealth}
         frozenNote={frozenNote}
+        current={current}
         historyNotice={historyNotice}
         range={range}
         setRange={setRange}
@@ -135,8 +142,14 @@ function MarketDataSectionBody({
   health,
   range,
   setRange,
+  current,
 }: MarketDataSectionBodyProps) {
   const sync = useMarketDataChartSync();
+  // Daily history carries USD prices only. A USD peg's reference is $1 on every
+  // day; other pegs need a dated FX/commodity reference series Pharos does not
+  // publish, so their deviation is stated for the live quote instead of charted.
+  const pegCharted = pegCurrency === "USD";
+  const pegName = getPegTaxonomyByCurrency(pegCurrency ?? undefined)?.presentation.shortLabel ?? pegCurrency;
 
   // Brush domain matches the active controlled range, not the entire supply
   // history — brushing inside "30d" lets you focus a few days. A history
@@ -152,6 +165,12 @@ function MarketDataSectionBody({
     return [Math.max(lastTs - cutoff, firstTs), lastTs];
   }, [range, supplyHistory]);
 
+  // The strip draws the market cap in small under the selection.
+  const brushSeries = useMemo(
+    () => supplyHistory.map((point) => ({ ts: point.date * 1000, value: point.circulatingUsd })),
+    [supplyHistory],
+  );
+
   // Clear brush when the active range changes — the previous selection no
   // longer makes sense in the new domain. `setBrushedRange` is stable from
   // the provider (memoized) so it's safe to include.
@@ -164,7 +183,7 @@ function MarketDataSectionBody({
     <section aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Market data</StablecoinModuleTitle>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {updatedAtMs ? (
             <FreshnessIndicator
               compact
@@ -174,35 +193,56 @@ function MarketDataSectionBody({
               labelPrefix="Updated"
             />
           ) : null}
-          <TimeRangeButtons options={TIME_RANGE_OPTIONS} value={range} onChange={setRange} />
+          <ChartRangeToggle options={TIME_RANGE_OPTIONS} value={range} onChange={setRange} />
         </div>
       </div>
       <div className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         {frozenNote}
         {historyNotice}
         <div className="overflow-hidden rounded-lg border border-border/50 bg-card/40 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-          <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          <div className={cn("grid grid-cols-1 divide-y divide-border/50", pegCharted && "lg:grid-cols-2 lg:divide-x lg:divide-y-0")}>
             <LazySection className="min-h-[340px] sm:min-h-[420px]">
               <McapChart
                 data={supplyHistory}
                 stablecoinId={stablecoinId}
                 controlledRange={range}
                 embedded
+                current={current}
               />
             </LazySection>
-            <LazySection className="min-h-[340px] sm:min-h-[420px]">
-              <PegDeviationChart
-                data={supplyHistory}
-                pegCurrency={pegCurrency}
-                controlledRange={range}
-                embedded
-              />
-            </LazySection>
+            {pegCharted ? (
+              <LazySection className="min-h-[340px] sm:min-h-[420px]">
+                <PegDeviationChart
+                  data={supplyHistory}
+                  pegCurrency={pegCurrency}
+                  controlledRange={range}
+                  embedded
+                  current={current}
+                />
+              </LazySection>
+            ) : null}
           </div>
+          {!pegCharted && pegName ? (
+            <p className="border-t border-border/50 px-4 py-3 text-xs text-muted-foreground sm:px-6">
+              <span className="font-medium text-foreground">Peg vs {pegName}:</span>{" "}
+              {current?.deviationBps != null ? (
+                <>
+                  <span className={cn("pharos-numeric", deviationColorClass(Math.abs(current.deviationBps)))}>
+                    {formatBps(current.deviationBps)}
+                  </span>{" "}
+                  now.
+                </>
+              ) : (
+                "unavailable now."
+              )}{" "}
+              Daily history is not charted: Pharos keeps no dated {pegName} reference series.
+            </p>
+          ) : null}
           {brushDomain && sync ? (
-            <div className="border-t border-border/50 px-4 py-2 sm:px-6">
+            // A drag strip fights page scroll on touch; touch readers use the range presets.
+            <div className="border-t border-border/50 px-4 py-2 pointer-coarse:hidden sm:px-6">
               <div className="mb-1 flex items-center justify-between gap-3">
-                <p className="pharos-label /70">Brush</p>
+                <p className="pharos-label">Brush</p>
                 {sync.brushedRange ? (
                   <button
                     type="button"
@@ -215,7 +255,7 @@ function MarketDataSectionBody({
                   <span className="text-3xs text-muted-foreground/70">Drag to focus a window</span>
                 )}
               </div>
-              <ChartBrush domain={brushDomain} value={sync.brushedRange} onChange={sync.setBrushedRange} />
+              <ChartBrush domain={brushDomain} value={sync.brushedRange} onChange={sync.setBrushedRange} series={brushSeries} />
             </div>
           ) : null}
         </div>

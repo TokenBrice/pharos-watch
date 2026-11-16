@@ -85,7 +85,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
           ) : isLoading || !summary ? (
             <>
               <BlacklistDetailStats symbol={symbol} stats={undefined} isLoading />
-              <Skeleton className="h-[220px] w-full rounded-xl sm:h-[260px]" />
+              <Skeleton className="h-[160px] w-full rounded-xl sm:h-[180px]" />
             </>
           ) : (
             <>
@@ -115,8 +115,9 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
         title={<MethodologyLabel topic="blacklistTracker">Recent blacklist events</MethodologyLabel>}
         bodyClassName="space-y-4"
       >
+          {/* The count lives on the table itself, so the two never disagree. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            Latest 10 freeze-ledger actions on this asset across all supported chains.
+            The latest freeze-ledger actions on this asset across all supported chains.
           </p>
           <BlacklistDetailEventFeed symbol={symbol} limit={10} />
       </DetailModuleCard>

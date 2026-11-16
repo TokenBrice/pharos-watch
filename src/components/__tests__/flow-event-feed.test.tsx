@@ -74,6 +74,30 @@ describe("FlowEventFeed row fold", () => {
     expect(screen.getAllByLabelText("Go to next page").length).toBeGreaterThan(0);
   });
 
+  it("renders neutral type chips with signed amounts in one table at every width", () => {
+    mockEvents(2);
+
+    const { container } = render(<FlowEventFeed stablecoinId="dai-makerdao" limit={10} scope="counted" />);
+
+    const rows = screen.getByTestId("mint-burn-event-feed-table").querySelectorAll("tbody tr");
+    expect(rows[0].textContent).toContain("Mint");
+    expect(rows[0].textContent).toContain("+$1.00K");
+    expect(rows[1].textContent).toContain("Burn");
+    expect(rows[1].textContent).toContain("−$2.00K");
+    expect(container.querySelector("[class*='emerald'], [class*='red-'], [class*='rose-']")).toBeNull();
+    expect(container.querySelector("ol")).toBeNull();
+  });
+
+  it("explains an empty ledger without contradicting longer-window nets", () => {
+    mockEvents(0);
+
+    render(<FlowEventFeed stablecoinId="xaut-tether" limit={10} scope="counted" />);
+
+    expect(screen.getByText(/No counted mint or burn events in the recent event ledger/)).toBeTruthy();
+    expect(screen.getByText(/30- and 90-day nets come from longer-kept hourly totals/)).toBeTruthy();
+    expect(screen.queryByText(/recorded yet/)).toBeNull();
+  });
+
   it("keeps short feeds unfolded", () => {
     mockEvents(4);
 

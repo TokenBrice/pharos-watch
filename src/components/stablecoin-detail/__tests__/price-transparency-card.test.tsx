@@ -159,7 +159,7 @@ describe("PriceTransparencyCard", () => {
       />,
     );
     expect(screen.getByText("$0.9500")).toBeTruthy();
-    expect(screen.getByText("High")).toBeTruthy();
+    expect(screen.getByText("High confidence")).toBeTruthy();
     expect(screen.getByText(/Nominal par reference:.*1\.0000/)).toBeTruthy();
   });
 
@@ -173,21 +173,69 @@ describe("PriceTransparencyCard", () => {
       />,
     );
 
-    expect(screen.getByText("3 used")).toBeTruthy();
-    expect(screen.getByText("1 available")).toBeTruthy();
-    expect(screen.getByText("Sources 3+/3")).toBeTruthy();
+    // Plain phrases, never "3 used" / "Sources 3+/3" codes.
+    expect(screen.getByText("Set by 3 agreeing sources")).toBeTruthy();
+    expect(screen.getByText("4 sources checked")).toBeTruthy();
+    expect(screen.queryByText(/3\+\/3/)).toBeNull();
 
-    const krakenRow = screen.getByText("Kraken").closest("div");
-    expect(krakenRow).not.toBeNull();
-    expect(within(krakenRow as HTMLElement).getByText("Used")).toBeTruthy();
+    // Roles read from the group a source sits in, not from a colour.
+    const used = screen.getByRole("list", { name: "Used for price" });
+    expect(within(used).getByText("Kraken")).toBeTruthy();
+    expect(within(used).getByText("Bitstamp")).toBeTruthy();
+    const checked = screen.getByRole("list", { name: "Also checked" });
+    expect(within(checked).getByText("Jupiter")).toBeTruthy();
+    expect(within(checked).queryByText("Kraken")).toBeNull();
+    // Registry sources without a feed collapse to one quiet count.
+    expect(screen.getByText(/other tracked sources? had no feed for this coin\./)).toBeTruthy();
+  });
 
-    const bitstampRow = screen.getByText("Bitstamp").closest("div");
-    expect(bitstampRow).not.toBeNull();
-    expect(within(bitstampRow as HTMLElement).getByText("Used")).toBeTruthy();
+  it("names the source-depth shortfall against the three-source target", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko+kraken")}
+        consensusSources={["coingecko", "kraken"]}
+        agreeSources={["coingecko", "kraken"]}
+        dexPriceCheck={null}
+      />,
+    );
+    expect(screen.getByText("2 of 3 target sources")).toBeTruthy();
+  });
 
-    const jupiterRow = screen.getByText("Jupiter").closest("div");
-    expect(jupiterRow).not.toBeNull();
-    expect(within(jupiterRow as HTMLElement).getByText("Available")).toBeTruthy();
+  it.each([false, true])("reads a non-dollar peg in its own unit with USD beside it (compact=%s)", (compact) => {
+    render(
+      <PriceTransparencyCard
+        coinData={{ ...makeCoinData("coingecko"), pegType: "peggedCHF", price: 1.189 }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={{ agrees: true, dexPrice: 1.1866, dexDeviationBps: -20, sourcePools: 5, sourceTvl: 3_390_000 }}
+        pegCurrency="CHF"
+        pegRef={1.19}
+        compact={compact}
+      />,
+    );
+    expect(screen.getByText("CHF 0.9992")).toBeTruthy();
+    expect(screen.getByText("USD 1.1890")).toBeTruthy();
+    // The DEX price shares the headline's unit.
+    expect(screen.getByText("CHF 0.9971")).toBeTruthy();
+  });
+
+  it.each([
+    { pegCurrency: "GOLD", expected: "$3,844.03" },
+    { pegCurrency: undefined, expected: "USD 3,844.03" },
+  ])("groups thousands and keeps cents for large prices ($expected)", ({ pegCurrency, expected }) => {
+    render(
+      <PriceTransparencyCard
+        coinData={{ ...makeCoinData("coingecko"), pegType: "peggedGOLD", price: 3844.0331 }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+        pegCurrency={pegCurrency}
+        pegRef={3850}
+        compact
+      />,
+    );
+    expect(screen.getByText(expected)).toBeTruthy();
+    expect(screen.queryByText(/3844\.0331/)).toBeNull();
   });
 
   it("renders compact rail layout with summary, DEX check, and source sections", () => {
@@ -209,12 +257,15 @@ describe("PriceTransparencyCard", () => {
 
     expect(screen.getByRole("heading", { name: "Price Transparency" })).toBeTruthy();
     expect(screen.getByText("$1.0000")).toBeTruthy();
-    expect(screen.getByText(/High/)).toBeTruthy();
-    expect(screen.getByText(/Sources 3\+\/3/)).toBeTruthy();
-    expect(screen.getByText("DEX Check")).toBeTruthy();
+    expect(screen.getByText("High confidence")).toBeTruthy();
+    // dex-promoted joins the three read sources once a DEX check exists.
+    expect(screen.getByText("4 sources checked")).toBeTruthy();
+    expect(screen.getByText("DEX check")).toBeTruthy();
     expect(screen.getByText("Agrees")).toBeTruthy();
+    expect(screen.getByText("DEX price is within 0.5% of the primary price.")).toBeTruthy();
     expect(screen.getByText("$0.9992")).toBeTruthy();
-    expect(screen.getByText(/12 price sources/i)).toBeTruthy();
+    expect(screen.getByText(/12 DEX price sources/)).toBeTruthy();
+    expect(screen.getByText("0.08% from reference")).toBeTruthy();
     expect(screen.getByText("CoinGecko")).toBeTruthy();
     expect(screen.getByText("Kraken")).toBeTruthy();
     expect(screen.getByText("Uniswap V3")).toBeTruthy();
@@ -239,8 +290,9 @@ describe("PriceTransparencyCard", () => {
           compact={compact}
         />,
       );
-      const sourceLabel = `${sourcePools} price ${sourcePools === 1 ? "source" : "sources"}`;
-      const summary = screen.getByText(sourceLabel, { exact: false });
+      const sourceLabel = `${sourcePools} DEX price ${sourcePools === 1 ? "source" : "sources"}`;
+      // One detail line carries the observation count beside its TVL.
+      const summary = screen.getByText(sourceLabel, { exact: false }).parentElement!;
       expect(summary.textContent).toContain("TVL");
       expect(summary.textContent).toContain("2.5");
       expect(screen.queryByText(/\b\d+ pools?\b/)).toBeNull();
@@ -267,6 +319,8 @@ describe("PriceTransparencyCard", () => {
       );
       expect(screen.queryByText("Agrees") !== null).toBe(agrees);
       expect(screen.queryByText("Disagrees") !== null).toBe(!agrees);
+      // The verdict names its threshold either way.
+      expect(screen.getByText(/0\.5% of the primary price|primary price by more than 0\.5%/)).toBeTruthy();
       expect(screen.getByText("$1.2513")).toBeTruthy();
     });
 

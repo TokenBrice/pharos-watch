@@ -102,7 +102,7 @@ const ARCHETYPE_CASES = [
     steps: [
       "Crypto collateral",
       "overcollateralized",
-      "Vault / PSM",
+      "Vault",
       "mint debt vs collateral",
       "USDC minted",
       "liquidates below ratio",

@@ -147,6 +147,8 @@ export function buildStablecoinDetailViewModel({
       liquidity: isFirstReadPending(dexLiquidity),
       peg: isFirstReadPending(pegSummary),
       yield: isFirstReadPending(supplemental.yieldRankings),
+      // A deferred read (Risk section not reached yet) will still arrive: keep its slot.
+      redemption: redemptionBackstops.enabled === false || isFirstReadPending(redemptionBackstops),
     },
   });
 

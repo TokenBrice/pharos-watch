@@ -27,6 +27,24 @@ export function v9DeploymentMintComponentKey(controlKeys: readonly string[]): st
   return `${DEPLOYMENT_MINT_PREFIX}${controlKeys.join("+")}`;
 }
 
+/**
+ * The asset's own mint component: the scorer's worst native mint path. Its key
+ * is exactly `mint`; bridged-token mints (`mint:bridge:…`) and
+ * deployment-local mints (`mint:deployment:…`) each describe one deployment,
+ * and `mint:binding` only repeats a native pick. An asset with no economically
+ * relevant native mint path (an immutable, user-collateralized CDP such as
+ * BOLD) publishes none, so a reader must never fall back to the first
+ * `kind: "mint"` row: that row is a bridged representation on another chain.
+ */
+const V9_NATIVE_MINT_COMPONENT_KEY = "mint";
+
+/** The native mint component of a published control breakdown, or null when none is published. */
+export function findV9NativeMintComponent<T extends { kind: string; key: string }>(
+  components: readonly T[] | null | undefined,
+): T | null {
+  return components?.find((component) => component.kind === "mint" && component.key === V9_NATIVE_MINT_COMPONENT_KEY) ?? null;
+}
+
 /** The control key of a bridged-token mint component, or null for any other key. */
 export function v9BridgeMintControlKey(componentKey: string): string | null {
   return componentKey.startsWith(BRIDGE_MINT_PREFIX) ? componentKey.slice(BRIDGE_MINT_PREFIX.length) : null;

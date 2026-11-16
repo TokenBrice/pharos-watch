@@ -99,6 +99,34 @@ describe("dev-api-proxy", () => {
     }
   }, 15_000);
 
+  it("resends a GET once when the upstream drops the connection, so a dead keep-alive socket never surfaces as a 502", async () => {
+    let attempts = 0;
+    const upstream = createServer((req, res) => {
+      attempts += 1;
+      if (attempts === 1) {
+        req.socket.destroy();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true }));
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    const address = upstream.address();
+    if (!address || typeof address === "string") throw new Error("Missing upstream address");
+    let child: ChildProcess | undefined;
+    try {
+      const port = await allocatePort("127.0.0.1");
+      child = await startProxy(port, `http://127.0.0.1:${address.port}`);
+      const response = await fetch(`http://127.0.0.1:${port}/api/stablecoins`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ok: true });
+      expect(attempts).toBe(2);
+    } finally {
+      if (child) await stopProxy(child);
+      await new Promise<void>((resolve, reject) => upstream.close((error) => error ? reject(error) : resolve()));
+    }
+  }, 15_000);
+
   it.skipIf(!nonLoopbackAddress)("binds only IPv4 loopback rather than the developer network interface", async () => {
     const port = await allocatePort("127.0.0.1");
     const child = await startProxy(port, "http://127.0.0.1:1");

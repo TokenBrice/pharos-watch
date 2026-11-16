@@ -256,7 +256,7 @@ function ProtectionRung({ rung }: { rung: CustodyProtectionRung }) {
  *
  * - The header chip is read off the protection meter (`postureKey`), so it
  *   never says "Undisclosed" beside a lit rung or a named custodian.
- * - Visual: named provider chips, unnamed holders as muted full text, a
+ * - Facts, after the verdict: named provider chips, unnamed holders as muted full text, a
  *   stacked share bar only when the review publishes at least two share
  *   segments, and the three-rung protection meter. The meter is dropped when
  *   the review establishes none of the three structure facts; the header
@@ -266,10 +266,11 @@ function ProtectionRung({ rung }: { rung: CustodyProtectionRung }) {
  *   structure undisclosed", with the provenance fold and review date on the
  *   same row. The placeholder holder is not repeated.
  *
- * Wide strips split the body (the visual left, verdict and folds right) in
- * `EvidenceModule`; in strip form the provenance fold and the review date
- * share one row. Renders nothing when no custody review exists; the caller
- * owns any "Not reviewed" state.
+ * The verdict and its chip lead at full width; the holders and the meter
+ * follow as the summary's facts, using the whole width of a strip instead of
+ * one column of a split body. In strip form the provenance fold and the
+ * review date share one row. Renders nothing when no custody review exists;
+ * the caller owns any "Not reviewed" state.
  */
 export function CustodyModule({
   summary,
@@ -329,21 +330,6 @@ export function CustodyModule({
       variant={variant}
       stripForm={stripForm}
       headerRight={headerChip}
-      visual={
-        <div className={stripForm ? "space-y-3" : "space-y-4"}>
-          {showHeldBy ? <HeldBy summary={summary} /> : null}
-          {structureUndisclosed ? null : (
-            <div className="@container/meter">
-              <ol
-                aria-label="Custody protections"
-                className="grid gap-2.5 @[25rem]/meter:grid-cols-3 @[25rem]/meter:gap-x-4 @[25rem]/meter:gap-y-1.5"
-              >
-                {summary.protection.map((rung) => <ProtectionRung key={rung.key} rung={rung} />)}
-              </ol>
-            </div>
-          )}
-        </div>
-      }
       verdict={summary.summary}
       chipRow={
         <Badge variant="outline" className="border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground">
@@ -381,6 +367,18 @@ export function CustodyModule({
         ) : null
       }
       footer={<EvidenceFooter {...footerProps} inline={stripForm} />}
-    />
+    >
+      {showHeldBy ? <HeldBy summary={summary} /> : null}
+      {structureUndisclosed ? null : (
+        <div className="@container/meter">
+          <ol
+            aria-label="Custody protections"
+            className="grid gap-2.5 @[25rem]/meter:grid-cols-3 @[25rem]/meter:gap-x-4 @[25rem]/meter:gap-y-1.5"
+          >
+            {summary.protection.map((rung) => <ProtectionRung key={rung.key} rung={rung} />)}
+          </ol>
+        </div>
+      )}
+    </EvidenceModule>
   );
 }

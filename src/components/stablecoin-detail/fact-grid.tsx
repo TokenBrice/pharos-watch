@@ -23,7 +23,7 @@ export interface FactGridItem {
 
 const LABEL_CLASS = "pharos-label leading-tight";
 const VALUE_CLASS: Record<FactValueStyle, string> = {
-  figure: "font-mono text-2xs font-semibold uppercase leading-snug",
+  figure: "font-mono text-xs font-semibold uppercase leading-snug",
   text: "text-xs font-medium leading-snug",
 };
 

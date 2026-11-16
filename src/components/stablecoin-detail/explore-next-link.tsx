@@ -10,7 +10,7 @@ export function ExploreNextLink({ href, label }: { href: string; label: string }
       href={href}
       className="pharos-focus-ring group flex min-h-9 items-center justify-between gap-3 rounded-sm py-1.5 text-sm text-foreground/85 transition-colors hover:text-foreground"
     >
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="min-w-0">{label}</span>
       <ArrowRight
         aria-hidden="true"
         className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"

@@ -58,12 +58,16 @@ describe("ContractDeployments interactions", () => {
     window.gtag = vi.fn();
 
     const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
-    const mobileGrid = container.querySelector(".grid.grid-cols-5");
+    const mobileGrid = container.querySelector("[data-contract-chips]");
     expect(mobileGrid).not.toBeNull();
 
     expect(screen.getByText("7 deployments tracked across Ethereum, Arbitrum, Base, and Optimism, plus 3 more.")).toBeTruthy();
 
-    fireEvent.click(within(mobileGrid as HTMLElement).getByRole("button", { name: /Base contract 0x3333/i }));
+    // Phone chips are labeled with the chain name, never an icon alone.
+    const baseChip = within(mobileGrid as HTMLElement).getByRole("button", { name: /Base contract 0x3333/i });
+    expect(baseChip.textContent).toBe("Base");
+    fireEvent.click(baseChip);
+    expect(baseChip.getAttribute("aria-pressed")).toBe("true");
 
     const selectedContract = screen.getByText("Selected contract").closest("div");
     expect(selectedContract).not.toBeNull();
@@ -102,10 +106,13 @@ describe("ContractDeployments interactions", () => {
     } as StablecoinMeta;
 
     const { container } = render(<ContractDeployments coinId={duplicateChainMeta.id} contracts={duplicateChainMeta.contracts ?? []} />);
-    const mobileGrid = container.querySelector(".grid.grid-cols-5");
+    const mobileGrid = container.querySelector("[data-contract-chips]");
     expect(mobileGrid).not.toBeNull();
 
-    fireEvent.click(within(mobileGrid as HTMLElement).getByRole("button", { name: /Base contract 0xbbbb/i }));
+    // Two chips on one chain are told apart by their addresses.
+    const secondChip = within(mobileGrid as HTMLElement).getByRole("button", { name: /Base contract 0xbbbb/i });
+    expect(secondChip.textContent).toBe("Base0xbbbb...bbbb");
+    fireEvent.click(secondChip);
 
     const selectedContract = screen.getByText("Selected contract").closest("div");
     expect(selectedContract).not.toBeNull();
@@ -145,20 +152,37 @@ describe("ContractDeployments interactions", () => {
     },
   );
 
-  it("renders desktop labeled contract rows with address, copy, and explorer actions", () => {
+  it("renders desktop labeled contract tiles with copy and explorer actions, and no address stub", () => {
     render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
 
-    // Each deployment gets a labeled row: chain link + truncated address +
-    // copy button + explorer link.
-    expect(screen.getAllByRole("link", { name: "Arbitrum" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("0x2222...2222")).toBeTruthy();
+    // Each deployment gets a labeled tile: chain link + copy button + explorer
+    // link. A tile is too narrow for a readable address, so it prints none
+    // (the full address is the tile's title and lives in the fold).
+    const arbitrumLink = screen.getAllByRole("link", { name: "Arbitrum" })[0];
+    expect(arbitrumLink).toBeTruthy();
+    expect(screen.queryByText("0x2222...2222")).toBeNull();
+    expect(arbitrumLink.closest("[title]")?.getAttribute("title")).toBe("0x2222222222222222222222222222222222222222");
     expect(screen.getByRole("button", { name: "Copy Arbitrum contract address" })).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "View Arbitrum contract on explorer" }).getAttribute("href"),
     ).toBe("https://arbiscan.io/address/0x2222222222222222222222222222222222222222");
-    // 7 contracts fit the 9-row desktop preview: the in-flow card has no
-    // show-all toggle any more, only the closed `Contract addresses` fold.
+    // 7 contracts fit the 12-tile preview: the in-flow card has no show-all
+    // toggle, only the closed `Contract addresses` fold.
     expect(screen.queryAllByRole("button", { name: "Show all 7 chains" })).toHaveLength(0);
+    expect(screen.getByText("Contract addresses")).toBeTruthy();
+  });
+
+  it("previews twelve tiles and names the rest in the fold", () => {
+    const thirteen = Array.from({ length: 13 }, (_, index) => ({
+      chain: "ethereum",
+      address: `0x${String(index + 1).padStart(40, "0")}`,
+    })) as NonNullable<StablecoinMeta["contracts"]>;
+    render(<ContractDeployments coinId={meta.id} contracts={thirteen} />);
+
+    expect(screen.getAllByRole("link", { name: /View Ethereum contract on explorer/ })).toHaveLength(12);
+    // The fold keeps the "Contract addresses" summary the SEO archive check keys on.
+    expect(screen.getByText("Contract addresses")).toBeTruthy();
+    expect(screen.getByText("(13)")).toBeTruthy();
   });
 
 });

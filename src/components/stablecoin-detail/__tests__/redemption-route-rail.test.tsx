@@ -82,4 +82,14 @@ describe("RedemptionRouteRail", () => {
     expect(whitelisted).not.toContain(REDEMPTION_HOLDER_ELIGIBILITY_LABELS["whitelisted-primary"]);
     expect(whitelisted).toContain("bg-foreground/60");
   });
+
+  it("keeps the phone fallback's route words in the sans, never mono capitals", () => {
+    const html = renderToStaticMarkup(<RedemptionRouteRail {...BASE_PROPS} settlementLabel="Multi-day" />);
+    const facts = html.slice(html.indexOf('aria-label="Route properties"'));
+    expect(facts).toContain(">Multi-day<");
+    expect(facts).not.toContain("uppercase");
+    // The rail's four stations, two by two: no orphaned last cell.
+    expect([...facts.matchAll(/pharos-label[^>]*>([^<]+)</g)].map((match) => match[1]))
+      .toEqual(["Access", "Venue", "Settlement", "Output"]);
+  });
 });

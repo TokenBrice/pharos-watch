@@ -8,6 +8,8 @@ import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-tran
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { hasObservedDisplayPrice } from "@/lib/current-peg";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import {
   BlacklistSection,
   DexLiquidityCard,
@@ -22,9 +24,11 @@ type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready"
 function ExpandableMcapChart({
   stablecoinId,
   supplyHistory,
+  current,
 }: {
   stablecoinId: string;
   supplyHistory: ReadyDetailViewModel["supplyHistory"];
+  current: { mcap: number | null; prevDay: number | null };
 }) {
   const [range, setRange] = useState<TimeRangeOption>("90d");
 
@@ -35,6 +39,7 @@ function ExpandableMcapChart({
       controlledRange={range}
       onControlledRangeChange={setRange}
       expandHistoryOnWideRange
+      current={current}
     />
   );
 }
@@ -63,11 +68,22 @@ export function DetailLiquidityActivitySections({
   viewModel,
 }: DetailLiquidityActivitySectionsProps) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
+  // Every fixed-peg coin gets the paired market-data module (non-USD pegs state
+  // their live deviation there); NAV and yield-bearing coins keep the cap chart.
+  const pegClass = getPegTaxonomyByCurrency(viewModel.coin.flags.pegCurrency ?? undefined)?.pegClass;
   const showPegChart =
-    viewModel.coin.flags.pegCurrency === "USD"
+    pegClass != null && pegClass !== "variable"
     && !viewModel.isNavToken
     && viewModel.coin.flags.yieldBearing !== true
     && viewModel.supplyHistory.length > 0;
+  // Chart headers read the hero's live figures so the two never disagree.
+  const current = {
+    mcap: viewModel.mcap,
+    // The hero's guard: a partial-coverage current supply is not comparable with the prior day.
+    prevDay: viewModel.coinData.supplyExcludedChains?.length ? null : viewModel.prevDay,
+    price: hasObservedDisplayPrice(viewModel.coinData) ? viewModel.coinData.price ?? null : null,
+    deviationBps: viewModel.deviationBps,
+  };
 
   return (
     <>
@@ -84,6 +100,7 @@ export function DetailLiquidityActivitySections({
                 pegCurrency={viewModel.coin.flags.pegCurrency}
                 updatedAtMs={viewModel.supplyUpdatedAt}
                 frozenNote={frozenNote}
+                current={current}
               />
             </LazySection>
           </section>
@@ -91,7 +108,7 @@ export function DetailLiquidityActivitySections({
           <section id="chart">
             {frozenNote}
             <LazySection minHeight={420}>
-              <ExpandableMcapChart stablecoinId={viewModel.id} supplyHistory={viewModel.supplyHistory} />
+              <ExpandableMcapChart stablecoinId={viewModel.id} supplyHistory={viewModel.supplyHistory} current={current} />
             </LazySection>
           </section>
         )}
@@ -122,6 +139,8 @@ export function DetailLiquidityActivitySections({
             <LazySection minHeight={200}>
               <PriceTransparencyCard
                 coinData={viewModel.coinData}
+                pegCurrency={viewModel.coin.flags.pegCurrency}
+                pegRef={viewModel.pegRef}
                 consensusSources={viewModel.consensusSources}
                 agreeSources={viewModel.agreeSources}
                 dexPriceCheck={viewModel.dexPriceCheck}
@@ -147,7 +166,10 @@ export function DetailLiquidityActivitySections({
           <div>
             {frozenNote}
             <SectionErrorBoundary name="blacklist">
-              <LazySection minHeight={480}>
+              {/* No reserve: it outlives the mount while on screen, so a card
+                  shorter than it (or a coin with no events, which renders
+                  nothing) left a blank band. */}
+              <LazySection>
                 <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
               </LazySection>
             </SectionErrorBoundary>

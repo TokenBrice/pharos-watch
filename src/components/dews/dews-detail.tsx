@@ -1,30 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AreaChart, Area, ReferenceLine } from "recharts";
+import { useId, useMemo, useState } from "react";
+import { AreaChart, Area, ReferenceArea } from "recharts";
 import { Table2 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_LABELS, THREAT_BAND_STYLES } from "@shared/lib/classification";
 import { DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
-import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
-
-/* Figma coin template: the DEWS history chart renders in the frost/teal
- * chart-primary hue regardless of the current threat band. */
-const DEWS_CHART_HEX = CHART_PALETTE[0];
+import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
+import { CHART_TICK_FILL } from "@/lib/chart-theme";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
-import {
-  ChartAreaGradient,
-  DateTooltip,
-  MonoYAxis,
-  TimeGrid,
-  TimeXAxis,
-  useSvgId,
-} from "@/components/chart-primitives/axes";
+import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives/axes";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
@@ -36,38 +26,103 @@ import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
   pool: { name: getDewsSignalLabel("pool"), metricKey: "balanceRatio", metricLabel: "balance ratio" },
-  liq: { name: getDewsSignalLabel("liq"), metricKey: "scoreDelta7d", metricLabel: "7d score \u0394" },
+  liq: { name: getDewsSignalLabel("liq"), metricKey: "scoreDelta7d", metricLabel: "7d score change" },
   price: { name: getDewsSignalLabel("price"), metricKey: "confidence", metricLabel: "confidence" },
-  diverg: { name: getDewsSignalLabel("diverg"), metricKey: "spreadBps", metricLabel: "spread (bps)" },
+  diverg: { name: getDewsSignalLabel("diverg"), metricKey: "spreadBps", metricLabel: "spread" },
   black: { name: getDewsSignalLabel("black"), metricKey: "events24h", metricLabel: "24h events" },
   flow: { name: getDewsSignalLabel("flow"), metricKey: "burnSurge", metricLabel: "burn surge" },
   yield: { name: getDewsSignalLabel("yield"), metricKey: "warnings", metricLabel: "warnings" },
 };
 
-function snapDewsYMax(max: number): number {
-  if (max <= 25) return 50;
-  if (max <= 50) return 75;
-  return 100;
+/** "Cross-Source Divergence" → "Cross-source divergence" (sentence-case labels). */
+function sentenceCase(label: string): string {
+  return label.charAt(0) + label.slice(1).toLowerCase();
 }
 
-function signalBarHex(value: number): string {
-  const band = DEWS_THREAT_BANDS.find(({ upper }) => value <= upper)?.band ?? "DANGER";
-  return THREAT_BAND_HEX[band];
+/**
+ * Plain-language reasons for a signal the worker could not score. Every
+ * producer code in worker/src/lib/dews is mapped; an unknown code falls back to
+ * a generic phrase so a raw machine key never reaches the page.
+ */
+const UNSCORED_REASON_TEXT: Record<string, string> = {
+  "not-applicable": "not applicable",
+  "supply-history-anchors-missing": "no supply history yet",
+  "price-evidence-unavailable": "no price evidence",
+  "invalid-price": "no valid price",
+  "peg-type-unavailable": "peg type unknown",
+  "peg-reference-missing": "no peg reference rate",
+  "peg-reference-unavailable": "no peg reference rate",
+  "peg-reference-untrusted": "peg reference rate not trusted",
+  "thin-reference": "too few reference rates",
+  "blacklist-source-failed": "freeze tracker read failed",
+  "mint-burn-data-missing": "no mint/burn data",
+  "mint-burn-baseline-too-short": "under 7 days of mint/burn history",
+  "mint-burn-stale": "mint/burn data out of date",
+  "mint-burn-valuation-partial": "mint/burn values incomplete",
+  "mint-burn-valuation-unknown": "mint/burn values incomplete",
+  "mint-burn-baseline-valuation-partial": "mint/burn baseline incomplete",
+  "mint-burn-baseline-valuation-unknown": "mint/burn baseline incomplete",
+  "mint-burn-isolated-no-outflow": "partial chain coverage, no outflow seen",
+  "mint-burn-isolated-no-stress-increase": "partial chain coverage, adds no stress",
+  "yield-warnings-unscored": "yield flags carry no stress weight",
+};
+
+/** Signals the worker leaves unscored without a reason code, by cause. */
+const UNSCORED_DEFAULT_TEXT: Record<string, string> = {
+  pool: "no DEX pool data",
+  liq: "no liquidity history",
+  black: "no freeze ledger",
+  yield: "no yield warnings",
+};
+
+const UNSCORED_GENERIC_TEXT = "no reading this cycle";
+
+export function describeUnscoredSignal(key: string, reason: unknown): string {
+  if (typeof reason === "string" && reason.length > 0) {
+    return UNSCORED_REASON_TEXT[reason] ?? UNSCORED_GENERIC_TEXT;
+  }
+  return UNSCORED_DEFAULT_TEXT[key] ?? UNSCORED_GENERIC_TEXT;
 }
 
-/* Only `available` signals reach a bar at all (unavailable ones are named in the
- * unavailable line instead), so every value here is a real reading. A
- * measured zero therefore keeps a visible cap at the origin rather than an
- * empty track, which would read as a bar that failed to render. */
+const BAND_VERDICT: Record<ThreatBand, string> = {
+  CALM: "No early signs of depeg stress.",
+  WATCH: "Minor stress signals; nothing points to a depeg yet.",
+  ALERT: "Several stress signals are elevated.",
+  WARNING: "Strong stress signals; depeg risk is elevated.",
+  DANGER: "Severe stress across signals; depeg risk is high.",
+};
+
+/* The chart reads on the published threat ladder: a fixed 0–100 scale with
+ * one tinted band per threshold, named at the right edge. */
+const BAND_AREAS = DEWS_THREAT_BANDS.map(({ band, upper }, index) => ({
+  band,
+  y1: index === 0 ? 0 : DEWS_THREAT_BANDS[index - 1].upper,
+  y2: upper,
+}));
+const Y_TICKS = [0, ...DEWS_THREAT_BANDS.map(({ upper }) => upper)];
+
+function bandForValue(value: number): ThreatBand {
+  return DEWS_THREAT_BANDS.find(({ upper }) => value <= upper)?.band ?? "DANGER";
+}
+
+/* Only available signals reach a bar (unscored ones are named in one line),
+ * so every value here is a measured reading on the threat ladder. A measured
+ * zero keeps a visible cap at the origin rather than an empty track. */
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-3 w-full rounded-xs border border-border/50 bg-muted/45">
+    <div className="h-2 w-full rounded-full bg-muted" aria-hidden="true">
       <div
-        className="h-full rounded-xs transition-all"
-        style={{ width: `${Math.min(value, 100)}%`, minWidth: "3px", backgroundColor: signalBarHex(value) }}
+        className="h-full rounded-full"
+        style={{ width: `${Math.min(Math.max(value, 0), 100)}%`, minWidth: "4px", backgroundColor: THREAT_BAND_HEX[bandForValue(value)] }}
       />
     </div>
   );
+}
+
+function signedFixed(val: number, digits: number): string {
+  const text = Math.abs(val).toFixed(digits);
+  if (Number(text) === 0) return text;
+  return `${val < 0 ? "\u2212" : "+"}${text}`;
 }
 
 function formatMetric(key: string, val: unknown): string {
@@ -75,13 +130,13 @@ function formatMetric(key: string, val: unknown): string {
   if (Array.isArray(val)) return `${val.length} active`;
   if (typeof val === "number") {
     if (key === "delta1d" || key === "delta7d" || key === "scoreDelta7d" || key === "tvlDelta7d") {
-      return `${val >= 0 ? "+" : ""}${val.toFixed(1)}%`;
+      return `${signedFixed(val, 1)}%`;
     }
     if (key === "spreadBps" || key === "primaryDevBps" || key === "dexDevBps") {
       return `${val.toFixed(0)} bps`;
     }
     if (key === "burnSurge" || key === "burnToMintRatio") {
-      return `${val.toFixed(1)}x`;
+      return `${val.toFixed(1)}×`;
     }
     return String(val);
   }
@@ -93,7 +148,7 @@ interface DEWSDetailProps {
 }
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
-  const dewsGradientId = useSvgId("dews");
+  const chartSummaryId = useId();
   const { data, isLoading, error, meta, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
@@ -116,22 +171,13 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     });
   }, [history]);
 
-  const chartYMax = useMemo(() => {
-    if (!chartData.length) return 100;
-    const max = Math.max(...chartData.map((d) => d.score as number));
-    return snapDewsYMax(max);
-  }, [chartData]);
-
-  const signalYMax = useMemo(() => {
-    if (!history?.length) return 100;
-    let max = 0;
-    for (const h of history) {
-      for (const key of Object.keys(SIGNAL_META)) {
-        const sig = h.signals?.[key];
-        if (sig?.available && sig.value > max) max = sig.value;
-      }
-    }
-    return snapDewsYMax(max);
+  const chartSummary = useMemo(() => {
+    if (!history || history.length < 2) return "";
+    const first = history[0];
+    const last = history[history.length - 1];
+    const peak = history.reduce((max, h) => (h.score > max.score ? h : max), first);
+    const day = (sec: number) => formatChartDate(sec * 1000, "short");
+    return `Composite score from ${Math.round(first.score)} on ${day(first.date)} to ${Math.round(last.score)} on ${day(last.date)}; peak ${Math.round(peak.score)} on ${day(peak.date)}, out of 100.`;
   }, [history]);
 
   if (isLoading) {
@@ -160,7 +206,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
   const { score, band, signals } = data.current;
   const typedBand = band as ThreatBand;
-  const bandColor = THREAT_BAND_STYLES[typedBand]?.cls ?? "";
+  const bandStyle = THREAT_BAND_STYLES[typedBand];
   const availableCount = Object.values(signals).filter((s) => s.available).length;
   const amplifiers = getDewsAmplifiers(data.current);
   const sortedSignals = Object.entries(SIGNAL_META)
@@ -170,33 +216,43 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
       return [{ key, meta, signal }];
     })
     .sort((a, b) => b.signal.value - a.signal.value);
+  const topSignal = sortedSignals[0] && Math.round(sortedSignals[0].signal.value) > 0 ? sortedSignals[0] : null;
 
-  const unavailableSignals = Object.entries(SIGNAL_META)
+  const unscoredSignals = Object.entries(SIGNAL_META)
     .filter(([key]) => !signals[key]?.available)
-    .map(([key, meta]) => {
-      const reason = typeof signals[key]?.unavailableReason === "string" ? signals[key].unavailableReason : null;
-      const status = reason === "not-applicable" ? "not applicable" : "unavailable";
-      return `${meta.name} — ${status}${reason ? ` (${reason})` : ""}`;
-    });
+    .map(([key, meta]) => `${sentenceCase(meta.name).toLowerCase()} (${describeUnscoredSignal(key, signals[key]?.unavailableReason)})`);
 
   return (
     <Card className="pharos-card-shell animate-in gap-0 overflow-hidden py-0 fade-in duration-300">
-      {/* Figma coin template: title row with the Composite/Signal-Breakdown
-          segmented toggle at the right; the big composite score + band chip
-          lead beneath the title. */}
+      {/* Title row with the Composite / Signal breakdown toggle at the right;
+          the composite score, its band and a one-line verdict lead beneath. */}
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-3">
           <StablecoinModuleTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
             Depeg Early Warning
           </StablecoinModuleTitle>
           <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
             <span className="flex items-center gap-2.5">
-              <span className="pharos-numeric text-3xl font-extrabold leading-none tabular-nums">{score}</span>
-              <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
-                {THREAT_BAND_LABELS[typedBand]}
+              <span className="flex items-baseline gap-0.5">
+                <span className="pharos-numeric text-3xl font-bold leading-none tabular-nums" data-dews-score="">{score}</span>
+                <span className="pharos-numeric text-xs text-muted-foreground">/100</span>
+              </span>
+              <span className={cn("rounded-md border px-2 py-0.5 text-xs font-semibold", bandStyle?.cls)}>
+                {THREAT_BAND_LABELS[typedBand] ?? band}
               </span>
             </span>
           </ScoreBadgeWrapper>
+          {BAND_VERDICT[typedBand] ? (
+            <p className="text-sm text-muted-foreground">
+              <span className="text-foreground">{BAND_VERDICT[typedBand]}</span>
+              {topSignal ? (
+                <>
+                  {" "}Largest input: {sentenceCase(topSignal.meta.name).toLowerCase()}{" "}
+                  <span className="pharos-numeric text-foreground">{Math.round(topSignal.signal.value)}</span>.
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {chartData.length > 1 ? (
@@ -210,7 +266,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={!showBreakdown}
                 onClick={() => setShowBreakdown(false)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:h-6 md:min-h-0 md:px-2 md:py-1",
                   !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -221,22 +277,19 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={showBreakdown}
                 onClick={() => setShowBreakdown(true)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-sm px-3 py-2 text-2xs font-medium leading-none transition-colors md:h-6 md:min-h-0 md:px-2 md:py-1",
                   showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Signal Breakdown
+                Signal breakdown
               </button>
             </div>
           ) : null}
-          <span className="text-muted-foreground/50" aria-hidden="true">
-            ·
-          </span>
           <MethodologyHint
             topic="dews"
-            buttonClassName="!h-11 !min-h-11 !w-11 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
+            buttonClassName="!h-11 !min-h-11 !w-11 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-6 md:!w-6 md:!min-h-0"
           />
-          <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-11 min-h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:h-5 md:min-h-0 md:w-5">
+          <ShowYourWorkToggle className="pharos-focus-ring inline-flex h-11 min-h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:h-6 md:min-h-0 md:w-6">
             <Table2 className="h-3 w-3" aria-hidden="true" />
             <span className="sr-only">Toggle score inputs</span>
           </ShowYourWorkToggle>
@@ -266,82 +319,90 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
               <span
                 key={amp.key}
                 className="rounded-sm border border-state-warn bg-state-warn-subtle px-2 py-1 text-xs text-state-warn-bright"
+                title={amp.key === "psi" ? "Market-wide stress (PSI) is amplifying this score" : "Stress in same-peg stablecoins is amplifying this score"}
               >
-                {amp.label} {amp.value.toFixed(2)}x
+                {amp.label} amplifier ×{amp.value.toFixed(2)}
               </span>
             ))}
           </div>
         )}
 
-        {/* Signal breakdown, sorted by descending score (Figma coin template):
-            mono uppercase label · score line with the metric stat right-aligned,
-            full-width severity bar beneath; two columns at lg+. */}
+        {/* Signal bars, sorted by descending score, on the same threat-band
+            ramp as the composite; two columns at lg+, read row by row. An odd
+            last signal spans the row instead of standing alone. */}
         {(() => {
           const renderRow = ({ key, meta, signal }: (typeof sortedSignals)[number]) => {
             const metricVal = signal[meta.metricKey];
-            const isInactive = Math.round(signal.value) === 0;
+            const rounded = Math.round(signal.value);
             return (
-              <div key={key} className={cn("space-y-2", isInactive && "opacity-60")}>
-                {/* Below sm the label and its metric restack instead of
-                    truncating the label ("POOL BALANCE DRIFT · 52 / 100"). */}
-                <div className="flex flex-col gap-0.5 text-xs sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                  <span className="min-w-0 break-words">
-                    <span className="text-foreground">{meta.name}</span>
-                    <span className="text-muted-foreground"> · {Math.round(signal.value)} / 100</span>
+              <div key={key} className="space-y-1.5 lg:odd:last:col-span-2" data-dews-signal={key}>
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <span className="min-w-0">
+                    <span className="text-foreground">{sentenceCase(meta.name)}</span>
+                    <span className="text-muted-foreground">
+                      {" · "}{meta.metricLabel}{" "}
+                      <span className="pharos-numeric">{formatMetric(meta.metricKey, metricVal)}</span>
+                    </span>
                   </span>
-                  <span className="text-muted-foreground sm:shrink-0 sm:whitespace-nowrap" title={meta.metricLabel}>
-                    {meta.metricLabel} ·{" "}
-                    <span className="pharos-numeric text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
+                  <span className="pharos-numeric shrink-0 tabular-nums text-foreground" aria-label={`${rounded} out of 100`}>
+                    {rounded}
                   </span>
                 </div>
                 <ProgressBar value={signal.value} />
               </div>
             );
           };
-          const half = Math.ceil(sortedSignals.length / 2);
-          const leftSignals = sortedSignals.slice(0, half);
-          const rightSignals = sortedSignals.slice(half);
-          return (
-            <>
-              <div className="space-y-4 lg:hidden">{sortedSignals.map(renderRow)}</div>
-              <div className="hidden lg:grid lg:grid-cols-2 lg:gap-x-8">
-                <div className="space-y-4">{leftSignals.map(renderRow)}</div>
-                <div className="space-y-4">{rightSignals.map(renderRow)}</div>
-              </div>
-            </>
-          );
+          return <div className="grid gap-y-3.5 lg:grid-cols-2 lg:gap-x-8">{sortedSignals.map(renderRow)}</div>;
         })()}
 
-        {/* The bars render in both chart modes, so the unmeasured signals are
-            named in both — otherwise a signal with no reading is indistinguishable
-            from one that was never listed. */}
-        {unavailableSignals.length > 0 && (
-          <p className="text-2xs text-muted-foreground">{unavailableSignals.join("; ")}</p>
+        {/* The bars render in both chart modes, so the unscored signals are
+            named in both, each with a plain reason. */}
+        {unscoredSignals.length > 0 && (
+          <p className="text-xs text-muted-foreground" data-dews-unscored="">
+            Not scored: {unscoredSignals.join(", ")}.
+          </p>
         )}
 
         {chartData.length > 1 && (
-          <>
-            <div ref={chartContainerRef} className="h-[240px]" role="figure" aria-label="DEWS score history">
+          <div className="space-y-2">
+            <div
+              ref={chartContainerRef}
+              className="h-[180px] text-foreground"
+              role="figure"
+              aria-label="DEWS score history"
+              aria-describedby={chartSummaryId}
+            >
               {isChartReady ? (
                 <AreaChart
                   width={width}
                   height={height}
                   data={chartData}
-                  margin={{ top: 8, right: 12, bottom: 6, left: 0 }}
+                  margin={{ top: 6, right: 52, bottom: 0, left: 0 }}
                 >
-                  <defs>
-                    <ChartAreaGradient id={dewsGradientId} color={DEWS_CHART_HEX} />
-                  </defs>
-                  <TimeGrid />
-                  <TimeXAxis dataKey="ts" minTickGap={24} tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
-                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} tickKind="score" width={40} />
-                  {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
-                    <ReferenceLine y={DEWS_THREAT_BANDS[1].upper} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
-                  )}
+                  {BAND_AREAS.map(({ band: areaBand, y1, y2 }) => (
+                    <ReferenceArea
+                      key={areaBand}
+                      y1={y1}
+                      y2={y2}
+                      fill={THREAT_BAND_HEX[areaBand]}
+                      fillOpacity={areaBand === typedBand ? 0.14 : 0.06}
+                      stroke="none"
+                      ifOverflow="hidden"
+                      label={{
+                        value: THREAT_BAND_LABELS[areaBand],
+                        position: "right",
+                        fontSize: 10,
+                        fill: areaBand === typedBand ? "var(--color-foreground)" : CHART_TICK_FILL,
+                        fontWeight: areaBand === typedBand ? 600 : 400,
+                      }}
+                    />
+                  ))}
+                  <TimeXAxis dataKey="ts" minTickGap={36} tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
+                  <MonoYAxis domain={[0, 100]} ticks={Y_TICKS} interval={0} width={34} />
                   <DateTooltip
                     formatter={(val, name) => val == null ? null : [
                       `${Math.round(val as number)}/100`,
-                      showBreakdown ? (SIGNAL_META[name as string]?.name ?? name) : "DEWS",
+                      showBreakdown ? sentenceCase(SIGNAL_META[name as string]?.name ?? String(name)) : "DEWS",
                     ]}
                     {...(showBreakdown && {
                       itemStyle: { fontFamily: "var(--font-mono)", fontSize: "0.875rem" },
@@ -354,8 +415,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                         type="monotone"
                         dataKey={key}
                         stroke={SIGNAL_CHART_COLORS[key]}
-                        fill={SIGNAL_CHART_COLORS[key]}
-                        fillOpacity={0.12}
+                        fill="none"
                         strokeWidth={1.5}
                         dot={false}
                         connectNulls={false}
@@ -366,9 +426,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <Area
                       type="monotone"
                       dataKey="score"
-                      stroke={DEWS_CHART_HEX}
-                      fill={`url(#${dewsGradientId})`}
-                      strokeWidth={2}
+                      stroke="var(--color-foreground)"
+                      fill="none"
+                      strokeWidth={1.75}
                       isAnimationActive={false}
                     />
                   )}
@@ -377,18 +437,23 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 <div className="h-full w-full animate-pulse rounded-sm bg-muted" />
               )}
             </div>
+            <p id={chartSummaryId} className="sr-only">{chartSummary}</p>
 
-            {showBreakdown && (
+            {showBreakdown ? (
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
                 {Object.entries(SIGNAL_META).map(([key, meta]) => (
                   <div key={key} className="flex items-center gap-1">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: SIGNAL_CHART_COLORS[key] }} />
-                    <span>{meta.name}</span>
+                    <span>{sentenceCase(meta.name)}</span>
                   </div>
                 ))}
               </div>
+            ) : (
+              <p className="text-2xs text-muted-foreground">
+                Daily composite score over {chartData.length} days, read against the Calm → Danger threat bands.
+              </p>
             )}
-          </>
+          </div>
         )}
 
         <ShowYourWorkPanel kind="dews" current={data.current} stablecoinId={stablecoinId} />

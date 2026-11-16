@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
 import { HeroPriceMetric, HeroSupplyMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
+import { HolderAlerts } from "@/components/stablecoin-detail/holder-alerts";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import type * as FeatureFlags from "@/lib/feature-flags";
@@ -24,10 +26,6 @@ vi.mock("next/link", async () => {
 vi.mock("@/lib/feature-flags", async (importOriginal) => ({
   ...(await importOriginal<typeof FeatureFlags>()),
   isHeroVerdictEnabled: () => true,
-}));
-
-vi.mock("@/components/bluechip-header-badge", () => ({
-  BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>Bluechip: B ({stablecoinId})</span>,
 }));
 
 vi.mock("@/components/share-button", () => ({
@@ -364,21 +362,44 @@ describe("HeroCard", () => {
     expect(metric.display.value).toBe(value);
     expect(metric.display.sub).toBe(`${pools} pools`);
     expect(model.signalRailItems.find((item) => item.key === "liquidity")?.primary).toBe(value);
-    if (score === null) {
-      expect(metric.accentClass).toBeUndefined();
-      expect(metric.display.color).toBe("text-muted-foreground");
-    }
+    if (score === null) expect(metric.display.color).toBe("text-muted-foreground");
     const html = renderHero(overrides);
-    expect(html).toContain(`${pools} pools`);
-    expect(html.split(">Liq<")[1]).toContain(`>${value}<`);
+    // A tile without a score is left out, never shown as a dash.
+    if (score === null) {
+      expect(html).not.toContain(">Liq<");
+    } else {
+      expect(html).toContain(`${pools} pools`);
+      expect(html.split(">Liq<")[1]).toContain(`>${value}<`);
+    }
   });
 
-  it("leaves missing liquidity unavailable without a measured score accent", () => {
+  it("leaves missing liquidity unavailable", () => {
     const model = buildStablecoinDetailHeroViewModel(makeHeroProps({ liquidityData: undefined }));
     const metric = model.tertiaryMetrics.find((item) => item.key === "liquidity")!;
     expect(metric.display.value).toBe("—");
     expect(metric.display.sub).toBeUndefined();
-    expect(metric.accentClass).toBeUndefined();
+  });
+
+  it("prints every signal tile's figure one way: no pill, no severity stripe, tone only for risk", () => {
+    const html = renderHero({ liquidityData: { ...liquidityData, liquidityScore: 20 } });
+    const tiles = html.split("Active depeg")[0]!.split(">DEWS<")[1]!;
+    // The DEWS band is a word in its band tone at figure size, like Peg and Liq.
+    expect(tiles).toMatch(/class="text-lg font-bold leading-tight pharos-numeric [^"]*">Watch</);
+    expect(tiles).not.toContain('data-slot="badge"');
+    expect(html).not.toMatch(/border-l-(2|\[3px\])/);
+    // Three signals sit three across, on the market row's thirds.
+    expect(html).toContain('class="mt-2.5 grid gap-2.5 sm:mt-3 sm:gap-3 grid-cols-3"');
+    expect(html).toContain('class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3"');
+  });
+
+  it("lays four signal tiles two by two on a phone and on the market row's quarters from sm", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps());
+    const keyMetric = { key: "backing-ratio", label: "Collateralization", value: "209.5%", subValue: "vs debt", colorClass: "text-foreground" };
+    const html = renderToStaticMarkup(<HeroCard model={model} keyMetric={keyMetric} />);
+    expect(html).toContain('class="mt-2.5 grid gap-2.5 sm:mt-3 sm:gap-3 grid-cols-2 sm:grid-cols-4"');
+    expect(html).toContain('class="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3"');
+    // Supply spans two quarters, so both rows share their column edges.
+    expect(html).toContain('class="col-span-2 min-w-0 pharos-inset px-3 py-2.5"');
   });
 
   it("renders the existing unavailable placeholder when live price is null", () => {
@@ -503,10 +524,18 @@ describe("HeroCard", () => {
       prevDay: 1_000_000,
       deviationBps: 350,
       pegScoreResult: null,
+      // DEWS does not score NAV tokens.
+      stressSignal: null,
       verdict: { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
     });
 
     expect(html).toContain("NAV token — no fixed peg");
+    // No peg, so no tone: the line is neutral context, not a green "healthy" reading.
+    expect(html.split("NAV token — no fixed peg")[0]!.slice(-160)).not.toContain("text-green");
+    // No DEWS or Peg reading applies: those tiles are left out, not filled with N/A.
+    expect(html).not.toContain(">DEWS<");
+    expect(html).not.toContain(">Peg<");
+    expect(html).not.toContain("N/A");
     expect(html).toContain("USD NAV");
     expect(html).not.toContain("+350 bps");
     expect(html).not.toContain("+350");
@@ -528,7 +557,7 @@ describe("HeroCard", () => {
       reportCard: { ...reportCardWithInheritedBlacklistRisk, id: "dai-makerdao" },
     });
 
-    expect(html).toContain(">Upstream<");
+    expect(html).toContain(">Upstream risk<");
     expect(html).not.toContain("No issuer controls");
   });
 
@@ -559,6 +588,9 @@ describe("HeroCard", () => {
 
     expect(html).toContain("1Y vs USD");
     expect(html).toContain("+12.34%");
+    // The cap's unit sits in its label, so its delta lines up with its neighbours'.
+    expect(html).toContain("Market cap (USD)");
+    expect(html).not.toContain("USD-normalized");
   });
 
   it("renders a limited depeg coverage note for sub-floor off-peg coins", () => {
@@ -607,6 +639,17 @@ describe("HeroIdentityHeader", () => {
     return renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} gradeRead={gradeRead} />);
   }
 
+  it("keeps the verdict separator off any line end and the actions on one row", () => {
+    const header = renderHeader();
+    const verdictLine = header.match(/<p class="([^"]*)" data-safety-verdict-line="[^"]*">(.*?)<\/p>/)!;
+    expect(verdictLine[1]).not.toContain("flex");
+    expect(verdictLine[2]).toContain(">\u00a0·\u00a0<");
+    expect(header).not.toContain("flex-wrap items-center gap-2");
+    // Only the compare label gives way on a narrow row.
+    expect(header).toMatch(/<span class="truncate">(vs [^<]+|Compare)<\/span>/);
+    expect(header).toContain("[&amp;&gt;[aria-haspopup=menu]]:shadow-none");
+  });
+
   it("passes the report-card read to the mobile grade", () => {
     expect(renderHeader({ reportCard: null }, "failed")).toContain("Grade unavailable");
     expect(renderHeader({ reportCard: null }, "pending")).toContain('aria-label="Loading Safety Score"');
@@ -621,11 +664,11 @@ describe("HeroIdentityHeader", () => {
       renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} updatedAtMs={updatedAtMs} dailySnapshot={daily} />);
     try {
       const prerender = render(now - 12 * 60_000);
-      expect(prerender.match(/Updated —/g)).toHaveLength(2);
+      expect(prerender.match(/Updated —/g)).toHaveLength(1);
       hydration.hydrated = true;
       const markup = render(now - 12 * 60_000);
-      // One stamp per breakpoint: closing the action row below lg, bottom-right at lg+.
-      expect(markup.match(/Updated 12m ago/g)).toHaveLength(2);
+      // One stamp under the action row at every width.
+      expect(markup.match(/Updated 12m ago/g)).toHaveLength(1);
       expect(prerender.replaceAll("Updated —", "Updated 12m ago")).toBe(markup);
       expect(markup).not.toMatch(/amber|text-warning/);
       expect(render(0)).not.toContain("Updated");
@@ -656,5 +699,66 @@ describe("HeroSupplyMetric", () => {
 
     expect(markup).toContain("30D");
     expect(markup.match(/—/g)).toHaveLength(2);
+  });
+});
+
+describe("hero verdict, fourth figure and holder alerts", () => {
+  const ratioMetric = { key: "backing-ratio", label: "Collateralization", value: "209.5%", subValue: "vs debt", colorClass: "text-foreground" };
+
+  it("gives a coin without native yield its mechanism figure, never a third-party 30d Excess", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps());
+    const markup = renderToStaticMarkup(<HeroCard model={model} keyMetric={ratioMetric} />);
+    expect(markup).toContain("Collateralization");
+    expect(markup).toContain("209.5%");
+    expect(markup).not.toContain("30d Excess");
+  });
+
+  it("keeps the native yield-vs-T-bill figure for a yield-bearing coin", () => {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps({ coin: { flags: { yieldBearing: true } } }));
+    const markup = renderToStaticMarkup(<HeroCard model={model} keyMetric={ratioMetric} />);
+    expect(markup).toContain("30d Excess");
+    expect(markup).not.toContain("209.5%");
+  });
+
+  it("shows no external rating beside the Pharos grade", () => {
+    expect(renderHero()).not.toMatch(/Bluechip/i);
+  });
+
+  it("states the grade's one reason: the binding cap, else the weakest pillar", () => {
+    const cap = { binding: true, limit: 84, reason: "Less than two years of known implementation history." };
+    expect(buildSafetyVerdictLine({ score: 84, bindingCap: cap, weakestPillar: { pillar: "backing", score: 81.7 } }))
+      .toEqual({ lead: "Capped at 84", detail: "Less than two years of known implementation history" });
+    expect(buildSafetyVerdictLine({ score: 87, bindingCap: null, weakestPillar: { pillar: "control", score: 80.2 } }))
+      .toEqual({ lead: "Weakest pillar", detail: "Economic Control 80/100" });
+    expect(buildSafetyVerdictLine({ score: null, bindingCap: null, weakestPillar: null })).toBeNull();
+  });
+
+  it("leads with holder alerts: warnings and notices and a live depeg, never a danger notice twice", () => {
+    const markup = renderToStaticMarkup(
+      <HolderAlerts
+        symbol="USDC"
+        activeDepeg
+        notices={[
+          { type: "warning", title: "USDC on Noble is being discontinued", message: "Move USDC off Noble before 2027-01-12." },
+          { type: "info", title: "Single-name equity collateral", message: "A position backs part of the supply." },
+          { type: "danger", title: "Exploit", message: "Shown by the danger banner." },
+        ]}
+      />,
+    );
+    expect(markup).toContain("USDC is trading off its peg");
+    expect(markup).toContain("USDC on Noble is being discontinued");
+    expect(markup).toContain("Single-name equity collateral");
+    expect(markup).not.toContain("Exploit");
+    // Notice text runs the full width of its banner.
+    expect(markup).not.toContain("max-w-");
+    expect(renderToStaticMarkup(<HolderAlerts symbol="USDC" notices={[]} />)).toBe("");
+  });
+
+  it("keeps the case-study callout on one row at every width", () => {
+    const html = renderHero();
+    const callout = html.match(/<a[^>]*Read the case study[^>]*>/)![0].match(/class="([^"]*)"/)![1];
+    expect(callout).toContain("flex items-center");
+    expect(callout).not.toContain("flex-col");
+    expect(html).toMatch(/class="line-clamp-2 min-w-0 [^"]*sm:line-clamp-1">[^<]+<\/span>/);
   });
 });

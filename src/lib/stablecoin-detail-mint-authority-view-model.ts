@@ -9,6 +9,7 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   resolveMintAuthorityScoreDisplay,
+  resolveNoPrivilegedMintDisplay,
   type MintAuthorityScoreDisplay,
   type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
@@ -19,6 +20,7 @@ import type { SafetyScoreV9IssuanceSummary } from "@shared/types/safety-score-v9
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import { selectMintAuthorityDetailControls } from "@/lib/stablecoin-detail-mint-authority-client";
 import { processReasonStatus } from "@/lib/mint-issuance-diagnostics";
+import { isNoPrivilegedMintPosture } from "@shared/lib/safety-score-v9/mint-posture";
 
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
@@ -204,7 +206,7 @@ const MINT_PATH_PASSPORT_LABELS: Record<string, string> = {
 };
 
 const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
-  "none-resolved": "No privileged mint resolved",
+  "none-resolved": "No privileged minter",
   "none-resolved-mint": "No privileged mint path",
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
@@ -523,7 +525,11 @@ export function buildMintAuthorityDetailViewModel(
       processDiagnostics: diagnostics.filter((diagnostic) => diagnostic.controlRefs.includes(ref)),
     };
   });
-  const scoreDisplay = resolveMintAuthorityScoreDisplay(published?.mint);
+  // No published native component plus a reviewed "no privileged mint"
+  // posture is a finding (Hardened), not a missing score.
+  const scoreDisplay = published != null && published.mint == null && isNoPrivilegedMintPosture(candidate.authorityPosture)
+    ? resolveNoPrivilegedMintDisplay(candidate.authorityPosture)
+    : resolveMintAuthorityScoreDisplay(published?.mint);
   const score = buildMintAuthorityScoreViewModel(
     scoreDisplay,
     published?.caps ?? [],
@@ -550,7 +556,10 @@ export function buildMintAuthorityDetailViewModel(
     verdict: candidate.headline ?? buildMintAuthorityVerdict({
       symbol: coin.symbol,
       bandLabel: scoreDisplay.bandKey === "nr" ? null : scoreDisplay.bandLabel,
-      scoreUnavailable: !score.publicationAvailable,
+      // The header pill and the band ladder already name a published band, so
+      // the verdict drops its "<Band> —" prefix and states the mechanism only.
+      // An NR component keeps "Not rated —", which spells out the pill's "NR".
+      scoreUnavailable: !score.publicationAvailable || scoreDisplay.bandKey !== "nr",
       mintPath: candidate.mintPath,
       authorityPosture: candidate.authorityPosture,
       controls,

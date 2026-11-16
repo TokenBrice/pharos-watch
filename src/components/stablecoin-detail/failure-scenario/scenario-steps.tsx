@@ -257,10 +257,7 @@ export function ScenarioSteps({
     <section aria-labelledby={headingId} className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <h4 id={headingId} className="text-sm font-semibold tracking-tight text-foreground">
-          Step by step{" "}
-          <span className="font-normal text-muted-foreground">
-            · <span className="pharos-numeric">{route.steps.length}</span> steps, each with its evidence
-          </span>
+          Step by step <span className="font-normal text-muted-foreground">· each with its evidence</span>
         </h4>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setAllOpen(true)} className={controlClass}>

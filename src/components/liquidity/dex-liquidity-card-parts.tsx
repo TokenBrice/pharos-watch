@@ -9,7 +9,6 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { formatAddress, formatCurrency, formatChartDate, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import { getNetColor } from "@shared/lib/classification/flows";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import {
@@ -33,18 +32,6 @@ import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } fr
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types/dex-liquidity";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { getDexDurabilityStyle, getPoolOrganicFractionTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
-
-export function TrendArrow({ value }: { value: number | null }) {
-  if (value == null) return null;
-  if (Math.abs(value) < 0.05) return null;
-  const isPositive = value >= 0;
-  return (
-    <span className={`text-xs font-mono ${getNetColor(value, { positiveInclusiveZero: true })}`}>
-      {isPositive ? "\u2191" : "\u2193"}
-      {Math.abs(value).toFixed(1)}%
-    </span>
-  );
-}
 
 export function PoolSourceLabel({
   count,
@@ -477,7 +464,9 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
             )}
           </div>
           {/* DEC-19: unavailable activity stays NR; its weight is not redistributed. */}
-          <span className="w-8 text-right font-mono tabular-nums">{value ?? "NR"}</span>
+          <span className="w-8 text-right font-mono tabular-nums" title={value == null ? "Not rated" : undefined}>
+            {value ?? <span aria-label="Not rated">–</span>}
+          </span>
         </div>
       ))}
     </div>

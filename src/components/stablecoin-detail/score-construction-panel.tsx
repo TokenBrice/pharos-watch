@@ -84,7 +84,7 @@ export function ScoreConstructionPanel({ card }: { card: ConstructionCard }) {
     : null;
 
   return (
-    <section className="border-b border-border/40 pb-3" aria-label="How this score is built">
+    <section aria-label="How this score is built">
       <ModuleDisclosure label="How this score is built">
         {coverageNotice}
         {steps.length > 0 ? (

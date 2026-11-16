@@ -9,21 +9,79 @@ import { cn } from "@/lib/utils";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { HeroSignalRailItem } from "./hero-card-metrics";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+
+const PILLAR_ROWS = [
+  { key: "backing", label: "Backing" },
+  { key: "exit", label: "Exit" },
+  { key: "control", label: "Economic Control" },
+] as const;
+
+/**
+ * The three pillars as compact bars: the grade's decomposition at a glance,
+ * each bar in its own grade's color with the score and letter beside it.
+ */
+function RailPillarBars({ card }: { card: V9ConsumerCard }) {
+  return (
+    <ul className="mt-3 space-y-1.5" aria-label="Safety Score pillars">
+      {PILLAR_ROWS.map(({ key, label }) => {
+        const score = card.pillars[key]?.score;
+        if (score == null || !Number.isFinite(score)) {
+          return (
+            <li key={key} className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.75rem] items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{label}</span>
+              <span className="h-1.5 rounded-full border border-dashed border-border" aria-hidden="true" />
+              <span className="text-right text-muted-foreground">—</span>
+            </li>
+          );
+        }
+        const grade = scoreToGrade(score);
+        const meta = getSafetyGradeMetadata(grade);
+        return (
+          <li key={key} className="grid grid-cols-[6.5rem_minmax(0,1fr)_2.75rem] items-center gap-2 text-xs">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+              <span className={cn("block h-full rounded-full", meta.barClassName)} style={{ width: `${Math.max(2, Math.min(100, score))}%` }} />
+            </span>
+            <span className="flex items-baseline justify-end gap-1">
+              <span className="pharos-numeric font-semibold text-foreground">{Math.round(score)}</span>
+              <span className={cn("pharos-numeric text-2xs font-semibold", meta.pulse.accentClassName)}>{grade}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** The grade's one reason (binding cap, else weakest pillar), in words. */
+function RailVerdict({ card }: { card: V9ConsumerCard }) {
+  const line = buildSafetyVerdictLine(card);
+  if (!line) return null;
+  return (
+    <p className="mt-2 text-xs leading-snug" data-safety-verdict-line>
+      <span className="font-medium text-foreground">{line.lead}</span>
+      <span aria-hidden="true" className="text-muted-foreground/60"> · </span>
+      <span className="text-muted-foreground">{line.detail}</span>
+    </p>
+  );
+}
 
 /** The signal view models render a missing value as an em dash. */
 const UNAVAILABLE = "—";
 
 /**
- * A DEWS row without a reading says why when the reason is structural: NAV
- * tokens are priced by NAV and frozen archives stopped collecting, so neither
- * is "unavailable". The wording matches the main column's DEWS state strip.
+ * A signal row earns its place with a reading: a pending read keeps its
+ * placeholder, but a row with no value (DEWS on a NAV token or a frozen
+ * archive, a missing liquidity score) or a NAV token's "NAV" peg, which
+ * only restates that the peg check does not apply, is left out.
  */
-function resolveRowDisplay(
-  item: HeroSignalRailItem,
-  { navToken, frozen }: { navToken: boolean; frozen: boolean },
-): Pick<HeroSignalRailItem, "primary" | "secondary" | "colorClass"> {
-  if (item.key !== "dews" || item.primary !== UNAVAILABLE || (!navToken && !frozen)) return item;
-  return { primary: "N/A", secondary: frozen ? "frozen" : "NAV", colorClass: "text-muted-foreground" };
+function hasSignalReading(item: HeroSignalRailItem, navToken: boolean): boolean {
+  if (item.pending) return true;
+  if (item.primary === UNAVAILABLE || item.primary === "") return false;
+  return !(item.key === "peg" && navToken);
 }
 
 /**
@@ -41,9 +99,12 @@ export function RailSafetySummary({
   frozen = false,
   gradeRead = "settled",
   liveAsOf = null,
+  card = null,
 }: {
+  /** The live card: its binding cap or weakest pillar is the grade's one-line reason, its pillars the bars. */
+  card?: V9ConsumerCard | null;
   items: HeroSignalRailItem[];
-  /** NAV tokens have no peg stress layer; their DEWS row reads "N/A · NAV". */
+  /** NAV tokens have no peg reading: their "NAV" peg row is left out. */
   navToken?: boolean;
   /** Frozen archives are no longer scored. */
   frozen?: boolean;
@@ -60,8 +121,9 @@ export function RailSafetySummary({
    */
   liveAsOf?: string | null;
 }) {
-  const [hero, ...rest] = items;
+  const [hero, ...signals] = items;
   if (!hero) return null;
+  const rest = signals.filter((item) => hasSignalReading(item, navToken));
 
   const graded = hero.primary !== UNAVAILABLE;
   const gradeClass = graded
@@ -71,7 +133,7 @@ export function RailSafetySummary({
   return (
     <div className="pharos-card-shell p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Safety</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Safety Score</h2>
         <Link
           href="#report-card"
           prefetch={false}
@@ -119,10 +181,11 @@ export function RailSafetySummary({
           {hero.note ?? liveAsOf ?? null}
         </p>
       ) : null}
-      <div className="mt-3 divide-y divide-border/40 border-t border-border/40">
-        {rest.map((item) => {
-          const display = resolveRowDisplay(item, { navToken, frozen });
-          return (
+      {graded && card ? <RailVerdict card={card} /> : null}
+      {graded && card && card.ratingStatus === "rated" ? <RailPillarBars card={card} /> : null}
+      {rest.length > 0 ? (
+        <div className="mt-3 divide-y divide-border/40 border-t border-border/40">
+          {rest.map((item) => (
             <IntentLink
               key={item.key}
               href={item.href}
@@ -135,18 +198,18 @@ export function RailSafetySummary({
                 {item.pending ? (
                   <span aria-hidden="true" className="block h-4 w-10 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
                 ) : (
-                  <span className={cn("pharos-numeric text-sm font-semibold", display.colorClass)}>
-                    {display.primary}
+                  <span className={cn("pharos-numeric text-sm font-semibold", item.colorClass)}>
+                    {item.primary}
                   </span>
                 )}
-                {display.secondary ? (
-                  <span className="text-xs text-muted-foreground">· <FigureLeadText text={display.secondary} /></span>
+                {item.secondary ? (
+                  <span className="text-xs text-muted-foreground">· <FigureLeadText text={item.secondary} /></span>
                 ) : null}
               </span>
             </IntentLink>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

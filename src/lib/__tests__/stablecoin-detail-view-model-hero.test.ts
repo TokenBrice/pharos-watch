@@ -5,7 +5,6 @@ import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
-import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { pegScoreColor } from "@/lib/severity-colors";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
@@ -48,11 +47,25 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(settled.signalRailItems[0]?.note).toBeUndefined();
   });
 
+  it("holds the passport slot of a fact whose read is in flight, never one that cannot land", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const reads = { peg: true, redemption: true };
+    expect(buildDetailHero({ coin, pendingReads: reads }).passportPendingKeys).toEqual(["redeemability", "record"]);
+    // A settled read, a NAV token's absent peg record and a frozen archive hold no slot.
+    expect(buildDetailHero({ coin }).passportPendingKeys).toEqual([]);
+    expect(buildDetailHero({ coin, isNavToken: true, pendingReads: reads }).passportPendingKeys).toEqual(["redeemability"]);
+    expect(buildDetailHero({ coin: { ...coin, status: "frozen" }, pendingReads: reads }).passportPendingKeys).toEqual([]);
+    const landed = buildDetailHero({ coin, pendingReads: reads, redemptionBackstop: { accessModel: "issuer-api" } as never });
+    expect(landed.passportPendingKeys).toEqual(["record"]);
+  });
+
   it("keeps NAV tokens and frozen archives out of the pending peg and DEWS reads", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const nav = buildDetailHero({ coin, isNavToken: true, pendingReads: ALL_PENDING, savedAssessment: SAVED });
     expect(nav.tertiaryMetrics.find((metric) => metric.key === "dews")!.display).toMatchObject({ value: "—" });
-    expect(nav.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display).toMatchObject({ value: "NAV" });
+    // A NAV token has no peg: the tile carries no reading and the hero leaves it out.
+    expect(nav.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display).toMatchObject({ value: "—" });
+    expect(nav.passportPendingKeys).toEqual([]);
   });
 
   it.each([900, null])("keeps native current paired with its checkpoints rather than mixing displayed supply %s", (supply) => {
@@ -69,8 +82,9 @@ describe("stablecoin detail hero view-model builder", () => {
       safePrevMonth: 950,
       hasPrevMonth: true,
     });
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
-    expect(hero.market.supplyTrend.prevMonthTrendClass).toContain("text-green-700");
+    // Supply moves are not risk: neutral ink, the sign carries the direction.
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
+    expect(hero.market.supplyTrend.prevMonthTrendClass).toBe("text-foreground");
   });
 
   it("derives hero display metrics and signal rail from raw detail inputs", () => {
@@ -151,18 +165,12 @@ describe("stablecoin detail hero view-model builder", () => {
     });
 
     expect(hero.market.supplyTrend.safePrevMonth).toBeNull();
-    expect(hero.market.prevDayTrendClass).toContain("text-red-700");
-    expect(hero.market.supplyTrend.prevWeekTrendClass).toContain("text-green-700");
+    expect(hero.market.prevDayTrendClass).toBe("text-foreground");
+    expect(hero.market.supplyTrend.prevWeekTrendClass).toBe("text-foreground");
     expect(hero.price.limitedDepegCoverageNote).toContain("Below $1.00M live-event floor");
 
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
-    expect(pegMetric?.display).toMatchObject({
-      value: "45",
-      // Coverage-limited history: no incident count is published, so the
-      // sub-line falls back to the at-peg reading.
-      sub: "99.4% at peg",
-    });
-    expect(pegMetric?.accentClass).toBe("border-l-2 border-l-red-500");
+    expect(pegMetric?.display).toMatchObject({ value: "45", sub: "99.4% at peg" });
 
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "performance-vs-usd")?.display.value).toBe("+12.34%");
     expect(hero.desktopTertiaryMetrics.map((metric) => metric.key)).not.toContain("dews");
@@ -215,7 +223,7 @@ describe("stablecoin detail hero view-model builder", () => {
     });
   });
 
-  it("does not publish a zero incident count for coverage-limited peg evidence", () => {
+  it("keeps the incident count out of the peg tile: the passport Record owns it", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const pegDisplay = (hero: ReturnType<typeof buildDetailHero>) =>
       hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
@@ -236,7 +244,8 @@ describe("stablecoin detail hero view-model builder", () => {
         id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays: 365,
       }),
     });
-    expect(pegDisplay(observed).sub).toBe("0 incidents");
+    expect(pegDisplay(observed).sub).toBe("100.0% at peg");
+    expect(observed.passportItems.find((item) => item.key === "record")?.value).toBe("0 recorded");
   });
 
   it("marks a numeric peg score under 30 tracking days as early while keeping its score colour", () => {
@@ -257,7 +266,7 @@ describe("stablecoin detail hero view-model builder", () => {
     });
     expect(pegDisplay(10).sub).not.toContain("incidents");
     expect(pegDisplay(29).sub).toBe("Early score · 29d tracked");
-    expect(pegDisplay(30).sub).toBe("0 incidents");
+    expect(pegDisplay(30).sub).toBe("100.0% at peg");
   });
 
   it("derives unavailable peg score and upstream freeze states", () => {
@@ -311,7 +320,7 @@ describe("stablecoin detail hero view-model builder", () => {
     // so the chip leaves for the FreezeWatch coverage page — never the
     // mint-authority section.
     expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
-      value: "Upstream",
+      value: "Upstream risk",
       href: buildCoinTrackerLink("dai-makerdao", "freezewatch", "DAI").href,
     });
     const reviewedFreezeHero = buildDetailHero({
@@ -408,7 +417,8 @@ describe("stablecoin detail hero view-model builder", () => {
     // No curated MiCA/GENIUS profile on this fixture, so jurisdiction has no
     // Regulatory standing module to target.
     expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#info" });
-    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts", chip: true });
+    expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts" });
+    expect(byKey.get("chains")).not.toHaveProperty("chip");
 
     // A decentralized coin omits the attestor chip (it publishes no reserve
     // attestation) and routes jurisdiction to the overview section.
@@ -653,17 +663,18 @@ describe("hero trend direction follows the printed percentage", () => {
   afterEach(() => { quietDeviations.value = null; });
   const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
 
-  it.each([false, true])("keeps rounded zero neutral and real moves directional (quiet=%s)", (quiet) => {
+  it.each([false, true])("mutes a rounded zero and inks real moves neutrally (quiet=%s)", (quiet) => {
     quietDeviations.value = quiet;
     const trend = (mcap: number, prevDay: number) => buildDetailHero({ coin, mcap, prevDay }).market.prevDayTrendClass;
     expect(trend(100, 100)).toBe("text-muted-foreground");
     expect(trend(99.999, 100)).toBe("text-muted-foreground");
     expect(trend(100.001, 100)).toBe("text-muted-foreground");
-    expect(trend(99, 100)).toBe(DIRECTION_TONE_CLASSES.down);
-    expect(trend(101, 100)).toBe(DIRECTION_TONE_CLASSES.up);
-    expect(trend(0, 100)).toBe(DIRECTION_TONE_CLASSES.down);
-    // Within the quiet threshold only the flag decides; outside it the sign does.
-    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
+    // A market-cap move is not risk: no red or green, the sign carries the direction.
+    expect(trend(99, 100)).toBe("text-foreground");
+    expect(trend(101, 100)).toBe("text-foreground");
+    expect(trend(0, 100)).toBe("text-foreground");
+    // Within the quiet threshold only the flag decides.
+    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : "text-foreground");
   });
 
   it("withholds the 24h change when current supply is partial", () => {

@@ -246,7 +246,7 @@ describe("DexLiquidityCard", () => {
     }, "gusd-gate");
 
     const { container } = render(<DexLiquidityCard stablecoinId="gusd-gate" />);
-    const sevenDayLabel = screen.getAllByText("7d Volume")[0];
+    const sevenDayLabel = screen.getAllByText("7d volume")[0];
 
     expect(sevenDayLabel.nextElementSibling?.textContent).toBe("—");
     expect(container.textContent).toContain("$2.89M");
@@ -399,7 +399,7 @@ describe("DexLiquidityCard", () => {
         ...overrides,
       });
       render(<DexLiquidityCard stablecoinId="usdc-circle" />);
-      return ["24h Volume", "7d Volume"].map((label) => {
+      return ["24h volume", "7d volume"].map((label) => {
         const value = screen.getAllByText(label)[0]!.nextElementSibling!;
         return { value: value.textContent, detail: value.nextElementSibling?.textContent ?? null };
       });
@@ -415,13 +415,22 @@ describe("DexLiquidityCard", () => {
 
     it.each([
       ["all-missing", [fresh(null), fresh(null)], "Not observed"],
-      ["mixed", [fresh(40_000), fresh(null)], `Partial ≥ ${formatCurrency(40_000)}`],
       ["stale", [aged], "Stale observations"],
     ] as const)("renders %s 24h/7d windows as a dash with a labelled detail", (_name, pools, detail) => {
       expect(renderWindows([...pools])).toEqual([
         { value: "—", detail },
         { value: "—", detail },
       ]);
+    });
+
+    it("headlines a partial window's lower bound with a coverage qualifier, never a bare dash", () => {
+      // The "≥" is glued to its figure, so a narrow column cannot wrap it away.
+      const bound = { value: `≥\u00a0${formatCurrency(40_000)}`, detail: "Partial coverage" };
+      expect(renderWindows([fresh(40_000), fresh(null)], {
+        scoreComponents: { tvlDepth: 89, volumeActivity: 72, poolQuality: 60, durability: 70, pairDiversity: 100 },
+      })).toEqual([bound, bound]);
+      // The verdict names components in the breakdown's own casing.
+      expect(screen.getByText("Diversity 100 and TVL Depth 89 carry the score; Pool Quality 60 is the softest.")).toBeTruthy();
     });
 
     it("suppresses a zero partial lower bound in favour of the completeness label", () => {
@@ -438,9 +447,12 @@ describe("DexLiquidityCard", () => {
       });
       expect(screen.getByText(/^Liquidity Score is not rated:/)).toBeTruthy();
       expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
-      // Valid components stay visible beside the NR activity bar (header pill + bar).
+      // Valid components stay visible beside the unrated activity bar; the
+      // notice says why, so no header pill repeats it, and the bar's value is a labelled dash.
       expect(screen.getByText("Score breakdown")).toBeTruthy();
-      expect(screen.getAllByText("NR").length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryByText("Not rated")).toBeNull();
+      expect(screen.getByLabelText("Not rated").textContent).toBe("–");
+      expect(screen.queryByText("NR")).toBeNull();
     });
   });
 });

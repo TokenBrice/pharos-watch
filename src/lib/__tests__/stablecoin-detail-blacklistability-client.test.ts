@@ -70,7 +70,8 @@ describe("projectBlacklistabilityClientSummary", () => {
       coinWith({ blacklistabilityReview: { ...FREEZABLE_REVIEW, reviewedStatus: "possible" } }),
     );
     expect(summary!.status).toBe("possible");
-    expect(summary!.statusLabel).toBe("Possible");
+    // One freeze vocabulary with the Freeze & seizure module.
+    expect(summary!.statusLabel).toBe("Restrictable");
     expect(summary!.statusToneClass).toContain("state-warn");
   });
 
@@ -80,8 +81,9 @@ describe("projectBlacklistabilityClientSummary", () => {
       new Map([["usdc-circle", { id: "usdc-circle", name: "USD Coin" } as unknown as StablecoinMeta]]),
     );
     expect(summary!.status).toBe("inherited");
-    expect(summary!.statusLabel).toBe("Upstream");
-    expect(summary!.statusToneClass).toContain("blue");
+    expect(summary!.statusLabel).toBe("Upstream freeze risk");
+    // Every exposed freeze state is amber; only "Not freezable" is green.
+    expect(summary!.statusToneClass).toContain("state-warn");
     expect(summary!.upstreamLabel).toBe("USD Coin");
     expect(summary!.statusNote).toContain("USD Coin");
   });

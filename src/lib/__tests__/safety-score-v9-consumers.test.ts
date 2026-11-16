@@ -493,6 +493,24 @@ describe("published mint diagnostic consumer", () => {
   });
 });
 
+describe("native mint component selection", () => {
+  it("reads only the asset's native mint row, never a bridged-token or deployment mint that sorts first", () => {
+    const card = makeV9Card({ id: "bold-like" });
+    const base = card.breakdowns!.control.components.find((row) => row.kind === "mint")!;
+    // BOLD: no native component is published (nothing can mint it), and
+    // bridged-token mints on L2s sort ahead of everything else.
+    card.breakdowns!.control.components = [
+      { ...base, key: "mint:bridge:bridge-meta:bold-liquity:15850c94dda1beb8ac25", label: "Arbitrum bridged-token mint", posture: "unbounded-adverse", score: 60, binding: false },
+      { ...base, key: "mint:deployment:mint-meta:bold-liquity:e2381c0e", label: "Ethereum mint authority", posture: "concentrated-admin", score: 75, binding: false },
+    ];
+    expect(readV9CardMintComponent(card)).toBeNull();
+    expect(projectV9TableCard(card).mint).toBeNull();
+    card.breakdowns!.control.components.push({ ...base, key: "mint", label: "Native mint authority", posture: "unbounded-reconciled", score: 80, binding: true });
+    expect(readV9CardMintComponent(card)).toEqual({ score: 80, posture: "unbounded-reconciled" });
+    expect(projectV9TableCard(card).mint).toEqual({ score: 80, posture: "unbounded-reconciled" });
+  });
+});
+
 function cohort() {
   return makeReportCardsV9Response({ cards: [
     makeV9Card({ id: "a-rated", score: 90 }),

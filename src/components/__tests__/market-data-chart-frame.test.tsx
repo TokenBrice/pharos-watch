@@ -147,7 +147,7 @@ it("highlights the 90-day seed after a wide expansion read fails, without a noti
   // The polling query retries twice before it settles.
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 8_000 });
   expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
-  expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: "90d" }).getAttribute("aria-pressed")).toBe("true");
   expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy();
   unmount();
   client.clear();
@@ -168,8 +168,8 @@ it("highlights the 90-day seed while a wide expansion read is still loading", as
     </QueryClientProvider>,
   );
   expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
-  expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
-  expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("false");
+  expect(screen.getByRole("button", { name: "90d" }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: "1y" }).getAttribute("aria-pressed")).toBe("false");
   unmount();
   client.clear();
 });
@@ -189,7 +189,7 @@ it("uses its own range controls to switch an uncontrolled expandable chart from 
     </QueryClientProvider>,
   );
   await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 4 data points" })).toBeTruthy());
-  fireEvent.click(screen.getByRole("button", { name: "1Y" }));
+  fireEvent.click(screen.getByRole("button", { name: "1y" }));
   await waitFor(() => expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy());
   expect(requests).toEqual([
     expect.stringContaining("range=all"),

@@ -6,6 +6,7 @@ import { BadgeCheck, Rocket } from "lucide-react";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { formatShortDate } from "@shared/lib/format";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -26,12 +27,7 @@ function formatChipLaunchDate(value: string | undefined): string | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatShortDate(date, { utc: true });
 }
 
 function HeroCompactChip({ href, children }: { href?: string | null; children: ReactNode }) {
@@ -63,30 +59,30 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
   const governanceLabel = HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance];
 
   return (
-    <div className="flex flex-col gap-2 border-b border-border/40 px-4 py-2 sm:px-5">
-      {showVerdict ? (
-        <div className="flex min-h-5 items-center" data-hero-verdict-lane>
+    <div className="border-b border-border/40 px-4 py-2 sm:px-5">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        {/* The verdict leads the chip row instead of taking a line of its own. */}
+        {showVerdict ? (
           <span
             id={`hero-verdict-${coin.id}`}
             data-archetype={verdict.archetype}
-            className="inline-flex min-h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-snug text-state-info-bright"
+            data-hero-verdict-lane
+            className="inline-flex h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-none text-state-info-bright"
           >
             <BadgeCheck aria-hidden="true" className="h-3 w-3 shrink-0" />
             {verdict.label}
           </span>
-        </div>
-      ) : null}
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
-          <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
-          <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
-          {(coin.infrastructures ?? []).map((value) => (
-            <InfrastructureBadge key={value} value={value} />
-          ))}
-        </div>
+        ) : null}
+        <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
+        <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
+        <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
+        {(coin.infrastructures ?? []).map((value) => (
+          <InfrastructureBadge key={value} value={value} />
+        ))}
+        {/* The last chip of the row: inline wherever the row has room,
+            pushed to the far end from sm. */}
         {launchDate ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground sm:ml-auto">
             <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
             {launchDate}
           </span>
@@ -119,8 +115,15 @@ export function HeroCardMobileSection({
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
   return (
-    <div className="px-4 py-4 sm:px-5 lg:hidden">
-      <HeroMarketMetricGrid variant="card" coin={coin} coinData={coinData} price={price} market={market} />
+    <div className="px-3 py-3 sm:px-5 sm:py-4 lg:hidden">
+      <HeroMarketMetricGrid
+        variant="card"
+        coin={coin}
+        coinData={coinData}
+        price={price}
+        market={market}
+        tertiaryCount={tertiaryMetrics.length}
+      />
 
       <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
     </div>
@@ -132,14 +135,11 @@ export function HeroCardDesktopSection({
   coinData,
   price,
   market,
-  tertiaryMetrics,
+  fourthMetric,
 }: HeroSectionBaseProps & {
-  tertiaryMetrics: HeroTertiaryMetricConfig[];
+  /** The coin-specific fourth figure (see `resolveFourthMetric`); null leaves three cells. */
+  fourthMetric: HeroTertiaryMetricConfig | null;
 }) {
-  // The fourth slot preserves the live 30d excess-vs-T-bill metric even though
-  // the visual chrome now matches the compact reference dossier.
-  const excessMetric = tertiaryMetrics.find((metric) => metric.key === "excess-yield");
-
 
   return (
     <div className="hidden lg:block">
@@ -149,7 +149,7 @@ export function HeroCardDesktopSection({
         coinData={coinData}
         price={price}
         market={market}
-        tertiaryMetric={excessMetric}
+        tertiaryMetric={fourthMetric ?? undefined}
       />
     </div>
   );

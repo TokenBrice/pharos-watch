@@ -13,6 +13,7 @@ import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import type { YieldHistoryPoint } from "@shared/types/yield-evidence-schemas";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
@@ -206,6 +207,40 @@ export function deriveYieldSourceSegments(
   });
 }
 
+export interface YieldWarningRun {
+  kind: "warning" | "unreadable";
+  start: number;
+  /** The next observation's timestamp (the run held until then), or the run's last point at the series end. */
+  end: number;
+}
+
+function warningKind(point: YieldHistoryChartPoint): YieldWarningRun["kind"] | null {
+  if (selectInvestmentWarningSignals(point.warningSignals).length > 0) return "warning";
+  return point.warningSignalsStatus === "unreadable" ? "unreadable" : null;
+}
+
+/**
+ * Consecutive observations carrying an investment warning (or unreadable
+ * warnings) collapse into one run, drawn as a single band: a marker on every
+ * hourly point smeared into a thick line. Operational advisories never start a run.
+ */
+export function deriveWarningRuns(points: readonly YieldHistoryChartPoint[]): YieldWarningRun[] {
+  const runs: YieldWarningRun[] = [];
+  let open: YieldWarningRun | null = null;
+  for (const point of points) {
+    const kind = warningKind(point);
+    if (open && kind !== open.kind) {
+      open.end = point.date;
+      runs.push(open);
+      open = null;
+    }
+    if (kind && !open) open = { kind, start: point.date, end: point.date };
+    else if (open) open.end = point.date;
+  }
+  if (open) runs.push(open);
+  return runs;
+}
+
 function normalizeDefaultDays(value?: number) {
   return PRESET_DAYS.includes(value as (typeof PRESET_DAYS)[number]) ? value! : DEFAULT_DAYS;
 }
@@ -230,6 +265,49 @@ function formatSourceKeySuffix(sourceKey: string) {
   return sourceKey.length > SOURCE_KEY_SUFFIX_LENGTH
     ? `...${sourceKey.slice(-SOURCE_KEY_SUFFIX_LENGTH)}`
     : sourceKey;
+}
+
+/** Two reference lines closer than one label height share a single inline label. */
+const REFERENCE_LABEL_MIN_GAP_PX = 14;
+
+interface ReferenceLineInput {
+  rate: number;
+  label: string;
+}
+
+/**
+ * Inline labels for the benchmark and median reference lines. A rate outside
+ * the y-domain is drawn clamped to the edge, so its label says "off scale"
+ * (E25). When both lines land within one label height (both clamped to the
+ * same edge, or simply close), their labels would print over each other: they
+ * join into one label on the upper line, stating a shared off-scale note once.
+ */
+export function resolveReferenceLineLabels({
+  benchmark,
+  median,
+  domain,
+  plotHeight,
+}: {
+  benchmark: ReferenceLineInput | null;
+  median: ReferenceLineInput | null;
+  domain: readonly [number, number];
+  plotHeight: number;
+}): { benchmark: string | null; median: string | null } {
+  const [min, max] = domain;
+  const offScale = (rate: number) => (rate > max ? " ↑ off scale" : rate < min ? " ↓ off scale" : "");
+  const separate = {
+    benchmark: benchmark ? `${benchmark.label}${offScale(benchmark.rate)}` : null,
+    median: median ? `${median.label}${offScale(median.rate)}` : null,
+  };
+  if (!benchmark || !median || !(max > min)) return separate;
+  const toPx = (rate: number) => ((max - Math.min(Math.max(rate, min), max)) / (max - min)) * plotHeight;
+  if (Math.abs(toPx(benchmark.rate) - toPx(median.rate)) >= REFERENCE_LABEL_MIN_GAP_PX) return separate;
+  const benchmarkIsUpper = benchmark.rate >= median.rate;
+  const [upper, lower] = benchmarkIsUpper ? [benchmark, median] : [median, benchmark];
+  const joined = offScale(upper.rate) === offScale(lower.rate)
+    ? `${upper.label} · ${lower.label}${offScale(upper.rate)}`
+    : `${upper.label}${offScale(upper.rate)} · ${lower.label}${offScale(lower.rate)}`;
+  return benchmarkIsUpper ? { benchmark: joined, median: null } : { benchmark: null, median: joined };
 }
 
 export function getYieldHistorySourceDisplayLabel(
@@ -473,6 +551,8 @@ export function useYieldHistoryChartModel({
   const spikeAnnotations = useMemo(() => computeSpikeAnnotations(chartData), [chartData]);
   const spikeDates = useMemo(() => new Set(spikeAnnotations.map((spike) => spike.date)), [spikeAnnotations]);
 
+  const warningRuns = useMemo(() => deriveWarningRuns(chartData), [chartData]);
+
   const sourceSegments = useMemo(() => {
     return deriveYieldSourceSegments(
       chartData
@@ -560,6 +640,7 @@ export function useYieldHistoryChartModel({
     yTicks,
     spikeAnnotations,
     sourceSegments,
+    warningRuns,
     resolvedBenchmarkLabel: getYieldBenchmarkDisplayLabel({
       benchmarkLabel,
       benchmarkIsFallback,

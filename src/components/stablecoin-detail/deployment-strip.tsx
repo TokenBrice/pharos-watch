@@ -1,9 +1,11 @@
+"use client";
+
+import { useLayoutEffect, useRef, useState } from "react";
 import { House } from "lucide-react";
 import { ControlRoleTag } from "@/components/stablecoin-detail/control-role-tag";
 import { cn } from "@/lib/utils";
 import {
   BRIDGE_TIER_CELL_CLASSES,
-  BRIDGE_TIER_DIAGNOSTIC_CELL_CLASSES,
   BRIDGE_TIER_POLICY_ORDER,
   BRIDGE_TIER_UNKNOWN_CELL_CLASS,
   CONTROL_COMPONENT_ROLE_LABELS,
@@ -11,400 +13,269 @@ import {
 } from "@shared/lib/classification";
 import type { BridgeRouteRiskTier } from "@shared/types/bridge-risk";
 
-export type DeploymentCellRole = Extract<ControlComponentRole, "limiting" | "eligible" | "diagnostic">;
+export type DeploymentRouteRole = Extract<ControlComponentRole, "limiting" | "eligible" | "diagnostic">;
 
-export interface DeploymentStripCell {
+export interface DeploymentRoute {
   key: string;
-  /** Chain or route name ("Ethereum", "Plasma OFT"). */
+  /** Chain or route name ("Ethereum", "Plasma · LayerZero"). */
   label: string;
-  /** Bridge route tier key (`BridgeRouteRiskTier`); an unrecognised key draws as unknown. */
+  /** Bridge route tier key (`BridgeRouteRiskTier`); an unrecognised key groups as unknown. */
   tierKey: string;
   tierLabel: string;
   /**
-   * Relation to the Control minimum. Only `limiting` is outlined;
-   * `diagnostic` (outside the eligible set) is dashed in its tier's hue;
-   * absent makes no claim.
+   * Relation to the Control minimum: `limiting` draws a solid outline,
+   * `diagnostic` (outside the eligible set) a dashed one; absent makes no claim.
    */
-  role?: DeploymentCellRole;
+  role?: DeploymentRouteRole;
   home?: boolean;
-  /** Tier not established for this deployment: hatched, whatever `tierKey` says. */
+  /** Tier not established for this route: it groups apart, whatever `tierKey` says. */
   unknown?: boolean;
-  /** Relative supply weight. Widths follow weights only when every cell has one. */
-  weight?: number | null;
 }
 
-export interface DeploymentStripBracket {
-  key: string;
-  /** Shared failure domain, already deduped by the caller ("LayerZero V2 ×3"). */
-  label: string;
-  cellKeys: readonly string[];
-  /** Quantified share ("10.8%", or a lower bound "≥21%"); absent reads "share unquantified", never a percent. */
-  shareLabel?: string;
-  /** Qualifies `shareLabel` ("1 unquantified" when part of the domain has no share); ignored without it. */
-  shareNote?: string;
-}
-
-export interface DeploymentStripProps {
-  cells: readonly DeploymentStripCell[];
-  brackets?: readonly DeploymentStripBracket[];
-  /** Names the strip ("USDe deployments by bridge tier"). */
+export interface DeploymentRouteGroupsProps {
+  routes: readonly DeploymentRoute[];
+  /**
+   * Inventory total per tier label, for routes that are a sample of a larger
+   * inventory: each group then counts every route and names the ones not
+   * listed as "+N more". Falls back to listed counts unless every group label
+   * has a total.
+   */
+  totals?: Readonly<Record<string, number>>;
+  /** Names the list ("Bridge routes by type"). */
   ariaLabel: string;
-  /**
-   * Inventory total per tier label, for cells that are a sample of a larger
-   * inventory. The legend then counts every route, not the drawn cells; it
-   * falls back to cell counts unless every legend label has a total.
-   */
-  legendTotals?: Readonly<Record<string, number>>;
-  /**
-   * Caller caveats ("40 of 88 routes drawn…"), set on the strip's one caveat
-   * line before its own equal-width note. Lower-case fragments; the line
-   * capitalises its first letter.
-   */
+  /** Caller caveats, appended to the caption. Lower-case fragments. */
   caveats?: readonly string[];
   /**
-   * Caption of a limiting input (plan §6) that no single cell carries, such
-   * as the engine's unverified-bridge fallback ("Bridge controls
-   * unverified"). The whole cell band takes the limiting outline and the
-   * legend's limiting key carries the caption, so tier fills never read as
-   * safe beside a limiting score.
+   * Caption of a limiting input (plan §6) that no single route carries, such
+   * as the engine's unverified-bridge fallback ("Bridge controls unverified"),
+   * stated once above the groups so tier dots never read as safe beside a
+   * limiting score.
    */
   bandLimiting?: string;
   className?: string;
 }
 
-/** Up to this many cells, every wide-enough cell carries its own name. */
-const INLINE_LABEL_LIMIT = 6;
-/** A weighted cell narrower than this share of the strip drops its inline name. */
-const MIN_INLINE_LABEL_SHARE = 0.12;
-/** Past this many cells the gutters shrink to a hairline so the strip stays one band. */
-const DENSE_CELL_COUNT = 16;
+/** Chain chips per group before "+N more". */
+const CHIP_LIMIT = 8;
 
-const SPLIT_CAVEAT = "equal widths, supply split unavailable";
-const SWATCH_CLASS = "h-3 w-3 shrink-0 rounded-xs";
-/** The §6 limiting outline, shared by a limiting cell, the whole band and the legend key. */
-const LIMITING_OUTLINE_CLASS = "outline-2 outline-offset-1 outline-foreground";
+const CAPTION = "Grouped by how the token reaches each chain, strongest route type first. Supply per chain is not published, so routes are listed, not sized.";
 
-/** The cell's reviewed tier; null when it is not established or not a published tier. */
-function resolveTier(cell: DeploymentStripCell): BridgeRouteRiskTier | null {
-  return !cell.unknown && Object.hasOwn(BRIDGE_TIER_CELL_CLASSES, cell.tierKey)
-    ? (cell.tierKey as BridgeRouteRiskTier)
+/**
+ * In a mixed group every chip states its role at one border weight: an
+ * eligible chip draws the same visible outline as its dashed diagnostic
+ * neighbours, solid, so it never reads as a chip that lost its border.
+ */
+const CHIP_ROLE_CLASS: Record<DeploymentRouteRole, string> = {
+  limiting: "border-[1.5px] border-foreground/80 font-medium",
+  diagnostic: "border-dashed border-muted-foreground/60",
+  eligible: "border-muted-foreground/60",
+};
+
+/** The route's reviewed tier; null when it is not established or not a published tier. */
+function resolveTier(route: DeploymentRoute): BridgeRouteRiskTier | null {
+  return !route.unknown && Object.hasOwn(BRIDGE_TIER_CELL_CLASSES, route.tierKey)
+    ? (route.tierKey as BridgeRouteRiskTier)
     : null;
 }
 
-/** The tier's own fill, whatever the cell's role: the legend keys hue by it. */
-function resolveTierFillClass(cell: DeploymentStripCell): string {
-  const tier = resolveTier(cell);
-  return tier === null ? BRIDGE_TIER_UNKNOWN_CELL_CLASS : BRIDGE_TIER_CELL_CLASSES[tier];
+interface RouteGroup {
+  key: string;
+  label: string;
+  dotClass: string;
+  rank: number;
+  routes: DeploymentRoute[];
 }
 
-function resolveCellClass(cell: DeploymentStripCell): string {
-  if (cell.role !== "diagnostic") return resolveTierFillClass(cell);
-  return BRIDGE_TIER_DIAGNOSTIC_CELL_CLASSES[resolveTier(cell) ?? "opaque-or-unknown"];
-}
-
-function formatShare(share: number): string {
-  const pct = share * 100;
-  return pct > 0 && pct < 0.1 ? "<0.1%" : `${pct.toFixed(1)}%`;
-}
-
-interface ResolvedBracket {
-  bracket: DeploymentStripBracket;
-  memberCount: number;
-  /** Contiguous column runs as [first, last] cell indices. */
-  runs: [number, number][];
-}
-
-function resolveBrackets(
-  brackets: readonly DeploymentStripBracket[],
-  indexByKey: ReadonlyMap<string, number>,
-): ResolvedBracket[] {
-  const resolved: ResolvedBracket[] = [];
-  for (const bracket of brackets) {
-    const indices = [...new Set(bracket.cellKeys.flatMap((key) => {
-      const index = indexByKey.get(key);
-      return index === undefined ? [] : [index];
-    }))].sort((a, b) => a - b);
-    if (indices.length === 0) continue;
-    const runs: [number, number][] = [];
-    for (const index of indices) {
-      const last = runs.at(-1);
-      if (last && index === last[1] + 1) last[1] = index;
-      else runs.push([index, index]);
+/** Routes grouped by tier in published policy order; unrecognised tiers, then unestablished ones, last. */
+export function groupDeploymentRoutes(routes: readonly DeploymentRoute[]): RouteGroup[] {
+  const policyOrder: readonly string[] = BRIDGE_TIER_POLICY_ORDER;
+  const groups = new Map<string, RouteGroup>();
+  for (const route of routes) {
+    const tier = resolveTier(route);
+    const key = route.unknown ? "unresolved" : route.tierKey;
+    const group = groups.get(key);
+    if (group) {
+      group.routes.push(route);
+      continue;
     }
-    resolved.push({ bracket, memberCount: indices.length, runs });
+    const policyIndex = policyOrder.indexOf(route.tierKey);
+    groups.set(key, {
+      key,
+      label: route.tierLabel,
+      dotClass: tier === null ? BRIDGE_TIER_UNKNOWN_CELL_CLASS : BRIDGE_TIER_CELL_CLASSES[tier],
+      rank: route.unknown ? policyOrder.length + 1 : policyIndex === -1 ? policyOrder.length : policyIndex,
+      routes: [route],
+    });
   }
-  // Earlier spans first; at the same start, the wider bracket sits higher.
-  return resolved.sort((a, b) => {
-    const spanA = a.runs.at(-1)![1] - a.runs[0]![0];
-    const spanB = b.runs.at(-1)![1] - b.runs[0]![0];
-    return a.runs[0]![0] - b.runs[0]![0] || spanB - spanA;
-  });
+  return [...groups.values()].sort((left, right) => left.rank - right.rank);
 }
 
-interface LegendEntry {
-  swatchClass: string;
-  labels: string[];
-  count: number;
+/** `markRole`: false when the group's header tag already names the role every route shares. */
+function RouteChip({ route, markRole }: { route: DeploymentRoute; markRole: boolean }) {
+  return (
+    <li
+      data-route={route.key}
+      data-role={route.role}
+      title={markRole && route.role ? CONTROL_COMPONENT_ROLE_LABELS[route.role] : undefined}
+      className={cn(
+        "inline-flex max-w-full items-center gap-1 rounded-md border bg-background/70 px-1.5 py-0.5 text-2xs leading-tight text-foreground",
+        markRole && route.role ? CHIP_ROLE_CLASS[route.role] : "border-border/60",
+      )}
+    >
+      {route.home ? <House data-home-glyph="" aria-hidden="true" className="h-3 w-3 shrink-0" /> : null}
+      <span className="min-w-0 wrap-anywhere">{route.label}</span>
+      {route.home || (route.role && route.role !== "eligible") ? (
+        <span className="sr-only">
+          {[route.home ? "home chain" : null, route.role && route.role !== "eligible" ? CONTROL_COMPONENT_ROLE_LABELS[route.role] : null]
+            .filter(Boolean)
+            .map((part) => `, ${part}`)
+            .join("")}
+        </span>
+      ) : null}
+    </li>
+  );
 }
 
-interface NameSlot {
-  index: number;
-  gridColumn: string;
-  align: "start" | "end" | "center";
-  named: boolean;
-}
-
-const NAME_SLOT_ALIGN_CLASS: Record<NameSlot["align"], string> = {
-  start: "justify-start",
-  end: "justify-end",
-  center: "justify-center",
-};
+/** Room for the "+N more" count to gain a digit when a chip moves behind it. */
+const MORE_DIGIT_ROOM_PX = 8;
 
 /**
- * One cell per chain or route, filled by bridge tier in published
- * `bridgeTierQuality` order. An opaque or unestablished tier is hatched; only
- * a route at the Control minimum (`role: "limiting"`) is outlined, and a
- * route outside the eligible set is drawn dashed in its tier's hue. A
- * limiting input no cell carries (`bandLimiting`) outlines the whole band.
- * Shared failure domains bracket the cells they span; an unquantified share
- * reads "share unquantified".
- *
- * The legend keys hue by tier (solid swatches, inventory totals when the
- * caller passes them) and keys the role channels with the cells' own
- * treatment: the outline for limiting (captioned for a band), the dashed
- * tier fill for diagnostics.
- *
- * Widths follow supply weights only when every cell carries one; otherwise
- * cells are equal and the caveat line says the split is unavailable. One
- * band from 1 to 40 cells: names inline up to six cells, then only the home
- * chain; the full roster is the screen-reader list.
+ * A group's chain chips. When the group lists fewer chips than it counts, the
+ * chips and the "+N more" share one row: chips that would push the count onto
+ * a row of its own (one chip and "+N more" stranded under a full row) move
+ * behind it instead. Chip widths are measured once, while every listed chip
+ * renders, so the row refits on resize; without layout (server render, tests)
+ * every listed chip shows.
  */
-export function DeploymentStrip({
-  cells,
-  brackets = [],
+function RouteChipList({
+  label,
+  routes,
+  count,
+  markRole,
+}: {
+  label: string;
+  routes: readonly DeploymentRoute[];
+  count: number;
+  markRole: boolean;
+}) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const widthsRef = useRef<number[] | null>(null);
+  const listed = routes.slice(0, CHIP_LIMIT);
+  const [fit, setFit] = useState(listed.length);
+  const overflows = count > listed.length;
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !overflows || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const chips = Array.from(list.querySelectorAll<HTMLElement>(":scope > [data-route]"));
+      if (widthsRef.current === null && chips.length === listed.length && chips.every((chip) => chip.offsetWidth > 0)) {
+        widthsRef.current = chips.map((chip) => chip.offsetWidth);
+      }
+      const widths = widthsRef.current;
+      const more = list.querySelector<HTMLElement>(":scope > [data-more]");
+      if (widths === null || !more || list.clientWidth === 0) return;
+      const style = getComputedStyle(list);
+      const gap = parseFloat(style.columnGap) || 0;
+      const available = list.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+      const row = more.offsetWidth + MORE_DIGIT_ROOM_PX;
+      let shown = widths.length;
+      let used = widths.reduce((sum, width) => sum + width + gap, 0);
+      while (shown > 1 && used + row > available) {
+        shown -= 1;
+        used -= widths[shown]! + gap;
+      }
+      setFit(shown);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [overflows, listed.length]);
+
+  const shown = listed.slice(0, overflows ? fit : listed.length);
+  const more = count - shown.length;
+  return (
+    <ul ref={listRef} aria-label={label} className="flex flex-wrap gap-1 pl-[1.125rem]">
+      {shown.map((route) => (
+        <RouteChip key={route.key} route={route} markRole={markRole} />
+      ))}
+      {more > 0 ? (
+        <li
+          data-more=""
+          title={routes.slice(shown.length).map((route) => route.label).join(", ") || undefined}
+          className="inline-flex items-center whitespace-nowrap px-1 py-0.5 text-2xs leading-tight text-muted-foreground"
+        >
+          +{more} more
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+/**
+ * Bridge routes as a grouped list: one group per route type in published
+ * `bridgeTierQuality` order (the tier dot keys the shared tier hue; an
+ * opaque or unestablished tier is hatched, never red), each with its route
+ * count, any Control role tags, and its chain chips, the first eight then
+ * "+N more". A role every route in the group shares is tagged once on the
+ * group; in a mixed group a limiting route's chip is outlined and a
+ * diagnostic one dashed. The home chain carries a house glyph. A limiting input no route
+ * carries (`bandLimiting`) is stated once above the groups.
+ *
+ * No proportion bar: per-chain supply is not published, so routes are
+ * listed rather than sized, and the caption says so. The DOM is the data
+ * surface (lists of named routes); the dots are decorative.
+ */
+export function DeploymentRouteGroups({
+  routes,
+  totals,
   ariaLabel,
-  legendTotals,
   caveats = [],
   bandLimiting,
   className,
-}: DeploymentStripProps) {
-  if (cells.length === 0) return null;
-
-  const weightTotal = cells.reduce((sum, cell) => sum + (cell.weight ?? 0), 0);
-  const splitKnown = weightTotal > 0
-    && cells.every((cell) => typeof cell.weight === "number" && Number.isFinite(cell.weight) && cell.weight >= 0);
-  const shares = cells.map((cell) => (splitKnown ? cell.weight! / weightTotal : 1 / cells.length));
-
-  const indexByKey = new Map(cells.map((cell, index) => [cell.key, index]));
-  const resolvedBrackets = resolveBrackets(brackets, indexByKey);
-  const cellRow = resolvedBrackets.length + 1;
-  const homeIndices = cells.flatMap((cell, index) => (cell.home ? [index] : []));
-  const inlineLabels = cells.length <= INLINE_LABEL_LIMIT;
-
-  // Legend in policy order; unrecognised tiers, then unestablished ones, last.
-  const policyOrder: readonly string[] = BRIDGE_TIER_POLICY_ORDER;
-  const legend = new Map<string, LegendEntry>();
-  const legendOrder = cells
-    .map((cell) => {
-      const policyIndex = policyOrder.indexOf(cell.tierKey);
-      return { cell, rank: cell.unknown ? policyOrder.length + 1 : policyIndex === -1 ? policyOrder.length : policyIndex };
-    })
-    .sort((a, b) => a.rank - b.rank);
-  for (const { cell } of legendOrder) {
-    const swatchClass = resolveTierFillClass(cell);
-    const entry = legend.get(swatchClass) ?? { swatchClass, labels: [], count: 0 };
-    if (!entry.labels.includes(cell.tierLabel)) entry.labels.push(cell.tierLabel);
-    entry.count += 1;
-    legend.set(swatchClass, entry);
-  }
-  const totals = legendTotals ?? null;
-  const countsAreTotals = totals !== null
-    && [...legend.values()].every((entry) => entry.labels.every((label) => Object.hasOwn(totals, label)));
-  const hasLimiting = bandLimiting !== undefined || cells.some((cell) => cell.role === "limiting");
-  const firstDiagnostic = cells.find((cell) => cell.role === "diagnostic");
-
-  const caveatLine = [...caveats, !splitKnown && cells.length > 1 ? SPLIT_CAVEAT : null]
-    .filter((part): part is string => part !== null && part !== "");
-
-  const gridStyle = {
-    gridTemplateColumns: splitKnown
-      ? cells.map((cell) => `minmax(3px,${cell.weight}fr)`).join(" ")
-      : `repeat(${cells.length},minmax(0,1fr))`,
-  };
-
-  // Name row: every wide-enough cell up to six cells; past that only the home
-  // chain, named when there is one and glyph-only when there are several.
-  const nameSlots: NameSlot[] = inlineLabels
-    ? cells.flatMap((cell, index) =>
-        cell.home || shares[index]! >= MIN_INLINE_LABEL_SHARE
-          ? [{ index, gridColumn: `${index + 1}`, align: "start" as const, named: true }]
-          : [],
-      )
-    : homeIndices.length === 1
-      ? [
-          homeIndices[0]! < cells.length / 2
-            ? { index: homeIndices[0]!, gridColumn: `${homeIndices[0]! + 1} / -1`, align: "start", named: true }
-            : { index: homeIndices[0]!, gridColumn: `1 / ${homeIndices[0]! + 2}`, align: "end", named: true },
-        ]
-      : homeIndices.map((index) => ({ index, gridColumn: `${index + 1}`, align: "center" as const, named: false }));
+}: DeploymentRouteGroupsProps) {
+  if (routes.length === 0) return null;
+  const groups = groupDeploymentRoutes(routes);
+  const countsAreTotals = totals !== undefined && groups.every((group) => Object.hasOwn(totals, group.label));
+  const caption = [CAPTION, ...caveats.map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}.`)].join(" ");
 
   return (
-    <div
-      role="group"
-      aria-label={ariaLabel}
-      data-widths={splitKnown ? "weighted" : "equal"}
-      className={cn("min-w-0 space-y-2", className)}
-    >
-      <div aria-hidden="true" className="space-y-2.5">
-        <div
-          className={cn("grid gap-y-1", cells.length > DENSE_CELL_COUNT ? "gap-x-px" : "gap-x-0.5")}
-          style={gridStyle}
-        >
-          {resolvedBrackets.flatMap(({ bracket, runs }, lane) =>
-            runs.map(([first, last], runIndex) => (
-              <div
-                key={`${bracket.key}:${first}`}
-                data-bracket={bracket.key}
-                style={{ gridColumn: `${first + 1} / ${last + 2}`, gridRow: lane + 1 }}
-                className={cn(
-                  "flex min-w-0 flex-col justify-end gap-0.5",
-                  first + 1 > cells.length / 2 ? "items-end" : "items-start",
-                )}
-              >
-                {runIndex === 0 ? (
-                  <span className="whitespace-nowrap text-2xs leading-[14px] text-muted-foreground">
-                    {bracket.label}{" "}
-                    {bracket.shareLabel ? (
-                      <span data-bracket-share="">
-                        <span className="font-mono tabular-nums text-foreground">{bracket.shareLabel}</span>
-                        {bracket.shareNote ? ` · ${bracket.shareNote}` : null}
-                      </span>
-                    ) : (
-                      <span data-bracket-share="">share unquantified</span>
-                    )}
-                  </span>
-                ) : null}
-                <span className="h-1.5 w-full rounded-t-xs border-x border-t border-foreground/45" />
-              </div>
-            )),
-          )}
-          {cells.map((cell, index) => {
-            const tier = resolveTier(cell);
-            return (
-              <span
-                key={cell.key}
-                data-cell={cell.key}
-                data-role={cell.role}
-                data-outlined={cell.role === "limiting" ? "" : undefined}
-                data-hatched={tier === null || tier === "opaque-or-unknown" ? "" : undefined}
-                title={`${cell.label} · ${cell.tierLabel}${cell.role ? ` · ${CONTROL_COMPONENT_ROLE_LABELS[cell.role]}` : ""}`}
-                style={{ gridColumn: index + 1, gridRow: cellRow }}
-                className={cn(
-                  "h-4 min-w-0 rounded-xs",
-                  resolveCellClass(cell),
-                  cell.role === "limiting" && cn("relative z-10", LIMITING_OUTLINE_CLASS),
-                )}
-              />
-            );
-          })}
-          {bandLimiting !== undefined ? (
-            <span
-              data-band-outlined=""
-              style={{ gridColumn: "1 / -1", gridRow: cellRow }}
-              className={cn("pointer-events-none relative z-10 h-4 rounded-xs", LIMITING_OUTLINE_CLASS)}
-            />
-          ) : null}
-          {nameSlots.map((slot) => {
-            const cell = cells[slot.index]!;
-            return (
-              <span
-                key={cell.key}
-                style={{ gridColumn: slot.gridColumn, gridRow: cellRow + 1 }}
-                className={cn(
-                  "flex min-w-0 items-center gap-1 text-2xs leading-[14px]",
-                  cell.home ? "text-foreground" : "text-muted-foreground",
-                  NAME_SLOT_ALIGN_CLASS[slot.align],
-                )}
-              >
-                {cell.home ? <House data-home-glyph="" className="h-3 w-3 shrink-0" /> : null}
-                {slot.named ? <span className="truncate">{cell.label}</span> : null}
-              </span>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-2xs leading-4 text-muted-foreground">
-          {[...legend.values()].map((entry) => (
-            <span key={entry.swatchClass} data-legend-entry="" className="inline-flex items-center gap-1.5">
-              <span className={cn(SWATCH_CLASS, entry.swatchClass)} />
-              <span className="text-foreground">{entry.labels.join(" / ")}</span>
-              {cells.length > 1 ? (
-                <span data-legend-count="" className="font-mono tabular-nums">
-                  {countsAreTotals
-                    ? entry.labels.reduce((sum, label) => sum + (totals?.[label] ?? 0), 0)
-                    : entry.count}
-                </span>
-              ) : null}
-            </span>
-          ))}
-          {hasLimiting ? (
-            <span data-legend-role="limiting" className="inline-flex items-center gap-1.5">
-              <span className={cn(SWATCH_CLASS, LIMITING_OUTLINE_CLASS)} />
-              <ControlRoleTag role="limiting" size="compact" />
-              {bandLimiting !== undefined ? <span className="text-foreground">{bandLimiting}</span> : null}
-            </span>
-          ) : null}
-          {firstDiagnostic ? (
-            <span data-legend-role="diagnostic" className="inline-flex items-center gap-1.5">
-              <span className={cn(SWATCH_CLASS, resolveCellClass(firstDiagnostic))} />
-              <ControlRoleTag role="diagnostic" size="compact" />
-            </span>
-          ) : null}
-          {homeIndices.length > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <House className="h-3 w-3 shrink-0 text-foreground" />
-              Home chain
-            </span>
-          ) : null}
-        </div>
-      </div>
-      {caveatLine.length > 0 ? (
-        <p data-strip-caveats="" className="text-2xs leading-snug text-muted-foreground">
-          {caveatLine.map((part, index) => (
-            <span key={part} data-split-caption={part === SPLIT_CAVEAT ? "" : undefined}>
-              {index > 0 ? " · " : null}
-              {index === 0 ? part.charAt(0).toUpperCase() + part.slice(1) : part}
-            </span>
-          ))}
+    <div role="group" aria-label={ariaLabel} className={cn("min-w-0 space-y-3", className)}>
+      {bandLimiting !== undefined ? (
+        <p data-band-limiting="" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground">
+          <ControlRoleTag role="limiting" size="compact" />
+          <span>{bandLimiting}: applies to every route</span>
         </p>
       ) : null}
-      {bandLimiting !== undefined ? (
-        <p className="sr-only">{`${bandLimiting}: ${CONTROL_COMPONENT_ROLE_LABELS.limiting}, across every deployment`}</p>
-      ) : null}
-      <ul className="sr-only">
-        {cells.map((cell, index) => (
-          <li key={cell.key}>
-            {[
-              `${cell.label}: ${cell.tierLabel}`,
-              cell.unknown ? "tier not established" : null,
-              cell.role ? CONTROL_COMPONENT_ROLE_LABELS[cell.role] : null,
-              cell.home ? "home chain" : null,
-              splitKnown ? `${formatShare(shares[index]!)} of supply` : null,
-            ]
-              .filter((part): part is string => part != null)
-              .join(", ")}
-          </li>
-        ))}
-      </ul>
-      {resolvedBrackets.length > 0 ? (
-        <ul className="sr-only" aria-label="Shared failure domains">
-          {resolvedBrackets.map(({ bracket, memberCount }) => (
-            <li key={bracket.key}>
-              {`${bracket.label}: spans ${memberCount === 1 ? "1 deployment" : `${memberCount} deployments`}, ${
-                bracket.shareLabel ? `share ${bracket.shareLabel}${bracket.shareNote ? `, ${bracket.shareNote}` : ""}` : "share unquantified"
-              }`}
+      <ul className="space-y-3">
+        {groups.map((group) => {
+          const count = countsAreTotals ? totals[group.label]! : group.routes.length;
+          const roles = (["limiting", "diagnostic"] as const).filter((role) =>
+            group.routes.some((route) => route.role === role),
+          );
+          // One shared role is said once by the header tag; a mixed group marks each chip.
+          const markRole = !(roles.length === 1 && group.routes.every((route) => route.role === roles[0]));
+          return (
+            <li key={group.key} data-route-group={group.key} className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span aria-hidden="true" className={cn("h-2.5 w-2.5 shrink-0 rounded-full", group.dotClass)} />
+                <span className="text-xs font-medium text-foreground">{group.label}</span>
+                <span data-group-count="" className="pharos-numeric text-xs text-muted-foreground">
+                  {count}
+                  <span className="sr-only">{count === 1 ? " route" : " routes"}</span>
+                </span>
+                {roles.map((role) => (
+                  <ControlRoleTag key={role} role={role} size="compact" />
+                ))}
+              </div>
+              <RouteChipList label={`${group.label} routes`} routes={group.routes} count={count} markRole={markRole} />
             </li>
-          ))}
-        </ul>
+          );
+        })}
+      </ul>
+      {routes.length > 1 ? (
+        <p data-route-caption="" className="text-2xs leading-snug text-muted-foreground">{caption}</p>
       ) : null}
     </div>
   );

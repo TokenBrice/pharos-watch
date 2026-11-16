@@ -62,7 +62,9 @@ const DEFAULT_BUDGETS = {
   // representative detail payloads. Keep about 3% headroom over release data:
   // re-baselined 2026-11-02 from 830,000 B after the USDe profile measured
   // 829,576 B (owner decision on #1825), so ordinary copy growth no longer fails.
-  representativeDetailHtmlBytes: 855_000,
+  // Re-baselined 2026-11-16 from 855,000 B for the dossier redesign (#2092):
+  // the USDe profile measured ~838 KiB (~858,100 B) in the PR build; ~2% headroom.
+  representativeDetailHtmlBytes: 875_000,
   representativeDetailPageTxtBytes: 145_000,
   // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
   // Keep narrow headroom so shared first-load chunk growth stays reviewable.

@@ -8,7 +8,6 @@ REDEMPTION_OUTPUT_ASSET_LABELS,
 REDEMPTION_SETTLEMENT_LABELS,
 formatRedemptionDocsProvenance,
 formatRedemptionModelConfidence,
-formatRedemptionResolutionState,
 formatRedemptionRouteFamily,
 formatRedemptionRouteStatus, } from "@shared/lib/classification";
 
@@ -381,12 +380,10 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
   return {
     title: entry.routeFamily === "offchain-issuer" ? "Issuer redemption route" : "Redemption route",
     scoreToneClass: scoreToneClass(entry.score),
-    heroScoreLabel: entry.score != null ? `${entry.score}/100` : "NR",
     routeFamilyLabel: formatRedemptionRouteFamily(entry.routeFamily),
     sourceModeLabel: SOURCE_MODE_LABELS[entry.sourceMode],
-    showResolutionStateBadge: entry.resolutionState !== "resolved",
-    resolutionStateLabel: formatRedemptionResolutionState(entry.resolutionState),
-    showRouteStatusBadge: entry.routeStatus !== "open",
+    // "unknown" is a gap, not a state: only a real non-open status earns a chip.
+    showRouteStatusBadge: entry.routeStatus !== "open" && entry.routeStatus !== "unknown",
     routeStatusLabel: formatRedemptionRouteStatus(entry.routeStatus),
     modelConfidenceLabel: formatRedemptionModelConfidence(entry.modelConfidence),
     isLowConfidence: entry.modelConfidence === "low",

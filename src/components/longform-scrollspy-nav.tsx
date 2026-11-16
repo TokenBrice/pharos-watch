@@ -299,7 +299,11 @@ export function LongformScrollspyNav({
         <div className={cn("relative flex items-center", isPillTabs ? "justify-center gap-2" : "gap-3")}>
           {/* Fade mask hints at off-screen pills on narrow viewports */}
           <div
-            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+            className={cn(
+              "pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent",
+              // The pill bar can still scroll up to lg (seven zones at 900 px).
+              isPillTabs ? "lg:hidden" : "sm:hidden",
+            )}
             aria-hidden="true"
           />
           {isPillTabs ? (
@@ -341,7 +345,7 @@ export function LongformScrollspyNav({
                     className={cn(
                       "group pharos-focus-ring relative isolate inline-flex shrink-0 snap-start items-center overflow-hidden whitespace-nowrap font-medium transition-colors",
                       isPillTabs
-                        ? "min-h-11 gap-1.5 rounded-md px-3.5 py-1 text-sm leading-none md:h-7 md:min-h-0"
+                        ? "min-h-10 gap-1.5 rounded-md px-3 py-1 text-sm leading-none md:h-7 md:min-h-0 md:px-3.5"
                         : "min-h-11 gap-1.5 rounded-full px-3 py-1.5 text-xs md:min-h-8 md:text-sm",
                       isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
                       isPillTabs && isActive && "pharos-pill-tab-active",
@@ -355,7 +359,9 @@ export function LongformScrollspyNav({
                         className={cn(
                           "shrink-0",
                           isPillTabs
-                            ? "h-4 w-4 text-current"
+                            // Icons only where the bar has room; below lg the
+                            // labels alone keep every zone in view.
+                            ? "hidden h-4 w-4 text-current lg:block"
                             : cn(
                                 "h-3.5 w-3.5",
                                 isActive ? "text-frost-blue" : "text-muted-foreground/80 group-hover:text-foreground",

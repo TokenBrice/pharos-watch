@@ -44,26 +44,10 @@ export const MINT_PRESSURE_TONE_CLASSES = {
   },
 } as const satisfies Record<MintPressureBand, { badge: string; value: string; panel: string }>;
 
-/** Event-feed badges (colour only; the feed adds its own `text-xs`). */
-export const FLOW_EVENT_BADGE_CLASSES = {
-  roundtrip: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  bridgeTransfer: "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
-  protocolInternal: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  reviewBurn: "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300",
-  mint: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  burn: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400",
-} as const;
-
 /** Receipt band and top minter/burner value text. */
 export const FLOW_RECEIPT_TONE_CLASSES = {
   mint: "text-emerald-700 dark:text-emerald-400",
   burn: "text-red-700 dark:text-red-400",
-} as const;
-
-/** Minting-pressure arc gauge value text at the burn and mint ends (the middle stays foreground). */
-export const MINT_GAUGE_ZONE_TEXT_CLASSES = {
-  burn: "text-red-700 dark:text-red-400",
-  mint: "text-emerald-700 dark:text-emerald-400",
 } as const;
 
 /** Coverage caveat badges; `full` shows none and `disabled` is neutral, so neither is listed. */

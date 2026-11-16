@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RailSafetySummary } from "../rail-safety-summary";
 import type { HeroSignalRailItem } from "../hero-card-metrics";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 // Vitest hoists the factory above static imports, so the helper loads dynamically.
 vi.mock("next/link", async () => {
@@ -42,12 +43,13 @@ describe("RailSafetySummary", () => {
     expect(dewsRow().querySelector(".animate-pulse")).not.toBeNull();
   });
 
-  it("states why a NAV token has no DEWS reading instead of a bare dash", () => {
-    render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} navToken />);
+  it("leaves out a NAV token's peg and DEWS rows, which carry no reading", () => {
+    const { container } = render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} navToken />);
 
-    expect(dewsRow().textContent).toContain("N/A");
-    expect(dewsRow().textContent).toContain("NAV");
-    expect(dewsRow().textContent).not.toContain("—");
+    expect(screen.queryByText("DEWS")).toBeNull();
+    expect(screen.queryByText("Peg")).toBeNull();
+    expect(screen.getByText("Liquidity")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/N\/A|—/);
   });
 
   it("dates a live grade and keeps a real DEWS reading for a NAV token untouched", () => {
@@ -58,11 +60,18 @@ describe("RailSafetySummary", () => {
     expect(screen.getByText("as of 2026-11-14 22:03 UTC")).toBeTruthy();
   });
 
-  it("leaves an unavailable DEWS reading as unavailable for an ordinary coin", () => {
-    render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} />);
+  it("leaves out an unavailable DEWS reading for an ordinary coin instead of a dash row", () => {
+    const { container } = render(<RailSafetySummary items={signals({ grade: "B+", dews: "—" })} />);
 
-    expect(dewsRow().textContent).toContain("—");
-    expect(dewsRow().textContent).not.toContain("N/A");
+    expect(screen.queryByText("DEWS")).toBeNull();
+    expect(container.textContent).not.toContain("—");
+  });
+
+  it("draws no empty signal block when no row carries a reading", () => {
+    const items = signals({ grade: "B+", dews: "—" }).map((row) => (row.key === "safety" ? row : { ...row, primary: "—" }));
+    const { container } = render(<RailSafetySummary items={items} />);
+
+    expect(container.querySelector(".divide-y")).toBeNull();
   });
 
   it("reads a frozen archive as not scored rather than a display-size dash", () => {
@@ -72,7 +81,7 @@ describe("RailSafetySummary", () => {
     expect(headline?.textContent).toContain("Frozen");
     expect(headline?.textContent).toContain("not scored");
     expect(headline?.textContent).not.toContain("—");
-    expect(dewsRow().textContent).toContain("N/A");
+    expect(screen.queryByText("DEWS")).toBeNull();
   });
 
   it("shows a loading placeholder, not 'Not scored', while the report-card read is in flight", () => {
@@ -105,4 +114,14 @@ describe("RailSafetySummary", () => {
     expect(headline?.textContent).not.toContain("Frozen");
   });
 
+  it("explains the grade in words and decomposes it into its three pillars", () => {
+    const cap = { kind: "track-record:<24m", limit: 84, reason: "Less than two years of known implementation history.", source: "track-record" as const, binding: true };
+    const card = makeV9Card({ score: 84, grade: "A", caps: [cap], bindingCap: cap });
+    const { container } = render(<RailSafetySummary items={signals({ grade: "A", dews: "Watch" })} card={card} />);
+
+    expect(container.querySelector("[data-safety-verdict-line]")?.textContent).toContain("Capped at 84");
+    const pillars = screen.getByRole("list", { name: "Safety Score pillars" });
+    expect(pillars.querySelectorAll("li")).toHaveLength(3);
+    expect(pillars.textContent).toContain("Economic Control");
+  });
 });

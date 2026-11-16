@@ -34,11 +34,21 @@ describe("floating feedback entry routes", () => {
     expect(screen.queryByRole("button", { name: /feedback/i, hidden: true })).toBeNull();
     expect(screen.getByRole("button", { name: "Scroll to top", hidden: true })).toBeTruthy();
     const scroll = screen.getByRole("button", { name: "Scroll to top", hidden: true });
-    for (const scrollY of [23, 24, 25, 399, 400, 401, 400, 24]) {
+    // Back-to-top appears only while the reader scrolls back up past 400px,
+    // so it never parks over content on the way down.
+    for (const [scrollY, visible] of [[23, false], [401, false], [900, false], [700, true], [650, true], [800, false], [600, true], [300, false]] as const) {
       fireEvent.scroll(window, { target: { scrollY } });
-      expect(scroll.parentElement?.parentElement?.classList.contains("invisible")).toBe(scrollY <= 400);
-      expect(scroll.tabIndex).toBe(scrollY > 400 ? 0 : -1);
+      expect(scroll.parentElement?.parentElement?.classList.contains("invisible")).toBe(!visible);
+      expect(scroll.tabIndex).toBe(visible ? 0 : -1);
     }
+  });
+
+  it("keeps the phone dock's feedback pill off a stablecoin dossier, which has its own report action", () => {
+    pathnameMock.mockReturnValue("/stablecoin/usdc-circle/");
+    render(<MobileUtilityDock />);
+
+    expect(screen.queryByRole("button", { name: /feedback/i, hidden: true })).toBeNull();
+    expect(screen.getByRole("button", { name: "Scroll to top", hidden: true })).toBeTruthy();
   });
 
   it("keeps both feedback controls on other product routes", () => {

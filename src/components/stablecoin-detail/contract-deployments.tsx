@@ -27,6 +27,25 @@ type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
 type ContractInfo = ReturnType<typeof deriveContractInfo>;
 type ContractRowVariant = "compact" | "detail" | "labeled";
 
+/**
+ * In-flow preview size: 12 fills whole rows of the 2-, 3- and 4-column tile
+ * grids, so a coin with more deployments never leaves an orphan tile.
+ */
+const CONTRACT_PREVIEW_COUNT = 12;
+
+/**
+ * A last tile alone on its row spans it instead of leaving blank cells, per
+ * breakpoint column count (2 at sm, 3 at md, 4 at lg); each wider breakpoint
+ * resets the narrower one's span.
+ */
+function orphanSpanClass(count: number): string {
+  return cn(
+    count % 2 === 1 && "sm:col-span-2",
+    count % 3 === 1 ? "md:col-span-3" : "md:col-span-1",
+    count % 4 === 1 ? "lg:col-span-4" : "lg:col-span-1",
+  );
+}
+
 function getContractKey(contract: ContractDeployment): string {
   return `${contract.chain}:${contract.address}`;
 }
@@ -68,12 +87,11 @@ export function ContractDeployments({
   // An id outside the tracked registry keeps the plain `Contracts` heading.
   const coinSymbol = CLIENT_TRACKED_META_BY_ID.get(coinId)?.symbol ?? null;
   const contractSummary = buildContractDeploymentSummary(contracts);
-  const mobileContractsPreview = contracts.slice(0, 6);
-  // Desktop shows labeled rows (chain name + address + actions), not an
-  // icon-only wall -- recognition fails past the top-10 chain logos. Preview 9
-  // keeps the card compact for coins with dozens of deployments; the in-flow
-  // card's closed fold carries the complete recorded list.
-  const desktopContractsPreview = contracts.slice(0, compact ? 4 : 9);
+  // Every preview is labeled (logo + chain name), not an icon-only wall --
+  // recognition fails past the top-10 chain logos, and two chains can share a
+  // logo (HyperEVM, Hyperliquid L1). The in-flow card's closed fold carries
+  // the complete recorded list.
+  const desktopContractsPreview = contracts.slice(0, compact ? 4 : CONTRACT_PREVIEW_COUNT);
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
   const openContract = contracts.find((contract) => getContractKey(contract) === openContractKey) ?? null;
@@ -176,31 +194,33 @@ export function ContractDeployments({
           onCopy={copyContractAddress}
         />
       ) : null}
-      <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
-        {mobileContractsPreview.map((c) => {
+      {/* Balanced wrap: chips are inline boxes, so the last row never holds a lone chip. */}
+      <div className="-mt-1.5 text-balance sm:hidden" data-contract-chips="">
+        {desktopContractsPreview.map((c) => {
           const contractKey = getContractKey(c);
           return (
             <ContractChainButton
               key={contractKey}
               chainKey={c.chain}
               address={c.address}
+              // A chain deployed twice names each chip by its address too.
+              repeatedChain={desktopContractsPreview.filter((other) => other.chain === c.chain).length > 1}
               isOpen={openContractKey === contractKey}
               onToggle={() => setOpenContractKey(openContractKey === contractKey ? null : contractKey)}
             />
           );
         })}
       </div>
-      <div className="hidden sm:block">
-        <div className="grid gap-1.5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
-          {desktopContractsPreview.map((c) => (
-            <ContractLabeledRow
-              key={`${c.chain}-${c.address}`}
-              contract={c}
-              copied={copiedContract === `${c.chain}:${c.address}`}
-              onCopy={copyContractAddress}
-            />
-          ))}
-        </div>
+      <div className="hidden gap-1.5 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {desktopContractsPreview.map((c, index) => (
+          <ContractLabeledRow
+            key={`${c.chain}-${c.address}`}
+            className={index === desktopContractsPreview.length - 1 ? orphanSpanClass(desktopContractsPreview.length) : undefined}
+            contract={c}
+            copied={copiedContract === `${c.chain}:${c.address}`}
+            onCopy={copyContractAddress}
+          />
+        ))}
       </div>
       {/* The complete recorded list is a closed native fold that replaces the
           old show-all toggle: every address is crawlable and readable without
@@ -208,7 +228,12 @@ export function ContractDeployments({
           interactive rows for every deployment were measured at ~1.26 MB of
           HTML on USDC (88 deployments), so this list is deliberately plain
           text with one shared class. */}
-      <ModuleDisclosure label="Contract addresses" count={contracts.length} className="mt-3">
+      <ModuleDisclosure
+        // The SEO archive check (C3) keys on a summary starting "Contract addresses"; the count names the full set.
+        label="Contract addresses"
+        count={contracts.length}
+        className="mt-3"
+      >
         <ContractDeploymentAddressList contracts={contracts} />
       </ModuleDisclosure>
       </div>
@@ -303,14 +328,19 @@ function ContractDetailRow({
   );
 }
 
-/* Desktop contract row: chain identity stays readable (logo + name) and the
+/* Desktop contract tile: chain identity stays readable (logo + name) and the
  * two verification actions (copy, explorer) sit inline -- recognition over
- * recall for the long tail of chains the bare icon wall hid. */
+ * recall for the long tail of chains the bare icon wall hid. A tile is too
+ * narrow for a readable address, so it prints none (the copy action, the
+ * explorer link and the fold carry it) and a long chain name truncates
+ * before the actions do. */
 function ContractLabeledRow({
   contract,
   copied,
   onCopy,
+  className,
 }: {
+  className?: string;
   contract: ContractDeployment;
   copied: boolean;
   onCopy: (chain: string, address: string) => void;
@@ -318,9 +348,14 @@ function ContractLabeledRow({
   const { chain, chainName, explorerUrl } = deriveContractInfo(contract);
 
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-background/40 py-1 pl-2.5 pr-1">
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-background/40 py-1 pl-2.5 pr-1",
+        className,
+      )}
+      title={contract.address}
+    >
       <ContractChainIdentity contract={contract} chain={chain} chainName={chainName} variant="labeled" />
-      <ContractAddress address={contract.address} variant="labeled" />
       <ContractCopyAction contract={contract} chainName={chainName} copied={copied} onCopy={onCopy} variant="labeled" />
       <ContractExplorerAction chain={chain} chainName={chainName} explorerUrl={explorerUrl} variant="labeled" />
     </div>
@@ -381,26 +416,22 @@ function ContractChainIdentity({
         className={
           isCompact
             ? "pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium text-foreground hover:underline"
-            : "pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium hover:underline"
+            : "pharos-focus-ring min-w-0 flex-1 rounded-sm text-sm font-medium hover:underline"
         }
       >
-        <span className={isCompact ? "block max-w-[7rem] truncate" : "block max-w-[9rem] truncate"}>{chainName}</span>
+        <span className={isCompact ? "block max-w-[7rem] truncate" : "block truncate"}>{chainName}</span>
       </Link>
     </>
   );
 }
 
-function ContractAddress({ address, variant }: { address: string; variant: ContractRowVariant }) {
+function ContractAddress({ address, variant }: { address: string; variant: "compact" | "detail" }) {
   if (variant === "detail") {
     return <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(address)}</p>;
   }
 
-  return variant === "compact" ? (
+  return (
     <span className="ml-auto min-w-0 truncate font-mono text-xs text-muted-foreground" title={address}>
-      {formatAddress(address)}
-    </span>
-  ) : (
-    <span className="ml-auto truncate font-mono text-xs text-muted-foreground" title={address}>
       {formatAddress(address)}
     </span>
   );
@@ -529,42 +560,47 @@ function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]):
   return `${count} ${deploymentLabel} tracked across ${formattedChains}${remainingSuffix}.`;
 }
 
+/* Phone chain chip: selects the deployment shown in the detail row above.
+ * Labeled like the desktop tiles, in the Key links pill grammar. */
 function ContractChainButton({
   chainKey,
   address,
+  repeatedChain,
   isOpen,
   onToggle,
 }: {
   chainKey: string;
   address: string;
+  repeatedChain: boolean;
   isOpen: boolean;
   onToggle: () => void;
 }) {
   const chain = CHAIN_META[chainKey];
+  const chainName = chain?.name ?? chainKey;
 
   return (
     <button
       type="button"
       onClick={onToggle}
-      className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
-        isOpen ? "ring-foreground" : "ring-transparent hover:ring-muted-foreground/30"
-      }`}
-      title={chain?.name ?? chainKey}
-      aria-label={`${chain?.name ?? chainKey} contract ${address}`}
+      aria-pressed={isOpen}
+      aria-label={`${chainName} contract ${address}`}
+      className={
+        isOpen
+          ? "pharos-focus-ring mt-1.5 mr-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-foreground px-3 py-1.5 align-top text-xs text-foreground"
+          : "pharos-focus-ring mt-1.5 mr-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 align-top text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+      }
     >
       {chain?.logoPath ? (
         <Image
-          src={resolveCompactLogoSrc(chain.logoPath, 28)!}
-          alt={chain.name}
-          width={28}
-          height={28}
-          className={`h-7 w-7 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
+          src={resolveCompactLogoSrc(chain.logoPath, 16)!}
+          alt=""
+          width={16}
+          height={16}
+          className={`h-4 w-4 shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
         />
-      ) : (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-          {(chain?.name ?? chainKey).charAt(0).toUpperCase()}
-        </div>
-      )}
+      ) : null}
+      {chainName}
+      {repeatedChain ? <span className="font-mono text-muted-foreground">{formatAddress(address)}</span> : null}
     </button>
   );
 }

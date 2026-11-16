@@ -449,11 +449,8 @@ describe("buildRedemptionBackstopCardViewModel", () => {
       }),
     );
 
-    expect(missingCache.heroScoreLabel).toBe("NR");
     expect(missingCache.title).toBe("Redemption route");
     expect("showExitScore" in missingCache).toBe(false);
-    expect(missingCache.showResolutionStateBadge).toBe(true);
-    expect(missingCache.resolutionStateLabel).toBe("missing cache");
     expect(missingCache.modelConfidenceLabel).toBe("Confidence: low");
     expect(missingCache.resolutionSummary).toContain("current stablecoins snapshot did not contain the asset");
     expect(missingCache.scoreBreakdown.access.label).toBe("Access score");
@@ -505,7 +502,6 @@ describe("buildRedemptionBackstopCardViewModel", () => {
       }),
     );
 
-    expect(flagged.heroScoreLabel).toBe("NR");
     expect(flagged.resolutionSummary).toContain("redeem to USDC");
     expect(flagged.resolutionSummary).toContain("operator-batched with no proven <=300-second completion bound");
     expect(flagged.resolutionSummary).toContain("unrated rather than scored zero");

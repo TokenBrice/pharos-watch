@@ -1,21 +1,17 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
-import type { PieSectorDataItem } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
-import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { ShareMeter } from "@/components/stablecoin-detail/threshold-gauge";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import { hasMeaningfulDexData } from "@/components/liquidity/dex-liquidity-card";
 import { canonicalizeChainCirculating, chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
-import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
+import { normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -24,213 +20,147 @@ import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
-interface DonutDatum {
+interface DistributionRow {
+  key: string;
   name: string;
   value: number;
-  hex: string;
   logoPath?: string;
   darkInvert?: boolean;
+  /** Set on the folded "Other" row: how many categories it holds. */
+  foldedCount?: number;
 }
 
-const OTHER_THRESHOLD = 0.02;
+interface DistributionUnits {
+  /** Headline label for the total ("Circulating", "DEX TVL"). */
+  totalLabel: string;
+  singular: string;
+  plural: string;
+}
 
-function buildDonutData(
+/** Named rows before the rest folds into Other; a lone remainder stays named. */
+const TOP_ROWS = 6;
+/** At or above this share one chain is the story, so untracked deployments get a caveat. */
+const CONCENTRATED_SHARE = 0.95;
+
+function buildDistribution(
   raw: Record<string, number>,
   opts: {
     labelForKey: (key: string) => string;
-    hexForKey: (key: string) => string | undefined;
     logoForKey?: (key: string) => { path: string; darkInvert?: boolean } | null;
     ungroupedKey?: string;
   },
-): { data: DonutDatum[]; total: number; categoryCount: number } {
+): { rows: DistributionRow[]; total: number; categoryCount: number } {
   const entries = Object.entries(raw)
-    .map(([key, value]) => ({ key, value }))
-    .filter((e) => e.value > 0)
-    .sort((a, b) => b.value - a.value);
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  const named = entries.filter(([key]) => key !== opts.ungroupedKey);
+  const ungrouped = entries.find(([key]) => key === opts.ungroupedKey);
+  const shown = named.length === TOP_ROWS + 1 ? named : named.slice(0, TOP_ROWS);
+  const folded = named.slice(shown.length);
+  const toRow = ([key, value]: [string, number]): DistributionRow => {
+    const logo = opts.logoForKey?.(key);
+    return { key, name: opts.labelForKey(key), value, logoPath: logo?.path, darkInvert: logo?.darkInvert };
+  };
 
-  const total = entries.reduce((sum, e) => sum + e.value, 0);
-  if (total === 0) return { data: [], total: 0, categoryCount: 0 };
-
-  const data: DonutDatum[] = [];
-  let otherValue = 0;
-  let categoryCount = 0;
-
-  for (const e of entries) {
-    if (e.key !== opts.ungroupedKey && Number.isFinite(e.value)) categoryCount += 1;
-    if (e.key !== opts.ungroupedKey && e.value / total < OTHER_THRESHOLD) {
-      otherValue += e.value;
-    } else {
-      const logo = opts.logoForKey?.(e.key);
-      data.push({
-        name: opts.labelForKey(e.key),
-        value: e.value,
-        hex: opts.hexForKey(e.key) ?? CHART_PALETTE[data.length % CHART_PALETTE.length],
-        logoPath: logo?.path,
-        darkInvert: logo?.darkInvert,
-      });
-    }
+  const rows = shown.map(toRow);
+  // Unattributed supply is never folded into Other: it is not a known category.
+  if (ungrouped) rows.push(toRow(ungrouped));
+  if (folded.length > 0) {
+    rows.push({ key: "other", name: "Other", value: folded.reduce((sum, [, value]) => sum + value, 0), foldedCount: folded.length });
   }
-
-  if (otherValue > 0) {
-    data.push({ name: "Other", value: otherValue, hex: CHART_SLATE });
-  }
-
-  return { data, total, categoryCount };
+  return { rows, total, categoryCount: named.length };
 }
 
-function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
-  return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-      {/* Semibold, not medium: at 11px with 0.08em tracking the eyebrow reads
-          far lighter than its measured contrast against the donut hole. */}
-      <span className="pharos-label">{subtitle}</span>
-      <span className="text-base font-semibold font-mono tabular-nums text-foreground">{formatCurrency(total)}</span>
-    </div>
-  );
+function formatShare(share: number): string {
+  const pct = share * 100;
+  if (pct === 100) return "100%";
+  if (pct > 0 && pct < 0.1) return "<0.1%";
+  // A near-total share never rounds up to a claim of all of it.
+  if (pct < 100 && pct >= 99.95) return ">99.9%";
+  return `${pct.toFixed(1)}%`;
 }
 
-function DonutSwatch({ datum }: { datum: DonutDatum }) {
-  if (datum.logoPath) {
+function RowMark({ row }: { row: DistributionRow }) {
+  if (row.logoPath) {
     return (
       <img
-        src={resolveCompactLogoSrc(datum.logoPath, 14)}
+        src={resolveCompactLogoSrc(row.logoPath, 16)}
         alt=""
-        width={14}
-        height={14}
-        className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${datum.darkInvert ? " dark:invert" : ""}`}
+        width={16}
+        height={16}
+        className={`h-4 w-4 shrink-0 rounded-full object-contain${row.darkInvert ? " dark:invert" : ""}`}
       />
     );
   }
-  return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: datum.hex }} />;
-}
-
-/* A ring of one segment encodes nothing the number does not already say, so a
- * concentrated distribution states the figure instead of drawing a circle. */
-function SingleCategoryFigure({
-  datum,
-  total,
-  subtitle,
-  ariaLabel,
-}: {
-  datum: DonutDatum;
-  total: number;
-  subtitle: string;
-  ariaLabel: string;
-}) {
+  // A logo-sized slot, so a row without a logo keeps its name on the shared text edge.
   return (
-    <div className="flex flex-col gap-1.5 py-1" role="figure" aria-label={ariaLabel}>
-      <span className="pharos-label">{subtitle}</span>
-      <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-foreground">
-        {formatCurrency(total)}
-      </span>
-      <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <DonutSwatch datum={datum} />
-        <span className="text-foreground">{datum.name}</span>
-        <span className="font-mono tabular-nums">100%</span>
-      </span>
-    </div>
+    <span aria-hidden="true" className="flex h-4 w-4 shrink-0 items-center justify-center">
+      <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+    </span>
   );
 }
 
-function renderActiveShape(props: PieSectorDataItem) {
-  return (
-    <Sector
-      cx={props.cx}
-      cy={props.cy}
-      innerRadius={props.innerRadius}
-      outerRadius={(props.outerRadius ?? 0) + 4}
-      startAngle={props.startAngle}
-      endAngle={props.endAngle}
-      fill={props.fill}
-      cornerRadius={props.cornerRadius}
-      opacity={1}
-    />
-  );
+function rowName(row: DistributionRow, units: DistributionUnits): string {
+  return row.foldedCount ? `Other (${row.foldedCount} ${units.plural})` : row.name;
 }
 
-const DONUT_INNER = 55;
-const DONUT_OUTER = 95;
-
-function DonutCard({
-  title,
-  subtitle,
+/**
+ * Ranked share list: the total first, then each category's share as a
+ * neutral bar (a composition, not a graded level), top six + Other. A dominant
+ * category keeps the same list (its full bar says it), so the chain and
+ * protocol cards always read, and balance, as the same figure.
+ */
+function DistributionFigure({
   ariaLabel,
-  data,
+  rows,
   total,
-  notice,
-  headerEnd,
+  categoryCount,
+  units,
+  note,
 }: {
-  title: ReactNode;
-  subtitle: string;
   ariaLabel: string;
-  data: DonutDatum[];
+  rows: DistributionRow[];
   total: number;
-  notice?: ReactNode;
-  headerEnd?: ReactNode;
+  categoryCount: number;
+  units: DistributionUnits;
+  note?: ReactNode;
 }) {
-  const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
-
   return (
-    <DetailModuleCard title={title} headerRight={headerEnd} bodyClassName="space-y-3">
-        {notice}
-        {data.length === 1 ? (
-          <SingleCategoryFigure datum={data[0]!} total={total} subtitle={subtitle} ariaLabel={ariaLabel} />
-        ) : (
-          <>
-            <div ref={ref} className="relative h-[200px] sm:h-[250px]" role="figure" aria-label={ariaLabel}>
-              {ready ? (
-                <>
-                  <PieChart width={width} height={height} className="cursor-pointer">
-                    <Pie
-                      data={data}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={DONUT_INNER}
-                      outerRadius={DONUT_OUTER}
-                      dataKey="value"
-                      nameKey="name"
-                      paddingAngle={3}
-                      strokeWidth={0}
-                      activeShape={renderActiveShape}
-                      isAnimationActive={false}
-                    >
-                      {data.map((d) => (
-                        <Cell key={d.name} fill={d.hex} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.[0]) return null;
-                        const d = payload[0].payload as DonutDatum;
-                        const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-                        return (
-                          <PharosChartTooltip active={active}>
-                            <TooltipRow color={d.hex} label={d.name} value={`${formatCurrency(d.value)} (${pct}%)`} />
-                          </PharosChartTooltip>
-                        );
-                      }}
-                    />
-                  </PieChart>
-                  <CenterOverlay total={total} subtitle={subtitle} />
-                </>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
-              {data.map((d) => {
-                const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
-                return (
-                  <span key={d.name} className="inline-flex items-center gap-1.5">
-                    <DonutSwatch datum={d} />
-                    <span>{d.name}</span>
-                    <span className="font-mono tabular-nums">{pct}%</span>
-                  </span>
-                );
-              })}
-            </div>
-          </>
-        )}
-    </DetailModuleCard>
+    <figure aria-label={ariaLabel} className="@container space-y-3">
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="pharos-label">{units.totalLabel}</span>
+        <span className="pharos-numeric text-xl font-semibold text-foreground">{formatCurrency(total)}</span>
+        {categoryCount > 0 ? (
+          <span className="text-sm text-muted-foreground">
+            across {categoryCount} {categoryCount === 1 ? units.singular : units.plural}
+          </span>
+        ) : null}
+      </p>
+      <ol className="@3xl:columns-2 @3xl:gap-x-10">
+        {rows.map((row) => {
+          const share = row.value / total;
+          return (
+            <li key={row.key} className="break-inside-avoid pb-2.5">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2 self-center">
+                  <RowMark row={row} />
+                  <span className={row.foldedCount ? "text-muted-foreground" : "text-foreground"}>{rowName(row, units)}</span>
+                </span>
+                <span className="pharos-numeric shrink-0 text-xs">
+                  <span className="text-foreground">{formatShare(share)}</span>
+                  <span className="ml-2 text-muted-foreground">{formatCurrency(row.value)}</span>
+                </span>
+              </div>
+              <div aria-hidden="true" className="mt-1.5">
+                <ShareMeter valuePct={share * 100} ariaLabel={rowName(row, units)} />
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {note}
+    </figure>
   );
 }
 
@@ -250,13 +180,16 @@ function DistributionUnavailableCard({
   );
 }
 
-function DonutCardSkeleton({ title }: { title: ReactNode }) {
+function DistributionCardSkeleton({ title }: { title: ReactNode }) {
   return (
     <DetailModuleCard title={title}>
-        <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
+        <Skeleton className="h-[180px] rounded-xl" />
     </DetailModuleCard>
   );
 }
+
+const CHAIN_UNITS: DistributionUnits = { totalLabel: "Circulating", singular: "chain", plural: "chains" };
+const PROTOCOL_UNITS: DistributionUnits = { totalLabel: "DEX TVL", singular: "protocol", plural: "protocols" };
 
 function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useStablecoins();
@@ -273,11 +206,13 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const nowMs = useFreshnessBoundary([healthInput]);
   const health = deriveDataHealth(healthInput, nowMs ?? query.dataUpdatedAt);
 
-  const { data, total, categoryCount, unattributed, unavailable } = useMemo(() => {
+  const { rows, total, categoryCount, unattributed, unavailable, deployedChainCount } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
     // A chain-dropout carry shows each carried chain at its baseline when the rows then sum to the headline.
     const chainCirculating = coin && chainCirculatingForDisplay(coin);
-    if (!chainCirculating) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: false };
+    const deployedChainCount = new Set(coin?.contracts?.map((contract) => contract.chain)).size;
+    const empty = { rows: [], total: 0, categoryCount: 0, unattributed: 0, deployedChainCount };
+    if (!chainCirculating) return { ...empty, unavailable: false };
 
     const raw: Record<string, number> = {};
     // Check before canonicalization: unregistered labels are dropped there, not proven zero.
@@ -296,43 +231,40 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         raw.unattributed = (raw.unattributed ?? 0) + remainder;
       }
     }
-    if (unavailable) return { data: [], total: 0, categoryCount: 0, unattributed: 0, unavailable: true };
+    if (unavailable) return { ...empty, unavailable: true };
 
-    return { ...buildDonutData(raw, {
+    return { ...buildDistribution(raw, {
       ungroupedKey: "unattributed",
       labelForKey: (key) => key === "unattributed" ? "Unattributed" : normalizeChain(key),
-      hexForKey: (key) => CHAIN_HEX[key],
       logoForKey: (key) => {
         const meta = CHAIN_META[key];
         return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
       },
-    }), unattributed: raw.unattributed ?? 0, unavailable: false };
+    }), unattributed: raw.unattributed ?? 0, unavailable: false, deployedChainCount };
   }, [listData, stablecoinId]);
+  const title = <MethodologyLabel topic="supplyByChain">Supply by chain</MethodologyLabel>;
 
   if (isLoading && !listData) {
-    return (
-      <DonutCardSkeleton
-        title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
-      />
-    );
+    return <DistributionCardSkeleton title={title} />;
   }
 
   if ((query.error && !listData) || unavailable) {
     return (
       <DistributionUnavailableCard
-        title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
+        title={title}
         label="Chain distribution data"
         onRetry={() => void query.refetch()}
       />
     );
   }
 
-  if (data.length === 0) return null;
+  if (rows.length === 0) return null;
+  const untrackedChainCount = deployedChainCount - categoryCount;
 
   return (
-    <DonutCard
-      title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
-      headerEnd={
+    <DetailModuleCard
+      title={title}
+      headerRight={
         <FreshnessIndicator
           compact
           updatedAtMs={health.dataUpdatedAt}
@@ -341,12 +273,23 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
           labelPrefix="Updated"
         />
       }
-      subtitle="Circulating"
-      ariaLabel={`Circulating supply distribution across ${categoryCount} ${categoryCount === 1 ? "chain" : "chains"}${unattributed > 0 ? `, plus ${formatCurrency(unattributed)} Unattributed supply` : ""}`}
-      data={data}
-      total={total}
-      notice={<DataHealthBanner entries={[health]} />}
-    />
+      bodyClassName="space-y-3"
+    >
+      <DataHealthBanner entries={[health]} />
+      <DistributionFigure
+        ariaLabel={`Circulating supply distribution across ${categoryCount} ${categoryCount === 1 ? "chain" : "chains"}${unattributed > 0 ? `, plus ${formatCurrency(unattributed)} Unattributed supply` : ""}`}
+        rows={rows}
+        total={total}
+        categoryCount={categoryCount}
+        units={CHAIN_UNITS}
+        note={untrackedChainCount > 0 && rows.some((row) => row.value / total >= CONCENTRATED_SHARE) ? (
+          <p className="text-xs text-muted-foreground">
+            Deployed on {deployedChainCount} chains; supply is tracked on {categoryCount}. Supply bridged to the other{" "}
+            {untrackedChainCount} may be missing.
+          </p>
+        ) : null}
+      />
+    </DetailModuleCard>
   );
 }
 
@@ -368,18 +311,17 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const liq = liquidityMap?.[stablecoinId];
   const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
 
-  const { data, total, categoryCount } = useMemo(() => {
-    if (!liq?.protocolTvl) return { data: [], total: 0, categoryCount: 0 };
+  const { rows, total, categoryCount } = useMemo(() => {
+    if (!liq?.protocolTvl) return { rows: [], total: 0, categoryCount: 0 };
 
-    return buildDonutData(liq.protocolTvl, {
+    return buildDistribution(liq.protocolTvl, {
       labelForKey: prettifyProtocol,
-      hexForKey: (key) => PROTOCOL_HEX[key],
       logoForKey: protocolLogo,
     });
   }, [liq]);
 
   if (isLoading && !liquidityMap) {
-    return <DonutCardSkeleton title="Liquidity by protocol" />;
+    return <DistributionCardSkeleton title="Liquidity by protocol" />;
   }
 
   if (query.error && !liquidityMap) {
@@ -394,7 +336,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isEmpty) return null;
 
-  if (data.length === 0) {
+  if (rows.length === 0) {
     return (
       <DistributionUnavailableCard
         title="Liquidity by protocol"
@@ -405,9 +347,9 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   return (
-    <DonutCard
+    <DetailModuleCard
       title="Liquidity by protocol"
-      headerEnd={
+      headerRight={
         <FreshnessIndicator
           compact
           updatedAtMs={health.dataUpdatedAt}
@@ -416,12 +358,17 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
           labelPrefix="Updated"
         />
       }
-      subtitle="DEX TVL"
-      ariaLabel={`DEX liquidity TVL distribution across ${categoryCount} ${categoryCount === 1 ? "protocol" : "protocols"}`}
-      data={data}
-      total={total}
-      notice={<DataHealthBanner entries={[health]} />}
-    />
+      bodyClassName="space-y-3"
+    >
+      <DataHealthBanner entries={[health]} />
+      <DistributionFigure
+        ariaLabel={`DEX liquidity TVL distribution across ${categoryCount} ${categoryCount === 1 ? "protocol" : "protocols"}`}
+        rows={rows}
+        total={total}
+        categoryCount={categoryCount}
+        units={PROTOCOL_UNITS}
+      />
+    </DetailModuleCard>
   );
 }
 
@@ -434,8 +381,10 @@ export function DistributionSection({ stablecoinId, frozen = false }: { stableco
       </div>
     );
   }
+  // Column flow sizes tracks to the cards that render: two sit side by side,
+  // a lone card (no tracked chains, or no DEX pools) spans the full width.
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+    <div className="grid gap-3 md:grid-flow-col md:auto-cols-fr md:gap-4">
       <ChainDistributionCard stablecoinId={stablecoinId} />
       <DexDistributionCard stablecoinId={stablecoinId} />
     </div>

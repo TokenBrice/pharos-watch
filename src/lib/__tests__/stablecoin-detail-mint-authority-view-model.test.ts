@@ -58,7 +58,9 @@ describe("mint-authority detail view-model builder", () => {
     expect(rated.score).toMatchObject({
       publicationAvailable: true, score: 35, compactLabel: "35 · Exposed", bandLabel: "Exposed",
     });
-    expect(rated.verdict).toMatch(/^Exposed —/);
+    // The pill and the ladder name the band; the verdict states the mechanism only.
+    expect(rated.verdict).not.toContain("Exposed");
+    expect(rated.verdict).toMatch(/^[A-Z]/);
     // A first read in flight (the prerender included) is pending, not unavailable.
     const pending = buildMintAuthorityDetailViewModel(coin, null, { publicationPending: true });
     expect(pending.score).toMatchObject({
@@ -67,6 +69,35 @@ describe("mint-authority detail view-model builder", () => {
     expect(pending.score?.detail).not.toContain("unavailable");
     expect(buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [] }, { publicationPending: true }).score)
       .toMatchObject({ publicationAvailable: true, compactLabel: "NR" });
+  });
+
+  it("reads a reviewed no-privileged-mint asset without a native component as Hardened", () => {
+    // An immutable, user-collateralized CDP (BOLD) publishes no native mint
+    // component; its only mint rows are bridged-token mints on other chains,
+    // which never stand in for the asset's own authority.
+    const coin = makeMintAuthorityCoin({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+      summary: "Users mint against collateral in immutable contracts.",
+      controls: [{ label: "Borrower operations", role: "direct-minter", authorityType: "contract", directMintAbility: "none" }],
+    });
+    const view = buildMintAuthorityDetailViewModel(coin, { mint: null, caps: [] });
+    expect(view.score).toMatchObject({
+      publicationAvailable: true,
+      score: null,
+      bandKey: "hardened",
+      bandLabel: "Hardened",
+      compactLabel: "Hardened · no privileged mint",
+    });
+    // "Hardened" lives in the pill and on the ladder, "no privileged minter" on the rail.
+    expect(view.verdict).toBe("Users mint TEST against collateral in immutable contracts; no privileged mint authority was found.");
+    expect(view.authorityPostureLabel).toBe("No privileged minter");
+    // A reviewed authority path without a published component stays NR.
+    const unrated = buildMintAuthorityDetailViewModel(makeControlCoin({
+      label: "Minter", role: "direct-minter", authorityType: "contract", directMintAbility: "direct",
+    }), { mint: null, caps: [] });
+    expect(unrated.score).toMatchObject({ bandLabel: "NR", compactLabel: "NR" });
   });
 
   it("uses only compact mint-authority summaries for client detail presentation", () => {

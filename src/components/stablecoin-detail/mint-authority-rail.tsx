@@ -212,7 +212,7 @@ export function MintAuthorityRail({
       <RailArrow orientation="responsive" />
       <div className="flex flex-col gap-0.5">
         <StationLabel>Controls</StationLabel>
-        <span className="flex flex-col items-start gap-1">
+        <span className="flex flex-wrap items-start gap-1">
           {railNodes.map((node) => (
             <ControlChip key={node.key} node={node} />
           ))}
@@ -233,7 +233,7 @@ export function MintAuthorityRail({
       <RailArrow orientation="responsive" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <StationLabel>Supply</StationLabel>
-        <span className="inline-flex w-fit items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 font-mono text-2xs font-semibold uppercase text-foreground">
+        <span className="inline-flex w-fit items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 font-mono text-2xs font-semibold text-foreground">
           {symbol}
         </span>
         <span className="mt-0.5 inline-flex items-start gap-1.5 text-2xs leading-snug text-muted-foreground">

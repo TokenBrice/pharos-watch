@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("usePrefetchStablecoin", () => {
-  it.each(["1Y", "All"])("warms the first-paint key and leaves %s expansion separate", async (range) => {
+  it.each(["1y", "All"])("warms the first-paint key and leaves %s expansion separate", async (range) => {
     vi.stubGlobal("ResizeObserver", ResizeObserverStub);
     const requests: string[] = [];
     const history = [

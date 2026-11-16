@@ -148,7 +148,7 @@ const TIER_SHORT_LABELS: Record<OracleRiskTier, string> = {
   "oracleless": "Oracleless",
   "privileged-internal-pricing": "Privileged",
   "redundant-with-failover": "Redundant",
-  "medianized-with-delay": "Medianized",
+  "medianized-with-delay": "Median",
   "standard-external": "Standard",
   "single-source-or-laggy": "Single-source",
   "opaque-or-unknown": "Opaque",

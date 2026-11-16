@@ -1,9 +1,20 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { flushSync } from "react-dom";
 import type { DepegHistory as DepegHistoryComponent } from "@/components/depeg/depeg-history";
+import type { LiveGrade } from "@/components/stablecoin-detail/safety-score-history-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverReview, useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
 import { TAB_PANEL_REVEAL_EVENT } from "@/lib/anchor-reveal";
@@ -27,6 +38,8 @@ type HistoryTabsProps = DepegHistoryProps & {
   initialTab?: HistoryTabKey;
   /** Whether the asset carries a grade in the current publication (`null` = unknown). */
   currentlyRated?: boolean | null;
+  /** The live Safety Score card's grade, compared with the latest daily close. */
+  liveGrade?: LiveGrade | null;
 };
 
 type HistoryTabKey = "grade" | "depeg" | "ddr";
@@ -42,6 +55,27 @@ interface HistoryTab {
 interface HistoryTabAvailability {
   grade: boolean;
   ddr: boolean;
+}
+
+interface HistorySwitcherSlotValue {
+  node: ReactNode;
+  /** Registers a mounted header slot; returns its release. */
+  claim: () => () => void;
+}
+
+const HistorySwitcherContext = createContext<HistorySwitcherSlotValue | null>(null);
+
+/**
+ * The History view switcher, drawn inside the active panel's card header. A
+ * panel card renders this in its header; while the active panel renders none,
+ * the shell draws the switcher above the card instead, so it is never lost.
+ */
+export function HistorySwitcherSlot() {
+  const slot = useContext(HistorySwitcherContext);
+  const claim = slot?.claim;
+  // A layout effect, so the shell drops its fallback copy before paint.
+  useLayoutEffect(() => claim?.(), [claim]);
+  return slot?.node ?? null;
 }
 
 const LiveSafetyScoreHistorySection = dynamic(
@@ -108,7 +142,8 @@ function HistoryTabAvailabilityProbe({
 }
 
 /**
- * Grade history, depeg history and the DDR record share one tabbed module:
+ * Grade history, depeg history and the Depeg Duration Resolver's forecast
+ * record share one tabbed module:
  * three stacked cards cost ~1,400px for what readers scan one at a time.
  *
  * The shell itself is synchronous for pilots so the retained-ledger depeg
@@ -125,11 +160,17 @@ export function HistoryTabs({
   depegHistoryPreview = null,
   initialTab,
   currentlyRated,
+  liveGrade = null,
   ...depegProps
 }: HistoryTabsProps) {
   const [selected, setSelected] = useState<HistoryTabKey | null>(null);
   const [availability, setAvailability] = useState<HistoryTabAvailability | null>(null);
   const [liveHistoryDisplayed, setLiveHistoryDisplayed] = useState(false);
+  const [headerSlots, setHeaderSlots] = useState(0);
+  const claimHeaderSlot = useCallback(() => {
+    setHeaderSlots((count) => count + 1);
+    return () => setHeaderSlots((count) => count - 1);
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const handleAvailabilityChange = useCallback((next: HistoryTabAvailability) => {
@@ -152,7 +193,9 @@ export function HistoryTabs({
       key: "grade",
       label: "Grade",
       anchorId: "grade-history",
-      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} currentlyRated={currentlyRated} />,
+      content: (
+        <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} currentlyRated={currentlyRated} liveGrade={liveGrade} />
+      ),
     });
   }
   if (!isNavToken) {
@@ -175,7 +218,7 @@ export function HistoryTabs({
   if (availability?.ddr) {
     tabs.push({
       key: "ddr",
-      label: "DDR record",
+      label: "Forecast record",
       anchorId: "ddr-track-record",
       content: <LiveDdrTrackRecordSection stablecoinId={stablecoinId} />,
     });
@@ -215,6 +258,29 @@ export function HistoryTabs({
     };
   }, []);
 
+  const switcher = tabs.length > 1 ? (
+    <div role="tablist" aria-label="History views" className="flex flex-wrap gap-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          role="tab"
+          id={`history-tab-${tab.key}`}
+          aria-selected={tab.key === active?.key}
+          aria-controls={tab.anchorId}
+          onClick={() => setSelected(tab.key)}
+          className={cn(
+            "pharos-focus-ring pharos-control-pill shrink-0 px-3 sm:px-2.5 sm:py-1",
+            tab.key === active?.key && "pharos-control-pill-active",
+          )}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+  const switcherSlot = { node: switcher, claim: claimHeaderSlot };
+
   return (
     <div
       ref={rootRef}
@@ -231,27 +297,7 @@ export function HistoryTabs({
           onAvailabilityChange={handleAvailabilityChange}
         />
       ) : null}
-      {tabs.length > 1 ? (
-        <div role="tablist" aria-label="History views" className="flex flex-wrap gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              id={`history-tab-${tab.key}`}
-              aria-selected={tab.key === active?.key}
-              aria-controls={tab.anchorId}
-              onClick={() => setSelected(tab.key)}
-              className={cn(
-                "pharos-focus-ring pharos-control-pill shrink-0 px-3 sm:px-2.5 sm:py-1",
-                tab.key === active?.key && "pharos-control-pill-active",
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {headerSlots === 0 ? switcher : null}
       {tabs.map((tab) => {
         const showLive = historyActive && tab.key === active?.key;
         return (
@@ -268,7 +314,9 @@ export function HistoryTabs({
             {tab.key === "depeg" && depegHistoryPreview ? (
               <div hidden={liveHistoryDisplayed}>{depegHistoryPreview}</div>
             ) : null}
-            {showLive ? tab.content : null}
+            {showLive ? (
+              <HistorySwitcherContext.Provider value={switcherSlot}>{tab.content}</HistorySwitcherContext.Provider>
+            ) : null}
           </div>
         );
       })}

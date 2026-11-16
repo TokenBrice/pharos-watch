@@ -8,15 +8,10 @@ import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type { SavedSafetyAssessment } from "@/lib/api";
 import {
-  buildDewsAccent,
-  buildDewsBandAccent,
   buildDewsDisplay,
   buildExcessYieldDisplay,
   buildLimitedDepegCoverageNote,
-  buildLiquidityAccent,
   buildLiquidityDisplay,
-  buildLiquidityScoreAccent,
-  buildPegScoreAccent,
   buildPegScoreDisplay,
   buildPerformanceVsUsdDisplay,
   buildSavedDewsDisplay,
@@ -26,8 +21,6 @@ import {
   HERO_MUTED_CLASS,
   HERO_PENDING_DEWS_DISPLAY,
   HERO_PENDING_DISPLAY,
-  HERO_NEGATIVE_TREND_CLASS,
-  HERO_POSITIVE_TREND_CLASS,
   type HeroDewsDisplay,
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
@@ -73,7 +66,6 @@ export interface HeroTertiaryMetricViewModel {
   mobileLabel?: "Peg" | "Liq";
   methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "excessYield";
   display: HeroDisplayValue | HeroDewsDisplay;
-  accentClass?: string;
 }
 
 export interface HeroSignalRailItemViewModel {
@@ -130,6 +122,8 @@ export interface HeroCardViewModel {
   desktopTertiaryMetrics: HeroTertiaryMetricViewModel[];
   signalRailItems: HeroSignalRailItemViewModel[];
   passportItems: HeroPassportItemViewModel[];
+  /** Passport facts whose live read is still in flight: the strip holds their slot so nothing reflows when they land. */
+  passportPendingKeys: HeroPassportItemViewModel["key"][];
   caseStudyCallout: HeroCaseStudyCalloutViewModel | null;
 }
 
@@ -183,6 +177,8 @@ export interface HeroPendingReads {
   liquidity?: boolean;
   peg?: boolean;
   yield?: boolean;
+  /** The redemption-backstop read (the passport's Redeemability fact), deferred or in flight. */
+  redemption?: boolean;
 }
 
 const MOBILE_ONLY_TERTIARY_KEYS: ReadonlySet<HeroTertiaryMetricViewModel["key"]> = new Set([
@@ -206,7 +202,8 @@ function getTrendClass(hasPreviousValue: boolean, currentValue: number, previous
     const percentChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
     if (percentChange < 0.5) return HERO_MUTED_CLASS;
   }
-  return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
+  // A supply or market-cap move is not risk: neutral ink, the sign carries the direction.
+  return "text-foreground";
 }
 
 function resolveEffectivePegScore(isNavToken: boolean, pegScoreResult: PegSummaryCoin | null): number | null {
@@ -231,18 +228,15 @@ function buildSupplyTrend(nativeSupply: NativeSupplyCheckpoints | null, supply: 
 
 function buildTertiaryMetrics(
   dewsDisplay: HeroDewsDisplay,
-  dewsAccent: string | undefined,
   pegScoreDisplay: HeroDisplayValue,
-  pegScoreAccent: string | undefined,
   liquidityDisplay: HeroDisplayValue,
-  liquidityAccent: string | undefined,
   excessYieldDisplay: HeroDisplayValue,
   performanceVsUsdDisplay: HeroDisplayValue | null,
 ): HeroTertiaryMetricViewModel[] {
   return [
-    { key: "dews", label: "DEWS", methodologyTopic: "dewsBand", display: dewsDisplay, accentClass: dewsAccent },
-    { key: "peg-score", label: "Peg Score", mobileLabel: "Peg", methodologyTopic: "pegScore", display: pegScoreDisplay, accentClass: pegScoreAccent },
-    { key: "liquidity", label: "Liquidity", mobileLabel: "Liq", methodologyTopic: "liquidityScore", display: liquidityDisplay, accentClass: liquidityAccent },
+    { key: "dews", label: "DEWS", methodologyTopic: "dewsBand", display: dewsDisplay },
+    { key: "peg-score", label: "Peg Score", mobileLabel: "Peg", methodologyTopic: "pegScore", display: pegScoreDisplay },
+    { key: "liquidity", label: "Liquidity", mobileLabel: "Liq", methodologyTopic: "liquidityScore", display: liquidityDisplay },
     { key: "excess-yield", label: "30d Excess", methodologyTopic: "excessYield", display: excessYieldDisplay },
     ...(performanceVsUsdDisplay
       ? [{ key: "performance-vs-usd" as const, label: "1Y vs USD" as const, display: performanceVsUsdDisplay }]
@@ -362,11 +356,7 @@ export function buildStablecoinDetailHeroViewModel({
   // NAV tokens and frozen archives have no live peg/DEWS reading to wait for.
   const awaitsSignals = !isNavToken && coin.status !== "frozen";
   const pegPending = awaitsSignals && pegScoreResult === null && pendingReads.peg === true;
-  const pegScoreDisplay = pegPending ? HERO_PENDING_DISPLAY : buildPegScoreDisplay(
-    isNavToken,
-    pegScoreResult,
-    null,
-  );
+  const pegScoreDisplay = pegPending ? HERO_PENDING_DISPLAY : buildPegScoreDisplay(isNavToken, pegScoreResult);
   // Without live data, a pending read shows the dated release value or a placeholder.
   const liquidityFallback = liquidityData === undefined && pendingReads.liquidity === true
     ? buildSavedLiquidityDisplay(savedAssessment) ?? HERO_PENDING_DISPLAY
@@ -383,14 +373,16 @@ export function buildStablecoinDetailHeroViewModel({
   const savedGrade = pendingReads.reportCard === true && !reportCard && savedAssessment?.grade ? savedAssessment : null;
   const tertiaryMetrics = buildTertiaryMetrics(
     dewsDisplay,
-    savedDews ? buildDewsBandAccent(savedDews.band) : buildDewsAccent(stressSignal),
     pegScoreDisplay,
-    buildPegScoreAccent(pegScoreResult),
     liquidityDisplay,
-    liquidityFallback ? buildLiquidityScoreAccent(savedAssessment?.liquidityScore ?? null) : buildLiquidityAccent(liquidityData),
     excessYieldDisplay,
     performanceVsUsdDisplay,
   );
+  const redemptionPending = coin.status !== "frozen" && redemptionBackstop === null && pendingReads.redemption === true;
+  const passportPendingKeys: HeroPassportItemViewModel["key"][] = [
+    ...(redemptionPending ? ["redeemability" as const] : []),
+    ...(pegPending ? ["record" as const] : []),
+  ];
   const subjectCaseStudy = CASE_STUDY_CLIENT_BY_COIN_ID[coin.id];
   const caseStudyCallout: HeroCaseStudyCalloutViewModel | null = subjectCaseStudy ? {
     href: `/learn/case-studies/${subjectCaseStudy.slug}/`,
@@ -450,6 +442,7 @@ export function buildStablecoinDetailHeroViewModel({
       pegScoreResult,
       isNavToken,
     }),
+    passportPendingKeys,
     caseStudyCallout,
   };
 }

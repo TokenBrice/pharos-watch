@@ -75,19 +75,6 @@ export const LIQUIDITY_COVERAGE_BADGE_CLASSES = {
   unobserved: "border-border/70 bg-muted text-muted-foreground",
 } as const satisfies Record<LiquidityCoverageClass, string>;
 
-/** Price-transparency source chips: the source used for the price against other available feeds. */
-export const PRICE_SOURCE_STATUS_CLASSES = {
-  used: {
-    wrap: "border-emerald-500/20 bg-emerald-500/[0.03]",
-    badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    dot: "bg-emerald-500",
-  },
-  available: {
-    badge: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    dot: "bg-sky-500",
-  },
-} as const;
-
 export const REQUEST_SOURCE_FILL_CLASSES = {
   primary: "bg-sky-500/70",
   secondary: "bg-amber-500/70",

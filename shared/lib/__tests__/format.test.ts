@@ -323,6 +323,15 @@ describe.each([
   });
 });
 
+describe("formatV9PresentationUsd unit rollover", () => {
+  it("promotes a figure that rounds to 1,000 of its unit to the next unit", () => {
+    expect(formatV9PresentationUsd(999_700)).not.toContain("1000");
+    expect(formatV9PresentationUsd(999_700)).toBe(formatV9PresentationUsd(1_000_000));
+    expect(formatV9PresentationUsd(999_700_000)).toBe(formatV9PresentationUsd(1_000_000_000));
+    expect(formatV9PresentationUsd(998_000)).toContain("998");
+  });
+});
+
 describe("abbreviateNumberParts", () => {
   it("returns value/suffix pairs for large magnitudes", () => {
     expect(abbreviateNumberParts(1.5e9)).toEqual({ short: 1.5, suffix: "B" });

@@ -9,7 +9,7 @@ import {
   SUMMARY_VERDICT_MAX_WORDS,
 } from "@shared/lib/summary-budget";
 import { FailureScenarioModule } from "../failure-scenario-module";
-import { routeMapBreakpoint } from "../route-map";
+import { routeMapBreakpoint, routeMapWrappedBreakpoint } from "../route-map";
 import { buildScenarioClock, buildScenarioRoute, parseElapsed } from "../scenario-model";
 
 function makeStage(id: string, elapsed: string): FailureScenarioStage {
@@ -90,7 +90,7 @@ function expectSummaryBudget(container: HTMLElement, scenario: FailureScenario) 
 
 
 describe("coin-agnostic failure scenarios", () => {
-  it("shows the approved reviewer and reviewed date without expiry wording", () => {
+  it("stamps the state pin and review date once, in the footer, and folds the reviewer", () => {
     const scenario = makeScenario({
       evidencePin: { chainId: 1, block: 26_138_725, observedAt: "2026-10-07" },
       review: {
@@ -101,16 +101,13 @@ describe("coin-agnostic failure scenarios", () => {
       },
     });
     const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: false }} />);
-    expect(screen.getByText(/^Reviewed/).textContent).toBe("Reviewed 2020-01-02");
-    const stamp = screen.getByText(/^Approved by Fixture Maintainer on/);
-    expect(stamp.textContent).toBe("Approved by Fixture Maintainer on 2020-01-02 · state at block 26,138,725");
-    expect(within(stamp).getAllByText("2020-01-02")).toHaveLength(1);
-    const dates = screen.getAllByText("2020-01-02");
-    expect(dates).toHaveLength(2);
-    for (const date of dates) {
-      expect(date.classList.contains("pharos-numeric")).toBe(true);
-    }
+    // No header pill: the footer's review date is the only one.
+    expect(screen.getAllByText(/^Reviewed/).map((node) => node.textContent)).toEqual(["Reviewed 2020-01-02"]);
+    const stamp = screen.getByText(/^State at block/);
+    expect(stamp.textContent).toBe("State at block 26,138,725");
+    expect(stamp.classList.contains("whitespace-nowrap")).toBe(true);
     expect(within(stamp).getByText("26,138,725").classList.contains("pharos-numeric")).toBe(true);
+    expect(within(container.querySelector("#failure-scenario-sources")! as HTMLElement).getByText("Approved by Fixture Maintainer.")).toBeDefined();
     expect(container.textContent).not.toMatch(/re-review|expir/i);
     expect(screen.queryByText("Draft — not approved")).toBeNull();
     expect(screen.queryByRole("note", { name: "Draft scenario" })).toBeNull();
@@ -143,6 +140,8 @@ describe("coin-agnostic failure scenarios", () => {
     expect(vertical.querySelectorAll("a")).toHaveLength(route.steps.length);
     expect(container.querySelectorAll("details[data-scenario-step]")).toHaveLength(route.steps.length);
     expect(Boolean(container.querySelector("#failure-scenario-clock"))).toBe(clock);
+    // The fold names what the map lacks: each step's detail (and the timeline).
+    expect(container.querySelector("#failure-scenario-path > summary")!.textContent).toBe(clock ? "Timeline & step details" : "Step details");
     expect(container.textContent).not.toMatch(/crvUSD|Convex|veCRV|vlCVX|PegKeeper/);
     // Path order and authored labels are retained, independently of the ruler.
     const steps = [...container.querySelectorAll("details[data-scenario-step]")];
@@ -213,6 +212,21 @@ describe("coin-agnostic failure scenarios", () => {
     const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
     const ruler = container.querySelector('[role="img"]')!;
     expect(within(ruler as HTMLElement).getByText("5").classList.contains("bg-foreground")).toBe(true);
+  });
+
+  it("wraps a long linear path into two balanced rows before the vertical spine", () => {
+    const scenario = makeScenario({ stages: Array.from({ length: 7 }, (_, index) => makeStage(`seven-${index + 1}`, `T+${index}d`)) });
+    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const wrapped = container.querySelector('[data-route-layout="wrapped"]')!;
+    expect(wrapped.className).toBe("hidden @[46rem]/evidence:block @[61rem]/evidence:hidden");
+    expect(container.querySelector('[data-route-layout="vertical"]')!.className).toBe("@[46rem]/evidence:hidden");
+    const items = [...wrapped.querySelectorAll("li")];
+    expect(items).toHaveLength(7);
+    expect(items.every((item) => item.classList.contains("basis-1/4"))).toBe(true);
+    // A one-row linear map stretches every box to the row's tallest title.
+    expect(container.querySelector('[data-route-layout="horizontal"] .self-center')).toBeNull();
+    expect(routeMapWrappedBreakpoint(buildScenarioRoute(LINEAR))).toBeUndefined();
+    expect(routeMapWrappedBreakpoint(buildScenarioRoute(THREE_BRANCHES))).toBeUndefined();
   });
 
   it("uses static length bands and an explicit vertical fallback", () => {

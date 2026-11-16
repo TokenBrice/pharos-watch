@@ -29,6 +29,17 @@ export const MODULE_DISCLOSURE_SUMMARY_CLASS =
  * stack's bottom margin (`space-y-*` in Tailwind v4) and any caller top margin
  * on the next fold, so ad-hoc `-mt-3`/`mt-3` nudges cannot reintroduce drift.
  */
+/**
+ * Closed folds in a module's run sit on one line as a details bar
+ * ("Scoring breakdown ⌄  Capacity, fees & confidence ⌄  Sources (2) ⌄")
+ * instead of stacking 36–44 px rows; an opened fold takes the full width,
+ * so its content never renders inside a shrink-wrapped box. Only folds that
+ * are direct children of the body (or of a fold wrapper) join the bar, so
+ * disclosures nested inside an open fold keep their own layout.
+ */
+export const MODULE_FOLD_BAR_CLASS =
+  "[&>details[data-module-fold]:not([open])]:mr-6 [&>details[data-module-fold]:not([open])]:inline-block [&>details[data-module-fold]:not([open])]:align-top [&>*>details[data-module-fold]:not([open])]:mr-6 [&>*>details[data-module-fold]:not([open])]:inline-block [&>*>details[data-module-fold]:not([open])]:align-top";
+
 export const MODULE_FOLD_RHYTHM_CLASS =
   "[&_[data-module-fold]:has(+[data-module-fold])]:mb-0 [&_[data-module-fold]+[data-module-fold]]:mt-0 [&>:has(>[data-module-fold]:last-child):has(+[data-module-fold])]:mb-0 [&>:has(>[data-module-fold]:last-child)+[data-module-fold]]:mt-0";
 
