@@ -112,9 +112,12 @@ describe("command palette model", () => {
 
   it("keeps a reviewed dispute's badge on its recent-depeg row", () => {
     const events = depegEventSearchData as Array<{ slug: string; auditVerdict?: string | null }>;
-    // Select by the verdict the badge reads, not by a curated event slug.
+    // Select by the verdict the badge reads, not by a curated event slug; the ten newest published
+    // events need not include a reviewed dispute, so add one when they don't.
+    if (!events.some((event) => isDisputedAuditVerdict(event.auditVerdict))) {
+      events.push({ ...events[0]!, slug: "test-disputed-2026-01-01", auditVerdict: "disputed" });
+    }
     const disputedEvent = events.find((event) => isDisputedAuditVerdict(event.auditVerdict));
-    expect(disputedEvent, "generated depeg search data carries a disputed verdict").toBeDefined();
     const ordinaryEvent = events.find((event) => !isDisputedAuditVerdict(event.auditVerdict))!;
 
     const disputed = buildCommandPaletteResultDescriptors({ query: disputedEvent!.slug, history: [], isDark: false })
