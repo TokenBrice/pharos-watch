@@ -16,6 +16,12 @@ on:
         required: true
       SITE_SESSION_SIGNING_KEY:
         required: false
+      # Production-environment secrets: callers must still pass them by name, or
+      # this reusable job resolves them to empty strings.
+      R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID:
+        required: true
+      R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY:
+        required: true
 
 permissions:
   contents: read
