@@ -173,6 +173,19 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, { label: string; sou
 );
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  // https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026
+  "usdplus-streamflow": {
+    code: "issuer-distributed-yield",
+    since: "2026-11-15",
+    nextReviewAt: "2026-12-15",
+    note: "USD+ distributes variable Treasury income as additional tokens daily; no exact native yield pool or reviewed holder-distribution reader is established. Stable-price growth and the parent M earner rate do not measure USD+ net holder return",
+  },
+  "usd-dinari": {
+    code: "pre-launch",
+    since: "2026-11-16",
+    nextReviewAt: "2027-01-15",
+    note: "Launched, awaiting data: price and supply lanes pass, but the Safety new-asset evidence gate blocks active admission; the reviewed rebase-index reader is archived until promotion",
+  },
   "susd-hedgecore": {
     code: "no-public-yield-source",
     since: "2026-09-27",

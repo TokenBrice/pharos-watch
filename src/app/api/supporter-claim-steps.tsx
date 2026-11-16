@@ -3,10 +3,14 @@ import { DonorKeyClaim } from "@/components/api-access/donor-key-claim";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
 import type { DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { formatProseList } from "@shared/lib/format";
+import { formatIsoDate, formatProseList } from "@shared/lib/format";
 import { DONOR_KEY_QUALIFYING_STABLECOINS, type DonorKeyGradeStatus } from "@shared/lib/funding/donor-eligibility";
 import type { Donation } from "@shared/lib/funding/schema";
-import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
+import {
+  DONOR_API_KEY_DAYS_PER_MIN_USD,
+  DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_TERMS_START_SEC,
+} from "@shared/lib/ops-limits";
 import {
   API_ACCESS_TELEGRAM_HANDLE,
   API_ACCESS_TELEGRAM_URL,
@@ -141,7 +145,8 @@ export function SupporterClaimSteps({
           <p className={STEP_NUMBER_CLASS_NAME}>03</p>
           <h3 className={STEP_TITLE_CLASS_NAME}>Sign and copy</h3>
           <p className={STEP_BODY_CLASS_NAME}>
-            Sign a text message with the donating wallet. No transaction, no gas. The key is shown once.
+            Sign a text message with the donating wallet. No transaction, no gas. The key is shown once; signing
+            again after a later donation extends it.
           </p>
         </li>
       </ol>
@@ -165,7 +170,16 @@ export function SupporterClaimSteps({
             <li>
               Donations are valued in USD at receipt and summed per wallet. Exactly ${DONOR_API_KEY_MIN_USD} qualifies.
             </li>
-            <li>A later grade change does not revoke an issued key.</li>
+            <li>
+              Each ${DONOR_API_KEY_MIN_USD} buys {DONOR_API_KEY_DAYS_PER_MIN_USD} days of access, pro rata, starting at the
+              claim. Signing again after a later donation adds its days to a live key, or starts them from that
+              signature if the key lapsed.
+            </li>
+            <li>
+              Wallets whose qualifying donations before {formatIsoDate(DONOR_API_KEY_TERMS_START_SEC)} reached $
+              {DONOR_API_KEY_MIN_USD} keep a key with no expiry.
+            </li>
+            <li>A later grade change never shortens an issued key.</li>
             <li>ETH and other tokens do not count.</li>
             <li>{COIN_NETWORKS_NOTE}</li>
             <li>Claims pause while the Safety Score publication is held or unavailable.</li>
@@ -173,7 +187,8 @@ export function SupporterClaimSteps({
         </ApiDisclosure>
         <ApiDisclosure summary="Lost key, privacy and terms">
           <ul className={TERMS_LIST_CLASS_NAME}>
-            <li>One key per wallet. Signing again does not rotate it.</li>
+            <li>For personal, non-commercial use. Commercial products need a partner key.</li>
+            <li>One key per wallet. Signing again extends it after a newly listed donation and never rotates it.</li>
             <li>
               Lost or leaked key: message{" "}
               <a href={API_ACCESS_TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
@@ -184,10 +199,12 @@ export function SupporterClaimSteps({
                 @{API_ACCESS_X_HANDLE} on X
               </a>
               . The donating wallet is verified before the key is rotated, and the messages are deleted afterwards.
-              Check the exact handle. Pharos never asks for wallet credentials or payment by direct message.
+              Check the exact handle. Pharos never asks for wallet credentials, and payments go only to the addresses on
+              the funding page.
             </li>
             <li>
-              Claiming stores the wallet address, key prefix and claim time. See the{" "}
+              Claiming stores the wallet address, key prefix, claim time and which ledger donations were credited. See
+              the{" "}
               <Link href="/privacy/" className="pharos-prose-link">
                 privacy policy
               </Link>

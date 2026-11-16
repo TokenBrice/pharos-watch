@@ -1,0 +1,65 @@
+{
+  "id": "rcusd-r25",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "The exact rcUSD purchase and redemption agreements identify a transferable token issued by RiftWriter Company Limited with a face value of one US dollar. The redemption agreement provides for payment of face value in USDC after token delivery and satisfactory KYC. This supports apparent payment-stablecoin treatment for the fixed-value base token, separately from the rcUSDp yield-bearing staking receipt. The agreements' Regulation S language and registration disclaimer do not establish a GENIUS authorization or decide securities-law treatment.",
+      "references": [
+        {
+          "label": "rcUSD Purchase Agreement: issuer, face value and transfer terms",
+          "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-15",
+          "accessedAt": "2026-11-15"
+        },
+        {
+          "label": "rcUSD Redemption Agreement: face-value USDC payment obligation and eligibility",
+          "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-15",
+          "accessedAt": "2026-11-15"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "RiftWriter Company Limited",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Review dated November 15, 2026. No token-specific public GENIUS approval, application, issuer-announced pathway or foreign-issuer registration was established. The current OCC implementation page states that waiver and application submissions are not yet being accepted. The asset-specific agreements restrict purchase, ownership and redemption to eligible non-U.S. persons and state that the token is not registered in any jurisdiction; those issuer statements are not regulatory approval or a finding of non-compliance. BVI governing law is not used as proof of issuer domicile. MiCA remains unassessed because no exact-token EU authorization, offering-scope or venue restriction evidence was established. Reserve-report and attestation presence flags are omitted because no current rcUSD financial report was verified; generic R25 software audit reports are not reserve assurance.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act implementation: current waiver and application posture",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "OCC final implementing rule announcement: separate application-opening announcement and January 18, 2027 effective date",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-92.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-10-21",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "rcUSD Redemption Agreement: issuer and published redemption policy",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-10-15",
+        "accessedAt": "2026-11-15"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act implementation page and October 21, 2026 final-rule announcement",
+        "Exact-token and legal-issuer searches across OCC and Federal Register materials for rcUSD and RiftWriter Company Limited",
+        "R25 issuer website, current documentation and rcUSD Purchase and Redemption Agreements"
+      ],
+      "summary": "No qualifying public GENIUS authorization, application, registered foreign-issuer exception or issuer-announced GENIUS pathway for rcUSD or RiftWriter Company Limited was found in the listed sources on November 15, 2026. This is a bounded negative-evidence review, not a conclusion that the issuer is prohibited or that it lacks every possible foreign license.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-11-15"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-15"
+  }
+}

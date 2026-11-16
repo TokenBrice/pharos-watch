@@ -61,6 +61,7 @@ export function evaluateWorkerWranglerConfig(
   expectValue("d1_databases", "binding", '"DB"');
   expectValue("d1_databases", "database_id", '"8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"');
   expectValue("root", "upload_source_maps", "true");
+  expectValue("root", "preview_urls", "false");
   expectValue("limits", "cpu_ms", "300000");
   expectValue("observability", "head_sampling_rate", role === "public" ? "0.1" : "1");
   expectValue("observability", "enabled", "true");
@@ -74,6 +75,21 @@ export function evaluateWorkerWranglerConfig(
     issues.push(`${role} must not declare retired Workflow bindings.`);
   }
   const queueAssignments = assignments.filter(({ section }) => section.startsWith("queues."));
+  if (role === "public") {
+    const rateLimits = toml.split(/^\s*\[\[ratelimits\]\].*$/m).slice(1).map((block) => parseAssignments(block));
+    const namespaces = rateLimits.map((entries) => unquote(entries.find(({ key }) => key === "namespace_id")?.value));
+    for (const [name, limit] of [["SITE_SESSION_RATE_LIMIT", 300], ["SITE_SOURCE_RATE_LIMIT", 1200]] as const) {
+      const matches = rateLimits.filter((entries) => unquote(entries.find(({ key }) => key === "name")?.value) === name);
+      const entries = matches[0] ?? [];
+      const namespace = unquote(entries.find(({ key }) => key === "namespace_id")?.value);
+      if (matches.length !== 1 || !namespace || !/^\d+$/.test(namespace)
+        || namespaces.filter((value) => value === namespace).length !== 1
+        || entries.find(({ section, key }) => section === "ratelimits.simple" && key === "limit")?.value !== String(limit)
+        || entries.find(({ section, key }) => section === "ratelimits.simple" && key === "period")?.value !== "60") {
+        issues.push(`Public ${name} must declare one unique numeric namespace and a ${limit}/60s simple rate limit.`);
+      }
+    }
+  }
   if (role === "public") {
     expectValue("queues.producers", "binding", '"RESERVE_CONTINUATION_QUEUE"');
     expectValue("queues.producers", "queue", '"pharos-reserve-continuation"');
@@ -114,7 +130,6 @@ export function evaluateWorkerWranglerConfig(
   }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
-    expectValue("root", "preview_urls", "false");
     expectValue("r2_buckets", "binding", '"SAFETY_CAPTURE_ARCHIVE"');
     expectValue("r2_buckets", "bucket_name", '"pharos-measurements"');
     if (assignments.some(({ section, key }) => section.startsWith("ratelimits") || key === "CORS_ORIGIN")) {

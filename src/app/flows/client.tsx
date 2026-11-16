@@ -20,7 +20,6 @@ import { ModuleDisclosure, MODULE_FOLD_RHYTHM_CLASS } from "@/components/stablec
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import type { FaqItem } from "@/lib/faq";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
@@ -44,7 +43,7 @@ const FLOWS_SHELL_PROPS = {
     changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   },
   header: "instrument",
-  headerActions: <ShareButton ogPath={API_PATHS.ogPage("flows")} />,
+  headerActions: <ShareButton />,
   leadParagraphs: [
     "Minting and redemption on each issuance chain, against its own 30-day norm.",
     "Net flow says whether tokens are being minted or burned right now. Excludes bridge transfers; covers tracked chains only, not global issuance. Pressure vs the 30-day norm says whether today's activity is stronger or weaker than each coin's recent pace, and the Bank Run Gauge weights that pressure by each coin's tracked supply.",

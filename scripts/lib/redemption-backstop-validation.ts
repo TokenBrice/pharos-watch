@@ -134,7 +134,10 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
     // RD3-03/RD3-04, RD5-08; f0056d612 additionally withdraws capacity tags for
     // BUCK, StandX DUSD, feUSD, inALPHA, MXNe, Noble USDN, USDon and USDv.
     // Backing, targets, inaccessible terms and other payout branches are not capacity evidence.
-    capacity: 45,
+    // +1 (2026-11-16): copm-minteo enters with an honestly unquantified issuer-API route; its
+    // published COP 10,000 minimum is not executable capacity, so no capacity tag is claimed.
+    // +1 (2026-11-16): rcusd-r25's conditional USDC payment obligation is not funded executable capacity.
+    capacity: 47,
     fees: 126,
     access: 157,
     settlement: 167,

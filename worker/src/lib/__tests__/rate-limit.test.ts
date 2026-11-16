@@ -10,6 +10,20 @@ afterEach(() => {
 });
 
 describe("feedback rate-limit reservations", () => {
+  it("caps all sources at 30 per rolling hour and releases only confirmed rejected slots", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const { db } = fixtures.open();
+    const reserve = (i: number) => reserveFeedbackRateLimit(db, `192.0.2.${i}`, "salt", 600, 3);
+    const first = await reserve(0);
+    for (let i = 1; i < 30; i++) expect(await reserve(i)).not.toBeNull();
+    expect(await reserve(30)).toBeNull();
+    expect(await releaseFeedbackRateLimit(db, first!)).toBe(true);
+    expect(await reserve(30)).not.toBeNull();
+    clock.mockReturnValue(1_800_003_599_000);
+    expect(await reserve(31)).toBeNull();
+    clock.mockReturnValue(1_800_003_600_000);
+    expect(await reserve(31)).not.toBeNull();
+  });
   it("releases exactly one identified reservation", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     const { sqlite, db } = fixtures.open();

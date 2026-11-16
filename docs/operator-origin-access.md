@@ -22,7 +22,7 @@ Still true:
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = true` remains enabled for CI/site-proxy rehearsals
+- `isAccessProtectedAdminHost()` in `worker/src/lib/auth.ts` recognizes only `ops-api.pharos.watch`, so `*.workers.dev` preview hosts return `404` on admin paths even when presented with an Access JWT; `preview_urls = false` disables public Worker version previews
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---
@@ -53,7 +53,8 @@ Current origin/access binding ownership derived from `shared/lib/env-contract.ts
 
 | Binding | Worker | Pages ops | Pages site-data | Purpose |
 | --- | --- | --- | --- | --- |
-| `DB` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas. |
+| `DB` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for optional site-data telemetry and required atomic Picker/dated-scorecard write quotas. |
+| `SOCIAL_PREVIEWS` | - | - | required | Pages binding to the permanent pharos-social-previews bucket for immutable discovery images and sealed dated scorecards; no object-expiry lifecycle. |
 | `SITE_API_SHARED_SECRET` | optional | - | required | Shared secret for Pages `/_site-data/*` -> Worker `site-api` authentication via `X-Pharos-Site-Proxy-Secret`. |
 | `CF_ACCESS_TEAM_DOMAIN` | optional | required | - | Cloudflare Access team domain used to verify Access JWTs on worker admin requests and the Pages ops proxy. |
 | `CF_ACCESS_OPS_API_AUD` | optional | - | - | Cloudflare Access audience for worker-side `ops-api.pharos.watch` JWT verification. |
@@ -77,6 +78,20 @@ Build-time and release-time fetchers in `scripts/lib/sync-from-api.ts` attach `S
 ---
 
 ## Pages Functions Proxy
+
+### Website-data sessions
+
+`POST /_site-data/session` is handled by `functions/_site-data/session.ts`; the static segment takes precedence over `[[path]].ts` under [Pages route specificity](https://developers.cloudflare.com/pages/functions/routing/#route-specificity). It uses the lane's `Origin` / `Referer` admission and only issues sessions on the request hosts `pharos.watch` and `ops.pharos.watch`; Pages aliases and hash hosts return `404`. Other methods return `405` with `Allow: POST`.
+
+The endpoint requires Pages secrets `SITE_SESSION_SIGNING_KEY` and `TURNSTILE_SECRET_KEY` (`500` when missing), accepts at most 4 KiB of JSON with a nonempty string `token` (`413` for overflow, `400` for invalid input), and limits attempts to 10 per minute per client network per isolate. IPv6 callers share a /64 bucket; missing or invalid addresses share an unknown bucket. Limiter keys are hashed; state is bounded to 5,000 keys, resets on recycle, and is not a global quota. Exhaustion returns `429` with `Retry-After: 60`.
+
+Turnstile siteverify receives the secret, token and `CF-Connecting-IP` as form fields. Issuance requires `success === true`, the request hostname and action `site-data`; rejection returns `403`. Transport, HTTP, malformed-response and 10-second deadline failures return `503` with `Retry-After: 60`. The deadline includes bounded response-body consumption. Success returns an empty `204`, `X-Pharos-Session-Expires` (Unix seconds), and `__Secure-pharos-session` with `Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=43200`. Every endpoint response carries `Cache-Control: no-store` and `X-Robots-Tag: noindex, nofollow`.
+
+For allowlisted GET reads, the Pages proxy forwards only the session cookie value as `X-Pharos-Site-Session`; automation uses the same cookie. The Worker authenticates the token. Client session-header, proxy-secret, client-IP, API-key and `CF-Access-*` headers are excluded; the proxy injects its own secret and edge-provided client IP. Worker `X-Pharos-Session` hints and `Retry-After` survive the response proxy. Session issuance does not change page middleware or existing token-free proxy admission; Worker enforcement owns the session requirement.
+
+Server-side selector recomputation and the Worker's authenticated site-health probe attach short-lived automation tokens from `SITE_SESSION_SIGNING_KEY`; without a key they retain the existing proxy-secret-only requests.
+
+### Operator proxy
 
 - `functions/api/admin/[[path]].ts`
 - same-origin admin requests from `ops.pharos.watch` to `/api/admin/*`
@@ -115,7 +130,7 @@ The current proxy now fails closed on its own trust boundary:
 
 Provision the required Pages ops and site-data bindings from the [runtime binding authority](#runtime-origin-bindings), including the Access service-token pair and UI JWT verification settings before deploying the ops frontend.
 
-`SELECTOR_SNAPSHOTS` is additionally the Picker snapshot KV namespace. `DB` remains optional for site-data attribution telemetry but mandatory for atomic selector-snapshot hashed-IP daily quotas; ordinary site-data reads continue without telemetry, while selector writes fail closed without DB.
+`SELECTOR_SNAPSHOTS` remains the Picker/social-post/Safety Map KV namespace. `DB` is optional for site-data telemetry but mandatory for atomic Picker and dated-scorecard creation quotas; ordinary site-data reads continue without telemetry, while those writes fail closed without DB. Public preview history and sealed dated editions use the separate permanent `SOCIAL_PREVIEWS` R2 binding ([OG storage and publication](./og-images.md#dated-scorecards)).
 
 Optional `SITE_API` binding setup, transport guarantees and rollback: [Pages Site API Service Binding](#pages-site-api-service-binding).
 
@@ -289,7 +304,7 @@ Any enablement, exception, exact-path replacement, or plan upgrade is an account
 `scripts/ci/cloudflare-account-state-manifest.json` is the committed, secret-free
 expectation for the account-bound configuration that this repository does not
 deploy: the active zone, Pages project and production binding names/types,
-custom domains, Access applications, WAF rules, zone browser-cache settings and heavy-Worker retirement state.
+custom domains, Access applications, WAF rules, zone browser-cache settings, heavy-Worker retirement state and permanent social-preview R2 binding/lifecycle policy.
 It includes the expected shared D1 database ID, but no account/zone IDs or secret values.
 
 The weekly **Weekly Validation** workflow's `compare-account-state` job runs
@@ -305,12 +320,15 @@ and differing policy fields—never token values, account/zone IDs or Pages secr
 
 Create a dedicated read-only API token for this check. It needs the minimum
 read access for zone lookup, Pages project/domains, Access applications,
-Worker domains/settings/subdomains/routes, Workflows and zone WAF/rulesets. Do not reuse a deployment or
+Worker domains/settings/subdomains/routes, Workflows, zone WAF/rulesets and
+**Account → Workers R2 Storage → Read** for bucket lifecycle. Do not reuse a deployment or
 cache-purge token. If either GitHub secret is absent, the workflow fails before
 making a network request and names the required secret. Unreadable, missing or
 malformed cache-setting evidence fails rather than implying a healthy policy. Intentional account
 changes must update the manifest and its fixture tests in the same review;
 Terraform/OpenTofu import remains owner-gated and out of scope.
+
+Social-preview storage is a deployment prerequisite, not an already-verified live resource: production `SOCIAL_PREVIEWS` must identify `pharos-social-previews`, whose lifecycle must contain no enabled object-deletion rule under any prefix. The shared read-only guard in `scripts/lib/cloudflare-pages-r2.ts` rejects missing/mismatched binding and unreadable/malformed lifecycle evidence; an absent/empty rules list, disabled deletion or abort-multipart-only rules are compatible. The trusted publisher performs the same check before S3 object operations, and weekly comparison monitors drift without provisioning or mutation. [Social-preview prerequisites](./deployment-process.md#social-preview-storage-prerequisites) own operator setup, credential scope and activation ordering.
 
 The manifest pins the operator-selected zone browser-cache settings, checked through the named
 zone-settings endpoints.

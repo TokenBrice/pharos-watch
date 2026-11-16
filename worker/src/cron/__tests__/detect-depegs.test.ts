@@ -43,21 +43,14 @@ vi.mock("@shared/lib/peg-rates", () => ({
       peggedREAL: fxFallbackRates?.peggedREAL ?? 0.18765951,
       ...(fxFallbackRates?.peggedRUB ? { peggedRUB: fxFallbackRates.peggedRUB } : {}),
     },
-    sources: {
-      peggedUSD: "median",
-      peggedEUR: "median",
-      peggedREAL: fxFallbackRates?.peggedREAL ? "fallback" : "median",
-      peggedRUB: fxFallbackRates?.peggedRUB ? "fallback" : "median",
-    },
+    sources: { peggedUSD: "median", peggedEUR: "median", peggedREAL: fxFallbackRates?.peggedREAL ? "fallback" : "median", peggedRUB: fxFallbackRates?.peggedRUB ? "fallback" : "median" },
     counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2, peggedRUB: 1 },
   }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
   normalizePegType: (pegType: string | undefined) => pegType,
 }));
 
-vi.mock("../../lib/native-peg-quotes", () => ({
-  fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
-}));
+vi.mock("../../lib/native-peg-quotes", () => ({ fetchCurrentNativePegQuotes: vi.fn(async () => new Map()) }));
 
 import { detectDepegEvents } from "../detect-depegs";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
@@ -101,7 +94,7 @@ function makeAsset(overrides: {
 describe("detectDepegEvents", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    vi.setSystemTime(new Date("2025-06-18T12:00:00Z")); // a Wednesday: FX and metal markets open
     vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
   });
 
@@ -115,10 +108,7 @@ describe("detectDepegEvents", () => {
   it("persists the existing native hydration quote for an active event without fetching again", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    seedOpenEvent(sqlite, {
-      id: 90738, stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR",
-      started_at: now - 77 * 86400,
-    });
+    seedOpenEvent(sqlite, { id: 90738, stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", started_at: now - 77 * 86400 });
     vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValueOnce(new Map([["eurc-circle", {
       stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR",
       vsCurrency: "eur", price: 0.98, updatedAt: now - 60,
@@ -137,10 +127,7 @@ describe("detectDepegEvents", () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
     const intervals = JSON.stringify({ intervals: [[now - 900, now]] });
-    seedOpenEvent(sqlite, {
-      price_coverage_json: intervals,
-      last_trusted_price_at: now,
-    });
+    seedOpenEvent(sqlite, { price_coverage_json: intervals, last_trusted_price_at: now });
     vi.setSystemTime((now + 900) * 1000);
     await detectDepegEvents(db, []);
     vi.setSystemTime((now + 3600) * 1000);
@@ -465,9 +452,7 @@ describe("detectDepegEvents", () => {
     expect(sqlite.prepare("SELECT id, direction, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([
       { id: 1, direction: "below", ended_at: now, recovery_price: null, close_reason: "superseded-direction" },
     ]);
-    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([
-      { stablecoin_id: "usdt-tether", direction: "above", first_price: 1.02 },
-    ]);
+    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([{ stablecoin_id: "usdt-tether", direction: "above", first_price: 1.02 }]);
   });
 
   it("keeps a live event open through an opposite low-confidence tick without DEX support", async () => {
@@ -492,14 +477,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 0.55,
-        priceSource: "coingecko",
-        priceConfidence: "low",
-        priceUpdatedAt: now,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.55, priceSource: "coingecko", priceConfidence: "low", priceUpdatedAt: now }),
     ]);
 
     const closures = preparedSqls.filter((sql) =>
@@ -553,14 +531,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 0.55,
-        priceSource: "coingecko",
-        priceConfidence: "low",
-        priceUpdatedAt: now,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.55, priceSource: "coingecko", priceConfidence: "low", priceUpdatedAt: now }),
     ]);
 
     const closures = preparedSqls.filter((sql) =>
@@ -675,14 +646,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "a7a5-old-vector",
-        symbol: "A7A5",
-        pegType: "peggedRUB",
-        price: 0.02,
-        priceSource: "pyth",
-        priceConfidence: "single-source",
-      }),
+      makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", price: 0.02, priceSource: "pyth", priceConfidence: "single-source" }),
     ]);
 
     const inserts = preparedSqls.filter((sql) =>
@@ -736,14 +700,7 @@ describe("detectDepegEvents", () => {
     await detectDepegEvents(
       db,
       [
-        makeAsset({
-          id: "brz-transfero",
-          symbol: "BRZ",
-          pegType: "peggedREAL",
-          price: 0.190587,
-          priceSource: "pyth",
-          priceConfidence: "single-source",
-        }),
+        makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.190587, priceSource: "pyth", priceConfidence: "single-source" }),
       ],
       { peggedREAL: 0.18765951 },
     );
@@ -755,9 +712,7 @@ describe("detectDepegEvents", () => {
   it.each([[5, "above"], [0.01, "below"]] as const)("routes extreme price %s into %s pending confirmation", async (price, direction) => {
     const { sqlite, db } = sqliteFixtures.open();
     await detectDepegEvents(db, [makeAsset({ id: "usdt-tether", symbol: "USDT", price })]);
-    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([
-      { stablecoin_id: "usdt-tether", direction, first_price: price },
-    ]);
+    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_price FROM depeg_pending").all()).toEqual([{ stablecoin_id: "usdt-tether", direction, first_price: price }]);
     expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
   });
 
@@ -775,14 +730,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 0.98,
-        priceSource: "cached",
-        priceConfidence: "fallback",
-        priceUpdatedAt: now - 600,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98, priceSource: "cached", priceConfidence: "fallback", priceUpdatedAt: now - 600 }),
     ]);
 
     expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(false);
@@ -857,14 +805,7 @@ describe("detectDepegEvents", () => {
     ]);
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 0.97,
-        priceSource: "coingecko",
-        priceConfidence: "low",
-        priceUpdatedAt: now,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.97, priceSource: "coingecko", priceConfidence: "low", priceUpdatedAt: now }),
     ]);
 
     const peakUpdate = db.getHistory().find((entry) =>
@@ -910,14 +851,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 1.0001,
-        priceSource: "cached",
-        priceConfidence: "fallback",
-        priceUpdatedAt: now - 600,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0001, priceSource: "cached", priceConfidence: "fallback", priceUpdatedAt: now - 600 }),
     ]);
 
     const closures = preparedSqls.filter((sql) =>
@@ -939,9 +873,7 @@ describe("detectDepegEvents", () => {
       id: "usdt-tether", symbol: "USDT", price: 0.9999,
       priceSource: "cached", priceConfidence: "fallback", priceUpdatedAt: now - 600,
     })]);
-    expect(sqlite.prepare("SELECT id, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([
-      { id: 1, ended_at: now, recovery_price: 0.9998, close_reason: "recovered-dex" },
-    ]);
+    expect(sqlite.prepare("SELECT id, ended_at, recovery_price, close_reason FROM depeg_events").all()).toEqual([{ id: 1, ended_at: now, recovery_price: 0.9998, close_reason: "recovered-dex" }]);
   });
 
   it("keeps an ongoing event open when authoritative primary recovery conflicts with trusted DEX depeg evidence", async () => {
@@ -981,14 +913,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdt-tether",
-        symbol: "USDT",
-        price: 1.0006,
-        priceSource: "coingecko",
-        priceConfidence: "high",
-        priceUpdatedAt: now - 60,
-      }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0006, priceSource: "coingecko", priceConfidence: "high", priceUpdatedAt: now - 60 }),
     ]);
 
     const closures = preparedSqls.filter((sql) =>
@@ -1087,12 +1012,7 @@ describe("detectDepegEvents", () => {
     ]);
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdc-circle",
-        symbol: "USDC",
-        pegType: "peggedUSD",
-        price: 1,
-      }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: 1 }),
     ]);
 
     const orphanClosures = db.getHistory().filter((entry) => isCloseEventUpdate(entry.sql));
@@ -1115,12 +1035,7 @@ describe("detectDepegEvents", () => {
     ]);
 
     await detectDepegEvents(db, [
-      makeAsset({
-        id: "usdc-circle",
-        symbol: "USDC",
-        pegType: "peggedUSD",
-        price: 1,
-      }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: 1 }),
     ]);
 
     const orphanClosure = db.getHistory().find((entry) => isCloseEventUpdate(entry.sql));

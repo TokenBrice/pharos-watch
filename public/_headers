@@ -30,20 +30,20 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Cache-Control: public, max-age=0, must-revalidate
 
 /pharoswatchbot/app
   ! X-Frame-Options
   ! Content-Security-Policy
   X-Robots-Tag: noindex, nofollow
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors https://telegram.org https://*.telegram.org
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch; font-src 'self'; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors https://telegram.org https://*.telegram.org
 
 /pharoswatchbot/app/*
   ! X-Frame-Options
   ! Content-Security-Policy
   X-Robots-Tag: noindex, nofollow
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors https://telegram.org https://*.telegram.org
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch; font-src 'self'; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors https://telegram.org https://*.telegram.org
 
 /favicon.ico
   ! Cache-Control
@@ -115,6 +115,10 @@
 /og-*.png
   ! Cache-Control
   Cache-Control: public, max-age=86400
+
+/og/v2/*.png
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
 
 /critical-css-loader.js
   ! Cache-Control

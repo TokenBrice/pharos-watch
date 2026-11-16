@@ -19,6 +19,7 @@ const brlMeta: StablecoinMeta = {
   id: "brz-transfero", name: "Brazilian Digital Token", symbol: "BRZ", geckoId: "brz",
   flags: { backing: "rwa-backed", pegCurrency: "BRL", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
 };
+const goldMeta: StablecoinMeta = { ...brlMeta, flags: { ...brlMeta.flags, pegCurrency: "GOLD" } };
 const eurMeta: StablecoinMeta = {
   id: "ceur-celo", name: "Celo Euro", symbol: "EURm", geckoId: "celo-euro",
   flags: { backing: "rwa-backed", pegCurrency: "EUR", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
@@ -38,6 +39,7 @@ type Spec = {
   rateCounts?: Record<string, number>;
   nativePrice?: number;
   open?: boolean;
+  now?: number;
   kind: "mutate" | "wait" | "ready";
   reason?: string;
   outcome?: string;
@@ -73,13 +75,17 @@ const PLAN_CASES: Spec[] = [
   { label: "records a fresh independent primary source when a native-origin move recovers", row: { id: 12, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.9758, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered", opposingSources: "primary:oracle:pyth+primary:authoritative" },
   { label: "uses the refreshed registry peg type for the confirmation threshold", row: { id: 13, peg_type: "peggedREAL" }, asset: { pegType: "peggedUSD" }, kind: "ready", peg: 1, threshold: 100 },
   { label: "returns a ready plan for an aged pending row", row: { id: 10 }, kind: "ready", peg: 1 },
+  { label: "waits for a closed metal market to reopen", row: { id: 14 }, meta: goldMeta, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
+  { label: "holds on today's price, not a stale severe reading", row: { id: 15, last_seen_bps: -3000 }, asset: { price: 3_880, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
+  { label: "requires severe confirmers while the metal market is closed", row: { id: 16, last_seen_bps: -2800 }, asset: { price: 2_800, pegType: "peggedGOLD" }, meta: goldMeta, rates: { peggedGOLD: 3_880 }, rateSources: { peggedGOLD: "fallback" }, now: 1_794_758_400, kind: "ready", peg: 3_880, threshold: 2_500 },
+  { label: "holds a native-origin FX candidate while the FX market is closed", row: { id: 17, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.98, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, nativePrice: 0.98, now: 1_794_758_400, kind: "wait", reason: "reference-market-closed" },
 ];
 
 function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanInput {
   const value = row(spec.row);
   const pendingState = normalizePendingDepegRow(value);
   const asset = spec.asset ? makeAsset({ id: value.stablecoin_id, symbol: value.symbol, ...spec.asset }) : undefined;
-  return { db, row: value, pendingState, asset, meta: spec.meta, pegRates: spec.rates ?? {}, pegRateSources: spec.rateSources ?? {}, pegRateCounts: spec.rateCounts ?? {}, nativePegQuote: spec.nativePrice == null ? undefined : { stablecoinId: value.stablecoin_id, geckoId: spec.meta?.geckoId ?? "brz", pegCurrency: spec.meta?.flags.pegCurrency ?? "BRL", price: spec.nativePrice, updatedAt: NOW_SEC - 60 }, openSet: spec.open ? new Set([value.stablecoin_id]) : new Set(), now: NOW_SEC };
+  return { db, row: value, pendingState, asset, meta: spec.meta, pegRates: spec.rates ?? {}, pegRateSources: spec.rateSources ?? {}, pegRateCounts: spec.rateCounts ?? {}, nativePegQuote: spec.nativePrice == null ? undefined : { stablecoinId: value.stablecoin_id, geckoId: spec.meta?.geckoId ?? "brz", pegCurrency: spec.meta?.flags.pegCurrency ?? "BRL", price: spec.nativePrice, updatedAt: NOW_SEC - 60 }, openSet: spec.open ? new Set([value.stablecoin_id]) : new Set(), now: spec.now ?? NOW_SEC };
 }
 
 afterEach(() => { for (const sqlite of openDbs.splice(0)) sqlite.close(); });
@@ -124,13 +130,7 @@ describe("buildConfirmationPlan", () => {
   it("withholds an implausible native-origin sample as unavailable evidence", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 14, stablecoin_id: "ceur-celo", symbol: "EURm", peg_type: "peggedEUR",
-        direction: "above", first_seen_bps: 15_984, first_price: 2.598389348610164,
-        last_seen_bps: 15_984, last_price: 2.598389348610164,
-        peak_seen_bps: 15_984, peak_price: 2.598389348610164,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 14, stablecoin_id: "ceur-celo", symbol: "EURm", peg_type: "peggedEUR", direction: "above", first_seen_bps: 15_984, first_price: 2.598389348610164, last_seen_bps: 15_984, last_price: 2.598389348610164, peak_seen_bps: 15_984, peak_price: 2.598389348610164, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: { id: "ceur-celo", symbol: "EURm", pegType: "peggedEUR", price: 1.16 },
       meta: eurMeta,
       rates: { peggedEUR: 1.16 },
@@ -151,13 +151,7 @@ describe("buildConfirmationPlan", () => {
   it("admits an extreme native-origin sample corroborated by an independent source family", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 15, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
-        direction: "below", first_seen_bps: -6_000, first_price: 0.4,
-        last_seen_bps: -6_000, last_price: 0.4,
-        peak_seen_bps: -6_000, peak_price: 0.4,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 15, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "below", first_seen_bps: -6_000, first_price: 0.4, last_seen_bps: -6_000, last_price: 0.4, peak_seen_bps: -6_000, peak_price: 0.4, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: nativeBrz(0.075),
       meta: brlMeta,
       rates: { peggedREAL: 0.18765951 },
@@ -176,13 +170,7 @@ describe("buildConfirmationPlan", () => {
   it("does not record a recovery from an implausible native-origin sample", () => {
     const { db } = fixture();
     const input = makeInput(db, {
-      row: {
-        id: 16, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL",
-        direction: "below", first_seen_bps: -940, first_price: 0.17,
-        last_seen_bps: -940, last_price: 0.17,
-        peak_seen_bps: -940, peak_price: 0.17,
-        peg_reference: 1, reason: "large-cap+native-origin",
-      },
+      row: { id: 16, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", direction: "below", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" },
       asset: nativeBrz(0.18765951),
       meta: brlMeta,
       rates: { peggedREAL: 0.18765951 },

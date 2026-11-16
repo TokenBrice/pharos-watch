@@ -13,7 +13,7 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "27f05b5c86ed66fb618d52ddd21dc27b3892b178d03af30164439f5c3719101e",
+  "inputSha256": "fdf211a5e6b5d9e0939e5549929e124d2b665c051ba5f75c252d6d2839146902",
   "image": {
     "sha256": "e1164d1c4734a61b35c5264b25d40f74a6bf3081e57028a03860fad94a9e68b4",
     "bytes": 149022,
@@ -1152,7 +1152,10 @@
     }
   ],
   "missing": [
+    "dchf-defi-franc-2024-03",
     "fusd-fedz-2026-05",
-    "usdh-hubble-2026-05"
+    "stbl-algofi-2023-07",
+    "usdh-hubble-2026-05",
+    "zunusd-zunami-2025-05"
   ]
 }

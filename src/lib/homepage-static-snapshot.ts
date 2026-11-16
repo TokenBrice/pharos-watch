@@ -1,3 +1,5 @@
+import "server-only";
+
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { numberValue } from "@shared/lib/type-guards";
 import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
@@ -6,6 +8,7 @@ import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { toSiteDataPath } from "@shared/lib/site-data-lane";
+import { mintSiteSessionToken, SITE_SESSION_COOKIE_NAME } from "@shared/lib/site-session-token";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { buildTotalMcapChartRows, TOTAL_MCAP_COHORT_IDS, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@shared/lib/total-mcap-chart";
@@ -25,8 +28,6 @@ interface TopStablecoinsDataset {
   };
   rows?: TopStablecoinsDatasetRow[];
 }
-
-export type { HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 
 const TOP_STABLECOINS_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as TopStablecoinsDataset;
 
@@ -77,8 +78,10 @@ async function fetchDatedHistory<T>(path: string, source: string, maxAgeSec: num
     status: "unknown", reason: "dated-build-fallback", warning: null,
   };
   try {
+    const key = process.env.SITE_SESSION_SIGNING_KEY;
+    const token = key ? await mintSiteSessionToken({ key, kind: "automation", nowSec: assessedAt }) : null;
     const response = await fetch(new URL(toSiteDataPath(path)!, SITE_ORIGIN), {
-      headers: { Origin: SITE_ORIGIN }, signal: AbortSignal.timeout(10_000),
+      headers: { Origin: SITE_ORIGIN, ...(token ? { Cookie: `${SITE_SESSION_COOKIE_NAME}=${token}` } : {}) }, signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) { await response.body?.cancel(); return { data: null, meta: { ...meta, reason: `source-http-${response.status}` } }; }
     const parsed = schema.safeParse(await response.json());

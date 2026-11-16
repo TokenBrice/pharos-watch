@@ -16,9 +16,9 @@
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T56 w2 archetype re-review",
-    "rationale": "Re-verified 2026-07-30 against live Brix materials: iTRY is fully backed by the Digital Liquidity Fund's DLF token, shares of a regulated basket of Turkish money-market funds with a daily NAV published by a licensed fund administrator, and wiTRY is the ERC-4626 staking wrapper whose value accrues against iTRY as fund yield is minted into the staking contract. The live stabilization and claim structure is therefore an NAV-accreting short-duration money-market-fund exposure rather than a fixed TRY cash claim, a CDP, or a private-credit fund; the tbill archetype remains the matching supported V9 category. wiTRY has no tracked parent asset (iTRY is not a Pharos-tracked coin), so no archetypeOverride parent divergence applies.",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery iTRY coupling review",
+    "rationale": "Brix backing documentation identifies DLF tokens representing a regulated basket of Turkish money-market funds behind iTRY. Staking documentation identifies wiTRY as ERC-4626 shares in deposited iTRY, appreciating as protocol rewards accrue. With iTRY admitted as a tracked fixed-TRY parent, wiTRY is a savings-passthrough variant excluded from parent-inclusive supply aggregates. Both use the tbill archetype, with NAV accrual only on wiTRY; no archetypeOverride is required. Fund look-through remains unresolved at the parent, and the child retains its direct wrapper claim.",
     "sources": [
       {
         "label": "Brix iTRY backing and custody documentation",
@@ -101,7 +101,9 @@
       "slice": {
         "name": "wiTRY claim on iTRY backed by Digital Liquidity Fund shares",
         "risk": "high",
-        "expectedAssetAddress": "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+        "expectedAssetAddress": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+        "coinId": "itry-brix",
+        "depType": "wrapper"
       }
     }
   },
@@ -130,5 +132,8 @@
         }
       ]
     }
-  }
+  },
+  "variantOf": "itry-brix",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "itry-brix"
 }

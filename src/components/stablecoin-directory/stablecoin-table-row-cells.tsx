@@ -203,7 +203,9 @@ function MarketCells({ row, model }: RowCellsProps) {
           ) : (
             <span className={`inline-flex items-center gap-0.5 ${model.pegDeviationColorClass}`}>
               {model.absPegDeviationBps !== null ? <DeviationIcon absBps={model.absPegDeviationBps} /> : null}
-              {model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
+              {model.referenceMarketClosed
+                ? <span title="Reference market closed">Mkt closed</span>
+                : model.pegDeviationBps == null ? "N/A" : formatBps(model.pegDeviationBps)}
             </span>
           )}
         </TableCell>

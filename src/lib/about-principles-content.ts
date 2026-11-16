@@ -16,7 +16,7 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   {
     id: "independence",
     title: "Independence is maintained through disclosed funding and editorial boundaries.",
-    body: "Pharos has no token, takes no issuer money, sells no paid placement, and accepts no editorial trade. Sustainability comes from community support and, eventually, paid API access for heavy programmatic users. The code is MIT-licensed and the inbound funding ledger is published in full at /funding/.",
+    body: "Pharos has no token, takes no money for listings, reviews, ratings or placement, and accepts no editorial trade. Paid service work for an issuer or its DAO, if any, is public, disclosed at /funding/ and kept apart from that coin's score. Sustainability comes from community support, paid API access for commercial products and infrastructure sponsored in kind. The code is MIT-licensed and the inbound funding ledger is published in full at /funding/.",
   },
   {
     id: "risk-over-price",

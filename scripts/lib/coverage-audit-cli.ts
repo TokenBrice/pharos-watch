@@ -5,6 +5,7 @@ import { formatCompactUsdWithOptions } from "@shared/lib/format";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { markdownValue } from "./markdown-report";
 import { writeFileResolved } from "./cli-args.mjs";
+import { siteDataSessionHeaders } from "./site-session";
 
 export { isRecord, markdownValue, numberValue, stringValue };
 
@@ -414,6 +415,7 @@ export async function loadCoverageAuditSiteDataInputs(
 ): Promise<{ reportCards: unknown; stablecoins: unknown; mode: "prod" | "api" } | null> {
   if (options.prod) {
     const siteDataHeaders = {
+      ...await siteDataSessionHeaders(PROD_REPORT_CARDS_URL),
       Origin: PROD_ORIGIN,
       Referer: `${PROD_ORIGIN}/coverage/`,
     };

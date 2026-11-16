@@ -136,7 +136,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current TELEGRAM_BOT_TOKEN binding is authoritative; this timestamp only limits duplicate warning logs.",
   },
   {
-    sourcePath: "worker/src/api/og.tsx",
+    sourcePath: "worker/src/lib/og-render.ts",
     stateNames: ["wasmInitialization"],
     owner: "OG-image WASM initialization",
     kind: "coordination",
@@ -200,6 +200,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current Env bindings and validateWorkerEnvContract() result are authoritative.",
   },
   {
+    sourcePath: "worker/src/handlers/http/gates.ts",
+    stateNames: ["siteSessionLogWindow"],
+    owner: "Site-session gate diagnostics",
+    kind: "counter",
+    resetOrTtl: "One minute window caps all detail events at 60 per UTC minute per isolate (valid sampled 1 in 16), plus finite outcome counters per mode; the next active minute emits one exact prior-window summary. Resets on rollover or isolate recycle.",
+    durableTruth: "Current signed token, Env mode and native rate-limit binding results are authoritative; counters bound detail logs and retain unsampled decision totals for the current isolate minute only.",
+  },
+  {
+    sourcePath: "functions/_site-data/session.ts",
+    stateNames: ["sessionRequestTimestampsByNetworkHash"],
+    owner: "Pages site-session issuance limiter",
+    kind: "limiter",
+    resetOrTtl: "Sliding 60-second windows admit 10 attempts per hashed client network; capped at 5,000 tracked hashes and reset on isolate recycle or test reset.",
+    durableTruth: "Current caller admission and Turnstile verification remain authoritative; this isolate-local limiter is best-effort abuse control only.",
+  },
+  {
     sourcePath: "worker/src/lib/api-cache-read.ts",
     stateNames: ["_cacheRead"],
     owner: "Persisted-cache JSON diagnostics",
@@ -212,8 +228,8 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     stateNames: ["_ak"],
     owner: "API-key authentication and fallback limiting",
     kind: "cache",
-    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage and fallback limiter maps cap at 4,096 entries, with prune and dependency-circuit coordination resetting with the isolate.",
-    durableTruth: "D1 API-key, rate-limit, and last-used rows are authoritative; local fallback limiting is emergency-only.",
+    resetOrTtl: "Key lookups are fresh for 5 seconds (2,048 entries); usage, fallback limiter, lookup-block and D1 over-quota memo maps cap at 4,096 entries. Lookup blocks expire at the minute boundary; over-quota memos apply only to the same minute and a limit below the observed count; all reset with the isolate.",
+    durableTruth: "D1 API-key, rate-limit, and last-used rows are authoritative; lookup blocks reuse native limiter rejection, over-quota memos reuse only D1-confirmed rejection, and local fallback limiting is emergency-only.",
   },
   {
     sourcePath: "worker/src/lib/auth.ts",

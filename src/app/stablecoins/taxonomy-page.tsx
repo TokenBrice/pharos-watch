@@ -42,7 +42,6 @@ export function createStablecoinTaxonomyRoute<TParamKey extends string>(config: 
 }) {
   return createStaticSlugRoute({
     ...config,
-    ogImage: "/og-stablecoins.png",
     render: (page) => <StablecoinTaxonomyPage page={page} />,
   });
 }

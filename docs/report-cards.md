@@ -182,6 +182,8 @@ See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
 V9 serves Safety Scores, home/detail/compare, portfolio/dependency map, yield, digest/flight-to-quality, Telegram, OG, datasets, status/grade history.
 
+Canonical social previews carry no numeric grade. Explicit dated scorecards capture one admitted accepted publication, preserve its published grade (including hysteresis), and display the methodology from that served identity rather than the internal `v9` discriminator. Admission rechecks observation/publication clocks, exact identity, subject and health after rendering; held, stale or pipeline-gap evidence cannot become a current per-coin assessment. The overview reconciles rated, not-rated and unavailable members, averaging only rated scores without inventing an aggregate grade. Retained editions seal public metadata and exact PNG bytes in strongly consistent permanent R2, never substitute a newer publication on read, and separate revalidatable HTML presentation from immutable image identity; [OG Images](https://github.com/TokenBrice/pharos-watch/blob/main/docs/og-images.md#dated-scorecards) owns sharing, quotas and retention.
+
 Graph/DDR/digest-detail/ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health; missing/invalid/mismatched cohorts fail closed with machine-readable reasons without full-card decoding.
 
 Portfolio dependency exposure is unavailable, not $0, when a basket link's share is unknown. Observed zero shares stay $0, and unknown-share links still count as routes.

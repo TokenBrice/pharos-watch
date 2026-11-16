@@ -19,17 +19,55 @@ const FundingChainSchema = z.enum(FUNDING_CHAIN_VALUES).refine(
 );
 
 const CostCategorySchema = z.enum(["team", "infra"]);
+const MonthKeySchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "month must be YYYY-MM");
+// Self-hosted square artwork only (docs/funding-page.md#data-model); never a remote URL.
+const MediaArtPathSchema = z.string().regex(/^\/media\/[a-z0-9-]+\.(svg|png|webp)$/, "must be a /media/ svg, png or webp path");
+
+const InKindSponsorSchema = z.object({
+  logo: MediaArtPathSchema,
+  url: z.string().regex(/^https:\/\/\S+$/, "sponsor url must be https"),
+  blurb: z.string().min(1),
+  announcement: z.string().regex(/^\/\S*$/, "announcement must be a site path").optional(),
+}).strict();
 
 const CostLineItemSchema = z.object({
   label: z.string().min(1),
   category: CostCategorySchema,
   usd_per_month: NonNegativeFiniteSchema,
   note: z.string().optional(),
+  /** Square vendor mark or team avatar, rendered in a circle beside the line. */
+  mark: MediaArtPathSchema.optional(),
+  /** In-kind sponsorship acknowledgment: a disclosure, never revenue or an imputed cost. */
+  sponsor: InKindSponsorSchema.optional(),
+}).strict().refine((item) => item.sponsor == null || item.usd_per_month === 0, {
+  message: "an in-kind sponsored line costs $0",
+  path: ["usd_per_month"],
+});
+
+/** The monthly cost published for a closed month, so its coverage keeps its own basis. */
+const MonthlyCostTotalSchema = z.object({
+  month: MonthKeySchema,
+  usd: NonNegativeFiniteSchema,
+}).strict();
+
+/** Exceptional one-time spend, disclosed outside the recurring total. */
+const OneTimeCostSchema = z.object({
+  label: z.string().min(1),
+  usd: NonNegativeFiniteSchema,
+  paid_by: z.enum(["founder"]),
 }).strict();
 
 export const CostsFileSchema = z.object({
   last_reviewed_at: UnixSecondsSchema,
   items: z.array(CostLineItemSchema),
+  monthly_totals: z.array(MonthlyCostTotalSchema).superRefine((rows, ctx) => {
+    rows.forEach((row, index) => {
+      if (index > 0 && row.month <= rows[index - 1].month) {
+        ctx.addIssue({ code: "custom", path: [index, "month"], message: "monthly_totals must be strictly ascending" });
+      }
+    });
+  }),
+  one_time: z.array(OneTimeCostSchema),
 }).strict();
 
 export const DonationSchema = z.object({
@@ -63,8 +101,8 @@ export const DonationsFileSchema = z.object({
 }).strict();
 
 export type FundingChain = z.infer<typeof FundingChainSchema>;
-export type CostCategory = z.infer<typeof CostCategorySchema>;
 export type CostLineItem = z.infer<typeof CostLineItemSchema>;
+export type CostsFile = z.infer<typeof CostsFileSchema>;
 export type DonationsFile = z.infer<typeof DonationsFileSchema>;
 
 /**

@@ -7,7 +7,7 @@ import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { BLOG_POSTS } from "@/data/blog";
 import { CASE_STUDY_EVENT_WINDOWS } from "@/lib/case-study-client-index";
 import { getIndexableChainIds } from "@/lib/chain-indexing";
-import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
+import { STATIC_COMPARE_PAIRS, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { INDEXABLE_DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "@/lib/peg-landing";
@@ -110,7 +110,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
     ...CASE_STUDY_EVENT_WINDOWS.map((study) => `/learn/case-studies/${study.slug}/`),
   ]),
   ...entries("blog", PUBLIC_ROUTE_FAMILY_PATHS.blogPosts),
-  ...entries("comparison", STATIC_COMPARISON_PAGES.map((page) => page.href)),
+  ...entries("comparison", STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => `/compare/${buildStaticComparisonSlug(leftId, rightId)}/`)),
   ...entries("digest", INDEXABLE_DIGEST_ENTRIES.map((digest) => `/digest/${digest.date}/`)),
   ...entries("depeg-event", INDEXABLE_DEPEG_EVENT_ENTRIES.map((event) => `/depeg/${event.slug}/`)),
   ...entries("docs", PUBLIC_DOCS.map((doc) => `/docs/${doc.slug}/`)),

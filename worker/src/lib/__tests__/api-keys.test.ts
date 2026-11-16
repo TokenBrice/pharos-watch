@@ -93,6 +93,13 @@ describe("api key helpers", () => {
         expiresAt: 1_800,
       },
     });
+    const cached = getApiKeyRuntimeSnapshotForTests();
+    const row = cached.apiKeyCache.get("0123456789abcdef")!.row;
+    row.is_active = 0;
+    row.expires_at = 1_600;
+    seedApiKeyRuntimeStateForTests(cached);
+    await expect(authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, undefined, 1_700))
+      .resolves.toMatchObject({ kind: "valid" });
   });
 
 
@@ -298,6 +305,26 @@ describe("api key helpers", () => {
 
     const response = await checkApiKeyRateLimit(db, 7, 3, 600);
     expect(response?.status).toBe(429);
+  });
+
+  it("memoizes only D1-confirmed over-quota buckets, allowing raised limits and new minutes", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    const statuses: number[] = [];
+    for (let i = 0; i < 20; i++) statuses.push((await checkApiKeyRateLimit(db, 7, 10, 600))?.status ?? 200);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(10);
+    expect(sqlite.prepare("SELECT count FROM api_key_rate_limit WHERE api_key_id = 7 AND bucket_start = 600").get()).toEqual({ count: 11 });
+    expect((await checkApiKeyRateLimit(db, 7, 10, 659))?.headers.get("Retry-After")).toBe("1");
+    expect(await checkApiKeyRateLimit(db, 7, 12, 659)).toBeNull();
+    expect(await checkApiKeyRateLimit(db, 8, 10, 600)).toBeNull();
+    expect(await checkApiKeyRateLimit(db, 7, 10, 660)).toBeNull();
+    const state = getApiKeyRuntimeSnapshotForTests();
+    state.apiKeyOverQuotaById.clear();
+    for (let i = 0; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES; i++) state.apiKeyOverQuotaById.set(i, { bucketStart: 600, count: 11 });
+    seedApiKeyRuntimeStateForTests(state);
+    expect((await checkApiKeyRateLimit(db, 5000, 0, 600))?.status).toBe(429);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyOverQuotaById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
+    expect(getApiKeyRuntimeSnapshotForTests().apiKeyOverQuotaById.has(0)).toBe(false);
+    sqlite.close();
   });
 
   it("hands each bucket's rate-limit prune to the request lifetime exactly once", async () => {

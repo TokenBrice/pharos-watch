@@ -1,0 +1,81 @@
+{
+  "id": "usdplus-streamflow",
+  "reserves": [
+    {
+      "name": "M0 M held in the Streamflow USD+ extension vault",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 permissioned issuers through the Streamflow USD+ extension",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "m0-solana-wrapper:m-vault"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Streamflow USD+ addition review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Streamflow pinned USD+ integration and M vault derivation",
+        "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+      },
+      {
+        "label": "Streamflow pinned USD+, M and wM identities",
+        "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/constants.rs"
+      },
+      {
+        "label": "Alchemy Solana Account Archive: exact accounts at finalized slot 469901684, block GxPPJSLigxokMCSpfJbZG8e3KT41mm5cUTPSUQK9GQYi, 2026-11-15T22:44:58Z",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Streamflow USD+ product disclosures",
+        "url": "https://usd-plus.com/learn-more"
+      }
+    ],
+    "rationale": "The immediate reserve relationship is M, not an independently measured Treasury portfolio or a wM reserve. Streamflow's integration derives an M vault under its USD+ extension. Exact-slot account bytes bind global DrmdLHLJYhmiiTJxgmsnDJbqEBurUmWpJPVT8HXq66Ru to USD+ usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia and legacy M mint mzerojk9tg56ebsrEAhfkyc9VgKjTW2zDqp6C5mhjzH. Its associated M vault 67GWo9en5KtPfeZn5LWrCyhL2w31rf1oqeCoszPUKsAs held 1452718753516 raw principal units at six decimals. The same-slot M scaled-UI multiplier was 1.100820601948, giving approximately 1599182.732707 indexed M units against 1599062.791523 minted USD+. This is a dated technical backing observation, not independent financial assurance, circulating supply or continuous reserve coverage. The single slice expresses the reviewed immediate M backing architecture; it is not a measured 100% Treasury allocation. Source/executable equivalence, alternate mint paths and the full upstream custody partition remain unresolved. The underlying legacy M mint differs from M's current catalog deployment and is retained here as exact reserve-read provenance, not an additional catalog deployment or a claim of migration completion.",
+    "compositionBasis": "Issuer integration architecture corroborated by exact-slot extension-global, M-vault, M scaled-UI mint and USD+ mint account reads",
+    "compositionAsOf": "2026-11-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Immediate reserve identity is M; upstream issuer allocation, custody providers, legal safeguards, full liability reconciliation and executable mint constraints are not established.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Streamflow USD+ extension and M0 infrastructure",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed upstream M0 issuer and collateral custodians",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Streamflow USD+ addition review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Streamflow USD+ product disclosures",
+        "url": "https://usd-plus.com/learn-more"
+      },
+      {
+        "label": "Streamflow USD+ issuer guide",
+        "url": "https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026"
+      }
+    ],
+    "uncertainty": "The issuer describes licensed custodians and M0 infrastructure without identifying the exact USD+ legal issuer, upstream collateral custodian/SPV allocation, provider shares or enforceable holder protections. On-chain vault custody does not establish whole-book institutional custody.",
+    "knownUnknownExposurePct": 100
+  }
+}

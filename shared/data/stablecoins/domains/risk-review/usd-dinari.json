@@ -1,0 +1,245 @@
+{
+  "id": "usd-dinari",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Dinari re-admission research",
+    "sources": [
+      {
+        "label": "Dinari current USD+ deployments and issuer minters",
+        "url": "https://docs.dinari.com/docs/usdplus-evm"
+      },
+      {
+        "label": "Dinari USD+ holder and redemption guide",
+        "url": "https://docs.dinari.com/docs/what-is-usd"
+      },
+      {
+        "label": "Ethereum pinned JSON-RPC evidence",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Arbitrum pinned JSON-RPC evidence",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned JSON-RPC evidence",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Plume pinned JSON-RPC evidence",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "Current token terms and holder restrictions",
+        "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+      }
+    ],
+    "evidence": "Arbitrum carries approximately 97.26% of the four positive pinned token supplies; Ethereum, Base and Plume are individually below ten percent. Every current token proxy is upgradeable and has a nonzero transferRestrictor and accessControl, both naming the shared dispatcher. A live EOA has role-zero administration and role-four upgrade authority on all four deployments; canCall for restrict(address) is also true. Current deployed token and restrictor source parity, holder-targeting enforcement and the complete active restrictor-role inventory remain unverified, so this review records the directly evidenced implementation-replacement exposure as Possible rather than upgrading old-version blacklist source into an active Yes verdict. No renunciation or absence of holder restrictions is asserted."
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USD+ distributes Treasury-linked returns through its token supply index. Current token version-five index/rate setters and their exact pricing authority are not source-verified; an observed index and a fixed-dollar redemption target do not prove external or independent valuation.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos Dinari re-admission research",
+      "rationale": "The issuer describes a Treasury-backed holder token with wallet-balance yield and direct issuer redemption. No USD+ borrower collateral or liquidation branches are identified. Pinned balancePerShare and publicVersion observations establish current index accounting, but the publicly available version-one rebasing source does not establish the deployed version-five rate-setter or external-price dependencies.",
+      "sources": [
+        {
+          "label": "Dinari current USD+ deployments and issuer minters",
+          "url": "https://docs.dinari.com/docs/usdplus-evm"
+        },
+        {
+          "label": "Dinari USD+ holder and redemption guide",
+          "url": "https://docs.dinari.com/docs/what-is-usd"
+        },
+        {
+          "label": "Ethereum pinned JSON-RPC evidence",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum pinned JSON-RPC evidence",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Base pinned JSON-RPC evidence",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Plume pinned JSON-RPC evidence",
+          "url": "https://rpc.plume.org"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Dinari re-admission research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Dinari current USD+ deployments and issuer minters",
+        "url": "https://docs.dinari.com/docs/usdplus-evm"
+      },
+      {
+        "label": "Dinari USD+ holder and redemption guide",
+        "url": "https://docs.dinari.com/docs/what-is-usd"
+      },
+      {
+        "label": "Ethereum pinned JSON-RPC evidence",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Arbitrum pinned JSON-RPC evidence",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned JSON-RPC evidence",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Plume pinned JSON-RPC evidence",
+        "url": "https://rpc.plume.org"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Four reviewed deployments support issuer-native minting through the documented Minter. The issuer app also offers bridging, but the exact transfer rail, liability netting and bridge-specific mint, upgrade, peer and validation controllers have not been verified. Native issuance observations do not certify absence of bridge exposure.",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Dinari re-admission research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Dinari current USD+ deployments and issuer minters",
+        "url": "https://docs.dinari.com/docs/usdplus-evm"
+      },
+      {
+        "label": "Dinari USD+ holder and redemption guide",
+        "url": "https://docs.dinari.com/docs/what-is-usd"
+      },
+      {
+        "label": "Issuer USD+ app and cross-chain interface",
+        "url": "https://usd.dinari.com/"
+      },
+      {
+        "label": "Ethereum pinned JSON-RPC evidence",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Arbitrum pinned JSON-RPC evidence",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Base pinned JSON-RPC evidence",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Plume pinned JSON-RPC evidence",
+        "url": "https://rpc.plume.org"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "protocol": "Dinari issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer explicitly lists its Minter on this chain and pinned token mintingMaxLimitOf/currentLimitOf calls both admit that Minter with uint256 maximum allowance. This establishes native issuer issuance. It does not certify a complete external-transfer or representation-rail census, liability netting, bridge controller, peer, validator, escrow or rate-limit inventory.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423677,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Ethereum pinned JSON-RPC evidence",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "protocol": "Dinari issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer explicitly lists its Minter on this chain and pinned token mintingMaxLimitOf/currentLimitOf calls both admit that Minter with uint256 maximum allowance. This establishes native issuer issuance. It does not certify a complete external-transfer or representation-rail census, liability netting, bridge controller, peer, validator, escrow or rate-limit inventory.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 524589895,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Arbitrum pinned JSON-RPC evidence",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "base:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "destinationChain": "base",
+        "contractAddress": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "protocol": "Dinari issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer explicitly lists its Minter on this chain and pinned token mintingMaxLimitOf/currentLimitOf calls both admit that Minter with uint256 maximum allowance. This establishes native issuer issuance. It does not certify a complete external-transfer or representation-rail census, liability netting, bridge controller, peer, validator, escrow or rate-limit inventory.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 57973583,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Base pinned JSON-RPC evidence",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "plume:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "destinationChain": "plume",
+        "contractAddress": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "protocol": "Dinari issuer-native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "native-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer explicitly lists its Minter on this chain and pinned token mintingMaxLimitOf/currentLimitOf calls both admit that Minter with uint256 maximum allowance. This establishes native issuer issuance. It does not certify a complete external-transfer or representation-rail census, liability netting, bridge controller, peer, validator, escrow or rate-limit inventory.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 106058067,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Plume pinned JSON-RPC evidence",
+            "url": "https://rpc.plume.org"
+          }
+        ]
+      }
+    ]
+  }
+}

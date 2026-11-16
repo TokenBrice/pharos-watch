@@ -63,8 +63,7 @@ describe("static content route adapters", () => {
     );
   });
 
-  it("uses the shared Learn card without changing article canonicals", async () => {
-    const image = { url: "/og-editorial-learn.png", width: 1200, height: 628 };
+  it("keeps article previews destination-specific without changing canonical identities", async () => {
     const routes = [
       ...CASE_STUDY_LIST.map(({ slug }) => ({
         canonical: `/learn/case-studies/${slug}/`,
@@ -78,9 +77,14 @@ describe("static content route adapters", () => {
     for (const route of routes) {
       const metadata = await route.metadata;
       expect(metadata.alternates?.canonical).toBe(route.canonical);
-      expect(metadata.openGraph?.images).toEqual([image]);
-      expect(metadata.twitter?.images).toEqual([image]);
+      expect(metadata.openGraph).toMatchObject({
+        images: [expect.objectContaining({ url: expect.stringMatching(/^\/og\/v2\//) })],
+      });
+      expect(metadata.twitter?.images).toEqual(metadata.openGraph?.images);
     }
+    const first = await routes[0].metadata;
+    const second = await routes[1].metadata;
+    expect(first.openGraph?.images).not.toEqual(second.openGraph?.images);
   });
 
   it("heads the mechanism matrix for its query while keeping its rows and caption registry-owned", () => {
@@ -103,8 +107,8 @@ describe("static content route adapters", () => {
     expect(html).toContain("NAV or par");
   });
 
-  it("uses the shared Learn image in case-study Article and hub ItemList JSON-LD", () => {
-    const image = `${SITE_ORIGIN}/og-editorial-learn.png`;
+  it("keeps article and hub structured images specific to their case study", () => {
+    const articleImages = new Map<string, string>();
     for (const study of CASE_STUDY_LIST) {
       const html = renderToStaticMarkup(<CaseStudyArticleJsonLd study={study} />);
       const article = JSON.parse(html.match(/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/s)![1]);
@@ -112,16 +116,18 @@ describe("static content route adapters", () => {
         "@type": "Article",
         url: `${SITE_ORIGIN}/learn/case-studies/${study.slug}/`,
         headline: study.title,
-        image,
       });
+      expect(article.image.startsWith(`${SITE_ORIGIN}/og/v2/`)).toBe(true);
+      articleImages.set(study.slug, article.image);
     }
     const html = renderToStaticMarkup(<CaseStudyListJsonLd studies={CASE_STUDY_LIST} />);
     const hub = JSON.parse(html.match(/<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/s)![1]);
     expect(hub.itemListElement).toEqual(CASE_STUDY_LIST.map((study, index) => expect.objectContaining({
       position: index + 1,
       url: `${SITE_ORIGIN}/learn/case-studies/${study.slug}/`,
-      item: expect.objectContaining({ "@type": "Article", name: study.title, image }),
+      item: expect.objectContaining({ "@type": "Article", name: study.title, image: articleImages.get(study.slug) }),
     })));
+    expect(articleImages.get(CASE_STUDY_LIST[0].slug)).not.toBe(articleImages.get(CASE_STUDY_LIST[1].slug));
   });
 
   it("returns route-specific missing metadata and rejects missing pages", async () => {

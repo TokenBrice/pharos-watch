@@ -38,6 +38,14 @@
     {
      "name": "SITE_API_SHARED_SECRET",
      "type": "secret_text"
+    },
+    {
+     "name": "SITE_SESSION_SIGNING_KEY",
+     "type": "secret_text"
+    },
+    {
+     "name": "TURNSTILE_SECRET_KEY",
+     "type": "secret_text"
     }
    ],
    "requiredD1Bindings": [
@@ -45,7 +53,10 @@
    ],
    "requiredKvBindings": [
     "SELECTOR_SNAPSHOTS"
-   ]
+   ],
+   "requiredR2Bindings": {
+    "SOCIAL_PREVIEWS": "pharos-social-previews"
+   }
   },
   "customDomains": [
    "ops.pharos.watch",

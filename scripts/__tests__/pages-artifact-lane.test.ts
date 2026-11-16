@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import type * as ChildProcess from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../ci/run-pages-artifact-lane.ts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
-import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
+import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, preparePagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -24,6 +24,7 @@ afterEach(() => { vi.unstubAllEnvs(); cleanup(); });
 const spawn = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async (importOriginal) => ({
   ...(await importOriginal<typeof ChildProcess>()),
+  execFileSync: vi.fn((await importOriginal<typeof ChildProcess>()).execFileSync),
   spawnSync: spawn,
 }));
 
@@ -235,16 +236,70 @@ describe("Pages artifact input profile", () => {
     expect(readFileSync(join(root, "public/llms.txt"), "utf8")).toBe("candidate llms\n");
   });
 
+  it.each([
+    { preexisting: true, gateFails: false }, { preexisting: true, gateFails: true },
+    { preexisting: false, gateFails: false }, { preexisting: false, gateFails: true },
+  ])("restores the entire owned preview directory with its map/signature ($preexisting, $gateFails)", async ({ preexisting, gateFails }) => {
+    const root = makeRoot();
+    dataFixture(root);
+    const map = "src/generated/social-preview-images.json";
+    const signature = "scripts/maintenance/state/social-preview-images.json";
+    write(root, "public/og/unowned.png", "unrelated asset");
+    if (preexisting) {
+      write(root, "public/og/v2/original.png", "original bytes");
+      write(root, map, "original map");
+      write(root, signature, "original signature");
+    }
+    const previewArtifact = GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "social-preview-images");
+    expect(previewArtifact?.outputPaths).toContain("public/og/v2");
+    spawn.mockImplementation((_program: string, args: string[]) => {
+      if (args.includes("generated:post-refresh")) {
+        write(root, "public/og/v2/original.png", "replayed bytes");
+        write(root, "public/og/v2/unpublished.png", "new replay-only image");
+        write(root, map, "replayed map");
+        write(root, signature, "replayed signature");
+      }
+      return { status: gateFails && args.includes("check:pages-release") ? 1 : 0, signal: null };
+    });
+    const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    if (gateFails) await expect(result).rejects.toThrow(/pages-release-artifact-gates/);
+    else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
+    if (preexisting) {
+      expect(readdirSync(join(root, "public/og/v2"))).toEqual(["original.png"]);
+      expect(readFileSync(join(root, "public/og/v2/original.png"), "utf8")).toBe("original bytes");
+      expect(readFileSync(join(root, map), "utf8")).toBe("original map");
+      expect(readFileSync(join(root, signature), "utf8")).toBe("original signature");
+    } else {
+      for (const path of ["public/og/v2", map, signature]) expect(existsSync(join(root, path))).toBe(false);
+    }
+    expect(readFileSync(join(root, "public/og/unowned.png"), "utf8")).toBe("unrelated asset");
+  });
+
   it("considers only unexpired identity-matched main artifacts, newest first", () => {
     const sha = "a".repeat(40);
-    const artifact = { id: 1, name: `pages-release-data-${sha}`, expired: false, created_at: "2026-10-07", workflow_run: { id: 10, head_branch: "main", head_sha: sha } };
+    const artifact = { id: 1, name: `pages-release-data-${sha}`, expired: false, created_at: "2026-10-07", workflow_run: { id: 10, head_branch: "main", head_sha: sha, head_repository_id: 100, repository_id: 100 } };
     expect(selectPagesReleaseArtifacts([
       artifact,
       { ...artifact, id: 2, created_at: "2026-10-08" },
       { ...artifact, id: 3, expired: true },
       { ...artifact, id: 4, name: "pages-release-data-other" },
       { ...artifact, id: 5, workflow_run: { ...artifact.workflow_run, head_branch: "candidate" } },
+      { ...artifact, id: 6, workflow_run: { ...artifact.workflow_run, head_repository_id: 200 } },
     ]).map((entry) => entry.id)).toEqual([2, 1]);
+    const gh = vi.mocked(execFileSync).mockClear();
+    for (const [event, repo, accepted] of [["pull_request", "TokenBrice/pharos-watch", false],
+      ["push", "fork/pharos-watch", false], ["push", undefined, false],
+      ...["push", "schedule", "workflow_dispatch"].map((event) => [event, "TokenBrice/pharos-watch", true])] as const) {
+      gh.mockReturnValueOnce(Buffer.from(JSON.stringify([{ artifacts: [artifact] }])))
+        .mockReturnValueOnce(Buffer.from(JSON.stringify({ conclusion: "success", head_branch: "main", head_sha: sha,
+          path: ".github/workflows/deploy-cloudflare.yml", event, head_repository: repo ? { full_name: repo } : undefined })));
+      if (accepted) {
+        gh.mockImplementationOnce(() => { throw new Error("pages-artifact-data-invalid: download reached"); });
+        expect(() => preparePagesReleaseData(makeRoot(), makeRoot())).toThrow("download reached");
+      } else expect(preparePagesReleaseData(makeRoot(), makeRoot()).dataStatus).toBe("degraded-data");
+      expect(gh).toHaveBeenCalledTimes(accepted ? 3 : 2);
+      gh.mockClear();
+    }
   });
 });
 

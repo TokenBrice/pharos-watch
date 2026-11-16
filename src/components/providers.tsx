@@ -30,6 +30,22 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
 };
 
 
+const SiteSession = process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
+  ? (() => {
+    // Inline only the tiny script starter; the manager and notice UI stay split.
+    const scriptModule = import(/* webpackMode: "eager" */ "@/lib/site-session-script");
+    const sessionModule = import("./site-session");
+    const SessionCheck = lazy(() => sessionModule.then((mod) => ({ default: mod.SiteSession })));
+    return function SessionLoader() {
+      useEffect(() => { void scriptModule.then((mod) => mod.preloadSiteSessionScript()); }, []);
+      return <>
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() && <link rel="preconnect" href="https://challenges.cloudflare.com" />}
+        <Suspense fallback={null}><SessionCheck /></Suspense>
+      </>;
+    };
+  })()
+  : null;
+
 const CommandPalette = lazy(() =>
   import("./command-palette/command-palette-root").then((mod) => ({ default: mod.CommandPalette })),
 );
@@ -192,6 +208,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SourceNavigationProvider>
           <GlobalSearchProvider>
+            {SiteSession && process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && (
+              <Suspense fallback={null}>
+                <SiteSession />
+              </Suspense>
+            )}
             {children}
             <Suspense fallback={null}>
               <RouteProviders />

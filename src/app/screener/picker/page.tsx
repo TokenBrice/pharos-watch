@@ -12,9 +12,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Picker: Match a Profile to a Shortlist",
     description,
-    ogImage: "/og-selector-default.png",
-    ogWidth: 1200,
-    ogHeight: 630,
     robots: {
       index: false,
       follow: true,

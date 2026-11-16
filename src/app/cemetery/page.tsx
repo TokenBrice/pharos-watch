@@ -39,8 +39,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: `Stablecoin Cemetery: ${CEMETERY_STATS.total} Documented Coin Deaths`,
   description: cemeteryMetadataDescription,
   canonical: "/cemetery/",
-  ogImage: `${SITE_URL}/og-cemetery.png`,
-  ogHeight: 630,
 });
 
 export default function CemeteryPage() {

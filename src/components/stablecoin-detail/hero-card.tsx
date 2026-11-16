@@ -258,7 +258,7 @@ export function HeroIdentityHeader({
             <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{header.benchmarkSymbol ? `vs ${header.benchmarkSymbol}` : "Compare"}</span>
           </IntentLink>
-          <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
+          <ShareButton stablecoinId={header.coinId} label="Share" />
           <button
             type="button"
             onClick={onOpenFeedback}

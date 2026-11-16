@@ -13,6 +13,7 @@
 // issuance config is ingested; an override now would exclude all tracked OUSD.
 const NON_ETHEREUM_CANONICAL_CHAIN_BY_STABLECOIN = new Map<string, string>([
   ["bd-basedollar", "base"],
+  ["copm-minteo", "polygon"],
   ["usdai-usd-ai", "arbitrum"],
 ]);
 

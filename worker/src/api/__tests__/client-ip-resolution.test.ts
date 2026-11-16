@@ -18,5 +18,6 @@ describe.each([
 
   it("does not let X-Forwarded-For override a present CF-Connecting-IP", () => {
     expect(resolve(make({ "CF-Connecting-IP": "203.0.113.10", "X-Forwarded-For": "1.1.1.1" }))).toBe("203.0.113.10");
+    expect(resolve(make({ "CF-Connecting-IP": "garbage", "X-Forwarded-For": "1.1.1.1" }))).toBe("unknown");
   });
 });

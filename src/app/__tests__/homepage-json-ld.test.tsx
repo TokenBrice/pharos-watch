@@ -9,10 +9,6 @@ vi.mock("@/lib/homepage-static-snapshot", () => ({ getHomepageHeroSnapshot: vi.f
 vi.mock("@/lib/homepage-evidence", () => ({
   HomepageEvidenceProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
-vi.mock("@/lib/page-metadata", () => ({
-  buildPageMetadata: () => ({}),
-  buildLiveRouteOgImageUrl: () => undefined,
-}));
 
 import HomePage from "@/app/page";
 

@@ -58,6 +58,22 @@ function reviewedOn(
  * retains the earlier adverse assessment, never proves that a route is absent.
  */
 export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedemptionCoverageDisposition[] = [
+  {
+    id: "usdplus-streamflow",
+    disposition: "needs-research",
+    reasonCode: "issuer-terms-missing",
+    blocker: "No verified direct issuer redemption eligibility, binding settlement deadline, minimum or fee schedule; the published M conversion lacks a complete reviewed deployed execution and capacity model.",
+    rationale: "Streamflow describes pool and third-party swaps. A pinned transaction proves an M deposit, USD+ mint and Meteora sale, while the exact extension vault is funded with M. These observations establish neither a direct fiat claim nor guaranteed same-notional holder redemption. The linked USD+-specific terms returned 404; that failed read does not prove no redemption right exists.",
+    evidenceNeeded: "Accessible token-specific legal terms and exact output/access evidence, complete deployed unwrap authorization and execution review, current capacity, all-in cost and maximum completion time.",
+    evidenceUrls: [
+      "https://usd-plus.com/learn-more",
+      "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs",
+      "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX",
+    ],
+    reviewer: "Pharos Streamflow USD+ addition review",
+    reviewedDate: "2026-11-15",
+    allowedRouteFamilyIfProven: null,
+  },
   reviewedOn("2026-10-07", {
     id: "usdx-axis",
     disposition: "defer",

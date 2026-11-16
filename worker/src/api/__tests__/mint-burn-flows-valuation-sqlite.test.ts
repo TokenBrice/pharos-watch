@@ -23,6 +23,7 @@ import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../..
 import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
+import { finalizeMintBurnFlowResponse } from "../../lib/mint-burn-flows-service";
 // Frozen at origin/main 49da34e78 so shallow CI clones and later releases retain this oracle.
 const prB = createRequire(import.meta.url)("./fixtures/pr-b-mint-burn-readers.cjs") as
   Pick<typeof FlowSchemas, "MintBurnFlowsResponseSchema" | "MintBurnPerCoinResponseSchema">
@@ -73,8 +74,51 @@ describe("mint/burn valuation completeness on real SQLite", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     fixtures.closeAll();
   });
+  it.each([["per-coin", 720, 0], ["aggregate", 720, 0], ["aggregate", 168, 1], ["per-coin", 24, 1]] as const)(
+    "bounds %s cache writes at hours=%s", async (scope, hours, expectedWrites) => {
+      const { db, sqlite } = await provenFixture();
+      sqlite.prepare("INSERT INTO cache VALUES ('stablecoins', ?, ?)").run(JSON.stringify({ peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 1_000_000 } },
+      ] }), NOW);
+      const realPrepare = db.prepare.bind(db);
+      let policyReads = 0;
+      const prepare = vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        const statement = realPrepare(sql);
+        if (hours === 720 && sql.startsWith("SELECT disabled_keys,")) {
+          const first = statement.first.bind(statement);
+          vi.spyOn(statement, "first").mockImplementation((...args) => ++policyReads === 1
+            ? Promise.reject(new Error("D1 DB is overloaded")) : first(...args));
+        }
+        return statement;
+      });
+      const writes = () => prepare.mock.calls.filter(([sql]) => sql.includes("INSERT INTO cache")).length;
+      const query = `?hours=${hours}${scope === "per-coin" ? "&stablecoin=usdt-tether" : ""}`;
+      expect((await flowResponse(db, query)).status).toBe(200);
+      expect(writes()).toBe(expectedWrites);
+      if (hours === 720) expect(policyReads).toBe(2);
+      if (scope === "per-coin" && hours === 24) {
+        vi.setSystemTime((NOW + 59) * 1000);
+        expect((await flowResponse(db, query)).status).toBe(200);
+        expect(writes()).toBe(1);
+        vi.setSystemTime((NOW + 60) * 1000);
+        expect((await flowResponse(db, query)).status).toBe(200);
+        expect(writes()).toBe(2);
+        const key = "mint-burn-flows:v8:coin:usdt-tether:24";
+        // Simulate a concurrent insert after the age read; SQL must still enforce the floor.
+        prepare.mockImplementation((sql) => {
+          const statement = realPrepare(sql);
+          if (sql === "SELECT value, updated_at FROM cache WHERE key = ?") statement.first = async () => null;
+          return statement;
+        });
+        expect((await finalizeMintBurnFlowResponse(db, key, NOW + 119, {}, { timestamp: NOW, status: "ok" }, "[]")).status).toBe(200);
+        expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(key))
+          .toEqual({ updated_at: NOW + 60 });
+      }
+    },
+  );
   it.each(["aggregate", "per-coin"] as const)("keeps %s data and newly committed scan proof in one snapshot", async (mode) => {
     const { db, sqlite } = await provenFixture();
     sqlite.exec("DELETE FROM mint_burn_scan_coverage");

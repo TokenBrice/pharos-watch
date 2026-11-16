@@ -38,7 +38,6 @@ const route = createStaticSlugRoute({
     title: study.metaTitle ?? study.title,
     description: study.metaDescription,
     canonical: `/learn/case-studies/${slug}/`,
-    ogImage: "/og-editorial-learn.png",
   }),
   missingMetadata: { title: "Not Found", robots: { index: false, follow: false } },
   render: renderCaseStudy,

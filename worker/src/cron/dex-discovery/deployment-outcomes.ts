@@ -1,4 +1,5 @@
 import {
+  DEX_DISCOVERY_EMPTY_CENSUS_GATES,
   DEX_DISCOVERY_PAGINATED_PROVIDERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
@@ -158,10 +159,19 @@ export function classifyDexDeploymentOutcomes(params: {
       .filter((check) => check.status === "degraded")
       .map((check) => deploymentKey(check.chain, check.address)),
   );
+  // A missing gate check is an open breaker or an unreached stage, not an empty venue.
+  const cleanGateChecks = new Set(
+    params.providerChecks
+      .filter((check) => check.status === "success" && DEX_DISCOVERY_EMPTY_CENSUS_GATES.has(check.provider))
+      .map((check) => `${check.provider}|${deploymentKey(check.chain, check.address)}`),
+  );
 
   return params.deployments.map((deployment) => {
     const providers = getDexDiscoveryProviders(deployment.chain, deployment.address);
     const key = deploymentKey(deployment.chain, deployment.address);
+    const exhaustiveSucceeded = exhaustiveSuccessfulChecks.has(key);
+    const gateOpen = providers.every((provider) =>
+      !DEX_DISCOVERY_EMPTY_CENSUS_GATES.has(provider) || cleanGateChecks.has(`${provider}|${key}`));
     const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const providerObservedPoolCount = params.providerChecks
       .filter((check) => check.status !== "failure" && deploymentKey(check.chain, check.address) === key)
@@ -170,8 +180,9 @@ export function classifyDexDeploymentOutcomes(params: {
     const attempt = resolveDexCensusAttempt({
       observedPoolCount,
       providerCount: providers.length,
-      exhaustiveSucceeded: exhaustiveSuccessfulChecks.has(key),
-      nonExhaustiveSucceededEmpty: nonExhaustiveSuccessfulEmptyChecks.has(key),
+      exhaustiveSucceeded: exhaustiveSucceeded && gateOpen,
+      // A completed census short of a gating venue is non-exhaustive, not empty.
+      nonExhaustiveSucceededEmpty: nonExhaustiveSuccessfulEmptyChecks.has(key) || exhaustiveSucceeded,
       providerDegraded: degradedChecks.has(key),
       providerFailed: failedChecks.has(key),
     });

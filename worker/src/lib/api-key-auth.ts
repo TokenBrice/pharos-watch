@@ -151,6 +151,14 @@ export async function authenticateApiKey(
   }
 
   try {
+    // Only reject secret mismatches from cache; eligibility still comes from D1.
+    const cached = getCachedApiKeyByPrefix(parsed.prefix);
+    if (cached && !(await timingSafeCompare(await hmacSha256Hex(effectivePepper, parsed.secret), cached.secret_hash))) {
+      const previous = pepperPrevious?.trim();
+      if (!previous || !(await timingSafeCompare(await hmacSha256Hex(previous, parsed.secret), cached.secret_hash))) {
+        return { kind: "invalid" };
+      }
+    }
     const row = await lookupApiKeyByPrefix(db, parsed.prefix);
     if (row && await hasSelfServeRevocation(db, row)) {
       clearApiKeyCache(parsed.prefix);

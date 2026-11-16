@@ -1,0 +1,19 @@
+{
+  "id": "usdau-allunity",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery prelaunch research",
+    "sources": [
+      {
+        "label": "AllUnity USDAU whitepaper v1.0",
+        "url": "https://framerusercontent.com/assets/sPpJ0HkkQ4ACpeSeqJbuGC433QQ.html"
+      },
+      {
+        "label": "AllUnity USDAU deployment list",
+        "url": "https://allunity.com/usdau"
+      }
+    ],
+    "evidence": "The USDAU whitepaper, section D.1 clauses 3(3)-(4), prohibits transfers to blacklisted addresses and reserves issuer transfer-blocking rights. Six live deployments were verified on 2026-11-15; Tempo alone had positive observed supply. Current implementation/controller reach for those powers has not been fully resolved across the deployments, so this is Possible rather than an asserted active Yes. No absence of holder controls is inferred."
+  }
+}

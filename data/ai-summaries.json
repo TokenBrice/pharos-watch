@@ -1,4 +1,12 @@
 {
+  "rcusd-r25": {
+    "title": "A fixed-dollar claim on an undisclosed reserve mix",
+    "text": "rcUSD is R25's fixed-dollar token on Sui, issued by RiftWriter Company Limited. Its purchase and redemption agreements set a $1 face value, while yield is attached to the separate rcUSDp staking receipt. R25 describes backing from tokenized money-market funds and stablecoins, but current fund identities, allocation weights and reserve custody remain unresolved. Pharos therefore retains an unresolved mechanism review rather than treating the portfolio description as a verified Treasury allocation. The purchase agreement states that tokens are not secured by the issuer's assets. Eligible holders can request USDC redemption after token delivery and satisfactory KYC, at the issuer-published USD/USDC exchange rate. Published terms leave executable capacity, total fees and completed-payout timing unquantified. A transferable on-chain balance therefore depends on a permissioned issuer obligation whose reserve coverage and settlement terms remain incomplete.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
   "gbpq-quantoz": {
     "title": "Deployed sterling token with no circulation",
     "text": "Quantoz Payments has deployed GBPQ on Ethereum and Stellar, but its token roster says no GBPQ is in circulation and no reserve exists yet. An Ethereum read on November 15 2026 returned six decimals and zero total supply, behind the same implementation, proxy admin and owner contracts as Quantoz's PLNQ. On Stellar, one account holds 1,000,000 GBPQ alongside about one million EURQ and one million USDQ, and the issuer account there can revoke trustline authorization and claw back balances. The white paper describes 1:1 sterling reserves held by Stichting Quantoz, a bankruptcy-remote foundation, with at least 30% in bank deposits, and par redemption for registered holders after compliance checks. Deployment and MiCA notification do not yet establish a circulating supply or an operating holder exit.",
@@ -72,12 +80,12 @@
     "factsAsOf": "2026-11-01"
   },
   "usdrf-realfi": {
-    "title": "RealFi's Tranched Credit Dollar on Cardano",
-    "text": "USDrf is RealFi's dollar token on Cardano, launched on mainnet on October 1 2026 alongside sUSDrf, its junior staked token. Supply was 5.40 million USDrf on November 1 2026. The backing is an off-chain book of Treasury bills, money market funds, floating-rate credit, CLO ETFs and private credit. RealFi publishes allocation ranges, which describe strategy rather than verified current holdings. Protocol first-loss reserves and sUSDrf absorb losses before USDrf does. Pharos classes that mechanism as a credit fund, which places USDrf among stable-value investments rather than in the core stablecoin totals. Direct minting and {{term:redemption}}redemption{{/term}} are limited to whitelisted institutions under an Institutional Minting Agreement, through a human-approved first-in, first-out queue with daily and monthly limits. RealFi's docs name TxPipe, Anastasia Labs and Halborn as auditors and HT Digital as reserve {{term:attestation}}attestation{{/term}} provider, but none of their reports had been published by November 1. CoinGecko began pricing it with a fresh market cap in November, but Pharos still tracks it pre-launch: DefiLlama's list scales its supply by a fill price shared across many assets, so no admitted supply lane exists yet. Holders outside the institutional whitelist have no direct redemption; they exit by selling on decentralized exchanges.",
-    "updatedAt": "2026-11-08",
+    "title": "RealFi's Credit Dollar, Issued on Signer Approval",
+    "text": "USDrf is RealFi's dollar token on Cardano, issued by RealFi Reserve Ltd. of the British Virgin Islands against an off-chain credit book of Treasury bills and money-market funds, emerging-market floating-rate bonds, CLO ETFs, private credit funds and direct loans. The published allocation ranges describe strategy, not holdings, and no reserve {{term:attestation}}attestation{{/term}} has appeared. Pharos classes the design as a credit fund, which places USDrf with stable-value investments outside the core stablecoin totals. An undisclosed first-loss reserve and sUSDrf, the junior staked tranche, absorb losses first. Every mint needs signatures from RealFi-operated key sets. A three-of-five role can mint without on-chain collateral, and a five-of-seven multisig can replace the mint logic with no delay. Deposited USDCx is swept to a RealFi multisig, so the chain records issuance but not the assets behind it. Only whitelisted institutions can redeem, through a queue with unpublished limits that RealFi can suspend, and other holders exit on Cardano decentralized exchanges. RealFi's terms reserve a right to freeze holders that the token cannot enforce on ordinary transfers. Until an attestation names holdings and custodians, the backing remains a stated strategy.",
+    "updatedAt": "2026-11-15",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-11-08"
+    "factsAsOf": "2026-11-15"
   },
   "swanusd-swan": {
     "title": "An anonymous wstETH CDP on Monolith",
@@ -4954,20 +4962,12 @@
     ]
   },
   "witry-brix": {
-    "title": "Wrapped Turkish Lira Yield",
-    "text": "wiTRY is Brix's ERC-4626 staking wrapper over iTRY, a {{term:yield-bearing}}yield-bearing{{/term}} claim that accrues fund yield against a token backed by shares of the Digital Liquidity Fund, a regulated basket of Turkish-lira money-market funds. The Ethereum wrapper can be verified on-chain, and Brix's Accountable dashboard publishes an assets-and-liabilities snapshot showing reserves matching iTRY and wiTRY supply. The snapshot omits the fund look-through: the underlying money-market funds, their weights, and their maturities stay undisclosed, so Pharos carries the whole reserve as one high-risk {{term:rwa}}RWA{{/term}} fund-share position. Exit runs through a cooldown unstake or a fee-bearing fast {{term:redemption}}redemption{{/term}} into iTRY, with final lira exposure inheriting the iTRY issuer and its Zodia Custody arrangement. Supply is now split almost evenly between Ethereum and MegaETH. Pharos rates wiTRY {{grade}}, with exit the weakest pillar: the track record is under six months, and no reviewed same-notional exit route exists across that multi-chain supply. The undisclosed fund look-through remains the durable constraint.",
-    "updatedAt": "2026-10-19",
+    "title": "Staked Turkish-lira fund exposure",
+    "text": "wiTRY is Brix's ERC-4626 staking share in iTRY. Fund-derived rewards increase the amount of iTRY represented by each share, so its value can rise against the fixed Turkish-lira parent. Pharos tracks that direct claim as a savings wrapper and counts the parent in monetary aggregates. The Ethereum reserve adapter reads the exact underlying iTRY asset; linking it to the parent exposes the issuer and fund risks through the dependency graph. Unstaking uses a cooldown or a fee-bearing fast {{term:redemption}}redemption{{/term}} route into iTRY, which still leaves the holder to complete an eligible issuer redemption or find a market counterparty. LayerZero representations add separate bridge controls beyond the canonical Ethereum vault. The parent holds DLF money-market-fund exposure with undisclosed constituent weights and maturity bounds. Wrapper accounting identifies the immediate claim, while final exit and recovery remain dependent on iTRY's issuer and reserve structure.",
+    "updatedAt": "2026-11-15",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
-    "claimTokens": [
-      {
-        "token": "grade",
-        "placeholder": "{{grade}}",
-        "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
-      }
-    ]
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
   },
   "srusd-reservoir": {
     "title": "Reservoir Savings Token",
@@ -6184,5 +6184,157 @@
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
     "factsAsOf": "2026-10-18"
+  },
+  "usd-dinari": {
+    "title": "Dinari USD+ is issued; Safety evidence remains incomplete",
+    "text": "Dinari announced USD+ availability on Ethereum mainnet on February 6, 2024. The current guide describes Treasury-backed daily rebasing and approved-account redemption into USDC, while the published terms still describe rewards through Staked USD+. Public treasury rosters identify eligible instruments without measured holdings or reconciliation to outstanding USD+, and no current independent reserve report has been verified. Pharos retains USD+ as launched, awaiting data. DefiLlama price and supply lanes pass, but active admission is blocked by the Safety Score new-asset evidence gate: 17 own open questions and an unresolved Mint Authority control inventory across Ethereum, Arbitrum, Base and Plume. Current deployed source and pinned evidence must establish mint, role, limit, rate and upgrade paths, including facets and bypasses. The remaining non-documentation questions and a passing admission receipt are also required before promotion; the listing review is due January 15, 2027.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
+  },
+  "eurpa-gr8-pay": {
+    "title": "GR8 Pay's unissued euro token",
+    "text": "GR8 Pay SIA proposes EUR.PA as a transferable euro e-money token with customer par redemption. The published white paper states that the token has not yet been issued, and no deployed contract or verified decimals are available. Its Latvian electronic money institution authorization and ESMA register entry establish the issuer framework. Customers must complete onboarding to issue or redeem directly. Other holders may transfer or trade the token once available, while exceptional non-customer redemption remains discretionary. The planned contract design includes address restrictions, freezing and global pauses. Safeguarded fiat and permitted liquid investments are the proposed backing, but a current reserve allocation is not established. An announced offer-start date does not demonstrate public issuance.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "plny-eurodollar": {
+    "title": "Eurodollar's unissued zloty token",
+    "text": "Eurodollar ApS proposes PLNY as a redeemable Polish zloty claim on Ethereum. The issuer has deployed the contract but states that no tokens have been issued. Its Danish electronic money institution authorization establishes the issuer framework; notification of a white paper does not establish a public launch. The proposed reserve model uses segregated customer funds, while token-specific reserve composition and independent reserve reports remain unpublished. The contract supports upgrades, transfer pauses and address blacklisting, but the current authority set has not been fully reviewed. Public issuance and a supported price and supply path are still required before Pharos can admit PLNY to live monitoring.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdpa-gr8-pay": {
+    "title": "GR8 Pay's unissued US dollar token",
+    "text": "GR8 Pay SIA proposes USD.PA as a transferable US dollar e-money token with customer par redemption. The published white paper states that the token has not yet been issued, and no deployed contract or verified decimals are available. Its Latvian electronic money institution authorization and ESMA register entry establish the issuer framework. Customers must complete onboarding to issue or redeem directly. Other holders may transfer or trade the token once available, while exceptional non-customer redemption remains discretionary. The planned contract design includes address restrictions, freezing and global pauses. Safeguarded fiat and permitted liquid investments are the proposed backing, but a current reserve allocation is not established. An announced offer-start date does not demonstrate public issuance.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdy-eurodollar": {
+    "title": "Eurodollar's unissued dollar token",
+    "text": "Eurodollar ApS proposes USDY as a redeemable US dollar claim on Ethereum. This is a separate instrument from Ondo's USDY and does not carry Ondo's yield claim. The issuer has deployed the contract but states that no tokens have been issued. Its Danish electronic money institution authorization establishes the issuer framework; notification of a white paper does not establish a public launch. The proposed reserve model uses segregated customer funds, while token-specific reserve composition and independent reserve reports remain unpublished. The contract supports upgrades, transfer pauses and address blacklisting, but the current authority set has not been fully reviewed. Public issuance and a supported price and supply path are still required before Pharos can admit USDY to live monitoring.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdau-allunity": {
+    "title": "AllUnity's dollar token awaits market data",
+    "text": "USDAU extends AllUnity's regulated e-money model to the US dollar. AllUnity announced public availability on six chains on September 30, 2026, with direct minting and redemption for onboarded institutional clients. Holders have a statutory par redemption right subject to identity, compliance and banking checks. The reserve model permits USD cash and eligible USD liquid assets in separate accounts at EU credit institutions. Banking Circle is named as a reserve-banking partner, but current allocations and USDAU-specific independent report coverage remain unverified. The issuer also reserves address-blocking powers, while the current control paths across the deployments need further review. Pharos retains USDAU as launched but outside live monitoring because neither a price lane nor an aggregate supply lane is admitted. A public deployment establishes identity; active tracking still requires usable market data.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eurdt-stabillon": {
+    "title": "StaBillon's euro issuance",
+    "text": "EURdt brings StaBillon's regulated e-money model to a euro token. Its whitepaper describes currency-matched reserves, segregated bank accounts and redemption at par, with account and identity checks before payout. That legal route depends on the issuer's banking and compliance process. It does not establish immediate market liquidity. StaBillon reports customer use since August 2026, and Ethereum issuance has been independently verified. Pharos keeps the token outside live monitoring because an admitted price and whole-asset supply path remain unavailable. Billon Unified Blockchain is another described issuance rail whose stock has not been reconciled with Ethereum. A current reserve allocation and the complete issuance ledger remain unresolved.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
+  "plndt-stabillon": {
+    "title": "StaBillon's zloty issuance",
+    "text": "PLNdt brings StaBillon's regulated e-money model to a Polish zloty token. Its whitepaper describes currency-matched reserves, segregated bank accounts and redemption at par, with account and identity checks before payout. That legal route depends on the issuer's banking and compliance process. It does not establish immediate market liquidity. StaBillon reports customer use since August 2026, and Ethereum issuance has been independently verified. Pharos keeps the token outside live monitoring because an admitted price and whole-asset supply path remain unavailable. Billon Unified Blockchain is another described issuance rail whose stock has not been reconciled with Ethereum. A current reserve allocation and the complete issuance ledger remain unresolved.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
+  "verusd-verona": {
+    "title": "Verona payments through a Brale dollar",
+    "text": "verUSD is Verona's proposed payment asset for AI agents, with issuance and reserve management provided by Brale. The announcement describes one-for-one dollar backing and redemption through the Verona program. It also describes native issuance across several chains, rather than a third-party wrapped token. Pharos retains an announced-phase record because an exact public deployment and positive token supply have not been independently verified. The issuer's launch language does not settle the holder scope: general transferability and an ordinary redemption claim beyond the payment program still need exact terms. An admitted price and supply path, together with those holder rights, are prerequisites for live tracking.",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "updatedAt": "2026-11-15",
+    "factsAsOf": "2026-11-15"
+  },
+  "copm-minteo": {
+    "title": "Minteo's Bank-Backed Colombian Peso",
+    "text": "COPM by Minteo is a Colombian-peso token backed by bank deposits, with issuer redemption aimed at businesses that pass manual compliance checks. Its practical exit depends on Minteo's onboarding and banking process: the public terms describe par conversion but do not establish a maximum payout time or an all-in cost ceiling. Monthly BDO reports provide independent limited assurance over historical bank balances and token liabilities across Polygon, Celo and Solana. They do not establish legal segregation, name the reserve banks or prove that cash is available when a holder wants to redeem. On-chain control remains with the issuer, including powers to mint, pause and freeze tokens; Solana also grants a permanent delegate. Transferable tokens therefore remain dependent on issuer-controlled fiat access and bank custody.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "usdplus-streamflow": {
+    "title": "Daily token yield on M0 infrastructure",
+    "text": "Streamflow USD+ is a dollar-pegged Solana token built on M0 infrastructure. Its holder return arrives as additional tokens distributed daily, so a stable market price does not measure the income holders receive. Streamflow describes Treasury-backed reserves, while its published integration routes USD+ through an M vault.\n\nThat technical relationship does not establish a complete deployed wrapper invariant or a direct legal claim on M0 collateral. Pharos therefore records the M0 infrastructure lineage without applying a parent variant relationship. Live tracking compares the local M vault with minted USD+ at one finalized Solana bank. The linked M0 dashboard concerns upstream reserves; independent financial reconciliation and the full custody-provider partition remain unverified.\n\nPublic pool swaps provide a market exit, with execution dependent on liquidity. Accessible issuer materials do not establish a direct fiat-redemption timetable, minimum or fee schedule. The durable constraint is the combination of local Solana controls, upstream collateral access and an issuer-distributed yield process whose current holder rate is not yet tracked.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "itry-brix": {
+    "title": "Fund-backed Turkish-lira token",
+    "text": "iTRY is Brix's fixed Turkish-lira token, backed by Digital Liquidity Fund tokens representing a basket of Turkish money-market funds. Ethereum transfers currently require whitelisted callers and counterparties, while the MegaETH representation has transfers enabled. Holding iTRY earns no automatic yield; the separate wiTRY staking share receives fund-derived rewards. Direct {{term:redemption}}redemption{{/term}} is restricted to onboarded, whitelisted customers and pays supported digital assets at a Turkish-lira notional value. The issuer can change payout assets and fees, and the reviewed terms establish no unconditional completion deadline. Accountable publishes aggregate assets and liabilities, while the underlying funds, their weights and maturities remain undisclosed. Zodia holds most onchain collateral, with a limited Fast Access Vault buffer, but those disclosures establish no complete executable exit capacity. The token terms give reserve ownership to the issuer and deny holders direct rights in those reserves. Access to a whitelisted issuer route and an opaque fund basket remain the central constraints.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "squsd-squads": {
+    "title": "Bridge-issued dollar with a delegated seizure power",
+    "text": "SQUSD is issued on Solana through Bridge, which publishes its supply and reserve categories. Its reserve total does not reconcile to the listed categories. The Treasury category includes money-market funds, leaving the underlying fund allocation and custody structure unresolved. Its Token-2022 mint retains a permanent delegate that can move or burn holder balances. New token accounts default to initialized and the transfer hook is unset. Pharos keeps SQUSD outside live monitoring because no admitted price lane is available. Published reserve totals do not establish an independently reconciled reserve book or a holder-specific redemption route.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eurod-oddo-bhf": {
+    "title": "Euro claim on ODDO’s bank balance sheet",
+    "text": "EUROD gives holders a euro claim on ODDO BHF SCA, a French credit institution. The white paper describes par redemption after eligibility and compliance checks. Backing consists of the bank's general balance sheet, and holders are unsecured creditors. This differs from a segregated electronic-money reserve. The token runs on Polygon with issuer-described freeze and forced-transfer powers. Pharos records public issuance but withholds live monitoring while no admitted price lane exists. Bank authorization does not establish a separately safeguarded token reserve or an executable market price.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eursm-stable-mint": {
+    "title": "Malta-issued euro with direct blacklist controls",
+    "text": "EURSM is Stable mint Ltd’s euro electronic-money token on Etherlink. Its published terms give holders par redemption after onboarding and compliance checks. The issuer describes cash and liquid financial backing, but current asset weights and an independently reconciled reserve report remain unavailable. A verified current blacklist role can block transfers involving selected holders. Pharos records the announced launch and positive on-chain issuance while keeping the asset outside live monitoring until an admitted price lane is available. The legal redemption claim depends on issuer access and the reserve evidence remains incomplete.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "eury-eurodollar": {
+    "title": "Danish euro token awaiting market data",
+    "text": "EURY is Eurodollar ApS’s euro electronic-money token on Ethereum. Issuer materials describe a par redemption claim and safeguarded reserve assets, and current issuance is visible on-chain. The asset’s published record supports an authorized Danish issuer, but does not disclose current reserve weights, named custody providers or an independent reconciliation. The white paper describes issuer freeze powers and the contract includes pause and blacklist checks. Pharos retains the issued token outside live monitoring because it has no admitted price lane. Public issuance and regulatory standing do not establish secondary-market liquidity.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "heur-heuro": {
+    "title": "French euro token with unresolved mainnet identity",
+    "text": "HEUR is HEURO SAS’s euro electronic-money token. Its white paper describes cash and liquid financial backing, public-chain transfers and par redemption after compliance checks. ESMA identifies the issuer under its OuiTrust commercial name. The issuer says HEUR is issued on Ethereum and Solana, but verified mainnet addresses and positive supply remain unavailable. Pharos therefore retains an announced record without a launch date. The reviewed contract design includes issuer controls; current mainnet authorities remain unresolved. Authorization and an issuance statement do not establish a verified circulating token or an admitted market-data lane.",
+    "updatedAt": "2026-11-15",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-15"
+  },
+  "sekau-allunity": {
+    "title": "Swedish krona issuance awaiting market data",
+    "text": "SEKAU gives holders a Swedish krona claim against AllUnity, with reserves held separately from the issuer's own funds. The white paper permits SEK cash and eligible liquid assets, but Pharos has not verified their current allocation or the scope of the reports linked by AllUnity's Trust Center. Institutional clients access primary minting, while the white paper permits third-party transfers and redemption subject to identity and compliance checks. It also reserves the issuer's right to block transfers involving blacklisted addresses. AllUnity announced the public-chain launch in June 2026, and a pinned Base read confirms positive token stock. Pharos still lacks an admitted price lane, whole-asset supply accounting and native SEK peg support. The launched, awaiting data listing preserves the distinction between verified issuance and a complete market-data view.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
+  },
+  "ronq-quantoz": {
+    "title": "Romanian leu token at the notification stage",
+    "text": "ESMA records a RONQ white paper notification for Quantoz Payments, the Dutch e-money issuer behind tracked Quantoz tokens. That token-specific regulatory entry supports a Romanian leu research stub, but it does not establish issuance or a launch date. The issuer's reviewed token and whitepaper pages provide no RONQ-specific deployment or terms. Pharos therefore carries no contract address, reserve allocation or redemption mechanics over from the issuer's other tokens. Price and supply remain unavailable, and the RON peg is recorded as OTHER pending native currency support. A dated notification is the starting point for the profile; public issuance and exact-product evidence are still needed to advance it.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
   }
 }

@@ -42,6 +42,7 @@ const TEST_FILE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".ts
  * silently narrow this table.
  */
 const LOCAL_ALIASES: readonly (readonly [string, string])[] = [
+  ["server-only", "node_modules/next/dist/compiled/server-only/empty.js"],
   ["@shared/data/stablecoins/coins.worker-full.generated.json", "shared/data/stablecoins/coins.worker-full.generated.json"],
   ["@", "src"],
   ["@shared", "shared"],

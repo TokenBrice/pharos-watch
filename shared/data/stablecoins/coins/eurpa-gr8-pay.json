@@ -1,0 +1,41 @@
+{
+  "id": "eurpa-gr8-pay",
+  "name": "GR8 Pay EUR PARITY",
+  "symbol": "EUR.PA",
+  "oneLiner": "EUR.PA is GR8 Pay SIA's proposed euro e-money token, with customer par redemption and public Ethereum transfers planned.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized"
+  },
+  "collateral": "The white paper proposes EUR-denominated backing in segregated safeguarding accounts at regulated credit institutions and permitted liquid investments in separate custody accounts. No current allocation percentages, named reserve banks or independent reserve report are established for this unissued token.",
+  "pegMechanism": "EUR.PA is designed as a 1:1 euro e-money token. Direct issuance and par redemption require GR8 Pay customer onboarding and compliance checks. The white paper permits other holders to buy, sell, hold and transfer on Ethereum or through crypto-asset service providers. Exceptional direct redemption for non-customers is discretionary. No deployed token identity or public issuance has been verified.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gr8.money/"
+    },
+    {
+      "label": "White paper",
+      "url": "https://gr8.money/eur.pa/wp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Latvia",
+    "regulator": "Latvijas Banka",
+    "license": "Electronic money institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-04-21",
+  "launchPhaseDetail": "The white paper published on 21 April 2026 states that GR8 Pay SIA has not yet issued EUR.PA. Ethereum ERC-20 issuance is planned, with no published contract address or verified decimals. The offer-start date in the paper does not establish an actual launch.",
+  "milestones": [
+    {
+      "date": "2026-04-21",
+      "type": "announcement",
+      "title": "GR8 Pay publishes EUR.PA white paper",
+      "description": "The issuer describes a proposed euro token and explicitly states that it has not yet been issued. No actual launch date or deployed contract is established.",
+      "sourceUrl": "https://gr8.money/eur.pa/wp"
+    }
+  ]
+}

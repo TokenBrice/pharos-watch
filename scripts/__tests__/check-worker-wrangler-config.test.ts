@@ -9,7 +9,7 @@ name = "stablecoin-api"
 main = "src/index.ts"
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
+preview_urls = false
 minify = true
 keep_names = true
 upload_source_maps = true
@@ -63,6 +63,20 @@ PROJECT_TAPE_PLACED_EXECUTOR = "on"
 WORKER_RESERVE_QUEUE_MODE = "on"
 WORKER_SLOT_CATCH_UP_MODE = "on"
 
+[[ratelimits]]
+name = "SITE_SESSION_RATE_LIMIT"
+namespace_id = "2026111502"
+[ratelimits.simple]
+limit = 300
+period = 60
+
+[[ratelimits]]
+name = "SITE_SOURCE_RATE_LIMIT"
+namespace_id = "2026111503"
+[ratelimits.simple]
+limit = 1200
+period = 60
+
 [[rules]]
 type = "Data"
 globs = ["**/*.ttf"]
@@ -80,6 +94,21 @@ fallthrough = true
 `;
 
 describe("check-worker-wrangler-config", () => {
+  it.each(["SITE_SESSION_RATE_LIMIT", "SITE_SOURCE_RATE_LIMIT"])("guards %s budgets and namespace isolation", (name) => {
+    const block = [...VALID_CONFIG.matchAll(/\[\[ratelimits\]\]\nname = "([^"]+)"[\s\S]*?(?=\n\[\[|$)/g)].find((match) => match[1] === name)![0];
+    for (const mutation of ["", block + "\n" + block, block.replace(/limit = \d+/, "limit = 1"),
+      block.replace("period = 60", "period = 10"), block.replace(/namespace_id = "\d+"/, 'namespace_id = ""'),
+      block.replace(/namespace_id = "\d+"/, `namespace_id = "${name === "SITE_SESSION_RATE_LIMIT" ? "2026111503" : "2026111502"}"`)]) {
+      expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(block, mutation)).issues.some((issue) => issue.includes(name))).toBe(true);
+    }
+  });
+  it.each(["public", "heavy"] as const)("rejects enabled or omitted previews on %s", (workerRole) => {
+    const toml = workerRole === "public" ? VALID_CONFIG : readFileSync("worker/wrangler.heavy.toml", "utf8");
+    for (const replacement of ["preview_urls = true", ""]) {
+      expect(evaluateWorkerWranglerConfig(toml.replace("preview_urls = false", replacement), { workerRole }).issues)
+        .toContain(`${workerRole} [root].preview_urls must be false.`);
+    }
+  });
   it("bounds public Queue consumption and permits mode-only rollback", () => {
     expect(evaluateWorkerWranglerConfig(VALID_CONFIG.replace(
       'WORKER_RESERVE_QUEUE_MODE = "on"', 'WORKER_RESERVE_QUEUE_MODE = "off"',

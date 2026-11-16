@@ -14,6 +14,7 @@ const ETHEREUM = requireChainConfig("ethereum");
 const ARBITRUM = requireChainConfig("arbitrum");
 const BASE = requireChainConfig("base");
 const TRON = requireChainConfig("tron");
+const POLYGON = requireChainConfig("polygon");
 
 // USDT custom issuance events on Ethereum and Tron.
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
@@ -223,6 +224,17 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     startBlock: 25_590_451,
     tier: "extended",
     startBlockSource: "ethereum-creation-receipt-0x2eef66c3a1df6f83f1230fc67074103675653df308a0437439fb36b5344bc0a1-reviewed-2026-10-15",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
+    chain: ETHEREUM,
+    stablecoinId: "itry-brix",
+    contractSource: "primary",
+    dustThreshold: 10_000,
+    startBlock: 24_637_760,
+    tier: "extended",
+    startBlockSource: "ethereum-creation-receipt-0x53179a8beec0f2c914984fe2a8d551d9f4eda068d72bd686ee2876d8bdce1296-reviewed-2026-11-15",
     startBlockConfidence: "high",
     events: transferMintBurn(),
   },
@@ -555,6 +567,19 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     startBlock: 48_631_941,
     tier: "extended",
     startBlockSource: "alchemy-base-code-deployment-2026-07-14-reviewed-2026-09-30",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+
+  // COPM native issuance. Archive code reads are empty at block 47,747,144
+  // and nonempty at 47,747,145; the factory receipt matches that deployment.
+  {
+    chain: POLYGON,
+    stablecoinId: "copm-minteo",
+    dustThreshold: 10_000,
+    startBlock: 47_747_145,
+    tier: "extended",
+    startBlockSource: "alchemy-polygon-code-deployment-2023-09-19-reviewed-2026-11-15",
     startBlockConfidence: "high",
     events: transferMintBurn(),
   },

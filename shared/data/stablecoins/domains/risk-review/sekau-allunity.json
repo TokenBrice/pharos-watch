@@ -1,0 +1,23 @@
+{
+  "id": "sekau-allunity",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "SEKAU white paper v1.1, D.1 clause 3: transfers and blocking",
+        "url": "https://framerusercontent.com/assets/2VnP2rqYKZjO2MgwW9LLu64QSI.html"
+      },
+      {
+        "label": "AllUnity SEKAU supported deployments",
+        "url": "https://allunity.com/sekau"
+      },
+      {
+        "label": "Pinned Base implementation and token-stock reads",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "evidence": "Provisional pre-launch review. The exact SEKAU white paper reserves issuer blocking of transfers to or from blacklisted addresses and forfeiture of associated rights in specified legal circumstances. At Base block 57973837 (2026-11-15T23:25:43Z), the token reported 11.23 SEKAU, six decimals and EIP-1967 implementation 0xe63b14d2a8f5aa23355dcaf33016098af2f6eb1c. Ethereum and Polygon stock were zero at their separately pinned reads. Whole-asset materiality remains unavailable: Tempo and Arc reads failed, and the issuer's Solana link resolves to an executable program rather than a token mint. Missing deployment shares are treated as material, not as zero. Possible records documented holder-facing restrictions pending current implementation-code and non-renounced role closure; no verified active holder-targeting operator or complete multi-chain control verdict is claimed. No parent exposure is inherited.",
+    "reviewer": "Pharos discovery research",
+    "reviewedAt": "2026-11-16"
+  }
+}

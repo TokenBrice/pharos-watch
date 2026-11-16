@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "itry-brix",
+  "captureId": "report-cards:v9:v1:af4320e3bf52f223e461b71bdd7628b06db9a5482992fdfca1a81c2cd05df995+admit:batch-5b257706f6",
+  "captureClockSec": 1794784639,
+  "registryFingerprint": "83bfdaf5ea36d92aef444a9553fcdbf74e73f09d16933dbd74c77d3782289985",
+  "card": {
+    "id": "itry-brix",
+    "openBucketQuestionsCarried": 4,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 5,
+    "documentationObligationsCarried": 5,
+    "issuerNondisclosureReviewedAtSec": 1794783239
+  },
+  "questions": [
+    {
+      "questionKey": "itry-brix|component|deployment-controls",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|component|exit-routes",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-runtime-route-evidence",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|component|peg",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-peg-input",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|control|authored:itry-brix|ethereum:0xb492b4afd9658093694cf9452d5c272e8230f3b0|ethereum-oft-adapter-safe",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "selected-bridge-route-unresolved",
+          "obligations": 1,
+          "documentation": false
+        },
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|component|mechanism-review:durationAndLiquidity",
+      "bucket": "issuer",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "bounded-mechanism-review",
+          "obligations": 1,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|reserve-exposure|reserve:8b5f5caa8977bbe45f8110ed",
+      "bucket": "issuer",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "material-reserve-slice-unstructured",
+          "obligations": 2,
+          "documentation": false
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|component|economic-control:mint",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "missing-mint-authority",
+          "obligations": 2,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|component|implementation-date",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [
+        {
+          "code": "missing-implementation-date",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    },
+    {
+      "questionKey": "itry-brix|control|authored:itry-brix|megaeth:0x996ce957408804fec19237d866799d9c7076e48c|*",
+      "bucket": "documentation",
+      "inherited": false,
+      "obligations": 2,
+      "codes": [
+        {
+          "code": "scoped-control-question",
+          "obligations": 1,
+          "documentation": true
+        },
+        {
+          "code": "unresolved-control-identity",
+          "obligations": 1,
+          "documentation": true
+        }
+      ]
+    }
+  ]
+}

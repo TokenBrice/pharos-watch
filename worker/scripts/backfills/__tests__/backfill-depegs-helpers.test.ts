@@ -16,6 +16,9 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createDeferredPromise } from "../../../src/lib/__tests__/deferred.test-support";
 
+// Monday 1970-01-05: 1 January and weekends close FX and metal markets, whose readings are held.
+const OPEN = 4 * 24 * 3_600;
+
 const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   vi.useRealTimers();
@@ -111,14 +114,14 @@ describe("parseSupplyData", () => {
     ["peggedEUR", 900_000, 1.2, true],
     ["peggedGOLD", 500, 3_000, true],
   ] as const)("uses USD-converted %s supply for the event floor", (pegType, native, rate, expectedEvent) => {
-    const tokens = [{ date: "1000", circulating: { [pegType]: native } }];
+    const tokens = [{ date: String(OPEN + 1_000), circulating: { [pegType]: native } }];
     const converted = parseSupplyData(tokens, () => rate);
     expect(converted[0].supply).toBeCloseTo(native * rate);
     const events = extractDepegEvents(
       [
-        { timestamp: 1_000, price: rate * 0.98 },
-        { timestamp: 2_000, price: rate * 0.97 },
-        { timestamp: 3_000, price: rate },
+        { timestamp: OPEN + 1_000, price: rate * 0.98 },
+        { timestamp: OPEN + 2_000, price: rate * 0.97 },
+        { timestamp: OPEN + 3_000, price: rate },
       ],
       () => rate,
       pegType,
@@ -207,7 +210,7 @@ describe("buildFxLookup", () => {
 
 describe("fetchHistoricalSecondaryFxRates", () => {
   it.each([[false, false], [true, false], [false, true], [true, true]])(
-    "merges overlapping year writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
+    "merges overlapping month writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
       const { db, sqlite } = fxFixtures.open();
       vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-06-16T00:00:00Z"));
       vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -234,7 +237,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
       release.resolve();
       const series = await late;
-      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
       expect(JSON.parse(cache.value)).toEqual({
         ...seed, "2025-06-14": { ...(seed["2025-06-14"] ?? {}), ...(!unavailable ? { cnh: 7.2 } : {}), kes: 129 },
         "2025-06-15": {},
@@ -261,7 +264,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     const timestamp = Date.parse("2025-06-14T00:00:00Z") / 1000;
     expect(second.KES).toEqual([{ timestamp, rate: 1 / 129 }]);
-    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2, kes: 129 } });
     expect(buildFxLookup(second.KES, 1 / 150)(timestamp)).toBe(1 / 129);
   });
@@ -277,7 +280,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "KES"], "2025-06-14", "2025-06-14");
     expect(series.CNH).toHaveLength(1);
     expect(series.KES).toEqual([]);
-    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2 } });
   });
 
@@ -292,7 +295,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: JSON.stringify({
@@ -324,7 +327,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: cachedValue,
@@ -360,7 +363,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -386,7 +388,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -409,7 +410,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const firstDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -432,7 +432,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const secondDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -465,7 +464,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const firstDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -481,7 +479,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const secondDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: cachedValue as string,
@@ -502,7 +500,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -528,7 +525,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -570,7 +566,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -714,13 +709,13 @@ describe("extractDepegEvents", () => {
     const day = 24 * 3_600;
     const events = extractDepegEvents(
       [
-        { timestamp: 1_000, price: 1.02 },
-        { timestamp: 1_000 + day, price: 1.03 },
-        { timestamp: 1_000 + 2 * day, price: 1.0 },
+        { timestamp: OPEN + 1_000, price: 1.02 },
+        { timestamp: OPEN + 1_000 + day, price: 1.03 },
+        { timestamp: OPEN + 1_000 + 2 * day, price: 1.0 },
       ],
       () => 1,
       "peggedEUR",
-      [{ ts: 1_000, supply: 50_000_000 }],
+      [{ ts: OPEN + 1_000, supply: 50_000_000 }],
       { peggedEUR: 1.08 },
       undefined,
       {
@@ -733,8 +728,8 @@ describe("extractDepegEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       direction: "above",
-      startedAt: 1_000,
-      endedAt: 1_000 + 2 * day,
+      startedAt: OPEN + 1_000,
+      endedAt: OPEN + 1_000 + 2 * day,
       peakPrice: 1.03,
     });
   });
@@ -742,12 +737,12 @@ describe("extractDepegEvents", () => {
   it("keeps extreme single-point native-peg crashes even when confirmation is otherwise required", () => {
     const events = extractDepegEvents(
       [
-        { timestamp: 1_000, price: 0.3 },
-        { timestamp: 2_000, price: 1.0 },
+        { timestamp: OPEN + 1_000, price: 0.3 },
+        { timestamp: OPEN + 2_000, price: 1.0 },
       ],
       () => 1,
       "peggedBRL",
-      [{ ts: 1_000, supply: 50_000_000 }],
+      [{ ts: OPEN + 1_000, supply: 50_000_000 }],
       { peggedBRL: 0.19 },
       undefined,
       {
@@ -761,8 +756,8 @@ describe("extractDepegEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       direction: "below",
-      startedAt: 1_000,
-      endedAt: 2_000,
+      startedAt: OPEN + 1_000,
+      endedAt: OPEN + 2_000,
       startPrice: 0.3,
       recoveryPrice: 1.0,
     });
@@ -771,12 +766,12 @@ describe("extractDepegEvents", () => {
   it("accepts fractional commodity prices when commodityOunces scales the peg", () => {
     const events = extractDepegEvents(
       [
-        { timestamp: 1_000, price: 5.15 },
-        { timestamp: 2_000, price: 2.9 },
+        { timestamp: OPEN + 1_000, price: 5.15 },
+        { timestamp: OPEN + 2_000, price: 2.9 },
       ],
       () => 2.9,
       "peggedGOLD",
-      [{ ts: 1_000, supply: 2_000_000 }],
+      [{ ts: OPEN + 1_000, supply: 2_000_000 }],
       { peggedGOLD: 2_915 },
       { commodityOunces: 0.001 },
     );
@@ -784,8 +779,8 @@ describe("extractDepegEvents", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       direction: "above",
-      startedAt: 1_000,
-      endedAt: 2_000,
+      startedAt: OPEN + 1_000,
+      endedAt: OPEN + 2_000,
       startPrice: 5.15,
       recoveryPrice: 2.9,
     });
@@ -815,20 +810,20 @@ describe("extractDepegEvents", () => {
   it("preserves low-nominal FX downside moves when validated against the historical peg reference", () => {
     const events = extractDepegEvents(
       [
-        { timestamp: 1_000, price: 0.0005 },
-        { timestamp: 2_000, price: 0.0067 },
+        { timestamp: OPEN + 1_000, price: 0.0005 },
+        { timestamp: OPEN + 2_000, price: 0.0067 },
       ],
       () => 0.0067,
       "peggedJPY",
-      [{ ts: 1_000, supply: 2_000_000 }],
+      [{ ts: OPEN + 1_000, supply: 2_000_000 }],
       { peggedJPY: 0.0067 },
     );
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       direction: "below",
-      startedAt: 1_000,
-      endedAt: 2_000,
+      startedAt: OPEN + 1_000,
+      endedAt: OPEN + 2_000,
       startPrice: 0.0005,
       recoveryPrice: 0.0067,
     });

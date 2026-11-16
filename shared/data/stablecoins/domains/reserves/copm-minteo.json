@@ -1,0 +1,66 @@
+{
+  "id": "copm-minteo",
+  "reserves": [
+    {
+      "name": "COP cash in Minteo bank accounts",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed banks holding accounts in Minteo's name",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos COPM addition review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BDO COPM limited-assurance report as of August 31 2026, signed October 19",
+        "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+      },
+      {
+        "label": "Minteo reserve-management policy, reviewed November 15 2026",
+        "url": "https://transparency.minteo.com/reserves"
+      }
+    ],
+    "rationale": "The latest report linked by the issuer on November 15 covers August 31 2026. Its management schedule reports COP 7,057,743,676.39 entirely as cash in bank accounts, with zero in the separate cash-equivalents and short-term-deposits category, against 6,768,005,179.37 COPM. BDO AUDIT S.A.S. BIC performed an ISAE 3000 limited-assurance engagement, comparing bank statements with the management schedule and token circulation on Polygon, Solana and Celo. Management signed October 6; BDO signed October 19. The bank-deposit category therefore represents 100% of the reported reserve book at that checkpoint, without implying current balances, named institutions, withdrawal terms, legal segregation or a financial-statement audit. The legacy low risk tier describes nominal fiat bank deposits; unknown bank credit, concentration and legal safeguards remain explicit in the structured fields.",
+    "compositionBasis": "BDO-reviewed August 31 2026 management reserve schedule: COP 7,057,743,676.39 in bank accounts divided by the same total reserves",
+    "compositionAsOf": "2026-08-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reported asset category is bank deposits; bank identities, institution weights, withdrawal terms, account jurisdiction, segregation, bankruptcy remoteness and rehypothecation restrictions are undisclosed. No unidentified asset-class residual is reported.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "COP cash in Minteo bank accounts",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Colombian-peso bank deposits are external reserve assets rather than tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed banks holding accounts in Minteo's name",
+        "role": "bank",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos COPM addition review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BDO COPM limited-assurance report as of August 31 2026, signed October 19",
+        "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+      }
+    ],
+    "uncertainty": "BDO verifies bank-account balances in Minteo's name, but neither the report nor the reserve policy identifies the banks, allocates institution shares or establishes account-level segregation, holder priority, bankruptcy protection, rehypothecation restrictions or contractual withdrawal timing."
+  }
+}

@@ -37,7 +37,7 @@ interface OpenApiRoute {
 }
 
 const SUPPLEMENTAL_NOTES = {
-  "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
+  "donor-key-claim": "Issues or extends one supporter API key, valid for days of access bought by donations, to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
   "telegram-mini-app-session": "Creates or refreshes a Telegram Mini App session after Telegram init-data validation.",
   "telegram-mini-app-mutation": "Applies an authenticated Telegram Mini App preference mutation.",
@@ -275,11 +275,13 @@ function renderSupplementalRoute(definition: EndpointDefinition): string {
 function renderOgRoute(): string {
   return [
     "### `GET /api/og/*`", "",
-    "Dynamic social-card PNGs, omitted from OpenAPI. Unavailable inputs stay unavailable; labels keep source time; freshness headers name budget and generation ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)). `/api/og/page/:slug` serves a stamped route figure, or the route's timeless card (`200`, `X-Og-Reason`) when its source is missing, stale, held or failing.", "",
-    "- **Path:** `/api/og/*`",
+    "PNG image APIs, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage. Legacy and `/api/og/v2/*` Worker paths remain available for explicitly dated numerical images ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).", "",
+    "Displayed observations are admitted against their own source clocks and budgets; expiry during rendering fails closed, and cache lifetime cannot outlive the earliest displayed source. Safety imagery rechecks the exact accepted publication identity and health after rendering. Chain cards label observed subtotals and withhold incomplete shares; Safety overviews account separately for unavailable members. `/api/og/page/:slug` may return its figure-free timeless card with `X-Og-Reason` when live evidence is unavailable.", "",
+    "`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.", "",
+    "- **Path:** `/api/og/*` and `/api/og/v2/*`",
     "- **Parameters:** Route-specific path segments select the supported image family.",
     "- **Success response schema:** PNG image bytes; not represented by a JSON component schema.",
-    "- **Policy:** API-key authentication exempt; route-specific response caching.",
+    "- **Policy:** API-key authentication exempt; unavailable on the site-data lane; source-bounded response caching.",
   ].join("\n");
 }
 export function renderGeneratedBlock(spec: OpenApiSpec): string {

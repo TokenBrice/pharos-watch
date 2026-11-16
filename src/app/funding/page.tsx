@@ -1,15 +1,13 @@
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
-  FundingKpiRow,
+  FundingHero,
   CostBreakdown,
   DonorList,
   SupportCtas,
-  YearEndHorizon,
   FundingFaq,
 } from "@/components/funding/funding-page-sections";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { computeCostsTotal, computeMonthlyHistory, summarizeDonations } from "@shared/lib/funding/helpers";
+import { buildMonthlyFunding, computeCostsTotal, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import { CostsFileSchema, DonationsFileSchema } from "@shared/lib/funding/schema";
@@ -19,20 +17,20 @@ export const metadata = buildPageMetadata({
   description:
     "See Pharos running costs, on-chain donations, monthly funding progress, donor ledger, and the path to keeping stablecoin risk analytics freely accessible.",
   canonical: "/funding/",
-  ogImage: `${SITE_URL}/og-funding.png`,
 });
 
-// Build-time timestamp anchors "this month" for the KPI split. Static export
-// means this reflects the last deploy, not the visitor's clock. Monthly
-// boundaries can be up to ~7 days stale (funding-update skill cadence).
+// Build-time timestamp anchors "this month". Static export means this reflects
+// the last deploy, not the visitor's clock; the hero names the ledger date.
 const BUILD_TIMESTAMP_SEC = Math.floor(Date.now() / 1000);
 
 export default function FundingPage() {
   const costs = CostsFileSchema.parse(costsData);
   const donations = DonationsFileSchema.parse(donationsData);
   const summary = summarizeDonations(donations.donations, BUILD_TIMESTAMP_SEC);
-  const monthlyHistory = computeMonthlyHistory(donations.donations, BUILD_TIMESTAMP_SEC);
-  const monthlyTargetUsd = computeCostsTotal(costs.items);
+  const months = buildMonthlyFunding(donations.donations, costs, BUILD_TIMESTAMP_SEC);
+  const founderOneTimeUsd = costs.one_time
+    .filter((cost) => cost.paid_by === "founder")
+    .reduce((sum, cost) => sum + cost.usd, 0);
 
   return (
     <FeaturePageShell
@@ -44,21 +42,16 @@ export default function FundingPage() {
       ]}
     >
       <div className="space-y-8">
-        <FundingKpiRow
+        <FundingHero
           summary={summary}
-          monthlyTargetUsd={monthlyTargetUsd}
-          monthlyHistory={monthlyHistory}
+          months={months}
+          monthlyCostUsd={computeCostsTotal(costs.items)}
+          founderUsd={summary.lifetimeFounderUsd + founderOneTimeUsd}
+          ledgerUpdatedAt={donations.last_updated_at}
         />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <CostBreakdown
-            items={costs.items}
-            currentCommunityUsd={summary.currentMonthCommunityUsd}
-            lastReviewedAt={costs.last_reviewed_at}
-          />
-          <DonorList donations={donations.donations} lastUpdatedAt={donations.last_updated_at} />
-        </div>
-        <YearEndHorizon />
+        <CostBreakdown items={costs.items} oneTime={costs.one_time} lastReviewedAt={costs.last_reviewed_at} />
         <SupportCtas />
+        <DonorList donations={donations.donations} lastUpdatedAt={donations.last_updated_at} />
         <FundingFaq />
       </div>
     </FeaturePageShell>

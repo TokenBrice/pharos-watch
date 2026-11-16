@@ -1,0 +1,126 @@
+{
+  "id": "itry-brix",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unknown",
+    "confidence": "verified",
+    "headline": "Brix\u2019s multisig can authorize uncapped issuance; public reserve reporting does not constrain the token\u2019s mint function.",
+    "summary": "At Ethereum block 26423424 (2026-11-15T22:33:59Z), the iTRY default administrator is a three-of-five Safe. The current iTryIssuer holds the mint role, but the administrator can authorize another minter without a collateral or numerical cap. The ordinary issuer path transfers DLF collateral before minting and maintains an internal issuance ledger; that path does not constrain an administrator-selected replacement minter. Whole-liability independent reconciliation and prudential issuer supervision remain unverified.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+      ],
+      "proxyAddresses": [
+        "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+      ],
+      "implementationAddresses": [
+        "0x0679eaa2443e5fea70eea7ac9508fd357406fdad"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "iTRY canonical token implementation",
+      "observedAt": "2026-11-15",
+      "observedBlock": 26423424,
+      "sources": [
+        {
+          "label": "Verified iTRY implementation and access control",
+          "url": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code"
+        },
+        {
+          "label": "iTRY ERC1967 proxy source",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "Ethereum pinned block 26423424",
+          "url": "https://etherscan.io/block/26423424"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "iTRY native token administrator",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
+        "deploymentRefs": [
+          "ethereum:0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+        ],
+        "threshold": 3,
+        "signerCount": 5,
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423424,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
+            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
+            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
+            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
+            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedAt": "2026-11-15",
+          "observedBlock": 26423424,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Verified iTRY implementation and access control",
+            "url": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code"
+          },
+          {
+            "label": "iTRY ERC1967 proxy source",
+            "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+          },
+          {
+            "label": "Ethereum pinned block 26423424",
+            "url": "https://etherscan.io/block/26423424"
+          },
+          {
+            "label": "iTRY owner Safe",
+            "url": "https://etherscan.io/address/0xbdb430adf64ff1c8201c10221ddb846fa62613b6#code"
+          }
+        ],
+        "evidence": "Pinned owner() returned the Safe and hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true. The current issuer 0x9a40dce442013e6664c308016206da4ba2a9e824 has MINTER_CONTRACT=true; the Safe itself has MINTER_CONTRACT=false. iTry.addMinter and grantRole allow the administrator to add a chosen mint-capable address; iTry.mint(address,uint256) performs _mint without a collateral check or supply ceiling. getThreshold=3 and getOwners=5; modules pagination terminated at the sentinel with no modules, the guard slot was zero, VERSION=1.4.1 and the standard fallback-handler slot was populated. Signer independence, key custody and exhaustive current minter membership were not established."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "disposition": "scoreable",
+      "evidence": "The block hash is 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, timestamp 2026-11-15T22:33:59Z; matching before/after headers bind every admitted read. Verified ERC1967Proxy exposes only fallback/receive delegation; its current iTry implementation exposes no upgrade selector, arbitrary delegatecall or implementation-slot setter, so the former wiTRY parent-upgrade claim is not repeated. The observed iTryIssuer ledger is 105526364.307175497186410053 iTRY while canonical totalSupply is 105526365.307175497186410053 iTRY; this is a disclosed internal workflow, not independent whole-liability reconciliation. Bridge representation controls remain in Bridge Risk.",
+      "reviewer": "Pharos Brix control review",
+      "reviewedAt": "2026-11-15",
+      "sources": [
+        {
+          "label": "Verified iTRY implementation and access control",
+          "url": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code"
+        },
+        {
+          "label": "iTRY ERC1967 proxy source",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "Ethereum pinned block 26423424",
+          "url": "https://etherscan.io/block/26423424"
+        },
+        {
+          "label": "iTRY owner Safe",
+          "url": "https://etherscan.io/address/0xbdb430adf64ff1c8201c10221ddb846fa62613b6#code"
+        },
+        {
+          "label": "Current iTRY issuer contract and internal ledger",
+          "url": "https://etherscan.io/address/0x9a40dce442013e6664c308016206da4ba2a9e824#code"
+        }
+      ]
+    }
+  }
+}

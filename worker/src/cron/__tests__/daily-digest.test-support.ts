@@ -42,8 +42,8 @@ export const ANTHROPIC_OK_TEXT = JSON.stringify({
 export function mockDailyDigestRegistryModule() {
   type Contract = readonly [string, string, number];
   const toContract = ([chain, address, decimals]: Contract) => ({ chain, address, decimals });
-  const asset = (id: string, symbol: string, contracts: Contract[], tradedContracts?: Contract[]) => ({
-    id, symbol, flags: { yieldBearing: false }, contracts: contracts.map(toContract),
+  const asset = (id: string, symbol: string, contracts: Contract[], tradedContracts?: Contract[], pegCurrency?: string) => ({
+    id, symbol, flags: { yieldBearing: false, ...(pegCurrency ? { pegCurrency } : {}) }, contracts: contracts.map(toContract),
     ...(tradedContracts ? { tradedContracts: tradedContracts.map(toContract) } : {}),
   });
   const stablecoins = [
@@ -58,7 +58,7 @@ export function mockDailyDigestRegistryModule() {
       ["base", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 6], ["optimism", "0x0b2c639c533813f4aa9d7837caf62653d097ff85", 6],
       ["polygon", "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", 6], ["avalanche", "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", 6],
     ]),
-    asset("paxg-paxos", "PAXG", [["ethereum", "0x45804880De22913dAFE09f4980848ECE6EcbAf78", 18]]),
+    asset("paxg-paxos", "PAXG", [["ethereum", "0x45804880De22913dAFE09f4980848ECE6EcbAf78", 18]], undefined, "GOLD"),
     asset("xaut-tether", "XAUT", [["ethereum", "0x68749665FF8D2d112Fa859AA293F07A622782F38", 6]]),
   ];
   // The digest's core aggregate universe is deliberately narrower than the
@@ -201,10 +201,7 @@ export function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfi
       rows: [],
       first: {
         value: JSON.stringify({
-          updatedAt: computedAt,
-          source: "compute-dews",
-          publishStatus: "published",
-          coverageVersion: 2,
+          updatedAt: computedAt, source: "compute-dews", publishStatus: "published", coverageVersion: 2,
           expectedRowCount: dewsRows.length,
           stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
         }),
@@ -322,12 +319,8 @@ function makeDailyDigestTables(): MockTableConfig[] {
       match: "FROM depeg_events e LEFT JOIN depeg_event_provenance",
       rows: [
         {
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          direction: "below",
-          peak_deviation_bps: 150,
-          peg_reference: 1,
-          started_at: nowSec - 3600,
+          stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: 150,
+          peg_reference: 1, started_at: nowSec - 3600,
         },
       ],
     },
@@ -438,14 +431,9 @@ export function currentPegObservation(
   overrides: Partial<CurrentPegObservation> = {},
 ): CurrentPegObservation {
   return {
-    currentDeviationBps: null,
-    currentSignal: null,
-    primaryTrust: "unusable",
-    dexPriceCheck: null,
+    currentDeviationBps: null, currentSignal: null, primaryTrust: "unusable", dexPriceCheck: null,
     pegReference: valueUsd == null ? null : { valueUsd, source: "median", contributorCount: 1, asOf: 0 },
-    pegReferenceUnavailable: false,
-    currentPriceUnavailable: false,
-    currentSupplyUnavailable: false,
+    pegReferenceUnavailable: false, currentPriceUnavailable: false, currentSupplyUnavailable: false,
     ...overrides,
   };
 }
@@ -492,12 +480,8 @@ export const BASE_SAFETY_CONTEXT = {
   status: "available" as const,
   expectedModel: "v9" as const,
   identity: {
-    model: "v9" as const,
-    schemaVersion: 1 as const,
-    methodologyVersion: "9.0",
-    policyId: "safety-score-v9",
-    policyDigest: "a".repeat(64),
-    evaluationBuildDigest: "b".repeat(64),
+    model: "v9" as const, schemaVersion: 1 as const, methodologyVersion: "9.0",
+    policyId: "safety-score-v9", policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64),
     baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}` as const,
     publicationGenerationId: "report-cards:v9:test",
   },
@@ -526,11 +510,7 @@ export function withClauseDash(raw: string): string {
 
 export function makeDigestRow(nowSec: number, daysAgo: number, psiScore: number, band: string, mcap: number, gaugeScore?: number) {
   const input = {
-    totalMcapUsd: mcap,
-    mcap7dDelta: 0,
-    activeDepegCount: 0,
-    topDepegs: [],
-    biggestSupplyChange: null,
+    totalMcapUsd: mcap, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [], biggestSupplyChange: null,
     stabilityIndex: { score: psiScore, band, components: { severity: 0, breadth: 0, trend: 0 } },
     yesterdayIndex: null,
     ...(gaugeScore == null ? {} : { mintBurnFlows: { gaugeScore, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] } }),
@@ -563,11 +543,7 @@ export function makeRefusalResponse(): Response {
 }
 
 export const VALID_CAPTURE_MAP_SUMMARY = {
-  date: "2026-08-30",
-  asOfSec: 1_788_000_000,
-  methodologyVersion: "v9.4",
-  gradedCount: 10,
-  notRatedCount: 2,
+  date: "2026-08-30", asOfSec: 1_788_000_000, methodologyVersion: "v9.4", gradedCount: 10, notRatedCount: 2,
   totalMcapUsd: 100_000_000_000,
   floorMcapByTier: { a: 1_000_000, other: 100_000 },
   tiers: [

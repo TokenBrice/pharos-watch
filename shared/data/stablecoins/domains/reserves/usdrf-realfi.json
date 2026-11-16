@@ -1,0 +1,72 @@
+{
+  "id": "usdrf-realfi",
+  "reserves": [
+    {
+      "name": "RealFi Reserve portfolio: T-bill and MMF buffer, floating-rate bonds, CLO ETFs and private credit (weights undisclosed)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "U.S. Treasury and tokenized government money market fund issuers, emerging-market floating-rate corporate bond issuers, SEC-registered CLO ETFs, private credit fund managers and direct borrowers selected by RealFi's Portfolio Manager",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "market",
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Claude USDrf promotion 2026-11-15",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RealFi docs: Real-world backing (sleeves, ranges and indicative-strategy footnote)",
+        "url": "https://docs.realfi.co/real-world-backing/real-world-backing"
+      },
+      {
+        "label": "RealFi docs: USDrf (base stablecoin), 1:1 reserve portfolio and liquidity buffer",
+        "url": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin"
+      },
+      {
+        "label": "RealFi docs: How the returns reach the user (10% buffer minimum and 7-day redemption coverage target)",
+        "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+      },
+      {
+        "label": "RealFi docs: Multi-layered defence (weighted-average-life cap and jurisdiction limits)",
+        "url": "https://docs.realfi.co/glass-box-approach/multi-layered-defence"
+      },
+      {
+        "label": "RealFi docs: sUSDrf (first-loss reserve and junior tranche loss order)",
+        "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf"
+      },
+      {
+        "label": "RealFi docs: Reserve Attestation (HT Digital named; no report published on 2026-11-15)",
+        "url": "https://docs.realfi.co/resources/reserve-attestation"
+      },
+      {
+        "label": "RealFi transparency portal (redirected to a geo-restriction page on 2026-11-15; contents not inspected)",
+        "url": "https://realfi.co/transparency"
+      }
+    ],
+    "rationale": "RealFi's docs, reopened 2026-11-15, describe one reserve book backing USDrf 1:1. It comprises a buffer of U.S. Treasury bills and tokenized government money market funds stated at 10-20% of TVL with a 10% minimum, emerging-market floating-rate corporate bonds at 15-25% with a 10% floor, SEC-registered investment-grade CLO ETFs, private credit funds, and direct six- to 24-month loans to businesses in digital lending, asset finance, payments and renewable energy. The backing page says the disclosed composition is indicative of the strategy at launch and not a fixed allocation, and its bond-sleeve text repeats the liquidity-buffer description, so the published ranges are internally inconsistent. RealFi names HT Digital as attestation provider, but the attestation page still says documentation will follow, and the transparency portal redirected to a geo-restriction page from the review location. No dated holdings, sleeve weights, instruments, custodians or matched liability denominator are established. The book is modeled as one full-envelope basket with basket-needs-split; no weight is invented and no range or policy floor is used as a slice weight. The first-loss reserve, of undisclosed size and composition, and the subordinated USDrf held in the sUSDrf vault absorb losses before other USDrf holders; neither is broken out as a reserve slice.",
+    "compositionBasis": "Issuer-documented allocation strategy and indicative ranges; no dated holdings, sleeve weights or attestation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current holdings, sleeve weights, instruments, obligors, custodians, valuations and a matched liability denominator are undisclosed. The 10-20% buffer, 15-25% bond range, 10% floors, 1.25-year weighted-average-life cap and jurisdiction caps are policy statements, not measured allocation, and the first-loss reserve size is unpublished. No attestation, audit report or accessible transparency feed was available on 2026-11-15.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "RealFi Reserve portfolio: T-bill and MMF buffer, floating-rate bonds, CLO ETFs and private credit (weights undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "RealFi publishes strategy sleeves and partial policy ranges but no current sleeve weights, holdings or tokenized-fund identities, so no constituent split or tracked-asset link is asserted."
+      }
+    ]
+  }
+}

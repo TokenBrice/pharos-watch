@@ -1,0 +1,23 @@
+{
+  "id": "plndt-stabillon",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "StaBillon European EMT whitepaper: holder controls and governed updates",
+        "url": "https://stabillon.com/wp-content/uploads/2025/10/ENG-White-Paper-Stabillon.pdf"
+      },
+      {
+        "label": "Verified Ethereum Diamond source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xecb1212b0567a87da0451fcdc7eeda9259f90985"
+      },
+      {
+        "label": "Pinned Ethereum Diamond owner and facet reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "evidence": "Reviewed Ethereum at block 26423509 (2026-11-15T22:50:59Z), hash 0x116599bdb2dac3f224fef09da448201a7c1da40df98440f04e6c13c350dedba1. The verified StabillonCoin Diamond source identifies StaBillon and has mutable EIP-2535 facet routing; owner() returns the token itself and facetAddresses() returns installed facets. The issuer whitepaper describes governed updates and pre-transfer blacklists and freeze periods. Possible records this holder-facing upgrade surface; an active holder-targeting role is not independently verified, so Yes is not asserted. Ethereum token stock is positive, but its share of whole-asset liabilities is unknown because Billon Unified Blockchain supply is unverified; both deployments are treated as material pending reconciliation. No parent is declared. Currency-matched custodial reserves are described, but measured reserve composition is unavailable and does not establish an additional upstream verdict. Billon chain controls and the live governance/freeze-role membership remain unresolved.",
+    "reviewer": "Pharos pre-launch research",
+    "reviewedAt": "2026-11-15"
+  }
+}

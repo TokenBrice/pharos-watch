@@ -36,6 +36,9 @@ export type ScheduledEnv = Pick<Env, "DB" | "CF_VERSION_METADATA"> &
     | "DONOR_KEY_CLAIM_RATE_LIMIT"
     | "SAFETY_GRADES_RATE_LIMIT"
     | "FEEDBACK_PREAUTH_RATE_LIMIT"
+    | "API_KEY_LOOKUP_RATE_LIMIT"
+    | "SITE_SESSION_RATE_LIMIT"
+    | "SITE_SOURCE_RATE_LIMIT"
   >>;
 
 export type HeavyEnv = Omit<ScheduledEnv, "M0_API_KEY"> & {
@@ -47,6 +50,7 @@ export interface WorkerEnvIssue {
     | "ops-access-partial-config"
     | "d1-status-partial-config"
     | "site-api-secret-misconfigured"
+    | "site-session-signing-key-missing"
     | "feedback-env-misconfigured"
     | "public-api-auth-pepper-missing"
     | "api-key-pepper-noop-rotation"
@@ -176,6 +180,7 @@ export function validateWorkerEnvContract(
     | "CF_ACCESS_OPS_API_AUD"
     | "CF_ACCESS_TEAM_DOMAIN"
     | "SITE_API_SHARED_SECRET"
+    | "SITE_SESSION_SIGNING_KEY"
     | "API_KEY_HASH_PEPPER"
     | "API_KEY_HASH_PEPPER_PREVIOUS"
     | "GITHUB_PAT"
@@ -217,6 +222,13 @@ export function validateWorkerEnvContract(
       code: "site-api-secret-misconfigured",
       message:
         "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
+    });
+  }
+
+  if (!hasConfiguredValue(env.SITE_SESSION_SIGNING_KEY)) {
+    issues.push({
+      code: "site-session-signing-key-missing",
+      message: "SITE_SESSION_SIGNING_KEY must be configured; the site-session gate observes key-missing or fails closed with 503 under enforce.",
     });
   }
 

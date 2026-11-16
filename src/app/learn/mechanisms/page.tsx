@@ -11,7 +11,6 @@ import {
 } from "@shared/lib/classification";
 import { countActiveByArchetype, getCoinsByLifecycleStatus } from "@shared/lib/stablecoins/by-mechanism";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -55,7 +54,6 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Learn how every stablecoin mechanism holds its peg: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, tokenized credit funds, and commodity claims.",
   canonical: "/learn/mechanisms/",
-  ogImage: `${SITE_URL}/og-editorial-learn.png`,
 });
 
 // Non-frost sequence tones for the archetype segments (frost stays the

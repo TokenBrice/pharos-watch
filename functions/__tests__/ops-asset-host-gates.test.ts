@@ -63,6 +63,8 @@ describe("ops asset host gates", () => {
         .map((directive) => directive.trim())
         .find((directive) => directive.startsWith("script-src")) ?? "";
       expect(scriptSrc).toContain("script-src 'self' 'nonce-");
+      expect(scriptSrc).toContain("https://challenges.cloudflare.com");
+      expect(response.headers.get("Content-Security-Policy")).toContain("frame-src https://challenges.cloudflare.com;");
       expect(response.headers.get("Content-Length")).toBeNull();
       expect(response.headers.get("Content-Encoding")).toBeNull();
       expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");

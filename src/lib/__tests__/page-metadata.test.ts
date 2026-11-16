@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
-import { formatUtcDayLabel } from "@shared/lib/format";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
-import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import {
   buildPageMetadata,
   buildStablecoinDetailMetadata,
@@ -11,7 +9,6 @@ import {
   getLatestDatedMilestoneDate,
   hasVolatileAmount,
 } from "@/lib/page-metadata";
-import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
 import { formatFuzzyDate } from "@/lib/pre-launch";
 
@@ -28,7 +25,7 @@ function descriptionOf(coin: StablecoinMeta): string {
 }
 
 function testCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
-  return makeStablecoinMeta({ symbol: "TSTX", name: "Test Dollar", ...overrides });
+  return makeStablecoinMeta({ id: CONTROL_ID, symbol: "TSTX", name: "Test Dollar", ...overrides });
 }
 
 describe("composeDescription", () => {
@@ -113,30 +110,10 @@ describe("active profile titles", () => {
 });
 
 describe("active profile descriptions", () => {
-  it("leads with the dated scores-latest grade, then the curated oneLiner", () => {
-    const assessment = getSnapshotSafetyAssessment(TREATMENT_ID);
-    expect(assessment).not.toBeNull();
-    const date = formatUtcDayLabel(new Date(`${PUBLIC_DATASET_CURRENT_DATE}T00:00:00Z`));
-    const description = descriptionOf(testCoin({
-      id: TREATMENT_ID,
-      oneLiner: "TSTX is Acme's {{term:attestation}}attested{{/term}} dollar stablecoin.",
-    }));
-    expect(description.startsWith(`Safety Score ${assessment!.grade} (${date}). TSTX is Acme's attested dollar stablecoin.`))
-      .toBe(true);
-  });
 
-  it("uses the oneLiner alone without a grade and replaces a volatile oneLiner with the fixed sentence", () => {
-    expect(descriptionOf(testCoin({ oneLiner: "TSTX is Acme's dollar stablecoin." })))
-      .toBe("TSTX is Acme's dollar stablecoin.");
+  it("withholds volatile market-amount claims from profile descriptions", () => {
     const volatile = descriptionOf(testCoin({ oneLiner: "TSTX is live with ~HK$527k circulating." }));
-    expect(volatile).toBe("Test Dollar (TSTX) is a centralized stablecoin backed by real-world assets, pegged to US Dollar.");
-  });
-
-  it("fixes the NAV-token fallback grammar", () => {
-    const nav = testCoin({ flags: { ...testCoin().flags, navToken: true }, brand: "Acme" });
-    expect(descriptionOf(nav)).toBe(
-      "Test Dollar (TSTX) is Acme's centralized yield-bearing token backed by real-world assets, with US Dollar-denominated NAV.",
-    );
+    expect(volatile).not.toMatch(/HK\$527k|\blive\b/i);
   });
 });
 
@@ -261,6 +238,7 @@ describe("tracked profile metadata invariants", () => {
       expect(description.length, coin.id).toBeLessThanOrEqual(180);
       expect(description, coin.id).not.toMatch(/Live peg score| on \d+ chains/);
       expect(title, coin.id).not.toMatch(/Safety Score [A-F]/);
+      expect(description, coin.id).not.toMatch(/Safety Score [A-F][+-]?(?:\s|[.(])/);
       if (coin.status !== "frozen") expect(title.length, coin.id).toBeLessThanOrEqual(51);
     }
   });
@@ -268,8 +246,41 @@ describe("tracked profile metadata invariants", () => {
 
 describe("buildPageMetadata", () => {
   it.each(["website", "article"] as const)("emits the shared site identity for %s pages", (ogType) => {
-    const metadata = buildPageMetadata({ title: "T", description: "D", canonical: "/x/", ogType });
+    const metadata = buildPageMetadata({ title: "T", description: "D", canonical: "/about/", ogType });
     expect(metadata.openGraph).toMatchObject({ siteName: "Pharos Watch", locale: "en_US", type: ogType });
     expect(metadata.twitter).toMatchObject({ site: "@PharosWatch", creator: "@TokenBrice" });
+  });
+
+  it("rejects a missing public destination instead of sharing the homepage", () => {
+    expect(() => buildPageMetadata({
+      title: "New profile", description: "A public profile.", canonical: "/stablecoin/unmapped-profile/",
+    })).toThrow("Missing social preview");
+  });
+
+  it("keeps generic social copy explicit for nonpublic routes", () => {
+    const metadata = buildPageMetadata({
+      title: "Private workspace", description: "Private operational details.", canonical: "/admin/",
+      robots: { index: false, follow: false },
+    });
+    expect(metadata.title).toBe("Private workspace");
+    expect(metadata.openGraph).not.toMatchObject({ title: expect.stringContaining("Private") });
+    expect(metadata.openGraph).not.toMatchObject({ description: expect.stringContaining("operational") });
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+
+  it("keeps canonical social claims evergreen and destination-specific while preserving SEO copy", () => {
+    const home = buildPageMetadata({
+      title: "Track 999 stablecoins", description: "999 coins currently tracked.", canonical: "/",
+    });
+    expect(home.title).toBe("Track 999 stablecoins");
+    expect(home.description).toBe("999 coins currently tracked.");
+    expect(home.openGraph).not.toMatchObject({ title: expect.stringContaining("999") });
+    expect(home.openGraph).not.toMatchObject({ description: expect.stringContaining("999") });
+    const usdc = buildStablecoinDetailMetadata(TRACKED_META_BY_ID.get("usdc-circle")!);
+    const lusd = buildStablecoinDetailMetadata(TRACKED_META_BY_ID.get("lusd-liquity")!);
+    expect(usdc.openGraph?.images).not.toEqual(lusd.openGraph?.images);
+    expect(usdc.openGraph).toMatchObject({
+      images: [expect.objectContaining({ url: expect.stringMatching(/^\/og\/v2\//), alt: expect.stringContaining("USDC") })],
+    });
   });
 });

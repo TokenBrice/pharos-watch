@@ -8,6 +8,12 @@ function points(prices: readonly number[]): PricePoint[] {
   return prices.map((price, index) => ({ timestamp: 1_000 + index * 3_600, price }));
 }
 
+// Friday 21:00 UTC with FX closed, then Wednesday 21:00 UTC with FX trading.
+it.each([[1_794_603_600, 0], [1_794_430_800, 1]])("holds sub-severe EUR readings while FX is closed (%s)", (start, expected) => {
+  const series = [1.12, 1.12, 1.12, 1.16].map((price, index) => ({ timestamp: start + index * 3_600, price }));
+  expect(extractDepegEvents(series, () => 1.16, "peggedEUR", [{ ts: start, supply: 6_000_000 }])).toHaveLength(expected);
+});
+
 describe("extractDepegEvents peak corroboration", () => {
   it("does not absorb an isolated single-sample trough into an open event's peak", () => {
     // USDC 2018-10-04 shape: one 0.786 print between 0.937 and 0.981.

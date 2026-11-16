@@ -1,0 +1,119 @@
+{
+  "id": "usdplus-streamflow",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Alchemy exact-slot Account Archive: finalized slot 469901684, block GxPPJSLigxokMCSpfJbZG8e3KT41mm5cUTPSUQK9GQYi, 2026-11-15T22:44:58Z",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Squads v4 arbitrary vault transaction execution",
+        "url": "https://github.com/Squads-Protocol/v4/blob/3a39735d0c56249bf2ce4b16b3229d7be87ad55f/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+      },
+      {
+        "label": "USD+ Solana mint",
+        "url": "https://solscan.io/token/usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia"
+      }
+    ],
+    "evidence": "USD+ has one verified deployment on Solana, representing the entire reviewed minted supply. Exact archive getAccountInfo reads at finalized slot 469901684 (2026-11-15T22:44:58Z) decode ordinary SPL mint usdsfJbX78ktZUnoRC7dwvvQz7xH3WdkpGne76gdUia with six decimals, supply 1599062791523 raw units and live freezeAuthority JCvMkyfm7iM4gAUfQ43A8BWFWktAjPjPMqbTpZvAG3MC. The off-curve freeze authority is the exact Squads v4 vault index zero for multisig AKeqDJDbeJiwze3tUKQefa8MJByT5hWcqfYmJwrFGYL3, verified by PDA derivation and a successful historical vault-execute CPI. Same-slot multisig state requires two votes, has no timelock or external config authority, and stores four members: three have initiate/vote/execute permission seven and one has permission zero. The current signing path can execute SPL FreezeAccount against a holder account; it is not merely an inactive program PDA or upgrade exposure. This directly establishes Yes on the sole material deployment without relying on M0 governance or reserve inheritance. This is control exposure, not a claim that any holder account was frozen. Extension upgrade and mint controls are reviewed separately; no SPL transfer-hook restriction or arbitrary-holder burn is asserted.",
+    "reviewer": "Pharos Streamflow USD+ addition review",
+    "reviewedAt": "2026-11-15"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "The reviewed USD+ mint and conversion path uses M's scaled-UI earning index to translate M principal into nominal USD+ units. That is protocol accounting rather than an independently observed USD market price. The extension program and underlying index controls remain mutable; no fiat-price guarantee or complete entrypoint census is established.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos Streamflow USD+ conversion-authority review",
+      "rationale": "The reviewed USD+ extension is an M-backed mint/conversion path rather than a borrower-debt liquidation engine. Its issuer-published quote computes conversion from M's stored scaled-UI index; the published interface exposes wrap/unwrap, fees and administration rather than borrower markets. A successful pinned Wrap independently corroborates the exact M-to-USD+ accounting path. This review covers that top-level conversion authority and does not certify all latent entrypoints or absence of every possible external data input.",
+      "sources": [
+        {
+          "label": "Pinned Streamflow USD+ quote and M mint identity",
+          "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+        },
+        {
+          "label": "Pinned Streamflow M-index conversion arithmetic",
+          "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/math/m_swap.rs"
+        },
+        {
+          "label": "Pinned Streamflow published extension interface",
+          "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/idls/m_ext.json"
+        },
+        {
+          "label": "Observed USD+ M-backed Wrap execution",
+          "url": "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX"
+        },
+        {
+          "label": "Alchemy exact-slot Solana Account Archive",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Streamflow USD+ conversion-authority review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Pinned Streamflow USD+ quote and M mint identity",
+        "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+      },
+      {
+        "label": "Pinned Streamflow M-index conversion arithmetic",
+        "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/math/m_swap.rs"
+      },
+      {
+        "label": "Pinned Streamflow published extension interface",
+        "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/idls/m_ext.json"
+      },
+      {
+        "label": "Observed USD+ M-backed Wrap execution",
+        "url": "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX"
+      },
+      {
+        "label": "Alchemy exact-slot Solana Account Archive",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      }
+    ],
+    "paths": [
+      {
+        "id": "solana:extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg",
+        "chain": "solana",
+        "address": "extUkDFf3HLekkxbcZ3XRUizMjbxMJgKBay3p9xGVmg",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-11-15",
+          "reviewer": "Pharos Streamflow USD+ conversion-authority review",
+          "confidence": "probable",
+          "rationale": "The reviewed USD+ extension is an M-backed mint/conversion path rather than a borrower-debt liquidation engine. Its issuer-published quote computes conversion from M's stored scaled-UI index; the published interface exposes wrap/unwrap, fees and administration rather than borrower markets. A successful pinned Wrap independently corroborates the exact M-to-USD+ accounting path. This review covers that top-level conversion authority and does not certify all latent entrypoints or absence of every possible external data input.",
+          "sources": [
+            {
+              "label": "Pinned Streamflow USD+ quote and M mint identity",
+              "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+            },
+            {
+              "label": "Pinned Streamflow M-index conversion arithmetic",
+              "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/math/m_swap.rs"
+            },
+            {
+              "label": "Pinned Streamflow published extension interface",
+              "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/idls/m_ext.json"
+            },
+            {
+              "label": "Observed USD+ M-backed Wrap execution",
+              "url": "https://solscan.io/tx/61x8ppChg6iZzrTYALh4kWvwhYom6p6yBUpwCfvAXYEXAGAm2jLDcmuR1DvxfxiMdF4qbuPKctqNuB4t44bBF2xX"
+            },
+            {
+              "label": "Alchemy exact-slot Solana Account Archive",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

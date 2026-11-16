@@ -107,6 +107,8 @@ describe("production performance probe", () => {
     expect(LONG_DWELL_VIEWPORT).toEqual({ width: 3072, height: 1600, dpr: 1.25 });
   });
   it("retains correctness violations in the completed long-dwell capture result", async () => {
+    vi.stubEnv("SITE_SESSION_SIGNING_KEY", "probe-test-key");
+    const addCookies = vi.fn();
     let now = 0;
     const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
     vi.stubGlobal("window", { __pharosPerf: {
@@ -119,6 +121,7 @@ describe("production performance probe", () => {
     };
     const page = {
       goto: async () => {
+        expect(addCookies).toHaveBeenCalledOnce();
         listeners.get("Network.requestWillBeSent")!({
           requestId: "poll", request: { url: "https://pharos.watch/_site-data/stablecoins" }, timestamp: 1,
         });
@@ -134,19 +137,23 @@ describe("production performance probe", () => {
     };
     const close = vi.fn();
     const browser = { newContext: async () => ({
-      addInitScript: async () => {}, newPage: async () => page, newCDPSession: async () => cdp, close,
+      addCookies, addInitScript: async () => {}, newPage: async () => page, newCDPSession: async () => cdp, close,
     }) };
     try {
-      const row = await capture(browser, "https://pharos.watch", "/", LONG_DWELL_VIEWPORT, 61_000);
+      const row = await capture(browser, "https://pharos.watch", "/", LONG_DWELL_VIEWPORT, 901_000);
       expect(row.jsonBytes).toBe(BUDGETS.jsonBytes + 1);
       expect(row.violations).toEqual([
         "detail banner still visible at observation end (not proof of a performance defect; inspect producer health)",
         "1 JSON requests failed",
       ]);
       expect(close).toHaveBeenCalledOnce();
+      expect(addCookies).toHaveBeenCalledTimes(2);
+      expect(addCookies.mock.calls[0][0][0]).toMatchObject({ domain: "pharos.watch", path: "/_site-data", secure: true, httpOnly: true, sameSite: "Strict" });
+      expect(addCookies.mock.calls[1][0][0].value).not.toBe(addCookies.mock.calls[0][0][0].value);
     } finally {
       clock.mockRestore();
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
   });
   it.each([

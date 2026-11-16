@@ -12,6 +12,7 @@ const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
     recordApiKeyRateLimitDependencySuccess: vi.fn(),
     recordApiKeyUsage: vi.fn(),
     resolveIsolateFallbackApiKeyRateLimit: vi.fn(),
+    getCachedApiKeyByPrefix: vi.fn(),
   },
 }));
 
@@ -20,12 +21,15 @@ vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   return { ...actual, verifyAccessJwt };
 });
 
-vi.mock("../../../lib/api-key-auth", () => ({
+vi.mock("../../../lib/api-key-auth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/api-key-auth")>(),
   authenticateApiKey: apiKeyMocks.authenticateApiKey,
   authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
 }));
 
-vi.mock("../../../lib/api-key-core", () => ({
+vi.mock("../../../lib/api-key-core", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../lib/api-key-core")>(),
+  getCachedApiKeyByPrefix: apiKeyMocks.getCachedApiKeyByPrefix,
   isApiKeyRateLimitDependencyCircuitOpen: apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen,
   recordApiKeyRateLimitDependencyFailure: apiKeyMocks.recordApiKeyRateLimitDependencyFailure,
   recordApiKeyRateLimitDependencySuccess: apiKeyMocks.recordApiKeyRateLimitDependencySuccess,
@@ -44,7 +48,21 @@ import {
   evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode,
 } from "../gates";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeApiKeyPrefixLookup, makeAuthenticatedApiKeyRow } from "../../../test-helpers/api-key-test-support";
+import { clearApiKeyCache, lookupApiKeyByPrefix, resetApiKeyStateForTests } from "../../../lib/api-key-core";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
+import { mintSiteSessionToken, readSiteSessionCookie, SITE_SESSION_COOKIE_NAME, SITE_SESSION_HEADER } from "@shared/lib/site-session-token";
+import { onRequest as issueSession, resetSiteSessionRateLimitStateForTests } from "../../../../../functions/_site-data/session";
+import { onRequest as proxySiteData } from "../../../../../functions/_site-data/[[path]]";
+import { siteSessionCookie } from "../../../../../scripts/lib/site-session";
+import { hashClientIp } from "@shared/lib/client-ip-hash";
+import { recomputeVerifiedSelectorSnapshot } from "../../../../../functions/lib/selector-canonical-snapshot";
+
+async function useRealApiKeyAuth() {
+  apiKeyMocks.authenticateApiKey.mockImplementation((await vi.importActual<typeof import("../../../lib/api-key-auth")>("../../../lib/api-key-auth")).authenticateApiKey);
+  apiKeyMocks.getCachedApiKeyByPrefix.mockImplementation((await vi.importActual<typeof import("../../../lib/api-key-core")>("../../../lib/api-key-core")).getCachedApiKeyByPrefix);
+}
 
 const validKey = {
   id: 7,
@@ -62,6 +80,7 @@ function parseWarnEvents(warn: { mock: { calls: unknown[][] } }): Record<string,
 function makeEnv() {
   return createWorkerEnv({
     SITE_API_SHARED_SECRET: "site-secret",
+    SITE_SESSION_SIGNING_KEY: "session-key",
     CF_ACCESS_OPS_API_AUD: "ops-aud",
     CF_ACCESS_TEAM_DOMAIN: "pharos-watch",
   });
@@ -69,6 +88,7 @@ function makeEnv() {
 
 describe("evaluateAccessGate", () => {
   beforeEach(() => {
+    resetApiKeyStateForTests();
     apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValue(false);
     apiKeyMocks.recordApiKeyRateLimitDependencyFailure.mockReturnValue({
       consecutiveFailures: 1,
@@ -79,10 +99,221 @@ describe("evaluateAccessGate", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    resetApiKeyStateForTests();
     verifyAccessJwt.mockReset();
     for (const mock of Object.values(apiKeyMocks)) {
       mock.mockReset();
     }
+  });
+
+  describe("site sessions", () => {
+    let clock = 1_800_000;
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(clock += 120_000);
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "info").mockImplementation(() => {});
+    });
+    afterEach(() => vi.restoreAllMocks());
+    const requestFor = (token?: string, host = "site-api.pharos.watch", path = "/api/stablecoins") => new Request(`https://${host}${path}`, {
+      headers: { "X-Pharos-Site-Proxy-Secret": "site-secret", "X-Pharos-Client-IP": "2001:db8:1:2::abcd",
+        "CF-Connecting-IP": "192.0.2.1", ...(token ? { [SITE_SESSION_HEADER]: token } : {}) },
+    });
+    const mint = (input: Partial<Parameters<typeof mintSiteSessionToken>[0]> = {}) => mintSiteSessionToken({
+      key: "session-key", kind: "browser", sid: "test-session", nowSec: Date.now() / 1000, ...input,
+    });
+    const sessionEnv = (mode: string | undefined) => ({ ...makeEnv(), SITE_SESSION_ENFORCEMENT: mode,
+      SITE_SESSION_RATE_LIMIT: { limit: vi.fn().mockResolvedValue({ success: true }) },
+      SITE_SOURCE_RATE_LIMIT: { limit: vi.fn().mockResolvedValue({ success: true }) } });
+
+    it("admits real Pages-issued browser and script automation cookies through the proxy in enforce", async () => {
+      const env = sessionEnv("enforce");
+      const pagesEnv = { SITE_SESSION_SIGNING_KEY: "session-key", TURNSTILE_SECRET_KEY: "turnstile-key",
+        SITE_API_ORIGIN: "https://site-api.pharos.watch", SITE_API_SHARED_SECRET: "site-secret" };
+      resetSiteSessionRateLimitStateForTests();
+      vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : new Request(input, init);
+        if (new URL(request.url).hostname === "challenges.cloudflare.com") {
+          return Response.json({ success: true, hostname: "pharos.watch", action: "site-data" });
+        }
+        return (await evaluateAccessGate(request, new URL(request.url), env)).response ?? Response.json({ admitted: true });
+      }));
+      try {
+        const issued = await issueSession({ env: pagesEnv, request: new Request("https://pharos.watch/_site-data/session", {
+          method: "POST", headers: { Origin: "https://pharos.watch", "CF-Connecting-IP": "192.0.2.1" },
+          body: JSON.stringify({ token: "verified-challenge" }),
+        }) });
+        expect(issued.status).toBe(204);
+        expect(await issued.text()).toBe("");
+        const browser = readSiteSessionCookie(issued.headers.get("Set-Cookie"));
+        expect(browser).toBeTruthy();
+        const automation = await siteSessionCookie("https://pharos.watch", { SITE_SESSION_SIGNING_KEY: "session-key" }, Date.now() / 1000);
+        for (const token of [browser, automation?.value, null]) {
+          const response = await proxySiteData({ env: pagesEnv, params: { path: "stablecoins" },
+            request: new Request("https://pharos.watch/_site-data/stablecoins", {
+              headers: { Origin: "https://pharos.watch", "CF-Connecting-IP": "192.0.2.1",
+                ...(token ? { Cookie: `${SITE_SESSION_COOKIE_NAME}=${token}` } : {}) },
+            }) });
+          expect(response.status).toBe(token ? 200 : 401);
+          if (!token) expect(response.headers.get("X-Pharos-Session")).toBe("required");
+        }
+        await expect(recomputeVerifiedSelectorSnapshot({} as never,
+          new Request("https://pharos.watch/selector-snapshot"), pagesEnv,
+        )).rejects.toThrow("Canonical selector source contract failed");
+        expect(env.SITE_SESSION_RATE_LIMIT.limit).toHaveBeenCalledOnce();
+      } finally {
+        vi.unstubAllGlobals();
+        resetSiteSessionRateLimitStateForTests();
+      }
+    });
+
+    it.each(["observe", "enforce"])("applies all token outcomes in %s on site and preview paths", async (mode) => {
+      const env = sessionEnv(mode);
+      for (const [outcome, token] of [
+        ["valid", await mint()], ["missing", undefined], ["malformed", "bad.token"],
+        ["bad-signature", await mint({ key: "wrong-key" })], ["expired", await mint({ nowSec: 1, ttlSec: 1 })],
+        ["not-yet-valid", await mint({ nowSec: Date.now() / 1000 + 61 })],
+      ] as const) {
+        vi.spyOn(Math, "random").mockReturnValue(0);
+        for (const host of ["site-api.pharos.watch", "preview.workers.dev"]) {
+          const request = requestFor(token, host);
+          const result = await evaluateAccessGate(request, new URL(request.url), env);
+          expect(result.response?.status ?? 200).toBe(mode === "observe" || outcome === "valid" ? 200 : 401);
+          if (result.response) {
+            expect(result.response.headers.get("X-Pharos-Session")).toBe("required");
+            expect(result.response.headers.get("Cache-Control")).toBe("no-store");
+          }
+          const events = outcome === "valid" ? console.info : console.warn;
+          expect(JSON.parse(String(vi.mocked(events).mock.lastCall?.[0]))).toMatchObject({
+            event: "site_session_gate", metadata: { mode, outcome, tokenKind: outcome === "valid" ? "browser" : null,
+              pathGroup: "stablecoins", clientNetworkHash: await hashClientIp("2001:db8:1:2::/64", "session-key") },
+          });
+        }
+      }
+      expect(env.SITE_SESSION_RATE_LIMIT.limit).toHaveBeenCalledTimes(2);
+      expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+    });
+
+    it.each(["observe", "enforce"])("accepts automation and previous-key tokens in %s", async (mode) => {
+      const env = sessionEnv(mode);
+      env.SITE_SESSION_SIGNING_KEY_PREVIOUS = "old-key";
+      const browser = requestFor(await mint({ key: "old-key" }));
+      expect((await evaluateAccessGate(browser, new URL(browser.url), env)).response).toBeNull();
+      expect(env.SITE_SESSION_RATE_LIMIT.limit).toHaveBeenCalledWith({ key: "test-session" });
+      expect(env.SITE_SOURCE_RATE_LIMIT.limit).toHaveBeenCalledWith({ key: "2001:db8:1:2::/64" });
+      env.SITE_SESSION_RATE_LIMIT.limit.mockRejectedValue(new Error("offline"));
+      env.SITE_SOURCE_RATE_LIMIT.limit.mockResolvedValue({ success: false });
+      const automation = requestFor(await mint({ kind: "automation", key: "old-key" }));
+      expect((await evaluateAccessGate(automation, new URL(automation.url), env)).response).toBeNull();
+      expect(env.SITE_SESSION_RATE_LIMIT.limit).toHaveBeenCalledOnce();
+      expect(env.SITE_SOURCE_RATE_LIMIT.limit).toHaveBeenCalledOnce();
+    });
+
+    it.each([undefined, "observe", "ENFORCE", " enforce ", "unknown", "enforce"])("defaults mode %j and handles missing current key", async (mode) => {
+      const env = { ...sessionEnv(mode), SITE_SESSION_SIGNING_KEY: undefined, SITE_SESSION_SIGNING_KEY_PREVIOUS: "old-key" };
+      const request = requestFor(await mint({ key: "old-key" }));
+      const response = (await evaluateAccessGate(request, new URL(request.url), env)).response;
+      expect(response?.status ?? 200).toBe(mode === "enforce" ? 503 : 200);
+      if (response) expect(response.headers.get("Retry-After")).toBe("60");
+      expect(env.SITE_SESSION_RATE_LIMIT.limit).not.toHaveBeenCalled();
+      expect(JSON.parse(String(vi.mocked(console.warn).mock.lastCall?.[0]))).toMatchObject({
+        metadata: { mode: mode === "enforce" ? "enforce" : "observe", outcome: "key-missing", tokenKind: null },
+      });
+    });
+
+    it("checks the proxy secret, path and method before sessions, including internal build reads", async () => {
+      const env = sessionEnv("enforce");
+      for (const [path, method, secret, status] of [
+        ["/api/stablecoins", "GET", "wrong", 401], ["/api/feedback", "POST", "site-secret", 404],
+        ["/api/stablecoins", "POST", "site-secret", 405],
+      ] as const) {
+        const request = new Request(`https://site-api.pharos.watch${path}`, { method, headers: { "X-Pharos-Site-Proxy-Secret": secret } });
+        expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(status);
+      }
+      expect(console.warn).not.toHaveBeenCalled();
+      const path = "/api/stablecoin-detail-snapshot-inputs";
+      const missing = requestFor(undefined, undefined, path);
+      expect((await evaluateAccessGate(missing, new URL(missing.url), env)).response?.status).toBe(401);
+      const valid = requestFor(await mint({ kind: "automation" }), undefined, path);
+      expect((await evaluateAccessGate(valid, new URL(valid.url), env)).response).toBeNull();
+    });
+
+    it.each(["observe", "enforce"])("handles each browser budget failure in %s", async (mode) => {
+      for (const binding of ["SITE_SESSION_RATE_LIMIT", "SITE_SOURCE_RATE_LIMIT"] as const) {
+        for (const failure of ["exceeded", "throws", "missing"] as const) {
+          const env = sessionEnv(mode);
+          if (failure === "missing") env[binding] = undefined as never;
+          else if (failure === "throws") env[binding].limit.mockRejectedValue(new Error("offline"));
+          else env[binding].limit.mockResolvedValue({ success: false });
+          const request = requestFor(await mint());
+          const response = (await evaluateAccessGate(request, new URL(request.url), env)).response;
+          expect(response?.status ?? 200).toBe(mode === "observe" ? 200 : failure === "exceeded" ? 429 : 503);
+          if (response) expect(response.headers.get("Retry-After")).toBe("60");
+          expect(JSON.parse(String(vi.mocked(console.warn).mock.lastCall?.[0]))).toMatchObject({
+            metadata: { mode, outcome: failure === "exceeded" ? "budget-exceeded" : "budget-unavailable", tokenKind: "browser" },
+          });
+        }
+      }
+    });
+
+    it("preserves the anonymous site throttle for valid sessions and isolates non-site lanes", async () => {
+      const env = sessionEnv("enforce");
+      env.SAFETY_GRADES_RATE_LIMIT = { limit: vi.fn().mockResolvedValue({ success: false }) };
+      for (const kind of ["browser", "automation"] as const) {
+        const request = requestFor(await mint({ kind }), undefined, "/api/dependency-scenarios/v1");
+        expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(429);
+      }
+      const noKeyEnv = { ...env, SITE_SESSION_SIGNING_KEY: undefined };
+      apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });
+      for (const path of ["/api/stablecoins", "/api/health"]) {
+        const request = requestFor(undefined, "api.pharos.watch", path);
+        expect((await evaluateAccessGate(request, new URL(request.url), noKeyEnv)).response).toBeNull();
+      }
+      expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledOnce();
+      verifyAccessJwt.mockResolvedValueOnce(true);
+      const admin = new Request("https://ops-api.pharos.watch/api/status", { headers: { "Cf-Access-Jwt-Assertion": "jwt" } });
+      expect((await evaluateAccessGate(admin, new URL(admin.url), noKeyEnv)).isAdmin).toBe(true);
+      expect(env.SITE_SESSION_RATE_LIMIT.limit).toHaveBeenCalledOnce();
+    });
+
+    it("caps all sampled details and summarizes exact outcomes per mode without exposing token or network", async () => {
+      const env = sessionEnv("observe");
+      const request = requestFor();
+      for (let i = 0; i < 65; i++) await evaluateAccessGate(request, new URL(request.url), env);
+      expect(console.warn).toHaveBeenCalledTimes(60);
+      vi.mocked(console.info).mockClear();
+      const minute = Math.floor(Date.now() / 60_000);
+      vi.setSystemTime(Date.now() + 60_000);
+      await evaluateAccessGate(request, new URL(request.url), env);
+      expect(console.warn).toHaveBeenCalledTimes(61);
+      expect(console.info).toHaveBeenCalledOnce();
+      expect(JSON.parse(String(vi.mocked(console.info).mock.lastCall?.[0]))).toMatchObject({
+        event: "site_session_gate_summary", metadata: { minute, outcomes: { observe: { missing: 65 }, enforce: {} } },
+      });
+      vi.mocked(console.info).mockClear();
+      const token = await mint();
+      const valid = requestFor(token);
+      vi.spyOn(Math, "random").mockReturnValue(1 / 16);
+      await evaluateAccessGate(valid, new URL(valid.url), env);
+      expect(console.info).not.toHaveBeenCalled();
+      vi.mocked(Math.random).mockReturnValue(0);
+      await evaluateAccessGate(valid, new URL(valid.url), env);
+      expect(console.info).toHaveBeenCalledOnce();
+      for (let i = 0; i < 100; i++) await evaluateAccessGate(valid, new URL(valid.url), env);
+      for (let i = 0; i < 3; i++) await evaluateAccessGate(request, new URL(request.url), sessionEnv("enforce"));
+      expect(console.info).toHaveBeenCalledTimes(59);
+      expect(console.warn).toHaveBeenCalledTimes(61);
+      vi.setSystemTime(Date.now() + 60_000);
+      await evaluateAccessGate(request, new URL(request.url), env);
+      expect(console.info).toHaveBeenCalledTimes(60);
+      expect(JSON.parse(String(vi.mocked(console.info).mock.lastCall?.[0]))).toMatchObject({
+        event: "site_session_gate_summary", metadata: { minute: minute + 1,
+          outcomes: { observe: { missing: 1, valid: 102 }, enforce: { missing: 3 } } },
+      });
+      const logs = JSON.stringify([vi.mocked(console.info).mock.calls, vi.mocked(console.warn).mock.calls]);
+      for (const sensitive of [token, "test-session", "2001:db8", "192.0.2.1", "session-key", "site-secret"]) expect(logs).not.toContain(sensitive);
+    });
   });
 
   it.each(["/api/safety-grades", "/api/dependency-graph/v1", "/api/dependency-scenarios/v1"])("limits anonymous %s before reading data and fails closed", async (path) => {
@@ -99,6 +330,103 @@ describe("evaluateAccessGate", () => {
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
     env.SAFETY_GRADES_RATE_LIMIT = undefined as never;
     expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(503);
+  });
+
+  it.each([false, true])("shares IPv6 /64 anonymous buckets (Pages=%s)", async (siteProxy) => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.SAFETY_GRADES_RATE_LIMIT = { limit };
+    for (const ip of ["2001:db8:1:2::1", "2001:0DB8:1:0002:ffff::abcd"]) {
+      const request = new Request(`https://${siteProxy ? "site-api" : "api"}.pharos.watch/api/dependency-scenarios/v1`, {
+        headers: { "CF-Connecting-IP": siteProxy ? "192.0.2.1" : ip,
+          ...(siteProxy ? { "X-Pharos-Site-Proxy-Secret": "site-secret", "X-Pharos-Client-IP": ip } : {}) },
+      });
+      expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+    }
+    expect(limit.mock.calls).toEqual([[{ key: "2001:db8:1:2::/64" }], [{ key: "2001:db8:1:2::/64" }]]);
+  });
+
+  it("blocks uncached prefixes after invalid attempts until the minute ends", async () => {
+    await useRealApiKeyAuth();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(60_000);
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    const limit = vi.fn().mockResolvedValueOnce({ success: true }).mockResolvedValue({ success: false });
+    env.API_KEY_LOOKUP_RATE_LIMIT = { limit };
+    env.DB = mockD1([makeApiKeyPrefixLookup({ prefix: "0123456789abcdef" }),
+      makeApiKeyPrefixLookup({ prefix: "fedcba9876543210" })]);
+    const request = (prefix: string, ip = "2001:db8:1:2::1") => new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "CF-Connecting-IP": ip, "X-API-Key": `ph_live_${prefix}_abcdefghijklmnopqrstuvwxyzABCDEF` },
+    });
+    const first = request("0123456789abcdef");
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response?.status).toBe(401);
+    const rotated = request("fedcba9876543210", "2001:0db8:1:0002::ffff");
+    const denied = (await evaluateAccessGate(rotated, new URL(rotated.url), env)).response;
+    expect(denied?.status).toBe(429);
+    expect(denied?.headers.get("Retry-After")).toBe("60");
+    const reads = () => (env.DB as ReturnType<typeof mockD1>).getHistory().length;
+    expect(reads()).toBe(2);
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response?.status).toBe(429);
+    expect(reads()).toBe(2);
+    expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledTimes(2);
+    expect(limit.mock.calls).toEqual([[{ key: "2001:db8:1:2::/64" }], [{ key: "2001:db8:1:2::/64" }]]);
+    env.DB = mockD1([makeApiKeyPrefixLookup({ row: await makeAuthenticatedApiKeyRow() }),
+      makeApiKeyPrefixLookup({ prefix: "fedcba9876543210" })]);
+    await lookupApiKeyByPrefix(env.DB, "0123456789abcdef");
+    expect((await evaluateAccessGate(first, new URL(first.url), env)).response).toBeNull();
+    const malformed = request("bad");
+    expect((await evaluateAccessGate(malformed, new URL(malformed.url), env)).response?.status).toBe(401);
+    expect(limit).toHaveBeenCalledTimes(2);
+    vi.setSystemTime(120_000);
+    limit.mockResolvedValue({ success: true });
+    expect((await evaluateAccessGate(rotated, new URL(rotated.url), env)).response?.status).toBe(401);
+    expect(limit).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([["standard", "pepper"], ["donor", "old"], ["self-serve", "old"]])("rejects cached wrong secrets without D1 and never charges valid %s keys", async (tier, pepper) => {
+    await useRealApiKeyAuth();
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    env.API_KEY_HASH_PEPPER_PREVIOUS = "old";
+    const limit = vi.fn().mockResolvedValue({ success: true });
+    env.API_KEY_LOOKUP_RATE_LIMIT = { limit };
+    const db = mockD1([makeApiKeyPrefixLookup({ row: await makeAuthenticatedApiKeyRow({ tier, pepper }) }),
+      { match: "api_key_self_serve_revocations", rows: [] }, { match: "UPDATE api_keys", rows: [] }]);
+    env.DB = db;
+    const request = (secret: string) => new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": `ph_live_0123456789abcdef_${secret}` },
+    });
+    const wrong = request("_".repeat(32));
+    for (let i = 0; i < 10; i++) expect((await evaluateAccessGate(wrong, new URL(wrong.url), env)).response?.status).toBe(401);
+    const reads = () => db.getHistory().filter(({ sql }) => sql.includes("FROM api_keys")).length;
+    expect(reads()).toBe(1);
+    expect(limit).toHaveBeenCalledTimes(10);
+    limit.mockResolvedValue({ success: false });
+    const valid = request("abcdefghijklmnopqrstuvwxyzABCDEF");
+    for (let i = 0; i < 2; i++) {
+      clearApiKeyCache("0123456789abcdef");
+      expect((await evaluateAccessGate(valid, new URL(valid.url), env)).response).toBeNull();
+    }
+    expect(reads()).toBe(3);
+    expect(limit).toHaveBeenCalledTimes(10);
+  });
+
+  it.each(["missing", "throws"])("authenticates when lookup limiter %s", async (mode) => {
+    const env = makeEnv();
+    env.API_KEY_HASH_PEPPER = "pepper";
+    env.API_KEY_LOOKUP_RATE_LIMIT = mode === "missing" ? undefined : { limit: vi.fn().mockRejectedValue(new Error("offline")) };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "valid", key: validKey });
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+    });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response).toBeNull();
+    expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledOnce();
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "invalid" });
+    expect((await evaluateAccessGate(request, new URL(request.url), env)).response?.status).toBe(401);
+    expect(parseWarnEvents(warn)).toContainEqual(expect.objectContaining({ event: "api_key_lookup_rate_limit_unavailable" }));
+    warn.mockRestore();
   });
 
   it.each(["site-api.pharos.watch", "pharos-api.example.workers.dev"])(

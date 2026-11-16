@@ -5,14 +5,19 @@ import {
   QUALITY_TIER_3_CLASSES,
   THREAT_BAND_ACCENT_CLASSES,
 } from "@shared/lib/classification";
-import type { DepegTrackerRow } from "@/lib/depeg-sort";
+import { isDeviationHeld, type DepegTrackerRow } from "@/lib/depeg-sort";
+
+/** A held deviation is not an observed reading, so it never supports a "clear" verdict. */
+function hasObservedDeviation(row: DepegTrackerRow): boolean {
+  return !isDeviationHeld(row) && Number.isFinite(row.coin.currentDeviationBps);
+}
 
 export function statusLabel(row: DepegTrackerRow): string {
   if (row.coin.activeDepeg) return "open";
   if (row.pendingIncident) return "pending";
   if (row.coin.depegEventCoverageLimited) return "floor";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
-  if (!Number.isFinite(row.coin.currentDeviationBps) || !Number.isFinite(row.dews?.score)) {
+  if (!hasObservedDeviation(row) || !Number.isFinite(row.dews?.score)) {
     return DEPEG_TRACKER_UNKNOWN_STATUS.label;
   }
   return "clear";
@@ -25,7 +30,7 @@ export function statusClassName(row: DepegTrackerRow): string {
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") {
     return DEPEG_ROW_STATUS_CLASSES.watch.pill;
   }
-  if (!Number.isFinite(row.coin.currentDeviationBps) || !Number.isFinite(row.dews?.score)) {
+  if (!hasObservedDeviation(row) || !Number.isFinite(row.dews?.score)) {
     return DEPEG_TRACKER_UNKNOWN_STATUS.cls;
   }
   return DEPEG_ROW_STATUS_CLASSES.clear.pill;

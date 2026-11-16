@@ -258,6 +258,8 @@ The resulting row is tagged with one `sourceMode`:
 
 Route documentation distinguishes reviewed sources from fallback project links and states what each source supports. Review dates, evidence provenance, runtime notes and applied caps accompany the route so a display link cannot imply stronger evidence. See the [documentation and notes reference](process/redemption-backstops-appendix.md#docs--notes).
 
+Dinari USD+ retains a reviewed, unquantified issuer route as pre-launch research for account-approved holders redeeming into USDC; its launched-awaiting-data lifecycle excludes it from active route coverage and scoring. Its [guide](https://docs.dinari.com/docs/what-is-usd) and [terms](https://dinari.com/terms-conditions-usdplus-stusdplus-tokens) describe conditional processing periods and passed-through charges; they do not establish executable capacity, unconditional completed settlement or all-in cost bounds. The retained review withholds all three scoring fields.
+
 ### Cost Modeling
 
 Costs distinguish bounded fees, disclosed formulas, variable schedules and reviewed but undisclosed charges; missing all-in costs remain unquantified. A zero issuer fee covers only that component, while holder, bank, network and settlement conditions keep their own evidence requirements. See the [cost implementation reference](process/redemption-backstops-appendix.md#cost-modeling).

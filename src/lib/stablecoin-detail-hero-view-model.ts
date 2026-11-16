@@ -105,6 +105,8 @@ export interface HeroCardViewModel {
     pegRef: number | null;
     deviationBps: number | null;
     pegReferenceUnavailable: boolean;
+    /** The peg's reference market was shut at the observation: the deviation is held. */
+    referenceMarketClosed: boolean;
     isNavToken: boolean;
     limitedDepegCoverageNote: string | null;
   };
@@ -151,6 +153,7 @@ export interface BuildHeroCardViewModelParams {
   pegRef: number | null;
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
+  referenceMarketClosed: boolean;
   pegScoreResult: PegSummaryCoin | null;
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
@@ -331,6 +334,7 @@ export function buildStablecoinDetailHeroViewModel({
   pegRef,
   deviationBps,
   pegReferenceUnavailable,
+  referenceMarketClosed,
   pegScoreResult,
   liquidityData,
   yieldRanking,
@@ -409,6 +413,7 @@ export function buildStablecoinDetailHeroViewModel({
       pegRef,
       deviationBps,
       pegReferenceUnavailable,
+      referenceMarketClosed,
       isNavToken,
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
     },

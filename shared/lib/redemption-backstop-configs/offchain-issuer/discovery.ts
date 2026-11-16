@@ -6,6 +6,63 @@ import { documentedVariableFee, fixedFee, issuerBase, sourceRef, undisclosedRevi
  * but neither that confidence nor current supply proves immediate executable capacity.
  * Each route withholds scoring for its explicitly missing executable terms. */
 export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "rcusd-r25": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-11-15",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    executionModel: "opaque",
+    outputAssets: ["usdc-circle"],
+    costModel: undisclosedReviewedFee("The rcUSD redemption agreement publishes no numeric redemption fee or complete all-in cost bound; USDC is paid at the issuer-published USD/USDC exchange rate."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The exact rcUSD agreement obligates RiftWriter Company Limited to pay the $1 token face value in USDC after satisfactory token delivery and KYC. It establishes neither funded same-notional capacity, a completed-payout deadline nor a numeric all-in fee bound. The days category is diagnostic only. The separate six-hour purchase-delivery term does not bound redemption settlement.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("rcUSD redemption agreement, October 15 2025, sections 1.1-1.3 and 2.7", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf", ["route", "access", "settlement", "fees"]),
+      ],
+    },
+    docs: [
+      sourceRef("rcUSD redemption agreement, October 15 2025: payment obligation without quantified executable capacity", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf", ["route", "access", "settlement", "fees"]),
+      sourceRef("rcUSD purchase agreement, October 15 2025", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf", ["route", "access"]),
+    ],
+    notes: [
+      "Eligibility requires non-US status, permitted jurisdiction and issuer-satisfaction KYC. Token delivery must also satisfy the issuer. A transferee's token balance alone does not establish redemption access.",
+      "The agreement specifies USDC payout but no chain or exact payout deployment. No permissionless on-chain execution, unconditional USDC parity, minimum redemption amount or zero fee is inferred.",
+      "The purchase agreement states that tokens are not secured by issuer assets. Current reserves, staked rcUSDp TVL and total circulating rcUSD do not establish executable USDC capacity; the route stays unquantified and unrated without current execution evidence.",
+    ],
+  },
+  "usd-dinari": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-11-15",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    outputAssets: ["usdc-circle"],
+    costModel: undisclosedReviewedFee("Dinari passes through blockchain and banking charges; a numeric all-in redemption fee ceiling is not published."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The current USD+ guide documents redemption for USDC at one dollar per token in zero to three days depending on size. Terms require an approved Dinari account, reserve transaction-limit discretion and describe commercially reasonable T+2 business-day service for large flows, with compliance and financial-partner delays or suspension. No immediate executable capacity, unconditional completed-payout maximum or all-in cost bound is established.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("Dinari USD+ guide, direct USDC redemption", "https://docs.dinari.com/docs/what-is-usd", ["route", "access", "settlement"]),
+        sourceRef("Dinari USD+ terms, eligibility, transaction limits, fees and processing", "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens", ["route", "access", "capacity", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Dinari USD+ guide, direct USDC redemption", "https://docs.dinari.com/docs/what-is-usd", ["route", "access", "settlement"]),
+      sourceRef("Dinari USD+ terms, eligibility, transaction limits, fees and processing", "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens", ["route", "access", "capacity", "fees", "settlement"]),
+    ],
+    notes: [
+      "Observed 2026-11-15T23:24:55Z for the re-admission review. Secondary holders must open and obtain approval for a Dinari account before direct redemption; the terms exclude U.S. persons, EU countries and other restricted jurisdictions.",
+      "The guide's zero-to-three-day indication and the terms' commercially reasonable T+2 business-day service are conditional processing descriptions. No unconditional payout deadline, fixed redemption minimum or same-notional funded capacity is inferred.",
+      "Terms describe management fees netted from quoted yield and pass through transaction and banking charges. Neither a zero redemption fee nor a complete cost ceiling is established.",
+      "The January 2026 USD+ technical redemption pause is marked Complete by the issuer's status page, with maintenance completed January 30. It is historical context, not evidence of a current suspension: https://statuspage.incident.io/dinari/incidents/ncpwtbwq.",
+    ],
+  },
   "mantrausd-mantra": {
     ...issuerBase,
     capacityModel: { kind: "unquantified" },

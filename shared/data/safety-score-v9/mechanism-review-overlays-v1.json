@@ -9293,6 +9293,67 @@
       }
     },
     {
+      "assetId": "itry-brix",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T23:01:48Z",
+      "sources": [
+        {
+          "label": "Brix iTRY Token Terms, updated March 25 2026; issuer owns reserves and holding users have no reserve rights (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md"
+        },
+        {
+          "label": "Brix backing documentation: DLF Turkish money-market fund basket, daily administrator NAV, hybrid custody (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/backing.md"
+        },
+        {
+          "label": "Brix oracle documentation: Redstone conveys administrator NAV for mint/redeem and reward calculations (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/technical/oracles.md"
+        },
+        {
+          "label": "Accountable Brix assets-and-liabilities JSON, source timestamp November 15 2026 22:31:00.165 UTC",
+          "url": "https://accountable.brix.money:8443/dashboard"
+        },
+        {
+          "label": "Brix proof-of-reserves disclosure: Accountable read-only custody-location verification (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/proof-of-reserves.md"
+        },
+        {
+          "label": "Brix mint/redemption documentation: permissioned primary route and potentially delayed larger redemptions (retrieved November 15 2026)",
+          "url": "https://docs.brix.money/itry/mint-and-redemption.md"
+        },
+        {
+          "label": "iTRY Ethereum token and issuer verified deployments; pinned total supply and DLF custody accounting at block 26423424",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "Ethereum Alchemy RPC, block 26423424 hash 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, November 15 2026 22:33:59 UTC",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Current iTRY issuer oracle pointer and administrator replacement powers, pinned Ethereum block 26423424",
+          "url": "https://etherscan.io/address/0x9a40dce442013e6664c308016206da4ba2a9e824#code"
+        }
+      ],
+      "notes": "Evidence re-opened November 15 2026 at 22:47 UTC. Fund claim and seniority is weak: the iTRY Token Terms identify iTRY Limited as issuer, explicitly deny holders rights in the company-owned reserves and restrict primary redemption to onboarded, whitelisted users. iTRY is a fixed-TRY issuer obligation, not a DLF fund share owned directly by holders; the terms provide no protected holder priority. NAV valuation is limited: Brix documents a business-day licensed-administrator NAV and Redstone relay, while Accountable publishes itemized reserve/liability totals, a dated DLF NAV check and current onchain collateral quantities. The named fund administrator, underlying constituent positions and independently verified valuation methodology remain undisclosed. Duration and liquidity remains unavailable: the docs promise a limited fast-redemption buffer but establish no current capacity, complete realization horizon, fund maturity maximum or same-notional completion bound. Loss recovery design is limited solely as an operational reconciliation control: Accountable's November 15 22:31 UTC response reports TRY 105531241.50 of reserves versus TRY 105526365.31 of iTRY liabilities and separately shows wiTRY shares/underlying iTRY value, with DLF NAV timestamp November 13 07:30 UTC. This is source-reported cryptographic/onchain proof, not an independently reviewed financial audit or legal recovery waterfall; cryptographic signatures and whole-book custodial rights have not been independently validated. No fund look-through, maturity, segregation, bankruptcy-remoteness or holder recovery priority is inferred. Onchain reads acquired at 22:53 UTC at Ethereum block 26423424 (hash 0x6c345ceffeb90c07e2a1a17c1d462474c88927f4814c8108f2d87d0963b2e7ed, block time 22:33:59 UTC) corroborate iTRY totalSupply 105526365.307175497186410053, issuer collateralToken 0x861e702e9d0fa68eae8f8735080b6ad1f5878f54 and getCollateralUnderCustody 80527695.886401242458870551 DLF units. The Fast Access Vault getAvailableBalance is zero at that block; this measures only its local available buffer and establishes neither exhaustion nor zero realizable value of the complete custody book. transferState is WHITELIST_ENABLED at the same pin, so permissionless secondary transfer is not asserted. The pinned current issuer oracle pointer differs from the older published NAV-feed address. Redstone is the documented publication arrangement, not a verified identity or signer characterization of the current replacement feed.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        },
+        "navValuation": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "Brix discloses a limited fast-redemption buffer and possible larger-redemption delay but publishes no current executable buffer amount, complete fund realization bound or maximum maturity.",
+          "sourceUrl": "https://docs.brix.money/itry/mint-and-redemption.md"
+        },
+        "lossRecoveryDesign": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
       "assetId": "witry-brix",
       "archetype": "tbill",
       "reviewedAt": "2026-07-20",
@@ -9318,7 +9379,7 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "Brix's contracts documentation establishes wiTRY as an ERC-4626 staking vault over iTRY with an issuer-run NAV oracle publishing valuation data for supply expansion, a cooldown contract holding iTRY during unstake, and a FastAccessVault liquidity vault for instant redemption. Verified on-chain 2026-07-20 via eth_call at Ethereum block 25572099: the vault's asset() is the iTRY token 0xb492B4aFD9658093694CF9452D5C272e8230F3B0, convertToAssets(1e18) returned 1.108632187121665300 iTRY per wiTRY (matching totalAssets 338,939,480.5296085 iTRY over totalSupply 305,727,620.4559736 wiTRY), iTRY totalSupply was 417,190,335.90564764, and cooldownDuration() returned 300 seconds at block 25572133; the Code4rena audit documents the admin-configurable cooldown, fast-redeem fee deductions, and the custodian-topped FastAccessVault buffer, plus three medium findings on cross-chain unstake and fast-redeem failure modes. These support limited fund claim and seniority (the wrapper share claim is verified on-chain, but legal seniority and custody over the underlying Turkish-lira money-market funds were not established), limited NAV valuation (the mechanism is documented and the on-chain exchange rate verified, but the NAV oracle is issuer-run and the underlying fund valuation is unverified), and limited duration and liquidity (cooldown and fast-redeem paths are documented with a measured 300-second cooldown parameter, but underlying fund liquidity and duration are undisclosed and the audit documents cross-chain redemption failure modes). Loss recovery design is limited: the Accountable third-party proof-of-solvency dashboard is live, but the 2026-07-15 coin-file review observed reserve data last updated 2026-06-24, so an independent reconciliation control exists with an unresolved freshness caveat; Turkish fund identities, custodians, and the legal claim structure remain unestablished.",
+      "notes": "Brix's contracts documentation establishes wiTRY as an ERC-4626 staking vault over iTRY with an issuer-run NAV oracle publishing valuation data for supply expansion, a cooldown contract holding iTRY during unstake, and a FastAccessVault liquidity vault for instant redemption. Verified on-chain 2026-07-20 via eth_call at Ethereum block 25572099: the vault's asset() is the iTRY token 0xb492B4aFD9658093694CF9452D5C272e8230F3B0, convertToAssets(1e18) returned 1.108632187121665300 iTRY per wiTRY (matching totalAssets 338,939,480.5296085 iTRY over totalSupply 305,727,620.4559736 wiTRY), iTRY totalSupply was 417,190,335.90564764, and cooldownDuration() returned 300 seconds at block 25572133; the Code4rena audit documents the admin-configurable cooldown, fast-redeem fee deductions, and the custodian-topped FastAccessVault buffer, plus three medium findings on cross-chain unstake and fast-redeem failure modes. These support limited fund claim and seniority (the wrapper share claim is verified on-chain, but legal seniority and custody over the underlying Turkish-lira money-market funds were not established), limited NAV valuation (the mechanism is documented and the on-chain exchange rate verified, but the NAV oracle is issuer-run and the underlying fund valuation is unverified), and limited duration and liquidity (cooldown and fast-redeem paths are documented with a measured 300-second cooldown parameter, but underlying fund liquidity and duration are undisclosed and the audit documents cross-chain redemption failure modes). The 2026-11-15 tracked-parent review removes the inherited Accountable loss-recovery override: parent reserve assurance and legal fund claim belong to itry-brix. The retained July observations support only wrapper accounting, exchange-rate mechanics and local withdrawal parameters; they do not establish parent solvency or recovery. Their original review clock remains unchanged.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -9328,9 +9389,6 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
-          "quality": "limited"
-        },
-        "lossRecoveryDesign": {
           "quality": "limited"
         }
       }
@@ -25550,6 +25608,230 @@
         },
         "durationAndLiquidity": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdrf-realfi",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-11-15",
+      "sources": [
+        {
+          "label": "RealFi docs: Real-world backing, strategy sleeves and partial ranges with a footnote calling the disclosed composition indicative of the launch strategy, not a fixed allocation; retrieved 2026-11-15T17:08:12Z",
+          "url": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        {
+          "label": "RealFi docs: How the returns reach the user, 10% minimum liquidity buffer and reserves covering at least 120% of expected 7-day net redemptions (policy); retrieved 2026-11-15T17:08:13Z",
+          "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+        },
+        {
+          "label": "RealFi docs: Multi-layered defence, 1.25-year weighted-average-life cap and jurisdiction limits (policy); retrieved 2026-11-15T17:08:14Z",
+          "url": "https://docs.realfi.co/glass-box-approach/multi-layered-defence"
+        },
+        {
+          "label": "RealFi docs: sUSDrf, loss order (first-loss reserves, then the subordinated staked pool, before any USDrf holder) and the staking vault address; retrieved 2026-11-15T17:08:11Z",
+          "url": "https://docs.realfi.co/realfi-tokens/susdrf-staked-usdrf"
+        },
+        {
+          "label": "RealFi docs: In summary, USDrf as the most senior asset and sUSDrf as subordinated; retrieved 2026-11-15T17:08:11Z",
+          "url": "https://docs.realfi.co/realfi-tokens/in-summary"
+        },
+        {
+          "label": "RealFi docs: Reserve Attestation, HT Digital named with documentation still to follow; retrieved 2026-11-15T17:08:21Z",
+          "url": "https://docs.realfi.co/resources/reserve-attestation"
+        },
+        {
+          "label": "USDrf Terms of Use, last updated 23 July 2026: section 1 senior token, section 2 no direct redemption claim without an issuer account, section 8 risk the issuer may not redeem; text retrieved 2026-11-15T17:09:37Z",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-terms-of-use"
+        },
+        {
+          "label": "USDrf Institutional Minting Agreement, last updated 23 July 2026: section 2 Mint User redemption right, section 3 no custody, fiduciary or trust services, section 8 suspension on a reserve adequacy or liquidity breach; text retrieved 2026-11-15T17:09:37Z",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement"
+        },
+        {
+          "label": "Koios asset_addresses for USDrf at Cardano block 14205037 (2026-11-15T18:24:03Z), retrieved 2026-11-15T18:24:12Z: the staking vault holds 3,049,558.706933 of 5,585,703.878529 USDrf",
+          "url": "https://api.koios.rest/api/v1/asset_addresses?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae&_asset_name=55534472"
+        },
+        {
+          "label": "RealFi transparency portal, redirected to app.realfi.co/restricted.html from the review location at 2026-11-15T18:21:48Z and 18:25:48Z; contents not inspected",
+          "url": "https://realfi.co/transparency"
+        }
+      ],
+      "notes": "Reviewed 2026-11-15 for USDrf's promotion to active. The evidence set is pinned at 2026-11-15T18:25:48Z: RealFi documentation pages retrieved 2026-11-15T17:07:57Z to 17:08:23Z; the USDrf Terms of Use and the USDrf Institutional Minting Agreement, both last updated 23 July 2026, retrieved 2026-11-15T17:09:37Z; a Koios asset_addresses read at Cardano block 14205037 (hash f5b2a9d3819b27c6d84e4b2a34bb2ed490c080bc77a64c9329e00164840327fa, 2026-11-15T18:24:03Z, tip unchanged before and after the read) listing 94 holders of 5,585,703.878529 USDrf, of which the documented sUSDrf staking vault addr1wyh04daelcpkgahkuz2ld885w2y3wa27r7w82gzdeagsazgtwduhf holds 3,049,558.706933 (54.5958%), leaving 2,536,145.171596 outside the vault; and the transparency portal, which redirected to a jurisdiction-restriction page at 18:21:48Z and 18:25:48Z, so its contents were not inspected. SENIORITY limited: Terms section 1 calls USDrf the senior token, and the sUSDrf page sets the loss order (the protocol's first-loss reserves, then the subordinated staked pool, before any USDrf holder), executed by burning USDrf from the staking vault; the on-chain read anchors the staked pool at 54.5958% of supply. The ordering is an issuer-operated protocol mechanism described in documentation, not an enforceable inter-creditor or trust structure, and the first-loss reserve size is undisclosed. LEGAL ENFORCEABILITY weak, on documented deficiency: USDrf only represents a right to require RealFi Reserve Ltd. (British Virgin Islands) to redeem, available to holders who open an account and accept the Institutional Minting Agreement; Terms section 2 states that persons without an account have no direct redemption claim against the Company. Agreement section 3 disclaims any fiduciary or trust service, no segregation, security interest or bankruptcy-remote vehicle is published, and section 8 permits suspension on a reserve adequacy or liquidity breach. RECOVERY limited: the documented buffers are the first-loss reserves, of undisclosed size, and the staked pool measured above; the issuer decides loss recognition and executes the vault burn, and no recovery waterfall for USDrf holders in an issuer default is published. CREDIT QUALITY, VALUATION CADENCE, MATURITY AND LIQUIDITY and CUSTODY are unavailable as sourced nondisclosures: the backing page publishes strategy sleeves and partial ranges it calls indicative of the launch strategy, not dated holdings, weights, obligors, ratings, maturities or custodians; the attestation page names HT Digital but says documentation will follow; the weekly sUSDrf epochs distribute realized income and do not value the reserve book. Both metrics are unavailable: the 1.25-year weighted-average-life cap, the 10% buffer floor and the 120% seven-day coverage target are policies, not measurements, and no valuation cadence is published. No metric is derived from policy ranges.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The multi-layered defence page caps the portfolio's weighted average life at 1.25 years and cites sleeve-level maturity limits as policy, but no dated maturity schedule or measured weighted average maturity is published; a policy cap is not a measurement.",
+          "sourceUrl": "https://docs.realfi.co/glass-box-approach/multi-layered-defence"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "No reserve valuation or NAV cadence is published: the named attestation provider has published no report, and the weekly staking epochs distribute realized income rather than value the reserve book.",
+          "sourceUrl": "https://docs.realfi.co/resources/reserve-attestation"
+        }
+      },
+      "components": {
+        "creditQuality": {
+          "applicability": "unavailable",
+          "rationale": "The backing page lists strategy sleeves (a Treasury bill and tokenized money market fund buffer, emerging-market floating-rate corporate bonds, CLO ETFs, private credit funds and direct loans) with partial ranges, and its footnote calls the disclosed composition indicative of the launch strategy, not a fixed allocation. No dated holdings, obligors, ratings or sleeve weights are published, the attestation provider has published no report, and the transparency portal was jurisdiction-restricted from the review location.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "weak"
+        },
+        "valuationCadence": {
+          "applicability": "unavailable",
+          "rationale": "No dated NAV or reserve valuation cadence is published. The attestation page names HT Digital but says documentation will follow, and the weekly sUSDrf epochs mint realized income to stakers rather than revalue the reserve book; the issuer's own mark is internal.",
+          "sourceUrl": "https://docs.realfi.co/resources/reserve-attestation"
+        },
+        "maturityAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The issuer states liquidity and duration policies (a 10% minimum liquidity buffer, reserves covering at least 120% of expected 7-day net redemptions, a 1.25-year weighted-average-life cap) but publishes no dated buffer balance, maturity ladder or measured liquidity profile; policy targets are not measurements.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+        },
+        "custody": {
+          "applicability": "unavailable",
+          "rationale": "No custodian, bank, broker, transfer agent or fund administrator is named for the off-chain reserve. The Institutional Minting Agreement covers only the noncustodial mint and redeem service, and the backing and attestation pages publish no custody arrangement.",
+          "sourceUrl": "https://docs.realfi.co/real-world-backing/real-world-backing"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdplus-streamflow",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T22:54:20Z",
+      "sources": [
+        {
+          "label": "Streamflow USD+ product disclosures reviewed 2026-11-15",
+          "url": "https://usd-plus.com/learn-more"
+        },
+        {
+          "label": "Streamflow issuer guide dated May 18, 2026; reviewed 2026-11-15",
+          "url": "https://streamflow.finance/blog/everything-you-need-to-know-about-usd-in-2026"
+        },
+        {
+          "label": "Pinned Streamflow integration identifying the USD+ global and M vault",
+          "url": "https://github.com/streamflow-finance/usd-plus-amm-implementation/blob/5f19f3e62352a92ccbb578f31c6d85907dd20174/jupiter-core/src/amms/usd_plus_amm.rs"
+        },
+        {
+          "label": "Alchemy Solana Account Archive: exact accounts at finalized slot 469901684, block GxPPJSLigxokMCSpfJbZG8e3KT41mm5cUTPSUQK9GQYi, 2026-11-15T22:44:58Z",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        }
+      ],
+      "notes": "Reviewed issuer product disclosures, structured integration code and exact Solana Account Archive bytes at finalized slot 469901684 (2026-11-15T22:44:58Z). The extension global identifies the exact USD+ mint and legacy M reserve mint; its derived vault holds approximately 1599182.732707 indexed M units against 1599062.791523 minted USD+. This corroborates the operational M reserve relationship and supports limited fundClaimAndSeniority only: no direct legal seniority over Treasury collateral, segregation or complete deployed fixed-unit mint invariant is established. The observation is not financial assurance or a circulating-supply override. Accessible issuer materials do not publish an independently administered USD+-specific valuation/reconciliation method, complete current maturity/liquidity schedule, or enforceable holder loss waterfall. Those three components remain sourced unavailable rather than measured weakness. The linked USD+-specific terms returned 404; that failure itself is not a nondisclosure assertion. The upstream M0 dashboard is not a USD+-specific assurance report.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ product and issuer guide describe the target dollar peg and daily additional-token income but publish no independently administered USD+-specific NAV or reserve-to-liability valuation method and dated reconciliation. The exact vault balance is technical evidence, not an independent valuation engagement.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ disclosures identify short-term Treasury backing through M0 but publish no USD+-specific current holdings maturity ladder, hard maturity maximum or whole-reserve cash-realization deadline. Observed pool liquidity and one M-vault balance do not establish those terms.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The accessible USD+ product disclosures describe M0 backing but publish no enforceable USD+ holder loss waterfall, priority over upstream collateral or recapitalization obligation. No USD+-specific independent financial assurance report was established.",
+          "sourceUrl": "https://usd-plus.com/learn-more"
+        }
+      }
+    },
+    {
+      "assetId": "copm-minteo",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-11-15",
+      "sources": [
+        {
+          "label": "Minteo reserve policy (issuer bank-custody claim, retrieved 2026-11-15)",
+          "url": "https://transparency.minteo.com/reserves"
+        },
+        {
+          "label": "Minteo tokenization and redemption (manual business onboarding and conditional charges, retrieved 2026-11-15)",
+          "url": "https://transparency.minteo.com/tokenizationAndRedemtion"
+        },
+        {
+          "label": "BDO ISAE 3000 limited assurance: August 31, 2026 reserves and Polygon, Solana and Celo liabilities; signed October 19, 2026",
+          "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+        }
+      ],
+      "notes": "Evidence review completed 2026-11-15T22:52:58.047Z; the calendar-day pin conservatively admits after that UTC day. Reviewed issuer reserve and redemption pages and the complete three-page BDO report on 2026-11-15. BDO compares bank balances held in Minteo (WAGMI S.A.S.) accounts with COPM liabilities on Polygon, Solana and Celo at August 31, 2026; this is limited assurance, not a financial-statement audit or proof of current balances. No enforceable holder-priority or reserve-segregation terms, named banks, custody concentration, replacement procedure or insolvency continuity protections are established by these sources. claimAndSegregation and custodyContinuity therefore remain unavailable rather than receiving an unsupported quality grade. assuranceAndReconciliation is deliberately omitted so the separately dated proofOfReserves.latestReport controls financial-assurance admission. Retrieved originals are pinned by SHA-256 in the lane evidence packet; the report digest is 136efc82505c5fbb6bf651a5276e8ab6ccb939a79547f3189b29fec06b0055c1. No current reserve-to-liability measurement is extrapolated from the historical report.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed redemption page describes manual business onboarding and par tokenization/redemption but does not establish enforceable holder priority, reserve ownership or legal segregation. BDO verifies sufficiency of Minteo bank balances at the historical report date, not holder rights or bankruptcy remoteness.",
+          "sourceUrl": "https://transparency.minteo.com/tokenizationAndRedemtion"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reserve page describes financial-institution custody, and the BDO report verifies bank balances without identifying the banks, account shares, replacement arrangements or insolvency continuity protections. These sources do not establish custody continuity.",
+          "sourceUrl": "https://transparency.minteo.com/reserves"
+        }
+      }
+    },
+    {
+      "assetId": "usd-dinari",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T23:31:35Z",
+      "sources": [
+        {
+          "label": "Dinari USD+ terms: issuer group, reserves, insolvency risks and Staked USD+ reward mechanics",
+          "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+        },
+        {
+          "label": "Dinari current guide: fixed-dollar daily rebasing and account redemption",
+          "url": "https://docs.dinari.com/docs/what-is-usd"
+        },
+        {
+          "label": "Dinari live info endpoint: issuer annual rate and deployment roster, retrieved 2026-11-15T23:25:12Z",
+          "url": "https://app-api.usd.dinari.com/api/v1/info/"
+        },
+        {
+          "label": "Dinari USD+ product: Treasury instruments, cash and equivalents; unnamed custodian",
+          "url": "https://dinari.com/usdplus"
+        },
+        {
+          "label": "Dinari issuer-operated transparency dashboard",
+          "url": "https://usd.dinari.com/transparency"
+        }
+      ],
+      "notes": "Re-admission review after fresh issuer terms/product reads at 2026-11-15T23:25:09Z and 23:25:10Z, live info at 23:25:12Z, and four treasury-token rosters at 23:25 to 23:26 UTC. Current guide and independently pinned token reads establish daily rebasing on the replacement deployment. The legal terms still describe Staked USD+ reward mechanics. All four applicable T-bill components remain sourced unavailable: reserve priority, valuation independence, complete duration/liquidity and independent reconciliation/recovery are not established. No nominal-par quote, eligible-asset weight, assurance quality or maturity metric is invented. The January redemption pause is marked complete by the issuer; no current suspension or reason for the unexplained March catalog removal is inferred.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "applicability": "unavailable",
+          "rationale": "USD+ terms define reserves held on behalf of eligible users and promise no operational commingling, but identify only Dinari, Inc. and subsidiaries as the issuer group. They name no completed bankruptcy-remote vehicle, reserve-asset trust or enforceable holder priority and acknowledge reserve loss or inaccessibility on Dinari insolvency. The product page names no USD+-specific custodian agreement. These sources establish a redemption promise, not an independently verified senior reserve claim.",
+          "sourceUrl": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "The current guide documents direct daily rebasing, while the terms still describe rewards through Staked USD+. The live info endpoint reports an annual rate without its measurement date, reserve valuations, independent administrator or matched NAV-to-liability reconciliation. A quoted rate or observed rebase index does not verify the underlying reserve valuation.",
+          "sourceUrl": "https://app-api.usd.dinari.com/api/v1/info/"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The product and terms describe mostly short-term Treasury instruments plus bank deposits and accepted stablecoins. Neither publishes a dated whole-book allocation, position-level maturity schedule, measured weighted-average maturity or stress liquidation profile. Eligible USFR treasury-token rosters establish neither current holdings nor duration; the advertised redemption window is not a portfolio maturity measurement.",
+          "sourceUrl": "https://dinari.com/usdplus"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The terms disclose issuer-insolvency and reserve-access risks and describe bankruptcy remoteness as an objective. No current USD+-specific independent reserve-to-liability report, named attestor, funded first-loss support, enforceable recapitalization commitment or holder recovery waterfall was retrieved from the terms, product or transparency surfaces. The self-reported reserve dashboard is not independent assurance.",
+          "sourceUrl": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
         }
       }
     }

@@ -11,6 +11,8 @@ export interface SiteDataProxyEnv {
   SITE_API_ORIGIN?: string;
   SITE_API?: ProxyServiceBinding;
   SITE_API_SHARED_SECRET?: string;
+  SITE_SESSION_SIGNING_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 export interface SiteDataProxyEnvIssue {

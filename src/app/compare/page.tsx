@@ -5,7 +5,6 @@ import { CompareContentLoadingState } from "@/app/compare/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 const compareDescription = `Compare ${ACTIVE_STABLECOIN_COUNT} stablecoins side by side across peg stability, liquidity depth, Safety Scores, supply history, mint/burn flows, and structural risk using Pharos live data.`;
@@ -44,7 +43,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Compare Stablecoins: Side-by-Side Analysis",
     description: compareDescription,
-    ogImage: `${SITE_URL}/og-compare.png`,
   },
   loadClient: () => import("@/components/compare/compare-client").then((m) => ({ default: m.CompareClient })),
   loading: <CompareContentLoadingState />,

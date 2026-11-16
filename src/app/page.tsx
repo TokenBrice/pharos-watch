@@ -6,7 +6,7 @@ import { HomeApiStrip } from "@/components/homepage/home-api-strip";
 import { HomeMediaStrip } from "@/components/homepage/home-media-strip";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
-import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -30,7 +30,6 @@ export const metadata: Metadata = buildPageMetadata({
   titleAbsolute: true,
   description: `Live peg, Safety Score, liquidity and freeze data for ${HEADLINE_STABLECOIN_COUNT} ${HEADLINE_STABLECOIN_LABEL}, with depeg alerts, reserve evidence and a record of ${DEAD_STABLECOIN_COUNT} failed coins.`,
   canonical: "/",
-  ogImage: buildLiveRouteOgImageUrl("home"),
 });
 
 export default async function HomePage() {

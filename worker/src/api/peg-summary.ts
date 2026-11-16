@@ -18,6 +18,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../lib/current-peg-observations";
 import { deriveDexDeviationBps } from "@shared/lib/current-peg-observations";
 import {
@@ -321,7 +322,14 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     });
 
     if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
-    if (currentBps !== null) {
+    // A deviation read against a closed FX or metal market stays on its row but is not a
+    // live peg status: the aggregates skip it, as the OG at-peg cohort does.
+    const heldByClosedMarket = currentBps !== null && isReferenceDeviationHeld(
+      meta.flags.pegCurrency,
+      asset?.priceObservedAt ?? asset?.priceUpdatedAt ?? Number.NaN,
+      Math.abs(observation?.currentSignal?.rawBps ?? currentBps),
+    );
+    if (currentBps !== null && !heldByClosedMarket) {
       // Keep summary aggregates aligned to rows with a live peg status.
       totalTracked++;
       const absBps = Math.abs(currentBps);

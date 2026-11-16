@@ -22,7 +22,7 @@ const psi = PSI_HISTORICAL_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gaps = STABLECOIN_PRICE_GAP_REVIEWS as StablecoinPriceGapReview[];
 const gapCount = gaps.length;
 const authored = psi.slice();
-const [review] = DEPEG_BLIND_EVENT_REVIEWS;
+const [, review] = DEPEG_BLIND_EVENT_REVIEWS; // USD: no reference-market hold
 
 afterEach(() => {
   fixtures.closeAll();
@@ -47,27 +47,16 @@ const USD_IDS = [...PSI_ELIGIBLE_META_BY_ID]
 const NON_USD_ID = [...PSI_ELIGIBLE_META_BY_ID].find(([, meta]) => meta.flags.pegCurrency !== "USD")?.[0];
 
 function censusJson(overrides: Record<string, unknown> = {}) {
-  return JSON.stringify({
-    scope: "psi-non-nav-before-supply-floor",
-    evaluatedAt: NOW - 120,
-    eligibleCount: 100,
-    observedCount: 98,
-    unavailableCount: 2,
-    belowFloorCount: 0,
-    reasonCounts: { "asset-absent": 2 },
-    ...overrides,
-  });
+  return JSON.stringify({ scope: "psi-non-nav-before-supply-floor", evaluatedAt: NOW - 120, eligibleCount: 100, observedCount: 98,
+    unavailableCount: 2, belowFloorCount: 0, reasonCounts: { "asset-absent": 2 }, ...overrides });
 }
 
 function censusRow(overrides: Record<string, unknown> = {}) {
-  return {
-    started_at: NOW - 60,
-    census_json: censusJson(),
-    pipeline_succeeded: 1,
-    unavailable_reason: null,
-    ...overrides,
-  };
+  return { started_at: NOW - 60, census_json: censusJson(), pipeline_succeeded: 1, unavailable_reason: null, ...overrides };
 }
+
+const censusDb = (...rows: Record<string, unknown>[]) => mockD1([{ match: "pharos:depeg-census-runs", rows }]);
+const suppressionDb = (rows: Record<string, unknown>[]) => mockD1([{ match: "pharos:depeg-dex-suppression-canary", rows }]);
 
 function pending(first: Record<string, unknown>, rows: Record<string, unknown>[] = []) {
   return mockD1([
@@ -78,88 +67,45 @@ function pending(first: Record<string, unknown>, rows: Record<string, unknown>[]
 
 describe("depeg canary checks", () => {
   it("reports a completed census as healthy and keeps the counters", async () => {
-    const db = mockD1([
-      { match: "pharos:depeg-census-runs", rows: [censusRow(), censusRow({ started_at: NOW - 960 })] },
-    ]);
+    const result = await checkDepegDetectionCensus(censusDb(censusRow(), censusRow({ started_at: NOW - 960 })), NOW);
 
-    const result = await checkDepegDetectionCensus(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "ok",
-      severity: "info",
-      executionStatus: "completed",
-      metadata: {
-        eligibleCount: 100,
-        observedCount: 98,
-        unavailableCount: 2,
-        unavailableShare: 0.02,
-        maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
-      },
-    });
+    expect(result).toMatchObject({ status: "ok", severity: "info", executionStatus: "completed", metadata: {
+      eligibleCount: 100, observedCount: 98, unavailableCount: 2, unavailableShare: 0.02, maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
+    } });
   });
 
   it("degrades when no run completed the detection pass", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-census-runs",
-        rows: [censusRow({ census_json: null, pipeline_succeeded: 0, unavailable_reason: "depeg-detection-error" })],
-      },
-    ]);
+    const db = censusDb(censusRow({ census_json: null, pipeline_succeeded: 0, unavailable_reason: "depeg-detection-error" }));
 
-    const result = await checkDepegDetectionCensus(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "degraded",
-      error: "depeg-census-missing",
-      metadata: { unavailableReason: "depeg-detection-error" },
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({
+      status: "degraded", error: "depeg-census-missing", metadata: { unavailableReason: "depeg-detection-error" },
     });
   });
 
   it("degrades when the newest completed census misses two producer intervals", async () => {
-    const db = mockD1([
-      {
-        match: "pharos:depeg-census-runs",
-        rows: [censusRow({ started_at: NOW - CRON_INTERVALS["sync-stablecoins"] * 2 - 60 })],
-      },
-    ]);
+    const db = censusDb(censusRow({ started_at: NOW - CRON_INTERVALS["sync-stablecoins"] * 2 - 60 }));
 
-    const result = await checkDepegDetectionCensus(db, NOW);
-
-    expect(result).toMatchObject({ status: "degraded", error: expect.stringContaining("census is") });
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({ status: "degraded", error: expect.stringContaining("census is") });
   });
 
   it("requires two consecutive material census losses instead of one noisy run", async () => {
     const lossy = censusRow({ census_json: censusJson({ unavailableCount: 20, observedCount: 80 }) });
     const healthy = censusRow({ started_at: NOW - 960 });
 
-    const oneRun = await checkDepegDetectionCensus(
-      mockD1([{ match: "pharos:depeg-census-runs", rows: [lossy, healthy] }]),
-      NOW,
-    );
+    const oneRun = await checkDepegDetectionCensus(censusDb(lossy, healthy), NOW);
     expect(oneRun.status).toBe("ok");
 
-    const twoRuns = await checkDepegDetectionCensus(
-      mockD1([{ match: "pharos:depeg-census-runs", rows: [lossy, { ...lossy, started_at: NOW - 960 }] }]),
-      NOW,
-    );
+    const twoRuns = await checkDepegDetectionCensus(censusDb(lossy, { ...lossy, started_at: NOW - 960 }), NOW);
     expect(twoRuns).toMatchObject({
-      status: "degraded",
-      error: expect.stringContaining("two consecutive runs"),
-      metadata: { unavailableShare: 0.2, priorUnavailableShare: 0.2 },
+      status: "degraded", error: expect.stringContaining("two consecutive runs"), metadata: { unavailableShare: 0.2, priorUnavailableShare: 0.2 },
     });
   });
 
   it("reports its own read failure as a failed measurement, not a producer finding", async () => {
-    const db = mockD1([
-      { match: "pharos:depeg-census-runs", throwError: new Error("D1_ERROR: overloaded"), rows: [] },
-    ]);
+    const db = mockD1([{ match: "pharos:depeg-census-runs", throwError: new Error("D1_ERROR: overloaded"), rows: [] }]);
 
-    const result = await checkDepegDetectionCensus(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      executionStatus: "failed",
-      executionFailureReason: "canary-source-unavailable",
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({
+      status: "error", executionStatus: "failed", executionFailureReason: "canary-source-unavailable",
     });
   });
 
@@ -215,39 +161,28 @@ describe("depeg canary checks", () => {
     } });
   });
 
+  it.each([[22, 0], [23, 2]])("acknowledges metal-market holds only inside a closure (Sunday %s:00 UTC)", (hour, actionable) => {
+    const evaluatedAt = Date.UTC(2026, 10, 15, hour) / 1000;
+    const gaps = assessDepegObservationGaps({ scope: "psi-non-nav-before-supply-floor", evaluatedAt, eligibleCount: 9,
+      observedCount: 7, unavailableCount: 2, belowFloorCount: 0, reasonCounts: { "reference-market-closed": 2 } }, evaluatedAt);
+    expect([gaps.actionableUnavailableCount, gaps.actionableReasonCounts])
+      .toEqual([actionable, actionable ? { "reference-market-closed": 2 } : {}]);
+  });
+
   it("projects the census from persisted cron_runs metadata", async () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
       `INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
        VALUES ('sync-stablecoins', ?, 1000, 'ok', 400, ?)`,
     );
-    insert.run(
-      NOW - 60,
-      JSON.stringify({
-        capabilities: { stablecoinsCache: true, depegPipeline: true },
-        quality: { depegObservation: JSON.parse(censusJson()) },
-      }),
-    );
-    insert.run(
-      NOW - 960,
-      JSON.stringify({
-        capabilities: { stablecoinsCache: true, depegPipeline: true },
-        quality: { depegObservation: JSON.parse(censusJson({ unavailableCount: 0 })) },
-      }),
-    );
+    const metadata = (census: string) =>
+      JSON.stringify({ capabilities: { stablecoinsCache: true, depegPipeline: true }, quality: { depegObservation: JSON.parse(census) } });
+    insert.run(NOW - 60, metadata(censusJson()));
+    insert.run(NOW - 960, metadata(censusJson({ unavailableCount: 0 })));
 
-    const result = await checkDepegDetectionCensus(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "ok",
-      metadata: {
-        runStartedAt: NOW - 60,
-        eligibleCount: 100,
-        observedCount: 98,
-        unavailableCount: 2,
-        reasonCounts: { "asset-absent": 2 },
-      },
-    });
+    expect(await checkDepegDetectionCensus(db, NOW)).toMatchObject({ status: "ok", metadata: {
+      runStartedAt: NOW - 60, eligibleCount: 100, observedCount: 98, unavailableCount: 2, reasonCounts: { "asset-absent": 2 },
+    } });
   });
 
   it("uses the outcome/clock index for the unconfirmed-severe lookback", async () => {
@@ -268,21 +203,14 @@ describe("depeg canary checks", () => {
   it("keeps quiet when no candidate is pending", async () => {
     const db = pending({ severe_recent: 0, stalled_count: 0, pending_count: 0, oldest_first_seen: null });
 
-    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
-      status: "ok",
-      metadata: { pendingCount: 0, unconfirmedSevereRecent: 0 },
-    });
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: "ok", metadata: { pendingCount: 0, unconfirmedSevereRecent: 0 } });
   });
 
   it("errors when an extreme move expired without a public event", async () => {
     const db = pending({ severe_recent: 1, stalled_count: 0, pending_count: 0, oldest_first_seen: null });
 
-    const result = await checkDepegPendingConfirmation(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      error: expect.stringContaining("expired unconfirmed"),
-      metadata: { unconfirmedSevereRecent: 1 },
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
+      status: "error", error: expect.stringContaining("expired unconfirmed"), metadata: { unconfirmedSevereRecent: 1 },
     });
   });
 
@@ -292,17 +220,9 @@ describe("depeg canary checks", () => {
       { stablecoin_id: "usdc-circle", first_seen_at: NOW - 15_000 },
     ]);
 
-    const result = await checkDepegPendingConfirmation(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      error: expect.stringContaining("outlived every dynamic expiry limit"),
-      metadata: {
-        stalledExpiredCount: 2,
-        pending: [
-          { stablecoinId: "usdt-tether", ageSec: 20_000 },
-          { stablecoinId: "usdc-circle", ageSec: 15_000 },
-        ],
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({
+      status: "error", error: expect.stringContaining("outlived every dynamic expiry limit"), metadata: {
+        stalledExpiredCount: 2, pending: [{ stablecoinId: "usdt-tether", ageSec: 20_000 }, { stablecoinId: "usdc-circle", ageSec: 15_000 }],
       },
     });
   });
@@ -320,34 +240,26 @@ describe("depeg canary checks", () => {
     });
   });
 
+  it.each([[9_060, 0], [2e5, 1]])("exempts metal-market holds; a gap %ss old stays blind: %s", async (age, blind) => {
+    const db = pending({ severe_recent: 0 }, [{ stablecoin_id: "xaut-tether", first_seen_at: NOW - age, reason: "large-cap" }]);
+    expect(await checkDepegPendingConfirmation(db, NOW)).toMatchObject({ status: blind ? "error" : "ok", metadata: { referenceMarketHeldCount: 1 } });
+    const now = Date.UTC(2026, 10, 15, 16) / 1000;
+    const { db: events, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price,
+      peg_reference, last_trusted_price_at) VALUES ('xaut-tether', 'XAUT', 'peggedGOLD', 'below', -200, ?, 3800, 3880, ?)`).run(now - 3e5, now - age);
+    expect(await checkDepegOpenCoverage(events, now)).toMatchObject({ metadata: { blindEventCount: blind } });
+  });
+
   it("names open events whose trusted price stopped advancing", async () => {
     const db = mockD1([
       { match: "pharos:depeg-census-runs", rows: [] },
-      {
-        match: "pharos:depeg-open-coverage-canary",
-        rows: [
-          {
-            id: 7,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            last_trusted_price_at: NOW - 5_001,
-            price_coverage_gap_started_at: NOW - 4_501,
-            total_count: 1,
-            acknowledged_count: 0, acknowledged_ids_json: "[]",
-          },
-        ],
-      },
+      { match: "pharos:depeg-open-coverage-canary", rows: [{ id: 7, stablecoin_id: "usdt-tether", symbol: "USDT", last_trusted_price_at: NOW - 5_001,
+        price_coverage_gap_started_at: NOW - 4_501, total_count: 1, acknowledged_count: 0, acknowledged_ids_json: "[]" }] },
     ]);
 
-    const result = await checkDepegOpenCoverage(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "degraded",
-      error: expect.stringContaining("USDT(usdt-tether)"),
-      metadata: {
-        blindEventCount: 1,
-        events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 4_501 }],
-      },
+    expect(await checkDepegOpenCoverage(db, NOW)).toMatchObject({
+      status: "degraded", error: expect.stringContaining("USDT(usdt-tether)"),
+      metadata: { blindEventCount: 1, events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 4_501 }] },
     });
   });
 
@@ -413,12 +325,7 @@ describe("depeg canary checks", () => {
        VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, ?)`,
     ).run(NOW - 8_000, NOW - age, NOW - 6_000);
 
-    const result = await checkDepegOpenCoverage(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "ok",
-      metadata: { blindEventCount: 0, events: [] },
-    });
+    expect(await checkDepegOpenCoverage(db, NOW)).toMatchObject({ status: "ok", metadata: { blindEventCount: 0, events: [] } });
   });
 
   it("exempts frozen coins, whose open rows are preserved history", async () => {
@@ -435,10 +342,7 @@ describe("depeg canary checks", () => {
 
     const result = await checkDepegOpenCoverage(db, NOW);
 
-    expect(result).toMatchObject({
-      status: "degraded",
-      metadata: { blindEventCount: 1, events: [{ stablecoinId: "live-coin" }] },
-    });
+    expect(result).toMatchObject({ status: "degraded", metadata: { blindEventCount: 1, events: [{ stablecoinId: "live-coin" }] } });
     expect((result.metadata as { events: unknown[] }).events).toHaveLength(1);
   });
 
@@ -469,32 +373,17 @@ describe("depeg canary checks", () => {
     const db = mockD1([{ match: "pharos:ddr-eligible-unsealed-canary", rows: [] }]);
 
     expect(await checkDdrEligibleUnsealed(db, NOW)).toMatchObject({
-      status: "ok",
-      metadata: { unsealedCount: 0, graceSec: CRON_INTERVALS["compute-depeg-resolver"] * 2 },
+      status: "ok", metadata: { unsealedCount: 0, graceSec: CRON_INTERVALS["compute-depeg-resolver"] * 2 },
     });
   });
 
-  it.each([
-    [NOW - 2_000, "degraded"],
-    [NOW - 7 * 3600, "error"],
-  ] as const)("bands an unsealed eligible incident (%i)", async (eligibleAt, status) => {
-    const db = mockD1([
-      {
-        match: "pharos:ddr-eligible-unsealed-canary",
-        rows: [{ incident_key: "incident:usdt-tether:below:1", eligible_at: eligibleAt, total_count: 1 }],
-      },
-    ]);
+  it.each([[NOW - 2_000, "degraded"], [NOW - 7 * 3600, "error"]] as const)("bands an unsealed eligible incident (%i)", async (eligibleAt, status) => {
+    const db = mockD1([{ match: "pharos:ddr-eligible-unsealed-canary",
+      rows: [{ incident_key: "incident:usdt-tether:below:1", eligible_at: eligibleAt, total_count: 1 }] }]);
 
-    const result = await checkDdrEligibleUnsealed(db, NOW);
-
-    expect(result).toMatchObject({
-      status,
-      metadata: {
-        unsealedCount: 1,
-        oldestAgeSec: NOW - eligibleAt,
-        incidents: [{ incidentKey: "incident:usdt-tether:below:1", ageSec: NOW - eligibleAt }],
-      },
-    });
+    expect(await checkDdrEligibleUnsealed(db, NOW)).toMatchObject({ status, metadata: {
+      unsealedCount: 1, oldestAgeSec: NOW - eligibleAt, incidents: [{ incidentKey: "incident:usdt-tether:below:1", ageSec: NOW - eligibleAt }],
+    } });
   });
 
   it("excludes health-deferred and repair-quarantined DDR incidents from the unsealed cohort", async () => {
@@ -542,96 +431,48 @@ describe("depeg canary checks", () => {
     ];
     for (const fixture of fixturesForIncident) {
       const incidentKey = `ddr2:${fixture.suffix.repeat(32)}`;
-      const eventId = Number(
-        insertEvent.run(`coin-${fixture.suffix}`, `C${fixture.suffix}`, NOW - 5_000).lastInsertRowid,
-      );
+      const eventId = Number(insertEvent.run(`coin-${fixture.suffix}`, `C${fixture.suffix}`, NOW - 5_000).lastInsertRowid);
       insertIncidentLink.run(incidentKey, eventId, NOW - 5_000);
-      insertIncident.run(
-        incidentKey,
-        `coin-${fixture.suffix}`,
-        eventId,
-        eventId,
-        NOW - 5_000,
-        NOW - 5_000,
-        `${fixture.suffix.repeat(64)}`,
-        NOW - 5_000,
-        NOW - 5_000,
-      );
+      insertIncident.run(incidentKey, `coin-${fixture.suffix}`, eventId, eventId, NOW - 5_000, NOW - 5_000, `${fixture.suffix.repeat(64)}`, NOW - 5_000, NOW - 5_000);
       insertMembership.run(incidentKey, `coin-${fixture.suffix}`, NOW - 5_000);
       insertLockState.run(incidentKey, eventId, eligibleAt, fixture.lastState, NOW - 5_000, NOW - 2_000);
-      if (fixture.repaired) {
-        insertRepairTask.run(`repair:${eventId}`, String(eventId), NOW - 1_000, NOW - 1_000);
-      }
+      if (fixture.repaired) insertRepairTask.run(`repair:${eventId}`, String(eventId), NOW - 1_000, NOW - 1_000);
     }
 
-    const result = await checkDdrEligibleUnsealed(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "degraded",
-      metadata: { unsealedCount: 1, incidents: [{ incidentKey: `ddr2:${"a".repeat(32)}` }] },
+    expect(await checkDdrEligibleUnsealed(db, NOW)).toMatchObject({
+      status: "degraded", metadata: { unsealedCount: 1, incidents: [{ incidentKey: `ddr2:${"a".repeat(32)}` }] },
     });
   });
 
   it.each([false, true])("flags a fresh DEX recovery-band suppression with two corroborating protocol groups (envelope=%s)", async (envelope) => {
     const stablecoinId = USD_IDS[0]!;
     const sources = JSON.stringify(envelope ? { aggregateObservedAt: NOW - 60, sources: recoverySources } : recoverySources);
-    const db = mockD1([
-      {
-        match: "pharos:depeg-dex-suppression-canary",
-        rows: [suppressionRow(stablecoinId, sources, 1)],
-      },
-    ]);
-
-    const result = await checkDepegDexSuppression(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "degraded",
-      error: expect.stringContaining(stablecoinId),
-      metadata: {
-        suppressedCount: 1,
-        suppressed: [{ stablecoinId, primaryBps: 150, dexBps: 10, protocolGroups: 2 }],
-      },
+    expect(await checkDepegDexSuppression(suppressionDb([suppressionRow(stablecoinId, sources, 1)]), NOW)).toMatchObject({
+      status: "degraded", error: expect.stringContaining(stablecoinId),
+      metadata: { suppressedCount: 1, suppressed: [{ stablecoinId, primaryBps: 150, dexBps: 10, protocolGroups: 2 }] },
     });
   });
 
   it("ignores a single-protocol DEX row, a stale protocol clock, and non-USD pegs", async () => {
     const singleProtocol = JSON.stringify(recoverySources.slice(0, 1));
     const staleProtocol = JSON.stringify(recoverySources.map((source) => ({ ...source, observedAt: NOW - 4_000 })));
-    const db = mockD1([
-      {
-        match: "pharos:depeg-dex-suppression-canary",
-        rows: [
-          suppressionRow(USD_IDS[0]!, singleProtocol, 5),
-          suppressionRow(USD_IDS[1]!, staleProtocol, 5),
-          suppressionRow(USD_IDS[2]!, JSON.stringify({ aggregateObservedAt: NOW, sources: [] }), 5),
-          suppressionRow(USD_IDS[3]!, "{}", 5),
-          ...(NON_USD_ID ? [suppressionRow(NON_USD_ID, singleProtocol, 5)] : []),
-        ],
-      },
+    const db = suppressionDb([
+      suppressionRow(USD_IDS[0]!, singleProtocol, 5),
+      suppressionRow(USD_IDS[1]!, staleProtocol, 5),
+      suppressionRow(USD_IDS[2]!, JSON.stringify({ aggregateObservedAt: NOW, sources: [] }), 5),
+      suppressionRow(USD_IDS[3]!, "{}", 5),
+      ...(NON_USD_ID ? [suppressionRow(NON_USD_ID, singleProtocol, 5)] : []),
     ]);
 
-    const result = await checkDepegDexSuppression(db, NOW);
-
-    expect(result).toMatchObject({ status: "ok", metadata: { suppressedCount: 0 } });
+    expect(await checkDepegDexSuppression(db, NOW)).toMatchObject({ status: "ok", metadata: { suppressedCount: 0 } });
   });
 
   it("escalates a broad DEX suppression cohort to error", async () => {
     const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 10);
     expect(ids).toHaveLength(10);
-    const db = mockD1([
-      {
-        match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((id) => suppressionRow(id, sources, ids.length)),
-      },
-    ]);
-
-    const result = await checkDepegDexSuppression(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      error: expect.stringContaining("10 USD-pegged assets"),
-      metadata: { suppressedCount: 10 },
+    expect(await checkDepegDexSuppression(suppressionDb(ids.map((id) => suppressionRow(id, sources, ids.length))), NOW)).toMatchObject({
+      status: "error", error: expect.stringContaining("10 USD-pegged assets"), metadata: { suppressedCount: 10 },
     });
   });
 
@@ -639,23 +480,9 @@ describe("depeg canary checks", () => {
     const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 50);
     expect(ids).toHaveLength(50);
-    const db = mockD1([
-      {
-        match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((id) => suppressionRow(id, sources, 60)),
-      },
-    ]);
-
-    const result = await checkDepegDexSuppression(db, NOW);
-
-    expect(result).toMatchObject({
-      status: "error",
-      error: expect.stringContaining("at least 50 USD-pegged assets"),
-      metadata: {
-        suppressedCount: 50,
-        suppressedCountIsLowerBound: true,
-        candidateCount: 60,
-      },
+    expect(await checkDepegDexSuppression(suppressionDb(ids.map((id) => suppressionRow(id, sources, 60))), NOW)).toMatchObject({
+      status: "error", error: expect.stringContaining("at least 50 USD-pegged assets"),
+      metadata: { suppressedCount: 50, suppressedCountIsLowerBound: true, candidateCount: 60 },
     });
   });
 });

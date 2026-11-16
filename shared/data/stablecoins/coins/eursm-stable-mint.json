@@ -1,0 +1,76 @@
+{
+  "id": "eursm-stable-mint",
+  "name": "Stable Mint EUR",
+  "symbol": "EURSM",
+  "status": "pre-launch",
+  "oneLiner": "EURSM is Stable mint Ltd's euro token, backed by cash and liquid financial assets and redeemable at par after holder onboarding.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "pegCurrency": "EUR"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Issuer-disclosed euro cash deposits and high-quality liquid financial assets; asset weights, bank allocation and independently reconciled backing remain unverified.",
+  "pegMechanism": "Holders may redeem at par after onboarding, token return and AML/KYC screening. No issuer redemption fee or minimum applies; third-party bank charges may apply. Issuance is against received fiat deposits.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://stablemint.io/stablecoins/",
+    "provider": "Stable mint Ltd; 102% reserve claim without a retrieved dated reserve-to-liability reconciliation",
+    "attestorTier": "self",
+    "cadence": "undisclosed"
+  },
+  "jurisdiction": {
+    "country": "Malta",
+    "regulator": "MFSA",
+    "license": "Electronic Money Institution"
+  },
+  "contracts": [
+    {
+      "chain": "etherlink",
+      "address": "0x6a02e153bcbf9e6be45c0b49f7f0abc82859ebd5",
+      "decimals": 18
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://stablemint.io/stablecoins/"
+    },
+    {
+      "label": "EURSM whitepaper",
+      "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_EUR.html"
+    },
+    {
+      "label": "Issuance and redemption terms",
+      "url": "https://stablemint.io/legal/terms-conditions/"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://stablemint.io/blog/stable-mint-is-live/"
+    }
+  ],
+  "launchDate": "2026-01-15",
+  "announcedDate": "2026-01-15",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "Publicly issued on Etherlink; awaiting an admitted price lane.",
+  "milestones": [
+    {
+      "date": "2026-01-15",
+      "type": "milestone",
+      "title": "Stable Mint announces live EURSM issuance",
+      "description": "Stable mint Ltd announces that it is live and issuing euro and dollar electronic-money tokens with segregated reserves and par redemption.",
+      "sourceUrl": "https://stablemint.io/blog/stable-mint-is-live/"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "No admitted price lane: exact-contract DefiLlama quote is empty and no verified CoinGecko listing was found. Positive Etherlink supply is verified.",
+    "reviewBy": "2027-01-15",
+    "source": {
+      "label": "Issuer token and deployment roster",
+      "url": "https://stablemint.io/stablecoins/"
+    }
+  },
+  "custodyModel": "unknown",
+  "collateralQuality": "rwa"
+}

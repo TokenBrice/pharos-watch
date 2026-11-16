@@ -111,10 +111,10 @@ function makeFeedbackBody(
   };
 }
 
-function makeRequest(body: unknown, idempotencyKey = FEEDBACK_IDEMPOTENCY_KEY): Request {
+function makeRequest(body: unknown, idempotencyKey = FEEDBACK_IDEMPOTENCY_KEY, ip = "1.2.3.4"): Request {
   return makeJsonRequest("https://x/api/feedback", body, {
     headers: {
-      "CF-Connecting-IP": "1.2.3.4",
+      "CF-Connecting-IP": ip,
       "Idempotency-Key": idempotencyKey,
     },
   });
@@ -233,6 +233,9 @@ describe("handleFeedback", () => {
 
   it("retries the same key after a 429 without persisting or consuming the rejected attempt", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
+    const env = makeEnv();
+    let suffix = 0;
+    const request = (key: string) => makeRequest(makeFeedbackBody(), key, `2001:0DB8:1:0002::${++suffix}`);
     queueFetch(
       new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
       new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
@@ -241,11 +244,11 @@ describe("handleFeedback", () => {
     );
 
     for (const key of ["feedback-quota-1", "feedback-quota-2", "feedback-quota-3"]) {
-      const response = await handleFeedback(db, makeRequest(makeFeedbackBody(), key), makeEnv());
+      const response = await handleFeedback(db, request(key), env);
       expect(response.status).toBe(200);
     }
 
-    const limited = await handleFeedback(db, makeRequest(makeFeedbackBody(), "feedback-quota-retry"), makeEnv());
+    const limited = await handleFeedback(db, request("feedback-quota-retry"), env);
     expect(limited.status).toBe(429);
     expect(
       sqlite
@@ -255,12 +258,25 @@ describe("handleFeedback", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 3 });
 
     sqlite.prepare("DELETE FROM feedback_rate_limit WHERE rowid = (SELECT MIN(rowid) FROM feedback_rate_limit)").run();
-    const retry = await handleFeedback(db, makeRequest(makeFeedbackBody(), "feedback-quota-retry"), makeEnv());
+    const retry = await handleFeedback(db, request("feedback-quota-retry"), env);
 
     expect(retry.status).toBe(200);
     expect(retry.headers.get("X-Idempotent-Replay")).toBe("false");
     expect(fetchSpy).toHaveBeenCalledTimes(4);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 3 });
+    expect(vi.mocked(env.FEEDBACK_PREAUTH_RATE_LIMIT!.limit).mock.calls.map(([arg]) => arg.key))
+      .toEqual(Array(5).fill("2001:db8:1:2::/64"));
+  });
+
+  it("rejects a new source at the global ceiling before creating a GitHub issue", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
+    const now = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < 30; i++) sqlite.prepare("INSERT INTO feedback_rate_limit (ip_hash, submitted_at) VALUES (?, ?)").run(`source-${i}`, now);
+    const response = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ error: "Too many submissions. Please wait a few minutes." });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 30 });
   });
 
   it("returns explicit degraded-service 503 when feedback rate-limit storage fails", async () => {

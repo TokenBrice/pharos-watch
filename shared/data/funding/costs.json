@@ -1,14 +1,26 @@
 {
-  "last_reviewed_at": 1791753489,
+  "last_reviewed_at": 1794836349,
   "items": [
-    { "label": "Ike", "category": "team", "usd_per_month": 1500, "note": "Growth & comms" },
-    { "label": "Brice", "category": "team", "usd_per_month": 0, "note": "Uncompensated" },
-    { "label": "CoinGecko API", "category": "infra", "usd_per_month": 129, "note": "Analyst tier" },
-    { "label": "Alchemy", "category": "infra", "usd_per_month": 40, "note": "Pay-as-you-go, ~$40 typical" },
-    { "label": "Dwellir", "category": "infra", "usd_per_month": 0, "note": "Multi-chain RPC; Growth plan sponsored in kind" },
-    { "label": "Claude API", "category": "infra", "usd_per_month": 30, "note": "Daily digest generation" },
-    { "label": "Cloudflare Workers", "category": "infra", "usd_per_month": 5, "note": "Paid plan" },
+    { "label": "Ike", "category": "team", "usd_per_month": 1500, "note": "Growth & comms", "mark": "/media/ike.png" },
+    { "label": "Brice", "category": "team", "usd_per_month": 0, "note": "Uncompensated", "mark": "/media/brice.png" },
+    { "label": "CoinGecko API", "category": "infra", "usd_per_month": 129, "note": "Prices, market caps and pool data; Analyst plan", "mark": "/media/coingecko.svg" },
+    { "label": "Alchemy", "category": "infra", "usd_per_month": 31.54, "note": "RPC and token prices; pay-as-you-go, Jul–Nov 2026 invoice average", "mark": "/media/alchemy.svg" },
+    { "label": "Dwellir", "category": "infra", "usd_per_month": 0, "note": "Multi-chain RPC; Growth plan sponsored in kind", "sponsor": { "logo": "/media/dwellir.svg", "url": "https://www.dwellir.com", "blurb": "Dwellir sponsors Pharos's multi-chain RPC access on its Growth plan, including archive state and wide event-log windows. Thank you, Dwellir.", "announcement": "/blog/dwellir-in-kind-sponsorship/" } },
+    { "label": "Claude API", "category": "infra", "usd_per_month": 0, "note": "Daily digest drafting; covered by TokenBrice's Claude Max credits", "mark": "/media/claude.svg" },
+    { "label": "Cloudflare Workers", "category": "infra", "usd_per_month": 12.66, "note": "Site, API and database hosting; paid plan plus usage, May–Nov 2026 invoice average", "mark": "/media/cloudflare.svg" },
     { "label": "Domain registration", "category": "infra", "usd_per_month": 2.85, "note": "pharos.watch, annualized" },
-    { "label": "X Premium", "category": "infra", "usd_per_month": 2.16, "note": "2 EUR/month, for @PharosWatch" }
+    { "label": "X Premium", "category": "infra", "usd_per_month": 2.16, "note": "@PharosWatch; 2 EUR/month", "mark": "/media/x.svg" }
+  ],
+  "monthly_totals": [
+    { "month": "2026-04", "usd": 1709.01 },
+    { "month": "2026-05", "usd": 1709.01 },
+    { "month": "2026-06", "usd": 1709.01 },
+    { "month": "2026-07", "usd": 1709.01 },
+    { "month": "2026-08", "usd": 1709.01 },
+    { "month": "2026-09", "usd": 1709.01 },
+    { "month": "2026-10", "usd": 1709.01 }
+  ],
+  "one_time": [
+    { "label": "Full website redesign and logo", "usd": 5800, "paid_by": "founder" }
   ]
 }

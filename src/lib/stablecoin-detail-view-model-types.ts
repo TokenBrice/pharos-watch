@@ -182,6 +182,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   pegRef: number | null;
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
+  /** The peg's reference market was shut at the observation: the current deviation is held. */
+  referenceMarketClosed: boolean;
   isNavToken: boolean;
   pegScoreResult: PegSummaryCoin | null;
   /** Null when the peg-summary provenance row was not read. */

@@ -74,7 +74,7 @@ The `cemetery-dataset` artifact owns regeneration: run `npx --no-install tsx scr
 
 ### OG image
 
-The `og-cemetery` artifact renders the real resting plot map, depends on the atlas and uses input-signature freshness. Run `npm run build:og-cemetery` after data changes and commit outputs. [OG Images](./og-images.md) owns rendering/review.
+The `og-cemetery` artifact renders the real resting plot map, depends on the atlas and uses input-signature freshness. Run `npm run build:og-cemetery` after data changes, then `npm run build:og-evergreen` to preserve that authored composition in the canonical immutable preview map; commit both artifacts' outputs. `og-cemetery.png` remains a legacy URL, not a reason to replace the scene with a generic card. [OG Images](./og-images.md#5-stablecoin-cemetery-card-publicog-cemeterypng) owns rendering/review and permanent image history.
 
 ### Frozen entries in the cemetery
 

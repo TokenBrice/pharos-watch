@@ -1,0 +1,80 @@
+{
+  "id": "usdau-allunity",
+  "reserves": [
+    {
+      "name": "USD cash and eligible USD HQLA reserve basket",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "EU-regulated credit institutions and eligible USD HQLA issuers; allocation undisclosed",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "duration",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery prelaunch research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AllUnity USDAU whitepaper v1.0",
+        "url": "https://framerusercontent.com/assets/sPpJ0HkkQ4ACpeSeqJbuGC433QQ.html"
+      },
+      {
+        "label": "AllUnity USDAU deployment list",
+        "url": "https://allunity.com/usdau"
+      },
+      {
+        "label": "AllUnity USDAU launch and reserve-banking partner",
+        "url": "https://allunity.com/news/allunity-launches-usdau-a-fully-reserved-micar-compliant-us-dollar-stablecoin-and-introduces-instant-fx-capabilities"
+      }
+    ],
+    "rationale": "The whitepaper describes the entire permitted reserve envelope as USD cash or eligible USD HQLAs in separate accounts at EU credit institutions. This unsplit basket records the issuer model, not measured current holdings or an independent reserve reconciliation.",
+    "compositionBasis": "Issuer whitepaper reserve envelope; current allocation and USDAU report scope unverified",
+    "scope": "classification-only",
+    "knownUnknownExposure": "Current cash/HQLA split, bank and instrument allocations, maturities, reserve total and independent report coverage are not verified.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash and eligible USD HQLA reserve basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "No sourced allocation separates cash from eligible HQLAs or identifies instrument weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Banking Circle",
+        "role": "bank"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery prelaunch research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AllUnity USDAU whitepaper v1.0",
+        "url": "https://framerusercontent.com/assets/sPpJ0HkkQ4ACpeSeqJbuGC433QQ.html"
+      },
+      {
+        "label": "AllUnity USDAU launch and reserve-banking partner",
+        "url": "https://allunity.com/news/allunity-launches-usdau-a-fully-reserved-micar-compliant-us-dollar-stablecoin-and-introduces-instant-fx-capabilities"
+      }
+    ],
+    "uncertainty": "Banking Circle is named for reserve and transaction banking, without a disclosed reserve share. The whitepaper describes segregation and statutory insolvency safeguards; current institutions, asset allocations and all custody layers remain unverified.",
+    "knownUnknownExposurePct": 100
+  }
+}

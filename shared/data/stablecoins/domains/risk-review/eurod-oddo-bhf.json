@@ -1,0 +1,19 @@
+{
+  "id": "eurod-oddo-bhf",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Issuer white paper",
+        "url": "https://www.oddo-bhf.com/app/uploads/sites/2/2026/01/2026-01-27-oddo-bhf-eurod-emt-whitepaper-mica.pdf"
+      },
+      {
+        "label": "Verified implementation source",
+        "url": "https://polygonscan.com/address/0xa64ee0ca6ab99d1e49b84294949f8739831086af#code"
+      }
+    ],
+    "evidence": "The sole issuer-linked Polygon deployment contains all verified stock. The current verified ERC20F implementation has a global transfer pause, an AccessRegistry transfer gate and forced recovery from restricted holders. The January 2026 white paper expressly permits address freezes and forced transfers. Current AccessRegistry operator membership was not resolved, so this review records Possible rather than asserting a proven current holder-targeted operator. Polygon block 97384924 (2026-11-15T22:47:35Z, 0x0ec1cd9e1a3be82fe4a2669db145461fab4a197adfd68a17e338ec46738e88f3) pins the proxy implementation 0xa64ee0ca6ab99d1e49b84294949f8739831086af and nonzero registry 0x2e8db75cc57bca8612f552197cb4e2c6d477062f.",
+    "reviewer": "Pharos discovery launched research",
+    "reviewedAt": "2026-11-15"
+  }
+}

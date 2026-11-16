@@ -831,6 +831,11 @@ describe("market and risk collectors", () => {
     expect(legacyResult.degradedReasons).toContain("mint-burn-gauge-malformed");
   });
   const activeRows = { usdc: { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: -100, started_at: 0 }, usdt: { stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -500, peak_price: 0.95, peg_reference: 1, started_at: 0 } };
+  const track = (ctx: CollectorContext, asset: ReturnType<typeof makeAsset>, mcap = 40e6) => {
+    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
+    ctx.stablecoinAssetById.set(asset.id, asset);
+    ctx.mcapById.set(asset.id, mcap);
+  };
   it.each([["sorts and suppresses", [{ ...activeRows.usdc }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { first: "USDC", suppressed: true }], ["keeps critical", [activeRows.usdt, { ...activeRows.usdc, peak_deviation_bps: -5200 }, { ...activeRows.usdc, stablecoin_id: "dai-makerdao", symbol: "DAI2", peak_deviation_bps: 150 }, { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "above", peak_deviation_bps: 500, started_at: 0 }], { count: 4, unsuppressed: true }], ["uses peak", [activeRows.usdc], { bps: -100 }], ["filters frozen", [{ ...activeRows.usdc, stablecoin_id: "usr-resolv", symbol: "USR", peak_deviation_bps: -9025 }, activeRows.usdc], { count: 1 }], ["uses stale peak", [{ ...activeRows.usdc, peak_deviation_bps: -3000, peak_price: 0.7, peg_reference: 1 }], { bps: -3000, basis: "peak-fallback" }]] as const)("%s", async (_label, rows, expected) => {
     const ctx = ctxFor(depegTable(rows.map((row) => ({ ...row, started_at: Math.floor(Date.now() / 1000) - 3600 }))));
     if ("basis" in expected) ctx.stablecoinsCacheIsFresh = false;
@@ -855,9 +860,7 @@ describe("market and risk collectors", () => {
       direction: "above", peak_deviation_bps: 1660, started_at: now - 10 * 86_400, peg_reference: 4051,
     }]));
     const asset = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 3902, priceObservedAt: now });
-    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
-    ctx.stablecoinAssetById.set(asset.id, asset);
-    ctx.mcapById.set(asset.id, 40e6);
+    track(ctx, asset);
     ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(3902)]]);
     const result = await collectActiveDepegs(ctx);
     // At today's par against today's gold reference. The latched 4051 reference
@@ -877,9 +880,7 @@ describe("market and risk collectors", () => {
       direction: "above", peak_deviation_bps: 2043, started_at: now - 41 * 86_400, peg_reference: 38.22,
     }]));
     const asset = makeAsset({ id: "xagm-matrixdock", symbol: "XAGM", pegType: "peggedSILVER", price: 30.411, priceObservedAt: now });
-    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
-    ctx.stablecoinAssetById.set(asset.id, asset);
-    ctx.mcapById.set(asset.id, 100e6);
+    track(ctx, asset, 100e6);
     ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(30)]]);
     const result = await collectActiveDepegs(ctx);
     expect(result.value.topDepegs[0]).toMatchObject({
@@ -898,9 +899,7 @@ describe("market and risk collectors", () => {
         direction: "below", peak_deviation_bps: -5000, started_at: now - 41 * 86_400, peg_reference: 5000,
       }]));
       const asset = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 1000, priceObservedAt: now });
-      (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
-      ctx.stablecoinAssetById.set(asset.id, asset);
-      ctx.mcapById.set(asset.id, 40e6);
+      track(ctx, asset);
       ctx.currentPegObservationById = state === "withheld"
         ? new Map([[asset.id, currentPegObservation(null, { pegReferenceUnavailable: true })]])
         : new Map();
@@ -921,6 +920,19 @@ describe("market and risk collectors", () => {
       expect(prompt).not.toContain("current $");
     },
   );
+  it("holds a weekend metal deviation instead of ranking it as current", async () => {
+    // Sunday 16:00 UTC: spot metals repeat Friday's close while the token trades.
+    const now = 1_794_758_400;
+    const ctx = ctxFor(depegTable([{ stablecoin_id: "paxg-paxos", symbol: "PAXG", peg_type: "peggedGOLD", source: "live", direction: "below", peak_deviation_bps: -600, started_at: now - 10 * 86_400, peg_reference: 4000 }]));
+    ctx.nowSec = now;
+    const asset = makeAsset({ id: "paxg-paxos", symbol: "PAXG", pegType: "peggedGOLD", price: 3900, priceObservedAt: now });
+    track(ctx, asset);
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(4000)]]);
+    const { value, qualityReasons } = await collectActiveDepegs(ctx);
+    expect(value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", bps: -600 });
+    expect(value.topDepegs[0].currentBps).toBeUndefined();
+    expect(qualityReasons).toEqual(["active-depeg-reference-market-closed"]);
+  });
   it("keeps a USD-peg event on the current reference of one", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ctx = ctxFor(depegTable([{ ...activeRows.usdc, started_at: now - 3_600, peg_reference: 1 }]));
@@ -978,9 +990,7 @@ describe("market and risk collectors", () => {
     const ctx = makeCollectorCtx(db);
     const asset = makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.1, priceObservedAt: now });
     const native = quoteMode === "native-peg" || (quoteMode == null && source === "live");
-    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
-    ctx.stablecoinAssetById.set(asset.id, asset);
-    ctx.mcapById.set(asset.id, 100e6);
+    track(ctx, asset, 100e6);
     // USD-quoted rows measure against the current reference; the native rows ignore it.
     ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(native ? null : pegReference)]]);
     const result = await collectActiveDepegs(ctx);

@@ -1,0 +1,20 @@
+{
+  "id": "eurod-oddo-bhf",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "credit-institution",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "Oddo BHF SCA",
+    "references": [
+      {
+        "label": "ESMA EMT issuer register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ODDO BHF EUROD MiCA whitepaper, January 27, 2026",
+        "url": "https://www.oddo-bhf.com/app/uploads/sites/2/2026/01/2026-01-27-oddo-bhf-eurod-emt-whitepaper-mica.pdf"
+      }
+    ]
+  }
+}

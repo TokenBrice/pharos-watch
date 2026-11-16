@@ -41,6 +41,7 @@ const SOURCE_TIER: Record<StagedPool["source"], number> = {
   "kava-swap": 3,
   "osmosis-sqs": 3,
   "noble-swap": 3,
+  sundaeswap: 3,
   cg_tickers: 4,
 };
 

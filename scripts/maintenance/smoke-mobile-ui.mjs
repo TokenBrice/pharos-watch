@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import { mkdir } from "node:fs/promises";
 import { isExpectedYieldDeepRouteUrl, isFatalRuntimeMessage } from "../lib/pages-asset-smoke.mjs";
 import { join } from "node:path";
@@ -795,6 +798,8 @@ export async function run(argv = process.argv.slice(2)) {
   const chromium = await loadChromium();
   const browser = await launchChromiumBrowser(chromium);
   const context = await browser.newContext();
+  const sessionCookie = await siteSessionCookie(url);
+  if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(url).hostname }]);
   const failures = [];
 
   try {

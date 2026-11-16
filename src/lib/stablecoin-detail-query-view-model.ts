@@ -1,4 +1,4 @@
-import { resolveCurrentDeviationBps, resolveCurrentPeg } from "@/lib/current-peg";
+import { resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
 import type { SupplyHistoryPoint } from "@shared/types/supply";
 import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -60,6 +60,8 @@ export interface DetailPegPriceSnapshot {
   pegRef: number | null;
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
+  /** The peg's reference market was shut at the observation: the current deviation is held. */
+  referenceMarketClosed: boolean;
   pegScoreResult: PegSummaryCoin | null;
   /** Null when neither the peg row nor the admitted summary was read. */
   consensusSources: string[] | null;
@@ -149,11 +151,13 @@ export function buildDetailPegPriceSnapshot(
   const pegRef = isNavToken
     ? getNavPriceReference(coin.flags.pegCurrency, pegSummaryData?.coins)
     : currentPeg?.pegReference?.valueUsd ?? null;
-  const deviationBps = resolveCurrentDeviationBps(summaryData, pegScoreResult);
+  // A NAV token has no fixed peg, so no reference market can hold its read.
+  const deviation = resolveCurrentDeviation(summaryData, pegScoreResult, isNavToken ? null : coin.flags.pegCurrency);
   return {
     pegRef,
-    deviationBps,
+    deviationBps: deviation.deviationBps,
     pegReferenceUnavailable: !isNavToken && currentPeg?.pegReferenceUnavailable === true,
+    referenceMarketClosed: deviation.referenceMarketClosed,
     pegScoreResult,
     // Legacy archives have no active peg row; unread provenance stays null.
     // A present publication's empty lists never borrow sibling sources.

@@ -87,7 +87,9 @@ describe("hourly corroboration before the next publication", () => {
           }] } };
     });
     const ctx = runtime(order);
+    ctx.env.SITE_SESSION_SIGNING_KEY = "session-key";
     await runStatusSelfCheckSlot(ctx);
+    expect(mocks.runStatusSelfCheck).toHaveBeenCalledWith(ctx.db, expect.objectContaining({ siteSessionSigningKey: "session-key" }));
     expect(order).toEqual(["status-self-check", "data-invariant-canary", "cron-sentinel", "dex-refresh", "price-corroboration"]);
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(ctx.db, expect.objectContaining({
       surface: "price-corroboration", outcome: failed ? "degraded" : "ok", dueCount: 2, processedCount: 1,

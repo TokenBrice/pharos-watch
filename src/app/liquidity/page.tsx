@@ -1,13 +1,11 @@
 import { LiquidityContentLoadingState } from "@/app/liquidity/loading-state";
 import { ShareButton } from "@/components/share-button";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 
 const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOIN_COUNT} stablecoins, refreshed from the Pharos DEX liquidity lane across Curve, Uniswap, Fluid, and more.`;
 
@@ -16,7 +14,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
     description: liquidityDescription,
-    ogImage: buildLiveRouteOgImageUrl("liquidity"),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
   loading: <LiquidityContentLoadingState />,
@@ -30,7 +27,7 @@ const route = createClientFeaturePage({
       docsPath: "/docs/dex-liquidity/",
     },
     header: "instrument",
-    headerActions: <ShareButton ogPath={API_PATHS.ogPage("liquidity")} />,
+    headerActions: <ShareButton />,
     leadParagraphs: [
       "Pool depth across 15+ DEX protocols, your exit route in a panic.",
       "The Liquidity Score weights TVL depth relative to market cap, 24h volume activity, pool quality, durability, and pool diversity. A coin with deep pools on one protocol scores lower than a coin with durable liquidity across Curve, Uniswap, Fluid, Balancer, and native redemption rails.",

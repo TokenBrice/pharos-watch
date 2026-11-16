@@ -4,10 +4,9 @@ import {
   CHAIN_HEALTH_METHODOLOGY_VERSION,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { methodologyAnchorFor } from "@/lib/methodology-anchors";
-import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildChainDirectoryJsonLd } from "@/lib/chain-json-ld";
 import type { FaqItem } from "@/lib/faq";
@@ -25,7 +24,6 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
-  ogImage: buildLiveRouteOgImageUrl("chains"),
 });
 
 const CHAINS_FAQ_ITEMS = [
@@ -84,7 +82,7 @@ export default function ChainsPage() {
         version: CHAIN_HEALTH_METHODOLOGY_VERSION,
         changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
       }}
-      headerActions={<ShareButton ogPath={API_PATHS.ogPage("chains")} />}
+      headerActions={<ShareButton />}
       leadParagraphs={[
         "Where stablecoin supply lives, how concentrated it is, and which chains are moving.",
         "Shares divide each chain's observed supply by observed global supply, so supply Pharos cannot place on a chain shows as Unattributed rather than being spread across chains. Chain Health rates each chain's stablecoin mix from 0 to 100; chains without enough evidence are NR, with the reason.",

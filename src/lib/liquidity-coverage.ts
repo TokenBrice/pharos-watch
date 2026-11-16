@@ -33,6 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
   dexscreener: "DexScreener",
   cg_tickers: "CG Tickers",
   horizon: "Stellar Horizon",
+  sundaeswap: "SundaeSwap",
 };
 
 export function getLiquidityCoverageBadge(

@@ -167,7 +167,7 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 133, pendingAdmissionCount: 2, disabledCount: 0 });
+      admittedCount: 133, pendingAdmissionCount: 4, disabledCount: 0 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));
@@ -252,6 +252,13 @@ describe("mint/burn durable publication admission", () => {
       expect(disabled.publication.legs[0].reason).toBe("operator-disabled");
       expect((await finalizeMintBurnFlowResponse(db, key, end + 62, {}, { status: "ok", timestamp: end }, "[]")).status).toBe(503);
       expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
+      const coinKey = "mint-burn-flows:v8:coin:usdt-tether:24";
+      sqlite.prepare("INSERT INTO cache VALUES (?, '{}', ?)").run(coinKey, end + 61);
+      for (const [skippedKey, persist] of [[aggregateFlowCacheKey(720), true], [coinKey, false], [coinKey, true]] as const) {
+        const response = await finalizeMintBurnFlowResponse(db, skippedKey, end + 62, {}, { status: "ok", timestamp: end }, "[]", persist);
+        expect(response.status).toBe(503);
+        expect(await response.json()).toMatchObject({ reason: "mint-burn-publication-scope-changed" });
+      }
     }
     await syncMintBurnPublicationPolicy(db, [], end + 120, roster.map(mintBurnConfigKey));
     const now = state === "grandfathered" ? end + 120 : end + day;

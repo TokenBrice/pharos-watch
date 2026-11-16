@@ -336,7 +336,8 @@ function isProtocolTvlFallbackSource(source: LiquidityMetrics["topPools"][number
     source === "icon-balanced" ||
     source === "kava-swap" ||
     source === "osmosis-sqs" ||
-    source === "noble-swap";
+    source === "noble-swap" ||
+    source === "sundaeswap";
 }
 
 /**

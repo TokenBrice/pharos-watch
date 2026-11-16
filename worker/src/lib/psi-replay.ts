@@ -137,5 +137,8 @@ export function historicalPsiInputSnapshot(replay: HistoricalPsiReplayResult, me
     degradedComponents: input.openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : [],
     stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),
     methodologyVersion,
+    // Every replay drops reference-market artifacts (`applyReferenceMarketClosureRule`), so the
+    // one-shot artifact repair must never subtract them from this row again.
+    referenceMarketRule: true,
   };
 }

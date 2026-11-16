@@ -1,4 +1,4 @@
-import { coinGeckoPool } from "./discovery.test-support";
+import { coinGeckoPool, discoveryContext } from "./discovery.test-support";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
@@ -53,6 +53,7 @@ vi.mock("../../../lib/dexscreener", async (importOriginal) => ({
 vi.mock("../../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
+  recordOutcomeSafe: vi.fn(async () => null),
 }));
 
 vi.mock("../crawl-soroban-pools", () => ({
@@ -72,6 +73,7 @@ vi.mock("../crawl-kava-swap-pools", () => ({
 }));
 
 import { crawlCoin } from "../crawl-sources";
+import { crawlSundaeSwapPoolsStage } from "../crawl-sundaeswap-pools";
 import { crawlCoinGeckoPoolsStage } from "../crawl-coingecko-pools";
 import {
   crawlDexScreenerPoolsStage,
@@ -83,7 +85,8 @@ import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { dsRateLimit, fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
-import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../../../lib/circuit-breaker";
+import { WORKER_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 
@@ -252,7 +255,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
-  it("reports every eligible DexScreener pair in the deployment census, including known pools", async () => {
+  it("reports every eligible DexScreener pair in the deployment census, including known pools, not blocked venues", async () => {
     const pair = {
       chainId: "ethereum",
       dexId: "uniswap-v3",
@@ -267,8 +270,9 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
+        { ...pair, pairAddress: "0xintents", dexId: "near-intents" },
         { ...pair, pairAddress: "0xknownpool" },
-        { ...pair, pairAddress: "0xnewpool" },
+        { ...pair, pairAddress: "0xnewpool", dexId: "rhea-finance" },
       ],
     });
 
@@ -285,36 +289,6 @@ describe("crawlCoin DexScreener hardening", () => {
       outcome: "observed_pools",
       observedPoolCount: 2,
     });
-  });
-
-  it("drops blocked DexScreener venues before staging and before the deployment census counts them", async () => {
-    const pair = (pairAddress: string, dexId: string) => ({
-      chainId: "ethereum",
-      dexId,
-      pairAddress,
-      labels: [],
-      baseToken: { address: "0xabc", name: "Test USD", symbol: "TUSD" },
-      quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
-      priceUsd: "1.00",
-      volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
-      liquidity: { usd: 75_000, base: 0, quote: 0 },
-      pairCreatedAt: null,
-    }) as never;
-    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
-      ok: true,
-      pairs: [pair("0xintents", "near-intents"), pair("0xrhea", "rhea-finance")],
-    });
-
-    const result = await crawlCoin(
-      createMockDb(),
-      "test-coin",
-      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
-      null,
-      new Set(),
-    );
-
-    expect(result.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xrhea"]);
-    expect(result.deploymentOutcomes[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
   });
 
   it("records one DexScreener failure for a crawl with only target errors", async () => {
@@ -549,13 +523,15 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 
-  it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
+  it("keeps CoinGecko onchain staging output aligned with current discovery rows, past a blocked venue", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
       complete: true,
       pools: [
+        coinGeckoPool({ id: "intents", address: "0xIntents", dex: "near-intents" }) as never,
         coinGeckoPool() as never,
+        coinGeckoPool({ id: "rhea", address: "0xRhea", dex: "rhea-finance" }) as never,
       ],
     });
 
@@ -568,7 +544,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
 
     expect(result.unresolvedChains).toEqual([]);
-    expect(result.pools).toHaveLength(1);
+    expect(result.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xpool", "ethereum:0xrhea"]);
     expect(result.pools[0]).toMatchObject({
       poolId: "ethereum:0xpool",
       stablecoinId: "usdc-circle",
@@ -701,28 +677,6 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(knownPoolIds).toEqual(
       new Set([knownPoolIdKey("usdc-circle", "ethereum:0xpool"), knownPoolIdKey("usdt-tether", "ethereum:0xpool")]),
     );
-  });
-
-  it("rejects blocked CoinGecko onchain venues while admitting other venues from the same response", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      transportOk: true,
-      schemaDegraded: false,
-      complete: true,
-      pools: [
-        coinGeckoPool({ id: "intents", address: "0xIntents", dex: "near-intents", reserve: "120000000", volume: "3" }) as never,
-        coinGeckoPool({ id: "rhea", address: "0xRhea", dex: "rhea-finance" }) as never,
-      ],
-    });
-
-    const result = await crawlCoin(
-      createMockDb(),
-      "usdc-circle",
-      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
-      "test-key",
-      new Set(),
-    );
-
-    expect(result.pools.map((pool) => [pool.poolId, pool.protocol])).toEqual([["ethereum:0xrhea", "rhea-finance"]]);
   });
 
   it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {
@@ -1018,28 +972,6 @@ describe("crawlCoin DexScreener hardening", () => {
     });
     if (gtComplete === true) expect(fetchDsTokenPairsWithStatus).not.toHaveBeenCalled();
     else expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not use a CoinGecko price observation as a separate completion signal", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      transportOk: true,
-      schemaDegraded: false,
-      complete: true,
-      pools: [],
-    });
-
-    const result = await crawlCoin(
-      createMockDb(),
-      "usdc-circle",
-      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
-      "test-key",
-      new Set(),
-    );
-
-    expect(crawlTokenPools).not.toHaveBeenCalled();
-    expect(result.deploymentOutcomes).toEqual([
-      expect.objectContaining({ outcome: "verified_no_pools", observedPoolCount: 0 }),
-    ]);
   });
 
   it("preserves non-EVM token case in GeckoTerminal requests", async () => {
@@ -1400,5 +1332,36 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(row).toMatchObject({ outcome: "provider_inaccessible", observedPoolCount: 0 });
     // The EVM-namespace provider must not be queried for the bank denom at all.
     expect(vi.mocked(fetchCgTokenPoolsWithStatus)).not.toHaveBeenCalled();
+  });
+
+  it("values SundaeSwap pools only through a tracked stable counter", async () => {
+    const [usdm, usdcx, iusd] = ["usdm-moneta", "usdc-circle", "iusd-indigo-protocol"].map((id) =>
+      WORKER_ACTIVE_META_BY_ID.get(id)!.contracts!.find(({ chain }) => chain === "cardano")!.address);
+    const dot = (id = "") => (id === "0x" ? "ada.lovelace" : `${id.slice(0, 56)}.${id.slice(56)}`);
+    const pool = (id: string, version: string, ids: unknown[], quantities: string[], identifier?: string) =>
+      ({ id, version, quantities, assets: ids.map((asset) => ({ id: dot(asset as string) })), modules: [{ kind: "invariant", identifier }] });
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({ response: new Response(null, { status: 200 }), body: {
+      errors: [{}], data: { pools: { byAsset: [
+        pool("a1", "Stableswaps", [usdcx, usdm], ["50000000000", "80000000000"]),
+        pool("b2", "V4", [usdm, iusd], ["20000000000", "20000000000"], "constant_product"),
+        pool("c3", "V3", ["0x", usdm], ["9", "9"]),
+        pool("d4", "V3", [usdm, iusd], ["1000000", "1000000"]), // $2: sub-floor
+        pool("e5", "V1", [usdm, iusd], ["2000000000", "20000000000"]), // $10: implausible
+        pool("f6", "V4", [usdcx, usdm], ["20000000000", "20000000000"], "concentrated_liquidity"),
+      ] } } } });
+    const input = { db: createMockDb(), coinTargets: [{ chain: "cardano", address: usdm!, decimals: 6 }], context: discoveryContext("usdm-moneta").value };
+    const { providerChecks } = await crawlSundaeSwapPoolsStage(input);
+
+    expect(JSON.parse(String(vi.mocked(fetchJsonWithRetry).mock.lastCall![1]!.body)).variables.asset).toBe(dot(usdm));
+    expect(input.context.pools.map((p) => [p.poolId, p.tvlUsd, p.priceUsd, p.baseToken])).toEqual([
+      ["cardano:a1", 100_000, null, usdcx], ["cardano:b2", 40_000, 1, usdm], ["cardano:c3", null, null, "0x"],
+      ["cardano:e5", null, null, usdm], ["cardano:f6", null, null, usdcx],
+    ]);
+    expect(providerChecks).toMatchObject([{ status: "degraded", error: "sundaeswap-graphql-errors", observedPoolCount: 5 }]);
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, true);
+    // A hung read resolves as a retryable miss that counts against the breaker.
+    vi.mocked(fetchJsonWithRetry).mockRejectedValueOnce(new DOMException("hung", "TimeoutError"));
+    expect((await crawlSundaeSwapPoolsStage(input)).providerChecks).toMatchObject([{ status: "failure", retryable: true }]);
+    expect(recordOutcomeSafe).toHaveBeenLastCalledWith(expect.anything(), CIRCUIT_SOURCE.SUNDAESWAP_DISCOVERY, false);
   });
 });

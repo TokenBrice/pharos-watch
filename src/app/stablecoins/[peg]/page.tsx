@@ -13,7 +13,6 @@ const route = createStaticSlugRoute({
   pages: PEG_HUB_PAGES,
   pageBySlug: PEG_TAXONOMY_PAGE_BY_SLUG,
   missingTitle: "Peg Currency Not Found",
-  ogImage: "/og-stablecoins.png",
   render: (page) => {
     const atAGlance = buildPegAtAGlanceRows(page.value, page.coins);
     const upcoming = (

@@ -93,7 +93,7 @@ describe("wave-3 redemption handoff uptake", () => {
 });
 
 describe("PKT-12 bounded holder conversion terms", () => {
-  it.each(["usda-avalon", "uusd-youves", "susd-solayer"])("does not promote %s conversion rights into full-supply capacity", (id) => {
+  it.each(["usda-avalon", "uusd-youves", "susd-solayer", "usd-dinari"])("does not promote %s conversion rights into full-supply capacity", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
     const result = RedemptionBackstopConfigSchema.safeParse(config);
     expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);

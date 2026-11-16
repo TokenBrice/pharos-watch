@@ -21,11 +21,12 @@ export interface InjectHtmlCspOptions {
 
 /**
  * Rewrite an HTML response to carry a fresh CSP nonce and no-store cache headers.
- * Non-HTML responses pass through untouched. The decoded body is returned, so any
+ * Non-HTML and bodyless 304 responses pass through untouched: a 304 cannot carry a
+ * body, and a new nonce would not match the HTML the client revalidated. The decoded body is returned, so any
  * inherited upstream Content-Encoding is dropped to keep the transport encoding sane.
  */
 export async function injectHtmlCsp(response: Response, options: InjectHtmlCspOptions): Promise<Response> {
-  if (!isHtmlResponse(response)) return response;
+  if (!isHtmlResponse(response) || response.status === 304) return response;
 
   const nonce = createCspNonce();
   const mutateHeaders = (headers: Headers): void => {

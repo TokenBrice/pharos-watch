@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteDataSessionHeaders } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import { appendFileSync, readFileSync } from "node:fs";
 import { API_CACHE_PROFILES } from "../../shared/lib/api-cache-profiles.ts";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
-import { loadCloudflareAccountStateManifest } from "./check-cloudflare-account-state-drift.mjs";
+import { loadCloudflareAccountStateManifest } from "../lib/cloudflare-account-state-manifest.mjs";
 
 const { siteOrigin: SITE_ORIGIN, apiOrigin: API_ORIGIN } = JSON.parse(
   readFileSync(new URL("../../shared/lib/runtime-origins.json", import.meta.url), "utf8"),
@@ -93,7 +96,7 @@ export async function runLiveApiCachePolicyCheck({
       const response = await fetchImpl(url, {
         method: "GET", redirect: "manual", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         headers: { Accept: "application/json", ...(sample.lane === "site-data"
-          ? { Origin: SITE_ORIGIN, Referer: `${SITE_ORIGIN}/` } : {}) },
+          ? { Origin: SITE_ORIGIN, Referer: `${SITE_ORIGIN}/`, ...await siteDataSessionHeaders(url) } : {}) },
       });
       try {
         row.actual = response.headers.get("cache-control");
@@ -122,7 +125,7 @@ runDirectCli(import.meta.url, async () => {
   const { values } = parseStrictCliArgs(process.argv.slice(2));
   if (values.help) {
     console.log("Usage: node scripts/ci/check-live-api-cache-policy.mjs");
-    console.log("Read-only public GET cache-policy checks on direct API and same-origin site-data; no secrets required.");
+    console.log("Read-only public GET cache-policy checks on direct API and same-origin site-data; SITE_SESSION_SIGNING_KEY authenticates site-data reads under enforcement.");
     return;
   }
   const report = await runLiveApiCachePolicyCheck();

@@ -14,6 +14,7 @@ vi.mock("@/lib/donor-key-claim-client", async (importOriginal) => ({
 
 const token = "ph_test_donor_one_time_token";
 const account = "0x1111111111111111111111111111111111111111";
+const stubWallet = () => vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
 
 afterEach(() => {
   clearPendingApiKey(token);
@@ -109,7 +110,7 @@ describe("DonorKeyClaim one-time reveal", () => {
   });
 
   it("recovers a claim response arriving after the issuance page unmounts", async () => {
-    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    stubWallet();
     let resolveClaim!: (result: Awaited<ReturnType<typeof claimDonorKey>>) => void;
     vi.mocked(claimDonorKey).mockReturnValue(new Promise((resolve) => { resolveClaim = resolve; }));
     const view = render(<><DonorKeyClaim /><PendingApiKeyRecovery /></>);
@@ -131,11 +132,22 @@ describe("DonorKeyClaim one-time reveal", () => {
     expect(savedUnload.defaultPrevented).toBe(false);
   });
 
+  it("shows an extension's new expiry without a token or an unsaved-key guard", async () => {
+    stubWallet();
+    vi.mocked(claimDonorKey).mockResolvedValue({ status: "extended", key: { keyPrefix: "prefix-test", maskedToken: "p...", tier: "donor", rateLimitPerMinute: 10, expiresAt: 1_800_000_000 } });
+    render(<DonorKeyClaim />);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    expect((await screen.findByRole("status")).textContent).toMatch(/prefix-test.*2027-01-15/);
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(false);
+  });
+
 });
 
 describe("DonorKeyClaim failure details", () => {
   it("renders the counted donation amount and ledger date from an ineligible response", async () => {
-    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    stubWallet();
     vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(403, "opaque", 1788681300, "ineligible", 4.25, ["USDC"]));
     render(<DonorKeyClaim />);
     fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
@@ -153,7 +165,7 @@ describe("DonorKeyClaim failure details", () => {
     "rate_limit_unavailable",
     "donations_ledger_invalid",
   ] as const)("does not blame a held Safety Score publication for %s", async (reason) => {
-    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    stubWallet();
     vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(503, "Supporter key claims are temporarily unavailable", null, reason));
     render(<DonorKeyClaim />);
     fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
@@ -163,7 +175,7 @@ describe("DonorKeyClaim failure details", () => {
   });
 
   it("keeps the held-publication explanation when the Safety Score publication is unavailable", async () => {
-    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    stubWallet();
     vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(503, "Supporter key claims are temporarily unavailable", null, "safety_scores_unavailable"));
     render(<DonorKeyClaim />);
     fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));

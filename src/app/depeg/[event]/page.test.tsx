@@ -42,6 +42,16 @@ vi.mock("@/lib/depeg-event-page-data", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/page-metadata", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/page-metadata")>();
+  // Synthetic fixture events have no generated preview; real slugs still resolve strictly.
+  return {
+    ...actual,
+    getPageSocialPreview: (canonical: string) =>
+      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed)-event\/$/.test(canonical) ? "/depeg/" : canonical),
+  };
+});
+
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
 }));
@@ -97,7 +107,8 @@ describe("depeg event page metadata and briefing", () => {
     const coinName = TRACKED_META_BY_ID.get(event.stablecoinId)?.name ?? null;
     const description = buildDepegEventDescription(event, COLLIDING_DEPEG_EVENT_SLUGS.has(slug), coinName);
     expect(metadata.description).toBe(description);
-    expect(metadata.openGraph).toMatchObject({ description });
+    // Social copy is evergreen and separate from SEO copy, but never contradicts the closure.
+    expect(metadata.openGraph?.description).toMatch(/coverage lost/i);
     expect(description).toMatch(/coverage lost/i);
     expect(description).not.toMatch(/\brecovered\b/i);
     const html = renderToStaticMarkup(await DepegEventPage({ params }));

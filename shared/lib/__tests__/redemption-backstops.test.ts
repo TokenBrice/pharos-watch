@@ -33,8 +33,10 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it.each([
+    ["rcusd-r25", "issuer-api", "verified-customer"],
     ["mantrausd-mantra", "issuer-api", "whitelisted-primary"],
     ["usdm-moneta", "manual", "whitelisted-primary"],
+    ["usdrf-realfi", "manual", "whitelisted-primary"],
   ] as const)("keeps %s documentary access separate from executable capacity and complete costs", (id, access, eligibility) => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(config.accessModel).toBe(access);

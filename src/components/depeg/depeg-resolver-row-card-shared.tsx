@@ -18,6 +18,7 @@ import {
   getLockMetadata,
   isCumulativeIncidence,
   isDdrInfrastructureReason,
+  isLiveCurrentDeviationHeld,
 } from "@/components/depeg/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
@@ -83,7 +84,7 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
   const { live } = row;
   const ageSec = live.ageSec;
   const peakDeviationBps = getDisplayedLivePeakDeviationBps(row);
-  const currentDeviationBps = live.currentDeviationBps;
+  const deviationHeld = isLiveCurrentDeviationHeld(row);
   const status = live.eventState;
 
   return (
@@ -97,9 +98,11 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
       <span>
         Peak <span className="pharos-numeric text-foreground">{peakDeviationBps == null ? "—" : formatBps(peakDeviationBps)}</span>
       </span>
-      {currentDeviationBps != null ? (
+      {deviationHeld ? (
+        <span>Reference market closed</span>
+      ) : live.currentDeviationBps != null ? (
         <span>
-          Now <span className="pharos-numeric text-foreground">{formatBps(currentDeviationBps)}</span>
+          Now <span className="pharos-numeric text-foreground">{formatBps(live.currentDeviationBps)}</span>
         </span>
       ) : null}
       {status ? <span className="text-foreground/70">{DDR_EVENT_STATE_LABELS[status]}</span> : null}

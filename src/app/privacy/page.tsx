@@ -18,7 +18,7 @@ const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy: Analytics, API & Telegram Data",
   description:
-    "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
+    "Pharos privacy policy for analytics, feedback, API access, Telegram subscriptions, browser-local portfolios, Picker snapshots and public dated scorecards.",
   canonical: "/privacy/",
 });
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: October 27, 2026"]}
+      leadParagraphs={["Last updated: November 16, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -72,6 +72,10 @@ export default function PrivacyPage() {
             with their original dates and are ignored after 72 hours or an incompatible data-version change.
             Older detail entries are removed as newer coins are used. Clearing browser site data removes these copies.
           </p>
+          <p>
+            Share-menu analytics record only the action, success or failure, and broad page type.
+            They do not include copied content, coin identifiers, snapshot identifiers, or share URLs.
+          </p>
         </section>
 
         <section className="space-y-2">
@@ -92,6 +96,18 @@ export default function PrivacyPage() {
             so identical answers against an identical dataset produce the same ID. Anyone with the link can view the
             frozen artifact. Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and
             expire after 90 days if never opened; the first successful read extends retention to five years.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="pharos-section-title">Public dated scorecards</h2>
+          <p>
+            Choosing Share dated scorecard saves a fixed image and its public Safety Score publication
+            in permanent Cloudflare R2 storage. Anyone with its link can view it. These artifacts contain public coin or
+            market data, methodology and source dates, not your holdings, Picker answers, account,
+            wallet, IP address or browser fingerprint. They are retained without an automatic expiry
+            so old shared links remain usable. Daily creation limits keep separately stored keyed IP-hash
+            counters in D1; these are not part of the public artifact. Older counters are pruned on later creation requests.
           </p>
         </section>
 
@@ -183,8 +199,9 @@ export default function PrivacyPage() {
               the API page
             </Link>{" "}
             asks a wallet to sign a short text message so the key can be tied to a donating wallet. Pharos stores the
-            wallet address, the issued key prefix, and the claim time, plus the key record itself, which is named after
-            the address and carries the last-used timestamp and route that every API key records. Those records are
+            wallet address, the issued key prefix, the claim time, and which public-ledger donations were credited to the
+            key, plus the key record itself, which is named after the address and carries the last-used timestamp and
+            route that every API key records. Those records are
             retained without an automatic expiry. Deactivation stops access but does not delete these records. You
             can request removal of the key record and its usage metadata by messaging{" "}
             <a
@@ -216,7 +233,15 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Cookies</h2>
           <p>
-            On GA4-enabled public website routes, the only cookies set by Pharos are those required by Google Analytics
+            When the browser check is enabled, Pharos sets one strictly necessary first-party security cookie before
+            serving live data. Cloudflare Turnstile is a browser check that helps distinguish people from automated
+            traffic. The cookie proves the browser passed that check, holds a random session ID and expiry with no
+            personal data, and lasts 12 hours. Only its expiry is saved in localStorage so the browser can renew it;
+            the cookie itself cannot be read by page scripts. If the check does not complete, build-time data remains
+            available without live refresh.
+          </p>
+          <p>
+            On GA4-enabled public website routes, Pharos also uses cookies required by Google Analytics
             4 (e.g.,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga</code>,{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga_*</code>) for distinguishing unique visitors. No

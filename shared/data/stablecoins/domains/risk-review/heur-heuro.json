@@ -1,0 +1,19 @@
+{
+  "id": "heur-heuro",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Issuer-linked Ethereum contract audit, May 29, 2025",
+        "url": "https://www.heuro.com/assets/docs/PeckShield-Audit-Report-ERC20-HEURO-v1.0.pdf"
+      },
+      {
+        "label": "Issuer deployment statement",
+        "url": "https://www.heuro.com/about/"
+      }
+    ],
+    "evidence": "The issuer-linked PeckShield Ethereum audit describes an upgradeable token with pause and blacklist functions. Current public mainnet contracts and authority holders remain unresolved, so the reviewed pre-launch design supports potential holder-control exposure, not a verified active blacklist authority or an observed freeze. The separate Solana audit labels its reviewed mint devnet and does not establish current mainnet controls.",
+    "reviewer": "Pharos discovery launched review",
+    "reviewedAt": "2026-11-15"
+  }
+}

@@ -665,7 +665,7 @@ export function buildCommandPaletteResultDescriptors({
         const href = `/depeg/${event.slug}/`;
         const dateLabel = event.startedAt ? new Date(event.startedAt * 1000).toISOString().slice(0, 10) : "";
         // A reviewed dispute keeps the archive's badge on the palette row.
-        const disputed = isDisputedAuditVerdict(event.auditVerdict) ? ` · ${DEPEG_AUDIT_DISPUTED_BADGE.label}` : "";
+        const disputed = isDisputedAuditVerdict((event as { auditVerdict?: Parameters<typeof isDisputedAuditVerdict>[0] }).auditVerdict) ? ` · ${DEPEG_AUDIT_DISPUTED_BADGE.label}` : "";
         return {
           id: `depeg-${event.slug}`,
           label: `${event.symbol} ${event.direction === "below" ? "below" : "above"} ${event.pegType}`,

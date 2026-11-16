@@ -1,0 +1,52 @@
+{
+  "id": "usdy-eurodollar",
+  "name": "Eurodollar USDY",
+  "symbol": "USDY",
+  "oneLiner": "Eurodollar ApS's unissued dollar e-money token is deployed on Ethereum and distinct from Ondo's yield-bearing USDY.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized"
+  },
+  "collateral": "The white paper proposes 1:1 USD reserve backing and segregated customer funds. No tokens have been issued; a token-specific reserve composition, named reserve banks and independent reserve report are not published on the reviewed issuer verification page.",
+  "pegMechanism": "Each USDY is intended to be a claim on Eurodollar ApS for one US dollar, redeemable at par under the notified e-money token terms. The issuer describes ordinary redemption without a fee, minimum or holding period, subject to required checks. Ethereum contract deployment does not establish issuance or a live market.",
+  "mechanismArchetype": "fiat-cash",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf25c3c8972378eed5093195fae274db5a6065b7f",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.stablecoin.dk/tokens/usdy.md"
+    },
+    {
+      "label": "White paper",
+      "url": "https://www.stablecoin.dk/tokens/usdy/white-paper.md"
+    },
+    {
+      "label": "Issuer deployment verification",
+      "url": "https://olbra.org/verify"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Denmark",
+    "regulator": "Finanstilsynet",
+    "license": "Electronic money institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-02-11",
+  "launchPhaseDetail": "The issuer states that the Ethereum smart contract is deployed but no USDY tokens have been issued. Its white paper is dated 11 February 2026, with a management disclosure correction on 9 October 2026. Olbra markets the same deployment under the same company number and LEI; the ESMA register and GLEIF still name Eurodollar ApS. No launch date is stated.",
+  "milestones": [
+    {
+      "date": "2026-02-11",
+      "type": "regulatory",
+      "title": "USDY white paper records notification to Finanstilsynet",
+      "description": "The issuer publishes terms for its US dollar e-money token. This is a white-paper notification, not public token issuance or approval of the white paper.",
+      "sourceUrl": "https://www.stablecoin.dk/tokens/usdy/white-paper.md"
+    }
+  ]
+}

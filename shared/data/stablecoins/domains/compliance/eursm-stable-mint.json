@@ -1,0 +1,20 @@
+{
+  "id": "eursm-stable-mint",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "MFSA",
+    "authorizedEntity": "Stable mint Ltd",
+    "references": [
+      {
+        "label": "ESMA EMT issuer register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Stable Mint EUR MiCA whitepaper",
+        "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_EUR.html"
+      }
+    ]
+  }
+}

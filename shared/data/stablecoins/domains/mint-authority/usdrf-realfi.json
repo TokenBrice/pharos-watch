@@ -1,0 +1,201 @@
+{
+  "id": "usdrf-realfi",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "probable",
+    "headline": "RealFi signers approve all USDrf issuance; three of five can mint without on-chain collateral, and five of seven can replace the mint logic instantly.",
+    "summary": "USDrf (Cardano asset name USDr) is minted under an immutable Plutus policy that defers every mint and burn to whichever stake validator one on-chain configuration record names. That record sits behind a RealFi five-of-seven native multisig with no time lock, which can swap the validator, the signer roles, the eligible collateral and its ratio, and has swapped the validator three times since June 2026. The current validator checks off-chain signatures against role multisigs: one backend key approves deposit mints and redemptions, which every observed transaction matched one-for-one in USDCx; three of five keys approve weekly yield mints with no on-chain collateral; and five of seven keys hold the administrative mint role, which under the previous validator minted 4.9 million USDr to a chosen address in August 2026 before it was burned. Deposited USDCx is swept to a RealFi three-of-five multisig and off-chain reserves, issuance reconciliation is an issuer ledger process, and the issuer states USDrf is not a regulated instrument.",
+    "controls": [
+      {
+        "chain": "cardano",
+        "address": "2430e30b1b595fdd6d8e248b4125a9e84cded4b449e293576403c10e",
+        "label": "RealFi config multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "threshold": 5,
+        "signerCount": 7,
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "USDr has no on-chain supply ceiling. This native multisig holds the configuration record that names the mint-authorizing validator, the signer roles and thresholds, the eligible collateral with its conversion ratio, and the fee address, so it can lift any constraint the current validators enforce.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 14204828,
+        "sources": [
+          {
+            "label": "Koios script_info: native script 2430e30b… atLeast 5 of 7 keys",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          },
+          {
+            "label": "Koios utxo_info: config UTxO 242935a0…#0 unspent at block 14204828",
+            "url": "https://api.koios.rest/api/v1/utxo_info"
+          },
+          {
+            "label": "Koios asset_txs: all 29 config NFT transactions",
+            "url": "https://api.koios.rest/api/v1/asset_txs?_asset_policy=b1a939dd2bed1ba23ea3d10bb00819891154a96c456c43692ee9a54c&_asset_name=&_history=true"
+          },
+          {
+            "label": "AdaStat: config holder address",
+            "url": "https://adastat.net/addresses/addr1wyjrpcctrdv4lhtd3cjgksf9485yehk5k3y79y6hvspuzrszan2q9"
+          },
+          {
+            "label": "AdaStat: config switch to the current approvals validator, 2026-09-24",
+            "url": "https://adastat.net/transactions/3c5b3d9162bc995f4af63e5af0b6b400ce117d2264f9d010825c219c21644526"
+          }
+        ],
+        "evidence": "Koios script_info returns native script 2430e30b1b595fdd6d8e248b4125a9e84cded4b449e293576403c10e (address addr1wyjrpcctrdv4lhtd3cjgksf9485yehk5k3y79y6hvspuzrszan2q9) as atLeast 5 of key hashes a35f3fd2…, 63b90c49…, 2690a2d3…, 25930bf5…, 889557a5…, 6d99a112… and def3ae76…, with no before or after clause; its hash recomputes exactly from that JSON. It holds the only token of config policy b1a939dd2bed1ba23ea3d10bb00819891154a96c456c43692ee9a54c, a decoded one-shot policy bound to output d09c01e2…#0 and minted once in 191dd20a… (block 13561344, 2026-06-17T10:38:37Z), so no second config token can exist. Koios utxo_info read at tip block 14204828 (slot 203196556, 2026-11-15T17:14:07Z) returns config UTxO 242935a004613cc4479a2de652262fe91066ed2103f0922c415714b7e57a6e1c#0, created at block 14147739 (2026-11-02T08:45:20Z), unspent. Spending and recreating it requires only five of these seven signatures and replaces every mint control at once: the validator the USDr policy defers to, all ten role multisigs, the USDCx entry and its one-to-one ratio, and the fee address. The 29 config NFT transactions show this power in use: the validator pointer moved from 84366c82… to 605b188f… (block 13813172, 2026-08-15T19:19:56Z), to 39ff256f… (block 13969355, 2026-09-21T12:00:31Z) and to the current 7b5d4f9c… (block 13981789, 2026-09-24T10:06:47Z); every role was set to the never-satisfiable aicone Before 0 at block 13999195 (2026-09-28T13:01:13Z) and restored 18 minutes later at block 13999244; and the NFT moved through five earlier holder scripts before reaching this one at block 13862336 (2026-08-27T09:04:31Z). The same seven keys at the same five-of-seven threshold also form config role 6, the administrative mint role, which under the previous validator signed the 4,900,000 USDr mint 3361c2d7… (block 13864032, 2026-08-27T18:25:59Z) to an arbitrary address with no USDCx deposited. Signer identities and key custody are undisclosed."
+      },
+      {
+        "chain": "cardano",
+        "address": "7b5d4f9cb7209596c776aafce45a15c9faba1e88bb11d96e16c96f01",
+        "label": "RealFi role-signed issuance approvals",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 5,
+        "directMintAbility": "direct",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No amount cap is established. Role 3 (three of five) mints weekly yield to the staking vault and the config-named fee address with no on-chain collateral, and role 6 (five of seven) mints to any address. Role 0 deposit mints, approved by one of eight keys, were matched one-for-one by USDCx in every observed transaction.",
+        "observedAt": "2026-11-15",
+        "observedBlock": 14204828,
+        "sources": [
+          {
+            "label": "Koios script_info: approvals validator 7b5d4f9c… (PlutusV3, decoded)",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          },
+          {
+            "label": "Koios asset_history: all 70 USDr mint and burn transactions",
+            "url": "https://api.koios.rest/api/v1/asset_history?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae&_asset_name=55534472"
+          },
+          {
+            "label": "Koios tx_info: redeemers, signatures and treasury flows of every USDr mint and burn",
+            "url": "https://api.koios.rest/api/v1/tx_info"
+          },
+          {
+            "label": "SundaeSwap aicone MultisigScript constructors used by the config roles",
+            "url": "https://github.com/SundaeSwap-finance/aicone/blob/main/lib/sundae/multisig.ak"
+          },
+          {
+            "label": "RealFi docs: yield is minted as new USDrf after Treasury reconciliation",
+            "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+          }
+        ],
+        "evidence": "Approvals stake validator 7b5d4f9cb7209596c776aafce45a15c9faba1e88bb11d96e16c96f01 (PlutusV3, 7,232 bytes, created in d840f742…; hash recomputed from Koios bytes) is the validator the current config names, so every USDr mint or burn must withdraw from it. Its decoded parameters are the config policy and four action validators (6f62eb15…, aadd6ebe…, 6f1a5f04…, 01dc62d1…); its body rebuilds a CIP-8 COSE Signature1 structure over the blake2b-256 hash of the serialized action, verifies each Ed25519 key whose blake2b-224 hash matches a config role member, and pairs each action constructor with one action validator and one role field. The pinned config roles are aicone AtLeast sets of Signature keys: role 0 one of eight (deposit mint), role 1 one of seven (redemption), role 2 three of five (treasury USDCx withdrawal), role 3 three of five (yield distribution), roles 4 and 5 one of six (staking and unstaking sUSDr), role 6 five of seven (administrative mint), role 7 one of seven (administrative burn), role 8 three of five (never exercised) and role 9 Before 0 (disabled). A census of all 70 USDr mint and burn transactions (first 94964988… at block 13569215, 2026-06-19; last 1e157673… at block 14180061, 2026-11-09T22:30:23Z) matches every action's signer set to that role: 31 deposit mints of 5,535,330.300787 USDr, each paired with an equal USDCx deposit into the treasury script; 9 redemptions of 268.69 USDr, each releasing equal USDCx; 9 yield or vault-adjustment actions netting +50,399.297742 USDr with no matching USDCx deposit, the 7 under the current validator each signed by three role-3 keys; 16 administrative mints of 4,900,335 USDr with no USDCx; and 5 administrative burns of 4,900,092.03 USDr. These reconcile exactly to total supply 5,585,703.878529 USDr, and the treasury datum counter moved by exactly each minted or burned amount. Under the current validator, role 3 mints USDr with no on-chain collateral to the staking vault and to the fee address the config names, currently RealFi's three-of-five native script 4aaa620e…, whose five keys all belong to the config multisig. Staking actions (roles 4 and 5) minted only sUSDr, which shares this policy."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "internal-ledger",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "RealFi config multisig",
+      "observedAt": "2026-11-15",
+      "observedBlock": 14204828,
+      "sources": [
+        {
+          "label": "Koios script_info: USDr policy 7d9e4a0e… (PlutusV3, 472 bytes, decoded)",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Koios utxo_info: config UTxO 242935a0…#0 naming approvals validator 7b5d4f9c…",
+          "url": "https://api.koios.rest/api/v1/utxo_info"
+        },
+        {
+          "label": "Koios asset_txs: config NFT history with three validator swaps",
+          "url": "https://api.koios.rest/api/v1/asset_txs?_asset_policy=b1a939dd2bed1ba23ea3d10bb00819891154a96c456c43692ee9a54c&_asset_name=&_history=true"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "Reviewed 2026-11-15 for the pre-launch promotion from primary on-chain reads and RealFi documents. Policy: USDr is asset name 55534472 under policy 7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae, an immutable PlutusV3 script of 472 bytes created in 6af64228…, whose hash recomputes from the Koios bytes. Decoded, it accepts any mint or burn when the script purpose is minting, the first reference input holding a token of config policy b1a939dd2bed1ba23ea3d10bb00819891154a96c456c43692ee9a54c carries an inline datum of exactly two fields, and the transaction withdraws from the stake credential whose hash is that datum's first field; it checks no signer, amount, recipient or oracle itself. The same policy also mints sUSDr (7355534472). Koios policy_asset_list returns supply 5,585,703.878529 USDr and asset_info gives 55 mints and 15 burns at tip block 14204762 (slot 203195351, 2026-11-15T16:54:02Z). Control: the mint logic is therefore upgradeable without delay by the five-of-seven native multisig that holds the one-shot config NFT, which has swapped the named validator three times; the current role-signed approvals validator is recorded as its own control. Exercised privileged issuance: before launch, role 6 minted 4,900,000 USDr without collateral on 2026-08-27 (3361c2d7…, block 13864032), which role 7 burned on 2026-09-16 (dc36b9bb…, block 13948784) before the recipient institution re-entered with a 4,999,990.010787 USDr deposit mint backed by equal USDCx (9c3e98fe…, block 13949508); no exploit, unauthorized signer or unbacked mint outside these roles was found, and every mint carried signatures from the configured role keys. Treasury custody: role 2 withdrew deposited USDCx from the treasury script to RealFi addresses in 10 transactions, most recently 164,541 USDCx to the three-of-five native script 4aaa620e… in dc616be2… (block 14195835, 2026-11-13); at block 14204845 the treasury held 0.861912 USDCx, so the supply is backed off-chain rather than by on-chain collateral. Reconciliation is an issuer internal ledger: deposit and redemption amounts post to a treasury datum counter that equals total supply, and RealFi states that off-chain repayments are reconciled by the RealFi Treasury before new USDrf is minted as yield; no independent reserve-to-supply reconciliation has been published, because the HT Digital attestation page and the TxPipe, Anastasia Labs and Halborn audit page both read 2026-11-15 still promise documents 'shortly'. Supervision is none: RealFi Reserve Ltd., the British Virgin Islands issuer, states USDrf is not classified as a regulated financial instrument under BVI virtual asset guidelines, and no attestation exists. The Institutional Minting Agreement issues USDrf at one per US dollar or dollar equivalent of USD, USDC or other assets RealFi accepts, after RealFi verifies receipt, and lets RealFi reject, suspend, limit or delay orders, so fiat-settled issuance rests on the same role approvals. Scanned to tip, the config UTxO is unspent and no mint or burn followed block 14180061.",
+      "reviewer": "Claude USDrf promotion controls lane 2026-11-15",
+      "reviewedAt": "2026-11-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Koios script_info: USDr policy, config NFT policy, native scripts and validators",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Koios policy_asset_list: USDr and sUSDr under one policy",
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae"
+        },
+        {
+          "label": "Koios asset_history: all USDr mint and burn transactions",
+          "url": "https://api.koios.rest/api/v1/asset_history?_asset_policy=7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae&_asset_name=55534472"
+        },
+        {
+          "label": "Koios tx_info: mint, burn, treasury and config transactions",
+          "url": "https://api.koios.rest/api/v1/tx_info"
+        },
+        {
+          "label": "Koios asset_txs: config NFT history",
+          "url": "https://api.koios.rest/api/v1/asset_txs?_asset_policy=b1a939dd2bed1ba23ea3d10bb00819891154a96c456c43692ee9a54c&_asset_name=&_history=true"
+        },
+        {
+          "label": "Koios utxo_info: current config UTxO",
+          "url": "https://api.koios.rest/api/v1/utxo_info"
+        },
+        {
+          "label": "Koios tip read at block 14204828, 2026-11-15T17:14:07Z",
+          "url": "https://api.koios.rest/api/v1/tip"
+        },
+        {
+          "label": "AdaStat: 4.9 million USDr administrative mint without collateral, 2026-08-27",
+          "url": "https://adastat.net/transactions/3361c2d76a79d00aaed7434df25c0e63915b9645c1f408d3c80cdc70b925d0bc"
+        },
+        {
+          "label": "SundaeSwap aicone MultisigScript constructors",
+          "url": "https://github.com/SundaeSwap-finance/aicone/blob/main/lib/sundae/multisig.ak"
+        },
+        {
+          "label": "Cardano developer docs: a minting policy runs only when its tokens are minted or burned",
+          "url": "https://developers.cardano.org/docs/developers/curriculum/native-tokens/minting-policies/"
+        },
+        {
+          "label": "RealFi docs: yield minted as new USDrf after RealFi Treasury reconciliation",
+          "url": "https://docs.realfi.co/real-world-backing/how-the-returns-reach-the-user"
+        },
+        {
+          "label": "RealFi USDrf Institutional Minting Agreement, revised 2026-07-23",
+          "url": "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement"
+        },
+        {
+          "label": "RealFi regulatory status of the protocol entities",
+          "url": "https://docs.realfi.co/compliance/regulatory-status-of-the-protocol-entities"
+        },
+        {
+          "label": "RealFi reserve attestation page, read 2026-11-15",
+          "url": "https://docs.realfi.co/resources/reserve-attestation"
+        },
+        {
+          "label": "RealFi audit reports page, read 2026-11-15",
+          "url": "https://docs.realfi.co/resources/audit-reports"
+        }
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "RealFi role-signed issuance approvals",
+          "question": "Does the mint and redeem action validator 6f62eb15… (10,773 bytes, not decompiled) enforce on-chain that each role 0 deposit mint and role 1 redemption, approved by a single key, moves USDCx into or out of the treasury at the configured one-to-one ratio, and does the yield action validator 6f1a5f04… cap role 3 distribution amounts? All 31 deposit mints and 9 redemptions through block 14180061 matched USDCx one-for-one, but no code-level bound is established, so a single backend key cannot yet be excluded as an uncollateralized minter.",
+          "subject": "authority-semantics",
+          "reviewedAt": "2026-11-15",
+          "reviewer": "Claude USDrf promotion controls lane 2026-11-15",
+          "sources": [
+            {
+              "label": "Koios script_info: action validators 6f62eb15… and 6f1a5f04…",
+              "url": "https://api.koios.rest/api/v1/script_info"
+            },
+            {
+              "label": "Koios tx_info: USDr mint and burn census",
+              "url": "https://api.koios.rest/api/v1/tx_info"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

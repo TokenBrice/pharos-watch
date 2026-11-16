@@ -1,0 +1,56 @@
+{
+  "id": "heur-heuro",
+  "name": "HEURO",
+  "symbol": "HEUR",
+  "brand": "HEURO",
+  "status": "pre-launch",
+  "oneLiner": "HEUR is HEURO SAS's euro electronic-money token, with issuer-described cash backing and par redemption; public mainnet supply remains unverified.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "pegCurrency": "EUR"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Issuer-described euro cash and high-quality liquid assets in a segregated fiduciary estate; current composition and named reserve institutions remain unverified.",
+  "pegMechanism": "The issuer white paper describes free euro redemption at par following holder onboarding, compliance checks and token return, with an aim of five business days before additional bank processing.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.heuro.com/about/",
+    "provider": "Heuro SAS; monthly and quarterly report claims were not reconciled to a retrieved dated token-reserve report",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "ACPR",
+    "license": "Electronic Money Institution"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.heuro.com/"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://www.heuro.com/assets/docs/Heuro%20White%20Paper%20vfinale%2030-01-2026%20-%2020260225%20-%20Clean.pdf"
+    },
+    {
+      "label": "Issuer disclosures",
+      "url": "https://www.heuro.com/about/"
+    }
+  ],
+  "announcedDate": "2026-02-26",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "HEURO SAS published its white paper on February 26, 2026 and says HEUR is issued on Ethereum and Solana. Public mainnet addresses and positive supply remain unverified; no admitted price or supply lane is available.",
+  "milestones": [
+    {
+      "date": "2026-02-26",
+      "type": "regulatory",
+      "title": "HEURO electronic-money white paper published",
+      "description": "Heuro SAS publishes the HEUR white paper describing euro backing, public-chain transfer and holder redemption. Its publication date does not verify public mainnet issuance.",
+      "sourceUrl": "https://www.heuro.com/assets/docs/Heuro%20White%20Paper%20vfinale%2030-01-2026%20-%2020260225%20-%20Clean.pdf"
+    }
+  ],
+  "custodyModel": "unknown",
+  "collateralQuality": "rwa"
+}

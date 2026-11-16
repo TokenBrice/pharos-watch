@@ -70,6 +70,11 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 7. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone. When a page introduces a metaphor, _draw it_ (the Cemetery plot map, Alt-Peg Atlas, Chains Harbor) — but every shape must encode a data field: on the plot map, section is cause of death, plinth steps are peak market cap, weathering is age and a bronze plaque is an archived data page
 8. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty
 
+### Social discovery surfaces
+
+Social previews are discovery surfaces even when their destination is a dense power-user dossier. Lead with subject and an honest reason to open, one relevant visual and bounded supporting information; never shrink a dashboard into unreadable cells. Substantial ink/navy grounds, restrained frost-blue mechanism art, recognizable local logos/tickers and editorial serif briefings create three distinct compositions. Keep subject, hook, compact brand and essential evidence inside the center-square crop; fit actual copy instead of clipping it or leaving fixed empty diagram bands. Canonical cards stay evergreen and lifecycle-honest (historical, listing-review/held or upcoming when applicable); numerical assessments keep a readable calendar **DATE · NOT LIVE** beside their grade/score. Authored blog covers and the Cemetery scene remain exceptions, not generic replacements. [OG Images](./og-images.md) owns rendering, privacy, permanent image identity and small-preview acceptance.
+
+
 ### Stablecoin Detail Module Contract
 
 Shared evidence-shell grammar lives here; [Stablecoin Detail: Section Order](./stablecoin-detail-page.md#section-order) owns route ordering, pillar placement, rail twins, phone accordions and Control roles. [Data Visualization: Stablecoin Detail Primitives](./data-visualization.md#stablecoin-detail-primitives) owns visual encodings, scale geometry and degenerate states.

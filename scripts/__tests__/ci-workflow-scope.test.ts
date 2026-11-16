@@ -378,9 +378,27 @@ describe("CI workflow scope", () => {
       entry.run === "node scripts/ci/check-live-api-cache-policy.mjs");
     expect(step).toBeDefined();
     expect(step.if).toBe("${{ !cancelled() }}");
-    expect(step.env).toBeUndefined();
+    expect(step.env).toEqual({ SITE_SESSION_SIGNING_KEY: "${{ secrets.SITE_SESSION_SIGNING_KEY }}" });
     expect(workflow.jobs.transport.env).toBeUndefined();
     expect(workflow.on.schedule.length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ["pages-release.yml", ["Refresh API-backed release data", "Build clean production export", "Reject signing key in exported site"]],
+    ["production-canaries.yml", ["Check live production Pages assets", "Check live direct and same-origin API Cache-Control", "Capture home and detail viewport matrix"]],
+    ["weekly-validation.yml", ["Capture production dependency coverage"]],
+  ])("scopes the session signing key to lane readers in %s", (file, consumers) => {
+    const workflow = parseYaml(readRepoFile(`.github/workflows/${file}`));
+    const holders: string[] = [];
+    expect(workflow.env?.SITE_SESSION_SIGNING_KEY).toBeUndefined();
+    for (const job of Object.values(workflow.jobs) as Array<{ env?: Record<string, string>; steps?: Array<{ name: string; env?: Record<string, string> }> }>) {
+      expect(job.env?.SITE_SESSION_SIGNING_KEY).toBeUndefined();
+      for (const step of job.steps ?? []) if (step.env?.SITE_SESSION_SIGNING_KEY !== undefined) {
+        expect(step.env.SITE_SESSION_SIGNING_KEY).toBe("${{ secrets.SITE_SESSION_SIGNING_KEY }}");
+        holders.push(step.name);
+      }
+    }
+    expect(holders).toEqual(consumers);
   });
 
   it("builds Pages without the Next compiler cache and consolidates artifact checks", () => {
@@ -490,8 +508,9 @@ describe("CI workflow scope", () => {
     }
     expect(release.on.workflow_call.inputs.workspace_artifact_name).toMatchObject({ required: true, type: "string" });
     expect(release.on.workflow_call.secrets.SITE_API_SHARED_SECRET).toEqual({ required: true });
-    for (const caller of [deploy, rebuild]) {
-      expect(caller.jobs["pages-release"].secrets.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
+    expect(release.on.workflow_call.secrets.SITE_SESSION_SIGNING_KEY).toEqual({ required: false });
+    for (const key of ["SITE_API_SHARED_SECRET", "SITE_SESSION_SIGNING_KEY", "R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID", "R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY"]) {
+      for (const caller of [deploy, rebuild]) expect(caller.jobs["pages-release"].secrets[key]).toBe(`\${{ secrets.${key} }}`);
     }
     expect(release.jobs["pages-release"].env.SITE_API_SHARED_SECRET).toBeUndefined();
     expect(upload?.with).toMatchObject({
@@ -1132,7 +1151,7 @@ describe("external scheduler delivery monitor", () => {
 });
 
 describe("Cloudflare deployment credential scope", () => {
-  type Step = { name?: string; id?: string; run?: string; uses?: string; env?: Record<string, string> };
+  type Step = { name?: string; id?: string; run?: string; uses?: string; if?: string; "continue-on-error"?: boolean; env?: Record<string, string> };
   const credentialKeys = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
   const consumerSteps = (workflowPath: string, jobName: string) => {
     const workflow = parseYaml(readRepoFile(workflowPath));
@@ -1163,6 +1182,7 @@ describe("Cloudflare deployment credential scope", () => {
       "Record verified Worker activation markers",
     ]],
     ["pages-release", ".github/workflows/pages-release.yml", [
+      "Publish immutable preview objects before Pages activation",
       "Deploy Pages",
       "Resolve active Pages deployment",
     ]],
@@ -1177,13 +1197,49 @@ describe("Cloudflare deployment credential scope", () => {
     }
   });
 
-  it("keeps Pages build-only secret and public flags out of the deploy credential scope", () => {
+  it("separates Pages build secrets and confines preview S3 credentials to the execution publisher", () => {
     const { job, effective } = consumerSteps(".github/workflows/pages-release.yml", "pages-release");
     expect(job.env?.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY).toBe("true");
+    expect(job.env?.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK).toBe("${{ vars.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK }}");
+    expect(job.env?.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBe("${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}");
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")).jobs["pages-artifact"];
+    for (const key of ["NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", "NEXT_PUBLIC_TURNSTILE_SITE_KEY"]) {
+      expect(pr.env?.[key]).toBe(job.env?.[key]);
+    }
     const build = effective.find(({ step }) => step.name === "Build clean production export");
     expect(build?.env.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
     expect(build?.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+    const guard = effective.find(({ step }) => step.name === "Reject signing key in exported site");
+    expect(guard?.env.SITE_SESSION_SIGNING_KEY).toBe("${{ secrets.SITE_SESSION_SIGNING_KEY }}");
+    expect(guard?.step.run).toContain('grep -rqF -- "$SITE_SESSION_SIGNING_KEY" out');
+    expect(guard?.step.run).toContain('[ -n "$SITE_SESSION_SIGNING_KEY" ]');
+    expect(effective.indexOf(guard!)).toBe(effective.indexOf(build!) + 1);
     const marker = effective.find(({ step }) => step.name === "Verify deployment release marker");
     expect(marker?.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+    const publisherName = "Publish immutable preview objects before Pages activation";
+    const publisher = effective.find(({ step }) => step.name === publisherName);
+    expect(publisher?.step.run).toBe("npm run publish:social-previews -- --out-dir out --execute");
+    expect(publisher?.step.if).toBeUndefined();
+    expect(publisher?.step["continue-on-error"]).toBeUndefined();
+    const artifactGate = effective.find(({ step }) => step.name === "Validate Pages artifact gates (size, CSS integrity, flags, phishing, SEO/continuity)");
+    const deploy = effective.find(({ step }) => step.name === "Deploy Pages");
+    expect(artifactGate).toBeDefined();
+    expect(effective.indexOf(publisher!)).toBeGreaterThan(effective.indexOf(artifactGate!));
+    expect(effective.indexOf(publisher!)).toBeLessThan(effective.indexOf(deploy!));
+    const s3CredentialKeys = ["R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID", "R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY"];
+    for (const key of s3CredentialKeys) {
+      expect(job.env?.[key]).toBeUndefined();
+      expect(publisher?.env[key]).toBe(`\${{ secrets.${key} }}`);
+      expect(effective.filter(({ step, env }) => JSON.stringify({ ...step, env }).includes(key))
+        .map(({ step }) => step.name)).toEqual([publisherName]);
+    }
+    for (const path of [
+      ".github/workflows/pages-prepare.yml",
+      ".github/workflows/pull-request-checks.yml",
+      ".github/actions/setup-workspace/action.yml",
+    ]) {
+      const source = readRepoFile(path);
+      for (const key of s3CredentialKeys) expect(source).not.toContain(key);
+    }
   });
 });

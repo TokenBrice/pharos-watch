@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "revision": "27f05b5c86ed",
+  "revision": "fdf211a5e6b5",
   "cellSize": 48,
   "columns": 16,
   "rows": 16,
@@ -1290,7 +1290,10 @@
     }
   },
   "missing": [
+    "dchf-defi-franc-2024-03",
     "fusd-fedz-2026-05",
-    "usdh-hubble-2026-05"
+    "stbl-algofi-2023-07",
+    "usdh-hubble-2026-05",
+    "zunusd-zunami-2025-05"
   ]
 }

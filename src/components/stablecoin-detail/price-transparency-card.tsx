@@ -21,11 +21,12 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES } from "@shared/lib/classification";
 import { formatCurrency, formatUsdPriceAdaptive, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
-import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
+import { getPegTaxonomyByCurrency, getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
-  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
   /** Null when neither the peg row nor the admitted summary was read: unread provenance, not zero sources. */
   consensusSources: string[] | null;
   agreeSources: string[] | null;
@@ -37,6 +38,8 @@ interface PriceTransparencyCardProps {
    */
   pegCurrency?: string;
   pegRef?: number | null;
+  /** A NAV token's DEX check reads against its own NAV, never a peg reference market. */
+  navToken?: boolean;
 }
 
 interface SourceInfo {
@@ -360,6 +363,7 @@ export function PriceTransparencyCard({
   dexPriceCheck,
   pegCurrency,
   pegRef,
+  navToken = false,
   compact = false,
 }: PriceTransparencyCardProps & {
   /**
@@ -451,6 +455,13 @@ export function PriceTransparencyCard({
   // The glyph tracks the verdict. `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
+  // The DEX check reads against the peg's reference, which repeats its last close while that
+  // market is shut: the deviation is held there. The row's peg type names the reference unit.
+  const dexDeviationHeld = isCurrentDeviationHeld(
+    navToken ? null : getPegTaxonomyByType(coinData.pegType)?.currency,
+    resolvePriceObservedAtSec(coinData),
+    dexPriceCheck?.dexDeviationBps,
+  );
   const priceLabel = !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, unit) : "N/A";
   const usdPriceLabel = nativeUnit && !hasNoPrice && coinData.price != null ? formatPriceIn(coinData.price, USD_UNIT) : null;
   const confidenceLabel = hasNoPrice
@@ -467,7 +478,7 @@ export function PriceTransparencyCard({
     ? [
         pluralize(dexPriceCheck.sourcePools, "DEX price source"),
         `${formatCurrency(dexPriceCheck.sourceTvl)} TVL`,
-        `${formatBpsAsPercent(dexPriceCheck.dexDeviationBps)} from reference`,
+        dexDeviationHeld ? "Reference market closed" : `${formatBpsAsPercent(dexPriceCheck.dexDeviationBps)} from reference`,
       ].map((segment) => (
         <span key={segment} className="whitespace-nowrap">{segment}</span>
       ))

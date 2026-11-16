@@ -19,7 +19,7 @@ import {
 } from "./audit-depeg-history/coingecko-audit";
 import { parseAuditRequest, type AuditPaginatedRequest, type RepairMode } from "./audit-depeg-history/request";
 import { buildRecomputeStabilityStatements } from "./audit-depeg-history/stability-recompute";
-import { loadSupplyHistoryRowsForWindow, loadPsiEligibleDepegEvents } from "../../src/lib/psi-replay-inputs";
+import { applyReferenceMarketClosureRule, loadSupplyHistoryRowsForWindow, loadPsiEligibleDepegEvents } from "../../src/lib/psi-replay-inputs";
 import {
   collectSyntheticSplitGroups,
   planSyntheticSplitRepair,
@@ -512,7 +512,9 @@ async function executeSyntheticSplitRepair(
     "Synthetic split repair failed before the stability-index repair could finish",
     {
       affectedDays: mutationPlan.affectedDays,
-      remainingDepegEvents: projectSyntheticSplitDepegEvents(await loadPsiEligibleDepegEvents(db), paginatedGroups),
+      remainingDepegEvents: applyReferenceMarketClosureRule(projectSyntheticSplitDepegEvents(
+        await loadPsiEligibleDepegEvents(db, { replayClosureRule: false }), paginatedGroups,
+      )),
     },
     { requestedMutationCount: mutationPlan.statements.length, operation: "Synthetic split repair" },
   );

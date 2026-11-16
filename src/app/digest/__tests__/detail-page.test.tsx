@@ -34,12 +34,6 @@ vi.mock("@/lib/json-ld", () => ({
   buildArticleJsonLd: () => ({}),
   safeJsonLd: (value: unknown) => value,
 }));
-vi.mock("@/lib/page-metadata", () => ({
-  buildPageMetadata: () => ({}),
-  composeDescription: (parts: unknown[]) => parts.filter(Boolean).join(" "),
-  summarizeText: (text: string) => text,
-  trimTextAtWordBoundary: (text: string) => text,
-}));
 vi.mock("@/lib/digest-registry", () => {
   const entry = (date: string, generatedAt: number, digestType: "daily" | "weekly", title = `Edition ${date}`) => ({
     date,

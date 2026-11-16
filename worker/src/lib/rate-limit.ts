@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { bytesToHex } from "./hash";
 import type { MinimalD1Database } from "./minimal-d1";
+import { FEEDBACK_GLOBAL_RATE_LIMIT_MAX_SUBMISSIONS, FEEDBACK_GLOBAL_RATE_LIMIT_WINDOW_SEC } from "@shared/lib/ops-limits";
 
 type RateLimitDb = MinimalD1Database;
 
@@ -47,9 +48,13 @@ export async function reserveFeedbackRateLimit(
        WHERE (
          SELECT COUNT(*) FROM feedback_rate_limit
          WHERE ip_hash = ? AND submitted_at > ?
+       ) < ? AND (
+         SELECT COUNT(*) FROM feedback_rate_limit
+         WHERE submitted_at > ?
        ) < ?`,
     )
-    .bind(ipHash, now, ipHash, now - windowSec, maxSubmissions)
+    .bind(ipHash, now, ipHash, now - windowSec, maxSubmissions,
+      now - FEEDBACK_GLOBAL_RATE_LIMIT_WINDOW_SEC, FEEDBACK_GLOBAL_RATE_LIMIT_MAX_SUBMISSIONS)
     .run();
   if ((insertResult.meta?.changes ?? 0) === 0) {
     return null;
@@ -60,7 +65,7 @@ export async function reserveFeedbackRateLimit(
   execCtx?.waitUntil(
     db
       .prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
-      .bind(now - 3600)
+      .bind(now - FEEDBACK_GLOBAL_RATE_LIMIT_WINDOW_SEC)
       .run()
       .then(() => {})
       .catch((e) => {

@@ -1,0 +1,16 @@
+{
+  "id": "usd-dinari",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Dinari USD+ terms section 3.1: EU access excluded since June 30, 2024",
+        "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+      },
+      {
+        "label": "ESMA MiCA Article 2: Union offer and admission scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  }
+}

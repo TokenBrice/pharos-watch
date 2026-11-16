@@ -5,7 +5,7 @@ compatibility_date = "2026-04-18"
 # Without global fetch semantics those same-Worker self-fetches can return
 # Cloudflare 522s from inside the Worker even when external clients are healthy.
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
+preview_urls = false
 minify = true
 keep_names = true
 # Cloudflare stores the uploaded map privately and uses it to de-minify stack
@@ -172,6 +172,30 @@ namespace_id = "2026110101"
 
   [ratelimits.simple]
   limit = 20
+  period = 60
+
+[[ratelimits]]
+name = "API_KEY_LOOKUP_RATE_LIMIT"
+namespace_id = "2026111501"
+
+  [ratelimits.simple]
+  limit = 300
+  period = 60
+
+[[ratelimits]]
+name = "SITE_SESSION_RATE_LIMIT"
+namespace_id = "2026111502"
+
+  [ratelimits.simple]
+  limit = 300
+  period = 60
+
+[[ratelimits]]
+name = "SITE_SOURCE_RATE_LIMIT"
+namespace_id = "2026111503"
+
+  [ratelimits.simple]
+  limit = 1200
   period = 60
 
 [vars]

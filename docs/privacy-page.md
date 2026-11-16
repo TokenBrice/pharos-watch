@@ -4,6 +4,10 @@ Public static `/privacy/` describes processing elsewhere in the product; it fetc
 
 ## Data Categories
 
+### Browser security session
+
+When the default-off browser-check flag is enabled with a Turnstile site key, Cloudflare Turnstile checks the browser before live data is served. One strictly necessary first-party HttpOnly cookie holds a random session ID and expiry, with no personal data, for 12 hours. Only the expiry hint (`pharos-site-session-exp`) is stored in localStorage; challenge tokens remain in memory until posted to the same-origin session endpoint. Failed checks leave build-time data available without live refresh. [Security governance](./security-governance.md#browser-session-gate) owns the client gate and script-loading rules.
+
 ### Website analytics
 
 `src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`; loopback hosts are admitted only after a browser-side opt-in (`localStorage["pharos-ga-loopback"] = "1"`), for local smoke checks. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.
@@ -15,6 +19,8 @@ Explicitly configured localhost/127.0.0.1/[::1] is a test-only exception; use a 
 Search events originate from manual input, not initial URL/history. They send page label/query length, never raw search text; clearing/navigation cancels pending events. Navigation sends bounded chrome/group/internal href without query string; palette selection sends query length and result kind/section/rank, zero-result events length only. Raw palette text is never sent. Page views and referrers carry origin+path only (no query or fragment, so no `?p=` holdings); invalid or non-HTTP(S) referrers are empty. GA4 Enhanced Measurement history pageviews and Site search are disabled in the account so only manual route events fire.
 
 Web Vitals retain document-lifetime meaning and current allowed path attribution; client navigation is not a new document measurement. Callback/debounce implementation belongs to the source, not this policy.
+
+Share-menu `social_share` events carry only bounded action, success/error outcome and broad surface. They contain no share URL, copied content, coin ID or snapshot ID, and cancelled/superseded attempts do not emit completion.
 
 ### Browser-local preferences
 
@@ -28,7 +34,7 @@ The homepage retains a bounded IndexedDB envelope of public market/PSI/incident 
 
 Feedback contact handles may be published in GitHub issues; disclose that before submission. Partner/lost-key/removal requests use private Telegram/X constants from `shared/lib/public-api-contract.ts`, with request messages deleted after issuance/rotation. No new self-serve email requests or Resend verification are accepted. Existing self-serve credentials expire on their established schedule; legacy email/request metadata remains private until coordinated cleanup. Rate identifiers are hashed, never raw IP.
 
-Supporter claims store signing wallet, token prefix and claim time in `api_key_donor_claims` plus key row/name and usage metadata. Issuance audit records tier, not address. Wallet-linked credentials are personal data processed for the requested perk. Signature/plaintext token never persist or enter logs. Unsaved token is temporary browser memory across internal navigation, cleared on copy/acknowledgment/unload, never local/session storage. Wallets stay outside request telemetry/structured logs; log outcome codes only.
+Supporter claims store signing wallet, token prefix and claim time in `api_key_donor_claims`, the credited public-ledger donations (chain, transaction hash, credit time) in `api_key_donor_credits`, plus key row/name and usage metadata. Issuance audit records tier, not address. Wallet-linked credentials are personal data processed for the requested perk. Signature/plaintext token never persist or enter logs. Unsaved token is temporary browser memory across internal navigation, cleared on copy/acknowledgment/unload, never local/session storage. Wallets stay outside request telemetry/structured logs; log outcome codes only.
 
 These records have no automatic expiry. Deactivation alone leaves wallet-bearing key name/usage. Private removal requests follow [admin reference](./api-reference-admin.md) to deactivate and delete key/usage/audit rows. Wallet/prefix/time remain in the claim fence against second issuance; removing that fence requires explicit reissuance decision. This is partial erasure, not all-wallet-record deletion; public donation ledger is independent and unaffected. [API route contract](./api-page.md#supporter-key-claim-contract) owns claim/recovery behavior.
 
@@ -37,6 +43,10 @@ These records have no automatic expiry. Deactivation alone leaves wallet-bearing
 Share artifacts are server-recomputed from allowlisted answers/canonical data. They include normalized input/output, methodology/version binding, dataset hash/provenance, no account/wallet/raw IP/fingerprint. Anyone with URL can read them.
 
 Unread artifacts expire after 90 days. Successful read attempts five-year retention extension; failure does not fail read and later reads can retry. Stored extension metadata prevents sliding expiry. Keyed IP-derived quotas exist in short-lived limiter/D1, not artifact body. [Snapshot sharing](./screener-page.md#snapshot-sharing), shared schema and Pages Function own payload/verification/quota details; do not copy a second matrix here.
+
+### Public dated scorecards
+
+Explicit dated-scorecard sharing persists only public assessment metadata and its hash-bound PNG as a sealed object in the dedicated `pharos-social-previews` R2 bucket, not the Picker's KV namespace. Artifacts have no automatic expiry, remain independent of dataset pruning and are readable by anyone with the URL. Holdings, Picker inputs, wallets, raw IP addresses and browser fingerprints never enter the artifact. Durable D1 UTC-day attempt counters use separately keyed IP hashes and a global bucket; they are distinct from the public record and pruned in bounded request-path cleanup. The [OG sharing contract](./og-images.md#dated-scorecards) owns quotas, transport, validation and retention; [deployment prerequisites](./deployment-process.md#social-preview-storage-prerequisites) distinguish required account setup from live acceptance.
 
 ### Telegram alerts and Mini App
 

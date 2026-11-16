@@ -90,7 +90,7 @@ Desktop history walks completed wizard steps; mobile commits one result after re
 
 ## Snapshot Sharing
 
-The retained `og-selector-default.png` is a static 1200×630 profile card for `/screener/picker/`. It is intentionally profile-level, not snapshot-level, so recipients of `?sid=...` links never receive a social card containing the frozen shortlist or form answers. No profile/snapshot-specific card is served; [OG images](./og-images.md) owns the asset.
+The Picker's evergreen preview is profile-level, not snapshot-level, so recipients of `?sid=...` links never receive a social card containing the frozen shortlist or form answers. The retained `og-selector-default.png` remains available for legacy inbound URLs. No profile/snapshot-specific result card is served; [OG Images](./og-images.md#6-selector-profile-cards-publicog-selector-png) owns generation and compatibility assets.
 
 Creation posts only allowlisted inputs. `functions/lib/selector-canonical-snapshot.ts` reloads canonical sources and runs the shared adapter/engine; the Pages handler stores the recomputed projection in `SELECTOR_SNAPSHOTS` KV. Never trust caller scores, identities, hashes or prose. POST validates allowed UI origins and returns `{ sid, ev }`; GET returns verified or explicitly legacy-unverified output, or a typed miss/error. A missing sid-only snapshot is not replaced by current output.
 

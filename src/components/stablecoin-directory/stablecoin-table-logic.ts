@@ -247,7 +247,8 @@ export function sortStablecoins({
     },
     mintAuthority: (r) => resolveMintAuthorityScoreDisplay(reportCards?.[r.id]?.mint).score,
     peg: (r) => {
-      const bps = resolveCurrentDeviationBps(r, pegScores?.get(r.id));
+      const meta = TRACKED_META_BY_ID.get(r.id);
+      const bps = resolveCurrentDeviationBps(r, pegScores?.get(r.id), meta?.flags.navToken ? null : meta?.flags.pegCurrency);
       return bps == null ? null : Math.abs(bps);
     },
   };

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
@@ -14,10 +13,6 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "A downloadable poster of every stablecoin Pharos grades, arranged across five A-to-F bands with bubble area tracking circulating supply and fixed markers for smaller assets.",
   canonical: "/safety-scores/map/",
-  // The poster itself is served from KV by a Pages Function, so it is not a file
-  // in `out/` and cannot be a same-origin og:image. Use the dynamic Safety
-  // Scores card the Worker renders instead.
-  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
 });
 
 const HOW_TO_READ = [

@@ -86,7 +86,7 @@ describe("buildPreLaunchQuickAnswers for a launched row", () => {
     ]);
     expect(items[0].answer).toBe("QEUR launched publicly on-chain on Oct 15, 2026, per its sourced launch milestone.");
     expect(items[2].answer).toBe(
-      "Yes, QEUR has been live since Oct 15, 2026. Pharos does not track it yet. No admitted price lane yet. Its price, supply, liquidity and Safety Score are unavailable on Pharos, not zero, until both a price and a supply source can be verified.",
+      "Yes, QEUR has been live since Oct 15, 2026. Pharos does not track it yet. No admitted price lane yet. Its price, supply, liquidity and Safety Score are unavailable on Pharos, not zero, until it passes the active-admission checks.",
     );
     const text = items.map((item) => item.answer).join(" ");
     expect(text).not.toMatch(/pre-launch \(|target|will use/i);

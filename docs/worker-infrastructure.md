@@ -21,7 +21,7 @@ Worker runtime safety and telemetry controls are declared in both Wrangler confi
 ```toml
 compatibility_date = "2026-04-18"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
-preview_urls = true
+preview_urls = false
 minify = true
 keep_names = true
 upload_source_maps = true
@@ -68,6 +68,8 @@ Use `logCronRun()` for terminal outcomes, `recordCronFailure()` for non-fatal ex
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
 Pages inventories are queried directly through `shared/lib/env-contract.ts`, not eager exports from the proxy modules. Validation reports partial Access/admin-D1/Telegram pairs, missing site-proxy/feedback/API-pepper/Banxico credentials, no-op `API_KEY_HASH_PEPPER` rotation, and Telegram `_PREVIOUS` values without their corresponding current token or secret. Ops requires team domain plus UI audience. Site-data requires `DB` for fail-closed selector POST quotas; public reads can continue without attribution. Binding ownership/requirements are in the linked inventory.
+
+`SITE_SESSION_SIGNING_KEY` is an operator-required Worker/Pages secret and script/CI credential; missing Worker keys report `site-session-signing-key-missing`. It and the native `SITE_SESSION_RATE_LIMIT` / `SITE_SOURCE_RATE_LIMIT` bindings remain optional at ingress so the gate can explicitly observe or fail closed. `SITE_SESSION_SIGNING_KEY_PREVIOUS` and Wrangler-managed `SITE_SESSION_ENFORCEMENT` are optional; only literal `enforce` enables rejection. Pages also requires `TURNSTILE_SECRET_KEY`; the browser flag and Turnstile site key are public build Variables. [Site-Data Auth](process/worker-infrastructure-appendix.md#site-data-auth) owns decisions and budgets.
 
 `ScheduledEnv` is the narrow shared scheduled-context view; `HeavyEnv` in `worker/src/lib/env.ts` requires no Workflow binding. Heavy shares public's D1, version metadata, compatibility, alias/module and CPU settings, without HTTP/CORS/rate-limit bindings. [The operator sunset record](process/worker-infrastructure-appendix.md#safety-score-v9-workflow-shadow-pilot) owns retirement status and rollback floor.
 

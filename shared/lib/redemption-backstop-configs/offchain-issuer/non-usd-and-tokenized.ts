@@ -80,6 +80,74 @@ const allunityBase: RedemptionBackstopConfig = {
 };
 
 export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "itry-brix": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-11-15",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "days",
+    executionModel: "opaque",
+    outputAssetType: "mixed-collateral",
+    unresolvedOutputDisposition: "issuer-undisclosed",
+    costModel: undisclosedReviewedFee("iTRY Token Terms section 15 permits request-specific fees and changes; no complete numeric all-in redemption fee schedule is published."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "Eligible whitelisted customers may redeem for one TRY notional in issuer-selected supported digital assets. No exact funded same-notional capacity, complete payout identity set, unconditional completed-receipt maximum or all-in fee bound is established. Operational delays and issuer suspension remain possible.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("iTRY Token Terms sections 5, 7 and 15", "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md", ["route", "access", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("iTRY Token Terms sections 5, 7 and 15", "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md", ["route", "access", "fees", "settlement"]),
+      sourceRef("Brix primary-market eligibility", "https://docs.brix.money/itry/eligibility.md", ["route", "access"]),
+      sourceRef("Brix mint and redemption interface", "https://docs.brix.money/itry/mint-and-redemption.md", ["route", "access"]),
+      sourceRef("Brix collateral management: limited fast buffer and larger-redemption delays", "https://docs.brix.money/technical/collateral-management.md", ["capacity", "settlement"]),
+    ],
+    notes: [
+      "KYC/AML approval and onchain whitelisting are required. Payout is supported digital assets at a TRY notional, not a guaranteed TRY bank payment; the complete current output set remains unknown.",
+      "The Company may decline or suspend redemption for compliance, operational, risk or solvency reasons. The days category is diagnostic, not an unconditional completion bound.",
+      "The disclosed Fast Access Vault is a routine buffer, not proved whole-book capacity. Its observed zero available balance does not establish exhaustion of other issuer resources.",
+    ],
+  },
+  "copm-minteo": {
+    ...issuerBase,
+    reviewedAt: "2026-11-15",
+    accessModel: "issuer-api",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    routeStatus: "unknown",
+    routeExitCorrelation: "independent-issuer-rail",
+    unresolvedOutputAssetKeys: ["fiat:COP"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "unquantified" },
+    costModel: documentedVariableFee(
+      "Minteo discloses customer-specific local tax withholding before each redemption. Customers pay outgoing wallet gas and their own outgoing bank fees; no complete issuer, bank, tax or network cost ceiling is published.",
+      "documented-variable",
+    ),
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "Minteo's public documentation establishes manually approved business AML/KYC access, gross 1:1 COPM redemption, and API orders from the customer's own wallet to the customer's own bank account. The COP 10,000 minimum is a native-currency threshold, not a USD amount. No current executable capacity, unconditional completed bank-credit deadline or complete all-in redemption cost is established. The days category is conservative diagnostic metadata rather than a settlement SLA; fiat:COP requires admitted captured FX for valuation.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("Minteo tokenization and redemption, reviewed November 15 2026", "https://transparency.minteo.com/tokenizationAndRedemtion", ["route", "access", "fees"]),
+        sourceRef("Minteo Create an Order API: customer wallet to own bank account, COPM minimum", "https://docs.minteo.com/orders/create-order", ["route", "access", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Minteo tokenization and redemption, reviewed November 15 2026", "https://transparency.minteo.com/tokenizationAndRedemtion", ["route", "access", "fees"]),
+      sourceRef("Minteo Create an Order API: customer wallet to own bank account, COPM minimum", "https://docs.minteo.com/orders/create-order", ["route", "access", "settlement"]),
+    ],
+    notes: [
+      "Businesses request manual onboarding and must pass Minteo's AML/KYC approval. The API supports redemption only from the customer's own wallet to the customer's own bank account; third-party payouts are a separate service.",
+      "The published minimum for both tokenization and redemption is COP 10,000. No static minRedeemUsd conversion is authored, and gross 1:1 COP redemption does not imply a dollar payout or a zero-cost route.",
+      "The reserve report corroborates historical backing, not immediately executable redemption inventory. Capacity remains unquantified, current openness unknown, and bank-credit timing and all-in fees unbounded.",
+    ],
+  },
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -407,6 +475,41 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     notes: [
       "Redemption credits the Anzens account before a separate bank withdrawal. Foreign-account withdrawals have a $100,000 minimum and use Encryptus; that condition is not applied to the domestic rail.",
       "Wire prices are rail-specific components. No generic minimum, zero gas, uniform basis-point fee, complete cost ceiling or guaranteed settlement delay is authored for the aggregate issuer route.",
+    ],
+  },
+  "usdrf-realfi": {
+    ...issuerBase,
+    reviewedAt: "2026-11-15",
+    accessModel: "manual",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "queued",
+    capacityModel: { kind: "unquantified" },
+    costModel: undisclosedReviewedFee(
+      "RealFi Reserve's Institutional Minting Agreement section 7 says it currently charges no fee of its own but may charge fees disclosed when an order is initiated. Cardano network, wallet and bank charges are separate. No fee schedule or all-in cost ceiling is published.",
+    ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale:
+        "The July 23, 2026 Institutional Minting Agreement limits direct redemption to whitelisted institutional Mint Users of RealFi Reserve Ltd. at one U.S. dollar, or an equivalent Eligible Asset, per USDrf less applicable fees. RealFi's redemption FAQ describes a human-approved first-in-first-out queue under daily and monthly throttle limits whose amounts are unpublished; timing depends on queue position and reserve composition and is not guaranteed within any window. Section 8 promises only commercially reasonable processing efforts and permits suspension on a reserve adequacy or liquidity breach, and section 9 lets the issuer set or change limits at its discretion. No executable same-notional capacity, completed-payout maximum or all-in cost bound is established.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("RealFi FAQ: How can I redeem USDrf?", "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf", ["route", "access", "capacity", "settlement"]),
+        sourceRef("USDrf Institutional Minting Agreement, July 23, 2026, sections 7-9", "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement", ["route", "access", "capacity", "settlement", "fees"]),
+      ],
+    },
+    docs: [
+      sourceRef("RealFi FAQ: How can I redeem USDrf?", "https://docs.realfi.co/frequently-asked-questions/how-can-i-redeem-usdrf", ["route", "access", "capacity", "settlement"]),
+      sourceRef("USDrf Institutional Minting Agreement, July 23, 2026, sections 1-2 and 6-10", "https://docs.realfi.co/essential-policies/usdrf-institutional-minting-agreement", ["route", "access", "capacity", "settlement", "fees"]),
+      sourceRef("USDrf Terms, July 23, 2026, sections 2 and 4: no direct redemption claim without an issuer account", "https://docs.realfi.co/essential-policies/usdrf-terms-of-use", ["access"]),
+      sourceRef("RealFi peg stability: queued institutional path, market-maker PSM and circuit breakers", "https://docs.realfi.co/glass-box-approach/peg-stability", ["route", "capacity", "settlement"]),
+    ],
+    notes: [
+      "Only legal entities onboarded through KYB as Mint Users, with a whitelisted Cardano address, can redeem; U.S. and EU entities are ineligible. The USDrf Terms give holders without an issuer account no direct redemption claim, and whitelisting may be denied, suspended or revoked. Retail holders exit through Cardano DEX liquidity, which this issuer route does not model.",
+      "Mint Users choose the Eligible Asset for each Redeem Order: U.S. dollars to a connected bank account, USDC, or other assets the issuer accepts from time to time. The fiat USD output follows the base redemption obligation; no stablecoin payout identity is asserted.",
+      "The daily and monthly throttle limits are unpublished, and RealFi says automated circuit breakers will slow redemptions as liquidity coverage approaches minimum thresholds. Throttles, discretionary limits and suspension rights leave capacity unquantified.",
+      "RealFi's stated buffer of 10-20% of TVL in Treasuries and money market funds, its 10% floor and its target of liquid reserves covering 120% of expected 7-day net redemptions are unverified reserve policy. No attestation was published by 2026-11-15, so these targets establish no executable capacity.",
+      "The peg-stability page also describes a PSM that market makers use for near-instant swaps under limits. No contract, access terms, fees or capacity are published for it, so it is not modeled as a holder route.",
     ],
   },
   "cash-phantom": {

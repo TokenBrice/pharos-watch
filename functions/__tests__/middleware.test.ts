@@ -47,6 +47,8 @@ function imgSrc(csp: string | null): string {
 describe("alias host redirect", () => {
   it.each([
     ["https://stablecoin-dashboard.pages.dev/depeg/x?a=1", 301, "https://pharos.watch/depeg/x?a=1"],
+    ["https://stablecoin-dashboard.pages.dev//example.com/?a=1", 301, "https://pharos.watch//example.com/?a=1"],
+    ["https://stablecoin-dashboard.pages.dev/\\example.com/?a=1", 301, "https://pharos.watch//example.com/?a=1"],
     ["https://stablecoin-dashboard.pages.dev/__pharos_release.json", 200, null],
     ["https://abc123.stablecoin-dashboard.pages.dev/depeg/x", 200, null],
   ])("%s", async (url, status, location) => {
@@ -298,6 +300,20 @@ describe("pages middleware markdown negotiation", () => {
     expect(res.headers.get("Content-Encoding")).toBeNull();
     const body = await res.text();
     expect(body).toMatch(/<script nonce="[^"]+">1<\/script>/);
+  });
+
+  it("passes an HTML 304 revalidation through without a body or a new nonce", async () => {
+    const next = vi.fn(async () => new Response(null, { status: 304, headers: { "Content-Type": "text/html", ETag: '"page"' } }));
+    const res = await onRequest({
+      request: new Request("https://pharos.watch/share/scorecard/x/", { headers: { "If-None-Match": '"page"' } }),
+      env: { ASSETS: { fetch: makeAssetsFetch({}) } },
+      next,
+    });
+
+    expect(res.status).toBe(304);
+    expect(res.headers.get("ETag")).toBe('"page"');
+    expect(res.headers.get("Content-Security-Policy")).toBeNull();
+    expect(await res.text()).toBe("");
   });
 
   it("allows Telegram bridge script and framing only on the Mini App route", async () => {

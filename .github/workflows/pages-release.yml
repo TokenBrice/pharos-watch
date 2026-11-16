@@ -14,6 +14,14 @@ on:
         required: true
       SITE_API_SHARED_SECRET:
         required: true
+      SITE_SESSION_SIGNING_KEY:
+        required: false
+      # Production-environment secrets: callers must still pass them by name, or
+      # this reusable job resolves them to empty strings.
+      R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID:
+        required: true
+      R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -28,6 +36,8 @@ jobs:
     env:
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
+      NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK: ${{ vars.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
       NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
@@ -62,6 +72,7 @@ jobs:
         run: tar --zstd -xf "${RUNNER_TEMP}/pharos-pages-workspace/workspace.tar.zst" --same-permissions
       - name: Refresh API-backed release data
         env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
           DIGEST_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           DEPEG_EVENTS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
@@ -83,6 +94,7 @@ jobs:
           # Approved deploy tuning: four critical-CSS workers on the release runner.
           PHAROS_CRITICAL_CSS_WORKERS: "4"
           SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
           PHAROS_RELEASE_PR_TYPECHECKED: "1"
         run: |
           if [ -z "${SITE_API_SHARED_SECRET//[[:space:]]/}" ]; then
@@ -92,6 +104,14 @@ jobs:
           npm run generated:post-refresh
           npx --no-install next build --webpack
           npm run postbuild
+      - name: Reject signing key in exported site
+        env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
+        run: |
+          if [ -n "$SITE_SESSION_SIGNING_KEY" ] && grep -rqF -- "$SITE_SESSION_SIGNING_KEY" out; then
+            echo "::error::Site session signing key found in exported site."
+            exit 1
+          fi
       - name: Archive non-secret post-refresh release data
         env:
           PAGES_RELEASE_DATA_ARCHIVE_PATH: ${{ runner.temp }}/pages-release-data.tar.zst
@@ -139,6 +159,13 @@ jobs:
         if: ${{ vars.INDEXNOW_ENABLED == 'true' }}
         continue-on-error: true
         run: curl -fsS --max-time 30 -o "${RUNNER_TEMP}/previous-sitemap.xml" https://pharos.watch/sitemap.xml
+      - name: Publish immutable preview objects before Pages activation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID: ${{ secrets.R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID }}
+          R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY }}
+        run: npm run publish:social-previews -- --out-dir out --execute
       - name: Deploy Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

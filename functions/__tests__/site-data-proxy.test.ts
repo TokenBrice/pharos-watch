@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestD1Database, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { onRequest } from "../_site-data/[[path]].ts";
+import { onRequest as sessionRequest, resetSiteSessionRateLimitStateForTests } from "../_site-data/session";
+import { readSiteSessionCookie, verifySiteSessionToken } from "@shared/lib/site-session-token";
 import * as requestAttribution from "../lib/request-attribution";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 import {
@@ -466,6 +468,31 @@ describe("site-data proxy", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["cookie-token", "header-token", "cookie-token"],
+    [null, "header-token", null],
+    [null, null, null],
+  ])("forwards session cookie %s with header %s", async (cookie, header, expected) => {
+    const fetchSpy = siteApi.json("/api/stablecoins", {}, 401, { "X-Pharos-Session": "required" });
+    const headers = new Headers({
+      Origin: "https://pharos.watch", "CF-Connecting-IP": "203.0.113.8",
+      "X-Pharos-Site-Proxy-Secret": "spoof", "X-Pharos-Client-IP": "spoof", "X-API-Key": "spoof",
+      "CF-Access-Client-Id": "spoof", "CF-Access-Client-Secret": "spoof",
+      "Cf-Access-Jwt-Assertion": "spoof", "Cf-Access-Authenticated-User-Email": "spoof",
+    });
+    if (cookie) headers.set("Cookie", `other=value; __Secure-pharos-session=${cookie}`);
+    if (header) headers.set("X-Pharos-Site-Session", header);
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", { headers })));
+    const forwarded = new Headers(fetchSpy.getHistory()[0]?.headers);
+    expect(forwarded.get("X-Pharos-Site-Session")).toBe(expected);
+    expect(forwarded.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    expect(forwarded.get("X-Pharos-Client-IP")).toBe("203.0.113.8");
+    for (const name of ["Cookie", "X-API-Key", ...Array.from(headers.keys()).filter((key) => key.startsWith("cf-access-"))]) {
+      expect(forwarded.has(name)).toBe(false);
+    }
+    expect(response.headers.get("X-Pharos-Session")).toBe("required");
+  });
+
   it("returns 429 before the upstream fetch when one client-IP source exceeds the read ceiling", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-20T12:00:00Z"));
@@ -651,5 +678,114 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("site-data session endpoint", () => {
+  const env = { ...makeEnv(), SITE_SESSION_SIGNING_KEY: " signing-key\n", TURNSTILE_SECRET_KEY: "turnstile-secret" };
+  const verified = { success: true, hostname: "pharos.watch", action: "site-data" };
+  function context(body = '{"token":"challenge"}', headers: HeadersInit = {}, host = "pharos.watch", method = "POST") {
+    return { env, request: new Request(`https://${host}/_site-data/session`, {
+      method, headers: { Origin: `https://${host}`, "CF-Connecting-IP": "203.0.113.9", ...headers },
+      ...(method === "POST" ? { body } : {}),
+    }) };
+  }
+  beforeEach(() => resetSiteSessionRateLimitStateForTests());
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
+
+  it.each(["pharos.watch", "ops.pharos.watch"])("issues a signed browser cookie on %s", async (host) => {
+    const fetch = vi.fn(async () => Response.json({ ...verified, hostname: host }));
+    vi.stubGlobal("fetch", fetch);
+    const response = await sessionRequest(context(undefined, host === "ops.pharos.watch"
+      ? { Origin: "", Referer: `https://${host}/page` } : {}, host));
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expectNoindex(response);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    const cookie = response.headers.get("Set-Cookie");
+    expect(cookie).toContain("; Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=43200");
+    const result = await verifySiteSessionToken({
+      token: readSiteSessionCookie(cookie), keys: [env.SITE_SESSION_SIGNING_KEY], nowSec: Math.floor(Date.now() / 1_000),
+    });
+    expect(result).toMatchObject({ ok: true, payload: { kind: "browser" } });
+    if (result.ok) expect(response.headers.get("X-Pharos-Session-Expires")).toBe(String(result.payload.exp));
+    expect(fetch).toHaveBeenCalledWith("https://challenges.cloudflare.com/turnstile/v0/siteverify", expect.objectContaining({
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, redirect: "manual",
+      signal: expect.any(AbortSignal), body: new URLSearchParams({ secret: "turnstile-secret", response: "challenge", remoteip: "203.0.113.9" }),
+    }));
+  });
+
+  it.each([
+    [{ success: false }, 403], [{ success: "true" }, 403], [{ hostname: "ops.pharos.watch" }, 403],
+    [{ action: "other" }, 403], [null, 403],
+    ["non-json", 503], ["unreachable", 503], ["http-error", 503],
+  ])("rejects siteverify result %j with %s", async (override, status) => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      if (override === "unreachable") throw new Error("offline");
+      if (override === "non-json") return new Response("<html>unavailable</html>");
+      if (override === "http-error") return Response.json(verified, { status: 503 });
+      return Response.json(override === null ? null : { ...verified, ...override as object });
+    }));
+    const response = await sessionRequest(context());
+    expect(response.status).toBe(status);
+    expect(response.headers.has("Set-Cookie")).toBe(false);
+    expectNoindex(response);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    if (status === 503) expect(response.headers.get("Retry-After")).toBe("60");
+    expect(await response.json()).toHaveProperty("error");
+  });
+
+  it.each<[ReturnType<typeof context>, number]>([
+    [context(undefined, {}, "hash.stablecoin-dashboard.pages.dev"), 404],
+    [context(undefined, {}, "stablecoin-dashboard.pages.dev"), 404],
+    [context(undefined, {}, "foreign.example"), 404],
+    [context(undefined, {}, "pharos.watch:8443"), 404],
+    [context(undefined, { Origin: "https://foreign.example" }), 404],
+    [context(undefined, { Origin: "", Referer: "https://pharos.watch/page" }, "pharos.watch", "GET"), 405],
+    [context(undefined, { Origin: "" }), 404],
+    [context("x".repeat(4_097)), 413], [context("{}", { "Content-Length": "4097" }), 413],
+    ...["{", "null", "{}", '{"token":1}', '{"token":" "}'].map((body): [ReturnType<typeof context>, number] => [context(body), 400]),
+    ...["SITE_SESSION_SIGNING_KEY", "TURNSTILE_SECRET_KEY"].map((key): [ReturnType<typeof context>, number] => [
+      { ...context(), env: { ...env, [key]: " " } }, 500,
+    ]),
+  ])("rejects invalid session requests %# before siteverify", async (ctx, status) => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const response = await sessionRequest(ctx);
+    expect(response.status).toBe(status);
+    expectNoindex(response);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.has("Set-Cookie")).toBe(false);
+    if (status === 405) expect(response.headers.get("Allow")).toBe("POST");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["ipv6", "unknown"])("meters %s callers before parsing and resets the window", async (kind) => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn());
+    for (let i = 0; i < 11; i++) {
+      const response = await sessionRequest(context("{}", {
+        "CF-Connecting-IP": kind === "ipv6" ? `2001:db8:1:2::${i + 1}` : "",
+      }));
+      expect(response.status).toBe(i < 10 ? 400 : 429);
+      if (i === 10) expect(response.headers.get("Retry-After")).toBe("60");
+    }
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect((await sessionRequest(context("{}", { "CF-Connecting-IP": kind === "ipv6" ? "2001:db8:1:2::1" : "" }))).status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("times out siteverify body consumption and cancels the stream", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new ReadableStream<Uint8Array>({ cancel }))));
+    const pending = sessionRequest(context());
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await pending;
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expectNoindex(response);
+    expect(cancel).toHaveBeenCalledOnce();
   });
 });

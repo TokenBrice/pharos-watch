@@ -18,6 +18,14 @@ const CEMETERY_ATLAS_TOP_LEVEL_LOGO_PATHS = existsSync(CEMETERY_ATLAS_SIGNATURE_
     .filter((path) => !path.startsWith("public/logos/cemetery/"))
   : [];
 
+// The generator records its complete local import/data closure. Importer edits
+// select a rebuild before newly introduced leaf inputs join this exact list.
+const SOCIAL_PREVIEW_SIGNATURE_URL = new URL("../maintenance/state/social-preview-images.json", import.meta.url);
+const SOCIAL_PREVIEW_SOURCE_PATHS = existsSync(SOCIAL_PREVIEW_SIGNATURE_URL)
+  ? Object.keys(JSON.parse(readFileSync(SOCIAL_PREVIEW_SIGNATURE_URL, "utf8")).sources)
+    .filter((path) => !path.startsWith("node_modules/"))
+  : [];
+
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
@@ -778,6 +786,40 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     script: "scripts/maintenance/generate-editorial-style.ts",
     sourcePaths: ["docs/editorial-style.md"],
+  }),
+  generatedArtifact({
+    id: "social-preview-images",
+    requiredBrowsers: [],
+    buildLifecycle: "post-refresh",
+    checkCommand: "node --import tsx scripts/maintenance/build-og-evergreen.ts --check",
+    command: "node --import tsx scripts/maintenance/build-og-evergreen.ts",
+    bootstrap: true,
+    dependsOn: ["stablecoin-catalog", "stablecoin-client-registry", "stablecoin-client-projections", "case-study-client-index", "changelog-registry", "og-cemetery"],
+    outputPaths: ["public/og/v2", "src/generated/social-preview-images.json", "scripts/maintenance/state/social-preview-images.json"],
+    phase: 4,
+    script: "scripts/maintenance/build-og-evergreen.ts",
+    sourcePaths: [
+      ...SOCIAL_PREVIEW_SOURCE_PATHS,
+      "scripts/lib/social-preview-*.ts",
+      "scripts/lib/og-static-runner.mts",
+      "scripts/lib/og-image-checks.mts",
+      "scripts/lib/og-svg.mts",
+      "scripts/lib/og-resvg-render.mts",
+      "shared/lib/social-preview.ts",
+      "src/lib/public-route-inventory.ts",
+      "src/app/**/page.tsx",
+      "data/depeg-events/*.json",
+      "data/digests.json",
+      "public/pharos-mark-on-dark.svg",
+      "data/logos.json",
+      "public/logos/*",
+      "src/assets/fonts/originals/Geist-Bold.ttf",
+      "src/assets/fonts/originals/Newsreader-Variable.ttf",
+      "src/assets/fonts/originals/Geist-Regular.ttf",
+      "src/assets/fonts/originals/GeistMono-Regular.ttf",
+      "package.json",
+      "package-lock.json",
+    ],
   }),
   generatedArtifact({
     id: "og-editorial",

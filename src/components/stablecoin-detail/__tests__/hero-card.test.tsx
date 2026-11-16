@@ -8,24 +8,12 @@ import { HolderAlerts } from "@/components/stablecoin-detail/holder-alerts";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import type * as FeatureFlags from "@/lib/feature-flags";
-import type {
-  DexLiquidityData,
-} from "@shared/types/dex-liquidity";
-import type {
-  PegSummaryCoin,
-} from "@shared/types/peg";
-import type {
-  StablecoinData,
-} from "@shared/types/supply";
-import type {
-  StablecoinMeta,
-} from "@shared/types/stablecoin-meta-schemas";
-import type {
-  StressSignalEntry,
-} from "@shared/types/stress";
-import type {
-  YieldRanking,
-} from "@shared/types/yield";
+import type { DexLiquidityData } from "@shared/types/dex-liquidity";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import type { StablecoinData } from "@shared/types/supply";
+import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import type { StressSignalEntry } from "@shared/types/stress";
+import type { YieldRanking } from "@shared/types/yield";
 
 const hydration = vi.hoisted(() => ({ hydrated: false }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => hydration.hydrated }));
@@ -104,6 +92,15 @@ const coinData: StablecoinData = {
   chainCirculating: {},
   chains: ["ethereum", "base"],
 };
+
+type HeroPriceProps = Parameters<typeof HeroPriceMetric>[0]["price"];
+
+const priceState = (overrides: Partial<HeroPriceProps> = {}): HeroPriceProps => ({
+  pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, referenceMarketClosed: false,
+  isNavToken: false, limitedDepegCoverageNote: null, ...overrides,
+});
+
+const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
 
 const pegScoreResult: PegSummaryCoin = {
   id: "usdc-circle",
@@ -270,6 +267,7 @@ function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams 
     pegRef: 1,
     deviationBps: -2,
     pegReferenceUnavailable: false,
+    referenceMarketClosed: false,
     pegScoreResult,
     liquidityData,
     yieldRanking,
@@ -409,13 +407,7 @@ describe("HeroCard", () => {
       <HeroPriceMetric
         coin={coin}
         coinData={{ ...coinData, price: null, priceConfidence: null }}
-        price={{
-          pegRef: 1,
-          deviationBps: null,
-          pegReferenceUnavailable: false,
-          isNavToken: false,
-          limitedDepegCoverageNote: null,
-        }}
+        price={priceState()}
         variant="card"
       />,
     );
@@ -434,12 +426,19 @@ describe("HeroCard", () => {
     expect(html).not.toContain("+200");
   });
 
+  it("names the closed reference market instead of a held deviation", () => {
+    const html = renderHero({ referenceMarketClosed: true, deviationBps: null });
+    expect(html).toContain("Reference market closed");
+    // A missing peg state outranks the closure: a NAV token keeps its own label.
+    expect(renderHero({ referenceMarketClosed: true, deviationBps: null, isNavToken: true })).toContain("NAV token — no fixed peg");
+  });
+
   it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {
     for (const price of [null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
       const html = renderToStaticMarkup(<HeroPriceMetric
         coin={coin}
         coinData={{ ...coinData, price, priceConfidence: null }}
-        price={{ pegRef: 1, deviationBps: 1, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+        price={priceState({ deviationBps: 1 })}
         variant={variant}
       />);
       expect(html).toMatch(/Observed price unavailable/i);
@@ -452,18 +451,17 @@ describe("HeroCard", () => {
     const html = renderToStaticMarkup(<HeroPriceMetric
       coin={{ ...coin, status: "frozen", frozenAt: "2026-06-30" }}
       coinData={{ ...coinData, price: 0.9997 }}
-      price={{ pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      price={priceState()}
       variant={variant}
     />);
     expect(html).toContain("Last observed · 2026-06-30");
   });
 
   it.each(["card", "cell"] as const)("labels the %s USD fallback price as USD, not the peg currency", (variant) => {
-    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
     const html = renderToStaticMarkup(<HeroPriceMetric
       coin={eurCoin}
       coinData={{ ...coinData, price: 1.117990454919679 }}
-      price={{ pegRef: null, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      price={priceState({ pegRef: null })}
       variant={variant}
     />);
 
@@ -473,11 +471,10 @@ describe("HeroCard", () => {
   });
 
   it.each(["card", "cell"] as const)("keeps the %s native-unit label when a reference is usable", (variant) => {
-    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
     const html = renderToStaticMarkup(<HeroPriceMetric
       coin={eurCoin}
       coinData={{ ...coinData, price: 1.11 }}
-      price={{ pegRef: 1.11, deviationBps: 0, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      price={priceState({ pegRef: 1.11, deviationBps: 0 })}
       variant={variant}
     />);
 

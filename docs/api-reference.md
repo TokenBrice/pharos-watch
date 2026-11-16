@@ -13,7 +13,7 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host.
+- `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host. After those checks the Worker verifies `X-Pharos-Site-Session` using the current or previous signing key. `SITE_SESSION_ENFORCEMENT` defaults to `observe`; only exact `enforce` rejects invalid sessions (`401`, `X-Pharos-Session: required`, `Cache-Control: no-store`), or a missing signing key (`503`). Valid browser sessions have native per-session (`300/min`) and client-network (`1,200/min`) budgets; enforce returns `429` with `Retry-After: 60` over budget or `503` on binding failure, while observe logs and continues. Automation tokens skip these budgets.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and subdomains of `stablecoin-dashboard.pages.dev`. Document requests to the bare `stablecoin-dashboard.pages.dev` host answer `301` to the same path and query on `pharos.watch`, except `/__pharos_release.json`; `/_site-data/*`, `/_next/*` and Functions-excluded assets such as `/sitemap.xml` are not redirected by the middleware. Its `Origin` / `Referer` gate is a caller-shape signal, not authentication, so admitted reads also carry a per-isolate, per-client-IP ceiling of `1,200` requests per `60` seconds (`429` with `Retry-After: 60`); see [Worker & API Limits](./worker-and-api-limits.md#worker-runtime).
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
@@ -37,6 +37,8 @@ Production Pages does not proxy public `/api/*` POST requests. `https://pharos.w
 The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. Pages `/_site-data/*` forwards the upstream cache policy, `Age`, and `Date` without adding a second Cache API lifetime, so it cannot make a nearly expired Worker response fresh again.
 
 ## Public API Auth
+
+The website site-session gate is separate from public API keys and Access-authenticated admin traffic. It covers both credentialed site-api and preview reads; observe logs without rejecting, while enforce requires a valid browser or automation token and applies browser budgets. See [Surface Split](#surface-split).
 
 Unless a route is explicitly called out below as exempt, requests to `https://api.pharos.watch` must send:
 
@@ -67,7 +69,7 @@ Self-serve key issuance is retired: the lane was removed on 2026-09-29, so `POST
 
 `POST /api/donor-key-claims` issues the supporter key and is exempt from `X-API-Key`. An externally-owned wallet signs an EIP-4361 message with `personal_sign` for domain `pharos.watch` and URI `https://pharos.watch/api/`, valid for 5 minutes, then posts `{ "message", "signature" }`. Eligibility requires at least `$10` in receipt-date USD from qualifying-stablecoin donations whose current grades are A+, A, A-, B+, B, or B-. Qualifying stablecoins are the reviewed `(chain, token contract)` pairs in `DONOR_KEY_QUALIFYING_STABLECOINS` (`shared/lib/funding/donor-eligibility.ts`): each coin counts only on its reviewed contract deployments, so bridged or same-ticker tokens never qualify, and non-USD fiat coins (EURC, EURCV, EUROP, ZCHF, XSGD, CADD, AUDM, MYRC) are valued at the ECB reference rate for their peg currency on the receipt date, never 1:1. The threshold is inclusive with floating-point tolerance, addresses are matched case-insensitively, founder rows count, and pool payouts do not. The donor list is updated every Sunday. Smart-contract wallets, Giveth streams, and exchange withdrawals cannot claim.
 
-All claim responses use `Cache-Control: no-store`. `201` returns the plaintext token once, with tier `donor`, `10` requests per minute, and no expiry. Every failure returns `{ "error": "message", "reason": "code" }`; codes are defined once by `DONOR_KEY_CLAIM_FAILURE_REASONS` in `shared/contracts/api-keys.ts`:
+All claim responses use `Cache-Control: no-store`. `201` returns the plaintext token once, with tier `donor`, `10` requests per minute, and `expiresAt`: each `$10` of counted donations buys `30` days, pro rata from the claim, and each donation is credited once (`api_key_donor_credits`). `expiresAt` is `null` when counted donations made before the terms changed reach `$10`. Re-signing with an active expiring key credits newly counted donations from the later of the signature and the current expiry, so a lapsed key restarts at the signature, and returns `200` `{ "status": "extended", "key" }` with no token; with nothing new to credit it returns `409 claim_exists`. Supporter keys are for personal, non-commercial use; commercial products use a partner key. Every failure returns `{ "error": "message", "reason": "code" }`; codes are defined once by `DONOR_KEY_CLAIM_FAILURE_REASONS` in `shared/contracts/api-keys.ts`:
 
 | Status | Reasons |
 | --- | --- |
@@ -80,9 +82,13 @@ All claim responses use `Cache-Control: no-store`. `201` returns the plaintext t
 
 The `403 ineligible` body additionally returns `ledgerUpdatedAt` (Unix seconds), `qualifyingUsd` (number), and `countedAssets` (string array of counted stablecoin labels). A missing coin grade is unavailable, not a zero observation: if counted donations plus donations with unavailable grades could reach the threshold, the route returns `503 grade_unavailable` with `Retry-After: 60` instead of `403`. Published grades outside A/B do not count. Missing or held canonical accepted V9 publications return `503 safety_scores_unavailable`.
 
-One key is issued per wallet, atomically with its `api_key_donor_claims` row. Existing claim lookup precedes grading; later grade changes do not alter already-issued keys. Re-signing never rotates a key. For a lost key or record removal, message [@TokenBrice on Telegram](https://t.me/TokenBrice), with [@PharosWatch on X](https://x.com/PharosWatch) as secondary. An operator verifies the donating wallet before rotating a lost key. Claim outcome logs contain codes only, not signed messages, signatures, or wallet addresses.
+One key is issued per wallet, atomically with its `api_key_donor_claims` row. Existing claim lookup precedes grading: revoked, orphaned and no-expiry claims answer before grades are read, and only an active expiring key is graded for extension. Later grade changes never shorten an issued key, and re-signing never rotates it. For a lost key or record removal, message [@TokenBrice on Telegram](https://t.me/TokenBrice), with [@PharosWatch on X](https://x.com/PharosWatch) as secondary. An operator verifies the donating wallet before rotating a lost key. Claim outcome logs contain codes only, not signed messages, signatures, or wallet addresses.
 
-Claims are enabled by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`. The `DONOR_KEY_CLAIM_RATE_LIMIT` binding admits `10` attempts per `60` seconds per client IP before reading the body. Donor keys always use D1-backed auth and quotas, not the isolate fast-cache path. Migration `0238_api_key_donor_claims.sql` must precede deployment; `docs/api-page.md` owns the live claim, quota, replay, and access-gate acceptance sequence.
+Claims are enabled by `DONOR_KEY_CLAIMS_OPEN` in `shared/lib/public-api-contract.ts`. The `DONOR_KEY_CLAIM_RATE_LIMIT` binding admits `10` attempts per `60` seconds per client network (IPv4 address or canonical IPv6 /64) before reading the body. Donor keys always use D1-backed auth and quotas, not the isolate fast-cache path. Migrations `0238_api_key_donor_claims.sql` and `0305_api_key_donor_credits.sql` must precede deployment; `docs/api-page.md` owns the live claim, quota, replay, and access-gate acceptance sequence.
+
+Invalid well-formed API credentials charge a native ceiling of `300` per `60` seconds per client network (`429`, `Retry-After: 60`). Rejection blocks uncached prefixes from that network locally until the minute ends without D1; fresh cached wrong secrets also skip D1. Valid credentials are uncharged. A missing or failing binding logs a warning and authentication proceeds. D1-confirmed per-key over-quota verdicts are memoized for the same minute without further counter writes, and a raised quota is rechecked against D1.
+
+`POST /api/feedback` admits `3` submissions per rolling `10` minutes per salted client-network hash and `30` per rolling hour across all sources. Its native pre-auth limiter uses the same network subject (`20` per `60` seconds). IPv4-mapped IPv6 uses the IPv4 address; unusable or missing addresses share the existing `unknown` bucket. Durable quota rejection returns `429` before GitHub issue creation; known GitHub rejection releases the reservation, while an uncertain outcome retains it.
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
@@ -229,7 +235,7 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 | archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot (elapsed UTC days), snapshots-index                                                                                                                                                                                                                                                                                                                                                                    |
 | immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                                                                 |
 | public-status      | `public, max-age=60`                                           | public-status-history                                                                                                                                                                                                                                                                                                                                                                               |
-| og-image           | `public, max-age=900, s-maxage=900`                            | dynamic Open Graph images, including rendered safety-score degraded states that remain explicitly marked with degraded metadata headers                                                                                                                                                                                                                                                              |
+| og-image           | `public, max-age=900, s-maxage=900`                            | ceiling for dynamic numerical/compatibility OG images; admitted source runway can shorten it, and degraded Safety states remain explicitly marked in metadata headers |
 | reserve-live | `public, s-maxage=3600, max-age=300` | stablecoin-reserves live mode with healthy, certain sync |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback | `public, s-maxage=300, max-age=60` | stablecoin-reserves curated/template/unavailable modes and live mode with non-`ok` or uncertain sync |
@@ -238,6 +244,8 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
 
 Live `/api/og/page/:slug` responses additionally bound browser and shared TTLs to the whole seconds remaining before the figure's admission expiry, reassessed after PNG rendering, capped at 900 seconds with no one-minute minimum. An expired figure becomes the figure-free timeless card (`X-Og-Reason: stale-cache`), using the 300-second `custom` profile. A positive subsecond remainder yields a zero-second live TTL. These origin bounds do not prove an account-wide browser-cache floor respects them; production acceptance must inspect uncached and cached OG headers.
+
+Other numerical OG families also bound displayed evidence by its own source clock, rechecking freshness after rendering rather than granting a new 900-second observation window. Safety images re-admit the accepted identity and health; native depeg quotes retain their separate evidence budget. `/api/og/v2/scorecard/:id` has an at-most-60-second ceiling bounded by observation/publication runway. These Worker PNG policies are distinct from canonical immutable `/og/v2/` assets and retained Pages scorecard reads: retained PNGs are immutable, while retained HTML revalidates using a body-derived ETag ([OG Images](./og-images.md#dated-scorecards)).
 
 ---
 
@@ -266,7 +274,7 @@ Client best practices:
 
 ## Rate Limits
 
-Protected public API traffic is limited per key; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `120` requests per `60` seconds per client IP, with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Telegram ingress and supporter claims use separate limiters and authentication.
+Protected public API traffic is limited per key; exemptions are listed in [Public API Auth](#public-api-auth) and owned by `publicApiAccess` in `shared/lib/api-endpoints/`. The free Safety Score grades, dependency graph, and dependency scenarios routes also use `SAFETY_GRADES_RATE_LIMIT`: `120` requests per `60` seconds per client network (IPv4 address or IPv6 /64), with `429` / `Retry-After: 60` on exhaustion and `503` if the limiter is unavailable. Telegram ingress and supporter claims use separate limiters and authentication.
 
 Missing or invalid keys receive `401` with `Unauthorized: valid X-API-Key required. Safety grades are free at /api/safety-grades; see https://pharos.watch/api/ for supporter and partner keys.` Supporter claim throttling is separate from the issued key's quota; see [Public API Auth](#public-api-auth).
 
@@ -395,6 +403,8 @@ Producer-written `blacklist-summary` snapshots also publish optional `refresh: {
 Blacklist summary publication checks the evidence generation captured before construction. Cold request builders also compare their exact, unexpired 120-second claim and the captured snapshot value atomically, so they cannot overwrite a concurrent producer publication. A superseded request serves the winning snapshot if one exists; otherwise it returns `503`, `Cache-Control: no-store`, and `error: "blacklist-summary-superseded"`. Summary construction reads gap evidence directly rather than reusing diagnostic gap caches.
 
 ## Mint-Burn Scan Availability
+
+`GET /api/mint-burn-flows` accepts `hours` from 1 through 720. Per-coin requests persist only the 24-hour cache row, at most once per 60 seconds; aggregate requests persist only the cron-published 24- and 168-hour windows. Other windows are computed and returned without a cache write. Persisted rows retain publication-policy fencing and cached fallback behavior.
 
 Mint/Burn v6.41 includes positive sub-threshold events in counted hourly/window event counts, volumes and activity flags, subject to the same pricing and classification gates as larger rows. Unresolved dust is still unresolved. The event feed excludes flagged rows in every `scope`, as do Tape and `largestEvent24h`; their visible population therefore differs from the accounting counts. Native display thresholds remain additional to any USD `minAmount` filter. Hours materialized before the v6.41 writer retain the old cutoff; windows spanning activation mix accounting scopes. See [dust accounting and its historical boundary](./mint-burn-flows.md#dust-in-accounting).
 
@@ -661,7 +671,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.46"
+  "currentVersion": "6.48"
 }
 ```
 
@@ -699,7 +709,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.46"
+  "currentVersion": "6.48"
 }
 ```
 
@@ -908,19 +918,23 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ```json
 {
-  "currentVersion": "3.67",
-  "methodologyVersion": "3.67"
+  "currentVersion": "3.69",
+  "methodologyVersion": "3.69"
 }
 ```
 
 ### `GET /api/og/*`
 
-Dynamic social-card PNGs, omitted from OpenAPI. Unavailable inputs stay unavailable; labels keep source time; freshness headers name budget and generation ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)). `/api/og/page/:slug` serves a stamped route figure, or the route's timeless card (`200`, `X-Og-Reason`) when its source is missing, stale, held or failing.
+PNG image APIs, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage. Legacy and `/api/og/v2/*` Worker paths remain available for explicitly dated numerical images ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).
 
-- **Path:** `/api/og/*`
+Displayed observations are admitted against their own source clocks and budgets; expiry during rendering fails closed, and cache lifetime cannot outlive the earliest displayed source. Safety imagery rechecks the exact accepted publication identity and health after rendering. Chain cards label observed subtotals and withhold incomplete shares; Safety overviews account separately for unavailable members. `/api/og/page/:slug` may return its figure-free timeless card with `X-Og-Reason` when live evidence is unavailable.
+
+`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.
+
+- **Path:** `/api/og/*` and `/api/og/v2/*`
 - **Parameters:** Route-specific path segments select the supported image family.
 - **Success response schema:** PNG image bytes; not represented by a JSON component schema.
-- **Policy:** API-key authentication exempt; route-specific response caching.
+- **Policy:** API-key authentication exempt; unavailable on the site-data lane; source-bounded response caching.
 
 ### `GET /api/report-cards/v9`
 
@@ -1117,14 +1131,14 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.46",
-  "methodologyVersion": "6.46"
+  "currentVersion": "6.48",
+  "methodologyVersion": "6.48"
 }
 ```
 
 ### `POST /api/donor-key-claims`
 
-Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.
+Issues or extends one supporter API key, valid for days of access bought by donations, to a donor wallet that signs a Sign-In-With-Ethereum claim message.
 
 - **Registry key:** `donor-key-claim`
 - **Path:** `/api/donor-key-claims`

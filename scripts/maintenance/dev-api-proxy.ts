@@ -13,6 +13,8 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { isSiteDataAllowedApiPath, isSiteDataAllowedMethod } from "@shared/lib/site-data-lane";
 
+import { siteSessionHeaders } from "../lib/site-session";
+
 const envFile = resolve(".env.local");
 
 if (existsSync(envFile)) {
@@ -103,13 +105,14 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   }
   try {
     const upstream = new URL(resolveProxyPath(req.url), UPSTREAM_ORIGIN);
-    const send = () =>
+    const send = async () =>
       // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted and resolveProxyPath applies the shared site-data path policy.
       fetch(upstream.toString(), {
         method: "GET",
         redirect: "error",
         headers: {
           "X-Pharos-Site-Proxy-Secret": SECRET,
+          ...await siteSessionHeaders(upstream),
           Accept: (req.headers.accept || "application/json") as string,
         },
       });

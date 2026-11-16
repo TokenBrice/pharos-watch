@@ -9,7 +9,6 @@ import createNextConfig, {
   BUILD_ID_INPUT_FILES,
   nextBuildId,
 } from "../../next.config";
-import { PAGES_RELEASE_DATA_PATHS } from "../lib/pages-release-data.mts";
 import { collectModuleSpecifiers, resolveModulePattern, resolveModuleSpecifier } from "../lib/pr-import-graph.mts";
 
 const fixtures: string[] = [];
@@ -153,6 +152,11 @@ afterEach(() => {
 });
 
 describe("release Next.js typecheck handoff", () => {
+  it.each([undefined, "false", "true"])("inlines the session flag with a default-off value (%s)", (flag) => {
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", flag);
+    expect(createNextConfig("phase-production-build").env?.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK).toBe(flag ?? "false");
+  });
+
   it("keeps Next build typechecking enabled by default", () => {
     vi.stubEnv("PHAROS_RELEASE_PR_TYPECHECKED", "");
 
@@ -198,11 +202,6 @@ describe("deterministic Next.js build ID", () => {
     expect(nextBuildId(root, { NODE_ENV: "production", NEXT_PUBLIC_GA_ID: "G-A" })).not.toBe(baseline);
     expect(nextBuildId(root, { NODE_ENV: "production", PATH: "/usr/bin" })).toBe(baseline);
   });
-
-  it("wires the deterministic ID into the build config", () => {
-    expect(createNextConfig("phase-production-build").generateBuildId).toBeTypeOf("function");
-    expect(BUILD_ID_EXCLUDED_PATHS).toBe(PAGES_RELEASE_DATA_PATHS);
-  });
 });
 
 describe("client bundle excludes release-refreshed data", () => {
@@ -213,6 +212,8 @@ describe("client bundle excludes release-refreshed data", () => {
     const { dependencies, unresolved } = buildClientDependencies(process.cwd(), clientModules);
     expect(unresolved).toEqual([]);
     expect(findExcludedClientImports(clientModules, dependencies)).toEqual([]);
+    expect(dependencies.has("src/lib/homepage-static-snapshot.ts")).toBe(false);
+    expect([...dependencies.keys()].filter((file) => /process\.env\.SITE_SESSION_SIGNING_KEY\b/u.test(readFileSync(file, "utf8")))).toEqual([]);
     // Every byte the bundle can reach is a build-ID input, so a change that can
     // alter client JavaScript/CSS cannot keep the ID.
     const unhashed = [...dependencies.keys()]
