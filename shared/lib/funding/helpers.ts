@@ -1,6 +1,4 @@
-import type { CostCategory, CostLineItem, CostsFile, Donation } from "./schema";
-
-const CATEGORY_ORDER: readonly CostCategory[] = ["team", "infra"];
+import type { CostLineItem, CostsFile, Donation } from "./schema";
 
 function requireFinite(value: number, field: string): number {
   if (!Number.isFinite(value)) throw new RangeError(`Funding ${field} must be finite`);
@@ -19,21 +17,6 @@ export function isUnpricedDonation(priceNote: string): boolean {
 
 export function computeCostsTotal(items: readonly CostLineItem[]): number {
   return items.reduce((sum, item) => sum + requireFinite(item.usd_per_month, "cost"), 0);
-}
-
-export interface CostCategoryGroup {
-  category: CostCategory;
-  items: CostLineItem[];
-  subtotal: number;
-}
-
-export function groupCostsByCategory(items: readonly CostLineItem[]): CostCategoryGroup[] {
-  return CATEGORY_ORDER.flatMap((category) => {
-    const subset = items.filter((item) => item.category === category);
-    if (subset.length === 0) return [];
-    const subtotal = computeCostsTotal(subset);
-    return [{ category, items: subset, subtotal }];
-  });
 }
 
 /** YYYY-MM in UTC. */

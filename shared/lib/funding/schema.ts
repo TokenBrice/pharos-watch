@@ -101,7 +101,6 @@ export const DonationsFileSchema = z.object({
 }).strict();
 
 export type FundingChain = z.infer<typeof FundingChainSchema>;
-export type CostCategory = z.infer<typeof CostCategorySchema>;
 export type CostLineItem = z.infer<typeof CostLineItemSchema>;
 export type CostsFile = z.infer<typeof CostsFileSchema>;
 export type DonationsFile = z.infer<typeof DonationsFileSchema>;
