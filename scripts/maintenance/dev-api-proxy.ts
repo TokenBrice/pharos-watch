@@ -103,14 +103,21 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   }
   try {
     const upstream = new URL(resolveProxyPath(req.url), UPSTREAM_ORIGIN);
-    // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted and resolveProxyPath applies the shared site-data path policy.
-    const upstreamRes = await fetch(upstream.toString(), {
-      method: "GET",
-      redirect: "error",
-      headers: {
-        "X-Pharos-Site-Proxy-Secret": SECRET,
-        Accept: (req.headers.accept || "application/json") as string,
-      },
+    const send = () =>
+      // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted and resolveProxyPath applies the shared site-data path policy.
+      fetch(upstream.toString(), {
+        method: "GET",
+        redirect: "error",
+        headers: {
+          "X-Pharos-Site-Proxy-Secret": SECRET,
+          Accept: (req.headers.accept || "application/json") as string,
+        },
+      });
+    // A keep-alive socket the upstream already closed fails the first write
+    // ("fetch failed") after an idle spell; a GET is safe to send once more.
+    const upstreamRes = await send().catch((error: unknown) => {
+      if (error instanceof TypeError && error.message === "fetch failed") return send();
+      throw error;
     });
 
     const headers: Record<string, string> = {};
@@ -134,7 +141,8 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return;
     }
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[dev-proxy] ${req.url} → ${message}`);
+    const cause = err instanceof Error && err.cause instanceof Error ? ` (${err.cause.message})` : "";
+    console.error(`[dev-proxy] ${req.url} → ${message}${cause}`);
     res.writeHead(502, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Dev proxy upstream error" }));
   }
