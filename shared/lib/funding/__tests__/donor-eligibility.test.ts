@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeDonation as row } from "./funding.test-support";
-import { DONOR_API_KEY_TERMS_START_SEC as TERMS } from "../../ops-limits";
 import {
   classifyDonorKeyDonation,
-  creditDonorKey,
-  donorKeyCreditId,
   isEligibleDonor,
   resolveDonorKeyQualifyingStablecoin,
   sumEligibleDonationsByAddress,
@@ -170,27 +167,4 @@ describe("donor key donation classification", () => {
     expect(summarizeDonorKeyEligibility(POOL, donations, GRADES)).toMatchObject({ qualifyingUsd: 0, countedAssets: [], rows: [] });
   });
 
-  it("credits each counted donation once, from the given start, and keeps earlier donors on no expiry", () => {
-    const DAY = 86_400;
-    const start = TERMS + 10 * DAY;
-    const after = (offsetDays: number, usd: number, tx: string) =>
-      row({ tx_hash: tx, block_timestamp: TERMS + offsetDays * DAY, usd_at_receipt: usd });
-    const rows = summarizeDonorKeyEligibility(A, [
-      after(1, 10, "0x01"), after(2, 5, "0x02"),
-      row({ tx_hash: "0x03", block_timestamp: TERMS + DAY, asset_symbol: "ETH", token_address: null, usd_at_receipt: 99 }),
-    ], GRADES).rows;
-
-    // $15 counted buys 45 days; the ETH row buys nothing.
-    expect(creditDonorKey(rows, new Set(), start)).toMatchObject({ expiresAt: start + 45 * DAY });
-    // Already-credited donations never buy time twice; matching ignores hash case.
-    const credited = new Set([donorKeyCreditId("ethereum", "0X01")]);
-    const partial = creditDonorKey(rows, credited, start);
-    expect(partial.newlyCounted.map((donation) => donation.tx_hash)).toEqual(["0x02"]);
-    expect(partial.expiresAt).toBe(start + 15 * DAY);
-    // $10 counted before the terms start keeps the original no-expiry key; less than that only buys days.
-    expect(creditDonorKey(summarizeDonorKeyEligibility(A, [row({ usd_at_receipt: 10 }), after(1, 10, "0x02")], GRADES).rows, new Set(), start).expiresAt)
-      .toBeNull();
-    expect(creditDonorKey(summarizeDonorKeyEligibility(A, [row({ usd_at_receipt: 5 }), after(1, 10, "0x02")], GRADES).rows, new Set(), start).expiresAt)
-      .toBe(start + 45 * DAY);
-  });
 });

@@ -56,18 +56,15 @@ describe("funding schemas", () => {
   });
 
   it("keeps cost history ordered, sponsorships at $0 and artwork self-hosted", () => {
-    const costs = {
-      last_reviewed_at: DONATION.block_timestamp,
-      items: [{ label: "Sponsor", category: "infra", usd_per_month: 0, sponsor: { logo: "/media/s.svg", url: "https://s.example", blurb: "Thanks." } }],
-      monthly_totals: [{ month: "2026-04", usd: 1709 }, { month: "2026-05", usd: 1709 }],
-      one_time: [{ label: "Redesign", usd: 5800, paid_by: "founder" }],
-    };
+    const item = { label: "S", category: "infra", usd_per_month: 0, sponsor: { logo: "/media/s.svg", url: "https://s.example", blurb: "Thanks." } };
+    const costs = { last_reviewed_at: DONATION.block_timestamp, items: [item], monthly_totals: [{ month: "2026-04", usd: 1 }, { month: "2026-05", usd: 1 }], one_time: [] };
     expect(CostsFileSchema.parse(costs)).toEqual(costs);
-    const reject = (patch: Record<string, unknown>) => expect(CostsFileSchema.safeParse({ ...costs, ...patch }).success).toBe(false);
-    reject({ monthly_totals: [{ month: "2026-05", usd: 1 }, { month: "2026-04", usd: 1 }] });
-    reject({ monthly_totals: [{ month: "2026-13", usd: 1 }] });
-    reject({ items: [{ ...costs.items[0], usd_per_month: 10 }] });
-    reject({ items: [{ label: "Vendor", category: "infra", usd_per_month: 5, mark: "https://cdn.example/logo.svg" }] });
+    for (const patch of [
+      { monthly_totals: [...costs.monthly_totals].reverse() },
+      { monthly_totals: [{ month: "2026-13", usd: 1 }] },
+      { items: [{ ...item, usd_per_month: 10 }] },
+      { items: [{ label: "V", category: "infra", usd_per_month: 5, mark: "https://cdn.example/v.svg" }] },
+    ]) expect(CostsFileSchema.safeParse({ ...costs, ...patch }).success).toBe(false);
   });
 
   it("rejects unknown chains and extra fields", () => {

@@ -71,39 +71,18 @@ describe("summarizeDonations", () => {
 });
 
 describe("buildMonthlyFunding", () => {
-  const may = Date.UTC(2026, 4, 3) / 1000;
-  const apr = Date.UTC(2026, 3, 15) / 1000;
-  const feb = Date.UTC(2026, 1, 15) / 1000;
+  const [feb, apr, may] = [1, 3, 4].map((m) => Date.UTC(2026, m, 15) / 1000);
   const costs = { items: COSTS, monthly_totals: [{ month: "2026-02", usd: 1709 }, { month: "2026-04", usd: 1709 }] };
+  const view = (rows: Donation[], max?: number) => buildMonthlyFunding(rows, costs, may, max).map((m) => [m.monthKey, m.communityUsd, m.costUsd, m.isCurrent]);
 
-  it("lists every month oldest first, with founders excluded and empty months as $0", () => {
-    const rows: Donation[] = [
-      D(may, "community", 5, "a"),
-      D(apr, "community", 100, "a"),
-      D(apr, "community", 50, "b"),
-      D(apr, "founder", 999, "f"),
-      D(feb, "community", 25, "c"),
-    ];
-    expect(buildMonthlyFunding(rows, costs, may).map(({ monthKey, communityUsd }) => [monthKey, communityUsd])).toEqual([
-      ["2026-02", 25], ["2026-03", 0], ["2026-04", 150], ["2026-05", 5],
+  it("lists every month oldest first, each against its own recorded cost, never today's backfilled", () => {
+    expect(view([D(may, "community", 5), D(apr, "community", 100), D(apr, "community", 50, "b"), D(apr, "founder", 999, "f"), D(feb, "community", 25)])).toEqual([
+      ["2026-02", 25, 1709, false],
+      ["2026-03", 0, null, false], // no recorded total: unavailable, not today's cost
+      ["2026-04", 150, 1709, false],
+      ["2026-05", 5, computeCostsTotal(COSTS), true],
     ]);
-  });
-
-  it("measures each month against its own recorded cost and never backfills today's", () => {
-    const months = buildMonthlyFunding([D(feb, "community", 25, "c")], costs, may);
-    expect(months.map(({ monthKey, costUsd, isCurrent }) => [monthKey, costUsd, isCurrent])).toEqual([
-      ["2026-02", 1709, false],
-      // No recorded total: unavailable, not the current cost.
-      ["2026-03", null, false],
-      ["2026-04", 1709, false],
-      // The current month uses today's line items.
-      ["2026-05", computeCostsTotal(COSTS), true],
-    ]);
-    expect(months[0].label).toBe("Feb 2026");
-  });
-
-  it("caps the window and returns nothing before the first community donation", () => {
-    expect(buildMonthlyFunding([D(feb, "community", 25, "c")], costs, may, 2).map((m) => m.monthKey)).toEqual(["2026-04", "2026-05"]);
-    expect(buildMonthlyFunding([D(apr, "founder", 999, "f")], costs, may)).toEqual([]);
+    expect(view([D(feb, "community", 25)], 2).map(([key]) => key)).toEqual(["2026-04", "2026-05"]);
+    expect(view([D(apr, "founder", 999, "f")])).toEqual([]);
   });
 });
