@@ -629,7 +629,7 @@
     "shared/lib/classification/chain-health.ts": "sha256:3560f37efd8859d855507f3369e89388aca61a6d9c872575e49be96e644f2e4d",
     "shared/lib/classification/control-posture.ts": "sha256:fc493ac3aa1c6e97ed3b6266614a0df0fc65df0a1777e23d31929dc1728984ca",
     "shared/lib/classification/coverage.ts": "sha256:1b4658c702ca200216c5b3207312d441de01b01790a145d44bfca34aa4c37d10",
-    "shared/lib/classification/depeg.ts": "sha256:1890a0c01812911cb7a24efbbb89d472b8b53fff26ccdd2d10381ce4dc8d6677",
+    "shared/lib/classification/depeg.ts": "sha256:186e87aa87b9ba3471888a589605034074c9afc9b52e688695bc580815d92703",
     "shared/lib/classification/descriptors.ts": "sha256:daf8b2df9bb7795e36d55e6311052f45dc8220b6c9a12f516d7cfbd26a6ba50b",
     "shared/lib/classification/domain.ts": "sha256:ef4760cc0012095067f945f1db43e9dbde7a89052c4e966cbd14b0ba3f67131b",
     "shared/lib/classification/flows.ts": "sha256:aa63c5f0651c7d27f13238f3fdae62982f2a82ffb04b1b2ad812a78e9d2128be",

@@ -11,7 +11,7 @@ Stage 2 only renders when Stage 1 is not Terminal evidence. The result is a two-
 
 DDR is **not investment advice and not a credit rating.** A "Terminal evidence" verdict is a structural read, not a guarantee, and the inverse is equally true.
 
-**Tier labels.** The wire tier codes are unchanged across versions: `recovery_likely`, `at_risk`, `recovery_unlikely`, `insufficient_signal`. DDRv5 changes what they mean and how they are labelled: `recovery_likely` reads **No break signals**, `at_risk` reads **Stress signals**, and `recovery_unlikely` reads **Terminal evidence**. Predictions locked before `v5.0` keep their original labels (Recovery Likely / At Risk / Recovery Unlikely) because they were issued under the earlier rubric.
+**Tier labels.** The wire tier codes are unchanged across versions: `recovery_likely`, `at_risk`, `recovery_unlikely`, `insufficient_signal`. DDRv5 changes what they mean and how they are labelled: `recovery_likely` reads **No break signals**, `at_risk` reads **Stress signals**, and `recovery_unlikely` reads **Terminal evidence**. Predictions locked before `v5.0` keep their original labels (Recovery Likely / At Risk / No Recovery Expected) because they were issued under the earlier rubric; the terminal tier reads "No recovery expected" because a terminal verdict publishes no recovery estimate at all.
 
 ## Methodology Versioning
 

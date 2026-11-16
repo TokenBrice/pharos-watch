@@ -327,7 +327,7 @@ export const DEFINITIONS = {
     short:
       "Depeg Duration Resolver: for each confirmed depeg, a sealed verdict on whether the peg will come back and, if so, a typical recovery window.",
     long:
-      "For each confirmed depeg incident, DDR publishes a Resolution Outlook (No break signals, Stress signals, Terminal evidence, or Insufficient Signal) from transparent mechanistic rules and, when recovery is plausible, recovery odds and an Expected Duration band from comparable past depegs, counting those that never recovered. Each incident gets one immutable prediction, sealed at forecast readiness or the 72-hour backstop. Predictions sealed before v5 keep their original Recovery Likely / At Risk / Recovery Unlikely labels. The verdict is a structural read, not a probability or investment advice.",
+      "For each confirmed depeg incident, DDR publishes a Resolution Outlook (No break signals, Stress signals, Terminal evidence, or Insufficient Signal) from transparent mechanistic rules and, when recovery is plausible, recovery odds and an Expected Duration band from comparable past depegs, counting those that never recovered. Each incident gets one immutable prediction, sealed at forecast readiness or the 72-hour backstop. Predictions sealed before v5 keep their original Recovery Likely / At Risk / No Recovery Expected labels. The verdict is a structural read, not a probability or investment advice.",
     listed: true,
     seeAlso: ["ddrr", "depeg"],
     ...DDR,

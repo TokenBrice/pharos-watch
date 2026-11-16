@@ -415,7 +415,7 @@ describe("DepegResolverModule", () => {
       />,
     );
 
-    expect(screen.getByText("Recovery unlikely")).toBeTruthy();
+    expect(screen.getByText("No recovery expected")).toBeTruthy();
     expect(screen.queryByText("Terminal evidence")).toBeNull();
     expect(screen.getByText("DDR does not expect this depeg to recover.")).toBeTruthy();
     expect(

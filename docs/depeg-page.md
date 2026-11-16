@@ -166,7 +166,7 @@ behind an explicit toggle that mounts them only when opened.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
 - **Tier vocabulary:** rows predicted under DDR 5.0+ read as evidence classes (No break
   signals / Stress signals / Terminal evidence); earlier locks keep Recovery likely / At risk /
-  Recovery unlikely. The tier split counts each vocabulary separately and never relabels an
+  No recovery expected. The tier split counts each vocabulary separately and never relabels an
   earlier lock. Labels live in `shared/lib/classification/depeg.ts`.
 - **Availability:** the hero's recovery totals and the worklist's whole-book/visible-slice
   claims use the same availability gate as forecast cards. Non-staleness degraded responses
