@@ -180,7 +180,8 @@ describe("ContractDeployments interactions", () => {
     render(<ContractDeployments coinId={meta.id} contracts={thirteen} />);
 
     expect(screen.getAllByRole("link", { name: /View Ethereum contract on explorer/ })).toHaveLength(12);
-    expect(screen.getByText("+1 more in contract addresses")).toBeTruthy();
+    // The fold keeps the "Contract addresses" summary the SEO archive check keys on.
+    expect(screen.getByText("Contract addresses")).toBeTruthy();
     expect(screen.getByText("(13)")).toBeTruthy();
   });
 

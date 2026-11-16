@@ -229,7 +229,8 @@ export function ContractDeployments({
           HTML on USDC (88 deployments), so this list is deliberately plain
           text with one shared class. */}
       <ModuleDisclosure
-        label={hiddenDesktopContractCount > 0 ? `+${hiddenDesktopContractCount} more in contract addresses` : "Contract addresses"}
+        // The SEO archive check (C3) keys on a summary starting "Contract addresses"; the count names the full set.
+        label="Contract addresses"
         count={contracts.length}
         className="mt-3"
       >
