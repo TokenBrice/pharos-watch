@@ -1,0 +1,313 @@
+{
+  "id": "copm-minteo",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Minteo official deployment directory",
+        "url": "https://transparency.minteo.com/contract-directory"
+      },
+      {
+        "label": "Minteo platform administrative controls",
+        "url": "https://transparency.minteo.com/blockchain"
+      },
+      {
+        "label": "Verified polygon TokenV1 implementation",
+        "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+      },
+      {
+        "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+        "url": "https://polygon-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Verified celo TokenV1 implementation",
+        "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+      },
+      {
+        "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+        "url": "https://celo-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+        "url": "https://solana-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+        "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+      },
+      {
+        "label": "Squads V4 vault signing seeds and approved-transaction execution",
+        "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+      },
+      {
+        "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+        "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+      },
+      {
+        "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+        "url": "https://solana-mainnet.g.alchemy.com"
+      }
+    ],
+    "evidence": "Reviewed all three issuer-directory deployments. Near-contemporaneous pinned totalSupply reads give Polygon 4156202969.754852048213337676 COPM (97.2400%), Celo 102966114.628110192879069442 (2.4090%) and Solana 15000000 (0.3509%), denominator 4274169084.382962241092407118 COPM across all three chains; these are measured issued-supply shares, not a circulating-supply override. Polygon is the decisive material deployment. At Polygon block 97385031 and Celo block 82882338 (hashes/times in source labels), current getImplementation() matches verified TokenV1 source; FREEZER_ROLE has exactly one live member, the issuer Safe, also DEFAULT_ADMIN. TokenV1.freeze(address) and thaw(address) set holder-specific state; _beforeTokenTransfer rejects frozen sender/recipient; burnFrozen(address,uint256) destroys an arbitrary frozen holder balance. Direct targeted controls therefore establish Yes, regardless of upgrade exposure. On Solana exact finalized slot 469903332, freezeAuthority and permanentDelegate both name the same Squads V4 vault PDA as mint authority, cryptographically derived from its exact multisig account (2-of-7, zero time lock, no config-authority override); Token-2022 permits account freeze and delegated holder transfers/burns. Celo and Solana are individually below the materiality threshold and do not determine the verdict. Off-chain key custody remains unverified.",
+    "reviewer": "Pharos COPM controls review",
+    "reviewedAt": "2026-11-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Polygon, Celo and Solana create native COPM liabilities under issuer mint authority. Minteo also offers an authenticated cross-chain bridge API with burn and mint transaction fields. The API is issuer-operated; no separate external message-validation protocol was established.",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos COPM controls review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Minteo official deployment directory",
+        "url": "https://transparency.minteo.com/contract-directory"
+      },
+      {
+        "label": "Minteo platform administrative controls",
+        "url": "https://transparency.minteo.com/blockchain"
+      },
+      {
+        "label": "Verified polygon TokenV1 implementation",
+        "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+      },
+      {
+        "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+        "url": "https://polygon-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Verified celo TokenV1 implementation",
+        "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+      },
+      {
+        "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+        "url": "https://celo-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+        "url": "https://solana-mainnet.g.alchemy.com"
+      },
+      {
+        "label": "Minteo API issuer-operated cross-chain burn and mint transfer object",
+        "url": "https://docs.minteo.com/bridges/object"
+      },
+      {
+        "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+        "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+      },
+      {
+        "label": "Squads V4 vault signing seeds and approved-transaction execution",
+        "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+      },
+      {
+        "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+        "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+      },
+      {
+        "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+        "url": "https://solana-mainnet.g.alchemy.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "polygon:0x12050c705152931cfee3dd56c52fb09dea816c23",
+        "destinationChain": "polygon",
+        "contractAddress": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+        "protocol": "Minteo native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer directory identifies this COPM deployment. Pinned current implementation and complete enumerable roles show issuer Safe mint(address,uint256) creates liabilities directly, without a bridge-message or remote-lock proof. Native issuance is not inferred from DefiLlama chain labels.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x84ec9fabaa0fc41706d57dc775b485e194ee4488",
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 97385031,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified polygon TokenV1 implementation",
+            "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+          },
+          {
+            "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+            "url": "https://polygon-mainnet.g.alchemy.com"
+          }
+        ]
+      },
+      {
+        "id": "celo:0xc92e8fc2947e32f2b574cca9f2f12097a71d5606",
+        "destinationChain": "celo",
+        "contractAddress": "0xc92e8fc2947e32f2b574cca9f2f12097a71d5606",
+        "protocol": "Minteo native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer directory identifies this COPM deployment. Pinned current implementation and complete enumerable roles show issuer Safe mint(address,uint256) creates liabilities directly, without a bridge-message or remote-lock proof. Native issuance is not inferred from DefiLlama chain labels.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "celo",
+        "controllerAddress": "0x0155b191ec52728d26b1cd82f6a412d5d6897c04",
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 82882338,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified celo TokenV1 implementation",
+            "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+          },
+          {
+            "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+            "url": "https://celo-mainnet.g.alchemy.com"
+          }
+        ]
+      },
+      {
+        "id": "solana:Copm5KwCLXDTWYgXJYmo6ixmMZrxd1wabkujkcuaK47C",
+        "destinationChain": "solana",
+        "contractAddress": "Copm5KwCLXDTWYgXJYmo6ixmMZrxd1wabkujkcuaK47C",
+        "protocol": "Minteo native Token-2022 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer directory identifies this Token-2022 mint. Exact-slot state and cryptographic PDA derivation bind native mint authority to the issuer Squads V4 vault (2-of-7, no time lock). Historical finalized MintToChecked executes through the same vault. This is direct native token-program issuance, not a wrapped supply claim or proof-gated bridge mint. Freeze and permanent-delegate controls remain; human signer independence and full execution closure are unverified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "8vxb4xw9Z8LeW4gt3rEhkMH449Tm4h3LS37qiLZKoyHi",
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 469903332,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+            "url": "https://solana-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "SPL Token-2022 mint authority and permanent delegate specification",
+            "url": "https://www.solana-program.com/docs/token-2022/extensions"
+          },
+          {
+            "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads V4 vault signing seeds and approved-transaction execution",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+          },
+          {
+            "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+            "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+          },
+          {
+            "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+            "url": "https://solana-mainnet.g.alchemy.com"
+          }
+        ]
+      }
+    ],
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos COPM controls review",
+      "routeIds": [
+        "polygon:0x12050c705152931cfee3dd56c52fb09dea816c23",
+        "celo:0xc92e8fc2947e32f2b574cca9f2f12097a71d5606",
+        "solana:Copm5KwCLXDTWYgXJYmo6ixmMZrxd1wabkujkcuaK47C"
+      ],
+      "rationale": "The issuer directory enumerates Polygon, Celo and Solana, and all three exact identities were reviewed. Both current EVM implementations expose arbitrary-recipient role-gated minting, while exact-slot Token-2022 state assigns native mint authority to an issuer Squads V4 vault with a current 2-of-7 multisig and a historical native MintToChecked execution. BDO independently counts token liabilities across all three chains. Minteo API bridge documentation describes issuer-operated cross-chain transfers with burn_transaction and mint_and_transfer_transaction fields; this is separate service machinery, not evidence that any catalog deployment is a wrapped representation. No external validator, escrow or message-proof gate was established; precise backend execution and bridge accounting remain undocumented.",
+      "sources": [
+        {
+          "label": "Minteo official deployment directory",
+          "url": "https://transparency.minteo.com/contract-directory"
+        },
+        {
+          "label": "Minteo platform administrative controls",
+          "url": "https://transparency.minteo.com/blockchain"
+        },
+        {
+          "label": "Verified polygon TokenV1 implementation",
+          "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+        },
+        {
+          "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+          "url": "https://polygon-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Verified celo TokenV1 implementation",
+          "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+        },
+        {
+          "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+          "url": "https://celo-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+          "url": "https://solana-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "BDO limited assurance over COPM reserves and all three chain liabilities, August 31 2026; signed October 19",
+          "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+        },
+        {
+          "label": "Minteo API issuer-operated cross-chain burn and mint transfer object",
+          "url": "https://docs.minteo.com/bridges/object"
+        },
+        {
+          "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+          "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+        },
+        {
+          "label": "Squads V4 vault signing seeds and approved-transaction execution",
+          "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+        },
+        {
+          "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+          "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+        },
+        {
+          "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+          "url": "https://solana-mainnet.g.alchemy.com"
+        }
+      ]
+    }
+  }
+}

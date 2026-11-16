@@ -82,9 +82,9 @@ const DEFAULT_BUDGETS = {
   // register rows in its RSC flight, plus inlined critical CSS in the HTML.
   // Keep about 5% headroom for these payloads.
   // The flight is `index.txt`, byte-identical to the decoded inline `__next_f`.
-  cemeteryHtmlBytes: 1_600_000,
-  cemeteryHtmlGzipBytes: 288_000,
-  cemeteryFlightBytes: 374_000,
+  cemeteryHtmlBytes: 1_675_000,
+  cemeteryHtmlGzipBytes: 303_000,
+  cemeteryFlightBytes: 395_000,
 };
 
 const BUDGET_ENV = {

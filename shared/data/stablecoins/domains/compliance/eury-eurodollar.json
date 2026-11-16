@@ -1,0 +1,28 @@
+{
+  "id": "eury-eurodollar",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Finanstilsynet",
+    "authorizedEntity": "Eurodollar ApS",
+    "references": [
+      {
+        "label": "ESMA EMT issuer register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "EURY issuer, currency and public circulation status",
+        "url": "https://www.stablecoin.dk/tokens/eury"
+      },
+      {
+        "label": "Eurodollar ApS authorization and regulatory status",
+        "url": "https://www.stablecoin.dk/company/regulatory-status"
+      },
+      {
+        "label": "EURY MiCA whitepaper",
+        "url": "https://www.stablecoin.dk/tokens/eury/white-paper"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "eurpa-gr8-pay",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Latvijas Banka",
+    "authorizedEntity": "SIA GR8 PAY",
+    "references": [
+      {
+        "label": "ESMA EMT issuer register (EUR.PA, SIA GR8 PAY, LEI 6488GKH17O8XT1326F66; accessed 2026-11-15)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "EUR.PA issuer white paper",
+        "url": "https://gr8.money/eur.pa/wp"
+      }
+    ]
+  }
+}

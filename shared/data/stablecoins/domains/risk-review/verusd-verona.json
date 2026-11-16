@@ -1,0 +1,10 @@
+{
+  "id": "verusd-verona",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sourceFreeRationale": "The announcement identifies a centrally operated Brale issuance program, but no exact verUSD deployment or holder-control specification is published in the reviewed material. Possible is a provisional pre-launch issuer-model assessment, not verification of an active freeze authority.",
+    "evidence": "Brale describes program controls and native multi-chain issuance; exact token addresses, implementations, role holders and public supply remain unverified. No parent is declared. The stated USD reserve backing lacks an exact measured composition, so it cannot independently establish a reserve-majority verdict. Ethereum, Polygon, Avalanche, Optimism, Arbitrum, Celo, Solana and Verona are announced networks, not a verified material-deployment census. Holder powers, access and ordinary exit rights need exact-product review before launch classification or promotion.",
+    "reviewer": "Pharos pre-launch research",
+    "reviewedAt": "2026-11-15"
+  }
+}

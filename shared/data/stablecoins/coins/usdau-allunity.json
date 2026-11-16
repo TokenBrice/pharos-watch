@@ -1,0 +1,98 @@
+{
+  "id": "usdau-allunity",
+  "name": "AllUnity USD",
+  "symbol": "USDAU",
+  "oneLiner": "USDAU is AllUnity's dollar e-money token, backed by segregated USD reserves with par redemption subject to identity and compliance checks.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized"
+  },
+  "collateral": "USD cash and eligible USD high-quality liquid assets held in separate accounts at EU-regulated credit institutions; the current cash/HQLA split and bank allocations are unverified.",
+  "pegMechanism": "AllUnity issues and redeems USDAU at USD 1 under MiCA. Direct redemption requires identity, AML and sanctions checks and a bank account in the holder's name; no executable backstop is modeled.",
+  "mechanismArchetype": "fiat-cash",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://allunity.com/trust-center",
+    "attestorTier": "self",
+    "cadence": "undisclosed"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://allunity.com/usdau"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://framerusercontent.com/assets/sPpJ0HkkQ4ACpeSeqJbuGC433QQ.html"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://allunity.com/news/allunity-launches-usdau-a-fully-reserved-micar-compliant-us-dollar-stablecoin-and-introduces-instant-fx-capabilities"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://allunity.com/trust-center"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "BaFin",
+    "license": "EMI (MiCA)"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xc6df1b92a6ae61a27059c41e541a91ce8dcb1605",
+      "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000c6ac18274a980b26",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "34yktgNRkQ2tQT66PkUqwZaeTFzcjbXmvVFhNG9h2bJn",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x0957a5b68b614f22b2dd8bd9d6879858beaaa6a0",
+      "decimals": 6
+    }
+  ],
+  "status": "pre-launch",
+  "launchPhase": "launched",
+  "launchDate": "2026-09-30",
+  "announcedDate": "2026-09-30",
+  "launchPhaseDetail": "AllUnity announced public availability on six chains on September 30, 2026. Positive issuance was verified on Tempo; Pharos has no admitted price or aggregate supply lane.",
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "Public issuance verified on Tempo; no admitted price lane or whole-asset supply lane. Six native deployments require an admitted aggregate supply source before active tracking.",
+    "reviewBy": "2027-01-15",
+    "source": {
+      "label": "AllUnity USDAU public launch",
+      "url": "https://allunity.com/news/allunity-launches-usdau-a-fully-reserved-micar-compliant-us-dollar-stablecoin-and-introduces-instant-fx-capabilities"
+    }
+  },
+  "milestones": [
+    {
+      "date": "2026-09-30",
+      "type": "announcement",
+      "title": "AllUnity announces USDAU public launch",
+      "description": "AllUnity announced USDAU availability through its Business Mint Account and ecosystem partners on Ethereum, Solana, Base, Tempo, Arc and Polygon.",
+      "sourceUrl": "https://allunity.com/news/allunity-launches-usdau-a-fully-reserved-micar-compliant-us-dollar-stablecoin-and-introduces-instant-fx-capabilities"
+    }
+  ]
+}

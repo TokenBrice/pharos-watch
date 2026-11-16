@@ -1,0 +1,74 @@
+{
+  "id": "squsd-squads",
+  "name": "Squads USD",
+  "symbol": "SQUSD",
+  "brand": "Squads",
+  "status": "pre-launch",
+  "llamaId": "466",
+  "oneLiner": "SQUSD is a dollar token issued on Solana through Bridge, with issuer-reported cash and Treasury reserves and no admitted market price.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "mechanismArchetype": "fiat-cash",
+  "collateral": "Bridge reports dollar cash and a Treasury category that includes money-market funds with Treasury-bill ladders of less than three-month duration. The reported reserve total exceeds the listed category amounts; the difference remains unclassified. Named cash banks, fund allocations and an independent SQUSD reserve reconciliation were not retrieved.",
+  "pegMechanism": "Bridge identifies SQUSD as a USD stablecoin issued on Solana. Dollar reserve and supply disclosures support the intended par backing; token-specific direct redemption eligibility, charges and settlement terms remain unverified.",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://reserves.bridge.xyz/squsd",
+    "provider": "Bridge issuer dashboard and reserve JSON; no independently reconciled SQUSD reserve report retrieved",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "8D9XrAWLNHYY3skSrpgkcwrr3zTp7Jr5pkiQyjfsiv7t",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://reserves.bridge.xyz/squsd"
+    },
+    {
+      "label": "Reserve data",
+      "url": "https://transparency.bridge.xyz/v0/stablecoins/squsd"
+    },
+    {
+      "label": "Official token metadata",
+      "url": "https://token-metadata.bridge.xyz/solana/squsd.json"
+    },
+    {
+      "label": "Observed initial on-chain issuance",
+      "url": "https://solscan.io/tx/2mPyC2qPcNGdeofTuRFM4tyB1Pa1DtAmwd7WE2tAqWYbhWdhXRY9uD2fe3mGsivhwsEFDo5bwXc3N3LXUNVLrD6d"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "launchDate": "2025-05-30",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "SQUSD is issued on Solana. The recorded launch date is the first positive mint returned in the reviewed on-chain history, rather than an independently documented commercial announcement. Bridge publishes current supply and reserve categories; no admitted price lane was found.",
+  "milestones": [
+    {
+      "date": "2025-05-30",
+      "type": "milestone",
+      "title": "SQUSD issuance is recorded on Solana",
+      "description": "A successful Token-2022 instruction mints 1,000 SQUSD at the Bridge-linked Solana mint. The recorded date anchors observed on-chain issuance.",
+      "sourceUrl": "https://solscan.io/tx/2mPyC2qPcNGdeofTuRFM4tyB1Pa1DtAmwd7WE2tAqWYbhWdhXRY9uD2fe3mGsivhwsEFDo5bwXc3N3LXUNVLrD6d"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "No admitted price lane: DefiLlama price is null, the exact-mint quote is empty, CoinGecko returns no asset, and DEX probes found no pools. DefiLlama supply and pinned Solana issuance are positive.",
+    "reviewBy": "2027-01-15",
+    "source": {
+      "label": "Issuer supply and reserves",
+      "url": "https://reserves.bridge.xyz/squsd"
+    }
+  }
+}

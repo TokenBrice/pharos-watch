@@ -1,0 +1,49 @@
+{
+  "id": "itry-brix",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "iTRY is a transferable fixed-TRY unit whose terms commit to redeem one token for one TRY of notional value in supported digital assets for eligible whitelisted customers. The terms explicitly deny interest or yield to token holders and distinguish iTRY from a fund interest.",
+      "references": [
+        {
+          "label": "iTRY Token Terms, sections 1, 5 and 7",
+          "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-11-15",
+          "sourceDate": "2026-03-25"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "iTRY Limited",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://accountable.brix.money:8443/dashboard",
+    "redemptionPolicyPresent": true,
+    "notes": "Issuer identity and the conditional digital-asset redemption obligation are established by the Token Terms. No token-specific U.S. GENIUS approval, application or foreign-issuer exception is established by this review; no negative-authorization conclusion is asserted. The terms prohibit U.S. persons, and their British Virgin Islands governing-law provision is not a regulatory authorization. DLF fund regulation and Zodia custody do not authorize this token issuer. Published daily Accountable reporting is distinct from a monthly accountant-attestation series. MiCA status remains unassessed because EU offering and token-specific authorization are unresolved. Pinned canonical Ethereum state requires a whitelisted caller, sender and recipient for ordinary transfers, despite the eligibility page describing permissionless secondary transfers; MegaETH representation transfers are enabled.",
+    "references": [
+      {
+        "label": "iTRY Token Terms, updated 25 March 2026",
+        "url": "https://docs.brix.money/resources/terms-and-policies/itry-token-terms.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "Brix eligibility: whitelisted primary market and documented secondary transfers",
+        "url": "https://docs.brix.money/itry/eligibility.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      },
+      {
+        "label": "Brix backing: DLF basket and custody",
+        "url": "https://docs.brix.money/itry/backing.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-15"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-11-15"
+  }
+}

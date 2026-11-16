@@ -1039,9 +1039,17 @@
     "32": "/logos/compact/eur0-usual.webp",
     "100": "/logos/compact/eur0-usual-100.webp"
   },
+  "/logos/eurdt-stabillon.png": {
+    "32": "/logos/compact/eurdt-stabillon.webp",
+    "100": "/logos/compact/eurdt-stabillon-100.webp"
+  },
   "/logos/euro3-3a-dao.webp": {
     "32": "/logos/compact/euro3-3a-dao.webp",
     "100": "/logos/compact/euro3-3a-dao-100.webp"
+  },
+  "/logos/eurod-oddo-bhf.png": {
+    "32": "/logos/compact/eurod-oddo-bhf.webp",
+    "100": "/logos/compact/eurod-oddo-bhf-100.webp"
   },
   "/logos/eurot-token-teknoloji.png": {
     "32": "/logos/compact/eurot-token-teknoloji.webp",
@@ -1162,6 +1170,10 @@
   "/logos/inalpha-nest.png": {
     "32": "/logos/compact/inalpha-nest.webp",
     "100": "/logos/compact/inalpha-nest-100.webp"
+  },
+  "/logos/itry-brix.png": {
+    "32": "/logos/compact/itry-brix.webp",
+    "100": "/logos/compact/itry-brix-100.webp"
   },
   "/logos/iusd-indigo-protocol.png": {
     "32": "/logos/compact/iusd-indigo-protocol.webp",
@@ -1315,6 +1327,10 @@
     "32": "/logos/compact/phpc-coins-ph.webp",
     "100": "/logos/compact/phpc-coins-ph-100.webp"
   },
+  "/logos/plndt-stabillon.png": {
+    "32": "/logos/compact/plndt-stabillon.webp",
+    "100": "/logos/compact/plndt-stabillon-100.webp"
+  },
   "/logos/pusd-polymarket.png": {
     "32": "/logos/compact/pusd-polymarket.webp",
     "100": "/logos/compact/pusd-polymarket-100.webp"
@@ -1375,6 +1391,10 @@
     "32": "/logos/compact/sdola-inverse-finance.webp",
     "100": "/logos/compact/sdola-inverse-finance-100.webp"
   },
+  "/logos/sekau-allunity.png": {
+    "32": "/logos/compact/sekau-allunity.webp",
+    "100": "/logos/compact/sekau-allunity-100.webp"
+  },
   "/logos/sfrax-frax.png": {
     "32": "/logos/compact/sfrax-frax.webp",
     "100": "/logos/compact/sfrax-frax-100.webp"
@@ -1402,6 +1422,10 @@
   "/logos/spusd-soulpeg.png": {
     "32": "/logos/compact/spusd-soulpeg.webp",
     "100": "/logos/compact/spusd-soulpeg-100.webp"
+  },
+  "/logos/squsd-squads.png": {
+    "32": "/logos/compact/squsd-squads.webp",
+    "100": "/logos/compact/squsd-squads-100.webp"
   },
   "/logos/stbt-matrixdock.png": {
     "32": "/logos/compact/stbt-matrixdock.webp",
@@ -1562,6 +1586,10 @@
   "/logos/usdon-ondo.png": {
     "32": "/logos/compact/usdon-ondo.webp",
     "100": "/logos/compact/usdon-ondo-100.webp"
+  },
+  "/logos/usdplus-streamflow.png": {
+    "32": "/logos/compact/usdplus-streamflow.webp",
+    "100": "/logos/compact/usdplus-streamflow-100.webp"
   },
   "/logos/usdpt-western-union.png": {
     "32": "/logos/compact/usdpt-western-union.webp",

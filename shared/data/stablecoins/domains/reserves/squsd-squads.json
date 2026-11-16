@@ -1,0 +1,71 @@
+{
+  "id": "squsd-squads",
+  "reserves": [
+    {
+      "name": "USD cash, banks undisclosed",
+      "pct": 12.0791,
+      "risk": "low",
+      "assetClass": "cash",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    },
+    {
+      "name": "Treasury category including money-market funds, fund split undisclosed",
+      "pct": 87.8245,
+      "risk": "low",
+      "assetClass": "other",
+      "liquidityHorizon": "unknown",
+      "riskFactors": [
+        "custody",
+        "counterparty"
+      ]
+    },
+    {
+      "name": "Unreconciled difference in reported reserve total",
+      "pct": 0.0964,
+      "risk": "high",
+      "unclassifiedResidual": true,
+      "residualReason": "insufficient-evidence"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos discovery launched review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge SQUSD reserve JSON",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/squsd"
+      },
+      {
+        "label": "Bridge Treasury category definition",
+        "url": "https://reserves.bridge.xyz/squsd"
+      }
+    ],
+    "rationale": "Issuer-published amounts were read from the SQUSD feed at 2026-11-15T22:49:30Z, upstream last_updated 2026-11-15T22:40:34Z. Cash of $8,843,601.03 plus the Treasury category of $64,299,776.57 totals $73,143,377.60, below reported reserve assets of $73,213,920.60. Each category is divided by the reported reserve total and rounded to four decimals; the $70,543 difference is explicitly unclassified, not allocated to Treasury. This unresolved reconciliation and issuer-only evidence keep confidence probable. The Treasury category includes money-market funds with Treasury-bill ladders; direct securities versus fund shares are undisclosed, so no Treasury-bill look-through is assigned.",
+    "compositionBasis": "Issuer self-reported reserve category amounts, not an audit or independent attestation",
+    "compositionAsOf": "2026-11-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The $70,543 difference between the reported total and listed categories is unreconciled. Named cash banks, custody structure and the composition and fund counterparties inside the Treasury category are undisclosed. Category totals do not establish look-through or legal reserve protections.",
+    "knownUnknownExposurePct": 87.9209,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Treasury category including money-market funds, fund split undisclosed",
+        "pct": 87.8245,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer groups direct Treasury exposure and money-market funds without constituent weights or instrument identities; no tracked stablecoin dependency is established."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unreconciled difference in reported reserve total",
+        "pct": 0.0964,
+        "disposition": "insufficient-evidence",
+        "rationale": "The feed's reported total exceeds the sum of its cash and Treasury category amounts. The difference has no published asset identity and remains an unclassified residual."
+      }
+    ]
+  }
+}

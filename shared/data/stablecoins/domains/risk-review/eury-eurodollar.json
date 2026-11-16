@@ -1,0 +1,19 @@
+{
+  "id": "eury-eurodollar",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Issuer white paper",
+        "url": "https://www.stablecoin.dk/tokens/eury/white-paper"
+      },
+      {
+        "label": "Verified implementation source",
+        "url": "https://etherscan.io/address/0xbc7b4fabbe705c3834782cc9e54da9e1454e2e41#code"
+      }
+    ],
+    "evidence": "The sole issuer-linked Ethereum deployment contains all verified stock. Its current verified implementation checks a per-address blacklist before transfers and exposes restricted global pause and upgrade operations. The white paper explicitly describes an issuer-controlled global transfer freeze. This review records Possible because the current AccessManager role-member census was not completed; it does not treat an empty blacklist or unavailable owner() as absence of controls. Ethereum block 26423485 (2026-11-15T22:46:11Z, 0x479173fe45f6fc84805691713e1d49c520e249c8c3f1bea2db5fa044d6f1ffe3) pins implementation 0xbc7b4fabbe705c3834782cc9e54da9e1454e2e41. A later AccessManager probe failed header revalidation and is withheld as current-role evidence.",
+    "reviewer": "Pharos discovery launched research",
+    "reviewedAt": "2026-11-15"
+  }
+}

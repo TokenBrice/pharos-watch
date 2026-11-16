@@ -13730,6 +13730,221 @@
       "windows": [],
       "reviewedAt": "2026-10-28",
       "reviewer": "W2-tron live JSON-RPC capability review"
+    },
+    {
+      "chainId": "polygon",
+      "stablecoinId": "copm-minteo",
+      "address": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code",
+        "sourceVerified": true,
+        "contractName": "UUPSProxy -> TokenV1 (OpenZeppelin ERC20Upgradeable)",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x056d93f19fa2559e10ae69628ea97483b4d336be",
+          "implementationSourceVerified": true,
+          "note": "Pinned getImplementation() matches the Etherscan-verified implementation; EIP-1967 slot and 18-decimal reads agree at all three conservation boundaries, with no Upgraded events across either window."
+        },
+        "externalMatches": [
+          {
+            "source": "issuer",
+            "value": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+            "matches": true,
+            "detail": "https://transparency.minteo.com/contract-directory publishes this exact Polygon COPM address; current pinned symbol COPM and name COP Minteo."
+          },
+          {
+            "source": "defillama",
+            "llamaId": 460,
+            "value": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+            "matches": true,
+            "detail": "DefiLlama 460 identifies COPM by Minteo, Polygon address matching the primary issuer directory."
+          }
+        ],
+        "onChain": {
+          "block": 97385031,
+          "blockHash": "0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402",
+          "timestamp": 1794783016,
+          "decimals": 18,
+          "symbol": "COPM",
+          "name": "COP Minteo",
+          "totalSupplyRaw": "4156202969754852048213337676",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "TokenV1 onlyRole(MINTER_ROLE) calls inherited _mint, which increments _totalSupply and emits exactly one Transfer(address(0),account,amount); zero recipient reverts."
+        },
+        {
+          "function": "burn(uint256) / burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Inherited ERC20BurnableUpgradeable burns caller or allowance-authorized account, then _burn decrements _totalSupply and emits exactly one Transfer(account,address(0),amount)."
+        },
+        {
+          "function": "burnFrozen(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FREEZER_ROLE may thaw, burn and refreeze an arbitrary frozen account. The inherited _burn updates supply and emits the single canonical Transfer; custom BurnedFrozen duplicates the action and is not indexed."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ totalSupply() returns stored _totalSupply. The verified current implementation and inherited sources have no supply writer other than _mint/_burn. Freeze/thaw, pause, rescueFunds, permit and multicall do not independently rewrite supply."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Source review and two disjoint 18.75-hour hash-pinned windows establish the exact paired zero-address Transfer law for this current implementation. Each has nonempty burn history and residual zero; no mints were observed in those windows, while the verified source establishes the mint pairing. Full history since deployment was not summed. Start block 47,747,145 (2023-09-19T22:41:52Z) is independently bounded by archive code empty at the preceding block and present at deployment, plus matching factory-creation transaction receipt 0xab4c33c41d866115a2730b16da1813c0979bc086fb5d3638ea47ba415e5ebef4, block hash 0x54569f7ae601f62fba93eb93525e7a78ece579427399b3ce9721e3363bf9eee5. Issuer API also offers cross-chain burn/mint transfers; no transaction-specific bridge attribution was established, so no guessed bridge-exclusion addresses are authored. This config covers Polygon issuance events, not whole-asset cash subscriptions/redemptions. Celo is excluded because runtime buildAlchemyUrl has no admitted mapping, and Solana has no mint/burn decoder.",
+      "windows": [
+        {
+          "fromBlock": 97294068,
+          "fromBlockHash": "0x732281739f4c97e442f41bed54f26876a5c7a85f9100d952e87a484b35e218b2",
+          "fromTimestamp": 1794646571,
+          "toBlock": 97339068,
+          "toBlockHash": "0x2d07fa6b02f24464298573d7413834f8fad3fda3b6597f7e1ea9bc20ce68babb",
+          "toTimestamp": 1794714071,
+          "mintRaw": "0",
+          "burnRaw": "75847240000000000000000000",
+          "supplyDeltaRaw": "-75847240000000000000000000",
+          "residualRaw": "0",
+          "logCount": 67,
+          "journalSha256": "2a0258f10411410980658d3957ed63805bcc444c77a16434a0959fe09b9ec5ff"
+        },
+        {
+          "fromBlock": 97339068,
+          "fromBlockHash": "0x2d07fa6b02f24464298573d7413834f8fad3fda3b6597f7e1ea9bc20ce68babb",
+          "fromTimestamp": 1794714071,
+          "toBlock": 97384068,
+          "toBlockHash": "0x52f2ab0478b420db068dc50af66049d1081c5907a468f10c43b00a32c34749b1",
+          "toTimestamp": 1794781571,
+          "mintRaw": "0",
+          "burnRaw": "5057495000000000000000000",
+          "supplyDeltaRaw": "-5057495000000000000000000",
+          "residualRaw": "0",
+          "logCount": 19,
+          "journalSha256": "36cf4664f74bb358ff73a4d09d9845d2143c60816d3b0b4703e6e4db3a3fe10d"
+        }
+      ],
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos COPM mint/burn source and pinned conservation review"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "itry-brix",
+      "address": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy -> iTry (OpenZeppelin ERC20Upgradeable)",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x0679eaa2443e5fea70eea7ac9508fd357406fdad",
+          "implementationSourceVerified": true,
+          "note": "Verified ERC1967Proxy exposes fallback/receive delegation only; the verified iTry implementation and inherited contracts expose no upgrade selector, implementation-slot setter or arbitrary delegatecall. The implementation is fixed after construction. Hash-pinned EIP-1967 slot reads match at all three audited boundaries; no Upgraded events occur in blocks 26323701-26423700."
+        },
+        "externalMatches": [
+          {
+            "source": "issuer",
+            "value": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+            "matches": true,
+            "detail": "https://docs.brix.money/resources/contracts identifies this exact Ethereum iTRY token and separately identifies its locking OFT adapter 0xa21819cb613c9525e31178812b665933471e5e88. Pinned adapter token() matches the configured token at all three conservation boundaries."
+          }
+        ],
+        "onChain": {
+          "block": 26423700,
+          "blockHash": "0xb79b1890f78c40d627a6af223952e7aae76298b97173576322e01d705c70c74f",
+          "timestamp": 1794785351,
+          "decimals": 18,
+          "symbol": "iTry",
+          "name": "iTry",
+          "totalSupplyRaw": "105526365307175497186410053",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "iTry.mint requires MINTER_CONTRACT and calls inherited OZ _mint: nonzero recipient, stored _totalSupply += amount and one Transfer(address(0),recipient,amount)."
+        },
+        {
+          "function": "burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MINTER_CONTRACT and allowance-gated. Inherited OZ _burn rejects zero account, decrements _totalSupply by amount and emits one Transfer(account,address(0),amount). Direct burn(uint256) always reverts."
+        },
+        {
+          "function": "redistributeLockedAmount(address,address)",
+          "internal": "_burn + _mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "DEFAULT_ADMIN_ROLE may burn the full blacklisted balance and mint exactly that amount to a non-blacklisted recipient. Each supply change emits its canonical zero-address Transfer; the custom LockedAmountRedistributed event is not indexed. Atomic burn/reissue is raw conservation evidence, not necessarily investor redemption/subscription."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ ERC20Upgradeable.totalSupply() returns stored _totalSupply. Only _mint and _burn write it; iTry and its inherited access-control, permit and reentrancy contracts provide no rebase, external supply override or independent supply writer. _beforeTokenTransfer only gates access/transfer state."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Verified source and ABI reviewed for proxy, implementation and Ethereum OFT adapter. Ordinary transfer/transferFrom reject either zero endpoint; _mint/_burn reject zero accounts, so counterfeit or ambiguous zero-side Transfers are not exposed. The verified iTRYTokenOFTAdapter inherits RateLimitedOFTAdapter -> OFTAdapter: _debit locks with safeTransferFrom(sender,adapter,amount); _credit unlocks with safeTransfer(recipient,amount); rescueToken rejects the underlying token. These are nonzero-address transfers and do not change Ethereum totalSupply or enter this zero-Transfer config. MegaETH OFT mint/burn events are outside this Ethereum scope, so no speculative bridge exclusions are added. Two disjoint 50000-block windows contain 12 raw mint/burn logs with residual exactly zero. Independent Dwellir EIP-1898 reads corroborate Alchemy production-audit supplies: block 26323700 = 275939310709471575070668758; block 26373700 = 177360052528279238890235943; block 26423700 = 105526365307175497186410053 raw units (18 decimals); matching before/after headers bind the reads. Deployment block 24637760 is confirmed by empty archive code at 24637759, present code at 24637760 and successful creation receipt 0x53179a8beec0f2c914984fe2a8d551d9f4eda068d72bd686ee2876d8bdce1296, including Upgraded to the reviewed implementation. Full history was not summed. Conservation admission does not authorize publication: this leg remains pending its independent durable 90-day scan/valuation admission. Evidence and redacted replay journal: agents/discovery-backlog/fixes/itry/.",
+      "windows": [
+        {
+          "fromBlock": 26373700,
+          "fromBlockHash": "0xd110e3b2d85251a2787711a4ef71847007c6cf1caeb7cb411e802e21967f4980",
+          "fromTimestamp": 1794183575,
+          "toBlock": 26423700,
+          "toBlockHash": "0xb79b1890f78c40d627a6af223952e7aae76298b97173576322e01d705c70c74f",
+          "toTimestamp": 1794785351,
+          "mintRaw": "9826549428103045100312711",
+          "burnRaw": "81660236649206786804138601",
+          "supplyDeltaRaw": "-71833687221103741703825890",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "d014d5f971e9ad0d46a85212fccf580bf09a63acf4a381b892b15b16b87823af"
+        },
+        {
+          "fromBlock": 26323700,
+          "fromBlockHash": "0x842237a68a313dcfe813b380457fc8dc1c69a84e9209c3e99d7a9876f0121910",
+          "fromTimestamp": 1793581631,
+          "toBlock": 26373700,
+          "toBlockHash": "0xd110e3b2d85251a2787711a4ef71847007c6cf1caeb7cb411e802e21967f4980",
+          "toTimestamp": 1794183575,
+          "mintRaw": "788897905618663819567185",
+          "burnRaw": "99368156086811000000000000",
+          "supplyDeltaRaw": "-98579258181192336180432815",
+          "residualRaw": "0",
+          "logCount": 4,
+          "journalSha256": "d014d5f971e9ad0d46a85212fccf580bf09a63acf4a381b892b15b16b87823af"
+        }
+      ],
+      "reviewedAt": "2026-11-16",
+      "reviewer": "Pharos independent-review fix lane: source and pinned conservation review"
     }
   ]
 }

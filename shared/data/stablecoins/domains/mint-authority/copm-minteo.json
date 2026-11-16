@@ -1,0 +1,464 @@
+{
+  "id": "copm-minteo",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "headline": "Issuer multisigs permit uncapped minting; monthly BDO reports reconcile reserves and liabilities, while signer independence remains unverified.",
+    "summary": "COPM is natively issued on Polygon, Celo and Solana. Issuer Safes hold the EVM mint, role-admin and upgrade powers; a Squads vault governs Solana issuance. Minting has no on-chain collateral bound. BDO limited-assurance reports reconcile bank reserves with liabilities on all three chains; signer independence and off-chain key custody remain unverified.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "controls": [
+      {
+        "label": "Polygon issuer Safe mint and role administration",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "polygon",
+        "address": "0x84ec9fabaa0fc41706d57dc775b485e194ee4488",
+        "deploymentRefs": [
+          "polygon:0x12050c705152931cfee3dd56c52fb09dea816c23"
+        ],
+        "threshold": 3,
+        "signerCount": 8,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x5357b2243f07986a598ab49d39e312bd30b9b522",
+            "0x350702214c2b3e3bc337747366b635ab3fa3b7bd",
+            "0xf815b0041e840ac702219f3d65075c7488c2f55c",
+            "0x6c13c367c295ba8de665ba64f0b644efb83f67bf",
+            "0x81d94ad6bef93abee1b8547b3bd61c3277b8e5b7",
+            "0xe898c22f5e645e2b118051484b78af5b66321b7f",
+            "0x1cf45e289015ca51e76f74385cb3187f5ccf1fe5",
+            "0x3ce64e53af28bb2be8e05caa12547aa9de4f8500"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "observedAt": "2026-11-15",
+          "observedBlock": 97385031,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 97385031,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified polygon TokenV1 implementation",
+            "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+          },
+          {
+            "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+            "url": "https://polygon-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "At polygon block 97385031 (0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00), getRoleMemberCount/getRoleMember enumerate this Safe as the sole DEFAULT_ADMIN, MINTER, UPGRADER, FREEZER, PAUSER and RESCUER member; every role admin is DEFAULT_ADMIN_ROLE. Verified TokenV1.mint(address,uint256) calls _mint with arbitrary recipient/amount and no deposit, bridge-message or reserve check. _authorizeUpgrade is onlyRole(UPGRADER_ROLE). The Safe returns threshold 3, 8 owners and VERSION 1.3.0; getModulesPaginated returns no modules with sentinel next, guard and module-guard storage read zero, and the nonzero fallback handler is retained explicitly. No token-level timelock is enforced. Signer beneficial independence and off-chain key custody were not established; fallback reach has no complete execution certificate."
+      },
+      {
+        "label": "Polygon issuer Safe mint implementation upgrades",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "polygon",
+        "address": "0x84ec9fabaa0fc41706d57dc775b485e194ee4488",
+        "deploymentRefs": [
+          "polygon:0x12050c705152931cfee3dd56c52fb09dea816c23"
+        ],
+        "threshold": 3,
+        "signerCount": 8,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x5357b2243f07986a598ab49d39e312bd30b9b522",
+            "0x350702214c2b3e3bc337747366b635ab3fa3b7bd",
+            "0xf815b0041e840ac702219f3d65075c7488c2f55c",
+            "0x6c13c367c295ba8de665ba64f0b644efb83f67bf",
+            "0x81d94ad6bef93abee1b8547b3bd61c3277b8e5b7",
+            "0xe898c22f5e645e2b118051484b78af5b66321b7f",
+            "0x1cf45e289015ca51e76f74385cb3187f5ccf1fe5",
+            "0x3ce64e53af28bb2be8e05caa12547aa9de4f8500"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "observedAt": "2026-11-15",
+          "observedBlock": 97385031,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 97385031,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified polygon TokenV1 implementation",
+            "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+          },
+          {
+            "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+            "url": "https://polygon-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "At polygon block 97385031 (0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00), getRoleMemberCount/getRoleMember enumerate this Safe as the sole DEFAULT_ADMIN, MINTER, UPGRADER, FREEZER, PAUSER and RESCUER member; every role admin is DEFAULT_ADMIN_ROLE. Verified TokenV1.mint(address,uint256) calls _mint with arbitrary recipient/amount and no deposit, bridge-message or reserve check. _authorizeUpgrade is onlyRole(UPGRADER_ROLE). The Safe returns threshold 3, 8 owners and VERSION 1.3.0; getModulesPaginated returns no modules with sentinel next, guard and module-guard storage read zero, and the nonzero fallback handler is retained explicitly. No token-level timelock is enforced. Signer beneficial independence and off-chain key custody were not established; fallback reach has no complete execution certificate."
+      },
+      {
+        "label": "Celo issuer Safe mint and role administration",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "celo",
+        "address": "0x0155b191ec52728d26b1cd82f6a412d5d6897c04",
+        "deploymentRefs": [
+          "celo:0xc92e8fc2947e32f2b574cca9f2f12097a71d5606"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x5357b2243f07986a598ab49d39e312bd30b9b522",
+            "0xf815b0041e840ac702219f3d65075c7488c2f55c",
+            "0x6c13c367c295ba8de665ba64f0b644efb83f67bf",
+            "0x81d94ad6bef93abee1b8547b3bd61c3277b8e5b7",
+            "0xe898c22f5e645e2b118051484b78af5b66321b7f",
+            "0x3ce64e53af28bb2be8e05caa12547aa9de4f8500",
+            "0x1cf45e289015ca51e76f74385cb3187f5ccf1fe5"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "observedAt": "2026-11-15",
+          "observedBlock": 82882338,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 82882338,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified celo TokenV1 implementation",
+            "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+          },
+          {
+            "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+            "url": "https://celo-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "At celo block 82882338 (0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00), getRoleMemberCount/getRoleMember enumerate this Safe as the sole DEFAULT_ADMIN, MINTER, UPGRADER, FREEZER, PAUSER and RESCUER member; every role admin is DEFAULT_ADMIN_ROLE. Verified TokenV1.mint(address,uint256) calls _mint with arbitrary recipient/amount and no deposit, bridge-message or reserve check. _authorizeUpgrade is onlyRole(UPGRADER_ROLE). The Safe returns threshold 3, 7 owners and VERSION 1.3.0; getModulesPaginated returns no modules with sentinel next, guard and module-guard storage read zero, and the nonzero fallback handler is retained explicitly. No token-level timelock is enforced. Signer beneficial independence and off-chain key custody were not established; fallback reach has no complete execution certificate."
+      },
+      {
+        "label": "Celo issuer Safe mint implementation upgrades",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "celo",
+        "address": "0x0155b191ec52728d26b1cd82f6a412d5d6897c04",
+        "deploymentRefs": [
+          "celo:0xc92e8fc2947e32f2b574cca9f2f12097a71d5606"
+        ],
+        "threshold": 3,
+        "signerCount": 7,
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x5357b2243f07986a598ab49d39e312bd30b9b522",
+            "0xf815b0041e840ac702219f3d65075c7488c2f55c",
+            "0x6c13c367c295ba8de665ba64f0b644efb83f67bf",
+            "0x81d94ad6bef93abee1b8547b3bd61c3277b8e5b7",
+            "0xe898c22f5e645e2b118051484b78af5b66321b7f",
+            "0x3ce64e53af28bb2be8e05caa12547aa9de4f8500",
+            "0x1cf45e289015ca51e76f74385cb3187f5ccf1fe5"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "observedAt": "2026-11-15",
+          "observedBlock": 82882338,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "present",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 82882338,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Verified celo TokenV1 implementation",
+            "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+          },
+          {
+            "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+            "url": "https://celo-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "At celo block 82882338 (0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00), getRoleMemberCount/getRoleMember enumerate this Safe as the sole DEFAULT_ADMIN, MINTER, UPGRADER, FREEZER, PAUSER and RESCUER member; every role admin is DEFAULT_ADMIN_ROLE. Verified TokenV1.mint(address,uint256) calls _mint with arbitrary recipient/amount and no deposit, bridge-message or reserve check. _authorizeUpgrade is onlyRole(UPGRADER_ROLE). The Safe returns threshold 3, 7 owners and VERSION 1.3.0; getModulesPaginated returns no modules with sentinel next, guard and module-guard storage read zero, and the nonzero fallback handler is retained explicitly. No token-level timelock is enforced. Signer beneficial independence and off-chain key custody were not established; fallback reach has no complete execution certificate."
+      },
+      {
+        "label": "Solana issuer Squads vault",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "8vxb4xw9Z8LeW4gt3rEhkMH449Tm4h3LS37qiLZKoyHi",
+        "deploymentRefs": [
+          "solana:Copm5KwCLXDTWYgXJYmo6ixmMZrxd1wabkujkcuaK47C"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "Token-2022 mint authority can issue new COPM; bank reserve reconciliation is off-chain, not an on-chain mint cap.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "minteo-issuer-control"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 469903332,
+        "sources": [
+          {
+            "label": "Minteo official deployment directory",
+            "url": "https://transparency.minteo.com/contract-directory"
+          },
+          {
+            "label": "Minteo platform administrative controls",
+            "url": "https://transparency.minteo.com/blockchain"
+          },
+          {
+            "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+            "url": "https://solana-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "SPL Token-2022 mint authority and permanent delegate specification",
+            "url": "https://www.solana-program.com/docs/token-2022/extensions"
+          },
+          {
+            "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          },
+          {
+            "label": "Squads V4 vault signing seeds and approved-transaction execution",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+          },
+          {
+            "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+            "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+          },
+          {
+            "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+            "url": "https://solana-mainnet.g.alchemy.com"
+          }
+        ],
+        "evidence": "At exact finalized slot 469903332, the mint, vault, Squads multisig, program and ProgramData response contexts match the pin; before/after headers match blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z. COPM is a two-decimal Token-2022 mint whose mint/freeze/metadata-update/permanent-delegate authority is this off-curve PDA. The vault is System Program-owned with empty data; that alone does not make it a keypair. Squads V4 program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf owns multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb. Its matching Anchor Multisig discriminator decodes threshold 2, seven distinct members each with initiate/vote/execute permission mask 7, time_lock 0 and default/null config_authority. SHA-256 Solana PDA derivation with published multisig/vault seeds, vault index 0 and bump 255 exactly yields the token authority. A finalized historical transaction at slot 248202995 executes native MintToChecked through this Squads vault, supporting native issuance rather than bridge proof minting. ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n records last upgrade slot 302582236 and Option::None upgrade authority at the current exact pin. Member addresses are retained in the research packet; distinct keys establish topology, not human independence or hardware custody. Spending-limit and full execution-scope closure are not certified.",
+        "threshold": 2,
+        "signerCount": 7,
+        "timelockDelaySec": 0
+      }
+    ],
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "polygon:0x12050c705152931cfee3dd56c52fb09dea816c23",
+        "celo:0xc92e8fc2947e32f2b574cca9f2f12097a71d5606"
+      ],
+      "proxyAddresses": [
+        "0x12050c705152931cfee3dd56c52fb09dea816c23",
+        "0xc92e8fc2947e32f2b574cca9f2f12097a71d5606"
+      ],
+      "implementationAddresses": [
+        "0x056d93f19fa2559e10ae69628ea97483b4d336be",
+        "0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7"
+      ],
+      "adminAddresses": [
+        "0x84ec9fabaa0fc41706d57dc775b485e194ee4488",
+        "0x0155b191ec52728d26b1cd82f6a412d5d6897c04"
+      ],
+      "canChangeMintLogic": true,
+      "sources": [
+        {
+          "label": "Minteo official deployment directory",
+          "url": "https://transparency.minteo.com/contract-directory"
+        },
+        {
+          "label": "Minteo platform administrative controls",
+          "url": "https://transparency.minteo.com/blockchain"
+        },
+        {
+          "label": "Verified polygon TokenV1 implementation",
+          "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+        },
+        {
+          "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+          "url": "https://polygon-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Verified celo TokenV1 implementation",
+          "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+        },
+        {
+          "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+          "url": "https://celo-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+          "url": "https://solana-mainnet.g.alchemy.com"
+        }
+      ],
+      "controlRef": "Polygon issuer Safe mint implementation upgrades"
+    },
+    "review": {
+      "evidence": "Primary issuer directory and blockchain controls, verified deployed TokenV1 implementations, complete enumerable role rosters and pinned Safe state establish direct issuer native minting on both EVM chains. Exact-slot Solana mint, vault, multisig and immutable-program account reads, exact PDA derivation and historical native MintToChecked execution establish a Squads-controlled Token-2022 issuance authority. Both TokenV1 versions allow arbitrary-recipient minting without collateral checks, and current role members can replace mint-critical logic. Monthly BDO AUDIT S.A.S. BIC ISAE 3000 limited-assurance reports compare all Polygon, Celo and Solana COPM liabilities with bank reserves: the August 31, 2026 report, signed October 19, covers COP 6,768,005,179.37 token liabilities and COP 7,057,743,676.39 cash. This supports periodic reconciliation and attestation-only supervision, not prudential authorization or a financial-statement audit. No current incident absence or complete execution closure is claimed.",
+      "reviewer": "Pharos COPM controls review",
+      "reviewedAt": "2026-11-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Minteo official deployment directory",
+          "url": "https://transparency.minteo.com/contract-directory"
+        },
+        {
+          "label": "Minteo platform administrative controls",
+          "url": "https://transparency.minteo.com/blockchain"
+        },
+        {
+          "label": "Verified polygon TokenV1 implementation",
+          "url": "https://polygonscan.com/address/0x056d93f19fa2559e10ae69628ea97483b4d336be#code"
+        },
+        {
+          "label": "Polygon block 97385031, hash 0xb13e13a688d06dcd24aa512c2f8c1351d5b4bbb8dec582efd2d97b902d1d9402, 2026-11-15T22:50:16+00:00; probe started 2026-11-15T22:50:12.465320+00:00",
+          "url": "https://polygon-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Verified celo TokenV1 implementation",
+          "url": "https://celoscan.io/address/0xbb0cf77caaf21dced4f06d3cb987dcb65f15b1c7#code"
+        },
+        {
+          "label": "Celo block 82882338, hash 0xb88c638b3e23fd4eea799b9394d6b8da6220aac4e2247449bb49bc2fe3c7995f, 2026-11-15T22:51:36+00:00; probe started 2026-11-15T22:51:36.801217+00:00",
+          "url": "https://celo-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+          "url": "https://solana-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "BDO limited assurance over COPM reserves and all three chain liabilities, August 31 2026; signed October 19",
+          "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+        },
+        {
+          "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+          "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+        },
+        {
+          "label": "Squads V4 vault signing seeds and approved-transaction execution",
+          "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+        },
+        {
+          "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+          "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+        },
+        {
+          "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+          "url": "https://solana-mainnet.g.alchemy.com"
+        }
+      ],
+      "scopedQuestions": [
+        {
+          "controlRef": "Solana issuer Squads vault",
+          "subject": "key-custody-independence",
+          "question": "What independent evidence establishes beneficial signer independence and off-chain key custody for the seven-member Solana Squads multisig?",
+          "reviewedAt": "2026-11-15",
+          "reviewer": "Pharos COPM controls review",
+          "sources": [
+            {
+              "label": "Minteo official deployment directory",
+              "url": "https://transparency.minteo.com/contract-directory"
+            },
+            {
+              "label": "Minteo platform administrative controls",
+              "url": "https://transparency.minteo.com/blockchain"
+            },
+            {
+              "label": "Solana finalized slot 469903332, blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, block time 2026-11-15T22:50:55+00:00; exact-slot mint and authority contexts; probe started 2026-11-15T22:50:52.632582+00:00",
+              "url": "https://solana-mainnet.g.alchemy.com"
+            },
+            {
+              "label": "SPL Token-2022 mint authority and permanent delegate specification",
+              "url": "https://www.solana-program.com/docs/token-2022/extensions"
+            },
+            {
+              "label": "Squads V4 Multisig account layout, members, permissions, threshold and config authority",
+              "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+            },
+            {
+              "label": "Squads V4 vault signing seeds and approved-transaction execution",
+              "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/instructions/vault_transaction_execute.rs"
+            },
+            {
+              "label": "COPM Solana native MintToChecked via Squads vault, finalized slot 248202995 (historical execution, not current configuration)",
+              "url": "https://solscan.io/tx/4QG44W8ay6MKGXfLEZUoK24ccmn24EjHkehoyQP9pzcVocBWhPoYU2SSQj9UV9krspW9SXwKizvM65GVqocHV9cv"
+            },
+            {
+              "label": "Exact finalized slot 469903332: Squads multisig BDNkaXZQkTogoKR9TWnwApyBTsinWtsxfPNntG8dRFsb, program and ProgramData Fy3YMJCvwbAXUgUM5b91ucUVA3jYzwWLHL3MwBqKsh8n; matching contexts and blockhash FYR3CTDzcHebFobRJN4eSNSnVJwBTyWr3UqQZMTzCnLD, 2026-11-15T22:50:55Z; follow-up probes started 2026-11-15T23:02:38.008534+00:00 and 2026-11-15T23:03:38.953313+00:00",
+              "url": "https://solana-mainnet.g.alchemy.com"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

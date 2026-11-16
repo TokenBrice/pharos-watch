@@ -1,0 +1,143 @@
+{
+  "id": "rcusd-r25",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "headline": "Issuer signing keys can mint rcUSD, raise issuance limits and replace the minting logic.",
+    "summary": "rcUSD native issuance uses a Sui TreasuryCap held inside shared ManagedTreasury. The sole ControllerCap holder can mint without a USDC deposit and raise the vault ceiling; the same address holds OracleCap and can create rcUSD through staking accounting reports. A separate single-signature administrator grants roles and owns the compatible-upgrade capability. Both current authorities resolve to simple secp256k1 signing addresses. No enforced economic supply bound or independent reserve-to-liability reconciliation was established. Private key custody remains undisclosed.",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "sui:0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd::rcusd::RCUSD"
+      ],
+      "adminAddresses": [
+        "0xea1f63624c47fb9691c768a79e33a0de9ef76b21554308e6dc968d845855be2d"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "R25 role administrator and package upgrade owner",
+      "observedAt": "2026-11-15",
+      "observedBlock": 345646368,
+      "sources": [
+        {
+          "label": "Sui GraphQL checkpoint-scoped state and deployed Move bytecode",
+          "url": "https://graphql.mainnet.sui.io/graphql"
+        },
+        {
+          "label": "rcUSD package UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0xb2d03518acd079d794f5909f59e982878b4f7b9480ab2b099be97a036580be26"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "sui",
+        "address": "0x846e0154f6072cd059e4673c6b54249294f3c75d59fd07d2f6ac8de2d01c83ef",
+        "deploymentRefs": [
+          "sui:0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd::rcusd::RCUSD"
+        ],
+        "label": "R25 rcUSD controller and accounting reporter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "capDescription": "The vault max_supply is 25000000000000 raw units (25 million rcUSD), but this controller can replace that ceiling immediately. whitelist_vault::mint_rcusd requires no deposit; staking::handle_oracle_report independently mints positive reported interest into the rcUSDp pool without a reserve-verification check.",
+        "failureDomainKeys": [
+          "eoa:sui:0x846e0154f6072cd059e4673c6b54249294f3c75d59fd07d2f6ac8de2d01c83ef"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 345646368,
+        "sources": [
+          {
+            "label": "Sui GraphQL checkpoint-scoped state and deployed Move bytecode",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
+          {
+            "label": "rcUSD deployed Sui package",
+            "url": "https://suiscan.xyz/mainnet/object/0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd"
+          },
+          {
+            "label": "rcUSD shared authority registry",
+            "url": "https://suiscan.xyz/mainnet/object/0xeab70055566a974891aa2941e0e7886f8b2566d8e3f5c85e93f009f2f1eeb28c"
+          },
+          {
+            "label": "R25 accounting report signed by the current controller",
+            "url": "https://suiscan.xyz/mainnet/tx/C6Y8Vzcp5cvJ1Yi39CU4H5bTnUyn1D16RdHLX1pnyShP"
+          }
+        ],
+        "evidence": "Sui checkpoint 345646368, digest Byu8r4q2N4HWWbjK738MjiAX26SSkN1VpQ1ZTKV3JMP2, timestamp 2026-11-15T22:46:34.167Z. Checkpoint.query reads AuthInner role bag 0xd7363f95cb40c63212a30651b574853e535d06f8089259afa0a63ec8fe0652e7 with size 4 and hasNextPage=false. Its ControllerCap and OracleCap records both name this address. Exact version-1 package disassembly enforces those roles on whitelist_vault::mint_rcusd, set_max_supply and staking::handle_oracle_report. The direct mint returns newly created rcUSD after only an adjustable ceiling check; the accounting report can mint a caller-specified positive interest amount into the staking balance. At transaction C6Y8Vzcp5cvJ1Yi39CU4H5bTnUyn1D16RdHLX1pnyShP, checkpoint 345413409 (2026-11-15T07:00:18.362Z), the sender is this exact current role address and the signature scheme is Secp256K1Signature. BLAKE2b-256 over flag 1 and the signature public key reproduces the role address. This proves single-signature chain authority, not the number of people or custody devices controlling that key."
+      },
+      {
+        "chain": "sui",
+        "address": "0xea1f63624c47fb9691c768a79e33a0de9ef76b21554308e6dc968d845855be2d",
+        "deploymentRefs": [
+          "sui:0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd::rcusd::RCUSD"
+        ],
+        "label": "R25 role administrator and package upgrade owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "failureDomainKeys": [
+          "eoa:sui:0xea1f63624c47fb9691c768a79e33a0de9ef76b21554308e6dc968d845855be2d"
+        ],
+        "observedAt": "2026-11-15",
+        "observedBlock": 345646368,
+        "sources": [
+          {
+            "label": "Sui GraphQL checkpoint-scoped state and deployed Move bytecode",
+            "url": "https://graphql.mainnet.sui.io/graphql"
+          },
+          {
+            "label": "rcUSD deployed Sui package",
+            "url": "https://suiscan.xyz/mainnet/object/0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd"
+          },
+          {
+            "label": "rcUSD shared authority registry",
+            "url": "https://suiscan.xyz/mainnet/object/0xeab70055566a974891aa2941e0e7886f8b2566d8e3f5c85e93f009f2f1eeb28c"
+          },
+          {
+            "label": "rcUSD package UpgradeCap",
+            "url": "https://suiscan.xyz/mainnet/object/0xb2d03518acd079d794f5909f59e982878b4f7b9480ab2b099be97a036580be26"
+          },
+          {
+            "label": "R25 package publication signed by the current administrator",
+            "url": "https://suiscan.xyz/mainnet/tx/zFeRyXFoDPCBZoHHvyU1oa2bLeKFNBf5EwNP6oQeXiM"
+          }
+        ],
+        "evidence": "Sui checkpoint 345646368, digest Byu8r4q2N4HWWbjK738MjiAX26SSkN1VpQ1ZTKV3JMP2, timestamp 2026-11-15T22:46:34.167Z. The complete four-row role bag names this sole AdminCap member (admin_count=1). auth::add_capability and remove_capability authorize the transaction sender against AdminCap; this administrator can grant ControllerCap and OracleCap. UpgradeCap 0xb2d03518acd079d794f5909f59e982878b4f7b9480ab2b099be97a036580be26 is currently address-owned by this same address, has package 0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd, version=1 and policy=0, and its last transaction remains the original publication. Thus the reviewed package is still the deployed mint-critical version and compatible upgrades remain authorized. Publication transaction zFeRyXFoDPCBZoHHvyU1oa2bLeKFNBf5EwNP6oQeXiM, checkpoint 208413390 (2025-11-04T11:00:40.702Z), has this sender and one Secp256K1Signature whose public key hashes to the current owner address. Neither the direct role-administration path nor the owned UpgradeCap encodes a mandatory execution delay. No multisig or human-independence claim is inferred from key custody."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Sui GraphQL checkpoint-scoped state and deployed Move bytecode",
+          "url": "https://graphql.mainnet.sui.io/graphql"
+        },
+        {
+          "label": "rcUSD deployed Sui package",
+          "url": "https://suiscan.xyz/mainnet/object/0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd"
+        },
+        {
+          "label": "rcUSD shared authority registry",
+          "url": "https://suiscan.xyz/mainnet/object/0xeab70055566a974891aa2941e0e7886f8b2566d8e3f5c85e93f009f2f1eeb28c"
+        },
+        {
+          "label": "rcUSD package UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0xb2d03518acd079d794f5909f59e982878b4f7b9480ab2b099be97a036580be26"
+        }
+      ],
+      "evidence": "Sui checkpoint 345646368, digest Byu8r4q2N4HWWbjK738MjiAX26SSkN1VpQ1ZTKV3JMP2, timestamp 2026-11-15T22:46:34.167Z. All decisive state reads used Checkpoint.query and matching before/after checkpoint headers. TreasuryCap 0xed99bfb3ee72cd1eb8be16a562b1f0996a050670e227ee6ebc7b829d935fbb36 holds total_supply=18297963222105, inside ManagedTreasury 0xf6495c5c7881cc89bff7a32250edb79eaeded52d23bfecbe24746c9911fd2a5c. The exact original package contains the deposit mint, privileged vault mint, accounting-report mint/burn, controller parameter setters and administrator role setters. AuthInner has four current role records, fully paginated: one AdminCap at the administrator, ControllerCap and OracleCap at the same operational signer, and a separate AssessorCap holder 0xfd120b328b295722da159612f819ddb9aa777736a654f02380124c7ec11d37b8 that controls whitelist membership rather than arbitrary native issuance. Both effective issuance authorities are independently matched to simple signatures. The upgrade owner can replace mint logic and the operational controller can raise its own nominal cap, so an immutable collateral bound is not established. Internal accounting reports are not external reconciliation. No current independent whole-liability reconciliation or exact-token prudential-supervision evidence was established; those fields remain unknown. No negative incident-clearance claim is made.",
+      "reviewer": "Pharos rcUSD addition review",
+      "reviewedAt": "2026-11-15",
+      "disposition": "scoreable"
+    }
+  }
+}

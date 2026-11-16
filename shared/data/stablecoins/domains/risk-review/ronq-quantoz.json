@@ -1,0 +1,10 @@
+{
+  "id": "ronq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sourceFreeRationale": "The provisional stub verdict follows the centralized regulated e-money issuer model in ESMA's RONQ notification for Quantoz Payments B.V. No RONQ-specific source describing holder controls or verified deployment is available in the reviewed register and issuer token/whitepaper pages; sibling control powers are not inherited.",
+    "evidence": "Regulator-sourced pre-launch stub. RONQ has no verified public token deployment, supply census or current controller inventory. Possible is a provisional issuer-model review, not a claim that a live blacklist, freeze or seizure authority has been verified. Complete the deployment, materiality and holder-control review when RONQ-specific primary disclosures become available.",
+    "reviewer": "Pharos discovery research",
+    "reviewedAt": "2026-11-16"
+  }
+}

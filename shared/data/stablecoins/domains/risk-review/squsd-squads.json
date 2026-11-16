@@ -1,0 +1,23 @@
+{
+  "id": "squsd-squads",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "SQUSD Solana mint",
+        "url": "https://solscan.io/token/8D9XrAWLNHYY3skSrpgkcwrr3zTp7Jr5pkiQyjfsiv7t"
+      },
+      {
+        "label": "Token-2022 permanent-delegate authority",
+        "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+      },
+      {
+        "label": "Observed delegate signature",
+        "url": "https://solscan.io/tx/2mPyC2qPcNGdeofTuRFM4tyB1Pa1DtAmwd7WE2tAqWYbhWdhXRY9uD2fe3mGsivhwsEFDo5bwXc3N3LXUNVLrD6d"
+      }
+    ],
+    "evidence": "The sole issuer-listed deployment was read through exact-slot Alchemy Account Archive at finalized Solana slot 469903080, block hash EeoTTB8Rswa8DaikssqYxH6i2ed6pcEE1Wz9yhPMJPVv, 2026-11-15T22:50:00Z, with matching headers before and after. Raw Token-2022 bytes retain permanent delegate 7gKaqnuG4m63cv4ivgiEKqxizUfXiismMMzHuKfgjJNh. This is an on-curve signing key, also present as a transaction signer in the cited issuance. Token-2022 permits that delegate to transfer or burn arbitrary holder balances. Freeze and mint authority addresses are off-curve; their controller topology is unresolved and is not the basis for this Yes verdict. Default accounts are initialized and the transfer-hook program is unset, so no active transfer allowlist is inferred. No exercise of seizure is claimed.",
+    "reviewer": "Pharos discovery launched review",
+    "reviewedAt": "2026-11-15"
+  }
+}

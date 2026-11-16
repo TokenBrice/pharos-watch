@@ -1,0 +1,89 @@
+{
+  "id": "rcusd-r25",
+  "reserves": [
+    {
+      "name": "Tokenized money market funds and stablecoins (allocation undisclosed)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "RiftWriter Company Limited; underlying fund and stablecoin issuers undisclosed",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos rcUSD primary-source research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Sui Foundation: rcUSD and rcUSDp launch, November 25, 2025",
+        "url": "https://www.sui.io/blog/r25-rwa-assets-rcusd-rcusdp"
+      },
+      {
+        "label": "rcUSD Purchase Agreement, October 15, 2025: issuer and unsecured token terms",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+      },
+      {
+        "label": "rcUSD Redemption Agreement, October 15, 2025: eligible-holder USDC payment obligation",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+      },
+      {
+        "label": "R25 audit index, reviewed November 15, 2026: smart contract audits, no identified rcUSD reserve report",
+        "url": "https://docs.r25.xyz/docs/security/audit-reports"
+      }
+    ],
+    "rationale": "The Sui Foundation's November 25, 2025 launch describes a diversified portfolio of tokenized money market funds and stablecoins supporting rcUSD. The source distinguishes the fixed-dollar base token from the yield-bearing rcUSDp staking receipt. Reopening the issuer's site, current documentation, audit index and asset-specific agreements on November 15, 2026 did not establish a dated rcUSD holdings statement, fund identities, sleeve weights, custody roster or independently signed reserve report. The 100% row is the full stated portfolio envelope, not a measured allocation or a claim that money market funds dominate it. Its high legacy risk reflects unresolved constituent and legal exposure, not a finding that the funds hold high-risk instruments. Purchase Agreement section 3.5 states that tokens confer no proprietary interest in issuer assets and are not secured by them. The separate Redemption Agreement section 1.3 provides a USDC payment obligation subject to delivery, KYC and its terms; it does not establish reserve ownership or bankruptcy remoteness. Generic R25 credit and Curator Studio vaults are separate products and are not attributed to rcUSD backing.",
+    "compositionBasis": "Historical exact-product portfolio description, with current holdings and constituent weights unestablished",
+    "scope": "classification-only",
+    "knownUnknownExposure": "The entire current constituent allocation is unresolved, including fund and stablecoin identities, weights, obligors, balances, valuations, custody and reconciliation to rcUSD liabilities. No Treasury dominance, reserve-to-supply ratio, financial assurance, hard maturity maximum or executable liquidity is inferred. The current audit index concerns software engagements and supplies no identified rcUSD reserve assurance report.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Tokenized money market funds and stablecoins (allocation undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The exact-product launch identifies a mixed MMF and stablecoin book but no named constituents or current allocation. No tracked fund or stablecoin dependency can be assigned an evidenced weight."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "RiftWriter Company Limited (issuer; reserve custodians undisclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos rcUSD primary-source research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "rcUSD Purchase Agreement, October 15, 2025: section 3.5",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+      },
+      {
+        "label": "rcUSD Redemption Agreement, October 15, 2025: sections 1.3, 3.4 and 5.2",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+      },
+      {
+        "label": "Sui Foundation: exact-product backing description",
+        "url": "https://www.sui.io/blog/r25-rwa-assets-rcusd-rcusdp"
+      }
+    ],
+    "uncertainty": "RiftWriter Company Limited is identified as rcUSD's issuer, not as a verified reserve custodian. Purchase Agreement section 3.5 expressly denies token-holder rights in the issuer's assets and states that tokens are not secured by those assets. No holder trust, proprietary reserve claim or bankruptcy-remote structure is established, so no bankruptcy-remoteness credit is given. The separate conditional USDC redemption obligation does not establish collateral title. Reserve custodians, account segregation, provider shares, custody jurisdictions, rehypothecation terms and successor-custody arrangements remain unknown. BVI governing law in the agreements does not independently establish the issuer's incorporation jurisdiction.",
+    "knownUnknownExposurePct": 100
+  }
+}

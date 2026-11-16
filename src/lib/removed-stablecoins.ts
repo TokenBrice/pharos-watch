@@ -44,5 +44,4 @@ export const REMOVED_STABLECOINS: readonly RemovedStablecoin[] = [
   { id: "wstbt-matrixdock", name: "Wrapped Matrixdock STBT", symbol: "wSTBT", pegCurrency: "USD", removedAt: "2026-05-12", reason: "no-live-data" },
   { id: "shyusd-hylo", name: "Staked hyUSD", symbol: "shyUSD", pegCurrency: "USD", removedAt: "2026-05-11", reason: "no-live-data" },
   { id: "syusd-lucidly", name: "Stable Yield USD", symbol: "syUSD", pegCurrency: "USD", removedAt: "2026-05-11", reason: "no-live-data" },
-  { id: "usd-dinari", name: "Dinari USD+", symbol: "USD+", pegCurrency: "USD", removedAt: "2026-03-10", reason: "catalog-review" },
 ];

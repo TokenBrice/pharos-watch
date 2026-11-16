@@ -1,4 +1,5 @@
 {
+  "rcusd-r25": "/logos/rcusd-r25.svg",
   "susdat-saturn": "/logos/susdat-saturn.png",
   "arcusdc-galaxy": "/logos/arcusdc-galaxy.svg",
   "armusdcs-wintermute": "/logos/armusdcs-wintermute.svg",
@@ -464,6 +465,7 @@
   "brlm-mento": "/logos/brlm-mento.png",
   "kesm-mento": "/logos/kesm-mento.png",
   "copm-mento": "/logos/copm-mento.png",
+  "copm-minteo": "/logos/copm-minteo.svg",
   "cadm-mento": "/logos/cadm-mento.png",
   "audm-mento": "/logos/audm-mento.png",
   "ghsm-mento": "/logos/ghsm-mento.png",
@@ -502,5 +504,22 @@
   "eurgh-gatehub": "/logos/eurgh-gatehub.png",
   "rdusd-rd-technologies": "/logos/rdusd-rd-technologies.png",
   "gbpq-quantoz": "/logos/gbpq-quantoz.svg",
-  "usdrf-realfi": "/logos/usdrf-realfi.png"
+  "usdrf-realfi": "/logos/usdrf-realfi.png",
+  "usd-dinari": "/logos/usd-dinari.svg",
+  "sekau-allunity": "/logos/sekau-allunity.png",
+  "eurpa-gr8-pay": "/logos/eurpa-gr8-pay.svg",
+  "plny-eurodollar": "/logos/plny-eurodollar.svg",
+  "usdpa-gr8-pay": "/logos/usdpa-gr8-pay.svg",
+  "usdy-eurodollar": "/logos/usdy-eurodollar.svg",
+  "usdau-allunity": "/logos/usdau-allunity.png",
+  "eurdt-stabillon": "/logos/eurdt-stabillon.png",
+  "plndt-stabillon": "/logos/plndt-stabillon.png",
+  "verusd-verona": "/logos/verusd-verona.svg",
+  "usdplus-streamflow": "/logos/usdplus-streamflow.png",
+  "itry-brix": "/logos/itry-brix.png",
+  "squsd-squads": "/logos/squsd-squads.png",
+  "eurod-oddo-bhf": "/logos/eurod-oddo-bhf.png",
+  "eursm-stable-mint": "/logos/eursm-stable-mint.svg",
+  "eury-eurodollar": "/logos/eury-eurodollar.svg",
+  "heur-heuro": "/logos/heur-heuro.png"
 }

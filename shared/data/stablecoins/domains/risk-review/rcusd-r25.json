@@ -1,0 +1,66 @@
+{
+  "id": "rcusd-r25",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Sui GraphQL checkpoint-scoped state and deployed Move bytecode",
+        "url": "https://graphql.mainnet.sui.io/graphql"
+      },
+      {
+        "label": "rcUSD deployed Sui package",
+        "url": "https://suiscan.xyz/mainnet/object/0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd"
+      },
+      {
+        "label": "rcUSD shared authority registry",
+        "url": "https://suiscan.xyz/mainnet/object/0xeab70055566a974891aa2941e0e7886f8b2566d8e3f5c85e93f009f2f1eeb28c"
+      },
+      {
+        "label": "rcUSD package UpgradeCap",
+        "url": "https://suiscan.xyz/mainnet/object/0xb2d03518acd079d794f5909f59e982878b4f7b9480ab2b099be97a036580be26"
+      },
+      {
+        "label": "Sui regulated coin and global-pause semantics",
+        "url": "https://docs.sui.io/onchain-finance/fungible-tokens/coin"
+      }
+    ],
+    "evidence": "Sui checkpoint 345646368, digest Byu8r4q2N4HWWbjK738MjiAX26SSkN1VpQ1ZTKV3JMP2, timestamp 2026-11-15T22:46:34.167Z. The sole verified deployment is native Sui rcUSD, accounting for all observed issuer supply (TreasuryCap 18297963222105 raw units at six decimals, 18,297,963.222105 rcUSD); DefiLlama 464 reports only Sui. Immutable metadata names rcUSD and six decimals. DenyCapV2 0x6ff718200d25253861ce29ff4077e63740e0943bd878a47dfcba764fa6efa5c9 has allow_global_pause=true and remains stored as a dynamic object inside ManagedTreasury 0xf6495c5c7881cc89bff7a32250edb79eaeded52d23bfecbe24746c9911fd2a5c. In exact currently deployed package version 1, treasuryrc::pause/unpause checks ControllerCap against the sender, then enables/disables the Sui global coin pause. The fully enumerated live Auth role bag assigns ControllerCap to 0x846e0154f6072cd059e4673c6b54249294f3c75d59fd07d2f6ac8de2d01c83ef, which is matched to a simple secp256k1 signature in its accounting transaction. This proves a reachable global transfer pause on the material deployment. The stored DenyCap alone does not establish a reachable address-targeted blacklist: its mutable borrow is public(friend), no reviewed public module entrypoint calls deny_list_v2_add/remove or returns this cap, and the current package has never upgraded. The live policy-0 UpgradeCap is owned by 0xea1f63624c47fb9691c768a79e33a0de9ef76b21554308e6dc968d845855be2d and permits future holder-targeting logic. Under FreezeWatch, current global pause plus upgrade exposure establishes Possible. No present pause-state or actual blacklist-exercise claim is made. Direct-control precedence resolves the verdict; unknown reserve weights do not establish a measured upstream percentage.",
+    "reviewer": "Pharos rcUSD addition review",
+    "reviewedAt": "2026-11-15"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "RiftWriter Company Limited publishes the USD/USDC exchange rate used to calculate USDC payments for rcUSD purchases and redemptions. The exact-token agreements fix the dollar face value at $1 while retaining this issuer-published conversion rate. This is a top-level issuer quote authority; no independent feed, rate-setting algorithm, bound or failover is established. The Sui OracleCap accounting-report mint path is separately reviewed in Mint Authority and is not used as evidence of a coin-price feed.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-15",
+      "reviewer": "Pharos rcUSD addition review",
+      "rationale": "Purchase Agreement section 1.2 requires payment in USDC at the USD/USDC exchange rate published by IssuerCo; Redemption Agreement section 1.3 uses the same issuer-published rate for USDC payouts. These exact rcUSD terms establish applicable mint/redemption conversion-rate authority without borrower liquidation branches. The separate rcUSDp staking receipt and its accounting reports do not establish this authority.",
+      "sources": [
+        {
+          "label": "rcUSD purchase agreement, October 15 2025, sections 1.1 and 1.2",
+          "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+        },
+        {
+          "label": "rcUSD redemption agreement, October 15 2025, sections 1.1 and 1.3",
+          "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos rcUSD addition review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "rcUSD purchase agreement, October 15 2025, sections 1.1 and 1.2",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+      },
+      {
+        "label": "rcUSD redemption agreement, October 15 2025, sections 1.1 and 1.3",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+      }
+    ]
+  }
+}

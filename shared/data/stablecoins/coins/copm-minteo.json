@@ -1,0 +1,88 @@
+{
+  "id": "copm-minteo",
+  "llamaId": "460",
+  "detailProvider": "defillama",
+  "name": "COPM by Minteo",
+  "symbol": "COPM",
+  "oneLiner": "COPM is Minteo's Colombian peso stablecoin, backed by peso bank deposits and redeemable 1:1 by businesses that complete its compliance checks.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "COP",
+    "governance": "centralized"
+  },
+  "collateral": "Colombian-peso bank deposits in accounts held in Minteo's name; the public reserve report does not name the banks or establish legal segregation.",
+  "pegMechanism": "Businesses onboard through Minteo's manual AML/KYC review, then tokenize or redeem COPM 1:1 against Colombian pesos. Tax withholding and bank or network fees may apply. Public transparency terms do not establish a maximum fiat settlement time.",
+  "mechanismArchetype": "fiat-cash",
+  "proofOfReserves": {
+    "type": "attestation",
+    "url": "https://transparency.minteo.com/transparency",
+    "provider": "BDO AUDIT S.A.S. BIC (ISAE 3000 limited assurance)",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Colombia",
+    "latestReport": {
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-10-19",
+      "publishedAtBasis": "signed-date-standin",
+      "assuranceMethod": "review",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Pharos COPM addition review 2026-11-15: limited assurance over bank balances and Polygon, Celo and Solana token counts; October 19 is the BDO signature date",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BDO COPM limited-assurance report as of August 31 2026, signed October 19",
+          "url": "https://transparency.minteo.com/assets/files/2026-08-31-BDO-Reservas-d51e41439d405b16579dac844c54a041.pdf"
+        }
+      ]
+    }
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://minteo.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/minteocom"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://transparency.minteo.com/transparency"
+    },
+    {
+      "label": "Docs",
+      "url": "https://transparency.minteo.com/"
+    },
+    {
+      "label": "Contract directory",
+      "url": "https://transparency.minteo.com/contract-directory"
+    },
+    {
+      "label": "Tokenization and redemption",
+      "url": "https://transparency.minteo.com/tokenizationAndRedemtion"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Colombia"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x12050c705152931cfee3dd56c52fb09dea816c23",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0xc92e8fc2947e32f2b574cca9f2f12097a71d5606",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "Copm5KwCLXDTWYgXJYmo6ixmMZrxd1wabkujkcuaK47C",
+      "decimals": 2
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown"
+}

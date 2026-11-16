@@ -1,0 +1,88 @@
+{
+  "id": "rcusd-r25",
+  "name": "R25 rcUSD",
+  "symbol": "rcUSD",
+  "oneLiner": "rcUSD is R25's fixed-dollar Sui token, supported by money-market funds and stablecoins, with USDC redemption for eligible verified holders.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos rcUSD addition review",
+    "rationale": "The exact Sui token has a fixed $1 face value and a separate yield-bearing staking receipt, rcUSDp. Primary sources describe tokenized money-market funds and stablecoins without current weights, fund identities or a Treasury-dominant mandate. This does not establish the tbill archetype, a NAV token or a managed credit-fund share. The listing remains in stable-value-investment under the unresolved-mechanism hold pending an exact-product reserve and holder-claim review.",
+    "sources": [
+      {
+        "label": "Sui Foundation rcUSD and rcUSDp launch, November 25 2025",
+        "url": "https://www.sui.io/blog/r25-rwa-assets-rcusd-rcusdp"
+      },
+      {
+        "label": "rcUSD purchase agreement, October 15 2025",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+      },
+      {
+        "label": "rcUSD redemption agreement, October 15 2025",
+        "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+      }
+    ]
+  },
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "R25 describes a portfolio of tokenized money-market funds and stablecoins. Current fund identities, allocation weights, custodians and an independently reconciled reserve report are not established. The purchase agreement identifies RiftWriter Company Limited as issuer and states that rcUSD is not secured by the issuer's assets.",
+  "pegMechanism": "The purchase agreement prices rcUSD at $1 per token, payable in USDC. Eligible holders may deliver rcUSD to RiftWriter Company Limited for a face-value payment in USDC at the issuer-published USD/USDC exchange rate after satisfactory KYC and token delivery. Transfer and jurisdiction restrictions apply. Redemption capacity, fees and a completed-payout deadline are undisclosed; the six-hour delivery term concerns purchases, not redemption. Staking produces the separate yield-bearing rcUSDp receipt.",
+  "llamaId": "464",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.r25.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/R25Official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.r25.xyz/docs"
+    },
+    {
+      "label": "App",
+      "url": "https://app.r25.xyz/exchange/"
+    },
+    {
+      "label": "Purchase agreement",
+      "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf"
+    },
+    {
+      "label": "Redemption Docs",
+      "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf"
+    },
+    {
+      "label": "Staking agreement",
+      "url": "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/4.%20rcUSD%20Staking%20Agreement.pdf"
+    },
+    {
+      "label": "Sui launch announcement",
+      "url": "https://www.sui.io/blog/r25-rwa-assets-rcusd-rcusdp"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "sui",
+      "address": "0x4dea4916aa61f522aca69c4e7265b8e3bdd65d3947f4fb9aaa6d87e0dfac35fd::rcusd::RCUSD",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Reserve mix and redemption terms remain incomplete",
+      "message": "The published rcUSD agreements describe an unsecured issuer obligation and permissioned USDC redemption. Current reserve weights, custody, executable capacity, fees and completed-payout timing are unverified. Pharos retains an unresolved mechanism classification. rcUSDp is a separate yield-bearing staking receipt."
+    }
+  ],
+  "launchDate": "2025-11-25"
+}

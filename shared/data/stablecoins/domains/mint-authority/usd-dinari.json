@@ -1,0 +1,492 @@
+{
+  "id": "usd-dinari",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "headline": "Issuer minting is permissioned, while the deployed control inventory and upgrade execution paths remain incompletely verified.",
+    "summary": "The issuer lists a Minter on Ethereum, Arbitrum, Base and Plume; every token deployment admits that Minter with unlimited current and maximum mint allowance. All four token proxies report version 5.0.0, have separately pinned implementation bytecode and share an access-control dispatcher. Pinned reads identify a live EOA with administrator and upgrader roles. The public repository describes an older token version and does not verify the deployed supply, rate, role or diamond-facet inventory. This is a partial control review, with the known issuer and upgrade powers preserved.",
+    "upgradeability": {
+      "model": "uups",
+      "deploymentRefs": [
+        "ethereum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "arbitrum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "base:0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+        "plume:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+      ],
+      "proxyAddresses": [
+        "0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+      ],
+      "implementationAddresses": [
+        "0xd5b7ca2a0b6c1f63b658b676e914f57f205cb520",
+        "0x05654444b54f239599d38488385ec3fd12f910ee",
+        "0xdd41fe6c56ea2b68186133795a482d7d18a506ee",
+        "0x5a4bf17bd3c14ec8e2b7c728a48864d1ebd391b7"
+      ],
+      "adminAddresses": [
+        "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+      ],
+      "canChangeMintLogic": true,
+      "sources": [
+        {
+          "label": "Dinari current USD+ deployments and issuer minters",
+          "url": "https://docs.dinari.com/docs/usdplus-evm"
+        },
+        {
+          "label": "Dinari USD+ holder and redemption guide",
+          "url": "https://docs.dinari.com/docs/what-is-usd"
+        },
+        {
+          "label": "Ethereum pinned JSON-RPC evidence",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum pinned JSON-RPC evidence",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Base pinned JSON-RPC evidence",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Plume pinned JSON-RPC evidence",
+          "url": "https://rpc.plume.org"
+        }
+      ],
+      "controlRef": "Ethereum issuer token upgrader"
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x500c1b2f2ce1cb64c53cc7759d8110eff5de93ce",
+        "deploymentRefs": [
+          "ethereum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Ethereum issuer Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423677,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Ethereum pinned JSON-RPC evidence",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum current token proxy",
+            "url": "https://eth.blockscout.com/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          }
+        ],
+        "evidence": "At block 26423677 / 0x0be0d3d678f2330427384c14b4bbfd8e180c91b9cc0097857d81e15ecdf3d158 (2026-11-15T23:24:35.000Z), mintingMaxLimitOf and mintingCurrentLimitOf for the issuer-listed Minter both returned uint256 maximum. This positively establishes an enabled issuer mint route on this deployment, not an immutable issuance ceiling or a complete census of other minters. The deployed publicVersion is 5.0.0; public repository version 1.0.0 does not establish current Minter execution, controller or payment parity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "ethereum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Ethereum issuer role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423677,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum pinned JSON-RPC evidence",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum shared access-control dispatcher",
+            "url": "https://eth.blockscout.com/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "At block 26423677 / 0x0be0d3d678f2330427384c14b4bbfd8e180c91b9cc0097857d81e15ecdf3d158 (2026-11-15T23:24:35.000Z), the token accessControl getter names 0xf60f689ec22fc2d485b3c734efe58538ccc28766. Its userRoles getter returns 17 for this address, hasRole(address,0) returns true, and canCall(address,setUserRole(address,uint8,bool)) returns true. eth_getCode returns empty bytecode for this current administrator. These are affirmative current role-administration and EOA observations; the current complete supply-writer, permission, facet and controller census remains unverified."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "ethereum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Ethereum issuer token upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 26423677,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Ethereum pinned JSON-RPC evidence",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum current token proxy",
+            "url": "https://eth.blockscout.com/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          },
+          {
+            "label": "Ethereum shared access-control dispatcher",
+            "url": "https://eth.blockscout.com/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "The pinned token implementation slot and runtime are retained at block 26423677 / 0x0be0d3d678f2330427384c14b4bbfd8e180c91b9cc0097857d81e15ecdf3d158 (2026-11-15T23:24:35.000Z). The current UUPS upgrade path calls the shared access controller with hasRole(caller,4); the observed administrator bitmap 17 includes role four and its account has no bytecode. The authority is retained even though a complete deployed-source, alternative-upgrader and execution-delay inventory has not been verified."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x500c1b2f2ce1cb64c53cc7759d8110eff5de93ce",
+        "deploymentRefs": [
+          "arbitrum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Arbitrum issuer Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-15",
+        "observedBlock": 524589895,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Arbitrum pinned JSON-RPC evidence",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Arbitrum current token proxy",
+            "url": "https://arbiscan.io/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          }
+        ],
+        "evidence": "At block 524589895 / 0xccdc9345faea1abfa8157829c2a260b40be6d62baa70192fdc1a72fc13f46b83 (2026-11-15T23:24:50.000Z), mintingMaxLimitOf and mintingCurrentLimitOf for the issuer-listed Minter both returned uint256 maximum. This positively establishes an enabled issuer mint route on this deployment, not an immutable issuance ceiling or a complete census of other minters. The deployed publicVersion is 5.0.0; public repository version 1.0.0 does not establish current Minter execution, controller or payment parity."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "arbitrum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Arbitrum issuer role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 524589895,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Arbitrum pinned JSON-RPC evidence",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Arbitrum shared access-control dispatcher",
+            "url": "https://arbiscan.io/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "At block 524589895 / 0xccdc9345faea1abfa8157829c2a260b40be6d62baa70192fdc1a72fc13f46b83 (2026-11-15T23:24:50.000Z), the token accessControl getter names 0xf60f689ec22fc2d485b3c734efe58538ccc28766. Its userRoles getter returns 17 for this address, hasRole(address,0) returns true, and canCall(address,setUserRole(address,uint8,bool)) returns true. eth_getCode returns empty bytecode for this current administrator. These are affirmative current role-administration and EOA observations; the current complete supply-writer, permission, facet and controller census remains unverified."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "arbitrum:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Arbitrum issuer token upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 524589895,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Arbitrum pinned JSON-RPC evidence",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Arbitrum current token proxy",
+            "url": "https://arbiscan.io/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          },
+          {
+            "label": "Arbitrum shared access-control dispatcher",
+            "url": "https://arbiscan.io/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "The pinned token implementation slot and runtime are retained at block 524589895 / 0xccdc9345faea1abfa8157829c2a260b40be6d62baa70192fdc1a72fc13f46b83 (2026-11-15T23:24:50.000Z). The current UUPS upgrade path calls the shared access controller with hasRole(caller,4); the observed administrator bitmap 17 includes role four and its account has no bytecode. The authority is retained even though a complete deployed-source, alternative-upgrader and execution-delay inventory has not been verified."
+      },
+      {
+        "chain": "base",
+        "address": "0x500c1b2f2ce1cb64c53cc7759d8110eff5de93ce",
+        "deploymentRefs": [
+          "base:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Base issuer Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-15",
+        "observedBlock": 57973583,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Base pinned JSON-RPC evidence",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Base current token proxy",
+            "url": "https://basescan.org/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          }
+        ],
+        "evidence": "At block 57973583 / 0x6c92a350eb41689e121a5e0da6d5f6fc78b33e5b93748fb307cb9cd806feb364 (2026-11-15T23:24:52.000Z), mintingMaxLimitOf and mintingCurrentLimitOf for the issuer-listed Minter both returned uint256 maximum. This positively establishes an enabled issuer mint route on this deployment, not an immutable issuance ceiling or a complete census of other minters. The deployed publicVersion is 5.0.0; public repository version 1.0.0 does not establish current Minter execution, controller or payment parity."
+      },
+      {
+        "chain": "base",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "base:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Base issuer role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 57973583,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Base pinned JSON-RPC evidence",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Base shared access-control dispatcher",
+            "url": "https://basescan.org/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "At block 57973583 / 0x6c92a350eb41689e121a5e0da6d5f6fc78b33e5b93748fb307cb9cd806feb364 (2026-11-15T23:24:52.000Z), the token accessControl getter names 0xf60f689ec22fc2d485b3c734efe58538ccc28766. Its userRoles getter returns 17 for this address, hasRole(address,0) returns true, and canCall(address,setUserRole(address,uint8,bool)) returns true. eth_getCode returns empty bytecode for this current administrator. These are affirmative current role-administration and EOA observations; the current complete supply-writer, permission, facet and controller census remains unverified."
+      },
+      {
+        "chain": "base",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "base:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Base issuer token upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 57973583,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Base pinned JSON-RPC evidence",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Base current token proxy",
+            "url": "https://basescan.org/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          },
+          {
+            "label": "Base shared access-control dispatcher",
+            "url": "https://basescan.org/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "The pinned token implementation slot and runtime are retained at block 57973583 / 0x6c92a350eb41689e121a5e0da6d5f6fc78b33e5b93748fb307cb9cd806feb364 (2026-11-15T23:24:52.000Z). The current UUPS upgrade path calls the shared access controller with hasRole(caller,4); the observed administrator bitmap 17 includes role four and its account has no bytecode. The authority is retained even though a complete deployed-source, alternative-upgrader and execution-delay inventory has not been verified."
+      },
+      {
+        "chain": "plume",
+        "address": "0x500c1b2f2ce1cb64c53cc7759d8110eff5de93ce",
+        "deploymentRefs": [
+          "plume:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Plume issuer Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-11-15",
+        "observedBlock": 106058067,
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Plume pinned JSON-RPC evidence",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Plume current token proxy",
+            "url": "https://explorer.plume.org/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          }
+        ],
+        "evidence": "At block 106058067 / 0x86843fbce5b9cf7428996912aa7dfb09fd17edc8553185d687226fbfb48ee37b (2026-11-15T23:25:31.000Z), mintingMaxLimitOf and mintingCurrentLimitOf for the issuer-listed Minter both returned uint256 maximum. This positively establishes an enabled issuer mint route on this deployment, not an immutable issuance ceiling or a complete census of other minters. The deployed publicVersion is 5.0.0; public repository version 1.0.0 does not establish current Minter execution, controller or payment parity."
+      },
+      {
+        "chain": "plume",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "plume:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Plume issuer role administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 106058067,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Plume pinned JSON-RPC evidence",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Plume shared access-control dispatcher",
+            "url": "https://explorer.plume.org/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "At block 106058067 / 0x86843fbce5b9cf7428996912aa7dfb09fd17edc8553185d687226fbfb48ee37b (2026-11-15T23:25:31.000Z), the token accessControl getter names 0xf60f689ec22fc2d485b3c734efe58538ccc28766. Its userRoles getter returns 17 for this address, hasRole(address,0) returns true, and canCall(address,setUserRole(address,uint8,bool)) returns true. eth_getCode returns empty bytecode for this current administrator. These are affirmative current role-administration and EOA observations; the current complete supply-writer, permission, facet and controller census remains unverified."
+      },
+      {
+        "chain": "plume",
+        "address": "0x06b09f6008780771980bfe7d4bb821f5f1aa60a3",
+        "deploymentRefs": [
+          "plume:0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+        ],
+        "label": "Plume issuer token upgrader",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-15",
+        "observedBlock": 106058067,
+        "failureDomainKeys": [
+          "issuer:dinari",
+          "eoa:0x06b09f6008780771980bfe7d4bb821f5f1aa60a3"
+        ],
+        "sources": [
+          {
+            "label": "Dinari current USD+ deployments and issuer minters",
+            "url": "https://docs.dinari.com/docs/usdplus-evm"
+          },
+          {
+            "label": "Plume pinned JSON-RPC evidence",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Plume current token proxy",
+            "url": "https://explorer.plume.org/address/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+          },
+          {
+            "label": "Plume shared access-control dispatcher",
+            "url": "https://explorer.plume.org/address/0xf60f689ec22fc2d485b3c734efe58538ccc28766"
+          }
+        ],
+        "evidence": "The pinned token implementation slot and runtime are retained at block 106058067 / 0x86843fbce5b9cf7428996912aa7dfb09fd17edc8553185d687226fbfb48ee37b (2026-11-15T23:25:31.000Z). The current UUPS upgrade path calls the shared access controller with hasRole(caller,4); the observed administrator bitmap 17 includes role four and its account has no bytecode. The authority is retained even though a complete deployed-source, alternative-upgrader and execution-delay inventory has not been verified."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Dinari current USD+ deployments and issuer minters",
+          "url": "https://docs.dinari.com/docs/usdplus-evm"
+        },
+        {
+          "label": "Dinari USD+ holder and redemption guide",
+          "url": "https://docs.dinari.com/docs/what-is-usd"
+        },
+        {
+          "label": "Ethereum pinned JSON-RPC evidence",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Arbitrum pinned JSON-RPC evidence",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Base pinned JSON-RPC evidence",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Plume pinned JSON-RPC evidence",
+          "url": "https://rpc.plume.org"
+        },
+        {
+          "label": "Current public token source, older version and not deployed parity",
+          "url": "https://github.com/dinaricrypto/usdplus-contracts/blob/ec33751ad8e3bf7a8ac4c8ab70c42da2639cfc77/src/UsdPlus.sol"
+        },
+        {
+          "label": "Current Ethereum token implementation, source unavailable at review",
+          "url": "https://eth.blockscout.com/address/0xd5b7ca2a0b6c1f63b658b676e914f57f205cb520?tab=contract"
+        }
+      ],
+      "evidence": "Fresh fixed-block RPC reads verify every token identity, decimals, supply, implementation, shared access controller, active issuer allowance and named administrator. Ethereum selector-to-facet storage and the facets() loupe positively identify the current access dispatcher and role surface. Explorer and Sourcify reads did not retrieve current implementation source. Reverting old-version ABI calls are retained as failed reads, not absence of a controller or Safe. The observed EOA root is a known adverse control fact; it does not establish a complete execution or issuer assurance review.",
+      "reviewer": "Pharos Dinari re-admission research",
+      "reviewedAt": "2026-11-15",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "What is the complete deployed version-five inventory of native mint, supply-index/rate, issuer-limit, role-administration, upgrade and diamond-facet powers, their current controllers and execution bypasses?",
+        "Does current independent reserve-to-liability reconciliation cover every native USD+ claim, and what supervision applies to the exact issuing activity?"
+      ]
+    }
+  }
+}

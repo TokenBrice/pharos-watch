@@ -1,0 +1,95 @@
+{
+  "id": "usd-dinari",
+  "reserves": [
+    {
+      "name": "Dinari Treasury, cash and accepted-stablecoin reserve basket (weights undisclosed)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Dinari, Inc. and undisclosed Treasury, bank and tokenized-security counterparties",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "liquidity",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Dinari re-admission research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Dinari USD+ product: Treasury instruments, cash and equivalents; unnamed third-party custodian",
+        "url": "https://dinari.com/usdplus"
+      },
+      {
+        "label": "Dinari USD+ guide: Treasury and dollar backing, daily rebasing",
+        "url": "https://docs.dinari.com/docs/what-is-usd"
+      },
+      {
+        "label": "Dinari USD+ terms: reserve categories, no commingling and reserve-access risks",
+        "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+      },
+      {
+        "label": "Dinari Ethereum treasury token roster",
+        "url": "https://app-api.usd.dinari.com/api/v1/treasury/chain/1/tokens"
+      },
+      {
+        "label": "Dinari Arbitrum treasury token roster",
+        "url": "https://app-api.usd.dinari.com/api/v1/treasury/chain/42161/tokens"
+      },
+      {
+        "label": "Dinari Base treasury token roster",
+        "url": "https://app-api.usd.dinari.com/api/v1/treasury/chain/8453/tokens"
+      },
+      {
+        "label": "Dinari Plume treasury token roster",
+        "url": "https://app-api.usd.dinari.com/api/v1/treasury/chain/98866/tokens"
+      }
+    ],
+    "rationale": "Issuer product and guide describe Treasury instruments, cash and equivalents. The live treasury rosters retrieved at 23:25-23:26 UTC on 2026-11-15 each identify a tokenized USFR instrument on Ethereum, Arbitrum, Base and Plume, but disclose no reserve balances, valuation or allocation weights. One 100% basket denotes the complete documented backing envelope, not a measured Treasury allocation. The medium legacy risk tier reflects the additional tokenized-security and undisclosed custody layers; it does not classify the basket as direct sovereign holdings.",
+    "compositionBasis": "Issuer-documented reserve categories and eligible treasury-token rosters; constituent weights and current holdings not established",
+    "scope": "classification-only",
+    "knownUnknownExposure": "All constituent weights, current treasury balances, reserve valuations and token-to-book liability reconciliation remain unestablished. Accepted stablecoins are not assigned guessed weights or dependency edges. No dated independent reserve-assurance report or USD+-specific named attestor was retrieved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Dinari Treasury, cash and accepted-stablecoin reserve basket (weights undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies categories and tokenized USFR reserve candidates without a current constituent allocation. Stablecoin acceptance and eligible-token rosters establish no weighted collateral links."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed third-party USD+ reserve custodian",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-15",
+    "reviewer": "Pharos Dinari re-admission research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Dinari USD+ product: third-party custody claim",
+        "url": "https://dinari.com/usdplus"
+      },
+      {
+        "label": "Dinari USD+ terms: reserve custody and reserve-loss risk",
+        "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+      }
+    ],
+    "uncertainty": "The product claims third-party custody for the book but names no USD+-specific custodian. Terms promise no operational commingling, while reserve-risk language describes bankruptcy protection as an objective and allows reserve loss or inaccessibility on issuer insolvency. Account-level segregation, completed legal remoteness and rehypothecation terms are unverified. Dinari Securities and Alpaca disclosures concern the separate U.S. brokerage product and do not establish USD+ custody.",
+    "knownUnknownExposurePct": 100
+  }
+}

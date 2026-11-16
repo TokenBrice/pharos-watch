@@ -4,7 +4,7 @@ import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { programAddress, publicKeyBytes } from "../../dex-liquidity/solana/program-address";
 import { decodeM0SolanaGlobal, fetchM0SolanaWrapperReserves } from "../m0-solana-wrapper";
-import { readSolanaMint, scaledSolanaRawAmount, SOLANA_TOKEN_2022_PROGRAM } from "../../../lib/solana-observation";
+import { readSolanaMint, scaledSolanaRawAmount, SOLANA_TOKEN_PROGRAM, SOLANA_TOKEN_2022_PROGRAM } from "../../../lib/solana-observation";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 import currentCapture from "./fixtures/m0-solana-local-2026-10-21.json";
@@ -95,13 +95,27 @@ describe("M0 Solana local wrapper", () => {
     expect(computeLiveReserveConfigFingerprint(f.config)).not.toBe(computeLiveReserveConfigFingerprint({ ...f.config, params: { ...f.config.params, globalAccount: M } }));
   });
 
-  it.each(["missing-global", "global-owner", "wrong-mint", "yield-variant", "mint-authority", "vault-owner", "vault-mint", "program-loader", "program-executable", "program-data", "zero-supply", "wrapper-scale"])("withholds the whole local observation for %s", async (failure) => {
+  it("accepts an SPL wrapper with stale unused Borsh allocation and retains Token-2022 M custody", async () => {
+    const f = await fixture(PROFILES[1]);
+    f.accounts[f.profile.mint].owner = SOLANA_TOKEN_PROGRAM;
+    f.accounts[f.global].bytes.fill(7, 145);
+    const result = await fetchM0SolanaWrapperReserves(f.coin, f.config, new AbortController().signal, { nowSec: NOW });
+    expect(result.metadata?.collateralizationRatio).toBe(1);
+    f.accounts[M].owner = SOLANA_TOKEN_PROGRAM;
+    await expect(fetchM0SolanaWrapperReserves(f.coin, f.config, new AbortController().signal, { nowSec: NOW })).rejects.toThrow("token-program owner mismatch");
+    f.accounts[M].owner = SOLANA_TOKEN_2022_PROGRAM;
+    f.accounts[f.global].bytes = new Uint8Array([...f.accounts[f.global].bytes, 0]);
+    await expect(fetchM0SolanaWrapperReserves(f.coin, f.config, new AbortController().signal, { nowSec: NOW })).rejects.toThrow("trailing layout mismatch");
+  });
+
+  it.each(["missing-global", "global-owner", "wrong-mint", "yield-variant", "mint-authority", "mint-owner", "vault-owner", "vault-mint", "program-loader", "program-executable", "program-data", "zero-supply", "wrapper-scale"])("withholds the whole local observation for %s", async (failure) => {
     const f = await fixture();
     if (failure === "missing-global") delete f.accounts[f.global];
     if (failure === "global-owner") f.accounts[f.global].owner = M;
     if (failure === "wrong-mint") f.accounts[f.global].bytes.set(publicKeyBytes(M), 41);
     if (failure === "yield-variant") f.accounts[f.global].bytes[140] = 1;
     if (failure === "mint-authority") f.accounts[f.profile.mint].bytes.set(publicKeyBytes(M), 4);
+    if (failure === "mint-owner") f.accounts[f.profile.mint].owner = M;
     if (failure === "vault-owner") f.accounts[f.vault].bytes.set(publicKeyBytes(M), 32);
     if (failure === "vault-mint") f.accounts[f.vault].bytes.set(publicKeyBytes(f.profile.mint));
     if (failure === "program-loader") f.accounts[f.profile.program].owner = M;

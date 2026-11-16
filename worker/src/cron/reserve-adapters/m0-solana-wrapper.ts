@@ -5,7 +5,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { programAddress, publicKeyBytes } from "../dex-liquidity/solana/program-address";
 import { buildCoverageShortfallWarnings, notApplicableFreshnessMetadata, reserveInfoWarning } from "./helpers";
 import { fetchSolanaAccountsWithPrograms } from "./solana";
-import { readSolanaMint, scaledSolanaRawAmount, solanaPublicKey, SOLANA_TOKEN_2022_PROGRAM } from "../../lib/solana-observation";
+import { readSolanaMint, scaledSolanaRawAmount, solanaPublicKey, SOLANA_TOKEN_PROGRAM, SOLANA_TOKEN_2022_PROGRAM } from "../../lib/solana-observation";
 import type { AdapterContext, AdapterResult } from "./types";
 
 const LOADER = "BPFLoaderUpgradeab1e11111111111111111111111";
@@ -29,9 +29,8 @@ export function decodeM0SolanaGlobal(data: Uint8Array) {
   const authorities = view.getUint32(cursor, true); cursor += 4;
   if (authorities > 1024 || cursor + authorities * 32 > data.length) throw new Error("M0 Solana wrap-authority census incomplete");
   cursor += authorities * 32;
-  // ExtGlobalV2 allocates space for Some even while pending_admin is None.
+  // Borsh may retain old bytes in the space allocated for a cleared pending_admin.
   if (data.length - cursor > (pending === 0 ? 32 : 0)) throw new Error("M0 Solana global trailing layout mismatch");
-  for (; cursor < data.length; cursor++) if (data[cursor] !== 0) throw new Error("M0 Solana global nonempty padding");
   return { wrapperMint, underlyingMint, authorities };
 }
 
@@ -63,7 +62,7 @@ export async function fetchM0SolanaWrapperReserves(coin: ReserveAdapterCoin, con
   if (global.wrapperMint !== p.wrapperMint || global.underlyingMint !== p.underlyingMint) throw new Error("M0 Solana global mint binding mismatch");
   const wrapperAccount = census.accounts.get(p.wrapperMint);
   const underlyingAccount = census.accounts.get(p.underlyingMint);
-  if (wrapperAccount?.owner !== SOLANA_TOKEN_2022_PROGRAM || underlyingAccount?.owner !== SOLANA_TOKEN_2022_PROGRAM) throw new Error("M0 Solana Token-2022 mint owner mismatch");
+  if ((wrapperAccount?.owner !== SOLANA_TOKEN_PROGRAM && wrapperAccount?.owner !== SOLANA_TOKEN_2022_PROGRAM) || underlyingAccount?.owner !== SOLANA_TOKEN_2022_PROGRAM) throw new Error("M0 Solana mint token-program owner mismatch");
   const wrapper = readSolanaMint(wrapperAccount, observedAt);
   const underlying = readSolanaMint(underlyingAccount, observedAt);
   if (wrapper.mintAuthority !== mintAuthority || wrapper.decimals !== 6 || underlying.decimals !== 6 || wrapper.multiplier !== 1 || !underlying.scaledUi) throw new Error("M0 Solana mint authority/unit accounting mismatch");
