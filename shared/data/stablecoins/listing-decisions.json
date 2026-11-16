@@ -506,6 +506,7 @@
     "rdusd-rd-technologies": "core-stablecoin",
     "chfs-safirum": "core-stablecoin",
     "gbpq-quantoz": "core-stablecoin",
+    "usd-dinari": "cash-equivalent",
     "sekau-allunity": "core-stablecoin",
     "ronq-quantoz": "core-stablecoin",
     "eurdt-stabillon": "core-stablecoin",

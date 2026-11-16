@@ -419,6 +419,12 @@ describe("removed-stablecoin redirect guard", () => {
       expected: [],
     },
     {
+      name: "permits Dinari re-admission after its retirement rules and ledger row are removed",
+      source: redirects(),
+      options: { ...options, trackedIds: new Set(["usd-dinari"]) },
+      expected: [],
+    },
+    {
       name: "flags a missing forward redirect",
       source: `/stablecoin/old-coin/* /cemetery/#old-coin 301`,
       options,

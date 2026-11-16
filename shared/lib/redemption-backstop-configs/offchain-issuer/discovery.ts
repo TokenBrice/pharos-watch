@@ -34,6 +34,35 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
       "The purchase agreement states that tokens are not secured by issuer assets. Current reserves, staked rcUSDp TVL and total circulating rcUSD do not establish executable USDC capacity; the route stays unquantified and unrated without current execution evidence.",
     ],
   },
+  "usd-dinari": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-11-15",
+    holderEligibility: "verified-customer",
+    settlementModel: "days",
+    outputAssets: ["usdc-circle"],
+    costModel: undisclosedReviewedFee("Dinari passes through blockchain and banking charges; a numeric all-in redemption fee ceiling is not published."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The current USD+ guide documents redemption for USDC at one dollar per token in zero to three days depending on size. Terms require an approved Dinari account, reserve transaction-limit discretion and describe commercially reasonable T+2 business-day service for large flows, with compliance and financial-partner delays or suspension. No immediate executable capacity, unconditional completed-payout maximum or all-in cost bound is established.",
+      reviewedAt: "2026-11-15",
+      docs: [
+        sourceRef("Dinari USD+ guide, direct USDC redemption", "https://docs.dinari.com/docs/what-is-usd", ["route", "access", "settlement"]),
+        sourceRef("Dinari USD+ terms, eligibility, transaction limits, fees and processing", "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens", ["route", "access", "capacity", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("Dinari USD+ guide, direct USDC redemption", "https://docs.dinari.com/docs/what-is-usd", ["route", "access", "settlement"]),
+      sourceRef("Dinari USD+ terms, eligibility, transaction limits, fees and processing", "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens", ["route", "access", "capacity", "fees", "settlement"]),
+    ],
+    notes: [
+      "Observed 2026-11-15T23:24:55Z for the re-admission review. Secondary holders must open and obtain approval for a Dinari account before direct redemption; the terms exclude U.S. persons, EU countries and other restricted jurisdictions.",
+      "The guide's zero-to-three-day indication and the terms' commercially reasonable T+2 business-day service are conditional processing descriptions. No unconditional payout deadline, fixed redemption minimum or same-notional funded capacity is inferred.",
+      "Terms describe management fees netted from quoted yield and pass through transaction and banking charges. Neither a zero redemption fee nor a complete cost ceiling is established.",
+      "The January 2026 USD+ technical redemption pause is marked Complete by the issuer's status page, with maintenance completed January 30. It is historical context, not evidence of a current suspension: https://statuspage.incident.io/dinari/incidents/ncpwtbwq.",
+    ],
+  },
   "mantrausd-mantra": {
     ...issuerBase,
     capacityModel: { kind: "unquantified" },

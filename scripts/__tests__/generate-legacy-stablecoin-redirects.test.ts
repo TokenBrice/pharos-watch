@@ -4,12 +4,14 @@ import { buildLegacyStablecoinRedirects } from "../maintenance/generate-legacy-s
 describe("legacy stablecoin redirect generation", () => {
   it("preserves historical identities after provider removal and imports retirement policy", () => {
     expect(buildLegacyStablecoinRedirects(
-      [{ id: "usdc-circle" }, { id: "usdt-tether", llamaId: "1" }],
-      { "2": "/stablecoin/usdc-circle/", "cg-usdc": "/stablecoin/usdc-circle/" },
+      [{ id: "usdc-circle" }, { id: "usdt-tether", llamaId: "1" }, { id: "usd-dinari", llamaId: "465" }],
+      { "2": "/stablecoin/usdc-circle/", "cg-usdc": "/stablecoin/usdc-circle/", "cg-dinari-usd": "/stablecoin/usd-dinari/" },
       "/stablecoin/retired-coin/* /coverage/ 301\n/stablecoin/retired-coin /coverage/ 301\n/stablecoin/retired-usd /stablecoins/usd/ 301\n/stablecoin/dead-coin /cemetery/#dead-coin-usd-2024-01 301\n",
     )).toEqual({
       "1": "/stablecoin/usdt-tether/",
       "2": "/stablecoin/usdc-circle/",
+      "465": "/stablecoin/usd-dinari/",
+      "cg-dinari-usd": "/stablecoin/usd-dinari/",
       "cg-usdc": "/stablecoin/usdc-circle/",
       "dead-coin": "/cemetery/#dead-coin-usd-2024-01",
       "retired-coin": "/coverage/",

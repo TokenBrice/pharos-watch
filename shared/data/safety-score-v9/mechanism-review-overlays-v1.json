@@ -25783,6 +25783,57 @@
           "sourceUrl": "https://transparency.minteo.com/reserves"
         }
       }
+    },
+    {
+      "assetId": "usd-dinari",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-15T23:31:35Z",
+      "sources": [
+        {
+          "label": "Dinari USD+ terms: issuer group, reserves, insolvency risks and Staked USD+ reward mechanics",
+          "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+        },
+        {
+          "label": "Dinari current guide: fixed-dollar daily rebasing and account redemption",
+          "url": "https://docs.dinari.com/docs/what-is-usd"
+        },
+        {
+          "label": "Dinari live info endpoint: issuer annual rate and deployment roster, retrieved 2026-11-15T23:25:12Z",
+          "url": "https://app-api.usd.dinari.com/api/v1/info/"
+        },
+        {
+          "label": "Dinari USD+ product: Treasury instruments, cash and equivalents; unnamed custodian",
+          "url": "https://dinari.com/usdplus"
+        },
+        {
+          "label": "Dinari issuer-operated transparency dashboard",
+          "url": "https://usd.dinari.com/transparency"
+        }
+      ],
+      "notes": "Re-admission review after fresh issuer terms/product reads at 2026-11-15T23:25:09Z and 23:25:10Z, live info at 23:25:12Z, and four treasury-token rosters at 23:25 to 23:26 UTC. Current guide and independently pinned token reads establish daily rebasing on the replacement deployment. The legal terms still describe Staked USD+ reward mechanics. All four applicable T-bill components remain sourced unavailable: reserve priority, valuation independence, complete duration/liquidity and independent reconciliation/recovery are not established. No nominal-par quote, eligible-asset weight, assurance quality or maturity metric is invented. The January redemption pause is marked complete by the issuer; no current suspension or reason for the unexplained March catalog removal is inferred.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "applicability": "unavailable",
+          "rationale": "USD+ terms define reserves held on behalf of eligible users and promise no operational commingling, but identify only Dinari, Inc. and subsidiaries as the issuer group. They name no completed bankruptcy-remote vehicle, reserve-asset trust or enforceable holder priority and acknowledge reserve loss or inaccessibility on Dinari insolvency. The product page names no USD+-specific custodian agreement. These sources establish a redemption promise, not an independently verified senior reserve claim.",
+          "sourceUrl": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "The current guide documents direct daily rebasing, while the terms still describe rewards through Staked USD+. The live info endpoint reports an annual rate without its measurement date, reserve valuations, independent administrator or matched NAV-to-liability reconciliation. A quoted rate or observed rebase index does not verify the underlying reserve valuation.",
+          "sourceUrl": "https://app-api.usd.dinari.com/api/v1/info/"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "The product and terms describe mostly short-term Treasury instruments plus bank deposits and accepted stablecoins. Neither publishes a dated whole-book allocation, position-level maturity schedule, measured weighted-average maturity or stress liquidation profile. Eligible USFR treasury-token rosters establish neither current holdings nor duration; the advertised redemption window is not a portfolio maturity measurement.",
+          "sourceUrl": "https://dinari.com/usdplus"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The terms disclose issuer-insolvency and reserve-access risks and describe bankruptcy remoteness as an objective. No current USD+-specific independent reserve-to-liability report, named attestor, funded first-loss support, enforceable recapitalization commitment or holder recovery waterfall was retrieved from the terms, product or transparency surfaces. The self-reported reserve dashboard is not independent assurance.",
+          "sourceUrl": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+        }
+      }
     }
   ]
 }

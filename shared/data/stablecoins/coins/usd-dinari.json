@@ -1,0 +1,107 @@
+{
+  "id": "usd-dinari",
+  "name": "Dinari USD+",
+  "symbol": "USD+",
+  "status": "pre-launch",
+  "launchPhase": "launched",
+  "launchDate": "2024-02-06",
+  "launchPhaseDetail": "Publicly issued; active tracking awaits the Safety Score new-asset evidence gate. Price and supply lanes pass, but 17 own open questions and the Mint Authority control inventory remain unresolved.",
+  "milestones": [
+    {
+      "date": "2024-02-06",
+      "type": "milestone",
+      "title": "Dinari announces USD+ availability on Ethereum mainnet",
+      "description": "Dinari's launch announcement states that USD+ and stUSD+ are available on Ethereum mainnet with a public minting and redemption app. This dates the instrument's public issuance, before the current replacement deployments; it does not establish the current token's control inventory.",
+      "sourceUrl": "https://dinari.com/blog/usd-stusd-yield-bearing-stablecoin"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "DefiLlama 465 price/supply pass. Safety Score new-asset evidence gate blocks active admission: 17 own open questions; unresolved Mint Authority control inventory (Ethereum, Arbitrum, Base, Plume). Close with pinned source/control proof, gap closure and passing admission receipt.",
+    "reviewBy": "2027-01-15"
+  },
+  "oneLiner": "Dinari's Treasury-backed dollar distributes yield through daily rebasing; eligible account holders redeem through the issuer in USDC.",
+  "mechanismArchetype": "tbill",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Dinari describes reserves consisting mostly of short-term U.S. Treasuries with smaller bank-deposit and accepted-stablecoin holdings. The public treasury rosters include tokenized USFR shares but establish neither holdings nor portfolio weights.",
+  "pegMechanism": "The current guide describes minting with USDC or USDT and redemption at one dollar per USD+, paid in USDC, with advertised settlement in 0 to 3 days. Direct redemption requires an approved Dinari account and is restricted by jurisdiction; the terms permit compliance and partner delays. Daily rebases increase token balances while the unit targets one dollar.",
+  "llamaId": "465",
+  "detailProvider": "defillama",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://usd.dinari.com/transparency",
+    "provider": "Dinari publishes an issuer-operated dashboard and eligible treasury-token rosters; no current USD+-specific independent reserve report or named attestor was verified.",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://dinari.com/usdplus"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.dinari.com/docs/what-is-usd"
+    },
+    {
+      "label": "Contract addresses",
+      "url": "https://docs.dinari.com/docs/usdplus-evm"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://usd.dinari.com/transparency"
+    },
+    {
+      "label": "Terms",
+      "url": "https://dinari.com/terms-conditions-usdplus-stusdplus-tokens"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/DinariGlobal"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xc9e3df3d230980b45adc623c81c3df4a73a5350f",
+      "decimals": 6
+    }
+  ],
+  "collateralQuality": "rwa",
+  "custodyModel": "unknown",
+  "yieldConfig": {
+    "yieldSource": "Short-term U.S. Treasury instruments",
+    "yieldType": "rebase"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Yield documentation differs",
+      "message": "The current USD+ guide describes direct daily rebasing, while the published terms still describe rewards through Staked USD+. The current deployment and its yield controls require separate review from the former USD+ token."
+    }
+  ]
+}

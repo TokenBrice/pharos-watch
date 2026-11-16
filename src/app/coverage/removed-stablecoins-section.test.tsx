@@ -14,5 +14,6 @@ describe("RemovedStablecoinsSection", () => {
     expect(html).toContain('href="/stablecoins/mxn');
     expect(html).toContain("Removed July 19, 2026");
     expect(html).toContain("No live issued token");
+    expect(html).not.toContain("usd-dinari");
   });
 });

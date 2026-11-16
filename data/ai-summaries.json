@@ -6185,6 +6185,14 @@
     "model": "claude-opus-5-5",
     "factsAsOf": "2026-10-18"
   },
+  "usd-dinari": {
+    "title": "Dinari USD+ is issued; Safety evidence remains incomplete",
+    "text": "Dinari announced USD+ availability on Ethereum mainnet on February 6, 2024. The current guide describes Treasury-backed daily rebasing and approved-account redemption into USDC, while the published terms still describe rewards through Staked USD+. Public treasury rosters identify eligible instruments without measured holdings or reconciliation to outstanding USD+, and no current independent reserve report has been verified. Pharos retains USD+ as launched, awaiting data. DefiLlama price and supply lanes pass, but active admission is blocked by the Safety Score new-asset evidence gate: 17 own open questions and an unresolved Mint Authority control inventory across Ethereum, Arbitrum, Base and Plume. Current deployed source and pinned evidence must establish mint, role, limit, rate and upgrade paths, including facets and bypasses. The remaining non-documentation questions and a passing admission receipt are also required before promotion; the listing review is due January 15, 2027.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
+  },
   "eurpa-gr8-pay": {
     "title": "GR8 Pay's unissued euro token",
     "text": "GR8 Pay SIA proposes EUR.PA as a transferable euro e-money token with customer par redemption. The published white paper states that the token has not yet been issued, and no deployed contract or verified decimals are available. Its Latvian electronic money institution authorization and ESMA register entry establish the issuer framework. Customers must complete onboarding to issue or redeem directly. Other holders may transfer or trade the token once available, while exceptional non-customer redemption remains discretionary. The planned contract design includes address restrictions, freezing and global pauses. Safeguarded fiat and permitted liquid investments are the proposed backing, but a current reserve allocation is not established. An announced offer-start date does not demonstrate public issuance.",

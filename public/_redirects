@@ -271,7 +271,6 @@
 /stablecoin/veur-vnx /stablecoins/eur/ 301
 /stablecoin/wstbt-matrixdock /stablecoins/usd/ 301
 /stablecoin/xai-silo-finance /cemetery/#xai-silo-finance 301
-/stablecoin/usd-dinari /stablecoins/usd/ 301
 /treasuries /coverage/ 301
 /mint /flows/ 301
 /home-alt / 301
@@ -365,7 +364,6 @@
 /stablecoin/veur-vnx/* /stablecoins/eur/ 301
 /stablecoin/wstbt-matrixdock/* /stablecoins/usd/ 301
 /stablecoin/xai-silo-finance/* /cemetery/#xai-silo-finance 301
-/stablecoin/usd-dinari/* /stablecoins/usd/ 301
 /treasuries/* /coverage/ 301
 /mint/* /flows/ 301
 /home-alt/* / 301
