@@ -1932,5 +1932,74 @@
     "obituary": "SiloDAO deprecated XAI after the stablecoin failed to scale DEX liquidity and repeatedly traded below its peg. Governance raised borrowing rates to force repayment, burned XAI credit lines across 17 silos, and retired the mint module so no new XAI could be created. The token nevertheless retains 5,358,653.23 XAI of residual supply, verified on Ethereum at block 25,627,256, representing legacy borrows and stranded wind-down liquidity rather than a live stablecoin system.",
     "sourceUrl": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443",
     "sourceLabel": "SiloDAO governance"
+  },
+  {
+    "id": "zunusd-zunami-2025-05",
+    "name": "Zunami USD",
+    "symbol": "zunUSD",
+    "llamaId": "181",
+    "geckoId": "zunami-usd",
+    "pegCurrency": "USD",
+    "mechanismArchetype": "protocol-position",
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2025-05-14",
+    "recordedAt": "2026-11-16",
+    "peakMcap": 2262574,
+    "epitaph": "Collateral withdrawn through an admin path",
+    "obituary": "Zunami's zunUSD was issued against an Omnipool of stablecoin liquidity strategies. On May 14, 2025, an administrative withdrawal removed collateral backing zunUSD and zunETH; the protocol confirmed the theft the following day. The failure exposed the token's dependence on privileged control over its backing positions.",
+    "sourceUrl": "https://x.com/ZunamiProtocol/status/1922993510925435267",
+    "sourceLabel": "Zunami Protocol: collateral theft announcement",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x8C0D76C9B18779665475F3E212D9Ca1Ed6A1A0e6"
+      }
+    ]
+  },
+  {
+    "id": "stbl-algofi-2023-07",
+    "name": "Algofi STBL",
+    "symbol": "STBL",
+    "llamaId": "38",
+    "geckoId": "algostable",
+    "pegCurrency": "USD",
+    "mechanismArchetype": "cdp",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2023-07-10",
+    "recordedAt": "2026-11-16",
+    "peakMcap": 8656926,
+    "epitaph": "Retired with Algofi's lending markets",
+    "obituary": "Algofi announced its protocol sunset on July 10, 2023, explicitly including the V1 lending market that issued STBL. The wind-down plan called for lower collateral factors to encourage repayment and withdrawal-only interfaces. STBL was the original overcollateralized Algorand dollar, distinct from the V2 token STBL2; this date records the retirement announcement, not the end of every outstanding loan.",
+    "sourceUrl": "https://x.com/algofiorg/status/1678536751969718272",
+    "sourceLabel": "Algofi: protocol wind-down announcement",
+    "contracts": [
+      {
+        "chain": "algorand",
+        "address": "465865291"
+      }
+    ]
+  },
+  {
+    "id": "dchf-defi-franc-2024-03",
+    "name": "DeFi Franc",
+    "symbol": "DCHF",
+    "llamaId": "105",
+    "geckoId": "defi-franc",
+    "pegCurrency": "CHF",
+    "mechanismArchetype": "cdp",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2024-03-17",
+    "recordedAt": "2026-11-16",
+    "peakMcap": 10056241,
+    "epitaph": "DAO dissolved to launch Loop",
+    "obituary": "Moneta DAO voted to dissolve and launch Loop, with the vote closing on March 17, 2024. The protocol's official documentation confirms that the decision sunset DeFi Franc and redirected development to Loop. DCHF had been a Swiss franc stablecoin borrowed against ETH and WBTC collateral.",
+    "sourceUrl": "https://docs.defifranc.com/",
+    "sourceLabel": "DeFi Franc Docs: DAO-voted sunset",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x045da4bfe02b320f4403674b3b7d121737727a36"
+      }
+    ]
   }
 ]
