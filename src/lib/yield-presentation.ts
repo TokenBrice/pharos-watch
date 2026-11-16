@@ -140,10 +140,6 @@ export const YIELD_SOURCE_FACT_LABELS = {
   heuristicDrivers: "Heuristic movement context, not a causal score decomposition",
 } as const;
 
-export function formatYieldDepositExplanation(symbol: string, venue: string, chain: string): string {
-  return `APY from depositing ${symbol} with ${venue} on ${chain}; not yield from simply holding ${symbol}.`;
-}
-
 export function formatYieldBenchmarkSpread(spread: number, label: string, rate: number | null): string {
   const reference = `${label}${rate != null ? ` (${rate.toFixed(2)}%)` : ""}`;
   return Math.abs(spread) < 0.005

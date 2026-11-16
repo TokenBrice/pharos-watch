@@ -104,7 +104,7 @@ function depegBps(event: TapeEvent): number | null {
  *   at their highest severity.
  * Events are never mutated or synthesized; every count is scoped to the loaded page.
  */
-export function buildCoinActivity(events: readonly TapeEvent[], pageFull = false): CoinActivity {
+function buildCoinActivity(events: readonly TapeEvent[], pageFull = false): CoinActivity {
   const entries: CoinActivityEntry[] = [];
   const depegIndex = new Map<string, number>();
   const sameDayIndex = new Map<string, number>();
@@ -189,7 +189,7 @@ function materialityUsd(supplyUsd: number | null | undefined): number {
  * Severity by materiality, shown only from Notice up: a routine mint or burn
  * is information; a resolved depeg is history; an open one is a warning.
  */
-export function activitySeverity(entry: CoinActivityEntry, supplyUsd?: number | null): TapeEventSeverity {
+function activitySeverity(entry: CoinActivityEntry, supplyUsd?: number | null): TapeEventSeverity {
   if (entry.kind === "flows") {
     const net = Math.abs(entry.mints.usd - entry.burns.usd);
     return Math.max(entry.largestUsd, net) >= materialityUsd(supplyUsd) ? "notice" : "info";

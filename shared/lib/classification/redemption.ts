@@ -5,7 +5,6 @@ import type {
   RedemptionSettlementModel,
   RedemptionDocsProvenance,
   RedemptionModelConfidence,
-  RedemptionResolutionState,
   RedemptionRouteFamily,
   RedemptionRouteStatus,
 } from "../../types/redemption";
@@ -153,14 +152,6 @@ export const REDEMPTION_MODELED_ROUTE_DISPLAY = {
   coverageDetail: "Redemption-backstop route is modeled.",
 } as const;
 
-const REDEMPTION_RESOLUTION_STATE_LABELS = {
-  resolved: "resolved",
-  "missing-cache": "missing cache",
-  "missing-capacity": "missing capacity",
-  failed: "failed",
-  impaired: "impaired",
-} as const satisfies Record<RedemptionResolutionState, string>;
-
 const REDEMPTION_ROUTE_STATUS_LABELS = {
   open: "open",
   degraded: "degraded",
@@ -185,10 +176,6 @@ const REDEMPTION_DOCS_PROVENANCE_LABELS = {
 
 export function formatRedemptionRouteFamily(value: RedemptionRouteFamily): string {
   return REDEMPTION_ROUTE_FAMILY_DISPLAY[value].label;
-}
-
-export function formatRedemptionResolutionState(value: RedemptionResolutionState): string {
-  return REDEMPTION_RESOLUTION_STATE_LABELS[value];
 }
 
 export function formatRedemptionRouteStatus(value: RedemptionRouteStatus): string {

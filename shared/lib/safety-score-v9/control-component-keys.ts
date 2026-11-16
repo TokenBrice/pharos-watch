@@ -36,7 +36,7 @@ export function v9DeploymentMintComponentKey(controlKeys: readonly string[]): st
  * BOLD) publishes none, so a reader must never fall back to the first
  * `kind: "mint"` row: that row is a bridged representation on another chain.
  */
-export const V9_NATIVE_MINT_COMPONENT_KEY = "mint";
+const V9_NATIVE_MINT_COMPONENT_KEY = "mint";
 
 /** The native mint component of a published control breakdown, or null when none is published. */
 export function findV9NativeMintComponent<T extends { kind: string; key: string }>(

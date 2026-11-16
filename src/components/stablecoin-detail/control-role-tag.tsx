@@ -31,7 +31,7 @@ const ROLE_WORDS: Record<MarkedRole, string> = {
 };
 
 /** What the role means for the score, in plain words: the tooltip and the spoken tail. */
-export const CONTROL_ROLE_HINTS: Record<MarkedRole, string> = {
+const CONTROL_ROLE_HINTS: Record<MarkedRole, string> = {
   limiting: "The lowest eligible Control input: it sets the Economic Control score",
   diagnostic: "Shown for context: outside the inputs that set the Economic Control score",
 };
