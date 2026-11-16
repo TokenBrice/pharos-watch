@@ -27,21 +27,22 @@ import {
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./historical-market-prices";
 
-function isValidSecondaryFxCacheDate(date: string, year: number): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(`${year}-`)) return false;
+function isValidSecondaryFxCacheDate(date: string, prefix: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !date.startsWith(prefix)) return false;
   const timestamp = Date.parse(`${date}T00:00:00Z`);
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date;
 }
 
-function normalizeSecondaryFxYearCache(
+/** Keep dated entries whose date starts with `prefix` ("YYYY-" or "YYYY-MM-"). */
+function normalizeSecondaryFxCache(
   parsed: unknown,
-  year: number,
+  prefix: string,
 ): Record<string, Record<string, number>> {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
 
   const normalized: Record<string, Record<string, number>> = {};
   for (const [date, rawRates] of Object.entries(parsed as Record<string, unknown>)) {
-    if (!isValidSecondaryFxCacheDate(date, year)) continue;
+    if (!isValidSecondaryFxCacheDate(date, prefix)) continue;
     if (!rawRates || typeof rawRates !== "object" || Array.isArray(rawRates)) continue;
 
     const rawRateKeys = Object.keys(rawRates);
@@ -54,6 +55,11 @@ function normalizeSecondaryFxYearCache(
   }
   return normalized;
 }
+
+/** "YYYY-MM" of the following UTC month. */
+const nextUtcMonth = (period: string) => new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 1)).toISOString().slice(0, 7);
+/** "YYYY-MM-DD" of the period's last UTC day. */
+const lastUtcDayOfMonth = (period: string) => new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0)).toISOString().slice(0, 10);
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 6;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
@@ -221,41 +227,50 @@ export async function fetchHistoricalSecondaryFxRates(
     normalized.map((currency) => [currency, []]),
   );
 
-  const startYear = Number.parseInt(startDate.slice(0, 4), 10);
-  const endYear = Number.parseInt(endDate.slice(0, 4), 10);
+  const decodeCache = (value: string, prefix: string) => decodeJsonString<Record<string, Record<string, number>>, "json-parse-failed">(
+    value,
+    { parseErrorReason: "json-parse-failed", normalize: (parsed) => ({ ok: true, payload: normalizeSecondaryFxCache(parsed, prefix) }) },
+  );
+  const legacyYearCaches = new Map<string, Record<string, Record<string, number>>>();
 
-  for (let year = startYear; year <= endYear; year++) {
-    const yearStart = `${year}-01-01`;
-    const yearEnd = `${year}-12-31`;
-    const rangeStart = startDate > yearStart ? startDate : yearStart;
-    const rangeEnd = endDate < yearEnd ? endDate : yearEnd;
+  // One cache row per month: a year of all-currency quotes, bound twice by the
+  // compare-and-swap below, outgrew the operator CLI's 1 MiB argv limit (E2BIG).
+  for (let period = startDate.slice(0, 7); period <= endDate.slice(0, 7); period = nextUtcMonth(period)) {
+    const periodStart = `${period}-01`;
+    const periodEnd = lastUtcDayOfMonth(period);
+    const rangeStart = startDate > periodStart ? startDate : periodStart;
+    const rangeEnd = endDate < periodEnd ? endDate : periodEnd;
     const wantedDates = enumerateDates(rangeStart, rangeEnd);
 
-    const cacheKey = `fx-history-secondary:${year}`;
-    let yearCache: Record<string, Record<string, number>> = {};
+    const cacheKey = `fx-history-secondary:${period}`;
+    let monthCache: Record<string, Record<string, number>> = {};
     let cacheChanged = false;
     let cached = await getCache(db, cacheKey, signal);
     if (cached) {
-      const decoded = decodeJsonString<Record<string, Record<string, number>>, "json-parse-failed">(
-        cached.value,
-        {
-          parseErrorReason: "json-parse-failed",
-          normalize: (parsed) => ({
-            ok: true,
-            payload: normalizeSecondaryFxYearCache(parsed, year),
-          }),
-        },
-      );
+      const decoded = decodeCache(cached.value, `${period}-`);
       if (decoded.ok) {
-        yearCache = decoded.payload;
-        cacheChanged = JSON.stringify(yearCache) !== cached.value;
+        monthCache = decoded.payload;
+        cacheChanged = JSON.stringify(monthCache) !== cached.value;
       } else {
+        cacheChanged = true;
+      }
+    } else {
+      // Carry dated evidence forward from the retired per-year row instead of refetching it.
+      const year = period.slice(0, 4);
+      if (!legacyYearCaches.has(year)) {
+        const legacy = await getCache(db, `fx-history-secondary:${year}`, signal);
+        const decoded = legacy ? decodeCache(legacy.value, `${year}-`) : null;
+        legacyYearCaches.set(year, decoded?.ok ? decoded.payload : {});
+      }
+      for (const [date, rates] of Object.entries(legacyYearCaches.get(year)!)) {
+        if (!date.startsWith(`${period}-`)) continue;
+        monthCache[date] = rates;
         cacheChanged = true;
       }
     }
 
     const missingDates = wantedDates.filter((date) => {
-      const cachedRates = yearCache[date];
+      const cachedRates = monthCache[date];
       // Empty maps are confirmed no-data; successful partial maps are not complete.
       return !cachedRates || (
         Object.keys(cachedRates).length > 0 &&
@@ -269,12 +284,12 @@ export async function fetchHistoricalSecondaryFxRates(
       );
       for (const [date, outcome] of fetched) {
         if (outcome.kind === "rates") {
-          mergeDateRates(yearCache, date, outcome.rates);
+          mergeDateRates(monthCache, date, outcome.rates);
           cacheChanged = true;
         } else if (outcome.kind === "unavailable") {
           // A later unavailable response must not erase dated evidence already read.
-          if (!yearCache[date]) {
-            yearCache[date] = {};
+          if (!monthCache[date]) {
+            monthCache[date] = {};
             cacheChanged = true;
           }
         }
@@ -286,26 +301,23 @@ export async function fetchHistoricalSecondaryFxRates(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
          WHERE cache.value = ? AND cache.updated_at = ?`,
-      ).bind(cacheKey, JSON.stringify(yearCache), Math.floor(Date.now() / 1000),
+      ).bind(cacheKey, JSON.stringify(monthCache), Math.floor(Date.now() / 1000),
         cached?.value ?? null, cached?.updatedAt ?? null).run(), 3, signal);
       if (write.meta.changes === 1) break;
 
       // Another backfill won; retain its evidence before retrying the inspected-row fence.
       cached = await getCache(db, cacheKey, signal);
       if (!cached) continue;
-      const decoded = decodeJsonString(cached.value, {
-        parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => ({ ok: true, payload: normalizeSecondaryFxYearCache(parsed, year) }),
-      });
+      const decoded = decodeCache(cached.value, `${period}-`);
       if (decoded.ok) {
         for (const [date, rates] of Object.entries(decoded.payload)) {
-          mergeDateRates(yearCache, date, rates);
+          mergeDateRates(monthCache, date, rates);
         }
       }
     }
 
     for (const date of wantedDates) {
-      const dailyRates = yearCache[date];
+      const dailyRates = monthCache[date];
       if (!dailyRates) continue;
 
       const timestamp = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);

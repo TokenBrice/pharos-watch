@@ -210,7 +210,7 @@ describe("buildFxLookup", () => {
 
 describe("fetchHistoricalSecondaryFxRates", () => {
   it.each([[false, false], [true, false], [false, true], [true, true]])(
-    "merges overlapping year writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
+    "merges overlapping month writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
       const { db, sqlite } = fxFixtures.open();
       vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-06-16T00:00:00Z"));
       vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -237,7 +237,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
       await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
       release.resolve();
       const series = await late;
-      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
       expect(JSON.parse(cache.value)).toEqual({
         ...seed, "2025-06-14": { ...(seed["2025-06-14"] ?? {}), ...(!unavailable ? { cnh: 7.2 } : {}), kes: 129 },
         "2025-06-15": {},
@@ -264,7 +264,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     const timestamp = Date.parse("2025-06-14T00:00:00Z") / 1000;
     expect(second.KES).toEqual([{ timestamp, rate: 1 / 129 }]);
-    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2, kes: 129 } });
     expect(buildFxLookup(second.KES, 1 / 150)(timestamp)).toBe(1 / 129);
   });
@@ -280,7 +280,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "KES"], "2025-06-14", "2025-06-14");
     expect(series.CNH).toHaveLength(1);
     expect(series.KES).toEqual([]);
-    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025-06") as { value: string };
     expect(JSON.parse(cache.value)).toEqual({ "2025-06-14": { cnh: 7.2 } });
   });
 
@@ -295,7 +295,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: JSON.stringify({
@@ -327,7 +327,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: cachedValue,
@@ -363,7 +363,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -389,7 +388,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -412,7 +410,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const firstDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -435,7 +432,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const secondDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -468,7 +464,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const firstDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -484,7 +479,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const secondDb = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
+        matchBinds: ["fx-history-secondary:2025-06"],
         rows: [],
         first: {
           value: cachedValue as string,
@@ -505,7 +500,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -531,7 +525,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
@@ -573,7 +566,6 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["fx-history-secondary:2025"],
         rows: [],
         first: null,
       },
