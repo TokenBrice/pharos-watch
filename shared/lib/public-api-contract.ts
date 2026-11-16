@@ -38,6 +38,13 @@ export const API_ACCESS_TELEGRAM_URL = `https://t.me/${API_ACCESS_TELEGRAM_HANDL
 export const API_ACCESS_X_HANDLE = "PharosWatch";
 export const API_ACCESS_X_URL = `https://x.com/${API_ACCESS_X_HANDLE}`;
 
+/**
+ * Published monthly price of a partner key for a commercial product. Services
+ * that are free to their users pay nothing; payment goes only to the funding
+ * addresses published on /funding/.
+ */
+export const COMMERCIAL_API_KEY_USD_PER_MONTH = 250;
+
 /** Human reply window promised on the partner key offer; not a contractual SLA. */
 export const PARTNER_KEY_REPLY_BUSINESS_DAYS = 2;
 

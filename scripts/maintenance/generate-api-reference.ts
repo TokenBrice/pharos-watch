@@ -37,7 +37,7 @@ interface OpenApiRoute {
 }
 
 const SUPPLEMENTAL_NOTES = {
-  "donor-key-claim": "Issues one non-expiring supporter API key to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
+  "donor-key-claim": "Issues or extends one supporter API key, valid for days of access bought by donations, to a donor wallet that signs a Sign-In-With-Ethereum claim message.",
   feedback: "Accepts the bounded feedback form payload used by the website.",
   "telegram-mini-app-session": "Creates or refreshes a Telegram Mini App session after Telegram init-data validation.",
   "telegram-mini-app-mutation": "Applies an authenticated Telegram Mini App preference mutation.",

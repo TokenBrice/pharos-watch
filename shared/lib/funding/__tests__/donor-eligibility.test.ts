@@ -166,4 +166,5 @@ describe("donor key donation classification", () => {
     expect(summary.rows.map((entry) => entry.status)).toEqual(["counted", "counted", "not-qualifying"]);
     expect(summarizeDonorKeyEligibility(POOL, donations, GRADES)).toMatchObject({ qualifyingUsd: 0, countedAssets: [], rows: [] });
   });
+
 });

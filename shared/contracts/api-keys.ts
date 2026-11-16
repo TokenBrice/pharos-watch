@@ -42,22 +42,25 @@ export const DONOR_KEY_CLAIM_FAILURE_REASONS = [
 ] as const;
 export type DonorKeyClaimFailureReason = (typeof DONOR_KEY_CLAIM_FAILURE_REASONS)[number];
 
-/** `POST /api/donor-key-claims` 201 body. The token is shown once. */
-export const DonorKeyClaimResponseSchema = z
+const DonorKeySummarySchema = z
   .object({
-    status: z.literal("issued"),
-    key: z
-      .object({
-        keyPrefix: z.string().min(1),
-        maskedToken: z.string().min(1),
-        tier: z.literal("donor"),
-        rateLimitPerMinute: z.number().int().positive(),
-        expiresAt: z.null(),
-      })
-      .strict(),
-    token: z.string().min(1),
+    keyPrefix: z.string().min(1),
+    maskedToken: z.string().min(1),
+    tier: z.literal("donor"),
+    rateLimitPerMinute: z.number().int().positive(),
+    /** Epoch seconds the key stops authenticating; null under the original no-expiry terms. */
+    expiresAt: z.number().int().positive().nullable(),
   })
   .strict();
+
+/**
+ * `POST /api/donor-key-claims` success body: 201 `issued` shows the token once;
+ * 200 `extended` moves an existing key's expiry and never re-sends a token.
+ */
+export const DonorKeyClaimResponseSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("issued"), key: DonorKeySummarySchema, token: z.string().min(1) }).strict(),
+  z.object({ status: z.literal("extended"), key: DonorKeySummarySchema }).strict(),
+]);
 export type DonorKeyClaimResponse = z.infer<typeof DonorKeyClaimResponseSchema>;
 
 const ApiKeySummarySchema = z.object({

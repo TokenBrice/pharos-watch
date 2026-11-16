@@ -14,7 +14,7 @@ Keyed access to the full API is now by request through the [partner key offer](/
 
 ## The supporter key
 
-An externally-owned EVM wallet that has donated at least $10 in stablecoins to Pharos, valued at receipt and recorded on the public [funding ledger](/funding/), can claim one API key by signing a message on [/api/](/api/). Only stablecoins graded A or B, including plus and minus grades, at the time you claim count toward the total. The threshold is inclusive, so exactly $10 qualifies; ETH and other non-stablecoin donations, lower or missing grades, and pooled payouts do not. No email, no account, no payment processor. The key runs at 10 requests per minute and has no scheduled expiry.
+An externally-owned EVM wallet that has donated at least $10 in stablecoins to Pharos, valued at receipt and recorded on the public [funding ledger](/funding/), can claim one API key by signing a message on [/api/](/api/). Only stablecoins graded A or B, including plus and minus grades, at the time you claim count toward the total. The threshold is inclusive, so exactly $10 qualifies; ETH and other non-stablecoin donations, lower or missing grades, and pooled payouts do not. No email, no account, no payment processor. The key runs at 10 requests per minute; since November 2026, each $10 buys 30 days of access (see the update at the end).
 
 How it works, in practice:
 
@@ -36,8 +36,12 @@ This restriction applies to the integration API, not to viewing the public websi
 
 ## Why this shape
 
-Pharos is independent and [donation-funded](/funding/). Grades are a small, cacheable response with a wide audience, so they are free with no key requirement. Supporters get a durable key for having paid part of the bill. Heavier integrations go through a hand review so their usage can be matched to available capacity. A paid tier for high-volume or commercial use may come later; no pricing or date is promised.
+Pharos is independent and [donation-funded](/funding/). Grades are a small, cacheable response with a wide audience, so they are free with no key requirement. Supporters get a key for having paid part of the bill. Heavier integrations go through a hand review so their usage can be matched to available capacity. A paid tier for high-volume or commercial use may come later; no pricing or date is promised.
 
 For a manually reviewed key, request a [partner key](/api/#partner-access). Eligible stablecoin donors can use [/api/](/api/) to claim a supporter key. See you at the lighthouse. 🗼
+
+## What changed since launch
+
+*Updated November 16, 2026.* Supporter keys no longer last indefinitely. Each $10 of qualifying donations now buys 30 days of access, pro rata, and signing again after a later donation extends the same key without rotating it. Supporter keys are now for personal, non-commercial use. Keys already claimed, and wallets whose qualifying donations before November 17, 2026 reached $10, keep the original terms with no expiry. The paid tier this post left open now exists: a partner key for a commercial product costs $250 per month, while services that are free to their users still pay nothing.
 
 	/- TokenBrice

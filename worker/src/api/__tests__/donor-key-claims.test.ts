@@ -27,92 +27,36 @@ vi.mock("@shared/lib/public-api-contract", async (importOriginal) => ({
   get DONOR_KEY_CLAIMS_OPEN() { return claimSwitch.open; },
 }));
 
-// $11 across two chains and exactly $10 qualify; ETH and pool payouts do not.
-vi.mock("@shared/data/funding/donations.json", () => ({
-  default: {
-    last_updated_at: 1788681300,
-    donations: [
-      {
-        chain: "ethereum",
-        tx_hash: "0xaa01",
-        block_timestamp: 1776072647,
-        from_address: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
-        display: "donor.eth",
-        kind: "community",
-        asset_symbol: "USDC",
-        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        amount_decimal: 5,
-        usd_at_receipt: 5,
-        price_note: "stablecoin-par",
-      },
-      {
-        chain: "base",
-        tx_hash: "0xaa02",
-        block_timestamp: 1776172647,
-        from_address: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
-        display: "donor.eth",
-        kind: "community",
-        asset_symbol: "USDC",
-        token_address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-        amount_decimal: 6,
-        usd_at_receipt: 6,
-        price_note: "stablecoin-par",
-      },
-      {
-        chain: "ethereum",
-        tx_hash: "0xbb01",
-        block_timestamp: 1776272647,
-        from_address: "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
-        display: "0x3c44cd...93bc",
-        kind: "community",
-        asset_symbol: "USDC",
-        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        amount_decimal: 10,
-        usd_at_receipt: 10,
-        price_note: "stablecoin-par",
-      },
-      {
-        chain: "ethereum",
-        tx_hash: "0xbb02",
-        block_timestamp: 1776282647,
-        from_address: "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
-        display: "0x15d34a...6a65",
-        kind: "community",
-        asset_symbol: "USDC",
-        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        amount_decimal: 9.99,
-        usd_at_receipt: 9.99,
-        price_note: "stablecoin-par",
-      },
-      {
-        chain: "ethereum",
-        tx_hash: "0xdd01",
-        block_timestamp: 1776372647,
-        from_address: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-        display: "ETH donor",
-        kind: "community",
-        asset_symbol: "ETH",
-        token_address: null,
-        amount_decimal: 1,
-        usd_at_receipt: 2000,
-        price_note: "receipt-time price",
-      },
-      {
-        chain: "gnosis",
-        tx_hash: "0xcc01",
-        block_timestamp: 1776372647,
-        from_address: "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
-        display: "via Giveth",
-        kind: "pool",
-        asset_symbol: "USDC",
-        token_address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
-        amount_decimal: 50,
-        usd_at_receipt: 50,
-        price_note: "stablecoin-par",
-      },
-    ],
-  },
-}));
+// $11 across two chains and exactly $10 qualify; ETH and pool payouts do not. The last
+// two rows postdate DONOR_API_KEY_TERMS_START_SEC, so they buy 45 and 30 days.
+vi.mock("@shared/data/funding/donations.json", () => {
+  const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+  const row = (tx_hash: string, block_timestamp: number, from_address: string, usd: number, extra: object = {}) => ({
+    chain: "ethereum", tx_hash, block_timestamp, from_address, display: from_address, kind: "community",
+    asset_symbol: "USDC", token_address: USDC, amount_decimal: usd, usd_at_receipt: usd, price_note: "stablecoin-par", ...extra,
+  });
+  return {
+    default: {
+      last_updated_at: 1788681300,
+      donations: [
+        row("0xaa01", 1776072647, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", 5),
+        row("0xaa02", 1776172647, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", 6, {
+          chain: "base", token_address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        }),
+        row("0xbb01", 1776272647, "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc", 10),
+        row("0xbb02", 1776282647, "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65", 9.99),
+        row("0xdd01", 1776372647, "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", 2000, {
+          asset_symbol: "ETH", token_address: null, amount_decimal: 1, price_note: "receipt-time price",
+        }),
+        row("0xcc01", 1776372647, "0x90f79bf6eb2c4f870365e785982e1f101e93b906", 50, {
+          chain: "gnosis", kind: "pool", token_address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+        }),
+        row("0xee01", 1794877200, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 15),
+        row("0xee02", 1794880800, "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", 10),
+      ],
+    },
+  };
+});
 
 const LEDGER_UPDATED_AT = 1788681300;
 const NOW_SEC = 1788681600;
@@ -128,6 +72,8 @@ const belowThresholdAccount = privateKeyToAccount(
 );
 const poolAccount = privateKeyToAccount("0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6");
 const strangerAccount = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+const termAccount = privateKeyToAccount("0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba");
+const TERM_DONATION_SEC = 1_794_877_200;
 
 const allowLimiter: RateLimit = { limit: async () => ({ success: true }) };
 const denyLimiter: RateLimit = { limit: async () => ({ success: false }) };
@@ -153,6 +99,7 @@ async function claim(
     signature?: string;
     limiter?: RateLimit | undefined;
     pepper?: string | undefined;
+    nowSec?: number;
   } = {},
 ): Promise<Response> {
   // Key presence, not `??`: the missing-binding cases pass `undefined` on purpose.
@@ -160,7 +107,24 @@ async function claim(
   const pepper = "pepper" in options ? options.pepper : PEPPER;
   const signer = options.signer ?? donorAccount;
   const body = { message, signature: options.signature ?? (await signer.signMessage({ message })) };
-  return handleDonorKeyClaim(db, makeJsonRequest(CLAIM_URL, body), { rateLimiter: limiter, pepper }, NOW_SEC);
+  return handleDonorKeyClaim(db, makeJsonRequest(CLAIM_URL, body), { rateLimiter: limiter, pepper }, options.nowSec ?? NOW_SEC);
+}
+
+async function issuedKey(response: Response) {
+  const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+  if (payload.status !== "issued") throw new Error(`expected an issued key, got ${payload.status}`);
+  return payload;
+}
+
+function gradeCards(cards: NonNullable<Parameters<typeof makeReportCardsV9Response>[0]>["cards"]) {
+  return vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({ kind: "v9", snapshot: makeReportCardsV9Response({ cards }) });
+}
+
+/** A database whose statements containing `fragment` throw; `state.failed` records that one did. */
+function failingOn(fragment: string) {
+  const state = { failed: false };
+  const failing = createSqliteD1(sqlite, { onRun(sql) { if (sql.includes(fragment)) { state.failed = true; throw new Error("injected failure"); } } });
+  return { failing, state };
 }
 
 function countApiKeys(): number {
@@ -170,10 +134,8 @@ function countApiKeys(): number {
 beforeEach(() => {
   claimSwitch.open = true;
   resetApiKeyStateForTests();
-  vi.mocked(loadActiveSafetyScoreIndex).mockReset().mockResolvedValue({
-    kind: "v9",
-    snapshot: makeReportCardsV9Response({ cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "B" })] }),
-  });
+  vi.mocked(loadActiveSafetyScoreIndex).mockReset();
+  gradeCards([makeWorkerV9Card({ id: "usdc-circle", grade: "B" })]);
   ({ sqlite, db } = createLatestSchemaSqlite());
 });
 
@@ -200,10 +162,7 @@ describe("POST /api/donor-key-claims", () => {
     [belowThresholdAccount, 403, "ineligible"],
     [poolAccount, 403, "ineligible"],
   ] as const)("distinguishes unavailable grades from insufficient donations for %s", async (account, status, reason) => {
-    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
-      kind: "v9",
-      snapshot: makeReportCardsV9Response({ cards: [] }),
-    });
+    gradeCards([]);
     const response = await claim(claimMessage(account), { signer: account });
     expect(response.status).toBe(status);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -226,35 +185,17 @@ describe("POST /api/donor-key-claims", () => {
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     expect(payload.key.rateLimitPerMinute).toBe(10);
     expect(payload.key.expiresAt).toBeNull();
 
-    const keyRow = sqlite
-      .prepare("SELECT tier, rate_limit_per_minute, expires_at, owner_email, name FROM api_keys WHERE key_prefix = ?")
-      .get(payload.key.keyPrefix) as {
-        tier: string;
-        rate_limit_per_minute: number;
-        expires_at: number | null;
-        owner_email: string | null;
-        name: string;
-      };
-    expect(keyRow).toMatchObject({
-      tier: "donor",
-      rate_limit_per_minute: 10,
-      expires_at: null,
-      owner_email: null,
+    const address = donorAccount.address.toLowerCase();
+    expect(sqlite.prepare("SELECT tier, rate_limit_per_minute, expires_at, owner_email, name FROM api_keys").get()).toEqual({
+      tier: "donor", rate_limit_per_minute: 10, expires_at: null, owner_email: null, name: `donor ${address}`,
     });
-    expect(keyRow.name).toBe(`donor ${donorAccount.address.toLowerCase()}`);
-
-    const claimRow = sqlite
-      .prepare("SELECT address, key_prefix, claimed_at FROM api_key_donor_claims")
-      .get() as { address: string; key_prefix: string; claimed_at: number };
-    expect(claimRow).toEqual({
-      address: donorAccount.address.toLowerCase(),
-      key_prefix: payload.key.keyPrefix,
-      claimed_at: NOW_SEC,
-    });
+    expect(sqlite.prepare("SELECT * FROM api_key_donor_claims").get()).toEqual({ address, key_prefix: payload.key.keyPrefix, claimed_at: NOW_SEC });
+    // The threshold is inclusive: exactly $10 also earns a key.
+    expect((await claim(claimMessage(thresholdAccount), { signer: thresholdAccount })).status).toBe(201);
 
     const auditRow = sqlite
       .prepare("SELECT action, actor, detail_json FROM api_key_audit_log")
@@ -265,12 +206,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it("treats pipeline-gap donations as temporarily unavailable rather than outside the grade band", async () => {
-    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
-      kind: "v9",
-      snapshot: makeReportCardsV9Response({ cards: [
-        makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" }),
-      ] }),
-    });
+    gradeCards([makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })]);
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ reason: "grade_unavailable" });
@@ -278,13 +214,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it.each(["C", "NR"] as const)("excludes donations when the current grade is %s", async (grade) => {
-    vi.mocked(loadActiveSafetyScoreIndex).mockResolvedValue({
-      kind: "v9",
-      snapshot: makeReportCardsV9Response({
-        cards: [makeWorkerV9Card({ id: "usdc-circle", grade })],
-      }),
-    });
-
+    gradeCards([makeWorkerV9Card({ id: "usdc-circle", grade })]);
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", qualifyingUsd: 0, countedAssets: [] });
@@ -306,11 +236,9 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it("preserves issued access and terminal replay after a grade downgrade", async () => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
-    vi.mocked(loadActiveSafetyScoreIndex).mockClear().mockResolvedValue({
-      kind: "v9",
-      snapshot: makeReportCardsV9Response({ cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "C" })] }),
-    });
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
+    vi.mocked(loadActiveSafetyScoreIndex).mockClear();
+    gradeCards([makeWorkerV9Card({ id: "usdc-circle", grade: "C" })]);
 
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
     expect((await claim(claimMessage(donorAccount, { nonce: "downgradereplay1" }))).status).toBe(409);
@@ -320,10 +248,34 @@ describe("POST /api/donor-key-claims", () => {
     expect(loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
   });
 
+  it("credits each later donation once: a live key grows from its expiry, a lapsed one from the signature", async () => {
+    const DAY = 86_400;
+    const at0 = TERM_DONATION_SEC + 3 * 3600;
+    const sign = (nonce: string, at: number) => claim(claimMessage(termAccount, { nonce, issuedAtSec: at }), { signer: termAccount, nowSec: at });
+    const extendedTo = async (response: Response) => DonorKeyClaimResponseSchema.parse(await response.json()).key.expiresAt;
+    // As if the $10 row was listed after the claim, with the key at the given expiry.
+    const uncredit = (expiresAt: number) => sqlite.exec(
+      `DELETE FROM api_key_donor_credits WHERE tx_hash = '0xee02'; UPDATE api_keys SET expires_at = ${expiresAt}`,
+    );
+
+    const issued = await issuedKey(await sign("termclaim0000001", at0));
+    expect(issued.key.expiresAt).toBe(at0 + 75 * DAY); // $15 + $10
+    await expect((await sign("termreplay000001", at0)).json()).resolves.toMatchObject({ reason: "claim_exists" });
+    uncredit(at0 + 45 * DAY);
+    expect(await extendedTo(await sign("termextend000001", at0 + 120))).toBe(at0 + 75 * DAY);
+    uncredit(at0 + 60);
+    const later = at0 + 180;
+    expect(await extendedTo(await sign("termextend000002", later))).toBe(later + 30 * DAY);
+    expect((await sign("termextend000003", later)).status).toBe(409);
+    expect(countApiKeys()).toBe(1);
+    resetApiKeyStateForTests();
+    await expect(authenticateApiKey(db, issued.token, PEPPER, undefined, later)).resolves.toMatchObject({ kind: "valid" });
+  });
+
   it("enforces the issued donor key's ten-request minute quota through the access gate", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     expect(payload.key.expiresAt).toBeNull();
     const env = createWorkerEnv({ DB: db, API_KEY_HASH_PEPPER: PEPPER });
     const request = new Request("https://api.pharos.watch/api/stablecoins", {
@@ -348,7 +300,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it("keeps the wallet mapped to its key across an admin rotation", async () => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     const { id } = sqlite.prepare("SELECT id FROM api_keys WHERE key_prefix = ?").get(payload.key.keyPrefix) as { id: number };
     const rotated = await rotateApiKey(db, PEPPER, id, NOW_SEC + 60);
     expect(rotated).not.toBeInstanceOf(Response);
@@ -359,7 +311,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it.each(["UPDATE api_key_donor_claims", "UPDATE api_keys"])("rolls back rotation when %s fails", async (failingSql) => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     const original = sqlite.prepare("SELECT * FROM api_keys").get() as { id: number };
     const flaky = createSqliteD1(sqlite, {
       onRun(sql) {
@@ -397,15 +349,16 @@ describe("POST /api/donor-key-claims", () => {
     );
   });
 
-  it("answers 409 for an orphaned claim whose key row is gone", async () => {
+  it.each([
+    ["an orphaned claim whose key row is gone", "DELETE FROM api_keys", 409, "claim_orphaned", 0],
+    ["a key an operator deactivated", "UPDATE api_keys SET is_active = 0", 403, "claim_revoked", 1],
+  ] as const)("keeps %s terminal", async (_label, sql, status, reason, keys) => {
     expect((await claim(claimMessage(donorAccount))).status).toBe(201);
-    sqlite.exec("DELETE FROM api_keys");
-
+    sqlite.exec(sql);
     const response = await claim(claimMessage(donorAccount, { nonce: "eeeeeeeeeeeeeeee" }));
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toMatchObject({ reason: "claim_orphaned" });
-    expect(countApiKeys()).toBe(0);
+    expect(response.status).toBe(status);
+    await expect(response.json()).resolves.toMatchObject({ reason });
+    expect(countApiKeys()).toBe(keys);
   });
 
   it("still returns the token when the post-commit id lookup fails", async () => {
@@ -438,59 +391,47 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(201);
     expect(countApiKeys()).toBe(1);
     expect((sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_audit_log").get() as { n: number }).n).toBe(0);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
   });
 
   it("rolls back an issuance outage and allows a clean retry", async () => {
-    let failed = false;
-    db = createSqliteD1(sqlite, {
-      onRun(sql) {
-        if (sql.includes("INSERT INTO api_key_donor_claims")) {
-          failed = true;
-          throw new Error("injected issuance failure");
-        }
-      },
-    });
+    const { failing, state } = failingOn("INSERT INTO api_key_donor_claims");
+    db = failing;
     const failedResponse = await claim(claimMessage(donorAccount));
     expect(failedResponse.status).toBe(503);
     await expect(failedResponse.json()).resolves.toMatchObject({ reason: "issue_failed" });
-    expect(failed).toBe(true);
+    expect(state.failed).toBe(true);
     expect(countApiKeys()).toBe(0);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 0 });
     db = createSqliteD1(sqlite);
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(201);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
   });
 
   it("preserves the issued token when audit insertion fails", async () => {
-    let failed = false;
-    db = createSqliteD1(sqlite, {
-      onRun(sql) {
-        if (sql.includes("INSERT INTO api_key_audit_log")) {
-          failed = true;
-          throw new Error("injected audit failure");
-        }
-      },
-    });
+    const { failing, state } = failingOn("INSERT INTO api_key_audit_log");
+    db = failing;
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(201);
-    expect(failed).toBe(true);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    expect(state.failed).toBe(true);
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
     expect(countApiKeys()).toBe(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_audit_log").get()).toEqual({ n: 0 });
   });
 
-  it("answers 503 when the rate limit binding throws", async () => {
-    const throwing: RateLimit = { limit: async () => { throw new Error("binding unavailable"); } };
-
-    const response = await claim(claimMessage(donorAccount), { limiter: throwing });
+  it.each([
+    ["the rate limit binding throws", { limiter: { limit: async () => { throw new Error("binding unavailable"); } } as RateLimit }, "rate_limit_unavailable"],
+    ["the rate limit binding is missing", { limiter: undefined }, "rate_limiter_missing"],
+    ["the API key pepper is unset", { pepper: undefined }, "pepper_missing"],
+  ] as const)("answers 503 when %s", async (_label, options, reason) => {
+    const response = await claim(claimMessage(donorAccount), options);
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({ reason: "rate_limit_unavailable" });
+    await expect(response.json()).resolves.toMatchObject({ reason });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -517,47 +458,14 @@ describe("POST /api/donor-key-claims", () => {
     expect((sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get() as { n: number }).n).toBe(1);
   });
 
-  it("answers 403 once an operator deactivates the issued key", async () => {
-    expect((await claim(claimMessage(donorAccount))).status).toBe(201);
-    sqlite.exec("UPDATE api_keys SET is_active = 0");
-
-    const response = await claim(claimMessage(donorAccount, { nonce: "cccccccccccccccc" }));
-
+  it.each([
+    ["a wallet below $10, with the ledger date", belowThresholdAccount, { ledgerUpdatedAt: LEDGER_UPDATED_AT, qualifyingUsd: 9.99, countedAssets: ["USDC"] }],
+    ["non-stablecoin donations above $10", strangerAccount, { qualifyingUsd: 0, countedAssets: [] }],
+    ["pool payout senders", poolAccount, { ledgerUpdatedAt: LEDGER_UPDATED_AT }],
+  ] as const)("answers 403 ineligible for %s", async (_label, account, body) => {
+    const response = await claim(claimMessage(account), { signer: account });
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ reason: "claim_revoked" });
-    expect(countApiKeys()).toBe(1);
-  });
-
-  it("issues a key for a wallet at exactly $10, because the threshold is inclusive", async () => {
-    const response = await claim(claimMessage(thresholdAccount), { signer: thresholdAccount });
-
-    expect(response.status).toBe(201);
-    expect(countApiKeys()).toBe(1);
-  });
-
-  it("answers 403 with the ledger date for a wallet below $10", async () => {
-    const response = await claim(claimMessage(belowThresholdAccount), { signer: belowThresholdAccount });
-
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({
-      reason: "ineligible", ledgerUpdatedAt: LEDGER_UPDATED_AT, qualifyingUsd: 9.99, countedAssets: ["USDC"],
-    });
-    expect(countApiKeys()).toBe(0);
-  });
-
-  it("excludes non-stablecoin donations above $10 from eligibility", async () => {
-    const response = await claim(claimMessage(strangerAccount), { signer: strangerAccount });
-
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", qualifyingUsd: 0, countedAssets: [] });
-    expect(countApiKeys()).toBe(0);
-  });
-
-  it("excludes pool payout senders from eligibility", async () => {
-    const response = await claim(claimMessage(poolAccount), { signer: poolAccount });
-
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", ledgerUpdatedAt: LEDGER_UPDATED_AT });
+    await expect(response.json()).resolves.toMatchObject({ reason: "ineligible", ...body });
     expect(countApiKeys()).toBe(0);
   });
 
@@ -567,7 +475,7 @@ describe("POST /api/donor-key-claims", () => {
     ["wrong chain", () => claimMessage(donorAccount).replace("Chain ID: 1", "Chain ID: 137")],
     ["expired", () => claimMessage(donorAccount, { issuedAtSec: NOW_SEC - 600 })],
     ["issued in the future", () => claimMessage(donorAccount, { issuedAtSec: NOW_SEC + 600 })],
-    ["tampered statement", () => claimMessage(donorAccount).replace("Claim your Pharos supporter API key.", "Approve this transfer.")],
+    ["tampered statement", () => claimMessage(donorAccount).replace("Claim or extend your Pharos supporter API key", "Approve this transfer")],
     ["unparseable Issued At", () => claimMessage(donorAccount).replace(/Issued At: .*/, "Issued At: garbage")],
     ["far-future expiration", () => claimMessage(donorAccount).replace(/Expiration Time: .*/, "Expiration Time: 2099-01-01T00:00:00.000Z")],
     ["SIWE version 2", () => claimMessage(donorAccount).replace("Version: 1", "Version: 2")],
@@ -582,17 +490,11 @@ describe("POST /api/donor-key-claims", () => {
     expect(countApiKeys()).toBe(0);
   });
 
-  it("rejects a signature from another wallet with 400", async () => {
-    const response = await claim(claimMessage(donorAccount), { signer: strangerAccount });
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({ reason: "signature_invalid" });
-    expect(countApiKeys()).toBe(0);
-  });
-
-  it("rejects a malformed signature with 400", async () => {
-    const response = await claim(claimMessage(donorAccount), { signature: `0x${"00".repeat(65)}` });
-
+  it.each([
+    ["from another wallet", { signer: strangerAccount }],
+    ["that is malformed", { signature: `0x${"00".repeat(65)}` }],
+  ] as const)("rejects a signature %s with 400", async (_label, options) => {
+    const response = await claim(claimMessage(donorAccount), options);
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ reason: "signature_invalid" });
     expect(countApiKeys()).toBe(0);
@@ -641,22 +543,6 @@ describe("POST /api/donor-key-claims", () => {
       expect(countApiKeys()).toBe(0);
     },
   );
-
-  it("answers 503 when the rate limit binding is missing", async () => {
-    const response = await claim(claimMessage(donorAccount), { limiter: undefined });
-
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({ reason: "rate_limiter_missing" });
-    expect(countApiKeys()).toBe(0);
-  });
-
-  it("answers 503 when the API key pepper is unset", async () => {
-    const response = await claim(claimMessage(donorAccount), { pepper: undefined });
-
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({ reason: "pepper_missing" });
-    expect(countApiKeys()).toBe(0);
-  });
 
   it("loads a malformed ledger without throwing and rejects issuance with 503", async () => {
     vi.resetModules();

@@ -1,28 +1,38 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, Heart, KeyRound, Star, Wallet, Wrench } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowUpRight, Building2, ExternalLink, Heart, KeyRound, Server, Share2, Star, Wallet, Wrench } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { FeatureHeroSplit, HeroMetricRow } from "@/components/feature-hero-split";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
-import { clampScore } from "@shared/lib/math";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/schema";
-import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
-import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { API_PAGE_ANCHORS, DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
+import type { CostLineItem, CostsFile, Donation, FundingChain } from "@shared/lib/funding/schema";
+import type { DonationSummary, MonthlyFunding } from "@shared/lib/funding/helpers";
+import {
+  DONOR_API_KEY_DAYS_PER_MIN_USD,
+  DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
+import {
+  API_ACCESS_TELEGRAM_HANDLE,
+  API_ACCESS_TELEGRAM_URL,
+  API_PAGE_ANCHORS,
+  COMMERCIAL_API_KEY_USD_PER_MONTH,
+  DONOR_KEY_CLAIMS_OPEN,
+} from "@shared/lib/public-api-contract";
 import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
-import { formatCoveragePct, groupCostsByCategory, isUnpricedDonation } from "@shared/lib/funding/helpers";
+import { formatCoveragePct, isUnpricedDonation } from "@shared/lib/funding/helpers";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
+import { CostAllocation, CostMark, MonthlyFundingChart, formatUsdWhole } from "./funding-visuals";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
 const PHAROS_FUNDING_ENS = "pharos-watch.eth";
 const GIVETH_URL = "https://giveth.io/project/pharos-watch:-transparent-stablecoins-analytics";
 const GITHUB_URL = "https://github.com/TokenBrice/pharos-watch";
-const DWELLIR_URL = "https://www.dwellir.com";
 const DWELLIR_POST_HREF = "/blog/dwellir-in-kind-sponsorship/";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
@@ -40,6 +50,11 @@ const QUALIFYING_COINS_TEXT =
     ? `${QUALIFYING_LABELS.slice(0, -1).join(", ")} or ${QUALIFYING_LABELS[QUALIFYING_LABELS.length - 1]}`
     : (QUALIFYING_LABELS[0] ?? "");
 const PHAROS_SHARE_MESSAGE = `Stablecoin risk data should be public infrastructure, not a private terminal. Pharos tracks ${TRACKED_COUNT_FLOOR}+ stablecoins with peg, safety, liquidity, depeg, blacklist, flow, yield, and dependency signals. MIT-licensed, practitioner-built, free to use. Help keep it open: https://pharos.watch/funding/`;
+const SHARE_URL = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);
+
+/** The funding rule, stated once in the hero and expanded in the FAQ. */
+const INDEPENDENCE_STATEMENT =
+  "Funding never buys a score. Pharos takes no money for listings, reviews, ratings or placement, from issuers or anyone else. Paid service work for an issuer or its DAO, if any, is public, listed on this page and kept apart from that coin's score.";
 
 // Brand-marked icons matching the footer (lucide has no X/Telegram icons).
 function XIcon({ className }: { className?: string }) {
@@ -57,15 +72,6 @@ function TelegramIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * Whole-dollar grouped USD through the shared cached formatter. Every value
- * rendered here is a non-negative sum (donations, targets, remaining gaps), so
- * the `$`-prefix spelling matches the previous `style: "currency"` output.
- */
-function formatUsdWhole(value: number): string {
-  return `$${formatDecimal(value, 0, 0)}`;
-}
-
 /** Donor-wall receipts: provenance says whether the receipt was priced; zero is a value. */
 function formatDonationUsd(value: number, priceNote: string): string {
   if (isUnpricedDonation(priceNote)) return "—";
@@ -75,278 +81,206 @@ function formatDonationUsd(value: number, priceNote: string): string {
   return formatUsdWhole(value);
 }
 
-interface KpiLabel {
-  primary: string;
-  secondary: string;
+function formatMonthYear(timestampSec: number): string {
+  return new Date(timestampSec * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-function buildThisMonthLabel(
-  summary: DonationSummary,
-  coveragePctLabel: string,
-  monthlyTargetUsd: number,
-): KpiLabel {
-  if (summary.lifetimeCommunityUsd === 0) {
-    return { primary: "Tracking begins", secondary: "first community donations will appear here" };
-  }
-  return {
-    primary: coveragePctLabel,
-    secondary: `${formatUsdWhole(summary.currentMonthCommunityUsd)} of ${formatUsdWhole(monthlyTargetUsd)} covered`,
-  };
-}
-
-function buildCommunityLabel(summary: DonationSummary): KpiLabel {
-  if (summary.lifetimeCommunityDonorCount === 0) {
-    return { primary: "Be the first", secondary: "community support starts here" };
-  }
-  return {
-    primary: formatUsdWhole(summary.lifetimeCommunityUsd),
-    secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
-  };
-}
-
-export interface FundingKpiRowProps {
+export interface FundingHeroProps {
   summary: DonationSummary;
-  monthlyTargetUsd: number;
-  monthlyHistory?: MonthlyCommunityCoverage[];
+  months: readonly MonthlyFunding[];
+  monthlyCostUsd: number;
+  /** Founder ledger transfers plus founder-paid one-time costs. */
+  founderUsd: number;
+  ledgerUpdatedAt: number;
 }
 
-export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }: FundingKpiRowProps) {
-  const rawCoveragePct = monthlyTargetUsd > 0 ? (summary.currentMonthCommunityUsd / monthlyTargetUsd) * 100 : 0;
-  const progressPct = clampScore(rawCoveragePct);
-  const ariaCoveragePct = Math.round(progressPct);
-  const coveragePctLabel = formatCoveragePct(summary.currentMonthCommunityUsd, monthlyTargetUsd);
-  const ariaCoverageText =
-    summary.lifetimeCommunityUsd === 0
-      ? "Tracking begins; no community donations recorded yet"
-      : `${coveragePctLabel} covered this month`;
-  const remainingUsd = Math.max(0, monthlyTargetUsd - summary.currentMonthCommunityUsd);
-
-  const thisMonth = buildThisMonthLabel(summary, coveragePctLabel, monthlyTargetUsd);
-  const community = buildCommunityLabel(summary);
-
+/**
+ * One Beam hero: today's monthly running cost, who covers it (community
+ * coverage this month and last full month, lifetime community and founder
+ * support) and the monthly history as the drawn visual.
+ */
+export function FundingHero({ summary, months, monthlyCostUsd, founderUsd, ledgerUpdatedAt }: FundingHeroProps) {
+  const lastFullMonth = [...months].reverse().find((month) => !month.isCurrent) ?? null;
+  const noCommunity = summary.lifetimeCommunityUsd === 0;
   return (
-    <Card className="pharos-card-shell">
-      <CardContent className="space-y-5 p-4 sm:p-5">
-        <div className="space-y-1.5 border-b border-border/50 pb-5">
-          <p className="pharos-label text-muted-foreground">Monthly running cost</p>
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
-              {formatUsdWhole(monthlyTargetUsd)}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              What it takes to keep Pharos online, maintained, and free to use every month.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-1.5">
-            <p className="pharos-label text-muted-foreground">This month coverage</p>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <p className="pharos-numeric text-3xl font-semibold tracking-tight text-foreground">
-                {thisMonth.primary}
-              </p>
-              <p className="text-sm text-muted-foreground">{thisMonth.secondary}</p>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[28rem]">
-            <FundingMiniStat
-              label="Community support"
-              value={community.primary}
-              detail={community.secondary}
+    <FeatureHeroSplit
+      ariaLabel="Funding overview"
+      mobileSubBeforeVisual
+      beamLabel="Monthly running cost"
+      beamValue={formatUsdWhole(monthlyCostUsd)}
+      universe={
+        <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+          What it takes to keep Pharos online, maintained and free to use, every month.
+        </p>
+      }
+      subKicker="Who covers it"
+      sub={
+        <div className="space-y-4">
+          <div className="divide-y divide-border/50">
+            <HeroMetricRow
+              label="Community, this month"
+              value={noCommunity ? "Tracking begins" : formatCoveragePct(summary.currentMonthCommunityUsd, monthlyCostUsd)}
+              detail={`ledger of ${formatEventDate(ledgerUpdatedAt)}`}
             />
-            <FundingMiniStat
-              label="Best long-term help"
-              value="Recurring Giveth"
-              detail="predictable support for the public site"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{formatUsdWhole(summary.currentMonthCommunityUsd)} covered</span>
-            <span>Monthly goal: {formatUsdWhole(monthlyTargetUsd)}</span>
-          </div>
-          <div
-            className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
-            role="progressbar"
-            aria-valuenow={ariaCoveragePct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Monthly funding coverage"
-            aria-valuetext={ariaCoverageText}
-          >
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-frost-blue/75"
-              style={{ width: `${progressPct}%` }}
-            />
-            {progressPct > 2 && progressPct < 98 ? (
-              <div
-                className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground"
-                style={{ left: `${progressPct}%` }}
-                title="Covered so far"
+            {lastFullMonth ? (
+              <HeroMetricRow
+                label={`Community, ${lastFullMonth.label}`}
+                value={lastFullMonth.costUsd == null ? "—" : formatCoveragePct(lastFullMonth.communityUsd, lastFullMonth.costUsd)}
+                detail="of that month's cost"
               />
             ) : null}
+            <HeroMetricRow
+              label="Community since launch"
+              value={noCommunity ? "Be the first" : formatUsdWhole(summary.lifetimeCommunityUsd)}
+              detail={noCommunity ? undefined : `${summary.lifetimeCommunityDonorCount} supporters`}
+            />
+            <HeroMetricRow label="TokenBrice since launch" value={formatUsdWhole(founderUsd)} detail="plus unpaid maintenance" />
           </div>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Supporter-funded this month</span>
-            <span>{remainingUsd > 0 ? `${formatUsdWhole(remainingUsd)} still open` : "Monthly costs covered"}</span>
-          </div>
+          <Button asChild size="lg" className="w-full gap-2 sm:w-auto">
+            <a href="#how-to-support">
+              <Heart className="h-4 w-4" aria-hidden="true" />
+              Support Pharos
+            </a>
+          </Button>
         </div>
-
-        {monthlyHistory.length > 0 ? (
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <p className="text-sm font-medium text-foreground">Previous months</p>
-              <p className="text-xs text-muted-foreground">
-                Coverage against the {formatUsdWhole(monthlyTargetUsd)} monthly goal
-              </p>
-            </div>
-            <TableFrame
-              tableId="funding-previous-months"
-              chrome="bare"
-              className="overflow-hidden rounded-lg border border-border/60"
-              tableClassName="table-fixed text-sm"
-              tableProps={{ "aria-label": "Previous monthly funding coverage" }}
-              viewportProps={{
-                mobileScrollHint: false,
-                scrollShadow: false,
-                horizontal: false,
-                overscrollX: false,
-                compactBottomPadding: false,
-              }}
-            >
-              <TableHeader className="bg-muted/35">
-                <TableRow rowIntent="static" className="hover:bg-transparent">
-                  <TableHead scope="col" className="h-9 w-[38%] px-3 text-xs font-medium">
-                    Month
-                  </TableHead>
-                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
-                    Community
-                  </TableHead>
-                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
-                    Coverage
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyHistory.map((m) => {
-                  const coveragePct = monthlyTargetUsd > 0
-                    ? (m.communityUsd / monthlyTargetUsd) * 100
-                    : 0;
-                  return (
-                    <TableRow key={m.monthKey} rowIntent="static" className="hover:bg-muted/20">
-                      <TableHead scope="row" className="h-auto px-3 py-2.5 font-medium text-foreground">
-                        {m.label}
-                      </TableHead>
-                      <TableCell className="px-3 py-2.5 text-right">
-                        <span className="pharos-numeric text-foreground">
-                          {formatUsdWhole(m.communityUsd)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2.5">
-                        <div className="flex items-center justify-end gap-3">
-                          <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
-                            <div
-                              className="h-full rounded-full bg-foreground/55"
-                              style={{ width: `${clampScore(coveragePct)}%` }}
-                            />
-                          </div>
-                          <span className="pharos-numeric min-w-10 text-right font-semibold text-foreground">
-                            {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </TableFrame>
-          </div>
-        ) : null}
-
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Donations keep Pharos freely accessible to all, so stablecoin users, analysts, and builders can check
-          high-quality analytics and risk analysis without a private terminal or paywall.
-        </p>
-      </CardContent>
-    </Card>
+      }
+      footer={<p className="text-sm leading-relaxed text-muted-foreground">{INDEPENDENCE_STATEMENT}</p>}
+    >
+      <MonthlyFundingChart months={months} />
+    </FeatureHeroSplit>
   );
 }
 
-function FundingMiniStat({ label, value, detail }: { label: string; value: string; detail: string }) {
+function CostGroup({ title, totalUsd, children }: { title: string; totalUsd?: number; children: React.ReactNode }) {
   return (
-    <div className="pharos-inset px-3 py-2.5">
-      <p className="pharos-label text-muted-foreground">{label}</p>
-      <p className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground">{detail}</p>
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3 border-b border-border/50 pb-1.5">
+        <h3 className="pharos-label">{title}</h3>
+        {totalUsd == null ? null : (
+          <span className="pharos-numeric text-xs text-muted-foreground">{formatUsdWhole(totalUsd)} / month</span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CostRow({ item, amount }: { item: Pick<CostLineItem, "label" | "note" | "mark" | "category">; amount: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <CostMark item={item} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium text-foreground">{item.label}</span>
+          <span className="pharos-numeric text-sm text-foreground">{amount}</span>
+        </div>
+        {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
+      </div>
+    </li>
+  );
+}
+
+/** Services donated in kind: a disclosure, not revenue (docs/funding-page.md#data-model). */
+function InKindSponsor({ item }: { item: CostLineItem }) {
+  if (!item.sponsor) return null;
+  const { sponsor } = item;
+  return (
+    <div className="space-y-2.5 pharos-inset p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <a href={sponsor.url} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-sm">
+          <Image src={sponsor.logo} alt={item.label} width={114} height={24} unoptimized />
+        </a>
+        <span className="text-right text-xs text-muted-foreground">{item.note}</span>
+      </div>
+      <p className="text-sm leading-relaxed">{sponsor.blurb}</p>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {sponsor.announcement ? (
+          <Link href={sponsor.announcement} className="underline underline-offset-2 hover:text-foreground">
+            Read the announcement
+          </Link>
+        ) : null}
+        <a
+          href={sponsor.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+        >
+          {new URL(sponsor.url).hostname.replace(/^www\./, "")}
+          <ExternalLink aria-hidden="true" className="h-3 w-3" />
+        </a>
+      </p>
     </div>
   );
 }
 
-const CATEGORY_LABELS: Record<string, string> = { team: "Team", infra: "Infrastructure" };
-
 export interface CostBreakdownProps {
   items: CostLineItem[];
-  currentCommunityUsd: number;
+  oneTime: CostsFile["one_time"];
   lastReviewedAt: number;
 }
 
-export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: CostBreakdownProps) {
-  const groups = groupCostsByCategory(items);
-  const total = groups.reduce((s, g) => s + g.subtotal, 0);
-  const currentFundingGapUsd = Math.max(0, total - currentCommunityUsd);
-  const reviewedDateObject = new Date(lastReviewedAt * 1000);
-  const reviewedDateTime = reviewedDateObject.toISOString().slice(0, 7);
-  const reviewedDate = reviewedDateObject.toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+/**
+ * Where the money goes: paid infrastructure as a share bar, the paid team,
+ * lines that cost nothing (in-kind sponsors first) and one-time spend kept
+ * outside the recurring total. The total itself is the hero's beam.
+ */
+export function CostBreakdown({ items, oneTime, lastReviewedAt }: CostBreakdownProps) {
+  const paidInfra = items.filter((item) => item.category === "infra" && item.usd_per_month > 0);
+  const paidTeam = items.filter((item) => item.category === "team" && item.usd_per_month > 0);
+  const free = items.filter((item) => item.usd_per_month === 0);
+  const sum = (lines: readonly CostLineItem[]) => lines.reduce((total, item) => total + item.usd_per_month, 0);
+  const reviewed = new Date(lastReviewedAt * 1000);
 
   return (
-    <Card className="pharos-card-shell">
-      <CardHeader className="space-y-1">
-        <p className="pharos-label text-muted-foreground">Where it goes</p>
-        <CardTitle as="h2">Monthly costs</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {groups.map((group) => (
-          <div key={group.category} className="space-y-1">
-            <p className="pharos-label">
-              {CATEGORY_LABELS[group.category] ?? group.category}
-            </p>
-            <ul className="space-y-0.5 text-sm">
-              {group.items.map((item) => (
-                <li key={item.label} className="flex justify-between gap-4">
-                  <span className="flex-1 truncate">
-                    {item.label}
-                    {item.note ? <span className="ml-2 text-xs text-muted-foreground">— {item.note}</span> : null}
-                  </span>
-                  <span className="pharos-numeric text-muted-foreground">
-                    {formatUsdWhole(item.usd_per_month)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-        <div className="flex justify-between border-t border-border/60 pt-2 text-sm font-medium">
-          <span>Total / month</span>
-          <span className="pharos-numeric">{formatUsdWhole(total)}</span>
+    <Card variant="shell">
+      <CardHeader
+        kicker="Where it goes"
+        heading="Monthly costs"
+        freshness={
+          <>
+            Costs reviewed <time dateTime={reviewed.toISOString().slice(0, 7)}>{formatMonthYear(lastReviewedAt)}</time>
+          </>
+        }
+      />
+      <CardContent className="grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="space-y-8">
+          {paidInfra.length > 0 ? (
+            <CostGroup title="Infrastructure" totalUsd={sum(paidInfra)}>
+              <CostAllocation items={paidInfra} ariaLabel="Share of the monthly infrastructure cost" />
+            </CostGroup>
+          ) : null}
+          {paidTeam.length > 0 ? (
+            <CostGroup title="Team" totalUsd={sum(paidTeam)}>
+              <ul className="space-y-3">
+                {paidTeam.map((item) => <CostRow key={item.label} item={item} amount={formatUsdWhole(item.usd_per_month)} />)}
+              </ul>
+            </CostGroup>
+          ) : null}
         </div>
-        <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          TokenBrice also sponsored $5,800 in one-time design expenses for the full website redesign and logo.
-          These exceptional expenses are not included in the monthly total above.
-        </p>
-        <div className="space-y-0.5 text-xs text-muted-foreground">
-          <p>
-            This month: {formatUsdWhole(currentCommunityUsd)} community ·{" "}
-            {currentFundingGapUsd > 0 ? `${formatUsdWhole(currentFundingGapUsd)} still open.` : "costs covered."}
-          </p>
-          <p>
-            Costs last reviewed: <time dateTime={reviewedDateTime}>{reviewedDate}</time>.
-          </p>
+        <div className="space-y-8">
+          {free.length > 0 ? (
+            <CostGroup title="Covered at no cost">
+              <div id="in-kind-supporters" className="space-y-3">
+                {free.filter((item) => item.sponsor).map((item) => <InKindSponsor key={item.label} item={item} />)}
+                <ul className="space-y-3">
+                  {free.filter((item) => !item.sponsor).map((item) => <CostRow key={item.label} item={item} amount="$0" />)}
+                </ul>
+              </div>
+            </CostGroup>
+          ) : null}
+          {oneTime.length > 0 ? (
+            <CostGroup title="One-time, outside the monthly cost">
+              <ul className="space-y-3">
+                {oneTime.map((cost) => (
+                  <CostRow
+                    key={cost.label}
+                    item={{ label: cost.label, note: "Paid by TokenBrice", category: "team" }}
+                    amount={formatUsdWhole(cost.usd)}
+                  />
+                ))}
+              </ul>
+            </CostGroup>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -356,125 +290,150 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
 export interface DonorListProps {
   donations: Donation[];
   lastUpdatedAt: number;
-  /** Cap how many rows render. Default 20. */
+  /** Rows shown before the "show all" fold. Default 10. */
   limit?: number;
 }
 
-export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListProps) {
+function DonationTable({ rows, label }: { rows: readonly Donation[]; label: string }) {
+  return (
+    <TableFrame
+      tableId={`funding-donations-${label.toLowerCase().replace(/\W+/g, "-")}`}
+      chrome="bare"
+      className="overflow-hidden rounded-lg border border-border/60"
+      tableClassName="text-sm"
+      tableProps={{ "aria-label": label }}
+    >
+      <TableHeader className="bg-muted/35">
+        <TableRow rowIntent="static" className="hover:bg-transparent">
+          <TableHead scope="col" className="h-9 px-3 text-xs font-medium">Supporter</TableHead>
+          <TableHead scope="col" className="h-9 px-3 text-xs font-medium">Date</TableHead>
+          <TableHead scope="col" className="h-9 px-3 text-xs font-medium">Sent</TableHead>
+          <TableHead scope="col" className="h-9 px-3 text-right text-xs font-medium">Amount</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((d) => {
+          const explorerUrl = buildExplorerUrl({ chainKey: d.chain, entityType: "tx", value: d.tx_hash });
+          const displayText = d.display || formatAddress(d.from_address);
+          const chain = CHAIN_META[d.chain];
+          const amount = formatDonationUsd(d.usd_at_receipt, d.price_note);
+          return (
+            <TableRow key={`${d.chain}-${d.tx_hash}`} rowIntent="static" className="hover:bg-muted/20">
+              <TableHead scope="row" className="h-auto max-w-56 truncate px-3 py-2 font-mono text-xs font-normal text-foreground">
+                {displayText}
+              </TableHead>
+              <TableCell className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                {formatEventDate(d.block_timestamp)}
+              </TableCell>
+              <TableCell className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  {chain?.logoPath ? (
+                    <Image src={resolveCompactLogoSrc(chain.logoPath, 12)!} alt="" width={12} height={12} />
+                  ) : null}
+                  {d.asset_symbol} on {chain?.name ?? d.chain}
+                </span>
+              </TableCell>
+              <TableCell className="whitespace-nowrap px-3 py-2 text-right">
+                {explorerUrl ? (
+                  <a
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${amount} from ${displayText}: view the transaction`}
+                    className="pharos-numeric inline-flex items-center gap-1 text-foreground underline-offset-2 hover:underline"
+                  >
+                    {amount}
+                    <ArrowUpRight aria-hidden="true" className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <span className="pharos-numeric text-foreground">{amount}</span>
+                )}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </TableFrame>
+  );
+}
+
+export function DonorList({ donations, lastUpdatedAt, limit = 10 }: DonorListProps) {
   const community = donations.filter((d) => d.kind !== "founder").sort((a, b) => b.block_timestamp - a.block_timestamp);
   const visible = community.slice(0, limit);
-  const lastUpdatedLabel =
-    lastUpdatedAt > 0
-      ? formatEventDate(lastUpdatedAt)
-      : null;
+  const earlier = community.slice(limit);
 
   return (
-    <Card id="supporters" className="pharos-card-shell">
-      <CardHeader className="space-y-1">
-        <p className="pharos-label text-muted-foreground">Where it comes from</p>
-        <CardTitle as="h2">Supporters</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <InKindSupporters />
-        <div className="space-y-2 border-t border-border/60 pt-4">
-          <p className="pharos-label">Recent donations</p>
-          {visible.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No community donations yet. {lastUpdatedLabel ? `Last checked ${lastUpdatedLabel}.` : ""}
-            </p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {visible.map((d) => {
-                const explorerUrl = buildExplorerUrl({ chainKey: d.chain, entityType: "tx", value: d.tx_hash });
-                const displayText = d.display || formatAddress(d.from_address);
-                return (
-                  <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
-                    <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      <span className="pharos-numeric">{formatDonationUsd(d.usd_at_receipt, d.price_note)}</span>{" "}
-                      {explorerUrl ? (
-                        <a
-                          href={explorerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline underline-offset-2 hover:text-foreground"
-                        >
-                          ↗
-                        </a>
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {community.length > limit ? (
+    <Card id="supporters" variant="shell">
+      <CardHeader
+        kicker="Where it comes from"
+        heading="Supporters"
+        freshness={lastUpdatedAt > 0 ? `Ledger updated ${formatEventDate(lastUpdatedAt)}, every Sunday` : undefined}
+      />
+      <CardContent className="space-y-3">
+        {visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No community donations yet.</p>
+        ) : (
+          <>
+            <DonationTable rows={visible} label="Most recent donations" />
+            {earlier.length > 0 ? (
+              <details className="space-y-3">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                  Show {earlier.length} earlier donations
+                </summary>
+                <div className="pt-3">
+                  <DonationTable rows={earlier} label="Earlier donations" />
+                </div>
+              </details>
+            ) : null}
             <p className="text-xs text-muted-foreground">
-              Showing most recent {limit} of {community.length} donations.
+              {community.length} donations in the public ledger, newest first.
             </p>
-          ) : null}
-          {lastUpdatedLabel ? <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p> : null}
-        </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-/** Services donated in kind: a disclosure, not revenue (docs/funding-page.md#data-model). */
-function InKindSupporters() {
-  return (
-    <section aria-labelledby="in-kind-supporters" className="space-y-2.5">
-      <p id="in-kind-supporters" className="pharos-label">In-kind supporters</p>
-      <div className="flex items-center justify-between gap-3">
-        <a href={DWELLIR_URL} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-sm">
-          <Image src="/media/dwellir.svg" alt="Dwellir" width={152} height={32} unoptimized />
-        </a>
-        <span className="text-xs text-muted-foreground">Multi-chain RPC</span>
-      </div>
-      <p className="text-sm leading-relaxed">
-        Dwellir sponsors Pharos&apos;s multi-chain RPC access on its Growth plan, including archive state and wide
-        event-log windows. Thank you, Dwellir.
-      </p>
-      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <Link href={DWELLIR_POST_HREF} className="underline underline-offset-2 hover:text-foreground">
-          Read the announcement
-        </Link>
-        <a
-          href={DWELLIR_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
-        >
-          dwellir.com
-          <ExternalLink aria-hidden="true" className="h-3 w-3" />
-        </a>
-      </p>
-    </section>
-  );
-}
-
 export function SupportCtas() {
   return (
-    <section id="how-to-support">
-      <Card className="pharos-card-shell">
-        <CardHeader className="space-y-1">
-          <p className="pharos-label text-muted-foreground">Get involved</p>
-          <CardTitle as="h2">How to support</CardTitle>
-        </CardHeader>
+    <section id="how-to-support" className="scroll-mt-20">
+      <Card variant="shell">
+        <CardHeader kicker="Get involved" heading="How to support" />
         <CardContent className="space-y-6">
           <div className="grid gap-3 lg:grid-cols-3">
             <PrimaryGivethTile />
             <WalletTile />
           </div>
           <SupporterKeyNote />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Best for long-term sustainability: a recurring Giveth stream on Optimism or Base. Direct wallet support
-            works on every supported chain; Base and Gnosis are usually the cheapest gas paths. Giveth donations
-            arrive at the wallet and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
-          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FundingPathTile
+              icon={Building2}
+              title="Building a commercial product on Pharos data?"
+              href={PARTNER_ACCESS_HREF}
+              linkLabel="See partner keys"
+            >
+              Partner keys are free for services that are free to their users, and ${COMMERCIAL_API_KEY_USD_PER_MONTH} per
+              month for commercial products.
+            </FundingPathTile>
+            <FundingPathTile
+              icon={Server}
+              title="Run infrastructure Pharos uses?"
+              href={DWELLIR_POST_HREF}
+              linkLabel="How Dwellir does it"
+            >
+              Data, RPC and hosting providers can sponsor a plan in kind. Sponsors are credited on this page and never
+              influence a score; message{" "}
+              <a href={API_ACCESS_TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
+                @{API_ACCESS_TELEGRAM_HANDLE}
+              </a>{" "}
+              to talk.
+            </FundingPathTile>
+          </div>
           <div className="space-y-2">
             <p className="pharos-label text-muted-foreground">Other ways to help</p>
             <div className="flex flex-wrap gap-2">
+              <SocialButton icon={Share2} label="Share Pharos" href={SHARE_URL} />
               <SocialButton icon={Star} label="Star on GitHub" href={GITHUB_URL} />
               <SocialButton icon={Wrench} label="Issues / PRs" href={`${GITHUB_URL}/issues`} />
               <SocialButton icon={XIcon} label="@PharosWatch" href={TWITTER_URL} />
@@ -488,6 +447,33 @@ export function SupportCtas() {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function FundingPathTile({
+  icon: Icon,
+  title,
+  href,
+  linkLabel,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  href: string;
+  linkLabel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 pharos-inset p-4">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-foreground" />
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+      </div>
+      <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
+      <Link href={href} className="pharos-prose-link mt-auto text-sm text-foreground">
+        {linkLabel}
+      </Link>
+    </div>
   );
 }
 
@@ -507,8 +493,9 @@ function SupporterKeyNote() {
             QUALIFYING_COINS_TEXT
           )}{" "}
           from a wallet you can sign with
-          (not an exchange withdrawal or a Giveth stream) earns a free key with {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE}{" "}
-          requests per minute and no expiry:{" "}
+          (not an exchange withdrawal or a Giveth stream) earns a personal, non-commercial key with{" "}
+          {DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, {DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $
+          {DONOR_API_KEY_MIN_USD}:{" "}
           <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
             claim it on the API page
           </Link>
@@ -530,8 +517,9 @@ function PrimaryGivethTile() {
       </div>
       <p className="text-base font-semibold text-foreground">Recurring via Giveth</p>
       <p className="text-sm text-muted-foreground leading-relaxed">
-        The strongest long-term signal: set a recurring donation so Pharos has predictable runway while the website
-        stays free for everyone. Recurring streams run on Optimism or Base only.
+        The strongest long-term signal: a recurring donation gives Pharos predictable runway while the website stays
+        free for everyone. Streams run on Optimism or Base and appear on the supporter list as one &ldquo;via
+        Giveth&rdquo; entry.
       </p>
       <p className="text-sm text-muted-foreground leading-relaxed">
         Giveth streams support Pharos but do not unlock the supporter API key.
@@ -558,16 +546,13 @@ function WalletTile() {
         <Wallet className="h-4 w-4 text-foreground" />
         <p className="text-sm font-medium text-foreground">Direct wallet</p>
       </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono text-base font-semibold text-foreground">{PHAROS_FUNDING_ENS}</p>
+        <CopyButton text={PHAROS_FUNDING_ENS} />
+      </div>
       <p className="text-xs text-muted-foreground">
-        {PHAROS_FUNDING_ENS} resolves to the same address on every supported chain. ETH, stablecoins, and other
-        ERC-20s accepted.
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Supporter API key: send ${DONOR_API_KEY_MIN_USD}+ in a qualifying stablecoin from this kind of wallet, then{" "}
-        <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
-          claim it on /api/
-        </Link>
-        .
+        The same address on every supported chain; Base and Gnosis usually have the cheapest gas. ETH, stablecoins
+        and other ERC-20s accepted.
       </p>
       <div className="mt-auto space-y-2 pt-2">
         <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background px-3 py-1.5">
@@ -613,37 +598,6 @@ function SocialButton({
   );
 }
 
-export function YearEndHorizon() {
-  const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);
-  return (
-    <Card className="pharos-card-shell">
-      <CardHeader className="space-y-1">
-        <p className="pharos-label text-muted-foreground">Where we&apos;re going</p>
-        <CardTitle as="h2">Path to sustainability</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          The dashboard stays free for everyone, forever. Sustainability comes from two streams: community donations
-          today, and &mdash; once mature &mdash; paid API access for institutional users with heavy programmatic needs.
-          The goal is to cover running costs from those two streams, with the public dashboard untouched.
-        </p>
-        <p className="text-xs">
-          If you can&apos;t support financially,{" "}
-          <a
-            href={shareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            sharing Pharos
-          </a>{" "}
-          helps stablecoin users find open risk data before they need it.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function FundingFaq() {
   const qa: Array<{ q: string; a: React.ReactNode }> = [
     {
@@ -651,8 +605,12 @@ export function FundingFaq() {
       a: "Independent stablecoin analytics has real data, infrastructure, and research costs. Support keeps the website free for everyone instead of making risk analysis available only through private terminals.",
     },
     {
-      q: "Why recurring Giveth donations?",
-      a: "Recurring support is the clearest long-term signal. It smooths one-off donation spikes and lets Pharos plan coverage, alerting, and data-review work without guessing month to month.",
+      q: "Does funding affect Safety Scores?",
+      a: "No. Pharos takes no money for listings, reviews, ratings or placement, from issuers or anyone else. If Pharos does paid service work for an issuer or its DAO, it is public, listed on this page, and kept apart from that coin's score. The scoring code and methodology are open, so anyone can check.",
+    },
+    {
+      q: "How will Pharos stay funded?",
+      a: "From three sources: community donations, paid API access for commercial products, and infrastructure sponsored in kind. The website stays free for everyone, with no paywall.",
     },
     {
       q: "Is my donation tax-deductible?",
@@ -662,13 +620,13 @@ export function FundingFaq() {
       q: "What do supporters get?",
       a: (
         <>
-          Recognition on the supporter wall, and a free supporter API key for ${DONOR_API_KEY_MIN_USD}+ in qualifying
-          stablecoins sent from a wallet you can sign with:{" "}
+          A place on the supporter list. A donation of ${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins from a
+          wallet you can sign with also buys a personal, non-commercial supporter API key: {DONOR_API_KEY_DAYS_PER_MIN_USD}{" "}
+          days of access per ${DONOR_API_KEY_MIN_USD}, extended by signing again after a later donation.{" "}
           <Link href={SUPPORTER_KEY_HREF} className="pharos-prose-link">
-            see the API page
+            See the API page
           </Link>
-          . The donor list is updated every Sunday and grades are checked at claim time. Teams that need higher limits
-          can ask for a{" "}
+          . The donor list is updated every Sunday and grades are checked at claim time. Commercial products use a{" "}
           <Link href={PARTNER_ACCESS_HREF} className="pharos-prose-link">
             partner key
           </Link>
@@ -686,11 +644,8 @@ export function FundingFaq() {
     },
   ];
   return (
-    <Card className="pharos-card-shell">
-      <CardHeader className="space-y-1">
-        <p className="pharos-label text-muted-foreground">Questions</p>
-        <CardTitle as="h2">FAQ</CardTitle>
-      </CardHeader>
+    <Card variant="shell">
+      <CardHeader kicker="Questions" heading="FAQ" />
       <CardContent>
         <dl className="space-y-3">
           {qa.map(({ q, a }) => (

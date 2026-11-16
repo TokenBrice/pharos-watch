@@ -199,8 +199,9 @@ export default function PrivacyPage() {
               the API page
             </Link>{" "}
             asks a wallet to sign a short text message so the key can be tied to a donating wallet. Pharos stores the
-            wallet address, the issued key prefix, and the claim time, plus the key record itself, which is named after
-            the address and carries the last-used timestamp and route that every API key records. Those records are
+            wallet address, the issued key prefix, the claim time, and which public-ledger donations were credited to the
+            key, plus the key record itself, which is named after the address and carries the last-used timestamp and
+            route that every API key records. Those records are
             retained without an automatic expiry. Deactivation stops access but does not delete these records. You
             can request removal of the key record and its usage metadata by messaging{" "}
             <a

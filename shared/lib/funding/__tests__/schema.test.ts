@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DonationSchema, DonationsFileSchema } from "../schema";
+import { CostsFileSchema, DonationSchema, DonationsFileSchema } from "../schema";
 import { makeDonation } from "./funding.test-support";
 
 const DONATION = makeDonation();
@@ -53,6 +53,18 @@ describe("funding schemas", () => {
       ...DONATION,
       usd_at_receipt: Number.NaN,
     })).toThrow();
+  });
+
+  it("keeps cost history ordered, sponsorships at $0 and artwork self-hosted", () => {
+    const item = { label: "S", category: "infra", usd_per_month: 0, sponsor: { logo: "/media/s.svg", url: "https://s.example", blurb: "Thanks." } };
+    const costs = { last_reviewed_at: DONATION.block_timestamp, items: [item], monthly_totals: [{ month: "2026-04", usd: 1 }, { month: "2026-05", usd: 1 }], one_time: [] };
+    expect(CostsFileSchema.parse(costs)).toEqual(costs);
+    for (const patch of [
+      { monthly_totals: [...costs.monthly_totals].reverse() },
+      { monthly_totals: [{ month: "2026-13", usd: 1 }] },
+      { items: [{ ...item, usd_per_month: 10 }] },
+      { items: [{ label: "V", category: "infra", usd_per_month: 5, mark: "https://cdn.example/v.svg" }] },
+    ]) expect(CostsFileSchema.safeParse({ ...costs, ...patch }).success).toBe(false);
   });
 
   it("rejects unknown chains and extra fields", () => {

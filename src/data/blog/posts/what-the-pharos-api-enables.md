@@ -42,8 +42,10 @@ OpenAPI and Postman files are linked from the [API page](/api/).
 ## How to get a key
 
 - **No key:** Safety Score grades for every tracked stablecoin, at `https://api.pharos.watch/api/safety-grades`.
-- **Supporter key:** donate $10 or more in stablecoins graded A or B, then claim a key on the [API page](/api/#supporter-key). It allows 10 requests per minute and does not expire.
-- **Partner key:** for teams in production. Message [@TokenBrice on Telegram](https://t.me/TokenBrice) or DM [@PharosWatch on X](https://x.com/PharosWatch). Partner keys start at 120 requests per minute. They are free when your service is free to its users; commercial terms are agreed case by case.
+- **Supporter key:** donate $10 or more in stablecoins graded A or B, then claim a key on the [API page](/api/#supporter-key). It allows 10 requests per minute, and each $10 buys 30 days of access.
+- **Partner key:** for teams in production. Message [@TokenBrice on Telegram](https://t.me/TokenBrice) or DM [@PharosWatch on X](https://x.com/PharosWatch). Partner keys start at 120 requests per minute. They are free when your service is free to its users; commercial products pay $250 per month.
+
+*Updated November 16, 2026: supporter keys now run 30 days per $10 donated, and commercial partner keys have a published price.*
 
 Access does not change how anything is scored. Any issuer can answer our evidence questions, with or without a key, and every rating follows the same published methodology.
 
