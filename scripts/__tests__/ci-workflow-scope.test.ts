@@ -509,9 +509,8 @@ describe("CI workflow scope", () => {
     expect(release.on.workflow_call.inputs.workspace_artifact_name).toMatchObject({ required: true, type: "string" });
     expect(release.on.workflow_call.secrets.SITE_API_SHARED_SECRET).toEqual({ required: true });
     expect(release.on.workflow_call.secrets.SITE_SESSION_SIGNING_KEY).toEqual({ required: false });
-    for (const caller of [deploy, rebuild]) {
-      expect(caller.jobs["pages-release"].secrets.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
-      expect(caller.jobs["pages-release"].secrets.SITE_SESSION_SIGNING_KEY).toBe("${{ secrets.SITE_SESSION_SIGNING_KEY }}");
+    for (const key of ["SITE_API_SHARED_SECRET", "SITE_SESSION_SIGNING_KEY", "R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID", "R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY"]) {
+      for (const caller of [deploy, rebuild]) expect(caller.jobs["pages-release"].secrets[key]).toBe(`\${{ secrets.${key} }}`);
     }
     expect(release.jobs["pages-release"].env.SITE_API_SHARED_SECRET).toBeUndefined();
     expect(upload?.with).toMatchObject({
