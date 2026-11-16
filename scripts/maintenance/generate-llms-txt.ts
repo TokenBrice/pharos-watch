@@ -161,7 +161,7 @@ const learnLinks = [
 ] as const;
 
 const apiLinks = [
-  ["API Access", absolute("/api/"), "Supporter keys for donors and partner keys on request; free Safety Score grades without a key."],
+  ["API Access", absolute("/api/"), "Supporter keys for donors, partner keys on request (free for free services, paid for commercial products); free Safety Score grades without a key."],
   ["API Reference", absolute("/api/reference/"), "Public and ops lanes, auth model, response contracts, and every public endpoint."],
   ["OpenAPI spec", absolute("/openapi.json"), "Machine-readable OpenAPI 3.1 endpoint catalogue for the Pharos API."],
   [

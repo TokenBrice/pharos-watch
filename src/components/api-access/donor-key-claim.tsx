@@ -133,7 +133,8 @@ function describeClaimFailure(error: unknown): ClaimFailure {
         status: 409,
         text: (
           <>
-            This wallet already claimed its key. Lost it? Message {TELEGRAM_CONTACT_LINK} on Telegram (or DM{" "}
+            This wallet already claimed its key and no newly listed donation extends it. A donation extends an expiring
+            key once the Sunday update lists it. Lost the key? Message {TELEGRAM_CONTACT_LINK} on Telegram (or DM{" "}
             {X_CONTACT_LINK} on X) for a rotation.
           </>
         ),
@@ -235,7 +236,7 @@ export function DonorKeyClaim() {
   const [walletFocusRequest, setWalletFocusRequest] = useState(0);
   const walletLinkRef = useRef<HTMLAnchorElement | null>(null);
   const { copied: pageLinkCopied, copy: copyPageLink } = useCopyToClipboard(1800);
-  const controls = useIssuedTokenControls(issued?.token ?? null, status === "submitting");
+  const controls = useIssuedTokenControls(issued?.status === "issued" ? issued.token : null, status === "submitting");
   const { retainIssuedToken } = controls;
 
   useEffect(() => {
@@ -304,7 +305,7 @@ export function DonorKeyClaim() {
       const finishIssuance = beginPendingApiKeyIssuance();
       try {
         const result = await claimDonorKey({ message, signature });
-        retainIssuedToken(result.token);
+        if (result.status === "issued") retainIssuedToken(result.token);
         setIssued(result);
         setStatus("issued");
       } finally {
@@ -321,7 +322,26 @@ export function DonorKeyClaim() {
     }
   }, [retainIssuedToken]);
 
-  if (status === "issued" && issued) {
+  if (status === "issued" && issued?.status === "extended") {
+    return (
+      <div className="mt-4" role="status">
+        <p className="pharos-label">Supporter key extended</p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          The key with prefix <code className="font-mono text-foreground">{issued.key.keyPrefix}</code>{" "}
+          {issued.key.expiresAt == null ? (
+            "no longer expires"
+          ) : (
+            <>
+              now runs until <span className="pharos-numeric text-foreground">{formatIsoDate(issued.key.expiresAt)}</span>
+            </>
+          )}
+          . Keep using the same key; there is nothing new to copy.
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "issued" && issued?.status === "issued") {
     return (
       <div className="mt-4">
         <p className="pharos-label">Supporter key issued</p>
@@ -330,7 +350,7 @@ export function DonorKeyClaim() {
           keyPrefix={issued.key.keyPrefix}
           expiresAt={issued.key.expiresAt}
           curlCommand={buildPublicApiCurlCommand({ tokenReference: issued.token, includeAcceptHeader: true })}
-          onceCopy={`It is only displayed once. The key allows ${issued.key.rateLimitPerMinute} requests per minute and has no scheduled expiry.`}
+          onceCopy={`It is only displayed once. The key allows ${issued.key.rateLimitPerMinute} requests per minute and ${issued.key.expiresAt == null ? "has no scheduled expiry" : `runs until ${formatIsoDate(issued.key.expiresAt)}; sign again after a later donation to extend it`}.`}
           copied={controls.copied}
           copyError={controls.copyError}
           copyText={controls.copyText}

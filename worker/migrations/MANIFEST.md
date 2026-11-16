@@ -91,6 +91,7 @@
 | 0301     | `0301_mint_burn_supply_proofs.sql`                         | Add immutable conditional range-supply evidence with a separate acceptance lifecycle, durable config fingerprints, nullable event proof references reusing 0300 raw amounts and a partial proof-reference index; no historical proof seed or existing row mutation. |
 | 0302     | `0302_mint_burn_supply_reconciliation.sql`                   | Add prospective daily exact native-unit operator supply-reconciliation receipts; no publication or history rewrite. |
 | 0303     | `0303_tape_query_indexes.sql`                              | Add sparse large-flow, freeze attempted-time, Telegram retry-error and reserve attempt-time indexes; preserve all existing indexes and rows. |
+| 0305     | `0305_api_key_donor_credits.sql`                           | Add the empty per-donation credit ledger that lets a re-signed supporter-key claim extend its expiry once per counted donation. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -548,6 +549,8 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0297_daily_digest_read_numbering_index.sql`: restore the prior Worker for a code rollback; keep the additive index, which only changes the digest reads' plan and is inert to older Workers. Drop it only in a later measured cleanup migration, never as part of a Worker rollback.
 
 ## Rollback Procedure
+
+`0305_api_key_donor_credits.sql` applies before the Worker that issues expiring supporter keys; the old Worker never reads or writes the table. Keep it on Worker rollback: an older Worker issues no-expiry keys and answers re-signs with `409`, while retained credits keep later extensions from crediting a donation twice. Retain the pre-window Time Travel bookmark, migration ledger and Worker version. Observe the first claim writing its credits and the first re-sign extension separately from migration success. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
 `0303_tape_query_indexes.sql` applies before the indexed Tape reader. Keep all four additive indexes on Worker rollback; older Workers remain compatible. Retain the pre-window Time Travel bookmark, migration ledger and public/heavy Worker versions. Index creation scans each source once; observe a new version-correlated Tape projection, Telegram retry-class read and reserve prune separately from migration success. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 

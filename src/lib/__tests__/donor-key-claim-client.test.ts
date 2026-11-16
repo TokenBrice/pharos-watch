@@ -108,7 +108,8 @@ describe("claimDonorKey", () => {
   it("rejects a success body that does not match the response contract", async () => {
     const payload = issuedPayload();
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ...payload, key: { ...(payload.key as Record<string, unknown>), expiresAt: 123 } }, 201),
+      // An extension must never carry a token.
+      jsonResponse({ ...payload, status: "extended" }, 200),
     );
 
     await expect(claimDonorKey({ message: "siwe", signature: SIGNATURE })).rejects.toThrow();

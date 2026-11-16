@@ -1,7 +1,14 @@
 import donationsAsset from "@shared/data/funding/donations.json";
 import { clientAddressLimiterSubject } from "@shared/lib/client-ip-hash";
 import { DONOR_CLAIM_SIWE_DOMAIN, buildDonorClaimSiweMessage } from "@shared/lib/donor-key-claim";
-import { isEligibleDonor, summarizeDonorKeyEligibility } from "@shared/lib/funding/donor-eligibility";
+import {
+  creditDonorKey,
+  donorKeyCreditId,
+  isEligibleDonor,
+  summarizeDonorKeyEligibility,
+  type DonorKeyCredit,
+  type DonorKeyEligibilitySummary,
+} from "@shared/lib/funding/donor-eligibility";
 import { DonationsFileSchema } from "@shared/lib/funding/schema";
 import type { DonationsFile } from "@shared/lib/funding/schema";
 import {
@@ -43,7 +50,8 @@ const INELIGIBLE_MESSAGE =
   + "The donor list is updated every Sunday; see https://pharos.watch/funding/";
 const PRIVATE_CONTACT = `message @${API_ACCESS_TELEGRAM_HANDLE} on Telegram (${API_ACCESS_TELEGRAM_URL}) or @${API_ACCESS_X_HANDLE} on X`;
 const ALREADY_CLAIMED_MESSAGE =
-  `This wallet already claimed its supporter key; to rotate a lost key ${PRIVATE_CONTACT}`;
+  "This wallet already claimed its supporter key and no newly listed donation extends it. "
+  + `A donation extends an expiring key once the Sunday update lists it; to rotate a lost key ${PRIVATE_CONTACT}`;
 const REVOKED_MESSAGE = `The supporter key for this wallet was revoked; ${PRIVATE_CONTACT}`;
 
 let donationsLedgerState:
@@ -69,7 +77,11 @@ interface DonorClaimDeps {
 
 interface DonorClaimRow {
   key_prefix: string;
+  claimed_at: number;
+  key_id: number | null;
   is_active: number | null;
+  expires_at: number | null;
+  rate_limit_per_minute: number | null;
 }
 
 /** Outcome codes only: the message, the signature, and the address are never logged. */
@@ -96,7 +108,7 @@ function claimError(status: number, message: string, reason: DonorKeyClaimFailur
 async function selectDonorClaim(db: D1Database, address: string): Promise<DonorClaimRow | null> {
   return db
     .prepare(
-      `SELECT c.key_prefix, k.is_active
+      `SELECT c.key_prefix, c.claimed_at, k.id AS key_id, k.is_active, k.expires_at, k.rate_limit_per_minute
        FROM api_key_donor_claims c
        LEFT JOIN api_keys k ON k.key_prefix = c.key_prefix
        WHERE c.address = ?`,
@@ -134,6 +146,104 @@ function isValidClaimMessage(message: string, parsed: ReturnType<typeof parseSiw
     domain: DONOR_CLAIM_SIWE_DOMAIN,
     time: new Date(nowSec * 1000),
   });
+}
+
+/** Credits each newly counted donation once; OR IGNORE lets a reissued wallet's retained credits stand. */
+function creditInserts(
+  db: D1Database,
+  address: string,
+  donations: DonorKeyCredit["newlyCounted"],
+  nowSec: number,
+  guard: { keyPrefix: string; expiresAt: number | null },
+): D1PreparedStatement[] {
+  // Each insert lands only if the key carries the expiry this batch set, so a
+  // claim that lost a race credits nothing.
+  return donations.map((donation) => db
+    .prepare(
+      `INSERT OR IGNORE INTO api_key_donor_credits (address, chain, tx_hash, credited_at)
+       SELECT ?, ?, ?, ?
+       WHERE EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = ? AND is_active = 1 AND expires_at IS ?)`,
+    )
+    .bind(address, donation.chain, donation.tx_hash.toLowerCase(), nowSec, guard.keyPrefix, guard.expiresAt));
+}
+
+/**
+ * A re-signed claim on an expiring key: credit counted donations not yet
+ * credited, from the later of now and the current expiry, so a live key grows
+ * and a lapsed one restarts at this signature. The token is never re-sent; the
+ * compare-and-set loses cleanly to a concurrent extension or rotation.
+ */
+async function extendDonorClaim(
+  db: D1Database,
+  address: string,
+  existing: DonorClaimRow & { expires_at: number },
+  summary: DonorKeyEligibilitySummary,
+  nowSec: number,
+): Promise<Response> {
+  let creditedIds: Set<string>;
+  try {
+    const credited = await db
+      .prepare("SELECT chain, tx_hash FROM api_key_donor_credits WHERE address = ?")
+      .bind(address)
+      .all<{ chain: string; tx_hash: string }>();
+    creditedIds = new Set(credited.results.map((row) => donorKeyCreditId(row.chain, row.tx_hash)));
+  } catch {
+    return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
+  }
+  const credit = creditDonorKey(summary.rows, creditedIds, Math.max(nowSec, existing.expires_at));
+  if (credit.newlyCounted.length === 0 && credit.expiresAt != null) {
+    const pendingGrade = summary.rows.some((row) => row.status === "grade-unavailable"
+      && !creditedIds.has(donorKeyCreditId(row.donation.chain, row.donation.tx_hash)));
+    if (pendingGrade) {
+      return claimError(503, UNAVAILABLE_MESSAGE, "grade_unavailable", RATE_LIMIT_RETRY_AFTER_SEC);
+    }
+    return claimError(409, ALREADY_CLAIMED_MESSAGE, "claim_exists");
+  }
+
+  let updated: D1Result[];
+  try {
+    updated = await db.batch([
+      db
+        .prepare("UPDATE api_keys SET expires_at = ?, updated_at = ? WHERE key_prefix = ? AND is_active = 1 AND expires_at = ?")
+        .bind(credit.expiresAt, nowSec, existing.key_prefix, existing.expires_at),
+      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: existing.key_prefix, expiresAt: credit.expiresAt }),
+    ]);
+  } catch {
+    return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
+  }
+  if ((updated[0]?.meta?.changes ?? 0) === 0) {
+    return claimError(409, ALREADY_CLAIMED_MESSAGE, "claim_exists");
+  }
+  clearApiKeyCache(existing.key_prefix);
+
+  if (existing.key_id != null) {
+    // Best effort, as on issuance: the new expiry is already live.
+    await recordApiKeyAudit(db, existing.key_id, "updated", { expiresAt: credit.expiresAt }, nowSec, "donor-claim").catch(
+      (error: unknown) => {
+        logWorkerEvent({
+          scope: "api",
+          level: "error",
+          event: "donor_key_claim_audit_failed",
+          route: ROUTE,
+          message: "audit_write_failed",
+          error,
+        });
+      },
+    );
+  }
+
+  claimOutcome("extended", 200, "info");
+  const response: DonorKeyClaimResponse = {
+    status: "extended",
+    key: {
+      keyPrefix: existing.key_prefix,
+      maskedToken: maskApiKeyToken(existing.key_prefix),
+      tier: "donor",
+      rateLimitPerMinute: existing.rate_limit_per_minute ?? DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+      expiresAt: credit.expiresAt,
+    },
+  };
+  return jsonResponse(response, { status: 200, noStore: true });
 }
 
 export async function handleDonorKeyClaim(
@@ -196,7 +306,11 @@ export async function handleDonorKeyClaim(
 
   const address = parsedMessage.address.toLowerCase();
   const existing = await selectDonorClaim(db, address);
-  if (existing) {
+  // Revoked, orphaned and no-expiry keys are terminal; only an active expiring key can be extended.
+  const renewable = existing?.is_active === 1 && existing.expires_at != null
+    ? { ...existing, expires_at: existing.expires_at }
+    : null;
+  if (existing && !renewable) {
     return existingClaimResponse(existing);
   }
 
@@ -208,6 +322,9 @@ export async function handleDonorKeyClaim(
     card.ratingStatus === "pipeline-gap" || card.grade === null ? [] : [[card.id, card.grade] as const],
   ));
   const summary = summarizeDonorKeyEligibility(address, donationsLedger.donations, grades);
+  if (renewable) {
+    return extendDonorClaim(db, address, renewable, summary, nowSec);
+  }
   const totals = new Map([[address, summary.qualifyingUsd]]);
   if (!isEligibleDonor(address, totals, DONOR_API_KEY_MIN_USD)) {
     let potentiallyQualifyingUsd = summary.qualifyingUsd;
@@ -236,6 +353,8 @@ export async function handleDonorKeyClaim(
     return claimError(503, UNAVAILABLE_MESSAGE, "pepper_missing");
   }
 
+  const credit = creditDonorKey(summary.rows, new Set(), nowSec);
+  const expiresAt = credit.expiresAt;
   const material = await buildApiKeyMaterial(pepper);
   const claimInsert = db
     .prepare("INSERT INTO api_key_donor_claims (address, key_prefix, claimed_at) VALUES (?, ?, ?)")
@@ -249,7 +368,7 @@ export async function handleDonorKeyClaim(
       ownerEmail: null,
       tier: "donor",
       rateLimitPerMinute: DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
-      expiresAt: null,
+      expiresAt,
     },
     nowSec,
   );
@@ -257,7 +376,11 @@ export async function handleDonorKeyClaim(
   try {
     // Atomic: a concurrent first claim loses on the address primary key and
     // rolls the key insert back with it, so no orphan key can be issued.
-    await db.batch([claimInsert, keyInsert]);
+    await db.batch([
+      claimInsert,
+      keyInsert,
+      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: material.keyPrefix, expiresAt }),
+    ]);
   } catch {
     const raced = await selectDonorClaim(db, address).catch(() => null);
     if (raced) {
@@ -309,7 +432,7 @@ export async function handleDonorKeyClaim(
       maskedToken: maskApiKeyToken(material.keyPrefix),
       tier: "donor",
       rateLimitPerMinute: DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
-      expiresAt: null,
+      expiresAt,
     },
     token: material.token,
   };

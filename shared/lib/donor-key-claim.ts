@@ -1,4 +1,9 @@
-import { DONOR_API_KEY_RATE_LIMIT_PER_MINUTE, DONOR_KEY_CLAIM_MAX_AGE_SEC } from "./ops-limits";
+import {
+  DONOR_API_KEY_DAYS_PER_MIN_USD,
+  DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+  DONOR_KEY_CLAIM_MAX_AGE_SEC,
+} from "./ops-limits";
 
 /**
  * Sign-In-With-Ethereum (EIP-4361) contract for donor key claims. The page
@@ -10,7 +15,7 @@ export const DONOR_CLAIM_SIWE_DOMAIN = "pharos.watch";
 export const DONOR_CLAIM_SIWE_URI = "https://pharos.watch/api/";
 const DONOR_CLAIM_SIWE_CHAIN_ID = 1;
 const DONOR_CLAIM_SIWE_STATEMENT =
-  `Claim your Pharos supporter API key. One key per wallet, no expiry, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute.`;
+  `Claim or extend your Pharos supporter API key for personal, non-commercial use. One key per wallet, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated, ${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute.`;
 const DONOR_CLAIM_NONCE_LENGTH = 16;
 
 const NONCE_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

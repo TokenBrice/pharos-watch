@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { summarizeCountingCoinNames, type DonorKeyQualifyingCoin } from "@/lib/donor-key-qualifying-coins";
 import {
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  DONOR_API_KEY_DAYS_PER_MIN_USD,
   DONOR_API_KEY_MIN_USD,
   DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
@@ -14,6 +15,7 @@ import {
   API_ACCESS_X_HANDLE,
   API_ACCESS_X_URL,
   API_PAGE_ANCHORS,
+  COMMERCIAL_API_KEY_USD_PER_MONTH,
   PARTNER_KEY_REPLY_BUSINESS_DAYS,
   PARTNER_KEY_REQUEST_TEMPLATE,
 } from "@shared/lib/public-api-contract";
@@ -52,12 +54,15 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
           Supporter key
         </h2>
         <p className={CARD_PITCH_CLASS_NAME}>
-          Donate ${DONOR_API_KEY_MIN_USD} or more and claim a key to the data behind every grade.
+          Each ${DONOR_API_KEY_MIN_USD} you donate buys {DONOR_API_KEY_DAYS_PER_MIN_USD} days of keyed access to the data
+          behind every grade.
         </p>
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-foreground">
         <li className="pharos-numeric">{DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests/min</li>
-        <li className="pharos-numeric">No expiry</li>
+        <li className="pharos-numeric">
+          {DONOR_API_KEY_DAYS_PER_MIN_USD} days per ${DONOR_API_KEY_MIN_USD}
+        </li>
         <li className="pharos-numeric">Every read endpoint</li>
       </ul>
       <div className="space-y-1.5">
@@ -83,7 +88,9 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
           </Link>
         </Button>
       </div>
-      <p className="pharos-meta">Given as a thank-you. Revocable, best effort, no SLA.</p>
+      <p className="pharos-meta">
+        For personal, non-commercial use; commercial products need a partner key. Revocable, best effort, no SLA.
+      </p>
     </section>
   );
 }
@@ -114,7 +121,9 @@ function PartnerKeyCard() {
         <li>Cached endpoints keep serving through brief database outages.</li>
       </ul>
       <p className="text-sm leading-relaxed text-foreground">
-        Free when your service is free to its users. Commercial integrations agree terms per request.
+        Free when your service is free to its users. Commercial products pay{" "}
+        <span className="pharos-numeric font-semibold">${COMMERCIAL_API_KEY_USD_PER_MONTH}</span> per month in
+        stablecoins.
       </p>
       <div className={CTA_ROW_CLASS_NAME}>
         <Button asChild size="lg" className="h-auto min-h-10 w-full gap-2 whitespace-normal sm:w-auto">
@@ -143,7 +152,12 @@ function PartnerKeyCard() {
           <CopyButton text={PARTNER_KEY_REQUEST_TEMPLATE} className="size-11 shrink-0 sm:size-8" />
         </div>
         <p className="mt-3 pharos-meta">
-          Check the exact handle. Pharos never asks for wallet credentials or payment by direct message.
+          Check the exact handle. Pharos never asks for wallet credentials, and payments go only to the addresses on
+          the{" "}
+          <Link href="/funding/#how-to-support" className="pharos-prose-link">
+            funding page
+          </Link>
+          .
         </p>
       </ApiDisclosure>
     </section>

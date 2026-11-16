@@ -30,6 +30,10 @@ describe("contracts workspace public wire schemas", () => {
     expect(DonorKeyClaimResponseSchema.parse(issued)).toEqual(issued);
     expect(DonorKeyClaimResponseSchema.safeParse({ ...issued, key: { ...issued.key, tier: "standard" } }).success).toBe(false);
     expect(DonorKeyClaimResponseSchema.safeParse({ ...issued, token: "" }).success).toBe(false);
+    const extended = { status: "extended", key: { ...issued.key, expiresAt: 1_800_000_000 } };
+    expect(DonorKeyClaimResponseSchema.parse(extended)).toEqual(extended);
+    // An extension never carries a token.
+    expect(DonorKeyClaimResponseSchema.safeParse({ ...extended, token: "phk_fixture_secret" }).success).toBe(false);
   });
 
   it("preserves attribution scope, omitted demand and the shared API-key traffic vocabulary", () => {

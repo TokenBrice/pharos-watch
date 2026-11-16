@@ -131,6 +131,22 @@ describe("DonorKeyClaim one-time reveal", () => {
     expect(savedUnload.defaultPrevented).toBe(false);
   });
 
+  it("shows an extension's new expiry without a token or an unsaved-key guard", async () => {
+    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    vi.mocked(claimDonorKey).mockResolvedValue({
+      status: "extended",
+      key: { keyPrefix: "prefix-test", maskedToken: "prefix-test...", tier: "donor", rateLimitPerMinute: 10, expiresAt: 1_800_000_000 },
+    });
+    render(<DonorKeyClaim />);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("prefix-test");
+    expect(status.textContent).toContain("2027-01-15");
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(false);
+  });
+
 });
 
 describe("DonorKeyClaim failure details", () => {

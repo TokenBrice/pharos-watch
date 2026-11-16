@@ -28,6 +28,7 @@ vi.mock("@shared/lib/public-api-contract", async (importOriginal) => ({
 }));
 
 // $11 across two chains and exactly $10 qualify; ETH and pool payouts do not.
+// The last two rows postdate DONOR_API_KEY_TERMS_START_SEC, so they buy 45 and 30 days.
 vi.mock("@shared/data/funding/donations.json", () => ({
   default: {
     last_updated_at: 1788681300,
@@ -110,6 +111,32 @@ vi.mock("@shared/data/funding/donations.json", () => ({
         usd_at_receipt: 50,
         price_note: "stablecoin-par",
       },
+      {
+        chain: "ethereum",
+        tx_hash: "0xee01",
+        block_timestamp: 1794877200,
+        from_address: "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+        display: "0x996550...a4dc",
+        kind: "community",
+        asset_symbol: "USDC",
+        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        amount_decimal: 15,
+        usd_at_receipt: 15,
+        price_note: "stablecoin-par",
+      },
+      {
+        chain: "ethereum",
+        tx_hash: "0xee02",
+        block_timestamp: 1794880800,
+        from_address: "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+        display: "0x996550...a4dc",
+        kind: "community",
+        asset_symbol: "USDC",
+        token_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        amount_decimal: 10,
+        usd_at_receipt: 10,
+        price_note: "stablecoin-par",
+      },
     ],
   },
 }));
@@ -128,6 +155,8 @@ const belowThresholdAccount = privateKeyToAccount(
 );
 const poolAccount = privateKeyToAccount("0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6");
 const strangerAccount = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+const termAccount = privateKeyToAccount("0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba");
+const TERM_DONATION_SEC = 1_794_877_200;
 
 const allowLimiter: RateLimit = { limit: async () => ({ success: true }) };
 const denyLimiter: RateLimit = { limit: async () => ({ success: false }) };
@@ -153,6 +182,7 @@ async function claim(
     signature?: string;
     limiter?: RateLimit | undefined;
     pepper?: string | undefined;
+    nowSec?: number;
   } = {},
 ): Promise<Response> {
   // Key presence, not `??`: the missing-binding cases pass `undefined` on purpose.
@@ -160,7 +190,13 @@ async function claim(
   const pepper = "pepper" in options ? options.pepper : PEPPER;
   const signer = options.signer ?? donorAccount;
   const body = { message, signature: options.signature ?? (await signer.signMessage({ message })) };
-  return handleDonorKeyClaim(db, makeJsonRequest(CLAIM_URL, body), { rateLimiter: limiter, pepper }, NOW_SEC);
+  return handleDonorKeyClaim(db, makeJsonRequest(CLAIM_URL, body), { rateLimiter: limiter, pepper }, options.nowSec ?? NOW_SEC);
+}
+
+async function issuedKey(response: Response) {
+  const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+  if (payload.status !== "issued") throw new Error(`expected an issued key, got ${payload.status}`);
+  return payload;
 }
 
 function countApiKeys(): number {
@@ -226,7 +262,7 @@ describe("POST /api/donor-key-claims", () => {
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     expect(payload.key.rateLimitPerMinute).toBe(10);
     expect(payload.key.expiresAt).toBeNull();
 
@@ -306,7 +342,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it("preserves issued access and terminal replay after a grade downgrade", async () => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     vi.mocked(loadActiveSafetyScoreIndex).mockClear().mockResolvedValue({
       kind: "v9",
       snapshot: makeReportCardsV9Response({ cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "C" })] }),
@@ -320,10 +356,52 @@ describe("POST /api/donor-key-claims", () => {
     expect(loadActiveSafetyScoreIndex).not.toHaveBeenCalled();
   });
 
+  it("credits each later donation once: extending a live key from its expiry and a lapsed one from the signature", async () => {
+    const DAY = 86_400;
+    const claimAt = TERM_DONATION_SEC + 3 * 3600;
+    const sign = (nonce: string, at: number) => claim(claimMessage(termAccount, { nonce, issuedAtSec: at }), {
+      signer: termAccount, nowSec: at,
+    });
+    const credits = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_credits").get() as { n: number }).n;
+
+    // $15 + $10 counted at the first claim buy 75 days from it.
+    const issued = await issuedKey(await sign("termclaim0000001", claimAt));
+    expect(issued.key.expiresAt).toBe(claimAt + 75 * DAY);
+    expect(credits()).toBe(2);
+    const replay = await sign("termreplay000001", claimAt);
+    expect(replay.status).toBe(409);
+    await expect(replay.json()).resolves.toMatchObject({ reason: "claim_exists" });
+
+    // As if the $10 row was listed after the claim: a live key grows from its current expiry.
+    const uncredit = (expiresAt: number) => {
+      sqlite.prepare("DELETE FROM api_key_donor_credits WHERE tx_hash = '0xee02'").run();
+      sqlite.prepare("UPDATE api_keys SET expires_at = ? WHERE key_prefix = ?").run(expiresAt, issued.key.keyPrefix);
+    };
+    uncredit(claimAt + 45 * DAY);
+    const live = await sign("termextend000001", claimAt + 120);
+    expect(live.status).toBe(200);
+    expect(DonorKeyClaimResponseSchema.parse(await live.json())).toEqual({
+      status: "extended", key: { ...issued.key, expiresAt: claimAt + 75 * DAY },
+    });
+    expect(credits()).toBe(2);
+
+    // A lapsed key restarts at the signature instead of the donation date.
+    uncredit(claimAt + 60);
+    const later = claimAt + 180;
+    await expect(authenticateApiKey(db, issued.token, PEPPER, undefined, later)).resolves.not.toMatchObject({ kind: "valid" });
+    const lapsed = await sign("termextend000002", later);
+    expect(lapsed.status).toBe(200);
+    expect(DonorKeyClaimResponseSchema.parse(await lapsed.json())).toMatchObject({ key: { expiresAt: later + 30 * DAY } });
+    expect((await sign("termextend000003", later)).status).toBe(409);
+    expect(countApiKeys()).toBe(1);
+    resetApiKeyStateForTests();
+    await expect(authenticateApiKey(db, issued.token, PEPPER, undefined, later)).resolves.toMatchObject({ kind: "valid" });
+  });
+
   it("enforces the issued donor key's ten-request minute quota through the access gate", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     expect(payload.key.expiresAt).toBeNull();
     const env = createWorkerEnv({ DB: db, API_KEY_HASH_PEPPER: PEPPER });
     const request = new Request("https://api.pharos.watch/api/stablecoins", {
@@ -348,7 +426,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it("keeps the wallet mapped to its key across an admin rotation", async () => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     const { id } = sqlite.prepare("SELECT id FROM api_keys WHERE key_prefix = ?").get(payload.key.keyPrefix) as { id: number };
     const rotated = await rotateApiKey(db, PEPPER, id, NOW_SEC + 60);
     expect(rotated).not.toBeInstanceOf(Response);
@@ -359,7 +437,7 @@ describe("POST /api/donor-key-claims", () => {
   });
 
   it.each(["UPDATE api_key_donor_claims", "UPDATE api_keys"])("rolls back rotation when %s fails", async (failingSql) => {
-    const payload = DonorKeyClaimResponseSchema.parse(await (await claim(claimMessage(donorAccount))).json());
+    const payload = await issuedKey(await claim(claimMessage(donorAccount)));
     const original = sqlite.prepare("SELECT * FROM api_keys").get() as { id: number };
     const flaky = createSqliteD1(sqlite, {
       onRun(sql) {
@@ -438,7 +516,7 @@ describe("POST /api/donor-key-claims", () => {
     expect(response.status).toBe(201);
     expect(countApiKeys()).toBe(1);
     expect((sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_audit_log").get() as { n: number }).n).toBe(0);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
   });
 
@@ -461,7 +539,7 @@ describe("POST /api/donor-key-claims", () => {
     db = createSqliteD1(sqlite);
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(201);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
   });
 
@@ -478,7 +556,7 @@ describe("POST /api/donor-key-claims", () => {
     const response = await claim(claimMessage(donorAccount));
     expect(response.status).toBe(201);
     expect(failed).toBe(true);
-    const payload = DonorKeyClaimResponseSchema.parse(await response.json());
+    const payload = await issuedKey(response);
     await expect(authenticateApiKey(db, payload.token, PEPPER)).resolves.toMatchObject({ kind: "valid" });
     expect(countApiKeys()).toBe(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM api_key_donor_claims").get()).toEqual({ n: 1 });
@@ -567,7 +645,7 @@ describe("POST /api/donor-key-claims", () => {
     ["wrong chain", () => claimMessage(donorAccount).replace("Chain ID: 1", "Chain ID: 137")],
     ["expired", () => claimMessage(donorAccount, { issuedAtSec: NOW_SEC - 600 })],
     ["issued in the future", () => claimMessage(donorAccount, { issuedAtSec: NOW_SEC + 600 })],
-    ["tampered statement", () => claimMessage(donorAccount).replace("Claim your Pharos supporter API key.", "Approve this transfer.")],
+    ["tampered statement", () => claimMessage(donorAccount).replace("Claim or extend your Pharos supporter API key", "Approve this transfer")],
     ["unparseable Issued At", () => claimMessage(donorAccount).replace(/Issued At: .*/, "Issued At: garbage")],
     ["far-future expiration", () => claimMessage(donorAccount).replace(/Expiration Time: .*/, "Expiration Time: 2099-01-01T00:00:00.000Z")],
     ["SIWE version 2", () => claimMessage(donorAccount).replace("Version: 1", "Version: 2")],

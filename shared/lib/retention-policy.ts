@@ -189,6 +189,7 @@ const PERMANENT_TABLE_CLOCKS = [
   ["admin_action_audit", "created_at", "admin audit"],
   ["api_key_audit_log", "created_at", "credential audit"],
   ["api_key_donor_claims", "claimed_at", "supporter claims"],
+  ["api_key_donor_credits", "credited_at", "supporter-key donation credits"],
   ["blacklist_events", "timestamp", "blacklist event ledger"],
   ["blacklist_reconciliation_runs", "started_at", "blacklist reconciliation audit"],
   ["chain_supply_history", "snapshot_date", "chain supply archive"],

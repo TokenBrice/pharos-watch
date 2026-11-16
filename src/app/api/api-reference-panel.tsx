@@ -30,12 +30,17 @@ import {
 } from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
+import {
+  DONOR_API_KEY_DAYS_PER_MIN_USD,
+  DONOR_API_KEY_MIN_USD,
+  DONOR_API_KEY_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
 import {
   API_ACCESS_TELEGRAM_HANDLE,
   API_PAGE_ANCHORS,
   API_PARTNER_ACCESS_URL,
   buildPublicApiCurlCommand,
+  COMMERCIAL_API_KEY_USD_PER_MONTH,
   PUBLIC_API_ARTIFACTS,
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
@@ -76,7 +81,7 @@ const HERO_LANES = [
 const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "How do I get a Pharos API key?",
-    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, no expiry) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, integration help and support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram.`,
+    answer: `Safety Score grades are free without a key at ${PUBLIC_API_HOST}${API_PATHS.safetyGrades()}. Donors of $${DONOR_API_KEY_MIN_USD} or more in qualifying stablecoins can claim a supporter key for personal, non-commercial use (${DONOR_API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute, ${DONOR_API_KEY_DAYS_PER_MIN_USD} days of access per $${DONOR_API_KEY_MIN_USD} donated) at ${SITE_URL}/api/#${API_PAGE_ANCHORS.supporterKey}. Teams that need higher limits, integration help and support can request a partner key at ${API_PARTNER_ACCESS_URL} by messaging @${API_ACCESS_TELEGRAM_HANDLE} on Telegram; it is free for services that are free to their users and $${COMMERCIAL_API_KEY_USD_PER_MONTH} per month for commercial products.`,
   },
   {
     question: "Do I need an API key for every endpoint?",

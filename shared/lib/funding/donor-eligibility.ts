@@ -1,5 +1,6 @@
 import type { Donation, FundingChain } from "./schema";
 import type { ReportCardGrade } from "../../types/report-card-grade";
+import { DONOR_API_KEY_DAYS_PER_MIN_USD, DONOR_API_KEY_MIN_USD, DONOR_API_KEY_TERMS_START_SEC } from "../ops-limits";
 
 export interface DonorKeyQualifyingStablecoin {
   /** Uppercase ledger `asset_symbol` the funding-update reconciliation writes for this coin. Display only. */
@@ -563,4 +564,42 @@ export function isEligibleDonor(
   // The threshold is inclusive, so the epsilon absorbs floating-point drift that
   // would otherwise leave a sum meant to be exactly the threshold just under it.
   return total >= thresholdUsd - 1e-9;
+}
+
+const DONOR_KEY_SEC_PER_USD = (DONOR_API_KEY_DAYS_PER_MIN_USD * 86_400) / DONOR_API_KEY_MIN_USD;
+
+/** A ledger donation's identity in `api_key_donor_credits`; matches the ledger's own duplicate check. */
+export function donorKeyCreditId(chain: string, txHash: string): string {
+  return `${chain}:${txHash.toLowerCase()}`;
+}
+
+export interface DonorKeyCredit {
+  /** Counted donations not yet credited; each buys access exactly once. */
+  readonly newlyCounted: readonly Donation[];
+  /** Expiry once they are credited, or `null` under the original no-expiry terms. */
+  readonly expiresAt: number | null;
+}
+
+/**
+ * Credits counted donations to a supporter key. Each one buys
+ * `DONOR_API_KEY_DAYS_PER_MIN_USD` days per `DONOR_API_KEY_MIN_USD`, pro rata,
+ * running from `startSec`: the claim on a first claim, and the later of the
+ * signature and the current expiry on a re-signed claim, so a live key grows
+ * and a lapsed one restarts at the signature. Counted donations made before
+ * `DONOR_API_KEY_TERMS_START_SEC` that reach the minimum keep the original
+ * no-expiry terms.
+ */
+export function creditDonorKey(
+  rows: DonorKeyEligibilitySummary["rows"],
+  creditedIds: ReadonlySet<string>,
+  startSec: number,
+): DonorKeyCredit {
+  const counted = rows.filter((row) => row.status === "counted").map((row) => row.donation);
+  const newlyCounted = counted.filter((donation) => !creditedIds.has(donorKeyCreditId(donation.chain, donation.tx_hash)));
+  const grandfatheredUsd = counted
+    .filter((donation) => donation.block_timestamp < DONOR_API_KEY_TERMS_START_SEC)
+    .reduce((sum, donation) => sum + donation.usd_at_receipt, 0);
+  if (grandfatheredUsd >= DONOR_API_KEY_MIN_USD - 1e-9) return { newlyCounted, expiresAt: null };
+  const newUsd = newlyCounted.reduce((sum, donation) => sum + donation.usd_at_receipt, 0);
+  return { newlyCounted, expiresAt: Math.floor(startSec + newUsd * DONOR_KEY_SEC_PER_USD) };
 }
