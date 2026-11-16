@@ -1,5 +1,32 @@
 [
   {
+    "slug": "eurs-2026-11-10",
+    "stablecoinId": "eurs-stasis",
+    "symbol": "EURS",
+    "pegType": "peggedEUR",
+    "direction": "below",
+    "peakDeviationBps": -775,
+    "startedAt": 1794317479
+  },
+  {
+    "slug": "audd-2026-11-09",
+    "stablecoinId": "audd-novatti",
+    "symbol": "AUDD",
+    "pegType": "peggedAUD",
+    "direction": "below",
+    "peakDeviationBps": -1039,
+    "startedAt": 1794262603
+  },
+  {
+    "slug": "zarp-2026-11-09",
+    "stablecoinId": "zarp-zarp",
+    "symbol": "ZARP",
+    "pegType": "peggedZAR",
+    "direction": "below",
+    "peakDeviationBps": -878,
+    "startedAt": 1794244603
+  },
+  {
     "slug": "lusd-2026-10-29",
     "stablecoinId": "lusd-liquity",
     "symbol": "LUSD",
@@ -234,12 +261,30 @@
     "startedAt": 1783883080
   },
   {
+    "slug": "cngn-2026-07-10",
+    "stablecoinId": "cngn-compliant-naira",
+    "symbol": "cNGN",
+    "pegType": "peggedNGN",
+    "direction": "below",
+    "peakDeviationBps": -509,
+    "startedAt": 1783650896
+  },
+  {
     "slug": "usda-2026-07-06",
     "stablecoinId": "usda-alpha-partner",
     "symbol": "USDA",
     "pegType": "peggedUSD",
     "direction": "below",
     "peakDeviationBps": -503,
+    "startedAt": 1783297163
+  },
+  {
+    "slug": "usda-2026-07-06-down",
+    "stablecoinId": "usda-alpha-partner",
+    "symbol": "USDA",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -1205,
     "startedAt": 1783297163
   },
   {
@@ -576,15 +621,6 @@
     "startedAt": 1776008975
   },
   {
-    "slug": "kag-2026-04-12",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "below",
-    "peakDeviationBps": -540,
-    "startedAt": 1775995487
-  },
-  {
     "slug": "gyd-2026-04-11",
     "stablecoinId": "gyd-gyroscope",
     "symbol": "GYD",
@@ -628,33 +664,6 @@
     "direction": "above",
     "peakDeviationBps": 1257,
     "startedAt": 1774289931
-  },
-  {
-    "slug": "kau-2026-03-22-down-88054",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -944,
-    "startedAt": 1774198866
-  },
-  {
-    "slug": "eurs-2026-03-22-up",
-    "stablecoinId": "eurs-stasis",
-    "symbol": "EURS",
-    "pegType": "peggedEUR",
-    "direction": "above",
-    "peakDeviationBps": 641,
-    "startedAt": 1774192556
-  },
-  {
-    "slug": "kau-2026-03-22-up-88042",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 954,
-    "startedAt": 1774162835
   },
   {
     "slug": "gyd-2026-03-22-down-88037",
@@ -729,15 +738,6 @@
     "startedAt": 1774129527
   },
   {
-    "slug": "kau-2026-03-21-up-88017",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 831,
-    "startedAt": 1774112438
-  },
-  {
     "slug": "usdx-2026-03-21",
     "stablecoinId": "usdx-hex-trust",
     "symbol": "USDX",
@@ -745,24 +745,6 @@
     "direction": "below",
     "peakDeviationBps": -669,
     "startedAt": 1774105237
-  },
-  {
-    "slug": "kag-2026-03-20-up-87986",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "above",
-    "peakDeviationBps": 806,
-    "startedAt": 1774044046
-  },
-  {
-    "slug": "kau-2026-03-20",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 653,
-    "startedAt": 1774044046
   },
   {
     "slug": "gyd-2026-03-20-down-87982",
@@ -1134,51 +1116,6 @@
     "startedAt": 1773577896
   },
   {
-    "slug": "kau-2026-03-15-up-87620",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 667,
-    "startedAt": 1773568860
-  },
-  {
-    "slug": "kau-2026-03-15-down",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -693,
-    "startedAt": 1773547260
-  },
-  {
-    "slug": "kau-2026-03-14-up-87580",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 810,
-    "startedAt": 1773518473
-  },
-  {
-    "slug": "kag-2026-03-14",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "above",
-    "peakDeviationBps": 649,
-    "startedAt": 1773450038
-  },
-  {
-    "slug": "kau-2026-03-14-up-87527",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 1091,
-    "startedAt": 1773450038
-  },
-  {
     "slug": "gyen-2026-03-13",
     "stablecoinId": "gyen-gyen",
     "symbol": "GYEN",
@@ -1260,15 +1197,6 @@
     "startedAt": 1773000024
   },
   {
-    "slug": "kau-2026-03-08-down-84645",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -1752,
-    "startedAt": 1772985624
-  },
-  {
     "slug": "usdx-2026-03-08",
     "stablecoinId": "usdx-hex-trust",
     "symbol": "USDX",
@@ -1276,15 +1204,6 @@
     "direction": "below",
     "peakDeviationBps": -3492,
     "startedAt": 1772985624
-  },
-  {
-    "slug": "kau-2026-03-08-up",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 913,
-    "startedAt": 1772928022
   },
   {
     "slug": "nect-2026-03-07-down-84614",
@@ -1296,15 +1215,6 @@
     "startedAt": 1772910045
   },
   {
-    "slug": "brz-2026-03-07-down-84603",
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedREAL",
-    "direction": "below",
-    "peakDeviationBps": -1123,
-    "startedAt": 1772898330
-  },
-  {
     "slug": "brz-2026-03-07-down-84582",
     "stablecoinId": "brz-transfero",
     "symbol": "BRZ",
@@ -1312,15 +1222,6 @@
     "direction": "below",
     "peakDeviationBps": -9843,
     "startedAt": 1772856019
-  },
-  {
-    "slug": "kau-2026-03-07-up",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 606,
-    "startedAt": 1772845217
   },
   {
     "slug": "eurs-2026-03-06",
@@ -1402,60 +1303,6 @@
     "direction": "below",
     "peakDeviationBps": -4258,
     "startedAt": 1772467226
-  },
-  {
-    "slug": "kau-2026-03-01-up-78555",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 2036,
-    "startedAt": 1772373623
-  },
-  {
-    "slug": "kag-2026-03-01-up-78521",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "above",
-    "peakDeviationBps": 755,
-    "startedAt": 1772355615
-  },
-  {
-    "slug": "kag-2026-03-01-down",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "below",
-    "peakDeviationBps": -564,
-    "startedAt": 1772344866
-  },
-  {
-    "slug": "kau-2026-03-01-up-76764",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 1015,
-    "startedAt": 1772341267
-  },
-  {
-    "slug": "kag-2026-02-28-up-76729",
-    "stablecoinId": "kag-kinesis",
-    "symbol": "KAG",
-    "pegType": "peggedSILVER",
-    "direction": "above",
-    "peakDeviationBps": 605,
-    "startedAt": 1772301646
-  },
-  {
-    "slug": "kau-2026-02-28-up-76716",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 783,
-    "startedAt": 1772290834
   },
   {
     "slug": "nect-2026-02-27-down-76614",
@@ -1575,15 +1422,6 @@
     "startedAt": 1771794197
   },
   {
-    "slug": "kau-2026-02-22-down",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -621,
-    "startedAt": 1771783200
-  },
-  {
     "slug": "nect-2026-02-22-down-24455",
     "stablecoinId": "nect-beraborrow",
     "symbol": "NECT",
@@ -1645,15 +1483,6 @@
     "direction": "below",
     "peakDeviationBps": -528,
     "startedAt": 1771668146
-  },
-  {
-    "slug": "kau-2026-02-21-up-91030",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 531,
-    "startedAt": 1771639200
   },
   {
     "slug": "nect-2026-02-20-down-49466",
@@ -1755,42 +1584,6 @@
     "startedAt": 1771200000
   },
   {
-    "slug": "kau-2026-02-15-up-91022",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 566,
-    "startedAt": 1771142400
-  },
-  {
-    "slug": "kau-2026-02-15-down",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -612,
-    "startedAt": 1771117200
-  },
-  {
-    "slug": "kau-2026-02-14-up",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 506,
-    "startedAt": 1771052400
-  },
-  {
-    "slug": "kau-2026-02-13-up-91016",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 1101,
-    "startedAt": 1771016400
-  },
-  {
     "slug": "honey-2026-02-13-up-24422",
     "stablecoinId": "honey-berachain",
     "symbol": "HONEY",
@@ -1825,15 +1618,6 @@
     "direction": "below",
     "peakDeviationBps": -2620,
     "startedAt": 1770768000
-  },
-  {
-    "slug": "kau-2026-02-08-down-91009",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -645,
-    "startedAt": 1770555600
   },
   {
     "slug": "usdb-2026-02-06-up",
@@ -1926,15 +1710,6 @@
     "startedAt": 1769983323
   },
   {
-    "slug": "kau-2026-02-01-up-90992",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 598,
-    "startedAt": 1769979600
-  },
-  {
     "slug": "yusd-2026-02-01",
     "stablecoinId": "yusd-aegis",
     "symbol": "YUSD",
@@ -1942,15 +1717,6 @@
     "direction": "below",
     "peakDeviationBps": -977,
     "startedAt": 1769961837
-  },
-  {
-    "slug": "kau-2026-02-01-up-90991",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 844,
-    "startedAt": 1769932800
   },
   {
     "slug": "eurs-2026-02-01",
@@ -2259,33 +2025,6 @@
     "startedAt": 1767643200
   },
   {
-    "slug": "kau-2026-01-04-down-90953",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -753,
-    "startedAt": 1767520800
-  },
-  {
-    "slug": "kau-2026-01-03-down-90949",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -767,
-    "startedAt": 1767452400
-  },
-  {
-    "slug": "kau-2026-01-03-down-90947",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -754,
-    "startedAt": 1767416400
-  },
-  {
     "slug": "kau-2026-01-02-down-90946",
     "stablecoinId": "kau-kinesis",
     "symbol": "KAU",
@@ -2293,24 +2032,6 @@
     "direction": "below",
     "peakDeviationBps": -805,
     "startedAt": 1767337200
-  },
-  {
-    "slug": "kau-2026-01-01-down",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "below",
-    "peakDeviationBps": -737,
-    "startedAt": 1767236400
-  },
-  {
-    "slug": "kau-2026-01-01-up",
-    "stablecoinId": "kau-kinesis",
-    "symbol": "KAU",
-    "pegType": "peggedGOLD",
-    "direction": "above",
-    "peakDeviationBps": 542,
-    "startedAt": 1767225600
   },
   {
     "slug": "usdc-2023-03-11",

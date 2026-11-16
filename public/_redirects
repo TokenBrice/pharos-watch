@@ -77,6 +77,82 @@
 /depeg/usn-2026-02-14-up-49237/ /stablecoin/usn-noon/ 301
 /depeg/usn-2026-02-14-up-49237 /stablecoin/usn-noon/ 301
 
+# Reviewed removal of reference-market closure artifacts (#2080 repair, #2083):
+# depegs that opened while the FX or metal reference market was closed and
+# ended within six hours of the reopen. The coin page remains the canonical surface.
+/depeg/kag-2026-04-12/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-04-12 /stablecoin/kag-kinesis/ 301
+/depeg/kau-2026-03-22-down-88054/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-22-down-88054 /stablecoin/kau-kinesis/ 301
+/depeg/eurs-2026-03-22-up/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-22-up /stablecoin/eurs-stasis/ 301
+/depeg/kau-2026-03-22-up-88042/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-22-up-88042 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-21-up-88017/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-21-up-88017 /stablecoin/kau-kinesis/ 301
+/depeg/kag-2026-03-20-up-87986/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-03-20-up-87986 /stablecoin/kag-kinesis/ 301
+/depeg/kau-2026-03-20/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-20 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-15-up-87620/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-15-up-87620 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-15-down/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-15-down /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-14-up-87580/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-14-up-87580 /stablecoin/kau-kinesis/ 301
+/depeg/kag-2026-03-14/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-03-14 /stablecoin/kag-kinesis/ 301
+/depeg/kau-2026-03-14-up-87527/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-14-up-87527 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-08-down-84645/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-08-down-84645 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-08-up/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-08-up /stablecoin/kau-kinesis/ 301
+/depeg/brz-2026-03-07-down-84603/ /stablecoin/brz-transfero/ 301
+/depeg/brz-2026-03-07-down-84603 /stablecoin/brz-transfero/ 301
+/depeg/kau-2026-03-07-up/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-07-up /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-01-up-78555/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-01-up-78555 /stablecoin/kau-kinesis/ 301
+/depeg/kag-2026-03-01-up-78521/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-03-01-up-78521 /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-03-01-down/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-03-01-down /stablecoin/kag-kinesis/ 301
+/depeg/kau-2026-03-01-up-76764/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-03-01-up-76764 /stablecoin/kau-kinesis/ 301
+/depeg/kag-2026-02-28-up-76729/ /stablecoin/kag-kinesis/ 301
+/depeg/kag-2026-02-28-up-76729 /stablecoin/kag-kinesis/ 301
+/depeg/kau-2026-02-28-up-76716/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-28-up-76716 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-22-down/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-22-down /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-21-up-91030/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-21-up-91030 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-15-up-91022/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-15-up-91022 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-15-down/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-15-down /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-14-up/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-14-up /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-13-up-91016/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-13-up-91016 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-08-down-91009/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-08-down-91009 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-01-up-90992/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-01-up-90992 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-01-up-90991/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-01-up-90991 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-04-down-90953/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-04-down-90953 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-03-down-90949/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-03-down-90949 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-03-down-90947/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-03-down-90947 /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-01-down/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-01-down /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-01-up/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-01-01-up /stablecoin/kau-kinesis/ 301
+
 # Reviewed removal of DGLD, EURS, IDRT and USDX price-feed artifacts
 # (2026-10-30): bad upstream price prints with no economic trade at the stored
 # deviation. The coin page remains the canonical surface.
