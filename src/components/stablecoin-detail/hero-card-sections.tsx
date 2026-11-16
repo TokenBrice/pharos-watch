@@ -109,7 +109,6 @@ export function HeroCardMobileSection({
   coinData,
   price,
   market,
-  peg,
   tertiaryMetrics,
 }: HeroSectionBaseProps & {
   tertiaryMetrics: HeroTertiaryMetricConfig[];
@@ -125,7 +124,7 @@ export function HeroCardMobileSection({
         tertiaryCount={tertiaryMetrics.length}
       />
 
-      <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
+      <HeroTertiaryMetrics metrics={tertiaryMetrics} />
     </div>
   );
 }

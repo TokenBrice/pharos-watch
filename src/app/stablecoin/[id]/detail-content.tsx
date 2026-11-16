@@ -49,7 +49,7 @@ import {
 } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { activityZoneLabel, DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
-import { FeedbackModal } from "./detail-lazy-sections";
+import { ActiveDepegOutlook, FeedbackModal } from "./detail-lazy-sections";
 import { DetailRiskContextSections } from "./detail-risk-context-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
@@ -492,6 +492,8 @@ export function DetailContent({
   const backingHeadline = sharedModules.backingMetrics?.visual?.kind === "coverage-ratio"
     ? sharedModules.backingMetrics
     : null;
+  // A live (non-archived, fixed-peg) depeg puts the resolver outlook first.
+  const activeDepeg = viewModel.coin.status !== "frozen" && !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
   const heroKeyMetric = backingHeadline
     ? {
         key: "backing-ratio",
@@ -540,6 +542,16 @@ export function DetailContent({
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
         <div className="min-w-0">
           <div ref={heroRef} className="space-y-4">
+            {/* A live depeg leads the dossier: the resolver's forecast sits above
+                the figures, inside the first fold at every width. Without a
+                published forecast the plain active-depeg alert takes its place. */}
+            {activeDepeg ? (
+              <ActiveDepegOutlook
+                stablecoinId={viewModel.id}
+                symbol={viewModel.coin.symbol}
+                fallback={<HolderAlerts activeDepeg symbol={viewModel.coin.symbol} />}
+              />
+            ) : null}
             <HeroCard model={heroModel} keyMetric={heroKeyMetric} />
             {/* A frozen coin leads with its obituary; its past danger notice
                 follows as a muted record so the story is not told in red first. */}
@@ -556,11 +568,7 @@ export function DetailContent({
             />
             <ListingStateBanner coin={viewModel.coin} />
             {viewModel.coin.status === "frozen" ? null : (
-              <HolderAlerts
-                notices={viewModel.coin.notices}
-                activeDepeg={!viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true}
-                symbol={viewModel.coin.symbol}
-              />
+              <HolderAlerts notices={viewModel.coin.notices} symbol={viewModel.coin.symbol} />
             )}
           </div>
           {viewModel.summary ? (

@@ -422,10 +422,8 @@ const TERTIARY_GRID_COLUMNS: Record<number, string> = {
 
 export function HeroTertiaryMetrics({
   metrics,
-  activeDepeg,
 }: {
   metrics: HeroTertiaryMetricConfig[];
-  activeDepeg: boolean;
 }) {
   return (
     <>
@@ -442,12 +440,6 @@ export function HeroTertiaryMetrics({
           ))}
         </div>
       ) : null}
-
-      {activeDepeg && (
-        <div className="mt-3 rounded-lg border border-state-danger-solid/20 bg-state-danger-solid/8 px-3 py-2 text-xs text-state-danger">
-          Active depeg detected
-        </div>
-      )}
     </>
   );
 }

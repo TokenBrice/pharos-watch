@@ -2,7 +2,8 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { StablecoinDepegResolverCard } from "../depeg-resolver-card";
+import { ActiveDepegOutlook, StablecoinDepegResolverCard } from "../depeg-resolver-card";
+import { getResolution, getTierMeta, getTierVocabulary } from "@/components/depeg/depeg-resolver-row-card-model";
 import { DDR_TEST_META, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 
@@ -25,30 +26,23 @@ afterEach(() => {
 });
 
 describe("StablecoinDepegResolverCard", () => {
-  it("omits only a healthy empty resolver snapshot", () => {
-    queryMock.mockReturnValue({ data: { _meta: DDR_TEST_META, rows: [] }, error: null, refetch: vi.fn() });
-    const { container } = render(<StablecoinDepegResolverCard stablecoinId="lusd-liquity" />);
-    expect(container.innerHTML).toBe("");
+  it.each([
+    ["an empty snapshot", DDR_TEST_META, [], "lusd-liquity"],
+    ["a coin absent from a stale book", { ...DDR_TEST_META, degraded: true, degradedReason: "stale-cache" }, [makeFrozenDdrV2Row()], "usdc-circle"],
+  ])("omits %s, never unavailable", (_case, _meta, rows, id) => {
+    queryMock.mockReturnValue({ data: { _meta, rows }, error: null, refetch: vi.fn() });
+    expect(render(<StablecoinDepegResolverCard stablecoinId={id} />).container.innerHTML).toBe("");
+    expect(render(<ActiveDepegOutlook stablecoinId={id} symbol="X" fallback="alert" />).container.textContent).toBe("alert");
   });
 
-  it("shows request failure without data and allows a retry", () => {
+  it.each([
+    ["a failed first read", undefined, new Error("HTTP 502"), "temporarily unavailable"],
+    ["a degraded empty snapshot", { _meta: { ...DDR_TEST_META, degraded: true, degradedReason: "no-valid-snapshot" }, rows: [] }, null, "Snapshot reason: no-valid-snapshot"],
+  ])("shows %s as unavailable with a retry", (_case, data, error, text) => {
     const refetch = vi.fn();
-    queryMock.mockReturnValue({ data: undefined, error: new Error("HTTP 502"), refetch });
+    queryMock.mockReturnValue({ data, error, refetch });
     render(<StablecoinDepegResolverCard stablecoinId="lusd-liquity" />);
-    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
-    fireEvent.click(screen.getByRole("button", { name: "Retry depeg duration resolver" }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows the reason and retry for a degraded empty snapshot", () => {
-    const refetch = vi.fn();
-    queryMock.mockReturnValue({
-      data: { _meta: { ...DDR_TEST_META, degraded: true, degradedReason: "no-valid-snapshot" }, rows: [] },
-      error: null, refetch,
-    });
-    render(<StablecoinDepegResolverCard stablecoinId="lusd-liquity" />);
-    expect(screen.getByRole("alert")).toBeTruthy();
-    expect(screen.getByText("Snapshot reason: no-valid-snapshot")).toBeTruthy();
+    expect(screen.getByRole("alert").closest("section")?.textContent).toContain(text);
     fireEvent.click(screen.getByRole("button", { name: "Retry depeg duration resolver" }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -65,16 +59,6 @@ describe("StablecoinDepegResolverCard", () => {
     expect(region.querySelectorAll("a[href='/stablecoin/lusd-liquity']").length).toBeGreaterThan(0);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(container.querySelector("[data-health-state]")).toBeNull();
-  });
-
-  it("omits a coin absent from a retained stale-cache book rather than calling it unavailable", () => {
-    const other = makeFrozenDdrV2Row();
-    queryMock.mockReturnValue({
-      data: { _meta: { ...DDR_TEST_META, degraded: true, degradedReason: "stale-cache" }, rows: [other] },
-      error: null, refetch: vi.fn(),
-    });
-    const { container } = render(<StablecoinDepegResolverCard stablecoinId="usdc-circle" />);
-    expect(container.innerHTML).toBe("");
   });
 
   it("keeps retained rows through a failed refresh without a load-error notice", () => {
@@ -119,5 +103,15 @@ describe("StablecoinDepegResolverCard", () => {
     const { container } = render(<StablecoinDepegResolverCard stablecoinId="lusd-liquity" />);
     expect(container.querySelector("[data-health-state]")?.getAttribute("data-health-state")).toBe("unavailable");
     expect(screen.getByRole("region", { name: "Depeg Duration Resolver for LUSD" })).toBeTruthy();
+  });
+
+  it("outlook leads with verdict, deviation", () => {
+    const row = makeFrozenDdrV2Row();
+    row.live.currentDeviationBps = -4569;
+    queryMock.mockReturnValue({ data: { _meta: DDR_TEST_META, rows: [row] }, error: null });
+    render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" />);
+    expect(screen.getByRole("heading").textContent).toMatch(/LUSD is trading 45\.7%/);
+    screen.getByText(getTierMeta(getResolution(row).tier, getTierVocabulary(row)).label);
+    expect(screen.getByRole("link").getAttribute("href")).toBe("#depeg-resolver");
   });
 });

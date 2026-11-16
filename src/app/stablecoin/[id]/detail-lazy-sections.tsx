@@ -82,6 +82,11 @@ export const DistributionSection = dynamic(
   () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
 );
+// The first-fold DDR outlook during a live depeg; its loading state holds the panel's footprint.
+export const ActiveDepegOutlook = dynamic(
+  () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.ActiveDepegOutlook),
+  { loading: () => <div aria-hidden="true" className="h-44 animate-pulse rounded-xl border border-border/60 bg-muted/30 sm:h-36" /> },
+);
 export const StablecoinDepegResolverCard = dynamic(
   () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.StablecoinDepegResolverCard),
   { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },
