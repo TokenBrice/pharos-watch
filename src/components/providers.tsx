@@ -31,7 +31,19 @@ const PHAROS_QUERY_DEFAULT_OPTIONS = {
 
 
 const SiteSession = process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
-  ? lazy(() => import("./site-session").then((mod) => ({ default: mod.SiteSession })))
+  ? (() => {
+    // Inline only the tiny script starter; the manager and notice UI stay split.
+    const scriptModule = import(/* webpackMode: "eager" */ "@/lib/site-session-script");
+    const sessionModule = import("./site-session");
+    const SessionCheck = lazy(() => sessionModule.then((mod) => ({ default: mod.SiteSession })));
+    return function SessionLoader() {
+      useEffect(() => { void scriptModule.then((mod) => mod.preloadSiteSessionScript()); }, []);
+      return <>
+        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() && <link rel="preconnect" href="https://challenges.cloudflare.com" />}
+        <Suspense fallback={null}><SessionCheck /></Suspense>
+      </>;
+    };
+  })()
   : null;
 
 const CommandPalette = lazy(() =>

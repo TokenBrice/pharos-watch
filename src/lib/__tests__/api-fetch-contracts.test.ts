@@ -774,6 +774,7 @@ describe("browser session gate", () => {
 
   it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skewSec) => {
     const { api, session, storage } = await setup();
+    const mark = vi.spyOn(performance, "mark");
     let release!: (token: string) => void;
     const challenge = vi.fn(() => new Promise<string>((resolve) => { release = resolve; }));
     session.registerSiteSessionChallenge(challenge);
@@ -793,6 +794,7 @@ describe("browser session gate", () => {
     })]);
     expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
     expect(session.getSiteSessionState()).toBe("ready");
+    expect(mark.mock.calls.map(([name]) => name)).toEqual(["pharos-session-token", "pharos-session-ready"]);
     expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 43200, 0);
   });
 

@@ -38,6 +38,7 @@ What must be true before turning each flag on in production:
 - [ ] Pages session endpoint, signing key and Turnstile keys are deployed; the public site key and flag reach the Pages build as GitHub Variables.
 - [ ] Worker remains in `observe`; a rebuilt Pages release and automation canaries are green.
 - [ ] Cold/returning visits pass in Chrome, Firefox, Safari and the Telegram Mini App webview on the canonical site and ops hosts, without CSP or Safe Browsing regressions; blocked checks show the reload notice.
+- [ ] Measure cold-visit script/token/session milestones using the `pharos-session-script`, `pharos-session-token` and `pharos-session-ready` User Timing marks against the accepted 1–2 second first-visit delay; returning visits load no challenge script until renewal is due, and slow challenges preserve the three-second read-wait bound.
 - [ ] Before separately enabling Worker enforcement, five days of observation meet the approved session-coverage, rate-budget and first-visit-delay gates. Enforcement still needs the owner's go; flag enablement alone does not authorize it.
 
 Enable the flag only after the first three gates pass; the observation gate governs the later enforcement flip. Review its lifecycle deadline after rollout acceptance; an empty public site key always disables the browser gate.

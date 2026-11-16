@@ -1,11 +1,10 @@
 import { setSiteSessionGate } from "@/lib/site-session-gate";
 import { isSiteSessionCheckEnabled } from "@/lib/feature-flags";
-import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_CLOCK_LEEWAY_SEC, SITE_SESSION_EXPIRES_HEADER } from "@shared/lib/site-session-constants";
+import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_EXPIRES_HEADER } from "@shared/lib/site-session-constants";
+import { getStoredSiteSessionExpiry, SITE_SESSION_EXPIRY_KEY, SITE_SESSION_RENEW_WINDOW_SEC } from "@/lib/site-session-script";
 
 type SessionState = "ready" | "pending" | "unavailable";
 type Challenge = (signal: AbortSignal) => Promise<string>;
-const EXPIRY_KEY = "pharos-site-session-exp";
-const RENEW_WINDOW_SEC = 3600;
 const listeners = new Set<() => void>();
 let expiry = 0;
 let state: SessionState = "pending";
@@ -40,18 +39,14 @@ export function registerSiteSessionRecovery(recover: () => void): () => void {
 
 export function hasValidSiteSession(): boolean {
   if (typeof window === "undefined") return false;
-  try {
-    const stored = Number(window.localStorage.getItem(EXPIRY_KEY));
-    if (Number.isSafeInteger(stored) && stored > Date.now() / 1000
-      && stored <= Date.now() / 1000 + SITE_SESSION_BROWSER_TTL_SEC + SITE_SESSION_CLOCK_LEEWAY_SEC) expiry = Math.max(expiry, stored);
-  } catch { /* The HttpOnly cookie still works when browser storage is blocked. */ }
+  expiry = Math.max(expiry, getStoredSiteSessionExpiry());
   return expiry > Date.now() / 1000;
 }
 
 export function invalidateSiteSession(): void {
   rejected = true;
   expiry = 0;
-  try { window.localStorage.removeItem(EXPIRY_KEY); } catch { /* Storage is optional. */ }
+  try { window.localStorage.removeItem(SITE_SESSION_EXPIRY_KEY); } catch { /* Storage is optional. */ }
   publish(attempts >= 3 && !inFlight ? "unavailable" : "pending");
 }
 
@@ -93,6 +88,7 @@ export function ensureSession(renew = false): Promise<void> {
         const run = await waitForChallenge(controller.signal);
         const token = await run(controller.signal);
         controller.signal.throwIfAborted();
+        performance.mark?.("pharos-session-token");
         const response = await fetch("/_site-data/session", {
           method: "POST",
           credentials: "same-origin",
@@ -105,7 +101,8 @@ export function ensureSession(renew = false): Promise<void> {
         controller.signal.throwIfAborted();
         if (response.status !== 204 || !Number.isSafeInteger(expires) || expires <= 0) throw new Error("Browser session refused");
         expiry = Math.floor(Date.now() / 1000) + SITE_SESSION_BROWSER_TTL_SEC;
-        try { window.localStorage.setItem(EXPIRY_KEY, String(expiry)); } catch { /* Storage is optional. */ }
+        try { window.localStorage.setItem(SITE_SESSION_EXPIRY_KEY, String(expiry)); } catch { /* Storage is optional. */ }
+        performance.mark?.("pharos-session-ready");
         publish("ready");
         if (rejected) { rejected = false; recoverQueries?.(); }
         return;
@@ -138,7 +135,7 @@ export async function waitForSiteSession(signal?: AbortSignal | null): Promise<v
 export function renewSiteSessionIfNeeded(): void {
   if (document.visibilityState !== "visible") return;
   const valid = hasValidSiteSession();
-  if (!valid || expiry - Date.now() / 1000 < RENEW_WINDOW_SEC) void ensureSession(valid).catch(() => {});
+  if (!valid || expiry - Date.now() / 1000 < SITE_SESSION_RENEW_WINDOW_SEC) void ensureSession(valid).catch(() => {});
   else if (state !== "ready") publish("ready");
 }
 

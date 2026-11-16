@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   Providers,
@@ -67,12 +67,20 @@ afterEach(() => {
   delete window.turnstile;
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("SiteSession", () => {
-  it("renders the explicit widget from the effect-loaded script with automatic retries disabled", async () => {
-    vi.spyOn(featureFlags, "isSiteSessionCheckEnabled").mockReturnValue(true);
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", "true");
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+  });
+
+  it.each([0, 7200])("loads only when due (%s seconds left), renders immediately and recovers queries", async (remaining) => {
+    if (remaining) localStorage.setItem("pharos-site-session-exp", String(Math.floor(Date.now() / 1000) + remaining));
+    const mark = vi.fn();
+    vi.stubGlobal("performance", { mark, now: Date.now });
+    vi.spyOn(featureFlags, "isSiteSessionCheckEnabled").mockReturnValue(true);
     vi.spyOn(sessionClient, "renewSiteSessionIfNeeded").mockImplementation(() => {});
     let recover!: () => void;
     vi.spyOn(sessionClient, "registerSiteSessionRecovery").mockImplementation((callback) => {
@@ -86,6 +94,8 @@ describe("SiteSession", () => {
     });
     const widget = { render: vi.fn().mockReturnValue("widget-id"), remove: vi.fn() };
     render(<SiteSession />);
+    expect(!!document.getElementById("pharos-turnstile")).toBe(!remaining);
+    expect(mark.mock.calls).toEqual(remaining ? [] : [["pharos-session-script"]]);
     const pending = run(new AbortController().signal);
     window.turnstile = widget;
     fireEvent.load(document.getElementById("pharos-turnstile")!);
@@ -116,7 +126,7 @@ describe("SiteSession", () => {
     client.clear();
   });
 
-  it("loads no script while disabled, then shows one small notice for an unavailable check", () => {
+  it("stays inert when disabled and shows one notice after rejection", () => {
     const enabled = vi.spyOn(featureFlags, "isSiteSessionCheckEnabled").mockReturnValue(false);
     vi.spyOn(sessionClient, "renewSiteSessionIfNeeded").mockImplementation(() => {});
     const paused = vi.spyOn(sessionClient, "isSiteSessionPaused").mockReturnValue(false);
