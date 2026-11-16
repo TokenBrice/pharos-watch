@@ -138,7 +138,8 @@ function buildBreakdowns(
       adjustments: [],
       method: "minimum-binding-component",
       components: [{
-        key: "control:reviewed",
+        // The published native mint component's key (findV9NativeMintComponent).
+        key: "mint",
         label: "Reviewed control",
         kind: "mint",
         posture: "distributed",

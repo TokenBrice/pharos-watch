@@ -1,6 +1,7 @@
 import { ReportCardsV9BrowserResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9TableResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
+import { findV9NativeMintComponent } from "@shared/lib/safety-score-v9/control-component-keys";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import type { SafetyScoreV9Card, SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import type { ReportCardGrade as V9Grade } from "@shared/types/report-card-grade";
@@ -151,7 +152,7 @@ export interface V9SafetyTableRow {
 export function readV9CardMintComponent(card: SafetyScoreV9Card | ReportCardsV9TableCard): PublishedMintComponent | null {
   if ("mint" in card) return card.mint;
   const breakdowns = "breakdowns" in card ? card.breakdowns : null;
-  const component = breakdowns?.control?.components.find((entry) => entry.kind === "mint");
+  const component = findV9NativeMintComponent(breakdowns?.control?.components);
   return component && component.score !== null ? { score: component.score, posture: component.posture } : null;
 }
 

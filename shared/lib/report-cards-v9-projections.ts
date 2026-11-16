@@ -10,6 +10,7 @@ import {
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9DependencyGraph } from "../types/report-cards-v9";
 import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "../types/safety-score-v9-causes";
 import { resolveCommonModeEffects } from "../types/dependency-graph";
+import { findV9NativeMintComponent } from "./safety-score-v9/control-component-keys";
 
 function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): ReportCardsV9DependencyGraph {
   return buildReportCardsV9DependencyGraph(snapshot.cards.map(card => ({
@@ -28,7 +29,7 @@ function ratedPricedUnknownPillars(
 
 export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV9TableCard {
   const resolved = resolveV9PublicWitnessTexts(card);
-  const component = resolved.breakdowns?.control.components.find(row => row.kind === "mint");
+  const component = findV9NativeMintComponent(resolved.breakdowns?.control.components);
   return {
     id: resolved.id, score: resolved.score, grade: resolved.grade, ratingStatus: resolved.ratingStatus,
     partialEvidence: projectV9CompactPartialEvidence(resolved.partialEvidence),
