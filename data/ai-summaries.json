@@ -6312,5 +6312,21 @@
     "authoredBy": "ai",
     "model": "GPT-6",
     "factsAsOf": "2026-11-15"
+  },
+  "sekau-allunity": {
+    "title": "Swedish krona issuance awaiting market data",
+    "text": "SEKAU gives holders a Swedish krona claim against AllUnity, with reserves held separately from the issuer's own funds. The white paper permits SEK cash and eligible liquid assets, but Pharos has not verified their current allocation or the scope of the reports linked by AllUnity's Trust Center. Institutional clients access primary minting, while the white paper permits third-party transfers and redemption subject to identity and compliance checks. It also reserves the issuer's right to block transfers involving blacklisted addresses. AllUnity announced the public-chain launch in June 2026, and a pinned Base read confirms positive token stock. Pharos still lacks an admitted price lane, whole-asset supply accounting and native SEK peg support. The launched, awaiting data listing preserves the distinction between verified issuance and a complete market-data view.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
+  },
+  "ronq-quantoz": {
+    "title": "Romanian leu token at the notification stage",
+    "text": "ESMA records a RONQ white paper notification for Quantoz Payments, the Dutch e-money issuer behind tracked Quantoz tokens. That token-specific regulatory entry supports a Romanian leu research stub, but it does not establish issuance or a launch date. The issuer's reviewed token and whitepaper pages provide no RONQ-specific deployment or terms. Pharos therefore carries no contract address, reserve allocation or redemption mechanics over from the issuer's other tokens. Price and supply remain unavailable, and the RON peg is recorded as OTHER pending native currency support. A dated notification is the starting point for the profile; public issuance and exact-product evidence are still needed to advance it.",
+    "updatedAt": "2026-11-16",
+    "authoredBy": "ai",
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-16"
   }
 }

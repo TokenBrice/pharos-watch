@@ -1,0 +1,20 @@
+{
+  "id": "sekau-allunity",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "BaFin",
+    "authorizedEntity": "AllUnity GmbH",
+    "references": [
+      {
+        "label": "ESMA EMT register, accessed 2026-11-16: AllUnity GmbH, BaFin, electronic money institution; SEKAU notification 2026-05-06, version 1.1 update 2026-09-14",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "AllUnity SEKAU white paper v1.1; issuer disclosure, not regulator approval of the white paper",
+        "url": "https://framerusercontent.com/assets/2VnP2rqYKZjO2MgwW9LLu64QSI.html"
+      }
+    ]
+  }
+}

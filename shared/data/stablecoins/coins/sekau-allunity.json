@@ -1,0 +1,101 @@
+{
+  "id": "sekau-allunity",
+  "name": "AllUnity SEKAU",
+  "symbol": "SEKAU",
+  "oneLiner": "SEKAU is AllUnity's Swedish krona e-money token, launched on public blockchains with a 1:1 redemption claim and segregated SEK reserves.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized"
+  },
+  "collateral": "SEK-denominated cash or eligible low-risk SEK liquid assets held in accounts separate from AllUnity's funds at regulated EU credit institutions. The launch release names Banking Circle as reserve and transaction bank; the current allocation between cash and liquid assets is unverified.",
+  "pegMechanism": "AllUnity issues SEKAU to verified institutions and states that all holders have a statutory right to redeem at par for Swedish kronor, subject to identification, AML, sanctions and banking checks. The white paper permits third-party transfers and issuer blocking of transfers to or from blacklisted addresses. Par redemption is a contractual claim, not an observed market quote.",
+  "mechanismArchetype": "fiat-cash",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://allunity.com/trust-center",
+    "provider": "AllUnity Trust Center; linked Deloitte reports could not be verified for SEKAU",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x0297b579b0cb603b5ee814eb7322b960d3ae7a66",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x0297b579b0cb603b5ee814eb7322b960d3ae7a66",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x0297b579b0cb603b5ee814eb7322b960d3ae7a66",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://allunity.com/sekau"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-swedish-krona-backed-stablecoin-sekau"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://framerusercontent.com/assets/2VnP2rqYKZjO2MgwW9LLu64QSI.html"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://allunity.com/trust-center"
+    },
+    {
+      "label": "ESMA EMT issuer register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Federal Financial Supervisory Authority (BaFin)",
+    "license": "Electronic Money Institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-06-19",
+  "launchDate": "2026-06-19",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "AllUnity launched SEKAU on June 19 2026 with institutional minting and redemption and public-chain transfers. Its product page now advertises Ethereum, Base, Polygon, Solana, Tempo and Arc. Pinned reads on November 15 2026 verified six decimals and 11.23 SEKAU on Base at block 57973837, with zero token stock on Ethereum at block 26423673 and Polygon at block 97386379. These are deployment token stocks, not an admitted whole-asset circulating supply. The issuer-linked Solana address is an executable program, not a token mint, at finalized slot 469913062; no Solana supply or token decimals were established. Tempo and Arc RPC reads were unavailable, so their decimals and supply remain unverified. Only the three independently verified EVM token deployments are recorded here. The issuer's public-chain launch and positive Base issuance support launched status, while price and whole-asset supply remain unavailable to Pharos. Pharos tracks the SEK peg as OTHER until Swedish krona peg support is built.",
+  "listingStatusReview": {
+    "changedAt": "2026-11-16",
+    "reason": "No admitted price lane or whole-asset supply lane; the SEK peg and its FX reference are unsupported. Pharos records the Swedish krona peg as OTHER pending native support.",
+    "reviewBy": "2027-01-15",
+    "source": {
+      "label": "AllUnity SEKAU product and deployment disclosures",
+      "url": "https://allunity.com/sekau"
+    }
+  },
+  "milestones": [
+    {
+      "date": "2026-05-06",
+      "type": "regulatory",
+      "title": "ESMA records SEKAU white paper notification",
+      "description": "The EMT register names AllUnity GmbH, supervised by BaFin, and records the SEKAU white paper notification. Notification does not mean regulator approval of the white paper or establish public issuance.",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "date": "2026-06-19",
+      "type": "announcement",
+      "title": "AllUnity launches SEKAU",
+      "description": "AllUnity announces its Swedish krona e-money token on Ethereum, Solana, Base, Tempo and Polygon, initially available through the Business Mint Account. Banking Circle is named as the reserve and transaction bank, with Marginalen Bank as a banking partner.",
+      "sourceUrl": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-swedish-krona-backed-stablecoin-sekau"
+    },
+    {
+      "date": "2026-09-14",
+      "type": "regulatory",
+      "title": "ESMA records SEKAU white paper version 1.1 update",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ]
+}

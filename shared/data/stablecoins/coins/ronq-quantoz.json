@@ -1,0 +1,46 @@
+{
+  "id": "ronq-quantoz",
+  "name": "Quantoz RONQ",
+  "symbol": "RONQ",
+  "oneLiner": "RONQ is Quantoz Payments' Romanian leu e-money token recorded by ESMA; public issuance and a launch date remain unverified.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "OTHER",
+    "governance": "centralized"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.quantoz.com/"
+    },
+    {
+      "label": "ESMA EMT issuer register",
+      "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    },
+    {
+      "label": "Issuer whitepapers",
+      "url": "https://www.quantoz.com/whitepapers/"
+    },
+    {
+      "label": "Token identities",
+      "url": "https://www.quantoz.com/tokens/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Netherlands",
+    "regulator": "De Nederlandsche Bank (DNB)",
+    "license": "Electronic Money Institution"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-04-15",
+  "launchPhaseDetail": "ESMA's EMT register records a RONQ white paper for Quantoz Payments B.V., a Dutch electronic money institution supervised by DNB, with notification and update dated April 15 2026. This is a regulatory milestone, not a confirmed launch or regulator approval of the white paper. The issuer's current token and whitepaper pages do not provide a RONQ-specific deployment, public issuance evidence, terms or launch date. No price or supply lane is admitted, and no sibling contract, backing allocation or redemption terms are inherited. Pharos tracks the RON peg as OTHER until Romanian leu peg support is built.",
+  "milestones": [
+    {
+      "date": "2026-04-15",
+      "type": "regulatory",
+      "title": "ESMA records RONQ white paper notification",
+      "description": "The EMT register names Quantoz Payments B.V., supervised by DNB, and records notification and update of the RONQ white paper. The entry establishes a regulatory milestone, not public issuance or a launch date.",
+      "sourceUrl": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+    }
+  ]
+}

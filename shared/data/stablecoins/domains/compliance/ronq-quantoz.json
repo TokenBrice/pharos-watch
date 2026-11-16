@@ -1,0 +1,16 @@
+{
+  "id": "ronq-quantoz",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "De Nederlandsche Bank (DNB)",
+    "authorizedEntity": "Quantoz Payments B.V.",
+    "references": [
+      {
+        "label": "ESMA EMT register, accessed 2026-11-16: RONQ white paper, Quantoz Payments B.V., DNB, electronic money institution; notification and update 2026-04-15. This is issuer authorization evidence, not white paper approval or issuance evidence.",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  }
+}
