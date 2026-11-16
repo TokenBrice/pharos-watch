@@ -76,6 +76,21 @@ export function evaluateWorkerWranglerConfig(
   }
   const queueAssignments = assignments.filter(({ section }) => section.startsWith("queues."));
   if (role === "public") {
+    const rateLimits = toml.split(/^\s*\[\[ratelimits\]\].*$/m).slice(1).map((block) => parseAssignments(block));
+    const namespaces = rateLimits.map((entries) => unquote(entries.find(({ key }) => key === "namespace_id")?.value));
+    for (const [name, limit] of [["SITE_SESSION_RATE_LIMIT", 300], ["SITE_SOURCE_RATE_LIMIT", 1200]] as const) {
+      const matches = rateLimits.filter((entries) => unquote(entries.find(({ key }) => key === "name")?.value) === name);
+      const entries = matches[0] ?? [];
+      const namespace = unquote(entries.find(({ key }) => key === "namespace_id")?.value);
+      if (matches.length !== 1 || !namespace || !/^\d+$/.test(namespace)
+        || namespaces.filter((value) => value === namespace).length !== 1
+        || entries.find(({ section, key }) => section === "ratelimits.simple" && key === "limit")?.value !== String(limit)
+        || entries.find(({ section, key }) => section === "ratelimits.simple" && key === "period")?.value !== "60") {
+        issues.push(`Public ${name} must declare one unique numeric namespace and a ${limit}/60s simple rate limit.`);
+      }
+    }
+  }
+  if (role === "public") {
     expectValue("queues.producers", "binding", '"RESERVE_CONTINUATION_QUEUE"');
     expectValue("queues.producers", "queue", '"pharos-reserve-continuation"');
     expectValue("queues.consumers", "queue", '"pharos-reserve-continuation"');

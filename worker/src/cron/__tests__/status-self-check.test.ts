@@ -9,6 +9,8 @@ import type { HealthResponse } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
+import { evaluateAccessGate } from "../../handlers/http/gates";
+import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 
 function buildProbeResponse(
   input: unknown,
@@ -916,7 +918,7 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probeBaseUrl).toBe("https://api.pharos.watch");
   });
 
-  it("probes production public, site-api, and ops-api lanes externally", async () => {
+  it.each([undefined, "session-key"])("probes production lanes externally (session key: %s)", async (siteSessionSigningKey) => {
     const ctx = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
@@ -926,6 +928,7 @@ describe("runStatusSelfCheck", () => {
       selfUrl: "https://api.pharos.watch",
       ctx,
       siteApiSharedSecret: "site-secret",
+      siteSessionSigningKey,
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       probePlanes?: { external?: { origins?: string[]; sampleCount?: number } };
@@ -942,6 +945,11 @@ describe("runStatusSelfCheck", () => {
       ]),
     );
     expect(new Headers(siteInit?.headers).get("X-Pharos-Site-Proxy-Secret")).toBe("site-secret");
+    const request = new Request(String(siteCall?.[0]), siteInit);
+    const gate = await evaluateAccessGate(request, new URL(request.url), createWorkerEnv({
+      SITE_API_SHARED_SECRET: "site-secret", SITE_SESSION_SIGNING_KEY: "session-key", SITE_SESSION_ENFORCEMENT: "enforce",
+    }));
+    expect(gate.response?.status ?? 200).toBe(siteSessionSigningKey ? 200 : 401);
     expect(metadata.probePlanes?.external?.sampleCount).toBe(3);
     expect(metadata.probePlanes?.external?.origins).toEqual(
       expect.arrayContaining([

@@ -200,6 +200,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current Env bindings and validateWorkerEnvContract() result are authoritative.",
   },
   {
+    sourcePath: "worker/src/handlers/http/gates.ts",
+    stateNames: ["siteSessionLogWindow"],
+    owner: "Site-session gate diagnostics",
+    kind: "counter",
+    resetOrTtl: "One minute window caps all detail events at 60 per UTC minute per isolate (valid sampled 1 in 16), plus finite outcome counters per mode; the next active minute emits one exact prior-window summary. Resets on rollover or isolate recycle.",
+    durableTruth: "Current signed token, Env mode and native rate-limit binding results are authoritative; counters bound detail logs and retain unsampled decision totals for the current isolate minute only.",
+  },
+  {
+    sourcePath: "functions/_site-data/session.ts",
+    stateNames: ["sessionRequestTimestampsByNetworkHash"],
+    owner: "Pages site-session issuance limiter",
+    kind: "limiter",
+    resetOrTtl: "Sliding 60-second windows admit 10 attempts per hashed client network; capped at 5,000 tracked hashes and reset on isolate recycle or test reset.",
+    durableTruth: "Current caller admission and Turnstile verification remain authoritative; this isolate-local limiter is best-effort abuse control only.",
+  },
+  {
     sourcePath: "worker/src/lib/api-cache-read.ts",
     stateNames: ["_cacheRead"],
     owner: "Persisted-cache JSON diagnostics",

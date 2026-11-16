@@ -11,6 +11,7 @@ import { fileURLToPath, URL } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";
+import { siteDataSessionHeaders, siteSessionHeaders } from "./site-session";
 import { SITE_API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 /**
@@ -243,7 +244,7 @@ export function resolveApiPathUrl(apiBaseOrEndpoint: string, apiPath: string): s
  * Build request headers (`Accept` + optional `X-API-Key`) from the first
  * non-empty API key among `envNames`.
  */
-export function apiFetchHeaders(envNames: readonly string[], options: { url?: string } = {}): Record<string, string> {
+export async function apiFetchHeaders(envNames: readonly string[], options: { url?: string } = {}): Promise<Record<string, string>> {
   const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
   const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
   const fetchUrl = parseFetchUrl(options.url);
@@ -251,7 +252,8 @@ export function apiFetchHeaders(envNames: readonly string[], options: { url?: st
   const shouldSendSiteApiSecret = !isSiteDataRequest && isTrustedSiteApiSecretUrl(fetchUrl);
   return {
     Accept: "application/json",
-    ...(isSiteDataRequest ? { Origin: SITE_ORIGIN } : {}),
+    ...(isSiteDataRequest ? { Origin: SITE_ORIGIN, ...await siteDataSessionHeaders(options.url!) } : {}),
+    ...(siteApiSharedSecret && shouldSendSiteApiSecret ? await siteSessionHeaders(options.url!) : {}),
     ...(apiKey && !isSiteDataRequest && !shouldSendSiteApiSecret ? { "X-API-Key": apiKey } : {}),
     ...(siteApiSharedSecret && shouldSendSiteApiSecret ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
   };
@@ -262,7 +264,7 @@ export function resolveGeneratorApiBase(): string | null {
   return resolveApiBaseFromEnv(GENERATOR_API_URL_ENV_NAMES);
 }
 
-export function generatorFetchHeaders(url?: string): Record<string, string> {
+export function generatorFetchHeaders(url?: string): Promise<Record<string, string>> {
   return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
 }
 

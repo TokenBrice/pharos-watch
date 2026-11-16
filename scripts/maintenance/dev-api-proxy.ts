@@ -13,6 +13,8 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { isSiteDataAllowedApiPath, isSiteDataAllowedMethod } from "@shared/lib/site-data-lane";
 
+import { siteSessionHeaders } from "../lib/site-session";
+
 const envFile = resolve(".env.local");
 
 if (existsSync(envFile)) {
@@ -109,6 +111,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       redirect: "error",
       headers: {
         "X-Pharos-Site-Proxy-Secret": SECRET,
+        ...await siteSessionHeaders(upstream),
         Accept: (req.headers.accept || "application/json") as string,
       },
     });

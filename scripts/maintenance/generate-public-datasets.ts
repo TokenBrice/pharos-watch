@@ -90,7 +90,7 @@ function resolveSnapshotDate(): string {
 
 async function safeFetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: generatorFetchHeaders(url) });
+    const res = await fetch(url, { headers: await generatorFetchHeaders(url) });
     if (!res.ok) {
       console.warn(`[generate-public-datasets] ${url} → HTTP ${res.status}`);
       return null;

@@ -1,6 +1,6 @@
 # One-shot historical backfills
 
-> **Agent navigation** — Read the matched section only: [Operator contract](#operator-contract) · [Transport safety](#transport-safety) · [Interruption and cleanup](#interruption-and-cleanup) · [Classification evidence](#classification-evidence) · [Supply history](#backfill-supply-history) · [PSI history](#backfill-stability-index) · [Depeg replay](#backfill-depegs) · [Depeg audit](#audit-depeg-history) · [CG prices](#backfill-cg-prices) · [Yield history](#backfill-yield-history) · [Mint/burn ingestion](#backfill-mint-burn) · [Mint/burn prices](#backfill-mint-burn-prices) · [Roundtrip reclassification](#reclassify-atomic-roundtrips) · [TAPE](#backfill-tape) · [Blacklist balances](#backfill-blacklist-current-balances) · [JLTXX capture](#bootstrap-jltxx-reserves).
+> **Agent navigation** — Read the matched section only: [Operator contract](#operator-contract) · [Transport safety](#transport-safety) · [Interruption and cleanup](#interruption-and-cleanup) · [Classification evidence](#classification-evidence) · [Supply history](#backfill-supply-history) · [PSI history](#backfill-stability-index) · [Depeg replay](#backfill-depegs) · [Depeg audit](#audit-depeg-history) · [Reference-market artifacts](#repair-reference-market-artifacts) · [CG prices](#backfill-cg-prices) · [Yield history](#backfill-yield-history) · [Mint/burn ingestion](#backfill-mint-burn) · [Mint/burn prices](#backfill-mint-burn-prices) · [Roundtrip reclassification](#reclassify-atomic-roundtrips) · [TAPE](#backfill-tape) · [Blacklist balances](#backfill-blacklist-current-balances) · [JLTXX capture](#bootstrap-jltxx-reserves).
 
 These operator jobs run outside the deployed Worker. Their former HTTP routes are unregistered (authenticated requests return 404); they are not admin dashboard actions. Recurring repairs remain in the Worker.
 
@@ -36,6 +36,7 @@ The atomic jobs listed below (owned by `ATOMIC_IMPORT_BACKFILL_JOBS` in `worker/
 | `backfill-mint-burn` | Per-hour aggregate delete/insert pairs before advancing the safe ingestion cursor. |
 | `backfill-mint-burn-prices` | Per-hour aggregate replacement before repaired rows are finalized/read back. |
 | `reclassify-atomic-roundtrips` | Per-hour aggregate delete/insert pairs after reclassification. |
+| `repair-reference-market-artifacts` | Artifact deletes and marked PSI corrections for the closures packed into one batch. |
 | `bootstrap-jltxx-reserves` | Fenced composition/state/history publication under the live reserve lease. |
 | `backfill-blacklist-current-balances` | Conditional Tron address-alias canonicalization plus alias deletion in one batch; the job-level gate applies even to non-Tron scopes. |
 
@@ -388,3 +389,21 @@ When a repair group is `source='backfill'` rows ending in the group's only live 
 Mutating delete/synthetic-repair runs and audit eligibility changes stage available PSI stability-index repairs into the same D1 batch commit. The canonical historical replay receives the post-audit event universe: invalidated events leave it and restored eligible events re-enter it. Supply prices, native quote-domain evidence and same-day DEWS archive rows match bounded backfill. Missing replay inputs retain the existing PSI day and log the named unavailable reason without inflating `daysRecomputed`. If the atomic provenance/mutation-plus-PSI commit fails, the job returns `500` with a specific error and leaves both provenance/events and PSI unchanged.
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
+
+## repair-reference-market-artifacts
+
+One-time repair of depeg and PSI history recorded before detection held closed FX and metal references (depeg-dews v6.47). It applies the closure rule in `replayReferenceMarketEventStart` (`shared/lib/reference-market-hours.ts`) to stored PSI-eligible events: a gold, silver or FX event that began while its reference market was closed and peaked below 2,500 bps is deleted when it ended within six hours of the reopen; a longer one keeps its row, and PSI counts it from the reopen.
+
+Work is grouped by closure, keyed by its reopen, and closures share atomic batches of up to 100 statements, so a run makes few imports. Each closure deletes its artifacts and changes each affected daily PSI row by only their effect: a replay-built row by the difference between replays with and without them, a live daily average by the mean per-sample difference over its complete set of 30-minute samples. A day that cannot be corrected (samples gone, replay inputs unavailable, or a stored component smaller than the artifacts' share) stays as published. Every evaluated row records `referenceMarketRepair`, with a `reason` when unavailable, so a rerun skips it; a row a replay rebuilt with the rule (`referenceMarketRule: true`) is marked `replayed-with-rule` and left unchanged. Events linked to a depeg-resolver incident are never mutated and are listed as `locked`; `sealedTarget: true` marks the event of an incident's sealed prediction, which can take the [input-corruption erratum](./depeg-artifact-removal.md#sealed-event-input-corruption-retain-history). A closure reports `waiting-for-daily-rows` and changes nothing until six hours after its reopen and until its recent daily rows exist, because the correction cannot be derived once its events are gone.
+
+Preview every closure by paging with `after`, the last `reopen` of the previous page, then apply with `--execute --allow-atomic-import` in a maintenance window outside the Safety Score :08–:22 cycle, after recording a fresh D1 Time Travel bookmark:
+
+```bash
+npx tsx worker/scripts/one-shot-backfill.ts repair-reference-market-artifacts --query 'dry-run=true&limit=20&after=<reopen>'
+```
+
+| Param     | Type      | Default | Description                                          |
+| --------- | --------- | ------- | ---------------------------------------------------- |
+| `dry-run` | `"true"`  | —       | Preview the plan without writing                     |
+| `limit`   | `integer` | `5`     | Closures planned or applied per run (max 50)         |
+| `after`   | `integer` | `0`     | Only closures reopening after this unix second       |

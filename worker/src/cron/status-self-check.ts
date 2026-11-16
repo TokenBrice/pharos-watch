@@ -15,6 +15,7 @@ import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import { mintSiteSessionToken, SITE_SESSION_HEADER } from "@shared/lib/site-session-token";
 import { evaluateStatusProbePayload, hasStatusProbePayloadContract } from "./status-probe-contracts";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
@@ -98,6 +99,7 @@ export interface StatusSelfCheckOptions {
   reportProgress?: CronProgressReporter;
   ctx?: ExecutionContext;
   siteApiSharedSecret?: string | null;
+  siteSessionSigningKey?: string;
   d1StatusConfig?: CloudflareD1StatusConfig;
   coingeckoApiKey?: string | null;
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
@@ -623,11 +625,16 @@ function buildExternalProductionProbeTargets(siteApiSharedSecret?: string | null
 
 async function runExternalProductionProbes(
   siteApiSharedSecret: string | null | undefined,
+  siteSessionSigningKey: string | undefined,
   signal?: AbortSignal,
 ): Promise<ProbeResult[]> {
   const probes: ProbeResult[] = [];
   for (const target of buildExternalProductionProbeTargets(siteApiSharedSecret)) {
     if (signal?.aborted) break;
+    if (target.headers?.[SITE_DATA_PROXY_SECRET_HEADER]) {
+      const token = await mintSiteSessionToken({ key: siteSessionSigningKey ?? "", kind: "automation", nowSec: Math.floor(Date.now() / 1000) });
+      if (token) target.headers[SITE_SESSION_HEADER] = token;
+    }
     probes.push(
       await probePathExternally(
         target.path,
@@ -652,7 +659,7 @@ async function collectStatusSelfCheckProbes(
   now: number,
   options: Pick<
     StatusSelfCheckOptions,
-    "selfUrl" | "signal" | "ctx" | "siteApiSharedSecret" | "reportProgress"
+    "selfUrl" | "signal" | "ctx" | "siteApiSharedSecret" | "siteSessionSigningKey" | "reportProgress"
   >,
 ): Promise<CollectedStatusSelfCheckProbes> {
   const { selfUrl, signal, ctx, siteApiSharedSecret } = options;
@@ -687,7 +694,7 @@ async function collectStatusSelfCheckProbes(
   }
 
   await options.reportProgress?.({ stage: "external-probes" });
-  const externalProbes = await runExternalProductionProbes(siteApiSharedSecret, signal);
+  const externalProbes = await runExternalProductionProbes(siteApiSharedSecret, options.siteSessionSigningKey, signal);
   const probes: ProbeResult[] = [...internalProbes, ...externalProbes];
   const internalSummary = summarizeProbePlane(internalProbes);
   const externalSummary = summarizeProbePlane(externalProbes);

@@ -26,6 +26,11 @@ const jobs = {
     atomicImportOrder: 2, previewParameter: "dry-run",
     supportsGet: true, stagedCapture: false,
   },
+  "repair-reference-market-artifacts": {
+    load: () => import("./backfills/repair-reference-market-artifacts").then((module) => module.handleRepairReferenceMarketArtifacts),
+    atomicImportOrder: 8, previewParameter: "dry-run",
+    supportsGet: false, stagedCapture: false,
+  },
   "backfill-cg-prices": {
     load: () => import("./backfills/backfill-cg-prices").then((module) => module.handleBackfillCgPricesTrusted),
     atomicImportOrder: null, previewParameter: null,

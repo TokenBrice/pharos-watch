@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { tsImport } from "tsx/esm/api";
+const { siteSessionCookie } = await tsImport("../lib/site-session.ts", import.meta.url);
+
 import { appendFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { parseCliInteger, parseStrictCliArgs, runDirectCli, writeFileResolved } from "../lib/cli-args.mjs";
@@ -259,6 +262,8 @@ export async function capture(browser, origin, route, viewport, dwellMs, confirm
     deviceScaleFactor: viewport.dpr, isMobile: viewport.width < 500 });
   let row;
   try {
+    let sessionCookie = await siteSessionCookie(origin);
+    if (sessionCookie) await context.addCookies([{ ...sessionCookie, domain: new URL(origin).hostname }]);
     await context.addInitScript(installObservers);
     // Keep probe loads out of GA sessions; aborted requests only lower the request count.
     if (blockAnalytics) await context.route((u) => /(^|\.)(googletagmanager|google-analytics)\.com$/.test(u.hostname), (r) => r.abort());
@@ -286,6 +291,13 @@ export async function capture(browser, origin, route, viewport, dwellMs, confirm
     const deadline = Date.now() + dwellMs;
     do {
       await page.waitForTimeout(Math.min(10_000, Math.max(1, deadline - Date.now())));
+      if (sessionCookie) {
+        const renewed = await siteSessionCookie(origin);
+        if (renewed && renewed.value !== sessionCookie.value) {
+          await context.addCookies([{ ...renewed, domain: new URL(origin).hostname }]);
+          sessionCookie = renewed;
+        }
+      }
       const { metrics } = await cdp.send("Performance.getMetrics");
       heapSamples.push({ elapsedMs: await page.evaluate(() => performance.now()), bytes: metrics.find((m) => m.name === "JSHeapUsedSize")?.value ?? null });
     } while (Date.now() < deadline);

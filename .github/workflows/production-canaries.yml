@@ -47,6 +47,7 @@ jobs:
       - name: Check live production Pages assets
         run: npm run test:smoke-pages-assets -- --mode live --url https://pharos.watch
         env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
           SMOKE_PAGES_ASSET_MODE: live
           SMOKE_PAGES_ASSET_URL: https://pharos.watch
           SMOKE_API_BASE_URL: https://api.pharos.watch
@@ -69,6 +70,8 @@ jobs:
           SMOKE_TRANSPORT_SITE_API_URL: http://site-api.pharos.watch/api/stablecoins?limit=1&smoke=transport
       - name: Check live direct and same-origin API Cache-Control
         if: ${{ !cancelled() }}
+        env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
         run: node scripts/ci/check-live-api-cache-policy.mjs
 
   page-performance:
@@ -84,6 +87,8 @@ jobs:
           browser-cache: "true"
           install-playwright-chromium: "true"
       - name: Capture home and detail viewport matrix
+        env:
+          SITE_SESSION_SIGNING_KEY: ${{ secrets.SITE_SESSION_SIGNING_KEY }}
         run: |
           args=()
           if [[ "$(date -u +%u)" == "1" ]]; then

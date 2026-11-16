@@ -119,6 +119,16 @@ describe("PSI replay input loaders", () => {
     expect((await loadPsiEligibleDepegEvents(db, { auditVerdicts, excludedIds: [1] })).map((event) => event.id)).toEqual([4]);
   });
 
+  it("replays the reference-market closure rule over stored events", async () => {
+    const { sqlite, db } = fixtures.open();
+    // Saturday 2026-11-14 12:00 UTC; FX reopens Sunday 23:00 (1_794_783_600).
+    for (const [id, ended_at] of [[1, 1_794_785_400], [2, 1_794_956_400]] as const) {
+      seedPsiEvent(sqlite, makeDepegRow({ id, stablecoin_id: `eur-${id}`, started_at: 1_794_657_600, ended_at, peg_type: "peggedEUR", peak_deviation_bps: -300 }));
+    }
+    expect((await loadPsiEligibleDepegEvents(db)).map(({ id, started_at, counted_from }) => [id, started_at, counted_from]))
+      .toEqual([[2, 1_794_657_600, 1_794_783_600]]);
+  });
+
   it("propagates archive and event read failures instead of returning empty successful inputs", async () => {
     const { db } = fixtures.open();
     vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error("archive read failed"); });

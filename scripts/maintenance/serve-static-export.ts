@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { siteSessionHeaders } from "../lib/site-session";
+import { SITE_SESSION_EXPIRES_HEADER, SITE_SESSION_BROWSER_TTL_SEC } from "@shared/lib/site-session-token";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -289,6 +291,12 @@ export function createStaticExportServer({
     const requestUrl = new URL(req.url ?? "/", `http://${host}:${port}`);
     const method = req.method ?? "GET";
 
+    if (method === "POST" && requestUrl.pathname === "/_site-data/session") {
+      res.writeHead(204, { [SITE_SESSION_EXPIRES_HEADER]: String(Math.floor(Date.now() / 1000) + SITE_SESSION_BROWSER_TTL_SEC) });
+      res.end();
+      return;
+    }
+
     const isNestedApiPath = requestUrl.pathname.startsWith("/api/") && requestUrl.pathname !== "/api/";
     const isSiteDataPath = requestUrl.pathname.startsWith("/_site-data/");
     const canServeStaticMethod = method === "GET" || method === "HEAD";
@@ -328,7 +336,8 @@ export function createStaticExportServer({
         const siteProxySecret = (process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET ?? "").trim();
         const proxyHeaders = buildForwardedRequestHeaders(
           req,
-          isSiteDataPath && siteProxySecret ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret } : {},
+          isSiteDataPath && siteProxySecret
+            ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret, ...await siteSessionHeaders(`${siteApiBaseUrl}${upstreamPath}${requestUrl.search}`) } : {},
         );
         const requestBody = await readRequestBody(req, method);
         const upstream = await proxyApiRequest(

@@ -18,6 +18,8 @@ import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summar
 import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLike, type SchemaLikeSource } from "@shared/lib/schema-like";
 import { requestResponse } from "@/lib/request";
 import { claimDataBootstrap } from "@/lib/data-bootstrap";
+import { getSiteSessionGate, SITE_SESSION_CHECK_ENABLED } from "@/lib/site-session-gate";
+import { SITE_SESSION_HINT_HEADER } from "@shared/lib/site-session-constants";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
@@ -78,6 +80,16 @@ function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): numb
   return Math.max(0, Math.floor(referenceNowSec - ageSeconds - edgeAgeSeconds));
 }
 
+function needsSiteSession(url: string): boolean {
+  if (!SITE_SESSION_CHECK_ENABLED || !process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || typeof window === "undefined") return false;
+  const resolved = new URL(url, window.location.origin);
+  return resolved.origin === window.location.origin && resolved.pathname.startsWith("/_site-data/");
+}
+
+function sessionRequired(status: number, headers: Headers): boolean {
+  return status === 401 && headers.get(SITE_SESSION_HINT_HEADER) === "required";
+}
+
 /** Consume the response inside the request's timeout and cancellation lifetime. */
 export async function apiRequest<T>(
   path: string,
@@ -86,6 +98,36 @@ export async function apiRequest<T>(
   options?: ApiRequestOptions,
 ): Promise<T> {
   const requestInit = withPublicApiAcceptMarker(path, init);
+  const url = buildRequestUrl(path, requestInit);
+  if (process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true" && needsSiteSession(url)) {
+    const { hasValidSiteSession, invalidateSiteSession, waitForSiteSession } =
+      getSiteSessionGate() ?? await import("@/lib/site-session-client");
+    const signal = options?.signal ?? requestInit?.signal;
+    if (!hasValidSiteSession()) await waitForSiteSession(signal);
+    const requestOptions = {
+      init: requestInit, signal: options?.signal, timeoutMs: options?.timeoutMs,
+      signalPolicy: "explicit-over-init" as const, errorMode: "passthrough" as const,
+      timeoutMessage: (timeoutMs: number) => `API request timed out after ${timeoutMs}ms`,
+      allowHttpError: true,
+    };
+    const first = await requestResponse(url, requestOptions, async (response) => {
+      if (sessionRequired(response.status, response.headers)) {
+        await response.body?.cancel();
+        return { retry: true as const };
+      }
+      return { retry: false as const, data: await handleResponse(response) };
+    });
+    if (!first.data.retry) return first.data.data;
+    invalidateSiteSession();
+    await waitForSiteSession(signal);
+    return (await requestResponse(url, requestOptions, async (response) => {
+      if (sessionRequired(response.status, response.headers)) {
+        invalidateSiteSession();
+        throw await buildFetchError(path, response);
+      }
+      return handleResponse(response);
+    })).data;
+  }
   const result = await requestResponse(buildRequestUrl(path, requestInit), {
     init: requestInit,
     signal: options?.signal,
@@ -123,6 +165,9 @@ export class ApiFetchError extends Error {
     this.bodyText = bodyText;
   }
 }
+
+/** Identifies reads that can recover after the browser session is acquired. */
+export class SiteSessionRequiredError extends ApiFetchError {}
 
 /** Dataset-state 503 bodies published by the Worker for a not-populated read. */
 const NOT_POPULATED_503_ERRORS = new Set([
@@ -194,7 +239,8 @@ async function buildFetchError(path: string, res: Response): Promise<ApiFetchErr
   } catch {
     bodyText = null;
   }
-  return new ApiFetchError(path, res.status, bodyText);
+  const ErrorType = sessionRequired(res.status, res.headers) ? SiteSessionRequiredError : ApiFetchError;
+  return new ErrorType(path, res.status, bodyText);
 }
 
 function resolveContractMode(
@@ -245,6 +291,12 @@ async function readApiJson(
     : undefined;
   if (adopted) {
     const body = await adopted;
+    if (process.env.NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK === "true"
+      && needsSiteSession(buildRequestUrl(path, requestInit)) && sessionRequired(body.status, new Headers(body.headers))) {
+      const { invalidateSiteSession } = getSiteSessionGate() ?? await import("@/lib/site-session-client");
+      invalidateSiteSession();
+      return readApiJson(path, init, { ...options, bootstrapQueryKey: undefined }, nullOn404);
+    }
     if (body.status < 200 || body.status >= 300) {
       if (nullOn404 && body.status === 404) return null;
       throw new ApiFetchError(path, body.status, body.bodyText);

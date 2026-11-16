@@ -10,8 +10,13 @@ import {
 import { setSingleKeyShortcutDisabled } from "@/lib/keyboard-shortcut-settings";
 import { openCommandPalette } from "@/lib/command-palette";
 import NotFound from "@/app/not-found";
+import { SiteSession } from "@/components/site-session";
+import * as sessionClient from "@/lib/site-session-client";
+import * as featureFlags from "@/lib/feature-flags";
+import { ApiFetchError, SiteSessionRequiredError } from "@/lib/api";
 
 const setThemeMock = vi.hoisted(() => vi.fn());
+const refetchQueries = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 let pathname = "/";
 
@@ -21,6 +26,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@tanstack/react-query", () => ({
   QueryClient: class QueryClient {},
+  useQueryClient: () => ({ refetchQueries }),
   QueryClientProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="query-client-provider">{children}</div>
   ),
@@ -54,8 +60,81 @@ function pressKey(key: string, options: KeyboardEventInit = {}, target: EventTar
 afterEach(() => {
   cleanup();
   setThemeMock.mockClear();
+  refetchQueries.mockReset().mockResolvedValue(undefined);
   pathname = "/";
   window.localStorage.clear();
+  document.getElementById("pharos-turnstile")?.remove();
+  delete window.turnstile;
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+
+describe("SiteSession", () => {
+  it("renders the explicit widget from the effect-loaded script with automatic retries disabled", async () => {
+    vi.spyOn(featureFlags, "isSiteSessionCheckEnabled").mockReturnValue(true);
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+    vi.spyOn(sessionClient, "renewSiteSessionIfNeeded").mockImplementation(() => {});
+    let recover!: () => void;
+    vi.spyOn(sessionClient, "registerSiteSessionRecovery").mockImplementation((callback) => {
+      recover = callback;
+      return () => {};
+    });
+    let run!: Parameters<typeof sessionClient.registerSiteSessionChallenge>[0];
+    vi.spyOn(sessionClient, "registerSiteSessionChallenge").mockImplementation((challenge) => {
+      run = challenge;
+      return () => {};
+    });
+    const widget = { render: vi.fn().mockReturnValue("widget-id"), remove: vi.fn() };
+    render(<SiteSession />);
+    const pending = run(new AbortController().signal);
+    window.turnstile = widget;
+    fireEvent.load(document.getElementById("pharos-turnstile")!);
+    expect(widget.render).toHaveBeenCalledWith(expect.any(HTMLElement), expect.objectContaining({
+      sitekey: "test-site-key", action: "site-data", appearance: "interaction-only", execution: "render",
+      retry: "never", "refresh-expired": "never", "refresh-timeout": "never",
+    }));
+    widget.render.mock.calls[0]![1].callback("single-use-token");
+    await expect(pending).resolves.toBe("single-use-token");
+    expect(widget.remove).toHaveBeenCalledWith("widget-id");
+    recover();
+    const filter = refetchQueries.mock.calls[0]![0];
+    expect(filter.type).toBe("active");
+    for (const error of [new SiteSessionRequiredError("/api/test", 401, null), new ApiFetchError("/api/test", 401, null), null]) {
+      expect(filter.predicate({ state: { error } })).toBe(error instanceof SiteSessionRequiredError);
+    }
+    const { QueryClient, QueryObserver } = await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity, refetchOnMount: false } } });
+    const reads = [0, 1, 2].map((i) => vi.fn().mockRejectedValueOnce(i === 1
+      ? new ApiFetchError("/api/test", 401, null) : new SiteSessionRequiredError("/api/test", 401, null)).mockResolvedValue("recovered"));
+    await Promise.allSettled(reads.map((queryFn, i) => client.fetchQuery({ queryKey: [i], queryFn })));
+    const unsubscribe = reads.slice(0, 2).map((queryFn, i) => new QueryObserver(client, { queryKey: [i], queryFn }).subscribe(() => {}));
+    refetchQueries.mockImplementation((filters) => client.refetchQueries(filters));
+    recover();
+    await vi.waitFor(() => expect(client.getQueryData([0])).toBe("recovered"));
+    expect(reads.map((read) => read.mock.calls.length)).toEqual([2, 1, 1]);
+    unsubscribe.forEach((stop) => stop());
+    client.clear();
+  });
+
+  it("loads no script while disabled, then shows one small notice for an unavailable check", () => {
+    const enabled = vi.spyOn(featureFlags, "isSiteSessionCheckEnabled").mockReturnValue(false);
+    vi.spyOn(sessionClient, "renewSiteSessionIfNeeded").mockImplementation(() => {});
+    const paused = vi.spyOn(sessionClient, "isSiteSessionPaused").mockReturnValue(false);
+    const { container, rerender } = render(<SiteSession />);
+    expect(container.innerHTML).toBe("");
+    expect(document.getElementById("pharos-turnstile")).toBeNull();
+    enabled.mockReturnValue(true);
+    rerender(<SiteSession />);
+    expect(screen.queryByRole("status")).toBeNull();
+    paused.mockReturnValue(true);
+    rerender(<SiteSession />);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toBe("Live data is paused: the browser check did not complete. Reload to try again.");
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(document.getElementById("pharos-turnstile")?.getAttribute("src")).toBe("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit");
+    rerender(<SiteSession />);
+    expect(document.querySelectorAll("#pharos-turnstile")).toHaveLength(1);
+  });
 });
 
 describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {

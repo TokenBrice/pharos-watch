@@ -26,6 +26,7 @@ import {
   resolveGeneratedAt,
   runCoverageAuditCli,
 } from "../lib/coverage-audit-cli";
+import { siteDataSessionHeaders } from "../lib/site-session";
 import { CliUsageError, parseStrictCliArgs, parseCliInteger, runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows } from "../lib/markdown-report";
 
@@ -995,9 +996,10 @@ async function loadResponse(
   }
 
   const url = options.url ?? PROD_DDRR_SITE_DATA_URL;
-  const headers: Record<string, string> | undefined = url.startsWith(PROD_ORIGIN)
-    ? { Origin: PROD_ORIGIN, Referer: joinUrl(PROD_ORIGIN, "/depeg/") }
-    : undefined;
+  const headers = {
+    ...(url.startsWith(PROD_ORIGIN) ? { Origin: PROD_ORIGIN, Referer: joinUrl(PROD_ORIGIN, "/depeg/") } : {}),
+    ...(new URL(url).pathname.startsWith("/_site-data/") ? await siteDataSessionHeaders(url) : {}),
+  };
   const payload = await fetchJson(url, fetchImpl, undefined, headers);
   return {
     response: DdrrResponseSchema.parse(unwrapResponsePayload(payload)),

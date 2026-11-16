@@ -8,7 +8,9 @@ To disable a default-on flag locally, set that flag to the literal string `false
 
 To enable in prod: set the env var as a GitHub repository Variable. The Pages build runs in GitHub Actions, so Cloudflare Pages dashboard variables are runtime-only for this app and are not inlined into the static bundle.
 
-Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name. Their names are declared with empty values in the generated `.env.example` from `shared/lib/env-contract/registry.ts`; no `.env` value or `next.config.*` entry sets a default.
+Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name. Their names are declared with empty values in the generated `.env.example` from `shared/lib/env-contract/registry.ts`; no `.env` value sets a default. Next config supplies an explicit `"false"` build value for an unset session flag so the bundler can eliminate its disabled branches.
+
+The site-session widget and request manager load through flag-guarded dynamic imports. With the flag off, the eager API bridge has no session-manager, notice UI, query recovery, or token-crypto dependency; shared session constants live separately from the signing helper.
 
 ## Flags
 
@@ -18,6 +20,7 @@ The flag source owns the active inventory; the table below describes its user-fa
 
 | Flag                                         | Gates                                                                               |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK`      | Turnstile browser-session widget, bounded live-data wait and single session retry; also requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype verdict chip; the `oneLiner` and AI summary are not gated)   |
@@ -29,6 +32,15 @@ Dated flags carry an `// expiresAt:` comment immediately above the flag key in `
 ## Flip readiness gates
 
 What must be true before turning each flag on in production:
+
+### `NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK`
+
+- [ ] Pages session endpoint, signing key and Turnstile keys are deployed; the public site key and flag reach the Pages build as GitHub Variables.
+- [ ] Worker remains in `observe`; a rebuilt Pages release and automation canaries are green.
+- [ ] Cold/returning visits pass in Chrome, Firefox, Safari and the Telegram Mini App webview on the canonical site and ops hosts, without CSP or Safe Browsing regressions; blocked checks show the reload notice.
+- [ ] Before separately enabling Worker enforcement, five days of observation meet the approved session-coverage, rate-budget and first-visit-delay gates. Enforcement still needs the owner's go; flag enablement alone does not authorize it.
+
+Enable the flag only after the first three gates pass; the observation gate governs the later enforcement flip. Review its lifecycle deadline after rollout acceptance; an empty public site key always disables the browser gate.
 
 ### `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`
 

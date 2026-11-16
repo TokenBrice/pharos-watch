@@ -4,6 +4,10 @@ Public static `/privacy/` describes processing elsewhere in the product; it fetc
 
 ## Data Categories
 
+### Browser security session
+
+When the default-off browser-check flag is enabled with a Turnstile site key, Cloudflare Turnstile checks the browser before live data is served. One strictly necessary first-party HttpOnly cookie holds a random session ID and expiry, with no personal data, for 12 hours. Only the expiry hint (`pharos-site-session-exp`) is stored in localStorage; challenge tokens remain in memory until posted to the same-origin session endpoint. Failed checks leave build-time data available without live refresh. [Security governance](./security-governance.md#browser-session-gate) owns the client gate and script-loading rules.
+
 ### Website analytics
 
 `src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`; loopback hosts are admitted only after a browser-side opt-in (`localStorage["pharos-ga-loopback"] = "1"`), for local smoke checks. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.

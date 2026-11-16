@@ -1,4 +1,5 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
+import { readSiteSessionCookie, SITE_SESSION_HEADER, SITE_SESSION_HINT_HEADER } from "@shared/lib/site-session-token";
 import {
   SITE_DATA_ALLOWED_METHOD,
   SITE_DATA_CLIENT_IP_HEADER,
@@ -26,6 +27,7 @@ import { resolveSiteDataRequestedPath } from "../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = ["Accept", "If-None-Match", "If-Modified-Since"] as const;
 const FORWARDED_RESPONSE_HEADERS = [
+  SITE_SESSION_HINT_HEADER,
   "Age",
   "Cache-Control",
   "Content-Type",
@@ -64,7 +66,9 @@ function methodNotAllowed(): Response {
 
 function buildUpstreamHeaders(request: Request, env: SiteDataProxyEnv): Headers {
   const secret = env.SITE_API_SHARED_SECRET?.trim() ?? "";
+  const session = readSiteSessionCookie(request.headers.get("Cookie"));
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
+    ...(session ? { [SITE_SESSION_HEADER]: session } : {}),
     [SITE_DATA_PROXY_SECRET_HEADER]: secret,
     // The edge sets CF-Connecting-IP and strips client-supplied copies. Forward
     // it so the Worker can key site-lane limits per reader instead of collapsing

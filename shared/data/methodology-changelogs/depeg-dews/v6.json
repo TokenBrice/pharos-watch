@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.48",
+    "title": "Historical backfill holds closed reference markets",
+    "date": "2026-11-16",
+    "effectiveAt": 1794787200,
+    "summary": "The historical depeg replay ignores sub-severe price samples read while their FX or metal reference market was closed, as live detection has since v6.47, and a one-time repair applies the same rule to stored history.",
+    "impact": [
+      "`extractDepegEvents` treats a held sample as no observation: it opens, extends and ends nothing. A weekend-only deviation leaves no backfill row; a longer one starts at the first open-market sample that still crosses the threshold.",
+      "The repair (`repair-reference-market-artifacts`) deletes 346 artifacts: sub-severe gold, silver or FX events that began during a closure and ended within six hours of the reopen. The 89 others that depeg-resolver incidents reference are append-only and stay as recorded; the 11 among them that are their incident's sealed forecast event take a `disputed` input-corruption erratum. The 241 longer events keep their rows, and PSI counts them from the reopen.",
+      "Peg Scores of the affected coins rise by up to 6 points as the artifacts leave their record (KAU +6; CADC, EURC and KAG +2; PAXG +1; XAUT unchanged), which can move their Safety Scores at the next publication. Live detection is unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.47",
     "title": "Closed FX and metal markets hold depeg state; sustained single-source recovery",
     "date": "2026-11-15",

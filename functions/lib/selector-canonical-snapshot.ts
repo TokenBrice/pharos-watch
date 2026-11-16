@@ -1,6 +1,7 @@
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import { mintSiteSessionToken, SITE_SESSION_HEADER } from "@shared/lib/site-session-token";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 import { runSelector } from "@shared/lib/selector/engine";
 import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
@@ -37,7 +38,7 @@ interface RuntimeSchema<T> {
   safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: readonly unknown[] } };
 }
 
-export type SelectorCanonicalSnapshotEnv = Pick<SiteDataProxyEnv, "SITE_API_ORIGIN" | "SITE_API_SHARED_SECRET">;
+export type SelectorCanonicalSnapshotEnv = Pick<SiteDataProxyEnv, "SITE_API_ORIGIN" | "SITE_API_SHARED_SECRET" | "SITE_SESSION_SIGNING_KEY">;
 
 async function fetchCanonicalSource<T>(
   request: Request,
@@ -51,6 +52,7 @@ async function fetchCanonicalSource<T>(
   if (!origin || !secret) {
     throw new Error("Canonical selector data lane is not configured");
   }
+  const token = await mintSiteSessionToken({ key: env.SITE_SESSION_SIGNING_KEY ?? "", kind: "automation", nowSec: Math.floor(Date.now() / 1000) });
 
   const result = await fetchUpstreamProxy(request, {
     upstreamUrl: new URL(path, origin).toString(),
@@ -58,6 +60,7 @@ async function fetchCanonicalSource<T>(
     headers: new Headers({
       Accept: "application/json",
       [SITE_DATA_PROXY_SECRET_HEADER]: secret,
+      ...(token ? { [SITE_SESSION_HEADER]: token } : {}),
     }),
     timeoutMs: SELECTOR_CANONICAL_FETCH_TIMEOUT_MS,
     timeoutReason: new DOMException("Canonical selector source timed out", "TimeoutError"),
