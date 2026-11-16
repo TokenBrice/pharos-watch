@@ -136,7 +136,8 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
     // Backing, targets, inaccessible terms and other payout branches are not capacity evidence.
     // +1 (2026-11-16): copm-minteo enters with an honestly unquantified issuer-API route; its
     // published COP 10,000 minimum is not executable capacity, so no capacity tag is claimed.
-    capacity: 46,
+    // +1 (2026-11-16): rcusd-r25's conditional USDC payment obligation is not funded executable capacity.
+    capacity: 47,
     fees: 126,
     access: 157,
     settlement: 167,

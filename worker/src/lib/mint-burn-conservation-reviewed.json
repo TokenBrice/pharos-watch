@@ -13841,6 +13841,110 @@
       ],
       "reviewedAt": "2026-11-15",
       "reviewer": "Pharos COPM mint/burn source and pinned conservation review"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "itry-brix",
+      "address": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://etherscan.io/address/0x0679eaa2443e5fea70eea7ac9508fd357406fdad#code",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy -> iTry (OpenZeppelin ERC20Upgradeable)",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x0679eaa2443e5fea70eea7ac9508fd357406fdad",
+          "implementationSourceVerified": true,
+          "note": "Verified ERC1967Proxy exposes fallback/receive delegation only; the verified iTry implementation and inherited contracts expose no upgrade selector, implementation-slot setter or arbitrary delegatecall. The implementation is fixed after construction. Hash-pinned EIP-1967 slot reads match at all three audited boundaries; no Upgraded events occur in blocks 26323701-26423700."
+        },
+        "externalMatches": [
+          {
+            "source": "issuer",
+            "value": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+            "matches": true,
+            "detail": "https://docs.brix.money/resources/contracts identifies this exact Ethereum iTRY token and separately identifies its locking OFT adapter 0xa21819cb613c9525e31178812b665933471e5e88. Pinned adapter token() matches the configured token at all three conservation boundaries."
+          }
+        ],
+        "onChain": {
+          "block": 26423700,
+          "blockHash": "0xb79b1890f78c40d627a6af223952e7aae76298b97173576322e01d705c70c74f",
+          "timestamp": 1794785351,
+          "decimals": 18,
+          "symbol": "iTry",
+          "name": "iTry",
+          "totalSupplyRaw": "105526365307175497186410053",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "iTry.mint requires MINTER_CONTRACT and calls inherited OZ _mint: nonzero recipient, stored _totalSupply += amount and one Transfer(address(0),recipient,amount)."
+        },
+        {
+          "function": "burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MINTER_CONTRACT and allowance-gated. Inherited OZ _burn rejects zero account, decrements _totalSupply by amount and emits one Transfer(account,address(0),amount). Direct burn(uint256) always reverts."
+        },
+        {
+          "function": "redistributeLockedAmount(address,address)",
+          "internal": "_burn + _mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "DEFAULT_ADMIN_ROLE may burn the full blacklisted balance and mint exactly that amount to a non-blacklisted recipient. Each supply change emits its canonical zero-address Transfer; the custom LockedAmountRedistributed event is not indexed. Atomic burn/reissue is raw conservation evidence, not necessarily investor redemption/subscription."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ ERC20Upgradeable.totalSupply() returns stored _totalSupply. Only _mint and _burn write it; iTry and its inherited access-control, permit and reentrancy contracts provide no rebase, external supply override or independent supply writer. _beforeTokenTransfer only gates access/transfer state."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Verified source and ABI reviewed for proxy, implementation and Ethereum OFT adapter. Ordinary transfer/transferFrom reject either zero endpoint; _mint/_burn reject zero accounts, so counterfeit or ambiguous zero-side Transfers are not exposed. The verified iTRYTokenOFTAdapter inherits RateLimitedOFTAdapter -> OFTAdapter: _debit locks with safeTransferFrom(sender,adapter,amount); _credit unlocks with safeTransfer(recipient,amount); rescueToken rejects the underlying token. These are nonzero-address transfers and do not change Ethereum totalSupply or enter this zero-Transfer config. MegaETH OFT mint/burn events are outside this Ethereum scope, so no speculative bridge exclusions are added. Two disjoint 50000-block windows contain 12 raw mint/burn logs with residual exactly zero. Independent Dwellir EIP-1898 reads corroborate Alchemy production-audit supplies: block 26323700 = 275939310709471575070668758; block 26373700 = 177360052528279238890235943; block 26423700 = 105526365307175497186410053 raw units (18 decimals); matching before/after headers bind the reads. Deployment block 24637760 is confirmed by empty archive code at 24637759, present code at 24637760 and successful creation receipt 0x53179a8beec0f2c914984fe2a8d551d9f4eda068d72bd686ee2876d8bdce1296, including Upgraded to the reviewed implementation. Full history was not summed. Conservation admission does not authorize publication: this leg remains pending its independent durable 90-day scan/valuation admission. Evidence and redacted replay journal: agents/discovery-backlog/fixes/itry/.",
+      "windows": [
+        {
+          "fromBlock": 26373700,
+          "fromBlockHash": "0xd110e3b2d85251a2787711a4ef71847007c6cf1caeb7cb411e802e21967f4980",
+          "fromTimestamp": 1794183575,
+          "toBlock": 26423700,
+          "toBlockHash": "0xb79b1890f78c40d627a6af223952e7aae76298b97173576322e01d705c70c74f",
+          "toTimestamp": 1794785351,
+          "mintRaw": "9826549428103045100312711",
+          "burnRaw": "81660236649206786804138601",
+          "supplyDeltaRaw": "-71833687221103741703825890",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "d014d5f971e9ad0d46a85212fccf580bf09a63acf4a381b892b15b16b87823af"
+        },
+        {
+          "fromBlock": 26323700,
+          "fromBlockHash": "0x842237a68a313dcfe813b380457fc8dc1c69a84e9209c3e99d7a9876f0121910",
+          "fromTimestamp": 1793581631,
+          "toBlock": 26373700,
+          "toBlockHash": "0xd110e3b2d85251a2787711a4ef71847007c6cf1caeb7cb411e802e21967f4980",
+          "toTimestamp": 1794183575,
+          "mintRaw": "788897905618663819567185",
+          "burnRaw": "99368156086811000000000000",
+          "supplyDeltaRaw": "-98579258181192336180432815",
+          "residualRaw": "0",
+          "logCount": 4,
+          "journalSha256": "d014d5f971e9ad0d46a85212fccf580bf09a63acf4a381b892b15b16b87823af"
+        }
+      ],
+      "reviewedAt": "2026-11-16",
+      "reviewer": "Pharos independent-review fix lane: source and pinned conservation review"
     }
   ]
 }

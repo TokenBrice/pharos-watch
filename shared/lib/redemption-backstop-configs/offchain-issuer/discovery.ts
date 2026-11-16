@@ -25,7 +25,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
       ],
     },
     docs: [
-      sourceRef("rcUSD redemption agreement, October 15 2025: payment obligation without quantified executable capacity", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf", ["route", "capacity", "access", "settlement", "fees"]),
+      sourceRef("rcUSD redemption agreement, October 15 2025: payment obligation without quantified executable capacity", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/3.%20rcUSD%20Redemption%20Agreement.pdf", ["route", "access", "settlement", "fees"]),
       sourceRef("rcUSD purchase agreement, October 15 2025", "https://r25-public.oss-cn-hongkong.aliyuncs.com/docs/2.%20rcUSD%20Purchase%20Agreement.pdf", ["route", "access"]),
     ],
     notes: [

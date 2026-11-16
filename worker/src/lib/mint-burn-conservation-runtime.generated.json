@@ -1580,6 +1580,15 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "itry-brix",
+      "address": "0xb492b4afd9658093694cf9452d5c272e8230f3b0",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
     }
   ]
 }
