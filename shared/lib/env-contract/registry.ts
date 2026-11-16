@@ -95,10 +95,19 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "DB",
     valueType: "D1Database",
-    description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.",
+    description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data telemetry and required atomic Picker/dated-scorecard write quotas.",
     docs: { includeInOperatorOriginAccess: true },
     runtimes: {
       worker: { status: "required" },
+      pagesSiteData: { status: "required" },
+    },
+  },
+  {
+    key: "SOCIAL_PREVIEWS",
+    valueType: "R2Bucket",
+    description: "Pages binding to the permanent pharos-social-previews bucket for immutable discovery images and sealed dated scorecards; no object-expiry lifecycle.",
+    docs: { includeInOperatorOriginAccess: true },
+    runtimes: {
       pagesSiteData: { status: "required" },
     },
   },
@@ -275,16 +284,16 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SITE_SESSION_SIGNING_KEY_PREVIOUS",
     valueType: "string",
-    description: "Optional Wrangler-managed Worker overlap secret for site-session signing-key rotation; retain for 24 hours after issuers switch to the new current key.",
+    description: "Optional Worker and Pages overlap secret for site-session signing-key rotation; retain in both runtimes for 24 hours after issuers switch to the new current key.",
     example: { section: "workerOptional", value: "" },
-    runtimes: { worker: { status: "optional" } },
+    runtimes: { worker: { status: "optional" }, pagesSiteData: { status: "optional" } },
   },
   {
     key: "SITE_SESSION_ENFORCEMENT",
     valueType: "string",
-    description: "Optional Wrangler-managed Worker rollout switch: only literal `enforce` rejects invalid site sessions and browser budget failures; unset or any other value uses `observe`.",
+    description: "Optional Worker and Pages rollout switch: only literal `enforce` rejects invalid site sessions (and Worker browser budget failures); unset or any other value uses `observe`. Keep both runtimes aligned.",
     example: { section: "workerOptional", value: "" },
-    runtimes: { worker: { status: "optional" } },
+    runtimes: { worker: { status: "optional" }, pagesSiteData: { status: "optional" } },
   },
   {
     key: "TURNSTILE_SECRET_KEY",

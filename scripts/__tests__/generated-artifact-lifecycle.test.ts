@@ -62,9 +62,13 @@ describe("generated artifact lifecycle", () => {
 
   it("materializes ignored compile and serve inputs during bootstrap and their Pages phases", () => {
     const pages = ["case-study-client-index", "changelog-registry"];
-    expect(selectedIds({ bootstrap: true })).toEqual(expect.arrayContaining([...pages, "llms-txt"]));
+    const postRefresh = ["llms-txt", "social-preview-images"];
+    expect(selectedIds({ bootstrap: true })).toEqual(expect.arrayContaining([...pages, ...postRefresh]));
     expect(selectedIds({ buildLifecycles: ["compile-input"] })).toEqual(expect.arrayContaining(pages));
-    expect(selectedIds({ buildLifecycles: ["post-refresh"] })).toContain("llms-txt");
+    expect(selectedIds({ buildLifecycles: ["post-refresh"] })).toEqual(expect.arrayContaining(postRefresh));
+    const previews = registry.find((a) => a.id === "social-preview-images")!;
+    expect(previews.outputPaths).toContain("src/generated/social-preview-images.json");
+    expect(previews.requiredBrowsers).toEqual([]);
   });
 });
 

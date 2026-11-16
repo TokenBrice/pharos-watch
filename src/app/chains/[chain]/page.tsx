@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_META, type ChainMeta } from "@shared/types/chain-identity";
 import { formatProseList } from "@shared/lib/format";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { isChainProfileIndexable } from "@/lib/chain-indexing";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { deploymentCountLabel, stablecoinCountLabel } from "@/lib/chain-labels";
@@ -56,7 +55,6 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
     title: chainPageTitle(meta.name, deployments),
     description: buildChainMetaDescription(meta.name, deployments),
     canonical: `/chains/${chain}/`,
-    ogImage: buildApiOgImageUrl(API_PATHS.ogChain(chain)),
     robots: isChainProfileIndexable(chain) ? undefined : { index: false, follow: true },
   });
 }
@@ -340,7 +338,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
         version: CHAIN_HEALTH_METHODOLOGY_VERSION,
         changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
       }}
-      headerActions={<ShareButton ogPath={API_PATHS.ogChain(chain)} />}
+      headerActions={<ShareButton />}
       leadParagraphs={[
         `Stablecoin supply, Chain Health and active deployments on ${meta.name}.`,
         ...buildChainEditorialIntro({ chainName: meta.name, meta, deployments }),

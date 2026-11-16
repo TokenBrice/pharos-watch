@@ -1570,6 +1570,13 @@
           ]
         },
         {
+          "sources": ["scripts/maintenance/publish-social-previews.ts", "scripts/lib/cloudflare-pages-r2.ts"],
+          "local": [
+            { "path": "docs/og-images.md", "anchor": "1-route-cards" },
+            { "path": "docs/deployment-process.md", "anchor": "social-preview-storage-prerequisites" }
+          ]
+        },
+        {
           "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/__tests__/inline-homepage-critical-css.test.ts"],
           "local": [{ "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }]
         },
@@ -1712,6 +1719,22 @@
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",
         "scripts/maintenance/build-og-route-timeless.ts",
+        "shared/lib/social-preview.ts",
+        "shared/lib/social-preview-asset.ts",
+        "shared/lib/social-preview-storage.ts",
+        "shared/lib/social-scorecard.ts",
+        "shared/types/social-scorecard.ts",
+        "worker/src/api/og-scorecard.tsx",
+        "worker/src/lib/og-render.ts",
+        "worker/src/lib/og-templates/scorecard.tsx",
+        "functions/share/scorecard/**",
+        "functions/_site-data/scorecard.ts",
+        "functions/og/v2/**",
+        "functions/lib/social-scorecard.ts",
+        "public/og/v2/**",
+        "scripts/lib/social-preview*",
+        "scripts/maintenance/build-og-evergreen.*",
+        "scripts/maintenance/publish-social-previews.ts",
         "next.config.ts",
         "docs/alt-pegs-page.md",
         "docs/api-page.md",
@@ -1736,6 +1759,14 @@
       ],
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "reading": [
+        {
+          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "worker/src/lib/og-templates/scorecard.tsx", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "public/og/v2/**", "scripts/lib/social-preview*", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
+          "local": [
+            { "path": "docs/og-images.md", "anchor": "1-route-cards" },
+            { "path": "docs/og-images.md", "anchor": "dated-scorecards" },
+            { "path": "docs/og-images.md", "anchor": "ci-guardrails" }
+          ]
+        },
         {
           "sources": ["public/llms.txt"],
           "local": [

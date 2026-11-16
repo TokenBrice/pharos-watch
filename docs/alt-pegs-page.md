@@ -1,6 +1,6 @@
 # Alt-Pegs Page
 
-Public `/alt-pegs/` (H1 and navigation label **Non-USD Pegs**) explains growth/structure beyond dollar pegs and links crawlable [peg taxonomy](./stablecoin-taxonomy-pages.md) cohorts. It is not a second Screener. `src/app/alt-pegs/` owns shell/client/chart; `shared/lib/alt-peg-snapshot.ts` (`buildNonUsdMarketSnapshot`) is the one current-snapshot reducer, shared by the page (`src/lib/alt-peg-market.ts` adds labels, links and colours) and the live share card. Shared tables reuse ordinary peg/liquidity/report-card overlays; no dedicated Worker endpoint is needed while existing joins suffice.
+Public `/alt-pegs/` (H1 and navigation label **Non-USD Pegs**) explains growth/structure beyond dollar pegs and links crawlable [peg taxonomy](./stablecoin-taxonomy-pages.md) cohorts. It is not a second Screener. `src/app/alt-pegs/` owns shell/client/chart; `shared/lib/alt-peg-snapshot.ts` (`buildNonUsdMarketSnapshot`) is the one current-snapshot reducer, shared by the page (`src/lib/alt-peg-market.ts` adds labels, links and colours) and the compatibility numerical Worker card. Shared tables reuse ordinary peg/liquidity/report-card overlays; no dedicated Worker endpoint is needed while existing joins suffice.
 
 ## Route Shape
 
@@ -42,7 +42,7 @@ The marker census starts with the core non-USD registry, using registry names, s
 
 ## Share Card
 
-`/alt-pegs/` selects the live route card `/api/og/page/alt-pegs` (`worker/src/api/og-page/alt-pegs.ts`): the same `buildNonUsdMarketSnapshot` beam over the published stablecoins cache, top three peg shares when complete, a `Partial · x/y non-USD coins observed` stamp when not. A missing, stale or null source, or a render failure, serves the timeless `og-alt-pegs.png` ([OG images](./og-images.md#1-route-cards)).
+Canonical metadata and the ordinary Share menu use the generated immutable evergreen `/og/v2/` preview, not a live total or peg-share image ([OG images](./og-images.md#1-route-cards)). `/api/og/page/alt-pegs` remains a compatibility numerical endpoint (`worker/src/api/og-page/alt-pegs.ts`) using `buildNonUsdMarketSnapshot` over the published cache with explicit partial coverage and figure-free failure states; it and legacy `og-alt-pegs.png` are not this page's canonical image selection.
 
 ## Crawlability And Discoverability
 

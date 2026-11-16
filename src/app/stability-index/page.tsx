@@ -1,10 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -32,7 +30,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Stability Index: Live Market Stress Score",
     description,
-    ogImage: buildApiOgImageUrl(API_PATHS.ogStabilityIndex()),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
   loading: (
@@ -51,7 +48,7 @@ const route = createClientFeaturePage({
       docsPath: "/docs/stability-index/",
     },
     header: "instrument",
-    headerActions: <ShareButton ogPath={API_PATHS.ogStabilityIndex()} />,
+    headerActions: <ShareButton />,
     leadParagraphs: [
       "A VIX for stablecoins: read the market regime before you trade.",
     ],

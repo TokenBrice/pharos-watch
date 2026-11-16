@@ -11,6 +11,7 @@ import pkg from "../../package.json";
 import { withTempRepo } from "./helpers/test-state";
 import * as v9 from "../maintenance/generate-safety-score-v9-evaluation-build-manifest";
 import * as shock from "../maintenance/generate-safety-score-v9-shock-coverage-registry";
+import * as automationRegistry from "../lib/automation-registry.mjs";
 
 describe("PR dataset integrity runner", () => {
   it.each([[[]], [["--bootstrap"]]])("rejects generation %s before children", async (args) => {
@@ -51,9 +52,23 @@ const run = (argv: string[], runCommandImpl: (command: string) => Promise<number
 
 describe("generated-artifact runner lifecycle selection", () => {
   const refreshArgv = ["--build-lifecycle=post-refresh"];
-  const ids = ["stablecoin-catalog", "depeg-event-search-data", "report-card-registry-fingerprint", "stablecoin-detail-snapshots", "llms-txt"];
+  const mockSchedulingPlan = () => vi.spyOn(automationRegistry, "buildGeneratedArtifactPhases").mockReturnValue([
+    { phase: 0, artifacts: [
+      { id: "upstream", command: "fixture:upstream" },
+      { id: "independent", command: "fixture:independent" },
+    ] },
+    { phase: 1, artifacts: [
+      { id: "dependent", command: "fixture:dependent", dependsOn: ["upstream"] },
+      { id: "independent-later", command: "fixture:independent-later" },
+    ] },
+    { phase: 2, artifacts: [
+      { id: "transitive", command: "fixture:transitive", dependsOn: ["dependent"] },
+    ] },
+  ]);
   const rejectsDownstream = (calls: [string, ...unknown[]][]) => {
-    for (const script of ids.slice(2)) expect(calls.some(([cmd]) => cmd.includes(script))).toBe(false);
+    for (const command of ["fixture:dependent", "fixture:independent-later", "fixture:transitive"]) {
+      expect(calls.some(([cmd]) => cmd === command)).toBe(false);
+    }
   };
   it.each(["runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
     withTempRepo("uncheckable", {}, (cwd) => {
@@ -85,36 +100,59 @@ describe("generated-artifact runner lifecycle selection", () => {
   });
 
   it("waits for upstream completion before starting dependent phases", async () => {
+    using _plan = mockSchedulingPlan();
     const upstream = Promise.withResolvers<number>();
     const entered = Promise.withResolvers<void>();
+    const dependent = Promise.withResolvers<number>();
+    const dependentEntered = Promise.withResolvers<void>();
     const child = vi.fn(async (command: string) => {
-      if (command.includes("per-coin-asset")) {
+      if (command === "fixture:upstream") {
         entered.resolve();
         return upstream.promise;
+      }
+      if (command === "fixture:dependent") {
+        dependentEntered.resolve();
+        return dependent.promise;
       }
       return 0;
     });
     const pending = run(refreshArgv, child);
+    expect(_plan).toHaveBeenCalledWith(expect.objectContaining({ buildLifecycles: ["post-refresh"] }));
     await entered.promise;
     rejectsDownstream(child.mock.calls);
     upstream.resolve(0);
+    await dependentEntered.promise;
+    expect(child.mock.calls.some(([command]) => command === "fixture:transitive")).toBe(false);
+    dependent.resolve(0);
     const result = await pending;
     expect(result.status).toBe(0);
-    expect(result.results.map(({ id }) => id)).toEqual(ids);
+    expect(result.results.map(({ id }) => id))
+      .toEqual(["upstream", "independent", "dependent", "independent-later", "transitive"]);
+    expect(result.results.every(({ status, statusLabel, taintedBy }) =>
+      status === 0 && statusLabel === "passed" && taintedBy.length === 0)).toBe(true);
   });
 
   it.each([
     ["stops later phases after an upstream failure", false],
     ["retains the failure and propagates transitive taint without tainting independent artifacts", true],
   ] as const)("%s", async (_name, continued) => {
-    const child = vi.fn(async (command: string) => command.includes("per-coin-asset") ? 7 : 0);
+    using _plan = mockSchedulingPlan();
+    const child = vi.fn(async (command: string) => command === "fixture:upstream" ? 7 : 0);
     const result = await run([...refreshArgv, ...(continued ? ["--continue-on-error"] : [])], child);
-    expect(result.status).toBe(7);
-    if (!continued) rejectsDownstream(child.mock.calls);
-    else {
-      expect(result.results.map(({ id, statusLabel, taintedBy }) => [id, statusLabel, taintedBy]))
-        .toEqual(ids.map((id, i) => [id, ["failed", "passed"][i] ?? "tainted", i > 1 ? [ids[0]] : []]));
-      expect(result.failures.map(({ status }) => status)).toEqual([7]);
+    expect(result).toMatchObject({ status: 7, failedCmd: "fixture:upstream" });
+    if (!continued) {
+      rejectsDownstream(child.mock.calls);
+      expect(result.results.find(({ id }) => id === "upstream"))
+        .toMatchObject({ status: 7, statusLabel: "failed", taintedBy: [] });
+    } else {
+      expect(result.results.map(({ id, statusLabel, taintedBy }) => [id, statusLabel, taintedBy])).toEqual([
+        ["upstream", "failed", []],
+        ["independent", "passed", []],
+        ["dependent", "tainted", ["upstream"]],
+        ["independent-later", "passed", []],
+        ["transitive", "tainted", ["upstream"]],
+      ]);
+      expect(result.failures.map(({ unit, status }) => [unit.id, status])).toEqual([["upstream", 7]]);
     }
   });
 });

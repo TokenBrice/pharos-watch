@@ -24,7 +24,6 @@ export const metadata: Metadata = buildPageMetadata({
   titleAbsolute: true,
   description: TELEGRAM_PAGE_DESCRIPTION,
   canonical: "/pharoswatchbot/",
-  ogImage: `${SITE_URL}/og-pharoswatchbot.png`,
 });
 
 /**

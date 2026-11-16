@@ -368,7 +368,6 @@ const route = createStaticSlugRoute({
   paramKey: "slug",
   pages: STATIC_COMPARISON_PAGES, pageBySlug: STATIC_COMPARISON_PAGE_BY_SLUG,
   missingTitle: "Comparison Not Found", missingMetadata: { title: "Comparison Not Found", robots: { index: false } },
-  ogImage: "/og-compare.png",
   render: StaticComparisonContent,
 });
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import sitemapDates from "@/generated/sitemap-dates.json";
+import socialPreviewImages from "@/generated/social-preview-images.json";
 import {
   BACKING_PROSE_LABELS,
   GOVERNANCE_PROSE_LABELS,
@@ -9,8 +10,7 @@ import {
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
@@ -23,23 +23,18 @@ import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import type { OgPageSlug } from "@shared/lib/og-route-cards";
 import { buildArticleJsonLd } from "@/lib/json-ld";
 import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
-import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
-import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { SITE_OPEN_GRAPH_IDENTITY, SITE_TWITTER_IDENTITY } from "@/lib/site-identity";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
 import { stripTermMarkup } from "@/lib/term-markup";
+import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 interface BuildPageMetadataInput {
   title: string;
   description: string;
   canonical: string;
-  ogImage?: string;
-  ogWidth?: number;
-  ogHeight?: number;
   robots?: Metadata["robots"];
   /**
    * Emit `title` as `{ absolute }`, bypassing the root `"%s | Pharos"`
@@ -449,18 +444,9 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
   }
 
-  // Grade first: Google truncates around 155 characters. The date is the
-  // scores-latest release the profile body cites; live price, peg and supply
-  // stay out because snippets are cached for weeks.
-  const assessment = getSnapshotSafetyAssessment(coin.id);
-  const lead = assessment
-    ? [
-        `Safety Score ${assessment.grade} (${formatDayLabel(PUBLIC_DATASET_CURRENT_DATE)}). ${body}`,
-        `Safety Score ${assessment.grade}. ${body}`,
-        body,
-      ]
-    : body;
-  return composeDescription([lead, getMetadataDifferentiator(coin)], PROFILE_DESCRIPTION_MAX_LENGTH);
+  // Canonical snippets can outlive both the deploy and a scoring generation.
+  // Numeric assessments belong to explicitly dated share artifacts.
+  return composeDescription([body, getMetadataDifferentiator(coin)], PROFILE_DESCRIPTION_MAX_LENGTH);
 }
 
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
@@ -477,8 +463,6 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       title: buildStablecoinStatusTitle(coin),
       description,
       canonical: buildStablecoinUrl(coin.id),
-      // Preserve OG image so social previews render the same card as live coins.
-      ogImage: buildApiOgImageUrl(API_PATHS.ogStablecoin(coin.id)),
     });
   }
 
@@ -487,9 +471,6 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       title: buildStablecoinStatusTitle(coin),
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
-      // Pre-launch ids never enter the worker's READABLE_IDS set, so use a
-      // static launch-tracker card until launch promotes the coin.
-      ogImage: "/og-upcoming.png",
     });
   }
 
@@ -498,9 +479,6 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       title: buildStablecoinStatusTitle(coin),
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
-      // Policy-withheld IDs are absent from the live stablecoins cache used by
-      // the Worker OG renderer, so use a static catalog card.
-      ogImage: "/og-stablecoins.png",
     });
   }
 
@@ -508,17 +486,19 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
     title: buildStablecoinStatusTitle(coin),
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
-    ogImage: buildApiOgImageUrl(API_PATHS.ogStablecoin(coin.id)),
   });
 }
 
-export function buildApiOgImageUrl(path: string): string {
-  return new URL(path, API_ORIGIN).toString();
-}
+type PageSocialPreview = (typeof socialPreviewImages)[keyof typeof socialPreviewImages];
+const PAGE_SOCIAL_PREVIEWS: Readonly<Record<string, PageSocialPreview>> = socialPreviewImages;
 
-/** Live route share card (`/api/og/page/:slug`); it falls back to the route's timeless card server-side. */
-export function buildLiveRouteOgImageUrl(slug: OgPageSlug): string {
-  return buildApiOgImageUrl(API_PATHS.ogPage(slug));
+/** Resolve public discovery imagery independently of volatile SEO copy. */
+export function getPageSocialPreview(canonical: string): PageSocialPreview {
+  const pathname = canonicalPathname(canonical);
+  const key = pathname && !pathname.endsWith("/") ? `${pathname}/` : pathname;
+  const preview = key && PAGE_SOCIAL_PREVIEWS[key];
+  if (!preview) throw new Error(`Missing social preview for public destination: ${canonical}`);
+  return preview;
 }
 
 const INDEXABLE_ROBOTS: Metadata["robots"] = {
@@ -537,18 +517,21 @@ export function buildPageMetadata({
   title,
   description,
   canonical,
-  ogImage,
-  ogWidth = 1200,
-  ogHeight = 628,
   robots,
   titleAbsolute = false,
   ogType = "website",
   publishedTime,
 }: BuildPageMetadataInput): Metadata {
+  const publicRoute = getRouteCapabilities(canonicalPathname(canonical)).chrome === "public";
+  const preview = getPageSocialPreview(publicRoute ? canonical : "/");
+  const socialTitle = preview.title;
+  const socialDescription = preview.description;
   const resolvedImage = {
-    url: ogImage ?? "/og-card.png",
-    width: ogWidth,
-    height: ogHeight,
+    url: preview.url,
+    width: preview.width,
+    height: preview.height,
+    type: preview.type,
+    alt: preview.alt,
   };
   const markdownAlternate = getMarkdownAlternateForCanonical(canonical);
   const alternates: Metadata["alternates"] = { canonical };
@@ -562,8 +545,8 @@ export function buildPageMetadata({
   const openGraph: Metadata["openGraph"] =
     ogType === "article"
       ? {
-          title,
-          description,
+          title: socialTitle,
+          description: socialDescription,
           url: canonical,
           ...SITE_OPEN_GRAPH_IDENTITY,
           type: "article",
@@ -571,8 +554,8 @@ export function buildPageMetadata({
           images: [resolvedImage],
         }
       : {
-          title,
-          description,
+          title: socialTitle,
+          description: socialDescription,
           url: canonical,
           ...SITE_OPEN_GRAPH_IDENTITY,
           type: "website",
@@ -587,8 +570,8 @@ export function buildPageMetadata({
     twitter: {
       card: "summary_large_image",
       ...SITE_TWITTER_IDENTITY,
-      title,
-      description,
+      title: socialTitle,
+      description: socialDescription,
       images: [resolvedImage],
     },
     robots: robots ?? INDEXABLE_ROBOTS,

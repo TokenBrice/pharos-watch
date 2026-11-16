@@ -1,11 +1,9 @@
-import type { V9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import * as React from "react";
-import satori, { init as initSatori } from "satori/standalone";
-import yogaWasm from "satori/yoga.wasm";
-import { Resvg, initResvg, resvgWasmModule } from "@cf-wasm/resvg/workerd";
-import { OG_FONTS } from "../lib/og-fonts";
+import { renderPng } from "../lib/og-render";
+import { handleScorecardOg } from "./og-scorecard";
 import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/stablecoin-card";
 import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
@@ -18,18 +16,15 @@ import { OG_PAGE_LOADERS, type OgPageLoad } from "./og-page";
 import { isActiveChainAggregateAsset } from "./chains";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { ratioToPercentage } from "@shared/lib/stats";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { resolveOrReject } from "../lib/api-params";
-import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES, buildOgImageCacheControl } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
+import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { summarizeMintBurnValuation } from "@shared/lib/mint-burn-valuation";
 import { summarizeMintBurnClassification } from "@shared/lib/mint-burn-classification";
@@ -47,8 +42,7 @@ import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { getVariantDisplay } from "@shared/lib/variant-display";
-import type { BackingType } from "@shared/types/core";
-import { loadActiveSafetyScoreIndex } from "../lib/safety-score-index";
+import { loadActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { addFreshnessHeaders } from "../lib/api-freshness";
@@ -56,62 +50,14 @@ import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
-import { getDepegThresholdBps } from "../lib/depeg-threshold-policy";
-import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import {
   getNativeEventPriceObservation, isNativePegEvent,
   type NativeEventPriceEvidence,
+  PSI_NATIVE_EVIDENCE_MAX_AGE_SEC,
 } from "@shared/lib/depeg-quote-domain";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
-
-// ---------------------------------------------------------------------------
-// WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
-// ---------------------------------------------------------------------------
-
-// Intentional per-isolate cache — WASM init runs once per Worker isolate; module-scope `let` is the documented exception. See docs/worker-infrastructure.md.
-let wasmInitialization: Promise<void> | null = null;
-
-/** @internal Reset isolate-local WASM initialization so test files can share a process. */
-export function resetOgWasmInitializationForTests(): void {
-  wasmInitialization = null;
-}
-
-async function ensureWasm(): Promise<void> {
-  if (!wasmInitialization) {
-    wasmInitialization = (async () => {
-      const errors: unknown[] = [];
-
-      // Initialize yoga WASM for satori layout engine
-      try {
-        await initSatori(yogaWasm);
-      } catch (e: unknown) {
-        // Ignore if already initialized in this isolate
-        if (!(e instanceof Error && e.message.includes("already"))) {
-          errors.push(e);
-        }
-      }
-
-      // Initialize resvg WASM for SVG→PNG rendering
-      try {
-        await initResvg(resvgWasmModule);
-      } catch (e: unknown) {
-        // @cf-wasm/resvg throws if already initialized in this isolate
-        if (!(e instanceof Error && e.message.includes("already called"))) {
-          errors.push(e);
-        }
-      }
-
-      if (errors.length > 0) {
-        throw errors[0];
-      }
-    })().catch((error) => {
-      wasmInitialization = null;
-      throw error;
-    });
-  }
-  await wasmInitialization;
-}
 
 
 function ogSourceAsOf(source: string, timestamp: number | null | undefined, now: number): string {
@@ -122,8 +68,6 @@ function ogSourceAsOf(source: string, timestamp: number | null | undefined, now:
 }
 
 
-const OG_WIDTH = 1200;
-const OG_HEIGHT = 628;
 const CACHE_HEADERS = {
   "Content-Type": "image/png",
   "Cache-Control": API_CACHE_PROFILES.ogImage,
@@ -143,11 +87,19 @@ function ogDataNotYetAvailable(): Response {
   });
 }
 
-interface OgSafetyScoreEntry {
-  score: number | null;
-  grade: string | null;
-  partialEvidence: V9CompactPartialEvidence | null;
+/** Use the owning source's budget; future clocks cannot certify present evidence. */
+function ogObservationFreshUntil(timestamp: number | null | undefined, budgetSec: number, nowSec: number): number | null {
+  const age = assessFreshnessTimestamp(nowSec, timestamp, 0);
+  return age.reason == null && age.ageSeconds <= budgetSec ? timestamp! + budgetSec : null;
 }
+
+function observedOgResponse(png: Uint8Array, freshUntilSec: number, headers: Record<string, string> = CACHE_HEADERS): Response {
+  const secondsLeft = freshUntilSec - Date.now() / 1000;
+  if (secondsLeft <= 0) return ogDataNotYetAvailable();
+  return new Response(png, { headers: { ...headers, "Cache-Control": buildOgImageCacheControl(secondsLeft) } });
+}
+
+type OgSafetyScoreEntry = SafetyScoreGradeSnapshot["cards"][number];
 
 type OgSafetyScoreSource =
   | {
@@ -159,6 +111,7 @@ type OgSafetyScoreSource =
       publicationGenerationId: string;
       assessedAtSec: number;
       expectedCount: number;
+      publicationFingerprint: string;
       scores: Record<string, OgSafetyScoreEntry>;
     }
   | {
@@ -180,7 +133,8 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
     };
   }
 
-  if (!isSafetyScoreV9SnapshotFresh(active.snapshot, assessedAtSec)) {
+  if (active.kind === "held" || !isSafetyScoreV9SnapshotFresh(active.snapshot, assessedAtSec)
+    || ogObservationFreshUntil(active.snapshot.asOfSec, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, assessedAtSec) == null) {
     return {
       kind: "error",
       reason: active.kind === "held" ? active.reason : "stale-cache",
@@ -198,12 +152,14 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
     publicationGenerationId: active.snapshot.safetyScoreIdentity.publicationGenerationId,
     assessedAtSec,
     expectedCount: active.snapshot.completeness.expectedCount,
-    scores: Object.fromEntries(
-      active.snapshot.cards.map((card) => [
-        card.id,
-        { score: card.score, grade: card.grade, partialEvidence: card.partialEvidence },
-      ]),
-    ),
+    publicationFingerprint: stableJsonStringifyV1({
+      identity: active.snapshot.safetyScoreIdentity,
+      asOfSec: active.snapshot.asOfSec,
+      publishedAtSec: active.snapshot.updatedAt,
+      completeness: active.snapshot.completeness,
+      cards: active.snapshot.cards,
+    }),
+    scores: Object.fromEntries(active.snapshot.cards.map((card) => [card.id, card])),
   };
 }
 
@@ -218,11 +174,12 @@ function safetyScoreOgPresentation(
   };
   if (safetySource.kind === "ok") {
     return {
-      lastUpdated: `${safetySource.model.toUpperCase()} ${safetySource.methodologyVersion} · ${ogSourceAsOf("as of", safetySource.asOfSec, Math.floor(Date.now() / 1000))}`,
+      lastUpdated: `Methodology v${safetySource.methodologyVersion} \u00b7 ${ogSourceAsOf("Observed", safetySource.asOfSec, safetySource.assessedAtSec)} \u00b7 ${ogSourceAsOf("Published", safetySource.publishedAtSec, safetySource.assessedAtSec)}`,
       headers: addFreshnessHeaders({
         ...CACHE_HEADERS,
         ...freshnessHeaders,
         "X-Safety-Score-Model": safetySource.model,
+        "X-Safety-Score-Methodology": safetySource.methodologyVersion,
         "X-Safety-Score-Status": "current",
       }, safetySource.publishedAtSec, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, {
         assessedAt: safetySource.assessedAtSec, freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
@@ -231,7 +188,7 @@ function safetyScoreOgPresentation(
   }
 
   return {
-    lastUpdated: "DEGRADED: V9 safety score unavailable",
+    lastUpdated: "Safety publication unavailable",
     headers: {
       // Keep degraded OG renders edge-cacheable: /api/og/* is public and
       // unauthenticated, and rendering each miss runs the WASM PNG pipeline.
@@ -246,25 +203,28 @@ function safetyScoreOgPresentation(
   };
 }
 
-// ---------------------------------------------------------------------------
-// SVG → PNG render pipeline
-// ---------------------------------------------------------------------------
-
-export async function renderPng(element: React.ReactNode): Promise<Uint8Array> {
-  await ensureWasm();
-
-  const svg = await satori(element, {
-    width: OG_WIDTH,
-    height: OG_HEIGHT,
-    fonts: OG_FONTS,
+/** Re-admit the exact accepted publication and health after the renderer yields. */
+async function safetyScoreOgResponse(
+  db: D1Database,
+  png: Uint8Array,
+  source: OgSafetyScoreSource,
+  freshUntilSec = Infinity,
+  headers: Record<string, string> = {},
+): Promise<Response> {
+  if (source.kind === "ok") {
+    const current = await loadOgSafetyScoreSource(db);
+    if (current.kind !== "ok" || current.publicationFingerprint !== source.publicationFingerprint) {
+      return ogDataNotYetAvailable();
+    }
+    freshUntilSec = Math.min(freshUntilSec, Math.min(source.asOfSec, source.publishedAtSec) + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
+  }
+  const assessedAtSec = Math.floor(Date.now() / 1000);
+  return observedOgResponse(png, freshUntilSec, {
+    ...safetyScoreOgPresentation({ ...source, assessedAtSec }).headers,
+    ...headers,
   });
-
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: "width", value: OG_WIDTH },
-  });
-  const rendered = resvg.render();
-  return rendered.asPng();
 }
+
 
 interface StablecoinOgCoinInput {
   name: string;
@@ -285,17 +245,12 @@ interface OgMintBurnFlow7d {
 
 interface StablecoinOgSignalsInput {
   coin: StablecoinOgCoinInput;
-  dexLiquidityScore: number | null;
   dewsBand: string | null | undefined;
   grade: string | null | undefined;
   sparklineRows: Array<{ price: number }>;
   hasActiveDepeg: boolean;
   /** `null` when no hourly bucket exists in the window. */
   mintBurn7d: OgMintBurnFlow7d | null;
-  pegScore: number | null;
-  backing: BackingType | null;
-  governance: string | null;
-  change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
   isFrozen?: boolean;
@@ -303,21 +258,16 @@ interface StablecoinOgSignalsInput {
 
 export function deriveStablecoinOgCardData({
   coin,
-  dexLiquidityScore,
   dewsBand,
   grade,
   sparklineRows,
   hasActiveDepeg,
   mintBurn7d,
-  pegScore,
-  backing,
-  governance,
-  change24h,
   variantLabel,
   variantParentSymbol,
   isFrozen,
 }: StablecoinOgSignalsInput): StablecoinCardData {
-  const pegPrice = coin.price ?? null;
+  const pegPrice = typeof coin.price === "number" && Number.isFinite(coin.price) && coin.price > 0 ? coin.price : null;
   const mcap = getCirculatingRawOrNull(coin);
   const prevWeekMcap = getPrevWeekRawOrNull(coin);
   // New snapshot rows never carry a nominal par price, but rows written before
@@ -345,16 +295,10 @@ export function deriveStablecoinOgCardData({
     pegPrice,
     pegPriceIsNominal: pegPrice != null && coin.priceObservedAtMode === "nominal_reference",
     dewsBand: dewsBand ?? null,
-    liquidityScore: dexLiquidityScore,
-    mcap,
     flow7d,
     flow7dSource,
     sparklineData: sparklineData.length >= 2 ? sparklineData : null,
     hasActiveDepeg,
-    pegScore,
-    backing,
-    governance,
-    change24h,
     variantLabel: variantLabel ?? null,
     variantParentSymbol: variantParentSymbol ?? null,
     isFrozen: isFrozen ?? false,
@@ -417,63 +361,22 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 
   const isFrozen = FROZEN_IDS.has(id);
 
-  // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline,
-  // active depeg, 7d flow, and 24h price change.
-  const [
-    stablecoinsPayload,
-    dexLiqSnapshot,
-    dewsRow,
-    safetySource,
-    sparklineRows,
-    activeDepegRow,
-    mintBurn7d,
-    price24hRow,
-  ] = await Promise.all([
-    loadStablecoinsCache(db, {
-      mode: "strict",
-      contract: "published",
-    }),
-    loadDexLiquiditySnapshot(db),
-    loadStressSignalCurrentRowForCoin(db, id, Math.floor(Date.now() / 1000), {
-      staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
-    }),
+  const [stablecoinsPayload, dewsRow, safetySource, sparklineRows, activeDepegRow, mintBurn7d] = await Promise.all([
+    loadStablecoinsCache(db, { mode: "strict", contract: "published" }),
+    loadStressSignalCurrentRowForCoin(db, id, now, { staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC }),
     loadOgSafetyScoreSource(db),
-    db
-      .prepare(
-        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 7",
-      )
-      .bind(id)
-      .all<{ price: number }>(),
-    db
-      .prepare(
-        "SELECT id FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL LIMIT 1",
-      )
-      .bind(id)
-      .first<{ id: number }>(),
+    db.prepare("SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 7")
+      .bind(id).all<{ price: number }>(),
+    db.prepare("SELECT id FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL LIMIT 1")
+      .bind(id).first<{ id: number }>(),
     readOgMintBurnFlow(db, id, now),
-    db
-      .prepare(
-        `WITH current_snapshot AS (
-          SELECT price, snapshot_date FROM supply_history
-          WHERE stablecoin_id = ? AND price IS NOT NULL
-          ORDER BY snapshot_date DESC LIMIT 1
-        )
-        SELECT current_snapshot.price AS current_price,
-               current_snapshot.snapshot_date AS current_date,
-               prior.price AS prev_day_price,
-               prior.snapshot_date AS prev_day_date
-        FROM current_snapshot
-        LEFT JOIN supply_history prior
-          ON prior.stablecoin_id = ?
-         AND prior.snapshot_date = current_snapshot.snapshot_date - ?`,
-      )
-      .bind(id, id, DAY_SECONDS)
-      .first<{ current_price: number; current_date: number; prev_day_price: number | null; prev_day_date: number | null }>(),
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
     return ogDataNotYetAvailable();
   }
+  const marketFreshUntil = ogObservationFreshUntil(stablecoinsPayload.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now);
+  if (marketFreshUntil == null) return ogDataNotYetAvailable();
 
   const { peggedAssets } = stablecoinsPayload.payload;
   const coin = peggedAssets.find((a) => a.id === id);
@@ -486,77 +389,45 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     ? safetySource.scores[id] ?? null
     : null;
 
-  // Cache-first: only pegScore is needed here, and a direct compute would
-  // re-scan ~21K depeg_events rows per render. If the cache is unavailable,
-  // keep the rest of the card available while omitting peg analytics.
-  let pegScore: number | null = null;
-  const pegAnalyticsCache = await loadPegAnalyticsCache(db).catch(() => null);
-  if (pegAnalyticsCache && pegAnalyticsCache.kind === "ok") {
-    pegScore = meta?.flags.navToken === true
-      ? null
-      : pegAnalyticsCache.pegDataById.get(id)?.pegScore ?? null;
-  } else {
-    logWorkerEvent({
-      scope: "api",
-      level: "warn",
-      event: "og.peg_cache_miss",
-      route: "/api/og/stablecoin",
-      message: "Peg analytics cache unavailable; rendering degraded card",
-      metadata: { stablecoinId: id },
-    });
-  }
-  const liq = dexLiqSnapshot.map[id];
+  const quoteFreshUntil = ogObservationFreshUntil(coin.priceObservedAt ?? coin.priceUpdatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now);
+  const dewsFreshUntil = dewsRow && ogObservationFreshUntil(dewsRow.computed_at, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC, now);
   const variantLabel = meta?.variantKind ? getVariantDisplay(meta.variantKind).shortLabel : null;
   const variantParentSymbol = meta?.variantOf
     ? (TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf)
     : null;
 
-  let change24h: number | null = null;
-  const pricePairAge = assessFreshnessTimestamp(now, price24hRow?.current_date);
-  const pricePairUnavailableReason = pricePairAge.reason != null ? pricePairAge.reason :
-    (pricePairAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.supplyHistory ? "snapshot-stale" :
-      price24hRow?.prev_day_date == null || price24hRow.prev_day_price == null ? "prior-day-price-missing" :
-        price24hRow.prev_day_date !== price24hRow.current_date - DAY_SECONDS ? "nonadjacent-snapshots" :
-          !Number.isFinite(price24hRow.current_price) || price24hRow.current_price <= 0 ||
-          !Number.isFinite(price24hRow.prev_day_price) || price24hRow.prev_day_price <= 0 ? "price-invalid" : null);
-  if (price24hRow && pricePairUnavailableReason == null && price24hRow.prev_day_price != null) {
-    change24h = ((price24hRow.current_price - price24hRow.prev_day_price) / price24hRow.prev_day_price) * 100;
-  }
-
   const safetyPresentation = safetyScoreOgPresentation(safetySource);
   const data = {
     ...deriveStablecoinOgCardData({
-      coin,
-      dexLiquidityScore: liq?.liquidityScore ?? null,
-      dewsBand: dewsRow?.band,
+      coin: quoteFreshUntil == null ? { ...coin, price: null } : coin,
+      dewsBand: dewsFreshUntil == null ? null : dewsRow?.band,
       grade: reportCardRow ? reportCardRow.grade ?? "Pipeline gap" : "Unavailable",
       sparklineRows: sparklineRows.results ?? [],
       hasActiveDepeg: activeDepegRow !== null,
       mintBurn7d,
-      pegScore,
-      backing: meta?.flags.backing ?? null,
-      governance: meta?.flags.governance ?? null,
-      change24h,
       variantLabel,
       variantParentSymbol,
       isFrozen,
     }),
-    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+    safetyMethodologyVersion: safetySource.kind === "ok" ? safetySource.methodologyVersion : null,
     lastUpdated: [
       ogSourceAsOf("Market", stablecoinsPayload.updatedAt, now),
-      ogSourceAsOf("Quote", coin.priceObservedAt ?? coin.priceUpdatedAt, now),
-      price24hRow && change24h != null
-        ? ogSourceAsOf("24h pair", price24hRow.current_date, now)
-        : `24h price pair unavailable (${pricePairUnavailableReason})`,
-      // The LIQUIDITY cell is a DEX-liquidity generation with its own clock; a
-      // fresh price or market read cannot make it current (R3/R6).
-      ...(liq?.liquidityScore != null ? [ogSourceAsOf("Liquidity", liq.updatedAt, now)] : []),
-      `Safety ${safetyPresentation.lastUpdated}${reportCardRow?.partialEvidence && reportCardRow.grade !== null ? " · Partial evidence: pipeline gap" : ""}`,
-    ].join(" · "),
+      quoteFreshUntil == null ? "Quote unavailable" : ogSourceAsOf("Quote", coin.priceObservedAt ?? coin.priceUpdatedAt, now),
+      safetyPresentation.lastUpdated,
+      ...(reportCardRow?.partialEvidence && reportCardRow.grade !== null ? ["Partial evidence: pipeline gap"] : []),
+    ].join(" \u00b7 "),
   };
 
   const png = await renderPng(<StablecoinCard data={data} />);
-  return new Response(png, { headers: safetyPresentation.headers });
+  let freshUntil = marketFreshUntil;
+  if (data.pegPrice != null && quoteFreshUntil != null) freshUntil = Math.min(freshUntil, quoteFreshUntil);
+  if (!data.hasActiveDepeg && (data.dewsBand === "DANGER" || data.dewsBand === "ALERT" || data.dewsBand === "WARNING") && dewsFreshUntil != null) {
+    freshUntil = Math.min(freshUntil, dewsFreshUntil);
+  }
+  return safetyScoreOgResponse(db, png, safetySource, freshUntil, {
+    "X-Market-Updated-At": String(stablecoinsPayload.updatedAt),
+    "X-Market-Freshness-Budget": String(API_FRESHNESS_MAX_AGE_SEC.stablecoins),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -564,13 +435,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 // ---------------------------------------------------------------------------
 
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
-  const [stablecoinsPayload, safetySource] = await Promise.all([
-    loadStablecoinsCache(db, {
-      mode: "strict",
-      contract: "published",
-    }),
-    loadOgSafetyScoreSource(db),
-  ]);
+  const safetySource = await loadOgSafetyScoreSource(db);
 
   const gradeDistribution: Record<string, number> = {
     "A+": 0, A: 0, "A-": 0,
@@ -581,46 +446,26 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
   let pulseScore = 0;
   let ratedCount = 0;
-  const allScores: Array<{ symbol: string; grade: string; score: number }> = [];
-
-  const symbolById = new Map<string, string>();
-  const payloadUsable = hasUsableStablecoinsPayload(stablecoinsPayload);
-  if (payloadUsable) {
-    for (const asset of stablecoinsPayload.payload.peggedAssets) {
-      symbolById.set(asset.id, asset.symbol);
-    }
-  }
-  const totalCoins = safetySource.kind === "ok"
-    ? safetySource.expectedCount
-    : payloadUsable
-      ? stablecoinsPayload.payload.peggedAssets.length
-      : ACTIVE_IDS.size;
+  let unavailableCount = 0;
+  const totalCoins = safetySource.kind === "ok" ? safetySource.expectedCount : ACTIVE_IDS.size;
 
   if (safetySource.kind === "ok") {
-    for (const [id, entry] of Object.entries(safetySource.scores)) {
-      const grade = entry.grade;
-      if (grade === null) continue;
-      if (grade in gradeDistribution) {
-        gradeDistribution[grade]++;
-      } else {
-        gradeDistribution["NR"]++;
-      }
-      if (entry.grade !== "NR" && entry.score !== null) {
+    for (const entry of Object.values(safetySource.scores)) {
+      if (entry.ratingStatus === "pipeline-gap" || entry.grade === null) {
+        unavailableCount++;
+      } else if (entry.ratingStatus === "not-rated") {
+        gradeDistribution.NR++;
+      } else if (entry.grade in gradeDistribution && entry.score !== null) {
+        gradeDistribution[entry.grade]++;
         pulseScore += entry.score;
         ratedCount++;
-        const symbol = symbolById.get(id) ?? TRACKED_META_BY_ID.get(id)?.symbol;
-        if (symbol) {
-          allScores.push({ symbol, grade, score: entry.score });
-        }
+      } else {
+        unavailableCount++;
       }
     }
   }
 
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : null;
-
-  allScores.sort((a, b) => b.score - a.score);
-  const topPerformers = allScores.slice(0, 3);
-  const bottomPerformers = allScores.slice(-3).reverse();
 
   const safetyPresentation = safetyScoreOgPresentation(safetySource);
   const data: SafetyScoresCardData = {
@@ -629,14 +474,12 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     pulseScore: avgScore,
     coverageRatio: safetySource.kind === "ok" && totalCoins > 0 ? ratedCount / totalCoins : null,
     totalCoins,
-    topPerformers,
-    bottomPerformers,
-    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+    unavailableCount: safetySource.kind === "ok" ? unavailableCount : null,
     lastUpdated: safetyPresentation.lastUpdated,
   };
 
   const png = await renderPng(<SafetyScoresCard data={data} />);
-  return new Response(png, { headers: safetyPresentation.headers });
+  return safetyScoreOgResponse(db, png, safetySource);
 }
 
 // ---------------------------------------------------------------------------
@@ -646,11 +489,8 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 async function handleDepegOg(db: D1Database): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
   const oneDayAgo = now - DAY_SECONDS;
-  const [stablecoins, psiRow, stressRows, openEvents, closedEvents, newTodayResult] = await Promise.all([
+  const [stablecoins, openEvents, closedEvents, newTodayResult] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict", contract: "published" }),
-    db.prepare("SELECT score, band, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-      .first<{ score: number; band: string; stored_at: number }>(),
-    loadStressSignalCurrentRows(db, now, { staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC }),
     db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
                        e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode, p.audit_verdict,
                        nq.value AS current_native_quote
@@ -676,50 +516,16 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
         .bind(oneDayAgo, ...newTodayAudit.binds).first<{ count: number }>();
     })(),
   ]);
-  const dewsDistribution = { danger: 0, alert: 0, warning: 0, watch: 0, normal: 0 };
-  for (const row of stressRows.results ?? []) {
-    switch (row.band) {
-      case "DANGER": dewsDistribution.danger++; break;
-      case "ALERT": dewsDistribution.alert++; break;
-      case "WARNING": dewsDistribution.warning++; break;
-      case "WATCH": dewsDistribution.watch++; break;
-      case "CALM": dewsDistribution.normal++; break;
-      // An unpublished band is not a calm observation; leave it uncounted.
-    }
-  }
-  const cacheAge = assessFreshnessTimestamp(now, stablecoins.updatedAt);
-  const marketFresh = stablecoins.kind === "ok" && cacheAge.reason == null &&
-    cacheAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  const marketFreshUntil = stablecoins.kind === "ok"
+    ? ogObservationFreshUntil(stablecoins.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now) : null;
   const assets = stablecoins.kind === "ok" ? stablecoins.payload.peggedAssets : [];
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const observations = marketFresh && stablecoins.kind === "ok"
+  const observations = marketFreshUntil != null && stablecoins.kind === "ok"
     ? deriveCurrentPegObservationMap({
         peggedAssets: assets, fxFallbackRates: stablecoins.payload.fxFallbackRates, asOf: stablecoins.updatedAt,
       })
     : new Map<string, CurrentPegObservation>();
-  // A 24/7 token measured against a closed 24/5 reference market repeats the last
-  // close, so that deviation is unknown rather than "at peg" or "off peg" (R2).
-  const isHeldPegDeviation = (
-    coinId: string,
-    observedAtSec: number | null | undefined,
-    absBps: number,
-  ): boolean => isReferenceDeviationHeld(
-    TRACKED_META_BY_ID.get(coinId)?.flags.pegCurrency,
-    observedAtSec ?? stablecoins.updatedAt ?? now,
-    absBps,
-  );
-  let totalCoins = 0;
-  let coinsAtPeg = 0;
-  for (const [id, observation] of observations) {
-    const asset = assetById.get(id);
-    const quoteAge = assessFreshnessTimestamp(now, asset?.priceObservedAt ?? asset?.priceUpdatedAt);
-    if (!ACTIVE_IDS.has(id) || FROZEN_IDS.has(id) || observation.currentSupplyUnavailable ||
-      observation.currentDeviationBps == null || quoteAge.reason != null ||
-      quoteAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stablecoins ||
-      isHeldPegDeviation(id, asset?.priceObservedAt ?? asset?.priceUpdatedAt, Math.abs(observation.currentSignal?.rawBps ?? Number.NaN))) continue;
-    totalCoins++;
-    if (observation.currentSignal && !signalCrossesThreshold(observation.currentSignal, getDepegThresholdBps(asset?.pegType))) coinsAtPeg++;
-  }
+  let freshUntil = Infinity;
   const eligibleEvents = (openEvents.results ?? []).filter((row) =>
     ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id) && !isDisputedAuditVerdict(row.audit_verdict));
   const openEventById = new Map<string, (typeof eligibleEvents)[number]>();
@@ -733,29 +539,33 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
   let hasNativeEvent = false;
   const activeDepegs = [...openEventById.values()].map((row) => {
     const asset = assetById.get(row.stablecoin_id);
-    const quoteAge = assessFreshnessTimestamp(now, asset?.priceObservedAt ?? asset?.priceUpdatedAt);
+    const quoteFreshUntil = ogObservationFreshUntil(asset?.priceObservedAt ?? asset?.priceUpdatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now);
     const nativeEvent = isNativePegEvent(row);
     hasNativeEvent ||= nativeEvent;
     const nativeObservation = nativeEvent
       ? getNativeEventPriceObservation(row, now, decodeNativeEventQuote(row.current_native_quote))
       : null;
-    if (nativeObservation) nativeQuoteTimes.push(nativeObservation.observedAt);
-    const usdAvailable = marketFresh && asset && isObservedPrice(asset) &&
-      typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0 &&
-      quoteAge.reason == null && quoteAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+    if (nativeObservation) {
+      nativeQuoteTimes.push(nativeObservation.observedAt);
+      freshUntil = Math.min(freshUntil, nativeObservation.observedAt + PSI_NATIVE_EVIDENCE_MAX_AGE_SEC);
+    }
+    const usdAvailable = marketFreshUntil != null && asset && isObservedPrice(asset) &&
+      typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0 && quoteFreshUntil != null;
+    if (!nativeEvent && usdAvailable) freshUntil = Math.min(freshUntil, marketFreshUntil!, quoteFreshUntil!);
     const currentPrice = nativeEvent ? nativeObservation?.value ?? null : usdAvailable ? asset.price! : null;
     // A USD-domain row reads today's authoritative reference, as PSI does, never the one stored at opening.
     const deviation = nativeEvent
       ? currentPrice != null ? deriveDepegSignal(currentPrice, row.peg_reference) : null
       : usdAvailable ? observations.get(row.stablecoin_id)?.currentSignal ?? null : null;
-    const deviationHeld = deviation != null && isHeldPegDeviation(
-      row.stablecoin_id,
-      nativeEvent ? nativeObservation?.observedAt : asset?.priceObservedAt ?? asset?.priceUpdatedAt,
+    // A held deviation is unknown while its 24/5 reference market repeats a close.
+    const deviationHeld = deviation != null && isReferenceDeviationHeld(
+      TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency,
+      (nativeEvent ? nativeObservation?.observedAt : asset?.priceObservedAt ?? asset?.priceUpdatedAt)
+        ?? stablecoins.updatedAt ?? now,
       deviation.absRawBps,
     );
     return {
       symbol: row.symbol,
-      name: TRACKED_META_BY_ID.get(row.stablecoin_id)?.name ?? row.symbol,
       // A held deviation is an unavailable current reading, never a peg move claim.
       deviationBps: deviationHeld ? null : deviation?.bps ?? null,
       ...(deviationHeld ? { deviationHeld } : {}),
@@ -765,33 +575,24 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     if (a.deviationBps == null) return b.deviationBps == null ? Math.abs(b.peakBps) - Math.abs(a.peakBps) : 1;
     if (b.deviationBps == null) return -1;
     return Math.abs(b.deviationBps) - Math.abs(a.deviationBps);
-  }).slice(0, 5);
+  }).slice(0, 3);
   const recoveredToday = (closedEvents.results ?? []).filter((row) => {
     if (isDisputedAuditVerdict(row.audit_verdict)) return false;
     const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
     return closure === "recovered" || closure === "legacy_recovered";
   }).length;
-  const psiAge = assessFreshnessTimestamp(now, psiRow?.stored_at);
-  const psiFresh = psiAge.reason == null && psiAge.ageSeconds <= API_FRESHNESS_MAX_AGE_SEC.stabilityIndex;
   const data: DepegCardData = {
     activeDepegCount: openEventById.size,
-    psiScore: psiFresh ? psiRow?.score ?? null : null,
-    psiBand: psiFresh ? psiRow?.band ?? null : null,
-    coinsAtPeg: totalCoins > 0 ? coinsAtPeg : null,
-    totalCoins,
-    dewsDistribution: stressRows.results.length > 0 ? dewsDistribution : null,
     activeDepegs,
     recoveredToday,
     newToday: newTodayResult?.count ?? null,
     lastUpdated: [
-      ogSourceAsOf("Live peg", stablecoins.updatedAt, now),
+      ogSourceAsOf("Market", stablecoins.updatedAt, now),
       ...(hasNativeEvent ? [ogSourceAsOf("Native peg", nativeQuoteTimes.length ? Math.min(...nativeQuoteTimes) : null, now)] : []),
-      ogSourceAsOf("PSI", psiRow?.stored_at, now),
-      ogSourceAsOf("DEWS", stressRows.results?.length ? Math.min(...stressRows.results.map((row) => row.computed_at)) : null, now),
     ].join(" · "),
   };
   const png = await renderPng(<DepegCard data={data} />);
-  return new Response(png, { headers: CACHE_HEADERS });
+  return observedOgResponse(png, freshUntil);
 }
 
 // ---------------------------------------------------------------------------
@@ -894,7 +695,18 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   };
 
   const png = await renderPng(<StabilityIndexCard data={data} />);
-  return new Response(png, { headers: addFreshnessHeaders(freshnessHeaders, latestSample.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, { assessedAt: now, freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex }) });
+  const assessedAt = Math.floor(Date.now() / 1000);
+  const secondsLeft = latestSample.stored_at + API_FRESHNESS_MAX_AGE_SEC.stabilityIndex - Date.now() / 1000;
+  if (secondsLeft < 0) return ogDataNotYetAvailable();
+  return new Response(png, {
+    headers: addFreshnessHeaders({
+      ...freshnessHeaders,
+      "Cache-Control": buildOgImageCacheControl(secondsLeft),
+      "X-Data-Assessed-At": String(assessedAt),
+    }, latestSample.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, {
+      assessedAt, freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
+    }),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -914,36 +726,20 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   if (stablecoinsResult.kind !== "ok") {
     return ogDataNotYetAvailable();
   }
+  const marketFreshUntil = ogObservationFreshUntil(stablecoinsResult.updatedAt, API_FRESHNESS_MAX_AGE_SEC.chains, now);
+  if (marketFreshUntil == null) return ogDataNotYetAvailable();
 
-  const { peggedAssets, fxFallbackRates } = stablecoinsResult.payload;
-  const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
-  const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
-
-  // Safety scores feed the chain health factor. An incomplete or mismatched
-  // compact publication deliberately leaves chain health unrated.
-  const safetyScores: Record<string, number> = {};
-  const safetySource = await loadOgSafetyScoreSource(db);
-  if (safetySource.kind === "ok") {
-    for (const [id, entry] of Object.entries(safetySource.scores)) {
-      if (entry.score !== null) {
-        safetyScores[id] = entry.score;
-      }
-    }
-  }
-
+  const activePeggedAssets = stablecoinsResult.payload.peggedAssets.filter(isActiveChainAggregateAsset);
   const aggregated = aggregateChains({
     peggedAssets: activePeggedAssets,
-    safetyScores,
-    pegRates,
+    safetyScores: {},
+    pegRates: {},
     updatedAt: stablecoinsResult.updatedAt,
   });
   const chain = aggregated.chains.find((entry) => entry.id === chainId);
 
-  // Every CHAIN_META chain page bakes this og:image URL, but aggregateChains()
-  // skips chains with no current supply observation. Absence from the aggregate
-  // is not an observed zero (ADR-28): render a figure-free card instead of a
-  // "$0" one, and instead of a 404 so baked share images never break.
-  const safetyPresentation = safetyScoreOgPresentation(safetySource);
+  // Keep legacy links resolving when a chain has no current supply observation.
+  // Absence is not an observed zero, so this card carries no supply figure.
   if (!chain) {
     const png = await renderPng(
       <ChainUnavailableCard
@@ -951,7 +747,15 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
         lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, now)}
       />,
     );
-    return new Response(png, { headers: { ...safetyPresentation.headers, "X-Og-Status": "degraded", "X-Og-Reason": "chain-not-in-aggregate" } });
+    const response = observedOgResponse(png, marketFreshUntil);
+    if (response.status === 200) {
+      response.headers.set("X-Og-Status", "degraded");
+      response.headers.set("X-Og-Reason", "chain-not-in-aggregate");
+    }
+    return response;
+  }
+  if (chain.unavailableSupplyObservationCount == null || !aggregated.supplyCoverage) {
+    return ogDataNotYetAvailable();
   }
   const data: ChainCardData = {
     name: chain.name,
@@ -959,24 +763,18 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     change7dPercent: chain.change7dPct == null ? null : ratioToPercentage(chain.change7dPct),
     stablecoinCount: chain.stablecoinCount,
     dominanceShare: chain.dominanceShare,
-    healthScore: chain.healthScore,
-    healthBand: chain.healthBand,
-    topStablecoins: (chain.topStablecoins ?? []).slice(0, 4).map((coin) => ({
+    unavailableSupplyObservationCount: chain.unavailableSupplyObservationCount,
+    aggregateUnavailableAssetCount: aggregated.supplyCoverage.aggregateUnavailableAssetCount,
+    topStablecoins: (chain.topStablecoins ?? []).slice(0, 3).map((coin) => ({
       symbol: coin.symbol,
       share: coin.share,
-      supplyUsd: coin.supplyUsd,
     })),
-    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-    // The headline figures are the market read; Safety only feeds Chain Health,
-    // so a stale/held publication must not replace the supply stamp (R3/R6).
-    lastUpdated: [
-      ogSourceAsOf("Market", stablecoinsResult.updatedAt, now),
-      `Safety ${safetyPresentation.lastUpdated}`,
-    ].join(" · "),
+    lastUpdated: ogSourceAsOf("Market", stablecoinsResult.updatedAt, now),
   };
 
   const png = await renderPng(<ChainCard data={data} />);
-  return new Response(png, { headers: safetyPresentation.headers });
+  return observedOgResponse(png, marketFreshUntil, addFreshnessHeaders(CACHE_HEADERS, stablecoinsResult.updatedAt,
+    API_FRESHNESS_MAX_AGE_SEC.chains, { assessedAt: Math.floor(Date.now() / 1000), freshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.chains }));
 }
 
 // ---------------------------------------------------------------------------
@@ -1064,9 +862,18 @@ async function handleOgPage(db: D1Database, slug: string): Promise<Response> {
 }
 
 
-const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
-const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
-const PAGE_OG_PATTERN = /^\/api\/og\/page\/([a-z-]+)$/;
+const STABLECOIN_OG_PATTERN = /^\/api\/og\/(?:v2\/)?stablecoin\/(.+)$/;
+const CHAIN_OG_PATTERN = /^\/api\/og\/(?:v2\/)?chain\/([a-z0-9-]+)$/;
+const PAGE_OG_PATTERN = /^\/api\/og\/(?:v2\/)?page\/([a-z-]+)$/;
+
+function decodeOgCapture(raw: string): string | Response {
+  try {
+    const decoded = decodeURIComponent(raw);
+    return encodeURIComponent(decoded) === raw ? decoded : ogErrorResponse("Not found", 404);
+  } catch {
+    return ogErrorResponse("Malformed URI", 400);
+  }
+}
 
 interface OgRoute {
   pattern: RegExp;
@@ -1078,14 +885,7 @@ interface OgRoute {
 const OG_ROUTES: readonly OgRoute[] = [
   {
     pattern: STABLECOIN_OG_PATTERN,
-    resolveCapture: (raw) => {
-      try {
-        const decoded = decodeURIComponent(raw);
-        return encodeURIComponent(decoded) === raw ? decoded : ogErrorResponse("Not found", 404);
-      } catch {
-        return ogErrorResponse("Malformed URI", 400);
-      }
-    },
+    resolveCapture: decodeOgCapture,
     render: (db, coinId) => handleStablecoinOg(db, coinId),
   },
   {
@@ -1093,9 +893,14 @@ const OG_ROUTES: readonly OgRoute[] = [
     render: (db, chainId) => handleChainOg(db, chainId),
   },
   { pattern: PAGE_OG_PATTERN, render: (db, slug) => handleOgPage(db, slug) },
-  { pattern: /^\/api\/og\/safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
-  { pattern: /^\/api\/og\/depeg$/, render: (db) => handleDepegOg(db) },
-  { pattern: /^\/api\/og\/stability-index$/, render: (db) => handleStabilityIndexOg(db) },
+  { pattern: /^\/api\/og\/(?:v2\/)?safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
+  { pattern: /^\/api\/og\/(?:v2\/)?depeg$/, render: (db) => handleDepegOg(db) },
+  { pattern: /^\/api\/og\/(?:v2\/)?stability-index$/, render: (db) => handleStabilityIndexOg(db) },
+  {
+    pattern: /^\/api\/og\/v2\/scorecard\/([^/]+)$/,
+    resolveCapture: decodeOgCapture,
+    render: (db, id) => handleScorecardOg(db, id),
+  },
 ];
 
 export async function handleOg(db: D1Database, path: string, _method = "GET"): Promise<Response | null> {

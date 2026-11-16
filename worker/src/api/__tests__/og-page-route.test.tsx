@@ -10,14 +10,15 @@ const loaders = vi.hoisted(() => ({ home: vi.fn(), chains: vi.fn() }));
 
 vi.mock("satori/standalone", () => ({
   init: vi.fn(),
-  default: vi.fn(async () => "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"628\"></svg>"),
+  default: vi.fn(async () => "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"630\"></svg>"),
 }));
 vi.mock("../og-page", async () => ({
   // `upcoming` runs its real loader: the route is timeless by decision.
   OG_PAGE_LOADERS: { ...loaders, upcoming: (await import("../og-page/upcoming")).loadUpcomingOgPage },
 }));
 
-import { handleOg, resetOgWasmInitializationForTests } from "../og";
+import { handleOg } from "../og";
+import { resetOgWasmInitializationForTests } from "../../lib/og-render";
 import { loadUpcomingOgPage } from "../og-page/upcoming";
 
 beforeEach(() => {
@@ -90,7 +91,7 @@ describe("/api/og/page/:slug", () => {
     });
     vi.mocked(satoriStandalone).mockImplementationOnce(async () => {
       vi.mocked(Date.now).mockReturnValue((NOW + elapsed) * 1000);
-      return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"628\"></svg>";
+      return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"630\"></svg>";
     });
     const res = await handleOg(mockD1([]), "/api/og/page/home");
     expect(res?.headers.get("X-Og-Assessed-At")).toBe(String(Math.floor(NOW + elapsed)));

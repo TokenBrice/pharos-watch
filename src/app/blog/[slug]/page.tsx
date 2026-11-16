@@ -10,7 +10,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { BLOG_POST_BY_SLUG } from "@/data/blog";
@@ -18,7 +18,6 @@ import sitemapDates from "@/generated/sitemap-dates.json";
 import { formatPublishedDate } from "../format-published-date";
 
 const POSTS_DIR = path.join(process.cwd(), "src/data/blog/posts");
-const OG_BLOG = "/og-blog.png";
 
 // Blog posts render as authored editorial content: the article body uses the
 // Georgia serif register (the `font-serif` carve-out, per DESIGN.md editorial
@@ -54,7 +53,7 @@ function renderBlogPost(post: (typeof BLOG_POST_BY_SLUG extends ReadonlyMap<stri
   const source = fs.readFileSync(path.join(POSTS_DIR, `${post.slug}.md`), "utf-8");
   const canonical = `${SITE_URL}/blog/${slug}/`;
   const dateModified = (sitemapDates as Record<string, string>)[`/blog/${slug}/`] ?? post.datePublished;
-  const socialImage = post.coverImage ?? OG_BLOG;
+  const socialImage = getPageSocialPreview(canonical).url;
 
   return (
     <FeaturePageShell
@@ -120,7 +119,6 @@ const route = createStaticSlugRoute({
     titleAbsolute: true,
     description: post.description,
     canonical: `/blog/${slug}/`,
-    ogImage: post.coverImage ?? OG_BLOG,
   }),
   missingMetadata: { title: "Post Not Found" },
   render: renderBlogPost,

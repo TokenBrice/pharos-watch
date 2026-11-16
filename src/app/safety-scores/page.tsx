@@ -8,14 +8,13 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ShareButton } from "@/components/share-button";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading-state";
 import { SafetyScoresLiveIsland } from "@/app/safety-scores/live-island";
 import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -23,7 +22,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
-  "Compare active Safety Score V10 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
+  "Compare stablecoin safety ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
 
 const SAFETY_REFRESH_HOURS = CRON_INTERVALS["compute-safety-score-v9"] / 3600;
 
@@ -61,7 +60,6 @@ export const metadata = buildPageMetadata({
   canonical: "/safety-scores/",
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
-  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
 });
 
 export default function SafetyScoresPage() {
@@ -88,7 +86,7 @@ export default function SafetyScoresPage() {
             href="/pharoswatchbot/#getting-started"
             description="Get notified when a safety grade changes"
           />
-          <ShareButton ogPath="/api/og/safety-scores" />
+          <ShareButton stablecoinId="safety-scores" />
         </>
       }
       preface={<JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest"))} />}

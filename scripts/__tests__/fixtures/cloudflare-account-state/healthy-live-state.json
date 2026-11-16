@@ -44,13 +44,19 @@
         ],
         "kvBindings": [
           "SELECTOR_SNAPSHOTS"
-        ]
+        ],
+        "r2Bindings": {
+          "SOCIAL_PREVIEWS": "pharos-social-previews"
+        }
       }
     },
     "customDomains": [
       "ops.pharos.watch",
       "pharos.watch"
     ]
+  },
+  "r2BucketLifecycles": {
+    "pharos-social-previews": { "enabledObjectDeletionRules": [] }
   },
   "accessApplications": [
     {

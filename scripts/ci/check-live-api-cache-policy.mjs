@@ -6,7 +6,7 @@ const { siteDataSessionHeaders } = await tsImport("../lib/site-session.ts", impo
 import { appendFileSync, readFileSync } from "node:fs";
 import { API_CACHE_PROFILES } from "../../shared/lib/api-cache-profiles.ts";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
-import { loadCloudflareAccountStateManifest } from "./check-cloudflare-account-state-drift.mjs";
+import { loadCloudflareAccountStateManifest } from "../lib/cloudflare-account-state-manifest.mjs";
 
 const { siteOrigin: SITE_ORIGIN, apiOrigin: API_ORIGIN } = JSON.parse(
   readFileSync(new URL("../../shared/lib/runtime-origins.json", import.meta.url), "utf8"),

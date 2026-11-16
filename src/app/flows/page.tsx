@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { FaqItem } from "@/lib/faq";
-import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import FlowsClient from "./client";
 import { DEFINITIONS } from "@/lib/definitions";
 
@@ -11,7 +11,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mint & Burn Tracker: Live Flows",
   description: FLOWS_DESCRIPTION,
   canonical: "/flows/",
-  ogImage: buildLiveRouteOgImageUrl("flows"),
 });
 
 const FLOW_FAQ_ITEMS = [

@@ -57,7 +57,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoins by Peg, Backing, Governance & Infrastructure",
   description: `Browse ${TOTAL} active stablecoins sorted by peg currency, collateral backing, governance model, and shared infrastructure.`,
   canonical: "/stablecoins/",
-  ogImage: `${SITE_URL}/og-stablecoins.png`,
 });
 
 export default function StablecoinsHubPage() {

@@ -5,7 +5,6 @@ import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -73,7 +72,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: `Upcoming Stablecoin Launches (${UPCOMING_BUILD_MONTH}): ${UPCOMING_STABLECOINS.length} Tracked`,
   description: `${UPCOMING_STABLECOINS.length} stablecoins announced but not yet live. By phase: ${UPCOMING_PHASE_TALLY}. Targets and sourced milestones.`,
   canonical: "/upcoming/",
-  ogImage: `${SITE_URL}/og-upcoming.png`,
 });
 
 export default function UpcomingPage() {
@@ -87,7 +85,7 @@ export default function UpcomingPage() {
         <>
           <PreLaunchAlertAction description="Pharos's Telegram channel digest lists the stablecoins Pharos starts tracking" />
           {/* Timeless by decision (docs/og-images.md): the route card carries no registry count. */}
-          <ShareButton ogPath={API_PATHS.ogPage("upcoming")} />
+          <ShareButton />
         </>
       )}
       leadDisclosureLabel="How to use the tracker"

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { crc32 } from "node:zlib";
 import sharp from "sharp";
 import { writeFileResolved } from "./cli-args.mjs";
 
@@ -20,6 +21,40 @@ const DEFAULT_TOLERANCE: PngComparisonTolerance = {
   maxChangedPixelRatio: 0.04,
   changedPixelThreshold: 8,
 };
+
+const PNG_SOURCE_KEY = "pharos-source-sha256";
+
+export function readPngSourceFingerprint(bytes: Buffer): string | null {
+  for (let offset = 8; offset + 12 <= bytes.length;) {
+    const length = bytes.readUInt32BE(offset);
+    const end = offset + length + 12;
+    if (end > bytes.length) return null;
+    if (
+      bytes.toString("ascii", offset + 4, offset + 8) === "tEXt" &&
+      bytes.toString("ascii", offset + 8, offset + 8 + PNG_SOURCE_KEY.length + 1) === `${PNG_SOURCE_KEY}\0`
+    ) {
+      const fingerprint = bytes.toString("ascii", offset + 9 + PNG_SOURCE_KEY.length, end - 4);
+      return /^[a-f0-9]{64}$/.test(fingerprint) ? fingerprint : null;
+    }
+    offset = end;
+  }
+  return null;
+}
+
+function stampPngSourceFingerprint(path: string, fingerprint: string): void {
+  if (!/^[a-f0-9]{64}$/.test(fingerprint)) throw new Error("Invalid OG source fingerprint");
+  const bytes = readFileSync(path);
+  const text = Buffer.from(`${PNG_SOURCE_KEY}\0${fingerprint}`, "ascii");
+  const chunk = Buffer.alloc(text.length + 12);
+  chunk.writeUInt32BE(text.length);
+  chunk.write("tEXt", 4, "ascii");
+  text.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+  // The browser renderer emits a fresh PNG; bind its source identity before
+  // comparison/promotion, never merely in the separately writable manifest.
+  writeFileSync(path, Buffer.concat([bytes.subarray(0, -12), chunk, bytes.subarray(-12)]));
+}
+
 
 export async function comparePngContent(
   expectedPath: string,
@@ -78,6 +113,7 @@ export async function stalePngCheckLabel({
     return fileLabel;
   }
   if (!actual.equals(expected)) {
+    if (readPngSourceFingerprint(expected) !== readPngSourceFingerprint(actual)) return `${fileLabel} (source fingerprint changed)`;
     const comparison = await comparePngContent(expectedPath, actualPath);
     if (comparison.matches) {
       console.warn(`${fileLabel}: byte-level PNG drift tolerated (${comparison.summary})`);
@@ -98,7 +134,7 @@ export async function promoteGeneratedPngIfChanged({
     unlinkSync(stagedPath);
     return false;
   }
-  if (existing) {
+  if (existing && readPngSourceFingerprint(existing) === readPngSourceFingerprint(staged)) {
     const comparison = await comparePngContent(publicPath, stagedPath);
     if (comparison.matches) {
       unlinkSync(stagedPath);
@@ -153,6 +189,8 @@ export async function validateGeneratedPng(path: string): Promise<void> {
 
 export interface OgArtifactRosterEntry {
   file: string;
+  /** SHA-256 of the semantic render inputs, embedded into the rendered PNG. */
+  sourceFingerprint?: string;
 }
 
 export interface OgArtifactRenderContext {
@@ -194,6 +232,7 @@ export async function runOgArtifactBuild<T extends OgArtifactRosterEntry>({
       const stagedPath = resolve(stagingDir, `${entry.file}.${check ? "check" : `write-${process.pid}`}.png`);
       await render(entry, { stagedPath, stagingDir, publicPath });
       await validateGeneratedPng(stagedPath);
+      if (entry.sourceFingerprint) stampPngSourceFingerprint(stagedPath, entry.sourceFingerprint);
       let changed = false;
       let staleLabel: string | null = null;
       if (check) {

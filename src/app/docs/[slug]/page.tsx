@@ -12,7 +12,7 @@ import { markdownLinkComponent } from "@/components/markdown-link";
 import { TableBody, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { cn } from "@/lib/utils";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOC_BY_SLUG, preparePublicDocMarkdown, resolvePublicDocHref } from "@shared/lib/public-docs";
@@ -135,7 +135,7 @@ function renderDoc(doc: (typeof PUBLIC_DOC_BY_SLUG extends ReadonlyMap<string, i
               description: doc.summary,
               datePublished: meta?.dateCreated,
               dateModified: meta?.dateModified,
-              image: `${SITE_URL}/og-card.png`,
+              image: `${SITE_URL}${getPageSocialPreview(`/docs/${slug}/`).url}`,
               mainEntityOfPage: `${SITE_URL}/docs/${slug}/`,
               url: `${SITE_URL}/docs/${slug}/`,
             }),

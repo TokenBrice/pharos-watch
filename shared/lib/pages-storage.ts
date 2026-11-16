@@ -42,3 +42,49 @@ export const SELECTOR_SNAPSHOT_DAILY_QUOTA = {
        SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END
        WHERE quota_date = ? AND ip_hash = ?`,
 } as const;
+
+/** Durable creation-attempt limits; accepted attempts are never refunded. */
+export const SOCIAL_SCORECARD_DAILY_QUOTA = {
+  table: "social_scorecard_daily_quota",
+  timestampColumn: "quota_date",
+  maxPerIp: 20,
+  maxGlobal: 2_000,
+  globalKey: "global",
+  consumeSql: `INSERT INTO social_scorecard_daily_quota (
+         quota_date,
+         quota_key,
+         count,
+         first_seen_at,
+         last_seen_at
+       )
+       VALUES (?, ?, 1, ?, ?)
+       ON CONFLICT(quota_date, quota_key) DO UPDATE SET
+         count = count + 1,
+         last_seen_at = excluded.last_seen_at
+       WHERE social_scorecard_daily_quota.count < ?`,
+  // Immediately follows the global reservation in one D1 batch. A full global
+  // bucket must not create arbitrarily many empty per-IP rows.
+  consumeIpSql: `INSERT INTO social_scorecard_daily_quota (
+         quota_date,
+         quota_key,
+         count,
+         first_seen_at,
+         last_seen_at
+       )
+       SELECT ?, ?, 1, ?, ? WHERE changes() = 1
+       ON CONFLICT(quota_date, quota_key) DO UPDATE SET
+         count = count + 1,
+         last_seen_at = excluded.last_seen_at
+       WHERE social_scorecard_daily_quota.count < ?`,
+  refundSql: `UPDATE social_scorecard_daily_quota
+       SET count = count - 1
+       WHERE quota_date = ? AND quota_key = ? AND count > 0`,
+  // The date-leading primary key bounds this request-path cleanup without a cron.
+  pruneSql: `DELETE FROM social_scorecard_daily_quota
+       WHERE rowid IN (
+         SELECT rowid FROM social_scorecard_daily_quota
+         WHERE quota_date < ?
+         ORDER BY quota_date, quota_key
+         LIMIT 256
+       )`,
+} as const;

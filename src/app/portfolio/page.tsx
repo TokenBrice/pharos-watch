@@ -1,7 +1,6 @@
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PortfolioClient } from "./client";
 
 const description =
@@ -11,7 +10,6 @@ export const metadata = buildPageMetadata({
   canonical: "/portfolio/",
   title: "Portfolio: Personal Stablecoin Risk View",
   description,
-  ogImage: `${SITE_URL}/og-portfolio.png`,
   robots: {
     index: false,
     follow: true,

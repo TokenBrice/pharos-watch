@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactNode } from "react";
+import { SOCIAL_PREVIEW_WIDTH, SOCIAL_PREVIEW_HEIGHT } from "@shared/lib/social-preview";
 
 // Matches the current light product shell used by static route captures.
 const BG = "#f8f8fa";
@@ -41,7 +42,7 @@ export interface CardFrameProps {
 
 export function MetricLabel({
   children,
-  fontSize = 14,
+  fontSize = 22,
 }: {
   children: ReactNode;
   fontSize?: number;
@@ -94,15 +95,15 @@ export function CardFrame({
   return (
     <div
       style={{
-        width: 1200,
-        height: 628,
+        width: SOCIAL_PREVIEW_WIDTH,
+        height: SOCIAL_PREVIEW_HEIGHT,
         display: "flex",
         flexDirection: "column",
         backgroundColor: BG,
         color: TEXT_PRIMARY,
         fontFamily: "Geist Sans",
-        padding: "42px 52px",
-        borderTop: `4px solid ${borderTopColor ?? "#22c55e"}`,
+        padding: "30px 48px",
+        borderTop: `4px solid ${borderTopColor ?? SEMANTIC_COLORS.neutral}`,
         position: "relative",
       }}
     >
@@ -111,14 +112,14 @@ export function CardFrame({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 28,
+          marginBottom: 18,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Pharos brand mark. Card BG is light, so this is the on-light variant (dark disc,
               light star). The emblem carries its own disc, so there is no plate behind it. */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <PharosMark size={40} />
+            <PharosMark size={32} />
             <span
               style={{
                 fontSize: 22,
@@ -131,7 +132,7 @@ export function CardFrame({
             </span>
           </div>
           {subtitle && (
-            <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
+            <span style={{ fontSize: 20, color: TEXT_SECONDARY }}>
               {subtitle}
             </span>
           )}
@@ -144,7 +145,7 @@ export function CardFrame({
               borderRadius: 4,
               backgroundColor: badge.color,
               color: "#fff",
-              fontSize: 12,
+              fontSize: 20,
               fontWeight: 700,
               letterSpacing: "0",
             }}
@@ -152,17 +153,17 @@ export function CardFrame({
             {badge.text}
           </div>
         ) : (
-          <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+          <span style={{ fontSize: 20, color: TEXT_SECONDARY }}>
             pharos.watch
           </span>
         )}
       </div>
 
-      <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 24 }}>
+      <div style={{ fontSize: title.length > 38 ? 44 : 52, lineHeight: 1.1, fontWeight: 700, marginBottom: 18, flexShrink: 0 }}>
         {title}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, justifyContent: "space-between" }}>
         {children}
       </div>
 
@@ -170,17 +171,17 @@ export function CardFrame({
         <div
           style={{
             display: "flex",
-            position: "absolute",
-            bottom: 16,
-            right: 52,
-            maxWidth: 1096,
-            textAlign: "right",
-            fontSize: 12,
+            flexShrink: 0,
+            marginTop: 18,
+            paddingTop: 12,
+            borderTop: "1px solid #d4d4d8",
+            fontSize: 18,
+            lineHeight: 1.35,
             color: TEXT_SECONDARY,
             fontFamily: "Geist Mono",
           }}
         >
-          Updated: {lastUpdated}
+          {lastUpdated}
         </div>
       )}
     </div>
@@ -190,15 +191,17 @@ export function CardFrame({
 export function Sparkline({
   data,
   color = FROST_BLUE,
+  width = 1080,
 }: {
   data: number[];
   color?: string;
+  width?: number;
 }) {
   if (data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const w = 1080;
+  const w = width;
   const h = 80;
   const step = w / (data.length - 1);
   const points = data.map(

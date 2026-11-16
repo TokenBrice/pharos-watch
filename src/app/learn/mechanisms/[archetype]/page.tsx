@@ -71,7 +71,6 @@ const route = createStaticSlugRoute({
     title: MECHANISM_EXPLAINER_TITLES[slug],
     description: DESCRIPTION_BY_ARCHETYPE[slug],
     canonical: getMechanismExplainerPath(slug),
-    ogImage: "/og-editorial-learn.png",
   }),
   missingMetadata: { title: "Not Found", robots: { index: false } },
   render: renderArchetypeExplainer,

@@ -18,7 +18,6 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Browse the full Pharos archive of daily stablecoin recaps, from major depegs and supply shifts to slower structural risk changes across the market.",
   canonical: "/digest/",
-  ogImage: `${SITE_URL}/og-editorial-digest.png`,
 });
 
 export default function DigestArchivePage() {

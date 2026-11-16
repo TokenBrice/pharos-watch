@@ -4,20 +4,8 @@ import { THREAT_BAND_HEX } from "@shared/lib/classification";
 
 export interface DepegCardData {
   activeDepegCount: number;
-  psiScore: number | null;
-  psiBand: string | null;
-  coinsAtPeg: number | null;
-  totalCoins: number;
-  dewsDistribution: {
-    danger: number;
-    alert: number;
-    warning: number;
-    watch: number;
-    normal: number;
-  } | null;
   activeDepegs: Array<{
     symbol: string;
-    name: string;
     deviationBps: number | null;
     /** The deviation exists but its FX or metal reference market is closed. */
     deviationHeld?: boolean;
@@ -29,9 +17,6 @@ export interface DepegCardData {
 }
 
 const DANGER_HEX = THREAT_BAND_HEX.DANGER;
-const ALERT_HEX = THREAT_BAND_HEX.ALERT;
-const WARNING_HEX = THREAT_BAND_HEX.WARNING;
-const WATCH_HEX = THREAT_BAND_HEX.WATCH;
 const NORMAL_HEX = THREAT_BAND_HEX.CALM;
 
 function getDeviationColor(bps: number): string {
@@ -43,142 +28,30 @@ function getDeviationColor(bps: number): string {
 
 export function DepegCard({ data }: { data: DepegCardData }) {
   const depegColor = data.activeDepegCount === 0 ? NORMAL_HEX : DANGER_HEX;
-
   return (
-    <CardFrame
-      title="Depeg Monitor"
-      subtitle="Real-time Peg Tracking"
-      borderTopColor={depegColor}
-      lastUpdated={data.lastUpdated}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: 60,
-          fontFamily: "Geist Mono",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <CardFrame title="Depeg Monitor" subtitle="Dated incident briefing" borderTopColor={depegColor} lastUpdated={data.lastUpdated}>
+      <div style={{ display: "flex", gap: 56, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: 410, gap: 10 }}>
           <MetricLabel>OPEN DEPEG EVENTS</MetricLabel>
-          <span style={{ fontSize: 64, fontWeight: 700, color: depegColor }}>
+          <span style={{ fontSize: 120, fontFamily: "Geist Mono", fontWeight: 700, lineHeight: 1.1, color: depegColor }}>
             {data.activeDepegCount}
           </span>
-          <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
-            <span style={{ color: SEMANTIC_COLORS.positive }}>
-              ↑ {data.recoveredToday} recovered
-            </span>
-            <span style={{ color: SEMANTIC_COLORS.negative }}>
-              ↓ {data.newToday ?? "—"} new
-            </span>
-          </div>
+          <span style={{ fontSize: 26 }}>{data.recoveredToday} recovered today</span>
+          <span style={{ fontSize: 26 }}>{data.newToday ?? "\u2014"} new today</span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricLabel>PSI SCORE</MetricLabel>
-          <span style={{ fontSize: 64, fontWeight: 700 }}>
-            {data.psiScore?.toFixed(1) ?? "N/A"}
-          </span>
-          <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-            {data.psiBand ?? "Unavailable"}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricLabel>OBSERVED AT PEG</MetricLabel>
-          <span style={{ fontSize: 64, fontWeight: 700 }}>
-            {data.coinsAtPeg ?? "N/A"}
-            {data.coinsAtPeg != null && <span style={{ fontSize: 24, color: TEXT_SECONDARY }}>
-              /{data.totalCoins}
-            </span>}
-          </span>
-        </div>
-      </div>
-
-      {/* Active depegs list - show top 5 */}
-      {data.activeDepegs.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <MetricLabel>OPEN INCIDENTS (TOP {Math.min(data.activeDepegs.length, 5)})</MetricLabel>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px 32px",
-              fontFamily: "Geist Mono",
-            }}
-          >
-            {data.activeDepegs.slice(0, 5).map((depeg) => (
-              <div
-                key={depeg.symbol}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  minWidth: 180,
-                }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 600 }}>
-                  {depeg.symbol}
-                </span>
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: depeg.deviationBps == null ? TEXT_SECONDARY : getDeviationColor(depeg.deviationBps),
-                    fontWeight: 700,
-                  }}
-                >
-                  {depeg.deviationBps == null
-                    ? `${depeg.deviationHeld ? "Reference market closed" : "Current unavailable"}; peak ${depeg.peakBps ?? "N/A"} bps`
-                    : `${depeg.deviationBps > 0 ? "+" : ""}${depeg.deviationBps} bps${depeg.peakBps != null ? ` (peak ${depeg.peakBps})` : ""}`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <MetricLabel>DEWS DISTRIBUTION</MetricLabel>
-        {data.dewsDistribution == null && (
-          <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>DEWS source unavailable</span>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: 32,
-            fontFamily: "Geist Mono",
-          }}
-        >
-          {(
-            [
-              { label: "DANGER", count: data.dewsDistribution?.danger ?? "—", color: DANGER_HEX },
-              { label: "ALERT", count: data.dewsDistribution?.alert ?? "—", color: ALERT_HEX },
-              { label: "WARNING", count: data.dewsDistribution?.warning ?? "—", color: WARNING_HEX },
-              { label: "WATCH", count: data.dewsDistribution?.watch ?? "—", color: WATCH_HEX },
-              { label: "NORMAL", count: data.dewsDistribution?.normal ?? "—", color: NORMAL_HEX },
-            ] as const
-          ).map((band) => (
-            <div
-              key={band.label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 3,
-                  backgroundColor: band.color,
-                }}
-              />
-              <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
-                {band.label}
-              </span>
-              <span style={{ fontSize: 24, fontWeight: 700 }}>
-                {band.count}
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 18 }}>
+          <MetricLabel>TOP {Math.min(data.activeDepegs.length, 3)} OF {data.activeDepegCount} OPEN INCIDENTS</MetricLabel>
+          {data.activeDepegs.slice(0, 3).map((depeg) => (
+            <div key={depeg.symbol} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 28, fontWeight: 700 }}>{depeg.symbol}</span>
+              <span style={{ fontSize: 22, color: depeg.deviationBps == null ? TEXT_SECONDARY : getDeviationColor(depeg.deviationBps) }}>
+                {depeg.deviationBps == null
+                  ? `${depeg.deviationHeld ? "Reference market closed" : "Current unavailable"}; peak ${depeg.peakBps ?? "N/A"} bps`
+                  : `${depeg.deviationBps > 0 ? "+" : ""}${depeg.deviationBps} bps${depeg.peakBps != null ? ` (peak ${depeg.peakBps})` : ""}`}
               </span>
             </div>
           ))}
+          {data.activeDepegs.length === 0 && <span style={{ fontSize: 26, color: TEXT_SECONDARY }}>No open incidents in this reading</span>}
         </div>
       </div>
     </CardFrame>

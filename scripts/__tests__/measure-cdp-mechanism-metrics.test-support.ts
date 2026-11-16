@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { R2MeasurementsClient } from "../lib/r2-measurements-client";
+import type { R2ObjectClient } from "../lib/r2-object-client";
 
 const captureRoots: string[] = [];
 
@@ -27,7 +27,7 @@ export function captureFixture() {
   return { bodyPath, cacheDir, cachePath, body, r2Key, sha256 };
 }
 
-export function remote(get: R2MeasurementsClient["get"]): R2MeasurementsClient {
+export function remote(get: R2ObjectClient["get"]): R2ObjectClient {
   return {
     get,
     put: async () => { throw new Error("unexpected remote write"); },

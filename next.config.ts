@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
-import { PAGES_RELEASE_DATA_PATHS } from "./scripts/lib/pages-release-data.mts";
+import { PAGES_RELEASE_BUILD_ID_EXCLUSIONS } from "./scripts/lib/pages-release-data.mts";
 
 const rechartsVendorPattern =
   /[\\/]node_modules[\\/](?:recharts|victory-vendor|d3-(?:array|color|ease|format|interpolate|path|scale|shape|time|time-format))[\\/]/;
@@ -30,12 +30,12 @@ export const BUILD_ID_INPUT_FILES = [
  * The Pages release rewrites these paths on every publish. They change rendered
  * HTML/RSC and served datasets, never the client bundle, so they must not rotate
  * the ID — a data-only publish then re-uploads only the pages whose bytes
- * changed. The list is not copied: `scripts/lib/pages-release-data.mts` owns it
- * for the replay archive too, and the client-closure guard in
- * `scripts/__tests__/next-config-release-typecheck.test.ts` fails if any client
- * module imports one of them.
+ * changed. `scripts/lib/pages-release-data.mts` owns both archived public
+ * inputs and derived server-only outputs rebuilt after replay. The
+ * client-closure guard in `scripts/__tests__/next-config-release-typecheck.test.ts`
+ * fails if a client module imports any excluded path.
  */
-export const BUILD_ID_EXCLUDED_PATHS: readonly string[] = PAGES_RELEASE_DATA_PATHS;
+export const BUILD_ID_EXCLUDED_PATHS: readonly string[] = PAGES_RELEASE_BUILD_ID_EXCLUSIONS;
 /**
  * Read at build time by `src/lib/feature-flags.ts`, `src/lib/api-url.ts`,
  * `src/app/layout.tsx` and `src/lib/safety-grade-snapshot.ts`. Every

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import FreezeWatchClient from "./client";
 import { FreezeWatchRegistryBlock } from "./registry-block";
 
@@ -10,7 +10,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: "USDT & USDC Freeze Tracker: Live Blacklist Events",
   description: FREEZEWATCH_DESCRIPTION,
   canonical: "/freezewatch/",
-  ogImage: buildLiveRouteOgImageUrl("freezewatch"),
 });
 
 export default function FreezeWatchPage() {
