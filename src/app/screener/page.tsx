@@ -3,7 +3,6 @@ import { FaqSection } from "@/components/faq-section";
 import { ScreenerContentLoadingState } from "@/app/screener/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const screenerDescription =
   "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V10 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
@@ -87,7 +86,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Screener: Filter by Grade, Peg & Backing",
     description: screenerDescription,
-    ogImage: `${SITE_URL}/og-default.png`,
   },
   loadClient: () => import("./client").then((m) => ({ default: m.ScreenerClient })),
   loading: <ScreenerContentLoadingState />,

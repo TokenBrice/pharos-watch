@@ -3,7 +3,6 @@ import { FaqSection } from "@/components/faq-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import content from "./content.json";
-import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 
 
 const DEPENDENCY_MAP_STATIC_SECTION = (
@@ -42,7 +41,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: content.metadataTitle,
     description: content.description,
-    ogImage: buildLiveRouteOgImageUrl("dependency-map"),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
   loading: <Skeleton className="h-[600px] w-full rounded-lg" />,

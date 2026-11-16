@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import type * as ChildProcess from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -234,6 +234,45 @@ describe("Pages artifact input profile", () => {
     });
     await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).rejects.toThrow(/pages-release-artifact-gates/);
     expect(readFileSync(join(root, "public/llms.txt"), "utf8")).toBe("candidate llms\n");
+  });
+
+  it.each([
+    { preexisting: true, gateFails: false }, { preexisting: true, gateFails: true },
+    { preexisting: false, gateFails: false }, { preexisting: false, gateFails: true },
+  ])("restores the entire owned preview directory with its map/signature ($preexisting, $gateFails)", async ({ preexisting, gateFails }) => {
+    const root = makeRoot();
+    dataFixture(root);
+    const map = "src/generated/social-preview-images.json";
+    const signature = "scripts/maintenance/state/social-preview-images.json";
+    write(root, "public/og/unowned.png", "unrelated asset");
+    if (preexisting) {
+      write(root, "public/og/v2/original.png", "original bytes");
+      write(root, map, "original map");
+      write(root, signature, "original signature");
+    }
+    const previewArtifact = GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "social-preview-images");
+    expect(previewArtifact?.outputPaths).toContain("public/og/v2");
+    spawn.mockImplementation((_program: string, args: string[]) => {
+      if (args.includes("generated:post-refresh")) {
+        write(root, "public/og/v2/original.png", "replayed bytes");
+        write(root, "public/og/v2/unpublished.png", "new replay-only image");
+        write(root, map, "replayed map");
+        write(root, signature, "replayed signature");
+      }
+      return { status: gateFails && args.includes("check:pages-release") ? 1 : 0, signal: null };
+    });
+    const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+    if (gateFails) await expect(result).rejects.toThrow(/pages-release-artifact-gates/);
+    else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
+    if (preexisting) {
+      expect(readdirSync(join(root, "public/og/v2"))).toEqual(["original.png"]);
+      expect(readFileSync(join(root, "public/og/v2/original.png"), "utf8")).toBe("original bytes");
+      expect(readFileSync(join(root, map), "utf8")).toBe("original map");
+      expect(readFileSync(join(root, signature), "utf8")).toBe("original signature");
+    } else {
+      for (const path of ["public/og/v2", map, signature]) expect(existsSync(join(root, path))).toBe(false);
+    }
+    expect(readFileSync(join(root, "public/og/unowned.png"), "utf8")).toBe("unrelated asset");
   });
 
   it("considers only unexpired identity-matched main artifacts, newest first", () => {

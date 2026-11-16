@@ -28,7 +28,6 @@ import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatCurrency, formatEventDate } from "@shared/lib/format";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -174,7 +173,7 @@ export default function FreezeWatchClient({ children }: { children?: ReactNode }
             href="/pharoswatchbot/#getting-started"
             description="Get Telegram alerts when an issuer freezes, releases, or wipes a tracked stablecoin"
           />
-          <ShareButton ogPath={API_PATHS.ogPage("freezewatch")} />
+          <ShareButton />
         </>
       }
       leadParagraphs={[

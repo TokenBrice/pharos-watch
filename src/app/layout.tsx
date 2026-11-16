@@ -18,17 +18,12 @@ import { GlobalFooterChrome, MainContent, RegimeBarChrome, RouteChrome } from "@
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { SITE_ALTERNATE_NAMES, SITE_NAME, SITE_OPEN_GRAPH_IDENTITY, SITE_TWITTER_IDENTITY } from "@/lib/site-identity";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getPageSocialPreview } from "@/lib/page-metadata";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
 import { bricolageDisplay, jetbrainsMono } from "@/lib/fonts/redesign";
-import {
-  ACTIVE_PEG_CURRENCY_COUNT,
-  ACTIVE_STABLECOIN_COUNT,
-  DEAD_STABLECOIN_COUNT,
-} from "@/lib/stablecoin-static-data";
-
-const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} active stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every ${CRON_INTERVALS["sync-stablecoins"] / 60} minutes.`;
+const homePreview = getPageSocialPreview("/");
+const siteDescription = "Independent stablecoin intelligence: inspect backing, exit liquidity, control and shared risks, follow peg incidents, and learn from historical failures.";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -50,14 +45,16 @@ export const metadata: Metadata = {
     type: "website",
     ...SITE_OPEN_GRAPH_IDENTITY,
     url: `${SITE_URL}/`,
-    title: "Stablecoin Analytics Dashboard | Pharos",
-    description: siteDescription,
-    images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
+    title: homePreview.title,
+    description: homePreview.description,
+    images: [{ url: homePreview.url, width: homePreview.width, height: homePreview.height, type: homePreview.type, alt: homePreview.alt }],
   },
   twitter: {
     card: "summary_large_image",
     ...SITE_TWITTER_IDENTITY,
-    images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
+    title: homePreview.title,
+    description: homePreview.description,
+    images: [{ url: homePreview.url, width: homePreview.width, height: homePreview.height, alt: homePreview.alt }],
   },
   // `?v=2` busts the 7-day immutable cache on the 2026-07-31 brand-mark swap. These three
   // filenames are browser conventions and cannot be renamed, so the query string is the only

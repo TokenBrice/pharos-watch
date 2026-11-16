@@ -169,6 +169,7 @@ export const API_PATHS = {
   ogSafetyScores: () => "/api/og/safety-scores",
   ogStabilityIndex: () => "/api/og/stability-index",
   ogPage: (slug: OgPageSlug) => `/api/og/page/${slug}`,
+  ogScorecard: (stablecoinId: string) => `/api/og/v2/scorecard/${encodeURIComponent(stablecoinId)}`,
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
       limit: params?.limit,

@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { isRecord } from "../../shared/lib/type-guards.ts";
+import { comparePagesR2Storage, fetchRequiredR2BucketLifecycles, normalizePagesR2Bindings, readCloudflareResult } from "../lib/cloudflare-pages-r2.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { loadCloudflareAccountStateManifest } from "../lib/cloudflare-account-state-manifest.mjs";
 
-const API_BASE_URL = "https://api.cloudflare.com/client/v4";
 const API_TOKEN_ENV = "CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN";
 const ZONE_SETTINGS_TOKEN_ENV = "CLOUDFLARE_ZONE_ANALYTICS_READ";
-const MANIFEST_PATH = "scripts/ci/cloudflare-account-state-manifest.json";
-const REQUEST_TIMEOUT_MS = 30_000;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -94,6 +93,7 @@ export function compareCloudflareAccountState(manifest, liveState) {
   for (const binding of manifest.pages.production.requiredKvBindings) {
     addRequiredStringDrift(drift, "pages.production.kvBindings", binding, production.kvBindings);
   }
+  drift.push(...comparePagesR2Storage(manifest.pages.production.requiredR2Bindings, production.r2Bindings, liveState?.r2BucketLifecycles));
 
   const accessApplications = asArray(liveState?.accessApplications);
   for (const expected of manifest.accessApplications) {
@@ -204,39 +204,6 @@ export function compareCloudflareAccountState(manifest, liveState) {
   }
 
   return drift;
-}
-
-async function readCloudflareResult(fetchImpl, apiToken, path, operation, { allowNotFound = false, allowWorkflowNotFound = false } = {}) {
-  const response = await fetchImpl(new URL(path.replace(/^\//, ""), `${API_BASE_URL}/`), {
-    method: "GET",
-    headers: { Authorization: `Bearer ${apiToken}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  if (allowNotFound && response.status === 404) return null;
-
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error(`${operation} returned an unparseable response (HTTP ${response.status})`);
-  }
-  if (allowWorkflowNotFound && response.status === 404 && payload?.success === false
-    && Array.isArray(payload.errors)
-    && payload.errors.some((error) => isRecord(error) && error.code === 10200
-      && error.message === "workflows.api.error.workflow.not_found")) {
-    return null;
-  }
-  const errors = asArray(payload?.errors)
-    .map((error) => (isRecord(error) ? normalizeString(error.message) : ""))
-    .filter(Boolean)
-    .join("; ");
-  if (!response.ok || payload?.success !== true) {
-    throw new Error(`${operation} failed (HTTP ${response.status})${errors ? `: ${errors}` : ""}`);
-  }
-  if (allowWorkflowNotFound && !isRecord(payload.result)) {
-    throw new Error(`${operation} returned a malformed named resource.`);
-  }
-  return payload.result;
 }
 
 function normalizePagesEnvironmentVariables(value) {
@@ -395,6 +362,9 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
   ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
   const unified = normalizeUnifiedPagesBindings(production);
+  const r2BucketLifecycles = await fetchRequiredR2BucketLifecycles({
+    accountId, requiredR2Bindings: manifest.pages.production.requiredR2Bindings, apiToken, fetchImpl,
+  });
   const heavyConfig = manifest.heavyWorker;
   const scriptBase = `/accounts/${encodeURIComponent(accountId)}/workers/scripts`;
   const [heavySettings, publicSettings, heavySubdomain, workflow, routes] = await Promise.all([
@@ -440,10 +410,12 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
           kvBindings: [
             ...new Set([...Object.keys(isRecord(production.kv_namespaces) ? production.kv_namespaces : {}), ...unified.kvBindings]),
           ],
+          r2Bindings: normalizePagesR2Bindings(production),
         },
       },
       customDomains: normalizePagesDomains(pageDomains),
     },
+    r2BucketLifecycles,
     accessApplications: normalizeAccessApplications(accessApplications),
     workerDomains: normalizeWorkerDomains(workerDomains),
     heavyWorker: {
@@ -462,10 +434,6 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
     },
     rateLimitRules: normalizeRateLimitRules(rateLimitRuleset?.rules),
   };
-}
-
-export function loadCloudflareAccountStateManifest(path = resolve(process.cwd(), MANIFEST_PATH)) {
-  return JSON.parse(readFileSync(path, "utf8"));
 }
 
 export async function runCloudflareAccountStateDriftCheck({

@@ -210,6 +210,8 @@ export async function main() {
     roster,
     signaturePath: SIGNATURE_PATH,
     stagingDir: STAGING,
+    width: L.width,
+    height: L.height,
     fonts: [
       { key: "geistSans", family: "Geist Sans", file: resolve(FONTS, "Geist-Regular.woff2"), weight: 400 },
       { key: "geistSansBold", family: "Geist Sans", file: resolve(FONTS, "Geist-Bold.woff2"), weight: 700 },

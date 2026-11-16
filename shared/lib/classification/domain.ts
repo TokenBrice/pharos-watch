@@ -1,4 +1,3 @@
-import type { BackingType } from "../../types/core";
 import type { GovernanceType, Infrastructure, StablecoinStatus } from "../../types/stablecoin-taxonomy";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
@@ -32,20 +31,6 @@ export const BACKING_LABELS_SHORT = projectDescriptors(BACKING_DESCRIPTORS, (des
 
 /** Prose phrases used inline in metadata descriptions. */
 export const BACKING_PROSE_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.proseLabel);
-
-export function getBackingLabelShort(value: string): string {
-  if (Object.prototype.hasOwnProperty.call(BACKING_LABELS_SHORT, value)) {
-    return BACKING_LABELS_SHORT[value as BackingType];
-  }
-  return value;
-}
-
-export function getGovernanceLabelShort(value: string): string {
-  if (Object.prototype.hasOwnProperty.call(GOVERNANCE_LABELS_SHORT, value)) {
-    return GOVERNANCE_LABELS_SHORT[value as GovernanceType];
-  }
-  return value;
-}
 
 export const INFRASTRUCTURE_LABELS = {
   "liquity-v1": "Liquity v1",

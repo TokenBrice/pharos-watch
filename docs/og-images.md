@@ -1,194 +1,153 @@
 # OG Images
 
-> **Agent navigation** — Start with [Route cards](#1-route-cards) and [CI guardrails](#ci-guardrails). Grep the numbered card-family heading for editorial · mechanism explainer · case-study · Cemetery · selector · blog · dynamic Worker cards; use each family's renewal instructions rather than reading wholesale.
+> **Agent navigation** — Start with [Route cards](#1-route-cards), [dated scorecards](#dated-scorecards) and [CI guardrails](#ci-guardrails). The numbered family headings retain legacy image-maintenance anchors.
 
-Pharos serves eight classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
+Canonical links are discovery surfaces, not miniature dashboards. Their image and social copy stay evergreen: identity, an honest reason to investigate, and a relevant visual. Numeric assessments belong to explicitly dated scorecards.
 
-The shared Share menu clears prior feedback timers when an image copy or PNG download starts, keeping its trigger disabled with a loading indicator until the operation settles. Copy success and failure feedback lasts two seconds.
+Site/CDN freshness does not expire a preview retained by a social network. A new image URL helps only after that network rereads the HTML; neither a cache purge nor a refresh tool guarantees that existing messages or attachments change.
 
 ## 1. Route cards
 
-A route card either states one figure stamped with the generation that produced it, or states no figure at all; it never repeats an undated live-state claim ("LIVE · AS OF …", an open-incident count, a flow verdict) that can go false within hours.
+Canonical page metadata resolves through `getPageSocialPreview()` in `src/lib/page-metadata.ts` and the generated `src/generated/social-preview-images.json` map. A missing public destination is an error, never a silent homepage-image fallback; only non-public chrome deliberately uses the home preview. Social title/description are separate from SEO title/description, so build-time directory counts and search experiments do not become undated social claims.
 
-`shared/lib/og-route-cards.ts` is the single authority for the route keys, kicker, two-line promise, `public/` filename and layout shared by both variants. `OG_LIVE_PAGE_SLUGS` lists the routes that select the live card.
+The `social-preview-images` artifact owns the destination catalog, generated map and immutable `/og/v2/` PNGs. Source registries establish subjects for coin and chain dossiers, named comparisons, taxonomy/peg cohorts, editorial articles, digest editions, events, documentation and tools. Indexability does not determine whether an exported page needs a specific preview.
 
-### Live cards (`/api/og/page/:slug`)
+The three visual grammars share a 1200×630 canvas, substantial ink/navy contrast and compact Pharos branding (`scripts/lib/social-preview-render.ts`):
 
-The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/page-metadata.ts`). The Worker reads each hero in process from the owner the public endpoint uses (no self-fetch, no connection-budget cost) and reduces it with the same shared helper the page uses. See [§8](#8-dynamic-worker-cards-apiog) for the rendering pipeline.
+- **Signal:** a bold monitoring question with frost-blue beams or oversized mechanism art, never a fabricated price line or live-looking dashboard.
+- **Dossier / contrast:** recognizable locally registered logo and ticker identity, a due-diligence question and bounded evidence themes. Comparison identities sit apart with a distinct `VS`, not a fused ticker.
+- **Briefing:** editorial serif subject hierarchy and document/calendar-led art, with actual edition dates and fixed historical outcomes where appropriate.
 
-| Slug | Route | Hero (owner → reducer) | Support (each dropped independently on failure) | Budget |
-| --- | --- | --- | --- | --- |
-| `home` | `/` | Total stablecoin market cap: stablecoins cache → `buildLiveHomepageHeroSnapshot` | Displayed PSI band and score; active depegs | `stablecoins` |
-| `chains` | `/chains/` | Largest chain's share of observed global supply (max `dominanceShare`): `handleChains` body, with the homepage completeness verdict over the same stablecoins generation; timeless (`incomplete-coverage`) when the leader or runner-up has an unavailable chain observation | Next two chains' shares and the observed (or known-subtotal) global supply; share bar only when shares sum to at most 1 | `chains` |
-| `dependency-map` | `/dependency-map/` | Mapped direct exposure: `projectDependencyGraph` + market caps → `buildDependencyHubsModel` | Upstream hubs; direct dependents | `stablecoins` and `reportCards`; stamped with the older read |
-| `timeline` | `/timeline/` | Open depeg incidents: `selectActiveDepegCoins` (`shared/lib/active-depegs.ts`) over `/api/peg-summary`, the homepage census | — | `pegSummary` |
-| `flows` | `/flows/` | Bank Run Gauge score and published band: mint-burn-flows body `gauge.score` / `gauge.band` (`formatBankRunGaugeScore`, `resolvePublishedGaugeBand`); a null score falls back to the timeless card (`figure-null`); the stamp adds "partial: N weighted coins withheld" when `partialValuationInputs > 0`; a band that withheld weight could move is omitted and the stamp reads "band unsettled: N weighted coins withheld" (`assessGaugeBandSettlement`, same rule as the digest) | — | `mintBurnFlows` |
-| `freezewatch` | `/freezewatch/` | Freezable share: stablecoins cache → `buildBlacklistStatusBuckets` → `computeFreezableSummary` | Freezable market cap; freezable coin count | `stablecoins` |
-| `liquidity` | `/liquidity/` | Total DEX TVL: `handleDexLiquidity` global row | — | `dexLiquidity` |
-| `alt-pegs` | `/alt-pegs/` | Non-USD market cap of the core universe: stablecoins cache → `buildNonUsdMarketSnapshot` (`shared/lib/alt-peg-snapshot.ts`), the same reducer as the page; a partial total shows as a known subtotal stamped `Partial · x/y non-USD coins observed` | Top three peg shares (only when every non-USD coin's supply is fully observed) | `stablecoins` |
-| `yield` | `/yield/` | Ranked yields: summary projection → `dedupeYieldRankings` | Median 30D APY of A/B-graded rows (never the top APY) | `yieldRankings` |
+Subject, hook, essential evidence and brand remain within the center-square crop (x285–915). Copy wraps within explicit readable budgets; overlong content fails rather than clipping or silently dropping words. Rendered text stays within the tracked fonts' coverage (ASCII, Latin-1 and common punctuation): `₮` renders as `T`, and any other uncovered glyph fails generation instead of drawing a missing-glyph box. Logos are clipped to the same circle the site uses. Art and copy adapt to the subject instead of reserving empty diagram bands. Missing registered logo bytes fail generation; an identity without a registered logo uses a two-character monogram beside its full ticker. Admitted raster logos are normalized to PNG before SVG embedding so WebP/JPEG decoding cannot silently remove an identity; the original file SHA-256 remains part of the semantic SVG identity. Trusted local SVGs retain their resource-admission checks.
 
-The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
+The local Multipli mark (`public/logos/340-rwausdi.png`) is mirrored from the issuer's [official rwaUSDi documentation](https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets), replacing an undecodable source asset.
 
-The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): the same fresh ceiling the owner endpoint publishes as `_meta.status: "fresh"` (the owner's explicit fresh budget where it publishes one — `/chains`' two `sync-stablecoins` intervals and `/api/report-cards/v9`'s V9 consumer budget — else `API_FRESHNESS_MAX_AGE_SEC` × the cache's fresh ratio from `getCacheRatioThresholds`), never less than two producer intervals. A card therefore shows its figure exactly while its source is inside that admission budget and goes timeless after it. Admission expiry is not the onset of a page warning: readers see warnings only on the page's own public bands.
+Lifecycle copy comes from `scripts/lib/social-preview-catalog.ts`: frozen dossiers say historical/legacy with a freeze date; delisted instruments explain the out-of-scope listing decision; quarantined instruments name the listing review/data hold; pre-launch instruments name plans and missing evidence, not active monitoring. Classification labels come from the shared vocabulary.
 
-Fail-closed contract:
+Ordinary previews contain no numeric grade, current price, market cap, coverage tally, alarm or irrelevant methodology pin. Picker and portfolio cards never disclose answers, shortlists or holdings. Authored blog covers and the Cemetery scene retain their designs through immutable copies.
 
-- The hero source must be present, inside its admission budget, not a held publication, and published by its page. Otherwise the Worker serves the route's timeless card with `200`, `X-Og-Status: timeless` and a closed-vocabulary `X-Og-Reason` (`cache-missing`, `stale-cache`, `held-publication`, `incomplete-coverage`, `figure-null`, `owner-error`, `render-error`, `timeless-by-decision`). A card mirrors its page: where the page publishes a partial total as a labelled known subtotal (home, chains, dependency map), the card shows the same figure and names the gap in its stamp (`Partial · 266/267 assets observed`, `excl. 3 coins without supply data`); it goes timeless only where the page itself withholds the number (for example a partial FreezeWatch share).
-- The stamp names the hero's generation time (`As of 12 Oct 2026, 14:05 UTC`), never the render clock. A cached copy on a social platform is therefore self-dating. Live responses carry `X-Og-Status: live`, `X-Og-Generation`, `X-Og-As-Of`, `X-Og-Freshness-Budget` and `X-Og-Assessed-At`. After PNG rendering, the Worker reassesses the remaining admission lifetime and bounds both cache TTLs to its nonnegative whole seconds or the 15-minute `ogImage` lifetime, whichever is shorter (`buildOgImageCacheControl`), with no one-minute minimum. A figure that expires during rendering is replaced by the figure-free timeless card (`stale-cache`); the assessment header names this post-render check. Timeless responses use the 5-minute `custom` profile so the live card returns soon after its source recovers. These are origin-policy bounds: the independently configured Cloudflare browser-cache floor can lift delivered browser TTLs, so release acceptance must inspect both uncached and cached production OG responses.
-- There are no colored verdicts. The flows card states the gauge score and its band name, never a net-direction verdict. The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, generated from the icons in `src/lib/nav-config.ts` by `build-og-route-timeless.ts`; the stablecoins card uses Lucide’s `Coins` icon directly because it is no longer in navigation). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
-- Sublabels name the figure's basis: the chains hero is a share of the same core-aggregate supply as the homepage, and unavailable chain observations are named in its stamp (`Partial · N chain observations unavailable`), dependency exposure is gross, and flows cover tracked issuance chains.
-- A share card is presentation that inherits its page's methodology. It must show the page's exact published figure and needs no methodology-changelog entry of its own.
+The map supplies image URL, alt, MIME type, dimensions and evergreen social copy. Metadata and article/hub structured imagery use the same destination identity. There is no route-local image override convention.
 
-### Timeless cards (`public/og-*.png`)
+Every new image uses `/og/v2/image-<semanticHash>.png`, independent of route slugs; the generated map remains the destination-to-image authority. Rendered identities hash the full semantic specification, stamped source fingerprint and toolchain identity; authored copies use the complete original PNG SHA-256. Retained slug-based URLs remain valid and permanent. The manifest's `sources[path]` values use explicit `sha256:<64 lowercase hex digits>` digests of the exact source bytes; PNG source stamps, semantic hashes and image-byte hashes retain their full raw SHA-256 values.
 
-Generated by `scripts/maintenance/build-og-route-timeless.ts` through the shared static runner, with the Geist faces the Worker uses. Each card has the route kicker, its two-line promise and `Live figures at pharos.watch/<route>`. It has no figure, date or state claim. The filenames are the retired screenshot roster's, so inbound links keep resolving.
-
-| Image | Route | Selected by |
-| --- | --- | --- |
-| `og-card.png` | `/` | Live-card fallback; default image in `src/lib/page-metadata.ts` and `src/app/layout.tsx`; `/compliance/`; docs JSON-LD |
-| `og-chains.png`, `og-dependency-map.png`, `og-timeline.png`, `og-flows.png`, `og-blacklist.png`, `og-liquidity.png`, `og-yield.png`, `og-alt-pegs.png` | live routes | Worker fail-closed twin; legacy inbound links |
-| `og-coverage.png` | `/coverage/` | route metadata |
-| `og-stablecoins.png` | `/stablecoins/`, peg and taxonomy pages | route metadata; quarantined/delisted dossier fallback |
-| `og-upcoming.png` | `/upcoming/` | route metadata; pre-launch dossier fallback |
-| `og-compare.png` | `/compare/`, `/compare/[slug]/` | route metadata |
-| `og-default.png` | `/screener/` | route metadata |
-| `og-funding.png` | `/funding/` | route metadata |
-| `og-pharoswatchbot.png` | `/pharoswatchbot/` | route metadata |
-| `og-changelog.png` | `/changelog/` | route metadata |
-| `og-portfolio.png` | `/portfolio/` | route metadata |
-
-Registry-derived counts (coverage, upcoming, stablecoins), funding and bot figures and the portfolio fixture stay timeless by decision: a count that changes per deploy or a demo portfolio adds nothing a shared card needs. `/upcoming/` shares through `/api/og/page/upcoming`: its loader always answers `timeless-by-decision`, so the route serves the timeless card (200, `X-Og-Status: timeless`, `X-Og-Reason: timeless-by-decision`, logged at info, not as a failure).
-
-### How to renew
+### Renewal
 
 ```bash
-npm run build:og-route-timeless
-npm run check:generated-artifacts -- --only=og-route-timeless
+npm run build:og-evergreen
+npm run check:generated-artifacts -- --only=social-preview-images
 ```
 
-### When to renew
+Generation also belongs to the post-refresh lifecycle: newly acquired digest/event routes must receive previews before the export is built. Evergreen rendering uses the existing Node resvg WASM engine with tracked fonts and no system-font fallback or browser installation; candidate code can therefore render newly replayed subjects offline. Replay restoration snapshots the entire `public/og/v2/` directory, restoring original membership and removing replay-created files even after failure.
 
-- After changing a route's copy or the layout in `shared/lib/og-route-cards.ts`.
-- After changing the brand mark (`public/pharos-mark-on-light.svg`) or the Geist font files.
+Published hashes are permanent identities, not release artifacts with a finite retention window. Before Pages activation, `scripts/maintenance/publish-social-previews.ts` verifies the map/manifest, every current and retained PNG, embedded source identity, exact `out/` versus `public/` bytes and absence of unregistered files. It conditionally creates objects in the dedicated `pharos-social-previews` R2 bucket under `evergreen/v2/`, then verifies bytes and metadata by readback; collisions fail, never overwrite or rebaseline. Never prune an old identity because it left the current map.
+
+`functions/og/v2/[[path]].ts` serves verified current static bytes first and falls back on static 404 to the same permanent R2 object. It never renders a replacement or fetches a live image. `public/_routes.json` keeps `/og/v2/` function-backed while legacy `/og-*.png` remains direct. PNG responses use one-year immutable caching and image-byte SHA-256 ETags for GET/HEAD and conditional requests. HTML revalidates independently. Bucket provisioning, binding, lifecycle and trusted publication are [deployment prerequisites](./deployment-process.md#social-preview-storage-prerequisites), not a claim of configured live storage.
+
+## Dated scorecards
+
+Coin dossiers and Safety Scores expose **Share dated scorecard** separately from ordinary Copy link, Copy as image and Download PNG. Ordinary actions use the canonical page and its evergreen image.
+
+`POST /_site-data/scorecard` accepts only `{ "stablecoinId": "..." }`; `safety-scores` selects the overview. The existing browser-session cookie is scoped to `/_site-data`; when Pages `SITE_SESSION_ENFORCEMENT=enforce`, the creator verifies it locally before quotas or capture. Invalid sessions return `401` with `X-Pharos-Session: required`; missing signing configuration returns `503`. Observe/unset preserves the rollout's observation mode. The Pages handler uses the trusted public Worker OG lane (optional `SITE_API` binding, otherwise public HTTP), never an input-supplied URL or the denied site-data lane. Required `SOCIAL_PREVIEWS` R2, `DB`, the keyed-IP secret and Cloudflare client-IP signal, a bounded JSON body and the allowed-origin signal gate creation. Retained GET/HEAD reads remain public.
+
+`/api/og/v2/scorecard/:id` reads the canonical accepted compact Safety publication and renders the admitted subject. A coin retains its published grade, including legitimate grade hysteresis; the overview separates rated, not-rated and pipeline-unavailable members and reports the rated arithmetic mean without inventing an aggregate letter grade. Missing, held, stale or quarantined evidence cannot become a current assessment. Observation/publication clocks, exact publication identity, subject and health are admitted again after rendering.
+
+The PNG and `X-Pharos-Scorecard` metadata bind the same publication identity, methodology, observation/publication clocks, renderer revision and image SHA-256. `worker/src/lib/og-templates/scorecard.tsx` keeps the subject, grade/score or cohort summary and readable calendar **DATE · NOT LIVE** together inside the center-square safe zone.
+
+The Pages creator validates and seals that evidence into one content-addressed JSON object containing metadata and PNG bytes under `scorecards/v1/` in `SOCIAL_PREVIEWS`, not KV. Conditional create plus strongly consistent R2 readback coordinates concurrent creators; a loser validates the existing winner, and corrupt existing content is never replaced.
+
+`shared/lib/pages-storage.ts` owns durable D1 creation-attempt quotas: **20 per keyed IP and 2,000 globally per UTC day**. A transactional guarded reservation occurs before upstream capture/render. Accepted dual reservations stay charged even if capture or storage fails; an IP refusal releases that attempt's global reservation, while global refusal creates no IP counter. Quota exhaustion returns `429` with seconds until next UTC midnight; store/configuration failures fail closed. Indexed, bounded request-path pruning removes old counters without a cron. Additive migration `0304_social_scorecard_daily_quota.sql` must precede the new creator.
+
+The global cap bounds daily admitted render/storage attempts, not lifetime storage or read traffic. Distributed clients can still exhaust it and deny new creations; it is not an abuse-proof identity system. Existing retained reads do not consume creation quotas.
+
+- `/share/scorecard/<id>/` serves retained-assessment HTML with self-canonical `og:url`, `noindex, follow`, the dated image and a link to current analysis. Presentation can evolve: HTML uses `public, max-age=0, must-revalidate` and an ETag of the actual rendered HTML body.
+- `/share/scorecard/<id>.png` serves the exact retained image with one-year immutable caching and an image-SHA ETag. Both support GET/HEAD `If-None-Match` and bodyless `304`.
+- Reads validate record/content/image identity. A missing or corrupt artifact never fetches latest as a substitute.
+- Records have no automatic expiry and are independent of public-dataset retention/pruning.
+- Public artifacts contain only public assessment data, not holdings, Picker answers, wallets, raw IP addresses or user fingerprints.
+
+The Share menu uses one responsive control/state machine, including the compact desktop coin-header presentation; breakpoint changes do not create competing requests or feedback. Ordinary image actions read the canonical first-party `/og/v2/` metadata identity. For Safari/WebKit, image copy starts `navigator.clipboard.write()` in the selection gesture with a promise-valued `ClipboardItem`; the abortable fetch resolves afterward. Cancellation and supersession suppress stale feedback. Clipboard failures retain labelled manual-copy URLs or download guidance. `social_share` analytics carry only bounded action/outcome/surface fields, not artifact IDs, coin IDs or URLs.
 
 ## 2. Editorial content cards (`public/og-editorial-*.png`)
 
-Generated by `scripts/maintenance/build-og-editorial.mjs` for long-form/editorial route families. The template renders a shared light editorial card aligned with the current product shell and varies the kicker/title per category. The generator uses `scripts/lib/og-static-runner.mts`, which loads the local fonts, fingerprints source/font inputs, rasterizes SVG through Firefox, and compares PNGs with the existing small-raster-drift tolerance.
-
-Write mode renders each PNG into ignored staging first and replaces the checked-in file only when its pixels changed beyond the same tolerance used by check mode. Routine local builds therefore leave visually unchanged OG assets and their modification times untouched despite Firefox encoding drift.
-
-| Image | Used by |
-| --- | --- |
-| `og-editorial-about.png` | `/about/` |
-| `og-editorial-depeg.png` | Depeg briefings |
-| `og-editorial-digest.png` | Daily/weekly digest pages |
-| `og-editorial-learn.png` | Both Learn hubs and all mechanism/case-study article metadata; case-study Article and hub ItemList JSON-LD |
-| `og-editorial-methodology.png` | Methodology pages |
-
-The Cemetery card (`og-editorial-cemetery.png`) was retired on 2026-09-30: `/cemetery/` selects the generated plot-map card (§5).
-
-### How to renew
+These category cards remain for legacy inbound image URLs; new canonical metadata uses the destination-specific evergreen map instead. `scripts/maintenance/build-og-editorial.mjs` remains their owner.
 
 ```bash
 npm run build:og-editorial
 npm run check:generated-artifacts -- --only=og-editorial
 ```
 
-### When to renew
-
-- After changing the editorial OG template.
-- After changing the card roster in `build-og-editorial.mjs`.
-- After a methodology version pin change that affects the rendered card.
+The shared `scripts/lib/og-static-runner.mts` hashes semantic SVG, font and renderer inputs and embeds their fingerprint into the actual PNG before publication. Raster tolerance applies only when source identity agrees. A small changed word/version cannot be discarded as encoding drift while a sidecar signature advances. Missing or changed PNG source identity requires regeneration; signatures describe bytes actually promoted.
 
 ## 3. Mechanism explainer cards (`public/og-learn-*.png`)
 
-Mechanism pages use the shared `og-editorial-learn.png` card (§2). Existing `public/og-learn-<archetype>.png` files remain unchanged inert static assets for cached HTML and external previews. Their generators, artifact registrations and signature outputs are retired; they are not regenerated or freshness-checked, and new archetypes need no bespoke card. On-page mechanism diagrams remain maintained independently.
+Current mechanism pages use generated subject-specific evergreen previews. Existing `public/og-learn-<archetype>.png` files remain inert compatibility assets for old HTML and external previews. Their retired generators are not revived; on-page mechanism diagrams remain independently maintained.
 
 ## 4. Case-study cards (`public/og-learn-case-*.png`)
 
-Case-study metadata, Article JSON-LD and hub ItemList entries use `og-editorial-learn.png` (§2). Existing `public/og-learn-case-<slug>.png` files follow the §3 inert-asset policy, preserving old inbound image URLs without redirects or withdrawals; article titles, canonical URLs and content remain independent of those retained binaries.
+Current case-study metadata, Article JSON-LD and hub ItemList entries use each study's generated preview. Existing `public/og-learn-case-<slug>.png` files follow the inert-asset policy above. Article titles, canonicals and authored historical outcomes remain independent of those binaries.
 
 ## 5. Stablecoin Cemetery card (`public/og-cemetery.png`)
 
-Generated by `scripts/maintenance/build-og-cemetery.ts` for `/cemetery/`. It owns the real light-theme desktop plot-map composition, crop and palette settings for the 1200×630 card. Generic CSS-module/token/font loading and screenshot rendering belong to `scripts/lib/scene-og.ts`; see [Data Visualization: Scene Kit](./data-visualization.md#scene-kit).
+`scripts/maintenance/build-og-cemetery.ts` owns the real plot-map composition, crop and palette for the 1200×630 scene. The canonical preview map retains its visual through an immutable copy; generic renderer/font machinery belongs to `scripts/lib/scene-og.ts` ([Scene Kit](./data-visualization.md#scene-kit)).
 
-Freshness is an input signature, not a pixel comparison. `scripts/maintenance/state/og-cemetery-signature.json` records the SHA-256 of the rendered document and the hash of the PNG written from it. `--check` rebuilds the document (no browser) and verifies both hashes and the PNG dimensions. It gives the same result on every platform. Write mode is a no-op while the check passes; `--force` re-renders anyway.
-
-It is the registered `og-cemetery` generated artifact and depends on `cemetery-logo-atlas`; regenerate it explicitly after adding a death or changing a cemetery logo. Its sources are the dead-coin data and frozen catalog, the cemetery modules, the plot-map model, geometry, scene, shapes and CSS module, the scene kit (`shared/lib/scene/`, `src/components/scene/`, `scripts/lib/scene-og.ts`), the atlas, the design tokens and the fonts.
-
-### How to renew
+The `og-cemetery` artifact depends on the logo atlas. `scripts/maintenance/state/og-cemetery-signature.json` binds document and published PNG hashes; check mode verifies signature and dimensions without platform-dependent rerender comparison.
 
 ```bash
 npm run build:og-cemetery
-npm run check:generated-artifacts -- --only=og-cemetery
+npm run build:og-evergreen
+npm run check:generated-artifacts -- --only=og-cemetery,social-preview-images
 ```
 
-### When to renew
-
-- When a registered source changes (a new death, a plot-map or token change, a new atlas) the check reports the artifact stale; regenerate it explicitly with `npm run build:og-cemetery` and commit it with the source.
-- After changing the card composition in `build-og-cemetery.ts`: bump `OG_CEMETERY_GENERATOR_VERSION`.
+Regenerate after registered scene/data/atlas inputs change; composition changes also bump `OG_CEMETERY_GENERATOR_VERSION`. Do not replace the authored scene with a generic tool card.
 
 ## 6. Selector profile cards (`public/og-selector-*.png`)
 
-`public/og-selector-default.png` is the retained static Picker metadata card. [Screener snapshot sharing](./screener-page.md#snapshot-sharing) owns the profile-level preview and no-answer/no-shortlist privacy contract.
+The Picker uses an evergreen profile-level card. The retained `og-selector-default.png` stays available for old links. [Screener snapshot sharing](./screener-page.md#snapshot-sharing) owns the no-answer/no-shortlist privacy contract; a Picker result never becomes an assessment scorecard.
 
 ## 7. Blog cards (`public/og-blog.png`, `public/blog/*-cover.png`)
 
-The `/blog/` hub uses the authored shared `public/og-blog.png` card. Individual posts use their optional `BlogPost.coverImage` for Open Graph and Twitter metadata as well as the article and hub-card image; posts without a cover fall back to `og-blog.png`. Cover images are authored 1200×630 assets, not generator outputs. The registry and route behavior live in `src/data/blog/index.ts` and `src/app/blog/[slug]/page.tsx`; follow [process/blog-publishing.md](./process/blog-publishing.md) when adding or changing one.
+Posts with an authored `BlogPost.coverImage` preserve that artwork through an immutable social-image copy. Posts without a cover and the blog hub use destination-specific generated cards, not the old category fallback. On-page covers remain authored assets, with their authored alt text; follow [blog publishing](./process/blog-publishing.md).
 
-### When to renew
-
-- After deliberately changing the shared blog identity card.
-- When publishing or revising a post whose registry entry selects a cover image.
-- Do not add blog covers to the screenshot or editorial-card generators; their lifecycle belongs to the post source.
+The old `og-blog.png` remains a compatibility asset. Do not attach unrelated methodology-version badges to new blog previews.
 
 ## 8. Dynamic Worker cards (`/api/og/*`)
 
-Since mint/burn v6.31, stablecoin cards select the admitted, enabled mint/burn scope before reading seven-day hourly totals and scan proof. Pending and disabled legs contribute neither; an empty scope cannot prove a measured zero. Untracked or inactive coins skip the scope read. Failed scope reads withhold the optional flow evidence while the rest of the card remains available.
+These are explicitly dated numerical images and compatibility endpoints, not canonical page previews. `worker/src/api/og.tsx` owns routing/data presentation; `worker/src/lib/og-render.ts` owns the request-initialized Satori/HarfBuzz/Yoga/resvg pipeline. Shared dimensions are 1200×630.
 
-Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached 15 minutes via `API_CACHE_PROFILES.ogImage`. Satori's HarfBuzz text shaping loads through `worker/src/lib/og-harfbuzz.ts`, which Wrangler aliases for `harfbuzzjs`. The shared frame follows the current light product shell and semantic status colors. **Self-renewing — no manual step.**
+Versioned `/api/og/v2/*` routes coexist with retained legacy URLs:
 
-Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, the same publication owner as `/api/stress-signals`. They honor completed-generation coverage rather than selecting raw maximum timestamps, so superseded or staged rows cannot override the published generation. Both use the API's eight-times-freshness fallback threshold for materialized rows and retain the owner's last-valid/history fallback (including an older single-coin result); unavailable authority yields no DEWS row. Existing rendering and response-cache limits are unchanged.
-
-The depeg summary joins each open event's quote provenance and event-specific native quote cache. Its current deviation uses the same canonical quote-domain resolver as digest collection: native events use clocked start/recovery/current native evidence, while USD-reference events use freshness-admitted USD market prices against the event reference. Neither USD prices nor FX-converted historical peaks substitute for missing native evidence. Missing or expired native observations render **Current unavailable; peak … bps**, and the source stamp keeps the native observation clock separate from the stablecoins generation.
-
-Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metadata, and seven-day flow as `—`; unavailable readings do not imply par, calm, zero liquidity, or a backing/governance classification. A rendered liquidity score carries its own `Liquidity <generation> UTC` stamp; the market and quote clocks cannot date it. A numeric zero remains an observed zero. Seven-day measured flow is labelled **7D NET MINT/BURN**; when absent, a **7D SUPPLY DELTA** is shown only if both current and prior-week USD supply are available. Supply change is not measured mint/burn. With fewer than two price-history points the chart is replaced by **Price history unavailable**, never a synthetic flat line. The sparkline selects the latest seven non-null `supply_history` prices, not a date-bounded seven-day window. Since mint-burn-flow v6.23 new rows never store a nominal par reference; a currently nominal coin draws no price line. A currently observed coin can retain older legacy par points until newer priced rows displace them. Since mint-burn-flow v6.23 the seven-day mint/burn cell follows the hourly valuation completeness: a complete window shows its signed net, a partial window (unpriced events) shows only its known gross subtotal as a lower bound (**7D GROSS (MIN)**, `$X+`, neutral color, never a signed net and never replaced by the supply delta), and a window with legacy coverage-unknown buckets keeps its net under **7D NET (UNVERIFIED)** in neutral color. When the published price is a nominal par reference (`priceObservedAtMode: "nominal_reference"`, pricing v6.38), the price cell is labelled **NOMINAL PAR** instead of **PRICE**, so par is never presented as an observed market price; an observed price, including a trusted market discount on a nominal-par route, keeps the **PRICE** label.
-
-| Route | Source |
+| Family | Purpose |
 | --- | --- |
-| `/api/og/stablecoin/:id` | per-stablecoin card (referenced from `src/lib/page-metadata.ts → buildStablecoinDetailMetadata`) |
-| `/api/og/safety-scores` | safety scores summary card |
-| `/api/og/depeg` | depeg summary card |
-| `/api/og/stability-index` | stability index summary card |
-| `/api/og/chain/:id` | per-chain card (referenced from `src/app/chains/[chain]/page.tsx` via `API_PATHS.ogChain`) |
-| `/api/og/page/:slug` | live route cards ([§1](#1-route-cards)); unknown slug → `404` |
+| `stablecoin/:id` | Dated per-coin numerical evidence |
+| `safety-scores` | Cohort summary without an aggregate grade |
+| `depeg` | Open event evidence with native-quote provenance |
+| `stability-index` | Admitted PSI observations and retained history |
+| `chain/:id` | Chain known supply/composition with explicit coverage |
+| `page/:slug` | Dated route figure or its figure-free fallback |
+| `scorecard/:id` | Trusted creation input for retained dated sharing |
 
-A chain absent from the current aggregate renders a figure-free "No current supply observation" card with `X-Og-Status: degraded` and `X-Og-Reason: chain-not-in-aggregate`, never `$0`: absence from the aggregate is not an observed zero (ADR-28).
+The generic OG descriptor is public-API exempt and denied on site-data. Queries coalesce in the edge-cache key; only recognized versioned paths select new representations. Renderer revision is not publication identity.
 
-Summary cards keep missing DEWS counts, safety coverage and window averages unavailable. Fewer than two PSI history observations yield no sparkline, and PSI 24h change uses a sample within one hour before source-minus-24h, else it is unavailable. PSI and safety freshness headers name the assessment clock, budget and generation where available. Dynamic cards stamp each source with its generation time only (`{source} YYYY-MM-DD HH:MM UTC`) and never print a stale label or budget. `/api/og/stability-index` shows its figures while the newest sample is inside the PSI admission window (`API_FRESHNESS_MAX_AGE_SEC.stabilityIndex`, two producer intervals, not 12×); a missing or expired sample serves a figure-free neutral card (frame, title and subtitle only), with the stale or unknown verdict, reason and budget carried only in the `X-Data-*` headers.
+Public methodology labels derive from the served publication's methodology version, never the internal `model: "v9"` compatibility discriminator or a newer repository constant. Safety grades are not recalculated from scores.
 
-OG cards display only metrics supplied by their constructors: the stablecoin card has no redemption cell, and summary cards have no safety trend or PSI flight-to-quality widget. The safety summary retains its average score explicitly without an aggregate grade; real flow flight-to-quality and redemption products are unchanged.
+The normal numerical image cache ceiling is `API_CACHE_PROFILES.ogImage`; `ogObservationFreshUntil()` / `observedOgResponse()` in [`worker/src/api/og.tsx`](../worker/src/api/og.tsx) bound displayed market, quote, DEWS and chain evidence by the owning source budget and reassess after rendering. Native depeg quotes use `PSI_NATIVE_EVIDENCE_MAX_AGE_SEC`; a near-expiry observation cannot receive a fresh 900-second TTL. Accepted Safety evidence additionally rechecks exact publication identity and current health after rendering. Dated creation-input PNGs have a separate at-most-60-second ceiling bounded by both observation and publication runway ([`og-scorecard.tsx`](../worker/src/api/og-scorecard.tsx)).
 
-PSI card high/low values are extrema of the retained instantaneous samples, explicitly labelled **Retained samples (up to 90 days)**. The actual retained history can be shorter; these are neither lifetime ATH/ATL nor extrema of daily averages. Pruned extremes leave this window without changing archived editions.
+Generation stamps name evidence clocks, not render time. Route cards retain `X-Og-Status`, generation/budget headers and a closed-vocabulary fallback reason. Account-level cache floors are independent: deployment acceptance must inspect delivered uncached and cached headers.
 
-These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
+Missing observations remain unavailable, never par/calm/zero. [`chain-card.tsx`](../worker/src/lib/og-templates/chain-card.tsx) qualifies observed supply subtotals and unavailable contributors; dominance is withheld when chain or global supply coverage is incomplete, while displayed composition shares explicitly name the observed chain subtotal. [`safety-scores-card.tsx`](../worker/src/lib/og-templates/safety-scores-card.tsx) separates NR and pipeline-unavailable members from rated coverage; the overview mean uses only rated scores and never an aggregate letter grade. Measured mint/burn is not supply change; native quotes are not reconstructed from USD references; historical sample extrema are not lifetime extrema. Historical/degraded sources cannot borrow a fresh sibling's clock. Data owners, not the image, establish these semantics.
 
-Satori `0.33.5` loads HarfBuzz, whose stock loader fails in workerd: it reads Node globals, compiles `hb.wasm` from bytes and builds a JS-to-Wasm trampoline, while workerd forbids Wasm code generation inside requests. `og-harfbuzz.ts` instantiates the bundled module and registers the module's own `free` export in place of that trampoline. Upgrade Satori only after the real Worker render check passes: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx`. The runtime check loads the OG route lazily inside a request, as production does, executes the production Satori/HarfBuzz/Yoga/resvg pipeline in local workerd and decodes cold and warm 1200×628 PNG responses; the existing Node SVG tests cover the individual card templates. After deployment, verify actual `GET` responses for all six dynamic card families (every `/api/og/page/:slug`) return decodable `image/png` data. `HEAD` and mocked handler tests do not prove rendering health.
-
-The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-templates/shared.tsx`) because satori cannot fetch a same-origin asset. It is the **on-light** variant — the same art as `public/pharos-mark-on-light.svg` — because the card background is light. `npm run build:og-route-timeless` projects the authored SVG’s viewport, disc and art paths into the marked generated block in the Worker template; `--check` rejects drift. Each renderer retains its existing clipping wrapper. A mark swap needs a **Worker deploy** and invalidates the 15-minute OG cache.
+Satori's workerd-compatible HarfBuzz loader remains `worker/src/lib/og-harfbuzz.ts`. Keep WASM initialization inside request execution with isolate reuse. A renderer upgrade needs the actual workerd PNG check, not only Node SVG tests.
 
 ## CI guardrails
 
-- `npm run seo:check` (`scripts/ci/check-seo-static.mjs`) inspects the built `out/` for OG metadata. As part of T2, this check also asserts that every same-origin `og:image` / `twitter:image` URL — root-relative, or absolute on `pharos.watch` — resolves to a file in `out/`; cards on other hosts (the `api.pharos.watch` dynamic routes) are skipped. This catches broken references like the historical `/og-default.png` regression.
-- `seo:check` runs in the classifier-selected PR `pages-artifact` lane through `npm run check:pages-artifact` → `npm run check:pages-release`. It also runs post-merge in `.github/workflows/pages-release.yml` and locally through `npm run check:release`; ordinary local `check:pr` defers the Pages lane to CI unless `--with-pages` is supplied.
+- `npm run seo:check` inspects built HTML and requires referenced same-origin images to exist in `out/`. It runs in the classifier-selected Pages artifact/release lane.
+- The evergreen artifact check validates destination coverage, source/image identities, dimensions, metadata map and immutable publication. Legacy static checks require embedded semantic source provenance as well as their manifests.
+- Focused rendering proof: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx worker/src/api/__tests__/og-source-availability.test.tsx`. Real cold/warm workerd responses must decode as 1200×630 PNGs.
+- Review full canvas, 600px, 400px and center-square crops in light/dark surroundings. Subject, recognizable identity and reason to open survive without a description; essential dated provenance stays readable beside the assessment, with no clipping, color-only meaning or footer/chart overlap.
+- Cover long identities, registered logos, lifecycle variants, fixed historical dates, unknown/NR/quarantined inputs, held/stale sources, observed zero, partial scope and publication changes during rendering. Retained HTML/PNG must stay coherent after source rollover/pruning, and old static hashes must resolve independently of replacement deployments or rollback.
+- After deployment, inspect actual new-share presentations on Telegram and other target clients, separately from existing attachments. Meta Sharing Debugger, LinkedIn Post Inspector and Telegram's refresh tooling are operational aids, not a freshness SLA.
+- Share-action analytics measure intent and completion, not social impressions or CTR. Evaluate creative variants against observable impressions and qualified visits; technical compliance or an attractive mockup does not prove a click lift.
 
 ## Orphans (intentional)
 
-These files in `public/` are not referenced from `src/` but are kept in case of external/legacy inbound links:
-
-- `og-image.png` — pre-`og-card.png` default fallback.
-- `og-card.svg` — predecessor of `og-card.png`. Also **visibly stale** since the 2026-07-31 brand-mark swap: it still carries the drawn lighthouse mark. Left untouched deliberately (it is an orphan); do not treat it as drift.
-- `og-pharosville.png` — `/pharosville` promo page no longer exists in app.
-
-Audit and remove if you confirm no external surfaces still point at them.
+Legacy `og-*.png`, `og-card.svg`, retired mechanism/case-study images and published `/og/v2/` hashes remain available for cached HTML/external references. Do not remove them merely because current source no longer selects them. Any withdrawal requires explicit external-reference/retention review.

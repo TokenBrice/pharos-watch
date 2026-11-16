@@ -241,13 +241,7 @@ export function HeroIdentityHeader({
             >
               <Flag className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
-            {/* Labelled with a full-size target below lg; the compact icon at lg+. */}
-            <span className="lg:hidden">
-              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
-            </span>
-            <span className="hidden lg:flex">
-              <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
-            </span>
+            <ShareButton stablecoinId={header.coinId} label="Share" compactAtDesktop />
           </div>
           <HeroUpdatedStamp updatedAtMs={updatedAtMs} dailySnapshot={dailySnapshot} className="col-span-2 text-right lg:hidden" />
         </div>

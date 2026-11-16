@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { FaqSection } from "@/components/faq-section";
 import type { FaqItem } from "@/lib/faq";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
@@ -35,7 +35,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: METHODOLOGY_TITLE,
   description: METHODOLOGY_DESCRIPTION,
   canonical: "/methodology/",
-  ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
 
 const METHODOLOGY_FAQ_ITEMS = [
@@ -94,7 +93,7 @@ export default function MethodologyPage() {
               datePublished: `${SAFETY_SCORE_FIRST_ENTRY_DATE}T00:00:00Z`,
               dateModified: `${SAFETY_SCORE_LATEST_ENTRY_DATE}T00:00:00Z`,
               author: "person",
-              image: `${SITE_URL}/og-editorial-methodology.png`,
+              image: `${SITE_URL}${getPageSocialPreview("/methodology/").url}`,
               mainEntityOfPage: `${SITE_URL}/methodology/`,
               keywords: [
                 "stablecoin methodology",

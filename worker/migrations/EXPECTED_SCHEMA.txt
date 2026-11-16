@@ -492,6 +492,7 @@ table	scheduled_child_attempts
 table	selector_snapshot_daily_quota
 table	site_data_request_samples
 table	site_data_request_stats
+table	social_scorecard_daily_quota
 table	stability_index
 table	stability_index_samples
 table	status_discrepancy_state

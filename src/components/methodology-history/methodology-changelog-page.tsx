@@ -5,6 +5,7 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard } from "@/components/methodology-history/methodology-version-card";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { getPageSocialPreview } from "@/lib/page-metadata";
 import type { PharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
   formatMethodologyDisplayDate,
@@ -80,7 +81,7 @@ export function MethodologyChangelogPage({
                 datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
                 dateModified: `${entries[0].date}T00:00:00Z`,
                 author: "person",
-                image: `${SITE_URL}/og-editorial-methodology.png`,
+                image: `${SITE_URL}${getPageSocialPreview(path).url}`,
                 mainEntityOfPage: `${SITE_URL}${path}`,
                 ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
               }),

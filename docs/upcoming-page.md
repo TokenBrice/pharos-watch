@@ -4,7 +4,7 @@ Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. 
 
 ## Data Contract
 
-Membership is checked-in `status: "pre-launch"` metadata via `PRE_LAUNCH_STABLECOINS`, not live API inference. The page splits it with `isLaunchedAwaitingData()`: rows with `launchPhase: "launched"` are live coins awaiting admissible data, so they never enter the upcoming count, the client projection, the Horizon constellation or the currency groups. Regenerate full/client projections with `npm run bootstrap:generated` after catalog changes. The route uses static logos and optional authored/generated teaser copy; no Worker data request or new endpoint belongs here (the Share image is the only API call, on demand).
+Membership is checked-in `status: "pre-launch"` metadata via `PRE_LAUNCH_STABLECOINS`, not live API inference. The page splits it with `isLaunchedAwaitingData()`: rows with `launchPhase: "launched"` are live coins awaiting admissible data, so they never enter the upcoming count, the client projection, the Horizon constellation or the currency groups. Regenerate full/client projections with `npm run bootstrap:generated` after catalog changes. The route uses static logos and optional authored/generated teaser copy; no Worker data request or new endpoint belongs here. Sharing fetches only the generated first-party evergreen PNG on demand, not a Worker OG transport.
 
 Keep full server metadata available for JSON-LD and crawlable profile links, but send clients only the card/filter projection. The shared Horizon constellation is also used on homepage; that teaser is not a second full tracker.
 
@@ -26,7 +26,7 @@ Per-user launch alerts are retired. The header action is `Follow @pharoswatch` (
 
 ## Share Card
 
-Share is timeless by decision ([OG images](./og-images.md)): the header `ShareButton` requests `/api/og/page/upcoming`, which serves the figure-free `upcoming` route card; route metadata keeps the static `og-upcoming.png`.
+The header `ShareButton`, canonical metadata and ordinary copy/download actions use `/upcoming/`'s generated immutable `/og/v2/` evergreen preview ([OG images](./og-images.md#1-route-cards)). SEO's build-month/count copy is separate from evergreen social copy. The former `/api/og/page/upcoming` request and `og-upcoming.png` metadata selection are retired; legacy URLs may still resolve, but neither is selected by this page. Upcoming has no numerical dated-scorecard action.
 
 ## SEO And Crawlability
 

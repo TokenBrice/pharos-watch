@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import { crc32 } from "node:zlib";
+import sharp from "sharp";
 import type { KVNamespace } from "@shared/types/cloudflare-runtime";
 import { buildDailySocialTweetText, buildDailySocialAltText, type DailySocialSnapshot } from "@shared/lib/daily-social";
 import { getDailySocialEdition } from "@shared/lib/daily-social-schedule";
 import { onRequest } from "../social-posts/[[path]]";
+import { onRequest as serveEvergreenPreview } from "../og/v2/[[path]]";
+import { SOCIAL_PREVIEW_ASSET_OBJECT_PREFIX } from "@shared/lib/social-preview-storage";
 
 const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 async function context(path: string, bytes = png, overrides: Record<string, unknown> = {}) {
@@ -75,5 +80,118 @@ describe("daily social artifacts", () => {
   });
   it("rejects corrupted manifest copy", async () => {
     expect((await onRequest(await context("2026-09-14.json", png, { tweetText: "manipulated" }))).status).toBe(502);
+  });
+});
+
+async function evergreenContext(kind: "rendered" | "authored" = "rendered") {
+  let bytes = await sharp({ create: { width: 1200, height: 630, channels: 4, background: "#15283b" } }).png().toBuffer();
+  const source = "a".repeat(64);
+  if (kind === "rendered") {
+    const data = Buffer.from(`pharos-source-sha256\0${source}`);
+    const chunk = Buffer.alloc(data.length + 12);
+    chunk.writeUInt32BE(data.length);
+    chunk.write("tEXt", 4);
+    data.copy(chunk, 8);
+    chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+    bytes = Buffer.concat([bytes.subarray(0, -12), chunk, bytes.subarray(-12)]);
+  }
+  const hash = createHash("sha256").update(bytes).digest("hex");
+  const semanticHash = kind === "rendered" ? "b".repeat(64) : hash;
+  const filename = `old-route-${semanticHash}.png`;
+  const customMetadata: Record<string, string> = {
+    "png-sha256": hash, "source-fingerprint": kind === "rendered" ? source : hash, "semantic-hash": semanticHash, kind,
+  };
+  const stored = { arrayBuffer: async () => Uint8Array.from(bytes).buffer, text: async () => "", customMetadata };
+  const get = vi.fn(async () => stored as typeof stored | null);
+  const put = vi.fn(async () => { throw new Error("reader must never write"); });
+  const next = vi.fn(async (_input?: Request | string, _init?: RequestInit) => new Response(null, { status: 404 }));
+  return {
+    request: new Request(`https://pharos.watch/og/v2/${filename}`),
+    env: { SOCIAL_PREVIEWS: { get, put } }, next, get, bytes, hash, filename, customMetadata,
+  };
+}
+
+describe("permanent evergreen preview assets", () => {
+  it("serves actual current static output before consulting permanent storage", async () => {
+    const ctx = await evergreenContext();
+    ctx.next.mockImplementation(async () => new Response(Uint8Array.from(ctx.bytes), { headers: { "Content-Type": "image/png" } }));
+    const response = await serveEvergreenPreview(ctx);
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(ctx.bytes);
+    expect(response.headers.get("etag")).toBe(`"${ctx.hash}"`);
+    expect(response.headers.get("cache-control")).toContain("immutable");
+    expect(ctx.get).not.toHaveBeenCalled();
+  });
+
+  it.each(["rendered", "authored"] as const)("resolves a removed/rolled-back identity from its permanent object (%s)", async (kind) => {
+    const ctx = await evergreenContext(kind);
+    const response = await serveEvergreenPreview(ctx);
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(ctx.bytes);
+    expect(ctx.get).toHaveBeenCalledExactlyOnceWith(`${SOCIAL_PREVIEW_ASSET_OBJECT_PREFIX}${ctx.filename}`);
+    expect(ctx.env.SOCIAL_PREVIEWS.put).not.toHaveBeenCalled();
+  });
+
+  it("preserves verified GET/HEAD and weak/list/wildcard ETag semantics", async () => {
+    const ctx = await evergreenContext();
+    ctx.request = new Request(ctx.request, { method: "HEAD" });
+    const head = await serveEvergreenPreview(ctx);
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    expect(head.headers.get("content-length")).toBe(String(ctx.bytes.length));
+    expect((ctx.next.mock.calls[0][0] as Request).method).toBe("GET");
+    for (const method of ["GET", "HEAD"]) {
+      for (const etag of [`"${ctx.hash}"`, `"other", W/"${ctx.hash}"`, "*"]) {
+        ctx.request = new Request(ctx.request.url, { method, headers: { "If-None-Match": etag } });
+        const response = await serveEvergreenPreview(ctx);
+        expect(response.status).toBe(304);
+        expect(await response.text()).toBe("");
+        expect(response.headers.get("etag")).toBe(`"${ctx.hash}"`);
+        expect((ctx.next.mock.calls.at(-1)?.[0] as Request).headers.has("if-none-match")).toBe(false);
+      }
+    }
+  });
+
+  it.each(["nested/file", "../secret", "home-deadbeef.png", `home-${"a".repeat(64)}.svg`, `home-${"A".repeat(64)}.png`])("rejects noncanonical or unsafe filenames (%s)", async (path) => {
+    const ctx = await evergreenContext();
+    ctx.request = new Request(`https://pharos.watch/og/v2/${path}`);
+    expect((await serveEvergreenPreview(ctx)).status).toBe(404);
+    expect(ctx.next).not.toHaveBeenCalled();
+    expect(ctx.get).not.toHaveBeenCalled();
+  });
+
+  it("returns explicit no-store failures without root/live/corruption fallback", async () => {
+    const ctx = await evergreenContext();
+    ctx.request = new Request(ctx.request, { method: "POST" });
+    const method = await serveEvergreenPreview(ctx);
+    expect(method.status).toBe(405);
+    expect(method.headers.get("allow")).toBe("GET, HEAD");
+    ctx.request = new Request(ctx.request.url);
+    expect((await serveEvergreenPreview({ ...ctx, env: {} })).status).toBe(503);
+    ctx.get.mockResolvedValueOnce(null);
+    expect((await serveEvergreenPreview(ctx)).status).toBe(404);
+    ctx.next.mockImplementationOnce(async () => new Response("<html>root fallback</html>", { headers: { "Content-Type": "text/html" } }));
+    ctx.get.mockClear();
+    const corruptStatic = await serveEvergreenPreview(ctx);
+    expect(corruptStatic.status).toBe(502);
+    expect(corruptStatic.headers.get("cache-control")).toBe("no-store");
+    expect(ctx.get).not.toHaveBeenCalled();
+    ctx.next.mockImplementationOnce(async () => new Response(null, { status: 503 }));
+    expect((await serveEvergreenPreview(ctx)).status).toBe(502);
+    expect(ctx.get).not.toHaveBeenCalled();
+  });
+
+  it("rejects corrupted PNG bytes, source stamps and object identity metadata", async () => {
+    const ctx = await evergreenContext();
+    for (const field of ["png-sha256", "source-fingerprint", "semantic-hash", "kind"]) {
+      const original = ctx.customMetadata[field];
+      ctx.customMetadata[field] = "c".repeat(64);
+      const response = await serveEvergreenPreview(ctx);
+      expect(response.status).toBe(502);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      ctx.customMetadata[field] = original;
+    }
+    ctx.bytes[0] = 0;
+    expect((await serveEvergreenPreview(ctx)).status).toBe(502);
   });
 });

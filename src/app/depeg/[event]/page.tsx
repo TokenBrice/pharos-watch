@@ -5,7 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata, getPageSocialPreview } from "@/lib/page-metadata";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -97,7 +97,6 @@ export async function generateMetadata(
     title,
     description,
     canonical: `/depeg/${event.slug}/`,
-    ogImage: `${SITE_URL}/og-editorial-depeg.png`,
     robots: NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug) ? { index: false, follow: true } : undefined,
   });
 }
@@ -276,7 +275,7 @@ export default async function DepegEventPage(
     description: heroDescription,
     datePublished: formatIsoTimestamp(event.startedAt),
     dateModified: formatIsoTimestamp(modifiedAtSeconds),
-    image: [`${SITE_URL}/og-editorial-depeg.png`],
+    image: [`${SITE_URL}${getPageSocialPreview(canonicalUrl).url}`],
     mainEntityOfPage: canonicalUrl,
     identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
   });

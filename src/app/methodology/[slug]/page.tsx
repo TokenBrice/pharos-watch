@@ -154,7 +154,6 @@ export async function generateMetadata({ params }: MethodologyChangelogPageProps
     title: display.metadataTitle,
     description: display.metadataDescription(changelog),
     canonical: changelog.publicPath,
-    ogImage: "/og-editorial-methodology.png",
   });
 }
 

@@ -19,10 +19,16 @@
           "SITE_API_SHARED_SECRET": { "type": "secret_text" }
         },
         "d1Bindings": ["DB"],
-        "kvBindings": []
+        "kvBindings": [],
+        "r2Bindings": {
+          "SOCIAL_PREVIEWS": "wrong-preview-bucket"
+        }
       }
     },
     "customDomains": ["pharos.watch"]
+  },
+  "r2BucketLifecycles": {
+    "pharos-social-previews": { "enabledObjectDeletionRules": ["old-preview-expiry"] }
   },
   "accessApplications": [
     {

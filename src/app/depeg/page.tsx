@@ -5,11 +5,9 @@ import { ShareButton } from "@/components/share-button";
 import { DepegEventArchivePreview } from "@/app/depeg/depeg-event-archive";
 import { DepegContentLoadingState } from "@/app/depeg/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -49,7 +47,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Depeg Tracker: Live Alerts & History",
     description: depegDescription,
-    ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
   loading: <DepegContentLoadingState />,
@@ -68,7 +65,7 @@ const route = createClientFeaturePage({
           href="/pharoswatchbot/#bot"
           description="Get instant Telegram alerts for depeg events and DEWS threat level changes"
         />
-        <ShareButton ogPath="/api/og/depeg" />
+        <ShareButton />
       </>
     ),
     preface: (

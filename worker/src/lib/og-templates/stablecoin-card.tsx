@@ -1,6 +1,6 @@
 import * as React from "react";
 import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS, GRADE_COLORS } from "./shared";
-import { getBackingLabelShort, getGovernanceLabelShort, THREAT_BAND_HEX } from "@shared/lib/classification";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
 
 export interface StablecoinCardData {
@@ -11,21 +11,15 @@ export interface StablecoinCardData {
   /** `pegPrice` is a nominal par reference (pricing v6.38), not an observed market price. */
   pegPriceIsNominal?: boolean;
   dewsBand: string | null;
-  liquidityScore: number | null;
-  mcap: number | null;
   /** Signed net, except `mint-burn-partial-gross`, where it is a known gross lower bound. */
   flow7d: number | null;
   flow7dSource: "mint-burn" | "mint-burn-coverage-unknown" | "mint-burn-partial-gross" | "supply-delta" | null;
   sparklineData: number[] | null;
   hasActiveDepeg: boolean;
-  pegScore: number | null;
-  backing: string | null;
-  governance: string | null;
-  change24h: number | null;
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
   isFrozen?: boolean;
-  safetyModel?: "v8" | "v9" | null;
+  safetyMethodologyVersion?: string | null;
   lastUpdated?: string;
 }
 
@@ -34,24 +28,13 @@ function getAdaptiveTreatment(data: StablecoinCardData): {
   badge?: { text: string; color: string };
 } {
   if (data.hasActiveDepeg) {
-    return {
-      borderTopColor: "#ef4444",
-      badge: { text: "DEPEGGED", color: "#ef4444" },
-    };
+    return { borderTopColor: SEMANTIC_COLORS.negative, badge: { text: "OPEN DEPEG", color: SEMANTIC_COLORS.negative } };
   }
-  if (data.dewsBand === "DANGER") {
-    return {
-      borderTopColor: "#ef4444",
-      badge: { text: "DANGER", color: "#ef4444" },
-    };
+  const bandColor = data.dewsBand == null ? undefined : THREAT_BAND_HEX[data.dewsBand as keyof typeof THREAT_BAND_HEX];
+  if (data.dewsBand === "DANGER" || data.dewsBand === "ALERT" || data.dewsBand === "WARNING") {
+    return { borderTopColor: bandColor, badge: { text: data.dewsBand, color: bandColor ?? SEMANTIC_COLORS.warning } };
   }
-  if (data.dewsBand === "ALERT" || data.dewsBand === "WARNING") {
-    return {
-      borderTopColor: "#f59e0b",
-      badge: { text: "ELEVATED STRESS", color: "#f59e0b" },
-    };
-  }
-  return data.dewsBand == null ? { borderTopColor: TEXT_SECONDARY } : {};
+  return {};
 }
 
 /** Get color for 24h change */
@@ -94,7 +77,7 @@ function MetricRow({
           key={metric.label}
           style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 80 }}
         >
-          <MetricLabel fontSize={13}>{metric.label}</MetricLabel>
+          <MetricLabel fontSize={22}>{metric.label}</MetricLabel>
           <span
             style={{
               fontSize: metric.size === "large" ? 44 : valueFontSize,
@@ -139,105 +122,44 @@ function flowMetric(data: StablecoinCardData): Metric {
 export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const treatment = getAdaptiveTreatment(data);
   const gradeColor = GRADE_COLORS[data.grade] ?? TEXT_SECONDARY;
-  const dewsColor = THREAT_BAND_HEX[data.dewsBand as keyof typeof THREAT_BAND_HEX] ?? TEXT_SECONDARY;
-  
-  // Build primary metrics row (5 items - PSI removed as it's market-wide)
-  const primaryMetrics: Metric[] = [
-    {
-      label: data.safetyModel ? `${data.safetyModel.toUpperCase()} GRADE` : "GRADE",
-      value: data.grade,
-      color: gradeColor,
-      size: "large" as const,
-    },
+  const supports: Metric[] = [
     {
       label: data.pegPriceIsNominal ? "NOMINAL PAR" : "PRICE",
-      value: data.pegPrice != null ? `$${data.pegPrice.toFixed(4)}` : "—",
-      color: TEXT_SECONDARY,
-    },
-    { label: "PEG SCORE", value: data.pegScore != null ? data.pegScore.toFixed(1) : "—", color: TEXT_SECONDARY },
-    { label: "DEWS", value: data.dewsBand ?? "—", color: dewsColor },
-    { label: "LIQUIDITY", value: data.liquidityScore != null ? data.liquidityScore.toFixed(0) : "—", color: TEXT_SECONDARY },
-  ];
-
-  const secondaryMetrics: Metric[] = [
-    { 
-      label: "MARKET CAP", 
-      value: data.mcap != null ? formatCurrency(data.mcap, 1) : "—",
-    },
-    { 
-      label: "24H CHANGE", 
-      value: data.change24h != null ? `${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(2)}%` : "—",
-      color: getChangeColor(data.change24h),
+      value: data.pegPrice != null ? `$${data.pegPrice.toFixed(4)}` : "\u2014",
     },
     flowMetric(data),
-    { 
-      label: "BACKING", 
-      value: data.backing != null ? getBackingLabelShort(data.backing) : "—",
-    },
-    { 
-      label: "TYPE", 
-      value: data.governance != null ? getGovernanceLabelShort(data.governance) : "—",
-    },
   ];
-
   return (
     <CardFrame
       title={`${data.name} (${data.symbol})`}
-      subtitle="Stablecoin Intelligence"
+      subtitle="Dated dossier"
       borderTopColor={treatment.borderTopColor}
       badge={treatment.badge}
       lastUpdated={data.lastUpdated}
     >
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {data.isFrozen ? (
-          <div
-            style={{
-              // satori rejects "inline-flex"; alignSelf already keeps the
-              // badge from stretching.
-              display: "flex",
-              alignItems: "center",
-              alignSelf: "flex-start",
-              marginBottom: 18,
-              borderRadius: 6,
-              border: "1px solid #d4d4d8",
-              padding: "4px 12px",
-              fontFamily: "Geist Mono",
-              fontSize: 16,
-              letterSpacing: "0",
-              textTransform: "uppercase",
-              color: "#52525b",
-            }}
-          >
-            Frozen archive
-          </div>
-        ) : null}
-        {data.variantLabel && data.variantParentSymbol ? (
-          <div
-            style={{
-              display: "flex",
-              marginBottom: 18,
-              fontFamily: "Geist Mono",
-              fontSize: 16,
-              letterSpacing: "0",
-              color: TEXT_SECONDARY,
-              textTransform: "uppercase",
-            }}
-          >
-            {data.variantLabel} of {data.variantParentSymbol}
-          </div>
-        ) : null}
-        <MetricRow metrics={primaryMetrics} valueFontSize={32} marginBottom={32} />
-
-        <MetricRow metrics={secondaryMetrics} valueFontSize={24} />
-      </div>
-
-      {data.sparklineData != null ? (
-        <Sparkline data={data.sparklineData} color={FROST_BLUE} />
-      ) : (
-        <div style={{ display: "flex", color: TEXT_SECONDARY, fontFamily: "Geist Mono", fontSize: 18 }}>
-          Price history unavailable
+      <div style={{ display: "flex", gap: 48, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", width: 400, flexShrink: 0 }}>
+          <MetricLabel>PUBLISHED SAFETY GRADE</MetricLabel>
+          <span style={{ fontFamily: "Geist Mono", fontSize: data.grade.length > 3 ? 46 : 120, fontWeight: 700, lineHeight: 1.1, color: gradeColor }}>
+            {data.grade}
+          </span>
+          <span style={{ fontSize: 22, color: TEXT_SECONDARY }}>
+            {data.safetyMethodologyVersion ? `Methodology v${data.safetyMethodologyVersion}` : "Publication unavailable"}
+          </span>
+          {data.isFrozen && <span style={{ fontSize: 20, color: TEXT_SECONDARY }}>Frozen archive</span>}
+          {data.variantLabel && data.variantParentSymbol && (
+            <span style={{ fontSize: 20, color: TEXT_SECONDARY }}>{data.variantLabel} of {data.variantParentSymbol}</span>
+          )}
         </div>
-      )}
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 24 }}>
+          <MetricRow metrics={supports} valueFontSize={34} />
+          {data.sparklineData != null ? (
+            <Sparkline data={data.sparklineData} color={FROST_BLUE} width={580} />
+          ) : (
+            <span style={{ color: TEXT_SECONDARY, fontSize: 22 }}>Price history unavailable</span>
+          )}
+        </div>
+      </div>
     </CardFrame>
   );
 }

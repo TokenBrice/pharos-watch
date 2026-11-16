@@ -10,6 +10,7 @@ import {
 } from "@shared/lib/og-route-cards";
 import { OG_ROUTE_GLYPHS } from "@shared/lib/og-route-glyphs";
 import { PharosMark } from "./shared";
+import { SOCIAL_PREVIEW_WIDTH, SOCIAL_PREVIEW_HEIGHT } from "@shared/lib/social-preview";
 
 /** One live figure with its generation stamp; every string is preformatted by the loader. */
 export interface RouteCardLiveData {
@@ -140,8 +141,8 @@ export function RouteCard(props: RouteCardProps) {
   return (
     <div
       style={{
-        width: L.width,
-        height: L.height,
+        width: SOCIAL_PREVIEW_WIDTH,
+        height: SOCIAL_PREVIEW_HEIGHT,
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -163,7 +164,7 @@ export function RouteCard(props: RouteCardProps) {
           <span style={{ marginTop: 8, fontSize: L.contextSize, color: C.textSecondary }}>
             {props.data.context}
           </span>
-          {props.data.support.length > 0 && <SupportRow items={props.data.support} />}
+          {props.data.support.length > 0 && <SupportRow items={props.data.support.slice(0, 2)} />}
           {props.data.visual && <Visual visual={props.data.visual} />}
         </div>
       ) : (
@@ -181,11 +182,13 @@ export function RouteCard(props: RouteCardProps) {
 
       <span
         style={{
-          position: "absolute",
-          left: L.paddingX,
-          bottom: L.footerBottom - 6,
+          marginTop: "auto",
+          paddingTop: 18,
+          paddingBottom: 24,
+          flexShrink: 0,
           fontFamily: "Geist Mono",
           fontSize: L.footerSize,
+          maxWidth: CONTENT_WIDTH,
           color: C.textSecondary,
         }}
       >

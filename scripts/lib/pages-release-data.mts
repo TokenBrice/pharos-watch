@@ -10,6 +10,16 @@ export const PAGES_RELEASE_DATA_PATHS = [
   "src/lib/datasets/public-dataset-current.ts",
   "src/generated/stablecoin-detail-snapshots",
 ] as const;
+
+/** Server-only outputs rebuilt from candidate code after public input replay. */
+export const PAGES_RELEASE_DERIVED_DATA_PATHS = [
+  "src/generated/social-preview-images.json",
+  "scripts/maintenance/state/social-preview-images.json",
+] as const;
+export const PAGES_RELEASE_BUILD_ID_EXCLUSIONS = [
+  ...PAGES_RELEASE_DATA_PATHS,
+  ...PAGES_RELEASE_DERIVED_DATA_PATHS,
+] as const;
 export const PAGES_RELEASE_DATA_ARCHIVE = "pages-release-data.tar.zst";
 const REPOSITORY = "TokenBrice/pharos-watch";
 const DATASET_ALIAS_START = "# BEGIN GENERATED PUBLIC DATASET ALIASES";

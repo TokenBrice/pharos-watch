@@ -7,7 +7,6 @@ interface SlugPageMetadata {
   title: string;
   description: string;
   href: string;
-  ogImage?: string;
 }
 
 interface StaticSlugRouteConfig<TParamKey extends string, TPage> {
@@ -18,7 +17,6 @@ interface StaticSlugRouteConfig<TParamKey extends string, TPage> {
   metadata?: (page: TPage, slug: string) => Metadata;
   missingMetadata?: Metadata;
   missingTitle?: string;
-  ogImage?: string;
   render: (page: TPage, slug: string) => ReactNode;
 }
 
@@ -30,7 +28,6 @@ export function createStaticSlugRoute<TParamKey extends string, TPage>({
   metadata,
   missingMetadata,
   missingTitle,
-  ogImage,
   render,
 }: StaticSlugRouteConfig<TParamKey, TPage>) {
   return {
@@ -49,7 +46,6 @@ export function createStaticSlugRoute<TParamKey extends string, TPage>({
         title: slugPage.title,
         description: slugPage.description,
         canonical: slugPage.href,
-        ogImage: slugPage.ogImage ?? ogImage,
       });
     },
     async Page({ params }: { params: Promise<Record<TParamKey, string>> }) {

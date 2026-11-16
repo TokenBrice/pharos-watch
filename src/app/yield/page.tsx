@@ -3,13 +3,11 @@ import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { YieldContentLoadingState } from "@/app/yield/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import type { FaqItem } from "@/lib/faq";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 
 const desc =
   "Compare stablecoin yields by APY, safety grade, source risk, and benchmark spread. The Pharos Yield Score asks one question: is this APY paying enough for the risk you take?";
@@ -70,7 +68,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Yields: Live APY Ranked by Risk",
     description: desc,
-    ogImage: buildLiveRouteOgImageUrl("yield"),
   },
   loadClient: () => import("@/components/yield/yield-client").then((m) => ({ default: m.YieldClient })),
   loading: <YieldContentLoadingState />,
@@ -83,7 +80,7 @@ const route = createClientFeaturePage({
       docsPath: "/docs/yield-intelligence/",
     },
     header: "instrument",
-    headerActions: <ShareButton ogPath={API_PATHS.ogPage("yield")} />,
+    headerActions: <ShareButton />,
     leadParagraphs: [
       "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
       "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (safety score 50+, warnings hidden); widen the Risk tolerance slider to see everything.",

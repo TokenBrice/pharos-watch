@@ -27,7 +27,7 @@ import {
   parseMechanismCaptureSummary,
   resolveCaptureBody,
 } from "../lib/mechanism-measurement/capture-summary";
-import type { R2MeasurementsClient } from "../lib/r2-measurements-client";
+import type { R2ObjectClient } from "../lib/r2-object-client";
 
 const DEFAULT_OUT_DIR = "shared/data/safety-score-v9/mechanism-measurements";
 const FROZEN_LEGACY_V1_PATH =
@@ -261,7 +261,7 @@ export type ProtocolApiArchiveResult =
 
 export async function readProtocolApiArtifact(
   path: string,
-  r2Client?: R2MeasurementsClient,
+  r2Client?: R2ObjectClient,
   rootDir: string = process.cwd(),
 ): Promise<ProtocolApiArchiveResult> {
   const absolutePath = resolve(rootDir, path);

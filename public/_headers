@@ -116,6 +116,10 @@
   ! Cache-Control
   Cache-Control: public, max-age=86400
 
+/og/v2/*.png
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
 /critical-css-loader.js
   ! Cache-Control
   Cache-Control: public, max-age=604800

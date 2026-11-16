@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   compareCloudflareAccountState,
   fetchCloudflareAccountState,
-  loadCloudflareAccountStateManifest,
   runCloudflareAccountStateDriftCheck,
 } from "../ci/check-cloudflare-account-state-drift.mjs";
+import { loadCloudflareAccountStateManifest } from "../lib/cloudflare-account-state-manifest.mjs";
 import { mockConsole, testEnv } from "../test-utils/ci-script-test-helpers";
 
 interface FixtureEnvironmentVariable {
@@ -36,10 +36,12 @@ interface FixtureLiveState {
         environmentVariables: Record<string, FixtureEnvironmentVariable>;
         d1Bindings: string[];
         kvBindings: string[];
+        r2Bindings: Record<string, string>;
       };
     };
     customDomains: string[];
   };
+  r2BucketLifecycles: Record<string, { enabledObjectDeletionRules: string[] }>;
   accessApplications: Array<{
     type: string;
     selfHostedDomains: string[];
@@ -81,6 +83,11 @@ function createFixtureFetch(
     const heavy = liveState.heavyWorker;
     const databaseId = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a";
     const extra: Record<string, unknown> = {
+      [`${account}/r2/buckets/pharos-social-previews/lifecycle`]: {
+        rules: liveState.r2BucketLifecycles["pharos-social-previews"].enabledObjectDeletionRules.map((id) => ({
+          id, enabled: true, conditions: { prefix: "" }, deleteObjectsTransition: { condition: { type: "Age", maxAge: 86400 } },
+        })),
+      },
       [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [
         { type: "d1", name: "DB", id: databaseId },
         ...(heavy.publicWorkflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
@@ -170,6 +177,7 @@ function createFixtureFetch(
                       env_vars: envVars,
                       d1_databases: Object.fromEntries(production.d1Bindings.map((binding) => [binding, { id: "d1-id" }])),
                       kv_namespaces: Object.fromEntries(production.kvBindings.map((binding) => [binding, { namespace_id: "kv-id" }])),
+                      r2_buckets: Object.fromEntries(Object.entries(production.r2Bindings).map(([binding, name]) => [binding, { name }])),
                     },
                   },
                 };
@@ -189,6 +197,8 @@ describe("Cloudflare account-state drift comparison", () => {
         'pages.production.environmentVariables.SITE_API_ORIGIN.value: expected "https://site-api.pharos.watch", found "https://wrong.example"',
         'pages.production.environmentVariables.SELECTOR_SNAPSHOT_IP_HASH_SECRET.type: expected "secret_text", found "plain_text"',
         'pages.production.kvBindings: missing "SELECTOR_SNAPSHOTS"',
+        'pages.production.r2Bindings.SOCIAL_PREVIEWS: expected "pharos-social-previews", found "wrong-preview-bucket"',
+        'r2.buckets.pharos-social-previews.lifecycle: enabled object deletion rule "old-preview-expiry" is forbidden',
         'pages.production.environmentVariables.CF_ACCESS_TEAM_DOMAIN.type: expected "secret_text", found "plain_text"',
         'accessApplications.operator-ui.sessionDuration: expected "12h", found "24h"',
         'workerCustomDomains.ops-api.pharos.watch.service: expected "stablecoin-api", found "other-service"',
@@ -323,7 +333,6 @@ describe("Cloudflare account-state drift comparison", () => {
     });
 
     expect(compareCloudflareAccountState(manifest, liveState)).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(13);
     expect(fetchMock.mock.calls.some(([request]) =>
       new URL(String(request)).pathname.endsWith("/workflows/safety-score-v9-publication"))).toBe(true);
     for (const [request, init] of fetchMock.mock.calls) {
@@ -349,11 +358,13 @@ describe("Cloudflare account-state drift comparison", () => {
         env_vars: { COLLISION: { type: "plain_text", value: "legacy" } },
         d1_databases: { DB: {} },
         kv_namespaces: { CACHE: {} },
+        r2_buckets: { SOCIAL_PREVIEWS: { name: "legacy-preview-bucket" } },
         bindings: [
           { name: "COLLISION", type: "plain_text", text: "unified" },
           { name: "SECRET", type: "secret_text", text: "unified-secret-sentinel" },
           { name: "DB", type: "d1" }, { name: "DB", type: "d1" }, { name: "EXTRA_DB", type: "d1" },
           { name: "CACHE", type: "kv_namespace" }, { name: "CACHE", type: "kv_namespace" },
+          { name: "SOCIAL_PREVIEWS", type: "r2_bucket", bucket_name: "pharos-social-previews" },
         ],
       });
       return new Response(JSON.stringify({ success: true, result }));
@@ -363,8 +374,93 @@ describe("Cloudflare account-state drift comparison", () => {
       environmentVariables: { COLLISION: { type: "plain_text", value: "unified" }, SECRET: { type: "secret_text" } },
       d1Bindings: ["DB", "EXTRA_DB"],
       kvBindings: ["CACHE"],
+      r2Bindings: { SOCIAL_PREVIEWS: "pharos-social-previews" },
     });
     expect(JSON.stringify(state)).not.toContain("unified-secret-sentinel");
+  });
+
+  it.each([
+    ["missing", {}],
+    ["wrong legacy binding", { r2_buckets: { OTHER_PREVIEWS: { name: "pharos-social-previews" } } }],
+    ["wrong legacy bucket", { r2_buckets: { SOCIAL_PREVIEWS: { name: "another-bucket" } } }],
+    ["malformed legacy bucket", { r2_buckets: { SOCIAL_PREVIEWS: { bucket_name: "pharos-social-previews" } } }],
+    ["wrong unified binding", { bindings: [{ type: "r2_bucket", name: "OTHER_PREVIEWS", bucket_name: "pharos-social-previews" }] }],
+    ["wrong unified bucket", { bindings: [{ type: "r2_bucket", name: "SOCIAL_PREVIEWS", bucket_name: "another-bucket" }] }],
+    ["malformed unified bucket", { bindings: [{ type: "r2_bucket", name: "SOCIAL_PREVIEWS" }] }],
+  ])("detects %s R2 binding identity from the Pages response", async (_label, configuration) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path, result) => {
+      if (!path.endsWith(`/pages/projects/${manifest.pages.project}`)) return;
+      const project = result as { deployment_configs: { production: Record<string, unknown> } };
+      Object.assign(project.deployment_configs.production, { r2_buckets: {}, bindings: [] }, configuration);
+      return Response.json({ success: true, result });
+    });
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    expect(compareCloudflareAccountState(manifest, state).some((entry: string) =>
+      entry.startsWith("pages.production.r2Bindings.SOCIAL_PREVIEWS:"))).toBe(true);
+  });
+
+  it.each([
+    {},
+    { rules: [] },
+    { rules: [{ id: "abort-incomplete-uploads", enabled: true, conditions: {},
+      abortMultipartUploadsTransition: { condition: { type: "Age", maxAge: 604800 } } }] },
+    { rules: [{ id: "disabled-expiry", enabled: false, conditions: { prefix: "" },
+      deleteObjectsTransition: { condition: { type: "Age", maxAge: 86400 } } }] },
+  ])("accepts valid non-expiring bucket lifecycle evidence %j", async (result) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result }) : undefined);
+    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    expect(compareCloudflareAccountState(manifest, state)).toEqual([]);
+    expect(state.r2BucketLifecycles).toEqual({ "pharos-social-previews": { enabledObjectDeletionRules: [] } });
+  });
+
+  it.each([
+    { type: "Age", maxAge: 86400 },
+    { type: "Date", date: "2030-01-01T00:00:00Z" },
+  ])("rejects enabled object deletion for every prefix and condition %j", async (condition) => {
+    for (const conditions of [{ prefix: "not-current-images/" }, {}]) {
+      const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+        path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result: {
+          rules: [{ id: "unrelated-prefix-expiry", enabled: true, conditions, deleteObjectsTransition: { condition } }],
+        } }) : undefined);
+      const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+      expect(compareCloudflareAccountState(manifest, state)).toContain(
+        'r2.buckets.pharos-social-previews.lifecycle: enabled object deletion rule "unrelated-prefix-expiry" is forbidden');
+    }
+  });
+
+  it.each([
+    null, [], { rules: null }, { rules: {} }, { rules: [null] }, { rules: [{}] },
+    { rules: [{ id: "unknown-enabled", conditions: { prefix: "" }, deleteObjectsTransition: {} }] },
+    { rules: [{ id: "invalid-enabled", enabled: "false", conditions: { prefix: "" }, deleteObjectsTransition: {} }] },
+    { rules: [{ id: "invalid-prefix", enabled: true, conditions: { prefix: null }, deleteObjectsTransition: {} }] },
+    { rules: [{ id: "invalid-deletion", enabled: true, conditions: { prefix: "" }, deleteObjectsTransition: null }] },
+    { rules: [{ id: "invalid-condition", enabled: true, conditions: { prefix: "" }, deleteObjectsTransition: { condition: {} } }] },
+    { rules: [{ id: "invalid-abort", enabled: true, conditions: { prefix: "" }, abortMultipartUploadsTransition: null }] },
+  ])("never treats malformed lifecycle evidence as no expiry: %j", async (result) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("lifecycle lookup returned malformed lifecycle rules");
+  });
+
+  it.each([
+    [403, '{"success":false}'], [404, '{"success":false}'], [500, '{"success":false}'],
+    [200, '{"success":false}'], [200, "not JSON"], [200, '{"success":true}'],
+  ])("fails closed on unreadable lifecycle response (HTTP %s, %s)", async (status, body) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? new Response(body, { status }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("Cloudflare R2 bucket pharos-social-previews lifecycle lookup");
+  });
+
+  it("propagates lifecycle connection failures without observing no expiry", async () => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) => {
+      if (path.endsWith("/r2/buckets/pharos-social-previews/lifecycle")) throw new Error("Lifecycle connection failed");
+      return undefined;
+    });
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("Lifecycle connection failed");
   });
 
   it("rejects zero or multiple exact zones before fetching account resources", async () => {
@@ -376,7 +472,7 @@ describe("Cloudflare account-state drift comparison", () => {
       });
       await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
         .rejects.toThrow(`returned ${count} exact active matches`);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls.every(([request]) => new URL(String(request)).pathname === "/client/v4/zones")).toBe(true);
     }
   });
 

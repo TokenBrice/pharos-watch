@@ -8,7 +8,6 @@ import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 import { RemovedStablecoinsSection } from "./removed-stablecoins-section";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
   ACTIVE_STABLECOIN_COUNT,
@@ -73,7 +72,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Coverage Matrix: Stablecoin Feature Coverage",
     description: coverageDescription,
-    ogImage: `${SITE_URL}/og-coverage.png`,
   },
   loadClient: () => import("./client").then((m) => ({ default: m.default })),
   loading: <Skeleton className="h-[560px] w-full rounded-xl" />,

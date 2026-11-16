@@ -153,6 +153,13 @@ jobs:
         if: ${{ vars.INDEXNOW_ENABLED == 'true' }}
         continue-on-error: true
         run: curl -fsS --max-time 30 -o "${RUNNER_TEMP}/previous-sitemap.xml" https://pharos.watch/sitemap.xml
+      - name: Publish immutable preview objects before Pages activation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID: ${{ secrets.R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID }}
+          R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY }}
+        run: npm run publish:social-previews -- --out-dir out --execute
       - name: Deploy Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

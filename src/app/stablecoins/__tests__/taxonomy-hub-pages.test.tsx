@@ -26,7 +26,7 @@ describe("stablecoin taxonomy hub pages", () => {
     await expect(metadata(page.slug)).resolves.toMatchObject({
       title: page.title,
       alternates: { canonical: page.href },
-      openGraph: { images: [{ url: expect.stringContaining("/og-stablecoins.png") }] },
+      openGraph: { images: [expect.objectContaining({ url: expect.stringMatching(/^\/og\/v2\//) })] },
     });
     await expect(metadata("missing")).resolves.toEqual({
       title: missingTitle,

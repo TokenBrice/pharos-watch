@@ -10,7 +10,7 @@ import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/regist
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
-import { buildPageMetadata, composeDescription, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildPageMetadata, composeDescription, getPageSocialPreview, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { formatIsoTimestamp } from "@shared/lib/format";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -96,7 +96,7 @@ function renderDigestDetail(digest: DigestContentEntry) {
             buildArticleJsonLd({
               headline: `${digest.title} (${formatted})`,
               description: buildDigestMetadataDescription(digest, formatted),
-              image: [`${SITE_URL}/og-editorial-digest.png`],
+              image: [`${SITE_URL}${getPageSocialPreview(`/digest/${digest.date}/`).url}`],
               datePublished: formatIsoTimestamp(digest.generatedAt),
               dateModified: formatIsoTimestamp(digest.generatedAt),
               mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
@@ -219,7 +219,6 @@ const route = createStaticSlugRoute({
       title: `${title}${dateSuffix}`,
       description: buildDigestMetadataDescription(digest, formatted),
       canonical: `/digest/${digest.date}/`,
-      ogImage: "/og-editorial-digest.png",
       ogType: "article",
       publishedTime: formatIsoTimestamp(digest.generatedAt),
       robots: isDigestIndexable(digest) ? undefined : { index: false, follow: true },
