@@ -1969,9 +1969,9 @@
     "recordedAt": "2026-11-16",
     "peakMcap": 8656926,
     "epitaph": "Retired with Algofi's lending markets",
-    "obituary": "Algofi announced its protocol sunset on July 10, 2023, explicitly including the V1 lending market that issued STBL. The wind-down plan called for lower collateral factors to encourage repayment and withdrawal-only interfaces. STBL was the original overcollateralized Algorand dollar, distinct from the V2 token STBL2; this date records the retirement announcement, not the end of every outstanding loan.",
-    "sourceUrl": "https://x.com/algofiorg/status/1678536751969718272",
-    "sourceLabel": "Algofi: protocol wind-down announcement",
+    "obituary": "On July 10, 2023, Algofi announced that it would sunset its platform and move it to withdrawal-only mode; STBL was minted against collateral in Algofi's V1 lending market. STBL was the original overcollateralized Algorand dollar, distinct from the V2 token STBL2; this date records the retirement announcement, not the end of every outstanding loan.",
+    "sourceUrl": "https://web.archive.org/web/20230710233631/https://blog.algofi.org/algofi-community-update-3cc989962d57",
+    "sourceLabel": "Algofi community update (archived): platform sunset",
     "contracts": [
       {
         "chain": "algorand",
@@ -1993,8 +1993,8 @@
     "peakMcap": 10056241,
     "epitaph": "DAO dissolved to launch Loop",
     "obituary": "Moneta DAO voted to dissolve and launch Loop, with the vote closing on March 17, 2024. The protocol's official documentation confirms that the decision sunset DeFi Franc and redirected development to Loop. DCHF had been a Swiss franc stablecoin borrowed against ETH and WBTC collateral.",
-    "sourceUrl": "https://docs.defifranc.com/",
-    "sourceLabel": "DeFi Franc Docs: DAO-voted sunset",
+    "sourceUrl": "https://web.archive.org/web/20251217123834/https://docs.defifranc.com/",
+    "sourceLabel": "DeFi Franc docs (archived): DAO-voted sunset",
     "contracts": [
       {
         "chain": "ethereum",

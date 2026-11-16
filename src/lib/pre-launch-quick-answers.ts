@@ -58,7 +58,7 @@ function buildLaunchedQuickAnswers(coin: QuickAnswerCoin, issuer: string | null,
     ...(issuer ? [{ question: `Who issues ${coin.symbol}?`, answer: issuer }] : []),
     {
       question: `Is ${coin.symbol} live yet?`,
-      answer: `Yes, ${coin.symbol} has been live${since ? ` since ${since}` : ""}. Pharos does not track it yet.${reason ? ` ${reason}` : ""} Its price, supply, liquidity and Safety Score are unavailable on Pharos, not zero, until both a price and a supply source can be verified.`,
+      answer: `Yes, ${coin.symbol} has been live${since ? ` since ${since}` : ""}. Pharos does not track it yet.${reason ? ` ${reason}` : ""} Its price, supply, liquidity and Safety Score are unavailable on Pharos, not zero, until it passes the active-admission checks.`,
     },
     ...(chains.length > 0
       ? [{ question: `Which chains does ${coin.symbol} use?`, answer: `The registry records ${coin.symbol} deployments on ${chains.join(", ")}.` }]
