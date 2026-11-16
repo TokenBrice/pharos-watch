@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SiteSessionRequiredError } from "@/lib/api";
 import { CoinNotices } from "@/components/coin-notice";
 import { isSiteSessionCheckEnabled } from "@/lib/feature-flags";
+import { loadSiteSessionScript, preloadSiteSessionScript } from "@/lib/site-session-script";
 import {
   isSiteSessionPaused,
   registerSiteSessionRecovery,
@@ -48,17 +49,11 @@ function SessionCheck() {
   useEffect(() => {
     const host = container.current;
     if (!host) return;
-    // External scripts belong in client effects, never shared layout JSX.
-    let script = document.getElementById("pharos-turnstile") as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.id = "pharos-turnstile";
-      script.async = true;
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      document.head.appendChild(script);
-    }
+    preloadSiteSessionScript();
     let cancelWidget: (() => void) | undefined;
     const unregister = registerSiteSessionChallenge((signal) => new Promise<string>((resolve, reject) => {
+      // A valid session never invokes the challenge until renewal is due.
+      const script = loadSiteSessionScript();
       let widget: string | undefined;
       const cleanup = () => {
         script.removeEventListener("load", render);
@@ -88,7 +83,7 @@ function SessionCheck() {
       };
       cancelWidget = fail;
       signal.addEventListener("abort", fail, { once: true });
-      if (signal.aborted) fail();
+      if (signal.aborted || script.dataset.failed) fail();
       else if (window.turnstile) render();
       else {
         script.addEventListener("load", render, { once: true });

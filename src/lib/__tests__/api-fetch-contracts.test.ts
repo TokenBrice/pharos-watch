@@ -772,27 +772,29 @@ describe("browser session gate", () => {
     expect(session.hasValidSiteSession()).toBe(true);
   });
 
-  it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skewSec) => {
+  it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skew) => {
     const { api, session, storage } = await setup();
-    let release!: (token: string) => void;
-    const challenge = vi.fn(() => new Promise<string>((resolve) => { release = resolve; }));
-    session.registerSiteSessionChallenge(challenge);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+    const mark = vi.spyOn(performance, "mark");
+    let send!: (token: string) => void;
+    const solve = vi.fn(() => new Promise<string>((done) => { send = done; }));
+    session.registerSiteSessionChallenge(solve);
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
       url === "/_site-data/session" ? new Response(null, {
-        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200 + skewSec) },
+        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200 + skew) },
       }) : jsonResponse({ ok: true }));
     const reads = [api.apiFetch("/api/stablecoins"), api.apiFetch("/api/daily-digest")];
     await Promise.resolve();
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(challenge).toHaveBeenCalledOnce();
-    release("single-use-token");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(solve).toHaveBeenCalledOnce();
+    send("single-use-token");
     await expect(Promise.all(reads)).resolves.toEqual([{ ok: true }, { ok: true }]);
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(fetchSpy.mock.calls[0]).toEqual(["/_site-data/session", expect.objectContaining({
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch.mock.calls[0]).toEqual(["/_site-data/session", expect.objectContaining({
       method: "POST", credentials: "same-origin", body: '{"token":"single-use-token"}',
     })]);
     expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
     expect(session.getSiteSessionState()).toBe("ready");
+    expect(mark.mock.calls.map(([name]) => name)).toEqual(["pharos-session-token", "pharos-session-ready"]);
     expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 43200, 0);
   });
 
