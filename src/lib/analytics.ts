@@ -58,6 +58,11 @@ type EventMap = {
   portfolio_cleared: { coin_count: number };
   portfolio_preset_loaded: { preset: string };
   theme_toggled: { theme: string };
+  social_share: {
+    action: "copy_link" | "copy_image" | "download_png" | "dated_scorecard";
+    outcome: "success" | "error";
+    surface: "stablecoin" | "safety-scores" | "route";
+  };
   fresh_data_ready: {
     surface: "home-hero" | "detail-summary";
     value: number;

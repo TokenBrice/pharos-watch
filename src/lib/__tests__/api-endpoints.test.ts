@@ -208,6 +208,11 @@ describe("api endpoint registry", () => {
       adminRequired: false,
       routeDependencies: [],
     });
+    expect(API_PATHS.ogScorecard("safety-scores")).toBe("/api/og/v2/scorecard/safety-scores");
+    expect(API_PATHS.ogScorecard("coin/with space")).toBe("/api/og/v2/scorecard/coin%2Fwith%20space");
+    expect(findDynamicEndpointDescriptor(API_PATHS.ogScorecard("usdt-tether"))).toMatchObject({
+      key: "og-image", methods: ["GET"], publicApiAccess: "exempt", siteDataAccess: "denied",
+    });
     expect(getDynamicEndpointDescriptorByKey("api-key-rotate")).toMatchObject({
       methods: ["POST"],
       adminRequired: true,

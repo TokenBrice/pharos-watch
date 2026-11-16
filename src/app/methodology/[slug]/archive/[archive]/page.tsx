@@ -24,7 +24,6 @@ export async function generateMetadata({ params }: ArchivePageProps) {
     title: `${history.changelog.markdownTitle}: ${archive} Archive`,
     description: `Full ${archive} release bodies and provenance for ${history.changelog.feedLabel}. Historical rules, not necessarily the current methodology.`,
     canonical: history.path,
-    ogImage: "/og-editorial-methodology.png",
   });
 }
 

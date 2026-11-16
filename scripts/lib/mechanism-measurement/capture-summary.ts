@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { z } from "zod";
-import { createR2MeasurementsClient, type R2MeasurementsClient } from "../r2-measurements-client";
+import { createR2MeasurementsClient } from "../r2-measurements-client";
+import type { R2ObjectClient } from "../r2-object-client";
 import { ShockCoverageEvidenceV1Schema, type ShockCoverageEvidenceV1 } from "./shock-schema";
 
 export const MECHANISM_MEASUREMENT_ROOT = "shared/data/safety-score-v9/mechanism-measurements";
@@ -35,7 +36,7 @@ const DEFAULT_CAPTURE_CACHE_DIR = "agents/.cache/measurements";
 export interface ResolveCaptureBodyOptions {
   cacheDir?: string;
   missingCaptureLabel?: string;
-  r2Client?: R2MeasurementsClient;
+  r2Client?: R2ObjectClient;
   rootDir?: string;
 }
 

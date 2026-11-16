@@ -6,6 +6,12 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShareButton } from "@/components/share-button";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { trackEvent } from "@/lib/analytics";
+import { getSiteSessionGate } from "@/lib/site-session-gate";
+import { SITE_SESSION_HINT_HEADER } from "@shared/lib/site-session-constants";
+
+vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+vi.mock("@/lib/site-session-gate", () => ({ SITE_SESSION_CHECK_ENABLED: true, getSiteSessionGate: vi.fn() }));
 
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -16,17 +22,28 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/lib/api", () => ({
-  API_BASE: "https://api.example.test",
-}));
-
 describe("ShareButton", () => {
   const createObjectURL = vi.fn(() => "blob:pharos-png");
   const revokeObjectURL = vi.fn();
+  const originalLocation = window.location.href;
+  class TestClipboardItem {
+    constructor(readonly data: Record<string, Promise<Blob>>) {}
+  }
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.mocked(trackEvent).mockClear();
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "");
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", "true");
+    vi.mocked(getSiteSessionGate).mockReset();
     vi.useFakeTimers();
+    vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL }));
+    vi.stubGlobal("ClipboardItem", TestClipboardItem);
+    const image = document.createElement("meta");
+    image.setAttribute("property", "og:image");
+    image.content = `https://pharos.watch/og/v2/${"d".repeat(64)}.png`;
+    image.dataset.shareTest = "true";
+    document.head.append(image);
     clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   });
 
@@ -34,8 +51,11 @@ describe("ShareButton", () => {
     clickSpy.mockRestore();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     createObjectURL.mockClear();
     revokeObjectURL.mockClear();
+    document.head.querySelectorAll("[data-share-test]").forEach((element) => element.remove());
+    window.history.replaceState(null, "", originalLocation);
   });
 
   it("downloads the OG image and defers object URL revocation", async () => {
@@ -43,25 +63,20 @@ describe("ShareButton", () => {
     const response = new Response();
     vi.spyOn(response, "blob").mockResolvedValue(blob);
     const fetchMock = mockFetch([{
-      match: "/api/og/stablecoin/usdc",
+      match: "/og/v2/",
       outcomes: [{ response }],
     }], { requireMatch: true });
 
-    render(<ShareButton ogPath="/api/og/stablecoin/usdc" />);
+    render(<ShareButton />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
-      vi.stubGlobal("URL", {
-        ...URL,
-        createObjectURL,
-        revokeObjectURL,
-      });
       await Promise.resolve();
       await Promise.resolve();
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/api/og/stablecoin/usdc",
+      `/og/v2/${"d".repeat(64)}.png`,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(createObjectURL).toHaveBeenCalledWith(blob);
@@ -77,20 +92,22 @@ describe("ShareButton", () => {
 
   it.each(["Download PNG", "Copy as image"])("keeps %s loading past prior link feedback", async (action) => {
     const response = Promise.withResolvers<Response>();
+    const write = vi.fn(async (items: TestClipboardItem[]) => {
+      await items[0]!.data["image/png"];
+    });
     vi.stubGlobal("navigator", { clipboard: {
-      writeText: vi.fn().mockResolvedValue(undefined), write: vi.fn().mockResolvedValue(undefined),
+      writeText: vi.fn().mockResolvedValue(undefined), write,
     } });
-    vi.stubGlobal("ClipboardItem", class {});
-    mockFetch([{ match: "/api/og/stablecoin/usdc", respond: () => response.promise }], { requireMatch: true });
-    render(<ShareButton ogPath="/api/og/stablecoin/usdc" />);
+    mockFetch([{ match: "/og/v2/", respond: () => response.promise }], { requireMatch: true });
+    render(<ShareButton />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     });
     expect(screen.getByRole("button", { name: "Copied!" })).toHaveProperty("disabled", false);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: action }));
+      if (action === "Copy as image") expect(write).toHaveBeenCalledOnce();
     });
-    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
     expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", true);
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", true);
@@ -101,6 +118,234 @@ describe("ShareButton", () => {
     expect(screen.getByRole("button", { name: completedLabel })).toHaveProperty("disabled", false);
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", false);
+  });
+
+  it.each(["clean", "private-state", "missing"])("strips private query and fragment state from shared links; canonical=%s", async (canonicalKind) => {
+    window.history.replaceState(null, "", "/stablecoin/usdc-circle/?holdings=private&answers=secret#private-state");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    if (canonicalKind !== "missing") {
+      const canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      canonical.href = `https://pharos.watch/stablecoin/usdc-circle/${canonicalKind === "private-state" ? "?answers=secret#private-state" : ""}`;
+      canonical.dataset.shareTest = "true";
+      document.head.append(canonical);
+    }
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Copy link" })); });
+    expect(writeText).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle/");
+  });
+
+  it("creates and copies a retained edition using only stablecoin identity", async () => {
+    const id = "a".repeat(64);
+    const url = `https://pharos.watch/share/scorecard/${id}/`;
+    const imageUrl = `https://pharos.watch/share/scorecard/${id}.png`;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const fetchMock = mockFetch([{ match: "/_site-data/scorecard", body: { url, imageUrl } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(fetchMock.getHistory()).toMatchObject([{ method: "POST", body: JSON.stringify({ stablecoinId: "usdc-circle" }) }]);
+    expect(writeText).toHaveBeenCalledWith(url);
+    expect(trackEvent).toHaveBeenCalledWith("social_share", { action: "dated_scorecard", outcome: "success", surface: "stablecoin" });
+    expect(screen.getByRole("link", { name: "Open dated scorecard" }).getAttribute("href")).toBe(url);
+    expect(screen.getByRole("link", { name: "Download dated PNG" }).getAttribute("href")).toBe(imageUrl);
+  });
+
+  it("leaves session acquisition disabled when the browser rollout flag is off", async () => {
+    vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", "false");
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+    const id = "a".repeat(64);
+    const url = `https://pharos.watch/share/scorecard/${id}/`;
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    const fetchMock = mockFetch([{ match: "/_site-data/scorecard", body: { url, imageUrl: `${url.slice(0, -1)}.png` } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(getSiteSessionGate).not.toHaveBeenCalled();
+  });
+
+  it("waits for the shared browser session before creating a dated edition", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+    const ready = Promise.withResolvers<void>();
+    const session = {
+      hasValidSiteSession: vi.fn(() => false),
+      invalidateSiteSession: vi.fn(),
+      waitForSiteSession: vi.fn(() => ready.promise),
+    };
+    vi.mocked(getSiteSessionGate).mockReturnValue(session);
+    const id = "a".repeat(64);
+    const url = `https://pharos.watch/share/scorecard/${id}/`;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const fetchMock = mockFetch([{ match: "/_site-data/scorecard", body: { url, imageUrl: `${url.slice(0, -1)}.png` } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(session.waitForSiteSession).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Share" })).toHaveProperty("disabled", true);
+    await act(async () => { ready.resolve(); });
+    expect(fetchMock.getHistory()).toMatchObject([{ method: "POST", body: JSON.stringify({ stablecoinId: "usdc-circle" }) }]);
+    expect(fetchMock).toHaveBeenCalledWith("/_site-data/scorecard", expect.objectContaining({ credentials: "same-origin" }));
+    expect(writeText).toHaveBeenCalledWith(url);
+  });
+
+  it.each(["cancel", "unmount", "supersede"])("suppresses creation after %s while awaiting the shared session", async (action) => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+    const ready = Promise.withResolvers<void>();
+    vi.mocked(getSiteSessionGate).mockReturnValue({
+      hasValidSiteSession: () => false, invalidateSiteSession: vi.fn(), waitForSiteSession: () => ready.promise,
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const fetchMock = mockFetch([], { requireMatch: true });
+    const view = render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    await act(async () => {
+      if (action === "unmount") view.unmount();
+      else {
+        fireEvent.click(screen.getByRole("button", { name: "Cancel sharing" }));
+        if (action === "supersede") fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      }
+    });
+    await act(async () => { ready.resolve(); });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open dated scorecard" })).toBeNull();
+    expect(writeText).toHaveBeenCalledTimes(action === "supersede" ? 1 : 0);
+  });
+
+  it.each(["success", "required", "unauthorized"])("renews only session-hinted rejections, outcome=%s", async (outcome) => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
+    const session = {
+      hasValidSiteSession: vi.fn(() => true), invalidateSiteSession: vi.fn(), waitForSiteSession: vi.fn(async () => {}),
+    };
+    vi.mocked(getSiteSessionGate).mockReturnValue(session);
+    const id = "a".repeat(64);
+    const url = `https://pharos.watch/share/scorecard/${id}/`;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const fetchMock = mockFetch([{
+      match: "/_site-data/scorecard",
+      outcomes: [
+        { response: new Response("{}", { status: 401, headers: outcome === "unauthorized" ? {} : { [SITE_SESSION_HINT_HEADER]: "required" } }) },
+        { response: outcome === "success"
+          ? new Response(JSON.stringify({ url, imageUrl: `${url.slice(0, -1)}.png` }))
+          : new Response("{}", { status: 401, headers: { [SITE_SESSION_HINT_HEADER]: "required" } }) },
+      ],
+    }], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(fetchMock).toHaveBeenCalledTimes(outcome === "unauthorized" ? 1 : 2);
+    expect(session.waitForSiteSession).toHaveBeenCalledTimes(outcome === "unauthorized" ? 0 : 1);
+    expect(session.invalidateSiteSession).toHaveBeenCalledTimes(outcome === "unauthorized" ? 0 : outcome === "success" ? 1 : 2);
+    expect(writeText).toHaveBeenCalledTimes(outcome === "success" ? 1 : 0);
+    if (outcome !== "success") expect(screen.getByRole("alert").textContent).toContain("Could not create a dated scorecard");
+  });
+
+  it("retains manual-copy and PNG access when the clipboard is blocked", async () => {
+    const id = "b".repeat(64);
+    const url = `https://pharos.watch/share/scorecard/${id}/`;
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) } });
+    mockFetch([{ match: "/_site-data/scorecard", body: { url, imageUrl: `https://pharos.watch/share/scorecard/${id}.png` } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="safety-scores" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(screen.getByRole("textbox", { name: "Share link" })).toHaveProperty("value", url);
+    expect(screen.getByRole("alert").textContent).toContain("Scorecard created");
+    expect(screen.getByRole("link", { name: "Download dated PNG" })).toBeTruthy();
+  });
+
+  it.each(["cancel", "unmount"])("suppresses late dated-share results after %s", async (action) => {
+    const pending = Promise.withResolvers<Response>();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    mockFetch([{ match: "/_site-data/scorecard", respond: () => pending.promise }], { requireMatch: true });
+    const view = render(<ShareButton stablecoinId="safety-scores" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    await act(async () => {
+      if (action === "unmount") view.unmount();
+      else fireEvent.click(screen.getByRole("button", { name: "Cancel sharing" }));
+    });
+    await act(async () => { pending.resolve(new Response(JSON.stringify({ url: `https://pharos.watch/share/scorecard/${"c".repeat(64)}/`, imageUrl: `https://pharos.watch/share/scorecard/${"c".repeat(64)}.png` }))); });
+    expect(trackEvent).not.toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: "Open dated scorecard" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("reports upstream admission failures instead of copying a live fallback", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    mockFetch([{ match: "/_site-data/scorecard", status: 503, body: { error: "held" } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="safety-scores" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("Could not create a dated scorecard");
+    expect(trackEvent).toHaveBeenCalledWith("social_share", { action: "dated_scorecard", outcome: "error", surface: "safety-scores" });
+    expect(screen.queryByRole("link", { name: "Open dated scorecard" })).toBeNull();
+  });
+
+  it.each(["missing", "external", "legacy"])("rejects %s preview metadata without fetching a numeric fallback", async (kind) => {
+    const image = document.head.querySelector<HTMLMetaElement>('meta[property="og:image"]')!;
+    if (kind === "missing") image.remove();
+    else image.content = kind === "external" ? "https://example.com/og/v2/image.png" : "https://pharos.watch/og-stablecoin.png";
+    const fetchMock = mockFetch([], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Download PNG" })); });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("Could not download the PNG");
+  });
+
+  it.each(["cancel", "unmount", "supersede"])("ignores a pending clipboard rejection after %s", async (action) => {
+    const pendingWrite = Promise.withResolvers<void>();
+    const writingStarted = Promise.withResolvers<void>();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: {
+      writeText,
+      write: vi.fn(async (items: TestClipboardItem[]) => {
+        await items[0]!.data["image/png"];
+        writingStarted.resolve();
+        await pendingWrite.promise;
+      }),
+    } });
+    mockFetch([{ match: "/og/v2/", respond: () => new Response("png") }], { requireMatch: true });
+    const view = render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy as image" }));
+      await writingStarted.promise;
+    });
+    await act(async () => {
+      if (action === "unmount") view.unmount();
+      else {
+        fireEvent.click(screen.getByRole("button", { name: "Cancel sharing" }));
+        if (action === "supersede") fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      }
+    });
+    await act(async () => { pendingWrite.reject(new Error("Late clipboard rejection")); });
+    expect(screen.queryByRole("alert")).toBeNull();
+    if (action === "supersede") {
+      expect(screen.getByRole("button", { name: "Copied!" })).toHaveProperty("disabled", false);
+      expect(trackEvent).toHaveBeenCalledExactlyOnceWith("social_share", { action: "copy_link", outcome: "success", surface: "stablecoin" });
+    } else expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(["external", "mismatched-image", "query", "credentials"])("refuses %s retained URLs before exposing or copying them", async (fault) => {
+    const id = "f".repeat(64);
+    let url = `https://pharos.watch/share/scorecard/${id}/`;
+    let imageUrl = `https://pharos.watch/share/scorecard/${id}.png`;
+    if (fault === "external") url = url.replace("pharos.watch", "example.com");
+    if (fault === "mismatched-image") imageUrl = imageUrl.replace(id, "e".repeat(64));
+    if (fault === "query") url += "?private=value";
+    if (fault === "credentials") imageUrl = imageUrl.replace("https://", "https://user@");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    mockFetch([{ match: "/_site-data/scorecard", body: { url, imageUrl } }], { requireMatch: true });
+    render(<ShareButton stablecoinId="usdc-circle" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Share dated scorecard" })); });
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: "Open dated scorecard" })).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain("Could not create a dated scorecard");
   });
 
 });

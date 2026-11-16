@@ -351,6 +351,7 @@ export const RETENTION_NON_APPEND_TABLES: Readonly<Record<string, string>> = {
   safety_score_public_fragments: "manifest-owned immutable fragments; cascade retirement from safety_score_public_manifests",
   safety_score_site_manifests: "generation/version/representation-owned derived website response; writer retires replaced selection with in-flight read grace",
   safety_score_site_fragments: "manifest-owned immutable website fragments; cascade retirement from safety_score_site_manifests",
+  social_scorecard_daily_quota: "mutable per-day IP/global creation-attempt counters; shared/lib/pages-storage.ts owns bounded request-path pruning",
   status_discrepancy_state: "current discrepancy counters",
   status_state: "current status hysteresis state",
   stress_signal_history: "replaceable daily DEWS materialization",

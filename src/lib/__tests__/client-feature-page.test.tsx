@@ -36,7 +36,7 @@ describe("createClientFeaturePage", () => {
 
   it("passes server-owned client props into the dynamic island", () => {
     const route = createClientFeaturePage<{ initialPreview: string | null }>({
-      path: "/test-feature/",
+      path: "/flows/",
       metadata: { title: "Test Feature", description: "Test feature description" },
       loadClient: async () => ({ default: () => null }),
       clientProps: { initialPreview: "dated-preview" },
@@ -51,7 +51,7 @@ describe("createClientFeaturePage", () => {
 
   it("keeps no-prop callers rendering an empty prop bag", () => {
     const route = createClientFeaturePage({
-      path: "/test-feature/",
+      path: "/flows/",
       metadata: { title: "Test Feature", description: "Test feature description" },
       loadClient: async () => ({ default: () => null }),
       loading: <div>Loading</div>,

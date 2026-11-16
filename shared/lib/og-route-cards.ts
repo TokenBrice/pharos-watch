@@ -170,7 +170,7 @@ export function ogRouteCardHost(path: string): string {
  */
 export const OG_ROUTE_CARD_LAYOUT = {
   width: 1200,
-  height: 628,
+  height: 630,
   paddingX: 64,
   accentBarHeight: 4,
   headerTop: 40,

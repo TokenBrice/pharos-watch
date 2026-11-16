@@ -18,7 +18,7 @@ const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy: Analytics, API & Telegram Data",
   description:
-    "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
+    "Pharos privacy policy for analytics, feedback, API access, Telegram subscriptions, browser-local portfolios, Picker snapshots and public dated scorecards.",
   canonical: "/privacy/",
 });
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: November 15, 2026"]}
+      leadParagraphs={["Last updated: November 16, 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
@@ -72,6 +72,10 @@ export default function PrivacyPage() {
             with their original dates and are ignored after 72 hours or an incompatible data-version change.
             Older detail entries are removed as newer coins are used. Clearing browser site data removes these copies.
           </p>
+          <p>
+            Share-menu analytics record only the action, success or failure, and broad page type.
+            They do not include copied content, coin identifiers, snapshot identifiers, or share URLs.
+          </p>
         </section>
 
         <section className="space-y-2">
@@ -92,6 +96,18 @@ export default function PrivacyPage() {
             so identical answers against an identical dataset produce the same ID. Anyone with the link can view the
             frozen artifact. Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and
             expire after 90 days if never opened; the first successful read extends retention to five years.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="pharos-section-title">Public dated scorecards</h2>
+          <p>
+            Choosing Share dated scorecard saves a fixed image and its public Safety Score publication
+            in permanent Cloudflare R2 storage. Anyone with its link can view it. These artifacts contain public coin or
+            market data, methodology and source dates, not your holdings, Picker answers, account,
+            wallet, IP address or browser fingerprint. They are retained without an automatic expiry
+            so old shared links remain usable. Daily creation limits keep separately stored keyed IP-hash
+            counters in D1; these are not part of the public artifact. Older counters are pruned on later creation requests.
           </p>
         </section>
 

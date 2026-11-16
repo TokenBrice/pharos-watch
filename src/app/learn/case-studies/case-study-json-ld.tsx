@@ -4,6 +4,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { getPageSocialPreview } from "@/lib/page-metadata";
 import { JsonLdScript } from "@/components/json-ld-script";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import type { CaseStudy } from "@shared/types/editorial-content";
@@ -36,7 +37,7 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
     description: study.metaDescription,
     url,
     mainEntityOfPage: url,
-    image: `${SITE_ORIGIN}/og-editorial-learn.png`,
+    image: `${SITE_ORIGIN}${getPageSocialPreview(url).url}`,
     inLanguage: "en",
     keywords: [
       study.eyebrow,
@@ -94,7 +95,7 @@ function buildCaseStudyListJsonLd(
           "@id": url,
           name: study.title,
           description: study.subtitle,
-          image: `${SITE_ORIGIN}/og-editorial-learn.png`,
+          image: `${SITE_ORIGIN}${getPageSocialPreview(url).url}`,
         },
       };
     }),

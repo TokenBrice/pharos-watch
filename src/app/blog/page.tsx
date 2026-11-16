@@ -16,7 +16,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Research & Product Updates",
   description: BLOG_DESCRIPTION,
   canonical: "/blog/",
-  ogImage: "/og-blog.png",
 });
 
 export default function BlogHubPage() {

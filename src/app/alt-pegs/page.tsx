@@ -2,9 +2,7 @@ import Link from "next/link";
 import { ShareButton } from "@/components/share-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import { PEG_HUB_PAGES } from "@/lib/peg-taxonomy";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 
 const description =
   "Non-USD stablecoin market structure across euro, gold, CPI-linked, and other alternative peg cohorts tracked by Pharos.";
@@ -14,7 +12,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Non-USD Pegs: Stablecoins Beyond the Dollar",
     description,
-    ogImage: buildLiveRouteOgImageUrl("alt-pegs"),
   },
   loadClient: () => import("./client").then((mod) => ({ default: mod.AltPegsClient })),
   loading: (
@@ -28,7 +25,7 @@ const route = createClientFeaturePage({
     breadcrumbName: "Non-USD Pegs",
     title: "Non-USD Pegs",
     header: "instrument",
-    headerActions: <ShareButton ogPath={API_PATHS.ogPage("alt-pegs")} />,
+    headerActions: <ShareButton />,
     leadParagraphs: [
       "See where stablecoin growth is broadening beyond the dollar.",
     ],

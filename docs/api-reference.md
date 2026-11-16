@@ -235,7 +235,7 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 | archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot (elapsed UTC days), snapshots-index                                                                                                                                                                                                                                                                                                                                                                    |
 | immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                                                                 |
 | public-status      | `public, max-age=60`                                           | public-status-history                                                                                                                                                                                                                                                                                                                                                                               |
-| og-image           | `public, max-age=900, s-maxage=900`                            | dynamic Open Graph images, including rendered safety-score degraded states that remain explicitly marked with degraded metadata headers                                                                                                                                                                                                                                                              |
+| og-image           | `public, max-age=900, s-maxage=900`                            | ceiling for dynamic numerical/compatibility OG images; admitted source runway can shorten it, and degraded Safety states remain explicitly marked in metadata headers |
 | reserve-live | `public, s-maxage=3600, max-age=300` | stablecoin-reserves live mode with healthy, certain sync |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback | `public, s-maxage=300, max-age=60` | stablecoin-reserves curated/template/unavailable modes and live mode with non-`ok` or uncertain sync |
@@ -244,6 +244,8 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
 
 Live `/api/og/page/:slug` responses additionally bound browser and shared TTLs to the whole seconds remaining before the figure's admission expiry, reassessed after PNG rendering, capped at 900 seconds with no one-minute minimum. An expired figure becomes the figure-free timeless card (`X-Og-Reason: stale-cache`), using the 300-second `custom` profile. A positive subsecond remainder yields a zero-second live TTL. These origin bounds do not prove an account-wide browser-cache floor respects them; production acceptance must inspect uncached and cached OG headers.
+
+Other numerical OG families also bound displayed evidence by its own source clock, rechecking freshness after rendering rather than granting a new 900-second observation window. Safety images re-admit the accepted identity and health; native depeg quotes retain their separate evidence budget. `/api/og/v2/scorecard/:id` has an at-most-60-second ceiling bounded by observation/publication runway. These Worker PNG policies are distinct from canonical immutable `/og/v2/` assets and retained Pages scorecard reads: retained PNGs are immutable, while retained HTML revalidates using a body-derived ETag ([OG Images](./og-images.md#dated-scorecards)).
 
 ---
 
@@ -923,12 +925,16 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ### `GET /api/og/*`
 
-Dynamic social-card PNGs, omitted from OpenAPI. Unavailable inputs stay unavailable; labels keep source time; freshness headers name budget and generation ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)). `/api/og/page/:slug` serves a stamped route figure, or the route's timeless card (`200`, `X-Og-Reason`) when its source is missing, stale, held or failing.
+PNG image APIs, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage. Legacy and `/api/og/v2/*` Worker paths remain available for explicitly dated numerical images ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).
 
-- **Path:** `/api/og/*`
+Displayed observations are admitted against their own source clocks and budgets; expiry during rendering fails closed, and cache lifetime cannot outlive the earliest displayed source. Safety imagery rechecks the exact accepted publication identity and health after rendering. Chain cards label observed subtotals and withhold incomplete shares; Safety overviews account separately for unavailable members. `/api/og/page/:slug` may return its figure-free timeless card with `X-Og-Reason` when live evidence is unavailable.
+
+`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.
+
+- **Path:** `/api/og/*` and `/api/og/v2/*`
 - **Parameters:** Route-specific path segments select the supported image family.
 - **Success response schema:** PNG image bytes; not represented by a JSON component schema.
-- **Policy:** API-key authentication exempt; route-specific response caching.
+- **Policy:** API-key authentication exempt; unavailable on the site-data lane; source-bounded response caching.
 
 ### `GET /api/report-cards/v9`
 

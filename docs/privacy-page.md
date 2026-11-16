@@ -20,6 +20,8 @@ Search events originate from manual input, not initial URL/history. They send pa
 
 Web Vitals retain document-lifetime meaning and current allowed path attribution; client navigation is not a new document measurement. Callback/debounce implementation belongs to the source, not this policy.
 
+Share-menu `social_share` events carry only bounded action, success/error outcome and broad surface. They contain no share URL, copied content, coin ID or snapshot ID, and cancelled/superseded attempts do not emit completion.
+
 ### Browser-local preferences
 
 There is no website account. Optional supporter-claim wallet interaction is the only wallet connection. Browser state includes shortcuts, portfolio, shared watchlist, Picker dismissal/session recovery, table/show-work/motion/history/Timeline preferences. Feature owners define exact keys: [Homepage](./homepage.md), [Portfolio](./portfolio-page.md#persistence-and-sharing), [Picker](./screener-page.md#browser-storage). Portfolio/shortcut state is not sent to API; shared snapshots are separate server-side storage.
@@ -41,6 +43,10 @@ These records have no automatic expiry. Deactivation alone leaves wallet-bearing
 Share artifacts are server-recomputed from allowlisted answers/canonical data. They include normalized input/output, methodology/version binding, dataset hash/provenance, no account/wallet/raw IP/fingerprint. Anyone with URL can read them.
 
 Unread artifacts expire after 90 days. Successful read attempts five-year retention extension; failure does not fail read and later reads can retry. Stored extension metadata prevents sliding expiry. Keyed IP-derived quotas exist in short-lived limiter/D1, not artifact body. [Snapshot sharing](./screener-page.md#snapshot-sharing), shared schema and Pages Function own payload/verification/quota details; do not copy a second matrix here.
+
+### Public dated scorecards
+
+Explicit dated-scorecard sharing persists only public assessment metadata and its hash-bound PNG as a sealed object in the dedicated `pharos-social-previews` R2 bucket, not the Picker's KV namespace. Artifacts have no automatic expiry, remain independent of dataset pruning and are readable by anyone with the URL. Holdings, Picker inputs, wallets, raw IP addresses and browser fingerprints never enter the artifact. Durable D1 UTC-day attempt counters use separately keyed IP hashes and a global bucket; they are distinct from the public record and pruned in bounded request-path cleanup. The [OG sharing contract](./og-images.md#dated-scorecards) owns quotas, transport, validation and retention; [deployment prerequisites](./deployment-process.md#social-preview-storage-prerequisites) distinguish required account setup from live acceptance.
 
 ### Telegram alerts and Mini App
 

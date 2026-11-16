@@ -136,7 +136,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current TELEGRAM_BOT_TOKEN binding is authoritative; this timestamp only limits duplicate warning logs.",
   },
   {
-    sourcePath: "worker/src/api/og.tsx",
+    sourcePath: "worker/src/lib/og-render.ts",
     stateNames: ["wasmInitialization"],
     owner: "OG-image WASM initialization",
     kind: "coordination",

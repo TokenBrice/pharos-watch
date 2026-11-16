@@ -7,7 +7,6 @@ import { ComplianceStatusDistributionBars } from "@/app/compliance/status-distri
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const COMPLIANCE_SUMMARY = buildComplianceSummary();
 const complianceDescription = `${COMPLIANCE_SUMMARY.micaAuthorized} of ${COMPLIANCE_SUMMARY.micaAssessed} active stablecoins assessed for MiCA hold MiCA authorization. GENIUS Act status for ${COMPLIANCE_SUMMARY.geniusTracked} coins (effective ${GENIUS_REGIME_STATE.effectiveDate}), from public registers.`;
@@ -145,7 +144,6 @@ const route = createClientFeaturePage({
   metadata: {
     title: `Active MiCA-Authorized Stablecoins (${COMPLIANCE_SUMMARY.micaAuthorized}) & GENIUS Act Tracker`,
     description: complianceDescription,
-    ogImage: `${SITE_URL}/og-card.png`,
   },
   loadClient: () => import("./client").then((m) => ({ default: m.ComplianceClient })),
   loading: <ComplianceContentLoadingState />,

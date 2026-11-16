@@ -53,7 +53,10 @@
    ],
    "requiredKvBindings": [
     "SELECTOR_SNAPSHOTS"
-   ]
+   ],
+   "requiredR2Bindings": {
+    "SOCIAL_PREVIEWS": "pharos-social-previews"
+   }
   },
   "customDomains": [
    "ops.pharos.watch",

@@ -302,6 +302,20 @@ describe("pages middleware markdown negotiation", () => {
     expect(body).toMatch(/<script nonce="[^"]+">1<\/script>/);
   });
 
+  it("passes an HTML 304 revalidation through without a body or a new nonce", async () => {
+    const next = vi.fn(async () => new Response(null, { status: 304, headers: { "Content-Type": "text/html", ETag: '"page"' } }));
+    const res = await onRequest({
+      request: new Request("https://pharos.watch/share/scorecard/x/", { headers: { "If-None-Match": '"page"' } }),
+      env: { ASSETS: { fetch: makeAssetsFetch({}) } },
+      next,
+    });
+
+    expect(res.status).toBe(304);
+    expect(res.headers.get("ETag")).toBe('"page"');
+    expect(res.headers.get("Content-Security-Policy")).toBeNull();
+    expect(await res.text()).toBe("");
+  });
+
   it("allows Telegram bridge script and framing only on the Mini App route", async () => {
     const req = new Request("https://pharos.watch/pharoswatchbot/app/");
     const next = vi.fn(async () =>

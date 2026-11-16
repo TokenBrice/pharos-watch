@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { CAPTURE_SUMMARY_SUFFIX, captureLookupKeys, parseMechanismCaptureSummary, verifyCaptureBody } from "../../scripts/lib/mechanism-measurement/capture-summary";
 import { createR2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
-import type { R2MeasurementsClient } from "../../scripts/lib/r2-measurements-client";
+import type { R2ObjectClient } from "../../scripts/lib/r2-object-client";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { parseIsoDateOrUtcInstantSec } from "@shared/types/date-primitives";
@@ -168,7 +168,7 @@ const DEFAULT_CAPTURE_CACHE_DIR = resolve(process.cwd(), "agents/.cache/measurem
 export interface SafetyScoreV9ReplayInputResolverOptions {
   cacheDir?: string;
   summaryRoot?: string;
-  r2Client?: R2MeasurementsClient;
+  r2Client?: R2ObjectClient;
 }
 
 interface CaptureReference {

@@ -66,12 +66,14 @@ export function criticalCssScopeForLane(env: Partial<NodeJS.ProcessEnv>): "gates
 // Post-refresh outputs (including ignored public/llms.txt) are regenerated
 // from the overlaid release data, so they are restored with the inputs: the
 // lane must leave no edits behind in the candidate checkout.
+// Directory outputs own their full pre-replay membership, including files a
+// generator adds before failing; never snapshot a literal wildcard filename.
 const RESTORED_PATHS = [...new Set<string>([
   ...PAGES_RELEASE_DATA_PATHS,
   ...(GENERATED_ARTIFACT_REGISTRY as { buildLifecycle: string; outputPaths: string[] }[])
     .filter((artifact) => artifact.buildLifecycle === "post-refresh")
     .flatMap((artifact) => artifact.outputPaths),
-])];
+])].filter((path, _index, paths) => !paths.some((parent) => parent !== path && path.startsWith(`${parent}/`)));
 
 /**
  * A committed `/depeg/<slug>/` 301 is a reviewed archive retirement: the
