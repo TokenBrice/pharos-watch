@@ -1731,7 +1731,6 @@
         "functions/_site-data/scorecard.ts",
         "functions/og/v2/**",
         "functions/lib/social-scorecard.ts",
-        "public/og/v2/**",
         "scripts/lib/social-preview*",
         "scripts/maintenance/build-og-evergreen.*",
         "scripts/maintenance/publish-social-previews.ts",
@@ -1760,7 +1759,7 @@
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "reading": [
         {
-          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "worker/src/lib/og-templates/scorecard.tsx", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "public/og/v2/**", "scripts/lib/social-preview*", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
+          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "worker/src/lib/og-templates/scorecard.tsx", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "scripts/lib/social-preview*", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
           "local": [
             { "path": "docs/og-images.md", "anchor": "1-route-cards" },
             { "path": "docs/og-images.md", "anchor": "dated-scorecards" },

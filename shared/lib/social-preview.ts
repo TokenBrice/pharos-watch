@@ -1,7 +1,6 @@
-/** Canonical dimensions and identity for evergreen and retained social previews. */
+/** Canonical dimensions for evergreen and retained social previews. */
 export const SOCIAL_PREVIEW_WIDTH = 1200;
 export const SOCIAL_PREVIEW_HEIGHT = 630;
-export const SOCIAL_PREVIEW_REVISION = "2";
 
 export interface SocialPreviewImage {
   title: string;

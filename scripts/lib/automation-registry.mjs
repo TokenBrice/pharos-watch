@@ -18,14 +18,6 @@ const CEMETERY_ATLAS_TOP_LEVEL_LOGO_PATHS = existsSync(CEMETERY_ATLAS_SIGNATURE_
     .filter((path) => !path.startsWith("public/logos/cemetery/"))
   : [];
 
-// The generator records its complete local import/data closure. Importer edits
-// select a rebuild before newly introduced leaf inputs join this exact list.
-const SOCIAL_PREVIEW_SIGNATURE_URL = new URL("../maintenance/state/social-preview-images.json", import.meta.url);
-const SOCIAL_PREVIEW_SOURCE_PATHS = existsSync(SOCIAL_PREVIEW_SIGNATURE_URL)
-  ? Object.keys(JSON.parse(readFileSync(SOCIAL_PREVIEW_SIGNATURE_URL, "utf8")).sources)
-    .filter((path) => !path.startsWith("node_modules/"))
-  : [];
-
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
@@ -791,34 +783,62 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "social-preview-images",
     requiredBrowsers: [],
     buildLifecycle: "post-refresh",
+    // Outputs are ignored and bootstrap validates on every job, so PRs need no separate drift check.
+    ciDriftCheck: false,
     checkCommand: "node --import tsx scripts/maintenance/build-og-evergreen.ts --check",
+    // Bootstrap writes only the route map; the post-refresh Pages build renders the PNGs.
+    bootstrapCommand: "node --import tsx scripts/maintenance/build-og-evergreen.ts --map-only",
     command: "node --import tsx scripts/maintenance/build-og-evergreen.ts",
     bootstrap: true,
     dependsOn: ["stablecoin-catalog", "stablecoin-client-registry", "stablecoin-client-projections", "case-study-client-index", "changelog-registry", "og-cemetery"],
-    outputPaths: ["public/og/v2", "src/generated/social-preview-images.json", "scripts/maintenance/state/social-preview-images.json"],
+    // PNGs render into the ignored public/og/v2/ build product (like out/): bootstrap never
+    // writes it, so it is neither transported nor snapshotted by replay restoration.
+    outputPaths: ["src/generated/social-preview-images.json"],
     phase: 4,
     script: "scripts/maintenance/build-og-evergreen.ts",
+    // The catalog's import roots plus the files the build reads. Generated
+    // inputs arrive through dependsOn; scripts stay exact for Pages deploy impact.
     sourcePaths: [
-      ...SOCIAL_PREVIEW_SOURCE_PATHS,
-      "scripts/lib/social-preview-*.ts",
-      "scripts/lib/og-static-runner.mts",
-      "scripts/lib/og-image-checks.mts",
-      "scripts/lib/og-svg.mts",
-      "scripts/lib/og-resvg-render.mts",
-      "shared/lib/social-preview.ts",
-      "src/lib/public-route-inventory.ts",
-      "src/app/**/page.tsx",
       "data/depeg-events/*.json",
       "data/digests.json",
-      "public/pharos-mark-on-dark.svg",
       "data/logos.json",
-      "public/logos/*",
-      "src/assets/fonts/originals/Geist-Bold.ttf",
-      "src/assets/fonts/originals/Newsreader-Variable.ttf",
-      "src/assets/fonts/originals/Geist-Regular.ttf",
-      "src/assets/fonts/originals/GeistMono-Regular.ttf",
-      "package.json",
       "package-lock.json",
+      "public/blog/*-cover.png",
+      "public/logos/*",
+      "public/og-cemetery.png",
+      "public/pharos-mark-on-dark.svg",
+      "scripts/lib/atomic-artifact-write.mts",
+      "scripts/lib/og-resvg-render.mts",
+      "scripts/lib/og-svg.mts",
+      "scripts/lib/social-preview-build.ts",
+      "scripts/lib/social-preview-catalog.ts",
+      "scripts/lib/social-preview-render.ts",
+      "shared/data/methodology-changelogs/**",
+      "shared/lib/chains/**",
+      "shared/lib/classification.ts",
+      "shared/lib/classification/**",
+      "shared/lib/depeg-audit.ts",
+      "shared/lib/methodology-versions/**",
+      "shared/lib/public-doc*",
+      "shared/lib/social-preview*.ts",
+      "shared/lib/stable-json.ts",
+      "shared/lib/stablecoins/**",
+      "shared/lib/urls.ts",
+      "shared/lib/yield-auto-lending.ts",
+      "shared/types/**",
+      "src/app/**/page.tsx",
+      "src/assets/fonts/originals/*.ttf",
+      "src/data/blog/**",
+      "src/lib/case-study-outcomes.ts",
+      "src/lib/changelog-history.ts",
+      "src/lib/compare-links.ts",
+      "src/lib/depeg-event-*.ts",
+      "src/lib/digest-registry.ts",
+      "src/lib/mechanism-explainers/**",
+      "src/lib/peg-landing.ts",
+      "src/lib/public-route-inventory.ts",
+      "src/lib/route-capabilities.ts",
+      "src/lib/stablecoin-taxonomy*.ts",
     ],
   }),
   generatedArtifact({
