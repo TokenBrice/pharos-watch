@@ -90,7 +90,7 @@ export const SOCIAL_CARD_BUDGETS = {
   hub: { headline: 40, deck: 90 },
   dossier: { headline: 60, subline: 48, hook: 64, chip: 18, chips: 2 },
   versus: { symbol: 12, detail: 32, hook: 48 },
-  record: { title: 90, dek: 120, dateline: 32, fact: 40, facts: 3, pill: 16 },
+  record: { title: 90, dek: 150, dateline: 32, fact: 40, facts: 3, pill: 16 },
   copy: { title: 70, description: 200, alt: 250 },
 } as const;
 const B = SOCIAL_CARD_BUDGETS;
@@ -796,7 +796,9 @@ function mechanismCard(archetype: (typeof MECHANISM_ARCHETYPE_VALUES)[number]): 
   }
   return record(getMechanismExplainerPath(archetype), {
     label: "Mechanism explained", accent: "ink", title: mustFit(`mechanism title for ${archetype}`, B.record.title, content.headline),
-    facts: [fit(B.record.fact, sentenceCase(MECHANISM_ARCHETYPE_LABELS[archetype])), tickers.join(" · ")].filter((fact): fact is string => !!fact),
+    // The archetype label is a fact only when the headline does not already say it.
+    facts: [content.headline.toLowerCase().includes(MECHANISM_ARCHETYPE_LABELS[archetype].toLowerCase()) ? undefined : fit(B.record.fact, sentenceCase(MECHANISM_ARCHETYPE_LABELS[archetype])), tickers.join(" · ")]
+      .filter((fact): fact is string => !!fact),
   }, { title: content.headline, description: clip(B.copy.description, content.subtitle, firstSentence(content.subtitle)) });
 }
 
