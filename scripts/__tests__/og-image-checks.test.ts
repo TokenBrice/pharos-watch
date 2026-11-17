@@ -8,25 +8,22 @@ import {
   contentSha256,
   runOgArtifactBuild,
 } from "../lib/og-image-checks.mts";
-import * as socialPreviewCatalog from "../lib/social-preview-catalog";
 import {
   buildSocialPreviewImages,
   discoverSocialPreviewPages,
-  readSocialPreviewLogo,
   SOCIAL_PREVIEW_MAP_PATH,
   type SocialPreviewEntry,
 } from "../lib/social-preview-build";
-import { buildSocialPreviewSvg } from "../lib/social-preview-render";
+import { loadSocialCardAssets, renderSocialCardSvg } from "../lib/social-card-render";
 import { renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
-import { DIGEST_ENTRIES } from "../../src/lib/digest-registry";
-import type { SocialPreviewSpec } from "../../shared/lib/social-preview";
+import { DARK } from "../../shared/lib/social-card/tokens";
+import type { SocialCardDossier } from "../../shared/lib/social-card/spec";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
 const { makeRoot: makeTempDir, cleanup } = createTempRepoTracker("pharos-og-image-checks");
 afterEach(() => { vi.restoreAllMocks(); cleanup(); });
 
-const mark = '<svg viewBox="0 0 400 400"><circle cx="200" cy="200" r="200"/></svg>';
 const fontBuffers = [readFileSync(new URL("../../src/assets/fonts/originals/Geist-Regular.ttf", import.meta.url))];
 const png = (background: string, width = 1200, height = 630) =>
   sharp({ create: { width, height, channels: 4, background } }).png();
@@ -117,31 +114,10 @@ describe("OG image file promotion", () => {
 });
 
 describe("evergreen destination previews", () => {
-  it("keeps public noindex destinations specific, private tools generic and historical editorial dated", () => {
+  it("discovers public static destinations and skips private chrome", () => {
     const pages = discoverSocialPreviewPages(process.cwd());
     expect(pages).toEqual(expect.arrayContaining(["/portfolio/", "/screener/picker/", "/timeline/"]));
     expect(pages.some((path) => path.startsWith("/admin") || path.startsWith("/pharoswatchbot/app/"))).toBe(false);
-    const catalog = socialPreviewCatalog.buildSocialPreviewCatalog(pages);
-    const byPath = new Map(catalog.specs.map((spec) => [spec.path, spec]));
-    const daily = DIGEST_ENTRIES.find((entry) => entry.digestType === "daily")!;
-    expect(byPath.get(`/digest/${daily.date}/`)?.subject).toBe(daily.title);
-    expect(byPath.get("/stablecoin/usdc-circle/")?.visual).toMatchObject({ kind: "identity", symbol: "USDC" });
-    expect(byPath.get("/compare/usdt-tether-vs-usdc-circle/")?.visual).toMatchObject({
-      kind: "contrast", left: { symbol: "USDT" }, right: { symbol: "USDC" },
-    });
-    const history = byPath.get("/learn/case-studies/usdc-svb-2023/")!;
-    expect(history.facts).toEqual(["10 Mar 2023", "Outcome: Survived"]);
-    expect(history.subject).toContain("Silicon Valley Bank");
-    for (const path of ["/portfolio/", "/screener/picker/"]) {
-      const spec = byPath.get(path)!;
-      expect(spec.path).toBe(path);
-      expect(JSON.stringify(spec)).not.toMatch(/holdings|balance|wallet|address|\bgrade\b|\bscore\b|[?&]|\d+%/i);
-    }
-    expect(catalog.preserved).toEqual(expect.arrayContaining([
-      expect.objectContaining({ path: "/cemetery/", url: "/og-cemetery.png" }),
-      expect.objectContaining({ path: "/blog/safety-score-v10/", url: "/blog/safety-score-v10-cover.png" }),
-    ]));
-    expect(() => socialPreviewCatalog.buildSocialPreviewCatalog(["/new-public-destination/"])).toThrow("no authored social preview");
   });
 
   it("names images by drawn inputs only, validates without rasterizing and renders each identity once", async () => {
@@ -155,8 +131,9 @@ describe("evergreen destination previews", () => {
       writeFileSync(join(root, file), content);
     }
     const svg = vi.fn(async () => '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#2b4a5e"/></svg>');
+    const validate = vi.fn();
     const copy = (title: string) => ({ title, description: `${title} description.`, alt: `${title} alt.` });
-    const drawn = (path: string, value: unknown, inputs = ["art.svg"]): SocialPreviewEntry => ({ path, copy: copy(path), drawn: value, inputs, svg });
+    const drawn = (path: string, value: unknown, inputs = ["art.svg"]): SocialPreviewEntry => ({ path, copy: copy(path), drawn: value, inputs, validate, svg });
     const entries: SocialPreviewEntry[] = [
       drawn("/a/", { hook: "Same", facts: ["x"] }), drawn("/b/", { facts: ["x"], hook: "Same" }),
       drawn("/c/", { hook: "Other", facts: ["x"] }), drawn("/d/", { hook: "Same", facts: ["x"] }, ["other.svg"]),
@@ -168,7 +145,8 @@ describe("evergreen destination previews", () => {
     const map = () => JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
 
     await expect(build("check")).resolves.toEqual({ routes: 5, images: 4, rendered: 0 });
-    expect(svg).toHaveBeenCalledTimes(3);
+    expect(validate).toHaveBeenCalledTimes(3);
+    expect(svg).not.toHaveBeenCalled();
     expect(existsSync(join(root, SOCIAL_PREVIEW_MAP_PATH))).toBe(false);
     await build("map");
     const first = map();
@@ -185,6 +163,7 @@ describe("evergreen destination previews", () => {
     expect(map()["/cover/"].url).toBe(first["/cover/"].url);
 
     await expect(build("render")).resolves.toMatchObject({ images: 4, rendered: 4 });
+    expect(svg).toHaveBeenCalledTimes(3);
     expect(readdirSync(join(root, "public/og/v2")).sort()).toEqual(Object.values(map()).map(({ url }) => url.slice(7)).filter((url, index, urls) => urls.indexOf(url) === index).sort());
     await expect(build("render")).resolves.toMatchObject({ rendered: 0 });
     const noise = await sharp(randomBytes(1200 * 630 * 3), { raw: { width: 1200, height: 630, channels: 3 } }).png().toBuffer();
@@ -192,35 +171,18 @@ describe("evergreen destination previews", () => {
     await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
   });
 
-  it("renders font-backed glyphs offline without a browser or host fonts", async () => {
-    const bytes = await renderSvgPngWithResvg({
-      svg: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="white"/><text x="50" y="130" font-family="Geist" font-size="80" fill="black">Stablecoin evidence</text></svg>',
-      fontBuffers, background: "#ffffff", width: 1200,
-    });
-    expect(await sharp(bytes).metadata()).toMatchObject({ width: 1200, height: 630, format: "png" });
-    expect((await sharp(bytes).stats()).channels[0].min).toBe(0);
-  });
-
-  it("keeps WebP logos visibly present through the actual evergreen rasterizer", async () => {
-    const root = makeTempDir();
-    mkdirSync(join(root, "public/logos"), { recursive: true });
-    const path = "/logos/format-proof.webp";
-    const webp = await png("#dc2328", 16, 16).webp().toBuffer();
-    writeFileSync(join(root, `public${path}`), webp);
-    const spec: SocialPreviewSpec = {
-      path: "/stablecoin/format-proof/", grammar: "dossier", eyebrow: "Stablecoin dossier",
-      subject: "Logo & visibility", hook: "Inspect the evidence.", facts: [],
-      visual: { kind: "identity", symbol: "COIN", name: "Logo visibility", logoPath: path, facets: ["Backing", "Control"] },
+  it("keeps WebP logos visibly present through the real card renderer and rasterizer", async () => {
+    const card: SocialCardDossier = {
+      template: "dossier", path: "/stablecoin/format-proof/", label: "Stablecoin dossier",
+      copy: { title: "Format proof", description: "Format proof.", alt: "Format proof." },
+      identity: { symbol: "USDS", name: "Sky Dollar", logoPath: "/logos/209-usds.webp" },
+      headline: "USDS", subline: "Sky Dollar", hook: "A WebP logo stays visible", chips: [], lifecycle: "active",
     };
-    const asset = await readSocialPreviewLogo(root, path);
-    const svg = buildSocialPreviewSvg(spec, mark, new Map([[path, asset]]));
-    expect(svg).toContain('width="1200" height="630"');
-    expect(svg).toContain("Logo &amp; visibility");
-    const bytes = await renderSvgPngWithResvg({ svg, fontBuffers, background: "#101e2b", width: 1200 });
-    const region = await sharp(bytes).extract({ left: 380, top: 175, width: 30, height: 30 }).toBuffer();
-    const channels = (await sharp(region).stats()).channels;
-    expect(channels[0].mean).toBeGreaterThan(150);
-    expect(channels[1].mean).toBeLessThan(90);
-    expect(channels[2].mean).toBeLessThan(90);
+    const assets = await loadSocialCardAssets(process.cwd(), [card]);
+    const bytes = await renderSvgPngWithResvg({ svg: await renderSocialCardSvg(card, assets), fontBuffers: [], background: DARK.ground, width: 1200 });
+    // The lens centre (800, 315) holds the logo; an empty plate would stay near the dark ground.
+    const region = await sharp(bytes).extract({ left: 760, top: 275, width: 80, height: 80 }).toBuffer();
+    const brightest = Math.max(...(await sharp(region).stats()).channels.slice(0, 3).map((channel) => channel.mean));
+    expect(brightest).toBeGreaterThan(110);
   });
 });

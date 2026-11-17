@@ -109,7 +109,7 @@ async function readLogo(repoRoot: string, path: string, grey: boolean): Promise<
   }
 }
 
-const identitiesOf = (spec: SocialCardSpec | SocialScorecardCard): readonly SocialCardIdentity[] => {
+export const identitiesOf = (spec: SocialCardSpec | SocialScorecardCard): readonly SocialCardIdentity[] => {
   if (!("template" in spec)) return [spec.identity];
   switch (spec.template) {
     case "dossier": return [spec.identity];
