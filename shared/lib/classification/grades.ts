@@ -15,6 +15,8 @@ export interface ReportCardGradeRangeMetadata {
   glowColor: string;
   borderColor: string;
   radarColor: string;
+  /** The family's dark-theme text tone (`dark:text-*-400`) as hex, for renderers without Tailwind such as social cards. */
+  onDarkHex: string;
   sectionDescription: string;
 }
 
@@ -48,6 +50,7 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.5 0.2 145 / 0.53)",
     borderColor: "oklch(0.65 0.22 145 / 0.6)",
     radarColor: "#10b981",
+    onDarkHex: "#34d399",
     sectionDescription: "Top tier - strong across all dimensions",
   },
   B: {
@@ -64,6 +67,7 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.5 0.16 250 / 0.45)",
     borderColor: "oklch(0.6 0.18 250 / 0.55)",
     radarColor: "#3b82f6",
+    onDarkHex: "#60a5fa",
     sectionDescription: "Above average - solid fundamentals with minor gaps",
   },
   C: {
@@ -80,6 +84,7 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.55 0.18 85 / 0.45)",
     borderColor: "oklch(0.65 0.2 85 / 0.55)",
     radarColor: "#f59e0b",
+    onDarkHex: "#fbbf24",
     sectionDescription: "Middle ground - meets baseline but has weaknesses",
   },
   D: {
@@ -96,6 +101,7 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.55 0.2 55 / 0.53)",
     borderColor: "oklch(0.6 0.22 55 / 0.6)",
     radarColor: "#f97316",
+    onDarkHex: "#fb923c",
     sectionDescription: "Below average - significant risk in multiple areas",
   },
   F: {
@@ -112,6 +118,7 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.5 0.22 25 / 0.6)",
     borderColor: "oklch(0.55 0.24 25 / 0.65)",
     radarColor: "#ef4444",
+    onDarkHex: "#f87171",
     sectionDescription: "Critical - major concerns across dimensions",
   },
   NR: {
@@ -128,9 +135,13 @@ export const REPORT_CARD_GRADE_RANGE_METADATA: Record<ReportCardGradeRange, Repo
     glowColor: "oklch(0.5 0 0 / 0.35)",
     borderColor: "transparent",
     radarColor: "#71717a",
+    onDarkHex: "#a1a1aa",
     sectionDescription: "Not yet rated - insufficient data",
   },
 };
 
 export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> =
   projectDescriptors(REPORT_CARD_GRADE_RANGE_METADATA, (metadata) => metadata.radarColor);
+
+export const GRADE_ON_DARK_HEX: Record<ReportCardGradeRange, string> =
+  projectDescriptors(REPORT_CARD_GRADE_RANGE_METADATA, (metadata) => metadata.onDarkHex);
