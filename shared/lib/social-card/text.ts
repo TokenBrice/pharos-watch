@@ -76,12 +76,13 @@ const GLUED_BEFORE = /^[)\]}!?,.:;/’”…%]/;
 const GLUED_AFTER = /[([{“‘]$/;
 
 /**
- * Soft-wrap units, each keeping its trailing space. Only space breaks Satori
- * certainly allows are used, so a measured line count is never optimistic.
+ * Soft-wrap units, each keeping its trailing space. Only breaks Satori
+ * certainly allows are used (spaces, and UAX #14's break after a hyphen
+ * before a letter), so a measured line count is never optimistic.
  */
 function breakUnits(text: string): string[] {
   const units: string[] = [];
-  for (const word of text.split(/(?<= )(?=[^ ])/)) {
+  for (const word of text.split(/(?<= )(?=[^ ])|(?<=\p{L}-)(?=\p{L})/u)) {
     const previous = units[units.length - 1];
     if (previous !== undefined && (GLUED_BEFORE.test(word) || GLUED_AFTER.test(previous.trimEnd()))) units[units.length - 1] = previous + word;
     else units.push(word);
