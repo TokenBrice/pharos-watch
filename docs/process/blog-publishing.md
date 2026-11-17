@@ -28,7 +28,8 @@ The hub's native cover images declare 1200×630 intrinsic dimensions, lazy loadi
    - **Cover image (optional):** drop the file in `public/blog/` and set
      `coverImage: "/blog/<slug>-cover.png"` + `coverAlt`. Author it **1200×630**
      — it renders atop the post and the hub card in a `1200/630` frame and
-     doubles as the post's social/OG artwork through an immutable hashed copy.
+     doubles as the post's social/OG artwork through an immutable hashed copy,
+     palette re-encoded on admission (generation fails above 500 KB).
      Without a cover, generation produces a post-specific evergreen card. Review the cover file and alt text before publishing.
 3. **Test** the feed and sitemap inventory:
    ```bash

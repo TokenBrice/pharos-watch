@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
@@ -11,19 +12,14 @@ import * as socialPreviewCatalog from "../lib/social-preview-catalog";
 import {
   buildSocialPreviewImages,
   discoverSocialPreviewPages,
-  publishImmutablePng,
   readSocialPreviewLogo,
-  SOCIAL_PREVIEW_GENERATOR,
   SOCIAL_PREVIEW_MAP_PATH,
-  SOCIAL_PREVIEW_SIGNATURE_PATH,
-  socialPreviewAssetUrl,
-  verifyImmutableSocialPreview,
+  type SocialPreviewEntry,
 } from "../lib/social-preview-build";
 import { buildSocialPreviewSvg } from "../lib/social-preview-render";
-import { buildOgStaticRenderInputs, buildOgStaticSourceFingerprint } from "../lib/og-static-runner.mts";
-import { OG_RESVG_RUNTIME_SOURCE_PATHS, renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
+import { renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
 import { DIGEST_ENTRIES } from "../../src/lib/digest-registry";
-import { SOCIAL_PREVIEW_REVISION, type SocialPreviewSpec } from "../../shared/lib/social-preview";
+import type { SocialPreviewSpec } from "../../shared/lib/social-preview";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -123,9 +119,9 @@ describe("OG image file promotion", () => {
 describe("evergreen destination previews", () => {
   it("keeps public noindex destinations specific, private tools generic and historical editorial dated", () => {
     const pages = discoverSocialPreviewPages(process.cwd());
-    expect(pages.paths).toEqual(expect.arrayContaining(["/portfolio/", "/screener/picker/", "/timeline/"]));
-    expect(pages.paths.some((path) => path.startsWith("/admin") || path.startsWith("/pharoswatchbot/app/"))).toBe(false);
-    const catalog = socialPreviewCatalog.buildSocialPreviewCatalog(pages.paths);
+    expect(pages).toEqual(expect.arrayContaining(["/portfolio/", "/screener/picker/", "/timeline/"]));
+    expect(pages.some((path) => path.startsWith("/admin") || path.startsWith("/pharoswatchbot/app/"))).toBe(false);
+    const catalog = socialPreviewCatalog.buildSocialPreviewCatalog(pages);
     const byPath = new Map(catalog.specs.map((spec) => [spec.path, spec]));
     const daily = DIGEST_ENTRIES.find((entry) => entry.digestType === "daily")!;
     expect(byPath.get(`/digest/${daily.date}/`)?.subject).toBe(daily.title);
@@ -148,75 +144,52 @@ describe("evergreen destination previews", () => {
     expect(() => socialPreviewCatalog.buildSocialPreviewCatalog(["/new-public-destination/"])).toThrow("no authored social preview");
   });
 
-  it("rotates semantic URLs for copy, font/render inputs and editorial identity without query revisions", () => {
-    const spec: SocialPreviewSpec = {
-      path: "/docs/classification/", grammar: "briefing", eyebrow: "Methodology",
-      subject: "Backing & control", hook: "Read the evidence rules.", facts: [],
-      visual: { kind: "document", labels: ["Classification", "Evidence"] },
-    };
-    const svg = buildSocialPreviewSvg(spec, mark);
-    expect(svg).toContain('width="1200" height="630"');
-    expect(svg).toContain("Backing &amp; control");
-    const inputs = buildOgStaticRenderInputs({ fonts: [], width: 1200, height: 630, renderer: "resvg" });
-    const fingerprint = buildOgStaticSourceFingerprint(svg, inputs);
-    const identity = socialPreviewAssetUrl(spec, fingerprint, inputs.runtimeFingerprint);
-    const semanticHash = contentSha256(JSON.stringify({ revision: SOCIAL_PREVIEW_REVISION, spec, sourceFingerprint: fingerprint, toolchainFingerprint: inputs.runtimeFingerprint }));
-    expect(identity).toEqual({ url: `/og/v2/image-${semanticHash}.png`, semanticHash });
-    expect(socialPreviewAssetUrl(spec, fingerprint, inputs.runtimeFingerprint)).toEqual(identity);
-    for (const path of ["/", "/stablecoin/gldt-gold-token-sa/", "/blog/token-key/"]) {
-      expect(socialPreviewAssetUrl({ ...spec, path }, fingerprint, inputs.runtimeFingerprint).url).toMatch(/^\/og\/v2\/image-[a-f0-9]{64}\.png$/);
-    }
-    expect(socialPreviewAssetUrl({ ...spec, hook: "Inspect the evidence rules." }, fingerprint, inputs.runtimeFingerprint).url).not.toBe(identity.url);
-    expect(socialPreviewAssetUrl(spec, "b".repeat(64), inputs.runtimeFingerprint).url).not.toBe(identity.url);
-    expect(socialPreviewAssetUrl(spec, fingerprint, "c".repeat(64)).url).not.toBe(identity.url);
-    expect(buildOgStaticSourceFingerprint(svg, { ...inputs, height: 628 })).not.toBe(fingerprint);
-    expect(buildOgStaticSourceFingerprint(svg, { ...inputs, fonts: [{ key: "changed", family: "Geist", file: "b".repeat(64), weight: 400 }] })).not.toBe(fingerprint);
-  });
-
-  it("persists tagged full source digests and opaque authored URLs while retaining old identities", async () => {
+  it("names images by drawn inputs only, validates without rasterizing and renders each identity once", async () => {
     const root = makeTempDir();
-    const bytes = await png("#eeeeee").toBuffer(), hash = contentSha256(bytes);
-    const preserved = { path: "/blog/token-key/", url: "/blog/token-key-cover.png", alt: "Authored cover", title: "Evidence", description: "Read the evidence." };
-    const catalog = vi.spyOn(socialPreviewCatalog, "buildSocialPreviewCatalog").mockReturnValue({ specs: [], preserved: [preserved] });
-    const sources: Record<string, string | Buffer> = {
-      [SOCIAL_PREVIEW_GENERATOR]: 'import "../lib/fixture";\n',
-      "scripts/lib/fixture.ts": "export const evidence = true;\n",
-      "src/app/page.tsx": "export default function Page() { return null; }\n",
-      "public/pharos-mark-on-dark.svg": mark,
-      [`public${preserved.url}`]: bytes,
+    const cover = await png("#eeeeee").toBuffer();
+    const files: Record<string, string | Buffer> = {
+      "scripts/lib/og-resvg-render.mts": "rasterizer", "font.ttf": fontBuffers[0], "art.svg": "art", "other.svg": "other", "public/cover.png": cover,
     };
-    for (const file of [
-      "package.json", "package-lock.json", "tsconfig.json", "tsconfig.base.json", "data/depeg-events/index.json",
-      ...["Geist-Bold.ttf", "Newsreader-Variable.ttf", "Geist-Regular.ttf", "GeistMono-Regular.ttf"].map((name) => `src/assets/fonts/originals/${name}`),
-      ...OG_RESVG_RUNTIME_SOURCE_PATHS,
-    ]) sources[file] = readFileSync(join(process.cwd(), file));
-    for (const [file, content] of Object.entries(sources)) {
+    for (const [file, content] of Object.entries(files)) {
       mkdirSync(join(root, file, ".."), { recursive: true });
       writeFileSync(join(root, file), content);
     }
-    const legacyUrl = `/og/v2/authored-cover-${hash}.png`;
-    const retained = { kind: "authored", sourceFingerprint: hash, pngSha256: hash };
-    mkdirSync(join(root, "public/og/v2"), { recursive: true });
-    writeFileSync(join(root, `public${legacyUrl}`), bytes);
-    mkdirSync(join(root, SOCIAL_PREVIEW_SIGNATURE_PATH, ".."), { recursive: true });
-    writeFileSync(join(root, SOCIAL_PREVIEW_SIGNATURE_PATH), JSON.stringify({
-      generatedBy: SOCIAL_PREVIEW_GENERATOR, revision: SOCIAL_PREVIEW_REVISION, retained: { [legacyUrl]: retained },
-    }));
+    const svg = vi.fn(async () => '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#2b4a5e"/></svg>');
+    const copy = (title: string) => ({ title, description: `${title} description.`, alt: `${title} alt.` });
+    const drawn = (path: string, value: unknown, inputs = ["art.svg"]): SocialPreviewEntry => ({ path, copy: copy(path), drawn: value, inputs, svg });
+    const entries: SocialPreviewEntry[] = [
+      drawn("/a/", { hook: "Same", facts: ["x"] }), drawn("/b/", { facts: ["x"], hook: "Same" }),
+      drawn("/c/", { hook: "Other", facts: ["x"] }), drawn("/d/", { hook: "Same", facts: ["x"] }, ["other.svg"]),
+      { path: "/cover/", copy: copy("Cover"), authored: "public/cover.png" },
+    ];
+    const build = (mode: "check" | "map" | "render") => buildSocialPreviewImages({
+      repoRoot: root, mode, load: async () => ({ entries, fonts: ["font.ttf"], background: "#101e2b" }),
+    });
+    const map = () => JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_MAP_PATH), "utf8")) as Record<string, { url: string }>;
 
-    await expect(buildSocialPreviewImages({ repoRoot: root, check: false })).resolves.toEqual({ routes: 1, rendered: 0 });
-    const manifest = JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_SIGNATURE_PATH), "utf8")) as {
-      sources: Record<string, string>; cards: unknown[]; retained: Record<string, unknown>;
-    };
-    expect(manifest.sources).toEqual(Object.fromEntries(Object.entries(sources).map(([file, content]) => [file, `sha256:${contentSha256(content)}`])));
-    expect(Object.keys(manifest.sources)).toEqual(Object.keys(sources).sort());
-    const url = `/og/v2/image-${hash}.png`;
-    expect(manifest.cards).toEqual([{ kind: "authored", path: preserved.path, url, semanticHash: hash, sourceFingerprint: hash }]);
-    expect(manifest.retained).toEqual({ [legacyUrl]: retained, [url]: retained });
-    expect(JSON.parse(readFileSync(join(root, SOCIAL_PREVIEW_MAP_PATH), "utf8"))[preserved.path]).toMatchObject({ url });
-    expect(readFileSync(join(root, `public${url}`))).toEqual(bytes);
-    await expect(buildSocialPreviewImages({ repoRoot: root, check: true })).resolves.toEqual({ routes: 1, rendered: 0 });
-    catalog.mockReturnValue({ specs: [], preserved: [preserved, { ...preserved, path: "/blog/another/" }] });
-    await expect(buildSocialPreviewImages({ repoRoot: root, check: true })).rejects.toThrow("identity collision");
+    await expect(build("check")).resolves.toEqual({ routes: 5, images: 4, rendered: 0 });
+    expect(svg).toHaveBeenCalledTimes(3);
+    expect(existsSync(join(root, SOCIAL_PREVIEW_MAP_PATH))).toBe(false);
+    await build("map");
+    const first = map();
+    expect(first["/a/"]).toEqual({ ...copy("/a/"), url: expect.stringMatching(/^\/og\/v2\/image-[a-f0-9]{64}\.png$/), width: 1200, height: 630, type: "image/png" });
+    // Path, copy and key order are not identity; drawn fields and input bytes are.
+    expect(first["/b/"].url).toBe(first["/a/"].url);
+    expect(new Set([first["/a/"].url, first["/c/"].url, first["/d/"].url]).size).toBe(3);
+    const admitted = await sharp(cover).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
+    expect(first["/cover/"].url).toBe(`/og/v2/image-${contentSha256(admitted)}.png`);
+    expect(existsSync(join(root, "public/og/v2"))).toBe(false);
+    writeFileSync(join(root, "font.ttf"), readFileSync(new URL("../../src/assets/fonts/originals/GeistMono-Regular.ttf", import.meta.url)));
+    await build("map");
+    expect(map()["/a/"].url).not.toBe(first["/a/"].url);
+    expect(map()["/cover/"].url).toBe(first["/cover/"].url);
+
+    await expect(build("render")).resolves.toMatchObject({ images: 4, rendered: 4 });
+    expect(readdirSync(join(root, "public/og/v2")).sort()).toEqual(Object.values(map()).map(({ url }) => url.slice(7)).filter((url, index, urls) => urls.indexOf(url) === index).sort());
+    await expect(build("render")).resolves.toMatchObject({ rendered: 0 });
+    const noise = await sharp(randomBytes(1200 * 630 * 3), { raw: { width: 1200, height: 630, channels: 3 } }).png().toBuffer();
+    writeFileSync(join(root, "public/cover.png"), noise);
+    await expect(build("check")).rejects.toThrow("Social preview exceeds 500 KB: public/cover.png");
   });
 
   it("renders font-backed glyphs offline without a browser or host fonts", async () => {
@@ -236,43 +209,18 @@ describe("evergreen destination previews", () => {
     writeFileSync(join(root, `public${path}`), webp);
     const spec: SocialPreviewSpec = {
       path: "/stablecoin/format-proof/", grammar: "dossier", eyebrow: "Stablecoin dossier",
-      subject: "Logo visibility", hook: "Inspect the evidence.", facts: [],
+      subject: "Logo & visibility", hook: "Inspect the evidence.", facts: [],
       visual: { kind: "identity", symbol: "COIN", name: "Logo visibility", logoPath: path, facets: ["Backing", "Control"] },
     };
     const asset = await readSocialPreviewLogo(root, path);
-    const bytes = await renderSvgPngWithResvg({
-      svg: buildSocialPreviewSvg(spec, mark, new Map([[path, asset]])),
-      fontBuffers, background: "#101e2b", width: 1200,
-    });
+    const svg = buildSocialPreviewSvg(spec, mark, new Map([[path, asset]]));
+    expect(svg).toContain('width="1200" height="630"');
+    expect(svg).toContain("Logo &amp; visibility");
+    const bytes = await renderSvgPngWithResvg({ svg, fontBuffers, background: "#101e2b", width: 1200 });
     const region = await sharp(bytes).extract({ left: 380, top: 175, width: 30, height: 30 }).toBuffer();
     const channels = (await sharp(region).stats()).channels;
     expect(channels[0].mean).toBeGreaterThan(150);
     expect(channels[1].mean).toBeLessThan(90);
     expect(channels[2].mean).toBeLessThan(90);
-  });
-
-  it("cannot rebaseline an old hash URL or mutate an authored cover while publishing", async () => {
-    const first = "a".repeat(64), second = "b".repeat(64);
-    const { publicDir: root, build } = artifactFixture([
-      { file: "first.png", sourceFingerprint: first, background: "#eeeeee" },
-      { file: "second.png", sourceFingerprint: second, background: "#ffffff" },
-    ], async (entry, { stagedPath }) => { await png(entry.background).toFile(stagedPath); });
-    await build();
-    const original = readFileSync(join(root, "first.png"));
-    const changed = readFileSync(join(root, "second.png"));
-    const url = `/og/v2/immutable-${first}.png`;
-    const record = { kind: "rendered" as const, sourceFingerprint: first, pngSha256: contentSha256(original) };
-    publishImmutablePng(root, url, original, record);
-    expect(() => verifyImmutableSocialPreview(original, { ...record, sourceFingerprint: second }, url)).toThrow("source mismatch");
-    expect(() => verifyImmutableSocialPreview(changed, { sourceFingerprint: second, pngSha256: record.pngSha256 }, url)).toThrow("bytes changed");
-    expect(() => publishImmutablePng(root, url, changed, {
-      kind: "rendered", sourceFingerprint: second, pngSha256: contentSha256(changed),
-    })).toThrow("source mismatch");
-    expect(readFileSync(join(root, url.slice(1)))).toEqual(original);
-    const authored = { kind: "authored" as const, sourceFingerprint: contentSha256(original), pngSha256: contentSha256(original) };
-    publishImmutablePng(root, `/og/v2/authored-${authored.pngSha256}.png`, original, authored);
-    expect(readFileSync(join(root, `og/v2/authored-${authored.pngSha256}.png`))).toEqual(original);
-    const wrongSize = await png("#ffffff", 1200, 628).toBuffer();
-    expect(() => verifyImmutableSocialPreview(wrongSize, authored, "wrong-size")).toThrow("1200×630");
   });
 });

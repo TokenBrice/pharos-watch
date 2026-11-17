@@ -48,11 +48,19 @@ function hmac(key: Uint8Array | string, value: string): Buffer {
   return createHmac("sha256", key).update(value).digest();
 }
 
+/** AWS SigV4 (RFC 3986) encoding of one path segment or query component. */
+function encodeComponent(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/gu, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 /** AWS SigV4 URI encoding with slash preservation for an object key. */
 function encodePath(value: string): string {
-  return value.split("/").map((segment) =>
-    encodeURIComponent(segment).replace(/[!'()*]/gu, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`),
-  ).join("/");
+  return value.split("/").map(encodeComponent).join("/");
+}
+
+const XML_ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&apos;": "'" };
+function xmlText(value: string): string {
+  return value.replace(/&(?:amp|lt|gt|quot|apos);/gu, (entity) => XML_ENTITIES[entity]!);
 }
 
 function canonicalHeaderValue(value: string): string {
@@ -80,7 +88,7 @@ function requireCredential(name: string, explicit: string | undefined): string {
   return value;
 }
 
-/** Path-style SigV4 transport with no delete/list surface or redirect forwarding. */
+/** Path-style SigV4 transport with no delete surface or redirect forwarding. */
 export class SignedR2ObjectClient implements R2ObjectClient {
   private readonly fetchImpl: FetchLike;
   private readonly now: () => Date;
@@ -131,13 +139,33 @@ export class SignedR2ObjectClient implements R2ObjectClient {
     };
   }
 
-  private async request(method: "PUT" | "GET" | "HEAD", key: string, body: Uint8Array, options: R2PutOptions): Promise<Response> {
-    const normalizedKey = assertObjectKey(key);
+  /** Every key under `prefix` (ListObjectsV2), following continuation pages. */
+  async list(prefix: string): Promise<string[]> {
+    const keys: string[] = [];
+    let continuation: string | undefined;
+    do {
+      const response = await this.request("GET", null, new Uint8Array(), {}, {
+        "list-type": "2", prefix, ...(continuation === undefined ? {} : { "continuation-token": continuation }),
+      });
+      const xml = await response.text();
+      if (!response.ok) throw new Error(`R2 LIST ${prefix} returned HTTP ${response.status}`);
+      for (const match of xml.matchAll(/<Key>([^<]*)<\/Key>/gu)) keys.push(xmlText(match[1]));
+      continuation = /<IsTruncated>true<\/IsTruncated>/u.test(xml)
+        ? xmlText(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/u.exec(xml)?.[1] ?? "")
+        : undefined;
+      if (continuation === "") throw new Error(`R2 LIST ${prefix} was truncated without a continuation token`);
+    } while (continuation !== undefined);
+    return keys;
+  }
+
+  private async request(method: "PUT" | "GET" | "HEAD", key: string | null, body: Uint8Array, options: R2PutOptions, query: Record<string, string> = {}): Promise<Response> {
+    const objectPath = key === null ? "" : `/${encodePath(assertObjectKey(key))}`;
     const accessKeyId = requireCredential(this.options.accessKeyEnv, this.options.accessKeyId);
     const secretAccessKey = requireCredential(this.options.secretKeyEnv, this.options.secretAccessKey);
     const payloadHash = method === "PUT" ? createHash("sha256").update(body).digest("hex") : EMPTY_SHA256;
     const { short, full } = formatAmzDate(this.now());
-    const canonicalUri = `/${this.options.bucket}/${encodePath(normalizedKey)}`;
+    const canonicalUri = `/${this.options.bucket}${objectPath}`;
+    const canonicalQuery = Object.keys(query).sort().map((name) => `${encodeComponent(name)}=${encodeComponent(query[name]!)}`).join("&");
     const headers: Record<string, string> = {
       host: this.host,
       "x-amz-content-sha256": payloadHash,
@@ -155,7 +183,7 @@ export class SignedR2ObjectClient implements R2ObjectClient {
     }
     const signedHeaders = Object.keys(headers).sort();
     const canonicalHeaders = signedHeaders.map((name) => `${name}:${canonicalHeaderValue(headers[name]!)}\n`).join("");
-    const canonicalRequest = [method, canonicalUri, "", canonicalHeaders, signedHeaders.join(";"), payloadHash].join("\n");
+    const canonicalRequest = [method, canonicalUri, canonicalQuery, canonicalHeaders, signedHeaders.join(";"), payloadHash].join("\n");
     const scope = `${short}/${REGION}/s3/aws4_request`;
     const stringToSign = ["AWS4-HMAC-SHA256", full, scope, createHash("sha256").update(canonicalRequest).digest("hex")].join("\n");
     const dateKey = hmac(`AWS4${secretAccessKey}`, short);
@@ -163,7 +191,7 @@ export class SignedR2ObjectClient implements R2ObjectClient {
     const serviceKey = hmac(regionKey, "s3");
     const signingKey = hmac(serviceKey, "aws4_request");
     headers.authorization = `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders.join(";")}, Signature=${createHmac("sha256", signingKey).update(stringToSign).digest("hex")}`;
-    return this.fetchImpl(`https://${this.host}${canonicalUri}`, {
+    return this.fetchImpl(`https://${this.host}${canonicalUri}${canonicalQuery ? `?${canonicalQuery}` : ""}`, {
       method, headers, redirect: "error",
       ...(method === "PUT" ? { body: Buffer.from(body.buffer as ArrayBuffer, body.byteOffset, body.byteLength) } : {}),
     });
