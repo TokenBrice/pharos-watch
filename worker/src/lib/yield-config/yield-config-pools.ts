@@ -1,3 +1,18 @@
+/**
+ * Pinned DL pools whose `apyReward` is an eligibility-gated campaign that a
+ * general depositor cannot claim. DeFiLlama folds the campaign into `apy`, so
+ * these rows publish `apyBase` as the headline and drop the reward component.
+ * Each entry cites the campaign and must be removed when it ends or opens up.
+ */
+export const YIELD_POOL_RESTRICTED_REWARD_IDS: ReadonlySet<string> = new Set([
+  // steakUSDG (Robinhood Chain): the reward leg is the Merkl WHITELIST campaign
+  // "[Robinhood Users Only] Supply to Steakhouse USDG V2 vault on Morpho"
+  // (https://api.merkl.xyz/v4/opportunities?chainId=4663&search=steakUSDG).
+  // Morpho reports the vault with no rewards: netApy 3.81%, 30d 4.04% vs DL
+  // apy 7.00% = apyBase 3.85% + apyReward 3.16% (observed 2026-11-17).
+  "32f586b4-5358-5aa2-88ee-c842139e7023",
+]);
+
 export const YIELD_POOL_MAP: Record<string, string> = {
   // USD3 - 3Jane senior credit tranche, Ethereum, native NAV appreciation
   "usd3-3jane": "f8cd444e-d99f-4132-b234-fd3482bf8806",
