@@ -182,10 +182,6 @@ export async function createSocialScorecard(request: Request, env: SocialScoreca
   } catch {
     return jsonError(400, "Expected only a canonical stablecoinId");
   }
-  const ipHash = await hashClientIp(`social-scorecard:${ip}`, secret);
-  const quotaDenied = await reserveCreationAttempt(env.DB, ipHash);
-  if (quotaDenied) return quotaDenied;
-  // A successful dual reservation remains charged on capture/storage failure.
   let snapshot: SealedSocialScorecard;
   try {
     snapshot = await captureSocialScorecard(request, stablecoinId, env.SITE_API);
@@ -199,6 +195,10 @@ export async function createSocialScorecard(request: Request, env: SocialScoreca
       // Even a corrupt existing object must never be silently replaced.
       openSocialScorecard(snapshot.id, await existing.text());
     } else {
+      // Content addressing dedupes first: re-sharing a sealed edition reserves
+      // nothing. A successful dual reservation remains charged on storage failure.
+      const quotaDenied = await reserveCreationAttempt(env.DB, await hashClientIp(`social-scorecard:${ip}`, secret));
+      if (quotaDenied) return quotaDenied;
       await env.SOCIAL_PREVIEWS.put(key, JSON.stringify(snapshot.record), {
         onlyIf: { etagDoesNotMatch: "*" },
         httpMetadata: { contentType: "application/json" },
