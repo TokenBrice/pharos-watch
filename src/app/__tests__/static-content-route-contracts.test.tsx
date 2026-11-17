@@ -87,6 +87,12 @@ describe("static content route adapters", () => {
     expect(first.openGraph?.images).not.toEqual(second.openGraph?.images);
   });
 
+  it("shares blog posts as articles with their publication time", async () => {
+    const [post] = BLOG_POSTS;
+    expect((await blogRoute.generateMetadata({ params: Promise.resolve({ slug: post.slug }) })).openGraph)
+      .toMatchObject({ type: "article", publishedTime: `${post.datePublished}T00:00:00Z` });
+  });
+
   it("heads the mechanism matrix for its query while keeping its rows and caption registry-owned", () => {
     const html = renderToStaticMarkup(<MechanismComparisonMatrix />);
 
