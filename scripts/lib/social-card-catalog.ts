@@ -258,7 +258,8 @@ const glyph = (name: Extract<SocialCardHubSubject, { kind: "glyph" }>["glyph"]) 
 
 function chainIdentity(chainId: string): SocialCardIdentity {
   const meta = CHAIN_META[chainId];
-  return identity(meta.name, meta.name, publicImage(meta.logoPath, "/chains/"));
+  // Chains have no ticker; the symbol is only drawn as a monogram, so use the name's first word ("Bifrost Network" → "Bifrost").
+  return identity(meta.name.split(" ")[0].slice(0, 12), meta.name, publicImage(meta.logoPath, "/chains/"));
 }
 function chainsByDeployments(): string[] {
   const counts = new Map<string, number>();
@@ -612,10 +613,11 @@ function nameLines(coin: StablecoinMeta, withSince: boolean): { headline: string
   // Compared as drawn: "USA₮" over "USAT" repeats the ticker once the glyph falls back.
   const redundant = hasRedundantName({ name, symbol });
   const fallback = `${PEG_LABELS_SHORT[coin.flags.pegCurrency]} stablecoin`;
-  if (symbol.length <= 8) {
+  // A short ticker always headlines; a long legal name (fund share classes) never does, it cannot fit three lines.
+  if (symbol.length <= 8 || name.length > 40) {
     const subline = fit(B.dossier.subline,
       !redundant && year && `${name} · since ${year}`, !redundant && name,
-      brand && year && `${brand} · since ${year}`, brand, redundant && fallback);
+      brand && year && `${brand} · since ${year}`, brand, fallback);
     if (subline) return { headline: symbol, subline };
   }
   return {
@@ -688,12 +690,14 @@ function coinCard(coin: StablecoinMeta): SocialCardSpec {
 function yieldCard(coin: StablecoinMeta): SocialCardSpec {
   const id = coinIdentity(coin);
   const source = coin.yieldConfig?.yieldSource ? normalizeWhitespace(coin.yieldConfig.yieldSource) : undefined;
-  const headline = `Where ${id.symbol}'s yield comes from`;
+  // A long camel-case ticker cannot break across lines, so it moves to the name line instead.
+  const longTicker = id.symbol.length > 12;
+  const headline = longTicker ? "Where the yield comes from" : `Where ${id.symbol}'s yield comes from`;
   const kind = coin.variantKind ? sentenceCase(getVariantDisplay(coin.variantKind).fullLabel.replace(/ variant$/, "")) : mechanismChip(coin);
   return finish({
     path: buildStablecoinUrl(coin.id, "yield/"), template: "dossier", label: "Yield source", identity: id,
     headline: mustFit(`yield headline for ${coin.id}`, B.dossier.headline, headline, id.symbol),
-    subline: mustFit(`yield subline for ${coin.id}`, B.dossier.subline, !hasRedundantName(id) && id.name, coin.brand,
+    subline: mustFit(`yield subline for ${coin.id}`, B.dossier.subline, longTicker && id.symbol, !hasRedundantName(id) && id.name, coin.brand,
       `${PEG_LABELS_SHORT[coin.flags.pegCurrency]} stablecoin`),
     hook: mustFit(`yield hook for ${coin.id}`, B.dossier.hook, source, "Lending-market yield on deposits"),
     chips: chips(kind, pegChip(coin.flags.pegCurrency)), lifecycle: "active",

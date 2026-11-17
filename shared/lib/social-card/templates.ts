@@ -269,7 +269,7 @@ function hub(spec: SocialCardHub, assets: SocialCardAssets): SocialCardElement {
   const ruler = spec.subject.kind === "peg-ruler";
   const legend = spec.subject.kind === "grade-shield";
   const [headline, deck] = fitStack(measure, where, [
-    { field: "headline", text: spec.headline, face: "display-800", sizes: steps(96, 60, 4), lineHeight: 1, tracking: -0.035, width: ruler ? PEG_RULER_COPY : COLUMN.width, maxLines: 4 },
+    { field: "headline", text: spec.headline, face: "display-800", sizes: steps(96, 52, 4), lineHeight: 1, tracking: -0.035, width: ruler ? PEG_RULER_COPY : COLUMN.width, maxLines: 4 },
     { field: "deck", text: spec.deck, face: "display-400", sizes: steps(34, 26), lineHeight: 1.28, width: ruler ? PEG_RULER_COPY : COLUMN.width, maxLines: 3, gap: 24 },
   ], BODY.bottom - BODY.top, legend ? 90 : 0);
   const { cx, cy } = LENS;
