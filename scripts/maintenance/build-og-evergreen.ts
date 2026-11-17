@@ -29,8 +29,9 @@ async function main(): Promise<void> {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   const mode = values.check ? "check" : values["map-only"] ? "map" : "render";
-  const shardMatch = values.shard === undefined ? null : /^(\d+)\/(\d+)$/.exec(values.shard);
-  if (values.shard !== undefined && (!shardMatch || Number(shardMatch[1]) >= Number(shardMatch[2]))) throw new Error(`--shard must be K/N with K < N: ${values.shard}`);
+  const shardArg = typeof values.shard === "string" ? values.shard : undefined;
+  const shardMatch = shardArg === undefined ? null : /^(\d+)\/(\d+)$/.exec(shardArg);
+  if (shardArg !== undefined && (!shardMatch || Number(shardMatch[1]) >= Number(shardMatch[2]))) throw new Error(`--shard must be K/N with K < N: ${shardArg}`);
   const shard = shardMatch ? { index: Number(shardMatch[1]), count: Number(shardMatch[2]) } : undefined;
   const result = await buildSocialPreviewImages({ repoRoot: REPO_ROOT, mode, shard });
   console.log(`${mode === "check" ? "Verified" : "Mapped"} ${result.routes} destination previews (${result.images} images); rendered ${result.rendered} new PNGs.`);
