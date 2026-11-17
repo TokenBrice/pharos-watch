@@ -11,25 +11,12 @@ export const API_CACHE_PROFILES = {
   archive: "public, s-maxage=86400, max-age=3600",
   noStore: "no-store",
   publicStatus: "public, max-age=60",
-  ogImage: "public, max-age=900, s-maxage=900",
   reserveLive: "public, s-maxage=3600, max-age=300",
   reserveLiveStale: "public, s-maxage=1800, max-age=120",
   reserveFallback: "public, s-maxage=300, max-age=60",
 } as const;
 
 export const PER_COIN_CACHE_TTL_SECONDS = 5 * 60;
-
-/** Edge/browser lifetime of a rendered OG image (the `ogImage` profile). */
-const OG_IMAGE_CACHE_TTL_SECONDS = 15 * 60;
-
-/**
- * A live share card may not be cached past its source's admission budget:
- * lifetime = min(15 min, nonnegative whole seconds of freshness left).
- */
-export function buildOgImageCacheControl(freshSecondsLeft: number): string {
-  const ttl = Math.min(OG_IMAGE_CACHE_TTL_SECONDS, Math.max(0, Math.floor(freshSecondsLeft)));
-  return `public, max-age=${ttl}, s-maxage=${ttl}`;
-}
 
 export function buildPerCoinCacheControl(sMaxageSeconds: number): string {
   const boundedSMaxage = Math.max(0, Math.floor(sMaxageSeconds));

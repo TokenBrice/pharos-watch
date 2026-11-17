@@ -279,7 +279,7 @@ Scheduled artifact PR secret:
 - `OG_REFRESH_GITHUB_TOKEN` — fallback bot/PAT for shock-coverage and protocol-mechanism refresh PRs; it does not schedule OG screenshots.
 - `MECHANISM_REFRESH_GITHUB_TOKEN` - optional dedicated bot/PAT for `.github/workflows/protocol-api-mechanism-refresh.yml`; that workflow falls back to the shock-coverage or OG refresh token.
 
-Canonical route previews use generated evergreen `/og/v2/` assets, with permanent R2 history; ordinary sharing no longer selects `/api/og/page/:slug` or a route-local `og-*.png` fallback ([OG Images](./og-images.md#1-route-cards)). Numerical Worker OG endpoints remain compatibility/explicit dated evidence surfaces. After a relevant Worker deploy, decode the affected PNGs and inspect source-runway/cache headers; `X-Og-Status: timeless` names its `X-Og-Reason`.
+Canonical route previews use generated evergreen `/og/v2/` assets, with permanent R2 history; ordinary sharing no longer selects `/api/og/page/:slug` or a route-local `og-*.png` fallback ([OG Images](./og-images.md#1-route-cards)). Retired numerical Worker OG families answer frozen `301`s to evergreen images; only the dated scorecard still renders ([Dynamic Worker cards](./og-images.md#8-dynamic-worker-cards-apiog)). After a relevant Worker deploy, confirm a legacy URL redirects to a `200` PNG, then decode a scorecard PNG and inspect its runway/cache headers.
 The [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) pages document the append-only measurement PR paths and their freshness gates.
 
 Site-session rollout credentials and controls:

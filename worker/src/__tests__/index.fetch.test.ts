@@ -202,7 +202,7 @@ describe("worker.fetch", () => {
       name: "malformed dynamic path validation",
       run: () =>
         worker.fetch(
-          new Request("https://api.pharos.watch/api/og/stablecoin/%E0%A4%A"),
+          new Request("https://api.pharos.watch/api/og/v2/scorecard/%E0%A4%A"),
           makeEnv(),
           makeExecutionContext().ctx,
         ),
@@ -981,8 +981,8 @@ describe("worker.fetch", () => {
   });
 
   it("does not require a key on exempt OG image routes", async () => {
-    // GET /api/og/* is dynamic and exempt; it may return 404 for unknown IDs
-    // but must not return 401.
+    // GET /api/og/* is dynamic and exempt; a retired family answers its frozen
+    // 301 (an unknown id gets the home image), never 401.
     const env = makeEnv();
     const { ctx, waits } = makeExecutionContext();
 
@@ -993,7 +993,8 @@ describe("worker.fetch", () => {
     );
     await Promise.all(waits);
 
-    expect(res.status).not.toBe(401);
+    expect(res.status).toBe(301);
+    expect(res.headers.get("Location")).toBe("https://pharos.watch/og/v2/image-5e2cce2c03a2b73b30d7389d55ebdee8d285e9f7819767f5778f42c51cff7e25.png");
   });
 
   it("does not require a key on exempt feedback submissions", async () => {

@@ -120,7 +120,7 @@ describe("router contract: strict frontend paths are routable", () => {
   });
 
   it("preserves intentional non-JSON dynamic OG responses", async () => {
-    const malformedOgPath = "https://api.pharos.watch/api/og/stablecoin/%E0%A4%A";
+    const malformedOgPath = "https://api.pharos.watch/api/og/v2/scorecard/%E0%A4%A";
     const response = await route(makeRouteCtx({
       url: new URL(malformedOgPath),
       request: new Request(malformedOgPath),

@@ -344,9 +344,9 @@ representative response evidence, not proof about every route or Cache Rule.
 The accepted 60-second floor still lifts 10-second realtime/per-coin browser
 profiles; do not lengthen producer budgets or relabel retained generations.
 The JSON-only cache-policy canary does not cover PNG OG responses: before
-accepting this policy, retain real uncached and cached `/api/og/page/:slug`
-headers (`Cache-Control`, `Age`, `CF-Cache-Status`, and the `X-Og-*`
-generation/budget/assessment headers), including a near-expiry card. A lifted
+accepting this policy, retain real uncached and cached `/api/og/v2/scorecard/:id`
+headers (`Cache-Control`, `Age`, `CF-Cache-Status`, and `X-Pharos-Scorecard`),
+including a near-expiry publication. A lifted
 TTL is not compliant merely because origin tests pass; [OG image caching](./og-images.md)
 owns the origin TTL bound, and correcting the external floor requires the
 explicit policy change below.

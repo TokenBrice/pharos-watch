@@ -185,7 +185,6 @@
     "publish:daily-social": "tsx scripts/maintenance/publish-daily-social.ts",
     "build:safety-score-map:monthly": "tsx scripts/maintenance/build-safety-score-map.ts --edition=monthly",
     "build:og-cemetery": "node --import tsx scripts/maintenance/build-og-cemetery.ts",
-    "build:og-route-timeless": "node --import tsx scripts/maintenance/build-og-route-timeless.ts",
     "build:og-evergreen": "node --import tsx scripts/maintenance/build-og-evergreen.ts",
     "publish:social-previews": "node --import tsx scripts/maintenance/publish-social-previews.ts",
     "prepare": "node --import tsx scripts/maintenance/prepare-workspace.ts",
