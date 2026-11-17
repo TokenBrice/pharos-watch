@@ -19,7 +19,7 @@ import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
 
 const pages = discoverSocialPreviewPages(process.cwd());
-const catalog = buildSocialCardCatalog(pages.paths);
+const catalog = buildSocialCardCatalog(pages);
 const byPath = new Map(catalog.cards.map((card) => [card.path, card]));
 const dossierFor = (id: string) => byPath.get(buildStablecoinUrl(id)) as Extract<SocialCardSpec, { template: "dossier" }>;
 const ai = JSON.parse(readFileSync("data/ai-summaries.json", "utf8")) as Record<string, { title: string }>;
@@ -28,9 +28,9 @@ describe("social card catalog", () => {
   it("covers every public destination once, deterministically, and fails closed on an unknown one", () => {
     const covered = [...catalog.cards, ...catalog.authored].map((entry) => entry.path);
     expect(new Set(covered).size).toBe(covered.length);
-    expect(covered).toEqual(expect.arrayContaining([...PUBLIC_ROUTE_PATHS, ...pages.paths]));
+    expect(covered).toEqual(expect.arrayContaining([...PUBLIC_ROUTE_PATHS, ...pages]));
     expect(catalog.authored).toEqual(expect.arrayContaining([expect.objectContaining({ path: "/cemetery/", sourcePath: "/og-cemetery.png" })]));
-    expect(buildSocialCardCatalog(pages.paths)).toEqual(catalog);
+    expect(buildSocialCardCatalog(pages)).toEqual(catalog);
     expect(() => buildSocialCardCatalog(["/new-public-destination/"])).toThrow("no authored social preview");
   });
 
