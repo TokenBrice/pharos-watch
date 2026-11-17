@@ -6,7 +6,7 @@ Public static `/privacy/` describes processing elsewhere in the product; it fetc
 
 ### Browser security session
 
-When the default-off browser-check flag is enabled with a Turnstile site key, Cloudflare Turnstile checks the browser before live data is served. One strictly necessary first-party HttpOnly cookie holds a random session ID and expiry, with no personal data, for 12 hours. Only the expiry hint (`pharos-site-session-exp`) is stored in localStorage; challenge tokens remain in memory until posted to the same-origin session endpoint. Failed checks leave build-time data available without live refresh. [Security governance](./security-governance.md#browser-session-gate) owns the client gate and script-loading rules.
+When the default-off browser-check flag is enabled with a Turnstile site key, Cloudflare Turnstile checks the browser before live data is served. One strictly necessary first-party HttpOnly cookie holds a random session ID and expiry, with no personal data, for 7 days. Only the expiry hint (`pharos-site-session-exp`) is stored in localStorage; challenge tokens remain in memory until posted to the same-origin session endpoint. Failed checks leave build-time data available without live refresh. [Security governance](./security-governance.md#browser-session-gate) owns the client gate and script-loading rules.
 
 ### Website analytics
 

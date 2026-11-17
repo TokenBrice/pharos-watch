@@ -743,11 +743,11 @@ describe("browser session gate", () => {
     return { api, session: await import("../site-session-client"), storage };
   }
   const sessionResponse = () => new Response(null, {
-    status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200) },
+    status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 604800) },
   });
   const required = () => new Response("session required", { status: 401, headers: { "X-Pharos-Session": "required" } });
 
-  it.each([["false", "key"], ["true", ""]])("keeps the existing fetch path with flag=%s and key=%s", async (flag, key) => {
+  it.each([["false", "key"], ["true", ""]])("fetches with flag=%s, key=%s", async (flag, key) => {
     const { api, session } = await setup(flag, key);
     const challenge = vi.fn();
     session.registerSiteSessionChallenge(challenge);
@@ -758,7 +758,7 @@ describe("browser session gate", () => {
     expect(challenge).not.toHaveBeenCalled();
   });
 
-  it("loads the manager when a request arrives before the widget", async () => {
+  it("loads before widget", async () => {
     await setup();
     vi.resetModules();
     const api = await import("../api");
@@ -772,7 +772,7 @@ describe("browser session gate", () => {
     expect(session.hasValidSiteSession()).toBe(true);
   });
 
-  it.each([-600, 600, -43800])("shares a session and stores local expiry despite %s seconds of server skew", async (skew) => {
+  it.each([-600, 600, -605400])("shares local expiry (skew %s)", async (skew) => {
     const { api, session, storage } = await setup();
     const mark = vi.spyOn(performance, "mark");
     let send!: (token: string) => void;
@@ -780,7 +780,7 @@ describe("browser session gate", () => {
     session.registerSiteSessionChallenge(solve);
     const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
       url === "/_site-data/session" ? new Response(null, {
-        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 43200 + skew) },
+        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 604800 + skew) },
       }) : jsonResponse({ ok: true }));
     const reads = [api.apiFetch("/api/stablecoins"), api.apiFetch("/api/daily-digest")];
     await Promise.resolve();
@@ -795,10 +795,10 @@ describe("browser session gate", () => {
     expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
     expect(session.getSiteSessionState()).toBe("ready");
     expect(mark.mock.calls.map(([name]) => name)).toEqual(["pharos-session-token", "pharos-session-ready"]);
-    expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 43200, 0);
+    expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 604800, 0);
   });
 
-  it.each([200, 401])("invalidates a stale expiry and retries a hinted 401 once (final %s)", async (status) => {
+  it.each([200, 401])("retries hinted 401 once (final %s)", async (status) => {
     const { api, session, storage } = await setup();
     storage.setItem("pharos-site-session-exp", String(Math.floor(Date.now() / 1000) + 7200));
     const challenge = vi.fn(async () => "token");
@@ -821,7 +821,7 @@ describe("browser session gate", () => {
     expect(recover).toHaveBeenCalledOnce();
   });
 
-  it("adopts a hinted bootstrap 401 as no bootstrap and enters the ordinary session fetch", async () => {
+  it("handles hinted bootstrap 401", async () => {
     const { api, session } = await setup();
     session.registerSiteSessionChallenge(async () => "token");
     window.__pharosDataBootstrap = {
@@ -838,7 +838,7 @@ describe("browser session gate", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("fetches after three seconds even while the shared challenge is still pending, and honors abort", async () => {
+  it("bounds waits; honors abort", async () => {
     const { api, session } = await setup();
     session.registerSiteSessionChallenge((signal) => new Promise((_resolve, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason), { once: true });
@@ -858,7 +858,7 @@ describe("browser session gate", () => {
     expect(session.getSiteSessionState()).toBe("unavailable");
   });
 
-  it("backs off, caps attempts at three, tolerates blocked storage and never restarts from unavailable", async () => {
+  it("caps retries despite blocked storage", async () => {
     const { api, session, storage } = await setup();
     storage.getItem.mockImplementation(() => { throw new Error("blocked"); });
     storage.removeItem.mockImplementation(() => { throw new Error("blocked"); });
@@ -881,7 +881,7 @@ describe("browser session gate", () => {
     expect(session.isSiteSessionPaused()).toBe(true);
   });
 
-  it("keeps admin and direct API requests outside the gate", async () => {
+  it("bypasses admin and direct API", async () => {
     const { api, session } = await setup();
     const challenge = vi.fn();
     session.registerSiteSessionChallenge(challenge);
@@ -893,31 +893,36 @@ describe("browser session gate", () => {
     expect(challenge).not.toHaveBeenCalled();
   });
 
-  it("renews only within the one-hour window in a visible tab, even when expiry writes are blocked", async () => {
-    const { session, storage } = await setup();
-    const start = Date.now();
-    storage.setItem("pharos-site-session-exp", String(Math.floor(start / 1000) + 7200));
+  it.each([204, 503])("renews visibly within 24h (%s)", async (status) => {
+    const { api, session, storage } = await setup();
+    const time = Date.now();
+    storage.setItem("pharos-site-session-exp", String(Math.floor(time / 1000) + 86400));
     storage.setItem.mockImplementation(() => { throw new Error("blocked"); });
-    const challenge = vi.fn(async () => "renewal-token");
-    session.registerSiteSessionChallenge(challenge);
+    const solve = vi.fn(() => new Promise<string>((done) => setTimeout(done, 4000, "token")));
+    session.registerSiteSessionChallenge(solve);
     vi.stubGlobal("document", { visibilityState: "visible" });
     session.renewSiteSessionIfNeeded();
     expect(session.getSiteSessionState()).toBe("ready");
-    expect(challenge).not.toHaveBeenCalled();
-    vi.setSystemTime(start + 3601_000);
+    expect(solve).not.toHaveBeenCalled();
+    vi.setSystemTime(time + 1000);
     vi.stubGlobal("document", { visibilityState: "hidden" });
     session.renewSiteSessionIfNeeded();
-    expect(challenge).not.toHaveBeenCalled();
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(sessionResponse());
+    expect(solve).not.toHaveBeenCalled();
+    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+      url === "/_site-data/session" ? (status === 204 ? sessionResponse() : new Response(null, { status })) : jsonResponse({ ok: true }));
     vi.stubGlobal("document", { visibilityState: "visible" });
     session.renewSiteSessionIfNeeded();
-    await session.ensureSession(true);
-    expect(fetchSpy).toHaveBeenCalledOnce();
+    const task = session.ensureSession(true).catch(() => {});
+    await expect(api.apiFetch("/api/stablecoins")).resolves.toEqual({ ok: true });
+    await vi.advanceTimersByTimeAsync(15000);
+    await task;
+    expect(spy).toHaveBeenCalledTimes(status === 204 ? 2 : 4);
     expect(session.hasValidSiteSession()).toBe(true);
     expect(session.getSiteSessionState()).toBe("ready");
+    expect(session.isSiteSessionPaused()).toBe(false);
   });
 
-  it.each(["", "NaN", "1.5", "9999999999999999"])("rejects an invalid session expiry %s without persisting it", async (expiry) => {
+  it.each(["", "NaN", "1.5", "9999999999999999"])("never stores invalid expiry %s", async (expiry) => {
     const { session, storage } = await setup();
     session.registerSiteSessionChallenge(async () => "token");
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, {

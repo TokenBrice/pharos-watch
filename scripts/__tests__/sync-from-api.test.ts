@@ -94,7 +94,7 @@ describe("fetchWithRetry", () => {
     expect(await verifySiteSessionToken({ token: renewed["X-Pharos-Site-Session"], keys: [env.SITE_SESSION_SIGNING_KEY], nowSec: 1781 }))
       .toMatchObject({ ok: true, payload: { kind: "automation", iat: 1781, exp: 2681 } });
     expect(await siteSessionCookie(url, env, 1781)).toEqual({ name: "__Secure-pharos-session", value: renewed["X-Pharos-Site-Session"],
-      path: "/_site-data", secure: true, httpOnly: true, sameSite: "Strict", expires: 1781 + 43200 });
+      path: "/_site-data", secure: true, httpOnly: true, sameSite: "Strict", expires: 1781 + 900 });
     expect(await siteSessionHeaders(url, {}, 1781)).toEqual({});
     expect(await siteSessionCookie(url, {}, 1781)).toBeNull();
     expect(await siteSessionHeaders(url, { SITE_SESSION_SIGNING_KEY: " " }, 1781)).toEqual({});

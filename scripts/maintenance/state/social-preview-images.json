@@ -735,7 +735,7 @@
     "src/app/page.tsx": "sha256:12089c5cba6cb59498696a0f45d8e78ef9accdee178cf5b841bb4e6c173e3bd8",
     "src/app/pharoswatchbot/page.tsx": "sha256:339bf7bc3996b5a51752f4c8ce59b3b95e35e3ccf62aea9c0acb178de2207c63",
     "src/app/portfolio/page.tsx": "sha256:316281d1aab69dd8ba17469c9903efbda1b91746630b6d3880e0f2e81c1e2ef0",
-    "src/app/privacy/page.tsx": "sha256:bec1d4c0d12449f57c9d3320138cf46e597587da44e22b1067b67a4f94cc5393",
+    "src/app/privacy/page.tsx": "sha256:9639b9ecfc2c2aa611d35bfd84b4f158044b8e89df2d9837fb1bf210fa3560fb",
     "src/app/safety-scores/map/page.tsx": "sha256:1f7b453a32f4d07b0c428b3ad71661b72e93ace285f575a0e090ad50de980458",
     "src/app/safety-scores/page.tsx": "sha256:1cbf22721225c8e1c009180053c29be0c4285e353414ae89177d3450a4f76418",
     "src/app/screener/page.tsx": "sha256:dd7d5c3d3a232bdb32345a44947df5f0c77812d1aa7e55196410fbf46de5763b",

@@ -1,7 +1,6 @@
 import {
   mintSiteSessionToken,
   SITE_SESSION_AUTOMATION_TTL_SEC,
-  SITE_SESSION_BROWSER_TTL_SEC,
   SITE_SESSION_COOKIE_NAME,
   SITE_SESSION_HEADER,
 } from "@shared/lib/site-session-token";
@@ -51,7 +50,7 @@ export async function siteSessionCookie(target: string | URL, env: Readonly<Reco
     secure: true,
     httpOnly: true,
     sameSite: "Strict" as const,
-    expires: nowSec + SITE_SESSION_BROWSER_TTL_SEC,
+    expires: nowSec + SITE_SESSION_AUTOMATION_TTL_SEC,
   } : null;
 }
 

@@ -1,7 +1,7 @@
 import { SITE_SESSION_BROWSER_TTL_SEC, SITE_SESSION_CLOCK_LEEWAY_SEC } from "@shared/lib/site-session-constants";
 
 export const SITE_SESSION_EXPIRY_KEY = "pharos-site-session-exp";
-export const SITE_SESSION_RENEW_WINDOW_SEC = 3600;
+export const SITE_SESSION_RENEW_WINDOW_SEC = 86400;
 
 export function getStoredSiteSessionExpiry(): number {
   try {

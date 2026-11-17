@@ -38,7 +38,7 @@ The direct Worker cache profiles below describe responses from `api.pharos.watch
 
 ## Public API Auth
 
-The website site-session gate is separate from public API keys and Access-authenticated admin traffic. It covers both credentialed site-api and preview reads; observe logs without rejecting, while enforce requires a valid browser or automation token and applies browser budgets. See [Surface Split](#surface-split).
+The website site-session gate is separate from public API keys and Access-authenticated admin traffic. It covers both credentialed site-api and preview reads; observe logs without rejecting, while enforce requires a valid browser (7 days) or automation (15 minutes) token and applies browser budgets. The shared `SITE_SESSION_BROWSER_TTL_SEC` owns the browser lifetime across issuance, verification, cookie age and client expiry. See [Surface Split](#surface-split).
 
 Unless a route is explicitly called out below as exempt, requests to `https://api.pharos.watch` must send:
 
