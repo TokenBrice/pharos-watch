@@ -140,7 +140,7 @@ Satori's workerd-compatible HarfBuzz loader remains `worker/src/lib/og-harfbuzz.
 
 ## CI guardrails
 
-- `npm run seo:check` inspects built HTML and requires referenced same-origin images to exist in `out/`. It runs in the classifier-selected Pages artifact/release lane.
+- `npm run seo:check` inspects built HTML and requires referenced same-origin images to exist in `out/`. Every page needs a non-empty `og:image` whose first tag starts within the first 32,768 bytes, because Slack reads only the start of a page; decoded HTML above 1 MB, Apple Messages' preview limit, warns. It runs in the classifier-selected Pages artifact/release lane.
 - The evergreen artifact check validates destination coverage, source/image identities, dimensions, metadata map and immutable publication. Legacy static checks require embedded semantic source provenance as well as their manifests.
 - Focused rendering proof: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx worker/src/api/__tests__/og-source-availability.test.tsx`. Real cold/warm workerd responses must decode as 1200×630 PNGs.
 - Review full canvas, 600px, 400px and center-square crops in light/dark surroundings. Subject, recognizable identity and reason to open survive without a description; essential dated provenance stays readable beside the assessment, with no clipping, color-only meaning or footer/chart overlap.

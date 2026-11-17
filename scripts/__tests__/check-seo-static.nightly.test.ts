@@ -80,6 +80,7 @@ async function writePage(
     googleBotRobots = [],
     ogType = "website",
     ogSiteName = "Pharos Watch",
+    ogImage = "https://images.example.test/card.png",
     canonical = pageUrl(route),
     title = `${h1} | Pharos`,
     description = `${h1} description`,
@@ -94,6 +95,7 @@ async function writePage(
     googleBotRobots?: string[];
     ogType?: string | null;
     ogSiteName?: string | null;
+    ogImage?: string | null;
     canonical?: string | null;
     title?: string;
     description?: string;
@@ -109,6 +111,7 @@ async function writePage(
   const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
   const ogSiteNameTag = ogSiteName ? `<meta property="og:site_name" content="${ogSiteName}"/>` : "";
+  const ogImageTag = ogImage === null ? "" : `<meta property="og:image" content="${ogImage}"/>`;
   const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
   await writeFile(
     filePath,
@@ -126,6 +129,7 @@ async function writePage(
     ${ogTypeTag}
     <meta name="twitter:card" content="summary_large_image"/>
     ${extraHead}
+    ${ogImageTag}
   </head>
   <body>
     <main>
@@ -251,6 +255,7 @@ describe("check-seo-static", () => {
     redirects?: string;
     errors?: string[];
     absentErrors?: string[];
+    warnings?: string[];
   };
 
   // One row per gate rule: the fixture that should trip it (or prove it stays quiet).
@@ -269,6 +274,21 @@ describe("check-seo-static", () => {
       name: "fails missing og:site_name on indexable pages",
       overrides: { "/": { ogSiteName: null } },
       errors: ["/: missing og:site_name"],
+    },
+    {
+      name: "fails missing or empty og:image",
+      overrides: { "/": { ogImage: "" }, "/stability-index/": { ogImage: null } },
+      errors: ["/: missing or empty og:image", "/stability-index/: missing or empty og:image"],
+    },
+    {
+      name: "fails an og:image tag past byte 32,768",
+      overrides: { "/": { extraHead: `<style>${"a".repeat(32_768)}</style>` } },
+      errors: ["/: first og:image tag starts at byte "],
+    },
+    {
+      name: "warns on decoded HTML over 1 MB",
+      overrides: { "/": { extraMain: "x".repeat(1_000_000) } },
+      warnings: ["1 HTML pages exceed 1000000 decoded bytes"],
     },
     {
       name: "allows noindex pages to omit canonical",
@@ -492,6 +512,9 @@ describe("check-seo-static", () => {
     for (const fragment of fixture.absentErrors ?? []) {
       expect(result.errors.filter((error) => error.includes(fragment))).toEqual([]);
     }
+    expect(result.warnings).toEqual(
+      expect.arrayContaining((fixture.warnings ?? []).map((fragment) => expect.stringContaining(fragment))),
+    );
   });
 
   it("enforces the retained depeg History preview in pilot profile HTML", async () => {
