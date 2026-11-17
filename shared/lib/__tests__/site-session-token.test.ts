@@ -11,9 +11,9 @@ const encode = (value: unknown) => bytesToBase64Url(new TextEncoder().encode(JSO
 
 describe("site session tokens", () => {
   it.each([
-    ["browser", SITE_SESSION_BROWSER_TTL_SEC], ["automation", SITE_SESSION_AUTOMATION_TTL_SEC],
+    ["browser", 43200], ["browser", SITE_SESSION_BROWSER_TTL_SEC], ["automation", SITE_SESSION_AUTOMATION_TTL_SEC],
   ] as const)("round trips %s", async (kind, ttl) => {
-    const token = await mintSiteSessionToken({ key, kind, nowSec });
+    const token = await mintSiteSessionToken({ key, kind, nowSec, ttlSec: ttl === 43200 ? ttl : undefined });
     const result = await verifySiteSessionToken({ token, keys: [key], nowSec });
     expect(result).toEqual({ ok: true, payload: { v: 1, kind, iat: nowSec, exp: nowSec + ttl, sid: expect.stringMatching(/^[A-Za-z0-9_-]{16}$/) } });
   });
@@ -44,10 +44,10 @@ describe("site session tokens", () => {
   it.each([
     null, undefined, "", "no-dot", "a.b.c", ".", "!.AA", "A.AA", "a".repeat(513),
     ...[null, [], { ...payload, v: 2 }, { ...payload, kind: "other" }, { ...payload, sid: 1 }, { ...payload, sid: "" },
-      { ...payload, exp: nowSec + 43201 }, { ...payload, kind: "automation", exp: nowSec + 901 },
+      { ...payload, exp: nowSec + 604801 }, { ...payload, kind: "automation", exp: nowSec + 901 },
       { ...payload, iat: "1700000000" }, { ...payload, iat: 1.5 }, { ...payload, exp: null },
       { ...payload, exp: nowSec }, { ...payload, extra: true }].map((value) => `${encode(value)}.${"A".repeat(43)}`),
-  ])("rejects malformed or missing %j", async (token) => {
+  ])("rejects invalid %j", async (token) => {
     expect(await verifySiteSessionToken({ token, keys: [key], nowSec }))
       .toEqual({ ok: false, reason: token ? "malformed" : "missing" });
   });
@@ -61,8 +61,8 @@ describe("site session tokens", () => {
   });
 
   it("builds the scoped secure cookie", () => {
-    expect(buildSiteSessionCookie("payload.signature", 43200)).toBe(
-      "__Secure-pharos-session=payload.signature; Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=43200",
+    expect(buildSiteSessionCookie("payload.signature", 604800)).toBe(
+      "__Secure-pharos-session=payload.signature; Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=604800",
     );
   });
 });

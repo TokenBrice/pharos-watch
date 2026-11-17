@@ -236,7 +236,7 @@ describe("retained dated scorecard Pages routes", () => {
     const { create, quotaRows, bucket, fetchMock } = setup();
     const env = { SITE_SESSION_ENFORCEMENT: "enforce", SITE_SESSION_SIGNING_KEY: sessionKey };
     const valid = await mintSiteSessionToken({ key: sessionKey, kind: "browser", nowSec: now });
-    const expired = await mintSiteSessionToken({ key: sessionKey, kind: "browser", nowSec: now - 43_300 });
+    const expired = await mintSiteSessionToken({ key: sessionKey, kind: "browser", nowSec: now - 604_900 });
     const forged = await mintSiteSessionToken({ key: "not-the-signing-key", kind: "browser", nowSec: now });
     const rejectedHeaders: Record<string, string>[] = [
       {},

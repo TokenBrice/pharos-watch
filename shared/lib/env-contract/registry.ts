@@ -284,7 +284,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SITE_SESSION_SIGNING_KEY_PREVIOUS",
     valueType: "string",
-    description: "Optional Worker and Pages overlap secret for site-session signing-key rotation; retain in both runtimes for 24 hours after issuers switch to the new current key.",
+    description: "Optional Worker and Pages overlap secret for site-session signing-key rotation; retain in both runtimes through the maximum browser token lifetime plus clock leeway after issuers switch to the new current key.",
     example: { section: "workerOptional", value: "" },
     runtimes: { worker: { status: "optional" }, pagesSiteData: { status: "optional" } },
   },

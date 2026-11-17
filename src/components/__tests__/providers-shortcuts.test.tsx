@@ -76,7 +76,7 @@ describe("SiteSession", () => {
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
   });
 
-  it.each([0, 7200])("loads only when due (%s seconds left), renders immediately and recovers queries", async (left) => {
+  it.each([0, 604800])("loads when due (%s), renders, recovers", async (left) => {
     if (left) localStorage.setItem("pharos-site-session-exp", String(Math.floor(Date.now() / 1000) + left));
     const mark = vi.fn();
     vi.stubGlobal("performance", { mark, now: Date.now });

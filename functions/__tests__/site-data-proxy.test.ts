@@ -703,7 +703,7 @@ describe("site-data session endpoint", () => {
     expectNoindex(response);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     const cookie = response.headers.get("Set-Cookie");
-    expect(cookie).toContain("; Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=43200");
+    expect(cookie).toContain("; Path=/_site-data; Secure; HttpOnly; SameSite=Strict; Max-Age=604800");
     const result = await verifySiteSessionToken({
       token: readSiteSessionCookie(cookie), keys: [env.SITE_SESSION_SIGNING_KEY], nowSec: Math.floor(Date.now() / 1_000),
     });
