@@ -3,13 +3,13 @@
 // edit the document and regenerate. Serialized data only, no logic.
 import type { EditorialPolicy } from "./editorial-style";
 
-export const EDITORIAL_STYLE_VERSION = "1.2";
+export const EDITORIAL_STYLE_VERSION = "1.3";
 
 /** Deterministic hash of the policy block. Bumps whenever enforcement changes. */
-export const EDITORIAL_STYLE_HASH = "baf6b0f7f9efd4cc";
+export const EDITORIAL_STYLE_HASH = "5080ce78db4b0ed7";
 
 export const EDITORIAL_POLICY: EditorialPolicy = {
-  "version": "1.2",
+  "version": "1.3",
   "oneLineDirective": "Write like an FT markets reporter with the tape in front of you: strongest verified fact first, distinguish observation from inference, explain the consequence plainly, no clause dashes, no corrective \"this is not X, it is Y\", no personified metrics, no nickname titles, no slogan closers. Wit only if deleting the names and figures kills the line; the default is none.",
   "registers": [
     {
@@ -28,7 +28,7 @@ export const EDITORIAL_POLICY: EditorialPolicy = {
       "id": "coin-summary",
       "label": "Coin summary",
       "group": "editorial",
-      "promptLine": "120 to 180 words as guidance with a hard ceiling of 250; shorter is legal when the evidence is complete, and length above the band must be carried by evidence, not narration. One main claim per sentence. The title is a plain descriptor or a characterization this coin's own record supports; puns, mascots, rhymes, and generic slogans are banned, and a title that would fit any other coin is generic. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required."
+      "promptLine": "120 to 180 words as guidance with a hard ceiling of 250; shorter is legal when the evidence is complete, and length above the band must be carried by evidence, not narration. One main claim per sentence. The title is a plain descriptor or a characterization this coin's own record supports, in sentence case: only the first word, proper nouns, registry tickers and acronyms take capitals, and a colon does not restart them. Puns, mascots, rhymes, and generic slogans are banned, and a title that would fit any other coin is generic. Explain what the asset is, its central trade-off, and what Pharos data reveals that a listing page would miss. Close on the durable constraint; no punch required."
     },
     {
       "id": "cemetery",

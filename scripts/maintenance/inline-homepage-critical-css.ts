@@ -62,6 +62,29 @@ export function criticalCssWorkerCount(pageCount: number): number {
 const asyncCssLoaderPath = "/critical-css-loader.js?v=2";
 const asyncStylesheetPattern =
   /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/(?:chunks|css)\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
+// Share metadata Next emits after its stylesheets and scripts. React escapes `>`
+// in attribute values, so a tag ends at its first `>`.
+const shareMetadataPattern =
+  /<title\b[^>]*>[\s\S]*?<\/title>|<meta\b(?=[^>]*\b(?:name|property)=["'](?:description|og:[^"']*|twitter:[^"']*|article:[^"']*)["'])[^>]*>|<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>/gi;
+
+/**
+ * Link-preview crawlers read only the start of a page (Slack fetches about the
+ * first 32 KB), so the title, description, canonical and og/twitter/article tags
+ * move, in document order, to just before the inlined critical style. The style
+ * stays ahead of the stylesheets it stands in for.
+ */
+function hoistShareMetadata(html: string): string {
+  const styleStart = html.search(/<style\b/);
+  const styleClose = styleStart < 0 ? -1 : html.indexOf("</style>", styleStart);
+  const headEnd = html.indexOf("</head>");
+  if (styleClose < 0 || headEnd < styleClose) return html;
+  const styleEnd = styleClose + "</style>".length;
+  const rest = html.slice(styleEnd, headEnd);
+  const tags = rest.match(shareMetadataPattern);
+  if (!tags) return html;
+  return html.slice(0, styleStart) + tags.join("") + html.slice(styleStart, styleEnd)
+    + rest.replace(shareMetadataPattern, "") + html.slice(headEnd);
+}
 
 interface OptimizationResult {
   beforeBytes: number;
@@ -215,6 +238,7 @@ async function optimizePage(optimizer: Beasties, filePath: string, label: string
     const insertAt = lastLink.index + lastLink[0].length;
     after = `${after.slice(0, insertAt)}<script src="${asyncCssLoaderPath}" async></script>${after.slice(insertAt)}`;
   }
+  after = hoistShareMetadata(after);
 
   const withoutNoscript = after.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, "");
 

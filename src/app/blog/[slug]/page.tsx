@@ -119,6 +119,8 @@ const route = createStaticSlugRoute({
     titleAbsolute: true,
     description: post.description,
     canonical: `/blog/${slug}/`,
+    ogType: "article",
+    publishedTime: `${post.datePublished}T00:00:00Z`,
   }),
   missingMetadata: { title: "Post Not Found" },
   render: renderBlogPost,
