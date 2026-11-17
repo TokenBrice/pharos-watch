@@ -8,11 +8,6 @@ import { OG_FONTS } from "./og-fonts";
 // Intentional per-isolate cache: initialize WASM once, retry only failed initialization.
 let wasmInitialization: Promise<void> | null = null;
 
-/** @internal Reset isolate-local initialization for runtime tests sharing a process. */
-export function resetOgWasmInitializationForTests(): void {
-  wasmInitialization = null;
-}
-
 async function ensureWasm(): Promise<void> {
   if (!wasmInitialization) {
     wasmInitialization = (async () => {

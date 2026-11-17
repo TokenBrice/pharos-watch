@@ -114,7 +114,7 @@ Commit/push according to [Pre-push readiness](./testing.md#pre-push-readiness) a
 - Visit `/stablecoin/<id>/` — confirm the frozen banner below the hero (within the identity zone), and the "Data frozen on YYYY-MM-DD" footer above each chart section.
 - Inspect Worker logs — confirm no cron INSERTs or UPDATEs a per-coin row for the coin's id; the archived row in the `stablecoins` cache is expected.
 - With a valid prior frozen-ID snapshot, confirm the next daily Telegram digest includes **Newly Frozen Stablecoins** for the coin (`frozenDetected` in appendix metadata). An absent or invalid baseline is seeded silently, not replayed. The cemetery appendix diffs `DEAD_STABLECOINS` only and stays silent on a freeze.
-- Inspect the canonical `/stablecoin/<id>/` metadata and its generated `/og/v2/` PNG: the dossier must identify the frozen historical record and freeze date, not active monitoring. The retained compatibility endpoint `https://api.pharos.watch/api/og/stablecoin/<id>` is not the canonical preview; when its published market source is admitted it should still render, while stale/unavailable evidence must fail closed ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).
+- Inspect the canonical `/stablecoin/<id>/` metadata and its generated `/og/v2/` PNG: the dossier must identify the frozen historical record and freeze date, not active monitoring. The retired `https://api.pharos.watch/api/og/stablecoin/<id>` is not the canonical preview: it answers a permanent redirect to the dossier image frozen when the legacy cards were retired ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).
 
 ## Known behaviors (not bugs)
 

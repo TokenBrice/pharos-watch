@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveMissingYieldWorkbenchRedirect } from "../../functions/stablecoin/[[path]]";
-import { assertOgImageResult, isRetryableStatus } from "../maintenance/smoke-api.mjs";
+import { assertOgImageResult, assertOgRedirectResult, isRetryableStatus, OG_REDIRECT_SMOKE_PATH } from "../maintenance/smoke-api.mjs";
 import {
   assertRouteSummary,
   getMobileWorkerCount,
@@ -35,16 +35,25 @@ describe("smoke-api retry policy", () => {
   });
 });
 describe("smoke-api og image assertion", () => {
+  const path = "/api/og/v2/scorecard/usdt-tether";
   it.each([
-    { label: "healthy PNG", path: "/api/og/depeg", status: 200, contentType: "image/png", renderErrorClass: null, bytes: 84_211, result: "82kb png", error: null },
-    { label: "503 render error", path: "/api/og/stablecoin/usdt-tether", status: 503, contentType: "text/plain", renderErrorClass: "Error", bytes: 26, result: null, error: "returned 503 (x-render-error-class: Error)" },
-    { label: "non-PNG type", path: "/api/og/depeg", status: 200, contentType: "text/html", renderErrorClass: null, bytes: 84_211, result: null, error: 'content-type "text/html"' },
-    { label: "tiny payload", path: "/api/og/depeg", status: 200, contentType: "image/png", renderErrorClass: null, bytes: 312, result: null, error: "suspiciously small image (312b)" },
-  ])("validates $label", ({ path, status, contentType, renderErrorClass, bytes, result, error }) => {
+    { label: "healthy PNG", status: 200, contentType: "image/png", renderErrorClass: null, bytes: 84_211, result: "82kb png", error: null },
+    { label: "503 render error", status: 503, contentType: "text/plain", renderErrorClass: "Error", bytes: 26, result: null, error: "returned 503 (x-render-error-class: Error)" },
+    { label: "non-PNG type", status: 200, contentType: "text/html", renderErrorClass: null, bytes: 84_211, result: null, error: 'content-type "text/html"' },
+    { label: "tiny payload", status: 200, contentType: "image/png", renderErrorClass: null, bytes: 312, result: null, error: "suspiciously small image (312b)" },
+  ])("validates $label", ({ status, contentType, renderErrorClass, bytes, result, error }) => {
     if (error === null) {
       expect(assertOgImageResult(path, { status, contentType, renderErrorClass, bytes })).toBe(result);
     } else {
       expect(() => assertOgImageResult(path, { status, contentType, renderErrorClass, bytes })).toThrow(error);
+    }
+  });
+
+  it("requires a retired family to 301 to an absolute evergreen image", () => {
+    const location = `https://pharos.watch/og/v2/image-${"a".repeat(64)}.png`;
+    expect(assertOgRedirectResult(OG_REDIRECT_SMOKE_PATH, { status: 301, location })).toBe(`301 ${location}`);
+    for (const result of [{ status: 200, location: null }, { status: 302, location }, { status: 301, location: "/og/v2/image-a.png" }]) {
+      expect(() => assertOgRedirectResult(OG_REDIRECT_SMOKE_PATH, result)).toThrow("expected a 301");
     }
   });
 });

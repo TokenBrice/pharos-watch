@@ -10,7 +10,6 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
-import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
 import * as depegTrustPolicy from "../../lib/depeg-trust-policy";
@@ -1439,9 +1438,6 @@ describe("active-depeg census scope", () => {
       const { summary } = body;
       if (summary === null) throw new Error("A served census response must carry a summary");
       expect(summary.activeDepegCount).toBe(census);
-
-      const timeline = await loadTimelineOgPage(db, CENSUS_NOW);
-      expect(timeline).toMatchObject({ kind: "ok", hero: String(census) });
     } finally {
       sqlite.close();
     }

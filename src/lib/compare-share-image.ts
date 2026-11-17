@@ -1,5 +1,3 @@
-import { formatOgStampTime } from "@shared/lib/og-route-cards";
-
 interface ShareRadarCoinData {
   symbol: string;
   overallGrade: string;
@@ -66,6 +64,15 @@ const ROW_H = 24;
 const CARD_BOTTOM_PAD = 12;
 const CARDS_Y = 90;
 const FOOTER_H = 50;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/** "12 Oct 2026, 14:05 UTC" — the generation time the footer names. */
+function formatOgStampTime(epochSec: number): string {
+  const date = new Date(epochSec * 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}, ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`;
+}
 
 /** Footer line; dates the card by its oldest loaded producer generation, never the render clock. */
 export function buildCompareShareFooter(asOfUpdatedAt?: number | null): string {

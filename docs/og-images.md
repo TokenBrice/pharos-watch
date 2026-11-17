@@ -112,31 +112,21 @@ The old `og-blog.png` remains a compatibility asset. Do not attach unrelated met
 
 ## 8. Dynamic Worker cards (`/api/og/*`)
 
-These are explicitly dated numerical images and compatibility endpoints, not canonical page previews. `worker/src/api/og.tsx` owns routing/data presentation; `worker/src/lib/og-render.ts` owns the request-initialized Satori/HarfBuzz/Yoga/resvg pipeline. Shared dimensions are 1200×630.
+The Worker renders one image family, the trusted creation input for [dated scorecards](#dated-scorecards): `/api/og/v2/scorecard/:id`. `worker/src/api/og.tsx` routes it to [`og-scorecard.tsx`](../worker/src/api/og-scorecard.tsx), and `worker/src/lib/og-render.ts` owns the request-initialized Satori/HarfBuzz/Yoga/resvg pipeline at 1200×630. A malformed id returns `400` and a non-canonical one `404`, before any read. The PNG's cache ceiling is at most 60 seconds, bounded by both observation and publication runway; an account-level browser-cache floor is independent of it, so acceptance inspects delivered uncached and cached headers. Public methodology labels derive from the served publication's methodology version, never the internal `model: "v9"` compatibility discriminator or a newer repository constant. Safety grades are not recalculated from scores.
 
-Versioned `/api/og/v2/*` routes coexist with retained legacy URLs:
+The retired numerical families answer `301` to an absolute evergreen image on `https://pharos.watch/og/v2/`, with `Cache-Control: public, max-age=31536000, immutable`. No page selects them, but old shares and lazy re-fetchers still request them. A redirect performs no D1 read and no render.
 
-| Family | Purpose |
+| Path under `/api/og/` or `/api/og/v2/` | `Location` |
 | --- | --- |
-| `stablecoin/:id` | Dated per-coin numerical evidence |
-| `safety-scores` | Cohort summary without an aggregate grade |
-| `depeg` | Open event evidence with native-quote provenance |
-| `stability-index` | Admitted PSI observations and retained history |
-| `chain/:id` | Chain known supply/composition with explicit coverage |
-| `page/:slug` | Dated route figure or its figure-free fallback |
-| `scorecard/:id` | Trusted creation input for retained dated sharing |
+| `stablecoin/:id` | the `/stablecoin/<id>/` image |
+| `chain/:id` | the `/chains/<id>/` image |
+| `depeg`, `safety-scores`, `stability-index` | that page's image |
+| `page/:slug` | the image of the page the slug named (`home` is `/`) |
+| an unknown id in any of these families | the home image |
 
-The generic OG descriptor is public-API exempt and denied on site-data. Queries coalesce in the edge-cache key; only recognized versioned paths select new representations. Renderer revision is not publication identity.
+`worker/src/api/og-legacy-redirects.json` maps each `family/id` to an image hash. It was generated once from the evergreen map in effect at retirement (`git:dfa0f3cf70:scripts/maintenance/state/social-preview-images.json`). Never regenerate it: its targets are permanent identities that R2 retains, and an id added later never had a legacy URL. Any other `/api/og/*` path returns `404`.
 
-Public methodology labels derive from the served publication's methodology version, never the internal `model: "v9"` compatibility discriminator or a newer repository constant. Safety grades are not recalculated from scores.
-
-The normal numerical image cache ceiling is `API_CACHE_PROFILES.ogImage`; `ogObservationFreshUntil()` / `observedOgResponse()` in [`worker/src/api/og.tsx`](../worker/src/api/og.tsx) bound displayed market, quote, DEWS and chain evidence by the owning source budget and reassess after rendering. Native depeg quotes use `PSI_NATIVE_EVIDENCE_MAX_AGE_SEC`; a near-expiry observation cannot receive a fresh 900-second TTL. Accepted Safety evidence additionally rechecks exact publication identity and current health after rendering. Dated creation-input PNGs have a separate at-most-60-second ceiling bounded by both observation and publication runway ([`og-scorecard.tsx`](../worker/src/api/og-scorecard.tsx)).
-
-Generation stamps name evidence clocks, not render time. Route cards retain `X-Og-Status`, generation/budget headers and a closed-vocabulary fallback reason. Account-level cache floors are independent: deployment acceptance must inspect delivered uncached and cached headers.
-
-Missing observations remain unavailable, never par/calm/zero. [`chain-card.tsx`](../worker/src/lib/og-templates/chain-card.tsx) qualifies observed supply subtotals and unavailable contributors; dominance is withheld when chain or global supply coverage is incomplete, while displayed composition shares explicitly name the observed chain subtotal. [`safety-scores-card.tsx`](../worker/src/lib/og-templates/safety-scores-card.tsx) separates NR and pipeline-unavailable members from rated coverage; the overview mean uses only rated scores and never an aggregate letter grade. Measured mint/burn is not supply change; native quotes are not reconstructed from USD references; historical sample extrema are not lifetime extrema. Historical/degraded sources cannot borrow a fresh sibling's clock. Data owners, not the image, establish these semantics.
-
-Satori's workerd-compatible HarfBuzz loader remains `worker/src/lib/og-harfbuzz.ts`. Keep WASM initialization inside request execution with isolate reuse. A renderer upgrade needs the actual workerd PNG check, not only Node SVG tests.
+The OG descriptor remains exempt from API keys and denied on site-data, and the edge-cache key drops queries. The API smoke probes one redirect and one scorecard render. Satori's workerd-compatible HarfBuzz loader remains `worker/src/lib/og-harfbuzz.ts`. Keep WASM initialization inside request execution, with isolate reuse. A renderer upgrade needs the actual workerd PNG check, not only Node SVG tests.
 
 ## CI guardrails
 

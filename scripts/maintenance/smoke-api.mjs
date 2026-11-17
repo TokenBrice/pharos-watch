@@ -31,11 +31,13 @@ export const CANARY_CONTRACT_SMOKE_PATHS = [
   "/api/stress-signals",
 ];
 
-// OG image endpoints are public PNG routes outside the JSON contract set.
-// The per-coin route once 503ed for every coin in production for weeks with
-// nothing watching it (satori threw on the card template), so the smoke
-// probes one coin card, one per-chain card, and one aggregate card on every run.
-export const OG_SMOKE_PATHS = ["/api/og/stablecoin/usdt-tether", "/api/og/chain/ethereum", "/api/og/depeg"];
+// OG image endpoints are public routes outside the JSON contract set. The
+// per-coin card once 503ed for every coin in production for weeks with nothing
+// watching it (satori threw on the card template), so the smoke renders the one
+// remaining Worker card, the dated scorecard, on every run. Retired families
+// answer a frozen 301 to their evergreen image; one probe keeps that table live.
+export const OG_SMOKE_PATHS = ["/api/og/v2/scorecard/usdt-tether"];
+export const OG_REDIRECT_SMOKE_PATH = "/api/og/stablecoin/usdt-tether";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
@@ -186,13 +188,14 @@ async function fetchPng(baseUrl, endpointPath, timeoutMs) {
   // Cache-buster query: OG responses are edge-cacheable, and a stale cached
   // PNG must not mask a render path broken by the deploy under test.
   const url = `${baseUrl}${endpointPath}?smoke=${Date.now()}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(timeoutMs) });
   const buffer = await res.arrayBuffer();
   return {
     url,
     status: res.status,
     contentType: res.headers.get("content-type") ?? "",
     renderErrorClass: res.headers.get("x-render-error-class"),
+    location: res.headers.get("location"),
     bytes: buffer.byteLength,
   };
 }
@@ -216,6 +219,14 @@ export function assertOgImageResult(endpointPath, result) {
   );
   assert(result.bytes > 10_000, `${endpointPath} returned a suspiciously small image (${result.bytes}b)`);
   return `${Math.round(result.bytes / 1024)}kb png`;
+}
+
+export function assertOgRedirectResult(endpointPath, result) {
+  assert(
+    result.status === 301 && /^https:\/\/pharos\.watch\/og\/v2\/image-[0-9a-f]{64}\.png$/.test(result.location ?? ""),
+    `${endpointPath} returned ${result.status} to "${result.location ?? ""}"; expected a 301 to an evergreen /og/v2/ image`,
+  );
+  return `301 ${result.location}`;
 }
 
 function isFiniteNumber(value) {
@@ -528,6 +539,8 @@ async function run() {
     const ogDetails = assertOgImageResult(ogPath, ogResult);
     console.log(`[smoke-api] OK ${ogPath} (${ogDetails})`);
   }
+  const redirect = await fetchPngWithRetry(baseUrl, OG_REDIRECT_SMOKE_PATH, timeoutMs, retryCount, retryDelayMs);
+  console.log(`[smoke-api] OK ${OG_REDIRECT_SMOKE_PATH} (${assertOgRedirectResult(OG_REDIRECT_SMOKE_PATH, redirect)})`);
 
   const smokeApiKey = (process.env.SMOKE_API_KEY ?? "").trim();
   if (!smokeApiKey) {
