@@ -12,9 +12,9 @@ Failures surface as red GitHub Actions runs and GitHub notifications. Job logs, 
 
 ## Scheduled start delay
 
-GitHub starts this repository's `schedule` runs hours after their cron time, consistently. Measured over 2026-10-12 → 2026-11-09 (#1949): `weekly-validation` (Mon 06:17 UTC) started 6.5–9.5 h late, `agent-maintenance-candidates` (Mon 07:15) 7–9.5 h, `ops-followups` (Mon 07:30) 7–10 h, `ddr-curation-watch` (daily 09:27) 6–8 h and `curation-expiry-sweep` (Tue 05:45) 4.5–7 h. The cron minute is a not-before time, never a delivery time.
+GitHub starts this repository's `schedule` runs hours after their cron time, consistently. Measured over 2026-10-12 → 2026-11-09 (#1949): `weekly-validation` (Mon 06:17 UTC) started 6.5–9.5 h late, `agent-maintenance-candidates` (Mon 07:15) 7–9.5 h, `ops-followups` (then Mon 07:30, daily since 2026-11-18) 7–10 h, `ddr-curation-watch` (daily 09:27) 6–8 h and `curation-expiry-sweep` (Tue 05:45) 4.5–7 h. The cron minute is a not-before time, never a delivery time.
 
-- Expect Monday reminders, the weekly CI report and DDR follow-ups in the afternoon or evening UTC. A scheduled run that has not started by its cron time plus 12 h is the incident threshold; an earlier absence is the normal delay.
+- Expect follow-up reminders, the weekly CI report and DDR follow-ups in the afternoon or evening UTC. A scheduled run that has not started by its cron time plus 12 h is the incident threshold; an earlier absence is the normal delay.
 - Acceptance of a workflow change cannot rely on the same-day scheduled run. Accept it from a manual `workflow_dispatch` on `main` at the merged SHA, then confirm the next scheduled run when it arrives.
 - Do not move a cron earlier to compensate: reports and overdue reminders are computed at run time, so an earlier nominal time changes their window whenever GitHub does start on time.
 
