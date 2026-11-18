@@ -1,4 +1,3 @@
-import { API_PATHS } from "./api-endpoints/paths";
 import { API_ORIGIN } from "./runtime-origins";
 import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH } from "./social-preview";
 import { SOCIAL_PREVIEW_ASSET_OBJECT_PREFIX } from "./social-preview-storage";
@@ -16,9 +15,14 @@ export function isEvergreenImageHash(value: string | null): value is string {
   return value !== null && /^[a-f0-9]{64}$/.test(value);
 }
 
+/**
+ * The evergreen fallback of an API-hosted dossier preview (`API_PATHS.ogDossier`), or null.
+ * Matched literally so the site-wide Share button does not bundle every API path.
+ */
 export function dossierOgFallbackPath(preview: URL, id: string): string | null {
   const hash = preview.searchParams.get("fallback");
-  return isEvergreenImageHash(hash) && preview.href === `${API_ORIGIN}${API_PATHS.ogDossier(id, hash)}`
+  return isEvergreenImageHash(hash)
+    && preview.href === `${API_ORIGIN}/api/og/v2/dossier/${encodeURIComponent(id)}?fallback=${hash}`
     ? `/og/v2/image-${hash}.png`
     : null;
 }

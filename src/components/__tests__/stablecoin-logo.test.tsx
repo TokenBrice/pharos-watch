@@ -4,13 +4,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { StablecoinLogo } from "../stablecoin-logo";
-import variants from "@/lib/logo-variants.generated.json";
+import collections from "@/lib/logo-variants.generated.json";
+import { compactLogoVariants } from "@/lib/logo-variants";
 
 afterEach(cleanup);
 
 describe("StablecoinLogo density selection", () => {
   it("publishes high-density candidates in server markup without changing the reserved header geometry", () => {
-    const [src, sizes] = Object.entries(variants).find(([src]) => src.startsWith("/logos/"))!;
+    const src = `/logos/${collections["/logos"].sources[0]}`;
+    const sizes = compactLogoVariants(src)!;
     const markup = renderToStaticMarkup(<StablecoinLogo src={src} name="Test coin" size={56} />);
     expect(markup).toContain(`${src} 3x`);
     const { container } = render(<StablecoinLogo src={src} name="Test coin" size={56} />);

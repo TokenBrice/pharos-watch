@@ -1,10 +1,18 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import variants from "../logo-variants.generated.json";
-import { resolveCompactLogoSrc, resolveCompactLogoSrcSet } from "../logo-variants";
+import collections from "../logo-variants.generated.json";
+import { compactLogoVariants, resolveCompactLogoSrc, resolveCompactLogoSrcSet } from "../logo-variants";
 
-const registry: Record<string, Partial<Record<32 | 56 | 100, string>>> = variants;
+const registry = Object.fromEntries(Object.entries(collections).flatMap(([prefix, { sources }]) =>
+  sources.map((name) => [`${prefix}/${name}`, compactLogoVariants(`${prefix}/${name}`)!])));
 
 describe("resolveCompactLogoSrc", () => {
+  it("derives only variant paths the generator wrote", () => {
+    const paths = Object.values(registry).flatMap((sizes) => Object.values(sizes));
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((path) => !existsSync(`public${path}`))).toEqual([]);
+  });
+
   it("selects small and header variants by rendered diameter, retaining originals for larger slots", () => {
     const [src, sizes] = Object.entries(registry).find(([src]) => src.startsWith("/logos/"))!;
     expect(resolveCompactLogoSrc(src, 24)).toBe(sizes[32]);
