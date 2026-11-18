@@ -485,12 +485,15 @@ export function exposureFootprint(
       break;
     }
   }
-  indirect.overlapUpperBoundUsd = indirect.overlapUnavailableReason ? null : indirect.overlapUsd;
   for (const layer of [direct, indirect]) {
     layer.excludedSupplyUnknownIds.sort();
     layer.complete = layer.excludedSupplyUnknownIds.length === 0 && layer.unknownShareEdgeCount === 0 && !layer.integrityFlag;
-    layer.hasKnownUsd ||= layer.complete;
   }
+  // A complete empty layer cannot stand in for observations in an incomplete footprint.
+  const hasKnownUsd = direct.hasKnownUsd || indirect.hasKnownUsd || (direct.complete && indirect.complete);
+  direct.hasKnownUsd ||= hasKnownUsd && direct.complete;
+  indirect.hasKnownUsd ||= hasKnownUsd && indirect.complete;
+  indirect.overlapUpperBoundUsd = !hasKnownUsd || indirect.overlapUnavailableReason ? null : indirect.overlapUsd;
   rows.sort((a, b) => a.minHop - b.minHop || a.id.localeCompare(b.id));
   return { rows, direct, indirect, reached: rows.length, bandCounts };
 }

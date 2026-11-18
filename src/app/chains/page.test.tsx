@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { getActiveChainIds } from "@shared/lib/chains";
+import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import ChainsPage from "./page";
 
 vi.mock("./client", () => ({
@@ -19,7 +20,7 @@ describe("ChainsPage", () => {
     expect(html).not.toContain("tracked deployment");
 
     expect(html).toContain("Where stablecoin supply lives, how concentrated it is, and which chains are moving.");
-    expect(html).toContain("Chain Health methodology 1.8");
+    expect(html).toContain(`Chain Health methodology ${CHAIN_HEALTH_METHODOLOGY_VERSION}`);
     expect(html).toContain("Chains FAQ");
     expect(html).toContain("What is the Chain Health Score?");
     expect(html).toContain('"@type":"FAQPage"');
@@ -32,5 +33,19 @@ describe("ChainsPage", () => {
     expect(client).toBeLessThan(faq);
     expect(faq).toBeLessThan(directory);
     expect(directory).toBeLessThan(footer);
+  });
+
+  it("links to the declared Chain Health methodology on both sides of the release clock", () => {
+    vi.useFakeTimers();
+    try {
+      for (const now of [1_795_053_599_000, 1_795_053_600_000]) {
+        vi.setSystemTime(now);
+        const html = renderToStaticMarkup(<ChainsPage />);
+        expect(html).toContain(`Chain Health methodology ${CHAIN_HEALTH_METHODOLOGY_VERSION}`);
+        expect(html).toContain(`href="${CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH.replace(/\/$/, "")}"`);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

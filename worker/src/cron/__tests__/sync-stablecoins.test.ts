@@ -161,7 +161,11 @@ describe("syncStablecoins", () => {
     expect(published.fxAdmissionCoverageGeneration).toEqual(expect.any(String));
   });
 
-  it.each([["main", true], ["fallback", true], ["main", false], ["fallback", false]] as const)("publishes the FX evidence cutover on %s with provider data %s", async (path, hasReference) => {
+  it.each([
+    ["main", true, true], ["fallback", true, true],
+    ["main", false, true], ["fallback", false, true],
+    ["main", true, undefined],
+  ] as const)("publishes FX evidence on %s with provider data %s and switch %s", async (path, hasReference, publishFxReferenceEvidence) => {
     const now = Date.parse("2026-11-20T21:55:00Z") / 1000;
     vi.setSystemTime(now * 1000);
     const observation = { pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates", cadence: "intraday", observedAtSec: now - 300 };
@@ -172,8 +176,13 @@ describe("syncStablecoins", () => {
     const writes = trackCacheWrites(db);
     if (path === "fallback") vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== CIRCUIT_SOURCE.DL_STABLECOINS);
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60), path === "fallback" ? fallbackCoinGeckoData() : {}));
-    await syncStablecoins(db, undefined, { publishFxReferenceEvidence: true });
+    await syncStablecoins(db, undefined, { publishFxReferenceEvidence });
     const payload = StablecoinListResponseSchema.parse(JSON.parse(writes.find((write) => write.key === "stablecoins")!.value));
+    if (publishFxReferenceEvidence === undefined) {
+      expect(payload.fxReferenceObservations).toBeUndefined();
+      expect(payload.fxFallbackRates?.peggedEUR).toBe(1.1);
+      return;
+    }
     if (!hasReference) {
       expect(payload.fxReferenceObservations).toEqual({});
       return;

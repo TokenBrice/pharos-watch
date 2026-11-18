@@ -180,6 +180,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/chain-identity.ts",
   "shared/types/coin-projection.ts",
   "shared/types/core.ts",
+  "shared/types/current-peg.ts",
   "shared/types/custody.ts",
   "shared/types/date-primitives.ts",
   "shared/types/depeg-audit.ts",

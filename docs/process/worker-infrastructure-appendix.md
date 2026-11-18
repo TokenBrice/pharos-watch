@@ -181,6 +181,8 @@ Permanent product history is explicit, including `supply_history`, `tape_events`
 
 Finalized `mint_burn_scan_coverage` proof is permanent, including old source fingerprints; lossless segment compaction is not age pruning. `mint_burn_dirty_hours` is an explicitly excluded mutable debt queue: only the atomic materialization rebuild consumes each key, never a time cutoff.
 
+The transaction and transfer supporter-credit ledgers are permanent. Mint/burn writer-epoch segments and hourly receipts are mutable proof state owned by the scan and rebuild writers. Reference-aware Telegram alert plans are mutable planning state. Closing a plan moves it into the regular Telegram job lifecycle.
+
 The same daily `runPruneCronHistory()` owns the two [Safety publication journal](../report-cards.md#publication-journal-and-movement-attribution) tables added by migration 0262:
 
 | Table | Retention clock | Evidence retained |

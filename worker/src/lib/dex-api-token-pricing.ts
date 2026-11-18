@@ -1,7 +1,7 @@
 import type { PriceValidationReferences } from "./price-validation";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { buildPriceValidationContext, getFreshReferencePriceForContext, getReferencePriceForContext } from "./price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
 import { logWorkerEvent } from "./structured-log";
@@ -151,7 +151,7 @@ function resolveTokenReferenceUsdPrice(
     // navToken legs price only from a guarded NAV reference carried in the
     // trusted map (orchestrator-phases/lookups admits fresh protocol-redeem
     // NAV overrides). Missing NAV stays null — never a peg/reference print.
-    if (TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
+    if (WORKER_TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
 
     return measuredReferenceAtSec === undefined
       ? getReferencePriceForContext(context, validationReferences)

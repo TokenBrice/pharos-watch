@@ -5,7 +5,7 @@ import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { readDexPriceLineage } from "../price-lineage";
 import type { DexAmmExecutionToken } from "@shared/types/dex-execution";
 import type { StablecoinData } from "@shared/types/supply";
@@ -23,7 +23,7 @@ export interface TrackedStablecoinMaps {
 }
 
 function isMarketMarkSource(asset: StablecoinData): boolean {
-  if (TRACKED_META_BY_ID.get(asset.id)?.flags.navToken || asset.priceObservedAtMode === "unknown") return false;
+  if (WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.navToken || asset.priceObservedAtMode === "unknown") return false;
   const sources = normalizePricingSourceKeys([asset.priceSource, ...(asset.agreeSources ?? [])]);
   return sources.length > 0 && sources.every((source) => {
     const entry = getPricingSourceRegistryEntry(source);
@@ -42,7 +42,7 @@ function isMarketMarkSource(asset: StablecoinData): boolean {
  *  ("low" confidence) and market prints never qualify; a missing or stale NAV
  *  fails closed. */
 function isGuardedNavReferencePrice(asset: StablecoinData, nowSec: number): boolean {
-  if (TRACKED_META_BY_ID.get(asset.id)?.flags.navToken !== true) return false;
+  if (WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.navToken !== true) return false;
   if (asset.priceConfidence !== "high") return false;
   if (!isPricingSourceProtocolOverride(asset.priceSource ?? null)) return false;
   const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;

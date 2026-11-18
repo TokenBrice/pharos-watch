@@ -286,6 +286,7 @@ describe("YieldAnalysisClient", () => {
       data: makeResponse([
         makeRanking({ id: "xgld-unitas", symbol: "xGLD", name: "xGLD" }),
         makeRanking({ id: "fpi-frax", symbol: "FPI", name: "Frax Price Index" }),
+        makeRanking({ id: "usdc-circle", symbol: "USDC", name: "USD Coin" }),
       ]),
     });
     render(
@@ -310,10 +311,12 @@ describe("YieldAnalysisClient", () => {
 
     const header = screen.getByRole("heading", { name: "xGLD" }).closest("section")!;
     expect(header.textContent).toContain("XAUT-denominated NAV");
-    expect(header.textContent).not.toContain("CPI");
+    expect(header.textContent).not.toContain("Variable");
 
     const peerRail = screen.getByRole("heading", { name: "Nearby yield context" }).closest("section")!;
-    expect(peerRail.textContent).toContain("CPI peg peers by PYS rank");
+    expect(peerRail.textContent).toContain("Variable peg peers by PYS rank");
+    expect(peerRail.textContent).toContain("Frax Price Index");
+    expect(peerRail.textContent).not.toContain("USDC");
     expect(peerRail.textContent).not.toContain("XAUT-denominated NAV peg peers");
   });
 

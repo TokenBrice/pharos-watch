@@ -305,6 +305,15 @@ describe("runtime reachability policies", () => {
     });
   });
 
+  it("keeps the scheduled DEX discovery import graph on the lightweight registry", async () => {
+    const result = await checkRuntimeReachabilityPolicy({
+      ...policy("memory-constrained-cron"),
+      entrypoints: { kind: "paths", paths: ["worker/src/handlers/scheduled/thirty-minute-dex-discovery.ts"] },
+    });
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
   it.each([
     '"use client";',
     '"use client"',

@@ -75,6 +75,15 @@ describe("retention policy registry", () => {
     }
   });
 
+  it("retains both supporter credit ledgers and excludes replaceable writer receipts and alert plans", () => {
+    for (const table of ["api_key_donor_credits", "api_key_donor_transfer_credits"]) {
+      expect(registered(table)).toMatchObject({ permanent: true, timestampColumn: "credited_at", windowSec: null });
+    }
+    for (const table of ["mint_burn_writer_epoch_coverage", "mint_burn_writer_epoch_hours", "telegram_reference_alert_plans"]) {
+      expect(RETENTION_NON_APPEND_TABLES[table]).toBeTruthy();
+    }
+  });
+
   it("keeps unresolved materialization debt outside age-based retention", () => {
     // Debt protects raw siblings until the atomic rebuild consumes its key.
     expect(!!registered("mint_burn_dirty_hours")).toBe(false);

@@ -424,8 +424,10 @@ describe("projectTape", () => {
     await projectMethodologyBumps(db, { dryRun: true });
     expect(source.get()).toMatchObject({ ts: oldTs, payload_json: oldPayload });
     expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
-    expect((await read()).rows.map((row) => [row.methodology_version, row.ts]))
-      .toEqual([["8.56", 1_795_040_700_000], ["8.55", 1_795_013_063_000]]);
+    const { rows } = await read();
+    expect(rows.map((row) => [row.methodology_version, row.ts]))
+      .toEqual([["8.56", 1_795_053_600_000], ["8.55", 1_795_013_063_000]]);
+    expect(JSON.parse(rows[0]!.payload_json)).toMatchObject({ effectiveAt: 1_795_053_600 });
     expect(source.get()).toEqual({ ...fresh, event_id: oldId });
 
     provisional.run(oldId, oldTs, oldPayload, SEC, "editorial-suppression", fresh.id!);

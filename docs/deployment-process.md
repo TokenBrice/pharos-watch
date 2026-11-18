@@ -158,7 +158,7 @@ Apply all pending D1 migrations through [0318_supply_history_guard_legacy_snapsh
 - Keep refreshed `data/depeg-events` out of commits until the rollback floor includes the compatible sync. Main’s sync drops retained-page URLs and the four new BRZ pages.
 - Before routing traffic to a rollback Worker, verify that the selectable redemption manifests expose no Mento phase-dependent capacity or score in the legacy row projection and purge any cached bulk or coin responses from the prior writer. The patched writer produces that projection automatically. A rollback target must also preserve the safe Mento writes and DDR partial-checkpoint guard, or keep the affected writers fenced for the duration of the rollback.
 
-Public FX evidence ships off. To opt in, set `PUBLISH_FX_REFERENCE_EVIDENCE` in `worker/src/cron/sync-stablecoins.ts` to `true` and deploy the Worker. This single setting covers the scheduled primary and fallback publications. An explicitly empty observation map activates admission for its generation.
+Public FX evidence ships off. To opt in, edit the source declaration to `const PUBLISH_FX_REFERENCE_EVIDENCE = true` in `worker/src/cron/sync-stablecoins.ts` and deploy the Worker. The constant defaults `publishFxReferenceEvidence` for both scheduled publication paths. An explicitly empty observation map activates admission for its generation.
 
 The following behavior applies with either switch setting.
 

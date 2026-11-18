@@ -112,6 +112,19 @@ describe("direct dependency exposure", () => {
 });
 
 describe("look-through dependency exposure", () => {
+  it("distinguishes an observed zero from an incomplete footprint with no known supply", () => {
+    const edges = [edge("root", "missing", "serial", null), edge("root", "observed", "serial", null)];
+    const unavailable = exposureFootprint(["root"], edges, () => null, opts);
+    expect(unavailable.direct).toMatchObject({ complete: false, hasKnownUsd: false });
+    expect(unavailable.indirect).toMatchObject({ complete: true, hasKnownUsd: false, overlapUpperBoundUsd: null });
+
+    const withZero = exposureFootprint(["root"], edges, id => id === "observed"
+      ? { usd: 0, asOf: null, basis: "market-cap-proxy" }
+      : null, opts);
+    expect(withZero.direct).toMatchObject({ complete: false, hasKnownUsd: true, knownUsd: 0 });
+    expect(withZero.indirect).toMatchObject({ complete: true, hasKnownUsd: true, overlapUpperBoundUsd: 0 });
+  });
+
   const capturedEdges = snapshot.edges as ReportCardsV9DependencyEdge[];
   const capturedSupply: SupplyOf = id => {
     const usd = (snapshot.supplyUsdById as Record<string, number>)[id];

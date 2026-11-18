@@ -8,7 +8,6 @@ import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
-import { loadTrackedStablecoinMaps } from "../dex-liquidity/orchestrator-phases/lookups";
 import type { DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";
 import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "./types";
@@ -564,7 +563,8 @@ export async function syncDexDiscovery(
     throwIfAborted(signal);
     const validationReferences = await loadPriceValidationReferences(db);
     let marketPrices: Promise<DexValuationPrices | undefined> | undefined;
-    const loadMarketPrices = () => marketPrices ??= loadTrackedStablecoinMaps(db, Math.floor(Date.now() / 1000))
+    const loadMarketPrices = () => marketPrices ??= import("../dex-liquidity/orchestrator-phases/lookups")
+      .then(({ loadTrackedStablecoinMaps }) => loadTrackedStablecoinMaps(db, Math.floor(Date.now() / 1000)))
       .then(({ stablecoinPriceById }) => stablecoinPriceById)
       .catch((err) => {
         logWorkerEventArgs("handler", "warn", "Horizon market marks unavailable", toErrorMessage(err));
