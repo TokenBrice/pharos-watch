@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.54`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.55`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
