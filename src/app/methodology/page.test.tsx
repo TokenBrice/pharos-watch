@@ -24,6 +24,7 @@ import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALT
 import { DEFINITIONS } from "@/lib/definitions";
 import { DEPEG_RESOLVER_SECTION_CONTENT, MINT_BURN_FLOW_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
+import { SAFETY_GRADE_FACTS } from "@/app/methodology/sections/core/safety-scores-overview";
 
 // The page is static (no props, constant date): render once and reuse the parsed document.
 let cachedHtml: string | null = null;
@@ -57,6 +58,18 @@ describe("MethodologyPage", () => {
     for (const text of [section?.textContent ?? "", DEPEG_RESOLVER_SECTION_CONTENT.markdown]) {
       expect(text).not.toMatch(/Terminal evidence means a terminal status|No break signals means no kill signal/);
     }
+  });
+
+  it("leads with the grade bands before reading meta", () => {
+    const html = methodologyHtml();
+    const glanceAt = html.indexOf('id="methodology-at-a-glance"');
+    expect(glanceAt).toBeGreaterThan(-1);
+    for (const meta of ["Page rhythm:", "How to read this page", "Editorial preface"]) {
+      expect(html.indexOf(meta), meta).toBeGreaterThan(glanceAt);
+    }
+    const glance = methodologyDocument().querySelector('[aria-labelledby="methodology-at-a-glance"]')!;
+    for (const { label, value } of SAFETY_GRADE_FACTS) expect(glance.textContent).toContain(`${label}${value}`);
+    expect(glance.querySelector('a[href="#safety-scores-methodology"]')).not.toBeNull();
   });
 
   it("names the Safety Score version, weights and changelog dates in metadata and the header", () => {

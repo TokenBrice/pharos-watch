@@ -2,7 +2,6 @@ import {
   ACTIVE_STABLECOIN_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
-  PRE_LAUNCH_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 import { PSI_HISTORICAL_ASSETS } from "@shared/lib/psi-historical-assets";
@@ -50,7 +49,9 @@ export const UNIVERSES = {
     label: "Pre-launch",
     definition:
       "Announced stablecoins that are not live yet, from announcement through launch. They join the active set when they go live.",
-    count: PRE_LAUNCH_STABLECOIN_COUNT,
+    // Counted by the page: the build-time pre-launch total also holds launched
+    // rows awaiting data, which are live and so outside this definition.
+    count: null,
   },
   scored: {
     label: "Scored",
