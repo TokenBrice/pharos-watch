@@ -134,6 +134,8 @@ Use the guarded reconciliation only for the immutable `night-watch-usdt-tron-202
 
 ### Blacklist Current-Balance Rebuild
 
+The reviewed Ethereum USDT exception keeps an address eligible while it remains blocked after a wipe. Rebuild using finalized balance evidence dated by the observation and retain the 12-hour age boundary. Historical wipe amounts remain ledger evidence.
+
 Use `worker/scripts/rebuild-blacklist-current-balances.ts` only after the source event set is complete:
 
 1. Preview, then arm the writer pause with `--arm-writer-pause`; live changes require `--execute --confirm rebuild-blacklist-current-balances`; the target defaults to local D1, so pass `--remote` deliberately for the production ledger.

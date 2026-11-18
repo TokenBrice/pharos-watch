@@ -125,6 +125,8 @@ The [KYC observation admission contract](./runbooks/blacklist-sync.md#kyc-balanc
 
 ## CI Deploy Sequence
 
+Daily dataset release selection uses the previous completed UTC date. Before repointing latest, require current Safety publication admission and retain the existing rollback for a failed admission.
+
 Workflow YAML owns job wiring; this section owns the production safety ordering. [Testing: CI Pipeline](./testing.md#ci-pipeline) owns PR/nightly/weekly validation and trusted retained-data Pages replay. `PHAROS_PAGES_REPLAY` is forbidden in production deploy/rebuild and local release rehearsal: only the validated PR replay lane may relax mirror wall-clock age.
 
 The release graph is `plan → (deploy-worker ∥ pages-prepare) → pages-release → post-deploy-acceptance`, with explicitly unselected surfaces skipped. [`deploy-cloudflare.yml`](../.github/workflows/deploy-cloudflare.yml) runs after a protected-main merge or main-only manual dispatch:
@@ -137,6 +139,28 @@ The release graph is `plan → (deploy-worker ∥ pages-prepare) → pages-relea
 6. **Acceptance probes each successful surface independently.** Read-only [`run-post-deploy-acceptance.ts`](../scripts/ci/run-post-deploy-acceptance.ts) needs Node but no npm install/bootstrap. It rechecks both exact deployment UUIDs and applicable public health/Pages evidence even when another deployment or identity probe failed. [Operational acceptance](#operational-acceptance) owns interpretation; activation is not runtime recovery.
 
 The daily/main-only [`rebuild-pages.yml`](../.github/workflows/rebuild-pages.yml) uses the same `pages-prepare → pages-release` path without Worker mutation, under the shared production lock.
+
+### Reference and supply rollout
+
+Apply all pending D1 migrations. For this rollout, verify the migration ledger includes [0314_mint_burn_receipt_exclusions.sql](../worker/migrations/0314_mint_burn_receipt_exclusions.sql) before activating either Worker. Activate and verify the heavy Worker, activate and verify the public Worker, then release Pages. On rollback, restore Pages first, then the compatible Worker pair. Keep the additive D1 schema in place.
+
+- A previous Worker’s mint/burn writes fire the 0312 triggers and reset the affected hour receipts. Migration 0314 preserves the OUSD and USDz exclusions recorded by the receipt-aware writer. Flow totals, counted events and Tape require recertification of a rewritten hour.
+- In-flight `telegram_reference_alert_plans` rows are stranded while the previous Worker is active. The compatible planner can resume unexpired plans when it returns.
+- Keep refreshed `data/depeg-events` out of commits until the rollback floor includes the compatible sync. Main’s sync drops retained-page URLs and the four new BRZ pages.
+
+Public FX evidence ships off. To opt in, set `PUBLISH_FX_REFERENCE_EVIDENCE` in `worker/src/cron/sync-stablecoins.ts` to `true` and deploy the Worker. This single setting covers the scheduled primary and fallback publications. An explicitly empty observation map activates admission for its generation.
+
+The following behavior applies with either switch setting.
+
+| Surface | Behavior |
+| --- | --- |
+| USD market-cap change | Dated USD caps take precedence. Healthy undated USD list rows retain the legacy bucket for each unassessed lookback. A rejected valuation withholds only its own window. Non-USD comparisons require a dated, matching USD valuation on new publications. |
+| PSI seven-day trend | Compare USD capitalizations seven UTC observation dates apart. Legacy publications retain their previous-week bucket. A failed comparison against dated history appears in trend coverage. |
+| Native supply on detail | Older envelopes can project tokens from USD stock and its observed price. An explicit unavailable count stays unknown. |
+| Chain peg health | Compare observed prices with the available peg reference when the row has no admission fields. A published verdict determines eligibility. |
+| Digest movers and DEWS supply | Use comparable native evidence when available. Older rows use the legacy USD inputs. The digest reports degraded coverage when a non-empty cohort has no admissible comparison. |
+| DEWS mint/burn flow | Legacy intervals use the existing flow score. Intervals under the new writer require epoch proof. An empty 0312 history permits the legacy calculation. |
+| Telegram recoveries and receipts | Legacy USD recovery classifications remain alertable. Dispatch retries a withheld recovery while the coin has no active replacement. A verified replacement opens under its own event ID and later worsening alerts use that ID. Reopening duration requires an admitted recovery clock. Terminal 0313 receipts retain the plan payload for roll-up deduplication. |
 
 ### Exact Pages artifact
 

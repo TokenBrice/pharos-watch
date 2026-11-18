@@ -48,6 +48,8 @@ Exports join mixed producer generations, not one atomic snapshot. All five live 
 
 ## Picker Handoff
 
+From `selector-v2.14`, the tolerance gate for an active event reads its published current deviation until FX evidence is enabled. When a verdict or explicit projection is present, the gate uses the admitted value. Held and stale reference notices retain their distinct wording.
+
 `src/lib/selector-handoff.ts` owns the URL and human-readable chips. Emit only `SCREENER_URL_SCHEMA` keys, published Backing/Exit terminology and recommendation IDs in `coins=`. Unsupported gates remain explicit divergence chips: yield/source warnings, Bluechip, inherited blacklist exposure, active depegs, critical or paused holder notices (the `states` filter selects a state; it cannot exclude one), legal uncertainty and one-hour effective TVL. Picker is the guided flow; Screener is exact inspection, sorting and export.
 
 Telegram subscribe commands use deduplicated canonical IDs, not tickers; identically named assets stay distinct targets.

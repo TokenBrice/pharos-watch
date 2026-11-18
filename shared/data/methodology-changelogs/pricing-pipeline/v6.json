@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.85",
+    "title": "Clocked references and independent market prices",
+    "date": "2026-11-18",
+    "effectiveAt": 1795040700,
+    "summary": "FX and commodity references retain the original observation, source and cadence. Public FX evidence is off by default. Current peg comparisons use the existing peg reference until a publication includes an admission verdict. Pricing and supply valuation keep source clocks and units attached to their own evidence.",
+    "impact": [
+      "Open Exchange Rates reserves one poll per open FX hour. Date-only fixings and intraday observations have distinct provenance and admission rules.",
+      "Native conversions carry quote and FX lineage and use the older eligible clock. Offshore CNH requires same-unit evidence. Shared price-forming pools and reviewed venue mirrors cannot double-vote.",
+      "Curve and Coinbase USDC conversions require a dated dependency. Coinbase midpoints use book times, Jupiter marks use block time, and clockless CoinGecko prices are diagnostic for primary voting. The curated Kinesis CEX ticker retires.",
+      "Historical price and supply records distinguish dated USD capitalization, token counts and the market quote. Commodity replay uses dated same-unit observations."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.84",
     "title": "A rejected live vault rate no longer falls back to the cached rate",
     "date": "2026-11-18",

@@ -42,6 +42,8 @@ Archive methodology correction is a separately reviewed metadata operation, not 
 
 ### Source Reconciliation
 
+A repaired source disposition can suppress a transition without removing its permalink identity. Direct lookup retains a reason for the suppression. Operational Safety grade restorations establish comparison baselines and are excluded from organic change counts.
+
 Since mint/burn v6.31, large-flow selection and corrections use only admitted, enabled config pairs. Scope filtering happens before the row cap, so pending legs cannot starve admitted flows. Scheduled projection starts a newly admitted leg at its admission timestamp; its 90-day baseline is not announced retroactively. Grandfathered legs retain their existing history, and explicit admin `since` bounds can still repair admitted historical events. Disabling a leg stops new projection without erasing historical claims; source-invalid claims retain the retraction behavior below.
 
 Depeg open/recovery, freeze and large-flow projectors reconcile immutable source identities independent of watermark. Scheduled reconciliation uses the source-owned trailing event-time window; older repair uses explicit admin bounds (`since=0` for all history). New-identity selection excludes already-projected identities/non-recovery closures before limiting. Freeze additionally reconciles already-projected claims with changed amounts or source suppression inside the event-time or recent amount-attempt window, without backfilling unrelated old sources. Source clocks own presentation; watermarks never regress. Freeze historical alerts retain the 24-hour recovery gate. Depeg alerts use active source episodes/exact prior episode IDs, not Tape insert IDs; backfills cannot replay historical depegs live.

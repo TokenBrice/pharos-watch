@@ -13,7 +13,11 @@ vi.mock("next/link", async () => {
 
 import MethodologyPage, { metadata } from "@/app/methodology/page";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
+import {
+  getMethodologyVersionAt,
+  METHODOLOGY_CHANGELOG_REGISTRY,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG,
+} from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { PSI_COMPONENT_LIMITS, PSI_CONDITION_BANDS, getConditionBand } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES, getGaugeBand } from "@shared/lib/mint-burn-gauge-bands";
@@ -22,7 +26,14 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { QUALITY_WEIGHT, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT, BACKING_DIVERSITY_WEIGHT } from "@shared/lib/chains/health";
 import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR, PYS_MAX_SOURCE_RISK_PENALTY, PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import { DEFINITIONS } from "@/lib/definitions";
-import { DEPEG_RESOLVER_SECTION_CONTENT, MINT_BURN_FLOW_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
+import {
+  DEPEG_RESOLVER_SECTION_CONTENT,
+  MINT_BURN_FLOW_SECTION_CONTENT,
+  PEGSCORE_DEWS_SECTION_CONTENT,
+  PRICING_PIPELINE_SECTION_CONTENT,
+  SAFETY_SCORES_SECTION_CONTENT,
+  STABILITY_INDEX_SECTION_CONTENT,
+} from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 import { SAFETY_GRADE_FACTS } from "@/app/methodology/sections/core/safety-scores-overview";
 
@@ -50,6 +61,39 @@ function tableCells(root: HTMLElement, testId: string) {
 }
 
 describe("MethodologyPage", () => {
+  it("activates the eleven coordinated methodology releases at the same timed boundary", () => {
+    const depegRelease = METHODOLOGY_CHANGELOG_REGISTRY
+      .find(({ key }) => key === "depeg-dews")!.entries.find(({ version }) => version === "6.50")!;
+    const activation = depegRelease.effectiveAt;
+    expect(activation).toBeGreaterThan(Date.parse(depegRelease.date) / 1000);
+    const releases = METHODOLOGY_CHANGELOG_REGISTRY.flatMap(({ key, entries }) =>
+      entries.flatMap((entry, index) => entry.effectiveAt === activation ? [{ key, entry, previous: entries[index + 1] }] : []),
+    );
+    expect(releases).toHaveLength(11);
+    for (const { key, entry, previous } of releases) {
+      expect(getMethodologyVersionAt(key, activation - 1)).toBe(previous.version);
+      expect(getMethodologyVersionAt(key, activation)).toBe(entry.version);
+      expect(getMethodologyVersionAt(key, activation + 1)).toBe(entry.version);
+    }
+  });
+
+  it("explains current admission in the rendered and Markdown methodology sections", () => {
+    for (const [content, claims] of [
+      [PEGSCORE_DEWS_SECTION_CONTENT, ["Friday at 5 p.m. and reopens Sunday at 5 p.m.", "Sunday 6 p.m. reopen",
+        "three other independently sourced same-peg tokens", "traded native pair or independent 24/7 pool"]],
+      [STABILITY_INDEX_SECTION_CONTENT, ["scores confirmed peer-relative events on their own lower-confidence basis",
+        "carry the last admitted contribution for that event", "FX evidence switch ships off", "Methodology v3.69", "Methodology v3.68"]],
+      [MINT_BURN_FLOW_SECTION_CONTENT, ["Counted Tron Issue and Redeem events", "USDT holder pressure stays unavailable",
+        "The Bank Run Gauge weights only eligible coins"]],
+    ] as const) {
+      const text = methodologyDocument().querySelector(`#${content.id}`)!.textContent;
+      for (const copy of [text, content.markdown]) {
+        for (const claim of claims) expect(copy).toContain(claim);
+        expect(copy).not.toMatch(/Friday 21:00 to Sunday 23:00 UTC|unless it moves 25%|pressure baseline and tracked-chain gauge weight/);
+      }
+    }
+  });
+
   it("qualifies DDR verdict summaries by depeg direction in the page and Markdown export", () => {
     const summary = "In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. An above-direction event whose live signed deviation is itself a below-peg break deeper than 1,000 bps is evaluated by the below-peg mapping, so a stale stored direction cannot publish No break signals for a live deep break. Otherwise, above peg, an exit-collapse signal reads as Stress signals and everything else as No break signals, even a severe kill signal. Below peg, any severe kill signal, or two or more kill signals without a strong non-inflatable-supply or hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse of the stored peak and live deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break with none, reads as Stress signals.";
     const section = methodologyDocument().querySelector("#depeg-resolver-methodology");

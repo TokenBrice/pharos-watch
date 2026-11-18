@@ -124,6 +124,8 @@ queue until dated evidence exists.
 
 ## 4. Add the 10-day pre-expiry queue
 
+The `assurance-report` family uses the report period's inclusive 100-day budget, separately from reserve composition. The queue verifies the replay-bound checkout overlay digests before applying the overlay. A missing or mismatched overlay makes the report partial. The 2026-08-31 GUSD report remains eligible through 2026-12-09 00:00:00 UTC. The 2026-09-30 USDC report remains eligible through 2027-01-08 00:00:00 UTC.
+
 The worklist reports gaps that already affect the replay. It does not list every still
 admitted composition approaching expiry. Run this extraction against the same replay;
 it lists compositions admitted at the capture clock but inadmissible within the

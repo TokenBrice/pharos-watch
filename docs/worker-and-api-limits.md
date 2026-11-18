@@ -339,6 +339,8 @@ Large cache-backed endpoints can opt into a response-ready companion cache when 
 
 ### Metered supplemental provider budgets
 
+The free Open Exchange Rates plan reserves one request per open FX hour before breaker admission. The lease owner alone can release a reservation. A closed session consumes no scheduled OXR request. Intake uses a two-hour observation budget and carry uses six hours at the original clock. For operational review, treat two open-market hours without an admitted FX reference as the paging threshold. OXR HTTP 403 or 429 records a separate quota event. See [FX collection](./process/worker-infrastructure-appendix.md#fx-and-metals-references).
+
 | Budget family | Source authority | Admission contract |
 | --- | --- | --- |
 | Vendor terms | [Dwellir documentation](https://www.dwellir.com/docs) / live account contract | Plans, RPS/batch/body/log limits and billing are vendor-owned. Recheck before capacity/spend changes; repository history preserves prior written terms, not a second live quota authority. |

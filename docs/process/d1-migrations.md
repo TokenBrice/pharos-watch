@@ -4,6 +4,16 @@ Policy for every new `worker/migrations/` file; `worker/migrations/MANIFEST.md` 
 
 ## Additive migrations
 
+The first three migrations in the reference and quantity rollout introduce the fields below. Before either Worker activates, apply all pending migrations through 0314. The [release procedure](../deployment-process.md#reference-and-supply-rollout) records the migration floor and deployment order.
+
+| Migration | Additive change | Retained compatibility |
+| --- | --- | --- |
+| `0306_supply_history_native_quantity.sql` | Adds nullable native quantity, USD valuation price and valuation observation clock to `supply_history`. | Existing rows preserve dated USD supply and market-price evidence. Null quantity remains unavailable. |
+| `0307_depeg_event_observation_references.sql` | Adds nullable peak and recovery references, peak quote domain, admitted coverage JSON and disposition to `depeg_events`. | Existing IDs and event fields remain readable. Null columns represent legacy evidence. |
+| `0308_api_key_donor_transfer_credits.sql` | Adds an initially empty ledger keyed by supporter address, chain, transaction and transfer discriminator. | The transaction-keyed credit ledger and all prior credits remain available across Worker rollback. |
+
+The schema changes populate no historical evidence. Run any quantity backfill, depeg repair or legacy receipt resolution through its reviewed write path after schema application.
+
 1. Select the next unused sequence from the manifest. Never rename or reuse a deployed filename.
 2. Add `-- rollout-safety: backward-compatible` to the migration.
 3. Keep the previous Worker able to read and write while the migration runs before the new Worker deploys. New required columns need a default; table, column, and index removal belongs in a later coordinated cleanup.

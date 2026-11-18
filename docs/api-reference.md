@@ -4,11 +4,13 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families, a bodyless `302` for dossier fallbacks and `image/png` for dated scorecards, and can return `text/plain` on errors; and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families, a bodyless `302` for dossier fallbacks and `image/png` for dated scorecards and depeg briefings, and can return `text/plain` on errors; and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
-> **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Safety Score Availability · Reserve Availability · Public Endpoints (generated from OpenAPI and the endpoint registry) · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
+> **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Safety Score Availability · Reserve Availability · Public Endpoints (generated from OpenAPI and the endpoint registry) · Reference, Valuation And Coverage Fields · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
 
 ## Surface Split
+
+The dated depeg dataset selects event starts over exactly 90 UTC dates with an exclusive end boundary. Capture v1 identifies incomplete coverage. Capture time and observed market time are separate. Top Stablecoins distinguishes nominal par from an observed quote, keeps unavailable values null and observed zero numeric, assigns CNHT to offshore CNH, and attaches chain evidence and captured membership when available.
 
 The runtime now uses three HTTP lanes:
 
@@ -20,7 +22,7 @@ Static dataset exports are served from the public website, not from the Worker A
 
 The same static lane serves `https://pharos.watch/datasets/<topic>/latest.{csv,json,ndjson}` and dated `/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}` artifacts, retained for 90 days. Topic IDs are a never-break external contract owned by `PUBLIC_DATASET_TOPICS` in `shared/lib/api-endpoints/datasets.ts`. Each `latest` URL is a Pages `200` rewrite to the same-extension dated file; `https://pharos.watch/sheets/<topic>.csv` rewrites directly to dated CSV. Missing dated URLs mean no published artifact, including retention pruning—not an observed empty dataset or proof no refresh ran. Shared current-snapshot freshness gates reject dates beyond two UTC dates; per-topic alias checks do not age-check each topic. These JSON-LD `DataDownload` URLs have extension-compatible content types, `Access-Control-Allow-Origin: *`, and cache policies from `public/_headers`. Generator/backdating mechanics belong to `scripts/maintenance/generate-public-datasets.ts`.
 
-The `depeg-history` topic is **retrospective windowed history**, not a historical point-in-time event-state sample. The dated filename selects the 90-day UTC event-start window ending on that date; peaks, recovery and closure fields come unchanged from the captured event ledger and may describe observations after the market snapshot. Its JSON/NDJSON metadata and CSV preamble report the ledger observation-end clock as `asOfISO`, the exact shard capture identity as `sourceGeneration`, the observation-start clock as `sourceObservationStartedAtISO`, and the separate market snapshot clock as `windowSnapshotAsOfISO`. Other topics retain the immutable market-envelope clock. A historical regeneration may change retrospective event rows and their capture provenance; it must not relabel later state as information known at the older market clock. Missing or mismatched ledger-capture provenance fails generation rather than inventing historical peaks or masking later recoveries.
+The `depeg-history` topic is **retrospective windowed history**, not a historical point-in-time event-state sample. The dated filename selects the 90-day UTC event-start window ending on that date; peaks, recovery and closure fields come unchanged from the captured event ledger and may describe observations after the market snapshot. Its JSON/NDJSON metadata and CSV preamble report the ledger observation-end clock as `asOfISO`, the verified source digest (or the local shard hash for an unverified capture) as `sourceGeneration`, the observation-start clock as `sourceObservationStartedAtISO`, and the separate market snapshot clock as `windowSnapshotAsOfISO`. Other topics retain the immutable market-envelope clock. A historical regeneration may change retrospective event rows and their capture provenance; it must not relabel later state as information known at the older market clock. Missing or mismatched ledger-capture provenance fails generation rather than inventing historical peaks or masking later recoveries.
 
 `scores-latest` additionally publishes an additive `_meta.displayProjection` contract and six appended row columns (`ratingStatus`, `safetyDisplay`, `dewsComputedAt`, `liquidityUpdatedAt`, `liquidityUnavailableReason`, `liquidityMethodologyVersion`). Existing columns and `_meta.asOfISO` keep their contract; `asOfISO` remains the collection clock, while the Safety publication clock is `displayProjection.safety.publishedAtSec` and each DEWS/liquidity source keeps its own `*At` field. Legacy exports omit the Safety object and set `safetyUnavailableReason: "legacy-source-metadata-unavailable"`; consumers must not infer held, current or quarantine state from the score. `displayProjection.version` is now 2: every v1 field keeps its bytes and the projection adds `openEvidence` (`{ semantics: "open-question-v1", totals: { questions, open, issuer, documentation, obligations } } | null`) copied from the accepted publication, plus `openEvidenceUnavailableReason` (`"safety-publication-unavailable" | "open-evidence-unavailable" | null`, null exactly when the counts are present). A missing Safety publication or a pre-cutover publication without the block publishes `openEvidence: null` with the matching reason, never three zero counts; the CSV preamble is unchanged.
 
@@ -242,7 +244,7 @@ Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-prof
 
 `POST /api/feedback`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The donor key claim and Telegram Mini App endpoints explicitly return no-store responses so plaintext API keys and per-chat alert state are never cacheable.
 
-`/api/og/v2/scorecard/:id` has an at-most-60-second ceiling bounded by observation/publication runway and re-admits the accepted identity and health after rendering. These origin bounds do not prove an account-wide browser-cache floor respects them; production acceptance must inspect uncached and cached scorecard headers. Retired `/api/og/*` image families answer `301` with `public, max-age=31536000, immutable`. These Worker policies are distinct from canonical immutable `/og/v2/` assets and retained Pages scorecard reads: retained PNGs are immutable, while retained HTML revalidates using a body-derived ETag ([OG Images](./og-images.md#dated-scorecards)).
+`/api/og/v2/scorecard/:id` has an at-most-60-second ceiling bounded by observation/publication runway and re-admits the accepted identity and health after rendering. The dated depeg briefing also bounds its PNG lifetime by the remaining observation budget and checks expiry after rendering. These origin bounds do not prove an account-wide browser-cache floor respects them; production acceptance must inspect uncached and cached scorecard headers. Retired `/api/og/*` image families answer `301` with `public, max-age=31536000, immutable`. These Worker policies are distinct from canonical immutable `/og/v2/` assets and retained Pages scorecard reads: retained PNGs are immutable, while retained HTML revalidates using a body-derived ETag ([OG Images](./og-images.md#dated-scorecards)).
 
 ---
 
@@ -308,7 +310,7 @@ API-key auth and quotas normally rely on D1. Protected cacheable `GET` edge-cach
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format; some errors add `reason`, `message` or domain diagnostics (the generated OpenAPI `ApiError` schema requires only a string `error` and allows additional properties). Unknown OG route patterns return the normal JSON error body. Invalid dated-route ID encodings and explicit scorecard source or render failures return `text/plain`. Unavailable dossier scorecards return an evergreen fallback redirect. [OG routes](#get-apiog)
+JSON API handlers use `{ "error": "message" }` JSON format; some errors add `reason`, `message` or domain diagnostics (the generated OpenAPI `ApiError` schema requires only a string `error` and allows additional properties). Unknown OG route patterns return the normal JSON error body. Invalid dated-route ID encodings and explicit scorecard or briefing failures return `text/plain`. Unavailable dossier scorecards return an evergreen fallback redirect. [OG routes](#get-apiog)
 
 | Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -391,6 +393,8 @@ For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionElig
 
 ## Blacklist Valuation Availability
 
+For the reviewed Ethereum USDT contract, active blocked balances after a wipe can use a separate finalized observation within 12 hours. Its value belongs to the active estimate. Historical destruction amounts and latest freeze-action counts remain ledger-derived.
+
 `GET /api/blacklist-summary` publishes `stats.destroyedTotal`, `recentFreezeAmount24hUsd`, `recentFreezeAmount7dUsd`, and values in `perCoinFrozenTotal` / `perCoinDestroyedTotal` as `number | null`. Null means valuation unavailable, not zero. Mixed cohorts publish only the known subtotal: optional `stats.valuationCoverage` qualifies `destroyed`, `recent24h`, `recent7d`, `perCoinFrozen`, and `perCoinDestroyed` with `{ knownCount, unavailableCount }`. A positive unavailable count makes that subtotal partial; absent coverage means unknown completeness. Fully priced cohorts and observed zero remain numeric, including zero for an empty cohort.
 
 Compatibility `activeFrozenTotal` and `activeAmountGapCount` use the last successful ledger value, including observed zero, for net-active addresses even after a provider refresh fails. Failure and original-observation freshness remain visible in `freezeLedgerMeta`; a failed first read is not evidence of zero. Released/destroyed records do not enter the active frozen total, while their retained snapshots still contribute to the distinct historical `trackedFrozenTotal`.
@@ -466,7 +470,10 @@ Since Mint/Burn v6.40, a chain-based `gaugeWeightUsd` requires observed supply f
 
 Aggregate FTQ also publishes `gauge.classificationReason` and independent `_meta.dependencies.flightToQuality` Safety Score evidence (`generationId`, original `updatedAt`, `ageSeconds`, `status`, `reason`, `freshBudgetSec`). Unavailable classification yields `flightToQuality: null` / `flightIntensity: null`, never inactive/zero. A withheld verdict names its cause in `gauge.flightToQualityReason` (`valuation-incomplete`, `flow-window-unavailable`, `cohort-member-unpublished`) and lists the classified coins excluded because their whole flow is pending mint/burn admission in `gauge.flightToQualityExcludedIds`; both fields are absent on payloads produced before they existed. Fresh, cached and fallback paths re-admit the canonical index and expose the same advisory without renewing the flow clock; per-coin responses have no market-wide FTQ dependency. See [FTQ classification](./mint-burn-flows.md#registry-ownership) for the separate consumer budget and recovery semantics.
 
-`GET /api/stablecoin-summary/{stablecoinId}`: `supplyUsd` fields `current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d` are `number | null`. Absent/empty/wholly invalid current peg buckets yield null `current` and `currentUnavailableReason: "supply-buckets-missing"`; observed supply, including `0`, clears the reason to null. Changes require observed current and historical values; missing current never implies a negative delta. `supplyByPegUsd` contains only finite buckets (`{}` if none). `priceObservedAt`, `priceSyncedAt` and `priceUpdatedAt` publish the quote clock; `X-Data-Age` measures the oldest of that clock and the cache generation, so a replayed quote is never aged by its sync write. One filtered malformed sibling row does not withhold an admitted asset; assets absent from the admitted publication return `404`.
+`GET /api/stablecoin-summary/{stablecoinId}` returns nullable USD values in `supplyUsd.current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d` and `change30d`. Absent, empty or wholly invalid current peg buckets yield null `current` and `currentUnavailableReason: "supply-buckets-missing"`. Observed supply, including `0`, clears that reason to null. Each historical value uses its dated `circulatingUsd` when available. An omitted baseline map or window uses its legacy USD bucket. An explicit empty map or null window leaves the comparison unavailable. If both are missing, the historical value and change are null. Changes require both current and historical values. `supplyByPegUsd` contains the finite buckets and can be empty. One malformed sibling row is filtered independently. An asset absent from the admitted publication returns `404`.
+
+The summary's `priceObservedAt` gives the source quote time. An explicit null survives, and only a legacy row with the field absent can use `priceUpdatedAt` as the observation time. For a dated quote `X-Data-Age` measures the older of quote time and publication time. When the quote time is unknown the header reports publication age and the quote clock remains null.
+
 `GET /api/dex-liquidity` and history publish nullable `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity`. [Measured volume availability (v6.9)](./dex-liquidity.md#measured-volume-availability) owns 72h admission, complete-only totals, availability-record fields, measured zero, global/legacy rows and the 50% activity/score coverage gate. Each `/api/dex-liquidity` row also carries optional `liquidityScoreUnavailableReason`: `null` when rated, otherwise the machine code of whoever nulled the score — `activity-coverage-below-floor`, `activity-missing`, `activity-stale`, `activity-completeness-unknown`, `no-retained-pools`, or `invalid-coverage-evidence` (publisher quarantine). Rows scored before the field existed publish `null`; consumers must not infer a cause. See [DEX Liquidity Score](./dex-liquidity.md#dex-liquidity-score).
 `GET /api/dex-liquidity` also publishes `balanceMeasuredTvlUsd` and `organicMeasuredTvlUsd` as `number | null`. Null is unavailable measurement weight, including legacy rows, not measured zero; numeric `0` remains valid. Consumers must require both a ratio/fraction and its independently observed weight before weighted aggregation, and must not render missing coverage as 0%.
 `GET /api/dex-liquidity` pools may carry optional `extra.permanentLiquidity` `{ lpShare, chain, lpToken, holder, proof, verifiedAtBlock }`: a reviewed LP lock on that exact pool, where `lpShare` (0 to 1) is the part of the LP supply that can never be withdrawn. Absent means not assessed, never zero. `proof` is an open string (`no-call-bytecode`, `burn-address` today). [Permanent liquidity](./dex-liquidity.md#permanent-liquidity) owns the proof classes, sizing and fail-closed rules. The row-level `lockedLiquidityPct` is CoinGecko's unverified figure, unrelated to this field.
@@ -496,7 +503,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/stablecoin-charts` | Stablecoin charts | Stablecoins, History | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist` | Blacklist events | Blacklist | `X-API-Key` required | `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
-| GET | `/api/depeg-events` | Depeg incidents | Peg Monitoring | `X-API-Key` required | `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `includePending` (query, optional, boolean) | 200, 400, 401, 429, 503 |
+| GET | `/api/depeg-events` | Depeg incidents | Peg Monitoring | `X-API-Key` required | `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `ledgerGeneration` (query, optional, string); `includePending` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver` | Depeg Duration Resolver | Risk, Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver-review` | Depeg Duration Resolver Reviewer | Risk, Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
@@ -601,7 +608,7 @@ Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for ful
 
 ```json
 {
-  "healthMethodologyVersion": "1.8"
+  "healthMethodologyVersion": "1.9"
 }
 ```
 
@@ -639,8 +646,8 @@ Normalized issuer freeze, unfreeze, blacklist, and destruction events with optio
 
 ```json
 {
-  "currentVersion": "4.62",
-  "currentVersionLabel": "v4.62"
+  "currentVersion": "4.63",
+  "currentVersionLabel": "v4.63"
 }
 ```
 
@@ -660,7 +667,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 - **Operation ID:** `depegEvents`
 - **Path:** `/api/depeg-events`
-- **Parameters:** `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `includePending` (query, optional, boolean)
+- **Parameters:** `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `ledgerGeneration` (query, optional, string); `includePending` (query, optional, boolean)
 - **Success response schema:** [`DepegEventsResponse`](https://pharos.watch/openapi.json#/components/schemas/DepegEventsResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
@@ -668,7 +675,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.49"
+  "currentVersion": "6.50"
 }
 ```
 
@@ -706,7 +713,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.49"
+  "currentVersion": "6.50"
 }
 ```
 
@@ -915,8 +922,8 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ```json
 {
-  "currentVersion": "3.69",
-  "methodologyVersion": "3.69"
+  "currentVersion": "3.70",
+  "methodologyVersion": "3.70"
 }
 ```
 
@@ -930,10 +937,12 @@ The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `de
 
 `/api/og/v2/dossier/:id?fallback=<hash>` serves the same admitted PNG and metadata for a rated active coin. If a current scorecard is unavailable, it sends a short-lived `302` to the evergreen PNG identified by the 64-character lowercase hex hash. An absent or invalid fallback selects the home evergreen PNG.
 
+`/api/og/v2/depeg/briefing` renders the dated depeg tracker briefing from the open incident ledger and published market and native evidence. Failed ledger reads or rendering return an uncached `503`. Individual unavailable observations retain their status on the image.
+
 - **Path:** `/api/og/*` and `/api/og/v2/*`
 - **Parameters:** Path segments select the family and subject. The dossier route accepts the evergreen image hash as `fallback`.
-- **Success response:** a bodyless `301` or `302` redirect, or scorecard PNG image bytes.
-- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and scorecard PNGs for up to 60 seconds within the source freshness budget.
+- **Success response:** a bodyless `301` or `302` redirect, or dated PNG image bytes.
+- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and dated PNGs for up to 60 seconds within the source freshness budget.
 
 ### `GET /api/report-cards/v9`
 
@@ -991,10 +1000,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.53",
-    "versionLabel": "v4.53",
-    "currentVersion": "4.53",
-    "currentVersionLabel": "v4.53",
+    "version": "4.54",
+    "versionLabel": "v4.54",
+    "currentVersion": "4.54",
+    "currentVersionLabel": "v4.54",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -1052,8 +1061,8 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 
 ```json
 {
-  "currentVersion": "8.55",
-  "methodologyVersion": "10.45"
+  "currentVersion": "8.56",
+  "methodologyVersion": "10.46"
 }
 ```
 
@@ -1071,7 +1080,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "8.55"
+  "methodologyVersion": "8.56"
 }
 ```
 
@@ -1089,8 +1098,8 @@ Historical yield observations for a stablecoin, with optional publication/source
 
 ```json
 {
-  "currentVersion": "8.55",
-  "methodologyVersion": "8.55"
+  "currentVersion": "8.56",
+  "methodologyVersion": "8.56"
 }
 ```
 
@@ -1130,8 +1139,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.49",
-  "methodologyVersion": "6.49"
+  "currentVersion": "6.50",
+  "methodologyVersion": "6.50"
 }
 ```
 
@@ -1186,6 +1195,86 @@ Receives Telegram Bot API updates; callers outside Telegram should not use it.
 - **Policy:** authentication exempt; bypass shared endpoint caching (`cacheBypass: true`).
 
 <!-- GENERATED-END: public-endpoints -->
+
+## Reference, Valuation And Coverage Fields
+
+### Stablecoins
+
+Optional `circulatingNative` is a token count. Optional `valuationPriceUsd` is the paired USD value per token and optional `valuationObservedAtSec` dates that valuation in Unix seconds. Null or absent means unavailable for that field. An explicit quantity of 0 is observed. `circulating` remains a dated USD value.
+
+Optional `fxReferenceObservations` and `selectedPegReferences` are objects keyed by peg type. Each FX observation records the USD per unit, source, cadence and observation time. Each selected reference identifies its kind and generation and carries either a dated provider observation or the median's USD value and contributors. A present empty map records that no entries were admitted. Legacy publications can omit the maps.
+
+Read the [peg-summary admission verdict](#peg-summary-admission) for the same quoted observation when available. The legacy list `currentPeg` projection can omit admission fields. A peg-summary verdict from a different quote does not replace the list observation's value or clock. Native market lineage, where recorded on a native quote, uses optional `derivation` with `kind` (`traded-pair`, `conversion`, `unknown`) and `lineage` with optional members `venue`, `pair`, `fxSource` and `fxObservedAtSec`. Omitted derivation is equivalent to unknown for independent voting. See [pricing lineage](./pricing-pipeline.md#primary-consensus).
+
+### Stablecoin detail
+
+When the canonical list supplies dated `supplyChangeBaselines`, detail forwards the map with its admitted current supply. The `currentCirculatingPrevDayUSD` field uses the dated day value or, when the map or day key is omitted, the admitted legacy previous-day buckets. An empty map or explicit null day returns an empty previous-day bucket.
+
+Commodity detail history overlays canonical native quantities on compatible completed checkpoints. Each wrapper checkpoint retains its own observation clock. Market-price admission requires the dated same-day quote, while a separately dated valuation can support its supply valuation. During a wrapper history gap the endpoint can serve current wrapper stock with the historical trend unavailable. The quantity fields are optional and have the same legacy semantics as [supply history](#get-apisupply-history).
+
+### Depeg events
+
+The incident contract includes these optional fields when the ledger and its projections carry the corresponding evidence.
+
+| Optional incident field | Semantics |
+| --- | --- |
+| `peakPegReference` | Contemporaneous reference in the units of the recorded peak price. |
+| `peakQuoteDomain` | `usd` or `native-peg` for the peak. |
+| `onsetBasis` | `peer-relative` identifies a lower-confidence comparison against same-peg tokens. The opening `startPrice` and `pegReference` are USD prices for this comparison. |
+| `peakBasis`, `peakPeerMedianUsd` | A `peer-relative` peak compares the USD peak price against the recorded peer median when available. Use `peakPeerMedianUsd` for that median. |
+| `peakReview` | `unverified` qualifies a reviewed peak that remains in the archive. |
+| `recoveryPegReference` | Contemporaneous reference for the recovery price. |
+| `analyticRecoveryAt` | Unix-second timestamp of admitted recovery. Explicit null means recovery is unverified. Absence allows legacy interpretation from the closure evidence. |
+| `admittedCoverage` | Ordered, non-overlapping half-open `{fromSec,toSec}` intervals in Unix seconds. An empty array records zero admitted intervals. Omission leaves coverage unrecorded. |
+| `disposition` | `restored-evidenced`, `admitted-coverage` or `repaired`. Omission means no disposition was recorded. The audited verdict remains independent. |
+| `referenceHold` | The detector's recorded reference-market closure hold for an open event, with the declaration time, optional refresh time and last trusted peak and observation time. |
+
+`startedAt` identifies the recorded onset (the projected canonical onset for a grouped incident). The first admitted interval, when present, identifies the start of counted evidence. A legacy peak or recovery with no proven observation reference stays in its recorded quote unit where known. Analytic recovery and duration use admitted evidence and can differ from the stored lifecycle timestamps.
+
+For a verified whole-ledger capture, request `?limit=1000&ledgerGeneration=latest` with exact totals enabled and no filters, cursor or nonzero offset. A successful page includes `ledgerProof` with a lowercase SHA-256 `generation` and the attested half-open interval `[coveredFromSec, coveredThroughSec)`. Send that generation and the returned `nextCursor` on each subsequent page. A changed manifest or an unattested or altered page returns `409`. An unavailable or invalid manifest returns `503`. Pages retries without a pin only when the first page reports `ledger-manifest-unavailable`. These captures have unverified coverage. Dedicated page retention is recorded in the static page index, and the dataset reads the fetched ledger shards.
+
+### Peg summary admission
+
+| Optional per-coin field | Semantics |
+| --- | --- |
+| `referenceAdmission` | Verdict for this quote with status, reason, source, cadence, observation clocks, decision clock, budget, session start, generation and policy version. Kinds are `fx`, `median`, `fallback` and `none`. Legacy rows can omit the block. Fixed USD uses its $1 identity and needs no market-reference verdict. |
+| `admittedDeviationBps` | Signed number when the comparison is admitted, including zero. Null means unavailable for the current census. Omission selects legacy behavior. |
+
+The older `currentDeviationBps` remains a compatibility field. When the new projection is present, use it for census and current comparisons, including a null projection. The verdict status identifies market closure, stale reference or unavailable evidence. Reference `asOf` reflects the original observation on clocked scheduled pegs. [Status and reason contract](./architecture.md#adr-45)
+
+### DEX liquidity
+
+DEX price age uses the oldest actual constituent observation. Publication age and price mismatch are separate evidence. TVL trend comparisons require two clocked, comparable endpoint observations and can be null. Headline aggregate TVL deducts reviewed Curve LP overlap while individual inventories retain gross amounts.
+
+### Supply history
+
+Optional `circulatingNative` is a token count. Optional `valuationPriceUsd` is the paired USD value per token and optional `valuationObservedAtSec` dates that valuation in Unix seconds. Null or absent means unavailable for that field. An explicit quantity of 0 is observed. `circulatingUsd` remains a dated USD value.
+
+The row is a dated checkpoint. Optional valuation evidence can date to an earlier day than the market-price field. A legacy row without quantity fields remains usable as USD supply history.
+
+### Stability index
+
+Historical rows may include optional `referenceMarketRepair` with the repair method and reason, including outside the detailed provenance window. Legacy rows without it carry no recorded repair verdict. Rolling averages include the reviewed sample corrections.
+
+### Redemption backstops
+
+Delayed settlement can expose `capacityProfile.eventualUsd` with unavailable immediate fields. An older row without a horizon profile identifies no eventual bound. Circle's ordinary bank payouts are multi-day. A reviewed Mento closure may retain delayed evidence on its original observation clock.
+
+### Safety score history v2
+
+Operational restoration baselines preserve comparison continuity after an interruption. Consumers omit those baseline rows from organic upgrade and downgrade counts. Legacy rows without the transition kind carry no such classification.
+
+### Yield rankings
+
+Optional selected-row provenance includes `sourceObservedAt`, `sourceMaxAgeSeconds`, `sourceFreshness`, `benchmarkFreshness` and benchmark selection metadata. Legacy rows without the fields have no corresponding cadence verdict. The headline `riskFreeRate` and per-row comparisons use annualized APY. Benchmark provenance retains the source rate, so Treasury's quoted investment-basis rate can differ from the comparison APY. Gold-unit yield can have null USD excess and null PYS.
+
+### Mint/burn flows
+
+USDT issuance and redemption amounts remain available in proven scope. USDT holder pressure is null and the composite excludes its weight while treasury-boundary evidence is unresolved. The aggregate producer can emit optional `pressureUnavailableReason: "treasury-boundary-unverified"`. Legacy rows without a reason supply no explanation for an unavailable score.
+
+### Stress signals
+
+Optional signal diagnostics retain the input evidence. Divergence can include per-leg `referenceAdmission` (primary and DEX), `referenceDivergence`, `referenceCarried`, `currentDivergenceValue` and `venueSpreadBps`. Carried reference evidence keeps its original observation time. Flow can include `mintVolume24hUsd`, `burnVolume24hUsd`, `burnSurgeUnavailableReason`, `burnMaterialityUsd`, `flowScope` and `flowChainIds`. These can describe observed subtotals while holder pressure or full-coin net is unavailable. Absence on legacy rows leaves the corresponding diagnostics unknown.
 
 ## Pages Function endpoints
 

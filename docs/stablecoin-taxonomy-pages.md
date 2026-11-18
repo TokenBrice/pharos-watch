@@ -18,6 +18,8 @@ The embedded table's `page.filterTag` must match `shared/lib/filter-tags.ts` for
 
 ## Titles And Authored Copy
 
+Discuss VAR using the asset's variable reference. Apply NAV terminology to NAV assets.
+
 `buildCohortTitle()` owns count interpolation and 61-character budget; its only compaction fallback drops Infrastructure. Backing/governance overflow has no broad automatic fallback: choose fitting base titles. Currency peg titles (and so the h1) carry the ISO code, `{Name} ({CODE}) Stablecoins: {N} Tracked, Ranked by Risk`, dropping `, Ranked by Risk` when the 61-character budget requires it; Gold, Silver and CPI keep their uncoded titles, and pre-launch-only hubs use `{N} Upcoming Launches Tracked`. Counts must not become literals in docs/fixtures.
 
 Description serves metadata/hub blurb and the one-line instrument-header deck; intro (plus the peg risk summary) is visible explanation folded under "About … stablecoins" but still server-rendered. Peg intro/context is authored in `peg-landing.ts`, while top coins/risk composition derive from registry; each authored sentence renders once per page. Edit authored halves rather than generated sentences. Shared classification owns labels, tags and symbols.

@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.9",
+    "title": "Peg coverage and dated chain supply",
+    "date": "2026-11-18",
+    "effectiveAt": 1795040700,
+    "summary": "Peg stability uses the published peg reference by default. When a publication carries FX admission evidence, only admitted comparisons count as observed. Supply behind held or stale comparisons remains in eligible coverage, which can withhold the chain composite.",
+    "impact": [
+      "Admitted chain partition clocks date history. SkyLink escrow without a matched representation remains unattributed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "1.8",
     "title": "NAV tokens excluded from peg deviation",
     "date": "2026-10-30",

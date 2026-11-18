@@ -1,5 +1,17 @@
 [
   {
+    "version": "7.5",
+    "title": "Clocked liquidity inputs and measured overlap",
+    "date": "2026-11-18",
+    "effectiveAt": 1795040700,
+    "summary": "DEX prices and comparable TVL trends keep original observation clocks. Price-forming pool lineage controls independent corroboration, and headline TVL deducts reviewed Curve overlap.",
+    "impact": [
+      "Complete PancakeSwap hourly windows and verified Curve NG state govern the relevant score-facing observations. Stellar's valuation state distinguishes traded prices from peg estimates."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.4",
     "title": "SundaeSwap pools join Cardano discovery",
     "date": "2026-11-15",

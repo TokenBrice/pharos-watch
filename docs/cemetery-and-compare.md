@@ -196,7 +196,7 @@ An empty comparison admits only the stablecoin list used by its selector. Metric
 
 Bluechip publication availability is separate from per-coin membership. A pending or failed whole-feed read without retained data leaves only Bluechip unavailable; a successful empty map is a usable publication. Refresh failures keep retained ratings and their original observation dates, with source error/freshness notices intact.
 
-It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
+Compare uses the current stablecoins quote and resolves its display reference against the matching peg-summary observation.
 
 In Normalized % mode, a displayed range that reaches a reviewed supply perimeter change (its adoption time or the ambiguous change-day label) resets that asset’s anchor to its first positive, unambiguous observation at or after adoption; earlier observations are unavailable (no tooltip value, a dash in the accessible table), while absolute mode and unaffected series retain their observations.
 
@@ -212,9 +212,11 @@ Compare includes client-side share/export rendering:
 - The card footer appends the oldest loaded producer generation (`stablecoins`, `pegSummary`, `dexLiquidity`, `reportCards`) as `As of DD Mon YYYY, HH:MM UTC`; an unknown contributing clock omits it, and the browser fetch clock is never used
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
-- The share card reads market cap and the 7-day supply change through `getCirculatingRawOrNull()` / `getPrevWeekRawOrNull()`; an unavailable operand renders `—`, never `$0.00` or a fabricated `-100%` change
+- The share card uses the table's market cap and 7-day market-cap change. An unavailable value renders `—`.
 
 ### Compare table context
+
+The table and exported image share a price projection. Fixed-peg conversion uses the reference for the same observation and falls back to the observed USD mark when conversion evidence is unavailable. USD labels use adaptive precision.
 
 The horizontally scrollable matrix is the comparable-field surface at every width; preserve accessible/narrow-screen access. Directional market-cap/issuance/yield fields are not universal winners.
 
@@ -222,9 +224,9 @@ Overview opens with `Current state`: each coin's exceptional states, the top one
 
 The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip says "Not rated" only when a usable publication omits that coin, including a successfully loaded empty map; no whole-feed publication means a dash, not an unrated verdict. A rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Every rated cell carries the grade's neutral original observation date in its tooltip and accessible text; operator retained/stale labels are not shown. Time at peg · up to 90d renders `recent90d` occupancy; only a partial-coverage window adds an inline whole-day basis marker (`· 2d`, full basis in its tooltip), described by the section's record-derived caveat; missing stats stay a dash and a null occupancy never reads as 100% or 0%. Directional fields such as issuance flow, market-cap change, and yield are not styled as universal winners because their desirability depends on the comparison task.
 
-Market cap and the `Market-cap change · 24h/7d/30d` rows use the already-USD current and historical circulation buckets through the nullable supply helpers. These are USD market-cap movements, not token-supply changes or price returns: unchanged EUR/gold token balances can move solely with USD valuation. No current-price conversion is applied to historical buckets; native detail supply trends instead use paired native token-count checkpoints. A coin whose current peg buckets are absent, empty or wholly invalid shows a dash for market cap and every market-cap change: a change is published only when both the current and the previous value are observed (and the previous value is positive), so missing current supply never becomes a `-100%` change. An explicitly observed zero still renders `$0.00` and its real change. Shared stablecoin-table delta context and the 7-day sparkline likewise name USD market cap.
+Market cap uses the current USD circulation buckets. The `Market-cap change · 24h/7d/30d` rows use the requested window's dated `circulatingUsd`. A present map with a missing window leaves that change unavailable. Legacy USD-peg rows with no map can still use their historical buckets. An unchanged EUR or gold token balance can move in USD value. A change requires observed current supply and a positive prior value. Observed zero current supply renders `$0.00` and a `-100%` change when a comparable positive prior exists.
 
-Current price, deviation, confidence and source counts use the selected stablecoins row and its `currentPeg` publication; only legacy rows without `currentPeg` fall back to peg-summary current fields. NAV price formatting still uses the currency rate because its deliberately null fixed-peg reference is not a missing currency conversion. Historical scores and incident flags keep their own analytics generation.
+Price, confidence and source counts use the selected stablecoins row and its `currentPeg` publication. For a legacy fixed-peg block, a quote-matched admission verdict from peg summary governs the deviation and price conversion. NAV prices use their quote-matched currency reference. Historical scores and incident flags keep their own analytics generation.
 
 The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/No (or a dash when the peg-summary row is missing). No means only that no recorded incident is open, never that the asset is currently at peg. This remains true for NAV tokens, unusable prices/references, and assets below event-collection coverage; current deviation is a separate measurement.
 

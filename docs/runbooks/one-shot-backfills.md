@@ -16,7 +16,7 @@ Default database is `stablecoin-db`, default target is remote; `--database <name
 
 `--query` retains the documented parameter spelling, values, repeated keys and continuation cursors. `--body-json` retains optional body/query precedence where supported. `--method GET` is accepted only for audit previews; otherwise POST is the default. The CLI writes the unchanged job response body plus a final newline and exits nonzero on a non-2xx response. Save the output receipt and review embedded `errors`, `done`, `continuationCursor`, `hasMore` and any unavailable-input diagnostics before continuing: a successful process exit does not certify complete historical coverage.
 
-Live operation requires `--execute`. Without it only an explicit supported preview query is accepted: `dry-run=true` for depegs, PSI, depeg audit, mint/burn prices or TAPE; `dryRun=true` for blacklist balances. Supply, CG prices, ingestion, yield history, roundtrip reclassification and staged reserve capture have no dry-run mode. Never assume an ignored parameter makes a command read-only.
+Live operation requires `--execute`. Without it only an explicit supported preview query is accepted: `dry-run=true` for depegs, PSI, depeg audit, mint/burn prices or TAPE; `dryRun=true` for blacklist balances. Supply history also accepts `dry-run=true`. CG prices, ingestion, yield history, roundtrip reclassification and staged reserve capture require execution. Never assume an ignored parameter makes a command read-only.
 
 Before writing, record the exact scope, schema/release identity, a fresh D1 Time Travel bookmark and the prior rows needed for reconciliation. Use bounded windows/batches and run one operator job at a time. Existing algorithm leases and guarded publication checks are retained, but there is no HTTP idempotency reservation or automatic replay. `--idempotency-key` is a run identity for live price repair and staged capture, not a generic retry guarantee. On interruption reconcile committed rows before explicitly resuming; do not blindly retry a destructive replay. No migration or deletion of product tables is part of this cutover.
 
@@ -102,7 +102,9 @@ For coins with a registered authoritative historical price provider, the backfil
 
 Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history first and compare that series to the native `1.0` peg before they fall back to USD-denominated CoinGecko/DefiLlama history plus historical FX. In that native-fiat mode, backfill uses daily points plus a two-point confirmation window across 36 hours, while still preserving extreme single-point crashes of `>= 5000 bps`.
 
-`dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
+Historical replay opens at the entry threshold and closes on a quote inside the recovery band. A USD move of 80 bps between those thresholds keeps an open episode active. An insert-only replay of a closed USD episode accepts recognized daily observations up to 26 hours apart. Replacing stored episodes requires consecutive observations no more than two hours apart through both boundaries.
+
+`dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows. FX cache normalization and fetched rates stay in memory during preview. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
 
 Bounded replay windows also support `startDay` / `endDay`, plus optional `contextDays` to widen the replay pad around that UTC window. This makes long-history audits and repairs practical through bounded CLI invocations without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
 For commodity-pegged assets, bounded replays limit the peer-median reference fetch to the replay pad and only fetch the needed gold or silver source family.
@@ -122,13 +124,15 @@ Epoch text requires unsigned integer digits or calendar-valid ISO date/date-time
 
 ## backfill-supply-history
 
-Backfills per-coin supply history snapshots. When historical market-price series are available, the job also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
+Quantity-only enrichment uses compare-and-set writes and leaves comparable USD history intact. Positive DefiLlama detail rows require observed valuation evidence for the derived quantity. Preview counts describe eligible writes for the selected mode, and the mode stays fixed across continuation.
 
-DefiLlama detail history preserves complete observed zero circulation, inserting missing days. Native non-USD zero needs no USD valuation and may carry `price: null`; positive native observations still require historical valuation or the explicitly enabled recent-window emergency fallback. Missing, empty or malformed circulating buckets never become zero and leave existing history unchanged. A daily price outside 2x the median of its neighbouring week is withheld from valuation: a non-USD day interpolates from admitted neighbours or stays unwritten, so a provider scale defect or one-day venue wick cannot value supply.
+Backfills per-coin supply history snapshots. An observed market quote supplies both the price and its original `price_observed_at` on insert and overwrite. Interpolation and explicit par policy can support a valuation but provide no market clock. To repair a missing market clock, preview a scoped date range with `price-clock-only=true&dry-run=true`. Execution re-reads the quote and updates only a null clock where the stored price, valuation price and valuation timestamp match the observation. The response counts repairs in `rowsPriceClockUpdated`.
+
+DefiLlama detail history reads native balances from `totalCirculating`, using `circulating` when the canonical buckets are absent or empty. Explicit USD and observed zero can be stored without a quote. Valuing a positive native count requires the latest screened USD price at or before the balance observation and less than 24 hours old. A prior-day quote can supply the valuation, while a daily market price requires a quote on that UTC day.
 
 By default the job inserts only missing `(stablecoin, day)` rows: an existing row — in particular the cron-owned `snapshot-supply` row carrying `price_observed_at`/`supply_provenance` — is left untouched and counted in the response's `rowsSkippedExisting`. Pass `overwrite=true` to replace existing rows instead; without it an observed zero does not replace a prior positive row.
 
-Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecting the first valid pair per UTC day. Missing caps may use historical EVM `totalSupply()` at day close only for a complete roster containing exactly one canonically supported EVM deployment; mixed-family/multi-deployment rosters fail closed with `unsupported-complete-roster`. Current supply is never projected backward. Protocol-TVL fallback stores `price: null` outside returned price-chart coverage rather than extrapolating jobs.
+Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecting the first valid pair per UTC day. Missing caps may use historical EVM `totalSupply()` at day close only for a complete roster containing exactly one canonically supported EVM deployment; mixed-family/multi-deployment rosters fail closed with `unsupported-complete-roster`. Current supply is never projected backward. Protocol-TVL fallback retains the observed USD TVL. A market price requires a positive quote from the same UTC day at or before the TVL observation.
 
 Protocol-TVL fallback additionally requires a commodity peg and a dedicated token slug admitted by `shared/lib/commodity-protocols.ts`. Both the protocol market cap and latest TVL must be finite and strictly positive, with their market-cap/TVL ratio in the inclusive `0.85`–`1.15` band. Missing or unusable equivalence evidence returns an explicit error without replacing history. An admitted fallback stores historical TVL points, not today's market cap or current supply projected backward; non-finite/nonpositive historical TVL points are withheld.
 
@@ -139,7 +143,8 @@ Protocol-TVL fallback additionally requires a commodity peg and a dedicated toke
 | `stablecoin`                    | `string`                           | —       | Process a single stablecoin ID                                                            |
 | `batch`                         | `integer`                          | `0`     | Batch offset for chunked processing                                                       |
 | `batchSize`                     | `integer`                          | `10`    | Coins per batch                                                                           |
-| `allow-constant-price-fallback` | `"true"`                           | —       | Allow current-price fallback when historical non-USD prices are missing                   |
+| `dry-run`                       | `"true"`                           | —       | Count eligible writes in `candidateRows`                                                   |
+| `price-clock-only`              | `"true"`                           | —       | Repair missing observation clocks from matching dated market quotes and retained valuations |
 | `overwrite`                     | `"true"`                           | —       | Replace existing `(stablecoin, day)` rows instead of leaving them untouched               |
 | `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for UTC daily rows written                                                    |
 | `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
@@ -147,6 +152,8 @@ Protocol-TVL fallback additionally requires a commodity peg and a dedicated toke
 | `cursor`                        | `string`                           | —       | Opaque continuation cursor; cursor-only requests resume the stored window size, while an explicit `windowDays` overrides and persists a new size |
 
 ## backfill-stability-index
+
+Use dated, same-unit historical lookup inputs. Review the retained sample pre-images, exact projected scores and successor-pair deltas before writing. The receipt gives the rollback evidence.
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
@@ -392,18 +399,19 @@ Mutating delete/synthetic-repair runs and audit eligibility changes stage availa
 
 ## repair-reference-market-artifacts
 
-One-time repair of depeg and PSI history recorded before detection held closed FX and metal references (depeg-dews v6.47). It applies the closure rule in `replayReferenceMarketEventStart` (`shared/lib/reference-market-hours.ts`) to stored PSI-eligible events: a gold, silver or FX event that began while its reference market was closed and peaked below 2,500 bps is deleted when it ended within six hours of the reopen; a longer one keeps its row, and PSI counts it from the reopen.
+Use the closure-grouped read-only receipt to review evidence and pre-images before accepting writes. Restoring PAXG 24994 and EURS 89640 under their original IDs requires reviewed per-event PSI reversal records and a reviewed reader revision. Until the records are supplied, the dry run lists each affected closure as `blocked` with `reviewed-psi-reversal-unavailable:<event-id>:<day>` and no planned PSI reversal. A null `reviewedReaderRevision` in the receipt also blocks apply. Review marked PSI sample reversals and retained Tape identities, and verify the bookmark and markers before each bounded write.
 
-Work is grouped by closure, keyed by its reopen, and closures share atomic batches of up to 100 statements, so a run makes few imports. Each closure deletes its artifacts and changes each affected daily PSI row by only their effect: a replay-built row by the difference between replays with and without them, a live daily average by the mean per-sample difference over its complete set of 30-minute samples. A day that cannot be corrected (samples gone, replay inputs unavailable, or a stored component smaller than the artifacts' share) stays as published. Every evaluated row records `referenceMarketRepair`, with a `reason` when unavailable, so a rerun skips it; a row a replay rebuilt with the rule (`referenceMarketRule: true`) is marked `replayed-with-rule` and left unchanged. Events linked to a depeg-resolver incident are never mutated and are listed as `locked`; `sealedTarget: true` marks the event of an incident's sealed prediction, which can take the [input-corruption erratum](./depeg-artifact-removal.md#sealed-event-input-corruption-retain-history). A closure reports `waiting-for-daily-rows` and changes nothing until six hours after its reopen and until its recent daily rows exist, because the correction cannot be derived once its events are gone.
+Each group is keyed by reference market reopening. The preview returns coverage, restoration and Tape pre-images, reviewed daily corrections and any blockers. A reviewed artifact gains a disposition and empty admitted intervals. The original incident remains addressable. A closure can suppress a Tape transition or withhold its analytic end time.
 
-Preview every closure by paging with `after`, the last `reopen` of the previous page, then apply with `--execute --allow-atomic-import` in a maintenance window outside the Safety Score :08–:22 cycle, after recording a fresh D1 Time Travel bookmark:
+The two restoration rows use `restored-evidenced` and preserve any reviewed coverage. PSI reverses only the event's recorded shares on marker-qualified samples. Unproven evidence, an unrecognized marker or a changed pre-image blocks that closure's write. Review the receipt and keep the Time Travel bookmark, then apply one closure per run with `--execute --allow-atomic-import` outside the Safety publication window after the owner accepts the dry run. The handler requires a verified reader revision before applying any group.
 
 ```bash
 npx tsx worker/scripts/one-shot-backfill.ts repair-reference-market-artifacts --query 'dry-run=true&limit=20&after=<reopen>'
 ```
 
-| Param     | Type      | Default | Description                                          |
-| --------- | --------- | ------- | ---------------------------------------------------- |
-| `dry-run` | `"true"`  | —       | Preview the plan without writing                     |
-| `limit`   | `integer` | `5`     | Closures planned or applied per run (max 50)         |
-| `after`   | `integer` | `0`     | Only closures reopening after this unix second       |
+| Parameter | Meaning |
+| --- | --- |
+| `dry-run` | Omission or `true` previews. Use `false` for the reviewed write. |
+| `limit` | Closures per preview, default 5 and maximum 50. A write processes one closure. |
+| `after` | Exclusive reopening timestamp for continuation. |
+| `time-travel-bookmark` | Required for a write. Use the recorded pre-write bookmark. |

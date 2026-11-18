@@ -23,7 +23,7 @@ softening rules for discovery surfaces do not apply here.
 - **Server shell:** `src/app/depeg/page.tsx` via `createClientFeaturePage` with the instrument
   header (`header: "instrument"` on `FeaturePageShell`), which owns the `h1`, the one-line deck, the
   meta row (methodology version link plus the compact `AlertsHeaderLink` Telegram action and Share),
-  and the Depeg History Dataset JSON-LD.
+  and the Depeg History Dataset JSON-LD. The Share menu also opens the [dated depeg briefing](./og-images.md#8-dynamic-worker-cards-apiog).
 - **Client:** `src/app/depeg/client.tsx` (`DepegClient`).
 - **After the client, as server content:** `DepegEventArchivePreview`, then `FaqSection`.
 - **Archive route:** `src/app/depeg/archive/page.tsx` renders the complete `DepegEventArchive`.
@@ -205,16 +205,7 @@ An absent live deviation or DEWS reading yields a neutral `unknown` status, neve
 known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
 DEWS and deviation metrics sort last in both directions, separately from observed zero.
 
-A live deviation measured while the coin's FX or metal reference market is closed
-(`isCurrentDeviationHeld` in `src/lib/current-peg.ts`, decided from the price observation's own
-time so prerendered and hydrated output agree) is shown as "Mkt closed" ("Reference market closed"
-on the detail hero, compare table and OG cards), counts as unavailable for sorting and status, and
-never feeds the at-peg or health buckets. A move at or beyond the 2,500 bps severe band, in
-either direction, still prints. Native-currency prices still convert at the last close. The same rule covers the directory table, screener and the home
-active-depegs card. Resolver cards print "Reference market closed" in place of the live "Now"
-deviation and leave a held reading out of the peg ratio, the displayed live peak and urgency
-ordering; the DDR payload carries no price observation clock, so its overlay generation time
-(`live.updatedAt`) places the reading.
+The hero and homepage rank confirmed incidents by circulating USD multiplied by the absolute admitted deviation as a fraction of peg. A missing operand leaves exposure unavailable. The incident stays in the confirmed count. The board, hero and homepage read the published reference decision with the matching quote clock. A held or stale reference withholds current deviation from ranking, peg-status buckets and native-currency conversion. The row shows “Reference market closed” or “Reference not yet updated”. A legacy payload without the admission fields uses the reference-market calendar and its legacy severe-move threshold. Clocked DDR overlays carry the resolver’s admitted deviation. Older overlays use `live.updatedAt` for the legacy closure check.
 
 The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
 
@@ -274,6 +265,8 @@ Retained bodies without the additive field show “maturing unavailable,” not 
 ---
 
 ## Event History And Crawlability
+
+Event pages distinguish the recorded detector timestamp from first admitted evidence and use each observation's own quote domain and reference. Peer-relative starts and peaks retain their USD prices and identify the lower-confidence comparison against the peer median. Explicitly unknown recovery appears as an unverified detector close. A legacy USD peak or recovery stays in USD when conversion evidence is unavailable. Reviewed restorations preserve the original IDs and durable links.
 
 - `DepegFeed` shows a responsive slice of loaded resolved detections, with a
   local **Load more** control that reveals more loaded rows without fetching another

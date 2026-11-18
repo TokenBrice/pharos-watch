@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.49`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.50`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -22,7 +22,6 @@ DEWS supply/liquidity composites renormalize their existing internal weights ove
 Confirmed events feed DDR's canonical incidents and immutable public forecasts or no-calls; DDR does not detect depegs independently or issue retroactive forecasts after a pre-lock resolution. See the [live forecast and grading board](https://pharos.watch/depeg/). The forecast-lock contract is owned by `docs/depeg-resolver.md`, not this detector.
 
 ## Thresholds & Constants
-
 | Constant | Value | Purpose |
 |----------|-------|---------|
 | `DEPEG_THRESHOLD_BPS` | <!-- GENERATED-START: depeg-threshold-usd -->100 (1%)<!-- GENERATED-END: depeg-threshold-usd --> | USD peg deviation threshold |
@@ -50,6 +49,54 @@ Confirmed events feed DDR's canonical incidents and immutable public forecasts o
 `MIN_PEER_MEDIAN_CONTRIBUTORS` in `shared/lib/peg-reference-trust.ts` is the single quorum authority for peer-median references: non-USD fiat medians and commodity medians both require at least 3 live contributors, while a direct spot/FX reference does not need peers.
 
 Runtime-neutral deviation and directional-signal primitives live in `shared/lib/depeg-signals.ts`; Worker detection, confirmation, analytics, and historical backfills import that authority directly via `@shared/lib/depeg-signals`.
+
+### Reference admission and calibration
+
+FX and bullion detection pairs the token quote with a source-clocked, same-unit reference. The [shared admission contract](./architecture.md#adr-45) covers the session, the first eligible observation after reopening, quote/reference pairing and repricing. A closed or unrefreshed reference can leave the published market price visible in USD while its current peg comparison is unavailable. The reader labels are **Reference market closed** and **Reference not yet updated**.
+
+During a closure, a fresh traded median needs at least three provenance-distinct traded contributors observed inside that closure. The lower-confidence peer-relative path excludes the subject, needs three independent same-peg peers and corroborates the break in a traded native pair or independent 24/7 pool. The detector and confirmer withhold peer-relative pending rows, events and peak updates while the supported rollback Worker interprets them as benchmark moves. A raw move of at least 2,500 bps in either direction can open or sustain a candidate against a direct reference that was within budget at the close. The token quote must fall inside the closure and within its freshness budget. A shifted independent cohort blocks that benchmark comparison. For gold and silver, a fresh same-metal median can also establish a severe move when at least three distinct assets have upstream quotes inside the closure. At a lower calibrated band, the closing benchmark requires a fresh, independent same-direction native trade and a near-benchmark cohort. A dated silver entitlement is required to compare XAGm on its actual ounces per token. The entitlement must match the timestamp of the token quote used in the comparison.
+
+The Tape projector repairs a rollback opening in place using its recorded onset. A peer onset gets a peer label, and a benchmark onset keeps its own magnitude when the peak used a peer median. Scheduled reconciliation covers the trailing 90 days. For older openings, run the `depeg.opened` class over the affected dates with [backfill-tape](./runbooks/one-shot-backfills.md#backfill-tape).
+
+The pending-confirmation canary accepts a closure hold only when the receipt matches both the candidate revision and the exact decision timestamp. Clearing the hold also clears its receipt.
+
+A severe candidate still observed just before the close can confirm during the closure. If the independent evidence is missing, expiry resumes at reopening. A missing current comparison leaves the candidate visible to the coverage canary.
+
+During a Worker version transition, provider-status-only FX metadata and a missing FX state use the legacy numeric reference path. A carried rate retains its legacy provenance across mixed publications. The first OXR snapshot replacing a legacy rate, and rereads of that snapshot, can use the legacy path when repricing is the only missing check. The next distinct observation uses the new admission rules. An explicitly empty observations map withholds the comparison, as does rejected evidence for the peg. Detection allows up to three hours between an OXR reference and a quote, covering its accepted snapshot age and one hourly poll.
+
+With source-clocked evidence, at least three eligible same-metal assets can supply the gold or silver median. During a closure, only upstream market quotes from within the closure and freshness budget enter that median. When the FX producer has a qualifying median, at least three distinct local assets must have quotes strictly newer than its oldest constituent to replace it. Only those newer quotes supply the replacement value and receipts. Otherwise the producer supplies both. Below quorum, the detector evaluates an available direct closing observation under the same severity and independent-cohort rules.
+
+With only a dated daily FX fixing, current peg display remains stale. Detection may use the fixing in an open session when both clocks meet the admission and repricing gates and the absolute move exceeds the applicable fixing-age band. Smaller moves remain `stale-reference`. Frankfurter age counts TARGET business days, and the dated secondary feed counts weekdays. The third age column applies from three days onward.
+
+The release calibration uses the nearest-rank 99.5th percentile of absolute USD-per-unit changes over one, two and three business-day intervals in the ten years before April 1, 2024. With fewer than 2,000 moves at a horizon, use 500 bps. Closure calibration uses the maximum absolute close-to-reopen log move plus 25%, estimated from the last fixing before and first after the closure. This includes trading on either side of the closure. The ordinary and extended samples have two and three to four intervening calendar days respectively, including Saturday and Sunday. Fewer than 300 closures in a class yields 2,500 bps. Both calibrations round up to 25 bps. The closure series starts in January 1999 and ends before April 1, 2024. Bullion calibration removes weekend carries and comparisons across the 2015 source break. Secondary FX history starts on March 2, 2024, so those currencies use the fallback. [Frankfurter](https://frankfurter.dev/v1/) · [Gold and silver history](https://www.goldprice.com/gold-price-history) · [Secondary FX history](https://registry.npmjs.org/@fawazahmed0%2Fcurrency-api)
+
+The closure columns apply to corroborated benchmark moves with an independent cohort. Sub-day closures and missing cohorts use 2,500 bps. The daily table is active for supported FX currencies. The bullion daily values are calibration context.
+
+| Calibration unit | 1 day (bps) | 2 days | 3+ days | Weekend | Extended |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| EUR | 200 | 275 | 300 | 300 | 2,500 |
+| GBP | 250 | 325 | 450 | 500 | 2,500 |
+| CHF | 200 | 275 | 350 | 425 | 2,500 |
+| BRL | 375 | 500 | 600 | 1850 | 2,500 |
+| JPY | 250 | 325 | 375 | 550 | 2,500 |
+| KRW | 225 | 275 | 300 | 750 | 2,500 |
+| IDR | 200 | 300 | 375 | 1100 | 2,500 |
+| INR | 125 | 175 | 200 | 400 | 2,500 |
+| MYR | 200 | 275 | 300 | 325 | 2,500 |
+| SGD | 125 | 175 | 200 | 275 | 2,500 |
+| HKD | 25 | 50 | 50 | 200 | 2,500 |
+| TRY | 550 | 825 | 1150 | 1650 | 2,500 |
+| AUD | 250 | 325 | 375 | 525 | 2,500 |
+| ZAR | 350 | 500 | 550 | 675 | 2,500 |
+| CAD | 175 | 250 | 275 | 425 | 2,500 |
+| CNY | 125 | 175 | 175 | 225 | 2,500 |
+| PHP | 125 | 150 | 200 | 800 | 2,500 |
+| MXN | 325 | 450 | 500 | 975 | 2,500 |
+| CZK | 225 | 325 | 350 | 400 | 2,500 |
+| PLN | 225 | 350 | 425 | 600 | 2,500 |
+| Gold | 325 | 475 | 550 | 1200 | 2,500 |
+| Silver | 700 | 1025 | 1225 | 2450 | 2,500 |
+| Other supported FX units | 500 | 500 | 500 | 2500 | 2,500 |
 
 ## Database Schema
 
@@ -146,6 +193,8 @@ The operator-only `depeg-open-coverage` canary counts an open event as blind onl
 
 The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The charts lane writes the producer-published `peg-analytics` D1 cache row every 30 minutes: the hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job at `:16` (also the only writer of the exact V9 peg-provenance seed) and the same job's standalone refresh when it skips preparation at `:46`. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. Future-clock recovery deletes a row only while its inspected value and `updated_at` still match; concurrent replacements survive, and writers retry publication under normal timestamp ordering. Its day-scoped event counters are re-bucketed against the request's UTC day from a bounded two-day `depeg_events` read when the row was published on an earlier UTC day, so midnight never relabels a previous day's counts, forces a full recompute, or turns a projection read failure into an outage. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
 
+A DEX cross-check uses its own observation clock and reference admission. A held primary quote can coexist with an admitted DEX comparison across reopening. For a USD NAV token, the DEX comparison uses the usable NAV denominator.
+
 Current quote-adjacent displays use the optional `currentPeg` block on `/api/stablecoins`, with that same row's price observation and source-agreement lists. It is derived by the shared current-observation helper used below; null price/reference remains null deviation, and the new block has no DEX agreement without an admitted quote. Peg-summary retains its independent live fields and historical analytics; legacy list rows without `currentPeg` retain the previous reader fallback.
 
 Current peg-summary observations are rederived from the latest stablecoins snapshot through `deriveCurrentPegObservationMap`, not from a numeric price plus an older cached analytics reference. The optional nullable `price` is the same admitted live observation used for current deviation and provenance, including retained-history responses. It is null when that observation is unavailable or nominal even if the raw asset has a positive price; an observed NAV quote may remain present with null deviation. Invalid or nonpositive quotes emit null, and legacy responses may omit the field. A snapshot `pegType` that disagrees with the curated registry peg currency withholds the reference (`pegReferenceUnavailable: true`) instead of anchoring a cross-unit deviation; the admitted unit (registry first, snapshot label only where the registry has no canonical type) also drives the DEX cross-check, the at-peg threshold and the published per-coin `pegType`, so a cached generation's older `pegType` never overrides it. Nominal or missing primary observations publish `currentPriceUnavailable: true` and `currentDeviationBps: null`; they are excluded from observed at-peg counts. At-peg summaries use the detector's raw-precision trigger boundaries, not rounded display deviations. A deviation below the severe band, observed while the coin's FX or metal reference market is closed (judged at the price observation's own time), stays on its row but is left out of the summary aggregates (`totalTracked`, `coinsAtPeg`, median and worst current deviation), as it is from the OG at-peg cohort. Historical analytics fields remain attached to their accepted generation, except that `depegEventsToday` / `depegEventsYesterday` are re-bucketed against the request's UTC day from a bounded two-day `depeg_events` read when the accepted generation was published on an earlier UTC day. The re-bucketing counts the same effective onset the public feed publishes (an active incident's projected first onset, falling back to the fragment's `started_at`), so a fragment that starts after midnight still counts on its incident's first day. If that read fails, the endpoint returns explicit `503` with `peg-event-day-count-read-failed` and `no-store` rather than defaulting the counters to zero. If canonical incident projections cannot be read during a fallback recompute, the endpoint retains an available accepted analytics snapshot with `incident-projection-read-failed` and `no-store`, or returns explicit `503` when none exists.
@@ -183,7 +232,7 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `getCirculatingRawOrNull()`) for live event recording. Observed sub-floor supply, including zero, closes existing rows as `coverage-lost-supply` with `recovery_price = NULL`; unavailable supply keeps the lifecycle open and records blind coverage
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references use the live FX rate whenever it is available; a fiat peer median is only a fallback and needs at least 3 live contributors. Commodity references may use a peer median only once at least 3 live same-metal contributors are admitted, otherwise they use a direct spot rate when available and fail closed without one. A 1- or 2-coin gold/silver median never anchors deviation
-- Reference-market closures (`shared/lib/reference-market-hours.ts`) hold every non-USD fiat (FX) and GOLD/SILVER asset whose deviation is below the 2,500 bps severe band. FX closes Friday 21:00 to Sunday 23:00 UTC, from 22:00 UTC on 24 and 31 December, and all of 25 December and 1 January; metals follow the same hours and also close from 21:00 UTC on the Thursday before Good Friday through Good Friday. FX feeds, spot, Chainlink heartbeats and tokens priced off them repeat the last close while the stablecoins keep trading, so a held asset opens no pending row and an open event takes no peak, direction or recovery update; the census reason is `reference-market-closed` and price coverage goes blind until the reopen. Pending confirmation waits on the same rule, judged on the candidate's current price against the refreshed reference (an unknown current deviation also waits), so neither a stale severe reading nor a near-par one confirms or clears it. A severe move is handled as before, except that its confirmers must also reach the severe band while the market is closed. The pending-candidate and open-event coverage canaries exempt FX and metal assets for their closure plus one grace window (a producer interval, or the open-event blind budget); a candidate already stalled, or a gap already blind, when the closure began stays actionable. Display surfaces show "Reference market closed" instead of a held current deviation, decided from the price observation's own time; API values and `pegReferenceUnavailable` do not change, because Safety Score inputs read them
+- FX and bullion lifecycle decisions follow [reference admission and calibration](#reference-admission-and-calibration). A held quote supplies no onset, peak, direction or recovery update. Candidate and open-event canaries can exempt a matching scheduled hold during its evidence budget. A candidate already stalled, or an event already blind at closure onset, remains actionable.
 - Floating `VAR`/`OTHER` pegs have no authoritative reference — their peer median is another coin's level, not a peg — so signal derivation fails closed and they cannot open or mutate live depeg state
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
 - Every live native-currency quote passes one plausibility bound against its own par (`classifyNativeQuoteImplausibility()` in `worker/src/lib/native-quote-plausibility.ts`, built on the primary price-validation reference band and `DEPEG_EXTREME_MOVE_BPS`). A quote outside that bound is withheld unless an independent source family (trusted DEX protocol groups in Stage 1, the normalized canonical family at confirmation) shows its own implausible move in the same direction. A withheld sample is unavailable evidence with a machine-readable reason: it cannot open a pending candidate, suppress the primary path, deepen a peak, or recover an event
@@ -261,6 +310,8 @@ After the main loop, load open events with the `MAX_OPEN_DEPEG_EVENTS = 200` bou
 
 ## Stage 2 -- Confirmation
 
+Pending confirmation rechecks the original evidence basis and current admission. A directly traded native quote can initiate a candidate during a hold. Promotion then needs independent corroboration in the relevant unit. The pending dead band lies between the event and recovery thresholds. Pool voting uses the pool's original observation clock, with mirrors and overlapping venues excluded. Recoveries can use continuous eligible primary observations or independently timed DEX evidence. Store an observation's own reference at a measured peak or recovery.
+
 Processes all rows in `depeg_pending`. Every live onset, including small-cap, multi-source, native-origin, and extreme candidates, enters this stage.
 
 ### Per-Record Processing
@@ -275,6 +326,10 @@ Recovery checks run before the age gate. A fresh native quote strictly inside th
 Native-origin candidates keep their native quote as the event-price domain, but that quote cannot confirm itself. At confirmation time, Pharos normalizes the fresh canonical USD price through the authoritative FX reference and admits only source families outside CoinGecko. One such independent canonical family must agree with the native-domain direction and full threshold before promotion; an at-peg or opposite-direction normalized canonical reading rejects the candidate after the temporal window. Missing, stale, fallback, cached, or CoinGecko-only canonical evidence leaves the row pending rather than promoting it.
 
 A native quote, or a stored native-origin sample, that fails the same plausibility bound is recorded as unavailable evidence (`native:<currency>:<reason>`). It cannot confirm, oppose, promote, deepen or recover a candidate, and it suppresses this row's native confirmation read instead of opening a replacement fetch. An implausible stored sample cannot be closed as recovered from canonical pricing; an independent family must show its own implausible move in the same direction before an extreme native sample can stand.
+
+Confirmation uses the detector’s monitoring registry, including historical UST and IRON. An unsupported or mismatched pending row can expire after the unavailable-reference window. For USD recovery, a legacy authoritative primary uses its quote update time when both observation clock fields are absent. An explicit clock verdict governs ordering when supplied.
+
+The 15-minute wait and dynamic expiry start at the detection run that first saw the continuous episode. When a quote has an upstream clock, its original time also governs ordering and persistence. A repeated quote cannot advance the episode. Pending first, latest and peak deviations are stored in whole basis points. Original price/reference pairs resolve peaks that round to the same value.
 
 Age checks:
 
@@ -333,7 +388,7 @@ Age checks:
 
 **Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
 
-Promotion inserts into `depeg_events` with `started_at` = the current continuous episode's `first_seen_at`, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
+Promotion inserts into `depeg_events` with `started_at` taken from the continuous episode’s first quote clock when recorded, or its first detection run on legacy input, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
 
 Native-currency confirmers on USD-origin candidates normalize their price by multiplying the native quote (reference 1) by the candidate's admitted USD peg reference before peak selection; native-origin candidates retain native prices and reference 1. Pool peak candidates are exposed and consumed only when the pool confirmation policy accepts them, so rejected minority pools cannot deepen a primary-led promotion or supply uncredited event peaks.
 
@@ -341,9 +396,11 @@ Pending rows that pass the 45-minute base expiry but still have same-direction p
 
 ## Historical Backfill Validation
 
-Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: rounded absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample inside the full trigger threshold. They do not inherit live tiered large-cap flags or the half-threshold/15-minute recovery window. A deeper sample replaces an open episode's peak only when another sample of the same episode is within 1,000 bps of it: a lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak. An episode whose opening print is never corroborated (and is not extreme) is withheld at close instead of publishing that print as the peak; extreme single-point crashes keep their existing exemption.
+Replay pairs dated observations with same-unit references available at the observation time. Historical metal medians exclude the asset being scored and require three independent peers when independent spot is unavailable. Keep onset, peak and recovery evidence distinct and preserve the existing incident where a replacement boundary cannot be proven. When per-observation reference evidence is missing, replay reports a degraded result. Targeted history repair preserves IDs and uses admitted intervals, with separately reviewed restoration and PSI receipts.
 
-Since v6.48 the replay applies the reference-market closure rule (`isReferenceDeviationHeld` in `extractDepegEvents`): a sub-severe sample read while its FX or metal reference market was closed is no observation, so it opens, extends and ends nothing, as in live detection since v6.47. A weekend-only deviation leaves no backfill row, and a longer one starts at the first open-market sample that still crosses the threshold. History recorded before the rule was repaired once with the `repair-reference-market-artifacts` operator job ([runbook](./runbooks/one-shot-backfills.md#repair-reference-market-artifacts)): a sub-severe event that began during a closure was deleted when it ended within six hours of the reopen; a longer one keeps its row, and PSI counts it from the reopen. Events in a depeg-resolver incident are append-only and stay as recorded; PSI excludes their artifacts through its replay rule.
+Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: raw absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample at or inside the half-threshold recovery band. Historical extraction and Tape allow one unit of floating-point precision at par when comparing the inclusive boundary. A deeper sample replaces an open episode's peak only when another sample of the same episode is within 1,000 bps of it: a lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak. An episode whose opening print is never corroborated (and is not extreme) is withheld at close instead of publishing that print as the peak; extreme single-point crashes keep their existing exemption.
+
+The earlier repair removed selected closure-origin artifacts. The current [repair workflow](./runbooks/one-shot-backfills.md#repair-reference-market-artifacts) records analytic disposition and admitted intervals while preserving incident identities. It includes reviewed restorations of PAXG event 24994 and EURS event 89640 and targeted PSI reversals. Apply the write only after reviewing its dry run.
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
@@ -519,6 +576,8 @@ producer contracts are unchanged.
 
 ## Peg Score (`peg-score.ts`)
 
+PegScore uses recorded admitted intervals for incident duration and excludes scheduled blind time from the observed denominator. Legacy fallback can accept a confirmed in-session onset with unknown duration. Recent statistics require evidence in their own window. A point at the scoring boundary can establish an incident with zero elapsed duration. During a declared hold, the active penalty can retain the last trusted observation inside admitted coverage. The recorded detector onset remains visible alongside the first admissible observation.
+
 The [public PegScore methodology](https://pharos.watch/methodology/#pegscore-dews-methodology)
 owns the formula and components; `shared/lib/peg-score.ts` owns execution.
 `derivePegAnalyticsSnapshot()` resolves tracking coverage through `coinTrackingStart()`
@@ -564,7 +623,7 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 |----------|----------|
 | Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + run-start repair; same-direction rows merge, opposite-direction rows close older directions without absorbing opposite-sign peaks |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
-| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` only on an observed sub-floor supply |
+| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing USD rows close with `close_reason = 'coverage-lost-supply'` when the primary price is usable and observed supply is below the floor |
 | Supply unavailable (absent/empty/invalid buckets) | No new event; an existing lifecycle stays open without peak/recovery progress, records blind price coverage, and emits a per-asset warning |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |

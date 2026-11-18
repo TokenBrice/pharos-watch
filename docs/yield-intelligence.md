@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.55`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.56`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -51,6 +51,8 @@ Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE
 ---
 
 ## Source-Aware APY Resolution
+
+USDY uses the canonical Ondo wrapper and starts a separate return history. USYC follows the issuer's next business-day reporting deadline and deduplicates repeated NAV observations. Price-derived returns annualize between distinct quote observations. The supplemental vault cache stores the v2 observation clock alongside the rollback reader’s fetch-clock projection in the same candidate. Legacy USYC rows with a published age use publication time minus that age for the issuer calendar. Pool retrieval time measures delivery, and only supported upstream clocks establish observation age.
 
 The sync cron resolves APY for each coin using a priority-ordered strategy. Deterministic and curated rows can coexist; the cron then applies confidence-weighted arbitration to choose the primary row while retaining alternatives.
 
@@ -281,7 +283,7 @@ apy = max(0, benchmarkRate - spreadBps / 100)
 
 Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native or product-specific benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. RUB rows use the Central Bank of Russia key rate from the DailyInfo `KeyRateXML` SOAP feed. TRY rows use CBRT EVDS BIST TLREF (`TP.BISTTLREF.ORAN`). `USD_EFFR` is sourced first from the New York Fed EFFR endpoint and then FRED DFF; a config can select it as the product benchmark through `benchmarkCurrency`, though no tracked product does so today. Rate-derived configs can also set `benchmarkOverrideKey`: APY is still computed from the configured product benchmark, but PYS/excess-yield benchmark selection and provenance use the override. USD tokenized T-bill/MMF-style proxies use this to compare against `USD_EFFR`; EUR and GBP treasury proxies carry explicit same-currency override keys; A7A5 uses `RUB` for both APY derivation and PYS/excess-yield provenance. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
 
-Product-input freshness is independent of the comparison hurdle: fresh EFFR cannot refresh a stale USD T-bill input. Structured cache entries preserve absent/invalid fetch and last-market clocks as null; only legacy scalars infer cache time. Missing clocks cannot score. Retained evidence stays degraded; hardcoded fallback without a market rate cannot produce product APY. Invalid registry readability names `yield-benchmarks:registry-invalid`.
+Linked opportunities use the child product’s benchmark and fixing window. The versioned rankings retain the fixing clock, while the rollback projection uses the original product fetch clock. Product-input freshness is independent of the comparison hurdle: fresh EFFR cannot refresh a stale USD T-bill input. Structured cache entries preserve absent/invalid fetch and last-market clocks as null; only legacy scalars infer cache time. Missing clocks cannot score. Retained evidence stays degraded; hardcoded fallback without a market rate cannot produce product APY. Invalid registry readability names `yield-benchmarks:registry-invalid`.
 
 The configured dependency resolver is shared by source resolution, evaluation, and both live-safety and preserved-safety API reads. A config whose product and hurdle are both `USD_EFFR` depends on EFFR alone, so a USD T-bill outage would not stale its source or withhold its score. Non-USD products independently require the USD normalization reference: a stale USD reference with a healthy EUR product yields `benchmark-stale`, not `source-stale`. A stale product yields `source-stale`; an independently stale comparison hurdle yields `benchmark-stale`. Retained product or normalization evidence carries `reference-benchmark-degraded`; healthy arithmetic is unchanged.
 
@@ -443,6 +445,8 @@ Rollback compatibility is part of the contract. Production-shaped `v7.48` payloa
 
 ## Benchmark Registry
 
+Treasury quotes retain the published convention and a comparable effective annual APY. Product models use the benchmark for their own instrument, including weekly CETES placement timing. A large move needs a later effective fixing for confirmation. Gold-return APY remains visible in its own unit with USD excess and PYS unavailable. DEWS reads the selected source's cadence-aware freshness and compares yield evidence within the same return unit.
+
 Yield Intelligence now uses a small benchmark registry instead of a single global T-bill field.
 
 **Benchmarks currently supported:**
@@ -546,6 +550,8 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 The methodology above owns public behavior; this section owns runtime contracts.
 
 [Runtime ownership and scoped reads](./yield-intelligence-operations.md#runtime-ownership-and-scoped-reads) details compact taxonomy, independent query startup and coin/history projection boundaries.
+
+During a Worker rollback, Pages applies the same benchmark-unit guard to the full, summary and per-coin rankings. A native-unit source such as `onchain:xgld-unitas` retains its APY and withholds incompatible USD excess yield and Pharos Yield Score.
 
 ### Persistence And Publication
 
