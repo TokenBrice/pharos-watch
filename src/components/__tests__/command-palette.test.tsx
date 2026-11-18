@@ -6,7 +6,7 @@ import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { CommandPalette } from "@/components/command-palette/command-palette-root";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
 import type { StablecoinListResponse } from "@shared/types/supply";

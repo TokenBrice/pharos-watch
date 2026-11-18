@@ -273,7 +273,7 @@ export function missingPublishedGaugeTable(): MockTableConfig {
 function makeDailyDigestTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
-  const weekAgoTs = todayTs - 7 * 86_400;
+  const supplyDates = [todayTs, todayTs - 86_400, todayTs - 7 * 86_400];
   const dewsRows: TestDewsRow[] = [
     { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
     { stablecoin_id: "usdc-circle", score: 12, band: "CALM", signals_json: '{"pool":{"value":10,"available":true}}', computed_at: nowSec - 600 },
@@ -333,17 +333,14 @@ function makeDailyDigestTables(): MockTableConfig[] {
     empty("FROM blacklist_events"),
     {
       match: "FROM supply_history WHERE stablecoin_id IN",
-      rows: [
-        { stablecoin_id: "usdt-tether", snapshot_date: todayTs, circulating_usd: 100_000_000 },
-        { stablecoin_id: "usdt-tether", snapshot_date: todayTs - 86_400, circulating_usd: 99_000_000 },
-        { stablecoin_id: "usdt-tether", snapshot_date: weekAgoTs, circulating_usd: 95_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: todayTs, circulating_usd: 60_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: todayTs - 86_400, circulating_usd: 61_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: weekAgoTs, circulating_usd: 62_000_000 },
-      ].map((row) => ({ ...row, circulating_native: row.circulating_usd,
-        valuation_price_usd: 1, valuation_observed_at_sec: row.snapshot_date,
-        supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: row.snapshot_date, supplyChainGuard: null }),
-      })),
+      rows: ([
+        ["usdt-tether", 100, 99, 95],
+        ["usdc-circle", 60, 61, 62],
+      ] as const).flatMap(([stablecoin_id, ...millions]) => millions.map((amount, i) => ({
+        stablecoin_id, snapshot_date: supplyDates[i], circulating_usd: amount * 1e6, circulating_native: amount * 1e6,
+        valuation_price_usd: 1, valuation_observed_at_sec: supplyDates[i],
+        supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: supplyDates[i], supplyChainGuard: null }),
+      }))),
     },
     empty("WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?"),
   ];

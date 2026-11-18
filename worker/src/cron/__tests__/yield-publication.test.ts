@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -14,7 +14,7 @@ import {
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
@@ -51,37 +51,49 @@ import { computeApyFromRate } from "../yield-helpers";
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
 
+const rankingsFixtures = createLatestSchemaFixtureTracker();
+afterEach(rankingsFixtures.closeAll);
+
+function rankingsFixture() {
+  const { db, sqlite } = rankingsFixtures.open();
+  const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'");
+  return {
+    db, sqlite,
+    readLegacy: () => JSON.parse(String(legacy.get()?.value)),
+    readCurrent: async () => JSON.parse((await readYieldRankingsCache(db))!.value),
+  };
+}
+
+function publishRankings(db: D1Database, startSec: number, rankings: unknown[], generationId = String(startSec)) {
+  return publishYieldRowsAtomically(db, {
+    rankingsPayload: { rankings, publication: { generationId } }, startSec, generationId,
+    yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+  });
+}
+
 describe("yield current-row conflict updates", () => {
   it("publishes xGLD native yield only to compatible readers and follows newer legacy generations on redeploy", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, db, readLegacy, readCurrent } = rankingsFixture();
     const usdt = { id: "usdt-tether", warningSignals: [], currentApy: 5 };
     const xgld = { id: "xgld-unitas", warningSignals: ["benchmark-unit-mismatch"], currentApy: 5,
       safetyScore: 80, safetyGrade: "A", pharosYieldScore: null, provenance: { sourceKey: "onchain:xgld-unitas" } };
-    const publish = (startSec: number) => publishYieldRowsAtomically(db, {
-      rankingsPayload: { rankings: [usdt, xgld], publication: { generationId: String(startSec) } },
-      startSec, generationId: String(startSec), yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
-    });
-    try {
-      await publish(100);
-      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
-      expect(JSON.parse(String(legacy?.value)).rankings).toEqual([usdt]);
-      expect(JSON.parse((await readYieldRankingsCache(db))!.value).rankings).toEqual([usdt, xgld]);
-      expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([xgld]);
-      sqlite.prepare("UPDATE cache SET value = ?, updated_at = 200 WHERE key = 'yield-rankings'")
-        .run(JSON.stringify({ rankings: [usdt], publication: { generationId: "200" } }));
-      expect((await publish(150)).skippedBecauseNewer).toBe(true);
-      expect(JSON.parse((await readYieldRankingsCache(db))!.value).publication.generationId).toBe("200");
-      expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([]);
-      sqlite.prepare("DELETE FROM cache WHERE key = 'yield-rankings'").run();
-      expect(await readYieldRankingsCache(db)).toBeNull();
-      expect(await readYieldRankingsCoinCache(db, xgld.id)).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const publish = (startSec: number) => publishRankings(db, startSec, [usdt, xgld]);
+    await publish(100);
+    expect(readLegacy().rankings).toEqual([usdt]);
+    expect((await readCurrent()).rankings).toEqual([usdt, xgld]);
+    expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([xgld]);
+    sqlite.prepare("UPDATE cache SET value = ?, updated_at = 200 WHERE key = 'yield-rankings'")
+      .run(JSON.stringify({ rankings: [usdt], publication: { generationId: "200" } }));
+    expect((await publish(150)).skippedBecauseNewer).toBe(true);
+    expect((await readCurrent()).publication.generationId).toBe("200");
+    expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([]);
+    sqlite.prepare("DELETE FROM cache WHERE key = 'yield-rankings'").run();
+    expect(await readYieldRankingsCache(db)).toBeNull();
+    expect(await readYieldRankingsCoinCache(db, xgld.id)).toBeNull();
   });
 
   it("publishes the USTBL product fetch to rollback readers and the Friday fixing to current readers", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { db, readLegacy, readCurrent } = rankingsFixture();
     const friday = Date.parse("2026-03-13T00:00:00Z") / 1000;
     const sunday = friday + 60 * 3600;
     const fetchedAt = sunday - 900;
@@ -92,23 +104,15 @@ describe("yield current-row conflict updates", () => {
     const provenance = buildYieldSourceProvenance({
       source, isBest: true, evaluatedSources: [source], startSec: sunday, dlPoolsMeta: makeYieldSourceMeta(),
     });
-    try {
-      await publishYieldRowsAtomically(db, {
-        rankingsPayload: { publication: { generationId: "weekend" }, rankings: [
-          { id: source.id, dataSource: source.dataSource, warningSignals: [], provenance },
-        ] },
-        startSec: sunday, generationId: "weekend", yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
-      });
-      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
-      expect(JSON.parse(String(legacy?.value)).rankings[0].provenance).toMatchObject({
-        sourceObservedAt: fetchedAt, sourceAgeSeconds: 900,
-      });
-      expect(JSON.parse((await readYieldRankingsCache(db))!.value).rankings[0].provenance).toMatchObject({
-        sourceObservedAt: friday, sourceAgeSeconds: 60 * 3600, sourceFetchedAt: fetchedAt,
-      });
-    } finally {
-      sqlite.close();
-    }
+    await publishRankings(db, sunday, [
+      { id: source.id, dataSource: source.dataSource, warningSignals: [], provenance },
+    ], "weekend");
+    expect(readLegacy().rankings[0].provenance).toMatchObject({
+      sourceObservedAt: fetchedAt, sourceAgeSeconds: 900,
+    });
+    expect((await readCurrent()).rankings[0].provenance).toMatchObject({
+      sourceObservedAt: friday, sourceAgeSeconds: 60 * 3600, sourceFetchedAt: fetchedAt,
+    });
   });
 
   it("writes every non-key column, including nulls and generation clocks, without replacing keys", async () => {
@@ -236,7 +240,7 @@ describe("publishYieldCoordinatorResults", () => {
   }
 
   it("keeps USDY's wrapper identity while projecting a verified long-horizon anchor for rollback", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { db, sqlite, readLegacy, readCurrent } = rankingsFixture();
     const { ondo } = OPTIONAL_YIELD_SOURCES;
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const anchorAge = 30 * DAY_SECONDS;
@@ -251,30 +255,24 @@ describe("publishYieldCoordinatorResults", () => {
       riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
       dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 5, startSec,
     });
-    try {
-      expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
-        evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
-      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
-      const canonical = await readYieldRankingsCache(db);
-      const [legacyRow] = JSON.parse(String(legacy?.value)).rankings;
-      const [canonicalRow] = JSON.parse(canonical!.value).rankings;
-      for (const row of [legacyRow, canonicalRow]) {
-        expect(row).toMatchObject({
-          currentApy: 5, pharosYieldScore: 28,
-          provenance: { sourceKey: ondo.sourceKey, sourceObservedAt: startSec, sourceAgeSeconds: 0 },
-        });
-      }
-      expect(legacyRow.provenance.comparisonAnchorAgeSeconds).toBeUndefined();
-      expect(legacyRow.provenance.comparisonAnchorObservedAt).toBeUndefined();
-      expect(canonicalRow.provenance.comparisonAnchorAgeSeconds).toBe(anchorAge);
-      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: ondo.sourceKey, apy: 5 }]);
-    } finally {
-      sqlite.close();
+    expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+      evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
+    const [legacyRow] = readLegacy().rankings;
+    const [canonicalRow] = (await readCurrent()).rankings;
+    for (const row of [legacyRow, canonicalRow]) {
+      expect(row).toMatchObject({
+        currentApy: 5, pharosYieldScore: 28,
+        provenance: { sourceKey: ondo.sourceKey, sourceObservedAt: startSec, sourceAgeSeconds: 0 },
+      });
     }
+    expect(legacyRow.provenance.comparisonAnchorAgeSeconds).toBeUndefined();
+    expect(legacyRow.provenance.comparisonAnchorObservedAt).toBeUndefined();
+    expect(canonicalRow.provenance.comparisonAnchorAgeSeconds).toBe(anchorAge);
+    expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: ondo.sourceKey, apy: 5 }]);
   });
 
   it("keeps a stale Yearn quote in decision evidence and publishes only the admitted Aave APY", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { db, sqlite, readCurrent } = rankingsFixture();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const id = "usdc-circle";
     const aaveKey = "protocol-api:aave-v3:usdc";
@@ -297,22 +295,17 @@ describe("publishYieldCoordinatorResults", () => {
       ...evaluated, riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: input.riskFreeRates,
       dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), startSec,
     });
-    try {
-      expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
-        evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
-      const cached = await readYieldRankingsCache(db);
-      const [ranking] = JSON.parse(cached!.value).rankings;
-      expect(ranking).toMatchObject({ currentApy: 4, altSources: [], provenance: { sourceKey: aaveKey } });
-      expect(ranking.alternateSummary).toBeUndefined();
-      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: aaveKey, apy: 4 }]);
-      const decision = sqlite.prepare("SELECT rejected_count, alternatives_json FROM yield_source_decisions").get()!;
-      expect(decision.rejected_count).toBe(1);
-      expect(JSON.parse(String(decision.alternatives_json))).toMatchObject([
-        { sourceKey: yearnKey, apy30d: 5, rejected: true, anomalies: ["source-stale"] },
-      ]);
-    } finally {
-      sqlite.close();
-    }
+    expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+      evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
+    const [ranking] = (await readCurrent()).rankings;
+    expect(ranking).toMatchObject({ currentApy: 4, altSources: [], provenance: { sourceKey: aaveKey } });
+    expect(ranking.alternateSummary).toBeUndefined();
+    expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: aaveKey, apy: 4 }]);
+    const decision = sqlite.prepare("SELECT rejected_count, alternatives_json FROM yield_source_decisions").get()!;
+    expect(decision.rejected_count).toBe(1);
+    expect(JSON.parse(String(decision.alternatives_json))).toMatchObject([
+      { sourceKey: yearnKey, apy30d: 5, rejected: true, anomalies: ["source-stale"] },
+    ]);
   });
 
   it.each([1, 1.001, 0.999])("persists an anchor without publishing zero, then publishes the measured return at rate %s", async (nextRate) => {

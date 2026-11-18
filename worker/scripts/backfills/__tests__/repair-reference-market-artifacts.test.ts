@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { REFERENCE_MARKET_RETIRED_EVENTS } from "@shared/data/depegs/reference-market-retired-events";
 import { handleEvents } from "../../../src/api/events";
@@ -23,20 +24,17 @@ it.each([
     straddled: ["2023-02-12T21:58:00Z", "2023-02-12T22:03:00Z"], reason: "severe-onset-uncertain" },
   { id: 90814, pegType: "peggedGOLD", start: "2026-10-30T17:02:47Z", end: "2026-10-31T13:46:28Z",
     peak: 160, startPrice: 3968.1082287455, pegReference: 3905.570022877781, recoveryPrice: 3874.120308574863,
-    admitted: ["2026-10-30T20:00:00Z", "2026-10-30T20:55:00Z"],
-    straddled: ["2026-10-30T20:58:00Z", "2026-10-30T21:02:00Z"], reason: "recovery-clock-unverified" },
-])("annotates $reason without overwriting the recorded event or recovery", async (example) => {
+    reason: "recovery-clock-unverified" },
+] as const)("annotates $reason without overwriting the recorded event or recovery", async (example) => {
   const { sqlite, db } = fixtures.open();
   const seconds = (iso: string) => Date.parse(iso) / 1000;
   const startedAt = seconds(example.start);
   const endedAt = seconds(example.end);
-  const [fromSec, toSec] = example.admitted.map(seconds);
-  const straddled = example.straddled.map(seconds);
   const archive = example.id === 90814
     ? { intervals: [[1793381480, 1793381480]], atParIntervals: [[1793452609, 1793454388]],
         lastObservationKind: "trusted-at-par", lastTrusted: 1793454388, gap: 1793382381 }
-    : { intervals: [[fromSec!, toSec!], straddled], atParIntervals: [],
-        lastObservationKind: "trusted-off-peg", lastTrusted: toSec!, gap: null };
+    : { intervals: [example.admitted.map(seconds), example.straddled.map(seconds)], atParIntervals: [],
+        lastObservationKind: "trusted-off-peg", lastTrusted: seconds(example.admitted[1]), gap: null };
   seedPsiEvent(sqlite, { ...makeDepegRow({ id: example.id, peg_type: example.pegType, direction: "above",
     started_at: startedAt, ended_at: endedAt, peak_deviation_bps: example.peak, start_price: example.startPrice,
     peg_reference: example.pegReference, recovery_price: example.recoveryPrice }), confirmation_sources: null, pending_reason: null });
@@ -153,16 +151,20 @@ it.each([false, true])("commits the daily and sample corrections together (sampl
   }
 });
 
-it.each([true, false])("only marks fully verified artifact families (both linked: %s)", async (bothLinked) => {
-  const { sqlite, db } = fixtures.open();
-  const incident = "ddr2:69a72ad462b65c78d4b4c0bf97bb1d42";
+const AUDD_INCIDENT = "ddr2:69a72ad462b65c78d4b4c0bf97bb1d42";
+const AUDD_START = 1_794_657_600;
+function seedAuddFragments(sqlite: DatabaseSync, end: number, linkedAt: number, bothLinked = true) {
+  const link = sqlite.prepare("INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', ?)");
   for (const id of [91043, 91048]) {
     seedPsiEvent(sqlite, { ...makeDepegRow({ id, stablecoin_id: "audd-novatti", peg_type: "peggedAUD",
-      started_at: 1_794_657_600 + id - 91043, ended_at: 1_794_670_000 }), confirmation_sources: null, pending_reason: null });
-    if (id === 91043 || bothLinked) sqlite.prepare(
-      "INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1)",
-    ).run(incident, id);
+      started_at: AUDD_START + id - 91043, ended_at: end }), confirmation_sources: null, pending_reason: null });
+    if (id === 91043 || bothLinked) link.run(AUDD_INCIDENT, id, linkedAt);
   }
+}
+
+it.each([true, false])("only marks fully verified artifact families (both linked: %s)", async (bothLinked) => {
+  const { sqlite, db } = fixtures.open();
+  seedAuddFragments(sqlite, 1_794_670_000, 1, bothLinked);
   const response = await run(db, `after=1794783599${apply}`);
   expect(response.status).toBe(bothLinked ? 200 : 409);
   expect(sqlite.prepare("SELECT id, disposition, admitted_coverage_json FROM depeg_events ORDER BY id").all())
@@ -173,19 +175,13 @@ it.each([true, false])("only marks fully verified artifact families (both linked
 
 it("excludes an effective DEWS target when its first incident fragment was disputed", async () => {
   const { sqlite, db } = fixtures.open();
-  const incident = "ddr2:69a72ad462b65c78d4b4c0bf97bb1d42";
-  const clock = 1_794_657_600;
-  for (const id of [91043, 91048]) {
-    seedPsiEvent(sqlite, { ...makeDepegRow({ id, stablecoin_id: "audd-novatti", peg_type: "peggedAUD",
-      started_at: clock + id - 91043, ended_at: clock + 3600 }), confirmation_sources: null, pending_reason: null });
-    sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
-      VALUES (?, ?, 'observed', ?)`).run(incident, id, clock);
-  }
+  const clock = AUDD_START;
+  seedAuddFragments(sqlite, clock + 3600, clock);
   sqlite.prepare(`INSERT INTO depeg_resolver_incidents
     (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id, first_started_at,
     current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
     VALUES (?, 'audd-novatti', 'AUD', 'below', 91043, 91048, ?, ?, 350, ?, ?, ?)`)
-    .run(incident, clock, clock + 5, "f".repeat(64), clock, clock);
+    .run(AUDD_INCIDENT, clock, clock + 5, "f".repeat(64), clock, clock);
   sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, public_json, created_at, updated_at)
     VALUES (91043, 'live', 'confirmed', '{"auditVerdict":"disputed"}', ?, ?)`).run(clock, clock);
   const request = new Request("https://operator.invalid/api/backfill-dews");

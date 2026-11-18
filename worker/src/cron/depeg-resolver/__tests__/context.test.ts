@@ -334,6 +334,24 @@ describe("DDR historical context", () => {
 });
 
 describe("DDR supply history provenance", () => {
+  async function loadContext(db: D1Database, ...rows: ReturnType<typeof activeRow>[]) {
+    const result = await loadDdrContext(db, rows, NOW_SEC);
+    if (result.kind !== "ok") throw new Error(result.reason);
+    return result.context;
+  }
+
+  function chainGap(at: number, baselineUsd: number, partial?: { partialCoverage: true; quarantinedSince: number }) {
+    return JSON.stringify({
+      supplySource: "defillama", supplyObservedAt: at, supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", ...partial,
+        chains: [{
+          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd, baselineObservedAt: at - 86_400, baselineSource: "state", resolution: "unavailable",
+        }],
+      },
+    });
+  }
+
   it("retains a partial USD checkpoint as unavailable instead of treating it as issuance or skipping it", async () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);
@@ -343,23 +361,12 @@ describe("DDR supply history provenance", () => {
       (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
       VALUES ('usdc-circle', ?, ?, ?)`);
     insert.run(baseline - 86_400, 1_000_000_000, null);
-    insert.run(baseline, 400_000_000, JSON.stringify({
-      supplySource: "defillama", supplyObservedAt: baseline,
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
-        quarantinedSince: baseline - 86_400,
-        chains: [{
-          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-          baselineUsd: 600_000_000, baselineObservedAt: baseline - 86_400,
-          baselineSource: "state", resolution: "unavailable",
-        }],
-      },
-    }));
+    insert.run(baseline, 400_000_000, chainGap(baseline, 600_000_000,
+      { partialCoverage: true, quarantinedSince: baseline - 86_400 }));
     insert.run(onset, 1_000_000_000, null);
 
-    const loaded = await loadDdrContext(db, [activeRow({ started_at: onset })], NOW_SEC);
-    if (loaded.kind !== "ok") throw new Error(loaded.reason);
-    const snapshots = loaded.context.supplyByCoin.get("usdc-circle") ?? [];
+    const context = await loadContext(db, activeRow({ started_at: onset }));
+    const snapshots = context.supplyByCoin.get("usdc-circle") ?? [];
     expect(snapshots).toContainEqual({ date: baseline, usd: null, comparisonPartial: true });
     expect(buildSupplyContext(snapshots, onset, NOW_SEC, [], false)).toMatchObject({
       covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
@@ -377,28 +384,17 @@ describe("DDR supply history provenance", () => {
     const insert = sqlite.prepare(`INSERT INTO supply_history
       (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, 1000000000, ?)`);
     for (const date of [today - 30 * day, onset - 7 * day, onset]) insert.run(id, date, null);
-    insert.run(id, today, JSON.stringify({
-      supplySource: "defillama", supplyObservedAt: today,
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "chains-unavailable",
-        chains: [{
-          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
-          baselineUsd: 10_000_000, baselineObservedAt: today - day,
-          baselineSource: "state", resolution: "unavailable",
-        }],
-      },
-    }));
+    insert.run(id, today, chainGap(today, 10_000_000));
 
-    const loaded = await loadDdrContext(db, [activeRow({ stablecoin_id: id, symbol: "SOFIUSD", started_at: onset })], NOW_SEC);
-    if (loaded.kind !== "ok") throw new Error(loaded.reason);
-    loaded.context.safetyContext = { status: "v9-identified", reason: null, identity: null };
-    loaded.context.v9ExitByCoin.set(id, {
+    const context = await loadContext(db, activeRow({ stablecoin_id: id, symbol: "SOFIUSD", started_at: onset }));
+    context.safetyContext = { status: "v9-identified", reason: null, identity: null };
+    context.v9ExitByCoin.set(id, {
       reasonCodes: [], pillarScore: 50, stressRequest: { requestedNotionalUsd: 1_000_000 },
       primaryRoute: { key: "primary", score: 50, capacity: {
         requestedNotionalUsd: 1_000_000, executableUsd: 500_000, completionRatio: 0.5,
       } },
     });
-    const [row] = resolveDdrIncidents(loaded.context, NOW_SEC);
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
     expect(row.inputs?.circulatingUsd).toBe(1_000_000_000);
     expect(row.relatedContext).toMatchObject({ supplyChange7dPct: 0, supplyChange30dPct: null });
     expect(row.resolution.tier).toBe("at_risk");
@@ -422,9 +418,7 @@ describe("DDR supply history provenance", () => {
     insert.run(baseline, 1_000_000, 100, provenance(baseline + 60));
     insert.run(midnight, 900_000, 90, provenance(onset));
     const resolve = async () => {
-      const loaded = await loadDdrContext(db, [activeRow({ started_at: onset })], NOW_SEC);
-      if (loaded.kind !== "ok") throw new Error(loaded.reason);
-      return resolveDdrIncidents(loaded.context, NOW_SEC)[0];
+      return resolveDdrIncidents(await loadContext(db, activeRow({ started_at: onset })), NOW_SEC)[0];
     };
     expect((await resolve()).relatedContext.supplyChange7dPct).toBe(-10);
     insert.run(midnight, 880_000, 88, provenance(replacementOffset == null ? null : midnight + replacementOffset));
@@ -463,17 +457,16 @@ describe("DDR supply history provenance", () => {
           }));
         }
       }
-      const loaded = await loadDdrContext(db, [event, usdt, ousd], NOW_SEC);
-      if (loaded.kind !== "ok") throw new Error(loaded.reason);
-      expect(loaded.context.mintBurnCoveredEventIds).toEqual(new Set([usdt.id]));
-      expect(loaded.context.mintBurnHourlyByCoin.get(usdt.stablecoin_id)?.map((row) => row.netFlowUsd)).toEqual([100]);
-      expect(loaded.context.mintBurnHourlyByCoin.has(ousd.stablecoin_id)).toBe(false);
-      const snapshots = loaded.context.supplyByCoin.get(event.stablecoin_id) ?? [];
+      const context = await loadContext(db, event, usdt, ousd);
+      expect(context.mintBurnCoveredEventIds).toEqual(new Set([usdt.id]));
+      expect(context.mintBurnHourlyByCoin.get(usdt.stablecoin_id)?.map((row) => row.netFlowUsd)).toEqual([100]);
+      expect(context.mintBurnHourlyByCoin.has(ousd.stablecoin_id)).toBe(false);
+      const snapshots = context.supplyByCoin.get(event.stablecoin_id) ?? [];
       expect(snapshots).toEqual([
         { date: baseline, usd: 1_100_000 },
         { date: event.started_at, usd: 1_000_000 },
       ]);
-      expect(resolveDdrIncidents(loaded.context, NOW_SEC)[0].inputs).toMatchObject({
+      expect(resolveDdrIncidents(context, NOW_SEC)[0].inputs).toMatchObject({
         circulatingUsd: 1_000_000,
         supply: { covered: true, change7dPct: (-100_000 / 1_100_000) * 100, mintSurge: null, mintSurgeCoverage: "unavailable" },
       });

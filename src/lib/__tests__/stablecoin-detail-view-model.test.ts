@@ -9,7 +9,7 @@ import type { PegSummaryCoin, PegSummaryResponse } from "@shared/types/peg";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { formatObservedPrice } from "../current-peg";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";

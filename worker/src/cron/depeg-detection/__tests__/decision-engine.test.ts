@@ -32,12 +32,21 @@ const zarMeta: StablecoinMeta = {
   geckoId: "celo-south-african-rand",
 };
 const usdInput = { now: 1_750_259_200, meta: usdMeta, ...usdPeg };
+const weekend = Date.UTC(2026, 10, 14, 12) / 1_000;
+const fridayBrlClose = Date.UTC(2026, 10, 13, 21, 55) / 1_000;
+const peerVenues = ["binance", "coinbase", "kraken"];
+const silverMeta: StablecoinMeta = { ...goldMeta, id: "xagm-matrixdock", commodityOunces: 1,
+  flags: { ...goldMeta.flags, pegCurrency: "SILVER" } };
 
 function clockedBenchmark(peg: string, value: number, observedAt: number, kind: "fx" | "fallback" = "fx") {
   const pegRates = { [peg]: value };
   const fx = referenceState(pegRates, observedAt);
   attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
   return { pegRates, pegRateSources: { [peg]: kind }, pegRateCounts: { [peg]: 0 } };
+}
+
+function peerMetadata(peers: PegAssetBase[], meta: StablecoinMeta) {
+  return new Map(peers.map(({ id }) => [id, meta]));
 }
 
 function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
@@ -160,13 +169,13 @@ describe("decideDepegAsset", () => {
     const now = Date.UTC(2026, 10, 18, 13) / 1000;
     const existing = makeExistingEvent({ id: 90738, stablecoin_id: meta.id, symbol: meta.symbol,
       peg_type: "peggedNGN", peg_reference: 1, direction: "below", start_price: 0.94, started_at: now - 86400 });
+    const poolKey = "ethereum:0x0000000000000000000000000000000000000001";
     const observation = (at: number, priceSource: string) => ({
       ...clockedBenchmark("peggedNGN", 0.0007, at - 120), meta, now: at, existing,
       asset: makeAsset({ id: meta.id, symbol: meta.symbol, pegType: "peggedNGN", price: 0.0007,
         priceSource, priceObservedAtMode: "upstream", priceObservedAt: at - 30, priceUpdatedAt: at - 30 }),
       dexRow: { ...makeDexRow(0.0007, { updated_at: at }), stablecoin_id: meta.id, aggregateObservedAt: at - 30,
-        pricePoolKeys: ["ethereum:0x0000000000000000000000000000000000000001"],
-        upstreamKeys: ["ethereum:0x0000000000000000000000000000000000000001", "venue:bitstamp"] },
+        pricePoolKeys: [poolKey], upstreamKeys: [poolKey, "venue:bitstamp"] },
       nativePegQuote: { stablecoinId: meta.id, geckoId: "compliant-naira", pegCurrency: "NGN",
         price: 1, updatedAt: at - 10, derivation: { kind: "conversion" as const, lineage: {} } },
     });
@@ -187,12 +196,12 @@ describe("decideDepegAsset", () => {
     const earlierFx = { ...prior, recovery_first_seen_at: now - 1000, recovery_last_seen_at: now - 1000,
       last_trusted_price_at: now - 1000, price_coverage_gap_started_at: now - 1000,
       price_coverage_json: JSON.stringify({ intervals: [], atParIntervals: [[now - 1000, now - 1000]], lastObservationKind: "trusted-at-par" }) };
-    const repeat = decideDepegAsset({ ...next, existing: earlierFx, dexRow: { ...next.dexRow, aggregateObservedAt: now - 30 },
-      asset: { ...next.asset, priceObservedAt: now - 30 } });
+    const repeatWithUsdAt = (at: number) => decideDepegAsset({ ...next, existing: earlierFx,
+      dexRow: { ...next.dexRow, aggregateObservedAt: at }, asset: { ...next.asset, priceObservedAt: at } });
+    const repeat = repeatWithUsdAt(now - 30);
     expect(repeat.commands).toEqual([]);
     expect(repeat.priceCoverage?.lastTrustedObservationAt).toBe(now - 1000);
-    expect(decideDepegAsset({ ...next, existing: earlierFx, dexRow: { ...next.dexRow, aggregateObservedAt: now - 20 },
-      asset: { ...next.asset, priceObservedAt: now - 20 } }).commands)
+    expect(repeatWithUsdAt(now - 20).commands)
       .toMatchObject([{ type: "continue-recovery", lastSeenAt: now - 20, usdObservedAt: now - 20 }]);
     expect(decideDepegAsset({ ...next, existing: { ...prior, recovery_usd_first_seen_at: null, recovery_usd_observed_at: null } }).commands)
       .toMatchObject([{ type: "begin-recovery", usdObservedAt: now + 870 }]);
@@ -209,14 +218,13 @@ describe("decideDepegAsset", () => {
     ["outvoted-pool", 0.93, 1, false],
     ["open-benchmark-event", 0.93, 1, true],
   ] as const)("uses independent weekend evidence for %s", (scenario, price, peerPrice, pending) => {
-    const now = Date.UTC(2026, 10, 14, 12) / 1_000;
+    const now = weekend;
     const asset = brzAsset(price, { priceSource: "coingecko", priceObservedAt: now - 60 });
-    const peers = ["binance", "coinbase", "kraken"].map((priceSource) =>
+    const peers = peerVenues.map((priceSource) =>
       brzAsset(peerPrice, { id: priceSource, priceSource, priceObservedAt: now - 60 }));
     const pegRates = { peggedREAL: 1 };
-    const metas = new Map(peers.map((peer) => [peer.id, brlMeta]));
-    metas.set(asset.id, brlMeta);
-    attachDetectionReferenceContext(pegRates, [asset, ...peers], metas, new Set(), null).rollbackSupportsPeerEvents = true;
+    attachDetectionReferenceContext(pegRates, [asset, ...peers], peerMetadata([...peers, asset], brlMeta),
+      new Set(), null).rollbackSupportsPeerEvents = true;
     const decision = decideDepegAsset({
       ...brlPeg, pegRates, asset, now, meta: brlMeta,
       existing: scenario === "open-benchmark-event" ? makeExistingEvent({ direction: "below", peak_deviation_bps: -250,
@@ -243,14 +251,15 @@ describe("decideDepegAsset", () => {
   });
 
   it("opens on the calibrated BRL benchmark with a stable cohort and a separate native trade", () => {
-    const now = Date.UTC(2026, 10, 14, 12) / 1_000;
+    const now = weekend;
     const at = now - 60;
     const asset = brzAsset(0.81, { priceSource: "coingecko", priceObservedAt: at, priceUpdatedAt: at });
-    const peers = ["binance", "coinbase", "kraken"].map((priceSource) =>
+    const peers = peerVenues.map((priceSource) =>
       brzAsset(1, { id: priceSource, priceSource, priceObservedAt: at, priceUpdatedAt: at }));
-    const rates = clockedBenchmark("peggedREAL", 1, Date.UTC(2026, 10, 13, 21, 55) / 1_000);
-    const fx = referenceState(rates.pegRates, Date.UTC(2026, 10, 13, 21, 55) / 1_000);
-    attachDetectionReferenceContext(rates.pegRates, [asset, ...peers], new Map([asset, ...peers].map((row) => [row.id, brlMeta])),
+    const rates = clockedBenchmark("peggedREAL", 1, fridayBrlClose);
+    const fx = referenceState(rates.pegRates, fridayBrlClose);
+    const cohort = [asset, ...peers];
+    attachDetectionReferenceContext(rates.pegRates, cohort, peerMetadata(cohort, brlMeta),
       new Set(), fx);
     const decision = decideDepegAsset({ ...rates, asset, now, meta: brlMeta, nativePegQuote: { ...brzQuote(0.97), updatedAt: at } });
     expect(decision.commands).toMatchObject([{ type: "upsert-pending", payload: {
@@ -259,13 +268,13 @@ describe("decideDepegAsset", () => {
   });
 
   it("keeps the severe benchmark band for a thin cohort when calibration is lower", () => {
-    const now = Date.UTC(2026, 10, 14, 12) / 1_000;
+    const now = weekend;
     const config = REFERENCE_CLOSURE_HOLD_BANDS_BPS.BRL;
     const previous = config.weekend;
     Reflect.set(config, "weekend", 600);
     try {
       const decision = decideDepegAsset({
-        ...clockedBenchmark("peggedREAL", 1, Date.UTC(2026, 10, 13, 21, 55) / 1_000),
+        ...clockedBenchmark("peggedREAL", 1, fridayBrlClose),
         now, meta: brlMeta, asset: brzAsset(0.90, { priceObservedAt: now - 60 }),
         nativePegQuote: { ...brzQuote(0.90), updatedAt: now - 60 },
       });
@@ -331,7 +340,7 @@ describe("decideDepegAsset", () => {
 
   it.each(["matched", "missing", "wrong-quote", "future-block", "wrong-generation", "prior-day"] as const)("uses the %s XAGm entitlement for event and peer pricing", (mode) => {
     const now = usdInput.now;
-    const meta = { ...goldMeta, id: "xagm-matrixdock", commodityOunces: 1, flags: { ...goldMeta.flags, pegCurrency: "SILVER" as const } };
+    const meta = silverMeta;
     const pegRates = { peggedSILVER: 30 };
     const observedAt = now - 30;
     const asset = { ...makeAsset({ id: meta.id, pegType: "peggedSILVER", price: 29.95142466, priceSource: "kraken",
@@ -342,15 +351,15 @@ describe("decideDepegAsset", () => {
     };
     const fx = referenceState(pegRates, now - 60);
     const context = attachDetectionReferenceContext(pegRates, [asset], new Map([[asset.id, meta]]), new Set(), fx, fx.repricingByPeg);
-    const decision = decideDepegAsset({ now, meta, asset, pegRates, pegRateSources: { peggedSILVER: "fallback" },
-      pegRateCounts: {}, referenceContext: context });
+    const input = { now, meta, asset, pegRates, pegRateSources: { peggedSILVER: "fallback" as const },
+      pegRateCounts: {}, referenceContext: context };
+    const decision = decideDepegAsset(input);
     const peer = context.groups.get("peggedSILVER")?.peers[0];
     if (mode === "matched") {
       expect(peer?.priceUsd).toBeCloseTo(30, 10);
       expect(decision.observation).toEqual({ kind: "observed" });
       expect(decision.commands).toEqual([]);
-      const offPeg = decideDepegAsset({ now, meta, asset: { ...asset, price: 29 }, pegRates,
-        pegRateSources: { peggedSILVER: "fallback" }, pegRateCounts: {}, referenceContext: context });
+      const offPeg = decideDepegAsset({ ...input, asset: { ...asset, price: 29 } });
       expect(offPeg.commands).toMatchObject([{ type: "upsert-pending", payload: { pegReference: 29.95142466 } }]);
     } else {
       expect(peer).toBeUndefined();
@@ -366,8 +375,7 @@ describe("decideDepegAsset", () => {
     const pegRates = { peggedSILVER: 30 };
     const fx = referenceState(pegRates, now - 1_000, false);
     fx.sources = { "gold-api.com": "ok" };
-    const meta = { ...goldMeta, id: "xagm-matrixdock", symbol: "XAGm", commodityOunces: 1,
-      flags: { ...goldMeta.flags, pegCurrency: "SILVER" as const } };
+    const meta = { ...silverMeta, symbol: "XAGm" };
     const asset = {
       ...makeAsset({ id: meta.id, symbol: meta.symbol, pegType: "peggedSILVER", price: pegReference * 0.95,
         priceSource: "coingecko", priceObservedAt: quoteAt, priceUpdatedAt: quoteAt, priceObservedAtMode: "upstream" }),
@@ -409,7 +417,7 @@ describe("decideDepegAsset", () => {
   });
 
   it.each([97, 100])("adopts an independently traded closed metal median for price %s", (price) => {
-    const now = Date.UTC(2026, 10, 14, 12) / 1_000;
+    const now = weekend;
     const meta = { ...goldMeta, commodityOunces: 1 };
     const pegRates = { peggedGOLD: 100 };
     const sample = (id: string, priceSource: string, value: number) => makeAsset({
@@ -418,7 +426,7 @@ describe("decideDepegAsset", () => {
     });
     const asset = sample(meta.id, "pyth", price);
     const quotes = [asset, ...["coinbase", "binance", "kraken"].map((source) => sample(source, source, 100))];
-    attachDetectionReferenceContext(pegRates, quotes, new Map(quotes.map((quote) => [quote.id, meta])), new Set(), null, undefined,
+    attachDetectionReferenceContext(pegRates, quotes, peerMetadata(quotes, meta), new Set(), null, undefined,
       { peggedGOLD: 4 });
     const decision = decideDepegAsset({ now, asset, meta, pegRates, pegRateSources: { peggedGOLD: "median" },
       pegRateCounts: { peggedGOLD: 4 }, existing: price === 100 ? makeExistingEvent({

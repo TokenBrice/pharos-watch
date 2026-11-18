@@ -84,7 +84,8 @@ vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
 });
 
 import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
-import { fetchMarketBackfillPriceSeries } from "../../../src/lib/historical-market-prices";
+import { makeReplayDiagnostics } from "../../../src/api/__tests__/depeg-replay.test-support";
+import { fetchMarketBackfillPriceSeries, type PricePoint } from "../../../src/lib/historical-market-prices";
 
 vi.mock("../../../src/lib/backfill-fx", async () => {
   const actual = await vi.importActual<typeof import("../../../src/lib/backfill-fx")>("../../../src/lib/backfill-fx");
@@ -218,6 +219,13 @@ describe("handleBackfillSupplyHistory", () => {
     );
   });
 
+  function mockSupplyTokens(tokens: object[]) {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tokens }));
+  }
+
+  const priceSeries = (prices: PricePoint[], granularity: "daily" | "hourly" = "daily") =>
+    ({ prices, diagnostics: { ...makeReplayDiagnostics(1), granularity } });
+
   it("reads canonical DefiLlama native buckets and uses the alias only for absent buckets", async () => {
     const { db, sqlite } = fixtures.open();
     const observedAt = 1_700_000_000;
@@ -228,10 +236,8 @@ describe("handleBackfillSupplyHistory", () => {
       { totalCirculating: {}, circulating: { peggedUSD: 50 } },
       { totalCirculating: { peggedUSD: -1 }, circulating: { peggedUSD: 60 } },
     ].map((entry, i) => ({ ...entry, date: observedAt + i * 86_400 }));
-    const reader = vi.mocked(fetchMarketBackfillPriceSeries);
-    const baseline = await reader(psiEligibleMocks.metaById.get("usdt-tether")!, "tether");
-    reader.mockResolvedValue({ ...baseline, prices: tokens.map(({ date }) => ({ timestamp: date, price: 1 })) });
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tokens }));
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue(priceSeries(tokens.map(({ date }) => ({ timestamp: date, price: 1 }))));
+    mockSupplyTokens(tokens);
     await backfill(db, "/api/backfill-supply-history?stablecoin=usdt-tether");
     expect(sqlite.prepare("SELECT circulating_usd, circulating_native FROM supply_history ORDER BY snapshot_date").all())
       .toEqual([100, 200, 300, 50].map((count) => ({ circulating_usd: count, circulating_native: count })));
@@ -241,13 +247,9 @@ describe("handleBackfillSupplyHistory", () => {
     const { db, sqlite } = fixtures.open();
     const at = 1_700_000_000;
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether";
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tokens: [
-      { date: at + 120, totalCirculatingUSD: { peggedUSD: 2e9 } },
-    ] }));
-    const reader = vi.mocked(fetchMarketBackfillPriceSeries);
-    const baseline = await reader(psiEligibleMocks.metaById.get("usdt-tether")!, "tether");
+    mockSupplyTokens([{ date: at + 120, totalCirculatingUSD: { peggedUSD: 2e9 } }]);
     for (const [timestamp, price, query] of [[at, 0.98, ""], [at + 60, 0.90, "&overwrite=true"]] as const) {
-      reader.mockResolvedValue({ ...baseline, prices: [{ timestamp, price }] });
+      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue(priceSeries([{ timestamp, price }]));
       await backfill(db, path + query);
       expect(sqlite.prepare("SELECT price, price_observed_at, valuation_observed_at_sec FROM supply_history").get())
         .toEqual({ price, price_observed_at: timestamp, valuation_observed_at_sec: null });
@@ -259,16 +261,12 @@ describe("handleBackfillSupplyHistory", () => {
     const day = Date.UTC(2022, 4, 10) / 1000;
     const observedAt = day - 60;
     const dates = [day, day + 86_400];
-    const priceReader = vi.mocked(fetchMarketBackfillPriceSeries);
-    const baseline = await priceReader(psiEligibleMocks.metaById.get("ust-terra")!, "terrausd");
-    priceReader.mockResolvedValue({ ...baseline, prices: [
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue(priceSeries([
       { timestamp: observedAt, price: 0.1 },
       { timestamp: day + 3_600, price: 0.09 },
       { timestamp: dates[1]!, price: 0.1 },
-    ] });
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
-      tokens: dates.map((date) => ({ date, circulating: { peggedUSD: 1_000_000_000 } })),
-    }));
+    ]));
+    mockSupplyTokens(dates.map((date) => ({ date, circulating: { peggedUSD: 1_000_000_000 } })));
     const endpoint = "/api/backfill-supply-history?stablecoin=ust-terra";
     const window = "&startDay=2022-05-10&endDay=2022-05-11&windowDays=1";
     const first = await readJsonResponse<{ continuationCursor: string }>(await backfill(db, endpoint + window + "&dry-run=true"), 200);
@@ -322,9 +320,7 @@ describe("handleBackfillSupplyHistory", () => {
     const day = Math.floor(observedAt / 86_400) * 86_400;
     sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
       VALUES ('usdt-tether', ?, ?, 1.001, ?)`).run(day, 100 * 1.001, match ? observedAt : observedAt + 1);
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
-      tokens: [{ date: observedAt, circulating: { peggedUSD: 100 } }],
-    }));
+    mockSupplyTokens([{ date: observedAt, circulating: { peggedUSD: 100 } }]);
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether&quantity-only=true";
     expect(await readJsonResponse(await backfill(db, `${path}&dry-run=true`), 200))
       .toMatchObject({ candidateRows: match ? 1 : 0, rowsQuantityUpdated: 0 });
@@ -385,14 +381,8 @@ describe("handleBackfillSupplyHistory", () => {
       .run("usdt-tether", day, 100_000_000, 1);
     const url = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
     for (const native of [50_000_000, 0]) {
-      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
-        prices: [{ timestamp: day, price: 1 }],
-        diagnostics: { granularity: "hourly", sourcesUsed: ["coingecko"], quoteMode: "usd", quoteCurrency: "usd",
-          mergeReasons: [], perSourceStats: [], policyAdjustments: [], finalPointCount: 1 },
-      });
-      vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
-        tokens: [{ date: day, totalCirculatingUSD: { peggedUSD: -1 }, totalCirculating: { peggedUSD: native } }],
-      }));
+      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce(priceSeries([{ timestamp: day, price: 1 }], "hourly"));
+      mockSupplyTokens([{ date: day, totalCirculatingUSD: { peggedUSD: -1 }, totalCirculating: { peggedUSD: native } }]);
       expect(await readJsonResponse(await backfill(db, url), 200)).toMatchObject({ rowsInserted: 0, skippedDays: 1 });
       expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
         .get("usdt-tether", day)).toEqual({ circulating_usd: 100_000_000, price: 1 });
@@ -402,9 +392,7 @@ describe("handleBackfillSupplyHistory", () => {
   it("stores a rejected native balance with its USD cap and a separate market quote", async () => {
     const { db, sqlite } = fixtures.open();
     const at = 1_700_000_000;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tokens: [
-      { date: at + 60, totalCirculatingUSD: { peggedUSD: 100_000_000 }, totalCirculating: { peggedUSD: -1 } },
-    ] }));
+    mockSupplyTokens([{ date: at + 60, totalCirculatingUSD: { peggedUSD: 100_000_000 }, totalCirculating: { peggedUSD: -1 } }]);
     const path = "/api/backfill-supply-history?stablecoin=usdt-tether";
     for (const query of ["", "&overwrite=true"]) {
       expect(await readJsonResponse(await backfill(db, path + query), 200)).toMatchObject({ rowsInserted: 1 });

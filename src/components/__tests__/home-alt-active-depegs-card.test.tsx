@@ -3,7 +3,7 @@
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import type { DepegEvent } from "@shared/types/peg";
 
 const { useActiveDepegEventsMock, usePegSummaryMock, useStablecoinsMock, useResolverMock } = vi.hoisted(() => ({

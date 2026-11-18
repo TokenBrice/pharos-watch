@@ -6,6 +6,12 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import type { PegAssetBase } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 
+const PEER_QUOTE_AT = Date.parse("2026-11-18T15:00:00Z") / 1000;
+
+function upstreamPeer(id: string, peg: string, price: number, priceObservedAt: number) {
+  return { ...asset(id, peg, price, 2_000_000), priceSource: "coingecko", priceObservedAt, priceObservedAtMode: "upstream" as const };
+}
+
 function asset(
   id: string,
   pegType: string,
@@ -37,12 +43,9 @@ describe("derivePegRates", () => {
   });
 
   it("uses the same eligible source-clocked fiat peers for its median, count and clocks", () => {
-    const now = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    const now = PEER_QUOTE_AT;
     const peg = "peggedEUR";
-    const peers = [1.122, 1.1, 1.1, 1.1].map((price, i) => ({
-      ...asset(`eur-${i}`, peg, price, 2_000_000), priceSource: "coingecko",
-      priceObservedAt: now - 60 - i, priceObservedAtMode: "upstream" as const,
-    }));
+    const peers = [1.122, 1.1, 1.1, 1.1].map((price, i) => upstreamPeer(`eur-${i}`, peg, price, now - 60 - i));
     const local = [peers[0], ...peers.slice(1).map((row) => ({ ...row, priceObservedAtMode: "local_fetch" as const }))];
     const thin = derivePegRates(local, undefined, undefined, {}, now);
     expect([thin.rates[peg], thin.counts[peg], thin.contributors?.[peg]]).toEqual([undefined, 1, undefined]);
@@ -105,7 +108,7 @@ describe("derivePegRates", () => {
   });
 
   it("retains the FX producer’s selected median cohort when list peers lack observation clocks", () => {
-    const now = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    const now = PEER_QUOTE_AT;
     const peers = [2000, 2200, 2400].map((price, i) => asset(`gold-${i}`, "peggedGOLD", price, 2_000_000));
     const contributors = ["a", "b", "c"].map((assetId, i) => ({
       assetId, observedAtSec: now - 100 + i, provenanceKey: `market:${assetId}`, derivation: "traded-market",
@@ -122,10 +125,7 @@ describe("derivePegRates", () => {
     const now = Date.parse("2026-11-21T12:00:00Z") / 1000;
     const friday = Date.parse("2026-11-20T21:50:00Z") / 1000;
     const spot = { pegKey: "peggedGOLD", usdPerUnit: 4100, source: "gold-api.com", cadence: "intraday", observedAtSec: friday };
-    const peers = [2870, 4099, 4101].map((price, i) => ({
-      ...asset(`metal-${i}`, "peggedGOLD", price, 2_000_000), priceSource: "coingecko",
-      priceObservedAtMode: "upstream" as const, priceObservedAt: now - 120 - i,
-    }));
+    const peers = [2870, 4099, 4101].map((price, i) => upstreamPeer(`metal-${i}`, "peggedGOLD", price, now - 120 - i));
     const ineligible = [
       { ...peers[0], id: "local", price: 9000, priceObservedAtMode: "local_fetch" as const },
       { ...peers[0], id: "prior-session", price: 9000, priceObservedAt: friday },
@@ -145,7 +145,7 @@ describe("derivePegRates", () => {
   });
 
   it("selects the newer bullion quorum by its oldest original observation and keeps that quorum's receipts", () => {
-    const now = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    const now = PEER_QUOTE_AT;
     const producerAt = now - 35 * 60;
     const contributors = ["a", "b", "c"].map((assetId, i) => ({
       assetId, observedAtSec: producerAt + i, provenanceKey: "market:coingecko", derivation: "traded-market",
@@ -153,10 +153,8 @@ describe("derivePegRates", () => {
     const producer = { pegKey: "peggedGOLD", source: "peer-median", cadence: "intraday", usdPerUnit: 4100,
       observedAtSec: producerAt, publishedAtSec: now - 30, contributors };
     for (const oldest of [now - 120, producerAt, producerAt - 1]) {
-      const peers = [4160, 4165.60, 4170].map((price, i) => ({
-        ...asset(`metal-${i}`, "peggedGOLD", price, 2_000_000), priceSource: "coingecko",
-        priceObservedAt: i === 0 ? oldest : now - 60, priceObservedAtMode: "upstream" as const,
-      }));
+      const peers = [4160, 4165.60, 4170].map((price, i) =>
+        upstreamPeer(`metal-${i}`, "peggedGOLD", price, i === 0 ? oldest : now - 60));
       const result = derivePegRates(peers, undefined, { peggedGOLD: 4100 }, { peggedGOLD: producer }, now);
       if (oldest > producerAt) {
         expect(result.rates.peggedGOLD).toBe(4165.60);
@@ -172,12 +170,10 @@ describe("derivePegRates", () => {
   });
 
   it("replaces the gold producer with the median and receipts of three strictly newer assets", () => {
-    const now = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    const now = PEER_QUOTE_AT;
     const observedAtSec = now - 2100;
-    const peers = [4100, 4150, 4160, 4180].map((price, i) => ({
-      ...asset(`metal-${i}`, "peggedGOLD", price, 2_000_000), priceSource: "coingecko",
-      priceObservedAt: i === 0 ? observedAtSec : now - 120, priceObservedAtMode: "upstream" as const,
-    }));
+    const peers = [4100, 4150, 4160, 4180].map((price, i) =>
+      upstreamPeer(`metal-${i}`, "peggedGOLD", price, i === 0 ? observedAtSec : now - 120));
     const producer = { pegKey: "peggedGOLD", source: "peer-median", cadence: "intraday", usdPerUnit: 4100, observedAtSec,
       contributors: peers.map(({ id }) => ({ assetId: id, observedAtSec, provenanceKey: "coingecko", derivation: "traded-market" })) };
     const result = derivePegRates(peers, undefined, { peggedGOLD: 4100 }, { peggedGOLD: producer }, now);

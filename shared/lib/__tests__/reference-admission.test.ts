@@ -129,52 +129,63 @@ describe("reference admission", () => {
       { observation: { ...input.observation, observedAtSec: close - 6 * hour - 1 } },
     ]) expect(evaluateReferenceAdmission({ ...input, ...changed }).status).not.toBe("admitted");
   });
-  it.each([
-    ["no denominator", { kind: "none", decisionAtSec: noon, quoteObservedAtSec: noon, rawDeviationBps: raw(3000) }, "unavailable", "no-reference"],
-    ["undated reference", direct(noon, {}, { observedAtSec: null }), "unavailable", "reference-clock-unavailable"],
-    ["undated quote", direct(noon, { quoteObservedAtSec: null }), "unavailable", "quote-clock-unavailable"],
-    ["future reference", direct(noon, {}, { observedAtSec: noon + 1 }), "unavailable", "reference-clock-unavailable"],
-    ["future quote", direct(noon, { quoteObservedAtSec: noon + 1 }), "unavailable", "quote-clock-unavailable"],
-    ["future publication", direct(noon, {}, { publishedAtSec: noon + 1 }), "unavailable", "invalid-reference"],
-    ["pre-observation publication", direct(noon, {}, { publishedAtSec: noon - 1 }), "unavailable", "invalid-reference"],
-    ["unknown unit", direct(noon, {}, { pegKey: "unknown" }), "unavailable", "invalid-reference"],
-    ["bad rate", direct(noon, {}, { usdPerUnit: 0 }), "unavailable", "invalid-reference"],
-    ["median with no contributors disguised as FX", direct(noon, {}, { source: "peer-median" }), "unavailable", "invalid-reference"],
-    ["intraday label on ECB", direct(noon, {}, { source: "frankfurter" }), "unavailable", "invalid-reference"],
-    ["inclusive six-hour budget", direct(noon, { quoteObservedAtSec: noon - 6 * hour }, { observedAtSec: noon - 6 * hour }), "admitted", "live-reference"],
-    ["aged pair", direct(noon, { quoteObservedAtSec: noon - 6 * hour }, { observedAtSec: noon - 6 * hour - 1 }), "stale-reference", "reference-over-budget"],
-    ["inclusive pairing tolerance", direct(noon, { quoteObservedAtSec: noon - 2 * hour }), "admitted", "live-reference"],
-    ["older numerator", direct(noon, { quoteObservedAtSec: noon - 2 * hour - 1 }), "stale-reference", "quote-reference-unpaired"],
-    ["older denominator", direct(noon, {}, { observedAtSec: noon - 2 * hour - 1 }), "stale-reference", "quote-reference-unpaired"],
-    ["seven-day-old token", direct(noon, { quoteObservedAtSec: noon - 7 * day }), "stale-reference", "quote-reference-unpaired"],
-    ["custom tolerance", direct(noon, { pairingToleranceSec: 0 }, { observedAtSec: noon - 1 }), "stale-reference", "quote-reference-unpaired"],
-    ["bad tolerance", direct(noon, { pairingToleranceSec: -1 }), "unavailable", "invalid-reference"],
-    ["quote from closure", direct(reopen + 30, { quoteObservedAtSec: reopen - 1 }), "stale-reference", "quote-before-reopen"],
-    ["reference from closure", direct(reopen + 30, {}, { observedAtSec: reopen - 1 }), "stale-reference", "reference-before-reopen"],
-    ["reference stamped at reopen", direct(reopen), "stale-reference", "reference-before-reopen"],
-    ["changed after reopen", direct(reopen + 1), "admitted", "live-reference"],
-    ["re-stamped close", direct(reopen + hour, { preCloseUsdPerUnit: 1.2 }), "stale-reference", "reference-not-repriced"],
-    ["no prior evidence", direct(noon, { preCloseUsdPerUnit: null }), "stale-reference", "reference-not-repriced"],
-    ["pre-session snapshot", direct(reopen + hour, { preCloseUsdPerUnit: null, firstInSessionObservedAtSec: reopen - 1 }), "stale-reference", "reference-not-repriced"],
-    ["3599s apart", direct(reopen + hour - 1, { preCloseUsdPerUnit: 1.2, firstInSessionObservedAtSec: reopen }), "stale-reference", "reference-not-repriced"],
-    ["3600s apart", direct(reopen + hour, { preCloseUsdPerUnit: null, firstInSessionObservedAtSec: reopen }), "admitted", "live-reference"],
-    ["Friday spot carried into closure", direct(saturday), "held-closed-session", "reference-market-closed"],
-    ["fractional sub-severe", direct(saturday, { rawDeviationBps: raw(-2499.99) }), "held-closed-session", "reference-market-closed"],
-    ["negative severe", direct(saturday, { rawDeviationBps: raw(-2500) }), "admitted", "severe-deviation"],
-    ["positive severe", direct(saturday, { rawDeviationBps: raw(2500) }), "admitted", "severe-deviation"],
-    ["severe with missing clock", direct(saturday, { rawDeviationBps: raw(2500), quoteObservedAtSec: null }), "unavailable", "quote-clock-unavailable"],
-    ["severe with unpaired clock", direct(saturday, { rawDeviationBps: raw(2500), quoteObservedAtSec: saturday - day }), "stale-reference", "quote-reference-unpaired"],
-    ["closed severe fixing on display", direct(saturday, { rawDeviationBps: raw(3000) }, { source: "fawazahmed0", cadence: "calendar-daily" }), "stale-reference", "daily-fixing-only"],
-    ["severe cannot date an ECB fixing on Saturday", direct(saturday, { purpose: "detection", rawDeviationBps: raw(3000) },
-      { source: "frankfurter", cadence: "business-daily" }), "stale-reference", "daily-fixing-only"],
-    ["metal maintenance", direct(metalBreak, { kind: "fallback" }, { source: "gold-api.com", pegKey: "peggedGOLD" }), "held-closed-session", "reference-market-closed"],
-    ["FX during maintenance", direct(metalBreak), "admitted", "live-reference"],
-    ["silver spot after break", direct(metalBreak + hour, { kind: "fallback" }, { source: "gold-api.com", pegKey: "peggedSILVER" }), "admitted", "live-reference"],
-  ] as const)("%s", (_label, input, status, reason) => {
-    const verdict = evaluateReferenceAdmission(input);
-    expect(ReferenceAdmissionSchema.parse(verdict)).toMatchObject({ status, reason });
-    expect(admittedDeviationBps(input.rawDeviationBps, verdict)).toBe(status === "admitted" ? input.rawDeviationBps : null);
-  });
+  const directCases = {
+    "unavailable": [
+      ["no denominator", { kind: "none", decisionAtSec: noon, quoteObservedAtSec: noon, rawDeviationBps: raw(3000) }, "no-reference"],
+      ["undated reference", direct(noon, {}, { observedAtSec: null }), "reference-clock-unavailable"],
+      ["undated quote", direct(noon, { quoteObservedAtSec: null }), "quote-clock-unavailable"],
+      ["future reference", direct(noon, {}, { observedAtSec: noon + 1 }), "reference-clock-unavailable"],
+      ["future quote", direct(noon, { quoteObservedAtSec: noon + 1 }), "quote-clock-unavailable"],
+      ["future publication", direct(noon, {}, { publishedAtSec: noon + 1 }), "invalid-reference"],
+      ["pre-observation publication", direct(noon, {}, { publishedAtSec: noon - 1 }), "invalid-reference"],
+      ["unknown unit", direct(noon, {}, { pegKey: "unknown" }), "invalid-reference"],
+      ["bad rate", direct(noon, {}, { usdPerUnit: 0 }), "invalid-reference"],
+      ["median with no contributors disguised as FX", direct(noon, {}, { source: "peer-median" }), "invalid-reference"],
+      ["intraday label on ECB", direct(noon, {}, { source: "frankfurter" }), "invalid-reference"],
+      ["bad tolerance", direct(noon, { pairingToleranceSec: -1 }), "invalid-reference"],
+      ["severe with missing clock", direct(saturday, { rawDeviationBps: raw(2500), quoteObservedAtSec: null }), "quote-clock-unavailable"],
+    ],
+    "admitted": [
+      ["inclusive six-hour budget", direct(noon, { quoteObservedAtSec: noon - 6 * hour }, { observedAtSec: noon - 6 * hour }), "live-reference"],
+      ["inclusive pairing tolerance", direct(noon, { quoteObservedAtSec: noon - 2 * hour }), "live-reference"],
+      ["changed after reopen", direct(reopen + 1), "live-reference"],
+      ["3600s apart", direct(reopen + hour, { preCloseUsdPerUnit: null, firstInSessionObservedAtSec: reopen }), "live-reference"],
+      ["negative severe", direct(saturday, { rawDeviationBps: raw(-2500) }), "severe-deviation"],
+      ["positive severe", direct(saturday, { rawDeviationBps: raw(2500) }), "severe-deviation"],
+      ["FX during maintenance", direct(metalBreak), "live-reference"],
+      ["silver spot after break", direct(metalBreak + hour, { kind: "fallback" }, { source: "gold-api.com", pegKey: "peggedSILVER" }), "live-reference"],
+    ],
+    "stale-reference": [
+      ["aged pair", direct(noon, { quoteObservedAtSec: noon - 6 * hour }, { observedAtSec: noon - 6 * hour - 1 }), "reference-over-budget"],
+      ["older numerator", direct(noon, { quoteObservedAtSec: noon - 2 * hour - 1 }), "quote-reference-unpaired"],
+      ["older denominator", direct(noon, {}, { observedAtSec: noon - 2 * hour - 1 }), "quote-reference-unpaired"],
+      ["seven-day-old token", direct(noon, { quoteObservedAtSec: noon - 7 * day }), "quote-reference-unpaired"],
+      ["custom tolerance", direct(noon, { pairingToleranceSec: 0 }, { observedAtSec: noon - 1 }), "quote-reference-unpaired"],
+      ["quote from closure", direct(reopen + 30, { quoteObservedAtSec: reopen - 1 }), "quote-before-reopen"],
+      ["reference from closure", direct(reopen + 30, {}, { observedAtSec: reopen - 1 }), "reference-before-reopen"],
+      ["reference stamped at reopen", direct(reopen), "reference-before-reopen"],
+      ["re-stamped close", direct(reopen + hour, { preCloseUsdPerUnit: 1.2 }), "reference-not-repriced"],
+      ["no prior evidence", direct(noon, { preCloseUsdPerUnit: null }), "reference-not-repriced"],
+      ["pre-session snapshot", direct(reopen + hour, { preCloseUsdPerUnit: null, firstInSessionObservedAtSec: reopen - 1 }), "reference-not-repriced"],
+      ["3599s apart", direct(reopen + hour - 1, { preCloseUsdPerUnit: 1.2, firstInSessionObservedAtSec: reopen }), "reference-not-repriced"],
+      ["severe with unpaired clock", direct(saturday, { rawDeviationBps: raw(2500), quoteObservedAtSec: saturday - day }), "quote-reference-unpaired"],
+      ["closed severe fixing on display", direct(saturday, { rawDeviationBps: raw(3000) }, { source: "fawazahmed0", cadence: "calendar-daily" }), "daily-fixing-only"],
+      ["severe cannot date an ECB fixing on Saturday", direct(saturday, { purpose: "detection", rawDeviationBps: raw(3000) },
+        { source: "frankfurter", cadence: "business-daily" }), "daily-fixing-only"],
+    ],
+    "held-closed-session": [
+      ["Friday spot carried into closure", direct(saturday), "reference-market-closed"],
+      ["fractional sub-severe", direct(saturday, { rawDeviationBps: raw(-2499.99) }), "reference-market-closed"],
+      ["metal maintenance", direct(metalBreak, { kind: "fallback" }, { source: "gold-api.com", pegKey: "peggedGOLD" }), "reference-market-closed"],
+    ],
+  } as const;
+  for (const [status, rows] of Object.entries(directCases)) {
+    it.each<readonly [string, ReferenceAdmissionInput, string]>(rows)("%s", (_label, input, reason) => {
+      const verdict = evaluateReferenceAdmission(input);
+      expect(ReferenceAdmissionSchema.parse(verdict)).toMatchObject({ status, reason });
+      expect(admittedDeviationBps(input.rawDeviationBps, verdict)).toBe(status === "admitted" ? input.rawDeviationBps : null);
+    });
+  }
 
   it.each([
     ["all traded", contributor("c", saturday), "admitted", "closed-session-traded-median"],

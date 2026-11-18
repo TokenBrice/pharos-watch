@@ -184,15 +184,16 @@ describe("site-only stablecoin live summary", () => {
     expect([summary.circulatingPrevDay, summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{}, {}, {}]);
   });
 
+  const eurDetail = (): StablecoinDetailResponse => ({
+    currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
+    tokens: [
+      { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
+      { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
+    ],
+  });
+
   it("withholds rejected weekly and monthly USD checkpoints even when detail history has values", async () => {
-    const detail: StablecoinDetailResponse = {
-      currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
-      currentCirculatingPrevDayUSD: { peggedEUR: 100_000_000 },
-      tokens: [
-        { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
-        { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
-      ],
-    };
+    const detail = { ...eurDetail(), currentCirculatingPrevDayUSD: { peggedEUR: 100_000_000 } };
     expect(projectStablecoinLiveSummary(detail, "eurc-circle")).toMatchObject({
       circulatingPrevWeek: { peggedEUR: 91_000_000 }, circulatingPrevMonth: { peggedEUR: 85_000_000 },
     });
@@ -212,13 +213,7 @@ describe("site-only stablecoin live summary", () => {
   });
 
   it("distinguishes a refused window from an omitted window or a failed assessment", () => {
-    const detail: StablecoinDetailResponse = {
-      currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
-      tokens: [
-        { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
-        { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
-      ],
-    };
+    const detail = eurDetail();
     expect(projectStablecoinLiveSummary({ ...detail, supplyChangeBaselines: { week: null } }, "eurc-circle"))
       .toMatchObject({ circulatingPrevWeek: {}, circulatingPrevMonth: { peggedEUR: 85_000_000 } });
     expect(projectStablecoinLiveSummary({ ...detail, supplyChangeBaselines: {} }, "eurc-circle"))

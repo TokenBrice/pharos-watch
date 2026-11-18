@@ -413,31 +413,46 @@ describe("handleFeedback", () => {
     expect(issuePayload.labels).toContain("verified: pending");
   });
 
+  async function expectEurReport(
+    asset: { id: string } & Record<string, unknown>, now: number, publishedAt: number,
+    label: string, copy: string, fxReferenceObservations?: object,
+  ) {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const db = mockD1([
+        { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+        { match: "cache", rows: [], first: {
+          value: JSON.stringify({ fxReferenceObservations, fxFallbackRates: { peggedEUR: 1.1 },
+            peggedAssets: [{ pegType: "peggedEUR", priceObservedAtMode: "upstream", ...asset }] }),
+          updated_at: publishedAt,
+        } },
+      ]);
+      queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
+      const response = await handleFeedback(db, makeRequest(makeFeedbackBody({
+        type: "data-correction", stablecoinId: asset.id, description: "The reported peg deviation appears incorrect.",
+      })), makeEnv());
+      expect(response.status).toBe(200);
+      const issue = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body)) as { body: string; labels: string[] };
+      expect(issue.labels).toContain(`verified: ${label}`);
+      expect(issue.body).toContain(copy);
+    } finally {
+      clock.mockRestore();
+    }
+  }
+
+  const eurcQuote = (price: number, priceObservedAt: number) => ({
+    id: "eurc-circle", symbol: "EURC", price, priceObservedAt, priceSource: "pyth",
+    circulating: { peggedEUR: 50_000_000 },
+  });
+
   it.each([
     [undefined, 60, "confirmed"],
     [{}, 60, "pending"],
     [undefined, 1801, "pending"],
   ] as const)("projects legacy EURC with evidence %j and quote age %i", async (evidence, age, expected) => {
     const now = Date.parse("2026-11-18T16:00:00Z") / 1000;
-    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    try {
-      const id = "eurc-circle";
-      const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }, { match: "cache", rows: [], first: {
-        value: JSON.stringify({ fxReferenceObservations: evidence, fxFallbackRates: { peggedEUR: 1.1 },
-          peggedAssets: [{ id, symbol: "EURC", price: 1.078, pegType: "peggedEUR", priceObservedAt: now - age,
-            priceObservedAtMode: "upstream", priceSource: "pyth", circulating: { peggedEUR: 50_000_000 } }] }),
-        updated_at: now,
-      } }]);
-      queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
-      const response = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "data-correction", stablecoinId: id,
-        description: "The reported peg deviation appears incorrect." })), makeEnv());
-      expect(response.status).toBe(200);
-      const issue = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
-      expect(issue.labels).toContain(`verified: ${expected}`);
-      expect(issue.body).toContain(expected === "confirmed" ? "-2.000%" : "**Peg deviation:** N/A");
-    } finally {
-      clock.mockRestore();
-    }
+    await expectEurReport(eurcQuote(1.078, now - age), now, now,
+      expected, expected === "confirmed" ? "-2.000%" : "**Peg deviation:** N/A", evidence);
   });
 
   it.each([
@@ -447,25 +462,7 @@ describe("handleFeedback", () => {
     ["2026-11-21T14:00:00Z", 2500.4, "confirmed", "+25.004%"],
   ] as const)("uses the unrounded legacy EURC move at %s (%s bps)", async (date, bps, label, evidence) => {
     const now = Date.parse(date) / 1000;
-    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-    try {
-      const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }, { match: "cache", rows: [], first: {
-        value: JSON.stringify({ fxFallbackRates: { peggedEUR: 1.1 },
-          peggedAssets: [{ id: "eurc-circle", symbol: "EURC", price: 1.1 * (1 + bps / 10000), pegType: "peggedEUR",
-            priceObservedAt: now - 60, priceObservedAtMode: "upstream", priceSource: "pyth",
-            circulating: { peggedEUR: 50_000_000 } }] }),
-        updated_at: now,
-      } }]);
-      queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
-      const response = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "data-correction", stablecoinId: "eurc-circle",
-        description: "The reported peg deviation appears incorrect." })), makeEnv());
-      expect(response.status).toBe(200);
-      const issue = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
-      expect(issue.labels).toContain(`verified: ${label}`);
-      expect(issue.body).toContain(evidence);
-    } finally {
-      clock.mockRestore();
-    }
+    await expectEurReport(eurcQuote(1.1 * (1 + bps / 10000), now - 60), now, now, label, evidence);
   });
 
   it.each([
@@ -477,34 +474,19 @@ describe("handleFeedback", () => {
     [null, 0, 600, "pending", "price-unavailable"],
   ] as const)("verifies EURS at submission with price %s after %s seconds and a %s second reference budget", async (price, delay, budgetSec, label, evidence) => {
     const observedAt = Date.parse("2026-11-13T21:59:00Z") / 1000;
-    const clock = vi.spyOn(Date, "now").mockReturnValue((observedAt + delay) * 1000);
-    try {
-      const id = "eurs-stasis";
-      const bps = price == null ? null : price === 1.1 ? 0 : -300;
-      const currentPeg = {
-        currentDeviationBps: bps, admittedDeviationBps: bps, primaryTrust: "authoritative", dexPriceCheck: null,
-        pegReferenceUnavailable: false, currentPriceUnavailable: price == null,
-        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: observedAt },
-        referenceAdmission: { status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates",
-          cadence: "intraday", referenceObservedAtSec: observedAt, quoteObservedAtSec: observedAt, decisionAtSec: observedAt,
-          budgetSec, sessionOpenedAtSec: getReferenceSessionState("fx", observedAt).sessionOpenedAtSec, generation: "friday", policyVersion: 1 },
-      };
-      const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }, { match: "cache", rows: [], first: {
-        value: JSON.stringify({ peggedAssets: [{ id, symbol: "EURS", price, pegType: "peggedEUR", priceObservedAt: observedAt,
-          priceObservedAtMode: "upstream", priceSource: "coingecko", circulating: { peggedEUR: 5_000_000 },
-          ...(budgetSec != null ? { currentPeg } : {}) }], fxFallbackRates: { peggedEUR: 1.1 } }),
-        updated_at: observedAt,
-      } }]);
-      queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
-      const response = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "data-correction", stablecoinId: id,
-        description: "The reported peg deviation appears incorrect." })), makeEnv());
-      expect(response.status).toBe(200);
-      const issue = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
-      expect(issue.labels).toContain(`verified: ${label}`);
-      expect(issue.body).toContain(evidence);
-    } finally {
-      clock.mockRestore();
-    }
+    const bps = price == null ? null : price === 1.1 ? 0 : -300;
+    const currentPeg = {
+      currentDeviationBps: bps, admittedDeviationBps: bps, primaryTrust: "authoritative", dexPriceCheck: null,
+      pegReferenceUnavailable: false, currentPriceUnavailable: price == null,
+      pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: observedAt },
+      referenceAdmission: { status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates",
+        cadence: "intraday", referenceObservedAtSec: observedAt, quoteObservedAtSec: observedAt, decisionAtSec: observedAt,
+        budgetSec, sessionOpenedAtSec: getReferenceSessionState("fx", observedAt).sessionOpenedAtSec, generation: "friday", policyVersion: 1 },
+    };
+    await expectEurReport({
+      id: "eurs-stasis", symbol: "EURS", price, priceObservedAt: observedAt, priceSource: "coingecko",
+      circulating: { peggedEUR: 5_000_000 }, ...(budgetSec != null ? { currentPeg } : {}),
+    }, observedAt + delay, observedAt, label, evidence);
   });
 
   it("canonicalizes a client-supplied name from the attached stablecoin ID", async () => {

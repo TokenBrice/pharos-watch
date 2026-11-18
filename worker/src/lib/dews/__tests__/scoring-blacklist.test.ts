@@ -46,6 +46,25 @@ function createSourceState(): DewsSourceState {
   };
 }
 
+function silverAsset(now: number, withEntitlement = true): StablecoinData {
+  const ozPerToken = 0.998380822;
+  return { ...createAsset("xagm-matrixdock"), pegType: "peggedSILVER", price: 30 * ozPerToken,
+    priceSource: "coingecko", priceObservedAt: now, priceObservedAtMode: "upstream",
+    commodityEntitlement: withEntitlement ? { source: "matrixdock-frs", generation: "ethereum:123",
+      quoteObservedAtSec: now, ozPerToken, observedAtSec: now - 60 } : undefined };
+}
+
+function hydrateDexSpread(id: string, price: number, nowSec: number, family: string | null) {
+  const clock = nowSec - 60;
+  const sources = [{ protocol: "curve", price, tvl: 2e6, observedAt: clock, aggregateObservedAt: clock }];
+  const lineage = family == null ? sources : { aggregateObservedAt: clock, sources,
+    aggregateContributors: [{ venueFamily: "dex:curve", providerFamily: family }] };
+  return hydrateDexPrices({ nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
+    db: mockD1([{ match: "FROM dex_prices", rows: [{ stablecoin_id: id, dex_price_usd: price,
+      source_total_tvl: 2e6, updated_at: nowSec - 20, source_pool_count: family === "incomplete" ? 2 : 1,
+      price_sources_json: JSON.stringify(lineage) }] }]) });
+}
+
 describe("buildDewsScoringResult peg reference admission", () => {
   it.each([
     { parityQuoteUnit: undefined, primaryDevBps: 0 },
@@ -76,11 +95,7 @@ describe("buildDewsScoringResult peg reference admission", () => {
 
   it("applies the silver entitlement only to the DEWS leg bearing its quote clock", () => {
     const now = Date.parse("2026-11-17T16:00:00Z") / 1000;
-    const ozPerToken = 0.998380822;
-    const asset = { ...createAsset("xagm-matrixdock"), pegType: "peggedSILVER", price: 30 * ozPerToken,
-      priceSource: "coingecko", priceObservedAt: now, priceObservedAtMode: "upstream" as const,
-      commodityEntitlement: { source: "matrixdock-frs" as const, generation: "ethereum:123", quoteObservedAtSec: now,
-        ozPerToken, observedAtSec: now - 60 } };
+    const asset = silverAsset(now);
     const state = createSourceState();
     state.references = new Map([["peggedSILVER", { kind: "fallback", usdPerUnit: 30, preCloseUsdPerUnit: 29,
       observation: { pegKey: "peggedSILVER", usdPerUnit: 30, source: "gold-api.com", cadence: "intraday", observedAtSec: now - 60 } }]]);
@@ -95,13 +110,9 @@ describe("buildDewsScoringResult peg reference admission", () => {
   it("checks both XAGm quote clocks with FX evidence off before scoring or releasing a closure hold", () => {
     const open = Date.parse("2026-11-17T16:00:00Z") / 1000;
     const closed = Date.parse("2026-11-21T00:01:00Z") / 1000;
-    const ozPerToken = 0.998380822;
     const state = createSourceState();
     const score = (nowSec: number, dexPriceUsd: number, dexAgeSec: number, withEntitlement = true) => {
-      const asset = { ...createAsset("xagm-matrixdock"), pegType: "peggedSILVER", price: 30 * ozPerToken,
-        priceSource: "coingecko", priceObservedAt: nowSec, priceObservedAtMode: "upstream" as const,
-        commodityEntitlement: withEntitlement ? { source: "matrixdock-frs" as const, generation: "ethereum:123",
-          quoteObservedAtSec: nowSec, ozPerToken, observedAtSec: nowSec - 60 } : undefined };
+      const asset = silverAsset(nowSec, withEntitlement);
       state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd, updatedAt: nowSec - dexAgeSec, sourceTotalTvl: 10e6,
         aggregateFamilies: ["coingecko"] });
       return buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec, pegRates: { peggedSILVER: 30 },
@@ -195,49 +206,42 @@ describe("buildDewsScoringResult peg reference admission", () => {
   it("keeps the USD identity spread with a live clock and a legacy DEX row", async () => {
     const nowSec = Date.parse("2026-11-21T00:00:00Z") / 1000;
     const asset = { ...createAsset("usdc-circle"), price: 1.0015, priceSource: "coinbase", priceObservedAt: nowSec - 60 };
-    const clock = nowSec - 60;
     const state = createSourceState();
-    state.dexPrices = await hydrateDexPrices({ nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
-      db: mockD1([{ match: "FROM dex_prices", rows: [{ stablecoin_id: asset.id, dex_price_usd: 0.9985,
-        source_total_tvl: 2e6, updated_at: nowSec - 20, source_pool_count: 1,
-        price_sources_json: JSON.stringify([{ protocol: "curve", price: 0.9985, tvl: 2e6,
-          observedAt: clock, aggregateObservedAt: clock }]) }] }]) });
+    state.dexPrices = await hydrateDexSpread(asset.id, 0.9985, nowSec, null);
     const [row] = buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec, pegRates: {},
       sourceState: state, registerMalformedPersistedInput: () => {} }).results;
     expect(row.signals.diverg).toMatchObject({ available: true, primaryDevBps: 15, dexDevBps: 15, venueSpreadBps: 30, value: 13 });
     expect(row.evidenceKinds).toContain("market-price");
   });
 
-  it.each([
-    ["fresh spread", 4_000, 3_800, 60, "coinbase", "dex:curve", 35, true],
-    ["carry only", null, null, 60, "coinbase", "dex:curve", 70, false],
-    ["carry with calm spread", 4_000, 4_000, 60, "coinbase", "dex:curve", 70, false],
-    ["fetch timestamp only", 4_000, 3_800, 60, "coinbase", "dex:curve", 70, false],
-    ["stale primary", 4_000, 3_800, 3_600, "coinbase", "dex:curve", 70, false],
-    ["shared provider", 4_000, 3_800, 60, "coinbase", "market:coinbase", 70, false],
-    ["successive Curve aggregates", 4_000, 3_800, 900, "dex-promoted", "dex:curve", 70, false],
-    ["hourly publisher's protocol lane", 4_000, 3_800, 900, "aerodrome-dex", "dex:curve", 70, false],
-    ["display-only lineage", 4_000, 3_800, 60, "coinbase", null, 70, false],
-    ["unknown aggregate provider", 4_000, 3_800, 60, "coinbase", "unknown", 70, false],
-    ["incomplete aggregate lineage", 4_000, 3_800, 60, "coinbase", "incomplete", 70, false],
-  ] as const)("scores closure evidence (%s)", async (label, price, dex, age, priceSource, family, value, evidence) => {
+  it.each<[string, {
+    price?: number | null; dex?: number | null; age?: number; priceSource?: string; family?: string | null;
+    priceObservedAtMode?: "local_fetch" | "upstream"; value?: number; evidence?: boolean;
+  }]>([
+    ["fresh spread", { value: 35, evidence: true }],
+    ["carry only", { price: null, dex: null }],
+    ["carry with calm spread", { dex: 4_000 }],
+    ["fetch timestamp only", { priceObservedAtMode: "local_fetch" }],
+    ["stale primary", { age: 3_600 }],
+    ["shared provider", { family: "market:coinbase" }],
+    ["successive Curve aggregates", { age: 900, priceSource: "dex-promoted" }],
+    ["hourly publisher's protocol lane", { age: 900, priceSource: "aerodrome-dex" }],
+    ["display-only lineage", { family: null }],
+    ["unknown aggregate provider", { family: "unknown" }],
+    ["incomplete aggregate lineage", { family: "incomplete" }],
+  ])("scores closure evidence (%s)", async (_label, {
+    price = 4_000, dex = 3_800, age = 60, priceSource = "coinbase", family = "dex:curve",
+    priceObservedAtMode = "upstream", value = 70, evidence = false,
+  }) => {
     const nowSec = Date.parse("2026-11-21T00:00:00Z") / 1000;
     const friday = nowSec - 2 * 3600 - 60;
     const xaut = { ...createAsset("xaut-tether", "XAUT"), pegType: "peggedGOLD", price, priceSource,
-      priceObservedAt: nowSec - age, priceObservedAtMode: label === "fetch timestamp only" ? "local_fetch" as const : "upstream" as const };
+      priceObservedAt: nowSec - age, priceObservedAtMode };
     const state = createSourceState();
     state.nativeHistory = new Map([[xaut.id, { day: 10_000_000, week: 10_000_000 }]]);
     state.references = new Map([["peggedGOLD", { kind: "fallback", usdPerUnit: 4_000,
       observation: { pegKey: "peggedGOLD", usdPerUnit: 4_000, source: "gold-api.com", cadence: "intraday", observedAtSec: friday } }]]);
-    if (dex != null) {
-      const clock = nowSec - 60;
-      const sources = [{ protocol: "curve", price: dex, tvl: 2e6, observedAt: clock, aggregateObservedAt: clock }];
-      state.dexPrices = await hydrateDexPrices({ nowSec, registerSourceFailure: () => {}, registerMalformedPersistedInput: () => {},
-        db: mockD1([{ match: "FROM dex_prices", rows: [{ stablecoin_id: xaut.id, dex_price_usd: dex,
-          source_total_tvl: 2e6, updated_at: nowSec - 20, source_pool_count: family === "incomplete" ? 2 : 1,
-          price_sources_json: JSON.stringify(family == null ? sources : { aggregateObservedAt: clock, sources,
-            aggregateContributors: [{ venueFamily: "dex:curve", providerFamily: family }] }) }] }]) });
-    }
+    if (dex != null) state.dexPrices = await hydrateDexSpread(xaut.id, dex, nowSec, family);
     if (evidence) {
       const prior = { value: 0, available: true, currentDivergenceValue: 0 };
       state.previousSignals.prevSignals.set(xaut.id, { signals: { diverg: prior }, computedAt: nowSec - 900, ageSec: 900 });

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { loadPegAnalyticsCache, publishPegAnalyticsCache } from "../peg-analytics-cache";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 import type * as PegScoreModule from "@shared/lib/peg-score";

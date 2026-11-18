@@ -298,6 +298,10 @@ describe("commodity detail missing upstream history", () => {
   });
 });
 
+const execCtx = { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext;
+const supplyHistoryInsert = (sqlite: ReturnType<typeof fixtures.open>["sqlite"]) => sqlite.prepare(`INSERT INTO supply_history
+  (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`);
+
 it.each([true, false])("keeps XAUT USD history and admits only completed scoped checkpoints (%s)", async (completed) => {
   const { db, sqlite } = fixtures.open();
   const now = Math.floor(Date.now() / 1000);
@@ -308,15 +312,13 @@ it.each([true, false])("keeps XAUT USD history and admits only completed scoped 
     : { tvl: dates.map((date) => ({ date, totalLiquidityUSD: 400 })) } }));
   if (completed) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
     .run("snapshot-supply:last-write", JSON.stringify({ snapshotDate: bucketUnixSecondsToUtcDay(now) }), now);
-  const insert = sqlite.prepare(`INSERT INTO supply_history
-    (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`);
+  const insert = supplyHistoryInsert(sqlite);
   for (const [date, source] of [[dates[1]!, "onchain-circulating-supply"], [dates[2]!, "defillama"]] as const) {
     insert.run(config.stablecoinId, bucketUnixSecondsToUtcDay(date), 300, 75, JSON.stringify({
       supplySource: source, supplyObservedAt: date - 60, supplyChainGuard: null,
     }));
   }
-  const detail = createDetailResponseHelpers({ db, stablecoinId: config.stablecoinId, pegType: config.pegType, cached: null,
-    execCtx: { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext });
+  const detail = createDetailResponseHelpers({ db, stablecoinId: config.stablecoinId, pegType: config.pegType, cached: null, execCtx });
   const response = await handleCommodityDetail(config, detail);
   const history = await response.json() as Record<string, unknown>;
   const parsed = StablecoinDetailResponseSchema.parse({
@@ -350,8 +352,7 @@ it.each(["history", "current-only", "empty", "read-failure", "expired"] as const
     const put = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
     put.run(key, cached.value, now);
     put.run("snapshot-supply:last-write", JSON.stringify({ snapshotDate: date }), now);
-    const insert = sqlite.prepare(`INSERT INTO supply_history
-      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`);
+    const insert = supplyHistoryInsert(sqlite);
     insert.run(id, date - 1, 500, null, null);
     if (scenario === "history" || scenario === "expired") insert.run(id, date, 200, 1, JSON.stringify({
       supplySource: "onchain-total-supply", supplyObservedAt: observedAt, supplyChainGuard: null,
@@ -365,13 +366,12 @@ it.each(["history", "current-only", "empty", "read-failure", "expired"] as const
       }] }), now - 30);
     }
     if (scenario === "read-failure") sqlite.exec("DROP TABLE supply_history");
-    const ctx = { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext;
-    const response = await handleStablecoinDetail(db, id, ctx);
+    const response = await handleStablecoinDetail(db, id, execCtx);
     const body = await response.json();
     await Promise.all(pending.splice(0));
     const retained = sqlite.prepare("SELECT value, updated_at AS updatedAt FROM cache WHERE key = ?").get(key) as typeof cached;
     expect(admitCommodityDetailCache(id, retained) != null).toBe(scenario === "history");
-    const compact = await handleStablecoinLiveSummary(db, id, ctx);
+    const compact = await handleStablecoinLiveSummary(db, id, execCtx);
     const compactBody = await compact.json();
 
     if (scenario === "history") {
@@ -409,9 +409,7 @@ it("serves pre-cutover Kinesis program history when the provider is unavailable"
   fetchJsonWithRetryMock.mockResolvedValue(null);
   fetchWithRetryMock.mockResolvedValue(null);
   sqlite.prepare("INSERT INTO supply_history(stablecoin_id,snapshot_date,circulating_usd) VALUES ('kau-kinesis',?,500000000)").run(now);
-  const response = await handleStablecoinDetail(db, "kau-kinesis", {
-    waitUntil: (promise: Promise<unknown>) => { pending.push(promise); },
-  } as ExecutionContext);
+  const response = await handleStablecoinDetail(db, "kau-kinesis", execCtx);
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ tokens: [{ totalCirculatingUSD: { peggedGOLD: 500000000 } }] });
 });

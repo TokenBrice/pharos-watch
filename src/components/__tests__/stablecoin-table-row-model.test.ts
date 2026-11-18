@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinData } from "@shared/types/supply";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
 import { makeChainGapGuard, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";

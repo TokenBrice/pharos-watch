@@ -940,13 +940,18 @@ describe("audit provenance PSI transaction", () => {
       headers: { "Content-Type": "application/json" },
     }));
 
+  const runAudit = (db: D1Database, query: string, coingeckoApiKey?: string) => {
+    const request = makeApiRequest(`/api/audit-depeg-history?${query}`, { method: "POST" });
+    return handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey });
+  };
+
   it.each([
-    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "native-peg", fetched: false, reason: "unclocked-native-quote" },
-    { stablecoin_id: "wcop-ripio", peg_type: "peggedCOP", quoteMode: "native-peg", fetched: false, reason: "matching-quotes-unavailable" },
-    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: null, fetched: false, reason: "quote-domain-unavailable" },
-    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "usd", fetched: false, reason: "dated-reference-unavailable" },
-    { stablecoin_id: "axcnh-anchorx", peg_type: "peggedCNH", quoteMode: "native-peg", quoteCurrency: "cny", fetched: false, reason: "matching-quotes-unavailable" },
-  ])("preserves $stablecoin_id ($quoteMode) when $reason", async ({ stablecoin_id, peg_type, quoteMode, quoteCurrency, fetched, reason }) => {
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "native-peg", reason: "unclocked-native-quote" },
+    { stablecoin_id: "wcop-ripio", peg_type: "peggedCOP", quoteMode: "native-peg", reason: "matching-quotes-unavailable" },
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: null, reason: "quote-domain-unavailable" },
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "usd", reason: "dated-reference-unavailable" },
+    { stablecoin_id: "axcnh-anchorx", peg_type: "peggedCNH", quoteMode: "native-peg", quoteCurrency: "cny", reason: "matching-quotes-unavailable" },
+  ])("preserves $stablecoin_id ($quoteMode) when $reason", async ({ stablecoin_id, peg_type, quoteMode, quoteCurrency, reason }) => {
     const { sqlite, db } = openAuditFixture();
     const event = makeAuditEvent({ id: 1, stablecoin_id, peg_type, source: "backfill", peg_reference: 1 });
     seedPsiEvent(sqlite, event);
@@ -954,12 +959,10 @@ describe("audit provenance PSI transaction", () => {
       VALUES (1, 'market', ?, 'confirmed', ?, ?, ?)`).run(quoteMode, day, day, JSON.stringify({ quoteCurrency }));
     const before = sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get();
     fetchWithRetryMock.mockReset().mockImplementation(async () => new Response(JSON.stringify({ prices: [] })));
-    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
-    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    const response = await runAudit(db, "min-supply=0", "cg-test-key");
     expect(await readJsonResponse(response, 200)).toMatchObject({ auditedEvents: [{ verdict: "skipped", reason }], daysRecomputed: 0 });
     expect(sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get()).toEqual(before);
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(fetched ? 1 : 0);
-    if (fetched) expect(new URL(fetchWithRetryMock.mock.calls[0][0]).searchParams.get("vs_currency")).toBe("brl");
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -975,8 +978,7 @@ describe("audit provenance PSI transaction", () => {
     const before = sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get();
     fetchWithRetryMock.mockReset();
     setCgPrice(0.97);
-    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
-    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    const response = await runAudit(db, "min-supply=0", "cg-test-key");
     expect(await readJsonResponse(response, 200)).toMatchObject({
       auditedEvents: [{ verdict: "skipped", reason }], daysRecomputed: 0,
     });
@@ -991,8 +993,7 @@ describe("audit provenance PSI transaction", () => {
       sqlite.exec("UPDATE depeg_event_provenance SET audit_verdict = 'disputed' WHERE event_id = 1");
       return new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, 0.97]] }));
     });
-    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
-    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    const response = await runAudit(db, "min-supply=0", "cg-test-key");
     await readJsonResponse(response, 500);
     expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
       .toMatchObject({ audit_verdict: "disputed" });
@@ -1003,10 +1004,7 @@ describe("audit provenance PSI transaction", () => {
     const { sqlite, db } = await setup();
     sqlite.exec("UPDATE depeg_events SET direction = 'above', start_price = 1.03, peak_price = 1.03, peak_deviation_bps = 300");
     sqlite.exec("UPDATE depeg_event_provenance SET audit_verdict = 'false_positive'");
-    const run = () => {
-      const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
-      return handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
-    };
+    const run = () => runAudit(db, "min-supply=0", "cg-test-key");
     setCgPrice(1.00996);
     expect(await readJsonResponse(await run(), 200)).toMatchObject({
       auditedEvents: [{ verdict: "false_positive", cgMaxSameDirectionBps: 100 }],
@@ -1030,8 +1028,7 @@ describe("audit provenance PSI transaction", () => {
       source_table, source_row_id, transition, methodology_version, created_at)
       SELECT 'composite-peak', 'depeg.peak_worsened', severity, ts, title, summary, payload_json,
         source_table, '1:300', 'updated', methodology_version, created_at FROM tape_events WHERE transition = 'opened'`);
-    const request = makeApiRequest("/api/audit-depeg-history?delete=1", { method: "POST" });
-    await readJsonResponse(await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request }), 200);
+    await readJsonResponse(await runAudit(db, "delete=1"), 200);
     expect(sqlite.prepare("SELECT count(*) AS count FROM depeg_events").get()).toEqual({ count: 0 });
     const tape = sqlite.prepare("SELECT source_row_id, suppression_reason FROM tape_events WHERE suppressed_at IS NOT NULL ORDER BY source_row_id").all();
     expect(tape).toEqual(["1", "1", "1:300"].map((source_row_id) => ({ source_row_id, suppression_reason: "depeg-claim-retracted" })));
@@ -1070,8 +1067,7 @@ describe("audit provenance PSI transaction", () => {
       sqlite.exec(`UPDATE depeg_events SET ${change} WHERE id = 1`);
       return db.batch<T>(statements);
     } };
-    const request = makeApiRequest(`/api/audit-depeg-history?${query}`, { method: "POST" });
-    const response = await handleAuditDepegHistoryTrusted({ db: racingDb, url: makeApiUrl(request.url), request });
+    const response = await runAudit(racingDb, query);
     expect(await readJsonResponse(response, 500)).toMatchObject({ error: expect.stringContaining("no changes were committed") });
     expect(sqlite.prepare("SELECT id, recovery_price, disposition FROM depeg_events ORDER BY id").all()).toEqual([
       { id: 1, recovery_price: contradictory ? 0.94 : 0.9998,
@@ -1091,8 +1087,7 @@ describe("audit provenance PSI transaction", () => {
     sqlite.exec("UPDATE depeg_events SET disposition = 'restored-evidenced', recovery_price = 0.94 WHERE id = 2");
     const statement = sqlite.prepare("SELECT * FROM depeg_events ORDER BY id");
     const before = statement.all();
-    const request = makeApiRequest(`/api/audit-depeg-history?${query}`, { method: "POST" });
-    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request });
+    const response = await runAudit(db, query);
     expect(await readJsonResponse(response, status)).toMatchObject(result);
     expect(statement.all()).toEqual(before);
   });

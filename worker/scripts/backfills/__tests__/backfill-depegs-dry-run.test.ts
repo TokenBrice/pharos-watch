@@ -416,10 +416,30 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(sqlite.prepare("SELECT id FROM depeg_events").all()).toEqual([]);
   });
 
+  function mockPaxgQuotes(prices: PricePoint[], sourceIds: readonly string[] = ["a", "b", "c"]) {
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({ prices, diagnostics: makeReplayDiagnostics(prices.length) });
+    vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce({
+      GOLD: sourceIds.map((sourceId, index) => ({
+        assetId: `peer-${index}`, sourceId, commodityOunces: 1,
+        prices: prices.map(({ timestamp }) => ({ timestamp, price: 4000 })),
+      })),
+    });
+  }
+
+  function mockPaxgSupply(times: number[], peggedGOLD = 2e9) {
+    mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
+      tokens: times.map((time) => ({ date: String(time), totalCirculatingUSD: { peggedGOLD } })),
+    } }]);
+  }
+
+  const replayPaxg = async (db: D1Database, query: string) =>
+    readJsonResponse(await handleBackfillDepegsTrusted({
+      db, url: makeApiUrl(`/api/backfill-depegs?stablecoin=paxg-paxos${query}`), coingeckoApiKey: "cg-test-key",
+    }), 200);
+
   it("previews corroborated severe PAXG moves inside a closure", async () => {
     const at = (date: string) => Date.parse(date) / 1000;
     const { db } = fixtures.open();
-    const url = makeApiUrl("/api/backfill-depegs?stablecoin=paxg-paxos&dry-run=true");
     for (const [onset, previous, low, sources, eventCount] of [
       ["2026-11-14T14:00Z", "2026-11-13T21:30Z", 2800, ["a", "b", "c"], 1],
       ["2026-11-13T22:05Z", "2026-11-13T21:55Z", 2800, ["a", "b", "c"], 1],
@@ -429,14 +449,9 @@ describe("handleBackfillDepegs replay windows", () => {
       const start = at(onset);
       const times = [at(previous), start, start + 1800, start + 3600, at("2026-11-16T12:00Z")];
       const prices = times.map((timestamp, index) => ({ timestamp, price: index === 0 || index === 4 ? 4000 : low }));
-      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({ prices, diagnostics: makeReplayDiagnostics(5) });
-      vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce({ GOLD: sources.map((sourceId, index) => ({
-        assetId: `peer-${index}`, sourceId, commodityOunces: 1, prices: times.map((timestamp) => ({ timestamp, price: 4000 })),
-      })) });
-      mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
-        tokens: [{ date: String(times[0]), totalCirculatingUSD: { peggedGOLD: 2e9 } }] } }]);
-      const response = await handleBackfillDepegsTrusted({ db, url, coingeckoApiKey: "cg-test-key" });
-      expect(await readJsonResponse(response, 200)).toMatchObject({ previews: [{
+      mockPaxgQuotes(prices, sources);
+      mockPaxgSupply([times[0]!]);
+      expect(await replayPaxg(db, "&dry-run=true")).toMatchObject({ previews: [{
         addedBackfillEventsSample: eventCount ? [{ startedAt: start, endedAt: times[4], peakDeviationBps: -3000 }] : [],
       }] });
     }
@@ -447,16 +462,10 @@ describe("handleBackfillDepegs replay windows", () => {
     const times = ["2026-11-06T21:55Z", "2026-11-07T14:00Z", "2026-11-07T14:30Z", "2026-11-09T12:00Z",
       "2026-11-13T21:55Z", "2026-11-14T14:00Z", "2026-11-14T14:30Z"].map((time) => Date.parse(time) / 1000);
     const prices = [4000, 2800, 2800, 4000, 4000, 2800, 2800].map((price, i) => ({ timestamp: times[i]!, price }));
-    mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
-      tokens: times.map((timestamp) => ({ date: String(timestamp), totalCirculatingUSD: { peggedGOLD: 2e9 } })),
-    } }]);
-    const run = async (dryRun: boolean) => {
-      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({ prices, diagnostics: makeReplayDiagnostics(prices.length) });
-      vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce({ GOLD: ["a", "b", "c"].map((sourceId) => ({
-        assetId: `peer-${sourceId}`, sourceId, commodityOunces: 1, prices: times.map((timestamp) => ({ timestamp, price: 4000 })),
-      })) });
-      const url = makeApiUrl("/api/backfill-depegs?stablecoin=paxg-paxos" + (dryRun ? "&dry-run=true" : ""));
-      return readJsonResponse(await handleBackfillDepegsTrusted({ db, url, coingeckoApiKey: "cg-test-key" }), 200);
+    mockPaxgSupply(times);
+    const run = (dryRun: boolean) => {
+      mockPaxgQuotes(prices);
+      return replayPaxg(db, dryRun ? "&dry-run=true" : "");
     };
     expect(await run(true)).toMatchObject({ recomputedBackfillEvents: 1, previews: [{
       addedBackfillEventsSample: [{ startedAt: times[1], endedAt: times[3], peakDeviationBps: -3000 }],
@@ -470,26 +479,18 @@ describe("handleBackfillDepegs replay windows", () => {
   it("preserves a PAXG incident when hourly quotes straddle the maintenance closure", async () => {
     const at = (clock: string) => Date.parse(`2026-11-17T${clock}Z`) / 1000;
     const prices = ["21:30", "21:45", "23:15"].map((clock) => ({ timestamp: at(clock), price: 4000 }));
-    const peers = { GOLD: ["a", "b", "c"].map((assetId) => ({
-      assetId, sourceId: assetId, commodityOunces: 1, prices,
-    })) };
-    vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce(peers).mockResolvedValueOnce(peers);
-    const series = { prices, diagnostics: makeReplayDiagnostics(3) };
-    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce(series).mockResolvedValueOnce(series);
-    mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
-      tokens: [{ date: String(at("21:30")), totalCirculatingUSD: { peggedGOLD: 6_000_000 } }] } }]);
+    mockPaxgQuotes(prices);
+    mockPaxgQuotes(prices);
+    mockPaxgSupply([at("21:30")], 6_000_000);
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
       started_at, ended_at, start_price, peg_reference, source)
       VALUES (1, 'paxg-paxos', 'PAXG', 'peggedGOLD', 'below', -300, ?, ?, 3880, 4000, 'backfill')`)
       .run(at("21:40"), at("23:05"));
-    const url = makeApiUrl("/api/backfill-depegs?stablecoin=paxg-paxos&startDay=2026-11-17&endDay=2026-11-17");
-    const previewUrl = new URL(url);
-    previewUrl.searchParams.set("dry-run", "true");
-    expect(await readJsonResponse(await handleBackfillDepegsTrusted({ db, url: previewUrl, coingeckoApiKey: "cg-test-key" }), 200))
+    const window = "&startDay=2026-11-17&endDay=2026-11-17";
+    expect(await replayPaxg(db, window + "&dry-run=true"))
       .toMatchObject({ previews: [{ degradedReason: "insufficient-boundary-evidence" }] });
-    const response = await handleBackfillDepegsTrusted({ db, url, coingeckoApiKey: "cg-test-key" });
-    expect(await readJsonResponse(response, 200)).toMatchObject({ eventsCreated: 0, skipped: ["PAXG"] });
+    expect(await replayPaxg(db, window)).toMatchObject({ eventsCreated: 0, skipped: ["PAXG"] });
     expect(sqlite.prepare("SELECT id FROM depeg_events").all()).toEqual([{ id: 1 }]);
   });
 

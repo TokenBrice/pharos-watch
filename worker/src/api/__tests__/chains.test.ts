@@ -121,15 +121,21 @@ describe("handleChains", () => {
     expect(body.chains[0]?.totalUsd).toBe(100);
     expect(body.chains[0]?.healthFactors.quality).toBeNull();
   });
+  const eurcAsset = (supply: number, overrides: Record<string, unknown> = {}) =>
+    asset("eurc-circle", { Ethereum: { current: supply } }, { pegType: "peggedEUR", circulating: { peggedEUR: supply }, ...overrides });
+
+  const readChains = async (cache: ReturnType<typeof stablecoinsCache>) => (await handleChains(mockD1([cache]))).json();
+
+  function eurFallbackCache(assets: unknown[]) {
+    const cache = stablecoinsCache(assets);
+    cache.first.value = JSON.stringify({ ...JSON.parse(cache.first.value), fxFallbackRates: { peggedEUR: 1.1 } });
+    return cache;
+  }
+
   it("reads a non-USD cohort reference from a cache predating currentPeg", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
-    const cache = stablecoinsCache([asset("eurc-circle", { Ethereum: { current: 100 } }, {
-      pegType: "peggedEUR", price: 1.1, circulating: { peggedEUR: 100 },
-    })]);
-    const payload = JSON.parse(cache.first.value);
-    cache.first.value = JSON.stringify({ ...payload, fxFallbackRates: { peggedEUR: 1.1 } });
-    const response = await handleChains(mockD1([cache]));
-    expect(await response.json()).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
+    const cache = eurFallbackCache([eurcAsset(100, { price: 1.1 })]);
+    expect(await readChains(cache)).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
   });
   it("expires a clocked comparison from an otherwise usable list generation", async () => {
     const now = Date.parse("2026-11-18T16:00:00Z") / 1000;
@@ -138,8 +144,8 @@ describe("handleChains", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     try {
       vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
-      const eurc = asset("eurc-circle", { Ethereum: { current: 100_000_000 } }, {
-        pegType: "peggedEUR", price: 1.078, priceObservedAt: quoteAt, circulating: { peggedEUR: 100_000_000 },
+      const eurc = eurcAsset(100_000_000, {
+        price: 1.078, priceObservedAt: quoteAt,
         currentPeg: {
           currentDeviationBps: -200, admittedDeviationBps: -200,
           pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: refAt },
@@ -152,12 +158,11 @@ describe("handleChains", () => {
         },
       });
       const cache = stablecoinsCache([eurc], 0);
-      const read = async () => (await handleChains(mockD1([cache]))).json();
-      expect(await read()).toMatchObject({
+      expect(await readChains(cache)).toMatchObject({
         chains: [{ healthFactors: { pegStability: 60 }, pegStabilityCoverage: { coverage: 1 } }],
       });
       clock.mockReturnValue((now + 1) * 1000);
-      expect(await read()).toMatchObject({
+      expect(await readChains(cache)).toMatchObject({
         chains: [{ healthFactors: { pegStability: null }, pegStabilityCoverage: { coverage: 0 } }],
       });
     } finally {
@@ -167,19 +172,16 @@ describe("handleChains", () => {
   it.each([false, true])("excludes ineligible assets from the legacy chain reference cohort (published block: %s)", async (published) => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const eur = { pegType: "peggedEUR", circulating: { peggedEUR: 100_000_000 } };
-    const eurc = asset("eurc-circle", { Ethereum: { current: 100_000_000 } }, {
-      ...eur, price: 1.1,
+    const eurc = eurcAsset(100_000_000, {
+      price: 1.1,
       currentPeg: published ? {
         currentDeviationBps: -435, pegReference: { valueUsd: 1.15, source: "median", contributorCount: 5, asOf: 1 },
         pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
       } : undefined,
     });
     const ineligible = ["49", "53", "55", "56"].map((id) => asset(id, {}, { ...eur, price: 1.15 }));
-    const cache = stablecoinsCache([eurc, ...ineligible]);
-    const payload = JSON.parse(cache.first.value);
-    cache.first.value = JSON.stringify({ ...payload, fxFallbackRates: { peggedEUR: 1.1 } });
-    const response = await handleChains(mockD1([cache]));
-    expect(await response.json()).toMatchObject({
+    const cache = eurFallbackCache([eurc, ...ineligible]);
+    expect(await readChains(cache)).toMatchObject({
       chains: [{ healthFactors: { pegStability: 100 }, pegStabilityCoverage: { coverage: 1 } }],
     });
   });

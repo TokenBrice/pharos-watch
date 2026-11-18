@@ -31,6 +31,18 @@ function makeDepegRow(overrides: Partial<DepegRow> = {}): DepegRow {
   };
 }
 
+function metalReference(pegKey: "peggedGOLD" | "peggedSILVER", at: number, usdPerUnit: number, preCloseUsdPerUnit: number) {
+  const source = "gold-api.com";
+  const observedAtSec = at - 60;
+  return {
+    usdPerUnit, observedAtSec, source, kind: "fallback",
+    observation: {
+      pegKey, usdPerUnit, observedAtSec, source, cadence: "intraday",
+      repricing: { source, preCloseUsdPerUnit, sessionOpenedAtSec: getReferenceSessionState("metal", at).sessionOpenedAtSec! },
+    },
+  } as const;
+}
+
 describe("PSI replay input loaders", () => {
   it("reads inclusive supply boundaries in order, preserving observed zero and prices", async () => {
     const { sqlite, db } = fixtures.open();
@@ -176,12 +188,7 @@ describe("PSI replay input loaders", () => {
         day, now: day + DAY_SECONDS, methodologyVersion: "2.1", supplyByCoin, sampleSlots: [day + 22 * 3600, day + 23.5 * 3600],
         depegEvents: [{ stablecoin_id: id, peg_type: "peggedGOLD", quote_mode: "usd", started_at: day - 42 * DAY_SECONDS,
           ended_at: null, peak_deviation_bps: -1_000, peg_reference: 4_000 }],
-        references: { referenceAt: (_currency, at) => ({
-          usdPerUnit: 4_000, observedAtSec: at - 60, source: "gold-api.com", kind: "fallback",
-          observation: { pegKey: "peggedGOLD", usdPerUnit: 4_000, observedAtSec: at - 60, source: "gold-api.com",
-            cadence: "intraday", repricing: { source: "gold-api.com", preCloseUsdPerUnit: 4_050,
-              sessionOpenedAtSec: getReferenceSessionState("metal", at).sessionOpenedAtSec! } },
-        }) },
+        references: { referenceAt: (_currency, at) => metalReference("peggedGOLD", at, 4_000, 4_050) },
       });
     };
     const narrow = await run(day);
@@ -263,42 +270,25 @@ describe("PSI replay input loaders", () => {
     ]);
   });
 
-  it("scores severe legacy weekend openings in either direction and holds a sub-severe opening", async () => {
+  it.each([
+    ["eurc-circle", "peggedEUR", 1, 0],
+    ["paxg-paxos", "peggedGOLD", 4000, 900],
+  ] as const)("scores severe legacy weekend openings for %s in either direction", async (id, pegType, reference, delay) => {
     const { sqlite, db } = fixtures.open();
     const day = Date.UTC(2026, 10, 14) / 1000;
-    const start = day + 22 * 3600;
-    const id = "eurc-circle";
+    const start = day + 22 * 3600 + delay;
     seedPsiPairedHistory(sqlite, day, id, 1e9);
-    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: "peggedEUR", peg_reference: 1,
+    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: pegType, peg_reference: reference,
       source: "live", started_at: start, ended_at: start + 3 * 3600 }));
-    const update = sqlite.prepare("UPDATE depeg_events SET direction = ?, start_price = ?, peak_deviation_bps = ? WHERE id = 1");
-    const archives = await loadHistoricalPsiArchives(db, day, day);
-    for (const [bps, score] of [[-3000, 29], [3000, 29], [-1000, 100]]) {
-      update.run(bps < 0 ? "below" : "above", 1 + bps / 10000, bps);
-      const replay = replayHistoricalPsiForDay({
-        ...archives, day, now: day + DAY_SECONDS, methodologyVersion: "3.70",
-        depegEvents: await loadPsiEligibleDepegEvents(db), sampleSlots: [start + 1800],
-      });
-      expect(replay.result?.score).toBe(score);
-    }
-  });
-
-  it("admits dated bullion comparisons for severe legacy openings without an interval ledger", async () => {
-    const { sqlite, db } = fixtures.open();
-    const day = Date.UTC(2026, 10, 14) / 1000;
-    const start = day + 22 * 3600 + 900;
-    const id = "paxg-paxos";
-    seedPsiPairedHistory(sqlite, day, id, 1e9);
-    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: "peggedGOLD", peg_reference: 4000,
-      source: "live", started_at: start, ended_at: start + 3 * 3600 }));
-    sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
+    const bullion = pegType === "peggedGOLD";
+    if (bullion) sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
       VALUES (1, 'historical-replay', 'usd', ?, ?)`).run(start, start);
-    const references = buildHistoricalReferenceLookup({
+    const references = bullion ? buildHistoricalReferenceLookup({
       commodityPeers: { GOLD: ["xaut-tether", "kau-kinesis", "xaum-matrixdock", "gldt-gold-dao"].map((assetId) => ({
         assetId, sourceId: `coingecko:${assetId}`, commodityOunces: 1,
-        prices: [{ timestamp: start - 60, price: 4000 }],
+        prices: [{ timestamp: start - 60, price: reference }],
       })) },
-    });
+    }) : undefined;
     const archives = await loadHistoricalPsiArchives(db, day, day);
     const update = sqlite.prepare("UPDATE depeg_events SET direction = ?, start_price = ?, peak_deviation_bps = ? WHERE id = 1");
     const replay = async () => replayHistoricalPsiForDay({
@@ -306,11 +296,13 @@ describe("PSI replay input loaders", () => {
       depegEvents: await loadPsiEligibleDepegEvents(db), sampleSlots: [start + 1800],
     });
     for (const [bps, score] of [[-1000, 100], [3000, 29], [-3000, 29]]) {
-      update.run(bps < 0 ? "below" : "above", 4000 * (1 + bps / 10000), bps);
+      update.run(bps < 0 ? "below" : "above", reference * (1 + bps / 10000), bps);
       expect((await replay()).result?.score).toBe(score);
     }
-    sqlite.exec("UPDATE depeg_events SET admitted_coverage_json = '[]' WHERE id = 1");
-    expect((await replay()).result?.score).toBe(100);
+    if (bullion) {
+      sqlite.exec("UPDATE depeg_events SET admitted_coverage_json = '[]' WHERE id = 1");
+      expect((await replay()).result?.score).toBe(100);
+    }
   });
 
   it("honors empty reviewed coverage and the admitted peer basis at a Saturday sample", async () => {
@@ -374,10 +366,7 @@ describe("PSI replay input loaders", () => {
         const replay = replayHistoricalPsiForDay({
           day, now: at + 60, sampleSlots: [at + 60], methodologyVersion: "2.1", ...archive, depegEvents: [event],
           references: {
-            referenceAt: () => ({ usdPerUnit: 30, observedAtSec: at - 60, source: "gold-api.com", kind: "fallback",
-              observation: { pegKey: "peggedSILVER", usdPerUnit: 30, observedAtSec: at - 60, source: "gold-api.com",
-                cadence: "intraday", repricing: { source: "gold-api.com", preCloseUsdPerUnit: 29,
-                  sessionOpenedAtSec: getReferenceSessionState("metal", at).sessionOpenedAtSec! } } }),
+            referenceAt: () => metalReference("peggedSILVER", at, 30, 29),
             entitlementAt: () => ({ source: "matrixdock-frs", generation: "ethereum:123", ozPerToken,
               observedAtSec: at - 90, quoteObservedAtSec: at + offset }),
           },

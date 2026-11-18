@@ -45,6 +45,31 @@ function quoteResponse(updatedAt = NOW - 60) {
   }), { status: 200 })));
 }
 
+async function hydrateWithSelectedFx(db: D1Database, assets: Parameters<typeof hydrateDepegDetection>[1]) {
+  const fx = await loadFreshFxRates(db);
+  return hydrateDepegDetection(db, assets, fx.fxFallbackRates, undefined, undefined, undefined, fx.detectionFxState);
+}
+
+type ConfirmationInputs = Omit<Parameters<typeof buildConfirmationPlan>[0], "db" | "row" | "pendingState" | "openSet" | "nativePegQuote">;
+
+function confirmationFor(db: D1Database, input: ConfirmationInputs, pegType: string, pegReference = 1) {
+  const row = makePendingDepegRow({ stablecoin_id: input.asset!.id, peg_type: pegType,
+    first_seen_at: NOW - 1000, peg_reference: pegReference });
+  return buildConfirmationPlan({ ...input, db, row, pendingState: normalizePendingDepegRow(row),
+    openSet: new Set(), nativePegQuote: undefined });
+}
+
+async function decideWithSelectedReference(
+  db: D1Database, now: number, coin: ReturnType<typeof makeAsset>,
+  rates: Parameters<typeof deriveDetectionPegRates>[4], state: Parameters<typeof deriveDetectionPegRates>[5],
+) {
+  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts, referenceContext, observations } =
+    await deriveDetectionPegRates(db, [coin], PSI_ELIGIBLE_META_BY_ID, new Set(), rates, state, now);
+  const decision = decideDepegAsset({ now, asset: coin, meta: PSI_ELIGIBLE_META_BY_ID.get(coin.id),
+    pegRates, pegRateSources, pegRateCounts, referenceContext });
+  return { commands: decision.commands, observations };
+}
+
 describe("hydrateDepegDetection", () => {
   it("detects severe moves against the retained direct close when a later FX selection cannot qualify", async () => {
     const now = Date.UTC(2026, 10, 21, 0, 20) / 1000;
@@ -83,11 +108,9 @@ describe("hydrateDepegDetection", () => {
           priceSource: "coingecko", priceConfidence: "single-source", priceUpdatedAt: now - 60,
           priceObservedAt: now - 60, priceObservedAtMode: "upstream", circulating: { [peg]: 60_000_000 },
         });
-        const selection = await deriveDetectionPegRates(db, [asset], PSI_ELIGIBLE_META_BY_ID, new Set(), rates, state, now);
-        expect(selection.observations?.[peg]).toEqual(observation);
-        const decision = decideDepegAsset({ now, asset, meta, pegRates: selection.rates,
-          pegRateSources: selection.sources, pegRateCounts: selection.counts, referenceContext: selection.referenceContext });
-        expect(decision.commands).toMatchObject(Math.abs(bps) === 3000
+        const result = await decideWithSelectedReference(db, now, asset, rates, state);
+        expect(result.observations?.[peg]).toEqual(observation);
+        expect(result.commands).toMatchObject(Math.abs(bps) === 3000
           ? [{ type: "upsert-pending", payload: { bps, pegReference: close.usdPerUnit,
             referenceAdmission: { referenceObservedAtSec: close.observedAtSec, generation: String(now - 60) } } }]
           : []);
@@ -108,7 +131,6 @@ describe("hydrateDepegDetection", () => {
     close.applyChainlinkQuotes(eurQuote(friday));
     await persistFxRateState(db, close.usableRates, close.buildPersistedMeta(), friday);
     const id = "eurc-circle";
-    const meta = PSI_ELIGIBLE_META_BY_ID.get(id)!;
     for (const [index, step] of ["omit", "omit", "reject", "omit", "heartbeat"].entries()) {
       const now = saturday + index * 60;
       vi.mocked(Date.now).mockReturnValue(now * 1000);
@@ -123,9 +145,7 @@ describe("hydrateDepegDetection", () => {
         const asset = makeAsset({ id, pegType: peg, price: 1.1 * (1 + bps / 10_000), priceSource: "coingecko",
           priceConfidence: "single-source", priceObservedAtMode: "upstream", priceObservedAt: now - 30,
           priceUpdatedAt: now - 30, circulating: { [peg]: 60_000_000 } });
-        const selection = await deriveDetectionPegRates(db, [asset], PSI_ELIGIBLE_META_BY_ID, new Set(), fxFallbackRates, detectionFxState, now);
-        const { commands } = decideDepegAsset({ now, asset, meta, pegRates: selection.rates,
-          pegRateSources: selection.sources, pegRateCounts: selection.counts, referenceContext: selection.referenceContext });
+        const { commands } = await decideWithSelectedReference(db, now, asset, fxFallbackRates, detectionFxState);
         expect(commands).toMatchObject(Math.abs(bps) === 3000 && (index < 2 || step === "heartbeat")
           ? [{ type: "upsert-pending", payload: { bps, pegReference: 1.1, referenceAdmission: { referenceObservedAtSec: friday } } }]
           : []);
@@ -168,16 +188,12 @@ describe("hydrateDepegDetection", () => {
     await persistFxRateState(db, fx.rates, fxMeta, NOW - 60);
     quoteResponse();
     const observed = { ...asset, priceObservedAt: NOW - 30, priceObservedAtMode: "upstream" as const };
-    const fxSelection = await loadFreshFxRates(db);
-    const hydrated = await hydrateDepegDetection(db, [observed], fxSelection.fxFallbackRates, undefined, undefined, undefined, fxSelection.detectionFxState);
-    const { pegRates, pegRateSources, pegRateCounts } = hydrated;
+    const { pegRates, pegRateSources, pegRateCounts } = await hydrateWithSelectedFx(db, [observed]);
     const meta = PSI_ELIGIBLE_META_BY_ID.get(asset.id);
     const inputs = { asset: observed, meta, now: NOW, pegRates, pegRateSources, pegRateCounts };
     const detection = decideDepegAsset(inputs);
     expect(detection.commands).toMatchObject(evidence === "other-provider" ? [] : [{ type: "upsert-pending", payload: { bps: -674 } }]);
-    const row = makePendingDepegRow({ stablecoin_id: asset.id, peg_type: peg, first_seen_at: NOW - 1_000, peg_reference: 0.193 });
-    const plan = buildConfirmationPlan({ ...inputs, db, row, pendingState: normalizePendingDepegRow(row),
-      openSet: new Set(), nativePegQuote: undefined });
+    const plan = confirmationFor(db, inputs, peg, 0.193);
     expect(plan.kind).toBe(evidence === "other-provider" ? "wait" : "ready");
   });
 
@@ -205,14 +221,11 @@ describe("hydrateDepegDetection", () => {
     }, NOW - 60);
     quoteResponse();
     const observed = { ...asset, priceObservedAt: NOW - 30, priceObservedAtMode: "upstream" as const };
-    const fxSelection = await loadFreshFxRates(db);
-    const hydrated = await hydrateDepegDetection(db, [observed], fxSelection.fxFallbackRates, undefined, undefined, undefined, fxSelection.detectionFxState);
+    const hydrated = await hydrateWithSelectedFx(db, [observed]);
     const input = { ...hydrated, pegRates: { ...hydrated.pegRates }, asset: observed, meta: PSI_ELIGIBLE_META_BY_ID.get(asset.id) };
     const admitted = mode === "selected" || mode === "first-after-deploy" || mode === "carried" || mode === "mixed-carry";
     expect(decideDepegAsset(input).commands.map(({ type }) => type)).toEqual(admitted ? ["upsert-pending"] : []);
-    const row = makePendingDepegRow({ stablecoin_id: asset.id, peg_type: peg, first_seen_at: NOW - 1000 });
-    expect(buildConfirmationPlan({ ...input, db, row, pendingState: normalizePendingDepegRow(row),
-      openSet: new Set(), nativePegQuote: undefined }).kind).toBe(admitted ? "ready" : "wait");
+    expect(confirmationFor(db, input, peg).kind).toBe(admitted ? "ready" : "wait");
   });
 
   it.each([null, "invalid-rate"] as const)("isolates GBP repricing anchor %s from persisted EUR admission", async (siblingAnchor) => {
@@ -227,9 +240,7 @@ describe("hydrateDepegDetection", () => {
     const hydrated = await hydrateDepegDetection(db, [eurc]);
     const inputs = { ...hydrated, asset: eurc, meta: PSI_ELIGIBLE_META_BY_ID.get(eurc.id) };
     expect(decideDepegAsset(inputs).commands).toMatchObject([{ type: "upsert-pending" }]);
-    const row = makePendingDepegRow({ stablecoin_id: eurc.id, peg_type: eurc.pegType!, first_seen_at: NOW - 1_000 });
-    expect(buildConfirmationPlan({ ...inputs, db, row, pendingState: normalizePendingDepegRow(row),
-      openSet: new Set(), nativePegQuote: undefined }).kind).toBe("ready");
+    expect(confirmationFor(db, inputs, eurc.pegType!).kind).toBe("ready");
   });
 
   it("uses the legacy gold median when only GBP has source-clocked evidence", async () => {
@@ -247,9 +258,8 @@ describe("hydrateDepegDetection", () => {
       id, pegType: "peggedGOLD", price: 4165.60, priceUpdatedAt: observedAtSec, priceObservedAt: observedAtSec,
       priceSource: i < 2 ? "coingecko" : "dexscreener-exact", priceObservedAtMode: i < 2 ? "upstream" : "local_fetch",
     }));
-    const fx = await loadFreshFxRates(db);
     quoteResponse();
-    const hydrated = await hydrateDepegDetection(db, peers, fx.fxFallbackRates, undefined, undefined, undefined, fx.detectionFxState);
+    const hydrated = await hydrateWithSelectedFx(db, peers);
     expect([hydrated.pegRates.peggedGOLD, hydrated.pegRateCounts.peggedGOLD]).toEqual([4165.60, 3]);
     expect(decideDepegAsset({ ...hydrated, asset: peers[0], meta: PSI_ELIGIBLE_META_BY_ID.get(peers[0].id) }))
       .toMatchObject({ observation: { kind: "observed" }, commands: [] });

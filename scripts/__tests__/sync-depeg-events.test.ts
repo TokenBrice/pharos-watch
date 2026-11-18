@@ -49,26 +49,32 @@ function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("sync-depeg-events", () => {
-  it("uses an unverified traversal when the first page has no manifest", async () => {
+  function depegSyncFixture() {
     const dataDir = makeRoot();
+    return { dataDir, args: ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")] };
+  }
+  const missingManifest = () => Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 });
+  const eursIncident = () => event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+
+  it("uses an unverified traversal when the first page has no manifest", async () => {
+    const { dataDir, args } = depegSyncFixture();
     const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("ledgerGeneration")
-      ? Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 })
+      ? missingManifest()
       : Response.json({ events: [event()], total: 1, nextCursor: null }));
     vi.stubGlobal("fetch", fetchMock);
-    await runDepegSync(["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")]);
+    await runDepegSync(args);
     expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("ledgerGeneration"))).toEqual(["latest", null]);
     expect(readDepegLedgerCapture(dataDir).ledgerProof).toBeUndefined();
     expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
   });
 
   it("fails a pinned continuation when its manifest vanishes, even with retained-data fallback", async () => {
-    const dataDir = makeRoot();
-    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
+    const { dataDir, args } = depegSyncFixture();
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [event()], total: 1 })));
     await runDepegSync(args);
     const ledgerProof = { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
     const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("cursor")
-      ? Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 })
+      ? missingManifest()
       : Response.json({ events: Array.from({ length: 1000 }, (_, i) => event({ id: i + 1 })),
         ledgerProof, nextCursor: "next", totalExact: true, total: 1001 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -79,9 +85,7 @@ describe("sync-depeg-events", () => {
   });
 
   it("captures the corrected event while retaining its dedicated page in the index", async () => {
-    const dataDir = makeRoot();
-    const indexPath = join(dataDir, "index.json");
-    const args = ["--api-url", "https://api.example.test", "--output", indexPath];
+    const { dataDir, args } = depegSyncFixture();
     let peakDeviationBps = -600;
     const ledgerProof = { generation: "b".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
@@ -97,9 +101,8 @@ describe("sync-depeg-events", () => {
   });
 
   it("publishes the current review and values at a retained same-event permalink", async () => {
-    const dataDir = makeRoot();
-    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
-    let row = event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+    const { dataDir, args } = depegSyncFixture();
+    let row = eursIncident();
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [row], total: 1 })));
     await runDepegSync(args);
     const [published] = readDepegEventPageEntries(dataDir);
@@ -117,9 +120,8 @@ describe("sync-depeg-events", () => {
   });
 
   it("keeps the reviewed peak at its reserved URL through consolidation", async () => {
-    const dataDir = makeRoot();
-    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
-    const original = event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+    const { dataDir, args } = depegSyncFixture();
+    const original = eursIncident();
     const revised = event({ ...original, peakDeviationBps: -210, peakPrice: 0.979,
       provenance: { auditVerdict: "repaired", pegScoreEligible: true } });
     const representative = event({ ...revised, id: 91042, constituentEventCount: 2 });

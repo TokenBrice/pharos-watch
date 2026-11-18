@@ -39,18 +39,26 @@ function depegRow(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
+function peerQuote(observedAt: number, price: number, bps: number, quoteObservedAt = observedAt) {
+  return { basis: "peer-relative", observedAt, price, pegReference: 1.1, bps,
+    corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt,
+      contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: quoteObservedAt })),
+      corroborator: { source: "pool:curve:defillama", observedAtSec: quoteObservedAt } } };
+}
+
+function seedEurcOpening(sqlite: ReturnType<typeof fixtures.open>["sqlite"], started: number,
+  peak: number, reason: string, receipt: object) {
+  sqlite.prepare(`INSERT INTO depeg_events
+    (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source, pending_reason, peer_basis_json)
+    VALUES ('eurc-circle','EURC','peggedEUR','below',?, ?,1.067,1.1,'live',?,?)`)
+    .run(peak, started, reason, JSON.stringify(receipt));
+}
+
 describe("depeg projector", () => {
   it("publishes a Saturday opening on its validated peer median and original magnitude", async () => {
     const { db, sqlite } = fixtures.open();
     const started = Date.parse("2026-11-14T12:00:00Z") / 1000;
-    const onset = { basis: "peer-relative", observedAt: started, price: 1.067, pegReference: 1.1, bps: -300,
-      corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt: started,
-        contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: started })),
-        corroborator: { source: "pool:curve:defillama", observedAtSec: started } } };
-    sqlite.prepare(`INSERT INTO depeg_events
-      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source, pending_reason, peer_basis_json)
-      VALUES ('eurc-circle','EURC','peggedEUR','below',-500,?,1.067,1.1,'live','low-confidence+peer-relative',?)`)
-      .run(started, JSON.stringify({ onset }));
+    seedEurcOpening(sqlite, started, -500, "low-confidence+peer-relative", { onset: peerQuote(started, 1.067, -300) });
     expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
     const identity = sqlite.prepare("SELECT id, event_id, created_at FROM tape_events").get();
     sqlite.exec(`UPDATE tape_events SET title = 'EURC depeg opened (−500 bps)', summary = 'Trading below peg.',
@@ -72,10 +80,7 @@ describe("depeg projector", () => {
     const start = Date.parse("2026-11-13T21:55:00Z") / 1000;
     const at = start + 900;
     const onset = { basis: "benchmark", price: 1.067, pegReference: 1.10, bps: -300, observedAt: start };
-    const peak = { basis: "peer-relative", price: 1.02, pegReference: 1.10, bps: -727, observedAt: at,
-      corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt: at,
-        contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: at })),
-        corroborator: { source: "pool:curve:defillama", observedAtSec: at } } };
+    const peak = peerQuote(at, 1.02, -727);
     const source = sqlite.prepare(`INSERT INTO depeg_events (id, stablecoin_id, symbol, peg_type, direction,
       started_at, start_price, peg_reference, peak_price, peak_peg_reference, peak_deviation_bps, source, pending_reason, peer_basis_json)
       VALUES (?, 'eurc-circle','EURC','peggedEUR','below',?,1.067,1.10,1.02,1.10,-727,'live','low-confidence+peer-relative',?)`);
@@ -111,14 +116,8 @@ describe("depeg projector", () => {
     const { db, sqlite } = fixtures.open();
     const started = Date.parse("2026-11-13T21:53:20Z") / 1000;
     const onset = { basis: "benchmark", observedAt: started, price: 1.067, pegReference: 1.1, bps: -300 };
-    const latest = { basis: "peer-relative", observedAt: started + 1000, price: 1.02, pegReference: 1.1, bps: -727,
-      corroboration: { basis: "peer-relative", confidence: "low", quoteObservedAt: started + 970,
-        contributors: ["one", "two", "three"].map((id) => ({ id, provenanceKey: id, observedAtSec: started + 970 })),
-        corroborator: { source: "pool:curve:defillama", observedAtSec: started + 970 } } };
-    sqlite.prepare(`INSERT INTO depeg_events
-      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source, pending_reason, peer_basis_json)
-      VALUES ('eurc-circle','EURC','peggedEUR','below',-727,?,1.067,1.1,'live','confirmation-window',?)`)
-      .run(started, JSON.stringify({ onset, latest }));
+    const latest = peerQuote(started + 1000, 1.02, -727, started + 970);
+    seedEurcOpening(sqlite, started, -727, "confirmation-window", { onset, latest });
     expect((await projectDepegOpened(db, { since: started - 1 })).projected).toBe(1);
     const row = sqlite.prepare("SELECT title, payload_json FROM tape_events").get()!;
     expect(row.title).toBe("EURC depeg opened (−300 bps)");

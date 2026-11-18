@@ -315,19 +315,21 @@ describe("generate-public-datasets", () => {
     expect(specFor("top-stablecoins", envelope).rows[0]).toMatchObject(expected);
   });
 
+  function renderLegacyRanking(base: ReturnType<typeof makeEnvelope>, stablecoins: unknown[]) {
+    const envelope = PublicSnapshotEnvelopeSchema.parse({ ...base, stablecoins });
+    if (!isProjectionEnvelope(envelope)) throw new Error("expected a legacy projection envelope");
+    return render(specFor("top-stablecoins", envelope)).json.rows;
+  }
+
   it("keeps rejected ranking prices unavailable while admitting legacy omissions", () => {
     const base = makeEnvelope();
-    const envelope = PublicSnapshotEnvelopeSchema.parse({
-      ...base,
-      stablecoins: [
-        { ...base.stablecoins[0], id: "usdt-tether", price: 0.98, priceSource: "coingecko", priceObservedAtMode: false },
-        { ...base.stablecoins[0], id: "zero-par", price: 0, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" },
-        { ...base.stablecoins[0], id: "legacy", price: 0.98, priceSource: "coingecko" },
-      ],
-    });
-    if (!isProjectionEnvelope(envelope)) throw new Error("expected a legacy projection envelope");
-    const { json } = render(specFor("top-stablecoins", envelope));
-    expect(json.rows).toEqual([
+    const market = { ...base.stablecoins[0], price: 0.98, priceSource: "coingecko" };
+    const rows = renderLegacyRanking(base, [
+      { ...market, id: "usdt-tether", priceObservedAtMode: false },
+      { ...market, id: "zero-par", price: 0, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" },
+      { ...market, id: "legacy" },
+    ]);
+    expect(rows).toEqual([
       expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAtMode: "unsupported" }),
       expect.objectContaining({ id: "zero-par", price: null, nominalReferenceUsd: null, nominalReferenceSource: null }),
       expect.objectContaining({ id: "legacy", price: 0.98 }),
@@ -340,13 +342,11 @@ describe("generate-public-datasets", () => {
     const market = { ...base.stablecoins[0], price: 0.98, priceSource: "coingecko",
       priceObservedAt, priceObservedAtMode: "upstream" };
     const currentPeg = { currentDeviationBps: null, pegReference: null, primaryTrust: "unusable", dexPriceCheck: null };
-    const envelope = PublicSnapshotEnvelopeSchema.parse({ ...base, stablecoins: [
+    const rows = renderLegacyRanking(base, [
       { ...market, id: "usdt-tether", currentPeg: { ...currentPeg, currentPriceUnavailable: true, pegReferenceUnavailable: false } },
       { ...market, id: "usdc-circle", currentPeg: { ...currentPeg, currentPriceUnavailable: false, pegReferenceUnavailable: true } },
-    ] });
-    if (!isProjectionEnvelope(envelope)) throw new Error("expected a projection envelope");
-    const { json } = render(specFor("top-stablecoins", envelope));
-    expect(json.rows).toEqual(expect.arrayContaining([
+    ]);
+    expect(rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAt: null }),
       expect.objectContaining({ id: "usdc-circle", price: 0.98, priceObservedAt }),
     ]));

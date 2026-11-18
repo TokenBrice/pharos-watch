@@ -3,7 +3,7 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "../api-query-descriptors";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
-import { makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import {

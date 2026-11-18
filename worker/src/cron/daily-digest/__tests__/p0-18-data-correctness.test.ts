@@ -23,6 +23,15 @@ function blacklistDb(rows: Record<string, unknown>[]) {
   return mockD1([{ match: "FROM blacklist_events", rows }]);
 }
 
+function activeDepegContext(id: string, symbol: string, pegType: string, bps: number, reference: number) {
+  const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events e", rows: [{
+    stablecoin_id: id, symbol, peg_type: pegType, quote_mode: "usd", direction: "below",
+    peak_deviation_bps: bps, started_at: NOW - 86_400, peg_reference: reference,
+  }] }]));
+  ctx.nowSec = NOW;
+  return ctx;
+}
+
 describe("P0-18 daily digest data correctness", () => {
 
   it.each([
@@ -34,10 +43,7 @@ describe("P0-18 daily digest data correctness", () => {
     status, admittedDeviationBps, quoteObservedAtSec, expected, reason,
   ) => {
     const id = "paxg-paxos";
-    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events e", rows: [{
-      stablecoin_id: id, symbol: "PAXG", peg_type: "peggedGOLD", quote_mode: "usd",
-      direction: "below", peak_deviation_bps: -600, started_at: NOW - 86_400, peg_reference: 3_500,
-    }] }]));
+    const ctx = activeDepegContext(id, "PAXG", "peggedGOLD", -600, 3_500);
     const evidence = {
       kind: "fallback", source: "gold-api.com", cadence: "intraday",
       quoteObservedAtSec, referenceObservedAtSec: NOW - 60, decisionAtSec: NOW, budgetSec: 21_600,
@@ -47,7 +53,6 @@ describe("P0-18 daily digest data correctness", () => {
       : status === "admitted" ? { ...evidence, status, reason: "live-reference" }
       : { ...evidence, status, reason: "reference-market-closed", sessionOpenedAtSec: null };
     const currentPeg = { ...currentPegObservation(4_000, { currentDeviationBps: -250 }), referenceAdmission, admittedDeviationBps };
-    ctx.nowSec = NOW;
     ctx.trackedStablecoinIds = new Set([id]);
     ctx.mcapById.set(id, 100e6);
     ctx.currentPegObservationById = new Map([[id, currentPegObservation(3_250, { currentDeviationBps: 2_000 })]]);
@@ -67,11 +72,7 @@ describe("P0-18 daily digest data correctness", () => {
     ["coingecko", undefined, undefined],
   ] as const)("recovers a legacy USD quote clock only for a dated source (%s, %s)", async (priceSource, priceObservedAt, expected) => {
     const id = "usdt-tether";
-    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events e", rows: [{
-      stablecoin_id: id, symbol: "USDT", peg_type: "peggedUSD", quote_mode: "usd",
-      direction: "below", peak_deviation_bps: -1_000, started_at: NOW - 86_400, peg_reference: 1,
-    }] }]));
-    ctx.nowSec = NOW;
+    const ctx = activeDepegContext(id, "USDT", "peggedUSD", -1_000, 1);
     ctx.stablecoinAssetById.set(id, makeAsset({
       id, price: 0.98, priceSource, priceSyncedAt: NOW - 60, priceUpdatedAt: NOW - 60, priceObservedAtMode: undefined, priceObservedAt,
     }));

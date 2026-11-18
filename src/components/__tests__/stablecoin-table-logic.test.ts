@@ -21,7 +21,7 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { formatComparisonPrice } from "@/lib/current-peg";
 import type { CsvColumn } from "@/lib/exports/csv";

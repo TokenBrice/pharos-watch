@@ -32,6 +32,19 @@ function preparingD1() {
   return makeNoopD1({ prepare: vi.fn(() => ({ bind: vi.fn(() => ({ kind: "prepared" })) })) });
 }
 
+async function dispatchFromDepegCache(row: ReturnType<typeof activeDepeg>, previous: DepegSnapshot) {
+  const now = 1_800_000_000;
+  const sources = eventSources({
+    activeDepegRows: [row], dewsCache: { value: "{}", updatedAt: now },
+    depegCache: { value: JSON.stringify(previous), updatedAt: now },
+  });
+  const state = buildDispatchSnapshotState(sources, now);
+  const result = await buildTelegramDispatchEvents(preparingD1(), sources, state, () => row.symbol);
+  return { ...result, baseline: state.currentSnapshots.depeg };
+}
+
+const bilira = { stablecoin_id: "tryb-bilira", symbol: "TRYB", peg_type: "peggedTRY", source: "live" };
+
 describe("buildTelegramDispatchEvents", () => {
   beforeEach(() => {
     mocks.buildAlertContextLines.mockResolvedValue(new Map([
@@ -363,21 +376,12 @@ describe("buildTelegramDispatchEvents", () => {
     ["native-peg", "benchmark"],
     ["benchmark", "native-peg"],
   ] as const)("reseeds without worsening on a %s to %s peak change", async (before, after) => {
-    const now = 1_800_000_000;
     const rowWithBasis = (peak: number, basis: string) => ({
       ...activeDepeg(peak),
       peer_basis_json: JSON.stringify({ peak: { basis } }),
     });
-    const dispatch = async (peak: number, basis: string, previous: DepegSnapshot) => {
-      const sources = eventSources({
-        activeDepegRows: [rowWithBasis(peak, basis)],
-        dewsCache: { value: "{}", updatedAt: now },
-        depegCache: { value: JSON.stringify(previous), updatedAt: now },
-      });
-      const state = buildDispatchSnapshotState(sources, now);
-      const { events } = await buildTelegramDispatchEvents(preparingD1(), sources, state, () => "DPG");
-      return { events, baseline: state.currentSnapshots.depeg };
-    };
+    const dispatch = (peak: number, basis: string, previous: DepegSnapshot) =>
+      dispatchFromDepegCache(rowWithBasis(peak, basis), previous);
 
     const changed = await dispatch(340, after, buildDepegSnapshot([rowWithBasis(120, before)]));
     expect(changed.events.depegWorsening).toEqual([]);
@@ -392,43 +396,26 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("keeps widening a legacy native peak when its next row adds the native marker", async () => {
-    const now = 1_800_000_000;
     const prior = {
-      ...activeDepeg(160), stablecoin_id: "tryb-bilira", symbol: "TRYB",
-      peg_type: "peggedTRY", source: "live", peg_reference: 1, peak_price: 1.016,
+      ...activeDepeg(160), ...bilira, peg_reference: 1, peak_price: 1.016,
     };
     const baseline = buildDepegSnapshot([prior]);
     expect(baseline["tryb-bilira"]).toMatchObject({ peakBasis: "native-peg", priceCurrency: "TRY" });
-    const sources = eventSources({
-      activeDepegRows: [{ ...prior, peak_deviation_bps: 340, peak_price: 1.034, peak_quote_domain: "native-peg" }],
-      dewsCache: { value: "{}", updatedAt: now },
-      depegCache: { value: JSON.stringify(baseline), updatedAt: now },
-    });
-    const { events } = await buildTelegramDispatchEvents(
-      preparingD1(), sources, buildDispatchSnapshotState(sources, now), () => "TRYB",
-    );
+    const { events } = await dispatchFromDepegCache(
+      { ...prior, peak_deviation_bps: 340, peak_price: 1.034, peak_quote_domain: "native-peg" }, baseline);
     expect(events.depegWorsening).toEqual([
       expect.objectContaining({ previousDeviationBps: 160, currentDeviationBps: 340 }),
     ]);
   });
 
   it("emits the first native worsening against a main-era snapshot", async () => {
-    const now = 1_800_000_000;
     const row = {
-      ...activeDepeg(600, "below", 42), stablecoin_id: "tryb-bilira", symbol: "TRYB",
-      peg_type: "peggedTRY", source: "live", start_price: 0.984, peak_price: 0.94,
+      ...activeDepeg(600, "below", 42), ...bilira, start_price: 0.984, peak_price: 0.94,
     };
-    const sources = eventSources({
-      activeDepegRows: [row],
-      dewsCache: { value: "{}", updatedAt: now },
-      depegCache: { value: JSON.stringify({
-        "tryb-bilira": { stablecoinId: row.stablecoin_id, symbol: row.symbol, eventId: 42,
-          direction: "below", deviationBps: 160, price: 0.984, pegReference: 1 },
-      }), updatedAt: now },
+    const { events, nextDepegSnapshot } = await dispatchFromDepegCache(row, {
+      "tryb-bilira": { stablecoinId: row.stablecoin_id, symbol: row.symbol, eventId: 42,
+        direction: "below", deviationBps: 160, price: 0.984, pegReference: 1 },
     });
-    const { events, nextDepegSnapshot } = await buildTelegramDispatchEvents(
-      preparingD1(), sources, buildDispatchSnapshotState(sources, now), () => "TRYB",
-    );
     expect(events.depegWorsening).toEqual([expect.objectContaining({
       previousDeviationBps: 160, currentDeviationBps: 600, priceCurrency: "TRY", peakBasis: "native-peg",
     })]);

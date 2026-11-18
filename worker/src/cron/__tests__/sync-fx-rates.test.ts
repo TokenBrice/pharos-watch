@@ -984,8 +984,17 @@ describe("syncFxRates", () => {
       .toMatchObject({ consecutiveFailures: 1 });
   });
 
-  it("reserves one OXR request per open hour and records a quota response", async () => {
+  function oxrFixture() {
     const { db, sqlite } = fixtures.open();
+    const read = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
+    return { sqlite, read: (key: string) => read.get(key), run: () => syncFxRates(db, undefined, "oxr-key") };
+  }
+
+  const oxrCalls = (fetchSpy: ReturnType<typeof mockFetch>) =>
+    fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"));
+
+  it("reserves one OXR request per open hour and records a quota response", async () => {
+    const { read, run } = oxrFixture();
     const fetchSpy = mockFetch(fxMirrors({
       openExchange: { status: 429, body: { message: "quota" } },
     }));
@@ -994,17 +1003,16 @@ describe("syncFxRates", () => {
       ["2025-06-16T08:30:00Z", 1], ["2025-06-16T09:00:00Z", 2],
     ] as const) {
       vi.setSystemTime(new Date(clock));
-      await syncFxRates(db, undefined, "oxr-key");
-      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"))).toHaveLength(calls);
+      await run();
+      expect(oxrCalls(fetchSpy)).toHaveLength(calls);
     }
-    const read = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
-    const quota = read.get("cron:event:sync-fx-rates:openexchange-rates-quota-limited");
+    const quota = read("cron:event:sync-fx-rates:openexchange-rates-quota-limited");
     expect(JSON.parse(String(quota?.value)).metadata).toMatchObject({ statusCode: 429 });
-    expect(read.get("fx-oxr-last-success")).toBeUndefined();
+    expect(read("fx-oxr-last-success")).toBeUndefined();
   });
 
   it.each([false, true])("polls on the first eligible OXR recovery run with a transient storage failure=%s", async (failReservation) => {
-    const { db, sqlite } = fixtures.open();
+    const { sqlite, read, run } = oxrFixture();
     const recoveredAt = Date.parse("2025-06-16T11:00:00Z");
     const fetchSpy = mockFetch([...fxMirrors({ openExchange: "omit" }), {
       match: "openexchangerates.org",
@@ -1012,8 +1020,7 @@ describe("syncFxRates", () => {
         ? Response.json({ error: "provider failure" }, { status: 500 })
         : Response.json({ timestamp: recoveredAt / 1000, rates: { EUR: 0.925 } }),
     }]);
-    const readCircuit = () => JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get(`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`)?.value));
+    const readCircuit = () => JSON.parse(String(read(`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`)?.value));
     for (const [time, calls, circuit] of [
       ["08:00", 1, "closed"], ["09:00", 2, "closed"], ["10:00", 3, "open"],
       ["10:30", 3, "open"], ["11:00", failReservation ? 3 : 4, failReservation ? "open" : "closed"],
@@ -1028,15 +1035,15 @@ describe("syncFxRates", () => {
         `);
       }
       if (failReservation && time === "11:30") sqlite.exec("DROP TRIGGER fail_oxr_reservation");
-      await syncFxRates(db, undefined, "oxr-key");
-      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"))).toHaveLength(calls);
+      await run();
+      expect(oxrCalls(fetchSpy)).toHaveLength(calls);
       expect(readCircuit().state).toBe(circuit);
     }
     expect(readCircuit().lastSuccessAt).toBe(recoveredAt / 1000 + (failReservation ? 1800 : 0));
   });
 
   it("leaves the last successful OXR source clock intact after a future snapshot", async () => {
-    const { db, sqlite } = fixtures.open();
+    const { read, run } = oxrFixture();
     const first = Date.parse("2025-06-16T08:00:00Z");
     const second = Date.parse("2025-06-16T09:00:00Z");
     mockFetch([...fxMirrors({ openExchange: "omit" }), {
@@ -1047,16 +1054,15 @@ describe("syncFxRates", () => {
       }),
     }]);
     vi.setSystemTime(first);
-    await syncFxRates(db, undefined, "oxr-key");
+    await run();
     vi.setSystemTime(second);
-    const result = await syncFxRates(db, undefined, "oxr-key");
-    const read = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
+    const result = await run();
     expect(JSON.parse(result.metadata!).sources.openExchangeRates).toBe("unavailable");
-    expect(read.get("fx-oxr-last-success")?.value).toBe(String(first / 1000));
-    const meta = JSON.parse(String(read.get("fx-rates-meta")?.value));
+    expect(read("fx-oxr-last-success")?.value).toBe(String(first / 1000));
+    const meta = JSON.parse(String(read("fx-rates-meta")?.value));
     expect(meta.sourceLastSuccessAtBySource.openExchangeRates).toBe(first / 1000);
     expect(meta.observations.peggedEUR).toMatchObject({ observedAtSec: first / 1000, usdPerUnit: 1 / 0.925 });
-    expect(JSON.parse(String(read.get("cron:event:sync-fx-rates:openexchange-rates-observation-rejected")?.value)).metadata)
+    expect(JSON.parse(String(read("cron:event:sync-fx-rates:openexchange-rates-observation-rejected")?.value)).metadata)
       .toMatchObject({ reason: "timestamp-future", upstreamTimestamp: second / 1000 + 1 });
   });
 

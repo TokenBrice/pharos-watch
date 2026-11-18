@@ -35,7 +35,7 @@ vi.mock("@shared/lib/psi-historical-assets", () => ({
 
 import { snapshotSupply } from "../snapshot-supply";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
-import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   historicalSupplyQuantity, SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL, SUPPLY_HISTORY_MARKET_PRICE_SQL,
   type HistoricalSupplyQuantityRow,
@@ -47,6 +47,8 @@ const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
 const completionMarker = buildSupplySnapshotCompletionMarker;
 
 describe("snapshotSupply", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+
   beforeEach(() => {
     vi.useFakeTimers();
     publishNonUsdShareHistoryMock.mockReset().mockResolvedValue(undefined);
@@ -55,7 +57,20 @@ describe("snapshotSupply", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    fixtures.closeAll();
   });
+
+  function snapshotFixture() {
+    const { sqlite, db } = fixtures.open();
+    const put = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)");
+    return {
+      sqlite,
+      put: (at: number, overrides: Parameters<typeof makeSnapshotAsset>[0]) =>
+        put.run(JSON.stringify({ peggedAssets: [makeSnapshotAsset(overrides)] }), at),
+      snapshot: (nowSec: number, id = "usdt-tether") =>
+        snapshotSupply(db, undefined, { nowSec, requiredActiveIds: [id], snapshotEligibleIds: [id] }),
+    };
+  }
 
   it("reports a projection failure without claiming the already committed supply write failed", async () => {
     publishNonUsdShareHistoryMock.mockRejectedValueOnce(new Error("projection read failed"));
@@ -265,36 +280,26 @@ describe("snapshotSupply", () => {
   });
 
   it("reads back stock observed just before the midnight snapshot, subject to the consumption cutoff", async () => {
-    const { db, sqlite } = createLatestSchemaSqlite();
-    try {
-      const day = Math.floor(Date.now() / 86_400_000) * 86_400;
-      const now = day + 120;
-      const observedAt = day - 30;
-      const id = "usdt-tether";
-      sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('stablecoins',?,?)")
-        .run(JSON.stringify({ peggedAssets: [makeSnapshotAsset({ id, supplySource: "defillama", supplyObservedAt: observedAt,
-          circulating: { peggedUSD: 100.1 }, circulatingNative: 100, valuationPriceUsd: 1.001 })] }), now);
-      await snapshotSupply(db, undefined, { nowSec: now, requiredActiveIds: [id], snapshotEligibleIds: [id] });
-      const row = sqlite.prepare("SELECT * FROM supply_history WHERE stablecoin_id = ?").get(id) as unknown as NativeSupplyHistoryRow;
-      expect(readNativeSupplyCheckpoint(row, now)).toEqual({ quantity: 100, observedAt });
-      expect(readNativeSupplyCheckpoint(row, observedAt - 1)).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    const { sqlite, put, snapshot } = snapshotFixture();
+    const day = Math.floor(Date.now() / 86_400_000) * 86_400;
+    const now = day + 120;
+    const observedAt = day - 30;
+    put(now, { id: "usdt-tether", supplySource: "defillama", supplyObservedAt: observedAt,
+      circulating: { peggedUSD: 100.1 }, circulatingNative: 100, valuationPriceUsd: 1.001 });
+    await snapshot(now);
+    const row = sqlite.prepare("SELECT * FROM supply_history WHERE stablecoin_id = 'usdt-tether'").get() as unknown as NativeSupplyHistoryRow;
+    expect(readNativeSupplyCheckpoint(row, now)).toEqual({ quantity: 100, observedAt });
+    expect(readNativeSupplyCheckpoint(row, observedAt - 1)).toBeNull();
   });
 
   it("admits the program row before cutover and wrapper stock only after cutover", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const { sqlite, put, snapshot } = snapshotFixture();
     const nowSec = Math.floor(Date.now() / 1000);
     const nextDay = nowSec + 86_400;
     const id = "kau-kinesis";
-    const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-    const write = async (at: number, supplySource: string, cap: number, native: number) => {
-      putCache.run("stablecoins", JSON.stringify({ peggedAssets: [
-        makeSnapshotAsset({ id, symbol: "KAU", supplySource, supplyObservedAt: at - 30,
-          circulating: { peggedGOLD: cap }, circulatingNative: native }),
-      ] }), at);
-      return snapshotSupply(db, undefined, { nowSec: at, requiredActiveIds: [id], snapshotEligibleIds: [id] });
+    const write = (at: number, supplySource: string, cap: number, native: number) => {
+      put(at, { id, symbol: "KAU", supplySource, supplyObservedAt: at - 30, circulating: { peggedGOLD: cap }, circulatingNative: native });
+      return snapshot(at, id);
     };
     const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive");
     try {
@@ -307,7 +312,6 @@ describe("snapshotSupply", () => {
         .toEqual([{ circulating_usd: 1_000, circulating_native: null }, { circulating_usd: 100, circulating_native: 1 }]);
     } finally {
       cutover.mockRestore();
-      sqlite.close();
     }
   });
 
@@ -779,93 +783,74 @@ describe("snapshotSupply", () => {
   });
 
   it("protects the first legacy insert when its assessed stock refused a native quantity", () => {
-    const { sqlite } = createLatestSchemaSqlite();
-    try {
-      const day = Date.UTC(2025, 5, 15) / 1000;
-      const at = day + 720;
-      const id = "usdt-tether";
-      const publish = (native?: null) => sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
-        .run(JSON.stringify({ peggedAssets: [makeSnapshotAsset({ id, supplySource: "coingecko-fallback",
-          supplyObservedAt: at, circulatingNative: native })] }), at);
-      const insert = sqlite.prepare(`INSERT OR REPLACE INTO supply_history
-        (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance)
-        VALUES (?, ?, 100000000, 1, ?, ?)`);
-      const provenance = { supplySource: "coingecko-fallback", supplyObservedAt: at, supplyChainGuard: null };
-      const row = () => sqlite.prepare(`SELECT circulating_usd, price, price_observed_at,
-        circulating_usd / price AS legacy_native, json_extract(supply_provenance, '$.nativeQuantityUnavailable') AS refused,
-        ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS market_price, ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS market_clock
-        FROM supply_history`).get();
+    const { sqlite, put } = snapshotFixture();
+    const day = Date.UTC(2025, 5, 15) / 1000;
+    const at = day + 720;
+    const provenance = { supplySource: "coingecko-fallback", supplyObservedAt: at, supplyChainGuard: null };
+    const insert = sqlite.prepare(`INSERT OR REPLACE INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance)
+      VALUES ('usdt-tether', ?, 100000000, 1, ?, ?)`);
+    const row = sqlite.prepare(`SELECT circulating_usd, price, price_observed_at,
+      circulating_usd / price AS legacy_native, json_extract(supply_provenance, '$.nativeQuantityUnavailable') AS refused,
+      ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS market_price, ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS market_clock
+      FROM supply_history`);
+    const publish = (circulatingNative?: null) => {
+      put(at, { id: "usdt-tether", supplySource: provenance.supplySource, supplyObservedAt: at, circulatingNative });
+      insert.run(day, at, JSON.stringify(provenance));
+    };
 
-      publish();
-      insert.run(id, day, at, JSON.stringify(provenance));
-      expect(row()).toMatchObject({ legacy_native: 100_000_000 });
-
-      sqlite.exec("DELETE FROM supply_history");
-      publish(null);
-      insert.run(id, day, at, JSON.stringify(provenance));
-      expect(row()).toEqual({ circulating_usd: 100_000_000, price: null, price_observed_at: null, legacy_native: null,
-        refused: 1, market_price: 1, market_clock: at });
-    } finally {
-      sqlite.close();
-    }
+    publish();
+    expect(row.get()).toMatchObject({ legacy_native: 100_000_000 });
+    sqlite.exec("DELETE FROM supply_history");
+    publish(null);
+    expect(row.get()).toEqual({ circulating_usd: 100_000_000, price: null, price_observed_at: null, legacy_native: null,
+      refused: 1, market_price: 1, market_clock: at });
   });
 
   it("repairs the first late market quote without reopening the refused native quantity", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const firstAt = Date.now() / 1000;
-      const id = "usdt-tether";
-      const run = async (nowSec: number, price: number | null) => {
-        vi.setSystemTime(nowSec * 1000);
-        sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
-          .run(JSON.stringify({ peggedAssets: [makeSnapshotAsset({
-            id, price, priceSource: "kraken", priceObservedAt: nowSec - 15, priceObservedAtMode: "upstream",
-            circulating: { peggedUSD: 100_000_000 }, supplySource: "coingecko-fallback",
-            supplyObservedAt: nowSec - 60, circulatingNative: null,
-          })] }), nowSec);
-        return snapshotSupply(db, undefined, { nowSec, requiredActiveIds: [id], snapshotEligibleIds: [id] });
-      };
+    const { sqlite, put, snapshot } = snapshotFixture();
+    const firstAt = Date.now() / 1000;
+    const run = (nowSec: number, price: number | null) => {
+      vi.setSystemTime(nowSec * 1000);
+      put(nowSec, {
+        id: "usdt-tether", price, priceSource: "kraken", priceObservedAt: nowSec - 15, priceObservedAtMode: "upstream",
+        circulating: { peggedUSD: 100_000_000 }, supplySource: "coingecko-fallback",
+        supplyObservedAt: nowSec - 60, circulatingNative: null,
+      });
+      return snapshot(nowSec);
+    };
 
-      expect((await run(firstAt, null)).itemCount).toBe(1);
-      expect((await run(firstAt + 300, 0.98)).itemCount).toBe(1);
-      expect((await run(firstAt + 600, 1)).itemCount).toBe(0);
-      expect(sqlite.prepare(`SELECT price, price_observed_at, circulating_native, circulating_usd,
-        ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS market_price, ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS market_clock,
-        json_extract(supply_provenance, '$.supplyObservedAt') AS stock_clock FROM supply_history`).get())
-        .toEqual({ price: null, price_observed_at: null, circulating_native: null, circulating_usd: 100_000_000,
-          market_price: 0.98, market_clock: firstAt + 285, stock_clock: firstAt - 60 });
-    } finally {
-      sqlite.close();
-    }
+    expect((await run(firstAt, null)).itemCount).toBe(1);
+    expect((await run(firstAt + 300, 0.98)).itemCount).toBe(1);
+    expect((await run(firstAt + 600, 1)).itemCount).toBe(0);
+    expect(sqlite.prepare(`SELECT price, price_observed_at, circulating_native, circulating_usd,
+      ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS market_price, ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS market_clock,
+      json_extract(supply_provenance, '$.supplyObservedAt') AS stock_clock FROM supply_history`).get())
+      .toEqual({ price: null, price_observed_at: null, circulating_native: null, circulating_usd: 100_000_000,
+        market_price: 0.98, market_clock: firstAt + 285, stock_clock: firstAt - 60 });
   });
 
   it("keeps an independent market quote from reviving an explicitly unavailable historical quantity", async () => {
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const nowSec = Math.floor(Date.now() / 1000);
-      const observedAt = nowSec - 40;
-      const id = "usdt-tether";
-      const payload = { peggedAssets: [makeSnapshotAsset({
-        id, price: 1, priceSource: "kraken", priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-        circulating: { peggedUSD: 100_000_000 }, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
-        circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null,
-      })] };
-      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .run("stablecoins", JSON.stringify(payload), nowSec);
-      expect((await snapshotSupply(db, undefined, { nowSec, requiredActiveIds: [id], snapshotEligibleIds: [id] })).itemCount).toBe(1);
+    const { sqlite, put, snapshot } = snapshotFixture();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 40;
+    const id = "usdt-tether";
+    put(nowSec, {
+      id, price: 1, priceSource: "kraken", priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      circulating: { peggedUSD: 100_000_000 }, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+      circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null,
+    });
+    expect((await snapshot(nowSec)).itemCount).toBe(1);
 
-      // Replay main's same-day price repair against the row it would otherwise divide into native units.
-      expect(sqlite.prepare("UPDATE supply_history SET price = ?, price_observed_at = ? WHERE stablecoin_id = ? AND price IS NULL")
-        .run(1, observedAt, id).changes).toBe(0);
-      const row = sqlite.prepare("SELECT * FROM supply_history").get() as unknown as
-        HistoricalSupplyQuantityRow & { supply_provenance: string };
-      expect(row).toMatchObject({ circulating_usd: 100_000_000, price: null, price_observed_at: null });
-      const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
-      expect(provenance).toMatchObject({ nativeQuantityUnavailable: true, marketQuote: { price: 1, observedAt } });
-      expect(historicalSupplyQuantity(id, "peggedUSD", row, provenance, nowSec + 86_400)).toBeNull();
-    } finally {
-      sqlite.close();
-    }
+    // Replay main's same-day price repair against the row it would otherwise divide into native units.
+    expect(sqlite.prepare("UPDATE supply_history SET price = ?, price_observed_at = ? WHERE stablecoin_id = ? AND price IS NULL")
+      .run(1, observedAt, id).changes).toBe(0);
+    const row = sqlite.prepare("SELECT * FROM supply_history").get() as unknown as
+      HistoricalSupplyQuantityRow & { supply_provenance: string };
+    expect(row).toMatchObject({ circulating_usd: 100_000_000, price: null, price_observed_at: null });
+    const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
+    expect(provenance).toMatchObject({ nativeQuantityUnavailable: true, marketQuote: { price: 1, observedAt } });
+    expect(historicalSupplyQuantity(id, "peggedUSD", row, provenance, nowSec + 86_400)).toBeNull();
   });
 
   it("persists validated supply provenance with the numeric partial remainder (K-031)", async () => {

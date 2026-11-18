@@ -1,5 +1,5 @@
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";

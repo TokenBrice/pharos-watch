@@ -105,23 +105,32 @@ it.each([config, MINT_BURN_CONFIGS.find((c) => c.stablecoinId === "usdai-usd-ai"
   expect(reread.windows.find((w) => w.days === 7)?.reason).toBe("daily-checkpoint-chain-broken");
   expect(reread.latest?.configFingerprint).toBeUndefined();
 });
+async function setupRetainedDay() {
+  const fixture = await setup();
+  fixture.input.now = start + day + 3600;
+  const { sqlite } = fixture;
+  const stored = () => String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation").get()!.receipt_json);
+  const receipt = () => JSON.parse(stored()) as Receipt;
+  const reviewEvent = (id: string, direction: "mint" | "burn", amount: string) => sqlite.prepare(`INSERT INTO mint_burn_events
+    (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, flow_type, burn_type, burn_review_reason,
+      tx_hash, block_number, timestamp, explorer_tx_url)
+    SELECT ?, stablecoin_id, symbol, chain_id, ?, 1, ?, flow_type, 'review_required', 'proof-missing',
+      tx_hash, block_number, timestamp, explorer_tx_url FROM mint_burn_events WHERE id = '0'`).run(id, direction, amount);
+  return { ...fixture, stored, receipt, reviewEvent };
+}
+
 it.each([[false, null], [false, 1.01], [true, 1.01]] as const)("supersedes a retained day (old fingerprint: %s, prior price: %s)", async (oldFingerprint, priorPrice) => {
-  const { db, sqlite, input } = await setup();
-  input.now = start + day + 3600;
+  const { db, sqlite, input, receipt, reviewEvent } = await setupRetainedDay();
   const key = mintBurnConfigKey(config);
-  const stored = () => JSON.parse(String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation").get()!.receipt_json));
-  sqlite.exec(`UPDATE mint_burn_events SET amount_raw = '110' WHERE id = '0';
-    INSERT INTO mint_burn_events (id, stablecoin_id, symbol, chain_id, direction, amount, amount_raw, flow_type,
-      burn_type, burn_review_reason, tx_hash, block_number, timestamp, explorer_tx_url)
-    SELECT 'burn', stablecoin_id, symbol, chain_id, 'burn', 1, '100', flow_type,
-      'review_required', 'proof-missing', tx_hash, block_number, timestamp, explorer_tx_url FROM mint_burn_events WHERE id = '0'`);
+  sqlite.exec("UPDATE mint_burn_events SET amount_raw = '110' WHERE id = '0'");
+  reviewEvent("burn", "burn", "100");
   if (priorPrice != null) input.priceContext.priceHistory.set(config.stablecoinId,
     [{ snapshotDate: start + day, observedAt: input.now, price: priorPrice }]);
   await runMintBurnSupplyReconciliation(input);
-  expect(stored()).toMatchObject({ status: "review-suppression", priceUsd: priorPrice });
+  expect(receipt()).toMatchObject({ status: "review-suppression", priceUsd: priorPrice });
   if (oldFingerprint) sqlite.exec(`UPDATE mint_burn_supply_reconciliation
     SET receipt_json = json_set(receipt_json, '$.configFingerprint', 'before-replay')`);
-  const original = stored();
+  const original = receipt();
   const leg = () => readMintBurnSupplyReconciliation(db, [config], input.now).then((legs) => legs.get(key));
   expect((await leg())?.status).toBe(oldFingerprint ? "unavailable" : "review-suppression");
 
@@ -129,43 +138,38 @@ it.each([[false, null], [false, 1.01], [true, 1.01]] as const)("supersedes a ret
   sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, 'ethereum', ?)").run(config.stablecoinId, start);
   input.now += 1800;
   await runMintBurnSupplyReconciliation(input);
-  expect(stored()).toEqual(original);
+  expect(receipt()).toEqual(original);
   sqlite.exec("DELETE FROM mint_burn_dirty_hours");
   input.now += 1800;
   input.priceContext.priceHistory.set(config.stablecoinId, [{ snapshotDate: start + day, observedAt: input.now, price: 1 }]);
   await runMintBurnSupplyReconciliation(input);
-  expect(stored()).toMatchObject({ status: "ok", checkedAt: input.now, supersededReceipts: [original],
+  expect(receipt()).toMatchObject({ status: "ok", checkedAt: input.now, supersededReceipts: [original],
     priceUsd: oldFingerprint ? 1 : priorPrice ?? 1, classes: { counted: { mintRaw: "110", burnRaw: "100", eventCount: 2 } } });
   expect(await leg()).toMatchObject({ status: "ok", activeFindings: [] });
   expect((await leg())?.latest).not.toHaveProperty("supersededReceipts");
   vi.clearAllMocks();
-  const replacement = stored();
+  const replacement = receipt();
   await runMintBurnSupplyReconciliation({ ...input, now: input.now + 1800 });
-  expect(stored()).toEqual(replacement);
+  expect(receipt()).toEqual(replacement);
   expect(fetchEvmBlockHeader).not.toHaveBeenCalled();
 });
 it("retains an unpriced residual until a repaired day with small review volume can be valued", async () => {
-  const { db, sqlite, input } = await setup();
-  input.now = start + day + 3600;
-  const stored = () => JSON.parse(String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation").get()!.receipt_json));
+  const { db, sqlite, input, receipt, reviewEvent } = await setupRetainedDay();
   sqlite.exec("UPDATE mint_burn_events SET amount_raw = '20' WHERE id = '0'");
   await runMintBurnSupplyReconciliation(input);
-  const original = stored();
+  const original = receipt();
   expect(original).toMatchObject({ status: "unexplained-residual", priceUsd: null });
 
-  sqlite.exec(`UPDATE mint_burn_events SET amount_raw = '9' WHERE id = '0';
-    INSERT INTO mint_burn_events (id,stablecoin_id,symbol,chain_id,direction,amount,amount_raw,flow_type,
-      burn_type,burn_review_reason,tx_hash,block_number,timestamp,explorer_tx_url)
-    SELECT 'review',stablecoin_id,symbol,chain_id,'mint',1,'1','standard','review_required','proof-missing',
-      tx_hash,block_number,timestamp,explorer_tx_url FROM mint_burn_events WHERE id = '0'`);
+  sqlite.exec("UPDATE mint_burn_events SET amount_raw = '9' WHERE id = '0'");
+  reviewEvent("review", "mint", "1");
   input.now += 1800;
   expect((await runMintBurnSupplyReconciliation(input)).processed).toBe(0);
-  expect(stored()).toEqual(original);
+  expect(receipt()).toEqual(original);
 
   input.now += 1800;
   input.priceContext.priceHistory.set(config.stablecoinId, [{ snapshotDate: start + day, observedAt: input.now, price: 1 }]);
   expect((await runMintBurnSupplyReconciliation(input)).processed).toBe(1);
-  expect(stored()).toMatchObject({ status: "ok", priceUsd: 1, residualRaw: "0", supersededReceipts: [original],
+  expect(receipt()).toMatchObject({ status: "ok", priceUsd: 1, residualRaw: "0", supersededReceipts: [original],
     classes: { review: { mintRaw: "1", eventCount: 1 } } });
   const leg = (await readMintBurnSupplyReconciliation(db, [config], input.now)).get(mintBurnConfigKey(config));
   expect(leg?.activeFindings).toEqual([]);
@@ -186,9 +190,7 @@ it("rechecks a settled day even when an earlier unavailable day keeps retrying",
   });
 });
 it.each(["ledger", "receipt"])("keeps the settled receipt when the %s races a replacement", async (race) => {
-  const { sqlite, input } = await setup();
-  input.now = start + day + 3600;
-  const stored = () => String(sqlite.prepare("SELECT receipt_json FROM mint_burn_supply_reconciliation").get()!.receipt_json);
+  const { sqlite, input, stored } = await setupRetainedDay();
   await runMintBurnSupplyReconciliation(input);
   let expected = stored();
   sqlite.exec("UPDATE mint_burn_events SET flow_type = 'protocol_internal' WHERE id = '0'");

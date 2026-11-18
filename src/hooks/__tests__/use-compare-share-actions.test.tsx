@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { useCompareShareActions } from "../use-compare-share-actions";
@@ -103,12 +103,21 @@ describe("useCompareShareActions", () => {
     expect(coins.find((coin) => coin.symbol === "DAI")?.weeklyChange).toBe("+25.00%");
   });
 
+  async function renderSharedCoin(coin: ComparisonCoinEntry) {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL: vi.fn() });
+    const { result } = renderHook(() => useCompareShareActions({
+      comparisonCoins: [coin, makeCoin("usdt-tether", "USDT")],
+      logos: {}, radarCards: [], axisOrder: [], axisLabels: {}, asOfUpdatedAt: null,
+    }));
+    await act(async () => result.current.handleDownload());
+    return shareImageMocks.renderCompareShareImage.mock.calls.at(-1)?.[0][0];
+  }
+
   it.each([
     ["idrx-idrx", "IDRX", "IDR", "peggedIDR", 0.0000551640254, false, "$0.00005516"],
     ["eutbl-spiko", "EUTBL", "EUR", "peggedEUR", 1.21, true, "$1.2100"],
   ] as const)("keeps the %s quote in USD when conversion evidence is unavailable", async (id, symbol, currency, pegType, price, navToken, expected) => {
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL: vi.fn() });
     const coin = makeCoin(id, symbol);
     coin.meta.flags.pegCurrency = currency;
     coin.meta.flags.navToken = navToken;
@@ -119,19 +128,10 @@ describe("useCompareShareActions", () => {
         }])
       : undefined;
     coin.data = { ...coin.data, pegType, price, priceSource: "coingecko", priceObservedAt: FX_REOPEN_QUOTE_AT };
-    const { result } = renderHook(() => useCompareShareActions({
-      comparisonCoins: [coin, makeCoin("usdt-tether", "USDT")],
-      logos: {}, radarCards: [], axisOrder: [], axisLabels: {}, asOfUpdatedAt: null,
-    }));
-    await act(async () => result.current.handleDownload());
-    expect(shareImageMocks.renderCompareShareImage.mock.calls.at(-1)?.[0][0]).toMatchObject({
-      symbol, price: expected,
-    });
+    expect(await renderSharedCoin(coin)).toMatchObject({ symbol, price: expected });
   });
 
   it("uses the quote-matched rejection for a fixed-peg share price", async () => {
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL: vi.fn() });
     const coin = makeCoin("eurc-circle", "EURC");
     const rejected = makeFxCurrentPeg("stale-reference", null);
     coin.meta.flags.pegCurrency = "EUR";
@@ -139,11 +139,6 @@ describe("useCompareShareActions", () => {
       priceObservedAt: FX_REOPEN_QUOTE_AT,
       currentPeg: { ...rejected, referenceAdmission: undefined, admittedDeviationBps: undefined } };
     coin.pegDetails = { ...makePegSummaryCoin({ id: coin.id, price: 1.122, priceObservedAt: FX_REOPEN_QUOTE_AT }), ...rejected };
-    const { result } = renderHook(() => useCompareShareActions({
-      comparisonCoins: [coin, makeCoin("usdt-tether", "USDT")],
-      logos: {}, radarCards: [], axisOrder: [], axisLabels: {}, asOfUpdatedAt: null,
-    }));
-    await act(async () => result.current.handleDownload());
-    expect(shareImageMocks.renderCompareShareImage.mock.calls.at(-1)?.[0][0]).toMatchObject({ symbol: "EURC", price: "$1.1220" });
+    expect(await renderSharedCoin(coin)).toMatchObject({ symbol: "EURC", price: "$1.1220" });
   });
 });

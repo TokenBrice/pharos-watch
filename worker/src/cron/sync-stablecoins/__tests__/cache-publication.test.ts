@@ -34,6 +34,15 @@ async function readCompanion(db: D1Database) {
   return JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
 }
 
+async function readCompanionList(db: D1Database) {
+  return StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+}
+
+function legacyFxAsset(at: number, price: number, id = "eurc-circle", pegType = "peggedEUR") {
+  return makePeggedAsset({ id, pegType, pegMechanism: "fiat-backed", price, priceSource: "coingecko",
+    priceObservedAt: at, priceObservedAtMode: "upstream", circulating: { [pegType]: 1e8 }, chainCirculating: {}, chains: [] });
+}
+
 function publish(input: ValidateAndCacheInput, blocked = () => ({ metadata: "blocked" })) {
   return validateAndWriteStablecoinsCache(input, blocked);
 }
@@ -63,10 +72,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     for (let interval = 0; interval <= 8; interval++) {
       const at = start + interval * 900;
       clock.mockReturnValue(at * 1000);
-      const asset = makePeggedAsset({ id: "eurc-circle", pegType: "peggedEUR", pegMechanism: "fiat-backed",
-        price: 1.1, priceSource: "coingecko", priceObservedAt: at, priceObservedAtMode: "upstream",
-        circulating: { peggedEUR: 100_000_000 }, chainCirculating: {}, chains: [] });
-      expect(await publish({ db, syncStartSec: at, validationContext: "main", assets: [asset],
+      expect(await publish({ db, syncStartSec: at, validationContext: "main", assets: [legacyFxAsset(at, 1.1)],
         fxReferenceObservations: {} })).toMatchObject({ written: true });
     }
     const served = JSON.parse((await readCompanion(db)).body);
@@ -90,11 +96,8 @@ describe("validateAndWriteStablecoinsCache", () => {
       }
       const selection = await loadFreshFxRates(db);
       expect(selection).not.toHaveProperty("fxReferenceObservations");
-      const asset = makePeggedAsset({ id: "eurc-circle", pegType: "peggedEUR", pegMechanism: "fiat-backed",
-        price: 1.122, priceSource: "coingecko", priceObservedAt: at - 60, priceObservedAtMode: "upstream",
-        circulating: { peggedEUR: 1e8 }, chainCirculating: {}, chains: [] });
-      const brz = { ...asset, id: "brz-transfero", pegType: "peggedREAL", price: 0.2, circulating: { peggedREAL: 1e8 } };
-      expect(await publish({ db, ...selection, assets: [asset, brz], validationContext: "main", syncStartSec: at,
+      const assets = [legacyFxAsset(at - 60, 1.122), legacyFxAsset(at - 60, 0.2, "brz-transfero", "peggedREAL")];
+      expect(await publish({ db, ...selection, assets, validationContext: "main", syncStartSec: at,
         publishFxReferenceEvidence: i === 9 })).toMatchObject({ written: true });
     }
     const served = JSON.parse((await readCompanion(db)).body);
@@ -122,15 +125,13 @@ describe("validateAndWriteStablecoinsCache", () => {
         state.enforcePublicationOrder();
         await persistFxRateState(db, state.usableRates, state.buildPersistedMeta(), at);
       }
-      const asset = makePeggedAsset({ id: "eurc-circle", pegType: "peggedEUR", pegMechanism: "fiat-backed", price: 1.122,
-        priceSource: "coingecko", priceObservedAt: at - 60, priceObservedAtMode: "upstream",
-        circulating: { peggedEUR: 1e8 }, chainCirculating: {}, chains: [] });
+      const asset = legacyFxAsset(at - 60, 1.122);
       const selection = await loadFreshFxRates(db);
       expect(selection.fxReferenceObservations).toHaveProperty("peggedGBP");
       expect(await publish({ db, ...selection, assets: [asset], validationContext: "main", syncStartSec: at,
         publishFxReferenceEvidence: interval === 9 })).toMatchObject({ written: true });
       if (interval < 8) continue;
-      const served = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+      const served = await readCompanionList(db);
       expect(served.peggedAssets[0].currentPeg?.currentDeviationBps).toBe(200);
       const summary = await handlePegSummary(db);
       expect(summary.status).toBe(200);
@@ -163,7 +164,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     });
     expect(await publish({ db, ...await loadFreshFxRates(db), assets, validationContext: "main",
       syncStartSec: at, publishFxReferenceEvidence: true })).toMatchObject({ written: true });
-    const served = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+    const served = await readCompanionList(db);
     expect(served.peggedAssets[0].currentPeg).toMatchObject({ legacyFxReference: true, currentDeviationBps: 0,
       pegReference: { source: "median", valueUsd: 4165.60, asOf: at } });
     expect(await (await handlePegSummary(db)).json()).toMatchObject({
@@ -182,11 +183,10 @@ describe("validateAndWriteStablecoinsCache", () => {
     for (let i = 0; i <= 9; i++) {
       const at = start + i * 900;
       clock.mockReturnValue(at * 1000);
-      const assets = ["eurc-circle", "eure-monerium", "eurcv-societe-generale-forge", "eurs-stasis"].map((id, j) =>
-        makePeggedAsset({ id, pegType: "peggedEUR", pegMechanism: "fiat-backed", price: j === 0 ? 1.122 : 1.1,
-          priceSource: "coingecko", priceObservedAt: i === 9 && j === 3 ? undefined : at - 60,
-          priceUpdatedAt: at - 60, priceObservedAtMode: "upstream",
-          circulating: { peggedEUR: 1e8 }, chainCirculating: {}, chains: [] }));
+      const assets = ["eurc-circle", "eure-monerium", "eurcv-societe-generale-forge", "eurs-stasis"].map((id, j) => ({
+        ...legacyFxAsset(at - 60, j === 0 ? 1.122 : 1.1, id),
+        priceObservedAt: i === 9 && j === 3 ? undefined : at - 60, priceUpdatedAt: at - 60,
+      }));
       expect(await publish({ db, assets, validationContext: "main", syncStartSec: at })).toMatchObject({ written: true });
       if (i === 8) {
         const current = JSON.parse((await readCompanion(db)).body).peggedAssets[0].currentPeg;
@@ -260,7 +260,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     }
     const undated = { ...asset, priceObservedAt: null, priceUpdatedAt: now - 60 };
     await publish({ ...input, assets: [undated], fxReferenceObservations: { [fx.pegKey]: fx } });
-    const fromPages = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+    const fromPages = await readCompanionList(db);
     expect(fromPages.peggedAssets[0]).toMatchObject({ priceObservedAt: null, currentPeg: {
       referenceAdmission: { reason: "quote-clock-unavailable", quoteObservedAtSec: null }, admittedDeviationBps: null,
     } });
@@ -284,7 +284,7 @@ describe("validateAndWriteStablecoinsCache", () => {
       priceObservedAt: now, priceObservedAtMode: "upstream", priceSource: "coingecko", circulating: { peggedSILVER: 2_000_000 }, chainCirculating: {}, chains: [] });
     const input = { db, assets: [asset], validationContext: "main" as const, syncStartSec: now, fxFallbackRates: { peggedSILVER: 30 } };
     await publish(input);
-    let coin = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body)).peggedAssets[0];
+    let [coin] = (await readCompanionList(db)).peggedAssets;
     expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
     expect(coin.commodityEntitlement).toEqual({ ozPerToken, observedAtSec: now - 120, source: "matrixdock-frs", generation: "ethereum:100", quoteObservedAtSec: now });
     expect(coin.currentPeg?.currentDeviationBps).toBe(0);
@@ -295,7 +295,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     ]), summary: { totalTracked: 1, coinsAtPeg: 1 } });
     sqlite.prepare("UPDATE reserve_sync_state SET last_success_attempt_id = 'different'").run();
     await publish(input);
-    coin = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body)).peggedAssets[0];
+    [coin] = (await readCompanionList(db)).peggedAssets;
     expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
     expect(coin.commodityEntitlement).toBeUndefined();
     expect(coin.currentPeg?.currentDeviationBps).toBeNull();

@@ -210,23 +210,22 @@ describe("P4 route observation persistence envelope", () => {
     const poolKey = canonicalExitRouteScopedKey(previous.scope.chain, previous.scope.contractOrPoolId);
     const rejectedQuoteHistory = { stablecoinId: input, rejectedAssetIds: new Set<string>(),
       poolReasons: new Map([[poolKey, DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE]]) };
+    const closedAt = Date.parse(closed) / 1000;
+    const reopenedAt = Date.parse(reopened) / 1000;
+    const hold = (raw: string, evidence = valuation, at = closedAt) =>
+      selectStillFreshDexRouteSetHold(candidate, raw, at, undefined, evidence);
     for (const raw of [encodeCurrentRouteSet(details), JSON.stringify(details)]) {
-      const held = selectStillFreshDexRouteSetHold(candidate, raw, Date.parse(closed) / 1000, undefined, valuation);
-      expect(held?.observations).toEqual([previous]);
-      expect(selectStillFreshDexRouteSetHold(candidate, raw, Date.parse(closed) / 1000, undefined, rejectedQuoteHistory)?.observations)
-        .toEqual([previous]);
-      expect(selectStillFreshDexRouteSetHold(candidate, raw, Date.parse(closed) / 1000, undefined, {
-        ...valuation, rejectedAssetIds: new Set(["tgbp-token"]),
-      })).toBeNull();
-      expect(selectStillFreshDexRouteSetHold(candidate, raw, Date.parse(reopened) / 1000, undefined, valuation)).toBeNull();
+      expect(hold(raw)?.observations).toEqual([previous]);
+      expect(hold(raw, rejectedQuoteHistory)?.observations).toEqual([previous]);
+      expect(hold(raw, { ...valuation, rejectedAssetIds: new Set(["tgbp-token"]) })).toBeNull();
+      expect(hold(raw, valuation, reopenedAt)).toBeNull();
     }
     for (const policy of [null, 0, 2, "1"]) {
-      const raw = JSON.stringify({ ...details, exitRouteAdmissionPolicyVersion: policy });
-      expect(selectStillFreshDexRouteSetHold(candidate, raw, Date.parse(closed) / 1000, undefined, valuation)).toBeNull();
+      expect(hold(JSON.stringify({ ...details, exitRouteAdmissionPolicyVersion: policy }))).toBeNull();
     }
     const expiredBeforeClosure = encodeCurrentRouteSet({ ...details,
       exitRouteObservations: [{ ...previous, observedAt: previous.observedAt - 86_400 }] });
-    expect(selectStillFreshDexRouteSetHold(candidate, expiredBeforeClosure, Date.parse(closed) / 1000, undefined, valuation)).toBeNull();
+    expect(hold(expiredBeforeClosure)).toBeNull();
   });
 
   it("keeps current routes ahead of individually eligible closure carries and counts the published observations", () => {

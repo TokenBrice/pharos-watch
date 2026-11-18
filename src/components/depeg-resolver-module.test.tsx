@@ -15,7 +15,7 @@ import {
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "./depeg-resolver-test-support";
 

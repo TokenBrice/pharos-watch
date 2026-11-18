@@ -52,6 +52,22 @@ function challengerPools(count: number): PoolEntry[] {
   }));
 }
 
+function challengerCounterparty(source: string, priceUsd: number, observedAtSec = SNAPSHOT - 60) {
+  return { stablecoinId: "usdc-circle", source, priceUsd, observedAtSec };
+}
+
+function lineagePoolId(index: number) {
+  return `ethereum:0x${String(index + 1).repeat(40)}`;
+}
+
+function setChallengerFallback(
+  sqlite: ReturnType<typeof seedPublishedDexGeneration>["sqlite"], topPools: string, challengerJson: string | null = null,
+) {
+  sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = ? WHERE stablecoin_id = ?")
+    .run(topPools, challengerJson, COIN);
+  sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+}
+
 describe("challenger publish", () => {
   it("bounds cross-source quote support before admission, dedupe, ranking and storage", () => {
     const crossSource = {
@@ -166,13 +182,11 @@ describe("challenger publish", () => {
     const coin = "usg-tangent";
     const [first, duplicate, independent, legacy] = challengerPools(4).map((pool, index): PoolEntry => ({
       ...pool,
-      poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+      poolId: lineagePoolId(index),
       project: ["uniswap-v3", "balancer", "curve", "sushiswap"][index]!,
       price: 0.92,
-      ...(index < 3 && { source: "direct_api", priceCounterparty: {
-        stablecoinId: "usdc-circle", source: index === 2 ? "binance" : "kraken",
-        priceUsd: 0.92, observedAtSec: SNAPSHOT - 30,
-      } }),
+      ...(index < 3 && { source: "direct_api",
+        priceCounterparty: challengerCounterparty(index === 2 ? "binance" : "kraken", 0.92, SNAPSHOT - 30) }),
     }));
     first!.priceObservedAt = SNAPSHOT - 30;
     duplicate!.tvlUsd = 1_000_000;
@@ -207,9 +221,9 @@ describe("challenger publish", () => {
   it("exposes a complete $6M receipt only to lineage-aware readers and excludes incomplete evidence", async () => {
     const { db, sqlite, generationId } = seedPublishedDexGeneration();
     const pools = ["bitstamp+coingecko", "bitstamp+kraken"].map((source, index): PoolEntry => ({
-      ...challengerPools(1)[0]!, chain: "ethereum", poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+      ...challengerPools(1)[0]!, chain: "ethereum", poolId: lineagePoolId(index),
       project: "uniswap-v3", price: 0.98, source: "direct_api", tvlUsd: 6_000_000,
-      priceCounterparty: { stablecoinId: "usdc-circle", source, priceUsd: 0.98, observedAtSec: SNAPSHOT - 60 },
+      priceCounterparty: challengerCounterparty(source, 0.98),
     }));
     try {
       await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools));
@@ -222,9 +236,7 @@ describe("challenger publish", () => {
       const challengerJson = buildStoredChallengerPoolsJson(COIN, pools, 20_000, SNAPSHOT)!;
       expect(JSON.parse(challengerJson)).toEqual([expect.objectContaining({ lineagePriceUsd: 0.98 })]);
       expect(JSON.parse(challengerJson)[0]).not.toHaveProperty("priceUsd");
-      sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = ? WHERE stablecoin_id = ?")
-        .run(topPools, challengerJson, COIN);
-      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+      setChallengerFallback(sqlite, topPools, challengerJson);
       expect(await loadedPools(db)).toEqual([pools[1]!.poolId]);
     } finally { sqlite.close(); }
   });
@@ -234,10 +246,10 @@ describe("challenger publish", () => {
     const pools = ["kraken", "binance", "kraken+binance"].map((source, index): PoolEntry => {
       const at = SNAPSHOT - (index === 2 ? 90 * 60 : 12);
       return {
-        ...challengerPools(1)[0]!, chain: "ethereum", poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+        ...challengerPools(1)[0]!, chain: "ethereum", poolId: lineagePoolId(index),
         project: ["uniswap-v3", "balancer", "curve"][index]!, source: "direct_api",
         price: 0.92, tvlUsd: 1_000_000, priceObservedAt: at,
-        priceCounterparty: { stablecoinId: "usdc-circle", source, priceUsd: 0.92, observedAtSec: at },
+        priceCounterparty: challengerCounterparty(source, 0.92, at),
       };
     });
     try {
@@ -245,9 +257,7 @@ describe("challenger publish", () => {
       await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools));
       expect(await loadedPools(db)).toEqual(expected);
       const topPools = buildStoredTopPoolsJson(COIN, pools, SNAPSHOT);
-      sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = NULL WHERE stablecoin_id = ?")
-        .run(topPools, COIN);
-      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+      setChallengerFallback(sqlite, topPools);
       expect(await loadedPools(db)).toEqual(expected);
       expect(normalizeTopPools(topPools).map(({ price }) => price)).toEqual([0.92, 0.92, 0.92]);
     } finally { sqlite.close(); }
@@ -258,11 +268,9 @@ describe("challenger publish", () => {
     const pool = { ...challengerPools(1)[0]!, tvlUsd: 6_000_000, price: 0.92 };
     try {
       await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, []));
-      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
       for (const support of [60_000, 200_000]) {
         const topPools = buildStoredTopPoolsJson(COIN, [{ ...pool, priceEvidenceTvlUsd: support }], SNAPSHOT);
-        sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = NULL WHERE stablecoin_id = ?")
-          .run(topPools, COIN);
+        setChallengerFallback(sqlite, topPools);
         expect(JSON.parse(topPools)[0]).not.toHaveProperty("price");
         expect(normalizeTopPools(topPools)[0]).toMatchObject({ price: 0.92, tvlUsd: 6_000_000 });
         const actual = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, 1_000, SNAPSHOT + 100);
@@ -277,15 +285,11 @@ describe("challenger publish", () => {
       try {
         if (mode === "pre-migration") sqlite.exec("ALTER TABLE dex_price_challenger_payloads_v2 DROP COLUMN price_lineage_json");
         const pool: PoolEntry = {
-          ...challengerPools(1)[0]!, poolId: "ethereum:0x1111111111111111111111111111111111111111",
-          source: "direct_api", priceCounterparty: { stablecoinId: "usdc-circle", priceUsd: 1,
-            source: "bitstamp", observedAtSec: SNAPSHOT - 60 },
+          ...challengerPools(1)[0]!, poolId: lineagePoolId(0),
+          source: "direct_api", priceCounterparty: challengerCounterparty("bitstamp", 1),
         };
         const independentCoin = "eurc-circle";
-        await publishDexPriceChallengerSnapshots(db, {
-          ...publicationInput(generationId),
-          retainedPoolsByStablecoin: new Map([[independentCoin, [pool]]]),
-        });
+        await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, [pool], SNAPSHOT, independentCoin));
         if (mode === "old writer") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = NULL, price_usd = 1");
         if (mode === "invalid receipt") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = 'garbage'");
         if (mode === "empty envelope") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = '{}'");
