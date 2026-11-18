@@ -685,3 +685,14 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^mantra-chain-halt-2026-08-20$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/operational-resilience-overlays-v1\.json$''']
+# The frozen legacy-OG redirect table maps retired /api/og ids to public /og/v2/
+# image hashes. Ids containing "token", "secret" or "key" (tgbp-tokenised,
+# chain/secret, krusdc-keyrock) trip generic-api-key on the SHA-256 that follows.
+# Match only a 64-hex hash, only in that file.
+[[allowlists]]
+description = "Public social-preview image hashes in the frozen legacy OG redirect table are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']
+paths = ['''(?:^|/)worker/src/api/og-legacy-redirects\.json$''']
