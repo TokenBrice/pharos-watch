@@ -2,8 +2,8 @@
   {
     "version": "10.46",
     "title": "Clocked peg evidence and independent discount caps",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "Safety uses clocked peg and settlement evidence, gives admitted off-peg coverage its measured duration and can apply an audited active discount cap before historical peg scoring is eligible.",
     "impact": [
       "The deeper eligible child or parent discount can bind a wrapper grade. Quiet history begins after the last affected instant, and operational recoveries use a separate grade-history comparison baseline.",

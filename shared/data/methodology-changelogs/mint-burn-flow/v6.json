@@ -2,8 +2,8 @@
   {
     "version": "6.47",
     "title": "Receipt-proven flows and holder pressure",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "USDT native issuance movement remains visible. USDT holder pressure is withheld pending treasury-boundary evidence, and the composite reweights across eligible coins.",
     "impact": [
       "Ethereum MUSD remains diagnostic for issuer flows. Proven USDz bridge legs and OUSD trustee-fee mints are excluded from holder flow.",

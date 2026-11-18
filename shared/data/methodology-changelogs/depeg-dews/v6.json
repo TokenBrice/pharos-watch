@@ -2,8 +2,8 @@
   {
     "version": "6.50",
     "title": "Admitted depeg observations and stress inputs",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "Detection evaluates the quote and its reference together during market closures. New peer-relative events require a supported rollback Worker that recognizes their basis. Historical events and stress inputs distinguish observed evidence, retained evidence and unavailable coverage.",
     "impact": [
       "Daily fixings support detection only above the applicable currency and age band. A fresh move of at least 25% can enter detection during a closure against an eligible closing reference. A shifted cohort blocks that comparison. Gold and silver use a peer median at quorum. Pending persistence and expiry start at first detection, with original quote clocks also governing confirmation.",

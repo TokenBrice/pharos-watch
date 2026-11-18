@@ -2,8 +2,8 @@
   {
     "version": "6.85",
     "title": "Clocked references and independent market prices",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "FX and commodity references retain the original observation, source and cadence. Public FX evidence is off by default. Current peg comparisons use the existing peg reference until a publication includes an admission verdict. Pricing and supply valuation keep source clocks and units attached to their own evidence.",
     "impact": [
       "Open Exchange Rates reserves one poll per open FX hour. Date-only fixings and intraday observations have distinct provenance and admission rules.",

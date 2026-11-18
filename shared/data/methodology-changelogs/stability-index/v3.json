@@ -2,8 +2,8 @@
   {
     "version": "3.70",
     "title": "Admitted event coverage and dated index inputs",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "Public FX evidence ships off by default. On a clocked publication PSI uses the event's admitted quote and reference, preserving a prior admitted contribution during a hold when comparable event history exists. DEWS stress breadth excludes only coins with a depeg contribution at the sample time.",
     "impact": [
       "Historical calculation uses date-effective core membership, exact seven-day pairs with no explicitly partial endpoint, and admitted event intervals. Severe legacy closure openings can use dated benchmark evidence. A dated market quote remains available when its native quantity is unavailable.",

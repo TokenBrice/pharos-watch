@@ -2,8 +2,8 @@
   {
     "version": "8.56",
     "title": "Cadence-aware yield and comparable benchmarks",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "Selected sources age on their own cadence, and benchmark comparisons use comparable annual-rate conventions and product-specific inputs. Gold-denominated returns remain visible without USD excess or PYS.",
     "impact": [
       "USDY starts a new canonical wrapper history. USYC follows the issuer business calendar, deduplicates repeated reports and retains original observation clocks.",

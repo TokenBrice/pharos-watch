@@ -2,8 +2,8 @@
   {
     "version": "4.63",
     "title": "Active balances after Ethereum USDT wipes",
-    "date": "2026-11-18",
-    "effectiveAt": 1795040700,
+    "date": "2026-11-19",
+    "effectiveAt": 1795053600,
     "summary": "A blocked Ethereum USDT address remains eligible for dated balance refresh after a wipe. Historical destruction and active balances use their own evidence.",
     "impact": [
       "Finalized balance observations age independently of the historical ledger. Editorial rollups disclose incomplete window coverage and unavailable exact USD totals."
