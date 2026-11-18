@@ -649,7 +649,7 @@ function coinCard(coin: StablecoinMeta): SocialCardSpec {
     return dossier({
       label: "Stablecoin Cemetery", lifecycle: "historical", stamp: "HISTORICAL RECORD",
       hook: mustFit(`epitaph for ${coin.id}`, B.dossier.hook, epitaph, `${cause} in ${died}`),
-      chips: chips(`Died ${died}`, fit(B.dossier.chip, cause) ?? mechanismChip(coin)), lines: nameLines(coin, false),
+      chips: chips(`Died ${died}`, fit(B.dossier.chip, cause, CAUSE_META[obituary.causeOfDeath].shortLabel) ?? mechanismChip(coin)), lines: nameLines(coin, false),
       title: [`${coinTitle(coin)}: ${epitaph}`, `${coinShort(coin)}: ${epitaph}`],
       description: clip(B.copy.description, `${opening} Cause of death: ${inProse(cause)}, ${died}.`, opening,
         `${coinTitle(coin)} died in ${died} (${inProse(cause)}). ${sentence(epitaph)}`),
