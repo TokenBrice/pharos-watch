@@ -1,4 +1,31 @@
 import type { DepegDirection } from "../types/peg";
+import type { AdmittedDeviationBps, ReferenceAdmission } from "../types/reference-admission";
+
+interface PublishedDeviationEvidence {
+  referenceAdmission?: ReferenceAdmission | null;
+  admittedDeviationBps?: AdmittedDeviationBps;
+  currentPriceUnavailable?: boolean;
+  pegReferenceUnavailable?: boolean;
+}
+
+export function hasPublishedDeviation(row: PublishedDeviationEvidence | null | undefined): boolean {
+  return row?.referenceAdmission !== undefined || row?.admittedDeviationBps !== undefined;
+}
+
+/** Only omission selects the caller's legacy comparison. A withheld or unpaired projection returns null. */
+export function readDeviationProjection(
+  row: PublishedDeviationEvidence | null | undefined,
+  fixedUsd: boolean,
+  quoteObservedAtSec: number | null | undefined,
+): AdmittedDeviationBps | undefined {
+  if (!hasPublishedDeviation(row)) return undefined;
+  const verdict = row?.referenceAdmission;
+  const bps = row?.admittedDeviationBps;
+  const paired = verdict === undefined ? fixedUsd : verdict?.status === "admitted" &&
+    quoteObservedAtSec != null && quoteObservedAtSec === verdict.quoteObservedAtSec;
+  return paired && !row?.currentPriceUnavailable && !row?.pegReferenceUnavailable &&
+    typeof bps === "number" && Number.isFinite(bps) ? bps : null;
+}
 
 export type { DepegDirection } from "../types/peg";
 
@@ -25,6 +52,7 @@ export function relativeBps(value: number, reference: number): RelativeBpsResult
   }
 
   const rawBps = ((value / reference) - 1) * 10000;
+  if (!Number.isFinite(rawBps)) return null;
   const bps = Math.round(rawBps);
   return {
     bps,
@@ -78,9 +106,12 @@ export function classifyDirectionalSignal(
   signal: DepegSignal | null | undefined,
   thresholdBps: number,
   expectedDirection: DepegDirection,
+  recoveryThresholdBps?: number,
 ): DirectionalSignalStatus {
   if (signal == null) return "insufficient";
-  if ((signal.absRawBps ?? signal.absBps) < thresholdBps) return "recover";
+  const magnitude = signal.absRawBps ?? signal.absBps;
+  if (recoveryThresholdBps == null ? magnitude < thresholdBps : magnitude <= recoveryThresholdBps) return "recover";
+  if (magnitude < thresholdBps) return "insufficient";
   return signal.direction === expectedDirection ? "confirm" : "contradict";
 }
 

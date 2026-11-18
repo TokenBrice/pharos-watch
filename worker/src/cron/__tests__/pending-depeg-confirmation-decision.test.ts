@@ -8,13 +8,23 @@ import {
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
-import { normalizePendingDepegRow } from "../../lib/depeg-pending";
+import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type {
   CollectedConfirmationEvidence,
   ConfirmationPlanReady,
   ConfirmationEvidenceInput,
 } from "../pending-depeg-confirmation";
+import { buildConfirmationPlan } from "../pending-depeg-confirmation";
+import { hydrateDepegDetection } from "../depeg-detection/hydration";
+import { attachDetectionReferenceContext } from "../depeg-detection/reference-policy";
+import { persistDepegCommands } from "../depeg-detection/persistence";
+import { decideDepegAsset } from "../depeg-detection/decision-engine";
+import { referenceState, tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
+import { rowToDepegEvent, type DepegRow } from "../../lib/depeg-helpers";
+import { admittedDepegOnset } from "../../lib/tape-projectors/depeg";
+import { projectDepegPeakBasis } from "../telegram/sources/telegram-alert-snapshots";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
@@ -389,7 +399,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
         geckoId: "celo-euro",
         pegCurrency: "EUR",
         price: 2.598389348610164,
-        updatedAt: NOW_SEC - 30,
+        updatedAt: NOW_SEC - 30, derivation: tradedPair,
       },
       nativeSourceKey: "native:eur",
       temporalSameDirectionConfirmed: true,
@@ -437,7 +447,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
         geckoId: "celo-euro",
         pegCurrency: "EUR",
         price: 0.2,
-        updatedAt: NOW_SEC - 30,
+        updatedAt: NOW_SEC - 30, derivation: tradedPair,
       },
       nativeSourceKey: "native:eur",
       temporalSameDirectionConfirmed: true,
@@ -483,6 +493,44 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
       await settle(db, plan, evidence);
       expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({ pending: { id: row.id }, events: [], outcomes: [] });
     }
+  });
+
+  it.each(["intermediate-native", "aggregate-veto"] as const)("retains available EURC evidence for %s", async (scenario) => {
+    const { db, sqlite } = openFixture();
+    const closed = scenario === "intermediate-native";
+    const now = (closed ? Date.UTC(2026, 10, 13, 22, 20) : Date.UTC(2026, 10, 12, 12)) / 1_000;
+    const price = closed ? 0.8195 : 1.045;
+    const meta = ACTIVE_META_BY_ID.get("eurc-circle")!;
+    const pegType = "peggedEUR";
+    const row = makePendingRow({ stablecoin_id: meta.id, symbol: meta.symbol, peg_type: pegType,
+      first_seen_at: now - 1_000, last_seen_at: now - 30, peg_reference: 1.10,
+      first_price: price, last_price: price, first_seen_bps: closed ? -2550 : -500, last_seen_bps: closed ? -2550 : -500 });
+    insertPending(sqlite, row);
+    const pegRates = { peggedEUR: 1.10 };
+    const fx = referenceState(pegRates, closed ? Date.UTC(2026, 10, 13, 21, 55) / 1_000 : now - 60);
+    attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const plan = buildConfirmationPlan({ db, row, pendingState: normalizePendingDepegRow(row), meta, pegRates,
+      pegRateSources: { peggedEUR: "fx" }, pegRateCounts: {}, openSet: new Set(), now,
+      asset: makeAsset({ id: meta.id, pegType, price, priceSource: closed ? "pyth" : "defillama",
+        priceObservedAt: now - 30, priceObservedAtMode: "upstream" }),
+      nativePegQuote: closed ? { stablecoinId: meta.id, geckoId: meta.geckoId!, pegCurrency: "EUR", price: 0.755,
+        updatedAt: now - 60, derivation: tradedPair } : undefined });
+    if (plan.kind !== "ready") throw new Error("Expected to evaluate other evidence");
+    const pools = (closed ? ["curve"] : ["sushiswap", "aerodrome"]).map((protocol) => ({
+      protocol, sourceFamily: protocol, chain: "ethereum", price: closed ? 0.81 : 1.10, tvlUsd: 6_000_000, observedAt: now - 30 }));
+    const evidence = await collectPlanEvidence(db, plan, { now, poolChallengers: new Map([[meta.id, pools]]),
+      ...(closed ? {} : {
+        dexPriceRows: new Map([[meta.id, { stablecoin_id: meta.id, dex_price_usd: price, aggregateObservedAt: null,
+          deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 12_000_000, updated_at: now - 30 }]]),
+        dexPriceSources: new Map([[meta.id, ["curve", "uniswap"].map((protocol) => ({
+          protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 6_000_000, updatedAt: now - 30, observedAt: now - 30 }))]]),
+      }) });
+    expect(evidence).toMatchObject({ poolStatus: closed ? "confirm" : "recover", dexPeakCandidates: [] });
+    if (!closed) expect(evidence.dexConfirmationVeto).toBe(true);
+    const statements = evaluatePromotionDecision({ db, plan, evidence, now });
+    if (statements.length) await db.batch(statements);
+    expect(readLifecycle(sqlite, meta.id, row.id).events).toHaveLength(closed ? 1 : 0);
+    if (!closed) expect(readLifecycle(sqlite, meta.id, row.id).pending).toEqual({ id: row.id });
   });
 
   it("collects fresh funded opposite-direction DEX evidence without promoting", async () => {
@@ -595,10 +643,268 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     });
   });
 
+  it("retains the observed DEX price when pending and DEX round to the same display peak", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({ first_price: 0.97999, first_seen_bps: -200.1, last_price: 0.97999,
+      last_seen_bps: -200.1, peak_price: 0.97999, peak_seen_bps: -200.1, peg_reference: 1 });
+    insertPending(sqlite, row);
+    const plan = makePlan({ row, authoritativePrice: 0.97999, ...primaryAgreement });
+    const dexPrice = 0.97996;
+    const evidence = await collectPlanEvidence(db, plan, {
+      dexPriceRows: new Map([[row.stablecoin_id, { stablecoin_id: row.stablecoin_id, dex_price_usd: dexPrice,
+        deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 6_000_000,
+        updated_at: NOW_SEC - 30, aggregateObservedAt: NOW_SEC - 45 }]]),
+      dexPriceSources: new Map([[row.stablecoin_id, ["curve", "uniswap"].map((protocol) => ({
+        protocol, sourceFamily: protocol, chain: "ethereum", price: dexPrice, tvl: 3_000_000,
+        updatedAt: NOW_SEC - 30, observedAt: NOW_SEC - 45,
+      }))]]),
+    });
+    await settle(db, plan, evidence);
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({ peak_deviation_bps: -200, peak_price: dexPrice });
+  });
+
+  it("keeps a continuous pre-close onset and reloads the promoted peer-relative basis", async () => {
+    const { db, sqlite } = openFixture();
+    const now = Date.UTC(2026, 10, 13, 22, 10) / 1_000;
+    const meta = ACTIVE_META_BY_ID.get("eurc-circle")!;
+    const pegType = "peggedEUR";
+    const startAt = now - 1_000;
+    const pending = { stablecoinId: meta.id, symbol: meta.symbol, pegType, direction: "below" as const, bps: -300,
+      seenAt: startAt, price: 1.067, pegReference: 1.10, reason: "confirmation-window" };
+    await buildUpsertPendingDepegStmt(db, pending).run();
+    const readPending = () => sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+    const sample = (id: string, priceSource: string, price: number) => makeAsset({ id, priceSource, price, pegType,
+      priceObservedAt: now - 30, priceObservedAtMode: "upstream", circulating: { ethereum: 5_000_000 } });
+    const asset = sample(meta.id, "defillama", 1.02);
+    const peers = ["coinbase", "binance", "kraken"].map((venue) => sample(venue, venue, 1.10));
+    const peerMeta = new Map([asset, ...peers].map((coin) => [coin.id, meta]));
+    const pegRates = { peggedEUR: 1.10 };
+    const context = attachDetectionReferenceContext(pegRates, [asset, ...peers], peerMeta, new Set(), null);
+    const challengerPools = [{ price: 1.02, protocol: "curve", sourceFamily: "curve", chain: "ethereum", tvlUsd: 500_000, observedAt: now - 30 }];
+    const inputs = { now, asset, meta, pegRates, pegRateSources: { peggedEUR: "fx" as const }, pegRateCounts: {}, challengerPools };
+    const planFor = (row: PendingDepegRow) => buildConfirmationPlan({ ...inputs, db, row,
+      pendingState: normalizePendingDepegRow(row), openSet: new Set(), nativePegQuote: undefined });
+    expect(decideDepegAsset(inputs).commands).toEqual([]);
+    expect(planFor(readPending()).kind).toBe("wait");
+    context.rollbackSupportsPeerEvents = true;
+    expect(planFor(readPending())).toMatchObject({ kind: "ready", independentConfirmation: { source: "pool:curve:curve" } });
+    expect(decideDepegAsset({ ...inputs, existing: {
+      id: 42, stablecoin_id: meta.id, symbol: meta.symbol, peg_type: pegType, direction: "below", source: "live",
+      started_at: startAt, ended_at: null, start_price: 1.0725, peak_price: 1.0725, peak_deviation_bps: -250,
+      recovery_price: null, peg_reference: 1.10, confirmation_sources: null, pending_reason: "confirmation-window",
+    } }).commands).toMatchObject([{ type: "update-peak", peakDeviationBps: -727, peakPegReference: 1.10 }]);
+    const command = decideDepegAsset(inputs).commands[0];
+    if (command?.type !== "upsert-pending") throw new Error("Expected compatible peer observation");
+    await buildUpsertPendingDepegStmt(db, command.payload).run();
+    expect(readPending().first_seen_at).toBe(startAt);
+    expect(JSON.parse(readPending().peer_basis_json!)).toMatchObject({ onset: { basis: "benchmark" }, latest: { basis: "peer-relative" } });
+    const plan = planFor(readPending());
+    if (plan.kind !== "ready") throw new Error("Expected peer promotion");
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now }));
+    const { openRows: [existing] } = await hydrateDepegDetection(db, []);
+    expect(existing.pending_reason).toContain("peer-relative");
+    const worsened = decideDepegAsset({ ...inputs, now: now + 60, existing, asset: { ...asset, price: 1.01, priceObservedAt: now + 30 },
+      challengerPools: [{ ...challengerPools[0], price: 1.01, observedAt: now + 30 }] });
+    expect(worsened.commands).toMatchObject([{ type: "update-peak", peakPegReference: 1.10 }]);
+    await persistDepegCommands(db, worsened.commands);
+    const { openRows: [updated] } = await hydrateDepegDetection(db, []);
+    expect(projectDepegPeakBasis(updated)).toEqual({ peakBasis: "peer-relative" });
+    expect(JSON.parse(updated.peer_basis_json!)).toMatchObject({ onset: { basis: "benchmark" },
+      peak: { basis: "peer-relative", observedAt: now + 30, price: 1.01,
+        corroboration: { confidence: "low", corroborator: { source: "pool:curve:curve" } } } });
+  });
+
+  it.each([false, true])("handles a stored peer onset when rollback support is %s and the benchmark reopens", async (supported) => {
+    const { db, sqlite } = openFixture();
+    const now = Date.UTC(2026, 10, 15, 23, 10) / 1_000;
+    const meta = ACTIVE_META_BY_ID.get("eurc-circle")!;
+    const pegType = "peggedEUR";
+    const startAt = now - 1_000;
+    const pending = { stablecoinId: meta.id, symbol: meta.symbol, pegType, direction: "below" as const,
+      bps: -400, seenAt: startAt, price: 1.056, pegReference: 1.10, reason: "confirmation-window+low-confidence+peer-relative",
+      peerBasis: JSON.stringify({ confidence: "low", contributors: [{ id: "peer", provenanceKey: "coinbase" }] }) };
+    await buildUpsertPendingDepegStmt(db, pending).run();
+    await buildUpsertPendingDepegStmt(db, { ...pending, seenAt: now - 30, bps: -250, price: 1.092,
+      pegReference: 1.12, reason: "confirmation-window", peerBasis: undefined }).run();
+    const row = sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+    const pegRates = { peggedEUR: 1.12 };
+    const fx = referenceState(pegRates, now - 60);
+    const context = attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const input = { meta, pegRates, pegRateSources: { peggedEUR: "fx" as const }, pegRateCounts: {}, now,
+      asset: makeAsset({ id: meta.id, pegType, price: 1.092, priceSource: "pyth+chainlink", agreeSources: ["pyth", "chainlink"],
+        priceConfidence: "high", priceObservedAt: now - 45, priceObservedAtMode: "upstream" }) };
+    context.rollbackSupportsPeerEvents = supported;
+    const plan = buildConfirmationPlan({ ...input, db, row, pendingState: normalizePendingDepegRow(row),
+      openSet: new Set(), nativePegQuote: undefined });
+    if (!supported) {
+      if (plan.kind !== "mutate") throw new Error("Expected rejection of the stored peer onset");
+      await db.batch(plan.statements);
+      expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+        events: [], pending: undefined, outcomes: [{ outcome: "rejected", final_decision_reason: "peer-event-rollback-incompatible" }],
+      });
+      return;
+    }
+    if (plan.kind !== "ready") throw new Error("Expected benchmark admission after reopening");
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now }));
+    const { openRows: [existing] } = await hydrateDepegDetection(db, []);
+    expect(existing).toMatchObject({ started_at: startAt, pending_reason: "confirmation-window+low-confidence+peer-relative",
+      peak_price: 1.056, peak_peg_reference: 1.10, last_trusted_price_at: now - 45 });
+    expect(admittedDepegOnset(existing)).toBe(startAt);
+    expect(JSON.parse(existing.peer_basis_json!)).toMatchObject({
+      onset: { basis: "peer-relative", corroboration: { confidence: "low" } },
+      peak: { basis: "peer-relative", pegReference: 1.10, corroboration: { contributors: [{ id: "peer" }] } },
+    });
+  });
+
+  it.each([
+    { onsite: "coinbase", second: "coinbase", price: 0.40, weekend: false, promotes: false },
+    { onsite: "coinbase", second: "coinbase", price: 0.90, weekend: true, promotes: false },
+    { onsite: "coinbase", second: "kraken", price: 0.90, weekend: true, promotes: true },
+    { onsite: "coinbase", second: "kraken", price: 0.40, weekend: true, promotes: true },
+    { onsite: undefined, second: "kraken", price: 0.90, weekend: true, promotes: false },
+  ])("requires an independent native venue for $onsite/$second at $price", async ({ onsite, second, price, weekend, promotes }) => {
+    const { db, sqlite } = openFixture();
+    const now = Date.UTC(2026, 10, weekend ? 14 : 12, 12) / 1_000;
+    const meta = ACTIVE_META_BY_ID.get("eurc-circle")!;
+    const pegType = "peggedEUR";
+    const p = { stablecoinId: meta.id, symbol: meta.symbol, pegType, direction: "below" as const, bps: (price - 1) * 10_000,
+      price, pegReference: 1, reason: "confirmation-window+native-origin", nativeVenue: onsite };
+    await buildUpsertPendingDepegStmt(db, { ...p, seenAt: now - 1_000 }).run();
+    await buildUpsertPendingDepegStmt(db, { ...p, seenAt: now - 60 }).run();
+    const row = sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+    const pegRates = { peggedEUR: 1.10 };
+    const fx = referenceState(pegRates, now - 60);
+    attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const plan = buildConfirmationPlan({ db, row, pendingState: normalizePendingDepegRow(row), meta, pegRates,
+      pegRateSources: { peggedEUR: "fx" }, pegRateCounts: {}, openSet: new Set(), now,
+      asset: makeAsset({ id: meta.id, pegType, price: price * 1.10, priceSource: "coinbase", agreeSources: ["coinbase"],
+        priceConfidence: "single-source", priceObservedAt: now - 45, priceObservedAtMode: "upstream" }),
+      nativePegQuote: { stablecoinId: meta.id, geckoId: meta.geckoId!, pegCurrency: "EUR", price,
+        updatedAt: now - 60, derivation: { ...tradedPair, lineage: { venue: second, pair: "EURC/EUR" } } },
+    });
+    if (plan.kind !== "ready") throw new Error("Expected a candidate ready to assess its evidence");
+    const statements = evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now });
+    if (statements.length) await db.batch(statements);
+    const state = readLifecycle(sqlite, meta.id, row.id);
+    expect(state.events).toHaveLength(promotes ? 1 : 0);
+    if (promotes) {
+      expect(state.events[0].confirmation_sources).toBe("temporal:15m+native:eur");
+      const receipt = sqlite.prepare("SELECT peer_basis_json AS receipt FROM depeg_events").get() as { receipt: string };
+      expect(JSON.parse(receipt.receipt).confirmation).toMatchObject({ venue: second, observedAt: now - 60, price });
+      expect(sqlite.prepare("SELECT last_trusted_price_at FROM depeg_events").get()).toEqual({ last_trusted_price_at: now - 60 });
+    }
+  });
+
+  it.each(["distinct-extremes", "same-venue-extreme", "cohort-drift", "retained-peer"] as const)(
+    "runs detection and confirmation together for %s", async (scenario) => {
+      const { db, sqlite } = openFixture();
+      const now = (scenario === "cohort-drift" ? Date.UTC(2026, 10, 13, 22, 30)
+        : Date.UTC(2026, 10, scenario === "same-venue-extreme" ? 12 : 14, 12)) / 1_000;
+      const meta = ACTIVE_META_BY_ID.get("eurc-circle")!;
+      const pegType = "peggedEUR";
+      const sharedMove = scenario === "cohort-drift";
+      const retained = scenario === "retained-peer";
+      const hasPeers = sharedMove || retained;
+      const open = scenario === "same-venue-extreme";
+      const pegRates = { peggedEUR: sharedMove ? 1 : 1.1 };
+      const inputAt = (at: number, first: boolean) => {
+        const price = sharedMove ? 0.74 : retained ? (first ? 1.10 : 1.02) : open ? (first ? 1.10 : 0.44) : 1.10;
+        const asset = makeAsset({ id: meta.id, pegType, price, priceSource: open ? "coinbase" : "coingecko",
+          agreeSources: [open ? "coinbase" : "coingecko"], priceObservedAt: at, priceUpdatedAt: at, priceObservedAtMode: "upstream" });
+        const peers = hasPeers && (!retained || !first) ? ["kraken", "coinbase", "binance"].map((venue) => ({
+          ...asset, id: venue, price: sharedMove ? 0.74 : 1.10, priceSource: venue, agreeSources: [venue],
+        })) : [];
+        const fx = referenceState(pegRates, open ? at - 30 : Date.UTC(2026, 10, 13, 21, 55) / 1_000);
+        attachDetectionReferenceContext(pegRates, [asset, ...peers], new Map([asset, ...peers].map((item) => [item.id, meta])),
+          new Set(), fx, fx.repricingByPeg);
+        const nativePrice = sharedMove || (open && first) ? 0.98 : retained ? 0.93 : 0.40;
+        const venue = first ? (open ? "kraken" : "bitso") : open ? "coinbase" : scenario === "distinct-extremes" ? "kraken" : "bitso";
+        return { asset, meta, pegRates, pegRateSources: { peggedEUR: "fx" as const }, pegRateCounts: {}, now: at,
+          challengerPools: hasPeers && !first ? [{ protocol: "curve", sourceFamily: "curve", chain: "ethereum",
+            tvlUsd: 6_000_000, price: sharedMove ? 0.73 : 1.02, observedAt: at }] : [],
+          nativePegQuote: { stablecoinId: meta.id, pegCurrency: "EUR", geckoId: meta.geckoId!, price: nativePrice,
+            updatedAt: at, derivation: { kind: "traded-pair" as const, lineage: { venue, pair: "EURC/EUR" } } },
+        };
+      };
+      const first = inputAt(now - 900, true);
+      const initial = decideDepegAsset(first);
+      expect(initial.commands).toMatchObject([{ type: "upsert-pending", payload: {
+        price: first.nativePegQuote.price, pegReference: 1, nativeVenue: first.nativePegQuote.derivation.lineage.venue,
+      } }]);
+      await persistDepegCommands(db, initial.commands);
+      const next = inputAt(now, false);
+      if (retained) {
+        // A repeated native trade was retained before the independent pool/peer quorum became available.
+        const repeat = decideDepegAsset({ ...first, now, nativePegQuote: { ...first.nativePegQuote, updatedAt: now } });
+        await persistDepegCommands(db, repeat.commands);
+      } else if (!open) {
+        await persistDepegCommands(db, decideDepegAsset(next).commands);
+      }
+      const row = sqlite.prepare("SELECT * FROM depeg_pending").get() as unknown as PendingDepegRow;
+      const plan = buildConfirmationPlan({ ...next, nativePegQuote: retained ? undefined : next.nativePegQuote,
+        row, pendingState: normalizePendingDepegRow(row), db, openSet: new Set() });
+      expect(plan.kind).toBe("ready");
+      if (plan.kind !== "ready") return;
+      if (sharedMove) {
+        expect(plan.allowsUsdObservation?.(0.73, now)).toBe(false);
+        expect(plan.independentConfirmation).toBeUndefined();
+      }
+      const statements = evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now });
+      if (statements.length) await db.batch(statements);
+      const state = readLifecycle(sqlite, meta.id, row.id);
+      if (scenario === "distinct-extremes" || retained) {
+        expect(state.events[0]).toMatchObject({ peak_price: retained ? 0.93 : 0.40, peg_reference: 1,
+          confirmation_sources: retained ? "temporal:15m+peer:median" : "temporal:15m+native:eur" });
+      } else expect(state.events).toEqual([]);
+    },
+  );
+
+  it("expires an old peer-relative candidate after reopening when its quorum vanishes", async () => {
+    const { db, sqlite } = openFixture();
+    const now = Date.UTC(2026, 10, 16, 12) / 1_000;
+    const row = makePendingRow({ stablecoin_id: "eurc-circle", peg_type: "peggedEUR",
+      first_seen_at: now - 172_800, last_seen_at: now - 172_500, reason: "confirmation-window+low-confidence+peer-relative",
+      peg_reference: 1.10 });
+    insertPending(sqlite, row);
+    const pegRates = { peggedEUR: 1.10 };
+    const fx = referenceState(pegRates, now - 60);
+    attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg).rollbackSupportsPeerEvents = true;
+    const plan = buildConfirmationPlan({ db, row, pendingState: normalizePendingDepegRow(row), now, pegRates,
+      pegRateSources: { peggedEUR: "fx" }, pegRateCounts: {}, openSet: new Set(), nativePegQuote: undefined,
+      meta: ACTIVE_META_BY_ID.get(row.stablecoin_id),
+      asset: makeAsset({ id: row.stablecoin_id, pegType: row.peg_type, price: 1.05, priceSource: "pyth",
+        priceObservedAt: now - 30, priceObservedAtMode: "upstream" }),
+    });
+    if (plan.kind !== "ready") throw new Error("Expected admission to reach the bounded expiry decision");
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now }));
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).outcomes[0]).toMatchObject({ outcome: "expired" });
+  });
+
+  it("does not confirm a native EUR discount with two USD prices at the same value", async () => {
+    const { db, sqlite } = openFixture();
+    const now = Date.UTC(2026, 10, 14, 12) / 1_000;
+    const row = makePendingRow({ stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR",
+      reason: "native-origin", peg_reference: 1, first_seen_at: now - 1_000, last_seen_at: now - 30,
+      first_price: 0.90, last_price: 0.90, peak_price: 0.90, first_seen_bps: -1000, last_seen_bps: -1000, peak_seen_bps: -1000 });
+    insertPending(sqlite, row);
+    const plan = buildConfirmationPlan({ db, row, pendingState: normalizePendingDepegRow(row),
+      meta: ACTIVE_META_BY_ID.get(row.stablecoin_id), pegRates: { peggedEUR: 1.10 }, pegRateSources: { peggedEUR: "fx" },
+      pegRateCounts: {}, openSet: new Set(), now,
+      asset: makeAsset({ id: row.stablecoin_id, pegType: "peggedEUR", price: 1.10, priceSource: "coinbase",
+        priceObservedAt: now - 30, priceObservedAtMode: "upstream" }),
+      nativePegQuote: { stablecoinId: row.stablecoin_id, geckoId: "euro-coin", pegCurrency: "EUR", price: 0.90,
+        updatedAt: now - 30, derivation: tradedPair },
+      challengerPools: [{ price: 1.10, sourceFamily: "curve", protocol: "curve", chain: "ethereum", tvlUsd: 6_000_000, observedAt: now - 30 }],
+    });
+    expect(plan.kind).toBe("ready");
+    if (plan.kind !== "ready") throw new Error("Expected an active candidate");
+    expect(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now })).toEqual([]);
+  });
+
   it.each([
     { currency: "EUR", reference: 1.1 },
     { currency: "BRL", reference: 0.193 },
-  ])("normalizes a $currency native confirmer peak into a USD-origin event", async ({ currency, reference }) => {
+  ])("confirms with a $currency trade and preserves the USD peak through rollout skew", async ({ currency, reference }) => {
     const { sqlite, db } = openFixture();
     const row = makePendingRow({
       id: 300, stablecoin_id: "non-usd-coin", symbol: currency,
@@ -612,19 +918,23 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       row, pegReference: reference, authoritativePrice: reference * 0.98,
       primaryStatus: "confirm", primarySameDirectionDepegged: true,
       temporalSameDirectionConfirmed: true, nativeSourceKey: `native:${currency.toLowerCase()}`,
-      nativeSignal: deriveDepegSignal(0.94, 1),
-      nativePegQuote: { stablecoinId: row.stablecoin_id, geckoId: "non-usd-coin", pegCurrency: currency, price: 0.94, updatedAt: NOW_SEC - 30 },
+      nativeSignal: deriveDepegSignal(0.90, 1),
+      nativePegQuote: { stablecoinId: row.stablecoin_id, geckoId: "non-usd-coin", pegCurrency: currency, price: 0.90, updatedAt: NOW_SEC - 30, derivation: tradedPair },
     });
     const evidence = await collectPlanEvidence(db, plan);
-    expect(evidence.offchainPeakCandidate?.price).toBeCloseTo(reference * 0.94, 10);
+    expect(evidence.offchainPeakCandidate?.price).toBeCloseTo(0.90, 10);
     await settle(db, plan, evidence);
     const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({
-      start_price: reference * 0.98, peg_reference: reference, peak_deviation_bps: -600,
+      start_price: reference * 0.98, peg_reference: reference, peak_deviation_bps: -200,
     });
-    expect(Number(state.events[0].peak_price)).toBeCloseTo(reference * 0.94, 10);
-    expect((Number(state.events[0].peak_price) / reference - 1) * 10_000).toBeCloseTo(-600, 6);
+    expect(Number(state.events[0].peak_price)).toBeCloseTo(reference * 0.98, 10);
+    const hydrated = await hydrateDepegDetection(db, []);
+    expect(hydrated.openRows[0]).toMatchObject({ quote_mode: "usd", peak_quote_domain: "usd", peak_peg_reference: reference });
+    sqlite.prepare("UPDATE depeg_events SET peak_price = ?, peak_deviation_bps = -1100").run(reference * 1.02 * 0.89);
+    const updated = sqlite.prepare("SELECT * FROM depeg_events").get() as unknown as DepegRow;
+    expect(rowToDepegEvent(updated).peakPegReference).toBeUndefined();
     expect(state.events[0].confirmation_sources).toBe(`temporal:15m+native:${currency.toLowerCase()}`);
   });
 
@@ -659,10 +969,10 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     const evidence = await collectPlanEvidence(db, plan, {
       poolChallengers: new Map([[row.stablecoin_id, [
         ...["curve", "uniswap"].slice(0, confirmingCount).map((protocol) => ({
-          price: 0.8, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+          price: 0.8, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum", observedAt: NOW_SEC - 30,
         })),
         ...["aerodrome", "balancer"].map((protocol) => ({
-          price: 1, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+          price: 1, tvlUsd: 1_000_000, protocol, sourceFamily: protocol, chain: "ethereum", observedAt: NOW_SEC - 30,
         })),
       ]]]),
     });
@@ -713,9 +1023,9 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     });
     const evidence = await collectPlanEvidence(db, plan, {
       poolChallengers: new Map([[row.stablecoin_id, [
-        { price: 0.8, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        { price: 0.8, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum", observedAt: NOW_SEC - 30 },
         ...["uniswap", "aerodrome"].slice(0, opposingCount).map((protocol) => ({
-          price: opposingPrice, tvlUsd: 6_000_000, protocol, sourceFamily: protocol, chain: "ethereum",
+          price: opposingPrice, tvlUsd: 6_000_000, protocol, sourceFamily: protocol, chain: "ethereum", observedAt: NOW_SEC - 30,
         })),
       ]]]),
     });

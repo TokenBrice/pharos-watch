@@ -6,6 +6,7 @@ import { seedOpenEvent, seedDexEvidence } from "./detect-depegs.test-support";
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 const mockD1 = createMockD1Preset([
+  { match: "FROM cache WHERE key IN", rows: [] },
   { match: "FROM dex_price_challenger_snapshots", rows: [] },
   { match: "FROM dex_price_challengers", rows: [] },
   { match: "SELECT stablecoin_id, top_pools_json", rows: [] },
@@ -35,15 +36,16 @@ vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_HISTORICAL_IDS: new Set(["iron-historical"]),
 }));
 
-vi.mock("@shared/lib/peg-rates", () => ({
+vi.mock("@shared/lib/peg-rates", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@shared/lib/peg-rates")>(),
   derivePegRates: (_assets: unknown, _metaById: unknown, fxFallbackRates?: Record<string, number>) => ({
     rates: {
       peggedUSD: 1,
-      peggedEUR: 1.08,
+      peggedEUR: fxFallbackRates?.peggedEUR ?? 1.08,
       peggedREAL: fxFallbackRates?.peggedREAL ?? 0.18765951,
       ...(fxFallbackRates?.peggedRUB ? { peggedRUB: fxFallbackRates.peggedRUB } : {}),
     },
-    sources: { peggedUSD: "median", peggedEUR: "median", peggedREAL: fxFallbackRates?.peggedREAL ? "fallback" : "median", peggedRUB: fxFallbackRates?.peggedRUB ? "fallback" : "median" },
+    sources: { peggedUSD: "median", peggedEUR: fxFallbackRates?.peggedEUR ? "fx" : "median", peggedREAL: fxFallbackRates?.peggedREAL ? "fx" : "median", peggedRUB: fxFallbackRates?.peggedRUB ? "fallback" : "median" },
     counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2, peggedRUB: 1 },
   }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
@@ -53,14 +55,14 @@ vi.mock("@shared/lib/peg-rates", () => ({
 vi.mock("../../lib/native-peg-quotes", () => ({ fetchCurrentNativePegQuotes: vi.fn(async () => new Map()) }));
 
 import { detectDepegEvents } from "../detect-depegs";
+import { referenceState, tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
+import { persistFxRateState } from "../../lib/fx-rate-state";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { rowToDepegEvent, type DepegRow } from "../../lib/depeg-helpers";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 
 function isCloseEventUpdate(sql: string): boolean {
-  return sql.includes(
-    "UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL, recovery_last_seen_at = NULL WHERE id = ?",
-  );
+  return sql.startsWith("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?");
 }
 
 function makeAsset(overrides: {
@@ -83,7 +85,7 @@ function makeAsset(overrides: {
     priceSource: overrides.priceSource ?? "pyth",
     priceConfidence: overrides.priceConfidence ?? "single-source",
     priceUpdatedAt: overrides.priceUpdatedAt ?? Math.floor(Date.now() / 1000),
-    priceObservedAt: overrides.priceObservedAt,
+    priceObservedAt: overrides.priceObservedAt ?? Math.floor(Date.now() / 1000) - 60,
     priceObservedAtMode: overrides.priceObservedAtMode,
     agreeSources: overrides.agreeSources,
     pegType: overrides.pegType ?? "peggedUSD",
@@ -119,7 +121,7 @@ describe("detectDepegEvents", () => {
     })]);
     expect(fetchCurrentNativePegQuotes).toHaveBeenCalledTimes(1);
     const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-      .get("depeg-native-quote:90738") as { value: string; updated_at: number };
+      .get("depeg-native-indicative:v1:90738") as { value: string; updated_at: number };
     expect(JSON.parse(row.value)).toEqual({ value: 0.98, observedAt: now - 60, source: "coingecko" });
     expect(row.updated_at).toBe(now - 60);
   });
@@ -243,7 +245,7 @@ describe("detectDepegEvents", () => {
     }));
     const preparedSqls: string[] = [];
     const db = mockD1([
-      { match: "SELECT id, stablecoin_id, symbol", rows: [] },
+      { match: "SELECT open_event.*", rows: [] },
       { match: "SELECT id, stablecoin_id, started_at FROM depeg_events", rows: openRows },
       { match: "dex_prices", rows: [] },
     ]);
@@ -374,10 +376,13 @@ describe("detectDepegEvents", () => {
     ["eurc-circle", "EUROC", "peggedEUR", 1.08, 150, true],
   ] as const)("routes %s at %i reference and %i bps to pending=%s", async (id, symbol, pegType, reference, bps, pending) => {
     const { sqlite, db } = sqliteFixtures.open();
-    await detectDepegEvents(db, [makeAsset({ id, symbol, pegType, price: reference * (1 - bps / 10000) })]);
-    expect(sqlite.prepare("SELECT stablecoin_id, direction, first_seen_bps FROM depeg_pending").all()).toEqual(
-      pending ? [{ stablecoin_id: id, direction: "below", first_seen_bps: -bps }] : [],
-    );
+    const now = Math.floor(Date.now() / 1000);
+    const fx = referenceState({ peggedEUR: 1.08 }, now - 60);
+    await persistFxRateState(db, fx.rates, fx, now - 60);
+    await detectDepegEvents(db, [makeAsset({ id, symbol, pegType, price: reference * (1 - bps / 10000),
+      priceObservedAtMode: "upstream", priceObservedAt: now - 30 })], { peggedEUR: 1.08 });
+    const rows = sqlite.prepare("SELECT stablecoin_id, direction, ROUND(first_seen_bps) AS first_seen_bps FROM depeg_pending").all();
+    expect(rows).toEqual(pending ? [{ stablecoin_id: id, direction: "below", first_seen_bps: -bps }] : []);
     expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
   });
 
@@ -655,7 +660,7 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("closes an open BRZ event after sustained recovery in the BRL quote", async () => {
+  it("starts a native recovery from a fresh BRL quote without counting legacy detector timestamps", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
@@ -664,7 +669,7 @@ describe("detectDepegEvents", () => {
         geckoId: "brz",
         pegCurrency: "BRL",
         price: 0.995,
-        updatedAt: now - 60,
+        updatedAt: now - 60, derivation: tradedPair,
       }],
     ]));
 
@@ -681,7 +686,7 @@ describe("detectDepegEvents", () => {
           started_at: now - 3600,
           start_price: 0.1909,
           peak_price: 0.191,
-          peg_reference: 0.18765951,
+          peg_reference: 1,
           recovery_price: null,
           ended_at: null,
           source: "live",
@@ -705,7 +710,8 @@ describe("detectDepegEvents", () => {
       { peggedREAL: 0.18765951 },
     );
 
-    expect(preparedSqls.some(isCloseEventUpdate)).toBe(true);
+    expect(preparedSqls.some(isCloseEventUpdate)).toBe(false);
+    expect(preparedSqls.some((sql) => sql.includes("SET recovery_first_seen_at = ?"))).toBe(true);
   });
 
 
@@ -809,9 +815,9 @@ describe("detectDepegEvents", () => {
     ]);
 
     const peakUpdate = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"),
+      entry.sql.startsWith("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ?"),
     );
-    expect(peakUpdate?.binds).toEqual([-300, 0.97, 1]);
+    expect(peakUpdate?.binds).toEqual([-300, 0.97, 1, "usd", null, null, 1]);
   });
 
   it("keeps an ongoing event open when ambiguous recovery is backed by only one near-peg DEX protocol and challengers still show the old depeg", async () => {
@@ -863,7 +869,7 @@ describe("detectDepegEvents", () => {
   it("persists ambiguous recovery corroborated by independent DEX protocols", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = Math.floor(Date.now() / 1000);
-    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 900, recovery_last_seen_at: now - 900 });
+    seedOpenEvent(sqlite, { recovery_first_seen_at: now - 960, recovery_last_seen_at: now - 960, recovery_evidence_source: "dex" });
     seedDexEvidence(sqlite, 0.9998, [
       { protocol: "fluid", price: 0.9997, tvl: 900_000 },
       { protocol: "balancer", price: 1.0001, tvl: 700_000 },
@@ -1039,6 +1045,6 @@ describe("detectDepegEvents", () => {
     ]);
 
     const orphanClosure = db.getHistory().find((entry) => isCloseEventUpdate(entry.sql));
-    expect(orphanClosure?.binds).toEqual([now, null, "orphan-tracking-removed", 99]);
+    expect(orphanClosure?.binds).toEqual([now, null, "orphan-tracking-removed", null, 99]);
   });
 });

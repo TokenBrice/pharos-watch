@@ -18,6 +18,7 @@ interface NativeQuotePolicyContext {
   rawAbsBps: number;
   direction: DepegDirection;
   threshold: number;
+  nativeThreshold?: number;
   recoveryThreshold: number;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
@@ -31,6 +32,7 @@ export function recoveryPriceForEvent(event: DepegDetectionRow, price: number): 
 
 export function resolvePeakUpdateCommand(params: {
   existing: DepegDetectionRow;
+  nativeObservation?: boolean;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   primarySignal: DepegSignal;
@@ -38,7 +40,7 @@ export function resolvePeakUpdateCommand(params: {
   primaryTrust: DepegPrimaryTrust;
   dexSupportsDirection: boolean;
 }): Extract<DepegPersistenceCommand, { type: "update-peak" }> | null {
-  const nativeEvent = isNativePegEvent(params.existing);
+  const nativeEvent = params.nativeObservation ?? isNativePegEvent(params.existing);
   const signal = nativeEvent ? params.nativeSignal : params.primarySignal;
   const price = nativeEvent ? params.nativePegPrice : params.primaryPrice;
   const canUpdate = nativeEvent
@@ -106,13 +108,13 @@ export function applyNativeQuoteVeto(
 ): DepegAssetDecision | null {
   const nativeSupportsPrimaryDirection =
     ctx.nativeSignal != null &&
-    signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
+    signalCrossesThreshold(ctx.nativeSignal, ctx.nativeThreshold ?? ctx.threshold) &&
     signalsShareDirection(ctx.nativeSignal, ctx.direction);
   const nativeShowsRecovery = signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold);
   const nativeSupportsExistingDirection =
     existing != null &&
     ctx.nativeSignal != null &&
-    signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
+    signalCrossesThreshold(ctx.nativeSignal, ctx.nativeThreshold ?? ctx.threshold) &&
     signalsShareDirection(ctx.nativeSignal, existing.direction as DepegDirection);
 
   if (ctx.rawAbsBps >= ctx.threshold && ctx.nativeSignal != null && !nativeSupportsPrimaryDirection) {

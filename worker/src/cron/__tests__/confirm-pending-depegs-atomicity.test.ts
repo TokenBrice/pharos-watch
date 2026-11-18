@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetchRetry } from "../../test-helpers/cron";
+import { mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
@@ -10,6 +10,12 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: Array.from({ length: 51 }, (_, index) => ({
+    id: `atomic-confirm-${index}`, symbol: `atomic-confirm-${index}`, flags: { pegCurrency: "USD" },
+  })),
+}));
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), notOkAsNull: true, passthroughNonResponse: true }));
 
@@ -59,7 +65,7 @@ function makePromotionAsset(stablecoinId: string) {
     symbol: stablecoinId,
     geckoId: undefined,
     price: 0.97,
-    priceSource: "pool-tvl-weighted",
+    priceSource: "defillama",
     priceConfidence: "low",
     priceUpdatedAt: NOW_SEC - 30,
     priceObservedAt: NOW_SEC - 30,

@@ -1,6 +1,7 @@
+import { readPendingObservationReceipt } from "../../lib/depeg-pending";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import { rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
+import { isPairedDepegPeak, parsePendingReason, rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
 
@@ -40,15 +41,19 @@ export function shouldCloseOrphanedDepeg(
 // well inside this bound; a domain mix or a drifted peak-time reference does not.
 const DUPLICATE_PEAK_REFERENCE_TOLERANCE = 0.01;
 
-/**
- * A duplicate's peak is a price/bps pair measured against that row's own quote
- * domain and reference. Copying it onto a keeper with a different domain or a
- * different reference publishes a deviation the keeper's own fields cannot
- * reproduce (native peak over a USD reference, or a peak-era commodity/peer
- * median over an onset-latched reference).
- */
+function pairedPeakMagnitude(row: DepegRow): number | null {
+  if ((row.peak_quote_domain !== "usd" && !(row.peak_quote_domain === "native-peg" && row.peak_peg_reference === 1)) ||
+    !isPairedDepegPeak(row.peak_price, row.peak_peg_reference, row.peak_deviation_bps)) return null;
+  return Math.abs((row.peak_price! / row.peak_peg_reference - 1) * 10000);
+}
+
 function isPeakComparable(keeper: DepegRow, dupe: DepegRow): boolean {
-  if (isNativePegEvent(keeper) !== isNativePegEvent(dupe)) return false;
+  if (isNativePegEvent(keeper) !== isNativePegEvent(dupe) ||
+    parsePendingReason(keeper.pending_reason).has("peer-relative") !== parsePendingReason(dupe.pending_reason).has("peer-relative")) return false;
+  const dupePaired = pairedPeakMagnitude(dupe);
+  if (dupePaired != null) return dupe.peak_quote_domain === (isNativePegEvent(keeper) ? "native-peg" : "usd");
+  if (dupe.peak_quote_domain != null || dupe.peak_peg_reference != null) return false;
+  // Unpaired legacy rows compare only within the original reference scale.
   const keeperReference = keeper.peg_reference;
   const dupeReference = dupe.peg_reference;
   if (
@@ -109,14 +114,32 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
           coverage,
         });
       }
+      let peakReceipt: string | undefined;
       for (let i = 1; i < rows.length; i++) {
         const dupe = rows[i];
         if (!dupe) continue;
         // Absorb worse peak deviation into the same-direction keeper only when
         // both rows price the same quote domain and reference scale.
-        if (isPeakComparable(keeper, dupe) && Math.abs(dupe.peak_deviation_bps) > Math.abs(keeper.peak_deviation_bps)) {
+        if (isPeakComparable(keeper, dupe) && (pairedPeakMagnitude(dupe) ?? Math.abs(dupe.peak_deviation_bps)) >
+          (pairedPeakMagnitude(keeper) ?? Math.abs(keeper.peak_deviation_bps))) {
           keeper.peak_deviation_bps = dupe.peak_deviation_bps;
           keeper.peak_price = dupe.peak_price;
+          keeper.peak_peg_reference = dupe.peak_peg_reference ?? null;
+          keeper.peak_quote_domain = dupe.peak_quote_domain ?? null;
+          if (keeper.peer_basis_json || dupe.peer_basis_json || peakReceipt != null) {
+            const observation = readPendingObservationReceipt(dupe.peer_basis_json)?.peak;
+            const peak = observation?.price === dupe.peak_price && observation.pegReference === dupe.peak_peg_reference &&
+              observation.observedAt >= dupe.started_at && isPairedDepegPeak(observation.price, observation.pegReference, observation.bps)
+              ? observation : null;
+            peakReceipt = JSON.stringify(peak);
+            // Later decisions in the same tick see the receipt that this command writes.
+            let receipt: Record<string, unknown> = {};
+            try {
+              const decoded: unknown = JSON.parse(keeper.peer_basis_json ?? "{}");
+              if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) receipt = { ...decoded };
+            } catch { /* An unreadable prior receipt carries no evidence. */ }
+            keeper.peer_basis_json = JSON.stringify({ ...receipt, peak });
+          }
         }
         // Persistence retains duplicates referenced by canonical incidents/links;
         // this detector repair never authorizes incident identity changes.
@@ -127,6 +150,9 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
         id: keeper.id,
         peakDeviationBps: keeper.peak_deviation_bps,
         peakPrice: keeper.peak_price,
+        ...(keeper.peak_peg_reference !== undefined ? { peakPegReference: keeper.peak_peg_reference } : {}),
+        ...(peakReceipt != null ? { peakReceipt } : {}),
+        ...(keeper.peak_quote_domain !== undefined ? { peakQuoteDomain: keeper.peak_quote_domain } : {}),
       });
       directionKeepers.push(keeper);
     }

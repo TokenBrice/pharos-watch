@@ -39,6 +39,15 @@ describe("three-state trusted price coverage", () => {
     expect(computePegScore([resumed], 0, 2700).pegPct).toBeCloseTo(100 * (1 - 600 / 1800));
   });
 
+  it("preserves a newer blind gap when an older trusted quote arrives", () => {
+    const trusted = advanceDepegPriceCoverage(null, 11_959, "trusted-off-peg");
+    const blind = advanceDepegPriceCoverage(trusted, 12_915, "blind");
+    expect(advanceDepegPriceCoverage(blind, 12_306, "trusted-off-peg")).toEqual(blind);
+    expect(advanceDepegPriceCoverage(blind, 12_915, "trusted-off-peg")).toMatchObject({
+      gapStartedAt: null, lastTrustedObservationAt: 12_915, intervals: [[11_959, 11_959], [12_915, 12_915]],
+    });
+  });
+
   it("extends at-par coverage at the 1200-second boundary but not across a 1201-second gap", () => {
     let coverage = advanceDepegPriceCoverage(null, 0, "trusted-at-par");
     coverage = advanceDepegPriceCoverage(coverage, 1200, "trusted-at-par");

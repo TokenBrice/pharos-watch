@@ -3,13 +3,21 @@ import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/depeg-threshold-policy";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { seedDexEvidence, seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 import { hydrateDepegDetection } from "../hydration";
+import { loadFreshFxRates } from "../../sync-stablecoins/shared";
 import { detectDepegEvents } from "../../detect-depegs";
+import { decideDepegAsset } from "../decision-engine";
+import { persistFxRateState, type FxRatesMeta } from "../../../lib/fx-rate-state";
+import { makePendingDepegRow } from "../../../test-helpers/pending-depeg-fixtures";
+import { buildConfirmationPlan } from "../../pending-depeg-confirmation";
+import { normalizePendingDepegRow, SELECT_PENDING_DEPEGS_SQL } from "../../../lib/depeg-pending";
+import { referenceState, tradedPair } from "./reference-fixtures";
 import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
 import { persistDepegCommands } from "../persistence";
 
@@ -47,10 +55,118 @@ describe("hydrateDepegDetection", () => {
     expect(hydrated.pegRateSources.peggedREAL).toBe("fx");
     expect(hydrated.dexPriceRows.get("usdt-tether")).toMatchObject({ dex_price_usd: 0.97, source_pool_count: 1, updated_at: NOW - 60 });
     expect(hydrated.dexPriceSources.get("usdt-tether")).toMatchObject([{ protocol: "curve", price: 0.97, tvl: 3_000_000 }]);
-    expect(hydrated.nativePegQuotes.get("brz-transfero")).toMatchObject({ price: 0.98, updatedAt: NOW - 60, pegCurrency: "BRL" });
-    const cached = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'depeg-native-quote:1'").get();
+    const derivation = { kind: "conversion", lineage: { fxSource: "openExchangeRates" } };
+    expect(hydrated.nativePegQuotes.get("brz-transfero")).toMatchObject({
+      price: 0.98, updatedAt: NOW - 60, pegCurrency: "BRL", derivation,
+    });
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'depeg-native-quote:1'").get()).toBeUndefined();
+    const cached = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'depeg-native-indicative:v1:1'").get();
     expect(cached?.updated_at).toBe(NOW - 60);
-    expect(JSON.parse(String(cached?.value))).toEqual({ value: 0.98, observedAt: NOW - 60, source: "coingecko" });
+    expect(JSON.parse(String(cached?.value))).toEqual({ value: 0.98, observedAt: NOW - 60, source: "coingecko", derivation });
+  });
+
+  it.each(["matching", "other-provider", "missing", "provider-keyed"] as const)("uses a persisted OXR generation with %s repricing evidence", async (evidence) => {
+    const { db } = fixtures.open();
+    const peg = "peggedREAL";
+    const fx = referenceState({ [peg]: 0.193 }, NOW - 60);
+    if (evidence === "other-provider") fx.repricingByPeg![peg].source = "chainlink";
+    const fxMeta = { ...fx,
+      ...(evidence === "missing" || evidence === "provider-keyed" ? { repricingByPeg: undefined } : {}),
+      ...(evidence === "provider-keyed" ? { sources: { openExchangeRates: "ok" } } : {}),
+    };
+    await persistFxRateState(db, fx.rates, fxMeta, NOW - 60);
+    quoteResponse();
+    const observed = { ...asset, priceObservedAt: NOW - 30, priceObservedAtMode: "upstream" as const };
+    const fxSelection = await loadFreshFxRates(db);
+    const hydrated = await hydrateDepegDetection(db, [observed], fxSelection.fxFallbackRates, undefined, undefined, undefined, fxSelection.detectionFxState);
+    const { pegRates, pegRateSources, pegRateCounts } = hydrated;
+    const meta = PSI_ELIGIBLE_META_BY_ID.get(asset.id);
+    const inputs = { asset: observed, meta, now: NOW, pegRates, pegRateSources, pegRateCounts };
+    const detection = decideDepegAsset(inputs);
+    expect(detection.commands).toMatchObject(evidence === "other-provider" ? [] : [{ type: "upsert-pending", payload: { bps: -674 } }]);
+    const row = makePendingDepegRow({ stablecoin_id: asset.id, peg_type: peg, first_seen_at: NOW - 1_000, peg_reference: 0.193 });
+    const plan = buildConfirmationPlan({ ...inputs, db, row, pendingState: normalizePendingDepegRow(row),
+      openSet: new Set(), nativePegQuote: undefined });
+    expect(plan.kind).toBe(evidence === "other-provider" ? "wait" : "ready");
+  });
+
+  it.each(["selected", "first-sample", "first-after-deploy", "empty", "empty-with-marker", "carried", "mixed-carry", "other-session"] as const)("uses %s canonical observations from the same FX generation", async (mode) => {
+    const { db } = fixtures.open();
+    const peg = "peggedREAL";
+    const rates: Record<string, number> = { [peg]: 0.193 };
+    if (mode === "mixed-carry") rates.peggedEUR = 1.08;
+    const fx = referenceState(rates, NOW - 60);
+    fx.repricingByPeg = undefined;
+    fx.sources = { openExchangeRates: "ok" };
+    const observation = { pegKey: peg, usdPerUnit: 0.193, observedAtSec: NOW - 60,
+      source: "openExchangeRates" as const, cadence: "intraday" as const };
+    const empty = mode === "empty" || mode === "empty-with-marker";
+    const observations: FxRatesMeta["observations"] = empty ? {} : mode === "carried" ? undefined : mode === "mixed-carry"
+      ? { peggedEUR: { ...observation, pegKey: "peggedEUR", usdPerUnit: rates.peggedEUR } } : { [peg]: observation };
+    const session = getReferenceSessionState("fx", NOW);
+    if (!session.open) throw new Error("Expected an open BRL reference session");
+    await persistFxRateState(db, fx.rates, { ...fx,
+      observations,
+      legacyDetectionPegs: ["carried", "mixed-carry", "first-after-deploy", "empty-with-marker"].includes(mode) ? [peg] : undefined,
+      referenceSourceSamples: { [`${peg}:openExchangeRates`]: { observation,
+        evidence: { sessionOpenedAtSec: session.sessionOpenedAtSec - (mode === "other-session" ? 604800 : 0),
+          firstInSessionObservedAtSec: NOW - 60, preCloseUsdPerUnit: mode === "first-sample" || mode === "first-after-deploy" ? null : 0.190 } } },
+    }, NOW - 60);
+    quoteResponse();
+    const observed = { ...asset, priceObservedAt: NOW - 30, priceObservedAtMode: "upstream" as const };
+    const fxSelection = await loadFreshFxRates(db);
+    const hydrated = await hydrateDepegDetection(db, [observed], fxSelection.fxFallbackRates, undefined, undefined, undefined, fxSelection.detectionFxState);
+    const input = { ...hydrated, pegRates: { ...hydrated.pegRates }, asset: observed, meta: PSI_ELIGIBLE_META_BY_ID.get(asset.id) };
+    const admitted = mode === "selected" || mode === "first-after-deploy" || mode === "carried" || mode === "mixed-carry";
+    expect(decideDepegAsset(input).commands.map(({ type }) => type)).toEqual(admitted ? ["upsert-pending"] : []);
+    const row = makePendingDepegRow({ stablecoin_id: asset.id, peg_type: peg, first_seen_at: NOW - 1000 });
+    expect(buildConfirmationPlan({ ...input, db, row, pendingState: normalizePendingDepegRow(row),
+      openSet: new Set(), nativePegQuote: undefined }).kind).toBe(admitted ? "ready" : "wait");
+  });
+
+  it.each([null, "invalid-rate"] as const)("isolates GBP repricing anchor %s from persisted EUR admission", async (siblingAnchor) => {
+    const { db } = fixtures.open();
+    const fx = referenceState({ peggedEUR: 1.10, peggedGBP: 1.25 }, NOW - 60);
+    const repricingByPeg = { ...fx.repricingByPeg, peggedGBP: { source: "openExchangeRates", preCloseUsdPerUnit: siblingAnchor } };
+    const fxMeta = { ...fx, repricingByPeg };
+    await persistFxRateState(db, fx.rates, fxMeta, NOW - 60);
+    quoteResponse();
+    const eurc = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price: 1.05,
+      priceObservedAt: NOW - 30, priceObservedAtMode: "upstream" });
+    const hydrated = await hydrateDepegDetection(db, [eurc]);
+    const inputs = { ...hydrated, asset: eurc, meta: PSI_ELIGIBLE_META_BY_ID.get(eurc.id) };
+    expect(decideDepegAsset(inputs).commands).toMatchObject([{ type: "upsert-pending" }]);
+    const row = makePendingDepegRow({ stablecoin_id: eurc.id, peg_type: eurc.pegType!, first_seen_at: NOW - 1_000 });
+    expect(buildConfirmationPlan({ ...inputs, db, row, pendingState: normalizePendingDepegRow(row),
+      openSet: new Set(), nativePegQuote: undefined }).kind).toBe("ready");
+  });
+
+  it.each(["dex", "native"] as const)("repeated %s observation leaves persisted recovery and coverage unchanged", async (source) => {
+    const { db, sqlite } = fixtures.open();
+    const native = source === "native";
+    const coin = native ? asset : makeAsset({ id: "usdt-tether", pegType: "peggedUSD", price: 1, priceSource: "coingecko" });
+    seedOpenEvent(sqlite, { stablecoin_id: coin.id, peg_type: coin.pegType!, peg_reference: 1,
+      pending_reason: native ? "native-origin" : "confirmation-window", started_at: NOW - 3_600 });
+    const observedAt = NOW - 60;
+    const protocolSources = ["curve", "uniswap"].map((protocol) => ({ protocol, chain: "ethereum",
+      sourceFamily: protocol, price: 1, tvl: 2_500_000, updatedAt: NOW - 30, observedAt }));
+    const nativeQuote = { stablecoinId: coin.id, geckoId: "brz", pegCurrency: "BRL", price: 1,
+      updatedAt: observedAt, derivation: tradedPair };
+    for (const now of [NOW, NOW + 900]) {
+      const { openRows: [existing] } = await hydrateDepegDetection(db, []);
+      const decision = decideDepegAsset({ now, asset: coin, meta: PSI_ELIGIBLE_META_BY_ID.get(coin.id), existing,
+        pegRates: { peggedUSD: 1 }, pegRateSources: {}, pegRateCounts: {}, protocolSources,
+        nativePegQuote: native ? nativeQuote : undefined,
+        dexRow: native ? undefined : { stablecoin_id: coin.id, dex_price_usd: 1, deviation_from_primary_bps: null,
+          source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW, aggregateObservedAt: observedAt },
+      });
+      await persistDepegCommands(db, [...decision.commands, { type: "record-price-coverage", id: existing.id, coverage: decision.priceCoverage! }]);
+      expect(sqlite.prepare("SELECT ended_at, recovery_first_seen_at, recovery_last_seen_at, last_trusted_price_at FROM depeg_events").get())
+        .toEqual({ ended_at: null, recovery_first_seen_at: observedAt, recovery_last_seen_at: observedAt, last_trusted_price_at: observedAt });
+      const raw = sqlite.prepare("SELECT price_coverage_json FROM depeg_events").get();
+      expect(JSON.parse(String(raw?.price_coverage_json)).atParIntervals).toEqual([[observedAt, observedAt]]);
+    }
+    expect(sqlite.prepare(SELECT_PENDING_DEPEGS_SQL).all()).toHaveLength(0);
   });
 
   it.each([
@@ -158,7 +274,7 @@ describe("hydrateDepegDetection", () => {
     const hydrated = await hydrateDepegDetection(db, [asset]);
     expect(hydrated.openRowsLimitReached).toBe(false);
     expect(hydrated.openRows).toHaveLength(MAX_OPEN_DEPEG_EVENTS - 1);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key LIKE 'depeg-native-quote:%'").get())
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key LIKE 'depeg-native-indicative:v1:%'").get())
       .toEqual({ count: MAX_OPEN_DEPEG_EVENTS - 1 });
   });
 

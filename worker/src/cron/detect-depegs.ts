@@ -1,7 +1,8 @@
+import type { FxRateState } from "../lib/fx-rate-state";
 import { CANARY_METADATA_BUDGET } from "../lib/canary-check-results";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
-import { NominalPriceReferenceSchema, type PegAssetBase } from "@shared/types/price";
+import { NominalPriceReferenceSchema } from "@shared/types/price";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { rowPriceCoverage } from "../lib/depeg-helpers";
@@ -22,6 +23,7 @@ import type {
   DepegObservationCensus,
   DepegObservationOutcome,
   DepegPersistenceCommand,
+  DepegPricingAsset,
 } from "./depeg-detection/types";
 import { DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT } from "./depeg-detection/types";
 
@@ -90,11 +92,12 @@ export function sampleDepegDeadBandNotices(notices: NonNullable<DepegObservation
 
 export async function detectDepegEvents(
   db: D1Database,
-  assets: PegAssetBase[],
+  assets: DepegPricingAsset[],
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   nativePegSession?: NativePegQuoteSession,
+  detectionFxState?: FxRateState | null,
 ): Promise<DepegDetectionResult> {
   throwIfAborted(signal);
   const hydrated = await hydrateDepegDetection(
@@ -103,7 +106,7 @@ export async function detectDepegEvents(
     fxFallbackRates,
     signal,
     coingeckoApiKey,
-    nativePegSession,
+    nativePegSession, detectionFxState,
   );
   if (hydrated.openRowsLimitReached) {
     return { status: "held", reason: "depeg-open-event-limit-reached", census: null };
@@ -137,6 +140,7 @@ export async function detectDepegEvents(
       pegRates: hydrated.pegRates,
       pegRateSources: hydrated.pegRateSources,
       pegRateCounts: hydrated.pegRateCounts,
+      referenceContext: hydrated.referenceContext,
       dexRow: hydrated.dexPriceRows.get(asset.id),
       protocolSources: hydrated.dexPriceSources.get(asset.id),
       challengerPools: hydrated.dexPoolChallengers.get(asset.id),
@@ -158,7 +162,8 @@ export async function detectDepegEvents(
     if (decision.deadBandNotice) deadBandNotices.push(decision.deadBandNotice);
     emitDepegDiagnostics(decision.diagnostics);
     if (existing && decision.priceCoverage) {
-      commands.push({ type: "record-price-coverage", id: existing.id, coverage: decision.priceCoverage });
+      commands.push({ type: "record-price-coverage", id: existing.id, coverage: decision.priceCoverage,
+        referenceHold: decision.referenceHold, admittedCoverage: decision.admittedCoverage });
     }
     commands.push(...decision.commands);
   }
@@ -173,7 +178,7 @@ export async function detectDepegEvents(
     if (presentAssetIds.has(row.stablecoin_id)) continue;
     const previous = rowPriceCoverage(row);
     const coverage = advanceDepegPriceCoverage(previous, hydrated.now, "blind");
-    if (coverage === previous) continue;
+    if (coverage === previous && row.reference_hold_json == null) continue;
     commands.push({
       type: "record-price-coverage",
       id: row.id,

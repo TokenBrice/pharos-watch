@@ -145,6 +145,25 @@ describe("buildDuplicateOpenEventRepair", () => {
     ]);
   });
 
+  it("keeps the deeper paired gold peak and its receipt across a change in opening reference", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const gold = { stablecoin_id: "paxg-paxos", symbol: "PAXG", peg_type: "peggedGOLD",
+      direction: "below", peak_quote_domain: "usd" } as const;
+    const observation = { basis: "benchmark", price: 102, pegReference: 120, observedAt: 210, bps: -1500 };
+    const first = { ...makeOpenRow(), ...gold, id: 1, started_at: 100, peg_reference: 100,
+      peak_price: 98, peak_deviation_bps: -200, peak_peg_reference: 100 };
+    const second = { ...first, id: 2, started_at: 200, peg_reference: 115, peak_price: 102,
+      peak_deviation_bps: -1500, peak_peg_reference: 120, peer_basis_json: JSON.stringify({ peak: observation }) };
+    seedOpenEvent(sqlite, first);
+    seedOpenEvent(sqlite, second);
+    const result = buildDuplicateOpenEventRepair([first, second]);
+    await persistDepegCommands(db, result.commands);
+    const stored = sqlite.prepare("SELECT peak_price, peak_peg_reference, peak_quote_domain, peer_basis_json FROM depeg_events WHERE id=1").get();
+    expect(stored).toMatchObject({ peak_price: 102, peak_peg_reference: 120, peak_quote_domain: "usd" });
+    expect(JSON.parse(String(stored?.peer_basis_json))).toEqual({ peak: observation });
+    expect(result.openEvents.get(gold.stablecoin_id)?.peer_basis_json).toBe(stored?.peer_basis_json);
+  });
+
   it("does not absorb a peak measured against a drifted reference", () => {
     const result = buildDuplicateOpenEventRepair([
       makeOpenRow({
@@ -200,7 +219,7 @@ describe("buildDuplicateOpenEventRepair", () => {
     });
     expect(result.commands).toEqual([
       { type: "delete-event", id: 2 },
-      { type: "update-peak", id: 1, peakDeviationBps: -300, peakPrice: 0.97 },
+      { type: "update-peak", id: 1, peakDeviationBps: -300, peakPrice: 0.97, peakPegReference: null, peakQuoteDomain: null },
       {
         type: "close-event",
         id: 1,
