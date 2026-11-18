@@ -70,14 +70,7 @@ The Share menu uses one responsive control/state machine, including the compact 
 
 ## 2. Editorial content cards (`public/og-editorial-*.png`)
 
-These category cards remain for legacy inbound image URLs; new canonical metadata uses the destination-specific evergreen map instead. `scripts/maintenance/build-og-editorial.mjs` remains their owner.
-
-```bash
-npm run build:og-editorial
-npm run check:generated-artifacts -- --only=og-editorial
-```
-
-The shared `scripts/lib/og-static-runner.mts` hashes semantic SVG, font and renderer inputs and embeds their fingerprint into the actual PNG before publication. Raster tolerance applies only when source identity agrees. A small changed word/version cannot be discarded as encoding drift while a sidecar signature advances. Missing or changed PNG source identity requires regeneration; signatures describe bytes actually promoted.
+Canonical metadata uses destination-specific evergreen previews. The existing `public/og-editorial-*.png` files are inert compatibility assets for cached HTML and external previews. Keep the published URLs and PNGs available under the same policy as the retired mechanism and case-study cards below.
 
 ## 3. Mechanism explainer cards (`public/og-learn-*.png`)
 
@@ -132,8 +125,8 @@ The OG descriptor remains exempt from API keys and denied on site-data, and the 
 ## CI guardrails
 
 - `npm run seo:check` inspects built HTML and requires referenced same-origin images to exist in `out/`. Every page needs a non-empty `og:image` whose first tag starts within the first 32,768 bytes, because Slack reads only the start of a page; decoded HTML above 1 MB, Apple Messages' preview limit, warns. It runs in the classifier-selected Pages artifact/release lane.
-- `npm run build:og-evergreen -- --check` validates destination coverage, copy and glyph budgets, logo admission, authored-cover size and the map in memory; bootstrap runs the same validation on every CI job, so PRs need no separate drift check. The post-refresh render gates every rendered PNG's dimensions and size. Legacy static checks require embedded semantic source provenance as well as their manifests.
-- Focused rendering proof: `npx vitest run scripts/__tests__/social-card-render.test.ts scripts/__tests__/social-card-catalog.test.ts scripts/__tests__/og-image-checks.test.ts scripts/__tests__/og-worker-runtime.test.ts`. Real cold/warm workerd scorecard responses must decode as 1200×630 PNGs.
+- `npm run build:og-evergreen -- --check` validates destination coverage, copy and glyph budgets, logo admission, authored-cover size and the map in memory; bootstrap runs the same validation on every CI job, so PRs need no separate drift check. The post-refresh render gates every rendered PNG's dimensions and size. The Cemetery check verifies its source and PNG signatures without launching Firefox.
+- Focused rendering proof: `npx vitest run scripts/__tests__/social-card-render.test.ts scripts/__tests__/social-card-catalog.test.ts scripts/__tests__/social-preview-build.test.ts scripts/__tests__/og-worker-runtime.test.ts`. Real cold/warm workerd scorecard responses must decode as 1200×630 PNGs.
 - Review each family at a 520 px feed width, in X's 2:1 crop with its bottom-left overlay and in Telegram's 48 dp centre square. Subject, recognizable identity and reason to open survive without a description; essential dated provenance stays readable beside the assessment, with no clipping, color-only meaning or footer/chart overlap.
 - Cover long identities, registered logos, lifecycle variants, fixed historical dates, unknown/NR/quarantined inputs, held/stale sources, observed zero, partial scope and publication changes during rendering. Retained HTML/PNG must stay coherent after source rollover/pruning, and old static hashes must resolve independently of replacement deployments or rollback.
 - After deployment, inspect actual new-share presentations on Telegram and other target clients, separately from existing attachments. Meta Sharing Debugger, LinkedIn Post Inspector and Telegram's refresh tooling are operational aids, not a freshness SLA.

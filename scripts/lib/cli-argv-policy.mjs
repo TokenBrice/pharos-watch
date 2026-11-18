@@ -168,7 +168,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "build",
       "Uploads mechanism-measurement capture bodies to the R2 archive bucket and writes local summaries; no production runtime state.",
     ),
-    exempt("scripts/lib/og-static-runner.mts", "build"),
     exempt("scripts/maintenance/analyze-gsc-coverage.mjs", "read-only"),
     exempt("scripts/maintenance/analyze-gsc-performance.mjs", "read-only"),
     exempt("scripts/maintenance/audit-dex-pricing-source-gaps.ts", "build"),

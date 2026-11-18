@@ -1541,7 +1541,6 @@
       "risk": "medium",
       "sources": [
         "scripts/**",
-        "public/og-editorial-*.png",
         "public/critical-css-loader.js",
         "public/datasets/top-stablecoins/**",
         "public/datasets/depeg-history/**",
@@ -1714,6 +1713,7 @@
         "public/datasets/stablecoin-cemetery.*",
         "public/llms.txt",
         "public/og-cemetery.png",
+        "public/og-editorial-*.png",
         "public/portfolio-bootstrap.js",
         "shared/lib/public-docs.ts",
         "shared/lib/social-preview.ts",
@@ -1756,6 +1756,10 @@
       ],
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "reading": [
+        {
+          "sources": ["public/og-editorial-*.png"],
+          "local": [{ "path": "docs/og-images.md", "anchor": "2-editorial-content-cards-publicog-editorial-png" }]
+        },
         {
           "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "scripts/lib/social-preview*", "scripts/lib/social-card-*", "shared/lib/social-card/**", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
           "local": [

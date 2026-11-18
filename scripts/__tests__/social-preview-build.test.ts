@@ -1,13 +1,8 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
-import {
-  comparePngContent,
-  contentSha256,
-  runOgArtifactBuild,
-} from "../lib/og-image-checks.mts";
 import {
   buildSocialPreviewImages,
   discoverSocialPreviewPages,
@@ -21,97 +16,10 @@ import type { SocialCardDossier } from "../../shared/lib/social-card/spec";
 
 import { createTempRepoTracker } from "./helpers/test-state";
 
-const { makeRoot: makeTempDir, cleanup } = createTempRepoTracker("pharos-og-image-checks");
+const { makeRoot: makeTempDir, cleanup } = createTempRepoTracker("pharos-social-preview-build");
 afterEach(() => { vi.restoreAllMocks(); cleanup(); });
 
 const fontBuffers = [readFileSync(new URL("../../src/assets/fonts/originals/Geist-Regular.ttf", import.meta.url))];
-const png = (background: string, width = 1200, height = 630) =>
-  sharp({ create: { width, height, channels: 4, background } }).png();
-
-function artifactFixture<T extends { file: string }>(
-  roster: T[],
-  render: (entry: T, context: { stagedPath: string }) => Promise<void>,
-) {
-  const root = makeTempDir();
-  const publicDir = join(root, "public"), stagingDir = join(root, "staging");
-  const build = (overrides: { check?: boolean; roster?: T[]; render?: typeof render } = {}) =>
-    runOgArtifactBuild({ check: false, family: "Test", publicDir, stagingDir,
-      refreshCommand: "refresh", roster, render, ...overrides });
-  return { publicDir, stagingDir, build };
-}
-
-describe("OG image file promotion", () => {
-  it.each([
-    [1, 1, 0, true], [0.99, 1, 0, false],
-    [2, 0.5, 0, true], [2, 0.49, 0, false], [2, 0, 2, true],
-  ] as const)("compares tolerance boundaries %j / %j / %j", async (maxMeanAbsPerChannel, maxChangedPixelRatio, changedPixelThreshold, matches) => {
-    const tolerance = { maxMeanAbsPerChannel, maxChangedPixelRatio, changedPixelThreshold };
-    const root = makeTempDir();
-    const expected = join(root, "expected.png");
-    const actual = join(root, "actual.png");
-    const raw = { width: 2, height: 1, channels: 4 as const };
-    await sharp(Buffer.from([0, 0, 0, 255, 0, 0, 0, 255]), { raw }).png().toFile(expected);
-    // Eight channel units / eight channels = mean 1; one of two pixels changes.
-    await sharp(Buffer.from([8, 0, 0, 255, 0, 0, 0, 255]), { raw }).png().toFile(actual);
-    expect((await comparePngContent(expected, actual, tolerance)).matches).toBe(matches);
-  });
-
-  it("shares missing, unchanged, changed, check, and render-failure lifecycle", async () => {
-    const { build, publicDir, stagingDir } = artifactFixture([{ file: "card.png", color: 25 }],
-      async (entry, { stagedPath }) => {
-        await png(`rgb(${entry.color}, 0, 0)`, 2, 2).toFile(stagedPath);
-      });
-    expect((await build()).changedFiles).toEqual(["card.png"]);
-    const published = join(publicDir, "card.png");
-    const bytes = readFileSync(published);
-    const unchanged = () => expect(readFileSync(published)).toEqual(bytes);
-    const cleaned = () => expect(existsSync(stagingDir)).toBe(false);
-    expect((await build()).changedFiles).toEqual([]);
-    unchanged();
-
-    await expect(build({ check: true, roster: [{ file: "card.png", color: 255 }] }))
-      .rejects.toThrow("Test OG images are stale: card.png");
-    unchanged();
-    cleaned();
-    await expect(build({ render: async (_entry, { stagedPath }) => { writeFileSync(stagedPath, ""); } }))
-      .rejects.toThrow("Generated PNG is missing or empty");
-    unchanged();
-    cleaned();
-    await expect(build({ check: true })).resolves.toMatchObject({ staleFiles: [] });
-    await expect(build({ check: true, roster: [{ file: "missing.png", color: 10 }] }))
-      .rejects.toThrow("Test OG images are stale: missing.png");
-    await expect(build({ render: async () => { throw new Error("render failed"); } })).rejects.toThrow("render failed");
-    cleaned();
-  });
-
-  it("never treats a changed semantic source as harmless raster drift", async () => {
-    const { publicDir, build: run } = artifactFixture([{ file: "card.png", sourceFingerprint: "", color: 0 }],
-      async (entry, { stagedPath }) => {
-        await png("#ffffff", 100, 100).composite([{
-          input: await png(`rgb(${entry.color}, 0, 0)`, 4, 4).toBuffer(),
-          left: 48, top: 48,
-        }]).toFile(stagedPath);
-      });
-    const build = (check: boolean, sourceFingerprint: string, color: number) =>
-      run({ check, roster: [{ file: "card.png", sourceFingerprint, color }] });
-
-    await build(false, "a".repeat(64), 0);
-    const oldBytes = readFileSync(join(publicDir, "card.png"));
-    await expect(build(true, "b".repeat(64), 255))
-      .rejects.toThrow("source fingerprint changed");
-    expect(readFileSync(join(publicDir, "card.png"))).toEqual(oldBytes);
-
-    await build(false, "b".repeat(64), 255);
-    const published = join(publicDir, "card.png");
-    const pixels = await sharp(published).ensureAlpha().raw().toBuffer();
-    expect(pixels[(49 * 100 + 49) * 4]).toBe(255);
-
-    // Identical semantic inputs may retain insignificant browser raster drift.
-    const currentBytes = readFileSync(published);
-    await build(false, "b".repeat(64), 254);
-    expect(readFileSync(published)).toEqual(currentBytes);
-  });
-});
 
 describe("evergreen destination previews", () => {
   it("discovers public static destinations and skips private chrome", () => {
@@ -122,7 +30,7 @@ describe("evergreen destination previews", () => {
 
   it("names images by drawn inputs only, validates without rasterizing and renders each identity once", async () => {
     const root = makeTempDir();
-    const cover = await png("#eeeeee").toBuffer();
+    const cover = await sharp({ create: { width: 1200, height: 630, channels: 4, background: "#eeeeee" } }).png().toBuffer();
     const files: Record<string, string | Buffer> = {
       "scripts/lib/og-resvg-render.mts": "rasterizer", "font.ttf": fontBuffers[0], "art.svg": "art", "other.svg": "other", "public/cover.png": cover,
     };
@@ -155,7 +63,7 @@ describe("evergreen destination previews", () => {
     expect(first["/b/"].url).toBe(first["/a/"].url);
     expect(new Set([first["/a/"].url, first["/c/"].url, first["/d/"].url]).size).toBe(3);
     const admitted = await sharp(cover).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
-    expect(first["/cover/"].url).toBe(`/og/v2/image-${contentSha256(admitted)}.png`);
+    expect(first["/cover/"].url).toBe(`/og/v2/image-${createHash("sha256").update(admitted).digest("hex")}.png`);
     expect(existsSync(join(root, "public/og/v2"))).toBe(false);
     writeFileSync(join(root, "font.ttf"), readFileSync(new URL("../../src/assets/fonts/originals/GeistMono-Regular.ttf", import.meta.url)));
     await build("map");

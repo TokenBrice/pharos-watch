@@ -5,6 +5,7 @@ import { cachedGlobMatcher } from "../lib/glob-matcher.mts";
 import { collectModuleSpecifiers, resolveModuleSpecifier } from "../lib/pr-import-graph.mts";
 import { V9_SCORE_INPUT_DATA_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
 import { describe, expect, it } from "vitest";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { buildGeneratedArtifactPhases as phases, GENERATED_ARTIFACT_REGISTRY, selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 
 interface Artifact {
@@ -52,6 +53,10 @@ describe("generated artifact lifecycle", () => {
 
   it("leaves authored root instructions outside generated artifact ownership", () => {
     for (const path of ["AGENTS.md", "CLAUDE.md"]) expect(registry.flatMap((a) => a.outputPaths)).not.toContain(path);
+  });
+
+  it("leaves frozen legacy OG cards outside generated artifact selection", () => {
+    expect(selectChangedGeneratedArtifactIds(["public/og-editorial-about.png", "public/og-learn-fiat-cash.png"])).toEqual([]);
   });
 
   it("records the atomic writer as a source of every artifact that publishes through it", () => {
