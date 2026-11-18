@@ -1,3 +1,8 @@
+import { DEPEG_RECOVERY_CLOSE_REASONS } from "@shared/lib/depeg-closure";
+import { DEPEG_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
+import { REPLAY_ROW_PREIMAGE_SQL } from "./backfill-depegs-window";
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
+import { BRZ_UNVERIFIED_PEAK_EVENT_IDS } from "@shared/data/depegs/backfill-replay-suppressions";
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
 import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
@@ -10,10 +15,11 @@ import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../../src/lib/depe
 import type { PsiDepegEventRow } from "../../src/lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import {
   runCoinGeckoAuditBatch,
   type AuditCgErrorReason,
+  type AuditDepegRow,
   type AuditedEvent,
   type Verdict,
 } from "./audit-depeg-history/coingecko-audit";
@@ -34,6 +40,25 @@ import {
 const AUDIT_UPSTREAM_OUTAGE_ERROR_RATIO = 0.5;
 const AUDIT_MIN_SUPPLY_LOOKUP_MARGIN_SEC = 30 * DAY_SECONDS;
 const AUDIT_SUPPLY_EXCLUSION_DETAIL_LIMIT = 25;
+const AUDIT_PROTECTION_SQL = `CASE
+  WHEN e.stablecoin_id = 'brz-transfero' AND e.id IN (${BRZ_UNVERIFIED_PEAK_EVENT_IDS.join(", ")}) THEN 'reviewed-peak-unverified'
+  WHEN e.disposition = 'restored-evidenced' THEN 'restored-evidenced'
+  WHEN ${reviewedDepegDisputeSql("e", false)} THEN 'reviewed-dispute'
+  WHEN e.disposition = 'repaired' THEN 'repaired'
+END`;
+const AUDIT_ROW_PREIMAGE_SQL = `json_array(${REPLAY_ROW_PREIMAGE_SQL.replaceAll("depeg_events.", "e.")},
+  p.peg_reference_source, p.source_kind, p.market_diagnostics_json)`;
+const EXISTING_SCORE_EXCLUSION_SQL = `(COALESCE(p.audit_verdict IN ('false_positive', 'disputed'), 0)
+  OR CASE WHEN json_valid(p.public_json)
+    THEN COALESCE(json_extract(p.public_json, '$.pegScoreEligible') = 0, 0)
+      OR COALESCE(json_extract(p.public_json, '$.auditVerdict') IN ('false_positive', 'disputed'), 0)
+    ELSE 0 END)`;
+const AUDIT_EVENT_COLUMNS = `${DEPEG_EVENTS_DEPEGROW_COLUMNS},
+  ${AUDIT_ROW_PREIMAGE_SQL} AS audit_preimage, e.close_reason,
+  e.peak_peg_reference, e.peak_quote_domain, e.recovery_peg_reference, e.admitted_coverage_json,
+  COALESCE(p.quote_mode, CASE WHEN json_valid(p.public_json) THEN json_extract(p.public_json, '$.quoteMode') END) AS quote_mode,
+  CASE WHEN json_valid(p.market_diagnostics_json) THEN json_extract(p.market_diagnostics_json, '$.quoteCurrency') END AS quote_currency,
+  ${AUDIT_PROTECTION_SQL} AS protection_reason`;
 
 type AuditSupplyObservation =
   | { supply: number; reason?: never }
@@ -147,6 +172,7 @@ interface ContradictoryRecoveryRepairResult {
   candidateEvents: ContradictoryRecoveryRepairSummary[];
   repairedEvents: ContradictoryRecoveryRepairSummary[];
   repairedEventCount: number;
+  skippedEvents: { id: number; reason: "recovery-evidence-ambiguous" }[];
 }
 
 interface AuditMutationPlan {
@@ -187,7 +213,11 @@ function buildAuditVerdictProvenanceStmt(
       `INSERT INTO depeg_event_provenance (
          event_id, source_kind, audit_verdict, confidence_tier, public_json, created_at, updated_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, CASE WHEN EXISTS (
+         SELECT 1 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+         WHERE e.id = ? AND ((${AUDIT_PROTECTION_SQL}) IS NOT NULL
+           OR (? = 'no_data' AND ${EXISTING_SCORE_EXCLUSION_SQL}))
+       ) THEN NULL ELSE ? END, ?, ?, ?, ?, ?)
        ON CONFLICT(event_id) DO UPDATE SET
          audit_verdict = excluded.audit_verdict,
          confidence_tier = excluded.confidence_tier,
@@ -196,6 +226,8 @@ function buildAuditVerdictProvenanceStmt(
     )
     .bind(
       event.id,
+      event.id,
+      verdict,
       event.source,
       verdict,
       confidenceTier,
@@ -205,21 +237,25 @@ function buildAuditVerdictProvenanceStmt(
     );
 }
 
-async function loadClosedDepegEvents(db: D1Database): Promise<DepegRow[]> {
+async function loadClosedDepegEvents(db: D1Database): Promise<AuditDepegRow[]> {
   const allClosedEvents = await db
     .prepare(
-      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at`,
+      `SELECT ${AUDIT_EVENT_COLUMNS}
+       FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+       WHERE e.ended_at IS NOT NULL ORDER BY e.started_at`,
     )
-    .all<DepegRow>();
+    .all<AuditDepegRow>();
   return allClosedEvents.results ?? [];
 }
 
-async function loadAllDepegEvents(db: D1Database): Promise<DepegRow[]> {
+async function loadAllDepegEvents(db: D1Database): Promise<AuditDepegRow[]> {
   const allEvents = await db
     .prepare(
-      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events ORDER BY stablecoin_id, started_at`,
+      `SELECT ${AUDIT_EVENT_COLUMNS}
+       FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+       ORDER BY e.stablecoin_id, e.started_at`,
     )
-    .all<DepegRow>();
+    .all<AuditDepegRow>();
   return allEvents.results ?? [];
 }
 
@@ -347,13 +383,17 @@ function getAuditMinSupplyHistoryWindow(events: readonly DepegRow[]): { startSec
   };
 }
 
-function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryRecoveryRepairSummary | null {
+function summarizeContradictoryRecoveryEvent(event: AuditDepegRow): ContradictoryRecoveryRepairSummary | null {
   if (event.ended_at == null || event.recovery_price == null) {
     return null;
   }
   const thresholdBps = getDepegThresholdBps(event.peg_type);
-  const recoveryBps = getDeviationSignal(event.recovery_price, event.peg_reference)?.absBps ?? null;
-  if (recoveryBps == null || recoveryBps < thresholdBps) {
+  const fixedUsd = event.peg_type === "peggedUSD" && event.quote_mode !== "native-peg";
+  const reference = event.recovery_peg_reference ?? (fixedUsd && event.peg_reference === 1 ? 1 : null);
+  if (reference == null) return null;
+  // The stored recovery reference is paired with the recovery price by the write contract.
+  const recovery = getDeviationSignal(event.recovery_price, reference);
+  if (!recovery || !signalCrossesThreshold(recovery, thresholdBps)) {
     return null;
   }
   return {
@@ -364,7 +404,7 @@ function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryReco
     startedAt: event.started_at,
     endedAt: event.ended_at,
     recoveryPrice: event.recovery_price,
-    recoveryBps,
+    recoveryBps: recovery.absBps,
     thresholdBps,
   };
 }
@@ -374,14 +414,14 @@ async function commitAuditMutation(
   db: D1Database,
   mutationStatements: D1PreparedStatement[],
   failureMessage: string,
-  recomputePlan?: { affectedDays: Set<number>; remainingDepegEvents: PsiDepegEventRow[] },
+  recomputePlan?: { affectedDays: Set<number>; remainingDepegEvents: PsiDepegEventRow[]; coingeckoApiKey?: string | null },
   batchBound?: AuditMutationBatchBound,
 ): Promise<number> {
   // The mutation and stability recompute form one logical unit. Build the
   // recompute first so the full atomic statement count can be bounded before
   // executeAtomicBatch sends the transaction.
   const recompute = recomputePlan
-    ? await buildRecomputeStabilityStatements(db, recomputePlan.affectedDays, recomputePlan.remainingDepegEvents)
+    ? await buildRecomputeStabilityStatements(db, recomputePlan.affectedDays, recomputePlan.remainingDepegEvents, recomputePlan.coingeckoApiKey)
     : { statements: [], daysRecomputed: 0, unavailableDays: [] };
   if (recompute.unavailableDays.length > 0) {
     logWorkerEventArgs("api", "warn", "[audit] PSI repair retained unavailable days:", recompute.unavailableDays);
@@ -418,6 +458,33 @@ async function commitAuditMutation(
   return recompute.daysRecomputed;
 }
 
+function guardAuditMutation(
+  db: D1Database,
+  rows: readonly AuditDepegRow[],
+  forbidIncidentMembers: boolean,
+  sealedEventIds: readonly number[] = rows.map(({ id }) => id),
+): D1PreparedStatement {
+  return db.prepare(`INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE EXISTS (
+    SELECT 1 FROM json_each(?) expected LEFT JOIN depeg_events e ON e.id = json_extract(expected.value, '$.id')
+    LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+    WHERE e.id IS NULL OR ${AUDIT_ROW_PREIMAGE_SQL} IS NOT json_extract(expected.value, '$.preimage')
+      OR (${AUDIT_PROTECTION_SQL}) IS NOT NULL OR EXISTS (
+        SELECT 1 FROM depeg_resolver_incident_event_links l
+          LEFT JOIN depeg_resolver_public_predictions prediction ON prediction.incident_key = l.incident_key
+        WHERE l.event_id = e.id AND (? = 1 OR (prediction.id IS NOT NULL
+          AND e.id IN (SELECT value FROM json_each(?))))
+      ))`).bind(JSON.stringify(rows.map(({ id, audit_preimage }) => ({ id, preimage: audit_preimage ?? null }))),
+    forbidIncidentMembers ? 1 : 0, JSON.stringify(sealedEventIds));
+}
+
+function retractDeletedTapeClaims(db: D1Database, ids: readonly number[], now: number) {
+  return db.prepare(`UPDATE tape_events AS t SET suppressed_at = ?, suppression_reason = ?
+    WHERE t.source_table = 'depeg_events' AND t.suppressed_at IS NULL AND EXISTS (
+      SELECT 1 FROM json_each(?) ids WHERE t.source_row_id = CAST(ids.value AS TEXT)
+        OR (t.source_row_id >= CAST(ids.value AS TEXT) || ':' AND t.source_row_id < CAST(ids.value AS TEXT) || ';')
+    )`).bind(now, DEPEG_CLAIM_RETRACTED_REASON, JSON.stringify(ids));
+}
+
 function planDirectDelete(db: D1Database, events: DepegRow[]): AuditMutationPlan {
   const affectedDays = new Set<number>();
   const statements = events.map((event) => {
@@ -430,13 +497,20 @@ function planDirectDelete(db: D1Database, events: DepegRow[]): AuditMutationPlan
 
 async function executeDirectDelete(
   db: D1Database,
-  events: DepegRow[],
+  events: AuditDepegRow[],
   deleteIds: readonly number[],
   dryRun: boolean,
 ): Promise<Response> {
   const toDelete = events.filter((event) => deleteIds.includes(event.id));
   if (toDelete.length === 0) {
     return errorResponse(404, "No matching events found");
+  }
+  const protectedEvents = toDelete.filter((event) => event.protection_reason != null);
+  if (protectedEvents.length > 0) {
+    return jsonResponse({
+      error: "Protected depeg history",
+      conflicts: protectedEvents.map((event) => ({ eventId: event.id, reason: event.protection_reason })),
+    }, { status: 409, noStore: true });
   }
 
   if (dryRun) {
@@ -458,7 +532,8 @@ async function executeDirectDelete(
   const remainingDepegEvents = await loadPsiEligibleDepegEvents(db, { excludedIds: toDelete.map((event) => event.id) });
   const daysRecomputed = await commitAuditMutation(
     db,
-    mutationPlan.statements,
+    [guardAuditMutation(db, toDelete, true), ...mutationPlan.statements,
+      retractDeletedTapeClaims(db, toDelete.map(({ id }) => id), Math.floor(Date.now() / 1000))],
     "Direct delete failed before the stability-index repair could finish",
     { affectedDays: mutationPlan.affectedDays, remainingDepegEvents },
     { requestedMutationCount: deleteIds.length, operation: "Direct delete" },
@@ -478,7 +553,12 @@ async function executeSyntheticSplitRepair(
   const allRows = await loadAllDepegEvents(db);
   const groupedCandidates = collectSyntheticSplitGroups(
     allRows.filter((event) => (request.symbolFilter ? event.symbol.toUpperCase() === request.symbolFilter : true)),
-  );
+  ).filter((group) => group.every((event: AuditDepegRow) => event.protection_reason == null
+    && event.peg_type === "peggedUSD" && event.quote_mode !== "native-peg" && event.peg_reference === 1
+    && event.peak_peg_reference == null && event.peak_quote_domain == null && event.recovery_peg_reference == null
+    && event.price_coverage_json == null && event.admitted_coverage_json == null
+    && event.recovery_first_seen_at == null && event.last_trusted_price_at == null
+    && event.price_coverage_gap_started_at == null));
   const paginatedGroups = groupedCandidates.slice(request.offset, request.offset + request.limit);
   const result: SyntheticSplitRepairResult = {
     repair: "synthetic-splits",
@@ -503,12 +583,14 @@ async function executeSyntheticSplitRepair(
   );
   if (sealedMutationResponse) return sealedMutationResponse;
 
-  const mutationPlan = planSyntheticSplitRepair(db, paginatedGroups, Math.floor(Date.now() / 1000));
+  const now = Math.floor(Date.now() / 1000);
+  const mutationPlan = planSyntheticSplitRepair(db, paginatedGroups, now);
   result.repairedGroups = mutationPlan.summaries;
   result.repairedEventCount = mutationPlan.repairedEventCount;
   result.daysRecomputed = await commitAuditMutation(
     db,
-    mutationPlan.statements,
+    [guardAuditMutation(db, paginatedGroups.flat(), true), ...mutationPlan.statements,
+      retractDeletedTapeClaims(db, mutationPlan.summaries.flatMap(({ mergedIds }) => mergedIds), now)],
     "Synthetic split repair failed before the stability-index repair could finish",
     {
       affectedDays: mutationPlan.affectedDays,
@@ -522,18 +604,18 @@ async function executeSyntheticSplitRepair(
 }
 
 function findContradictoryRecoveryCandidates(
-  events: DepegRow[],
+  events: AuditDepegRow[],
   symbolFilter: string | null,
 ): ContradictoryRecoveryRepairSummary[] {
   return events
-    .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
+    .filter((event) => event.protection_reason == null && (!symbolFilter || event.symbol.toUpperCase() === symbolFilter))
     .map((event) => summarizeContradictoryRecoveryEvent(event))
     .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
 }
 
 async function executeContradictoryRecoveryRepair(
   db: D1Database,
-  events: DepegRow[],
+  events: AuditDepegRow[],
   request: AuditPaginatedRequest,
 ): Promise<Response> {
   const filteredCandidates = findContradictoryRecoveryCandidates(events, request.symbolFilter);
@@ -547,25 +629,37 @@ async function executeContradictoryRecoveryRepair(
     candidateEvents: paginatedCandidates,
     repairedEvents: [],
     repairedEventCount: 0,
+    skippedEvents: [],
   };
+  const eventsById = new Map(events.map((event) => [event.id, event]));
+  const mutable = paginatedCandidates.filter(({ id }) => {
+    const row = eventsById.get(id)!;
+    // These legacy fields cannot identify which observations shared the invalid denominator.
+    if (row.price_coverage_json == null && row.last_trusted_price_at == null) return true;
+    result.skippedEvents.push({ id, reason: "recovery-evidence-ambiguous" });
+    return false;
+  });
 
-  if (request.dryRun || paginatedCandidates.length === 0) {
+  if (request.dryRun || mutable.length === 0) {
     return jsonResponse(result);
   }
 
   const sealedMutationResponse = await rejectSealedDdrEventMutation(
     db,
-    paginatedCandidates.map((candidate) => candidate.id),
+    mutable.map((candidate) => candidate.id),
     "audit-depeg-history:contradictory-recovery-price",
   );
   if (sealedMutationResponse) return sealedMutationResponse;
 
-  const statements = paginatedCandidates.map((candidate) =>
-    db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
-  );
-  await commitAuditMutation(db, statements, "Contradictory recovery-price repair failed");
-  result.repairedEvents = paginatedCandidates;
-  result.repairedEventCount = paginatedCandidates.length;
+  const statements = mutable.map(({ id }) =>
+    db.prepare(`UPDATE depeg_events SET recovery_price = NULL, recovery_peg_reference = NULL,
+      recovery_first_seen_at = NULL, recovery_last_seen_at = NULL,
+      close_reason = CASE WHEN close_reason IN (${DEPEG_RECOVERY_CLOSE_REASONS.map(() => "?").join(",")})
+        THEN NULL ELSE close_reason END WHERE id = ?`).bind(...DEPEG_RECOVERY_CLOSE_REASONS, id));
+  await commitAuditMutation(db, [guardAuditMutation(db, mutable.map(({ id }) => eventsById.get(id)!), false), ...statements],
+    "Contradictory recovery-price repair failed");
+  result.repairedEvents = mutable;
+  result.repairedEventCount = mutable.length;
   return jsonResponse(result);
 }
 
@@ -629,7 +723,7 @@ export async function handleAuditDepegHistoryTrusted({
 }
 
 export interface AuditEventsOptions {
-  events: DepegRow[];
+  events: AuditDepegRow[];
   minSupply: number;
   symbolFilter: string | null;
   offset: number;
@@ -728,11 +822,21 @@ export async function auditEvents(
 
   const affectedDays = new Set<number>();
   const provenanceStatements: D1PreparedStatement[] = [];
+  const inspectedEvents: AuditDepegRow[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
   const projectedAuditVerdicts = new Map<number, DepegAuditVerdict>();
   const nowSec = Math.floor(Date.now() / 1000);
   const { outcomes, attemptedCgFetches, errorReason } = await runCoinGeckoAuditBatch(db, paginatedEvents, coingeckoApiKey);
   if (errorReason) result.upstreamErrorReason = errorReason;
+
+  const noDataIds = outcomes.filter((outcome) => outcome.provenanceVerdict === "no_data").map(({ event }) => event.id);
+  const noDataExcluded = new Set<number>();
+  if (!dryRun && noDataIds.length > 0) {
+    const { results } = await db.prepare(`SELECT p.event_id AS id FROM depeg_event_provenance p
+      WHERE p.event_id IN (SELECT value FROM json_each(?)) AND ${EXISTING_SCORE_EXCLUSION_SQL}`)
+      .bind(JSON.stringify(noDataIds)).all<{ id: number }>();
+    for (const { id } of results) noDataExcluded.add(id);
+  }
 
   for (const outcome of outcomes) {
     result.auditedEvents.push(outcome.auditedEvent);
@@ -741,8 +845,10 @@ export async function auditEvents(
     result.rejectedByTimestampCount += outcome.rejectedByTimestampCount;
     if (outcome.falsePositiveFound) result.falsePositivesFound++;
 
-    if (!dryRun && outcome.provenanceVerdict != null) {
+    if (!dryRun && outcome.provenanceVerdict != null
+      && !(outcome.provenanceVerdict === "no_data" && noDataExcluded.has(outcome.event.id))) {
       provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, outcome.event, outcome.provenanceVerdict, nowSec));
+      inspectedEvents.push(outcome.event);
       projectedAuditVerdicts.set(outcome.event.id, outcome.provenanceVerdict);
       if (outcome.invalidatesProvenance) {
         invalidatingProvenanceEventIds.push(outcome.event.id);
@@ -770,9 +876,9 @@ export async function auditEvents(
     });
     result.daysRecomputed = await commitAuditMutation(
       db,
-      provenanceStatements,
+      [guardAuditMutation(db, inspectedEvents, false, invalidatingProvenanceEventIds), ...provenanceStatements],
       "False-positive audit persistence failed before the stability-index repair could finish",
-      { affectedDays, remainingDepegEvents },
+      { affectedDays, remainingDepegEvents, coingeckoApiKey },
       { requestedMutationCount: provenanceStatements.length, operation: "Audit provenance persistence" },
     );
   }

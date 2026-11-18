@@ -1,16 +1,19 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { DepegLedgerProofSchema } from "../../shared/types/depeg-event-projection";
 import { z } from "zod";
 
 const DepegLedgerCaptureSchema = z.object({
   schemaVersion: z.literal(1),
+  shardSource: z.literal("fetched-ledger").optional(),
   captureId: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   observationStartedAtISO: z.string().datetime(),
   observedAtISO: z.string().datetime(),
   sourceUrl: z.string().url(),
   methodologyVersionLabel: z.string().min(1),
   eventCount: z.number().int().nonnegative(),
+  ledgerProof: DepegLedgerProofSchema.optional(),
   apiTotal: z.number().int().nonnegative().nullable(),
 });
 

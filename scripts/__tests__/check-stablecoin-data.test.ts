@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   computeLiveReserveConfigFingerprint,
   isReserveSupplyAdmissionBootstrapAuthorized,
@@ -18,7 +19,19 @@ import {
   getTerminalLiveReserveConfigIssue,
   getExpiredReserveSupplyAdmissionBootstrapIssue,
   getOverdueListingStatusReviewIssue,
+  getPegRuntimeSupportIssue,
 } from "../ci/check-stablecoin-data";
+
+describe("OTHER promotion gate", () => {
+  it.each([
+    ["pre-launch", false, null],
+    ["active", false, expect.stringContaining("independent same-unit reference")],
+    ["active", true, null],
+  ] as const)("checks %s OTHER listings with navToken=%s", (status, navToken, expected) => {
+    const { flags } = TRACKED_META_BY_ID.get("sekau-allunity")!;
+    expect(getPegRuntimeSupportIssue({ status, flags: { ...flags, navToken } })).toEqual(expected);
+  });
+});
 
 describe("per-coin deployment identity gate", () => {
   it("retains duplicate rejection across primary/traded arrays without folding native identity case", () => {

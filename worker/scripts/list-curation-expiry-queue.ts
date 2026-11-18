@@ -7,8 +7,8 @@
 // - Other active evidence families (execution reviews, supply plans/partitions/
 //   exclusions, native single-route supply, mint/bridge scoped controls and
 //   questions, transfer scopes, scoped reserve observations, bounded reserve
-//   facts): the effective boundary is derived from each record's original
-//   authored clocks plus the canonical policy budget. The frozen input is never
+//   facts, and assurance reports): derive the boundary from each record's
+//   original authored clocks and canonical policy budget. The frozen input is never
 //   replayed at +N days, because hourly source observations would go stale
 //   independently and be misattributed as review expiry. Current admission is
 //   a separate join against exported admission functions or the captured
@@ -41,20 +41,25 @@ import {
   weightedReviewIsCurrent,
 } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { exitExecutionReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
+import { exitExecutionReviewDigests } from "@shared/lib/safety-score-v9/exit-execution";
+import { projectV9MechanismProfile } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { admitV10ReserveObservation, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
-import { parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
+import { parseBoundedDateSec, ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ExitExecutionModelReviewSchema } from "@shared/types/exit-route";
 import { ReserveBoundedFactSchema } from "@shared/types/reserve-bounded-facts";
+import { V9MechanismRiskReviewSchema } from "@shared/types/safety-score-v9-backing";
 import {
   V9ControlExecutionScopeSchema,
   V9WeightedQuorumSchema,
   type V1005AuthorityGraph,
 } from "@shared/types/safety-score-v9-control-scope";
+import { ComponentEvidenceBindingSchema, ResearchEvidenceSchema } from "@shared/types/safety-score-v9-research-evidence";
 import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
+import { sha256HexFromUtf8Chunks } from "../src/lib/hash";
+import { getSafetyScoreV9MechanismOverlayEvidence } from "../src/lib/safety-score-v9/extension-mechanism";
 import { resolveReviewedReserveAdmission } from "../src/lib/safety-score-v9/extension-reserves";
 import { REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES } from "../src/lib/safety-score-v9/supply-attribution-contract";
 import {
@@ -273,12 +278,13 @@ export type EvidenceFamily =
   | "transfer-review"
   | "transfer-scope"
   | "reserve-observation"
-  | "reserve-bound-fact";
+  | "reserve-bound-fact"
+  | "assurance-report";
 
 export const EVIDENCE_FAMILIES: readonly EvidenceFamily[] = [
   "execution-review", "supply-plan", "supply-partition", "supply-row-exclusion", "supply-native-single-route",
   "mint-control", "bridge-control", "scoped-control-question", "transfer-review", "transfer-scope",
-  "reserve-observation", "reserve-bound-fact",
+  "reserve-observation", "reserve-bound-fact", "assurance-report",
 ];
 
 export type EvidenceDisposition = "admitted" | "rejected" | "lapsed" | "unknown" | "inactive";
@@ -455,6 +461,9 @@ const CompiledAssetSchema = z.object({
 }).loose();
 const ExtensionAssetSchema = z.object({
   assetId: z.string(),
+  mechanismRiskReview: V9MechanismRiskReviewSchema.nullable().optional(),
+  componentEvidence: z.array(ComponentEvidenceBindingSchema).optional(),
+  researchEvidence: z.array(ResearchEvidenceSchema).optional(),
   supplyReview: z.object({
     selectedBridgeRoutes: z.array(z.object({ deploymentRouteKey: z.string(), supplyShare: z.number().nullable() }).loose()),
     providerRowExclusions: z.array(z.object({
@@ -683,6 +692,66 @@ function enumerateProjections(
     }
   };
 
+  // Use the captured fact and its report binding to keep composition and
+  // assurance admission independent.
+  const assuranceSourceId = "stablecoin.proof-of-reserves.latest-report";
+  for (const { assetId, mechanismRiskReview: review, componentEvidence, researchEvidence } of joins.extension?.values() ?? []) {
+    if (!review) continue;
+    const { archetype } = review;
+    const scope = archetype === "tbill" ? "lossRecoveryDesign" : "assuranceAndReconciliation";
+    const fact = archetype === "tbill" ? review.lossRecoveryDesign
+      : archetype === "fiat-cash" || archetype === "commodity-claim" ? review.assuranceAndReconciliation : null;
+    if (!fact) continue;
+    const scoped = fact.scopedAssessments?.some((row) =>
+      row.status.observationState === "known" && row.quality !== null && row.share > 0);
+    const measured = scoped || (fact.status.observationState === "known" && fact.quality !== null);
+    if (!measured && fact.status.observationState !== "stale") continue;
+    const governing = componentEvidence?.find((entry) => entry.componentKey === `mechanism-risk-review:governing-assurance:${scope}`);
+    const binding = governing ?? componentEvidence?.find((entry) => entry.componentKey === `mechanism-risk-review:${scope}`);
+    if (!binding) continue;
+    isolate("assurance-report", assetId, scope, () => {
+      const evidence = researchEvidence?.find((entry) =>
+        entry.sourceId === assuranceSourceId && binding.evidenceKeys.includes(entry.evidenceKey));
+      if (governing && governing.evidenceKeys.some((key) => !researchEvidence?.some((entry) => entry.evidenceKey === key))) {
+        throw new Error("governing-assurance-evidence-unresolved");
+      }
+      if (!evidence) return;
+      const overlayBinding = componentEvidence?.find((entry) => entry.componentKey === "mechanism-risk-review");
+      if (!governing && !scoped && overlayBinding) {
+        const sourceId = "safety-score-v9.mechanism-review-overlay";
+        const captured = overlayBinding.evidenceKeys.map((key) => {
+          const row = researchEvidence?.find((entry) => entry.evidenceKey === key);
+          if (!row) throw new Error("assurance-overlay-evidence-unresolved");
+          return row;
+        }).filter((row) => row.sourceId === sourceId);
+        if (captured.length > 0) {
+          const overlay = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
+          if (!overlay) throw new Error("assurance-overlay-evidence-unresolved");
+          const rebuilt = new ReviewEvidenceBuilder(assetId, clockSec, sha256HexFromUtf8Chunks);
+          rebuilt.add({ ...overlay, componentKeys: ["mechanism-risk-review"], sourceId, publishedBy: "unknown", confidence: "manual-review" });
+          if (rebuilt.evidence.size !== captured.length || captured.some((row) =>
+            rebuilt.evidence.get(row.evidenceKey)?.contentSha256 !== row.contentSha256
+          )) throw new Error("assurance-overlay-digest-mismatch");
+
+          // An overlay can govern while a report remains bound as diagnostic evidence.
+          const { components, profileReview } = overlay.payload;
+          if (components[scope] != null || (profileReview && projectV9MechanismProfile(profileReview).components[scope] != null)) return;
+        }
+      }
+      const { observedAtSec, publishedAtSec, maxAgeSec } = evidence;
+      if (publishedAtSec === null || maxAgeSec === null) throw new Error("assurance-report-clock-missing");
+      projections.push({
+        family: "assurance-report", assetId, scope, source: evidence.sourceId,
+        clocks: { periodEnd: isoSec(observedAtSec), publishedAt: isoSec(publishedAtSec) },
+        startSec: publishedAtSec,
+        terms: [{ label: `periodEnd + assuranceReportMaxAgeSec (${maxAgeSec}s)`, atSec: observedAtSec + maxAgeSec, inclusive: true }],
+        admission: () => measured
+          ? { state: "admitted", reason: null }
+          : { state: "rejected", reason: "assurance-report-stale" },
+      });
+    });
+  }
+
   // Execution reviews: current through the explicit instant (whole second).
   const routesByDigest = new Map<string, { assetId: string; scoreEligible: boolean }[]>();
   for (const asset of joins.compiled?.values() ?? []) {
@@ -696,18 +765,19 @@ function enumerateProjections(
     const source = `exit-execution-model-reviews-v1.json#/reviews/${index}`;
     isolate("execution-review", null, source, () => {
       const review = ExitExecutionModelReviewSchema.parse(raw);
-      const digest = exitExecutionReviewDigest(review);
+      const digests = exitExecutionReviewDigests(review);
       const assetId = review.identity.assetId;
       const enabled = POLICY.semantic.exit.executionModels[review.modelId]?.admission === "enabled";
       projections.push({
-        family: "execution-review", assetId, scope: `${review.modelId} ${review.identity.deployment} digest:${digest}`, source,
+        family: "execution-review", assetId, scope: `${review.modelId} ${review.identity.deployment} digest:${digests[0]}`, source,
         clocks: { reviewedAt: review.reviewedAt, expiresAt: review.expiresAt },
         startSec: instantSec(review.reviewedAt, "ceil"),
         terms: [{ label: "explicit expiresAt", atSec: instantSec(review.expiresAt, "floor"), inclusive: true }],
         ...(enabled ? {} : { inactiveReason: "execution-model-not-enabled" }),
         admission: () => {
           if (!joins.compiled) return unknownJoin("replay-compiled-facts-missing");
-          const routes = (routesByDigest.get(digest) ?? []).filter((route) => route.assetId === assetId);
+          const routes = digests.flatMap((digest) => routesByDigest.get(digest) ?? [])
+            .filter((route) => route.assetId === assetId);
           if (routes.length === 0) return unknownJoin("no-captured-certificate-for-review");
           return routes.some((route) => route.scoreEligible)
             ? { state: "admitted", reason: "score-eligible certificate route" }
@@ -887,10 +957,12 @@ function enumerateProjections(
   return projections;
 }
 
-/** Boundary projection only (no admission joins); used for resolver boundary-parity tests. */
+/** Boundary projection only, with compiler-selected evidence for replay-owned records. */
 export function enumerateEvidenceFamilyBoundaries(replay: Replay, sources: CurationExpirySources = defaultCurationExpirySources()) {
   const diagnostics: CensusDiagnostic[] = [];
-  const joins: ReplayJoins = { compiled: null, extension: null, economicModelById: {} };
+  const assets = replay.pipeline.extension?.assets;
+  const extension = assets ? indexAssets("pipeline.extension.assets", assets, ExtensionAssetSchema, diagnostics) : null;
+  const joins: ReplayJoins = { compiled: null, extension, economicModelById: {} };
   const boundaries = enumerateProjections(replay, sources, joins, diagnostics, []).map((projection) => {
     const term = controllingTerm(projection.terms);
     return { family: projection.family, assetId: projection.assetId, scope: projection.scope, source: projection.source, lastAdmittedSec: lastAdmitted(term), controllingBudget: term.label };

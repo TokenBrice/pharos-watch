@@ -279,10 +279,11 @@ function renderOgRoute(): string {
     "The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `depeg`, `safety-scores` and `stability-index`, with or without the `v2/` prefix) answer `301` to the absolute evergreen image of their former destination from a table frozen at retirement; an unknown id redirects to the home image ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).", "",
     "`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.", "",
     "`/api/og/v2/dossier/:id?fallback=<hash>` serves the same admitted PNG and metadata for a rated active coin. If a current scorecard is unavailable, it sends a short-lived `302` to the evergreen PNG identified by the 64-character lowercase hex hash. An absent or invalid fallback selects the home evergreen PNG.", "",
+    "`/api/og/v2/depeg/briefing` renders the dated depeg tracker briefing from the open incident ledger and published market and native evidence. Failed ledger reads or rendering return an uncached `503`. Individual unavailable observations retain their status on the image.", "",
     "- **Path:** `/api/og/*` and `/api/og/v2/*`",
     "- **Parameters:** Path segments select the family and subject. The dossier route accepts the evergreen image hash as `fallback`.",
-    "- **Success response:** a bodyless `301` or `302` redirect, or scorecard PNG image bytes.",
-    "- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and scorecard PNGs for up to 60 seconds within the source freshness budget.",
+    "- **Success response:** a bodyless `301` or `302` redirect, or dated PNG image bytes.",
+    "- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and dated PNGs for up to 60 seconds within the source freshness budget.",
   ].join("\n");
 }
 export function renderGeneratedBlock(spec: OpenApiSpec): string {

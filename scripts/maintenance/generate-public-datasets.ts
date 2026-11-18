@@ -579,8 +579,11 @@ async function main(): Promise<void> {
     );
   }
 
+  const historical = isHistoricalSnapshotDate(requestedSnapshotDate);
+  const repointCurrent = !historical || values["repoint-current"];
   const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate, {
-    historical: isHistoricalSnapshotDate(requestedSnapshotDate),
+    historical,
+    repointCurrent: values["repoint-current"],
     depegCapture,
   });
   if (apiBase) {
@@ -598,7 +601,6 @@ async function main(): Promise<void> {
     totalWritten += result.written;
     totalPruned += pruneOldSnapshots(join(DATASETS_DIR, spec.topic), snapshotDate);
   }
-  const repointCurrent = !isHistoricalSnapshotDate(requestedSnapshotDate) || values["repoint-current"];
   if (repointCurrent) {
     if (writePublicDatasetRedirects(snapshotDate).changed) totalWritten += 1;
     if (writePublicDatasetCurrentModule(snapshotDate).changed) totalWritten += 1;

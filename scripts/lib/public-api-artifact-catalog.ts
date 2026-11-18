@@ -349,6 +349,12 @@ const PUBLIC_API_ARTIFACT_INPUTS = {
       },
       INCLUDE_TOTAL_QUERY_PARAM,
       {
+        name: "ledgerGeneration",
+        in: "query",
+        schema: { type: "string" },
+        description: "For an unfiltered 1000-row page with exact total, request latest without a cursor, then pin the returned lowercase SHA-256 ledgerProof generation with each successor cursor. The source attests a half-open coverage window.",
+      },
+      {
         name: "includePending",
         in: "query",
         schema: { type: "boolean" },

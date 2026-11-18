@@ -20,11 +20,12 @@ import {
 import { formatIsoDate } from "@shared/lib/format";
 import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { z } from "zod";
 import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
+import { readDepegEventIndex, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -106,17 +107,6 @@ export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
 interface DepegEventOutputPaths {
   dataDir: string;
   indexFile: string;
-}
-
-function readExistingDepegEntries(dataDir: string): readonly DepegEventEntry[] {
-  if (!existsSync(dataDir)) return [];
-  return readdirSync(dataDir)
-    .filter((name) => /^\d{4}\.json$/.test(name))
-    .sort()
-    .flatMap((name) => {
-      const path = `${dataDir}/${name}`;
-      return DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(path, "utf8")));
-    });
 }
 
 export function findMissingStaticDepegArchiveSlugs(
@@ -222,8 +212,10 @@ function resolveOutputPaths(explicit: string | null): DepegEventOutputPaths {
   return { dataDir: dirname(indexFile), indexFile };
 }
 
-function buildDepegEventIndex(entries: readonly DepegEventEntry[]) {
+function buildDepegEventIndex(entries: readonly DepegEventEntry[], ledger: readonly DepegEventEntry[]) {
+  const fetched = new Set(ledger);
   return selectStaticDepegEventPages(entries).map((event) => ({
+    ...(fetched.has(event) ? {} : { retainedPage: event }),
     slug: event.slug,
     stablecoinId: event.stablecoinId,
     symbol: event.symbol,
@@ -236,6 +228,7 @@ function buildDepegEventIndex(entries: readonly DepegEventEntry[]) {
 
 function writeDepegEventLedger(
   entries: readonly DepegEventEntry[],
+  pages: readonly DepegEventEntry[],
   paths: DepegEventOutputPaths,
 ): { shardCount: number } {
   const shards = new Map<string, DepegEventEntry[]>();
@@ -259,7 +252,7 @@ function writeDepegEventLedger(
     }
   }
 
-  writeFileSync(paths.indexFile, `${JSON.stringify(buildDepegEventIndex(entries), null, 2)}\n`);
+  writeFileSync(paths.indexFile, `${JSON.stringify(buildDepegEventIndex(pages, entries), null, 2)}\n`);
   return { shardCount: shards.size };
 }
 
@@ -305,6 +298,12 @@ export function assignSlugs(
   });
 }
 
+async function isMissingLedgerManifest(response: Response): Promise<boolean> {
+  if (response.status !== 503) return false;
+  const error: unknown = await response.clone().json().catch(() => null);
+  return typeof error === "object" && error !== null && "reason" in error && error.reason === "ledger-manifest-unavailable";
+}
+
 export async function runDepegSync(argv = process.argv.slice(2)) {
   const options = parseDepegSyncArgs(argv);
   if (writeCliHelpIfRequested(options, USAGE)) return;
@@ -317,7 +316,11 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
     scriptName: "sync-depeg-events",
   });
   const outputPaths = resolveOutputPaths(options.output);
-  const previousEntries = readExistingDepegEntries(outputPaths.dataDir);
+  const previousBySlug = new Map(readDepegEventSnapshot({ missing: "empty" }, outputPaths.dataDir).map((row) => [row.slug, row]));
+  for (const { retainedPage } of readDepegEventIndex({ missing: "empty" }, outputPaths.indexFile)) {
+    if (retainedPage) previousBySlug.set(retainedPage.slug, retainedPage);
+  }
+  const previousEntries = [...previousBySlug.values()];
   const headers = new Headers(await apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
@@ -325,8 +328,9 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
   let publicationStarted = false;
   try {
     const observationStartedAtISO = new Date().toISOString();
-    const { entries, apiTotal } = await (async () => {
+    const { entries, pageEntries, apiTotal, ledgerProof } = await (async () => {
       const collected: DepegEvent[] = [];
+      let ledgerProof: DepegLedgerCapture["ledgerProof"];
       let cursor: string | null = null;
       let expectedTotal: number | undefined;
       const limit = 1000;
@@ -334,18 +338,27 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams();
         params.set("limit", String(limit));
+        params.set("includeTotal", "true");
+        if (page === 0 || ledgerProof) params.set("ledgerGeneration", ledgerProof?.generation ?? "latest");
         if (cursor) params.set("cursor", cursor);
-        const pagedUrl = `${apiUrl}?${params.toString()}`;
-        const res = await fetchWithRetry(
-          pagedUrl,
-          { headers },
-          {
-            logLabel: "sync-depeg-events",
-            retryStatuses: [403],
-            backoffMs: [12_000, 12_000],
-          },
-        );
-        if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
+        const fetchPage = () => fetchWithRetry(`${apiUrl}?${params}`, { headers }, {
+          logLabel: "sync-depeg-events",
+          retryStatuses: [403],
+          backoffMs: [12_000, 12_000],
+          terminalResponse: isMissingLedgerManifest,
+        });
+        let res = await fetchPage();
+        let unpinned = false;
+        if (page === 0 && await isMissingLedgerManifest(res)) {
+          params.delete("ledgerGeneration");
+          unpinned = true;
+          res = await fetchPage();
+        }
+        if (!res.ok) {
+          const message = `API returned ${res.status} for ${apiUrl}?${params}`;
+          if (ledgerProof) throw new SnapshotIntegrityError(message);
+          throw new Error(message);
+        }
         let payload: unknown;
         try {
           payload = await res.json();
@@ -360,6 +373,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
           throw new SnapshotIntegrityError(`Invalid depeg response: ${parsed.error.message}`);
         }
         const body = parsed.data;
+        if (page === 0 && !unpinned) ledgerProof = body.ledgerProof;
+        if (body.ledgerProof?.generation !== ledgerProof?.generation ||
+          body.ledgerProof?.coveredFromSec !== ledgerProof?.coveredFromSec ||
+          body.ledgerProof?.coveredThroughSec !== ledgerProof?.coveredThroughSec) {
+          throw new SnapshotIntegrityError("Depeg ledger proof changed during traversal");
+        }
+        if (ledgerProof && (body.totalExact !== true || body.total === undefined ||
+          body.nextCursor === undefined || body.events.length !== Math.min(limit, body.total - collected.length) ||
+          Boolean(body.nextCursor) !== (collected.length + body.events.length < body.total))) {
+          throw new SnapshotIntegrityError("Incomplete verified depeg ledger page");
+        }
         if (page === 0) expectedTotal = body.total;
         else if (body.total !== expectedTotal) {
           throw new SnapshotIntegrityError("Depeg pagination changed its API total during traversal");
@@ -406,7 +430,9 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         return b.id - a.id;
       });
 
-      const computedEntries = assignSlugs(unique, previousEntries);
+      const stored = DepegEventStoredSnapshotSchema.safeParse(assignSlugs(unique, previousEntries));
+      if (!stored.success) throw new SnapshotIntegrityError(`Invalid stored depeg snapshot: ${stored.error.message}`);
+      const computedEntries = stored.data;
       let lineage: DepegArchiveLineage = [];
       const missingPublishedEntries = selectStaticDepegEventPages(previousEntries).filter((entry) => !seen.has(entry.id));
       const hasConsolidatedRepresentative = unique.some((event) => (event.constituentEventCount ?? 1) > 1);
@@ -437,13 +463,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         lineage = parsed.data.rows;
         console.log(`[sync-depeg-events] Incident lineage: ${lineage.length} resolver rows admitted`);
       }
-      const stored = DepegEventStoredSnapshotSchema.safeParse(
-        preserveStaticDepegArchiveEntries(previousEntries, computedEntries, lineage),
-      );
-      if (!stored.success) {
-        throw new SnapshotIntegrityError(`Invalid stored depeg snapshot: ${stored.error.message}`);
-      }
-      const archivePreservedEntries = stored.data;
+      const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries, lineage);
 
       // Guard against API returning an empty list (e.g. token expiry, partial
       // outage, or a misconfigured API base). Wiping the seed event would purge
@@ -468,16 +488,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         archivePreservedEntries,
         options.allowArchiveShrink,
       );
-      return { entries: archivePreservedEntries, apiTotal: expectedTotal ?? null };
+      return { entries: computedEntries, pageEntries: archivePreservedEntries, apiTotal: expectedTotal ?? null, ledgerProof };
     })();
     const shardCount = new Set(
       entries.map((entry) => String(new Date(entry.startedAt * 1000).getUTCFullYear())),
     ).size;
     if (!options.dryRun) {
       publicationStarted = true;
-      writeDepegEventLedger(entries, outputPaths);
+      writeDepegEventLedger(entries, pageEntries, outputPaths);
       const capture: DepegLedgerCapture = {
         schemaVersion: 1,
+        shardSource: "fetched-ledger",
         captureId: depegLedgerCaptureId(outputPaths.dataDir),
         observationStartedAtISO,
         observedAtISO: new Date().toISOString(),
@@ -485,6 +506,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         methodologyVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
         eventCount: entries.length,
         apiTotal,
+        ledgerProof,
       };
       const capturePath = `${outputPaths.dataDir}/${DEPEG_LEDGER_CAPTURE_RELATIVE_PATH}`;
       mkdirSync(dirname(capturePath), { recursive: true });

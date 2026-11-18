@@ -52,6 +52,14 @@ describe("social card renderer", () => {
     for (const pillars of [scorecard.pillars, []]) expect(JSON.stringify(buildSocialScorecardElement({ ...scorecard, identity: longest, pillars }, assets))).toContain('"skyMoneyUsdsFlagship"');
   });
 
+  it.each([
+    [0.000055164025388120685, "$0.00005516"],
+    [0.0000431234, "$0.00004312"],
+  ])("draws a sub-cent USD low with its significant digits", (low, expected) => {
+    const card = { ...record, ruler: { peg: 1, floor: 0, low, currencySymbol: "$" } } as SocialCardSpec;
+    expect(JSON.stringify(buildSocialCardElement(card, assets))).toContain(expected);
+  });
+
   it("draws a dashed monogram for an identity without a registered logo", () => {
     const element = JSON.stringify(buildSocialCardElement(dossier, assets));
     expect(element).toContain("dashed");

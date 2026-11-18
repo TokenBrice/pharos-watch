@@ -70,6 +70,8 @@ interface FetchWithRetryOptions {
   timeoutMs?: number;
   /** Additional response statuses that are known to be transient for this caller. */
   retryStatuses?: readonly number[];
+  /** A recognized application response that the caller can handle immediately. */
+  terminalResponse?: (response: Response) => Promise<boolean>;
 }
 
 /**
@@ -109,7 +111,7 @@ export async function fetchWithRetry(
       }
       throw err;
     }
-    if (res.ok || (res.status < 500 && !retryStatuses.has(res.status))) return res;
+    if (res.ok || (res.status < 500 && !retryStatuses.has(res.status)) || await retryOptions.terminalResponse?.(res)) return res;
     if (i < attempts - 1) {
       await res.body?.cancel();
       const delay = backoff[i] ?? backoff[backoff.length - 1];

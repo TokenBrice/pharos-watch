@@ -594,6 +594,15 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       `);
       continue;
     }
+    if (target === "mint_burn_events") {
+      db.exec(`
+        INSERT INTO mint_burn_events (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+          tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+        VALUES ('legacy-fee', 'ousd-origin-protocol', 'OUSD', 'ethereum', 'mint', 12000000, 12000000,
+          '0x1', 100, 3600, 'https://example.org/tx/1', 'protocol_internal');
+      `);
+      continue;
+    }
     if (target === "cron_runs") {
       db.exec(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('migration-gate-fixture', 1, 0, 'ok');",

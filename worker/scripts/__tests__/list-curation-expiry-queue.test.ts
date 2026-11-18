@@ -8,13 +8,17 @@ import { join, resolve } from "node:path";
 import executionReviewRegistry from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { compileReviewedControlScope, v1005ReviewIsCurrent, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { exitExecutionReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
+import { exitExecutionInKindReviewDigest, exitExecutionReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { admitV10ReserveObservation, resolveV10ReserveObservationDeploymentRefs } from "@shared/lib/safety-score-v9/reserve-scope";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ExitExecutionModelReviewSchema } from "@shared/types/exit-route";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { buildSafetyScoreV9ReserveBoundFacts } from "../../src/lib/safety-score-v9/extension-reserve-bounds";
+import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
+import { getSafetyScoreV9MechanismOverlayEvidence } from "../../src/lib/safety-score-v9/extension-mechanism";
+import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
 import {
   buildCurationExpiryQueue,
   buildCurationExpiryReport,
@@ -210,6 +214,82 @@ function rowKeys(rows: readonly { family: string; assetId: string; disposition: 
 }
 
 describe("buildCurationExpiryReport evidence families", () => {
+  it.each([
+    ["gusd-gemini", "2026-12-09"],
+    ["usdc-circle", "2027-01-08"],
+    ["pyusd-paypal", null],
+  ] as const)("queues only report-derived assurance for %s (last admitted %s)", (assetId, date) => {
+    const metaById = new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]);
+    const initial = makeV9FixedInput({ assetId, clockSec: Date.parse("2026-11-18T12:00:00Z") / 1_000 });
+    const extension = buildSafetyScoreV9BaselineExtension(initial, { metaById });
+    const compiled = extension.assets[0];
+    const governing = compiled?.componentEvidence.find(row => row.componentKey === "mechanism-risk-review:governing-assurance:assuranceAndReconciliation");
+    expect(compiled?.researchEvidence.find(row => governing?.evidenceKeys.includes(row.evidenceKey))?.sourceId)
+      .toBe(date === null ? "safety-score-v9.mechanism-review-overlay" : "stablecoin.proof-of-reserves.latest-report");
+    expect(compiled?.mechanismRiskReview).toMatchObject({
+      assuranceAndReconciliation: { status: { observationState: "known" } },
+    });
+    const replay = familyReplay({ extensionAssets: extension.assets, liveReserveMap: initial.liveReserveMap });
+    replay.pipeline.fixedInput.clockSec = initial.clockSec;
+    const sources = emptySources({ metaById });
+    const report = buildCurationExpiryReport(replay, 0, sources, initial.clockSec, parseCurationExpiryHorizon("2027-01-19"));
+    expect(report.status).toBe("complete");
+    expect(report.reserveRows).toEqual([]);
+    if (date === null) {
+      expect(report.upcoming.some((row) => row.family === "assurance-report")).toBe(false);
+      return;
+    }
+    expect(report.upcoming).toContainEqual(expect.objectContaining({
+      family: "assurance-report", assetId, scope: "assuranceAndReconciliation",
+      boundarySemantics: "inclusive", lastAdmittedSec: Date.parse(date) / 1_000, disposition: "admitted",
+    }));
+    const cutoff = buildCurationExpiryReport(replay, 0, sources, initial.clockSec, parseCurationExpiryHorizon(date));
+    expect(cutoff.upcoming.some((row) => row.family === "assurance-report")).toBe(false);
+    const expired = makeV9FixedInput({ assetId, clockSec: Date.parse(date) / 1_000 + 1 });
+    replay.pipeline.fixedInput.clockSec = expired.clockSec;
+    replay.pipeline.extension = buildSafetyScoreV9BaselineExtension(expired, { metaById });
+    expect(buildCurationExpiryReport(replay, 0, sources, expired.clockSec).lapsed)
+      .toContainEqual(expect.objectContaining({ family: "assurance-report", assetId, disposition: "lapsed" }));
+  });
+
+  it.each([
+    ["mechanism-risk-review", true, "assurance-overlay-digest-mismatch"],
+    ["mechanism-risk-review", false, "assurance-overlay-evidence-unresolved"],
+    ["mechanism-risk-review-history", true, null],
+  ] as const)("uses the captured PYUSD overlay under %s (evidence present: %s)", (componentKey, hasEvidence, diagnostic) => {
+    const assetId = "pyusd-paypal";
+    const clockSec = Date.parse("2026-11-18T12:00:00Z") / 1_000;
+    const metaById = new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]);
+    const { assets: [asset] } = buildSafetyScoreV9BaselineExtension(makeV9FixedInput({ assetId, clockSec }), { metaById });
+    const overlay = getSafetyScoreV9MechanismOverlayEvidence(assetId, "fiat-cash", clockSec)!;
+    const sourceId = "safety-score-v9.mechanism-review-overlay";
+    const evidence = new ReviewEvidenceBuilder(assetId, clockSec);
+    const { assuranceAndReconciliation: _assurance, ...components } = overlay.payload.components;
+    evidence.add({
+      ...overlay, componentKeys: [componentKey], sourceId, publishedBy: "unknown", confidence: "manual-review",
+      payload: { ...overlay.payload, components },
+    });
+    const captured = evidence.finish();
+    const replay = familyReplay({ extensionAssets: [{
+      ...asset,
+      componentEvidence: [...asset.componentEvidence.filter((row) => row.componentKey !== "mechanism-risk-review" && !row.componentKey.startsWith("mechanism-risk-review:governing-assurance:")), ...captured.componentEvidence],
+      researchEvidence: [...asset.researchEvidence.filter((row) => row.sourceId !== sourceId), ...(hasEvidence ? captured.researchEvidence : [])],
+    }] });
+    replay.pipeline.fixedInput.clockSec = clockSec;
+    const report = buildCurationExpiryReport(replay, 90, emptySources({ metaById }), clockSec);
+    expect(report.status).toBe(diagnostic ? "partial" : "complete");
+    if (diagnostic) {
+      expect(report.diagnostics).toContainEqual({
+        family: "assurance-report", assetId, scope: "assuranceAndReconciliation", message: diagnostic,
+      });
+      expect(report.upcoming.some((row) => row.family === "assurance-report")).toBe(false);
+    } else {
+      expect(report.upcoming).toContainEqual(expect.objectContaining({
+        family: "assurance-report", assetId, lastAdmittedSec: Date.parse("2027-01-08") / 1_000,
+      }));
+    }
+  });
+
   it("lists execution reviews at the exact inclusive boundary but not one second later, joined to compiled certificates", () => {
     const due = executionReview("exec-due", isoSec(CLOCK_SEC - 20 * DAY), isoSec(HORIZON_SEC - 1));
     const later = executionReview("exec-later", isoSec(CLOCK_SEC - 20 * DAY), isoSec(HORIZON_SEC));
@@ -218,7 +298,7 @@ describe("buildCurationExpiryReport evidence families", () => {
       familyReplay({
         compiledAssets: [{
           assetId: "exec-due",
-          exitRoutes: [{ routeKey: "redemption:g:r", scoreEligible: true, executionCertificate: { reviewDigest: exitExecutionReviewDigest(due) } }],
+          exitRoutes: [{ routeKey: "redemption:g:r", scoreEligible: true, executionCertificate: { reviewDigest: exitExecutionInKindReviewDigest(due) } }],
         }],
       }),
       10,

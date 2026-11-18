@@ -13,6 +13,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { formatUtcDateOnly } from "@shared/lib/format";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY } from "../lib/public-dataset-projections";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import {
   createNpmScriptCommand,
@@ -72,11 +75,11 @@ export interface RefreshPagesReleaseDataOptions {
   resultPath?: string;
 }
 
-function captured(command: SpawnCommand): Promise<CommandResult> {
-  return runSpawnCommand({ ...command, captureOutput: true });
+function captured(command: SpawnCommand, extraEnv?: Record<string, string>): Promise<CommandResult> {
+  return runSpawnCommand({ ...command, captureOutput: true }, extraEnv);
 }
 
-function defaultDependencies(repoRoot: string, datasetBackupDir: string): ReleaseRefreshDependencies {
+function defaultDependencies(repoRoot: string, datasetBackupDir: string, datasetDate?: string): ReleaseRefreshDependencies {
   return {
     digests: ({ outputPath }) => captured(createSpawnCommand(localBin("tsx"), [
       "scripts/maintenance/sync-digests.ts",
@@ -88,7 +91,15 @@ function defaultDependencies(repoRoot: string, datasetBackupDir: string): Releas
       "--output",
       outputPath!,
     ])),
-    publicDatasets: () => captured(createNpmScriptCommand("generate:public-datasets")),
+    publicDatasets: () => {
+      if (datasetDate) return captured(createNpmScriptCommand("generate:public-datasets"), { PUBLIC_DATASETS_DATE: datasetDate });
+      // The current UTC date is still open for depeg onsets when Pages refreshes.
+      const completedDate = formatUtcDateOnly(new Date(Date.now() - DAY_SECONDS * 1_000));
+      return captured(createNpmScriptCommand("generate:public-datasets", ["--repoint-current"]), {
+        PUBLIC_DATASETS_DATE: completedDate,
+        [PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY]: "1",
+      });
+    },
     rollbackPublicDatasets: async () => {
       for (const path of PUBLIC_DATASET_BUNDLE_PATHS) {
         const target = join(repoRoot, path);
@@ -150,7 +161,7 @@ export async function refreshPagesReleaseData({
   );
   mkdirSync(resolvedRefreshDir, { recursive: true });
   const datasetBackupDir = join(resolvedRefreshDir, "public-dataset-bundle");
-  const dependencies = { ...defaultDependencies(repoRoot, datasetBackupDir), ...overrides };
+  const dependencies = { ...defaultDependencies(repoRoot, datasetBackupDir, env.PUBLIC_DATASETS_DATE?.trim()), ...overrides };
 
   const committedDigestPath = join(repoRoot, "data/digests.json");
   const committedDepegPath = join(repoRoot, "data/depeg-events");
@@ -191,7 +202,7 @@ export async function refreshPagesReleaseData({
       throw error;
     }
   } else {
-    depegLog = appendLog(depegLog, "::warning::depeg-event refresh failed; using committed depeg snapshot");
+    depegLog = appendLog(depegLog, "::warning::depeg-event refresh failed; using committed depeg snapshot with unverified source coverage");
   }
 
   // Snapshot every generator output, including authored redirects, before any dataset writes.

@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
-import type { StablecoinData } from "@shared/types/supply";
 import type { BackfillCoinReplayResult } from "../backfill-depegs-replay";
 import { parseSupplyData, type BackfillEvent } from "../../../src/lib/historical-depeg-extraction";
 import { buildBackfillPlan } from "../backfill-depegs/planning";
@@ -16,7 +14,8 @@ import {
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../../../src/lib/fetch-retry";
 import type * as AbortModule from "../../../src/lib/abort";
 
-vi.mock("../backfill-depegs-replay", () => ({
+vi.mock("../backfill-depegs-replay", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../backfill-depegs-replay")>()),
   backfillCoin: vi.fn(),
 }));
 vi.mock("../../../src/lib/abort", async (importOriginal) => ({
@@ -82,6 +81,9 @@ const LIVE_ROW = {
 function stubReplayEvents(events: BackfillEvent[] | null): void {
   vi.mocked(backfillCoin).mockResolvedValue({
     events,
+    assessed: (events ?? []).flatMap(({ startedAt, direction }) => [
+      { timestamp: startedAt - 60, state: "in-band" }, { timestamp: startedAt, state: direction },
+    ]),
     sourceKind: "market",
     authoritativeSource: null,
     marketDiagnostics: null,
@@ -97,45 +99,25 @@ describe("backfill replay episode skips", () => {
     vi.restoreAllMocks();
   });
 
-  it.each([
-    ["fractional current fallback", 0.03215074656862798, 3000, [], 3000],
-    ["fractional historical spot", 0.03215074656862798, 3000, [{ timestamp: 1_700_000_000, rate: 2800 }], 2800],
-    ["one ounce current fallback", 1, 3000, [], 3000],
-    ["historical spot without current rate", 0.03215074656862798, null, [{ timestamp: 1_700_000_000, rate: 2800 }], 2800],
-  ] as const)("converts commodity units once through replay and apply: %s", async (_label, ounces, currentRate, series, spot) => {
+  it.each([0.03215074656862798, 1])("converts an hourly commodity quorum to token units (%s oz)", async (ounces) => {
+    const ts = 1_700_000_000;
     const meta = { ...TRACKED_META_BY_ID.get("kau-kinesis")!, commodityOunces: ounces };
-    const expected = spot * ounces;
-    vi.mocked(backfillCoin).mockImplementationOnce(async ({ getPegRef }) => ({
-      events: [episode({ pegType: "peggedGOLD", pegRef: getPegRef(1_700_000_000) })],
-      sourceKind: "market", authoritativeSource: null, marketDiagnostics: null,
+    const peers = ["one", "two", "three", meta.id].map((assetId, index) => ({
+      assetId, sourceId: assetId, commodityOunces: 1,
+      prices: [{ timestamp: ts, price: index === 3 ? 100 : 2_800 }, { timestamp: ts + 3600, price: 4000 }],
     }));
-    const applyBackfillEvents = vi.fn();
-    const result = await executeBackfillForCoin({
-      db: mockD1([{ match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at", rows: [] }]),
-      prepared: { meta, geckoId: "kinesis-gold", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
-      pegRates: currentRate == null ? {} : { peggedGOLD: currentRate },
-      fxRates: undefined, fxSeries: {}, commoditySeries: { GOLD: [...series] },
-      replayWindow: null, coingeckoApiKey: null, dryRun: false, applyBackfillEvents,
+    vi.mocked(backfillCoin).mockImplementationOnce(async ({ getPegRef }) => {
+      expect(getPegRef(ts - 1)).toBeNull();
+      expect(getPegRef(ts)).toBeCloseTo(2_800 * ounces);
+      expect(getPegRef(ts + 4 * 3600)).toBeNull();
+      return { events: [], sourceKind: "market", authoritativeSource: null, marketDiagnostics: null };
     });
-    const calls = vi.mocked(backfillCoin).mock.calls;
-    expect(calls[calls.length - 1]![0].getPegRef(1_700_000_000)).toBeCloseTo(expected);
-    expect(result.status).toBe("applied");
-    expect(applyBackfillEvents).toHaveBeenCalledTimes(1);
-    expect(applyBackfillEvents.mock.calls[0]![1][0].pegRef).toBeCloseTo(expected);
-  });
-
-  it("skips commodity replay without a current rate or historical spot anchor", async () => {
-    const before = vi.mocked(backfillCoin).mock.calls.length;
-    const applyBackfillEvents = vi.fn();
-    const result = await executeBackfillForCoin({
-      db: mockD1(),
-      prepared: { meta: TRACKED_META_BY_ID.get("kau-kinesis")!, geckoId: "kinesis-gold", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
-      pegRates: {}, fxRates: undefined, fxSeries: {}, commoditySeries: {},
-      replayWindow: null, coingeckoApiKey: null, dryRun: false, applyBackfillEvents,
+    const outcome = await executeBackfillForCoin({
+      db: mockD1([{ match: "FROM depeg_events WHERE", rows: [] }]), prepared: { meta, geckoId: "kinesis-gold", supplyTokens: [] },
+      fxSeries: {}, commodityPeers: { GOLD: peers },
+      replayWindow: null, coingeckoApiKey: null, dryRun: true, applyBackfillEvents: vi.fn(),
     });
-    expect(result).toEqual({ status: "skipped", eventCount: 0, reason: "missing-fx-reference" });
-    expect(vi.mocked(backfillCoin).mock.calls).toHaveLength(before);
-    expect(applyBackfillEvents).not.toHaveBeenCalled();
+    expect(outcome.status).toBe("preview");
   });
 
   it("drops suppressed and live-covered recomputed episodes before applying", async () => {
@@ -151,11 +133,9 @@ describe("backfill replay episode skips", () => {
 
     const outcome = await executeBackfillForCoin({
       db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
-      pegRates: { peggedUSD: 1 },
-      fxRates: undefined,
+      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [] },
       fxSeries: {},
-      commoditySeries: {},
+      commodityPeers: {},
       replayWindow: null,
       coingeckoApiKey: null,
       dryRun: false,
@@ -169,8 +149,8 @@ describe("backfill replay episode skips", () => {
     expect(appliedEvents.map((event) => event.startedAt)).toEqual([UNCOVERED_EPISODE.startedAt]);
   });
 
-  it.each([false, true])("preserves all-absent supply history even with a current fallback (dryRun=%s)", async (dryRun) => {
-    stubReplayEvents([]);
+  it.each([false, true])("preserves a row when history is unevaluable (dryRun=%s)", async (dryRun) => {
+    stubReplayEvents(null);
     const applyBackfillEvents = vi.fn();
     const db = mockD1([{
       match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
@@ -182,62 +162,37 @@ describe("backfill replay episode skips", () => {
       prepared: {
         meta: USN_META, geckoId: "noon-usn",
         supplyTokens: [{ date: "1700000000", circulating: {} }],
-        currentSupplyUsd: 1_000_000_000,
       },
-      pegRates: { peggedUSD: 1 }, fxRates: undefined, fxSeries: {}, commoditySeries: {},
+      fxSeries: {}, commodityPeers: {},
       replayWindow: null, coingeckoApiKey: null, dryRun, applyBackfillEvents,
     });
     expect(outcome.status).toBe("skipped");
     expect(applyBackfillEvents).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
     const calls = vi.mocked(backfillCoin).mock.calls;
-    expect(calls[calls.length - 1]?.[0].missingSupplyUsd).toBeNull();
+    expect(calls[calls.length - 1]?.[0].supplyByDate).toEqual([]);
     if (dryRun) expect(outcome.preview?.recomputedBackfillEventCount).toBeNull();
   });
 
-  it("converts native history with the historical FX reference before replay", async () => {
+  it("uses a previously published dated FX fixing for native supply conversion", async () => {
     stubReplayEvents([]);
-    const meta = TRACKED_META_BY_ID.get("eurc-circle")!;
+    const day = Date.parse("2025-06-16T00:00:00Z") / 1000;
     await executeBackfillForCoin({
       db: mockD1(),
       prepared: {
-        meta, geckoId: "euro-coin",
-        supplyTokens: [
-          { date: "1000", circulating: { peggedEUR: 900_000 } },
-          { date: "2000", circulating: { peggedEUR: 900_000 } },
-        ],
-        currentSupplyUsd: null,
+        meta: TRACKED_META_BY_ID.get("eurc-circle")!, geckoId: "euro-coin",
+        supplyTokens: [day, day + 86400].map((date) => ({ date: String(date), circulating: { peggedEUR: 900_000 } })),
       },
-      pegRates: { peggedEUR: 2 }, fxRates: { peggedEUR: 2 },
-      fxSeries: { EUR: [{ timestamp: 1_000, rate: 1.1 }, { timestamp: 2_000, rate: 1.2 }] },
-      commoditySeries: {}, replayWindow: null, coingeckoApiKey: null, dryRun: true,
+      fxSeries: { EUR: [{ timestamp: day, rate: 1.1 }, { timestamp: day + 86400, rate: 1.2 }] },
+      commodityPeers: {}, replayWindow: null, coingeckoApiKey: null, dryRun: true,
       applyBackfillEvents: vi.fn(),
     });
-    const calls = vi.mocked(backfillCoin).mock.calls;
-    const snapshots = calls[calls.length - 1]![0].supplyByDate;
-    expect(snapshots.map((snapshot) => snapshot.ts)).toEqual([1_000, 2_000]);
-    expect(snapshots[0].supply).toBeCloseTo(990_000);
-    expect(snapshots[1].supply).toBeCloseTo(1_080_000);
+    const snapshots = vi.mocked(backfillCoin).mock.calls.slice(-1)[0]![0].supplyByDate;
+    expect(snapshots[0]).toEqual({ ts: day, supply: null });
+    expect(snapshots[1]?.ts).toBe(day + 86400);
+    expect(snapshots[1]?.supply).toBeCloseTo(990_000);
   });
 
-  it("converts fractional commodity native token counts with the per-token peg reference", async () => {
-    stubReplayEvents([]);
-    const meta = TRACKED_META_BY_ID.get("ggbr-goldfish-gold")!;
-    await executeBackfillForCoin({
-      db: mockD1(),
-      prepared: {
-        meta, geckoId: "goldfish-gold",
-        supplyTokens: [{ date: "1000", circulating: { peggedGOLD: 500_000 } }],
-        currentSupplyUsd: null,
-      },
-      pegRates: {}, fxRates: undefined, fxSeries: {},
-      commoditySeries: { GOLD: [{ timestamp: 1_000, rate: 3_000 }] },
-      replayWindow: null, coingeckoApiKey: null, dryRun: true,
-      applyBackfillEvents: vi.fn(),
-    });
-    const calls = vi.mocked(backfillCoin).mock.calls;
-    expect(calls[calls.length - 1]![0].supplyByDate).toEqual([{ ts: 1_000, supply: 1_500_000 }]);
-  });
 });
 
 describe("backfillEpisodeCoveredByLiveEvent", () => {
@@ -252,10 +207,11 @@ describe("backfillEpisodeCoveredByLiveEvent", () => {
     expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 0, endedAt: 999, direction: "above" }, live)).toBe(false);
   });
 
-  it("requires the same direction and treats open live rows as point intervals", () => {
+  it("treats retained open rows as open-ended and blocks any identical start", () => {
     const open = { started_at: 1_000, ended_at: null, direction: "below" };
     expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 900, endedAt: 1_100, direction: "below" }, open)).toBe(true);
-    expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 1_001, endedAt: 1_100, direction: "below" }, open)).toBe(false);
+    expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 1_001, endedAt: 1_100, direction: "below" }, open)).toBe(true);
+    expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 1_000, endedAt: 1_100, direction: "above" }, open)).toBe(true);
     expect(backfillEpisodeCoveredByLiveEvent({ startedAt: 900, endedAt: 1_100, direction: "above" }, open)).toBe(false);
   });
 });
@@ -278,18 +234,6 @@ afterEach(() => {
 });
 
 describe("backfill-depegs planning detail intake", () => {
-  it.each<StablecoinData["circulating"]>([{}, { peggedUSD: 0 }])("retains current replay-input supply availability (%j)", async (circulating) => {
-    mockFetch([{ match: "/stablecoin/", body: { tokens } }]);
-    const plan = await buildBackfillPlan({
-      db: mockD1([{ match: "cache", rows: [{
-        value: JSON.stringify({ peggedAssets: [makeStablecoin({ id: meta.id, symbol: meta.symbol, circulating, price: 1 })] }),
-        updated_at: Math.floor(Date.now() / 1000),
-      }] }]),
-      coins: [meta], replayWindow: null, coingeckoApiKey: null,
-    });
-    expect(plan.preparedCoins[0]!.currentSupplyUsd).toBe("peggedUSD" in circulating ? 0 : null);
-  });
-
   it("keeps historical supply and defillama-history provenance for healthy bodies above the shared cap", async () => {
     const body = JSON.stringify({
       gecko_id: "tether", tokens,
@@ -305,6 +249,7 @@ describe("backfill-depegs planning detail intake", () => {
     expect(prepared).not.toHaveProperty("chainBalances");
     vi.mocked(backfillCoin).mockResolvedValue({
       sourceKind: "market", authoritativeSource: null, marketDiagnostics: null,
+      assessed: [{ timestamp: 900, state: "in-band" }, { timestamp: 1000, state: "below" }],
       events: [{
         pegType: "peggedUSD", direction: "below", peakDeviationBps: -200,
         startedAt: 1000, endedAt: 2000, startPrice: 0.98, peakPrice: 0.98, recoveryPrice: 1, pegRef: 1,
@@ -313,8 +258,8 @@ describe("backfill-depegs planning detail intake", () => {
     const applyBackfillEvents = vi.fn<ApplyBackfillEventsFn>(async () => undefined);
     const outcome = await executeBackfillForCoin({
       db: mockD1([{ match: "FROM depeg_events", rows: [] }]), prepared,
-      pegRates: plan.pegRates, fxRates: plan.fxRates, fxSeries: plan.fxSeries,
-      commoditySeries: plan.commoditySeries, replayWindow: null, coingeckoApiKey: null,
+      fxSeries: plan.fxSeries,
+      commodityPeers: plan.commodityPeers, replayWindow: null, coingeckoApiKey: null,
       dryRun: false, applyBackfillEvents,
     });
     expect(outcome.status).toBe("applied");

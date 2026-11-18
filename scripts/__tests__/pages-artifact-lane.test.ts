@@ -359,7 +359,8 @@ describe("dropRetiredDepegEventEntries", () => {
     writeFileSync(join(dataDir, "2026.json"), `${JSON.stringify(entries, null, 2)}\n`);
     writeFileSync(join(dataDir, "2023.json"), `${JSON.stringify([{ slug: "usdt-2023-06-15" }], null, 2)}\n`);
     writeFileSync(join(dataDir, "index.json"), `${JSON.stringify(entries, null, 2)}\n`);
-    writeFileSync(join(dataDir, "metadata/capture.json"), `${JSON.stringify({ captureId: "sha256:stale", eventCount: 3 })}\n`);
+    writeFileSync(join(dataDir, "metadata/capture.json"), `${JSON.stringify({ captureId: "sha256:stale", eventCount: 3,
+      shardSource: "fetched-ledger", ledgerProof: { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 42 } })}\n`);
 
     expect(dropRetiredDepegEventEntries(root)).toEqual(["eurs-2026-04-19"]);
     expect(JSON.parse(readFileSync(join(dataDir, "2026.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);

@@ -2,8 +2,9 @@ import { readJsonResponse } from "../../../src/test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "../../../src/test-helpers/__shared/auth";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import type { DatabaseSync } from "node:sqlite";
-import { handleBackfillStabilityIndex } from "../backfill-stability-index";
+import { handleBackfillStabilityIndex, type BackfillStabilityIndexRouteContext } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../../src/lib/stability-index";
 import { seedPsiDews } from "../../../src/api/__tests__/psi-replay.test-support";
 import type { PsiHistoricalDewsRow } from "../../../src/lib/psi-replay";
@@ -13,11 +14,7 @@ stubCryptoForAuth();
 const fixtures = createLatestSchemaFixtureTracker();
 
 /** The route hydrates `url` from the request; mirror that for the direct-call suites. */
-function callBackfillStabilityIndex(context: {
-  db: D1Database;
-  trustedAdmin?: boolean;
-  request?: Request;
-}): Promise<Response> {
+function callBackfillStabilityIndex(context: Omit<BackfillStabilityIndexRouteContext, "url">): Promise<Response> {
   const url = context.request
     ? new URL(context.request.url)
     : new URL("https://api.pharos.watch/api/backfill-stability-index");
@@ -189,9 +186,10 @@ describe("handleBackfillStabilityIndex", () => {
     vi.useRealTimers();
   });
 
-  it("persists native replay unavailability instead of using a USD daily price or peak", async () => {
+  it("preserves the published row when interior native replay evidence is unavailable", async () => {
     const day = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
     const db = makeDb({
+      stabilityRows: [{ computed_at: day, score: 87.3, band: "STEADY", methodology_version: "3.0", input_snapshot: "{}" }],
       depegRows: [{ stablecoin_id: "eurc-circle", peak_deviation_bps: -200, peg_reference: 1,
         started_at: day, ended_at: null }],
       supplyRows: [
@@ -200,16 +198,54 @@ describe("handleBackfillStabilityIndex", () => {
       ],
     });
     db.sqlite.prepare("UPDATE depeg_events SET peg_type = 'peggedEUR', source = 'live', start_price = 0.98").run();
+    seedPsiDews(db.sqlite, [{ stablecoin_id: "eurc-circle", snapshot_date: day, band: "ALERT" }]);
     const response = await callBackfillStabilityIndex({
       db, trustedAdmin: true,
       request: makeApiRequest(`/api/backfill-stability-index?startDay=${day}&endDay=${day}`, { method: "POST", adminKey: "secret" }),
     });
-    expect(response.status).toBe(200);
-    const row = db.sqlite.prepare("SELECT input_snapshot FROM stability_index WHERE computed_at = ?").get(day) as { input_snapshot: string };
-    expect(JSON.parse(row.input_snapshot)).toMatchObject({
-      depegCount: 0, openDepegsWithoutPrice: 1, peakDeviationFallbackCount: 0,
-      degradedComponents: ["open-depeg-no-price"],
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      daysBackfilled: 0, unavailableDays: [{ day, reason: "open-depeg-inputs-unavailable", openDepegsWithoutPrice: 1 }],
     });
+    expect(db.sqlite.prepare("SELECT score, input_snapshot FROM stability_index WHERE computed_at = ?").get(day))
+      .toEqual({ score: 87.3, input_snapshot: "{}" });
+  });
+
+  it.each([false, true])("applies dated EUR evidence at a retained slot when available=%s", async (available) => {
+    const day = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+    const at = day + 1800;
+    const referenceMarketRepair = { method: "samples", sampleScores: { [at + 60]: 91 } };
+    const db = makeDb({
+      stabilityRows: [
+        { computed_at: day, score: 87.3, band: "STEADY", methodology_version: "3.0", input_snapshot: JSON.stringify({ referenceMarketRepair }) },
+        { computed_at: day, score: 70, band: "TREMOR", methodology_version: "3.0", input_snapshot: "{}" },
+      ],
+      depegRows: [{ stablecoin_id: "eurc-circle", peak_deviation_bps: -200, peg_reference: 1.2,
+        started_at: day - 3600, ended_at: null }],
+      supplyRows: [day - 7 * 86400, day].map((snapshot_date) => ({
+        stablecoin_id: "eurc-circle", snapshot_date, circulating_usd: 1e9, price: 1.08,
+      })),
+    });
+    db.sqlite.exec(`UPDATE depeg_events SET peg_type = 'peggedEUR';
+      INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
+      SELECT id, 'backfill', 'usd', started_at, started_at FROM depeg_events;`);
+    db.sqlite.prepare("UPDATE supply_history SET price_observed_at = ? WHERE snapshot_date = ?").run(at, day);
+    db.sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, 87, 'STEADY', '{}', '{}')").run(at + 60);
+    const response = await callBackfillStabilityIndex({
+      db, trustedAdmin: true,
+      references: { referenceAt: (currency, quotedAt) => available && currency === "EUR" && quotedAt === at
+        ? { usdPerUnit: 1.1, observedAtSec: at - 60, source: "openExchangeRates", kind: "fx",
+          observation: { pegKey: "peggedEUR", usdPerUnit: 1.1, observedAtSec: at - 60, source: "openExchangeRates",
+            cadence: "intraday", repricing: { source: "openExchangeRates", preCloseUsdPerUnit: 1.12,
+              sessionOpenedAtSec: getReferenceSessionState("fx", at).sessionOpenedAtSec! } } } : null },
+      request: makeApiRequest(`/api/backfill-stability-index?startDay=${day}&endDay=${day}`, { method: "POST", adminKey: "secret" }),
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ daysBackfilled: available ? 1 : 0 });
+    const stored = db.sqlite.prepare("SELECT score, input_snapshot FROM stability_index WHERE computed_at = ?").get(day);
+    expect(stored?.score).toBe(available ? 73.2 : 87.3);
+    expect(JSON.parse(String(stored?.input_snapshot)).referenceMarketRepair).toEqual(referenceMarketRepair);
+    if (available) expect(computeStabilityIndex).toHaveBeenCalledWith(expect.objectContaining({
+      depegs: [expect.objectContaining({ bps: expect.closeTo(-181.818, 1) })],
+    }));
   });
 
   it.each(["trend-inputs-unavailable", "dews-archive-unavailable"])("preserves an accepted day when %s", async (reason) => {
@@ -239,7 +275,7 @@ describe("handleBackfillStabilityIndex", () => {
   it("rebuilds daily PSI rows and reports days backfilled", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const start = nowSec - 2 * 86400;
-    const day0 = Math.floor((nowSec - 7 * 86400) / 86400) * 86400;
+    const day0 = Math.floor((nowSec - 2 * 86400) / 86400) * 86400;
     const day1 = Math.floor((nowSec - 86400) / 86400) * 86400;
     const day2 = Math.floor(nowSec / 86400) * 86400;
 
@@ -256,7 +292,7 @@ describe("handleBackfillStabilityIndex", () => {
         ],
         supplyRows: [
           { stablecoin_id: "usdt-tether", snapshot_date: day0 - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
-          { stablecoin_id: "usdt-tether", snapshot_date: day1 - 86400, circulating_usd: 100_000_000, price: 0.9975 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day1 - 7 * 86400, circulating_usd: 100_000_000, price: 0.9975 },
           { stablecoin_id: "usdt-tether", snapshot_date: day0, circulating_usd: 99_000_000, price: 1 },
           { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000, price: 0.9975 },
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },

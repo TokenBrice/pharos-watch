@@ -23,7 +23,10 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { errorResponse, jsonResponse } from "../../src/lib/api-response";
 import { runAdminJob, readAdminIntegerParam } from "../../src/lib/admin-job";
 import { TAPE_PROJECTOR_JOBS } from "../../src/lib/tape-projectors/registry";
-import type { ProjectorOptions } from "../../src/lib/tape-projectors/types";
+import type { Projector, ProjectorOptions } from "../../src/lib/tape-projectors/types";
+import { PSI_SAMPLE_PROJECTION_SQL, PSI_DAILY_HAS_REPAIR_SQL, projectPsiSample } from "../../src/lib/psi-sample-projection";
+import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 const DEFAULT_MAX_ROWS = 5_000;
 const MAX_MAX_ROWS = 50_000;
@@ -54,6 +57,52 @@ function readBoolean(url: URL, body: Record<string, unknown>, key: string): bool
     return lowered === "true" || lowered === "1";
   }
   return false;
+}
+
+async function reconcilePsiRepairs(db: D1Database, project: Projector, options: ProjectorOptions & { since: number; until: number }) {
+  const { since, until, maxRows = DEFAULT_MAX_ROWS, dryRun } = options;
+  const { results: marks } = await db.prepare(`
+    SELECT d.computed_at, repair.key AS sample_at, repair.value AS score FROM stability_index d
+    JOIN json_each(CASE WHEN json_valid(d.input_snapshot) THEN CASE
+      WHEN json_extract(d.input_snapshot, '$.referenceMarketRepair.method') = 'samples'
+        AND json_type(d.input_snapshot, '$.referenceMarketRepair.sampleScores') = 'object'
+      THEN json_extract(d.input_snapshot, '$.referenceMarketRepair.sampleScores') END END) repair
+    WHERE d.computed_at BETWEEN ? AND ? AND d.id = (
+      SELECT id FROM stability_index WHERE computed_at = d.computed_at
+        ORDER BY COALESCE(${PSI_DAILY_HAS_REPAIR_SQL}, 0) DESC, id DESC LIMIT 1)
+      AND CAST(repair.key AS INTEGER) > ? AND CAST(repair.key AS INTEGER) <= ?
+    ORDER BY CAST(repair.key AS INTEGER)`)
+    .bind(bucketUnixSecondsToUtcDay(since + 1), bucketUnixSecondsToUtcDay(until), since, until)
+    .all<{ computed_at: number; sample_at: string; score: number }>();
+  if (marks.length === 0) return { projected: 0, pendingReason: "reviewed-sample-corrections-unavailable" };
+  const first = Number(marks[0]!.sample_at);
+  const last = Number(marks[marks.length - 1]!.sample_at);
+  const { before, after } = (await db.prepare(`SELECT
+    (SELECT MAX(stored_at) FROM stability_index_samples WHERE stored_at < ?) AS before,
+    (SELECT MIN(stored_at) FROM stability_index_samples WHERE stored_at > ?) AS after`)
+    .bind(first, last).first<{ before: number | null; after: number | null }>()) ?? { before: null, after: null };
+  if (before == null || after == null) return { projected: 0, pendingReason: "psi-sample-pair-unavailable" };
+
+  const { results } = await db.prepare(`${PSI_SAMPLE_PROJECTION_SQL}
+    WHERE s.stored_at BETWEEN ? AND ? ORDER BY s.stored_at`).bind(before, after)
+    .all<Parameters<typeof projectPsiSample>[0]>();
+  const byTime = new Map(results.map((row) => [row.stored_at, row]));
+  const bands = new Set<string>(PSI_CONDITION_BAND_VALUES);
+  if (!byTime.has(before) || !byTime.has(after) || results.some((row) => !bands.has(projectPsiSample(row).band)) ||
+      marks.some(({ sample_at, score, computed_at }) => {
+        const at = Number(sample_at);
+        return typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100 ||
+          !Number.isSafeInteger(at) || String(at) !== sample_at || bucketUnixSecondsToUtcDay(at) !== computed_at ||
+          byTime.get(at)?.corrected_score !== score;
+      })) return { projected: 0, pendingReason: "psi-sample-pair-unavailable" };
+
+  let projected = 0;
+  for (let index = 1; index < results.length; index += maxRows) {
+    const result = await project(db, { since: results[index - 1]!.stored_at,
+      until: results[Math.min(index + maxRows - 1, results.length - 1)]!.stored_at, maxRows, dryRun });
+    projected += result.projected;
+  }
+  return { projected, pendingReason: null };
 }
 
 export interface BackfillTapeRouteContext {
@@ -101,6 +150,10 @@ export async function handleBackfillTape({
     }
 
     const dryRun = readBoolean(url, body, "dryRun") || readBoolean(url, body, "dry-run");
+    const reconcilePsi = readBoolean(url, body, "reconcilePsiRepairs");
+    if (reconcilePsi && (since == null || until == null || requestedClasses.length !== 1 || requestedClasses[0] !== "psi.band_changed")) {
+      return errorResponse(400, "reconcilePsiRepairs requires class=psi.band_changed and explicit since and until");
+    }
 
     const options: ProjectorOptions = {
       since: since != null ? since : undefined,
@@ -117,10 +170,14 @@ export async function handleBackfillTape({
     }
     const errors: { name: string; message: string }[] = [];
     let total = 0;
+    let pendingReason: string | null = null;
 
     for (const job of selectedJobs) {
       try {
-        const result = await job.run(db, options);
+        const result = reconcilePsi && since != null && until != null
+          ? await reconcilePsiRepairs(db, job.run, { ...options, since, until })
+          : await job.run(db, options);
+        if ("pendingReason" in result) pendingReason = result.pendingReason;
         perClass[job.name] = result.projected;
         total += result.projected;
       } catch (err) {
@@ -141,6 +198,7 @@ export async function handleBackfillTape({
         ignoredParams,
         projected: total,
         perClass,
+        ...(reconcilePsi ? { pendingReason } : {}),
         errors,
       },
       errors.length > 0 ? { status: 500 } : undefined,

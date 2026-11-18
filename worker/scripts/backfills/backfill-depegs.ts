@@ -1,11 +1,12 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../src/lib/structured-log";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { jsonResponse } from "../../src/lib/api-response";
+import { serializeDepegPriceCoverage } from "../../src/lib/depeg-helpers";
 import { selectBackfillCoins } from "../../src/lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse } from "../../src/lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { buildBackfillDeleteStmt, loadDdrBackfillReplayConflicts, loadIncompleteBackfillReplayWindow } from "./backfill-depegs-window";
+import { buildBackfillDeleteStmt, buildReplayPreimageGuard, loadDdrBackfillReplayConflicts, loadIncompleteBackfillReplayWindow } from "./backfill-depegs-window";
 import { parseOptionalDayWindow } from "../../src/lib/backfill-day-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
@@ -53,25 +54,31 @@ export async function applyBackfillEvents(
     );
   }
 
-  const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
+  const preimages = run?.replacePreimages;
+  const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow, preimages?.map(({ id }) => id));
   const nowSec = Math.floor(Date.now() / 1000);
   if (run) {
     await buildUpsertBackfillRunStmt(db, meta, run, "started", nowSec, 0, null).run();
   }
   let insertedCount = 0;
   try {
-    if (events.length === 0) {
-      await db.batch([deleteStmt]);
-      if (run) {
-        await buildUpsertBackfillRunStmt(db, meta, run, "complete", Math.floor(Date.now() / 1000), 0, null).run();
-      }
-      return { provenanceMismatchCount: 0 };
-    }
-    const insertStmts = events.map((e) =>
-      db
+    const insertStmts = events.map((e) => {
+      const lastTrusted = e.endedAt ?? e.admittedCoverage?.[e.admittedCoverage.length - 1]?.toSec ?? e.startedAt;
+      const priceCoverage = e.admittedCoverage == null ? null : serializeDepegPriceCoverage({
+        intervals: e.admittedCoverage[0]?.fromSec === e.startedAt
+          ? e.admittedCoverage.map(({ fromSec, toSec }) => [fromSec, toSec])
+          : [[e.startedAt, e.startedAt], ...e.admittedCoverage.map(({ fromSec, toSec }): [number, number] => [fromSec, toSec])],
+        atParIntervals: e.recoveryPrice != null && e.endedAt != null ? [[e.endedAt, e.endedAt]] : [],
+        lastObservationKind: e.recoveryPrice != null ? "trusted-at-par" : "trusted-off-peg",
+        lastTrustedObservationAt: lastTrusted,
+        gapStartedAt: null,
+      });
+      return db
         .prepare(
-          `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'backfill')`,
+          `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source,
+         peak_peg_reference, peak_quote_domain, recovery_peg_reference, admitted_coverage_json,
+         price_coverage_json, last_trusted_price_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'backfill', ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           meta.id,
@@ -85,11 +92,39 @@ export async function applyBackfillEvents(
           e.peakPrice,
           e.recoveryPrice,
           e.pegRef,
-        ),
-    );
-    // First batch: delete + first chunk of inserts so partial crashes cannot leave the coin event-less.
-    // D1 limits each batch to 100 statements. Reserve one slot for the delete so the first batch
-    // never exceeds the limit; remaining inserts ship in full BATCH_CHUNK_SIZE (100) batches.
+          e.peakPegReference ?? null,
+          e.peakQuoteDomain ?? null,
+          e.recoveryPegReference ?? null,
+          e.admittedCoverage == null ? null : JSON.stringify(e.admittedCoverage),
+          priceCoverage,
+          priceCoverage == null ? null : lastTrusted,
+        );
+    });
+    const provenanceStmts = events
+      .filter((event): event is typeof event & { provenance: BackfillEventProvenanceInput } => event.provenance != null)
+      .map((event) => buildInsertProvenanceStmt(db, meta, event, event.provenance, Math.floor(Date.now() / 1000)));
+    if (preimages != null) {
+      const guards = [
+        buildReplayPreimageGuard(db, meta.id, preimages, events),
+        deleteStmt,
+        db.prepare(`INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE EXISTS (
+          SELECT 1 FROM json_each(?) expected JOIN depeg_events e ON e.id = expected.value)`)
+          .bind(JSON.stringify(preimages.map(({ id }) => id))),
+      ];
+      const provenanceGuard = db.prepare(`INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE
+        (SELECT COUNT(*) FROM depeg_event_provenance p JOIN depeg_events e ON e.id = p.event_id
+          WHERE p.replay_run_id = ? AND e.stablecoin_id = ?) != ?`)
+        .bind(run?.runId ?? null, meta.id, provenanceStmts.length);
+      if (guards.length + insertStmts.length + provenanceStmts.length + 1 > BATCH_CHUNK_SIZE) {
+        throw new Error("Replay exceeds the atomic statement limit. Narrow the replay window.");
+      }
+      await db.batch([...guards, ...insertStmts, ...provenanceStmts, provenanceGuard]);
+      insertedCount = insertStmts.length;
+      if (run) await buildUpsertBackfillRunStmt(db, meta, run, "complete",
+        Math.floor(Date.now() / 1000), insertedCount, null).run();
+      return { provenanceMismatchCount: 0 };
+    }
+    // Direct fixture callers retain the legacy chunking path. Operator replays carry pre-images.
     const firstChunkSize = Math.min(insertStmts.length, BATCH_CHUNK_SIZE - 1);
     await db.batch([deleteStmt, ...insertStmts.slice(0, firstChunkSize)]);
     insertedCount += firstChunkSize;
@@ -98,9 +133,6 @@ export async function applyBackfillEvents(
       await db.batch(chunk);
       insertedCount += chunk.length;
     }
-    const provenanceStmts = events
-      .filter((event): event is typeof event & { provenance: BackfillEventProvenanceInput } => event.provenance != null)
-      .map((event) => buildInsertProvenanceStmt(db, meta, event, event.provenance, Math.floor(Date.now() / 1000)));
     let provenanceChanges = 0;
     for (let i = 0; i < provenanceStmts.length; i += BATCH_CHUNK_SIZE) {
       const results = await db.batch(provenanceStmts.slice(i, i + BATCH_CHUNK_SIZE));
@@ -203,6 +235,7 @@ async function executeBackfillDepegs(
 
   const plan = await buildBackfillPlan({
     db,
+    dryRun,
     coins,
     replayWindow,
     coingeckoApiKey: coingeckoApiKey ?? null,
@@ -212,6 +245,7 @@ async function executeBackfillDepegs(
   let provenanceMismatchCount = 0;
   const errors: string[] = [];
   const skipped: string[] = [];
+  const skipReasons: Record<string, string> = {};
   const consumeIncompleteWindow =
     !dryRun && replayWindow == null && !url.searchParams.has("stablecoin");
   const previews: BackfillReplayPreview[] = [];
@@ -225,10 +259,8 @@ async function executeBackfillDepegs(
     const outcome = await executeBackfillForCoin({
       db,
       prepared,
-      pegRates: plan.pegRates,
-      fxRates: plan.fxRates,
       fxSeries: plan.fxSeries,
-      commoditySeries: plan.commoditySeries,
+      commodityPeers: plan.commodityPeers,
       replayWindow: coinReplayWindow,
       coingeckoApiKey: coingeckoApiKey ?? null,
       dryRun,
@@ -239,6 +271,7 @@ async function executeBackfillDepegs(
     });
     if (outcome.status === "skipped") {
       skipped.push(prepared.meta.symbol);
+      if (outcome.reason) skipReasons[prepared.meta.id] = outcome.reason;
     } else if (outcome.status === "error") {
       errors.push(outcome.errorMessage ?? `${prepared.meta.symbol}: unknown error`);
       continue;
@@ -260,12 +293,13 @@ async function executeBackfillDepegs(
         contextDays: replayWindow?.contextDays ?? null,
         previews,
         skipped,
+        skipReasons,
         errors,
         commodities:
           plan.commodityPegs.length > 0
             ? {
-                goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
-                silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
+                goldDataPoints: plan.commodityPeers.GOLD?.reduce((sum, peer) => sum + peer.prices.length, 0) ?? 0,
+                silverDataPoints: plan.commodityPeers.SILVER?.reduce((sum, peer) => sum + peer.prices.length, 0) ?? 0,
               }
             : undefined,
       }),
@@ -278,12 +312,13 @@ async function executeBackfillDepegs(
       eventsCreated: totalEvents,
       provenanceMismatchCount,
       skipped,
+      skipReasons,
       errors,
       commodities:
         plan.commodityPegs.length > 0
           ? {
-              goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
-              silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
+              goldDataPoints: plan.commodityPeers.GOLD?.reduce((sum, peer) => sum + peer.prices.length, 0) ?? 0,
+              silverDataPoints: plan.commodityPeers.SILVER?.reduce((sum, peer) => sum + peer.prices.length, 0) ?? 0,
             }
           : undefined,
     }),

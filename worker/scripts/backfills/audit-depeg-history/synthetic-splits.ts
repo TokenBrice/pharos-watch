@@ -3,6 +3,11 @@ import type { DepegRow } from "../../../src/lib/depeg-helpers";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import type { PsiDepegEventRow } from "../../../src/lib/psi-recompute";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { formatDuration, formatPrice } from "@shared/lib/format";
+import { DEPEG_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
+import { severityForDepegOpened } from "../../../src/lib/tape-event-helpers";
+import { admittedDepegRecoveryAt } from "../../../src/lib/tape-projectors/depeg";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
@@ -231,7 +236,7 @@ export function planSyntheticSplitRepair(
     statements.push(
       db
         .prepare(
-          "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+          "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ?, close_reason = ? WHERE id = ?",
         )
         .bind(
           first.started_at,
@@ -241,6 +246,7 @@ export function planSyntheticSplitRepair(
           worst.peak_price ?? worst.start_price,
           tail.ended_at,
           tail.ended_at == null ? null : tail.recovery_price,
+          tail.close_reason ?? null,
           keeper.id,
         ),
     );
@@ -248,6 +254,35 @@ export function planSyntheticSplitRepair(
       if (row.id === keeper.id) continue;
       statements.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
     }
+    const analyticEnd = admittedDepegRecoveryAt({ ...tail, started_at: first.started_at });
+    const sign = first.direction === "below" ? "−" : "+";
+    const peak = Math.abs(worst.peak_deviation_bps);
+    const sourceId = String(keeper.id);
+    statements.push(
+      db.prepare(`UPDATE tape_events SET
+        ts = CASE transition WHEN 'opened' THEN ?1 ELSE ?2 END,
+        ends_at = ?2, severity = CASE transition WHEN 'opened' THEN ?3 ELSE severity END,
+        title = CASE transition WHEN 'opened' THEN ?4 ELSE title END,
+        summary = CASE transition WHEN 'opened' THEN ?5 ELSE ?6 END,
+        payload_json = json_set(payload_json, '$.startedAt', ?7, '$.endedAt', ?8, '$.pegReference', ?9,
+          '$.absDeviationBps', ?10, '$.signedDeviationBps', ?11),
+        methodology_version = CASE transition WHEN 'opened' THEN ?12 ELSE ?13 END
+        WHERE source_table = 'depeg_events' AND source_row_id = ?14 AND suppressed_at IS NULL
+          AND (transition = 'opened' OR (transition = 'resolved' AND ?2 IS NOT NULL))`)
+        .bind(first.started_at * 1000, analyticEnd == null ? null : analyticEnd * 1000,
+          severityForDepegOpened(peak), `${first.symbol} depeg opened (${sign}${peak} bps)`,
+          first.start_price == null ? `${first.symbol} crossed peg threshold (${first.direction} peg).`
+            : `Trading at ${formatPrice(first.start_price)} (${first.direction} peg).`,
+          analyticEnd == null ? null : `Resolved after ${formatDuration(first.started_at, analyticEnd)} (peak ${sign}${peak} bps).`,
+          first.started_at, analyticEnd, first.peg_reference, peak, worst.peak_deviation_bps,
+          getMethodologyVersionAt("depeg-dews", first.started_at),
+          analyticEnd == null ? null : getMethodologyVersionAt("depeg-dews", analyticEnd), sourceId),
+      db.prepare(`UPDATE tape_events SET suppressed_at = ?, suppression_reason = ?
+        WHERE source_table = 'depeg_events' AND suppressed_at IS NULL AND (
+          (transition = 'resolved' AND source_row_id = ? AND ? IS NULL)
+          OR (transition = 'updated' AND source_row_id >= ? AND source_row_id < ?))`)
+        .bind(now, DEPEG_CLAIM_RETRACTED_REASON, sourceId, analyticEnd, `${sourceId}:`, `${sourceId};`),
+    );
 
     addAffectedDays(affectedDays, summary.startedAt, summary.endedAt ?? now);
     summaries.push(summary);

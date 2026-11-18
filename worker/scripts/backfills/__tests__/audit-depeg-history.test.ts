@@ -12,6 +12,7 @@ import { seedPsiPairedHistory, seedPsiSupply, seedPsiEvent, seedPsiDews, readPsi
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { buildRecomputeStabilityStatements } from "../audit-depeg-history/stability-recompute";
 import { loadPsiEligibleDepegEvents } from "../../../src/lib/psi-replay-inputs";
+import { projectDepegOpened, projectDepegResolved } from "../../../src/lib/tape-projectors/depeg";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -100,6 +101,7 @@ function makeContradictoryRecoveryRows() {
       start_price: 0.17,
       peak_price: 0.166,
       recovery_price: 0.17,
+      recovery_peg_reference: 0.2,
       peg_reference: 0.2,
       source: "live",
     },
@@ -167,13 +169,15 @@ describe("handleAuditDepegHistory method safety", () => {
       circulating_usd: 1_000_000_000,
     }));
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [longEvent] },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows: [longEvent] },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       {
         match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p",
         rows: [],
       },
       { match: "FROM supply_history", rows: supplyRows },
+      { match: "FROM stability_index_samples", rows: [] },
+      { match: "SELECT computed_at FROM stability_index", rows: [] },
       { match: "FROM stress_signal_history", rows: supplyRows.map((row) => ({ ...row, band: "CALM" })) },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
@@ -215,7 +219,7 @@ describe("handleAuditDepegHistory method safety", () => {
     {
       title: "blocks synthetic split repairs that would mutate sealed DDRv2 events",
       makeRows: makeSyntheticSplitRows, query: "?repair=synthetic-splits",
-      additionalReads: ["FROM depeg_events ORDER BY stablecoin_id, started_at"],
+      additionalReads: ["ORDER BY e.stablecoin_id, e.started_at"],
       eventId: 2, publicPredictionId: 78,
       operation: "audit-depeg-history:synthetic-splits",
       mutationSqlFragments: ["UPDATE depeg_events SET started_at", "DELETE FROM depeg_events WHERE id = ?"],
@@ -245,7 +249,7 @@ describe("handleAuditDepegHistory method safety", () => {
     if (coingeckoApiKey) {
       fetchWithRetryMock.mockReset();
       fetchWithRetryMock.mockResolvedValue(
-        new Response(JSON.stringify({ prices: [] }), {
+        new Response(JSON.stringify({ prices: [[makeRows()[0]!.started_at * 1000, 1]] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
@@ -253,7 +257,8 @@ describe("handleAuditDepegHistory method safety", () => {
     }
     const rows = makeRows();
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
+      { match: "key IN (", rows: [] },
       ...additionalReads.map((match) => ({ match, rows })),
       {
         match: "FROM depeg_resolver_incident_event_links l",
@@ -289,7 +294,7 @@ describe("handleAuditDepegHistory method safety", () => {
     {
       title: "refuses synthetic split repairs that would delete unsealed DDR incident members",
       query: "?repair=synthetic-splits",
-      additionalReads: ["FROM depeg_events ORDER BY stablecoin_id, started_at"], eventId: 2,
+      additionalReads: ["ORDER BY e.stablecoin_id, e.started_at"], eventId: 2,
       operation: "audit-depeg-history:synthetic-splits",
       mutationSqlFragments: ["UPDATE depeg_events SET started_at", "DELETE FROM depeg_events WHERE id = ?"],
     },
@@ -297,7 +302,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const rows = makeSyntheticSplitRows();
     const incidentKey = "ddr2:1234567890abcdef1234567890ab";
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
       ...additionalReads.map((match) => ({ match, rows })),
       {
         match: "FROM depeg_resolver_incident_event_links l",
@@ -322,12 +327,13 @@ describe("handleAuditDepegHistory method safety", () => {
   it("still nulls contradictory recovery prices on unsealed DDR incident members", async () => {
     const rows = makeContradictoryRecoveryRows();
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
       {
         match: "FROM depeg_resolver_incident_event_links l",
         rows: [{ event_id: 21, incident_key: "ddr2:1234567890abcdef1234567890ab", public_prediction_id: null }],
       },
-      { match: "UPDATE depeg_events SET recovery_price = NULL WHERE id = ?", rows: [] },
+      { match: "INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE EXISTS", rows: [] },
+      { match: "UPDATE depeg_events SET recovery_price = NULL, recovery_peg_reference = NULL", rows: [] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
       adminKey: "secret",
@@ -342,7 +348,7 @@ describe("handleAuditDepegHistory method safety", () => {
   it("returns a clear 500 when direct delete recompute commit fails", async () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       {
         match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p",
@@ -355,6 +361,8 @@ describe("handleAuditDepegHistory method safety", () => {
         })),
       },
       { match: "FROM stress_signal_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: 1_799_971_200, band: "CALM" }] },
+      { match: "FROM stability_index_samples", rows: [] },
+      { match: "SELECT computed_at FROM stability_index", rows: [] },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [], throwError: new Error("insert failed") },
     ]) as MockD1Database;
@@ -379,8 +387,8 @@ describe("handleAuditDepegHistory method safety", () => {
     const rows = makeSyntheticSplitRows();
     const day = 1_799_971_200;
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-      { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
+      { match: "ORDER BY e.stablecoin_id, e.started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows },
       {
@@ -390,10 +398,13 @@ describe("handleAuditDepegHistory method safety", () => {
         })),
       },
       { match: "FROM stress_signal_history", rows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, band: "CALM" }] },
+      { match: "FROM stability_index_samples", rows: [] },
+      { match: "SELECT computed_at FROM stability_index", rows: [] },
       {
-        match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+        match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ?, close_reason = ?",
         rows: [],
       },
+      { match: "UPDATE tape_events", rows: [] },
       { match: "DELETE FROM depeg_events WHERE id = ?", rows: [] },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
@@ -421,12 +432,13 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?") && entry.binds[0] === 2)).toBe(true);
   });
 
-  it("keeps the live tail when repairing a backfill-to-live handoff", async () => {
+  it.each([false, true])("repairs a backfill-to-live handoff only with consistent evidence (different references=%s)", async (differentReferences) => {
     const rows = makeBackfillLiveHandoffRows();
+    if (!differentReferences) rows[1]!.peg_reference = 1;
     const day = 1_762_214_400;
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
-      { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
+      { match: "ORDER BY e.stablecoin_id, e.started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows },
       {
@@ -434,10 +446,13 @@ describe("handleAuditDepegHistory method safety", () => {
         rows: [{ stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 50_000_000 }],
       },
       { match: "FROM stress_signal_history", rows: [] },
+      { match: "FROM stability_index_samples", rows: [] },
+      { match: "SELECT computed_at FROM stability_index", rows: [] },
       {
-        match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+        match: "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ?, close_reason = ?",
         rows: [],
       },
+      { match: "UPDATE tape_events", rows: [] },
       { match: "DELETE FROM depeg_events WHERE id = ?", rows: [] },
       { match: "DELETE FROM stability_index WHERE computed_at", rows: [] },
       { match: "INSERT INTO stability_index", rows: [] },
@@ -453,6 +468,11 @@ describe("handleAuditDepegHistory method safety", () => {
       daysRecomputed: number;
       repairedGroups: Array<{ keeperId: number; mergedIds: number[] }>;
     };
+    if (differentReferences) {
+      expect(body.repairedEventCount).toBe(0);
+      expect(db.getHistory().some(({ sql }) => sql.includes("UPDATE depeg_events SET started_at"))).toBe(false);
+      return;
+    }
     expect(body.repairedEventCount).toBe(1);
     expect(body.repairedGroups[0]).toMatchObject({ keeperId: 11, mergedIds: [10] });
     expect(body.daysRecomputed).toBe(0);
@@ -461,7 +481,7 @@ describe("handleAuditDepegHistory method safety", () => {
     )).toBe(false);
 
     const updateEntry = db.getHistory().find((entry) =>
-      entry.sql.includes("UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?"),
+      entry.sql.includes("UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ?, close_reason = ?"),
     );
     expect(updateEntry?.binds).toEqual([
       rows[0].started_at,
@@ -471,6 +491,7 @@ describe("handleAuditDepegHistory method safety", () => {
       rows[0].peak_price,
       rows[1].ended_at,
       rows[1].recovery_price,
+      null,
       rows[1].id,
     ]);
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?") && entry.binds[0] === 10)).toBe(true);
@@ -479,9 +500,10 @@ describe("handleAuditDepegHistory method safety", () => {
   it("nulls contradictory recovery prices on POST repair", async () => {
     const rows = makeContradictoryRecoveryRows();
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows },
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
-      { match: "UPDATE depeg_events SET recovery_price = NULL WHERE id = ?", rows: [] },
+      { match: "INSERT INTO depeg_events (stablecoin_id) SELECT NULL WHERE EXISTS", rows: [] },
+      { match: "UPDATE depeg_events SET recovery_price = NULL, recovery_peg_reference = NULL", rows: [] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
       adminKey: "secret",
@@ -496,8 +518,40 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.repairedEventCount).toBe(1);
     expect(body.repairedEvents).toEqual([expect.objectContaining({ id: 21, symbol: "BRZ" })]);
     expect(
-      db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?") && entry.binds[0] === 21),
+      db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET recovery_price = NULL, recovery_peg_reference = NULL")
+        && entry.binds[entry.binds.length - 1] === 21),
     ).toBe(true);
+  });
+
+  it.each([110, null, 130])("compares a recovery against its own paired reference (%s)", async (reference) => {
+    const { sqlite, db } = fixtures.open();
+    const event = makeContradictoryRecoveryRows()[0]!;
+    seedPsiEvent(sqlite, { ...makeAuditEvent(), ...event, peg_type: "peggedGOLD", peg_reference: 100, recovery_price: 110 });
+    sqlite.prepare("UPDATE depeg_events SET recovery_peg_reference = ? WHERE id = ?").run(reference, event.id);
+    const request = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request });
+    const repaired = reference === 130;
+    expect(await readJsonResponse(response, 200)).toMatchObject({ repairedEventCount: repaired ? 1 : 0 });
+    expect(sqlite.prepare("SELECT recovery_price, recovery_peg_reference FROM depeg_events WHERE id = ?").get(event.id))
+      .toEqual({ recovery_price: repaired ? null : 110, recovery_peg_reference: repaired ? null : reference });
+  });
+
+  it.each([false, true])("withholds a contradictory recovery from Tape (ambiguous coverage: %s)", async (ambiguous) => {
+    const { sqlite, db } = fixtures.open();
+    const open = Date.parse("2026-10-29T15:00Z") / 1000;
+    const end = open + 3600;
+    seedPsiEvent(sqlite, makeAuditEvent({ id: 21, source: "live", started_at: open, ended_at: end, recovery_price: 0.96 }));
+    sqlite.prepare(`UPDATE depeg_events SET recovery_peg_reference = 1, recovery_first_seen_at = ?,
+      close_reason = 'recovered-primary', price_coverage_json = ?, last_trusted_price_at = ? WHERE id = 21`)
+      .run(end, ambiguous ? JSON.stringify({ intervals: [], atParIntervals: [[end, end]] }) : null, ambiguous ? end : null);
+    const request = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ repairedEventCount: ambiguous ? 0 : 1,
+      skippedEvents: ambiguous ? [{ id: 21, reason: "recovery-evidence-ambiguous" }] : [] });
+    expect(sqlite.prepare("SELECT ended_at, recovery_price, recovery_first_seen_at, close_reason FROM depeg_events WHERE id = 21").get())
+      .toEqual({ ended_at: end, recovery_price: ambiguous ? 0.96 : null, recovery_first_seen_at: ambiguous ? end : null,
+        close_reason: ambiguous ? "recovered-primary" : null });
+    expect(await projectDepegResolved(db, { since: open, until: end })).toMatchObject({ projected: 0 });
   });
 
   it("does NOT delete a depeg event when CG prices fail live-pipeline validation", async () => {
@@ -698,6 +752,7 @@ describe("handleAuditDepegHistory method safety", () => {
       { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM supply_history", rows: [] },
+      { match: "SELECT p.event_id AS id FROM depeg_event_provenance p", rows: [] },
       { match: "INSERT INTO depeg_event_provenance", rows: [] },
       { match: "FROM depeg_events e LEFT JOIN depeg_event_provenance p", rows: [event] },
     ]) as MockD1Database;
@@ -765,7 +820,7 @@ describe("handleAuditDepegHistory method safety", () => {
       peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
     });
     const db = mockD1([
-      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [event] },
+      { match: "WHERE e.ended_at IS NOT NULL ORDER BY e.started_at", rows: [event] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
 
@@ -854,8 +909,16 @@ it("fails the batch with an explicit reason instead of a keyless CoinGecko fetch
 describe("audit provenance PSI transaction", () => {
   const day = Date.parse("2026-03-05T00:00:00Z") / 1000;
 
+  function openAuditFixture() {
+    const fixture = fixtures.open();
+    if (!fixture.sqlite.prepare("SELECT name FROM pragma_table_info('depeg_events') WHERE name = 'disposition'").get()) {
+      fixture.sqlite.exec("ALTER TABLE depeg_events ADD COLUMN disposition TEXT");
+    }
+    return fixture;
+  }
+
   const setup = async () => {
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openAuditFixture();
     const event = makeAuditEvent({
       id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
       direction: "below", source: "live", peg_reference: 1,
@@ -876,6 +939,163 @@ describe("audit provenance PSI transaction", () => {
     new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, price]] }), {
       headers: { "Content-Type": "application/json" },
     }));
+
+  it.each([
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "native-peg", fetched: false, reason: "unclocked-native-quote" },
+    { stablecoin_id: "wcop-ripio", peg_type: "peggedCOP", quoteMode: "native-peg", fetched: false, reason: "matching-quotes-unavailable" },
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: null, fetched: false, reason: "quote-domain-unavailable" },
+    { stablecoin_id: "brla-brla-digital", peg_type: "peggedBRL", quoteMode: "usd", fetched: false, reason: "dated-reference-unavailable" },
+    { stablecoin_id: "axcnh-anchorx", peg_type: "peggedCNH", quoteMode: "native-peg", quoteCurrency: "cny", fetched: false, reason: "matching-quotes-unavailable" },
+  ])("preserves $stablecoin_id ($quoteMode) when $reason", async ({ stablecoin_id, peg_type, quoteMode, quoteCurrency, fetched, reason }) => {
+    const { sqlite, db } = openAuditFixture();
+    const event = makeAuditEvent({ id: 1, stablecoin_id, peg_type, source: "backfill", peg_reference: 1 });
+    seedPsiEvent(sqlite, event);
+    sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, audit_verdict, created_at, updated_at, market_diagnostics_json)
+      VALUES (1, 'market', ?, 'confirmed', ?, ?, ?)`).run(quoteMode, day, day, JSON.stringify({ quoteCurrency }));
+    const before = sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get();
+    fetchWithRetryMock.mockReset().mockImplementation(async () => new Response(JSON.stringify({ prices: [] })));
+    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ auditedEvents: [{ verdict: "skipped", reason }], daysRecomputed: 0 });
+    expect(sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get()).toEqual(before);
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(fetched ? 1 : 0);
+    if (fetched) expect(new URL(fetchWithRetryMock.mock.calls[0][0]).searchParams.get("vs_currency")).toBe("brl");
+  });
+
+  it.each([
+    { auditVerdict: "disputed", publicVerdict: "disputed", disposition: null, reason: "reviewed-dispute" },
+    { auditVerdict: "confirmed", publicVerdict: "disputed", disposition: null, reason: "reviewed-dispute" },
+    { auditVerdict: "confirmed", publicVerdict: "confirmed", disposition: "restored-evidenced", reason: "restored-evidenced" },
+    { auditVerdict: "confirmed", publicVerdict: "confirmed", disposition: "repaired", reason: "repaired" },
+  ])("retains $reason when CoinGecko would confirm the stored move", async ({ auditVerdict, publicVerdict, disposition, reason }) => {
+    const { sqlite, db } = await setup();
+    sqlite.prepare("UPDATE depeg_events SET disposition = ? WHERE id = 1").run(disposition);
+    sqlite.prepare("UPDATE depeg_event_provenance SET audit_verdict = ?, public_json = ? WHERE event_id = 1")
+      .run(auditVerdict, JSON.stringify({ auditVerdict: publicVerdict }));
+    const before = sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get();
+    fetchWithRetryMock.mockReset();
+    setCgPrice(0.97);
+    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      auditedEvents: [{ verdict: "skipped", reason }], daysRecomputed: 0,
+    });
+    expect(sqlite.prepare("SELECT * FROM depeg_event_provenance WHERE event_id = 1").get()).toEqual(before);
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+  });
+
+  it("aborts the provenance and PSI batch when a dispute arrives during the audit", async () => {
+    const { sqlite, db } = await setup();
+    const before = readPsiDay(sqlite, day);
+    fetchWithRetryMock.mockReset().mockImplementation(async () => {
+      sqlite.exec("UPDATE depeg_event_provenance SET audit_verdict = 'disputed' WHERE event_id = 1");
+      return new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, 0.97]] }));
+    });
+    const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    await readJsonResponse(response, 500);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "disputed" });
+    expect(readPsiDay(sqlite, day)).toEqual(before);
+  });
+
+  it("does not restore eligibility for a rounded 99.6 bps print or a changed direction", async () => {
+    const { sqlite, db } = await setup();
+    sqlite.exec("UPDATE depeg_events SET direction = 'above', start_price = 1.03, peak_price = 1.03, peak_deviation_bps = 300");
+    sqlite.exec("UPDATE depeg_event_provenance SET audit_verdict = 'false_positive'");
+    const run = () => {
+      const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
+      return handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key" });
+    };
+    setCgPrice(1.00996);
+    expect(await readJsonResponse(await run(), 200)).toMatchObject({
+      auditedEvents: [{ verdict: "false_positive", cgMaxSameDirectionBps: 100 }],
+    });
+    const before = readPsiDay(sqlite, day);
+    fetchWithRetryMock.mockImplementation(async () => {
+      sqlite.exec("UPDATE depeg_events SET direction = 'below', start_price = 0.97, peak_price = 0.97, peak_deviation_bps = -300");
+      return new Response(JSON.stringify({ prices: [[(day + 3600) * 1000, 1.03]] }));
+    });
+    await readJsonResponse(await run(), 500);
+    expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
+      .toMatchObject({ audit_verdict: "false_positive" });
+    expect(readPsiDay(sqlite, day)).toEqual(before);
+  });
+
+  it("retracts both transitions and composite claims atomically on direct delete", async () => {
+    const { sqlite, db } = await setup();
+    await projectDepegOpened(db, { since: day, until: day + 7200 });
+    await projectDepegResolved(db, { since: day, until: day + 7200 });
+    sqlite.exec(`INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json,
+      source_table, source_row_id, transition, methodology_version, created_at)
+      SELECT 'composite-peak', 'depeg.peak_worsened', severity, ts, title, summary, payload_json,
+        source_table, '1:300', 'updated', methodology_version, created_at FROM tape_events WHERE transition = 'opened'`);
+    const request = makeApiRequest("/api/audit-depeg-history?delete=1", { method: "POST" });
+    await readJsonResponse(await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request }), 200);
+    expect(sqlite.prepare("SELECT count(*) AS count FROM depeg_events").get()).toEqual({ count: 0 });
+    const tape = sqlite.prepare("SELECT source_row_id, suppression_reason FROM tape_events WHERE suppressed_at IS NOT NULL ORDER BY source_row_id").all();
+    expect(tape).toEqual(["1", "1", "1:300"].map((source_row_id) => ({ source_row_id, suppression_reason: "depeg-claim-retracted" })));
+  });
+
+  it.each([false, true])("leaves prior exclusion and PSI intact on no_data (late exclusion: %s)", async (late) => {
+    const { sqlite, db, event } = await setup();
+    const readProvenance = () => sqlite.prepare("SELECT audit_verdict, public_json FROM depeg_event_provenance WHERE event_id = 1").get();
+    const exclude = () => sqlite.exec(`UPDATE depeg_event_provenance SET audit_verdict = 'false_positive',
+      public_json = '{"auditVerdict":"false_positive","pegScoreEligible":false}' WHERE event_id = 1`);
+    if (!late) exclude();
+    const before = readPsiDay(sqlite, day);
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ prices: [] })));
+    const racingDb = late ? { ...db, batch<T>(statements: D1PreparedStatement[]) { exclude(); return db.batch<T>(statements); } } : db;
+    const audit = auditEvents(racingDb, { events: [event], minSupply: 0, symbolFilter: null, offset: 0, limit: 10,
+      dryRun: false, coingeckoApiKey: "cg-test-key" });
+    if (late) await expect(audit).rejects.toThrow("no changes were committed");
+    else await expect(audit).resolves.toMatchObject({ auditedEvents: [{ verdict: "no_data" }], daysRecomputed: 0 });
+    expect(readProvenance()).toEqual({ audit_verdict: "false_positive",
+      public_json: '{"auditVerdict":"false_positive","pegScoreEligible":false}' });
+    expect(readPsiDay(sqlite, day)).toEqual(before);
+  });
+
+  it.each([
+    ["delete=1", "disposition = 'restored-evidenced'"],
+    ["repair=synthetic-splits", "disposition = 'restored-evidenced'"],
+    ["repair=contradictory-recovery-price", "recovery_price = 0.94"],
+  ])("rolls back %s when inspected evidence changes just before the batch", async (query, change) => {
+    const { sqlite, db } = openAuditFixture();
+    for (const row of makeSyntheticSplitRows()) seedPsiEvent(sqlite, makeAuditEvent(row));
+    const contradictory = query.startsWith("repair=contradictory");
+    if (contradictory) sqlite.exec("UPDATE depeg_events SET recovery_price = 0.92, recovery_peg_reference = 1 WHERE id = 1");
+    const dayRows = sqlite.prepare("SELECT * FROM stability_index");
+    const before = dayRows.all();
+    const racingDb = { ...db, batch<T>(statements: D1PreparedStatement[]) {
+      sqlite.exec(`UPDATE depeg_events SET ${change} WHERE id = 1`);
+      return db.batch<T>(statements);
+    } };
+    const request = makeApiRequest(`/api/audit-depeg-history?${query}`, { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db: racingDb, url: makeApiUrl(request.url), request });
+    expect(await readJsonResponse(response, 500)).toMatchObject({ error: expect.stringContaining("no changes were committed") });
+    expect(sqlite.prepare("SELECT id, recovery_price, disposition FROM depeg_events ORDER BY id").all()).toEqual([
+      { id: 1, recovery_price: contradictory ? 0.94 : 0.9998,
+        disposition: change.startsWith("disposition") ? "restored-evidenced" : null },
+      { id: 2, recovery_price: 0.9999, disposition: null },
+    ]);
+    expect(dayRows.all()).toEqual(before);
+  });
+
+  it.each([
+    { query: "delete=2", status: 409, result: { conflicts: [{ eventId: 2, reason: "restored-evidenced" }] } },
+    { query: "repair=synthetic-splits", status: 200, result: { candidateGroups: [], repairedGroups: [] } },
+    { query: "repair=contradictory-recovery-price", status: 200, result: { candidateEvents: [], repairedEvents: [] } },
+  ])("does not mutate restored evidence through $query", async ({ query, status, result }) => {
+    const { sqlite, db } = openAuditFixture();
+    for (const row of makeSyntheticSplitRows()) seedPsiEvent(sqlite, makeAuditEvent(row));
+    sqlite.exec("UPDATE depeg_events SET disposition = 'restored-evidenced', recovery_price = 0.94 WHERE id = 2");
+    const statement = sqlite.prepare("SELECT * FROM depeg_events ORDER BY id");
+    const before = statement.all();
+    const request = makeApiRequest(`/api/audit-depeg-history?${query}`, { method: "POST" });
+    const response = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(request.url), request });
+    expect(await readJsonResponse(response, status)).toMatchObject(result);
+    expect(statement.all()).toEqual(before);
+  });
 
   it.each([
     { label: "null envelope", body: null, rejected: 0 },
@@ -930,15 +1150,17 @@ describe("audit provenance PSI transaction", () => {
   });
 
   it("excludes invalidated events and restores confirmed events in the same provenance-plus-PSI commit", async () => {
-    const { sqlite, db, event } = await setup();
+    const { sqlite, db } = await setup();
     const original = readPsiDay(sqlite, day);
     expect(JSON.parse(original.input_snapshot).depegCount).toBe(1);
-    const options = {
-      events: [event], minSupply: 0, symbolFilter: null, offset: 0, limit: 10,
-      dryRun: false, coingeckoApiKey: "cg-test-key",
+    const run = async () => {
+      const request = makeApiRequest("/api/audit-depeg-history?min-supply=0", { method: "POST" });
+      return readJsonResponse(await handleAuditDepegHistoryTrusted({
+        db, url: makeApiUrl(request.url), request, coingeckoApiKey: "cg-test-key",
+      }), 200) as Promise<{ daysRecomputed: number }>;
     };
     setCgPrice(1);
-    const invalidated = await auditEvents(db, options);
+    const invalidated = await run();
     expect(invalidated.daysRecomputed).toBe(1);
     expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
       .toMatchObject({ audit_verdict: "false_positive" });
@@ -948,7 +1170,7 @@ describe("audit provenance PSI transaction", () => {
     expect(excluded.score).toBeGreaterThan(original.score);
 
     setCgPrice(0.97);
-    const restored = await auditEvents(db, options);
+    const restored = await run();
     expect(restored.daysRecomputed).toBe(1);
     expect(sqlite.prepare("SELECT audit_verdict FROM depeg_event_provenance WHERE event_id = 1").get())
       .toMatchObject({ audit_verdict: "confirmed" });
@@ -1035,7 +1257,7 @@ describe("buildRecomputeStabilityStatements", () => {
     seedPsiSupply(sqlite, [
       ...[PSI_DAY - 7 * DAY_SECONDS, PSI_DAY].flatMap((snapshot_date) => [
         { stablecoin_id: "usdt-tether", snapshot_date, circulating_usd: 100e9, price: 1 },
-        { stablecoin_id: "usdc-circle", snapshot_date, circulating_usd: 1e9, price: 0.995 },
+        { stablecoin_id: "usdc-circle", snapshot_date, circulating_usd: 1e9, price: 0.995, price_observed_at: snapshot_date + 3600 },
         { stablecoin_id: "eurc-circle", snapshot_date, circulating_usd: 1e9, price: 1.08 },
       ]),
     ]);
@@ -1070,20 +1292,21 @@ describe("buildRecomputeStabilityStatements", () => {
     expect(readPsiDay(sqlite, PSI_DAY)).toEqual(auditDay);
   });
 
-  it("keeps sparse 8, 14 and 21-day supply evidence independent of the replay window", async () => {
+  it("keeps sparse capitalization weights independent of the replay window with an exact trend pair", async () => {
     const fixture = () => {
       const { sqlite, db } = fixtures.open();
       seedPsiSupply(sqlite, [
         { stablecoin_id: "usdt-tether", snapshot_date: PSI_DAY - 8 * DAY_SECONDS, circulating_usd: 100e9, price: 1 },
         { stablecoin_id: "usdc-circle", snapshot_date: PSI_DAY - 14 * DAY_SECONDS, circulating_usd: 1e9, price: 0.995 },
         { stablecoin_id: "dai-makerdao", snapshot_date: PSI_DAY - 21 * DAY_SECONDS, circulating_usd: 3e9, price: 1 },
+        { stablecoin_id: "dai-makerdao", snapshot_date: PSI_DAY - 7 * DAY_SECONDS, circulating_usd: 3e9, price: 1 },
         { stablecoin_id: "dai-makerdao", snapshot_date: PSI_DAY, circulating_usd: 3e9, price: 1 },
       ]);
       seedPsiDews(sqlite, [PSI_DAY - DAY_SECONDS, PSI_DAY].map((snapshot_date) => ({
         stablecoin_id: "usdt-tether", snapshot_date, band: "CALM",
       })));
       seedPsiEvent(sqlite, makeAuditEvent({
-        id: 1, stablecoin_id: "usdc-circle", started_at: PSI_DAY - DAY_SECONDS, ended_at: null,
+        id: 1, stablecoin_id: "usdc-circle", started_at: PSI_DAY, start_price: 0.995, ended_at: null,
         peak_deviation_bps: -1000, source: "backfill",
       }));
       return { sqlite, db };

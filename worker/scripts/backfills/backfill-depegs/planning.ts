@@ -1,16 +1,12 @@
 import { logWorkerEventArgs } from "../../../src/lib/structured-log";
-import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
-import { DAY_MS } from "@shared/lib/time-constants";
-import { derivePegRates } from "@shared/lib/peg-rates";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../../src/lib/constants";
-import { cgUrl, cgHeaders } from "../../../src/lib/coingecko";
 import { fetchJsonWithRetry } from "../../../src/lib/fetch-retry";
-import { RATE_LIMITS } from "../../../src/lib/rate-limit";
-import { loadStablecoinsCache } from "../../../src/lib/stablecoins-cache";
 import {
   type FxTimeSeries,
   PEG_TO_FX,
@@ -18,8 +14,10 @@ import {
   OTHER_COIN_FX,
   fetchHistoricalFxRates,
   fetchHistoricalSecondaryFxRates,
-  buildCommodityMedianSeriesFromCg,
+  fetchHistoricalCommodityPeers,
+  HISTORICAL_INTRADAY_PAIRING_SEC,
   type CommodityPeg,
+  type HistoricalCommoditySources,
 } from "../../../src/lib/backfill-fx";
 import type { BackfillReplayWindow } from "../../../src/lib/backfill-day-window";
 import type { SupplyPoint } from "../../../src/lib/historical-depeg-extraction";
@@ -38,15 +36,12 @@ export interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
   supplyTokens: SupplyPoint[];
-  currentSupplyUsd: number | null;
 }
 
 export interface BackfillPlan {
   preparedCoins: PreparedBackfillCoin[];
-  pegRates: Record<string, number>;
-  fxRates: Record<string, number> | undefined;
   fxSeries: Record<string, FxTimeSeries[]>;
-  commoditySeries: Record<string, FxTimeSeries[]>;
+  commodityPeers: HistoricalCommoditySources;
   commodityPegs: CommodityPeg[];
 }
 
@@ -55,35 +50,9 @@ export async function buildBackfillPlan(opts: {
   coins: StablecoinMeta[];
   replayWindow: BackfillReplayWindow | null;
   coingeckoApiKey: string | null;
+  dryRun?: boolean;
 }): Promise<BackfillPlan> {
   const { db, coins, replayWindow, coingeckoApiKey } = opts;
-
-  // Get peg rates from cached stablecoin data
-  let pegRates: Record<string, number> = { peggedUSD: 1 };
-  let fxRates: Record<string, number> | undefined;
-  const currentSupplyById = new Map<string, number>();
-
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
-  if (stablecoinsCache.kind !== "ok") {
-    logWorkerEventArgs("api", "warn", `[backfill-depegs] stablecoins cache ${stablecoinsCache.kind} (${stablecoinsCache.reason})`);
-  }
-  const stablecoinsPayload =
-    stablecoinsCache.kind === "ok" || (stablecoinsCache.kind === "degraded" && stablecoinsCache.payload)
-      ? stablecoinsCache.payload
-      : null;
-  if (stablecoinsPayload) {
-    const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
-    ({ rates: pegRates } = derivePegRates(
-      stablecoinsPayload.peggedAssets,
-      metaById,
-      stablecoinsPayload.fxFallbackRates,
-    ));
-    fxRates = stablecoinsPayload.fxFallbackRates;
-    for (const asset of stablecoinsPayload.peggedAssets) {
-      const supply = getCirculatingRawOrNull(asset);
-      if (supply != null) currentSupplyById.set(asset.id, supply);
-    }
-  }
 
   const processable = coins.filter((m) => !m.flags.navToken);
 
@@ -92,11 +61,8 @@ export async function buildBackfillPlan(opts: {
   const neededCommodityPegs = new Set<CommodityPeg>();
   const preparedCoins: PreparedBackfillCoin[] = [];
 
-  // Fetch historical FX rates only as far back as the oldest supply snapshot in this batch.
-  // If supply history is missing, fall back to 10 years to preserve current behavior.
-  const tenYearsAgoMs = Date.now() - 10 * 365 * DAY_MS;
-  const defaultStartDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
-  const endDate = new Date().toISOString().slice(0, 10);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const endDate = new Date(Math.min(replayWindow?.replayEndSec ?? nowSec, nowSec) * 1000).toISOString().slice(0, 10);
   let historicalFxStartDate = endDate;
 
   for (const meta of processable) {
@@ -132,57 +98,18 @@ export async function buildBackfillPlan(opts: {
       meta,
       geckoId,
       supplyTokens,
-      currentSupplyUsd: currentSupplyById.get(meta.id) ?? null,
     });
 
     const peg = meta.flags.pegCurrency;
-    if (peg === "USD") continue;
+    if (peg === "USD" || supplyTokens.length === 0) continue;
 
-    // Native-only rows still anchor the FX fetch, but never enter USD thresholds.
     const firstSupplyTimestamp = supplyTokens.reduce((earliest, point) => {
-      const ts = Number.parseInt(point.date, 10);
-      return Number.isFinite(ts) ? Math.min(earliest, ts) : earliest;
-    }, Number.POSITIVE_INFINITY);
-    let earliestDate: string;
-    if (Number.isFinite(firstSupplyTimestamp)) {
-      earliestDate = new Date(firstSupplyTimestamp * 1000).toISOString().slice(0, 10);
-    } else if (SECONDARY_PEG_TO_FX[peg] && geckoId) {
-      // Secondary FX coins with no DL supply data would otherwise default to 10 years,
-      // triggering ~3,600 per-day CDN fetches for the cold-start FX cache build.
-      // Fetch the CG ATL/genesis date to anchor the window to the coin's actual inception.
-      try {
-        await new Promise((r) => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
-        const cgResult = await fetchJsonWithRetry<{
-          genesis_date?: string | null;
-          market_data?: { atl_date?: Record<string, string> };
-        }>(
-          cgUrl(
-            `/coins/${geckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
-            coingeckoApiKey ?? null,
-          ),
-          { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null) },
-          1,
-          { timeoutMs: 10_000 },
-        );
-        if (cgResult?.response.ok) {
-          const cgData = cgResult.body;
-          const inceptionStr = cgData.genesis_date ?? cgData.market_data?.atl_date?.["usd"];
-          if (inceptionStr) {
-            const d = new Date(inceptionStr);
-            d.setUTCDate(d.getUTCDate() - 7); // 7-day buffer
-            earliestDate = d.toISOString().slice(0, 10);
-          } else {
-            earliestDate = defaultStartDate;
-          }
-        } else {
-          earliestDate = defaultStartDate;
-        }
-      } catch {
-        earliestDate = defaultStartDate;
-      }
-    } else {
-      earliestDate = defaultStartDate;
-    }
+      const ts = Number(point.date);
+      return Number.isSafeInteger(ts) && ts > 0 ? Math.min(earliest, ts) : earliest;
+    }, Infinity);
+    if (!Number.isFinite(firstSupplyTimestamp)) continue;
+    const startSec = replayWindow?.replayStartSec ?? firstSupplyTimestamp;
+    const earliestDate = new Date(Math.max(0, startSec - 15 * DAY_SECONDS) * 1000).toISOString().slice(0, 10);
     if (earliestDate < historicalFxStartDate) {
       historicalFxStartDate = earliestDate;
     }
@@ -203,43 +130,26 @@ export async function buildBackfillPlan(opts: {
     }
   }
 
-  // Fetch FX rates and commodity peer-median series in parallel.
-  // Commodity peg reference is derived from the median of all tracked gold/silver
-  // token CG prices — same approach as derivePegRates() in the live system.
-  const fxPromise =
-    neededFxCurrencies.size > 0
-      ? fetchHistoricalFxRates([...neededFxCurrencies], historicalFxStartDate, endDate)
-      : Promise.resolve({} as Record<string, FxTimeSeries[]>);
+  const fxSeriesPrimary = await fetchHistoricalFxRates([...neededFxCurrencies], historicalFxStartDate, endDate);
+  const fxSeriesSecondary = await fetchHistoricalSecondaryFxRates(
+    db, [...neededSecondaryFxCurrencies], historicalFxStartDate, endDate, undefined, opts.dryRun,
+  );
 
-  const secondaryFxPromise =
-    neededSecondaryFxCurrencies.size > 0
-      ? fetchHistoricalSecondaryFxRates(db, [...neededSecondaryFxCurrencies], historicalFxStartDate, endDate)
-      : Promise.resolve({} as Record<string, FxTimeSeries[]>);
-
-  const commodityRange = replayWindow
-    ? {
-        startSec: replayWindow.replayStartSec,
-        endSec: replayWindow.replayEndSec,
-      }
-    : undefined;
+  const commodityRange = {
+    startSec: Math.max(0, (replayWindow?.replayStartSec ?? Date.parse(historicalFxStartDate) / 1000)
+      - MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC - HISTORICAL_INTRADAY_PAIRING_SEC - HOUR_SECONDS),
+    endSec: Math.min(replayWindow?.replayEndSec ?? nowSec, nowSec),
+  };
   const commodityPegs = [...neededCommodityPegs].sort();
-  const commodityPromise = commodityPegs.length > 0
-    ? buildCommodityMedianSeriesFromCg(commodityRange, coingeckoApiKey ?? null, commodityPegs)
-    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
-
-  const [fxSeriesPrimary, fxSeriesSecondary, commoditySeries] = await Promise.all([
-    fxPromise,
-    secondaryFxPromise,
-    commodityPromise,
-  ]);
+  const commodityPeers = commodityPegs.length > 0
+    ? await fetchHistoricalCommodityPeers(commodityRange, coingeckoApiKey, commodityPegs, db)
+    : {};
   const fxSeries = { ...fxSeriesPrimary, ...fxSeriesSecondary };
 
   return {
     preparedCoins,
-    pegRates,
-    fxRates,
     fxSeries,
-    commoditySeries,
+    commodityPeers,
     commodityPegs,
   };
 }

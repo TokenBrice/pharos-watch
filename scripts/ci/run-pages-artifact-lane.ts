@@ -90,18 +90,22 @@ export function dropRetiredDepegEventEntries(repoRoot: string): string[] {
   const dataDir = join(repoRoot, "data/depeg-events");
   const dropped = new Set<string>();
   let eventCount = 0;
+  let ledgerChanged = false;
   for (const name of readdirSync(dataDir).filter((file) => /^(\d{4}|index)\.json$/.test(file))) {
     const entries = JSON.parse(readFileSync(join(dataDir, name), "utf8")) as unknown;
     if (!Array.isArray(entries)) continue;
     const kept = entries.filter((entry: { slug?: string }) => !retired.has(entry.slug ?? ""));
     if (name !== "index.json") eventCount += kept.length;
     if (kept.length === entries.length) continue;
+    if (name !== "index.json") ledgerChanged = true;
     for (const entry of entries as { slug?: string }[]) if (entry.slug && retired.has(entry.slug)) dropped.add(entry.slug);
     writeFileSync(join(dataDir, name), `${JSON.stringify(kept, null, 2)}\n`);
   }
-  if (dropped.size > 0) {
+  if (ledgerChanged) {
     const capturePath = join(dataDir, DEPEG_LEDGER_CAPTURE_RELATIVE_PATH);
     const capture = JSON.parse(readFileSync(capturePath, "utf8")) as Record<string, unknown>;
+    delete capture.ledgerProof;
+    delete capture.shardSource;
     writeFileSync(capturePath, `${JSON.stringify({ ...capture, captureId: depegLedgerCaptureId(dataDir), eventCount }, null, 2)}\n`);
   }
   return [...dropped].sort();

@@ -1,8 +1,9 @@
+import type { DepegEventDisposition, DepegEventQuoteDomain } from "@shared/types/peg";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { HistoricalMarketSourceDiagnostics } from "../../src/lib/historical-market-prices";
 import type { BackfillEvent } from "../../src/lib/historical-depeg-extraction";
-import { existingRowOverlapsReplayWindow } from "./backfill-depegs-window";
+import { existingRowOverlapsReplayWindow, REPLAY_PROTECTED_SQL, REPLAY_ROW_PREIMAGE_SQL } from "./backfill-depegs-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS } from "../../src/lib/depeg-helpers";
 
@@ -22,11 +23,19 @@ export interface ExistingDepegEventRow {
   recovery_price: number | null;
   peg_reference: number;
   source: string;
+  disposition?: DepegEventDisposition | null;
+  replay_preimage?: string;
+  replay_protected?: number;
+  peak_peg_reference?: number | null;
+  peak_quote_domain?: DepegEventQuoteDomain | null;
+  recovery_peg_reference?: number | null;
+  admitted_coverage_json?: string | null;
 }
 
 export interface BackfillReplayPreview {
   stablecoinId: string;
   symbol: string;
+  degradedReason?: string | null;
   replaySource: "market" | "authoritative" | "preserve-existing";
   authoritativeSource: string | null;
   marketSourcesUsed: string[];
@@ -47,6 +56,7 @@ export interface ExistingReplayRows {
   allRows: ExistingDepegEventRow[];
   existingBackfillRows: ExistingDepegEventRow[];
   existingLiveRows: ExistingDepegEventRow[];
+  protectedBackfillRows: ExistingDepegEventRow[];
 }
 
 function formatBackfillNumber(value: number | null | undefined): string {
@@ -64,6 +74,10 @@ function buildBackfillEventFingerprint(event: BackfillEvent): string {
     formatBackfillNumber(event.peakPrice),
     formatBackfillNumber(event.recoveryPrice),
     formatBackfillNumber(event.pegRef),
+    formatBackfillNumber(event.peakPegReference),
+    event.peakQuoteDomain ?? "null",
+    formatBackfillNumber(event.recoveryPegReference),
+    event.admittedCoverage == null ? "null" : JSON.stringify(event.admittedCoverage),
   ].join("|");
 }
 
@@ -77,6 +91,10 @@ function buildExistingBackfillFingerprint(row: ExistingDepegEventRow): string {
     formatBackfillNumber(row.peak_price),
     formatBackfillNumber(row.recovery_price),
     formatBackfillNumber(row.peg_reference),
+    formatBackfillNumber(row.peak_peg_reference),
+    row.peak_quote_domain ?? "null",
+    formatBackfillNumber(row.recovery_peg_reference),
+    row.admitted_coverage_json ?? "null",
   ].join("|");
 }
 
@@ -157,23 +175,29 @@ export async function loadExistingReplayRows(
 ): Promise<ExistingReplayRows> {
   const existingRows = await db
     .prepare(
-      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS} FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at`,
+      `SELECT ${DEPEG_EVENTS_DEPEGROW_COLUMNS}, disposition,
+       peak_peg_reference, peak_quote_domain, recovery_peg_reference, admitted_coverage_json,
+       ${REPLAY_ROW_PREIMAGE_SQL} AS replay_preimage, ${REPLAY_PROTECTED_SQL} AS replay_protected
+       FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at`,
     )
     .bind(stablecoinId)
     .all<ExistingDepegEventRow>();
   const allRows = existingRows.results ?? [];
+  const retain = (row: ExistingDepegEventRow) => row.replay_protected === 1;
   return {
     allRows,
     existingBackfillRows: allRows.filter((row) => (
-      row.source === "backfill" && existingRowOverlapsReplayWindow(row, replayWindow)
+      row.source === "backfill" && !retain(row) && existingRowOverlapsReplayWindow(row, replayWindow)
     )),
     existingLiveRows: allRows.filter((row) => row.source === "live"),
+    protectedBackfillRows: allRows.filter((row) => row.source === "backfill" && retain(row)),
   };
 }
 
 export function buildBackfillReplayPreview({
   meta,
   sourceKind,
+  degradedReason,
   authoritativeSource,
   marketDiagnostics,
   existingRows,
@@ -181,6 +205,7 @@ export function buildBackfillReplayPreview({
 }: {
   meta: StablecoinMeta;
   sourceKind: "market" | "authoritative" | "preserve-existing";
+  degradedReason?: string | null;
   authoritativeSource: string | null;
   marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
   existingRows: ExistingReplayRows;
@@ -191,6 +216,7 @@ export function buildBackfillReplayPreview({
     stablecoinId: meta.id,
     symbol: meta.symbol,
     replaySource: sourceKind,
+    ...(degradedReason ? { degradedReason } : {}),
     authoritativeSource,
     marketSourcesUsed: marketDiagnostics?.sourcesUsed ?? [],
     mergeReasons: marketDiagnostics?.mergeReasons ?? [],

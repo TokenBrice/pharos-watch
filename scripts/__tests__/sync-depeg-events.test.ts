@@ -11,6 +11,8 @@ import {
 } from "../maintenance/sync-depeg-events";
 import { createTempRepoTracker } from "./helpers/test-state";
 import { SnapshotIntegrityError } from "../lib/sync-from-api";
+import { readDepegEventPageEntries, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { projectDepegHistory } from "../lib/public-dataset-projections";
 import { readDepegLedgerCapture } from "../lib/depeg-ledger-capture";
 
 const { cleanup, makeRoot } = createTempRepoTracker("depeg-event-shards-test");
@@ -46,6 +48,53 @@ function event(overrides: Partial<DepegEvent> = {}): DepegEvent {
 }
 
 describe("sync-depeg-events", () => {
+  it("uses an unverified traversal when the first page has no manifest", async () => {
+    const dataDir = makeRoot();
+    const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("ledgerGeneration")
+      ? Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 })
+      : Response.json({ events: [event()], total: 1, nextCursor: null }));
+    vi.stubGlobal("fetch", fetchMock);
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")]);
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("ledgerGeneration"))).toEqual(["latest", null]);
+    expect(readDepegLedgerCapture(dataDir).ledgerProof).toBeUndefined();
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+  });
+
+  it("fails a pinned continuation when its manifest vanishes, even with retained-data fallback", async () => {
+    const dataDir = makeRoot();
+    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [event()], total: 1 })));
+    await runDepegSync(args);
+    const ledgerProof = { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
+    const fetchMock = vi.fn(async (url: string) => new URL(url).searchParams.has("cursor")
+      ? Response.json({ reason: "ledger-manifest-unavailable" }, { status: 503 })
+      : Response.json({ events: Array.from({ length: 1000 }, (_, i) => event({ id: i + 1 })),
+        ledgerProof, nextCursor: "next", totalExact: true, total: 1001 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(runDepegSync([...args, "--allow-existing-on-fetch-failure"])).rejects.toThrow(SnapshotIntegrityError);
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("ledgerGeneration")))
+      .toEqual(["latest", ledgerProof.generation]);
+    expect(readDepegLedgerCapture(dataDir).eventCount).toBe(1);
+  });
+
+  it("captures the corrected event while retaining its dedicated page in the index", async () => {
+    const dataDir = makeRoot();
+    const indexPath = join(dataDir, "index.json");
+    const args = ["--api-url", "https://api.example.test", "--output", indexPath];
+    let peakDeviationBps = -600;
+    const ledgerProof = { generation: "b".repeat(64), coveredFromSec: 1, coveredThroughSec: 2_000_000_000 };
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      events: [event({ peakDeviationBps })], total: 1, totalExact: true, nextCursor: null, ledgerProof,
+    })));
+    await runDepegSync(args);
+    peakDeviationBps = -100;
+    await runDepegSync(args);
+    const dataset = projectDepegHistory(readDepegEventSnapshot({ missing: "throw" }, dataDir), "2026-05-15");
+    expect(dataset).toMatchObject([{ peakDeviationBps: -100 }]);
+    expect(readDepegEventPageEntries(dataDir)).toMatchObject([{ slug: "usdc-2026-05-15", peakDeviationBps: -600 }]);
+    expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 1, apiTotal: 1, ledgerProof });
+  });
+
   it("assigns deterministic slugs for same-coin same-day events", () => {
     const entries = assignSlugs([event({ id: 2, direction: "above" }), event({ id: 1, direction: "below" })]);
 
@@ -165,7 +214,7 @@ describe("sync-depeg-events", () => {
       await expect(attempt).rejects.toMatchObject({ code: "EISDIR" });
       expect(warning).not.toHaveBeenCalled();
     }
-    expect(readFileSync(shardPath, "utf8") !== before).toBe(failure !== "fetch");
+    expect(readFileSync(shardPath, "utf8") !== before).toBe(failure === "metadata/capture.json");
   });
 
   it("round-trips legacy event fields through the shared stored schema", async () => {
@@ -271,12 +320,12 @@ describe("sync-depeg-events", () => {
     for (let capture = 0; capture < 2; capture++) {
       await runDepegSync(args);
       const captured = DepegEventStoredSnapshotSchema.parse(JSON.parse(readFileSync(shardPath, "utf8")));
-      expect(captured.find((entry) => entry.id === original.id)).toEqual(published);
+      expect(captured.find((entry) => entry.id === original.id)).toBeUndefined();
       expect(captured.find((entry) => entry.id === representative.id)).toMatchObject({
         slug: "usda-2026-07-06-down", peakDeviationBps: -129,
       });
-      expect(JSON.parse(readFileSync(indexPath, "utf8"))).toEqual([expect.objectContaining({ slug: published.slug })]);
-      expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 2, apiTotal: 1 });
+      expect(JSON.parse(readFileSync(indexPath, "utf8"))).toEqual([expect.objectContaining({ slug: published.slug, retainedPage: published })]);
+      expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 1, apiTotal: 1 });
     }
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/depeg-resolver")).map(([url]) => url))
       .toEqual(Array(2).fill("https://api.example.test/_site-data/depeg-resolver"));
@@ -389,9 +438,11 @@ describe("sync-depeg-events", () => {
     const root = makeRoot();
     const indexPath = join(root, "data/depeg-events/index.json");
     const total = 21_001;
+    const ledgerProof = { generation: "a".repeat(64), coveredFromSec: 1, coveredThroughSec: 1_795_000_000 };
     const fetchMock = vi.fn((input: string) => {
       const url = new URL(input);
       const offset = Number(url.searchParams.get("cursor") ?? 0);
+      expect(url.searchParams.get("ledgerGeneration")).toBe(offset === 0 ? "latest" : ledgerProof.generation);
       const length = Math.min(1000, total - offset);
       const events = Array.from({ length }, (_, index) => event({
         id: offset + index + 1,
@@ -400,7 +451,7 @@ describe("sync-depeg-events", () => {
       }));
       return Promise.resolve(new Response(JSON.stringify({
         events,
-        total,
+        total, totalExact: true, ledgerProof,
         nextCursor: offset + length < total ? String(offset + length) : null,
       })));
     });
@@ -415,8 +466,9 @@ describe("sync-depeg-events", () => {
     expect(shard.some((entry) => entry.id === total)).toBe(true);
     expect(readDepegLedgerCapture(join(root, "data/depeg-events"))).toMatchObject({
       schemaVersion: 1,
+      shardSource: "fetched-ledger",
       eventCount: total,
-      apiTotal: total,
+      apiTotal: total, ledgerProof,
       captureId: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       sourceUrl: "https://api.example.test/api/depeg-events",
     });

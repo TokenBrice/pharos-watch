@@ -4,12 +4,15 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../../src/lib/db";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { historicalPsiInputSnapshot, replayHistoricalPsiForDay } from "../../src/lib/psi-replay";
-import { loadHistoricalPsiArchives, loadPsiEligibleDepegEvents } from "../../src/lib/psi-replay-inputs";
+import { loadHistoricalPsiArchives, loadHistoricalPsiReferences, loadHistoricalPsiSampleSlots, loadPsiEligibleDepegEvents } from "../../src/lib/psi-replay-inputs";
 import type { PsiUniverseCache } from "../../src/lib/psi-history-universe";
 import { runAdminJob } from "../../src/lib/admin-job";
 import { acquireCronLease, createLeaseOwner, releaseCronLease, renewCronLease } from "../../src/lib/cron-lease-primitives";
 import { logWorkerEvent } from "../../src/lib/structured-log";
 import { parseOptionalDayWindow } from "../../src/lib/backfill-day-window";
+import type { HistoricalReferenceLookup } from "@shared/types/peg";
+import { isRecord } from "@shared/lib/type-guards";
+import { PSI_DAILY_HAS_REPAIR_SQL } from "../../src/lib/psi-sample-projection";
 
 // Advisory lease key fencing concurrent admin invocations of this rebuild. It
 // is intentionally distinct from the "stability-index" cron job key.
@@ -31,12 +34,18 @@ export interface BackfillStabilityIndexRouteContext {
   url: URL;
   trustedAdmin?: boolean;
   request?: Request;
+  references?: HistoricalReferenceLookup;
+  loadReferences?: typeof loadHistoricalPsiReferences;
+  coingeckoApiKey?: string | null;
 }
 
 export async function handleBackfillStabilityIndex({
   db,
   url,
   request,
+  references,
+  loadReferences,
+  coingeckoApiKey,
 }: BackfillStabilityIndexRouteContext): Promise<Response> {
   return runAdminJob({ request, url }, async ({ dryRun }) => {
     const rebuildTableSql = [
@@ -91,10 +100,15 @@ export async function handleBackfillStabilityIndex({
 
     const depegEvents = await loadPsiEligibleDepegEvents(db, { startDay, endDay });
     const { supplyByCoin, dewsByDay } = await loadHistoricalPsiArchives(db, startDay, endDay);
+    const sampleSlotsByDay = await loadHistoricalPsiSampleSlots(db, startDay, endDay);
+    const datedReferences = references ?? await loadReferences?.(db, depegEvents, startDay, endDay, coingeckoApiKey ?? null);
 
     const existingRows = await db
+      // SAFETY: The repair predicate is fixed and both bounds are bound below.
       .prepare(
-        "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index WHERE computed_at >= ? AND computed_at <= ?",
+        `SELECT computed_at, score, band, components, input_snapshot, methodology_version
+         FROM stability_index WHERE computed_at >= ? AND computed_at <= ?
+         ORDER BY computed_at, COALESCE(${PSI_DAILY_HAS_REPAIR_SQL}, 0), id`,
       )
       .bind(startDay, endDay)
       .all<ExistingStabilityIndexRow>();
@@ -168,7 +182,13 @@ export async function handleBackfillStabilityIndex({
       let daysEvaluated = 0;
       let daysChanged = 0;
       let maxAbsoluteScoreDelta = 0;
-      const unavailableDays: Array<{ day: number; reason: string; trendUnavailableIds: string[] }> = [];
+      const unavailableDays: Array<{
+        day: number;
+        reason: string;
+        trendUnavailableIds: string[];
+        openDepegsWithoutPrice: number;
+        openDepegsWithoutWeight: number;
+      }> = [];
       const universeCache: PsiUniverseCache = new Map();
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
@@ -182,6 +202,8 @@ export async function handleBackfillStabilityIndex({
           supplyByCoin,
           dewsByDay,
           universeCache,
+          references: datedReferences,
+          sampleSlots: sampleSlotsByDay.get(day),
         });
         const { result } = replay;
         const existing = existingByDay.get(day);
@@ -190,6 +212,8 @@ export async function handleBackfillStabilityIndex({
           unavailableDays.push({
             day, reason: replay.unavailableReason ?? "insufficient-market-cap",
             trendUnavailableIds: replay.input.trendUnavailableIds,
+            openDepegsWithoutPrice: replay.input.openDepegsWithoutPrice,
+            openDepegsWithoutWeight: replay.input.openDepegsWithoutWeight,
           });
           if (!dryRun && existing) {
             stmts.push(
@@ -224,6 +248,13 @@ export async function handleBackfillStabilityIndex({
         }
 
         if (!dryRun) {
+          let referenceMarketRepair: unknown;
+          try {
+            const snapshot: unknown = JSON.parse(existing?.input_snapshot ?? "null");
+            if (isRecord(snapshot)) referenceMarketRepair = snapshot.referenceMarketRepair;
+          } catch {
+            // Invalid legacy provenance contains no recoverable repair marker.
+          }
           stmts.push(
             db
               .prepare(
@@ -234,7 +265,7 @@ export async function handleBackfillStabilityIndex({
                 result.score,
                 result.band,
                 JSON.stringify(result.components),
-                JSON.stringify(historicalPsiInputSnapshot(replay, methodologyVersion)),
+                JSON.stringify({ ...historicalPsiInputSnapshot(replay, methodologyVersion), referenceMarketRepair }),
                 methodologyVersion,
               ),
           );

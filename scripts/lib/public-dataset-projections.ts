@@ -1,16 +1,22 @@
+import { createHash } from "node:crypto";
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import { isRecord } from "@shared/lib/type-guards";
 import type { DepegEvent } from "@shared/types/peg";
+import { NominalPriceReferenceSchema, PriceObservedAtModeSchema, type PriceObservedAtMode } from "@shared/types/price";
 import type { SupplyObservationProvenance } from "@shared/types/supply";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { projectEnvelopeSupplyProvenance } from "@shared/lib/supply-provenance";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import type {
   PublicSnapshotEnvelope,
@@ -33,8 +39,11 @@ import {
 import { z } from "zod";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "./public-dataset-artifacts";
 import type { DepegLedgerCapture } from "./depeg-ledger-capture";
+import { hasUnverifiedDepegPeak } from "../../src/lib/depeg-event-config";
+import { hasUnverifiedAnalyticRecovery } from "../../src/lib/depeg-event-display";
 
 export const RETENTION_DAYS = 90;
+export const PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY = "PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY";
 
 export type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
   version?: number;
@@ -117,8 +126,18 @@ interface TopStablecoinRow {
   supplyUnavailableReason: string | null;
   /** Recorded chain-coverage provenance from the immutable envelope; null = unrecorded (unknown). */
   supplyProvenance: SupplyObservationProvenance | null;
-  chainCount: number;
+  chainCount: number | null;
   chains: string;
+  frozen: boolean;
+  frozenAt: string | null;
+  archiveCapturedAt: string | null;
+  archivalCirculatingUsd: number | null;
+  chainUnavailableReason: "chain-evidence-unavailable" | null;
+  priceSource: string | null;
+  priceObservedAt: number | null;
+  priceObservedAtMode: PriceObservedAtMode | null;
+  nominalReferenceUsd: number | null;
+  nominalReferenceSource: string | null;
 }
 
 const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
@@ -133,37 +152,86 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "chains", accessor: (r) => r.chains },
   { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
   { header: "supplyProvenance", accessor: (r) => r.supplyProvenance },
+  { header: "frozen", accessor: (r) => r.frozen },
+  { header: "frozenAt", accessor: (r) => r.frozenAt },
+  { header: "archiveCapturedAt", accessor: (r) => r.archiveCapturedAt },
+  { header: "archivalCirculatingUsd", accessor: (r) => r.archivalCirculatingUsd },
+  { header: "chainUnavailableReason", accessor: (r) => r.chainUnavailableReason },
+  { header: "priceSource", accessor: (r) => r.priceSource },
+  { header: "priceObservedAt", accessor: (r) => r.priceObservedAt },
+  { header: "priceObservedAtMode", accessor: (r) => r.priceObservedAtMode },
+  { header: "nominalReferenceUsd", accessor: (r) => r.nominalReferenceUsd },
+  { header: "nominalReferenceSource", accessor: (r) => r.nominalReferenceSource },
 ];
+
+function nativeSupplyChain(coin: SnapshotEnvelope["stablecoins"][number]): string | null {
+  if (coin.id === "hbd-hive" && coin.supplySource === "onchain-circulating-supply") return "Hive";
+  if ((coin.id === "zsd-zephyr-protocol" || coin.id === "zys-zephyr-protocol") && coin.supplySource === "zephyr-scanner") {
+    return "Zephyr";
+  }
+  return null;
+}
 
 function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoinRow[] {
   if (!envelope) return [];
   const pricingPipelineVersion = envelope.methodologyVersions?.pricingPipeline;
   return envelope.stablecoins
-    .map((coin) => {
+    .map((coin): TopStablecoinRow => {
       const admission = admitSupplyBuckets(coin.circulating);
+      const frozenDate = typeof coin.frozenAt === "string" ? coin.frozenAt : FROZEN_META_BY_ID.get(coin.id)?.frozenAt;
+      const frozen = typeof coin.frozen === "boolean"
+        ? coin.frozen
+        : frozenDate != null && frozenDate <= envelope.snapshotDate;
+      const archive = frozen ? FROZEN_SNAPSHOTS_BY_ID.get(coin.id) : undefined;
+      const archiveInWindow = archive && Date.parse(archive.capturedAt) <= envelope.generatedAt * 1_000 ? archive : undefined;
+      const archiveBuckets = admitSupplyBuckets(archiveInWindow?.peggedAssetRow.circulating);
+      const nativeChain = !frozen && admission.status === "observed" ? nativeSupplyChain(coin) : null;
+      const chains = [...new Set(coin.chains.filter((chain) => typeof chain === "string").map((chain) => chain.trim()).filter(Boolean))];
+      if (chains.length === 0 && nativeChain) chains.push(nativeChain);
+      const priceSource = typeof coin.priceSource === "string" ? coin.priceSource : null;
+      const priceObservedAtMode = PriceObservedAtModeSchema.safeParse(coin.priceObservedAtMode).data ?? null;
+      const observed = !frozen && coin.price !== null && coin.price > 0 && isObservedPrice({ priceSource, priceObservedAtMode });
+      const nominalReference = NominalPriceReferenceSchema.safeParse(coin.nominalPriceReference).data;
+      const nominalFallback = priceObservedAtMode === "nominal_reference" || priceSource === "protocol-par";
+      const sourceClock = coin.priceObservedAt;
+      // DefiLlama's untracked CNHT row uses the onshore currency code.
+      const pegCurrency = coin.id === "280" ? "CNH" : TRACKED_META_BY_ID.get(coin.id)?.flags.pegCurrency;
       return {
-      id: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
-      pegType: coin.pegType,
-      pegMechanism: coin.pegMechanism,
-      price: coin.price,
-      circulatingUsd: getCirculatingRawOrNull(coin),
-      supplyUnavailableReason: admission.status === "observed" ? null
-        : admission.status === "invalid" ? admission.reason : "absent",
-      supplyProvenance: admission.status === "observed"
-        ? projectEnvelopeSupplyProvenance({
-          supplySource: coin.supplySource,
-          supplyObservedAt: coin.supplyObservedAt,
-          supplyChainGuard: coin.supplyChainGuard,
-        }, pricingPipelineVersion)
-        : null,
-      chainCount: coin.chains.length,
-      chains: coin.chains.join(";"),
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol,
+        pegType: pegTypeFromCurrency(pegCurrency) ?? coin.pegType,
+        pegMechanism: coin.pegMechanism,
+        price: observed ? coin.price : null,
+        circulatingUsd: frozen ? null : getCirculatingRawOrNull(coin),
+        supplyUnavailableReason: frozen ? "frozen-archive" : admission.status === "observed" ? null
+          : admission.status === "invalid" ? admission.reason : "absent",
+        supplyProvenance: !frozen && admission.status === "observed"
+          ? projectEnvelopeSupplyProvenance({
+            supplySource: coin.supplySource,
+            supplyObservedAt: coin.supplyObservedAt,
+            supplyChainGuard: coin.supplyChainGuard,
+          }, pricingPipelineVersion)
+          : null,
+        chainCount: chains.length || null,
+        chains: chains.join(";"),
+        frozen,
+        frozenAt: frozen ? frozenDate ?? null : null,
+        archiveCapturedAt: archiveInWindow?.capturedAt ?? null,
+        archivalCirculatingUsd: archiveBuckets.status === "observed" ? archiveBuckets.total : null,
+        chainUnavailableReason: chains.length === 0 ? "chain-evidence-unavailable" : null,
+        priceSource,
+        priceObservedAt: observed && typeof sourceClock === "number" && Number.isSafeInteger(sourceClock)
+          && sourceClock > 0 && sourceClock <= envelope.generatedAt
+          ? sourceClock : null,
+        priceObservedAtMode,
+        nominalReferenceUsd: nominalReference?.price ?? (nominalFallback ? coin.price : null),
+        nominalReferenceSource: nominalReference?.source ?? (nominalFallback ? priceSource : null),
       };
     })
-    .sort((a, b) => a.circulatingUsd === null ? (b.circulatingUsd === null ? 0 : 1)
-      : b.circulatingUsd === null ? -1 : b.circulatingUsd - a.circulatingUsd);
+    .sort((a, b) => Number(a.frozen) - Number(b.frozen)
+      || (a.circulatingUsd === null ? (b.circulatingUsd === null ? 0 : 1)
+        : b.circulatingUsd === null ? -1 : b.circulatingUsd - a.circulatingUsd));
 }
 
 interface DepegHistoryRow {
@@ -175,6 +243,19 @@ interface DepegHistoryRow {
   startedAtISO: string;
   endedAtISO: string | null;
   durationSec: number | null;
+  admittedCoverage: DepegEvent["admittedCoverage"] | null;
+  firstAdmissibleObservationAtISO: string | null;
+  admittedDurationSec: number | null;
+  analyticRecoveryStatus: "unknown" | null;
+  onsetBasis: NonNullable<DepegEvent["onsetBasis"]> | null;
+  peakBasis: NonNullable<DepegEvent["peakBasis"]> | null;
+  peakPeerMedianUsd: NonNullable<DepegEvent["peakPeerMedianUsd"]> | null;
+  analyticRecoveryAt: NonNullable<DepegEvent["analyticRecoveryAt"]> | null;
+  peakPegReference: NonNullable<DepegEvent["peakPegReference"]> | null;
+  peakQuoteDomain: NonNullable<DepegEvent["peakQuoteDomain"]> | null;
+  recoveryPegReference: NonNullable<DepegEvent["recoveryPegReference"]> | null;
+  disposition: NonNullable<DepegEvent["disposition"]> | null;
+  peakStatus: "unverified" | null;
   startPrice: number;
   peakPrice: number | null;
   recoveryPrice: number | null;
@@ -205,14 +286,27 @@ const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
   { header: "auditVerdict", accessor: (r) => r.auditVerdict },
   // Rows for coins no longer in the tracked catalog stay exported, marked.
   { header: "retired", accessor: (r) => r.retired },
+  { header: "peakStatus", accessor: (r) => r.peakStatus },
+  { header: "admittedCoverage", accessor: (r) => r.admittedCoverage == null ? null : { intervals: r.admittedCoverage } },
+  { header: "firstAdmissibleObservationAtISO", accessor: (r) => r.firstAdmissibleObservationAtISO },
+  { header: "admittedDurationSec", accessor: (r) => r.admittedDurationSec },
+  { header: "analyticRecoveryStatus", accessor: (r) => r.analyticRecoveryStatus },
+  { header: "onsetBasis", accessor: (r) => r.onsetBasis },
+  { header: "peakBasis", accessor: (r) => r.peakBasis },
+  { header: "peakPeerMedianUsd", accessor: (r) => r.peakPeerMedianUsd },
+  { header: "analyticRecoveryAt", accessor: (r) => r.analyticRecoveryAt },
+  { header: "peakPegReference", accessor: (r) => r.peakPegReference },
+  { header: "peakQuoteDomain", accessor: (r) => r.peakQuoteDomain },
+  { header: "recoveryPegReference", accessor: (r) => r.recoveryPegReference },
+  { header: "disposition", accessor: (r) => r.disposition },
 ];
 
 export function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
   const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
   const snapshotEndSec = snapshotEndSecForDate(snapshotDate);
   return events
-    .filter((event) => event.startedAt >= cutoffSec && event.startedAt <= snapshotEndSec)
-    .map((event) => ({
+    .filter((event) => event.startedAt >= cutoffSec && event.startedAt < snapshotEndSec)
+    .map((event): DepegHistoryRow => ({
       id: event.id,
       stablecoinId: event.stablecoinId,
       symbol: event.symbol,
@@ -221,6 +315,20 @@ export function projectDepegHistory(events: DepegEvent[], snapshotDate: string):
       startedAtISO: new Date(event.startedAt * 1000).toISOString(),
       endedAtISO: event.endedAt ? new Date(event.endedAt * 1000).toISOString() : null,
       durationSec: event.endedAt ? event.endedAt - event.startedAt : null,
+      admittedCoverage: event.admittedCoverage ?? null,
+      firstAdmissibleObservationAtISO: event.admittedCoverage?.length
+        ? new Date(event.admittedCoverage[0].fromSec * 1000).toISOString() : null,
+      admittedDurationSec: event.admittedCoverage?.reduce((sum, interval) => sum + interval.toSec - interval.fromSec, 0) ?? null,
+      analyticRecoveryStatus: hasUnverifiedAnalyticRecovery(event) ? "unknown" : null,
+      onsetBasis: event.onsetBasis ?? null,
+      peakBasis: event.peakBasis ?? null,
+      peakPeerMedianUsd: event.peakPeerMedianUsd ?? null,
+      analyticRecoveryAt: event.analyticRecoveryAt ?? null,
+      peakPegReference: event.peakPegReference ?? null,
+      peakQuoteDomain: event.peakQuoteDomain ?? null,
+      recoveryPegReference: event.recoveryPegReference ?? null,
+      disposition: event.disposition ?? null,
+      peakStatus: event.peakReview === "unverified" || hasUnverifiedDepegPeak(event) ? "unverified" : null,
       startPrice: event.startPrice,
       peakPrice: event.peakPrice,
       recoveryPrice: event.recoveryPrice,
@@ -671,43 +779,32 @@ function hasSnapshotCatalogFields(coin: SnapshotEnvelope["stablecoins"][number])
   );
 }
 
-function projectPegMechanismDistribution(
-  envelope: SnapshotEnvelope | null,
-  historical = false,
-): PegMechanismProjection {
+function projectPegMechanismDistribution(envelope: SnapshotEnvelope | null): PegMechanismProjection {
   if (!envelope) {
     return { rows: projectPegMechanismRows(TRACKED_STABLECOINS) };
   }
 
-  if (envelope.stablecoins.length > 0 && envelope.stablecoins.every(hasSnapshotCatalogFields)) {
+  if (envelope.stablecoins.every(hasSnapshotCatalogFields)) {
     return { rows: projectPegMechanismRows(envelope.stablecoins) };
   }
 
+  const enrichment: Array<[string, PegCatalogFields]> = [];
+  const projectedCoins = envelope.stablecoins.map((coin) => {
+    const current = TRACKED_META_BY_ID.get(coin.id);
+    const missing = {
+      ...(coin.mechanismArchetype === undefined ? { mechanismArchetype: current?.mechanismArchetype } : {}),
+      ...(coin.pegReferenceId === undefined ? { pegReferenceId: current?.pegReferenceId } : {}),
+      ...(coin.jurisdiction === undefined ? { jurisdiction: { country: current?.jurisdiction?.country } } : {}),
+    };
+    if (!hasSnapshotCatalogFields(coin)) enrichment.push([coin.id, missing]);
+    return { ...coin, ...missing };
+  });
+  enrichment.sort(([a], [b]) => a.localeCompare(b));
+  const enrichmentId = createHash("sha256").update(JSON.stringify(enrichment)).digest("hex");
   const metadataNote =
     `legacy snapshot ${envelope.snapshotDate} omitted mechanismArchetype, pegReferenceId, or jurisdiction; `
-    + "using current catalog metadata as an approximation";
+    + `using current catalog metadata as an approximation (enrichment sha256:${enrichmentId})`;
   console.warn(`[generate-public-datasets] ${metadataNote}.`);
-
-  // Pre-catalog snapshots cannot provide an exact historical classification. Keep
-  // the legacy latest output intact, and restrict historical approximation to
-  // stablecoin IDs present in the snapshot envelope.
-  if (!historical) {
-    return {
-      rows: projectPegMechanismRows(TRACKED_STABLECOINS),
-      metadataStatus: "approximated",
-      metadataNote,
-    };
-  }
-
-  const currentById = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin]));
-  const projectedCoins = envelope.stablecoins.map((coin) => {
-    const current = currentById.get(coin.id);
-    return {
-      mechanismArchetype: coin.mechanismArchetype ?? current?.mechanismArchetype,
-      pegReferenceId: coin.pegReferenceId ?? current?.pegReferenceId,
-      jurisdiction: coin.jurisdiction ?? current?.jurisdiction,
-    };
-  });
 
   return {
     rows: projectPegMechanismRows(projectedCoins),
@@ -725,6 +822,7 @@ export interface TopicSpec<T> {
   metadataStatus?: "approximated";
   metadataNote?: string;
   depegCapture?: DepegLedgerCapture;
+  depegWindowDate?: string;
   displayProjection?: Readonly<Record<string, unknown>>;
 }
 
@@ -732,6 +830,13 @@ export function buildTopicArtifacts<T>(spec: TopicSpec<T>, asOfISO: string) {
   if (spec.topic === "depeg-history" && spec.rows.length > 0 && !spec.depegCapture) {
     throw new Error("Depeg-history exports require captured event-ledger provenance");
   }
+  const capture = spec.depegCapture;
+  // Older shards could substitute a retained static page for a corrected ledger row.
+  const proof = capture?.shardSource === "fetched-ledger" && capture.apiTotal === capture.eventCount ? capture.ledgerProof : undefined;
+  const snapshotDate = spec.depegWindowDate;
+  const verifiedWindow = proof && snapshotDate &&
+    proof.coveredFromSec <= cutoffSecForSnapshotDate(snapshotDate) &&
+    proof.coveredThroughSec >= snapshotEndSecForDate(snapshotDate);
   return buildPublicDatasetArtifacts({
     rows: spec.rows,
     columns: spec.columns,
@@ -744,8 +849,12 @@ export function buildTopicArtifacts<T>(spec: TopicSpec<T>, asOfISO: string) {
       metadataNote: spec.metadataNote,
       displayProjection: spec.displayProjection,
       ...(spec.depegCapture ? {
-        freshnessContract: "retrospective windowed event history; event state observed during the ledger capture, not at the market snapshot clock",
-        sourceGeneration: spec.depegCapture.captureId,
+        freshnessContract: verifiedWindow
+          ? "retrospective windowed event history with complete source coverage for the requested window"
+          : proof ? "retrospective windowed event history with partial source coverage for the requested window"
+          : "retrospective windowed event history; incomplete coverage (source watermark and common ledger generation unavailable); source generation identifies the local capture",
+        ...(proof ? { sourceCoverage: { coveredFromSec: proof.coveredFromSec, coveredThroughSec: proof.coveredThroughSec } } : {}),
+        sourceGeneration: proof?.generation ?? spec.depegCapture.captureId,
         sourceObservationStartedAtISO: spec.depegCapture.observationStartedAtISO,
         windowSnapshotAsOfISO: asOfISO,
       } : {}),
@@ -785,11 +894,11 @@ export function validateScoresLatestDisplayProjection(
 }
 
 function cutoffSecForSnapshotDate(snapshotDate: string): number {
-  return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
+  return snapshotEndSecForDate(snapshotDate) - RETENTION_DAYS * DAY_SECONDS;
 }
 
 function snapshotEndSecForDate(snapshotDate: string): number {
-  return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) + 86_400 - 1;
+  return Math.floor(Date.parse(`${snapshotDate}T00:00:00Z`) / 1000) + DAY_SECONDS;
 }
 
 export function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDate: string): void {
@@ -807,12 +916,20 @@ export function buildTopicSpecs(
   envelope: SnapshotEnvelope | null,
   depegEvents: DepegEvent[],
   snapshotDate: string,
-  options: { historical?: boolean; depegCapture?: DepegLedgerCapture } = {},
+  options: { historical?: boolean; depegCapture?: DepegLedgerCapture; repointCurrent?: boolean } = {},
 ): TopicSpec<unknown>[] {
   const historical = options.historical ?? isHistoricalSnapshotDate(snapshotDate);
   const envelopeSnapshotDate = envelope?.snapshotDate || snapshotDate;
-  const pegMechanismProjection = projectPegMechanismDistribution(envelope, historical);
-  const scoresProjection = projectScoresLatest(envelope, { historical });
+  if (options.depegCapture?.apiTotal != null && options.depegCapture.apiTotal > options.depegCapture.eventCount) {
+    throw new Error("Depeg ledger capture contains fewer events than the reported source total");
+  }
+  const requireCurrentSafety = options.repointCurrent === true || process.env[PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY] === "1"
+    || (!historical && options.depegCapture !== undefined);
+  const pegMechanismProjection = projectPegMechanismDistribution(envelope);
+  const scoresProjection = projectScoresLatest(envelope, { historical: historical && !requireCurrentSafety });
+  if (requireCurrentSafety && !scoresProjection.displayProjection?.safety) {
+    throw new Error(`Public snapshot ${envelopeSnapshotDate} has no accepted current Safety projection for the latest alias`);
+  }
   const methodologyVersion = (
     keys: readonly string[],
     fallback: string,
@@ -838,6 +955,7 @@ export function buildTopicSpecs(
       columns: DEPEG_HISTORY_COLUMNS,
       methodologyLabel: `depeg-dews ${options.depegCapture?.methodologyVersionLabel ?? DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
       depegCapture: options.depegCapture,
+      depegWindowDate: envelopeSnapshotDate,
     } as TopicSpec<DepegHistoryRow> as TopicSpec<unknown>,
     {
       topic: "scores-latest",

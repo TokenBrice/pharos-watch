@@ -31,6 +31,7 @@ export interface BackfillRunInput {
   removedCount: number;
   addedCount: number;
   replayWindow: BackfillReplayWindow | null;
+  replacePreimages?: { id: number; preimage: string }[];
 }
 
 export type PersistedBackfillEvent = BackfillEvent & {
@@ -51,6 +52,10 @@ export function buildBackfillEventsFingerprint(events: BackfillEvent[]): string 
     peakPrice: event.peakPrice,
     recoveryPrice: event.recoveryPrice,
     pegRef: event.pegRef,
+    peakPegReference: event.peakPegReference,
+    peakQuoteDomain: event.peakQuoteDomain,
+    recoveryPegReference: event.recoveryPegReference,
+    admittedCoverage: event.admittedCoverage,
   }))));
 }
 
