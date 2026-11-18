@@ -117,6 +117,32 @@ async function loadPegEventDayCounts(db: D1Database, nowSec: number): Promise<Pe
   }
 }
 
+/**
+ * Coins with an observed price on the current or previous UTC day's supply
+ * snapshot. `snapshot-supply` records only actual observations there (never
+ * nominal par) and repairs the day's row when a price returns, so a coin absent
+ * from this set has had no usable price for at least a full UTC day, or never.
+ * Null when the read fails.
+ */
+async function loadRecentlyPricedIds(db: D1Database, nowSec: number): Promise<ReadonlySet<string> | null> {
+  try {
+    const rows = await db.prepare(
+      // No DISTINCT: it scans the whole (stablecoin_id, snapshot_date) key; the
+      // date index reads only these two days and the Set dedupes.
+      `SELECT /* pharos:peg-summary:recently-priced-ids */
+         stablecoin_id FROM supply_history
+        WHERE snapshot_date >= ? AND price IS NOT NULL`,
+    ).bind(bucketUnixSecondsToUtcDay(nowSec) - DAY_SECONDS).all<{ stablecoin_id: string }>();
+    return new Set((rows.results ?? []).map((row) => row.stablecoin_id));
+  } catch (error) {
+    logWorkerEventArgs("api", "warn",
+      "[peg-summary] recent price-history read failed; unpriced coins publish NR:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
 async function resolveCachedEventDayCounts(
   db: D1Database,
   payload: { computedAtSec: number; depegEventsToday: number; depegEventsYesterday: number },
@@ -168,9 +194,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     fxFallbackRates?: Record<string, number>;
   };
 
+  const now = Math.floor(Date.now() / 1000);
   // 2. Load DEX prices + shared peg analytics snapshot
   // Narrower aggregate-only column set than the dex-liquidity endpoint.
-  const [dexPriceResult, pegAnalyticsCache] = await Promise.all([
+  const [dexPriceResult, pegAnalyticsCache, recentlyPricedIds] = await Promise.all([
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
       .all<DexPriceRow>()
       .then((result): DexPriceReadResult => ({ kind: "ok", results: result.results ?? [] }))
@@ -186,6 +213,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     // A previous-day generation is still accepted: its day-scoped counters are
     // re-bucketed below, so midnight never forces a recompute or an outage.
     loadPegAnalyticsCache(db).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
+    loadRecentlyPricedIds(db, now),
   ]);
 
   let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
@@ -195,7 +223,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // so key response freshness to the older of the two observations. Current
   // deviation and reference admission use the canonical live observation map.
   let freshnessAsOf = stablecoinsCache.updatedAt;
-  const now = Math.floor(Date.now() / 1000);
   let analyticsDegradedReason: string | undefined;
 
   if (pegAnalyticsCache.kind === "ok") {
@@ -275,8 +302,16 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     const asset = priceById.get(meta.id);
     const observation = currentObservations.get(meta.id);
     const currentBps = observation?.currentDeviationBps ?? null;
+    const currentPriceUnavailable = observation?.currentPriceUnavailable ?? !isNavToken;
     // NAV score fields are normalized at the peg-analytics source via
     // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
+    // Detection needs an observed price, so with none (missing, rejected or
+    // nominal-only) for a full UTC day, or ever, an event-free window is
+    // unobserved, not time at peg: the score and its time-at-peg views publish
+    // NR, never 100 (R1/R2), and `currentPriceUnavailable` names the reason. A
+    // shorter miss keeps the score; a failed history read withholds it (R2).
+    // Events stay published.
+    const scoreUnobserved = currentPriceUnavailable && !(recentlyPricedIds?.has(meta.id) ?? false);
     coins.push({
       id: meta.id,
       symbol: meta.symbol,
@@ -287,10 +322,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       currentDeviationBps: currentBps,
       pegReference: observation?.pegReference ?? null,
       pegReferenceUnavailable: observation?.pegReferenceUnavailable ?? true,
-      currentPriceUnavailable: observation?.currentPriceUnavailable ?? !isNavToken,
+      currentPriceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       ...(observation?.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
-      pegScore: pegData.pegScore,
+      pegScore: scoreUnobserved ? null : pegData.pegScore,
       price: observation?.currentPriceUnavailable === false && asset && isObservedPrice(asset) &&
         asset.price != null && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null,
       priceSource: asset?.priceSource ?? undefined,
@@ -303,7 +338,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       consensusSources: asset?.consensusSources,
       agreeSources: asset?.agreeSources,
       primaryTrust: observation?.primaryTrust ?? "unusable",
-      pegPct: pegData.pegPct,
+      pegPct: scoreUnobserved ? null : pegData.pegPct,
       ...(pegData.unknownCoverageSeconds != null ? { unknownCoverageSeconds: pegData.unknownCoverageSeconds } : {}),
       severityScore: pegData.severityScore,
       spreadPenalty: pegData.spreadPenalty,
@@ -316,7 +351,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       trackingSpanDays: pegData.trackingSpanDays,
       observationStartedAt: pegData.observationStartedAt ?? null,
       historyCoverage: pegData.historyCoverage,
-      recent90d: pegData.recent90d,
+      recent90d: scoreUnobserved ? null : pegData.recent90d,
       methodologyVersion,
       dexPriceCheck: observation?.dexPriceCheck ?? undefined,
     });
