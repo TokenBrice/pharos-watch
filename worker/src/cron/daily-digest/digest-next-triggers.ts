@@ -74,7 +74,7 @@ function triggerDetail(trigger: TriggerWithoutDetail): string {
     case "dews-band":
       return `If ${symbol} remains ${trigger.thresholdLabel}, the risk signal survives the first-day band-change noise test.`;
     case "psi-score":
-      return `If PSI falls to ${trigger.thresholdLabel}, tomorrow's story should shift from regime frame to active deterioration.`;
+      return `If PSI falls to ${trigger.thresholdLabel}, tomorrow's story should shift from PSI band context to active deterioration.`;
   }
 }
 
@@ -343,7 +343,7 @@ function psiTrigger(score: number, candidateId?: string): DigestNextTrigger {
     thresholdValue: threshold,
     thresholdLabel: `${threshold} or lower`,
     candidateId,
-    rationale: "A two-point PSI drop is large enough to change the regime frame.",
+    rationale: "A two-point PSI drop is large enough to change how the PSI band frames the day.",
   });
 }
 
