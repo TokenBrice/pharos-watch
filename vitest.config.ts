@@ -184,8 +184,10 @@ export default defineConfig({
       "satori/yoga.wasm": path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),
       "@cf-wasm/resvg/workerd": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
       "@resvg/resvg-wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
+      // Wrangler aliases harfbuzzjs to the Worker WASM loader; the real package's Promise export
+      // makes Vite's namespace thenable. A measurer built from this stub fails closed, like satori.
       // Exact match only: scripts reach the real package through createRequire, which Vite never aliases.
-      harfbuzzjs: path.resolve(__dirname, "worker/src/__mocks__/harfbuzz-stub.ts"),
+      harfbuzzjs: path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),
     },
   },
 });
