@@ -528,7 +528,7 @@ export function filterValidDlPools(
   });
   if (envelopeRejected.length > 0) {
     logWorkerEventArgs("handler", "warn",
-      `[yield-sync] Rejected ${envelopeRejected.length} DL pool row(s) above the ${DL_POOL_APY_ENVELOPE_PERCENT}% APY envelope from ${context}: ${
+      `[yield-sync] Rejected ${envelopeRejected.length} DL pool row(s) above the ${DL_POOL_APY_ENVELOPE_PERCENT}% APY envelope or without a restricted-reward base from ${context}: ${
         summarizeInvalidRows(envelopeRejected, (row, index) => {
           if (isRecord(row) && typeof row.pool === "string") return row.pool;
           return `row-${index}`;

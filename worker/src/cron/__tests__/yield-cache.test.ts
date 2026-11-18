@@ -114,18 +114,12 @@ describe("parseDlStablecoinPoolsCache", () => {
     const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
     const raw = buildDlStablecoinPoolsCache(pools, nowSec - 1800);
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 1800, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.pools).toHaveLength(1);
-    expect(result!.meta.ageSeconds).toBe(1800);
+    expect(result?.pools).toHaveLength(1);
+    expect(result?.meta.ageSeconds).toBe(1800);
   });
 
-  it("rejects legacy array format", () => {
-    const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
-    const raw = JSON.stringify(pools);
-    expect(parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec)).toBeNull();
-  });
-
-  it("returns null for malformed or non-object JSON", () => {
+  it("returns null for legacy arrays and malformed or non-object JSON", () => {
+    expect(parseDlStablecoinPoolsCache(JSON.stringify([makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })]), nowSec - 3600, nowSec)).toBeNull();
     expect(parseDlStablecoinPoolsCache("{bad", nowSec, nowSec)).toBeNull();
     expect(parseDlStablecoinPoolsCache('"just a string"', nowSec, nowSec)).toBeNull();
   });
@@ -134,18 +128,19 @@ describe("parseDlStablecoinPoolsCache", () => {
     const raw = JSON.stringify({
       updatedAt: nowSec - 3600,
       source: "sync-dex-liquidity",
-      poolCount: 4,
+      poolCount: 5,
       data: [
         makeDlYieldPool({ pool: "bad-apy", project: "sdai", tvlUsd: 1e8, apy: Number.NaN }),
-        makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
+        makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8, apyBase: 4, apyReward: 1 }),
         makeDlYieldPool({ pool: steak, apy: 403.8, apyBase: 3.8, apyReward: 400 }),
         makeDlYieldPool({ pool: steak, apy: 7, apyBase: 400 }),
+        makeDlYieldPool({ pool: steak, apy: 7, apyBase: null }),
       ],
     });
 
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
 
-    expect(result?.pools.map(({ pool, apy, apyReward }) => [pool, apy, apyReward])).toEqual([["valid", 5, null], [steak, 3.8, null]]);
+    expect(result?.pools.map(({ pool, apy, apyBase, apyReward }) => [pool, apy, apyBase, apyReward])).toEqual([["valid", 5, 4, 1], [steak, 3.8, 3.8, null]]);
     expect(result?.meta.poolCount).toBe(2);
   });
 
