@@ -45,14 +45,15 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       symbol: "dUSD",
       geckoId: "dtrinity-usd",
     })];
-    installPrimaryPriceRoutes({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
+    const observedAt = Math.floor(Date.now() / 1000) - 60;
+    installPrimaryPriceRoutes({ coingecko: { body: { "dtrinity-usd": { usd: 0.995, last_updated_at: observedAt } } } });
     const db = makePoolChallengeDb([{
       stablecoin_id: "dusd-dtrinity",
       price_sources_json: JSON.stringify(sources),
-      updated_at: Math.floor(Date.now() / 1000) - 60,
+      updated_at: observedAt,
     }]);
     const dlListPrices = new Map([
-      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
+      ["dusd-dtrinity", { price: 0.994, observedAt, observedAtMode: "upstream" as const }],
     ]);
     return fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
   }

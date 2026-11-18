@@ -64,7 +64,9 @@ describe("screenDailyPriceOutliers", () => {
 describe("historical CoinGecko prices-only transport parity", () => {
   it.each([undefined, { startSec: EPOCH, endSec: NOW }])("retains the daily URL and unpaced positive-price decoding (%j)", async (range) => {
     mocks.fetch.mockResolvedValue(chart([[NOW * 1000 + 999, 1], [NOW * 1000, 2], [NOW * 1000, 0], [NOW * 1000, -1]]));
-    expect((await daily(range)).prices).toEqual([{ timestamp: NOW, price: 2 }]);
+    expect((await daily(range)).prices).toEqual([{
+      timestamp: NOW, price: 2, nativeQuote: { currency: "EUR", derivation: { kind: "conversion", lineage: {} } },
+    }]);
     expect(mocks.fetch.mock.calls).toEqual([[
       range ? rangeUrl(EPOCH, NOW, "eur") : `${BASE}?vs_currency=eur&days=max`,
       { headers: { "User-Agent": USER_AGENT }, signal: undefined }, 2, { timeoutMs: 30_000 },
@@ -365,8 +367,8 @@ describe("fetchMarketBackfillPriceSeries", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
     expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("vs_currency=eur");
     expect(result.prices).toEqual([
-      { timestamp: 1_700_000_000, price: 1.001 },
-      { timestamp: 1_700_000_360, price: 0.999 },
+      { timestamp: 1_700_000_000, price: 1.001, nativeQuote: { currency: "EUR", derivation: { kind: "conversion", lineage: {} } } },
+      { timestamp: 1_700_000_360, price: 0.999, nativeQuote: { currency: "EUR", derivation: { kind: "conversion", lineage: {} } } },
     ]);
     expect(result.diagnostics).toMatchObject({
       quoteMode: "native-peg",
@@ -413,12 +415,11 @@ describe("fetchMarketBackfillPriceSeries", () => {
     expect(result.diagnostics.perSourceStats).toHaveLength(1);
   });
 
-  it("falls through alternate native quote currencies when the preferred CoinGecko fiat code is empty", async () => {
+  it("requests USD history for AxCNH without substituting onshore or offshore yuan", async () => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(jsonResult({ prices: [] }))
       .mockResolvedValueOnce(jsonResult({
         prices: [
-          [1_700_000_000_000, 1.004],
+          [1_700_000_000_000, 0.139],
         ],
       }));
 
@@ -443,12 +444,11 @@ describe("fetchMarketBackfillPriceSeries", () => {
       },
     );
 
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
-    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("vs_currency=cny");
-    expect(fetchWithRetryMock.mock.calls[1]?.[0]).toContain("vs_currency=cnh");
-    expect(result.diagnostics.quoteCurrency).toBe("cnh");
+    expect(result.diagnostics).toMatchObject({ quoteMode: "usd", quoteCurrency: "usd" });
+    const coinGeckoUrls = fetchWithRetryMock.mock.calls.map(([url]) => String(url)).filter((url) => url.includes("vs_currency="));
+    expect(coinGeckoUrls).toEqual([expect.stringContaining("vs_currency=usd")]);
     expect(result.prices).toEqual([
-      { timestamp: 1_700_000_000, price: 1.004 },
+      { timestamp: 1_700_000_000, price: 0.139 },
     ]);
   });
 

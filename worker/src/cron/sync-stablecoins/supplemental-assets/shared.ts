@@ -3,6 +3,7 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import type { StablecoinData } from "@shared/types/supply";
 import type { PriceObservedAtMode } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
@@ -11,13 +12,18 @@ import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import {
+  buildPriceValidationContext,
   buildPriceReasonablenessOptions,
   isReasonablePrice,
+  type PriceValidationReferences,
 } from "../../../lib/price-validation";
+import { validatePublishedAssetPrice, type TrustedPriceReference } from "../../../lib/price-publish-policy";
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./onchain-supply";
+
+type SupplyQuantityFields = Pick<StablecoinData, "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec">;
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
 type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
@@ -28,6 +34,25 @@ export interface SupplementalPriceResolution {
   source: "defillama-contract" | "coingecko-mirror" | "coingecko" | "coingecko-low-volume";
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
+}
+
+export interface CommodityValuationEvidence {
+  validationReferences?: PriceValidationReferences;
+  previousTrustedPrices?: ReadonlyMap<string, TrustedPriceReference>;
+}
+
+export function admitCommodityValuation(
+  meta: StablecoinMeta,
+  quote: SupplementalPriceResolution | null,
+  evidence?: CommodityValuationEvidence,
+): SupplementalPriceResolution | null {
+  if (!quote) return null;
+  return validatePublishedAssetPrice({
+    asset: { price: quote.price, priceSource: quote.source, priceConfidence: "single-source" },
+    validationContext: buildPriceValidationContext({ stablecoinId: meta.id, pegType: pegTypeKey(meta), commodityOunces: meta.commodityOunces }),
+    validationReferences: evidence?.validationReferences,
+    previousTrustedPrice: evidence?.previousTrustedPrices?.get(meta.id),
+  }).accepted ? quote : null;
 }
 
 export function pegTypeKey(meta: { flags: { pegCurrency: string } }): string {
@@ -56,6 +81,28 @@ export function resolveSupplementalCoinGeckoMcap(
     requireObservedAt: true,
   });
   return freshness.accepted ? toPositiveFiniteNumber(entry?.usd_market_cap) : null;
+}
+
+/** The cap and its conversion price must come from the same admitted CoinGecko observation. */
+export function getCoinGeckoCapQuantity(
+  meta: SupplementalAssetMeta,
+  entry: CoinGeckoMcapData[string] | undefined,
+  mcap: number,
+  observedAt: number | null,
+  previousTrustedPrice?: TrustedPriceReference,
+): SupplyQuantityFields {
+  const price = toPositiveFiniteNumber(entry?.usd);
+  const native = price != null ? mcap / price : null;
+  if (native == null || !Number.isFinite(native) || native <= 0 || observedAt == null || observedAt !== entry?.last_updated_at ||
+    mcap !== entry.usd_market_cap || meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER" ||
+    !validatePublishedAssetPrice({
+      asset: { price, priceSource: "coingecko", priceConfidence: "single-source" },
+      validationContext: buildPriceValidationContext({ stablecoinId: meta.id, pegCurrency: meta.flags.pegCurrency }),
+      previousTrustedPrice,
+    }).accepted) {
+    return { circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null };
+  }
+  return { circulatingNative: native, valuationPriceUsd: price, valuationObservedAtSec: observedAt };
 }
 
 function normalizeFreshSupplementalPriceResolution(
@@ -125,7 +172,11 @@ export function resolveSupplementalPrice(
     if (freshResolution) return freshResolution;
   }
 
-  const cgEntry = cgData[geckoId];
+  return resolveSupplementalCoinGeckoPrice(cgData, geckoId);
+}
+
+export function resolveSupplementalCoinGeckoPrice(cgData: CoinGeckoMcapData, geckoId?: string): SupplementalPriceResolution | null {
+  const cgEntry = geckoId ? cgData[geckoId] : undefined;
   const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
   if (cgPrice != null) {
     const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
@@ -232,7 +283,7 @@ export function buildSupplementalAsset(input: {
   circulatingPrevWeek?: number | null;
   circulatingPrevMonth?: number | null;
   chainLabels?: PeggedAsset["chains"];
-}): PeggedAsset {
+} & SupplyQuantityFields): PeggedAsset & SupplyQuantityFields {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   const pKey = pegTypeKey(input.meta);
   const priceResolution = input.priceResolution;
@@ -252,6 +303,9 @@ export function buildSupplementalAsset(input: {
     priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
     supplyObservedAt: input.supplyObservedAt ?? null,
+    circulatingNative: input.circulatingNative,
+    valuationPriceUsd: input.valuationPriceUsd,
+    valuationObservedAtSec: input.valuationObservedAtSec,
     ...(input.supplyPerimeter ? { supplyPerimeter: input.supplyPerimeter } : {}),
     circulating: input.mcap == null ? {} : { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
@@ -276,13 +330,14 @@ export async function resolveCuratedAggregateSupplementalSupply(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
+  evidence?: CommodityValuationEvidence,
 ): Promise<{
   mcap: number;
   supplySource: string;
   supplyObservedAt: number | null;
   chainCirculating: PeggedAsset["chainCirculating"];
-} | null> {
-  const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+} & SupplyQuantityFields | null> {
+  const priceResolution = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
   if (!priceResolution) return null;
 
   const aggregate = await fetchCuratedAggregateOnChainMcap(meta, priceResolution.price, chainRpcs, signal, dwellirNative);
@@ -290,6 +345,9 @@ export async function resolveCuratedAggregateSupplementalSupply(
 
   return {
     mcap: aggregate.mcap,
+    circulatingNative: aggregate.nativeSupply,
+    valuationPriceUsd: priceResolution.price,
+    valuationObservedAtSec: priceResolution.observedAt,
     supplySource: aggregate.supplySource,
     supplyObservedAt: aggregate.observedAt ?? null,
     chainCirculating: toPublicChainCirculating(aggregate.chainCirculating),
@@ -298,7 +356,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
 
 /**
  * Build commodity rows serially. Commodity rows fail closed when neither a
- * curated aggregate nor a trusted upstream source provides positive mcap.
+ * curated aggregate nor a trusted upstream source provides supply.
  */
 export async function fetchCommodityTokens(
   metas: readonly StablecoinMeta[],
@@ -307,27 +365,25 @@ export async function fetchCommodityTokens(
     priceData: SupplementalDefiLlamaPriceData;
     cgData: CoinGeckoMcapData;
     resolveSupply: (meta: StablecoinMeta) => Promise<{
-      mcap: number;
+      mcap: number | null;
       supplySource: string;
       supplyObservedAt?: number | null;
       chainCirculating?: PeggedAsset["chainCirculating"];
-    }>;
+    } & SupplyQuantityFields>;
   },
 ): Promise<PeggedAsset[]> {
   const tokens: PeggedAsset[] = [];
   for (const meta of metas) {
     const supply = await options.resolveSupply(meta);
-    if (!Number.isFinite(supply.mcap) || supply.mcap <= 0) {
-      logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] No positive mcap for ${meta.symbol}, skipping`);
+    if (supply.mcap == null ? supply.supplySource !== "onchain-supply-withheld" :
+      !Number.isFinite(supply.mcap) || supply.mcap < 0) {
+      logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] No admitted mcap for ${meta.symbol}, skipping`);
       continue;
     }
     tokens.push(buildSupplementalAsset({
       meta,
       priceResolution: resolveSupplementalPrice(options.priceData, options.cgData, meta.geckoId),
-      mcap: supply.mcap,
-      supplyObservedAt: supply.supplyObservedAt,
-      supplySource: supply.supplySource,
-      chainCirculating: supply.chainCirculating,
+      ...supply,
     }));
   }
   return tokens;

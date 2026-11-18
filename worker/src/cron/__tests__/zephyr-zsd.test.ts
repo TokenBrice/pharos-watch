@@ -244,8 +244,9 @@ describe("buildZephyrZsdPeggedAsset", () => {
       supplySource: "zephyr-scanner",
       supplyObservedAt: null,
       circulating: { peggedUSD: 384_268.020140708 },
+      circulatingNative: 385_038.0963333748, valuationPriceUsd: 0.998, valuationObservedAtSec: 1_700_000_000,
       chainCirculating: {},
-      chains: [],
+      chains: ["Zephyr"],
     });
   });
 
@@ -266,6 +267,7 @@ describe("buildZephyrZsdPeggedAsset", () => {
       price: 50_000,
       priceSource: "coingecko",
       circulating: { peggedUSD: 1_000 },
+      circulatingNative: 1_000, valuationPriceUsd: 1, valuationObservedAtSec: null,
     });
   });
 
@@ -339,7 +341,7 @@ describe("buildZephyrZysPeggedAsset", () => {
   it("publishes ZYS NAV supply and price from Zephyr Scanner", () => {
     const asset = buildZephyrZysPeggedAsset(
       makeZysMeta(),
-      { supply: 165_587.3320289986, mcapPrice: 1.9068, mcap: 315_741.9247128945, priceReported: true },
+      { supply: 165_587.3320289986, mcapPrice: 1.9068, mcap: 315_741.9247128945, priceReported: true, observedAt: 1_700_000_000 },
       1_700_000_060,
     );
 
@@ -352,8 +354,9 @@ describe("buildZephyrZysPeggedAsset", () => {
       priceConfidence: "single-source",
       supplySource: "zephyr-scanner",
       circulating: { peggedUSD: 315_741.9247128945 },
+      circulatingNative: 165_587.3320289986, valuationPriceUsd: 1.9068, valuationObservedAtSec: 1_700_000_000,
       chainCirculating: {},
-      chains: [],
+      chains: ["Zephyr"],
     });
   });
 });

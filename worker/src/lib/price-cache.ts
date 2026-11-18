@@ -16,6 +16,10 @@ export interface PriceCacheEntry {
   consensusSources?: string[];
 }
 
+export function priceCacheObservationClock(entry: Pick<PriceCacheEntry, "observedAt" | "updatedAt" | "syncedAt">): number | null {
+  return entry.observedAt ?? (entry.syncedAt == null ? entry.updatedAt : null);
+}
+
 export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCacheEntry>> {
   const map = new Map<string, PriceCacheEntry>();
 
@@ -48,7 +52,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       updatedAt: row.updated_at,
       source: row.source ?? null,
       confidence: row.confidence ?? null,
-      observedAt: row.observed_at ?? row.updated_at,
+      observedAt: priceCacheObservationClock({ observedAt: row.observed_at, updatedAt: row.updated_at, syncedAt: row.synced_at }),
       observedAtMode: row.observed_at_mode ?? null,
       syncedAt: row.synced_at ?? row.updated_at,
       hasExplicitClocks: row.observed_at != null && row.synced_at != null,

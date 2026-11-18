@@ -110,6 +110,20 @@ describe.each(LANES)("$lane supplemental market-cap freshness", (lane) => {
 
 describe("silver supplemental supply observation", () => {
   it.each([
+    { providerCap: 2_500, cap: 2_500, native: null },
+    { providerCap: 2_399, cap: 3_000, native: 100 },
+    { providerCap: 3_000, cap: 3_000, native: 100 },
+  ])("uses only direct units when a $providerCap provider cap is available", async ({ providerCap, cap, native }) => {
+    const now = nowSec();
+    mockFetch([
+      { match: "/prices/current/", body: { coins: { "coingecko:silver-test": { price: 30, timestamp: now } } } },
+      { match: "/coins/markets?", body: [{ id: "silver-test", circulating_supply: 100, last_updated: new Date(now * 1000).toISOString() }] },
+    ], { requireMatch: true });
+    const [asset] = await fetchSilverTokens({ "silver-test": { usd: 30, usd_market_cap: providerCap, last_updated_at: now } });
+    expect(asset).toMatchObject({ circulating: { peggedSILVER: cap }, circulatingNative: native, valuationPriceUsd: native === null ? null : 30 });
+  });
+
+  it.each([
     { freshSupply: false, freshMcap: false, expected: null },
     { freshSupply: true, freshMcap: false, expected: 3_200 },
     { freshSupply: true, freshMcap: true, expected: 3_200 },

@@ -37,7 +37,7 @@ import {
   reportStablecoinsStage,
   type StablecoinsStalenessSummary,
 } from "./runtime";
-import { buildSyncMetadata, type CronResult, type PreviousStablecoinsCacheState } from "./shared";
+import { buildSyncMetadata, type CronResult, type PreviousStablecoinsCacheState, type StablecoinsFxSelection } from "./shared";
 import { isFallbackBackedTrackedBaseline, queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
 import { persistChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
@@ -166,7 +166,8 @@ function publicationLabels(path: "main" | "fallback"): StablecoinsPublicationLab
     };
 }
 
-interface StablecoinsPostIntakePublicationBase {
+interface StablecoinsPostIntakePublicationBase extends StablecoinsFxSelection {
+  publishFxReferenceEvidence?: boolean;
   db: D1Database;
   assets: PeggedAsset[];
   previousAssetsById: Map<string, PeggedAsset>;
@@ -176,7 +177,6 @@ interface StablecoinsPostIntakePublicationBase {
   signal?: AbortSignal;
   reportProgress?: CronProgressReporter;
   coingeckoApiKey?: string | null;
-  fxFallbackRates?: Record<string, number>;
   priceCacheEntries: PriceCacheWriteEntry[];
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
   supplyChainGuard?: SupplyChainGuardResult;
@@ -197,7 +197,7 @@ async function fillStablecoinsSupplyHistory(
   try {
     const fillAbort = returnIfAborted(input.signal, stage);
     if (fillAbort) return fillAbort;
-    const fillCount = await fillMissingSupplyHistory(input.db, input.assets, input.signal);
+    const fillCount = await fillMissingSupplyHistory(input.db, input.assets, input.signal, input.syncStartSec);
     if (fillCount > 0 && main) {
       logWorkerEventArgs(
         "handler",
@@ -287,6 +287,9 @@ export async function runStablecoinsPostIntakePublication(
   const cacheResult = await validateAndWriteStablecoinsCache({
     assets: input.assets,
     fxFallbackRates: input.fxFallbackRates,
+    fxReferenceObservations: input.fxReferenceObservations,
+    detectionFxState: input.detectionFxState,
+    publishFxReferenceEvidence: input.publishFxReferenceEvidence,
     db: input.db,
     syncStartSec: input.syncStartSec,
     signal: input.signal,
@@ -423,6 +426,7 @@ export async function runStablecoinsPostIntakePublication(
       labels.depegLogContext,
       input.binanceSession,
       input.nativePegSession,
+      input.detectionFxState,
     );
     if (isAbortResult(depegResult)) return publishedAbort(depegResult);
 

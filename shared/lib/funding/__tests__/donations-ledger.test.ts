@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import donationsAsset from "../../../data/funding/donations.json";
 import { DONOR_KEY_QUALIFYING_STABLECOINS, resolveDonorKeyQualifyingStablecoin } from "../donor-eligibility";
-import { DonationsFileSchema } from "../schema";
+import { TransferDonationsFileSchema } from "../schema";
 
 const NATIVE_ASSET_SYMBOLS = new Set(["ETH", "POL", "MATIC", "XDAI"]);
 const QUALIFYING_SYMBOLS = new Set(DONOR_KEY_QUALIFYING_STABLECOINS.map((coin) => coin.symbol));
 
 describe("committed donations ledger", () => {
-  const ledger = DonationsFileSchema.parse(donationsAsset);
+  const ledger = TransferDonationsFileSchema.parse(donationsAsset);
   const label = (row: (typeof ledger.donations)[number]) => `${row.chain}:${row.tx_hash} ${row.asset_symbol}`;
 
   it("records a token address on every row, null exactly for native assets", () => {

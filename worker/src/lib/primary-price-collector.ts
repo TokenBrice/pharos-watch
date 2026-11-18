@@ -1,11 +1,15 @@
 import type { PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
+import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isHardPricingTrustTier } from "@shared/lib/pricing-source-policy";
+import { REVIEWED_COINGECKO_KRAKEN_MIRRORS } from "@shared/lib/pricing-provider-config";
 import { pricesAgreeWithinBps } from "./price-divergence";
-import type { SourcePrice } from "./price-consensus";
+import { DEX_PROTOCOL_SOURCE_MIN_TVL_USD } from "./dex-cron-constants";
+import { haveDisjointPriceInputs, type SourcePrice } from "./price-consensus";
+import { CURVE_USDC_USD_VENUE_KEY, directUsdVenueKeys } from "../cron/dex-liquidity/price-lineage";
 import { validatePricingSourceFreshness, type PricingSourceFreshnessRejectReason } from "./pricing-source-freshness";
 
 interface PrimaryPriceAssetLike {
@@ -20,6 +24,9 @@ interface DexProtocolSourceQuote {
   tvl: number;
   updatedAt: number;
   chain: string;
+  /** Complete, canonical chain:pool keys for price formation, when verified by the writer. */
+  pricePoolKeys?: readonly string[];
+  upstreamKeys?: readonly string[];
 }
 
 interface DexAggregateQuote {
@@ -28,6 +35,8 @@ interface DexAggregateQuote {
   aggregateObservedAt?: number | null;
   source_pool_count: number;
   source_total_tvl: number;
+  pricePoolKeys?: readonly string[];
+  upstreamKeys?: readonly string[];
 }
 
 export interface NavTelemetryQuote {
@@ -35,6 +44,7 @@ export interface NavTelemetryQuote {
   price: number;
   observedAt: number;
   observedAtMode?: PriceObservedAtMode | null;
+  maxAgeSec?: number;
   metadata?: Record<string, unknown>;
 }
 
@@ -47,6 +57,7 @@ export type PrimaryDexCandidateExclusionReason =
   | "stale_source_age"
   | "future_source_timestamp"
   | "missing_observed_at"
+  | "unproven_pool_independence"
   | "invalid_observed_at";
 
 export interface PrimaryDexCandidateTelemetry {
@@ -98,19 +109,20 @@ export interface PrimaryCollectedQuotes {
   cgPrice: number | null;
   cgObservedAt: number | null;
   cgObservedAtMode: PriceObservedAtMode | null;
-  cgTickerPrice: number | null;
-  cgTickerObservedAt: number | null;
   dlListQuote?: DlListQuote;
   binancePrice: number | null;
   binanceObservedAt: number | null;
   krakenPrice: number | null;
   krakenObservedAt: number | null;
+  krakenMarketObservedAt?: number;
+  krakenQuoteBasis?: import("@shared/types/supply").StablecoinData["priceQuoteBasis"];
   bitstampPrice: number | null;
   bitstampObservedAt: number | null;
   coinbasePrice: number | null;
   coinbaseObservedAt: number | null;
   curvePrice: number | null;
   curveObservedAt: number | null;
+  curvePricePoolKeys?: readonly string[];
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navQuote?: NavTelemetryQuote;
@@ -138,7 +150,9 @@ function buildSourcePrice(input: {
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
   nowSec?: number;
+  maxAgeSec?: number;
   metadata?: Record<string, unknown>;
+  upstreamKeys?: readonly string[];
 }): SourcePrice | null {
   if (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price <= 0) {
     return null;
@@ -150,6 +164,7 @@ function buildSourcePrice(input: {
     observedAt: input.observedAt,
     observedAtMode: input.observedAtMode,
     nowSec: input.nowSec,
+    maxAgeSec: input.maxAgeSec,
   });
   if (!freshness.accepted) {
     return null;
@@ -162,10 +177,9 @@ function buildSourcePrice(input: {
     observedAt: freshness.observedAt,
     observedAtMode: freshness.observedAtMode,
     metadata: input.metadata,
+    upstreamKeys: input.upstreamKeys,
   };
 }
-
-const DEX_PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
 
 /**
  * Later same-run readers (authoritative parent checks) validate the composite
@@ -303,12 +317,6 @@ export function buildPrimarySourceCandidates(
       nowSec,
     }),
     buildSourcePrice({
-      source: "cg-ticker",
-      price: collected.cgTickerPrice,
-      observedAt: collected.cgTickerObservedAt,
-      nowSec,
-    }),
-    buildSourcePrice({
       source: "defillama-list",
       price: collected.dlListQuote?.price ?? null,
       observedAt: collected.dlListQuote?.observedAt ?? null,
@@ -324,7 +332,9 @@ export function buildPrimarySourceCandidates(
     buildSourcePrice({
       source: "kraken",
       price: collected.krakenPrice,
-      observedAt: collected.krakenObservedAt,
+      observedAt: collected.krakenMarketObservedAt ?? (collected.krakenQuoteBasis === "last-trade" ? null : collected.krakenObservedAt),
+      observedAtMode: collected.krakenMarketObservedAt != null ? "upstream" : collected.krakenQuoteBasis === "last-trade" ? "unknown" : "local_fetch",
+      metadata: collected.krakenQuoteBasis ? { quoteBasis: collected.krakenQuoteBasis } : undefined,
       nowSec,
     }),
     buildSourcePrice({
@@ -344,6 +354,9 @@ export function buildPrimarySourceCandidates(
       price: collected.curvePrice,
       observedAt: collected.curveObservedAt,
       nowSec,
+      metadata: { pricePoolKeys: collected.curvePricePoolKeys },
+      upstreamKeys: collected.curvePricePoolKeys?.length && collected.curvePricePoolKeys.every(isCanonicalPricePoolKey)
+        ? [...collected.curvePricePoolKeys, CURVE_USDC_USD_VENUE_KEY] : undefined,
     }),
     buildSourcePrice({
       source: "curve-oracle",
@@ -356,10 +369,31 @@ export function buildPrimarySourceCandidates(
       price: collected.navQuote?.price ?? null,
       observedAt: collected.navQuote?.observedAt ?? null,
       observedAtMode: collected.navQuote?.observedAtMode ?? null,
+      maxAgeSec: collected.navQuote?.maxAgeSec,
       nowSec,
       metadata: collected.navQuote?.metadata,
     }),
   ].filter((source): source is SourcePrice => source != null);
+  for (const source of baseSources) {
+    source.upstreamKeys ??= directUsdVenueKeys(source.source, asset.symbol);
+  }
+  const curveSource = baseSources.find((source) => source.source === "curve-onchain");
+  const canVoteIndependently = (source: SourcePrice, pricePoolKeys: readonly string[] | undefined): boolean => {
+    if (source.upstreamKeys?.length === 0) return false;
+    if (!curveSource) return true;
+    if (!haveDisjointPriceInputs(curveSource, source)) return false;
+    // Legacy producers omitted lineage. Preserve their pre-lineage vote until a receipt is available.
+    if (pricePoolKeys === undefined) return true;
+    const curveKeys = collected.curvePricePoolKeys;
+    return !!curveKeys?.length && curveKeys.every(isCanonicalPricePoolKey) &&
+      Array.isArray(pricePoolKeys) && pricePoolKeys.length > 0 &&
+      pricePoolKeys.every((key) => isCanonicalPricePoolKey(key) && !curveKeys.includes(key));
+  };
+  const cgSource = baseSources.find((source) => source.source === "coingecko");
+  if (cgSource && REVIEWED_COINGECKO_KRAKEN_MIRRORS.has(asset.id) &&
+      baseSources.some((source) => source.source === "kraken")) {
+    cgSource.nonVotingReason = "venue-mirror";
+  }
   sources.push(...baseSources);
 
   const dexCandidateTelemetry: PrimaryDexCandidateTelemetry[] = [];
@@ -406,7 +440,8 @@ export function buildPrimarySourceCandidates(
       observedAt: freshness.observedAt,
       observedAtMode: freshness.observedAtMode,
       nowSec,
-      metadata: { tvl: protocolSource.tvl, chain: protocolSource.chain },
+      upstreamKeys: protocolSource.upstreamKeys ?? protocolSource.pricePoolKeys,
+      metadata: { tvl: protocolSource.tvl, chain: protocolSource.chain, pricePoolKeys: protocolSource.pricePoolKeys },
     });
     if (!source) {
       dexCandidateTelemetry.push({
@@ -431,6 +466,9 @@ export function buildPrimarySourceCandidates(
       continue;
     }
 
+    if (!canVoteIndependently(source, protocolSource.pricePoolKeys)) {
+      source.nonVotingReason = "unproven-pool-independence";
+    }
     promotedDexProtocolCandidates.push(source);
   }
 
@@ -438,13 +476,14 @@ export function buildPrimarySourceCandidates(
   const agreesWithHardSource = (dexSource: SourcePrice): boolean =>
     baseSources.some(
       (source) =>
+        haveDisjointPriceInputs(dexSource, source) &&
         isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier) &&
         pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps),
     );
   const agreesWithIndependentDexSource = (dexSource: SourcePrice, pool: readonly SourcePrice[]): boolean => {
     const dexSourceFamily = getPricingSourceRegistryEntry(dexSource.source)?.depegSourceFamily;
     return pool.some((otherDexSource) =>
-      otherDexSource !== dexSource &&
+      otherDexSource !== dexSource && haveDisjointPriceInputs(dexSource, otherDexSource) &&
       getPricingSourceRegistryEntry(otherDexSource.source)?.depegSourceFamily !== dexSourceFamily &&
       pricesAgreeWithinBps(dexSource.price, otherDexSource.price, divergenceThresholdBps));
   };
@@ -452,7 +491,8 @@ export function buildPrimarySourceCandidates(
   // Beside base legs a lane must fit the co-leg budget, and only lanes that fit
   // it can corroborate one another; otherwise one lane would date the composite.
   const coLegNowSec = nowSec ?? Math.floor(Date.now() / 1000);
-  const coLegBudgetSec = baseSources.length > 0 ? getDexCoLegBudgetSec(baseSources) : null;
+  const votingBaseSources = baseSources.filter((source) => source.nonVotingReason == null);
+  const coLegBudgetSec = votingBaseSources.length > 0 ? getDexCoLegBudgetSec(votingBaseSources) : null;
   const laneAgeSec = (dexSource: SourcePrice): number | null =>
     typeof dexSource.observedAt === "number" ? coLegNowSec - dexSource.observedAt : null;
   const fitsCoLegBudget = (dexSource: SourcePrice): boolean => {
@@ -460,14 +500,15 @@ export function buildPrimarySourceCandidates(
     const ageSec = laneAgeSec(dexSource);
     return ageSec != null && ageSec <= coLegBudgetSec;
   };
-  const coLegLanes = promotedDexProtocolCandidates.filter(fitsCoLegBudget);
+  const votingDexCandidates = promotedDexProtocolCandidates.filter((source) => source.nonVotingReason == null);
+  const coLegLanes = votingDexCandidates.filter(fitsCoLegBudget);
   const admittedPromotedDexProtocolSources = coLegLanes.filter((dexSource) =>
     agreesWithHardSource(dexSource) || agreesWithIndependentDexSource(dexSource, coLegLanes));
   // Degraded fallback: when the fresh legs cannot agree on their own (one is
   // missing or diverging), a lane inside the primary budget that agrees with a
   // fresh hard leg may still join. Consensus then dates the result by the
   // lane's own older clock, never by the fresh legs' clock.
-  const fallbackLanes = coLegBudgetSec == null ? [] : promotedDexProtocolCandidates.filter((dexSource) => {
+  const fallbackLanes = coLegBudgetSec == null ? [] : votingDexCandidates.filter((dexSource) => {
     const ageSec = laneAgeSec(dexSource);
     return !fitsCoLegBudget(dexSource) && ageSec != null && ageSec <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC &&
       agreesWithHardSource(dexSource);
@@ -492,7 +533,10 @@ export function buildPrimarySourceCandidates(
     const sourceProtocol = source.source.replace(/-dex$/, "");
     const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
     let outcome: Parameters<typeof buildPromotedDexCandidateTelemetry>[3];
-    if (admittedPromotedDexProtocolSources.includes(source)) {
+    if (source.nonVotingReason) {
+      sources.push(source);
+      outcome = { status: "excluded", reason: "unproven_pool_independence" };
+    } else if (admittedPromotedDexProtocolSources.includes(source)) {
       outcome = { status: "accepted" };
     } else if (!fitsCoLegBudget(source)) {
       outcome = {
@@ -501,7 +545,7 @@ export function buildPrimarySourceCandidates(
         coLegBudgetSec: coLegBudgetSec ?? undefined,
         ageSec: laneAgeSec(source) ?? undefined,
       };
-      if (agreesWithHardSource(source) || agreesWithIndependentDexSource(source, promotedDexProtocolCandidates)) {
+      if (agreesWithHardSource(source) || agreesWithIndependentDexSource(source, votingDexCandidates)) {
         coLegHeldDexSources.add(source.source);
       }
     } else {
@@ -522,12 +566,17 @@ export function buildPrimarySourceCandidates(
       price: collected.dexAggregateQuote.dex_price_usd,
       observedAt: collected.dexAggregateQuote.aggregateObservedAt,
       nowSec,
+      upstreamKeys: collected.dexAggregateQuote.upstreamKeys ?? collected.dexAggregateQuote.pricePoolKeys,
       metadata: {
         poolCount: collected.dexAggregateQuote.source_pool_count,
         tvl: collected.dexAggregateQuote.source_total_tvl,
+        pricePoolKeys: collected.dexAggregateQuote.pricePoolKeys,
       },
     });
     if (dexAggregateSource) {
+      if (!canVoteIndependently(dexAggregateSource, collected.dexAggregateQuote.pricePoolKeys)) {
+        dexAggregateSource.nonVotingReason = "unproven-pool-independence";
+      }
       sources.push(dexAggregateSource);
     }
   }

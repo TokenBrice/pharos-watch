@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
@@ -104,6 +105,22 @@ describe("parseKinesisResponse", () => {
 });
 
 describe("syncKinesisSupply", () => {
+  it("writes Horizon observations under native program identities once the wrappers cut over", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive").mockReturnValue(true);
+    try {
+      vi.mocked(fetchTextWithRetry)
+        .mockResolvedValueOnce(await textResult(kauResponse()))
+        .mockResolvedValueOnce(await textResult(kagResponse()));
+      const { db, bindFn } = makeDb();
+      expect((await syncKinesisSupply(db, new AbortController().signal)).itemCount).toBe(2);
+      expect(bindFn).toHaveBeenCalledWith("kau-kinesis-native-program", "kinesis-kau", 2_586_388, 1_800_000_000);
+      expect(bindFn).toHaveBeenCalledWith("kag-kinesis-native-program", "kinesis-kag", 3_742_495, 1_800_000_000);
+    } finally {
+      cutover.mockRestore();
+    }
+  });
+
   beforeEach(() => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(recordOutcomeSafe).mockResolvedValue(mockCircuitOutcomeRecord());

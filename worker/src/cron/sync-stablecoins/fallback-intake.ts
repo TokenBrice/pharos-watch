@@ -1,7 +1,8 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
-import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/stablecoin-intake-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -9,7 +10,7 @@ import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
-import { buildPriceValidationContext } from "../../lib/price-validation";
+import { buildPriceValidationContext, type PriceValidationReferences } from "../../lib/price-validation";
 import { validatePublishedAssetPrice, type TrustedPriceReference } from "../../lib/price-publish-policy";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata, hydrateGeckoIdAliases, restorePreferredNativeSupply } from "./shared";
@@ -20,7 +21,7 @@ import { mergeFrozenSnapshots } from "./intake";
 import { NAV_PARENT_ONLY_GECKO_IDS } from "./supplemental-assets";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import type { OnChainMcapResult } from "./supplemental-assets/onchain-supply";
-import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
+import { buildSupplementalAsset, getCoinGeckoCapQuantity, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
 
 interface FallbackStablecoinMetadata {
   id: string;
@@ -99,6 +100,7 @@ export function buildFallbackAssetsFromCoinGecko(
       mcap: entry.mcap,
       supplyObservedAt: entry.observedAt,
       supplySource: "coingecko-fallback",
+      ...getCoinGeckoCapQuantity(meta, input.cgData[meta.geckoId], entry.mcap, entry.observedAt),
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
@@ -127,7 +129,7 @@ export async function runFallbackIntakePhase(
   // injects their captured DefiLlama rows exactly as the primary intake does:
   // merge before structural admission, then normalize the provider buckets.
   const { validAssets } = filterStructurallyValidAssets(
-    mergeFrozenSnapshots(coingeckoAssets, FROZEN_SNAPSHOTS),
+    mergeFrozenSnapshots(coingeckoAssets, FROZEN_SNAPSHOTS, input.syncStartSec),
   );
   hydrateGeckoIdAliases(validAssets);
   normalizeChainCirculating(validAssets);
@@ -155,9 +157,11 @@ export async function overlayFallbackCuratedAggregateSupply(
   dwellirNative?: DwellirNativeCapability,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
   previousTrustedPrices?: ReadonlyMap<string, TrustedPriceReference> | null,
+  validationReferences?: PriceValidationReferences,
 ): Promise<void> {
   for (const asset of assets) {
     throwIfAborted(signal);
+    if (isKinesisWrapperSupplyId(asset.id) && !isKinesisWrapperSupplyCutoverActive(asset.id, Math.floor(Date.now() / 1000))) continue;
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || (!prefersOnChainSupplyMcap(meta) && !selectCuratedAggregateOnchainSupplyProbeContracts(meta))) continue;
     if (isOnchainSupplyPartitionExcluded(meta.id) && asset.supplySource === "coingecko-fallback"
@@ -165,9 +169,11 @@ export async function overlayFallbackCuratedAggregateSupply(
 
     const priceUsd = toPositiveFiniteNumber(asset.price);
     let onChainMcap: OnChainMcapResult | null = null;
-    if (priceUsd != null && (meta.id !== "buidl-blackrock" || (previousTrustedPrices !== null && validatePublishedAssetPrice({
+    const commodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
+    if (priceUsd != null && ((!commodity && meta.id !== "buidl-blackrock") || (previousTrustedPrices !== null && validatePublishedAssetPrice({
       asset, validationContext: buildPriceValidationContext({ stablecoinId: meta.id }),
       previousTrustedPrice: previousTrustedPrices?.get(meta.id),
+      validationReferences,
     }).accepted))) {
       onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative);
       // A preferred single-register asset has no curated roster but still owns
@@ -189,6 +195,19 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
     asset.supplyObservedAt = onChainMcap.observedAt ?? null;
+    delete asset.circulatingNative;
+    delete asset.valuationPriceUsd;
+    delete asset.valuationObservedAtSec;
+    delete asset.supplyChangeBaselines;
+    const nativeSupply = onChainMcap.nativeSupply;
+    const quoteClock = asset.priceObservedAt;
+    if (nativeSupply != null && Number.isFinite(nativeSupply) && nativeSupply >= 0 && priceUsd != null &&
+      quoteClock != null && Number.isSafeInteger(quoteClock) && quoteClock > 0 && asset.priceObservedAtMode === "upstream" &&
+      Math.abs(nativeSupply * priceUsd - onChainMcap.mcap) <= 1e-12 * Math.max(onChainMcap.mcap, 1)) {
+      asset.circulatingNative = nativeSupply;
+      asset.valuationPriceUsd = priceUsd;
+      asset.valuationObservedAtSec = quoteClock;
+    }
     asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
     asset.chains = Object.keys(onChainMcap.chainCirculating);
     if (meta.id === SFRAX_STOCK_PERIMETER.assetId) {

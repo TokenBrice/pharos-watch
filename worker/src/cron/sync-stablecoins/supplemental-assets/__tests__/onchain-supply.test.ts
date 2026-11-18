@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
+import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS } from "@shared/lib/onchain-supply-probe";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import * as evmRpc from "../../../../lib/evm-rpc";
+import * as nativeSupply from "../../../../lib/native-token-supply";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
 
@@ -135,6 +137,43 @@ describe("supply deployment failure reasons", () => {
 });
 
 describe("joined EVM supply observations", () => {
+  it("dates PAXG by the oldest included block or slot and withholds it when a clock is missing", async () => {
+    const meta = TRACKED_META_BY_ID.get("paxg-paxos")!;
+    const at = Math.floor(Date.now() / 1000) - 90;
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockResolvedValue(100n * 10n ** 18n);
+    const solana = meta.contracts!.find(({ chain }) => chain === "solana")!;
+    if (!isFixedDecimalDeployment(solana)) throw new Error("PAXG requires fixed decimals");
+    const read = vi.spyOn(nativeSupply, "observeSolanaTokenSupply").mockResolvedValue({
+      rawSupply: 100n * 10n ** BigInt(solana.decimals), slot: 456, observedAt: at,
+    });
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 3000)).resolves.toMatchObject({
+      mcap: 900000, nativeSupply: 300, observedAt: at,
+    });
+    expect(vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls.map(([chain]) => chain)).toEqual(["ethereum", "base"]);
+    read.mockResolvedValue(null);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 3000)).resolves.toBeNull();
+  });
+
+  it("withholds wrapper stock until the reviewed perimeter cutover", async () => {
+    const meta = TRACKED_META_BY_ID.get("kau-kinesis")!;
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 134.4771)).resolves.toBeNull();
+    expect(evmRpc.fetchEvmUint256AtBlock).not.toHaveBeenCalled();
+  });
+
+  it.each([["kau-kinesis", 1_640_000, 134.4771], ["kag-kinesis", 35_000, 57.994]] as const)(
+    "values the reviewed %s Ethereum wrapper stock", async (id, nativeSupply, price) => {
+      vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive").mockReturnValue(true);
+      const meta = TRACKED_META_BY_ID.get(id)!;
+      vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockResolvedValue(BigInt(nativeSupply) * 10n ** 18n);
+      await expect(fetchCuratedAggregateOnChainMcap(meta, price)).resolves.toMatchObject({
+        mcap: nativeSupply * price, nativeSupply, observedAt: Math.floor(Date.now() / 1000) - 30,
+      });
+      expect(evmRpc.fetchEvmUint256AtBlock).toHaveBeenCalledWith(
+        "ethereum", meta.contracts![0].address, TOTAL_SUPPLY_SELECTOR, 123, expect.objectContaining({ stateBlockHash: BLOCK_HASH }),
+      );
+    },
+  );
+
   it("pins inventory movement between excluded holders to one canonical hash and observation clock", async () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
     const contract = meta.contracts![0];
@@ -507,9 +546,13 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     fetchMoveFungibleAssetSupplyMock.mockReset();
   });
 
-  it("reallocates canonical lock/mint supply without double counting representations", async () => {
+  it.each([
+    { balances: [50, 50, 50, 50], canonical: 1_000, remaining: null, residual: null },
+    { balances: [105, 55, 30, 10], canonical: 1_000, remaining: 800, residual: 15 },
+    { balances: [100, 50, 25, 10], canonical: 185, remaining: 0, residual: 0 },
+  ])("reconciles SkyLink lockboxes per route ($balances)", async ({ balances, canonical, remaining, residual }) => {
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
-      if (input?.chain === "ethereum") return 1_000n * 10n ** 18n;
+      if (input?.chain === "ethereum") return BigInt(canonical) * 10n ** 18n;
       if (input?.chain === "base") return 100n * 10n ** 18n;
       if (input?.chain === "optimism") return 50n * 10n ** 18n;
       if (input?.chain === "arbitrum") return 25n * 10n ** 18n;
@@ -517,23 +560,30 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       return 0n;
     });
 
-    const observedBefore = Math.floor(Date.now() / 1000);
-    const result = await fetchCuratedAggregateOnChainMcap(makeSkyMeta(), 1);
-    const observedAfter = Math.floor(Date.now() / 1000);
+    for (const balance of balances) fetchOnchainUint256Mock.mockResolvedValueOnce(BigInt(balance) * 10n ** 18n);
+    const price = 0.17;
+    const result = await fetchCuratedAggregateOnChainMcap(makeSkyMeta(), price);
+    if (remaining == null || residual == null) {
+      expect(result).toBeNull();
+      return;
+    }
 
     expect(result).toMatchObject({
-      mcap: 1_000,
+      mcap: canonical * price,
       supplySource: "onchain-total-supply",
       chainCirculating: {
-        Ethereum: { current: 815, chainId: "ethereum" },
-        Base: { current: 100, chainId: "base" },
-        Optimism: { current: 50, chainId: "optimism" },
-        Arbitrum: { current: 25, chainId: "arbitrum" },
-        Unichain: { current: 10, chainId: "unichain" },
+        Ethereum: { current: remaining * price, chainId: "ethereum" },
+        "sUSDS unattributed SkyLink escrow": { current: residual * price },
+        Base: { current: 100 * price, chainId: "base" },
+        Optimism: { current: 50 * price, chainId: "optimism" },
+        Arbitrum: { current: 25 * price, chainId: "arbitrum" },
+        Unichain: { current: 10 * price, chainId: "unichain" },
       },
     });
-    expect(result?.observedAt).toBeGreaterThanOrEqual(observedBefore);
-    expect(result?.observedAt).toBeLessThanOrEqual(observedAfter);
+    expect(result?.observedAt).toBe(Math.floor(Date.now() / 1000) - 30);
+    const escrowCalls = vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls.filter((call) => call[2] !== TOTAL_SUPPLY_SELECTOR);
+    expect(escrowCalls).toHaveLength(4);
+    expect(escrowCalls.every((call) => call[0] === "ethereum" && call[3] === 123 && call[4]?.stateBlockHash === BLOCK_HASH)).toBe(true);
   });
 
   it("fails closed when representation supply is not smaller than canonical supply", async () => {
@@ -952,7 +1002,7 @@ describe("curation-expanded complete supply rosters", () => {
     );
     expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(total * price);
     // Aptos must not be sent through Movement's asset-restricted xReserve gate.
-    if (residual) {
+    if (residual?.escrowAddress) {
       expect(result?.chainCirculating?.[residual.unattributedChainLabel]?.chainId).toBeUndefined();
       expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
         chain: canonical, data: `0x70a08231${residual.escrowAddress.slice(2).padStart(64, "0")}`,

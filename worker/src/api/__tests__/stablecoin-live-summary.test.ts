@@ -68,8 +68,25 @@ describe("site-only stablecoin live summary", () => {
     expect(unavailable).toMatchObject({
       supplyObservedAt: null, nativeSupply: { current: null, prevWeek: null, prevMonth: null },
     });
-    expect(projectStablecoinLiveSummary({ ...detail, currentCirculatingUSD: { peggedUSD: 0 }, currentSupplyObservedAt: NOW }))
+    expect(projectStablecoinLiveSummary({ ...detail, currentCirculatingUSD: { peggedUSD: 0 }, currentCirculatingNative: 0, currentSupplyObservedAt: NOW }))
       .toMatchObject({ circulating: { peggedUSD: 0 }, supplyObservedAt: NOW, nativeSupply: { current: 0 } });
+  });
+
+  it("derives legacy native checkpoints from the observed current valuation and token history", () => {
+    const detail = { currentCirculatingUSD: { peggedEUR: 300 }, currentSupplyObservedAt: NOW, price: 1.5,
+      priceSource: "coingecko", tokens: history };
+    expect(projectStablecoinLiveSummary(detail).nativeSupply).toEqual({ current: 200, prevWeek: 93, prevMonth: 70 });
+    expect(projectStablecoinLiveSummary({ ...detail, currentCirculatingNative: null }).nativeSupply.current).toBeNull();
+  });
+
+  it.each([1_125_868.04, null])("uses the BRLm producer quantity %s with an independent display price", (native) => {
+    const detail = {
+      currentCirculatingUSD: { peggedREAL: 201_972.94022000663 },
+      currentCirculatingNative: native,
+      price: 0.17743848100793938,
+      priceSource: "coingecko",
+    };
+    expect(projectStablecoinLiveSummary(detail, "brlm-mento").nativeSupply.current).toBe(native);
   });
 
   it.each(fixtures)("matches the shared client projector for $name without history transport", async ({ name, detail }) => {
@@ -108,7 +125,7 @@ describe("site-only stablecoin live summary", () => {
     });
     const canonical = projectStablecoinLiveSummary({
       price: 2, priceSource: "coingecko", tokens,
-      currentCirculatingUSD: { peggedUSD: 100 }, currentSupplyObservedAt: NOW,
+      currentCirculatingUSD: { peggedUSD: 100 }, currentCirculatingNative: 50, currentSupplyObservedAt: NOW,
       currentCirculatingPrevDayUSD: id ? {} : buckets,
     }, id);
     expect([canonical.circulatingPrevDay, canonical.circulatingPrevWeek, canonical.circulatingPrevMonth]).toEqual([{}, {}, {}]);
@@ -129,7 +146,7 @@ describe("site-only stablecoin live summary", () => {
     };
     expect(projectStablecoinLiveSummary({ tokens })).toMatchObject(expected);
     expect(projectStablecoinLiveSummary({
-      tokens, price: 2, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 0 },
+      tokens, price: 2, priceSource: "coingecko", currentCirculatingUSD: { peggedUSD: 0 }, currentCirculatingNative: 0,
       currentSupplyObservedAt: NOW, currentCirculatingPrevDayUSD: { peggedUSD: 0 },
     })).toMatchObject(expected);
   });

@@ -6,6 +6,8 @@ import { applyConsensusResults, createValidationContextResolver } from "../prici
 import { normalizeStablecoinsPayload } from "../shared";
 import { makePeggedAsset } from "./_fixtures";
 
+const syncStartSec = Date.parse("2026-10-30T12:00:00Z") / 1_000;
+
 describe("mergeFrozenSnapshots", () => {
   const snapshots = [
     {
@@ -17,7 +19,7 @@ describe("mergeFrozenSnapshots", () => {
 
   it("appends a snapshot row when upstream is missing it", () => {
     const upstream = [{ id: "usdt-tether", name: "Tether", symbol: "USDT" } as never];
-    const merged = mergeFrozenSnapshots(upstream, snapshots);
+    const merged = mergeFrozenSnapshots(upstream, snapshots, syncStartSec);
     expect(merged).toHaveLength(2);
     expect(merged.find((a) => (a as { id: string }).id === "fixture-frozen")).toMatchObject({ name: "Fixture" });
   });
@@ -27,7 +29,7 @@ describe("mergeFrozenSnapshots", () => {
       { id: "fixture-frozen", name: "Fixture (live)", symbol: "FXT" } as never,
       { id: "usdt-tether", name: "Tether", symbol: "USDT" } as never,
     ];
-    const merged = mergeFrozenSnapshots(upstream, snapshots);
+    const merged = mergeFrozenSnapshots(upstream, snapshots, syncStartSec);
     expect(merged).toHaveLength(2);
     // upstream wins — preserves anything upstream still serves
     expect((merged.find((a) => (a as { id: string }).id === "fixture-frozen") as { name: string }).name).toBe("Fixture (live)");
@@ -43,26 +45,25 @@ describe("mergeFrozenSnapshots", () => {
         capturedAt: "2026-04-27T00:00:00Z",
         peggedAssetRow: { id: "usdt-tether", name: "Tether (snapshot)", symbol: "USDT" },
       },
-    ]);
+    ], syncStartSec);
     expect(merged).toHaveLength(1);
     expect((merged[0] as { name: string }).name).toBe("Tether (live)");
   });
 
   it("deduplicates repeated snapshots before the canonical dedupe stage", () => {
     const upstream = [{ id: "usdt-tether", name: "Tether", symbol: "USDT" } as never];
-    const merged = mergeFrozenSnapshots(upstream, [...snapshots, ...snapshots]);
+    const merged = mergeFrozenSnapshots(upstream, [...snapshots, ...snapshots], syncStartSec);
     expect(merged.filter((a) => (a as { id: string }).id === "fixture-frozen")).toHaveLength(1);
   });
 
   it("returns input unchanged when no snapshots provided", () => {
     const upstream = [{ id: "usdt-tether", name: "Tether", symbol: "USDT" } as never];
-    expect(mergeFrozenSnapshots(upstream, [])).toBe(upstream);
+    expect(mergeFrozenSnapshots(upstream, [], syncStartSec)).toBe(upstream);
   });
 });
 
 describe("frozen-snapshot price provenance", () => {
   it("does not republish a captured snapshot price as this run's DefiLlama observation", () => {
-    const syncStartSec = Math.floor(Date.parse("2026-10-30T12:00:00Z") / 1000);
     const snapshot = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins");
     if (!snapshot) throw new Error("expected the checked-in AEUR frozen snapshot");
     expect(snapshot.capturedAt).toBe("2026-07-08T08:00:33.000Z");
@@ -70,10 +71,11 @@ describe("frozen-snapshot price provenance", () => {
     expect(snapshot.peggedAssetRow).not.toHaveProperty("priceObservedAt");
     expect(snapshot.peggedAssetRow).not.toHaveProperty("priceUpdatedAt");
 
-    // DefiLlama no longer serves AEUR, so intake appends the captured row. With
-    // no geckoId/CEX/curve/redstone lane the primary collector returns no quote
-    // for it; the undated `defillama-list` consensus leg is rejected by
-    // `requiresObservedAt`, exactly as in production.
+    const [captured] = mergeFrozenSnapshots([], [snapshot], Date.parse(snapshot.capturedAt) / 1_000);
+    expect(captured?.price).toBe(snapshot.peggedAssetRow.price);
+    expect(captured?.priceObservedAt).toBe(Date.parse(snapshot.capturedAt) / 1_000);
+
+    // Intake retains the archive row after its price has aged out.
     const merged = mergeFrozenSnapshots(
       [
         makePeggedAsset({
@@ -86,14 +88,14 @@ describe("frozen-snapshot price provenance", () => {
         }),
       ],
       [{ ...snapshot, peggedAssetRow: structuredClone(snapshot.peggedAssetRow) }],
+      syncStartSec,
     );
     const { validAssets } = filterStructurallyValidAssets(merged);
     applyTrackedAssetOverrides(validAssets);
     const frozenRow = validAssets.find((asset) => asset.id === "aeur-anchored-coins");
     if (!frozenRow) throw new Error("expected the injected AEUR row to pass structural admission");
     expect(frozenRow.geckoId).toBeUndefined();
-    expect(frozenRow.price).toBe(snapshot.peggedAssetRow.price);
-    expect(frozenRow.priceObservedAt).toBe(Date.parse(snapshot.capturedAt) / 1000);
+    expect(frozenRow.price).toBeNull();
 
     applyConsensusResults({
       assets: validAssets,
@@ -108,6 +110,7 @@ describe("frozen-snapshot price provenance", () => {
     // R6: the 2026-07-08 captured value was not read from DefiLlama this run, so
     // publication must not claim it as a DefiLlama consensus observation nor date
     // it to the run clock (docs/pricing-pipeline.md#timestamp-semantics).
+    expect(published?.price).toBeNull();
     expect(published?.consensusSources ?? []).not.toContain("defillama");
     expect(published?.agreeSources ?? []).not.toContain("defillama");
     expect(published?.priceObservedAt ?? null).not.toBe(syncStartSec);

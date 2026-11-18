@@ -12,7 +12,10 @@ import { prepareCacheUpsert } from "../lib/db-cache";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { buildSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { isDailyStockObservation, SUPPLY_SNAPSHOT_MAX_AGE_SEC } from "../lib/dews/native-quantity";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -39,7 +42,7 @@ import { publishNonUsdShareHistory } from "../lib/non-usd-share-history";
 // moves these gates with it instead of stranding unanchored literals.
 const STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC = CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec;
 const CACHE_DEGRADED_AGE_SEC = STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
-const CACHE_MAX_AGE_SEC = 2 * STABLECOINS_CACHE_PRODUCER_INTERVAL_SEC;
+
 
 interface SnapshotSupplyOptions {
   minStablecoinsCacheUpdatedAtSec?: number | null;
@@ -50,8 +53,16 @@ interface SnapshotSupplyOptions {
   snapshotEligibleIds?: readonly string[];
 }
 
-/** `[stablecoinId, snapshotDate, circulatingUsd, price, priceObservedAt, supplyProvenanceJson]` */
-type SupplySnapshotRow = readonly [string, number, number, number | null, number | null, string | null];
+type SupplySnapshotRow = readonly [
+  stablecoinId: string, snapshotDate: number, circulatingUsd: number, price: number | null,
+  priceObservedAt: number | null, supplyProvenance: string | null, circulatingNative: number | null,
+  valuationPriceUsd: number | null, valuationObservedAtSec: number | null,
+];
+
+const SUPPLY_QUANTITY_SNAPSHOT_UPSERT_PREFIX = SUPPLY_SNAPSHOT_UPSERT_PREFIX.replace(
+  /\)$/,
+  ", circulating_native, valuation_price_usd, valuation_observed_at_sec)",
+);
 
 async function repairSameDayMissingPrices(
   db: D1Database,
@@ -98,16 +109,17 @@ export async function snapshotSupply(
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
+  const assessedAt = options.nowSec ?? Math.floor(Date.now() / 1000);
   const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;
   const configuredRequiredActiveIds = options.requiredActiveIds ?? [...WORKER_ACTIVE_IDS];
   const snapshotEligibleIds = new Set(
     options.snapshotEligibleIds ?? [...WORKER_ACTIVE_IDS, ...PSI_HISTORICAL_IDS],
   );
   const preflight = await preflightSupplySnapshot(db, {
-    nowSec: options.nowSec,
+    nowSec: assessedAt,
     requiredActiveIds: configuredRequiredActiveIds,
     publicationWaivers,
-    maxCacheAgeSec: CACHE_MAX_AGE_SEC,
+    maxCacheAgeSec: SUPPLY_SNAPSHOT_MAX_AGE_SEC,
     assertContinuation: () => throwIfAborted(signal),
     deriveCoverage: (payload, requiredActiveIds, snapshotDate) => {
       const requiredActiveIdSet = new Set(requiredActiveIds);
@@ -125,6 +137,16 @@ export async function snapshotSupply(
           continue;
         }
         nonRestoredSnapshotIds.add(asset.id);
+        const kinesis = isKinesisWrapperSupplyId(asset.id);
+        const wrapper = kinesis && isKinesisWrapperSupplyCutoverActive(asset.id, assessedAt);
+        const supplyObservedAt = asset.supplyObservedAt;
+        if ((kinesis && wrapper !== (asset.supplySource === "onchain-total-supply")) ||
+          ((asset.id === "buidl-blackrock" || wrapper) &&
+            (supplyObservedAt == null || !Number.isSafeInteger(supplyObservedAt) || supplyObservedAt <= 0 ||
+              supplyObservedAt > assessedAt || assessedAt - supplyObservedAt > SUPPLY_SNAPSHOT_MAX_AGE_SEC))) {
+          unavailableSnapshotIds.add(asset.id);
+          continue;
+        }
 
         const circ = asset.circulating;
         if (!circ) { unavailableSnapshotIds.add(asset.id); continue; }
@@ -145,9 +167,14 @@ export async function snapshotSupply(
           : null;
         // Partial-chain evidence travels with the numeric remainder; invalid metadata stays NULL (unknown).
         const provenance = buildSupplyObservationProvenance(asset);
+        const quantityEligible = (!kinesis || wrapper) && supplyObservedAt != null &&
+          isDailyStockObservation(asset.id, snapshotDate, supplyObservedAt, assessedAt) && assessedAt - supplyObservedAt <= SUPPLY_SNAPSHOT_MAX_AGE_SEC;
         snapshotRows.push([
           asset.id, snapshotDate, circulatingUsd, price, priceObservedAt,
           provenance == null ? null : JSON.stringify(provenance),
+          quantityEligible ? asset.circulatingNative ?? null : null,
+          quantityEligible ? asset.valuationPriceUsd ?? null : null,
+          quantityEligible ? asset.valuationObservedAtSec ?? null : null,
         ]);
       }
 
@@ -365,7 +392,7 @@ export async function snapshotSupply(
       ).bind(snapshotDate, ...stablecoinIds));
       const replacementStatements = [
         ...deleteStatements,
-        ...prepareMultiRowInsertStatements(db, SUPPLY_SNAPSHOT_UPSERT_PREFIX, snapshotRows),
+        ...prepareMultiRowInsertStatements(db, SUPPLY_QUANTITY_SNAPSHOT_UPSERT_PREFIX, snapshotRows),
         prepareCacheUpsert(db, { key: SNAPSHOT_SUPPLY_LAST_WRITE_KEY, value: markerValue, updatedAt: nowSec }),
       ];
       await executeAtomicBatch(db, replacementStatements, { signal });

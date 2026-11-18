@@ -1,3 +1,4 @@
+import type { FxRateState } from "../../lib/fx-rate-state";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
@@ -22,7 +23,7 @@ import {
   type AuthoritativeLivePriceOverrideStats,
   fetchAuthoritativeLivePriceOverrides,
 } from "../../lib/authoritative-price-sources";
-import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/price-cache";
+import { priceCacheObservationClock, type PriceCacheEntry, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import type {
@@ -52,12 +53,16 @@ import {
 } from "../../lib/native-peg-implied-prices";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
+  assetPriceObservationClock,
+  chainlinkNavAgeForAsset,
   clearPriceMetadata,
+  validateAssetPricingSourceFreshness,
   type CronResult,
 } from "./shared";
 import {
   applyAcceptedPriceCandidate,
   applyProtocolPriceOverrides,
+  getFiatPremiumEvidenceForCurrentAsset,
   getPostEnrichmentCandidatePricesForCurrentAsset,
   recordProtocolPriceOverridePublicationRejection,
   settleNominalPriceReferences,
@@ -198,6 +203,7 @@ export async function runPostEnrichmentPricePipeline(
     getPricingSourceRegistryEntry(COINGECKO_NATIVE_IMPLIED_SOURCE)?.maxTrustedAgeSec ?? null;
   for (const asset of assets) {
     const nativePegImpliedUsd = nativePegImpliedUsdQuotes.get(asset.id);
+    const fiatPremiumEvidence = getFiatPremiumEvidenceForCurrentAsset(asset, input.primaryPriceResults);
     const currentHasPrice = asset.price != null && typeof asset.price === "number";
     const currentHasStrongBypassAuthority = currentHasPrice && hasStrongNativePegBypassAuthority(asset);
     const nativePegDivergenceBps =
@@ -205,15 +211,26 @@ export async function runPostEnrichmentPricePipeline(
         ? computePriceDivergenceBps(asset.price as number, nativePegImpliedUsd.priceUsd)
         : null;
 
+    const validateCurrentPrice = () => validatePublishedAssetPrice({
+      asset,
+      candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
+      fiatPremiumEvidence,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+    });
+
     const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
-      if (nativePegImpliedUsd == null) return false;
+      if (nativePegImpliedUsd == null || nativePegImpliedUsd.updatedAt == null ||
+        nativePegImpliedUsd.referenceAdmission?.status !== "admitted") return false;
       // The lane's own registry budget is the admission gate; the shared fetch
       // uses the wider depeg budget for its different consumers.
+      const ageSec = nativePegImpliedUsd.referenceAdmission.decisionAtSec - nativePegImpliedUsd.updatedAt;
       if (nativePegMaxTrustedAgeSec == null
-        || input.syncStartSec - nativePegImpliedUsd.updatedAt > nativePegMaxTrustedAgeSec) {
+        || ageSec < 0 || ageSec > nativePegMaxTrustedAgeSec) {
         logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Skipped native-peg ${reason} for ${asset.symbol} (id=${asset.id}): ` +
-          `quote is ${input.syncStartSec - nativePegImpliedUsd.updatedAt}s old, budget ${nativePegMaxTrustedAgeSec ?? "unknown"}s`,
+          `quote is ${ageSec}s old, budget ${nativePegMaxTrustedAgeSec ?? "unknown"}s`,
         );
         return false;
       }
@@ -240,14 +257,14 @@ export async function runPostEnrichmentPricePipeline(
       if (reason === "fill") {
         logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Filled missing non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via direct ${nativePegImpliedUsd.pegCurrency} quote`,
+          `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via ${nativePegImpliedUsd.pegCurrency} conversion`,
         );
         nativePegFillCount++;
       } else {
         logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Corrected weak non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
           `$${asset.price} from ${asset.priceSource ?? "unknown"} -> $${nativePegImpliedUsd.priceUsd.toFixed(6)} ` +
-          `via direct ${nativePegImpliedUsd.pegCurrency} quote (${nativePegDivergenceBps}bps divergence)`,
+          `via ${nativePegImpliedUsd.pegCurrency} conversion (${nativePegDivergenceBps}bps divergence)`,
         );
         nativePegCorrectionCount++;
       }
@@ -271,14 +288,12 @@ export async function runPostEnrichmentPricePipeline(
       tryApplyNativePegImpliedPrice("fill");
     } else if (
       !currentHasStrongBypassAuthority &&
-      nativePegImpliedUsd != null &&
-      // Only a named source observation can outrank the native quote. An undated
-      // incumbent has observedAt=null while priceUpdatedAt is merely this run's
-      // application stamp, so it must stay correctable (it carries no evidence
-      // that it is fresher than the native observation).
-      nativePegImpliedUsd.updatedAt >= (asset.priceObservedAt ?? 0) &&
+      nativePegImpliedUsd?.updatedAt != null &&
+      // Only a named market observation can outrank the native quote.
+      nativePegImpliedUsd.updatedAt >= (assetPriceObservationClock(asset) ?? 0) &&
       nativePegDivergenceBps != null &&
-      nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS
+      nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS &&
+      (!fiatPremiumEvidence || validateCurrentPrice().reason !== "corroborated_fiat_premium")
     ) {
       tryApplyNativePegImpliedPrice("correction");
     }
@@ -287,13 +302,7 @@ export async function runPostEnrichmentPricePipeline(
     // Nominal par was validated when applied and carries no observation clock to age.
     if (asset.priceObservedAtMode === "nominal_reference") continue;
 
-    const decision = validatePublishedAssetPrice({
-      asset,
-      candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-    });
+    const decision = validateCurrentPrice();
     if (!decision.accepted) {
       const authoritativeOverride = input.authoritativeOverrides.get(asset.id);
       const currentPrice = asset.price;
@@ -329,6 +338,7 @@ export async function runPostEnrichmentPricePipeline(
       asset.price != null &&
       typeof asset.price === "number" &&
       asset.price > 0 &&
+      assetPriceObservationClock(asset) != null &&
       asset.priceConfidence !== "fallback" &&
       asset.priceConfidence !== "low" &&
       isReplaySafePriceSource(asset.priceSource),
@@ -338,7 +348,7 @@ export async function runPostEnrichmentPricePipeline(
     price: asset.price! as number,
     source: asset.priceSource ?? null,
     confidence: asset.priceConfidence ?? null,
-    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+    observedAt: assetPriceObservationClock(asset),
     observedAtMode: asset.priceObservedAtMode ?? null,
     syncedAt: asset.priceSyncedAt ?? input.syncStartSec,
     agreeSources: asset.agreeSources ?? [],
@@ -363,11 +373,12 @@ export async function runPostEnrichmentPricePipeline(
     const priceCache = input.priceCache;
     for (const asset of stillMissing) {
       const candidates = staged.get(asset.id) ?? [];
-      const candidatePrices = Object.fromEntries(candidates.map((candidate) => [candidate.source, candidate.price]));
+      const datedCandidates = candidates.filter((candidate) => !candidate.recentActivity);
+      const candidatePrices = Object.fromEntries(datedCandidates.map((candidate) => [candidate.source, candidate.price]));
       for (const [candidateIndex, candidate] of candidates.entries()) {
-        const agreeSources = [...new Set(candidates
+        const agreeSources = [...new Set([candidate.source, ...datedCandidates
           .filter((other) => pricesAgreeWithinBps(candidate.price, other.price, DIVERGENCE_THRESHOLD_BPS))
-          .map((other) => other.source))];
+          .map((other) => other.source)])];
         const decision = validateFallbackPriceCandidate({
           price: candidate.price,
           source: candidate.source,
@@ -392,9 +403,9 @@ export async function runPostEnrichmentPricePipeline(
           confidence: "fallback",
           observedAt: candidate.observedAt,
           observedAtMode: candidate.observedAtMode,
-          consensusSources: Object.keys(candidatePrices),
+          consensusSources: candidates.map((row) => row.source),
           agreeSources,
-          syncedAt: input.syncStartSec,
+          syncedAt: candidate.recentActivity?.collectedAt ?? input.syncStartSec,
         });
         cachedFallbackCount++;
         break;
@@ -402,8 +413,20 @@ export async function runPostEnrichmentPricePipeline(
       if (!hasMissingPrice(asset)) continue;
       const cached = priceCache.get(asset.id);
       if (!cached) continue;
-      const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
-      if (cached.updatedAt > now || now - cached.updatedAt >= maxAgeSec) continue;
+      const observedAt = priceCacheObservationClock(cached);
+      if ((cached.source === "defillama" || cached.source === "defillama-list") &&
+        (cached.observedAtMode !== "upstream" || cached.hasExplicitClocks === false || observedAt == null)) continue;
+      // The cached USD value of a foreign NAV also contains the FX rate from that run.
+      const navAge = cached.source === "chainlink-nav" && ACTIVE_META_BY_ID.get(asset.id)?.flags.pegCurrency === "USD"
+        ? chainlinkNavAgeForAsset(asset.id) : undefined;
+      if (navAge !== undefined) {
+        if (observedAt == null || observedAt > now || cached.hasExplicitClocks === false || !validateAssetPricingSourceFreshness(asset.id, {
+          source: "chainlink-nav", observedAt, observedAtMode: cached.observedAtMode, nowSec: now, requireObservedAt: true,
+        }).accepted) continue;
+      } else {
+        const maxAgeSec = getPriceCacheMaxAgeSec(cached.source, PRICE_CACHE_TTL);
+        if (cached.updatedAt > now || now - cached.updatedAt >= maxAgeSec) continue;
+      }
       const cachedAgreeSources =
         cached.agreeSources && cached.agreeSources.length > 0
           ? cached.agreeSources
@@ -429,7 +452,7 @@ export async function runPostEnrichmentPricePipeline(
         price: cached.price,
         source: "cached",
         confidence: "fallback",
-        observedAt: cached.observedAt ?? cached.updatedAt,
+        observedAt,
         observedAtMode: cached.observedAtMode ?? null,
         consensusSources: cached.consensusSources,
         agreeSources: cached.agreeSources,
@@ -512,6 +535,7 @@ export async function runDepegPipeline(
   logContext: string,
   binanceSession?: BinanceFetchSession,
   nativePegSession?: NativePegQuoteSession,
+  detectionFxState?: FxRateState | null,
 ): Promise<DepegPipelineResult | CronResult> {
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
@@ -523,7 +547,7 @@ export async function runDepegPipeline(
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
     if (depegAbort) return depegAbort;
-    const detection = await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
+    const detection = await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession, detectionFxState);
     if (detection.status === "held") {
       depegHeldReason = detection.reason;
       if (detection.census == null) depegObservationUnavailableReason = detection.reason;
@@ -547,7 +571,7 @@ export async function runDepegPipeline(
       signal,
       coingeckoApiKey,
       binanceSession,
-      nativePegSession,
+      nativePegSession, detectionFxState,
     );
     if (confirmation.status === "held") depegHeldReason = confirmation.reason;
     if (confirmation?.providerDiagnostics?.length) {

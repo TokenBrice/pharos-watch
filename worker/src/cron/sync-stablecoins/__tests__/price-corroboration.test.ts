@@ -135,6 +135,30 @@ describe("hourly price corroboration", () => {
     }
   });
 
+  it("writes a rollback-readable DEX collection clock and admits only a matching activity receipt", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    const db = createSqliteD1(sqlite);
+    const now = 1_800_000_540;
+    const observation = { id: "moveusd-cfx", source: "dexscreener-exact", chain: "solana",
+      target: "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm", price: 0.9993, observedAt: null,
+      observedAtMode: "unknown" as const, recentActivity: { evidence: "positive-volume-m5" as const, collectedAt: now } };
+    try {
+      await writePriceCorroborationObservations(db, [observation], now);
+      const wire = JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(PRICE_CORROBORATION_OBSERVATIONS_KEY)?.value))[0];
+      expect(wire).toEqual({ ...observation, observedAt: now, observedAtMode: "local_fetch" });
+      for (const age of [60, 360, 899]) {
+        expect((await loadPriceCorroborationObservations(db, now + age)).byId.get(observation.id)).toEqual([observation]);
+      }
+      expect((await loadPriceCorroborationObservations(db, now + 900)).byId.size).toBe(0);
+      for (const invalid of [{ ...wire, observedAt: now + 1 }, { ...wire, observedAtMode: "upstream" }, { ...wire, target: "" }]) {
+        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(JSON.stringify([invalid]), PRICE_CORROBORATION_OBSERVATIONS_KEY);
+        expect((await loadPriceCorroborationObservations(db, now + 60)).summary.discarded.unknownTime).toBe(1);
+      }
+    } finally { sqlite.close(); }
+  });
+
   it("runs only for the :09 hourly status-check invocation", () => {
     expect(isPriceCorroborationSlot(1_800_000_540)).toBe(true);
     expect(isPriceCorroborationSlot(1_800_000_000)).toBe(false);
@@ -174,10 +198,13 @@ describe("hourly price corroboration", () => {
         agreeSources: ["coingecko", "defillama-list"],
       }),
       makePeggedAsset({ id: "fallback", price: null }),
+      makePeggedAsset({ id: "display-only", price: null }),
     ];
     const fallbackProbes = new Map<string, PeggedAsset>([
       ["primary", makePeggedAsset({ id: "primary", price: 1.0002, priceSource: "defillama-contract", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 })],
       ["fallback", makePeggedAsset({ id: "fallback", price: 0.999, priceSource: "coinmarketcap", priceConfidence: "fallback", priceObservedAt: 1_800_000_000 })],
+      ["display-only", makePeggedAsset({ id: "display-only", price: 0.9993, priceSource: "dexscreener-exact",
+        priceConfidence: "fallback", priceObservedAt: null, priceObservedAtMode: "unknown" })],
     ]);
     const entries = buildPriceCorroborationCacheEntries({
       publishedAssets: publicationRows,

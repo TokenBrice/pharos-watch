@@ -8,9 +8,11 @@ export interface CurvePoolConfig {
   inputDecimals: number;
   outputDecimals: number;
   chain: string;
+  terminalQuoteAsset: "USDC";
+  sellGuard?: { minBalanceTokens: number; smallQuoteTokens: number; impactQuoteTokens: number };
   /** Use get_dy_underlying selector for metapools (e.g., LUSD/3Crv) */
   useUnderlying?: boolean;
-  /** Two-hop pricing: raw price is in intermediate token, multiply by via-token's USD price */
+  /** Hop ratio in the intermediate token, multiplied by that token's resolved USD price. */
   hop?: { viaStablecoinId: string };
   /** Explicit route metadata for diagnostics and wrapper/chained-hop opt-in */
   routeType?: CurveRouteType;
@@ -32,6 +34,7 @@ function priceRoute(
     inputDecimals: 6,
     outputDecimals: 18,
     chain: "ethereum",
+    terminalQuoteAsset: "USDC",
     ...overrides,
   };
 }
@@ -120,6 +123,7 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // pmUSD/crvUSD (factory-stable-ng, ~$19.4M TVL)
   priceRoute("pmusd-precious-metals", "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb", {
     inputDecimals: 18, hop: { viaStablecoinId: "crvusd-curve" }, routeType: "one-hop",
+    sellGuard: { minBalanceTokens: 100_000, smallQuoteTokens: 1_000, impactQuoteTokens: 100_000 },
   }),
   // crvUSD/frxUSD (factory-stable-ng, ~$13.1M TVL)
   priceRoute("frxusd-frax", "0x13e12BB0E6A2f1A3d6901a59a9d585e89A6243e1", {

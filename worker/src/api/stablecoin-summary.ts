@@ -5,12 +5,7 @@ import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import {
-  getCirculatingRawOrNull,
-  getPrevDayRawOrNull,
-  getPrevMonthRawOrNull,
-  getPrevWeekRawOrNull,
-} from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { isFiniteNumber } from "@shared/lib/type-guards";
 
 function supplyDelta(current: number | null, previous: number | null): number | null {
@@ -34,7 +29,9 @@ export const handleStablecoinSummary = async (
 
   // A cached replay keeps its original quote clock; age the freshness verdict
   // on the oldest contributing observation, never the sync write generation.
-  const priceObservedAt = isObservedPrice(coin) ? coin.priceObservedAt ?? coin.priceUpdatedAt ?? null : null;
+  const priceObservedAt = isObservedPrice(coin)
+    ? (coin.priceObservedAt === undefined ? coin.priceUpdatedAt ?? null : coin.priceObservedAt)
+    : null;
   const freshnessAsOf = priceObservedAt == null
     ? stablecoinsCache.updatedAt
     : Math.min(stablecoinsCache.updatedAt, priceObservedAt);
@@ -42,9 +39,9 @@ export const handleStablecoinSummary = async (
   // A present coin whose current buckets are absent/empty/invalid has unavailable current
   // supply (null + reason), never a measured 0 that would fabricate a -100% delta.
   const currentSupplyUsd = getCirculatingRawOrNull(coin);
-  const prevDaySupplyUsd = getPrevDayRawOrNull(coin);
-  const prevWeekSupplyUsd = getPrevWeekRawOrNull(coin);
-  const prevMonthSupplyUsd = getPrevMonthRawOrNull(coin);
+  const prevDaySupplyUsd = getUsdMarketCapBaselineOrNull(coin, "day");
+  const prevWeekSupplyUsd = getUsdMarketCapBaselineOrNull(coin, "week");
+  const prevMonthSupplyUsd = getUsdMarketCapBaselineOrNull(coin, "month");
 
   return jsonResponse({
     id: coin.id,

@@ -1,6 +1,8 @@
+import { readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { logCronRun } from "../../lib/cron-logger";
 import { loadProducerFreshnessFacts } from "../../lib/status/freshness-oracle";
 import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
@@ -255,6 +257,53 @@ describe("snapshotSupply", () => {
     const result = await snapshotSupply(db);
     // Should insert 2 rows (IDs "usdt-tether" and "usdc-circle" are tracked, "cash-stabl-fi" is not)
     expect(result.itemCount).toBe(2);
+  });
+
+  it("reads back stock observed just before the midnight snapshot, subject to the consumption cutoff", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const day = Math.floor(Date.now() / 86_400_000) * 86_400;
+      const now = day + 120;
+      const observedAt = day - 30;
+      const id = "usdt-tether";
+      sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES ('stablecoins',?,?)")
+        .run(JSON.stringify({ peggedAssets: [makeSnapshotAsset({ id, supplySource: "defillama", supplyObservedAt: observedAt,
+          circulating: { peggedUSD: 100.1 }, circulatingNative: 100, valuationPriceUsd: 1.001 })] }), now);
+      await snapshotSupply(db, undefined, { nowSec: now, requiredActiveIds: [id], snapshotEligibleIds: [id] });
+      const row = sqlite.prepare("SELECT * FROM supply_history WHERE stablecoin_id = ?").get(id) as unknown as NativeSupplyHistoryRow;
+      expect(readNativeSupplyCheckpoint(row, now)).toEqual({ quantity: 100, observedAt });
+      expect(readNativeSupplyCheckpoint(row, observedAt - 1)).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("admits the program row before cutover and wrapper stock only after cutover", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const nextDay = nowSec + 86_400;
+    const id = "kau-kinesis";
+    const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    const write = async (at: number, supplySource: string, cap: number, native: number) => {
+      putCache.run("stablecoins", JSON.stringify({ peggedAssets: [
+        makeSnapshotAsset({ id, symbol: "KAU", supplySource, supplyObservedAt: at - 30,
+          circulating: { peggedGOLD: cap }, circulatingNative: native }),
+      ] }), at);
+      return snapshotSupply(db, undefined, { nowSec: at, requiredActiveIds: [id], snapshotEligibleIds: [id] });
+    };
+    const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive");
+    try {
+      expect((await write(nowSec, "onchain-total-supply", 100, 1)).itemCount).toBe(0);
+      expect((await write(nowSec, "coingecko-fallback", 1_000, 10)).itemCount).toBe(1);
+      cutover.mockImplementation((assetId, clock) => assetId === id && clock >= nextDay);
+      expect((await write(nextDay, "coingecko-fallback", 1_000, 10)).itemCount).toBe(0);
+      expect((await write(nextDay, "onchain-total-supply", 100, 1)).itemCount).toBe(1);
+      expect(sqlite.prepare("SELECT circulating_usd, circulating_native FROM supply_history ORDER BY snapshot_date").all())
+        .toEqual([{ circulating_usd: 1_000, circulating_native: null }, { circulating_usd: 100, circulating_native: 1 }]);
+    } finally {
+      cutover.mockRestore();
+      sqlite.close();
+    }
   });
 
   it("writes observed rows and reports restored-only required assets as skipped", async () => {
@@ -693,6 +742,7 @@ describe("snapshotSupply", () => {
         makeSnapshotAsset({
           id: "usdt-tether", price: 1.0002, priceSource: "binance",
           priceObservedAt: nowSec - 300, priceObservedAtMode: "upstream",
+          circulatingNative: 100, supplyObservedAt: nowSec - 300, valuationPriceUsd: 1, valuationObservedAtSec: nowSec - 600,
         }),
         // A nominal par reference is not a price observation.
         makeSnapshotAsset({
@@ -708,10 +758,12 @@ describe("snapshotSupply", () => {
       });
 
       expect(sqlite.prepare(
-        "SELECT stablecoin_id, circulating_usd, price, price_observed_at FROM supply_history ORDER BY stablecoin_id",
+        "SELECT stablecoin_id, circulating_usd, price, price_observed_at, circulating_native, valuation_price_usd, valuation_observed_at_sec FROM supply_history ORDER BY stablecoin_id",
       ).all()).toEqual([
-        { stablecoin_id: "usdc-circle", circulating_usd: 50, price: null, price_observed_at: null },
-        { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1.0002, price_observed_at: nowSec - 300 },
+        { stablecoin_id: "usdc-circle", circulating_usd: 50, price: null, price_observed_at: null,
+          circulating_native: null, valuation_price_usd: null, valuation_observed_at_sec: null },
+        { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1.0002, price_observed_at: nowSec - 300,
+          circulating_native: 100, valuation_price_usd: 1, valuation_observed_at_sec: nowSec - 600 },
       ]);
     } finally {
       sqlite.close();

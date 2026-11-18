@@ -12,6 +12,8 @@ import {
 import { enrichMissingPrices, type PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { runCmcPass } from "../sync-stablecoins/enrich-prices-cmc-pass";
 import { runJupiterPass } from "../sync-stablecoins/enrich-prices-jupiter-pass";
+import { SOLANA_MINT_BY_ID } from "../sync-stablecoins/enrich-prices-pass-common";
+import { runShortLivedPriceRefresh } from "../sync-stablecoins/price-short-lived-refresh";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
@@ -1346,24 +1348,75 @@ function makeMissingUsdg(): PeggedAsset {
 
 const USDG_SOLANA_MINT = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
 
-function jupiterRoutes(currentSlot: number, quote: Readonly<Record<string, unknown>>) {
+async function solanaObservationResponse(request: Request, currentSlot: number, blockTime: number | null) {
+  const body = await request.json() as { method: string };
+  return Response.json(body.method === "getBlockTime" ? { result: blockTime } : solanaSlotResponse(currentSlot));
+}
+
+function jupiterRoutes(
+  currentSlot: number,
+  quote: Readonly<Record<string, unknown>>,
+  blockTime: number | null = Math.floor(Date.now() / 1000) - 10,
+) {
   return [
-    { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+    { match: "api.mainnet-beta.solana.com", respond: (request: Request) => solanaObservationResponse(request, currentSlot, blockTime) },
     { match: "api.jup.ag/price/v3", body: { [USDG_SOLANA_MINT]: quote } },
   ];
 }
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
+  it.each([true, false])("accounts for a half-open Jupiter probe on budget exhaustion (batch completed: %s)", async (completed) => {
+    const now = 1_800_000_000;
+    const head = 418_913_760;
+    const ids = ["usdg-paxos", "ausd-agora", "jupusd-jupiter", "usdk-kast", "frxusd-frax",
+      "usdf-flipcash", "squsd-squads", "xo-exodus", "usdu-unitas", "fdusd-first-digital"];
+    const assets = ids.map((id) => makePeggedAsset({ id, price: null, pegType: "peggedUSD" }));
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    try {
+      const circuitKey = `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`;
+      const db = makeEnrichPricesDb([{
+        match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [circuitKey], rows: [],
+        first: { value: JSON.stringify({ state: "half-open", consecutiveFailures: 3,
+          lastFailureAt: now - 60, lastSuccessAt: null, openedAt: now - 60 }), updated_at: now - 60 },
+        delayMs: completed ? 0 : 18_000,
+      }]);
+      const fetchSpy = mockFetch([
+        completed ? { match: "api.jup.ag/price/v3", body: Object.fromEntries(ids.map((id, index) => [
+          SOLANA_MINT_BY_ID.get(id)!, { usdPrice: 1, decimals: 6, blockId: head - index },
+        ])) } : { match: "api.jup.ag/price/v3", respond: () => ({ stall: true }) },
+        { match: "api.mainnet-beta.solana.com", matchBody: '"getSlot"', body: solanaSlotResponse(head) },
+        { match: "api.mainnet-beta.solana.com", matchJson: { jsonrpc: "2.0", id: 1, method: "getBlockTime", params: [head] },
+          body: { result: now - 10 } },
+        { match: "api.mainnet-beta.solana.com", matchBody: '"getBlockTime"', respond: () => ({ stall: true }) },
+      ]);
+      const refresh = runShortLivedPriceRefresh({ assets, db });
+      await vi.advanceTimersByTimeAsync(21_000);
+      const result = await refresh;
+      expect(result.jupiterRefresh).toMatchObject({ resolved: Number(completed), timedOut: false, failedPasses: ["jupiter-read-budget-exhausted"] });
+      expect(result.observations).toEqual(completed ? [{ id: ids[0], source: "jupiter", price: 1,
+        observedAt: now - 10, observedAtMode: "upstream" }] : []);
+      expect(fetchSpy.getHistory().filter(({ body }) => body?.includes('"getBlockTime"'))).toHaveLength(completed ? 8 : 0);
+      const outcomes = db.getHistory().filter(({ sql, binds }) => sql.includes("INSERT INTO cache") && binds[0] === circuitKey);
+      expect(outcomes.map(({ binds }) => JSON.parse(String(binds[1])))).toEqual(completed ? [expect.objectContaining({
+        state: "closed", consecutiveFailures: 0, lastSuccessAt: now + 20,
+      })] : []);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each([false, true])("uses configured Solana references with bounded public fallback (keyed failure: %s)", async (keyedFailure) => {
     const currentSlot = 418_913_760;
     const assets = [makePeggedAsset({ id: "usdg-paxos", symbol: "USDG", price: 0 })];
     const chainRpcs = buildChainRpcs("test-alchemy-secret", "test-drpc-secret");
     const fetchSpy = mockFetch([
       { match: "solana-mainnet.g.alchemy.com/v2/", matchHeaders: { Authorization: "Bearer test-alchemy-secret" },
-        status: keyedFailure ? 503 : 200, body: keyedFailure ? "test-alchemy-secret" : solanaSlotResponse(currentSlot) },
+        respond: (request) => keyedFailure ? new Response("test-alchemy-secret", { status: 503 })
+          : solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       { match: "lb.drpc.org/ogrpc", respond: () => new Response("invalid JSON test-drpc-secret") },
-      { match: "solana-rpc.publicnode.com", body: solanaSlotResponse(currentSlot) },
+      { match: "solana-rpc.publicnode.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       { match: "api.jup.ag/price/v3", body: {
         "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
           usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, liquidity: 100_000,
@@ -1400,7 +1453,7 @@ describe("enrichMissingPrices", () => {
       }) : makeMissingUsdg();
       const quote = { usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, ...liquidity };
       mockFetch(_label === "nonfinite" ? [
-        { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+        { match: "api.mainnet-beta.solana.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
         { match: "api.jup.ag/price/v3", respond: () => new Response(
           `{"${USDG_SOLANA_MINT}":{"usdPrice":1.0002,"decimals":6,"blockId":${currentSlot - 20},"liquidity":1e999}}`,
           { headers: { "Content-Type": "application/json" } },
@@ -1425,7 +1478,7 @@ describe("enrichMissingPrices", () => {
 
     const fetchSpy = mockFetch([
       { match: "api.mainnet-beta.solana.com", status: 403, body: "blocked" },
-      { match: "api.mainnet.solana.com", body: solanaSlotResponse(currentSlot) },
+      { match: "api.mainnet.solana.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       {
         match: "api.jup.ag/price/v3",
         body: {
@@ -1637,6 +1690,31 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0);
   });
 
+  it.each([[900, true], [7_200, false], [null, false], [-1, false]] as const)(
+    "requires wall-clock evidence even when Jupiter matches a stalled Solana head (age %s)", async (age, accepted) => {
+      const now = 1_800_000_000;
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(now * 1000);
+      try {
+        const slot = 418_913_760;
+        const blockTime = age == null ? null : now - age;
+        const asset = makeMissingUsdg();
+        const fetchSpy = mockFetch(jupiterRoutes(slot, { usdPrice: 1.0002, decimals: 6, blockId: slot }, blockTime));
+        const result = await runJupiterPass([asset], undefined, undefined);
+        expect(result.resolved).toBe(accepted ? 1 : 0);
+        const read = fetchSpy.getHistory().find(({ body }) => body?.includes('"getBlockTime"'));
+        expect(JSON.parse(read!.body!)).toMatchObject({ method: "getBlockTime", params: [slot] });
+        if (accepted) {
+          expect(asset).toMatchObject({ priceObservedAt: blockTime, priceUpdatedAt: blockTime, priceObservedAtMode: "upstream" });
+        } else {
+          expect(asset.price).toBe(0);
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("records a Jupiter breaker failure when an OK response has a malformed V3 payload", async () => {
     const db = makeEnrichPricesDb([
       {
@@ -1733,7 +1811,7 @@ describe("enrichMissingPrices", () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [makeMissingUsdg()];
     mockFetch([
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      { match: "api.mainnet-beta.solana.com", respond: (request) => solanaObservationResponse(request, currentSlot, Math.floor(Date.now() / 1000) - 10) },
       { match: "api.jup.ag/price/v3", body: {
         [USDG_SOLANA_MINT]: { usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 10, liquidity: 100_000 },
         BadMint111111111111111111111111111111111111: { usdPrice: 1, decimals: null, blockId: 1 },

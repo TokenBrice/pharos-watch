@@ -1,9 +1,11 @@
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/price";
-import type { ChainPartitionProvenance, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/supply";
+import type { ChainPartitionProvenance, StablecoinData, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyRestoreMode, SupplyUnavailableReason } from "@shared/types/supply";
+import type { SupplyChangeBaselines } from "@shared/lib/supply";
 import type { PriceDerivation } from "@shared/types/price";
 import type { DefiLlamaListFillDefaultQuote } from "@shared/lib/pricing-source-policy";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
+import type { FiatPremiumEvidence } from "../../lib/price-publish-policy";
 import { stampPriceMetadata } from "./shared";
 
 export interface PriceValidationStats {
@@ -14,7 +16,7 @@ export interface PriceValidationStats {
   low: number;
 }
 
-export interface PrimaryPriceResult {
+export interface PrimaryPriceResult extends Pick<StablecoinData, "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys"> {
   price: number;
   source: string;
   selectedSource?: string;
@@ -26,6 +28,7 @@ export interface PrimaryPriceResult {
   agreeSources: string[];
   disagreeSources?: string[];
   allPrices?: Record<string, number>;
+  fiatPremiumEvidence?: FiatPremiumEvidence;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
   observedAtBySource?: Record<string, number | null>;
@@ -33,7 +36,8 @@ export interface PrimaryPriceResult {
   priceSourceConfidenceProfile?: PriceSourceConfidenceProfile | null;
 }
 
-export interface PeggedAsset {
+export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec" |
+  "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys" | "commodityEntitlement" | "parityQuoteUnit"> {
   id: string;
   name: string;
   symbol: string;
@@ -60,6 +64,7 @@ export interface PeggedAsset {
   priceSelectedSource?: string | null;
   supplySource?: string;
   supplyObservedAt?: number | null;
+  supplyChangeBaselines?: SupplyChangeBaselines;
   supplyRestored?: boolean;
   /** Set only by the DefiLlama-outage fallback; routine main-path carries stay unmarked. */
   supplyRestoreMode?: SupplyRestoreMode;
@@ -94,11 +99,12 @@ export function applyResolvedPrice(
   price: number,
   source: string,
   confidence: PriceConfidence,
-  updatedAtSec = Math.floor(Date.now() / 1000),
+  updatedAtSec: number | null = Math.floor(Date.now() / 1000),
   observedAtMode: PriceObservedAtMode = "local_fetch",
 ): void {
   asset.price = price;
-  stampPriceMetadata(asset, source, confidence, updatedAtSec, observedAtMode, [source], undefined, updatedAtSec, source);
+  const syncedAt = updatedAtSec ?? Math.floor(Date.now() / 1000);
+  stampPriceMetadata(asset, source, confidence, updatedAtSec, observedAtMode, [source], undefined, syncedAt, source);
 }
 
 // DefiLlama returns the literal string "wrong" as the geckoId for assets whose

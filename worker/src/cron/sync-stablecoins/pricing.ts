@@ -8,7 +8,7 @@ import {
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
-import { clearPriceMetadata, stampPriceMetadata } from "./shared";
+import { assetPriceObservationClock, clearPriceMetadata, stampPriceMetadata, validateAssetPricingSourceFreshness } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { mentoBrokerProvider } from "../../lib/authoritative-price-sources/mento-broker";
@@ -16,9 +16,10 @@ import { getProtocolParPriceOverride, protocolParProvider } from "../../lib/auth
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { NominalPriceReference } from "@shared/types/price";
-import type { PriceCacheEntry } from "../../lib/price-cache";
+import { priceCacheObservationClock, type PriceCacheEntry } from "../../lib/price-cache";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import {
+  type FiatPremiumEvidence,
   type TrustedPriceReference,
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
@@ -32,7 +33,6 @@ import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
 } from "../../lib/pricing-provider-diagnostics";
-import { validateCompositePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 
 const MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS = 512;
 
@@ -149,7 +149,7 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
     ) {
       dlListPrices.set(asset.id, {
         price: asset.price,
-        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+        observedAt: assetPriceObservationClock(asset),
         observedAtMode: asset.priceObservedAtMode ?? "unknown",
       });
     }
@@ -159,12 +159,13 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
 
 function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): void {
   const source = asset.priceSource || "defillama";
+  const observedAt = assetPriceObservationClock(asset);
   // Carried-forward prices already needed an original timestamp in the restore
   // helpers; `supplyRestored` marks carried supply, so an undated current-run
   // list quote on a carried-supply row keeps its registry semantics here.
-  if (!validateCompositePricingSourceFreshness({
+  if (!validateAssetPricingSourceFreshness(asset.id, {
     source,
-    observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+    observedAt,
     observedAtMode: asset.priceObservedAtMode,
     nowSec: syncStartSec,
   }).accepted) {
@@ -175,7 +176,7 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
     asset,
     source,
     asset.priceConfidence === "fallback" || source === "coingecko-low-volume" ? "fallback" : "single-source",
-    asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+    observedAt,
     asset.priceObservedAtMode ?? null,
     [source],
     [source],
@@ -187,12 +188,14 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
 
 interface ApplyPrimaryCandidateInput {
   asset: PeggedAsset;
-  candidate: PrimaryPriceResult;
+  candidate: PrimaryPriceWithFiatPremiumEvidence;
   previousTrustedPrice: PreviousTrustedPrice | null;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
 }
+
+export type PrimaryPriceWithFiatPremiumEvidence = PrimaryPriceResult;
 
 function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null {
   const {
@@ -210,6 +213,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     confidence: candidate.confidence,
     agreeSources: candidate.agreeSources,
     candidatePrices: candidate.allPrices,
+    fiatPremiumEvidence: candidate.fiatPremiumEvidence,
     validationContext,
     validationReferences,
     previousTrustedPrice,
@@ -233,6 +237,9 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     selectedSource: candidate.selectedSource ?? candidate.source,
     sourceConfidenceProfile: candidate.priceSourceConfidenceProfile ?? null,
   });
+  if (candidate.priceQuoteBasis) asset.priceQuoteBasis = candidate.priceQuoteBasis;
+  if (candidate.upstreamKeys) asset.upstreamKeys = candidate.upstreamKeys;
+  if (candidate.pricePoolKeys) asset.pricePoolKeys = candidate.pricePoolKeys;
   return null;
 }
 
@@ -242,7 +249,7 @@ function hasCurrentAssetPrice(asset: PeggedAsset): boolean {
 
 export function getPrimaryCandidatePricesForCurrentAsset(
   asset: PeggedAsset,
-  primaryPriceResults?: Map<string, PrimaryPriceResult>,
+  primaryPriceResults?: ReadonlyMap<string, PrimaryPriceResult>,
 ): Record<string, number> | undefined {
   if (!primaryPriceResults || !hasCurrentAssetPrice(asset)) return undefined;
 
@@ -278,6 +285,14 @@ export function getPostEnrichmentCandidatePricesForCurrentAsset(
   return getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults);
 }
 
+export function getFiatPremiumEvidenceForCurrentAsset(
+  asset: PeggedAsset,
+  primaryPriceResults?: ReadonlyMap<string, PrimaryPriceWithFiatPremiumEvidence>,
+): FiatPremiumEvidence | undefined {
+  if (!getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults)) return undefined;
+  return primaryPriceResults?.get(asset.id)?.fiatPremiumEvidence;
+}
+
 export function buildPreviousTrustedPriceLookup(
   previousAssetsById: Map<string, PeggedAsset>,
   nowSec: number,
@@ -293,7 +308,6 @@ export function buildPreviousTrustedPriceLookup(
       confidence: PeggedAsset["priceConfidence"] | undefined;
       observedAt: number | null | undefined;
       observedAtMode?: PeggedAsset["priceObservedAtMode"] | undefined;
-      updatedAt: number | null | undefined;
       agreeSources: string[] | null | undefined;
     },
   ) => {
@@ -302,9 +316,9 @@ export function buildPreviousTrustedPriceLookup(
       price: candidate.price,
       priceSource: candidate.source ?? null,
       priceConfidence: candidate.confidence ?? null,
-      priceObservedAt: candidate.observedAt ?? candidate.updatedAt ?? null,
+      priceObservedAt: candidate.observedAt ?? null,
       priceObservedAtMode: candidate.observedAtMode ?? null,
-      priceUpdatedAt: candidate.updatedAt ?? candidate.observedAt ?? null,
+      priceUpdatedAt: candidate.observedAt ?? null,
       agreeSources: candidate.agreeSources ?? [],
     }, nowSec) !== "authoritative") {
       return;
@@ -314,7 +328,7 @@ export function buildPreviousTrustedPriceLookup(
       return;
     }
 
-    const nextObservedAt = candidate.observedAt ?? candidate.updatedAt ?? null;
+    const nextObservedAt = candidate.observedAt ?? null;
     const existingObservedAt = lookup.get(assetId)?.observedAt ?? null;
     if (
       existingObservedAt != null &&
@@ -339,9 +353,8 @@ export function buildPreviousTrustedPriceLookup(
       price: asset.price,
       source: asset.priceSource ?? null,
       confidence: asset.priceConfidence ?? null,
-      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+      observedAt: assetPriceObservationClock(asset),
       observedAtMode: asset.priceObservedAtMode ?? null,
-      updatedAt: asset.priceUpdatedAt ?? asset.priceObservedAt ?? null,
       agreeSources: asset.agreeSources ?? [],
     });
   }
@@ -352,9 +365,8 @@ export function buildPreviousTrustedPriceLookup(
         price: cached.price,
         source: cached.source ?? null,
         confidence: cached.confidence ?? null,
-        observedAt: cached.observedAt ?? cached.updatedAt,
+        observedAt: priceCacheObservationClock(cached),
         observedAtMode: cached.observedAtMode ?? null,
-        updatedAt: cached.updatedAt,
         agreeSources: cached.agreeSources ?? [],
       });
     }
@@ -385,6 +397,7 @@ export function prevalidatePrices(input: {
     const decision = validatePublishedAssetPrice({
       asset,
       candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
+      fiatPremiumEvidence: getFiatPremiumEvidenceForCurrentAsset(asset, primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,

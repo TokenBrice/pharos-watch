@@ -8,6 +8,7 @@ import { batchExecute } from "./d1-primitives";
 import type { NativePegQuote } from "./native-peg-quotes";
 
 export const NATIVE_EVENT_QUOTE_CACHE_PREFIX = "depeg-native-quote:";
+const INDICATIVE_NATIVE_QUOTE_PREFIX = "depeg-native-indicative:v1:";
 
 export function decodeNativeEventQuote(value: string | null): PersistedNativePegQuote | null {
   if (value == null) return null;
@@ -38,22 +39,29 @@ export async function persistActiveNativeEventQuotes(
     if (!isNativePegEvent(event)) continue;
     const quote = quotes.get(event.stablecoin_id);
     if (!quote || quote.stablecoinId !== event.stablecoin_id ||
-        normalizePegType(event.peg_type) !== normalizePegType(`pegged${quote.pegCurrency}`)) continue;
+        normalizePegType(event.peg_type) !== normalizePegType(`pegged${quote.pegCurrency}`) ||
+        quote.vsCurrency?.toUpperCase() !== quote.pegCurrency) continue;
     const parsed = PersistedNativePegQuoteSchema.safeParse({
-      value: quote.price, observedAt: quote.updatedAt, source: "coingecko",
+      value: quote.price, observedAt: quote.updatedAt, source: "coingecko", derivation: quote.derivation,
     });
     if (!parsed.success || parsed.data.observedAt > now ||
         now - parsed.data.observedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
+    // A rolled-back Worker reads the unversioned key as a direct market trade.
+    const derivation = parsed.data.derivation;
+    const traded = derivation?.kind === "traded-pair" && derivation.lineage.venue && derivation.lineage.pair;
+    const prefix = traded ? NATIVE_EVENT_QUOTE_CACHE_PREFIX : INDICATIVE_NATIVE_QUOTE_PREFIX;
     statements.push(prepareCacheUpsert(db, {
-      key: `${NATIVE_EVENT_QUOTE_CACHE_PREFIX}${event.id}`,
+      key: `${prefix}${event.id}`,
       value: JSON.stringify(parsed.data),
       updatedAt: parsed.data.observedAt,
     }, "if-newer"));
   }
   // Event-specific quotes are live inputs, not a historical archive.
-  statements.push(db.prepare(
-    `DELETE FROM cache WHERE key GLOB ?
-     AND key NOT IN (SELECT ? || id FROM depeg_events WHERE ended_at IS NULL)`,
-  ).bind(`${NATIVE_EVENT_QUOTE_CACHE_PREFIX}*`, NATIVE_EVENT_QUOTE_CACHE_PREFIX));
+  for (const prefix of [NATIVE_EVENT_QUOTE_CACHE_PREFIX, INDICATIVE_NATIVE_QUOTE_PREFIX]) {
+    statements.push(db.prepare(
+      `DELETE FROM cache WHERE key GLOB ?
+       AND key NOT IN (SELECT ? || id FROM depeg_events WHERE ended_at IS NULL)`,
+    ).bind(`${prefix}*`, prefix));
+  }
   await batchExecute(db, statements, { signal });
 }

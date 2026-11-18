@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import type { MockRegistryStablecoin } from "../../../../test-helpers/cron/mock-registry";
+import * as evmRpc from "../../../../lib/evm-rpc";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import ftusd from "@shared/data/stablecoins/coins/ftusd-flying-tulip.json";
 import fiusd from "@shared/data/stablecoins/coins/fiusd-sygnum.json";
@@ -58,7 +59,15 @@ vi.mock("../../../../lib/chain-observation", () => ({
   fetchSolanaTokenSupply: () => probeTrackedTokenSupplyMock(undefined, { kind: "onchain-solana" }),
 }));
 
-vi.mock("../usdy-aptos-supply", () => ({ fetchAptosSupply: async () => 1_000_000n }));
+vi.mock("../usdy-aptos-supply", () => ({
+  fetchAptosSupply: async () => ({ rawSupply: 1_000_000n, observedAt: Math.floor(Date.now() / 1000) }),
+}));
+vi.mock("../../../../lib/native-token-supply", () => ({
+  observeSolanaTokenSupply: async () => {
+    const rawSupply = await probeTrackedTokenSupplyMock(undefined, { kind: "onchain-solana" });
+    return rawSupply == null ? null : { rawSupply, slot: 100, observedAt: Math.floor(Date.now() / 1000) };
+  },
+}));
 
 vi.mock("../../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
@@ -119,6 +128,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
   beforeEach(() => {
     nowSec = Math.floor(Date.now() / 1000);
     observedAt = nowSec - 30;
+    vi.spyOn(evmRpc, "fetchEvmBlockNumber").mockResolvedValue(100);
+    vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue({ number: 100, hash: `0x${"1".repeat(64)}`, timestamp: observedAt });
+    vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (chain) => probeTrackedTokenSupplyMock(undefined, { chain }));
     fetchWithRetryMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
     fetchErc20TotalSupplyMock.mockReset();
@@ -136,6 +148,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       circulating: { peggedUSD: 8_737_126.658 },
       price: null,
       supplySource: "onchain-circulating-supply", supplyObservedAt: observedAt,
+      chains: ["Hive"],
       circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
     });
     expect(fetchHiveHbdProtocolSupplyMock).toHaveBeenCalledWith(hbd.liveReservesConfig, expect.any(AbortSignal));
@@ -192,7 +205,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
   it("publishes USDY from its configured supplemental source when the DefiLlama list omits it", async () => {
     const marketCap = 2_356_848_686.3214035;
-    fetchWithRetryMock.mockImplementationOnce(emptyPrices);
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {
+      "coingecko:ondo-us-dollar-yield": { price: 1.16, timestamp: nowSec - 60 },
+    } }));
 
     const result = await fetchFiatCoinGeckoTokens({
       "ondo-us-dollar-yield": {
@@ -204,13 +219,16 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
     expect(result.find((asset) => asset.id === "usdy-ondo-finance")).toMatchObject({
       id: "usdy-ondo-finance",
-      price: 1.15,
-      priceSource: "coingecko",
-      priceObservedAt: nowSec,
+      price: 1.16,
+      priceSource: "coingecko-mirror",
+      priceObservedAt: nowSec - 60,
       priceObservedAtMode: "upstream",
       supplySource: "coingecko-fallback",
       supplyObservedAt: nowSec,
       circulating: { peggedUSD: marketCap },
+      circulatingNative: marketCap / 1.15,
+      valuationPriceUsd: 1.15,
+      valuationObservedAtSec: nowSec,
       chainCirculating: {},
     });
     // The shared fixture still probes unpriced plain-par ftUSD, never USDY.
@@ -307,7 +325,14 @@ describe("fetchFiatCoinGeckoTokens", () => {
       circulating: {},
       chainCirculating: Object.fromEntries(meta.contracts.map(c => [CHAIN_META[c.chain].name, { chainId: c.chain, current: null }])),
     }));
-    expect(probeTrackedTokenSupplyMock.mock.calls.some(([probe]) => probe?.id === meta.id)).toBe(true);
+    if (meta.id === buidl.id) {
+      expect(evmRpc.fetchEvmUint256AtBlock).toHaveBeenCalledWith(
+        "ethereum", buidl.contracts[0].address, expect.any(String), 100,
+        expect.objectContaining({ stateBlockHash: `0x${"1".repeat(64)}` }),
+      );
+    } else {
+      expect(probeTrackedTokenSupplyMock.mock.calls.some(([probe]) => probe?.id === meta.id)).toBe(true);
+    }
   });
 
   it("does not invent USDY supply or par when its current market observations are unavailable", async () => {
@@ -533,7 +558,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
         chainCirculating: { Ethereum: { current: 3_120_000, chainId: "ethereum" } },
       });
       expect(susds?.priceSource).toBeUndefined();
-      expect(susds?.supplyObservedAt).toBeGreaterThan(Math.floor(Date.now() / 1000) - 10);
+      expect(susds?.supplyObservedAt).toBe(observedAt);
     } else {
       expect(result).toEqual([
         expect.objectContaining({

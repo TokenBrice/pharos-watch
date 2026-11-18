@@ -41,6 +41,7 @@ function makeDetailHelpers(
     resolveTokensWithSupplyHistoryFallback: async (tokens) => ({ tokens: await resolveTokens(tokens), observedAt: null, fallback: false }),
     staleCacheOrError: (status, message) => new Response(message, { status }),
     trySupplyHistoryFallback: vi.fn(async () => null),
+    serveWrapperHistory: async () => Response.json({ tokens: [] }),
   };
 }
 

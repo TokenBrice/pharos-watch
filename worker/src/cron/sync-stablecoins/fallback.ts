@@ -126,6 +126,7 @@ export async function syncViaCoingeckoFallback(
   jupiterApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   dwellirNative?: DwellirNativeCapability,
+  publishFxReferenceEvidence = false,
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
@@ -155,7 +156,7 @@ export async function syncViaCoingeckoFallback(
     });
     return buildUnreadablePreviousPublicationResult(assets.length, rowsRead);
   }
-  const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
+  const { fxFallbackRates, fxReferenceObservations, detectionFxState, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",
   );
@@ -169,7 +170,8 @@ export async function syncViaCoingeckoFallback(
     syncStartSec,
     replayPriceCache,
   );
-  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById, replaySnapshot === null ? null : previousTrustedPrices);
+  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById,
+    replaySnapshot === null ? null : previousTrustedPrices, validationReferences);
   const { previousActivePriceCoverage, previousMissingGenerationsById } =
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
 
@@ -251,7 +253,9 @@ export async function syncViaCoingeckoFallback(
     signal,
     reportProgress,
     priceCacheEntries,
-    fxFallbackRates,
+    fxFallbackRates, detectionFxState,
+    fxReferenceObservations,
+    publishFxReferenceEvidence,
     coingeckoApiKey,
     providerDiagnostics: [...(enrichStats.providerDiagnostics ?? []), ...providerDiagnostics],
     metadata: {

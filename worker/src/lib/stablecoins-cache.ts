@@ -4,6 +4,22 @@ import { getCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
 import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
 
+const StablecoinsReferenceEnvelopeSchema = StablecoinListResponseSchema.pick({
+  fxReferenceObservations: true, selectedPegReferences: true, fxAdmissionCoverageGeneration: true,
+});
+
+/** A delayed publisher cannot install a companion for a superseded equal-clock cohort. */
+export function prepareStablecoinsGenerationCompanion(
+  db: D1Database, key: string, value: string, updatedAt: number, generation: string,
+): D1PreparedStatement {
+  return db.prepare(`
+    INSERT INTO cache (key, value, updated_at) SELECT ?, ?, ?
+    WHERE EXISTS (SELECT 1 FROM cache WHERE key = 'stablecoins' AND updated_at = ?
+      AND json_extract(value, '$.fxAdmissionCoverageGeneration') = ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).bind(key, value, updatedAt, updatedAt, generation);
+}
+
 // Validate critical fields only -- passthrough preserves all upstream data
 const StablecoinEntrySchema = z.object({
   id: z.string().min(1),
@@ -38,6 +54,8 @@ export interface StablecoinsCacheLoadOk {
   payload: StablecoinsCachePayload;
   updatedAt: number;
   filteredCount?: number;
+  /** Published payload validation aliases legacy clocks; capture needs their original absence. */
+  missingPriceObservedAtIds?: ReadonlySet<string>;
 }
 
 export interface StablecoinsCacheLoadDegraded {
@@ -68,6 +86,7 @@ export interface LoadStablecoinsCacheOptions {
 interface StablecoinsCacheDecodePayload {
   payload: StablecoinsCachePayload;
   filteredCount: number;
+  missingPriceObservedAtIds?: ReadonlySet<string>;
 }
 
 function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
@@ -104,14 +123,14 @@ function normalizePayload(
   parsed: unknown,
   contract: StablecoinsCacheContract,
 ):
-  | { kind: "ok"; payload: StablecoinsCachePayload; filteredCount: number }
+  | ({ kind: "ok" } & StablecoinsCacheDecodePayload)
   | { kind: "degraded"; reason: "filtered-malformed-entries"; payload: StablecoinsCachePayload; filteredCount: number }
   | { kind: "error"; reason: StablecoinsCacheFailureReason } {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return { kind: "error", reason: "invalid-payload-shape" };
   }
 
-  const obj = parsed as { peggedAssets?: unknown; fxFallbackRates?: unknown };
+  const obj = parsed as Record<string, unknown>;
   if (!Array.isArray(obj.peggedAssets)) {
     return { kind: "error", reason: "missing-pegged-assets" };
   }
@@ -121,10 +140,15 @@ function normalizePayload(
     if (!result.success) {
       return { kind: "error", reason: "published-contract-invalid" };
     }
+    const missingPriceObservedAtIds = new Set<string>();
+    for (const row of obj.peggedAssets) {
+      if (!("priceObservedAt" in row)) missingPriceObservedAtIds.add(row.id);
+    }
     return {
       kind: "ok",
       payload: result.data,
       filteredCount: 0,
+      ...(missingPriceObservedAtIds.size ? { missingPriceObservedAtIds } : {}),
     };
   }
 
@@ -133,9 +157,12 @@ function normalizePayload(
     return { kind: "error", reason: "missing-pegged-assets" };
   }
 
+  const evidence = StablecoinsReferenceEnvelopeSchema.safeParse(obj);
+  if (!evidence.success) return { kind: "error", reason: "published-contract-invalid" };
   const payload = {
     peggedAssets: validated.assets,
     fxFallbackRates: toFxFallbackRates(obj.fxFallbackRates),
+    ...evidence.data,
   };
 
   if (validated.filteredCount > 0) {
@@ -193,13 +220,8 @@ export async function loadStablecoinsCache(
       normalize: (parsed) => {
         const normalized = normalizePayload(parsed, contract);
         if (normalized.kind === "ok") {
-          return {
-            ok: true,
-            payload: {
-              payload: normalized.payload,
-              filteredCount: normalized.filteredCount,
-            },
-          };
+          const { kind: _kind, ...payload } = normalized;
+          return { ok: true, payload };
         }
         if (normalized.kind === "degraded") {
           return {
@@ -231,8 +253,7 @@ export async function loadStablecoinsCache(
 
   return {
     kind: "ok",
-    payload: decoded.payload.payload,
+    ...decoded.payload,
     updatedAt: decoded.updatedAt ?? 0,
-    filteredCount: decoded.payload.filteredCount,
   };
 }

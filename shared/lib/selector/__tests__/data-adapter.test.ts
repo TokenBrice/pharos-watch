@@ -1,7 +1,10 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { makeYieldProvenance, makeYieldRanking } from "../../../test-utils/yield-ranking-fixtures";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
-import { applyInputDrivenExclusions, hasRequiredSignals } from "../exclusions";
+import { applyInputDrivenExclusions, evaluateExclusions, hasRequiredSignals } from "../exclusions";
+import { buildClosestSurvivors } from "../output-helpers";
+import { evaluateReferenceAdmission } from "../../reference-admission";
+import { asRawDeviationBps } from "../../../types/reference-admission";
 import { selectYieldSource } from "../yield-source";
 import { makeInput } from "./fixture";
 import type * as ClientRegistry from "../../stablecoins/client-registry";
@@ -33,7 +36,7 @@ vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
     { type: "warning" as const, title: "Redemptions paused", kind: "paused" as const },
     { type: "danger" as const, title: "Chain halted" },
   ] };
-  const coins = [reviewed, unreviewed, structural, halted];
+  const coins = [reviewed, unreviewed, structural, halted, actual.CLIENT_ACTIVE_META_BY_ID.get("paxg-paxos")!];
   return {
     ...actual,
     CLIENT_TRACKED_STABLECOINS: coins,
@@ -83,7 +86,7 @@ const NOW = 1_700_000_000_000;
 
 describe("buildSelectorRows", () => {
   it("retains structural onchain eligibility without inferring institutional custody", () => {
-    const rows = [...buildSelectorRows(EMPTY_ARGS).rows.values()];
+    const rows = [...buildSelectorRows({ ...EMPTY_ARGS, pegCurrency: "USD" }).rows.values()];
     const eligibleIds = (custodyOk: "any" | "onchain-only" | "regulated-only") => rows
       .filter((row) => applyInputDrivenExclusions(row, makeInput({ custodyOk })) === null)
       .map((row) => row.id);
@@ -419,19 +422,64 @@ describe("yield ingestion", () => {
     expect(row.dewsAgeSec).toBeNull();
   });
 
-  it("does not substitute the DEX source deviation for an unread peg deviation", () => {
+  it.each([
+    { label: "missing legacy reading", raw: null, admitted: undefined, expected: null },
+    { label: "observed legacy reading", raw: 4, admitted: undefined, expected: 4 },
+    { label: "explicitly unavailable projection", raw: 4, admitted: null, expected: null },
+    { label: "observed zero projection", raw: 4, admitted: 0, expected: 0 },
+  ])("uses fixed USD without falling back to DEX or overriding the projection: $label", ({ raw, admitted, expected }) => {
     const row = buildSelectorRows({
       ...EMPTY_ARGS,
       pegCurrency: "USD",
       pegData: {
-        coins: [{ id: "usdc-circle", currentDeviationBps: null }],
+        coins: [{ id: "usdc-circle", currentDeviationBps: raw, admittedDeviationBps: admitted }],
         methodology: { version: "peg-v3" },
-      } as unknown as PegSummaryResponse,
+      } as unknown as BuildSelectorRowsArgs["pegData"],
       dexData: {
         "usdc-circle": { liquidityScore: 80, dexDeviationBps: 8 },
       } as unknown as DexLiquidityMap,
       now: NOW,
     }).rows.get("usdc-circle")!;
-    expect(row.currentDeviationBps).toBeNull();
+    expect(row.currentDeviationBps).toBe(expected);
+  });
+
+  it.each([
+    { label: "legacy reading", at: null, before: 2_000, deviation: undefined, expected: -40 },
+    { label: "closed", at: "2026-11-21T12:00:00Z", before: 2_000, deviation: -40, expected: null, notice: "Reference market closed" },
+    { label: "stale", at: "2026-11-23T12:00:00Z", before: 2_100, deviation: -40, expected: null, notice: "Reference not yet updated" },
+    { label: "admitted without a value", at: "2026-11-23T12:00:00Z", before: 2_000, deviation: null, expected: null },
+    { label: "admitted zero", at: "2026-11-23T12:00:00Z", before: 2_000, deviation: 0, expected: 0 },
+    { label: "quote predates admission", quoteOffset: -1, at: "2026-11-23T12:00:00Z", before: 2_000, deviation: -40, expected: null },
+    { label: "quote postdates admission", quoteOffset: 1, at: "2026-11-23T12:00:00Z", before: 2_000, deviation: -40, expected: null },
+    { label: "admitted fractional", at: "2026-11-23T12:00:00Z", before: 2_000, deviation: -40.25, expected: -40.25 },
+  ])("uses legacy or admitted gold deviations for the active-depeg gate: $label", ({ at, before, deviation, expected, notice, quoteOffset = 0 }) => {
+    const id = "paxg-paxos";
+    const observedAtSec = at == null ? null : Date.parse(at) / 1000;
+    const referenceAdmission = observedAtSec == null ? undefined : evaluateReferenceAdmission({
+      kind: "fallback", decisionAtSec: observedAtSec, quoteObservedAtSec: observedAtSec,
+      rawDeviationBps: asRawDeviationBps(-40), preCloseUsdPerUnit: before,
+      observation: { pegKey: "peggedGOLD", usdPerUnit: 2_100, source: "gold-api.com", cadence: "intraday", observedAtSec },
+    });
+    const row = buildSelectorRows({
+      ...EMPTY_ARGS, pegCurrency: "GOLD", now: (observedAtSec ?? NOW / 1000) + 30,
+      stablecoinsData: {
+        peggedAssets: [{ id, circulating: { peggedGOLD: 10_000_000 } }],
+      } as unknown as StablecoinListResponse,
+      pegData: { coins: [{ id, activeDepeg: true, pegScore: 95, currentDeviationBps: -40,
+        priceObservedAt: observedAtSec == null ? null : observedAtSec + quoteOffset,
+        referenceAdmission, admittedDeviationBps: deviation }] } as unknown as BuildSelectorRowsArgs["pegData"],
+    }).rows.get(id)!;
+    expect(row.currentDeviationBps).toBe(expected);
+    const input = makeInput({ pegCurrency: "GOLD", depegTolerance: "tight" });
+    const exclusion = evaluateExclusions(row, input);
+    if (expected != null) {
+      expect(exclusion).toBeNull();
+    } else {
+      expect(exclusion).toMatchObject({ reason: "active-depeg", severity: "hard" });
+      if (notice) {
+        expect(exclusion?.detail).toBe(notice);
+        expect(buildClosestSurvivors([exclusion!], [row], input, () => null)[0]?.liveReading).toBe(notice);
+      }
+    }
   });
 });

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { makeDonation as row } from "./funding.test-support";
 import {
   classifyDonorKeyDonation,
+  creditDonorKey,
   isEligibleDonor,
+  resolveDonorKeyCreditIds,
   resolveDonorKeyQualifyingStablecoin,
   sumEligibleDonationsByAddress,
   summarizeDonorKeyEligibility,
@@ -62,6 +64,28 @@ describe("donor eligibility", () => {
     totals.set(B, 10.01);
     expect(isEligibleDonor(B.toUpperCase().replace("0X", "0x"), totals, 10)).toBe(true);
     expect(isEligibleDonor("0x0000000000000000000000000000000000000000", totals, 10)).toBe(false);
+  });
+
+  it.each([
+    ["both receipts", false, false, [], [0, 1]],
+    ["resolved legacy receipt", true, true, [], [1]],
+    ["resolved legacy receipt and exact credit", true, true, ["log:1"], []],
+    ["unresolved legacy receipt", true, false, [], []],
+  ] as const)("credits %s at most once", (_label, legacyCredit, legacyAlias, exactCredits, expected) => {
+    const tx_hash = `0x${"ab".repeat(32)}`;
+    const donations = [
+      token("USDC", { tx_hash, usd_at_receipt: 6, transfer_discriminator: "log:0", ...(legacyAlias ? { legacy_credit: true } : {}) }),
+      token("DAI", { tx_hash, usd_at_receipt: 6, transfer_discriminator: "log:1" }),
+    ];
+    const credit = { chain: "ethereum", tx_hash };
+    const credits = [
+      ...(legacyCredit ? [credit] : []),
+      ...exactCredits.map((transfer_discriminator) => ({ ...credit, transfer_discriminator })),
+    ];
+    const summary = summarizeDonorKeyEligibility(A, donations, GRADES);
+    expect(summary.qualifyingUsd).toBe(12);
+    expect(creditDonorKey(summary.rows, resolveDonorKeyCreditIds(donations, credits), 1_800_000_000).newlyCounted)
+      .toEqual(expected.map((index) => donations[index]));
   });
 
   it("grants access when floating-point drift leaves an exactly-$10 sum just short", () => {

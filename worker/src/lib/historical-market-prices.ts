@@ -1,6 +1,8 @@
 import { isCoinGeckoHistoryAllowed } from "./solomon-usdv-identity";
 import { logWorkerEventArgs } from "./structured-log";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import type { QuoteDerivation } from "@shared/types/native-peg-quote";
+import { FxReferenceSourceSchema } from "@shared/types/fx-reference";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
@@ -13,6 +15,18 @@ import { rethrowIfAborted, sleepWithSignal } from "./abort";
 export interface PricePoint {
   timestamp: number;
   price: number;
+  nativeQuote?: { currency: string; derivation: QuoteDerivation };
+}
+
+export function isAdmittedHistoricalNativeQuote(point: PricePoint, currency: string): boolean {
+  const quote = point.nativeQuote;
+  if (quote?.currency.toUpperCase() !== currency.toUpperCase()) return false;
+  const { kind, lineage } = quote.derivation;
+  if (kind === "traded-pair") return Boolean(lineage.venue?.trim() && lineage.pair?.trim());
+  const clock = lineage.fxObservedAtSec;
+  return kind === "conversion" && FxReferenceSourceSchema.safeParse(lineage.fxSource).success
+    && clock != null && Number.isSafeInteger(clock) && clock > 0
+    && clock <= point.timestamp && point.timestamp - clock <= 2 * HOUR_SECONDS;
 }
 
 export type HistoricalMarketSource = "coingecko" | "coingecko-native" | "defillama";
@@ -59,6 +73,7 @@ export interface HistoricalMarketPriceSeriesResult {
 interface HistoricalMarketQuoteOptions {
   pegCurrency?: string | null;
   useNativePegQuote?: boolean;
+  requireExactUnit?: boolean;
 }
 
 interface HistoricalSourcePolicy {
@@ -94,14 +109,12 @@ function buildSeriesStats(
 }
 
 function dedupeAndSortPrices(prices: PricePoint[]): PricePoint[] {
-  const byTimestamp = new Map<number, number>();
+  const byTimestamp = new Map<number, PricePoint>();
   for (const point of prices) {
     if (!Number.isFinite(point.timestamp) || !Number.isFinite(point.price) || point.price <= 0) continue;
-    byTimestamp.set(point.timestamp, point.price);
+    byTimestamp.set(point.timestamp, point);
   }
-  return [...byTimestamp.entries()]
-    .map(([timestamp, price]) => ({ timestamp, price }))
-    .sort((left, right) => left.timestamp - right.timestamp);
+  return [...byTimestamp.values()].sort((left, right) => left.timestamp - right.timestamp);
 }
 
 /**
@@ -291,12 +304,19 @@ async function fetchCgPriceHistoryDaily(
   }
 }
 
+const MAX_INTRADAY_SAMPLE_GAP_SEC = 2 * 3600;
+
+function isIntradayPair(previous: PricePoint, next: PricePoint): boolean {
+  return next.timestamp > previous.timestamp && next.timestamp - previous.timestamp <= MAX_INTRADAY_SAMPLE_GAP_SEC;
+}
+
 export async function fetchCgPriceHistoryHourly(
   geckoId: string,
   range?: HistoricalMarketBackfillRange,
   vsCurrency = "usd",
   coingeckoApiKey: string | null = null,
   signal?: AbortSignal,
+  requireIntraday = false,
 ): Promise<PricePoint[]> {
   if (!isCoinGeckoHistoryAllowed(geckoId)) return [];
   const seen = new Map<number, number>();
@@ -311,7 +331,7 @@ export async function fetchCgPriceHistoryHourly(
   }
 
   try {
-    if (startSec < HOURLY_EPOCH) {
+    if (!requireIntraday && startSec < HOURLY_EPOCH) {
       await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
       const phaseOne = await fetchCgChartPrices(
         `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
@@ -345,12 +365,17 @@ export async function fetchCgPriceHistoryHourly(
     }
   }
 
-  if (seen.size === 0) {
+  if (seen.size === 0 && !requireIntraday) {
     return fetchCgPriceHistoryDaily(geckoId, range, vsCurrency, coingeckoApiKey, signal);
   }
 
-  return dedupeAndSortPrices(
+  const prices = dedupeAndSortPrices(
     [...seen.entries()].map(([timestamp, price]) => ({ timestamp, price })),
+  );
+  if (!requireIntraday) return prices;
+  return prices.filter((point, index) =>
+    (index > 0 && isIntradayPair(prices[index - 1]!, point)) ||
+    (index + 1 < prices.length && isIntradayPair(point, prices[index + 1]!)),
   );
 }
 
@@ -386,6 +411,7 @@ export async function fetchMarketBackfillPriceSeries(
   geckoId: string,
   options?: {
     granularity?: HistoricalMarketBackfillGranularity;
+    requireIntraday?: boolean;
     seedCoinGeckoPrices?: PricePoint[];
     range?: HistoricalMarketBackfillRange;
     quote?: HistoricalMarketQuoteOptions;
@@ -394,8 +420,11 @@ export async function fetchMarketBackfillPriceSeries(
   },
 ): Promise<HistoricalMarketPriceSeriesResult> {
   const granularity = options?.granularity ?? "hourly";
-  const nativeQuoteCurrencies = options?.quote?.useNativePegQuote
-    ? getNativePegQueryCurrencies(options?.quote?.pegCurrency ?? meta.flags.pegCurrency)
+  const pegCurrency = options?.quote?.pegCurrency ?? meta.flags.pegCurrency;
+  // Chart currency codes do not establish whether the CNY or CNH market supplied the conversion.
+  const nativeQuoteCurrencies = options?.quote?.useNativePegQuote && pegCurrency.toUpperCase() !== "CNH"
+    ? getNativePegQueryCurrencies(pegCurrency).filter((currency) =>
+        !options.quote?.requireExactUnit || currency.toUpperCase() === pegCurrency.toUpperCase())
     : [];
   const quoteMode = nativeQuoteCurrencies.length > 0 ? "native-peg" : "usd";
   let quoteCurrency = nativeQuoteCurrencies[0] ?? "usd";
@@ -419,7 +448,8 @@ export async function fetchMarketBackfillPriceSeries(
       const candidateCurrency = quoteCurrencyCandidates[index]!;
       const candidatePrices = granularity === "daily"
         ? await fetchCgPriceHistoryDaily(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null, options?.signal)
-        : await fetchCgPriceHistoryHourly(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null, options?.signal);
+        : await fetchCgPriceHistoryHourly(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null,
+          options?.signal, options?.requireIntraday);
       if (candidatePrices.length > 0 || index === quoteCurrencyCandidates.length - 1) {
         rawCgPrices = candidatePrices;
         quoteCurrency = candidateCurrency;
@@ -428,7 +458,10 @@ export async function fetchMarketBackfillPriceSeries(
       }
     }
   }
-  const cgAdjusted = applyHistoricalPolicyAdjustments(meta.id, dedupeAndSortPrices(rawCgPrices ?? []));
+  const cgAdjusted = applyHistoricalPolicyAdjustments(meta.id, dedupeAndSortPrices(rawCgPrices ?? []).map((point) =>
+    quoteMode === "native-peg" ? {
+      ...point, nativeQuote: { currency: quoteCurrency.toUpperCase(), derivation: { kind: "conversion", lineage: {} } },
+    } : point));
   const cgPrices = cgAdjusted.prices;
   diagnostics.policyAdjustments.push(...cgAdjusted.adjustments);
   diagnostics.perSourceStats.push(buildSeriesStats(primarySource, cgPrices));

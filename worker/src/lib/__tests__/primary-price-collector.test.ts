@@ -6,8 +6,6 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
     cgPrice: null,
     cgObservedAt: null,
     cgObservedAtMode: null,
-    cgTickerPrice: null,
-    cgTickerObservedAt: null,
     binancePrice: null,
     binanceObservedAt: null,
     krakenPrice: null,
@@ -32,6 +30,31 @@ const aggregate = (price: number, pools: number, tvl: number, aggregateObservedA
 });
 
 describe("buildPrimarySourceCandidates", () => {
+  const directPoolKey = "ethereum:0x0000000000000000000000000000000000000001";
+  it.each([
+    [undefined, true], [[], false], [[directPoolKey], false], [["ethereum:unknown-pool"], false],
+    [["eth:0x0000000000000000000000000000000000000002"], false],
+    [["solana:fake-pool"], false], [[`solana:${"Z".repeat(44)}`], false],
+    [["ethereum:0x0000000000000000000000000000000000000002"], true],
+    [["solana:11111111111111111111111111111112"], true],
+    [["sui:0x" + "2".repeat(64)], true], [["sui:0x2"], false],
+    [["tron:0x0000000000000000000000000000000000000002"], true],
+    [["ethereum:0x" + "ab".repeat(32)], true], [["ethereum:0x" + "0".repeat(64)], false],
+    [["ethereum:0x" + "AB".repeat(32)], false],
+  ] as const)(
+    "checks DEX aggregate pool provenance alongside Curve when supplied (%j)", (pricePoolKeys, independent) => {
+      const nowSec = 1_700_000_000;
+      const { sources } = buildPrimarySourceCandidates({ id: "gusd-gemini", symbol: "GUSD" }, makeCollected({
+        curvePrice: 1,
+        curveObservedAt: nowSec,
+        curvePricePoolKeys: [directPoolKey],
+        dexAggregateQuote: { ...aggregate(1, 2, 2_000_000), pricePoolKeys },
+      }), { nowSec });
+      const dex = sources.find(({ source }) => source === "dex-promoted");
+      expect(dex?.price).toBe(1);
+      expect(dex?.nonVotingReason).toBe(independent ? undefined : "unproven-pool-independence");
+    },
+  );
   it("admits only fresh typed native HBD quotes and does not create a DEX confidence profile", () => {
     const nowSec = 1_800_000_000;
     const collected = makeCollected({ hiveNativeQuote: { price: 0.98662, observedAt: nowSec - 4, observedAtMode: "local_fetch" } });
@@ -444,6 +467,7 @@ describe("buildPrimarySourceCandidates", () => {
     const pmusd = { id: "pmusd-precious-metals", symbol: "pmUSD" };
     const curveLane = (ageSec: number) => ({
       protocol: "curve", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - ageSec, chain: "ethereum",
+      pricePoolKeys: ["ethereum:0x0000000000000000000000000000000000000001"],
     });
     const freshLegs = (cgPrice: number | null) => ({
       cgPrice,
@@ -451,6 +475,7 @@ describe("buildPrimarySourceCandidates", () => {
       cgObservedAtMode: cgPrice == null ? null : "upstream" as const,
       curvePrice: 0.53416,
       curveObservedAt: nowSec - 30,
+      curvePricePoolKeys: ["ethereum:0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb"],
     });
 
     it("keeps a lane past the strictest co-leg window out and records its budget and age", () => {

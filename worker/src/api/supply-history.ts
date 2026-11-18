@@ -6,18 +6,26 @@ import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-histor
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { matchesCurrentSupplyPerimeter } from "../lib/supply-history-db";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
   circulating_usd: number;
   price: number | null;
+  circulating_native?: number | null;
+  valuation_price_usd?: number | null;
+  valuation_observed_at_sec?: number | null;
   /** Migration 0287; NULL = coverage unrecorded (legacy, prior Worker, backfill). */
   supply_provenance?: string | null;
 }
 
 function latestServedSupplyTimestamp(rows: SupplyHistoryRow[]): number | null {
   return rows.reduce<number | null>(
-    (latest, row) => latest == null ? row.snapshot_date : Math.max(latest, row.snapshot_date),
+    (latest, row) => {
+      const observedAt = parseSupplyObservationProvenance(row.supply_provenance).provenance?.supplyObservedAt;
+      const clock = observedAt != null && observedAt > 0 ? observedAt : row.snapshot_date;
+      return latest == null ? clock : Math.max(latest, clock);
+    },
     null,
   );
 }
@@ -45,14 +53,17 @@ export const handleSupplyHistory = async (
       const lowerBinds = range === "all" ? [] : [cutoff];
       const result = await database
         .prepare(
-          `SELECT snapshot_date, circulating_usd, price, supply_provenance
+          `SELECT snapshot_date, circulating_usd, price, supply_provenance,
+                  circulating_native, valuation_price_usd, valuation_observed_at_sec
            FROM supply_history
            WHERE stablecoin_id = ?${lowerFilter}${latestSnapshotFilter}
            ORDER BY snapshot_date ASC`
         )
         .bind(stablecoinId, ...lowerBinds, ...latestSnapshotBinds)
         .all<SupplyHistoryRow>();
-      return result.results ?? [];
+      const rows = result.results ?? [];
+      const now = Math.floor(Date.now() / 1000);
+      return rows.filter((row) => matchesCurrentSupplyPerimeter(stablecoinId, row.snapshot_date, row.supply_provenance, now));
     },
     mapRow: (row) => {
       // Malformed metadata degrades only this row's provenance to unknown; supply and price stay intact.
@@ -65,12 +76,14 @@ export const handleSupplyHistory = async (
         date: row.snapshot_date,
         circulatingUsd: row.circulating_usd,
         price: row.price,
+        ...(row.circulating_native == null ? {} : { circulatingNative: row.circulating_native }),
+        ...(row.valuation_price_usd == null ? {} : { valuationPriceUsd: row.valuation_price_usd }),
+        ...(row.valuation_observed_at_sec == null ? {} : { valuationObservedAtSec: row.valuation_observed_at_sec }),
         supplyProvenance: provenance,
       };
     },
-    freshness: async ({ rows }) => {
-      const completedSnapshot = await loadCompletedSnapshot();
-      const updatedAt = completedSnapshot?.updatedAt ?? latestServedSupplyTimestamp(rows);
+    freshness: ({ rows }) => {
+      const updatedAt = latestServedSupplyTimestamp(rows);
       return updatedAt == null || assessFreshnessTimestamp(Math.floor(Date.now() / 1000), updatedAt).reason != null
         ? null
         : {
@@ -78,9 +91,8 @@ export const handleSupplyHistory = async (
           maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.supplyHistory,
         };
     },
-    buildHeaders: async ({ rows }): Promise<Record<string, string>> => {
-      const completedSnapshot = await loadCompletedSnapshot();
-      const updatedAt = completedSnapshot?.updatedAt ?? latestServedSupplyTimestamp(rows);
+    buildHeaders: ({ rows }): Record<string, string> => {
+      const updatedAt = latestServedSupplyTimestamp(rows);
       const assessment = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), updatedAt);
       return assessment.reason == null ? {} : {
         "Cache-Control": "no-store",

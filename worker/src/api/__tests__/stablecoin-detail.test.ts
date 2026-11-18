@@ -159,6 +159,22 @@ describe("scheduled detail refresh freshness", () => {
 });
 
 describe("handleStablecoinDetail", () => {
+  it("suppresses scope-unknown commodity history even on a fresh public cache hit", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cached = JSON.stringify({ tokens: [{ date: now - 30, totalCirculatingUSD: { peggedGOLD: 500 } }] });
+    queueFetch(Response.json({ prices: [], market_caps: [] }));
+    const db = mockD1([
+      { match: "cache", matchBinds: ["detail:vnxau-vnx"], rows: [], first: { value: cached, updated_at: now - 15 } },
+      { match: "cache", rows: [], first: null },
+      { match: "FROM supply_history", matchBinds: ["vnxau-vnx"], rows: [] },
+    ]);
+    const { ctx } = makeCtx();
+    const response = await handleStablecoinDetail(db, "vnxau-vnx", ctx);
+    expect(await readJsonResponse(response, 502)).toEqual({
+      error: "Historical detail data unavailable for stablecoin vnxau-vnx",
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
   beforeEach(() => {
     resetStablecoinDetailStateForTests();
     fetchSpy = installFetchMock();
@@ -355,7 +371,7 @@ describe("handleStablecoinDetail", () => {
       pegMechanism: "fiat-backed", _meta: { updatedAt: observedAt, status: "stale", reason: "detail-history-fallback" },
     });
     expect(body.tokens).toEqual(rescue
-      ? [{ date: observedAt, totalCirculatingUSD: { peggedUSD: 125 }, totalCirculating: { peggedUSD: 62.5 } }]
+      ? [{ date: observedAt, totalCirculatingUSD: { peggedUSD: 125 }, totalCirculating: {} }]
       : [{ date: observedAt, circulating: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 }, minted: 0 }]);
     expect(ctx.waitUntil).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:usdt-tether'").get()).toBeUndefined();
@@ -386,10 +402,10 @@ describe("handleStablecoinDetail", () => {
   it.each([false, true])("retains the newest observed zero supply-history checkpoint with earlier positive=%s", async (earlierPositive) => {
     const now = Math.floor(Date.now() / 1000);
     const { db, sqlite } = fixtures.open();
-    const insert = sqlite.prepare("INSERT INTO supply_history(stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
-    if (earlierPositive) insert.run("usdt-tether", now - 86400, 100, 2);
-    insert.run("usdt-tether", now, 0, 2);
-    insert.run("usdt-tether", now + 3600, 999, 2);
+    const insert = sqlite.prepare("INSERT INTO supply_history(stablecoin_id, snapshot_date, circulating_usd, price, circulating_native) VALUES (?, ?, ?, ?, ?)");
+    if (earlierPositive) insert.run("usdt-tether", now - 86400, 100, 2, 50);
+    insert.run("usdt-tether", now, 0, 2, 0);
+    insert.run("usdt-tether", now + 3600, 999, 2, null);
     // Malformed provider history must still find an admitted observed-zero rescue.
     queueFetch(new Response(JSON.stringify({ price: 1 })));
     const { ctx } = makeCtx();
@@ -536,19 +552,24 @@ describe("handleStablecoinDetail", () => {
     [7_201, "stale"],
   ])("classifies a %ss detail retained after refresh failure as %s by the served generation's budget", async (age, status) => {
     const now = Math.floor(Date.now() / 1000);
-    const cachedValue = makeDLDetailBody();
-    const db = mockD1([
-      { match: "cache", rows: [], first: { value: cachedValue, updated_at: now - age } },
-      { match: "supply_history", rows: [] },
-    ]);
-    queueFetch(new Response("Server Error", { status: 500 }));
-    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
-    expect(response.status).toBe(200);
-    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - age));
-    expect(response.headers.get("X-Data-Freshness")).toBe(status);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(response.headers.get("Warning")).toContain("refresh failed");
-    expect(await response.json()).toMatchObject(JSON.parse(cachedValue));
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const cachedValue = makeDLDetailBody();
+      const db = mockD1([
+        { match: "cache", rows: [], first: { value: cachedValue, updated_at: now - age } },
+        { match: "supply_history", rows: [] },
+      ]);
+      queueFetch(new Response("Server Error", { status: 500 }));
+      const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - age));
+      expect(response.headers.get("X-Data-Freshness")).toBe(status);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("Warning")).toContain("refresh failed");
+      expect(await response.json()).toMatchObject(JSON.parse(cachedValue));
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("returns stale cache when upstream fails but cache exists", async () => {

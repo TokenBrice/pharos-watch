@@ -8,14 +8,20 @@ import {
   resolveSupplementalPrice,
 } from "../sync-stablecoins/supplemental-assets";
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
+import { fetchSilverTokens } from "../sync-stablecoins/supplemental-assets/silver";
 import { resolveSupplementalCoinGeckoMcap, fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
 import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
 import { createMockD1Preset } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { buildChainRpcs } from "../../lib/chain-registry";
+import * as evmRpc from "../../lib/evm-rpc";
+import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 
 const mockD1 = createMockD1Preset([
   { match: "INSERT INTO cache", rows: [] },
+  { match: "FROM cache WHERE key = ?", matchBinds: ["snapshot-supply:last-write"], rows: [], first: null, allowUnused: true },
 ]);
 
 afterEach(() => {
@@ -408,15 +414,84 @@ describe("fetchSupplementalPriceData", () => {
 });
 
 describe("fetchGoldTokens", () => {
-  it("ignores protocol TVL history and defers XAUT comparisons to supply_history", async () => {
+  it.each([
+    { reconciles: true, price: 4_020, scoped: true },
+    { reconciles: false, price: 4_020, scoped: false },
+    { reconciles: true, price: 9_999, scoped: false },
+    { reconciles: true, price: 100_000, scoped: false },
+  ])("admits clocked XAUT liability only with scope and price evidence ($reconciles, $price)", async ({ reconciles, price, scoped }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const hash = `0x${"1".repeat(64)}` as const;
+    const header = vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue({ number: 50, hash, timestamp: now - 300 });
+    const supply = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (_chain, _address, call) =>
+      call === DECIMALS_SELECTOR ? 6n : (call === TOTAL_SUPPLY_SELECTOR ? 110n : reconciles ? 10n : 11n) * 1_000_000n);
+    mockFetch([
+      { match: "/prices/current/", body: { coins: { "coingecko:tether-gold": { price, timestamp: now - 60 } } } },
+      { match: "/protocol/", body: {} },
+      { match: "app.tether.to/transparency.json", body: { data_formatted: [{ iso: "xaut", id: now - 900,
+        blockChains: [{ name: "Ethereum", totalAuthorized: "110", notIssued: "10", quarantined: "0" }] }] } },
+    ], { requireMatch: true });
+    try {
+      const capClock = now - 90;
+      const asset = (await fetchGoldTokens({ "tether-gold": { usd_market_cap: 500_000, last_updated_at: capClock } },
+        undefined, undefined, buildChainRpcs(), undefined,
+        { validationReferences: { rates: { peggedGOLD: 4_020 }, type: "fresh", updatedAt: now - 60 } },
+      )).find(({ id }) => id === "xaut-tether");
+      expect(asset).toMatchObject(scoped ? { circulating: { peggedGOLD: 402_000 }, circulatingNative: 100,
+        valuationPriceUsd: 4_020, valuationObservedAtSec: now - 60, supplyObservedAt: now - 300 }
+        : { circulating: { peggedGOLD: 500_000 }, supplyObservedAt: capClock, circulatingNative: null });
+      if (price === 4_020) expect(header.mock.calls.map(([, block]) => block)).toContain("finalized");
+      expect(supply.mock.calls.filter(([chain, _address, _call, block, opts]) =>
+        chain === "ethereum" && block === 50 && opts?.stateBlockHash === hash)).toHaveLength(price === 4_020 ? 3 : 0);
+    } finally {
+      header.mockRestore();
+      supply.mockRestore();
+    }
+  });
+
+  it("checks the pre-cutover KAG cap against program stock without publishing wrapper quantity", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockFetch([
+      { match: "/prices/current/", body: { coins: { "coingecko:kinesis-silver": { price: 30, timestamp: now } } } },
+      { match: "/coins/markets?", body: [{ id: "kinesis-silver", circulating_supply: 100, last_updated: new Date(now * 1000).toISOString() }] },
+    ], { requireMatch: true });
+    const assets = await fetchSilverTokens({ "kinesis-silver": { usd: 30, usd_market_cap: 1000, last_updated_at: now } });
+    expect(assets.find(({ id }) => id === "kag-kinesis")).toMatchObject({
+      circulating: { peggedSILVER: 3000 }, circulatingNative: null, supplySource: "coingecko-fallback",
+    });
+  });
+
+  it.each([
+    ["kau-kinesis", "kinesis-gold", fetchGoldTokens],
+    ["kag-kinesis", "kinesis-silver", fetchSilverTokens],
+  ] as const)("holds %s when valuation is outside its commodity price band", async (id, geckoId, fetchTokens) => {
+    const now = Math.floor(Date.now() / 1000);
+    mockFetch([
+      { match: "/prices/current/", body: { coins: { [`coingecko:${geckoId}`]: { price: 8_000, timestamp: now } } } },
+      { match: "/protocol/", body: {} },
+      { match: "/coins/markets?", body: [] },
+    ], { requireMatch: true });
+    const rpc = vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockResolvedValue(100n * 10n ** 18n);
+    const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive")
+      .mockImplementation((assetId) => assetId === id);
+    try {
+      const cg = { [geckoId]: { usd_market_cap: 500_000, last_updated_at: now } };
+      const chainRpcs = buildChainRpcs();
+      const assets = fetchTokens === fetchGoldTokens
+        ? await fetchGoldTokens(cg, undefined, undefined, chainRpcs)
+        : await fetchSilverTokens(cg, undefined, null, undefined, chainRpcs);
+      expect(assets.find((asset) => asset.id === id)).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+      expect(rpc).not.toHaveBeenCalled();
+    } finally {
+      rpc.mockRestore();
+      cutover.mockRestore();
+    }
+  });
+
+  it("keeps XAUT comparisons unavailable when the protocol cap has no paired quantity or clock", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const mcap = 2_460_797_595;
     const protocolTvl = 2_890_974_295;
-    const d1History = {
-      day: 2_499_088_910,
-      week: 2_496_955_497,
-      month: 2_482_779_944,
-    };
     const utcMidnight = (daysAgo: number) => {
       const date = new Date();
       date.setUTCDate(date.getUTCDate() - daysAgo);
@@ -468,20 +543,17 @@ describe("fetchGoldTokens", () => {
 
     const db = mockD1([
       {
-        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
-        rows: [
-          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(1), circulating_usd: d1History.day },
-          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(7), circulating_usd: d1History.week },
-          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(30), circulating_usd: d1History.month },
-        ],
+        match: "FROM supply_history",
+        rows: [{ stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(7), circulating_usd: 2_496_955_497 }],
       },
     ]);
 
-    await expect(fillMissingSupplyHistory(db, assets)).resolves.toBe(3);
+    await expect(fillMissingSupplyHistory(db, assets)).resolves.toBe(0);
     expect(xaut).toMatchObject({
-      circulatingPrevDay: { peggedGOLD: d1History.day },
-      circulatingPrevWeek: { peggedGOLD: d1History.week },
-      circulatingPrevMonth: { peggedGOLD: d1History.month },
+      circulatingNative: null,
+      circulatingPrevDay: null,
+      circulatingPrevWeek: null,
+      circulatingPrevMonth: null,
     });
   });
 
@@ -508,16 +580,22 @@ describe("fetchGoldTokens", () => {
     vi.useFakeTimers({ now: Date.UTC(2026, 10, 13, 12), toFake: ["Date"] });
     const snapshotDate = (daysAgo: number) => Date.UTC(2026, 10, 13 - daysAgo) / 1000;
     const db = mockD1([{
-      match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
-      rows: ["empty", "observed-zero", "gho-aave"].flatMap((stablecoin_id) =>
-        [1, 7, 30].map((days, i) => ({ stablecoin_id, snapshot_date: snapshotDate(days), circulating_usd: 99 - i })))
-        .concat({ stablecoin_id: "out-of-bound", snapshot_date: snapshotDate(7), circulating_usd: 50 }),
+      match: "FROM supply_history",
+      rows: ["empty", "observed-zero", "gho-aave", "out-of-bound"].flatMap((stablecoin_id) =>
+        [1, 7, 30].map((days, i) => ({
+          stablecoin_id, snapshot_date: snapshotDate(days), circulating_usd: 1.1 * (99 - i),
+          circulating_native: stablecoin_id === "out-of-bound" ? 50 : 99 - i,
+          supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: snapshotDate(days) + 12 * 3600, supplyChainGuard: null }),
+        }))),
     }]);
     const assets = ["empty", "observed-zero", "out-of-bound", "no-history", "gho-aave"].map((id) => ({
       id,
       name: id,
       symbol: id,
       circulating: { peggedUSD: 100 },
+      supplyObservedAt: snapshotDate(0) + 12 * 3600,
+      circulatingNative: 100,
+      valuationPriceUsd: 1,
       circulatingPrevDay: id === "observed-zero" ? { peggedUSD: 0 } : {},
       circulatingPrevWeek: id === "observed-zero" ? { peggedUSD: 0 } : {},
       circulatingPrevMonth: id === "observed-zero" ? { peggedUSD: 0 } : {},
@@ -548,14 +626,18 @@ describe("fetchGoldTokens", () => {
       return Math.floor(date.getTime() / 1000);
     };
     const db = mockD1([{
-      match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
-      rows: [{ stablecoin_id: "multi", snapshot_date: snapshotDate(1), circulating_usd: 100 }],
+      match: "FROM supply_history",
+      rows: [{ stablecoin_id: "multi", snapshot_date: snapshotDate(1), circulating_usd: 100, circulating_native: 100,
+        supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: Math.floor(now.getTime() / 1000) - 86_400, supplyChainGuard: null }) }],
     }]);
     const asset = {
       id: "multi",
       name: "Multi-bucket fixture",
       symbol: "MULTI",
       circulating: { peggedUSD: 60, peggedEUR: 40 },
+      supplyObservedAt: Math.floor(now.getTime() / 1000),
+      circulatingNative: 100,
+      valuationPriceUsd: 1,
       circulatingPrevDay: null,
     } as Parameters<typeof fillMissingSupplyHistory>[1][number];
 

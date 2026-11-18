@@ -201,10 +201,10 @@ export async function runStablecoinsPricingStage(
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
   }
   if (nativePegCorrectionCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via direct native quotes`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via native-implied translations`);
   }
   if (nativePegFillCount > 0) {
-    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via direct native quotes`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via native-implied translations`);
   }
   if (cachedFallbackCount > 0) {
     logWorkerEventArgs("handler", "info", `[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);

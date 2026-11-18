@@ -1,3 +1,5 @@
+import { isKinesisWrapperSupplyId } from "./onchain-supply-probe";
+
 /**
  * changedAt is first publication of the redefined quantity; evidence may have been read earlier.
  * marketWide marks a step large enough to break whole-market comparisons (total all-time high,
@@ -54,6 +56,13 @@ export const SUPPLY_PERIMETER_CHANGES = [
     marketWide: false,
   },
 ] as const;
+
+/** A reviewed perimeter record enables the Kinesis wrapper publication and snapshot together. */
+export function isKinesisWrapperSupplyCutoverActive(stablecoinId: string, nowSec: number): boolean {
+  return isKinesisWrapperSupplyId(stablecoinId) &&
+    SUPPLY_PERIMETER_CHANGES.some((change) => change.stablecoinId === stablecoinId && change.changedAt <= nowSec &&
+      change.chainIds.join(",") === "ethereum");
+}
 
 /** Intraday observations retain their strict observation timestamp. */
 export function isEarlierSupplyPerimeter(stablecoinId: string, observedAt: number): boolean {

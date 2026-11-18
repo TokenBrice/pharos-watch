@@ -4,12 +4,19 @@ import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS, API_CACHE_PROFILE
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/detail-cache-generation";
 import { binarySearchNearest } from "../../lib/binary-search";
-import { errorResponse } from "../../lib/api-response";
+import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import { buildFreshnessMeta } from "../../lib/api-freshness";
+import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { API_FRESHNESS_MAX_AGE_SEC, DETAIL_HISTORY_FALLBACK_REASON } from "@shared/lib/api-freshness";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import { historicalSupplyQuantity, matchesCurrentSupplyPerimeter, type HistoricalSupplyQuantityRow } from "../../lib/supply-history-db";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -19,6 +26,29 @@ const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
 // D1 caps a single value at 2 MiB (2,097,152 B); leave headroom so the write
 // is refused here (with a failure marker) instead of erroring inside D1.
 const DETAIL_CACHE_MAX_VALUE_BYTES = 1_900_000;
+const COMMODITY_HISTORY_VERSION = 1;
+const VERSIONED_COMMODITY_HISTORY_IDS = new Set(["paxg-paxos", "vnxau-vnx"]);
+
+function commodityHistoryVersion(id: string): number | undefined {
+  if (id === "xaut-tether") return 2;
+  if (isKinesisWrapperSupplyId(id)) return isKinesisWrapperSupplyCutoverActive(id, Math.floor(Date.now() / 1000)) ? 1 : 2;
+  return VERSIONED_COMMODITY_HISTORY_IDS.has(id) ? COMMODITY_HISTORY_VERSION : undefined;
+}
+
+export function hasCurrentCommodityHistory(id: string, detail: Record<string, unknown>): boolean {
+  const version = commodityHistoryVersion(id);
+  return version === undefined || detail.commodityHistoryVersion === version;
+}
+
+export function admitCommodityDetailCache(id: string, cached: DetailCacheEntry): DetailCacheEntry {
+  if (!cached || commodityHistoryVersion(id) === undefined) return cached;
+  try {
+    const detail = JSON.parse(cached.value);
+    return detail && hasCurrentCommodityHistory(id, detail) ? cached : null;
+  } catch {
+    return null;
+  }
+}
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];
@@ -45,6 +75,7 @@ export interface DetailResponseHelpers {
   ): Promise<ResolvedDetailHistory>;
   staleCacheOrError(status: number, message: string): Response;
   trySupplyHistoryFallback(reason: string, latestTokenDate?: number | null): Promise<Response | null>;
+  serveWrapperHistory(): Promise<Response>;
 }
 
 export function logUpstreamFailure(
@@ -72,6 +103,52 @@ function createJsonResponse(body: string, cacheControl: string): Response {
       "Cache-Control": cacheControl,
     },
   });
+}
+
+export function createWrapperDetailUnavailableResponse(): Response {
+  const reason = "wrapper-detail-unavailable";
+  return jsonResponse({ error: "Wrapper supply history and current detail are unavailable", reason }, {
+    status: 503,
+    noStore: true,
+    headers: { "X-Data-Freshness": "unknown", "X-Data-Freshness-Reason": reason },
+  });
+}
+
+function detailHistoryFreshness(observedAt: number, now: number) {
+  return {
+    ...buildFreshnessMeta(observedAt, DETAIL_HISTORY_MAX_AGE_SECONDS, "stablecoin-detail", {
+      assessedAt: now, freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+      degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+    }),
+    status: "stale" as const,
+    reason: DETAIL_HISTORY_FALLBACK_REASON,
+  };
+}
+
+/** Assess the stored D1 clock again on each public read, including cache hits. */
+export function applyWrapperDetailHistoryFreshness(
+  detail: Record<string, unknown>, headers: Headers, now: number,
+): boolean {
+  const clock = detail.commodityHistoryObservedAt;
+  if (typeof clock !== "number" || !Number.isSafeInteger(clock) || clock <= 0 || clock > now ||
+    now - clock > DETAIL_HISTORY_MAX_AGE_SECONDS ||
+    !Array.isArray(detail.tokens) || detail.tokens.length === 0) return false;
+
+  const meta = detailHistoryFreshness(clock, now);
+  detail._meta = meta;
+  headers.set("X-Data-Updated-At", String(clock));
+  headers.set("X-Data-Age", String(meta.ageSeconds));
+  headers.set("X-Data-Freshness", meta.status);
+  headers.set("X-Data-Freshness-Reason", meta.reason);
+  headers.set("Warning", '110 - "Stablecoin detail history is retained fallback data"');
+  const cacheControl = headers.get("Cache-Control");
+  if (cacheControl != null) {
+    const bounded = addFreshnessHeaders({ "Cache-Control": cacheControl }, clock, DETAIL_HISTORY_MAX_AGE_SECONDS, {
+      assessedAt: now, freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
+    });
+    headers.set("Cache-Control", bounded["Cache-Control"] ?? cacheControl);
+  }
+  return true;
 }
 
 export function createFreshCacheHitResponse(cachedValue: string, ageSeconds: number, updatedAt: number): Response {
@@ -143,6 +220,8 @@ export function createDetailResponseHelpers(config: {
   onFreshAcquisition?: () => void;
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
+  const cached = admitCommodityDetailCache(config.stablecoinId, config.cached);
+  const historyVersion = { commodityHistoryVersion: commodityHistoryVersion(config.stablecoinId) };
   // Failed/oversized cache writes used to vanish into sampled console logs,
   // leaving flagship coins on a synchronous-refetch-per-request path for
   // weeks. A small marker row makes the failure visible to the staleness
@@ -216,7 +295,7 @@ export function createDetailResponseHelpers(config: {
   ): Promise<Response | null> => {
     const tokens = await loadSupplyHistoryFallback(reason, latestTokenDate);
     if (tokens.length === 0) return null;
-    return createFallbackResponseFromTokens(tokens, getLatestDetailTokenDate(tokens));
+    return createFallbackResponseFromTokens(tokens, getLatestDetailTokenDate(tokens), historyVersion);
   };
 
   const createFreshResponseFromBody = (body: string): Response => {
@@ -237,10 +316,7 @@ export function createDetailResponseHelpers(config: {
     const now = Math.floor(Date.now() / 1000);
     const assessment = assessFreshnessTimestamp(now, observedAt);
     const meta = assessment.reason == null && observedAt != null
-      ? { ...buildFreshnessMeta(observedAt, DETAIL_HISTORY_MAX_AGE_SECONDS, "stablecoin-detail", {
-          assessedAt: now, freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
-          degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
-        }), status: "stale" as const, reason: DETAIL_HISTORY_FALLBACK_REASON }
+      ? detailHistoryFreshness(observedAt, now)
       : { updatedAt: null, ageSeconds: null, assessedAt: now, status: "unknown" as const,
           freshBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS, degradedBudgetSec: DETAIL_HISTORY_MAX_AGE_SECONDS,
           reason: assessment.reason };
@@ -258,8 +334,26 @@ export function createDetailResponseHelpers(config: {
     body?: Record<string, unknown>,
   ): Response =>
     history.fallback || !isDetailHistoryFresh(history.tokens)
-      ? createFallbackResponseFromTokens(history.tokens, history.observedAt, body)
-      : createFreshResponseFromBody(JSON.stringify({ ...body, tokens: history.tokens }));
+      ? createFallbackResponseFromTokens(history.tokens, history.observedAt, { ...body, ...historyVersion })
+      : createFreshResponseFromBody(JSON.stringify({ ...body, ...historyVersion, tokens: history.tokens }));
+
+  const serveWrapperHistory = async (): Promise<Response> => {
+    const tokens = await loadSupplyHistoryFallback("wrapper-history").catch((error) => {
+      logUpstreamException("wrapper-supply-history", config.stablecoinId, error);
+      return [];
+    });
+    const observedAt = tokens.reduce((latest, token) => Math.max(latest, Number(token.supplyObservedAt)), 0);
+    if (observedAt <= 0) return createWrapperDetailUnavailableResponse();
+    const body = JSON.stringify({ ...historyVersion, commodityHistoryObservedAt: observedAt, tokens });
+    if (!isDetailHistoryFresh([{ date: observedAt }])) {
+      return createFallbackResponseFromTokens(tokens, observedAt, { ...historyVersion, commodityHistoryObservedAt: observedAt });
+    }
+    queueCacheWrite(body);
+    config.onFreshAcquisition?.();
+    const response = createFreshUpstreamResponse(body);
+    response.headers.set("X-Data-Updated-At", String(observedAt));
+    return response;
+  };
 
   const resolveTokensWithSupplyHistoryFallback = async (
     tokens: DetailTokens,
@@ -280,18 +374,34 @@ export function createDetailResponseHelpers(config: {
       return { tokens: resolved, observedAt: getLatestDetailTokenDate(resolved), fallback: true };
     }
 
+    if (config.stablecoinId === "xaut-tether") {
+      const startDay = bucketUnixSecondsToUtcDay(Date.now() / 1000) - 32 * DAY_SECONDS;
+      const scopedHistory = await fetchSupplyHistoryFallback(config.db, config.stablecoinId, config.pegType, startDay)
+        .catch((error) => {
+          logUpstreamException("xaut-native-supply-history", config.stablecoinId, error);
+          return [];
+        });
+      const byDay = new Map(scopedHistory.filter((token) => token.nativeSupplySource === "onchain-circulating-supply")
+        .map((token) => [token.date, token]));
+      tokens = tokens.map((token) => {
+        const checkpoint = typeof token.date === "number" ? byDay.get(bucketUnixSecondsToUtcDay(token.date)) : undefined;
+        return checkpoint ? { ...token, totalCirculating: checkpoint.totalCirculating,
+          nativeSupplySource: checkpoint.nativeSupplySource, nativeSupplyObservedAt: checkpoint.nativeSupplyObservedAt } : token;
+      });
+    }
     return { tokens, observedAt: getLatestDetailTokenDate(tokens), fallback: false };
   };
 
   return {
-    cached: config.cached,
+    cached,
     createFreshResponseFromBody,
     createFreshResponseFromTokens,
     createFallbackResponseFromTokens,
     createResponseFromResolvedTokens,
     resolveTokensWithSupplyHistoryFallback,
-    staleCacheOrError: (status, message) => staleCacheOrError(config.cached, status, message),
+    staleCacheOrError: (status, message) => staleCacheOrError(cached, status, message),
     trySupplyHistoryFallback,
+    serveWrapperHistory,
   };
 }
 
@@ -300,19 +410,29 @@ async function fetchSupplyHistoryFallback(
   db: D1Database,
   stablecoinId: string,
   pegType: string,
+  startDay?: number,
 ): Promise<Record<string, unknown>[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const wrapper = isKinesisWrapperSupplyCutoverActive(stablecoinId, now);
+  const xaut = stablecoinId === "xaut-tether";
+  const completion = wrapper || xaut ? await getCompletedSupplySnapshot(db) : null;
+  if (wrapper && !completion) return [];
   const result = await db
     .prepare(
-      `SELECT snapshot_date, circulating_usd, price
+      `SELECT snapshot_date, circulating_usd, circulating_native, supply_provenance, price, price_observed_at,
+         valuation_price_usd, valuation_observed_at_sec
        FROM supply_history
-       WHERE stablecoin_id = ?
+       WHERE stablecoin_id = ?${completion ? " AND snapshot_date <= ?" : ""}${startDay != null ? " AND snapshot_date >= ?" : ""}
        ORDER BY snapshot_date ASC`,
     )
-    .bind(stablecoinId)
-    .all<{ snapshot_date: number; circulating_usd: number; price: number | null }>();
+    .bind(stablecoinId, ...(completion ? [completion.snapshotDate] : []), ...(startDay != null ? [startDay] : []))
+    .all<HistoricalSupplyQuantityRow & { supply_provenance: string | null }>();
 
-  const now = Math.floor(Date.now() / 1000);
   return (result.results ?? [])
+    .filter((row) => matchesCurrentSupplyPerimeter(stablecoinId, row.snapshot_date, row.supply_provenance, now))
+    .map((row) => ({ ...row, provenance: parseSupplyObservationProvenance(row.supply_provenance).provenance }))
+    .filter(({ provenance }) => !wrapper || (provenance?.supplySource === "onchain-total-supply" &&
+      provenance.supplyObservedAt != null && provenance.supplyObservedAt > 0 && provenance.supplyObservedAt <= now))
     .filter((row) => (
       typeof row.circulating_usd === "number"
       && Number.isFinite(row.circulating_usd)
@@ -320,18 +440,31 @@ async function fetchSupplyHistoryFallback(
       && row.snapshot_date > 0
       && assessFreshnessTimestamp(now, row.snapshot_date).reason == null
     ))
-    .map((row) => ({
-      date: row.snapshot_date,
-      totalCirculatingUSD: { [pegType]: row.circulating_usd },
-      totalCirculating: buildNativeSupplyBuckets(pegType, row.circulating_usd, row.price),
-    }));
+    .map((row) => {
+      const native = historicalSupplyQuantity(stablecoinId, pegType, row, row.provenance, now);
+      const hasNative = native != null;
+      const xautScoped = xaut && completion != null && hasNative && row.provenance?.supplySource === "onchain-circulating-supply" &&
+        classifySupplyCoverage(row.provenance) === "complete" && assessFreshnessTimestamp(now, row.provenance.supplyObservedAt).reason == null;
+      return {
+        date: row.snapshot_date,
+        ...(wrapper ? { supplyObservedAt: row.provenance?.supplyObservedAt } : {}),
+        ...(xautScoped ? {
+          nativeSupplySource: row.provenance?.supplySource,
+          nativeSupplyObservedAt: row.provenance?.supplyObservedAt,
+        } : {}),
+        totalCirculatingUSD: { [pegType]: row.circulating_usd },
+        totalCirculating: hasNative && (!xaut || xautScoped) ? { [pegType]: native } : {},
+      };
+    });
 }
 
 export function findNearestPrice(
   sortedPrices: { timestamp: number; price: number }[],
   date: number,
 ): number | null {
-  const price = binarySearchNearest(sortedPrices, date, (p) => p.timestamp)?.price;
+  const match = binarySearchNearest(sortedPrices, date, (p) => p.timestamp);
+  if (!match || bucketUnixSecondsToUtcDay(match.timestamp) !== bucketUnixSecondsToUtcDay(date)) return null;
+  const price = match.price;
   return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
 }
 

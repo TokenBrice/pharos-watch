@@ -148,6 +148,7 @@ describe("handleStablecoinSummary", () => {
       pegType: "peggedEUR", price: 2,
       circulating: { peggedEUR: 120, peggedUSD: 30 },
       circulatingPrevDay: { peggedEUR: 100, peggedUSD: 20 },
+      supplyChangeBaselines: { day: { observedAt: 1_790_000_000, circulatingUsd: 125, circulatingNative: null } },
       circulatingPrevWeek: { peggedEUR: 80, peggedUSD: 10 },
     });
     delete payload.peggedAssets[0].circulatingPrevMonth;
@@ -157,7 +158,7 @@ describe("handleStablecoinSummary", () => {
     const response = await handleStablecoinSummary(db, "usdt-tether");
     expect(await readJsonResponse(response, 200)).toMatchObject({
       supplyByPegUsd: { peggedEUR: 120, peggedUSD: 30 },
-      supplyUsd: { current: 150, prevDay: 120, prevWeek: 90, prevMonth: null, change1d: 30, change7d: 60, change30d: null },
+      supplyUsd: { current: 150, prevDay: 125, prevWeek: 90, prevMonth: null, change1d: 25, change7d: 60, change30d: null },
     });
   });
 

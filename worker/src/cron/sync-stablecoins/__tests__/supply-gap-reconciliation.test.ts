@@ -6,6 +6,7 @@ import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as StructuredLog from "../../../lib/structured-log";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
@@ -365,6 +366,35 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(result.gapFillRejections).toEqual([]);
   });
 
+  it("withholds only the remainder derived from an off-date cap on fresh and carried packets", async () => {
+    const nowMs = Date.now();
+    const { db } = fixtures.open();
+    const fresh = makeAsset();
+    mockCoinGeckoHistory([
+      [nowMs - 30 * DAY_MS, 75], [nowMs - 6 * DAY_MS, 100],
+      [nowMs - DAY_MS, 95], [nowMs, 130],
+    ]);
+    expect((await reconcileTrackedSupplyGaps([fresh])).totalReconciled).toBe(1);
+    const carry = makeAsset();
+    expect(carryForwardSupplyGapFill(carry, fresh)).toBe(true);
+    // A prior publication can already have projected the rejection into the aggregate wire.
+    carry.supplyChangeBaselines = { ...carry.supplyChangeBaselines, week: null };
+    carry.circulatingPrevWeek = {};
+    const restored = restoreMissingTrackedAssets([], new Map([[fresh.id, fresh]])).assets.find(a => a.id === fresh.id)!;
+    for (const asset of [fresh, carry, restored]) {
+      expect(asset.chainCirculating?.["XRP Ledger"]?.circulatingPrevWeek).toBe(20);
+      await fillMissingSupplyHistory(db, [asset]);
+      expect(asset.supplyChangeBaselines?.week).toBeNull();
+      expect(asset.chainCirculating?.["XRP Ledger"]).toMatchObject({
+        current: 30, circulatingPrevDay: 5, circulatingPrevWeek: null, circulatingPrevMonth: 5,
+      });
+      expect(asset.chainCirculating?.Ethereum.circulatingPrevWeek).toBe(48);
+      expect(asset.supplyGapFill).toMatchObject({
+        withheldHistoricalBuckets: ["week"], withheldHistoricalBucketReasons: { week: "history-unobserved" },
+      });
+    }
+  });
+
   it("withholds the AstraA non-conserving previous-day remainder without changing the admitted aggregate", async () => {
     const nowMs = Date.now();
     const asset = makeAsset();
@@ -588,7 +618,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
     };
     const ordinary = {
-      ...makeAsset(), id: "ordinary", supplySource: "coingecko",
+      ...makeAsset(), id: "ordinary", supplyObservedAt: Math.floor(Date.now() / 1000), circulatingNative: 100, valuationPriceUsd: 1, supplySource: "coingecko",
       circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: { peggedEUR: 0 },
     };
     const assets = [...owned, provenanceOnly, ordinary];
@@ -596,8 +626,11 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     for (const asset of assets) {
       for (const days of [1, 7, 30]) {
         const date = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days) / 1000;
-        sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
-          .run(asset.id, date, 95);
+        sqlite.prepare(`INSERT INTO supply_history
+          (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+          .run(asset.id, date, 95 * 1.1, 95, JSON.stringify({
+            supplySource: "coingecko", supplyChainGuard: null, supplyObservedAt: Math.floor(now.getTime() / 1000) - days * 86_400,
+          }));
       }
     }
 
@@ -612,7 +645,68 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(provenanceOnly.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day"]);
   });
 
-  it("never splices a newer D1 history row onto a carried supply packet", async () => {
+  it.each(["coingecko-fallback", "defillama"])("withholds KAU if a prior %s program packet survives the wrapper cutover", async (supplySource) => {
+    const { db } = fixtures.open();
+    const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive")
+      .mockImplementation((id) => id === "kau-kinesis");
+    const asset = {
+      ...makeAsset(), id: "kau-kinesis", circulating: { peggedGOLD: 500_000_000 },
+      circulatingNative: 5_000_000, valuationPriceUsd: 100, supplySource, supplyRestored: true,
+    };
+    try {
+      await fillMissingSupplyHistory(db, [asset]);
+      expect(asset).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld",
+        chainCirculating: { Ethereum: { chainId: "ethereum", current: null } } });
+      expect(asset.circulatingNative).toBeUndefined();
+    } finally {
+      cutover.mockRestore();
+    }
+  });
+
+  it("recovers a co-timed USD stock from pre-0306 history and retains the previous-day bucket", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const prior = now - 86_400;
+    const asset: PeggedAsset = {
+      ...makeAsset(), id: "usdc-circle", pegType: "peggedUSD", circulating: { peggedUSD: 999.6 },
+      supplySource: "coingecko-fallback", supplyObservedAt: now, circulatingNative: 1020,
+      valuationPriceUsd: 0.98, valuationObservedAtSec: now, circulatingPrevDay: null,
+    };
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, Math.floor(prior / 86_400) * 86_400, 980, 0.98, prior, JSON.stringify({
+        supplySource: "coingecko-fallback", supplyObservedAt: prior, supplyChainGuard: null,
+      }));
+    expect(await fillMissingSupplyHistory(db, [asset])).toBe(1);
+    expect(asset.circulatingPrevDay).toEqual({ peggedUSD: 980 });
+    expect(asset.supplyChangeBaselines?.day?.circulatingNative).toBe(1000);
+  });
+
+  it("withholds the first KAU wrapper comparison against a dated legacy program row", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const id = "kau-kinesis";
+    const cutover = vi.spyOn(supplyPerimeter, "isKinesisWrapperSupplyCutoverActive")
+      .mockImplementation((assetId, clock) => assetId === id && clock >= now);
+    const wrapper = {
+      ...makeAsset(), id, circulating: { peggedGOLD: 1_000 },
+      circulatingNative: 10, valuationPriceUsd: 100, supplySource: "onchain-total-supply", supplyObservedAt: now - 30,
+    };
+    try {
+      sqlite.prepare(`INSERT INTO supply_history
+        (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+        .run(id, Math.floor(now / 86_400) * 86_400 - 86_400, 10_000, 100, JSON.stringify({
+          supplySource: "coingecko-fallback", supplyChainGuard: null, supplyObservedAt: now - 86_400,
+        }));
+      await fillMissingSupplyHistory(db, [wrapper], undefined, now);
+      expect(wrapper.circulatingNative).toBe(10);
+      expect(wrapper).toHaveProperty("supplyChangeBaselines.day", null);
+    } finally {
+      cutover.mockRestore();
+    }
+  });
+
+  it.each([0, 2 * 3600, 2 * 3600 + 1, 23 * 3600 + 40 * 60])("rejects a carried packet and applies the elapsed baseline tolerance (%s seconds)", async (daySkew) => {
     const { db, sqlite } = fixtures.open();
     // 2026-11-01 BUIDL shape: a 2026-10-30 headline carried forward must not take a
     // 2026-11-01 daily row as its 1d baseline and publish a synthetic +5.35% change.
@@ -622,7 +716,7 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       supplyRestored: true, supplyObservedAt: 1_793_000_000,
     };
     const ordinary = {
-      ...makeAsset(), id: "ordinary", supplySource: "defillama",
+      ...makeAsset(), id: "ordinary", supplyObservedAt: Math.floor(Date.now() / 1000), circulatingNative: 100, valuationPriceUsd: 1, supplySource: "defillama",
       circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: { peggedEUR: 0 },
     };
     const now = new Date();
@@ -632,17 +726,24 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       const history = asset.id === carried.id ? 2007 : 95;
       for (const days of [1, 7, 30]) {
         const date = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days) / 1000;
-        sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
-          .run(asset.id, date, history);
+        sqlite.prepare(`INSERT INTO supply_history
+          (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+          .run(asset.id, date, history * 1.1, history, JSON.stringify({
+            supplySource: "coingecko", supplyChainGuard: null, supplyObservedAt: Math.floor(now.getTime() / 1000) - days * 86_400 - (days === 1 ? daySkew : 0),
+          }));
       }
     }
 
-    expect(await fillMissingSupplyHistory(db, [carried, ordinary])).toBe(2);
+    const paired = daySkew <= 2 * 3600;
+    expect(await fillMissingSupplyHistory(db, [carried, ordinary])).toBe(paired ? 2 : 1);
     expect(carried).toMatchObject({
       circulatingPrevDay: null, circulatingPrevWeek: { peggedEUR: 2165 }, circulatingPrevMonth: null,
     });
     expect(ordinary).toMatchObject({
-      circulatingPrevDay: { peggedEUR: 95 }, circulatingPrevWeek: { peggedEUR: 95 }, circulatingPrevMonth: { peggedEUR: 0 },
+      circulatingPrevDay: paired ? { peggedEUR: 95 } : null, circulatingPrevWeek: { peggedEUR: 95 }, circulatingPrevMonth: { peggedEUR: 0 },
+      supplyChangeBaselines: {
+        week: { circulatingUsd: 95 * 1.1, circulatingNative: 95 },
+      },
     });
   });
 

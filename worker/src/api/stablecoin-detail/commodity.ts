@@ -1,5 +1,8 @@
 import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
+import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
@@ -30,16 +33,19 @@ export interface CommodityDetailConfig {
 export async function fetchCommodityTokens(
   config: CommodityDetailConfig,
 ): Promise<Record<string, unknown>[]> {
+  if (isKinesisWrapperSupplyCutoverActive(config.stablecoinId, Math.floor(Date.now() / 1000))) return [];
+  const xaut = config.stablecoinId === "xaut-tether";
+  const useProtocol = isDedicatedSingleTokenGoldProtocolSlug(config.protocolSlug);
   const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * DAY_SECONDS;
 
   const [priceResult, protocolResult] = await Promise.all([
-    fetchJsonWithRetry(
+    useProtocol ? fetchJsonWithRetry(
       `${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${twoYearsAgo}&span=730`,
       undefined,
       DETAIL_UPSTREAM_MAX_RETRIES,
       { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
-    ),
-    config.protocolSlug
+    ) : Promise.resolve(null),
+    useProtocol
       ? fetchJsonWithRetry<{
           tvl?: { date: number; totalLiquidityUSD: number }[];
         }>(
@@ -54,7 +60,7 @@ export async function fetchCommodityTokens(
   let prices: { timestamp: number; price: number }[] = [];
   if (priceResult?.response.ok) {
     prices = extractDefiLlamaCoinChartPrices(priceResult.body, config.geckoId);
-  } else {
+  } else if (useProtocol) {
     logUpstreamFailure(
       "defillama-coins-chart",
       config.stablecoinId,
@@ -66,7 +72,7 @@ export async function fetchCommodityTokens(
   if (protocolResult?.response.ok) {
     const protocolData = protocolResult.body;
     tvlHistory = protocolData.tvl ?? [];
-  } else if (config.protocolSlug) {
+  } else if (useProtocol) {
     logUpstreamFailure(
       "defillama-protocol-detail",
       config.stablecoinId,
@@ -78,14 +84,20 @@ export async function fetchCommodityTokens(
   let tokens: Record<string, unknown>[] = [];
 
   if (tvlHistory.length > 0) {
-    const sortedPrices = [...prices].sort(
-      (a, b) => a.timestamp - b.timestamp,
-    );
+    const pricesByDay = new Map<number, typeof prices>();
+    for (const quote of prices) {
+      if (quote.price <= 0) continue;
+      const day = bucketUnixSecondsToUtcDay(quote.timestamp);
+      const quotes = pricesByDay.get(day) ?? [];
+      quotes.push(quote);
+      pricesByDay.set(day, quotes);
+    }
     tokens = tvlHistory.map((point) => {
-      const price = findNearestPrice(sortedPrices, point.date);
+      const price = findNearestPrice(pricesByDay.get(bucketUnixSecondsToUtcDay(point.date)) ?? [], point.date);
       const marketCap = point.totalLiquidityUSD;
       return {
         date: point.date,
+        ...(xaut ? { supplySource: "defillama", supplyObservedAt: point.date } : {}),
         totalCirculatingUSD: { [config.pegType]: marketCap },
         totalCirculating: buildNativeSupplyBuckets(config.pegType, marketCap, price),
       };
@@ -114,6 +126,9 @@ export async function fetchCommodityTokens(
       config.pegType,
       priceMap,
     );
+    if (xaut) {
+      tokens = tokens.map((token) => ({ ...token, supplySource: "coingecko", supplyObservedAt: token.date }));
+    }
   }
 
   return tokens;
@@ -123,6 +138,7 @@ export async function handleCommodityDetail(
   config: CommodityDetailConfig,
   detail: DetailResponseHelpers,
 ): Promise<Response> {
+  if (isKinesisWrapperSupplyCutoverActive(config.stablecoinId, Math.floor(Date.now() / 1000))) return detail.serveWrapperHistory();
   try {
     const history = await detail.resolveTokensWithSupplyHistoryFallback(
       await fetchCommodityTokens(config),

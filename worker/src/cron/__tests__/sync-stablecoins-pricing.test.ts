@@ -34,6 +34,19 @@ function makePriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPr
 }
 
 describe("DefiLlama list quote origin", () => {
+  it("keeps an undated incumbent undated through repeated sync and publication", () => {
+    const asset = makeAsset({ id: "usdt-tether", price: 1, priceSource: "defillama", priceObservedAt: null,
+      priceUpdatedAt: 1_700_000_000, priceObservedAtMode: "unknown" });
+    for (const syncStartSec of [1_700_000_060, 1_700_000_120]) {
+      expect(buildDlListPrices([asset]).get(asset.id)?.observedAt).toBeNull();
+      applyConsensusResults({ assets: [asset], primaryPriceResults: new Map(),
+        validationContexts: createValidationContextResolver(), syncStartSec, reason: "primary" });
+      expect(normalizeStablecoinsPayload({ peggedAssets: [asset] }).peggedAssets[0]).toMatchObject({
+        price: 1, priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: syncStartSec,
+      });
+    }
+  });
+
   it.each([undefined, "defillama", "defillama-list"])("retains upstream list quotes with source %s", (priceSource) => {
     const asset = makeAsset({ id: "usdt-tether", supplySource: undefined, price: 1,
       priceSource, priceObservedAt: 1_700_000_000, priceObservedAtMode: "upstream" });

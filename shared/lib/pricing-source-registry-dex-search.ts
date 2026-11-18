@@ -211,6 +211,8 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     depegSourceFamily: "fallback:jupiter",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 1,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.fallbackSearch, {
     key: "coinmarketcap",

@@ -34,7 +34,6 @@ import {
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
   resolveStablecoinPriceGapReviews,
-  resolveStablecoinScheduledPriceClosures,
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
   type StablecoinPublicationCoverage,
@@ -559,20 +558,22 @@ export function buildStablecoinsSyncResult(input: {
   const presentActiveIds = new Set(activeAssets.map((asset) => asset.id));
   const absentActiveCount = ACTIVE_IDS.size - presentActiveIds.size;
   activeHealth.sourceDistribution.missing += absentActiveCount;
+  const activePriceCoverage = input.activePriceCoverage
+    ?? evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
+      nowSec,
+      previousCoverage: input.previousActivePriceCoverage,
+      previousAcceptedAssetsById: input.previousAcceptedAssetsById,
+    });
   // Acknowledged price gaps stay in the raw missing count but stop driving the
   // admin Missing tile: only valid, unexpired reviews count, so an expired
   // review automatically re-alerts on the next sync. Scheduled closures are
   // counted separately; they are never acknowledgements. Absent catalog rows are
   // missing prices too and acknowledge the same way.
   const resolvedGapReviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
-  const scheduledClosures = resolveStablecoinScheduledPriceClosures([...ACTIVE_IDS], nowSec);
-  const missingActiveIds = new Set(activeAssets.filter(hasMissingPrice).map((asset) => asset.id));
-  for (const id of ACTIVE_IDS) {
-    if (!presentActiveIds.has(id)) missingActiveIds.add(id);
-  }
+  const scheduledClosures = new Set(activePriceCoverage.scheduledClosureGapIds);
   let acknowledgedMissingCount = 0;
   let scheduledClosureMissingCount = 0;
-  for (const id of missingActiveIds) {
+  for (const id of activePriceCoverage.missingActiveIds) {
     if (scheduledClosures.has(id)) scheduledClosureMissingCount++;
     else if (resolvedGapReviews.activeById.has(id)) acknowledgedMissingCount++;
   }
@@ -592,12 +593,6 @@ export function buildStablecoinsSyncResult(input: {
     input.syncStartSec,
   );
   const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
-  const activePriceCoverage = input.activePriceCoverage
-    ?? evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
-      nowSec,
-      previousCoverage: input.previousActivePriceCoverage,
-      previousAcceptedAssetsById: input.previousAcceptedAssetsById,
-    });
   const priceSourceAttemptLedger = buildPriceSourceAttemptLedger({
     missingActiveIds: activePriceCoverage.missingActiveIds,
     providerDiagnostics: input.providerDiagnostics ?? [],

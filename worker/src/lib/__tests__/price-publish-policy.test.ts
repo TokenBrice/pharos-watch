@@ -18,6 +18,39 @@ const USD_CONTEXT: PriceValidationContext = {
   tracked: true,
 };
 
+describe("fiat upper-band publication", () => {
+  it.each([
+    ["reviewed-range premium", 1.23, "kraken", { kraken: 1.23, binance: 1.231 }, true],
+    ["exact boundary", 1.19, "kraken", { kraken: 1.19, binance: 1.19 }, true],
+    ["lone price", 1.23, "kraken", undefined, false],
+    ["different magnitude", 1.23, "kraken", { kraken: 1.23, binance: 1.48 }, false],
+    ["different magnitudes around the candidate", 1.23, "kraken+binance", { kraken: 1.225, binance: 1.235 }, false],
+    ["selected price lacks direct support", 1.23, "coingecko", { kraken: 1.23, binance: 1.23 }, false],
+    ["same family", 1.23, "coingecko", { coingecko: 1.23, "coingecko-low-volume": 1.23 }, false],
+    ["list aggregators only", 1.23, "coingecko", { coingecko: 1.23, "defillama-list": 1.23 }, false],
+    ["converted vote", 1.23, "kraken", { kraken: 1.23, "coingecko-native-implied": 1.23 }, false],
+    ["potential venue mirror", 1.23, "kraken", { kraken: 1.23, "cg-ticker": 1.23 }, false],
+    ["stale pool clock", 1.23, "kraken", { kraken: 1.23, "curve-dex": 1.23 }, false],
+  ] as const)("evaluates %s", (_name, ratio, source, quotes, accepted) => {
+    const par = 0.2;
+    const candidatePrices = quotes && Object.fromEntries(Object.entries(quotes).map(([key, value]) => [key, value * par]));
+    const now = Math.floor(Date.now() / 1000);
+    const fiatPremiumEvidence = Object.fromEntries(Object.entries(candidatePrices ?? {}).map(([key, priceUsd]) => [key, {
+      priceUsd,
+      observedAtSec: now - (key === "curve-dex" ? 6_000 : 60),
+      upstreamKeys: [`venue:${key === "cg-ticker" ? "kraken" : key}`],
+    }]));
+    const decision = validatePrimaryPriceCandidate({
+      price: par * ratio, source, confidence: "high", candidatePrices, fiatPremiumEvidence,
+      validationContext: { ...USD_CONTEXT, pegClass: "fiat_fx", pegType: "peggedREAL" },
+      validationReferences: { rates: { peggedREAL: par }, type: "fresh", updatedAt: null },
+    });
+    expect(decision).toEqual({
+      accepted, reason: accepted ? "corroborated_fiat_premium" : "fiat_upper_band_requires_corroboration",
+    });
+  });
+});
+
 describe("validatePrimaryPriceCandidate — severe downside with directional corroboration", () => {
   it("does not let the native CG-dependent leg bypass severe-downside or temporal-jump guards", () => {
     expect(validatePrimaryPriceCandidate({

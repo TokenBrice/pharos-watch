@@ -28,6 +28,7 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     depegSourceFamily: "coingecko",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 2,
+    isRetired: true,
     capabilities: {
       hasBidAsk: true,
       hasTradeAge: false,

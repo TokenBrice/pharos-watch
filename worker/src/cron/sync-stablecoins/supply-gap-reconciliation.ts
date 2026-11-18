@@ -5,7 +5,7 @@ import {
 
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevMonthRawOrNull, getPrevWeekRawOrNull, SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC, type SupplyChangeBaselines } from "@shared/lib/supply";
 import type { SupplyGapFillProvenance } from "@shared/types/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -77,6 +77,7 @@ export function carryForwardSupplyGapFill(
   asset.supplySource = previous.supplySource;
   asset.supplyObservedAt = observedAt;
   asset.supplyRestored = true;
+  asset.supplyChangeBaselines = previous.supplyChangeBaselines;
   asset.supplyGapFill = { ...provenance, carryForwardRuns: runs + 1 };
   return true;
 }
@@ -583,6 +584,19 @@ const HISTORY_BUCKETS = [
   { key: "month", field: "circulatingPrevMonth" },
 ] as const satisfies readonly { key: HistoryBucketKey; field: string }[];
 
+function chartSupplyBaselines(
+  asset: PeggedAsset,
+  observations: Record<HistoryBucketKey, MarketCapObservation | null>,
+): SupplyChangeBaselines {
+  const baselines: SupplyChangeBaselines = {};
+  for (const { key, field } of HISTORY_BUCKETS) {
+    const point = observations[key];
+    baselines[key] = point && getCirculatingRawOrNull({ circulating: asset[field] }) === point.value
+      ? { observedAt: point.observedAt, circulatingUsd: point.value, circulatingNative: null } : null;
+  }
+  return baselines;
+}
+
 /**
  * DEC-01 supplemental aggregate raise for one tracked asset missing exactly one deployment. Fail-closed:
  * the DL chain baseline must reconcile with every attributed chain observed; the CoinGecko series must
@@ -955,6 +969,7 @@ export async function reconcileTrackedSupplyGaps(
         continue;
       }
       candidate.asset.supplyObservedAt = observedAt;
+      candidate.asset.supplyChangeBaselines = chartSupplyBaselines(candidate.asset, { day, week, month });
       delete candidate.asset.supplyRestored;
       candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
       reconciledIds.push(candidate.asset.id);
@@ -987,6 +1002,7 @@ export async function reconcileTrackedSupplyGaps(
     candidate.asset.circulatingPrevDay = { [candidate.pegKey]: totals.day };
     candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: totals.week };
     candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: totals.month };
+    candidate.asset.supplyChangeBaselines = chartSupplyBaselines(candidate.asset, { day, week, month });
     candidate.asset.supplySource = reason;
     candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
     reconciledIds.push(candidate.asset.id);

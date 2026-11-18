@@ -1,4 +1,5 @@
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import type { QuoteDerivation } from "@shared/types/native-peg-quote";
 import { logWorkerEventArgs } from "./structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import { USER_AGENT } from "./constants";
@@ -35,9 +36,8 @@ async function readNativePegResponseSnippet(response: Response, signal?: AbortSi
 /**
  * Maps each supported non-USD fiat pegCurrency (uppercase ISO code matching
  * stablecoin registry `pegCurrency` values) to the CoinGecko `vs_currencies`
- * query strings to try in order.  CNY and CNH share `cny` first because
- * CoinGecko merges the two into a single feed; the legacy `cnh` fallback is
- * retained for compatibility with existing provider response shapes.
+ * query strings to try in order. CoinGecko supports onshore CNY, but does
+ * not list offshore CNH. Leave CNH unavailable for both live and history.
  *
  * The map covers only CoinGecko `vs_currencies` values. Peg currencies that
  * CoinGecko does not serve are documented in the registry-coverage test.
@@ -50,8 +50,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["CAD", ["cad"]],
   ["CHF", ["chf"]],
   ["CLP", ["clp"]],
-  ["CNY", ["cny", "cnh"]],
-  ["CNH", ["cny", "cnh"]],
+  ["CNY", ["cny"]],
   ["CZK", ["czk"]],
   ["EUR", ["eur"]],
   ["GBP", ["gbp"]],
@@ -85,6 +84,7 @@ export interface NativePegQuote {
   vsCurrency?: string;
   price: number;
   updatedAt: number;
+  derivation?: QuoteDerivation;
 }
 
 export interface NativePegQuoteFetchOptions {
@@ -343,6 +343,8 @@ export async function fetchCurrentNativePegQuotes(
               vsCurrency,
               price,
               updatedAt,
+              // The coin update clock does not date CoinGecko's FX conversion.
+              derivation: { kind: "conversion", lineage: { fxSource: "openExchangeRates" } },
             });
             filledAny = true;
           }

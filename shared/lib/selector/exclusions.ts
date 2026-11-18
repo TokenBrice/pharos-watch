@@ -158,7 +158,8 @@ function applyUniversalExclusions(
   // not "within the ceiling": the event flag alone fails closed (R2).
   if (row.activeDepeg) {
     if (row.currentDeviationBps == null) {
-      return fail(row.id, "active-depeg", "hard", "Active depeg with current deviation unavailable");
+      return fail(row.id, "active-depeg", "hard",
+        row.currentDeviationUnavailableNotice ?? "Active depeg with current deviation unavailable");
     }
     const ceiling = activeDepegThresholdBps(input.depegTolerance);
     if (Math.abs(row.currentDeviationBps) > ceiling) {

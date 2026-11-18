@@ -1,4 +1,4 @@
-import type { Donation, FundingChain } from "./schema";
+import { fundingTransferId, type Donation, type FundingChain } from "./schema";
 import type { ReportCardGrade } from "../../types/report-card-grade";
 import { DONOR_API_KEY_DAYS_PER_MIN_USD, DONOR_API_KEY_MIN_USD, DONOR_API_KEY_TERMS_START_SEC } from "../ops-limits";
 
@@ -568,9 +568,27 @@ export function isEligibleDonor(
 
 const DONOR_KEY_SEC_PER_USD = (DONOR_API_KEY_DAYS_PER_MIN_USD * 86_400) / DONOR_API_KEY_MIN_USD;
 
-/** A ledger donation's identity in `api_key_donor_credits`; matches the ledger's own duplicate check. */
-export function donorKeyCreditId(chain: string, txHash: string): string {
-  return `${chain}:${txHash.toLowerCase()}`;
+/** The same key the funding ledger uses to check for duplicate receipts. */
+export const donorKeyCreditId = fundingTransferId;
+
+/** Resolve transaction-keyed historical credits to their original ledger receipts. */
+export function resolveDonorKeyCreditIds(
+  donations: readonly Donation[],
+  credits: readonly { chain: string; tx_hash: string; transfer_discriminator?: string }[],
+): Set<string> {
+  const ids = new Set(credits.map((row) => donorKeyCreditId(row.chain, row.tx_hash, row.transfer_discriminator)));
+  const legacyTransactions = new Set(donations
+    .filter((row) => row.transfer_discriminator === undefined || row.legacy_credit)
+    .map((row) => donorKeyCreditId(row.chain, row.tx_hash)));
+
+  for (const row of donations) {
+    const transaction = donorKeyCreditId(row.chain, row.tx_hash);
+    // An unresolved persisted legacy credit fences the transaction until its receipt is identified.
+    if (ids.has(transaction) && (row.legacy_credit || !legacyTransactions.has(transaction))) {
+      ids.add(donorKeyCreditId(row.chain, row.tx_hash, row.transfer_discriminator));
+    }
+  }
+  return ids;
 }
 
 export interface DonorKeyCredit {
@@ -595,7 +613,8 @@ export function creditDonorKey(
   startSec: number,
 ): DonorKeyCredit {
   const counted = rows.filter((row) => row.status === "counted").map((row) => row.donation);
-  const newlyCounted = counted.filter((donation) => !creditedIds.has(donorKeyCreditId(donation.chain, donation.tx_hash)));
+  const newlyCounted = counted.filter((donation) =>
+    !creditedIds.has(donorKeyCreditId(donation.chain, donation.tx_hash, donation.transfer_discriminator)));
   const grandfatheredUsd = counted
     .filter((donation) => donation.block_timestamp < DONOR_API_KEY_TERMS_START_SEC)
     .reduce((sum, donation) => sum + donation.usd_at_receipt, 0);

@@ -132,7 +132,7 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "usd1-bundle-oracle",
-    "version": 3,
+    "version": 4,
     "semantics": "single-asset",
     "breakerScope": "usd1-world-liberty-financial",
     "display": {

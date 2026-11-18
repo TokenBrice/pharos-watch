@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { classifyPrimaryDepegTrust } from "@shared/lib/depeg-primary-trust";
+import { createAuthoritativeLivePriceOverrideStats } from "../../../lib/authoritative-price-sources";
+import { createValidationContextResolver } from "../pricing";
+import { runPostEnrichmentPricePipeline } from "../post-enrichment";
 import type * as AbortModule from "../../../lib/abort";
+import { buildSourceDepthDistribution, createEmptySourceDepthDistribution } from "../../../lib/status/price-source-depth";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -220,7 +225,7 @@ describe("DEX refresh continuity", () => {
     expect(nextDexRefreshCursor(plan, plan.missingBatchCount + 3)).toBe(3);
   });
 
-  it("probes a missing-price row in the same slot as already-priced refreshes", async () => {
+  it("probes a missing-price row first and publishes its qualified DEX price until collection expiry", async () => {
     vi.setSystemTime(now * 1000);
     prepareRefresh().mockRestore();
     const priced = ethereumDexPricedRows(7 * 30);
@@ -236,7 +241,7 @@ describe("DEX refresh continuity", () => {
             quoteToken: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", name: "USD Coin", symbol: "USDC" },
             priceNative: "0.9993", priceUsd: "0.9993",
             liquidity: { usd: 103_088.44, base: 5_117, quote: 97_974 },
-            volume: { h24: 0.18 }, pairCreatedAt: 1_713_827_704_000,
+            volume: { h24: 0.18, m5: 0.1 }, pairCreatedAt: 1_713_827_704_000,
           }]
         : [],
     } as never));
@@ -244,24 +249,23 @@ describe("DEX refresh continuity", () => {
     const summary = await runRefresh();
 
     expect(summary).toMatchObject({ attemptedBatches: 7, resolved: 1 });
-    const state = await readRefreshState();
-    expect(state.observations).toEqual([
-      expect.objectContaining({ id: "moveusd-cfx", source: "dexscreener-exact", price: 0.9993 }),
-    ]);
-    expect(state.cursor).toBe(6);
-    // Publication adopts the fetched source; the next refresh must keep the now-priced row.
-    Object.assign(missing, { price: state.observations[0].price, priceSource: "dexscreener-exact",
-      priceObservedAt: state.observations[0].observedAt, priceObservedAtMode: "local_fetch", priceConfidence: "fallback" });
-    setPublished(missing);
-    vi.setSystemTime((now + 900) * 1000);
-    expect(await runRefresh({ syncStartSec: now + 900 })).toMatchObject({
-      resolved: 1, hintedAttempted: 1, assetDiagnostics: [expect.objectContaining({
-        assetId: missing.id, inCohort: true, publishedSource: "dexscreener-exact", attempt: expect.objectContaining({ result: "resolved" }),
-      })],
+    expect(summary.providerDiagnostics[0]).toMatchObject({ chain: "solana", resolvedCount: 1 });
+    expect(summary.assetDiagnostics.find(({ assetId }) => assetId === missing.id)?.attempt).toMatchObject({
+      result: "resolved", observedAt: undefined,
     });
-    const next = await loadPriceCorroborationObservations(db, now + 1260);
-    expect(next.byId.get(missing.id)?.[0].observedAt).toBe(now + 900);
-    expect((await loadPriceCorroborationObservations(db, now + 1800)).byId.has(missing.id)).toBe(false);
+    const state = await readRefreshState();
+    expect(state.observations).toMatchObject([{ id: missing.id, price: 0.9993, observedAt: now, observedAtMode: "local_fetch",
+      recentActivity: { evidence: "positive-volume-m5", collectedAt: now } }]);
+    expect(state.cursor).toBe(6);
+    vi.setSystemTime((now + 60) * 1000);
+    const publication = await runPostEnrichmentPricePipeline({ assets: [missing], db, syncStartSec: now + 60,
+      validationContexts: createValidationContextResolver(), authoritativeOverrides: new Map(),
+      authoritativeOverrideStats: createAuthoritativeLivePriceOverrideStats(), priceCache: new Map() }, "");
+    expect(publication).toMatchObject({ cachedFallbackCount: 1 });
+    expect(missing).toMatchObject({ price: 0.9993, priceObservedAt: null, priceUpdatedAt: null, priceSyncedAt: now,
+      priceObservedAtMode: "unknown", priceConfidence: "fallback", priceSource: "dexscreener-exact" });
+    expect(classifyPrimaryDepegTrust(missing, now + 60)).toBe("confirm_required");
+    expect((await loadPriceCorroborationObservations(db, now + 900)).byId.has(missing.id)).toBe(false);
   });
 
   it("bounds batches and advances fairly under overflow", () => {
@@ -294,7 +298,7 @@ describe("DEX refresh continuity", () => {
     prepareRefresh().mockResolvedValue({ resolved: 0, failures: [] });
     const observations = [
       { id: "m-m0", source: "defillama-contract", price: 0.997, observedAt: now - 60, observedAtMode: "upstream" as const },
-      { id: "xo-exodus", source: "jupiter", price: 0.999, observedAt: now, observedAtMode: "local_fetch" as const },
+      { id: "xo-exodus", source: "jupiter", price: 0.999, observedAt: now, observedAtMode: "upstream" as const },
     ];
     vi.mocked(shortLived.runShortLivedPriceRefresh).mockResolvedValueOnce({
       contractRefresh: { cohortSize: 2, resolved: 1, failedPasses: [], timedOut: false },
@@ -312,6 +316,28 @@ describe("DEX refresh continuity", () => {
     const staged = await loadPriceCorroborationObservations(db, now + 60);
     expect(staged.byId.get("m-m0")?.[0].observedAt).toBe(now - 60);
     expect(staged.byId.get("xo-exodus")?.[0].observedAt).toBe(now);
+  });
+
+  it.each([PRICE_CORROBORATION_OBSERVATIONS_KEY, DEX_REFRESH_CACHE_KEY])(
+    "requires a block-timed Jupiter observation from %s", async (key) => {
+      const observation = { id: "xo-exodus", source: "jupiter", price: 0.999, observedAt: now - 30 };
+      for (const observedAtMode of ["local_fetch", "upstream"] as const) {
+        const row = { ...observation, observedAtMode };
+        const payload = key === DEX_REFRESH_CACHE_KEY ? { observations: [row] } : [row];
+        const generation = observedAtMode === "upstream" ? now + 1 : now;
+        await setCacheIfNewer(db, key, JSON.stringify(payload), generation);
+        const { byId, summary } = await loadPriceCorroborationObservations(db, now + 60);
+        expect(byId.get(row.id)).toEqual(observedAtMode === "upstream" ? [row] : undefined);
+        expect(summary.discarded.sourceIneligible).toBe(observedAtMode === "local_fetch" ? 1 : 0);
+      }
+    },
+  );
+
+  it("counts an upstream Jupiter quote in the one-source status bucket", () => {
+    expect(buildSourceDepthDistribution([makePeggedAsset({
+      id: "xo-exodus", price: 0.999, priceSource: "jupiter", priceObservedAt: now - 30,
+      priceObservedAtMode: "upstream", consensusSources: ["jupiter"],
+    })])).toEqual({ ...createEmptySourceDepthDistribution(), "1": 1 });
   });
 
   it("paces consecutive batches within the lane budget", async () => {

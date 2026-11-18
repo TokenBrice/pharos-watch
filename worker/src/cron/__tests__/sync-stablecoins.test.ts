@@ -11,6 +11,8 @@ import {
   makeSyncDb,
   trackCacheWrites,
 } from "./sync-stablecoins.test-support";
+import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
+import { StablecoinListResponseSchema } from "@shared/types/supply";
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
@@ -154,7 +156,32 @@ describe("syncStablecoins", () => {
     expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "aborted-after-publication", cacheWriteMode: "published",
       ...(stage === "complete" ? {} : { quality: { depegObservation: null, depegObservationUnavailableReason: "aborted" } }),
       capabilities: { stablecoinsCache: true, depegPipeline: stage === "complete" } });
-    expect(writes.some((write) => write.key === "stablecoins")).toBe(true);
+    const published = StablecoinListResponseSchema.parse(JSON.parse(writes.find((write) => write.key === "stablecoins")!.value));
+    expect(published.fxReferenceObservations).toBeUndefined();
+    expect(published.fxAdmissionCoverageGeneration).toEqual(expect.any(String));
+  });
+
+  it.each([["main", true], ["fallback", true], ["main", false], ["fallback", false]] as const)("publishes the FX evidence cutover on %s with provider data %s", async (path, hasReference) => {
+    const now = Date.parse("2026-11-20T21:55:00Z") / 1000;
+    vi.setSystemTime(now * 1000);
+    const observation = { pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates", cadence: "intraday", observedAtSec: now - 300 };
+    const rows = fxRatesCacheRows(now - 30, { peggedEUR: 1.1 }, {
+      sourceUpdatedAtByPeg: { peggedEUR: observation.observedAtSec }, observations: { peggedEUR: observation },
+    });
+    const db = makeSyncDb([{ match: "cache WHERE key IN", matchBinds: ["fx-rates", "fx-rates-meta"], rows: hasReference ? rows : [] }]);
+    const writes = trackCacheWrites(db);
+    if (path === "fallback") vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== CIRCUIT_SOURCE.DL_STABLECOINS);
+    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60), path === "fallback" ? fallbackCoinGeckoData() : {}));
+    await syncStablecoins(db, undefined, { publishFxReferenceEvidence: true });
+    const payload = StablecoinListResponseSchema.parse(JSON.parse(writes.find((write) => write.key === "stablecoins")!.value));
+    if (!hasReference) {
+      expect(payload.fxReferenceObservations).toEqual({});
+      return;
+    }
+    expect(payload.fxReferenceObservations?.peggedEUR).toEqual(observation);
+    expect(payload.selectedPegReferences?.peggedEUR).toMatchObject({ kind: "fx", generation: `stablecoins:${now}`, observation });
+    expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[6]).toMatchObject({ selectedReferenceEvidence: { peggedEUR: observation } });
+    expect(vi.mocked(confirmPendingDepegs).mock.calls[0]?.[7]).toBe(vi.mocked(detectDepegEvents).mock.calls[0]?.[6]);
   });
 
   it("publishes the DefiLlama snapshot and runs the downstream depeg workflow", async () => {
@@ -179,8 +206,8 @@ describe("syncStablecoins", () => {
     expect(trackedDb).not.toBe(db);
     expect(primaryCall?.[8]).toMatchObject({ previousAssetsById: expect.any(Map) });
     expect(enrichMissingPrices).not.toHaveBeenCalled();
-    expect(detectDepegEvents).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object), expect.any(Object));
+    expect(detectDepegEvents).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object), null);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(trackedDb, expect.any(Array), undefined, undefined, undefined, expect.any(Object), expect.any(Object), null);
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-stablecoins", true);
   });
 
@@ -490,7 +517,7 @@ describe("syncStablecoins", () => {
     expect(writes.map((write) => write.key)).not.toContain("stablecoins");
   });
 
-  it("aborts during the staleness check and backfills supply history", async () => {
+  it("aborts during the staleness check and withholds priors from undated USD history", async () => {
     vi.mocked(recordOutcome).mockClear();
     const controller = new AbortController();
     const report = vi.fn(async (update: { stage?: string | null }) => { if (update.stage === "staleness-check") controller.abort(); });
@@ -505,7 +532,9 @@ describe("syncStablecoins", () => {
     const historyWrites = trackCacheWrites(historyDb);
     mockFetchWithRetry(defaultSyncRoutes(historyData));
     await syncStablecoins(historyDb);
-    expect(publishedAssets(historyWrites).find((asset) => asset.id === "usdt-tether")).toMatchObject({ circulatingPrevDay: { peggedUSD: 900_000 }, circulatingPrevWeek: { peggedUSD: 890_000 }, circulatingPrevMonth: { peggedUSD: 880_000 } });
+    const published = publishedAssets(historyWrites).find((asset) => asset.id === "usdt-tether");
+    expect(published).toMatchObject({ circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} });
+    expect(published).not.toHaveProperty("supplyChangeBaselines");
   });
 
   it.each([

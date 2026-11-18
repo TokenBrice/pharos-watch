@@ -125,6 +125,9 @@ function buildCurrentTradingSnapshot(): Record<string, unknown> {
 describe("selector snapshot contract", () => {
   it("preserves old-guard SID fingerprints and unknown-field projection for every retained profile/version", () => {
     const sids: string[] = [];
+    const fingerprintedVersions = SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS.slice(
+      0, SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS.indexOf("selector-v2.13") + 1,
+    );
     const row = makeMergedRowWithIdentity(
       { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
       { yieldVenueChain: "ethereum", yieldProtocolSlug: "aave" },
@@ -159,7 +162,9 @@ describe("selector snapshot contract", () => {
         const verified = createVerifiedSelectorSnapshot(baseline);
         expect(validateSelectorSnapshotResponse(verified)).toEqual({ ok: true, snapshot: verified });
         expect(validateSelectorSnapshotResponse({ ...verified, unknownRoot: true }).ok).toBe(false);
-        sids.push(computeSelectorSnapshotSid(projected), computeSelectorSnapshotSid(verified));
+        if (fingerprintedVersions.includes(engineVersion)) {
+          sids.push(computeSelectorSnapshotSid(projected), computeSelectorSnapshotSid(verified));
+        }
       }
     }
     // Captured from the pre-schema hand guards, not calculated by the new parser.

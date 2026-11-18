@@ -1,11 +1,13 @@
+import { getCommodityOuncesAtQuote } from "../commodity-median";
 import { getChainResilienceTier } from "./index";
 import { CHAIN_META } from "../../types/chain-identity";
 import { canonicalizeChainCirculating } from "./circulating";
 // Chain health reads backing/commodity units only, never issuer evidence.
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "../stablecoins/client-registry";
-import { getPegReference } from "../peg-rates";
+import { readDeviationProjection } from "../depeg-signals";
+import { pegTypeFromCurrency } from "../peg-taxonomy";
+import { getPegReference, isParityPrice, normalizePegType } from "../peg-rates";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "../supply";
-import { isObservedPrice } from "../pricing-source-policy";
 import { relativeChangeRatio } from "../stats";
 import { ZERO_RATIO, type Ratio } from "../../types/ratio";
 import {
@@ -18,8 +20,12 @@ import {
   computeHealthScore,
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
+  type PegStabilityCandidate,
 } from "./health";
 import type { BackingType } from "../../types/core";
+import type { StablecoinData } from "../../types/supply";
+import type { CurrentPeg } from "../../types/current-peg";
+import type { AdmittedDeviationBps, ReferenceAdmission } from "../../types/reference-admission";
 import type {
   ChainSummary,
   ChainsResponse,
@@ -27,14 +33,21 @@ import type {
 } from "../../types/chains";
 
 /** Narrow input type — only the fields the aggregator actually reads. */
-export interface ChainAggregatorAsset {
+export interface ChainAggregatorAsset extends Partial<Pick<StablecoinData,
+  "priceObservedAtMode" | "parityQuoteUnit" | "commodityEntitlement" | "priceDerivation" | "agreeSources" | "consensusSources">> {
   id: string;
   symbol: string;
   name?: string;
   price: number | null;
   priceSource?: string | null;
-  priceObservedAtMode?: string | null;
+  priceObservedAt?: number | null;
+  priceUpdatedAt?: number | null;
   pegType?: string;
+  currentPeg?: Pick<CurrentPeg, "pegReference" | "currentPriceUnavailable" | "pegReferenceUnavailable"> & {
+    currentDeviationBps?: number | null;
+    referenceAdmission?: ReferenceAdmission | null;
+    admittedDeviationBps?: AdmittedDeviationBps;
+  };
   circulating?: Record<string, number>;
   circulatingPrevDay?: Record<string, number>;
   circulatingPrevWeek?: Record<string, number>;
@@ -51,7 +64,8 @@ export interface ChainAggregatorAsset {
 export interface ChainAggregatorInput {
   peggedAssets: ChainAggregatorAsset[];
   safetyScores: Record<string, number>;
-  pegRates: Record<string, number>;
+  /** Legacy cohort rates cover rows that predate the per-asset peg block. */
+  pegRates?: Record<string, number>;
   /**
    * Generation timestamp of the payload being aggregated. The aggregator is
    * pure: it never stamps wall-clock time it did not observe, so every caller
@@ -82,8 +96,8 @@ interface ChainAccumulator {
     name: string;
     symbol: string;
     supplyUsd: number;
-    price: number | null;
     pegType: string | undefined;
+    pegStability: PegStabilityCandidate;
     safetyScore: number | null;
     backing: BackingType | undefined;
     navToken: boolean;
@@ -97,8 +111,32 @@ function supplyChangeRatio(current: number, previous: number): Ratio | null {
   return current === 0 && previous === 0 ? ZERO_RATIO : relativeChangeRatio(current, previous);
 }
 
+function pegStabilityCandidate(asset: ChainAggregatorAsset, supplyUsd: number, legacyRates: ChainAggregatorInput["pegRates"]): PegStabilityCandidate {
+  const peg = asset.currentPeg;
+  const price = !peg?.currentPriceUnavailable && isParityPrice(asset) && typeof asset.price === "number"
+    ? asset.price : null;
+  const meta = TRACKED_META_BY_ID.get(asset.id);
+  const pegType = normalizePegType(asset.pegType);
+  const registryPeg = pegTypeFromCurrency(meta?.flags.pegCurrency);
+  const unit = { assetId: asset.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec: asset.priceObservedAt };
+  if ((registryPeg != null && registryPeg !== pegType) || getCommodityOuncesAtQuote(meta?.commodityOunces, unit) == null) {
+    return { price, pegRef: null, supplyUsd };
+  }
+  if (peg == null && legacyRates) {
+    const pegRef = getPegReference(pegType, legacyRates, meta?.commodityOunces, unit);
+    return { price, pegRef, supplyUsd };
+  }
+  const usdPeg = pegType === "peggedUSD" && (meta == null || meta.flags.pegCurrency === "USD");
+  const projection = readDeviationProjection(peg, usdPeg, asset.priceObservedAt);
+  // Legacy chain scores weight the unrounded price/reference ratio.
+  const unavailable = peg?.pegReferenceUnavailable || projection === null ||
+    (projection === undefined && peg?.currentDeviationBps === null);
+  const pegRef = unavailable ? null : usdPeg ? 1 : peg?.pegReference?.valueUsd ?? null;
+  return { price, pegRef, supplyUsd, admittedDeviationBps: projection };
+}
+
 export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
-  const { peggedAssets, safetyScores, pegRates } = input;
+  const { peggedAssets, safetyScores } = input;
 
   const accumulators = new Map<string, ChainAccumulator>();
   let aggregateTotalUsd = 0;
@@ -186,8 +224,8 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         name: asset.name ?? asset.symbol,
         symbol: asset.symbol,
         supplyUsd: current,
-        price: isObservedPrice(asset) && typeof asset.price === "number" ? asset.price : null,
         pegType: asset.pegType,
+        pegStability: pegStabilityCandidate(asset, current, input.pegRates),
         safetyScore: safetyScores[asset.id] ?? null,
         backing: meta?.flags?.backing,
         navToken: meta?.flags?.navToken === true,
@@ -268,15 +306,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
 
     // Peg stability: NAV tokens are excluded from peg deviation and its coverage universe
     // because their price appreciates by design (docs/classification.md). Every other
-    // positive-supply coin enters the coverage denominator; coins without a peg reference
+    // positive-supply coin enters the coverage denominator; coins without an admitted comparison
     // stay unobserved rather than disappearing from the factor's universe.
     const pegAssessment = assessPegStability(acc.coins
       .filter((c) => !c.navToken)
-      .map((c) => ({
-        price: c.price,
-        pegRef: getPegReference(c.pegType, pegRates, TRACKED_META_BY_ID.get(c.id)?.commodityOunces),
-        supplyUsd: c.supplyUsd,
-      })));
+      .map((coin) => coin.pegStability));
 
     const qualityCoins = acc.coins.map((c) => ({
       safetyScore: c.safetyScore,
@@ -351,7 +385,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
           id: coin.id,
           name: coin.name,
           symbol: coin.symbol,
-          price: coin.price,
+          price: coin.pegStability.price,
           pegType: coin.pegType,
           supplyUsd: coin.supplyUsd,
           // Chain-local denominator: the chain's own total, never the global aggregate.

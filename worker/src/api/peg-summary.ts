@@ -20,7 +20,7 @@ import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-c
 import { signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices } from "../lib/current-peg-observations";
-import { deriveDexDeviationBps } from "@shared/lib/current-peg-observations";
+import { deriveDexDeviationBps, hasFxReferenceEvidence } from "@shared/lib/current-peg-observations";
 import {
   effectiveStartedAtSql,
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
@@ -189,10 +189,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     }
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }
-  const { peggedAssets, fxFallbackRates } = stablecoinsCache.payload as {
-    peggedAssets: StablecoinData[];
-    fxFallbackRates?: Record<string, number>;
-  };
+  const { peggedAssets, fxFallbackRates, fxReferenceObservations } = stablecoinsCache.payload;
+  const admissionEnabled = hasFxReferenceEvidence(fxReferenceObservations);
 
   const now = Math.floor(Date.now() / 1000);
   // 2. Load DEX prices + shared peg analytics snapshot
@@ -236,6 +234,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
       peggedAssets,
       fxFallbackRates,
+      fxReferenceObservations,
       methodologyAsOf: stablecoinsCache.updatedAt,
       includeNavTokens: true,
     }).catch((error) => {
@@ -271,12 +270,14 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   const dexPrices = selectCurrentPegDexPrices(dexPriceResult.results, now);
 
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const { sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
+  const pegRates = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates, fxReferenceObservations, now);
   const currentObservations = deriveCurrentPegObservationMap({
     peggedAssets,
-    fxFallbackRates,
+    pegRates,
+    fxReferenceObservations,
     asOf: stablecoinsCache.updatedAt,
     now,
+    generation: `stablecoins:${stablecoinsCache.updatedAt}`,
     dexPrices,
   });
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
@@ -285,7 +286,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
   let activeDepegCount = 0;
   const allAbsBps: number[] = [];
-  let worstCurrent: { id: string; symbol: string; bps: number } | null = null;
+  let worstCurrent: { id: string; symbol: string; rawBps: number } | null = null;
   let coinsAtPeg = 0;
   let totalTracked = 0;
 
@@ -303,6 +304,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     const observation = currentObservations.get(meta.id);
     const currentBps = observation?.currentDeviationBps ?? null;
     const currentPriceUnavailable = observation?.currentPriceUnavailable ?? !isNavToken;
+    const admittedBps = observation?.admittedDeviationBps ?? null;
     // NAV score fields are normalized at the peg-analytics source via
     // NULL_PEG_SCORE_RESULT; only live deviation is withheld again here.
     // Detection needs an observed price, so with none (missing, rejected or
@@ -320,6 +322,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
+      admittedDeviationBps: admissionEnabled ? admittedBps : undefined,
+      referenceAdmission: observation?.referenceAdmission,
       pegReference: observation?.pegReference ?? null,
       pegReferenceUnavailable: observation?.pegReferenceUnavailable ?? true,
       currentPriceUnavailable,
@@ -357,22 +361,25 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     });
 
     if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
-    // A deviation read against a closed FX or metal market stays on its row but is not a
-    // live peg status: the aggregates skip it, as the OG at-peg cohort does.
-    const heldByClosedMarket = currentBps !== null && isReferenceDeviationHeld(
-      meta.flags.pegCurrency,
-      asset?.priceObservedAt ?? asset?.priceUpdatedAt ?? Number.NaN,
-      Math.abs(observation?.currentSignal?.rawBps ?? currentBps),
-    );
-    if (currentBps !== null && !heldByClosedMarket) {
-      // Keep summary aggregates aligned to rows with a live peg status.
+    const censusBps = admissionEnabled ? admittedBps : currentBps;
+    const legacyQuoteAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
+    const legacyHold = !admissionEnabled && censusBps !== null &&
+      typeof legacyQuoteAt === "number" && Number.isFinite(new Date(legacyQuoteAt * 1000).getTime()) &&
+      isReferenceDeviationHeld(
+        meta.flags.pegCurrency,
+        legacyQuoteAt,
+        Math.abs(observation?.currentSignal?.rawBps ?? censusBps),
+      );
+    if (censusBps !== null && !legacyHold) {
       totalTracked++;
-      const absBps = Math.abs(currentBps);
+      const absBps = Math.abs(censusBps);
       allAbsBps.push(absBps);
       const pegThreshold = getDepegThresholdBpsForPegCurrency(meta.flags.pegCurrency);
-      if (observation?.currentSignal && !signalCrossesThreshold(observation.currentSignal, pegThreshold)) coinsAtPeg++;
-      if (!worstCurrent || absBps > Math.abs(worstCurrent.bps)) {
-        worstCurrent = { id: meta.id, symbol: meta.symbol, bps: currentBps };
+      const atPeg = admissionEnabled ? absBps < pegThreshold
+        : observation?.currentSignal && !signalCrossesThreshold(observation.currentSignal, pegThreshold);
+      if (atPeg) coinsAtPeg++;
+      if (!worstCurrent || absBps > Math.abs(worstCurrent.rawBps)) {
+        worstCurrent = { id: meta.id, symbol: meta.symbol, rawBps: censusBps };
       }
     }
   }
@@ -380,10 +387,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   const medianBps = medianOfRounded(allAbsBps);
 
   // Flag peg types using fallback rates so frontend can signal stale data
-  const fallbackPegTypes = Object.entries(pegRateSources)
+  const fallbackPegTypes = Object.entries(pegRates.sources)
     .filter(([, src]) => src === "fallback")
     .map(([peg]) => peg);
-  const fxPegTypes = Object.entries(pegRateSources)
+  const fxPegTypes = Object.entries(pegRates.sources)
     .filter(([, src]) => src === "fx")
     .map(([peg]) => peg);
 
@@ -406,7 +413,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     summary: {
       activeDepegCount,
       medianDeviationBps: medianBps,
-      worstCurrent,
+      worstCurrent: worstCurrent && { id: worstCurrent.id, symbol: worstCurrent.symbol, bps: Math.round(worstCurrent.rawBps) },
       coinsAtPeg,
       totalTracked,
       depegEventsToday,

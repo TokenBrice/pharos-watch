@@ -1,4 +1,6 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
+import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
+import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
@@ -11,12 +13,15 @@ import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import type { PeggedAsset } from "../enrich-prices";
 import {
+  admitCommodityValuation,
   fetchCommodityTokens,
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalPrice,
   resolveSupplementalCoinGeckoMcap,
+  toPositiveFiniteNumber,
   type CoinGeckoMcapData,
+  type CommodityValuationEvidence,
 } from "./shared";
 
 const SILVER_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "SILVER");
@@ -65,7 +70,7 @@ async function fetchCoinGeckoCirculatingSupplyMap(
       observedAtMode: "upstream",
       requireObservedAt: true,
     });
-    if (freshness.accepted && freshness.observedAt != null && item.circulating_supply != null && Number.isFinite(item.circulating_supply) && item.circulating_supply > 0) {
+    if (freshness.accepted && freshness.observedAt != null && item.circulating_supply != null && Number.isFinite(item.circulating_supply) && item.circulating_supply >= 0) {
       supplyMap.set(item.id, { supply: item.circulating_supply, observedAt: freshness.observedAt });
     }
   }
@@ -79,51 +84,57 @@ export async function fetchSilverTokens(
   db?: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
   dwellirNative?: DwellirNativeCapability,
+  evidence?: CommodityValuationEvidence,
 ): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
 
   try {
     const [priceData, cgSupplyMap] = await Promise.all([
       fetchSupplementalPriceData(SILVER_METAS, "silver", signal, db),
-      fetchCoinGeckoCirculatingSupplyMap(SILVER_METAS, "silver", signal, coingeckoApiKey),
+      fetchCoinGeckoCirculatingSupplyMap(SILVER_METAS.filter((meta) => !isKinesisWrapperSupplyCutoverActive(meta.id, nowSec)), "silver", signal, coingeckoApiKey),
     ]);
-
-    const mcapMap: Record<string, number> = {};
-    const observedAtById: Record<string, number | undefined> = {};
-    for (const token of SILVER_METAS) {
-      if (!token.geckoId) continue;
-      const cgMcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
-      const supplyObservation = cgSupplyMap.get(token.geckoId);
-      const circulatingSupply = supplyObservation?.supply;
-      const priceResolution = resolveSupplementalPrice(priceData, cgData, token.geckoId);
-      const price = priceResolution?.price ?? 0;
-      const mcap = resolveMarketCap(cgMcap ?? undefined, circulatingSupply, price);
-
-      if (mcap > 0) {
-        if (circulatingSupply && cgMcap && Math.abs(cgMcap - mcap) / mcap > 0.01) {
-          logWorkerEventArgs("handler", "warn",
-            `[silver] ${token.symbol}: cgMcap=${cgMcap.toFixed(0)} rejected, using computed=${mcap.toFixed(0)} (supply=${circulatingSupply.toFixed(0)} × price=${price.toFixed(2)})`,
-          );
-        }
-        mcapMap[token.id] = mcap;
-        observedAtById[token.id] = mcap === cgMcap
-          ? cgData[token.geckoId]?.last_updated_at
-          : supplyObservation?.observedAt;
-      }
-    }
 
     return fetchCommodityTokens(SILVER_METAS, {
       logPrefix: "silver",
       priceData,
       cgData,
       resolveSupply: async (meta) => {
-        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative);
+        const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal, dwellirNative, evidence);
+        if (aggregate) return aggregate;
+        if (isKinesisWrapperSupplyCutoverActive(meta.id, nowSec)) return { mcap: null, supplySource: "onchain-supply-withheld" };
+        const observed = meta.geckoId ? cgSupplyMap.get(meta.geckoId) : undefined;
+        const quote = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
+        const cgMcap = resolveSupplementalCoinGeckoMcap(cgData, meta.geckoId);
+        const resolvedMcap = resolveMarketCap(cgMcap ?? undefined, observed?.supply, quote?.price ?? 0);
+        if (observed && (observed.supply === 0 || (quote && resolvedMcap > 0 && resolvedMcap !== cgMcap))) {
+          if (cgMcap != null && resolvedMcap !== cgMcap) {
+            logWorkerEventArgs("handler", "warn", `[silver] ${meta.symbol}: rejecting CoinGecko cap in favor of observed circulating supply`);
+          }
+          return {
+            // The program count can value its pre-cutover cap but is not wrapper stock.
+            circulatingNative: isKinesisWrapperSupplyId(meta.id) ? null : observed.supply,
+            valuationPriceUsd: quote?.price,
+            valuationObservedAtSec: quote?.observedAt,
+            mcap: observed.supply === 0 ? 0 : resolvedMcap,
+            supplySource: "coingecko-fallback",
+            supplyObservedAt: observed.observedAt,
+          };
+        }
+        const cgEntry = meta.geckoId ? cgData[meta.geckoId] : undefined;
+        const capClock = cgMcap == null ? null : cgEntry?.last_updated_at;
+        const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
+        const pairedQuote = cgPrice != null && capClock != null && observed?.observedAt === capClock && cgMcap != null &&
+          Math.abs(observed.supply * cgPrice - cgMcap) <= 1e-12 * cgMcap
+          ? admitCommodityValuation(meta, { price: cgPrice, observedAt: capClock, observedAtMode: "upstream", source: "coingecko" }, evidence) : null;
         return {
-          mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
-          supplySource: aggregate?.supplySource ?? "coingecko-fallback",
-          supplyObservedAt: aggregate ? aggregate.supplyObservedAt : observedAtById[meta.id],
-          chainCirculating: aggregate?.chainCirculating,
+          circulatingNative: pairedQuote && !isKinesisWrapperSupplyId(meta.id) ? observed?.supply : null,
+          valuationPriceUsd: pairedQuote?.price ?? null,
+          valuationObservedAtSec: pairedQuote?.observedAt ?? null,
+          mcap: cgMcap,
+          supplySource: "coingecko-fallback",
+          supplyObservedAt: capClock,
         };
       },
     });

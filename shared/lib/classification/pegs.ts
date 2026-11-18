@@ -456,15 +456,15 @@ export const PEG_METADATA = {
     chart: { label: "Silver", textColor: "text-gray-700 dark:text-gray-400", bgColor: "bg-gray-400", hex: "#9ca3af" },
   },
   VAR: {
-    label: "CPI",
-    shortLabel: "CPI",
+    label: "a variable reference",
+    shortLabel: "Variable",
     filterTag: "var-peg",
-    filterLabel: "CPI",
+    filterLabel: "Variable",
     badge: {
-      label: "CPI Peg",
+      label: "Variable Peg",
       cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
     },
-    chart: { label: "CPI", textColor: "text-sky-700 dark:text-sky-400", bgColor: "bg-sky-500", hex: "#0ea5e9" },
+    chart: { label: "Variable", textColor: "text-sky-700 dark:text-sky-400", bgColor: "bg-sky-500", hex: "#0ea5e9" },
   },
   OTHER: {
     label: "Other",

@@ -6,6 +6,7 @@ import type {
   HealthBand,
 } from "../../types/chains";
 import type { Ratio } from "../../types/ratio";
+import type { AdmittedDeviationBps } from "../../types/reference-admission";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
 import { bandFromThresholds, hhiToDiversityScore } from "../math";
 import { deriveDepegSignal } from "../depeg-signals";
@@ -66,10 +67,14 @@ export function computeBackingDiversityScore(
   return Math.round(100 * (entropy / maxEntropy));
 }
 
-function pegProximityScore(price: number | null, pegRef: number): number | null {
-  const signal = price == null ? null : deriveDepegSignal(price, pegRef);
-  // `absRawBps` is the unrounded deviation, matching the previous inline formula.
-  return signal == null ? null : Math.max(0, 100 - (signal.absRawBps ?? signal.absBps) / PEG_DEVIATION_SCORE_DIVISOR_BPS);
+function pegProximityScore({ price, pegRef, admittedDeviationBps }: PegStabilityCandidate): number | null {
+  if (price == null || !Number.isFinite(price) || price <= 0) return null;
+  const deviationBps = admittedDeviationBps !== undefined
+    ? admittedDeviationBps
+    : pegRef == null ? null : deriveDepegSignal(price, pegRef)?.rawBps ?? null;
+  return deviationBps == null || !Number.isFinite(deviationBps)
+    ? null
+    : Math.max(0, 100 - Math.abs(deviationBps) / PEG_DEVIATION_SCORE_DIVISOR_BPS);
 }
 
 export interface PegStabilityCandidate {
@@ -77,6 +82,7 @@ export interface PegStabilityCandidate {
   /** `null` when the coin's peg has no reference rate; the coin still counts in the coverage denominator. */
   pegRef: number | null;
   supplyUsd: number;
+  admittedDeviationBps?: AdmittedDeviationBps;
 }
 
 export interface PegStabilityAssessment {
@@ -88,8 +94,8 @@ export interface PegStabilityAssessment {
 /**
  * Peg stability plus its observation coverage against the supplied peg-referenced positive supply.
  * NAV tokens are excluded by the caller (their price appreciates by design). A coin is observed
- * only when it has a usable price and a usable (finite, positive) peg reference; coins lacking a
- * reference stay in the denominator so missing-reference supply cannot inflate coverage.
+ * only when it has an admitted deviation or a usable fixed-USD comparison; coins lacking either
+ * stay in the denominator so missing-reference supply cannot inflate coverage.
  */
 export function assessPegStability(coins: readonly PegStabilityCandidate[]): PegStabilityAssessment {
   let eligibleSupplyUsd = 0;
@@ -102,7 +108,7 @@ export function assessPegStability(coins: readonly PegStabilityCandidate[]): Peg
   for (const coin of coins) {
     if (!(coin.supplyUsd > 0)) continue;
     eligibleSupplyUsd += coin.supplyUsd;
-    const coinScore = coin.pegRef == null ? null : pegProximityScore(coin.price, coin.pegRef);
+    const coinScore = pegProximityScore(coin);
     if (coinScore != null) {
       observedCount += 1;
       observedSupplyUsd += coin.supplyUsd;

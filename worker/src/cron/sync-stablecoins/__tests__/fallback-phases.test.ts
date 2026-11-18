@@ -169,6 +169,9 @@ describe("CoinGecko fallback phases", () => {
       priceSyncedAt: NOW_SEC,
       supplySource: "coingecko-fallback",
       circulating: { peggedUSD: 12_000_000 },
+      circulatingNative: 12_000_000 / 0.999,
+      valuationPriceUsd: 0.999,
+      valuationObservedAtSec: NOW_SEC - 60,
       circulatingPrevDay: null,
       circulatingPrevWeek: null,
       circulatingPrevMonth: null,
@@ -211,21 +214,23 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
-  it("injects frozen snapshot rows the CoinGecko feed cannot serve, with their captured clocks", async () => {
+  it.each([false, true])("injects frozen supply and applies archive price freshness (expired=%s)", async (expired) => {
+    const aeur = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins")!;
+    const capturedAt = Math.floor(Date.parse(aeur.capturedAt) / 1000);
+    const syncStartSec = capturedAt + (expired ? 86_400 : 0);
     const stablecoins = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive");
     const cgData = Object.fromEntries(stablecoins.map((meta) => [meta.geckoId!, {
-      usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC,
+      usd: 1, usd_market_cap: 5_000_000, last_updated_at: syncStartSec,
     }]));
-    const result = await runFallbackIntakePhase({ syncStartSec: NOW_SEC, cgData, stablecoins });
+    const result = await runFallbackIntakePhase({ syncStartSec, cgData, stablecoins });
     expect("assets" in result).toBe(true);
     const assets = (result as { assets: PeggedAsset[] }).assets;
     const frozenIds = new Set(FROZEN_SNAPSHOTS.map((snapshot) => snapshot.id));
     expect(assets.filter((asset) => frozenIds.has(asset.id)).map((asset) => asset.id).sort())
       .toEqual([...frozenIds].sort());
-    const aeur = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins")!;
     expect(assets.find((asset) => asset.id === aeur.id)).toMatchObject({
-      price: 1.117990454919679,
-      priceObservedAt: Math.floor(Date.parse(aeur.capturedAt) / 1000),
+      price: expired ? null : 1.117990454919679,
+      priceObservedAt: expired ? null : capturedAt,
       circulating: { peggedEUR: 1_117_775.589919203 },
     });
   });
@@ -578,6 +583,7 @@ describe("CoinGecko fallback phases", () => {
       " (CG fallback)",
       undefined,
       undefined,
+      undefined,
     );
   });
 });
@@ -727,9 +733,10 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(fresh[0].supplyUnavailableReason).toBeUndefined();
   });
 
-  it("attaches the full per-chain map for a curated NAV wrapper and probes only curated assets", async () => {
+  it.each([4_884_400_000 / 1.06, undefined])("replaces the whole curated supply packet with producer count %s", async (nativeSupply) => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue({
       mcap: 4_884_400_000,
+      nativeSupply,
       supplySource: "onchain-total-supply",
       observedAt: NOW_SEC + 10,
       chainCirculating: {
@@ -745,6 +752,11 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       symbol: "sUSDS",
       geckoId: "susds",
       price: 1.06,
+      priceObservedAt: NOW_SEC - 60,
+      priceObservedAtMode: "upstream",
+      circulatingNative: 4_600_000_000,
+      valuationPriceUsd: 1,
+      valuationObservedAtSec: NOW_SEC - 90,
       supplySource: "coingecko-fallback",
       circulating: { peggedUSD: 4_600_000_000 },
       chainCirculating: { Ethereum: { current: null } },
@@ -762,6 +774,9 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     // Single basis: the CG NAV price is passed straight through to the probe.
     expect(priceUsd).toBe(1.06);
     expect(susds.supplyObservedAt).toBe(NOW_SEC + 10);
+    expect(susds.circulatingNative).toBe(nativeSupply);
+    expect(susds.valuationPriceUsd).toBe(nativeSupply == null ? undefined : 1.06);
+    expect(susds.valuationObservedAtSec).toBe(nativeSupply == null ? undefined : NOW_SEC - 60);
 
     expect(susds.supplySource).toBe("onchain-total-supply");
     expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });

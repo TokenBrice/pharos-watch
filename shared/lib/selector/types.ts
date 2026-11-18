@@ -274,6 +274,7 @@ export interface MergedRow {
   pegScore: number | null;
   activeDepeg: boolean;
   currentDeviationBps: number | null;
+  currentDeviationUnavailableNotice?: string;
   depegEventCount: number;
   lastEventAt: number | null;
 

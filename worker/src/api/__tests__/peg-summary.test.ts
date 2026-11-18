@@ -16,6 +16,7 @@ import * as depegTrustPolicy from "../../lib/depeg-trust-policy";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/dex-cron-constants";
 
 const nowSec = Math.floor(Date.now() / 1000);
+const OPEN_FX_QUOTE_AT = 1_795_017_600; // Wednesday 16:00 UTC
 const TODAY_START_SEC = Math.floor(nowSec / 86_400) * 86_400;
 
 /** A fresh (<= offsetSec old) cache clock that is always on the request's UTC day. */
@@ -29,14 +30,15 @@ function makePegSummaryDb(
   assets: ReturnType<typeof makeAsset>[] = [],
   fxFallbackRates?: Record<string, number>,
   depegRows: ReturnType<typeof makeDepegEventRow>[] = [],
+  { fxReferenceObservations, updatedAt = nowSec }: { fxReferenceObservations?: unknown; updatedAt?: number } = {},
 ) {
-  const cacheValue = JSON.stringify({ peggedAssets: assets, ...(fxFallbackRates ? { fxFallbackRates } : {}) });
+  const cacheValue = JSON.stringify({ peggedAssets: assets, fxFallbackRates, fxReferenceObservations });
   return mockD1([
     { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
     {
       match: "cache",
-      rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
-      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      rows: [{ key: "stablecoins", value: cacheValue, updated_at: updatedAt }],
+      first: { key: "stablecoins", value: cacheValue, updated_at: updatedAt },
     },
     { match: "depeg_events", rows: depegRows },
     { match: "dex_prices", rows: [] },
@@ -220,18 +222,80 @@ describe("handlePegSummary", () => {
   it.each([
     ...[99.6, 100, 100.4, -99.6, -100, -100.4].map((bps) => ({ bps, pegType: "peggedUSD", id: "usdt-tether", threshold: 100 })),
     ...[149.6, 150, 150.4, -149.6, -150, -150.4].map((bps) => ({ bps, pegType: "peggedEUR", id: "eurc-circle", threshold: 150 })),
-  ])("classifies raw threshold deviation $bps for $pegType while displaying rounded bps", async ({ bps, pegType, id, threshold }) => {
+  ])("classifies legacy raw threshold deviation $bps for $pegType while displaying rounded bps", async ({ bps, pegType, id, threshold }) => {
     const price = 1 + bps / 10_000;
-    const asset = makeAsset({ id, pegType, price });
+    const asset = makeAsset({ id, pegType, price, priceObservedAt: OPEN_FX_QUOTE_AT });
     const db = makePegSummaryDb([asset], pegType === "peggedEUR" ? { peggedEUR: 1 } : undefined);
     const body = await readJsonResponse(await handlePegSummary(db), 200) as {
       coins: PegSummaryCoin[]; summary: { coinsAtPeg: number; totalTracked: number };
     };
     const signal = deriveDepegSignal(price, 1)!;
-    expect(body.coins.find((coin) => coin.id === id)?.currentDeviationBps).toBe(signal.bps);
+    const coin = body.coins.find((coin) => coin.id === id);
+    expect(coin?.currentDeviationBps).toBe(signal.bps);
+    expect(coin).not.toHaveProperty("admittedDeviationBps");
     expect(body.summary.totalTracked).toBe(1);
     expect(body.summary.coinsAtPeg).toBe(signalCrossesThreshold(signal, threshold) ? 0 : 1);
   });
+
+  it.each([
+    ["absent evidence map", "legacy", 0, 200, undefined, undefined, 1],
+    ["empty evidence map", "empty", 0, 200, null, "reference-clock-unavailable", 0],
+    ["two-hour pair", "intraday", 7200, 0, 0, "live-reference", 1],
+    ["two hours plus one second", "intraday", 7201, 0, null, "quote-reference-unpaired", 0],
+    ["Easter Monday with Thursday's fixing", "fixing", 60, 200, null, "quote-reference-unpaired", 0],
+    ["clockless row in a clocked generation", "other-peg", 60, 0, null, "reference-clock-unavailable", 0],
+  ] as const)("%s", async (_label, mode, quoteAge, raw, admitted, reason, count) => {
+    const decisionAtSec = Date.parse("2027-03-29T16:00:00Z") / 1000;
+    const updatedAt = decisionAtSec - 10;
+    vi.spyOn(Date, "now").mockReturnValue(decisionAtSec * 1000);
+    const asset = makeAsset({ id: "brz-transfero", pegType: "peggedREAL", price: 0.204, priceObservedAt: decisionAtSec - quoteAge });
+    const usdPerUnit = mode === "fixing" || mode === "empty" || mode === "legacy" ? 0.2 : 0.204;
+    const pegKey = mode === "other-peg" ? "peggedEUR" : "peggedREAL";
+    const evidence = mode === "fixing"
+      ? { pegKey, usdPerUnit, source: "frankfurter", cadence: "business-daily", observedAtSec: Date.parse("2027-03-25T13:10:00Z") / 1000 } as const
+      : { pegKey, usdPerUnit, source: "openExchangeRates", cadence: "intraday", observedAtSec: decisionAtSec,
+        repricing: { sessionOpenedAtSec: Date.parse("2027-03-28T21:00:00Z") / 1000, preCloseUsdPerUnit: 0.2 } } as const;
+    const fxFallbackRates = { peggedREAL: usdPerUnit };
+    const fxReferenceObservations = mode === "legacy" ? undefined : mode === "empty" ? {} : { [pegKey]: evidence };
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(
+      await handlePegSummary(makePegSummaryDb([asset], fxFallbackRates, [], { fxReferenceObservations, updatedAt })), 200,
+    ));
+    const coin = body.coins.find(({ id }) => id === asset.id);
+    expect(coin?.currentDeviationBps).toBe(reason && admitted == null ? null : raw);
+    if (reason) {
+      expect(coin).toMatchObject({ admittedDeviationBps: admitted, referenceAdmission: { reason, generation: `stablecoins:${updatedAt}` } });
+      expect(coin?.pegReference?.asOf ?? null).toBe(mode === "empty" || mode === "other-peg" ? null : evidence.observedAtSec);
+      expect(coin?.pegReferenceUnavailable).toBe(admitted == null);
+    } else {
+      expect(coin).not.toHaveProperty("admittedDeviationBps");
+      expect(coin).not.toHaveProperty("referenceAdmission");
+      expect(coin?.pegReference?.asOf).toBe(updatedAt);
+    }
+    expect(body.summary).toMatchObject({
+      totalTracked: count, coinsAtPeg: count && raw === 0 ? 1 : 0, medianDeviationBps: count ? raw : null,
+    });
+    expect(body.summary?.worstCurrent?.bps ?? null).toBe(count ? raw : null);
+  });
+  it("keeps the executable XOFm proceeds and accrued Solayer valuation outside the parity census", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(OPEN_FX_QUOTE_AT * 1000);
+    const assets = [
+      makeAsset({ id: "xofm-mento", pegType: "peggedXOF", priceSource: "mento-broker", price: 0.98 / 600, priceObservedAt: OPEN_FX_QUOTE_AT }),
+      makeAsset({ id: "susd-solayer", pegType: "peggedUSD", priceSource: "cached", agreeSources: ["protocol-redeem"],
+        parityQuoteUnit: "accrued-token", price: 1.181399598224652, priceObservedAt: OPEN_FX_QUOTE_AT }),
+      makeAsset({ id: "usdc-circle", pegType: "peggedUSD", price: 1, priceObservedAt: OPEN_FX_QUOTE_AT }),
+    ];
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(
+      makePegSummaryDb(assets, { peggedXOF: 1 / 600 }, [], { updatedAt: OPEN_FX_QUOTE_AT, fxReferenceObservations: {} }),
+    ), 200));
+    for (const asset of assets.slice(0, 2)) {
+      expect(body.coins.find(({ id }) => id === asset.id)).toMatchObject({
+        price: asset.price, priceObservedAt: OPEN_FX_QUOTE_AT, currentPriceUnavailable: false,
+        currentDeviationBps: null, admittedDeviationBps: null,
+      });
+    }
+    expect(body.summary).toMatchObject({ totalTracked: 1, coinsAtPeg: 1, medianDeviationBps: 0, worstCurrent: { id: "usdc-circle" } });
+  });
+
   it.each([
     { priceSource: "coingecko", priceObservedAtMode: "nominal_reference" as const },
     { priceSource: "protocol-par", priceObservedAtMode: "upstream" as const },
@@ -487,6 +551,7 @@ describe("handlePegSummary", () => {
     expect(decode).toHaveBeenCalledTimes(age < DEX_PRICE_CHECK_FRESHNESS_SEC && tvl >= 250_000 ? 1 : 0);
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     if (accepted) expect(coin?.dexPriceCheck).toEqual({
+      observedAtSec: nowSec - originalAge!,
       dexPrice: 1.0002,
       dexDeviationBps: 2,
       agrees: true,
@@ -537,6 +602,7 @@ describe("handlePegSummary", () => {
     const body = PegSummaryResponseSchema.parse(await readJsonResponse(res, 200));
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toEqual({
+      observedAtSec: nowSec - 1800,
       dexPrice: 1.0002,
       dexDeviationBps: 2,
       agrees: true,
@@ -693,7 +759,7 @@ describe("handlePegSummary", () => {
   });
 
   // Wednesday and Sunday 16:00 UTC: on Sunday the closed FX market holds the row out of the aggregates.
-  it.each([[1_795_017_600, 1], [1_794_758_400, 0]])("measures the DEX cross-check and at-peg threshold against the live peg unit, not an older cached pegType (%s)", async (nowSec, atPeg) => {
+  it.each([[OPEN_FX_QUOTE_AT, 1], [1_794_758_400, 0]])("uses the live peg unit for the DEX cross-check and legacy at-peg threshold (%s)", async (nowSec, atPeg) => {
     vi.useFakeTimers();
     vi.setSystemTime(nowSec * 1000);
     const price = 1.08 * (1 + 120 / 10_000);
@@ -757,6 +823,8 @@ describe("handlePegSummary", () => {
     const coin = body.coins.find((entry) => entry.id === "eurc-circle");
     expect(coin?.pegType).toBe("peggedEUR");
     expect(coin?.currentDeviationBps).toBe(120);
+    expect(coin?.pegReference?.asOf).toBe(nowSec);
+    expect(coin).not.toHaveProperty("referenceAdmission");
     expect(coin?.dexPriceCheck).toMatchObject({ dexDeviationBps: 120, agrees: true });
     // 120 bps is inside the non-USD band; the cached USD label would have
     // selected the 100 bps USD band and dropped the row from coinsAtPeg.
@@ -865,7 +933,7 @@ describe("handlePegSummary", () => {
     expect(body.summary.totalTracked).toBe(1);
   });
 
-  it("counts non-USD coins within the non-USD threshold as at peg", async () => {
+  it.each([OPEN_FX_QUOTE_AT, null])("counts clockless FX in the legacy census with quote timestamp %s", async (priceUpdatedAt) => {
     const asset = makeAsset({
       id: "eurc-circle",
       symbol: "EUROC",
@@ -875,7 +943,8 @@ describe("handlePegSummary", () => {
       price: 1.065,
       priceSource: "defillama",
       priceConfidence: "single-source",
-      priceUpdatedAt: nowSec,
+      priceObservedAt: null,
+      priceUpdatedAt,
     });
     // v6.08: a lone non-USD coin needs a live FX fallback for an
     // authoritative reference; without one, deviation is withheld and the
@@ -888,7 +957,7 @@ describe("handlePegSummary", () => {
         totalTracked: number;
       };
     };
-    expect(body.summary.coinsAtPeg).toBeGreaterThanOrEqual(1);
+    expect(body.summary).toMatchObject({ coinsAtPeg: 1, totalTracked: 1 });
   });
 
   it("withholds deviation for a thin non-USD peer group without an FX fallback", async () => {

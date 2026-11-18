@@ -2,11 +2,10 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/curve-onchain";
-import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices, type CoingeckoSimplePriceEntry } from "../../lib/coingecko-simple-price";
 import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
-import { createPricingAssetAttempt } from "../../lib/pricing-provider-diagnostics";
+import { createPricingAssetAttempt, endpointLabel, type PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidateSafe } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
@@ -23,7 +22,7 @@ import {
   type BinanceFetchSession,
 } from "../../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import {
   createDexPriceSourceLoadTelemetry,
   loadDexPrices,
@@ -32,6 +31,7 @@ import {
 } from "../../lib/depeg-helpers";
 import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
+import { CEX_PROVIDER_AUDIT_CONFIG, COINBASE_PRODUCTS } from "@shared/lib/pricing-provider-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -67,7 +67,6 @@ export interface PrimaryPricePlan {
   navPriceIds: string[];
   sourceAllowed: {
     cg: boolean;
-    cgTicker: boolean;
     binance: boolean;
     kraken: boolean;
     bitstamp: boolean;
@@ -80,19 +79,19 @@ export interface PrimaryPricePlan {
 
 export interface PrimaryConsensusQuoteMaps {
   cgQuotes: Map<string, CoingeckoSimplePriceEntry>;
-  cgObservedAt: number | null;
-  cgTickerPrices: Map<string, number>;
-  cgTickerObservedAt: number | null;
   binancePrices: Map<string, number>;
   binanceObservedAt: number | null;
   krakenPrices: Map<string, number>;
   krakenObservedAt: number | null;
+  krakenObservedAtBySymbol: Map<string, number>;
+  krakenQuoteBasisBySymbol: Map<string, NonNullable<PeggedAsset["priceQuoteBasis"]>>;
   bitstampPrices: Map<string, number>;
   bitstampObservedAtBySymbol: Map<string, number>;
   coinbasePrices: Map<string, number>;
   coinbaseObservedAtBySymbol: Map<string, number>;
   curvePrices: Map<string, number>;
   curveObservedAtByCoinId: Map<string, number>;
+  curvePricePoolKeysByCoinId: Map<string, readonly string[]>;
   curveOraclePrice: number | null;
   curveOracleObservedAt: number | null;
   navPrices: Map<string, NavTelemetryQuote>;
@@ -102,19 +101,19 @@ export interface PrimaryConsensusQuoteMaps {
 export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMaps {
   return {
     cgQuotes: new Map(),
-    cgObservedAt: null,
-    cgTickerPrices: new Map(),
-    cgTickerObservedAt: null,
     binancePrices: new Map(),
     binanceObservedAt: null,
     krakenPrices: new Map(),
     krakenObservedAt: null,
+    krakenObservedAtBySymbol: new Map(),
+    krakenQuoteBasisBySymbol: new Map(),
     bitstampPrices: new Map(),
     bitstampObservedAtBySymbol: new Map(),
     coinbasePrices: new Map(),
     coinbaseObservedAtBySymbol: new Map(),
     curvePrices: new Map(),
     curveObservedAtByCoinId: new Map(),
+    curvePricePoolKeysByCoinId: new Map(),
     curveOraclePrice: null,
     curveOracleObservedAt: null,
     navPrices: new Map(),
@@ -288,7 +287,6 @@ export async function buildPrimaryPricePlan(
       navPriceIds,
       sourceAllowed: {
         cg: false,
-        cgTicker: false,
         binance: false,
         kraken: false,
         bitstamp: false,
@@ -302,7 +300,6 @@ export async function buildPrimaryPricePlan(
 
   const [
     cgAllowed,
-    cgTickerAllowed,
     binanceAllowed,
     krakenAllowed,
     bitstampAllowed,
@@ -312,7 +309,6 @@ export async function buildPrimaryPricePlan(
     hiveMarketAllowed,
   ] = await Promise.all([
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES),
-    shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES),
@@ -324,7 +320,6 @@ export async function buildPrimaryPricePlan(
 
   if (
     !cgAllowed &&
-    !cgTickerAllowed &&
     !binanceAllowed &&
     !krakenAllowed &&
     !bitstampAllowed &&
@@ -341,7 +336,11 @@ export async function buildPrimaryPricePlan(
   const candidateSymbolsUpper = [...new Set(candidates.map((asset) => asset.symbol.toUpperCase()))];
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
   const krakenSymbols = candidateSymbolsUpper.filter((symbol) => krakenKnownSet.has(symbol));
-  const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
+  const curveRequested = candidates.some((asset) => curveEligibleIds.has(asset.id));
+  const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol)) ||
+    (curveAllowed && curveRequested) ||
+    (coinbaseAllowed && coinbaseSymbols.some((symbol) => COINBASE_PRODUCTS.some((product) =>
+      product.symbol === symbol && product.quoteAsset === "USDC")));
 
   return {
     candidates,
@@ -356,12 +355,11 @@ export async function buildPrimaryPricePlan(
     navPriceIds,
     sourceAllowed: {
       cg: cgAllowed,
-      cgTicker: cgTickerAllowed,
       binance: binanceAllowed,
       kraken: krakenAllowed,
       bitstamp: bitstampAllowed,
       coinbase: coinbaseAllowed,
-      curve: curveAllowed,
+      curve: curveAllowed && curveRequested,
       curveOracle: curveOracleAllowed,
       hiveMarket: hiveMarketAllowed,
     },
@@ -420,34 +418,12 @@ export async function collectPrimaryProviderQuotes(params: {
         for (const [geckoId, entry] of outcome.value) {
           quoteMaps.cgQuotes.set(geckoId, entry);
         }
-        if (outcome.value.size > 0) {
-          quoteMaps.cgObservedAt = Math.floor(Date.now() / 1000);
-        }
         return isSuccessfulOutcome(outcome);
       }),
     );
   }
 
-  if (sourceAllowed.cgTicker && CG_TICKER_COINS.length > 0) {
-    fetches.push(() =>
-      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_TICKER, "CG ticker API", async () => {
-        const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
-          CG_TICKER_COINS,
-          coingeckoApiKey ?? null,
-          signal,
-        );
-        for (const [coinId, price] of prices) {
-          quoteMaps.cgTickerPrices.set(coinId, price);
-        }
-        if (prices.size > 0) {
-          quoteMaps.cgTickerObservedAt = Math.floor(Date.now() / 1000);
-        }
-        return successfulResponses > 0;
-      }),
-    );
-  }
-
-  if (sourceAllowed.binance || sourceAllowed.kraken || sourceAllowed.bitstamp || sourceAllowed.coinbase) {
+  if (sourceAllowed.binance || sourceAllowed.kraken || sourceAllowed.bitstamp || sourceAllowed.coinbase || sourceAllowed.curve) {
     fetches.push(async () => {
       if (sourceAllowed.binance) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
@@ -471,6 +447,8 @@ export async function collectPrimaryProviderQuotes(params: {
           for (const [symbol, price] of outcome.value.prices) {
             quoteMaps.krakenPrices.set(symbol, price);
           }
+          quoteMaps.krakenObservedAtBySymbol = outcome.value.observedAtBySymbol;
+          if (outcome.value.quoteBasisBySymbol) quoteMaps.krakenQuoteBasisBySymbol = outcome.value.quoteBasisBySymbol;
           if (outcome.value.prices.size > 0) {
             quoteMaps.krakenObservedAt = Math.floor(Date.now() / 1000);
           }
@@ -492,18 +470,65 @@ export async function collectPrimaryProviderQuotes(params: {
         });
       }
 
+      const usdcPrice = quoteMaps.bitstampPrices.get("USDC");
+      const usdcObservedAt = quoteMaps.bitstampObservedAtBySymbol.get("USDC");
+      const usdcUsd = usdcPrice != null && Number.isFinite(usdcPrice) && usdcPrice > 0 && usdcObservedAt != null &&
+        validatePricingSourceFreshness({ source: "bitstamp", observedAt: usdcObservedAt, maxFutureSkewSec: 0 }).accepted
+        ? { price: usdcPrice, observedAt: usdcObservedAt }
+        : null;
+
       if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
           const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
           providerDiagnostics.push(...outcome.value.diagnostics);
-          for (const [symbol, price] of outcome.value.prices) {
-            quoteMaps.coinbasePrices.set(symbol, price);
-          }
-          for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
-            quoteMaps.coinbaseObservedAtBySymbol.set(symbol, observedAt);
+          for (const { symbol, productId } of COINBASE_PRODUCTS) {
+            const price = outcome.value.prices.get(symbol);
+            const quoteAsset = outcome.value.quoteAssetBySymbol.get(symbol);
+            const observedAt = outcome.value.observedAtBySymbol.get(symbol);
+            const clock = outcome.value.clockBySymbol.get(symbol);
+            if (price == null || !quoteAsset || observedAt == null || !clock) continue;
+            const parent = quoteAsset === "USDC" ? usdcUsd : null;
+            const resolved = quoteAsset === "USD" || parent != null;
+            const diagnostic = {
+              source: "coinbase",
+              stage: "primary",
+              endpoint: endpointLabel(`${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${productId}/${clock === "book" ? "book" : "ticker"}`),
+              status: null,
+              ok: true,
+              success: true,
+              candidateCount: 1,
+              resolvedCount: resolved ? 1 : 0,
+              quoteClock: clock,
+              quoteObservedAt: observedAt,
+            } satisfies PricingProviderAttemptDiagnostic & { quoteClock: typeof clock; quoteObservedAt: number };
+            providerDiagnostics.push(diagnostic);
+            if (!resolved) {
+              logWorkerEventArgs("handler", "warn", `[primary-prices] Coinbase ${symbol}: USDC/USD dependency unavailable`);
+              continue;
+            }
+            quoteMaps.coinbasePrices.set(symbol, parent ? price * parent.price : price);
+            quoteMaps.coinbaseObservedAtBySymbol.set(symbol, parent ? Math.min(observedAt, parent.observedAt) : observedAt);
           }
           return isSuccessfulOutcome(outcome);
         });
+      }
+
+      if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
+        if (!usdcUsd) {
+          logWorkerEventArgs("handler", "warn", "[primary-prices] Curve on-chain: USDC/USD dependency unavailable");
+        } else {
+          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
+            const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, usdcUsd, signal, chainRpcs);
+            for (const [id, price] of outcome.value.prices) {
+              quoteMaps.curvePrices.set(id, price);
+            }
+            for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
+              quoteMaps.curveObservedAtByCoinId.set(id, observedAt);
+            }
+            quoteMaps.curvePricePoolKeysByCoinId = outcome.value.pricePoolKeysByCoinId;
+            return isSuccessfulOutcome(outcome);
+          });
+        }
       }
     });
   }
@@ -521,20 +546,7 @@ export async function collectPrimaryProviderQuotes(params: {
     fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.COINBASE_PRICES));
   }
 
-  if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
-    fetches.push(() =>
-      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
-        const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
-        for (const [id, price] of outcome.value.prices) {
-          quoteMaps.curvePrices.set(id, price);
-        }
-        for (const [id, observedAt] of outcome.value.observedAtByCoinId) {
-          quoteMaps.curveObservedAtByCoinId.set(id, observedAt);
-        }
-        return isSuccessfulOutcome(outcome);
-      }),
-    );
-  } else if (CURVE_POOL_CONFIGS.length === 0) {
+  if (CURVE_POOL_CONFIGS.length === 0) {
     fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
   }
 
