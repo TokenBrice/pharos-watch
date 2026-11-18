@@ -121,6 +121,10 @@ export function isSfraxStockContractRoster(meta: StablecoinMeta): boolean {
 // current-token-stock observation. It is not a blanket acceptance of restored rows.
 const REVIEWED_ONCHAIN_SUPPLY_HOLDS: Readonly<Record<string, SupplyUnavailableReason>> = {
   [SFRAX_STOCK_PERIMETER.assetId]: "economic-float-unreconciled",
+  // sBOLD was exploited on 2026-11-18 (Ethereum block 26441936): about 4.4e19
+  // shares now claim about 4.5 BOLD, so its token stock is no economic float.
+  // K3 Capital paused the vault; remove once K3 restores it.
+  "sbold-k3-capital": "economic-float-unreconciled",
 };
 
 export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableReason | null {
