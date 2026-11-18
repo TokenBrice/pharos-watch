@@ -28,7 +28,7 @@ export {
   PYS_MAX_SOURCE_RISK_PENALTY,
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
-import { median, percentileNearestRank } from "@shared/lib/stats";
+import { median } from "@shared/lib/stats";
 import { normalizeChainId } from "@shared/types/chain-identity";
 import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
@@ -42,9 +42,11 @@ const TVL_OUTFLOW_THRESHOLD = -0.2;
 const YIELD_SPIKE_MIN_APY = 2.0; // only flag spike if currentApy > 2%
 // Below this many samples the window median is too thin to call a sample a spike.
 const SPIKE_CAPPED_MEAN_MIN_SAMPLES = 24; // about two days at the two-hourly cadence
-// The cap never sits below this percentile, so at most the top tenth of the window is
-// capped: a level held for longer than that is the distribution, not a spike.
-const SPIKE_CAPPED_MEAN_FLOOR_PERCENTILE = 90;
+// Share of the window above the cap at which the cap applies in full, and at which it
+// no longer applies. In between it fades linearly, so `apy30d` never steps when a spike
+// lengthens or ages out: a level held that long is the distribution, not a spike.
+const SPIKE_CAP_FULL_SHARE = 0.05; // about 1.5 days of a full two-hourly window
+const SPIKE_CAP_NONE_SHARE = 0.15; // about 4.5 days
 const NEGATIVE_TREND_MIN_APY = 1.0; // only flag negative trend if apy30d > 1%
 const ZERO_YIELD_HISTORY_THRESHOLD = 0.5; // flag when current=0 but 30d avg > 0.5%
 const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
@@ -106,11 +108,11 @@ export function computeYieldStability(apySamples: number[]): number | null {
 
 /**
  * 30-day headline mean with isolated spikes winsorized (yield v8.56): a sample
- * above `max(YIELD_SPIKE_THRESHOLD × window median, YIELD_SPIKE_MIN_APY, 90th
- * percentile)` counts as that cap. The multiple and floor are the `yield-spike`
- * warning's; the percentile term keeps a sustained episode (more than a tenth of
- * the window) uncapped. Samples are never dropped and stored history is
- * untouched. Fewer than `SPIKE_CAPPED_MEAN_MIN_SAMPLES` samples or a
+ * above `max(YIELD_SPIKE_THRESHOLD × window median, YIELD_SPIKE_MIN_APY)` counts
+ * as that cap, with the `yield-spike` warning's multiple and floor. The cap
+ * applies in full while at most 5% of the window is above it and fades linearly
+ * to no cap at 15%, so a sustained episode counts in full and the result never
+ * steps. Samples are never dropped and stored history is untouched. Fewer than `SPIKE_CAPPED_MEAN_MIN_SAMPLES` samples or a
  * non-positive median return the plain mean, which is always reported as
  * `rawMean`.
  */
@@ -118,15 +120,12 @@ export function computeSpikeCappedMean(samples: number[]): { mean: number; rawMe
   const rawMean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
   const windowMedian = samples.length >= SPIKE_CAPPED_MEAN_MIN_SAMPLES ? median(samples) : null;
   if (windowMedian == null || windowMedian <= 0) return { mean: rawMean, rawMean, cappedSamples: 0 };
-  const cap = Math.max(
-    windowMedian * YIELD_SPIKE_THRESHOLD,
-    YIELD_SPIKE_MIN_APY,
-    percentileNearestRank(samples, SPIKE_CAPPED_MEAN_FLOOR_PERCENTILE) ?? 0,
-  );
-  const cappedSamples = samples.filter((value) => value > cap).length;
-  if (cappedSamples === 0) return { mean: rawMean, rawMean, cappedSamples };
-  const mean = samples.reduce((sum, value) => sum + Math.min(value, cap), 0) / samples.length;
-  return { mean, rawMean, cappedSamples };
+  const cap = Math.max(windowMedian * YIELD_SPIKE_THRESHOLD, YIELD_SPIKE_MIN_APY);
+  const above = samples.filter((value) => value > cap).length;
+  const weight = Math.min(1, (SPIKE_CAP_NONE_SHARE - above / samples.length) / (SPIKE_CAP_NONE_SHARE - SPIKE_CAP_FULL_SHARE));
+  if (above === 0 || weight <= 0) return { mean: rawMean, rawMean, cappedSamples: 0 };
+  const cappedMean = samples.reduce((sum, value) => sum + Math.min(value, cap), 0) / samples.length;
+  return { mean: rawMean - weight * (rawMean - cappedMean), rawMean, cappedSamples: above };
 }
 
 interface WarningInput {

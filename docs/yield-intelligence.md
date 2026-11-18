@@ -441,13 +441,13 @@ Rollback compatibility is part of the contract. Production-shaped `v7.48` payloa
 
 #### 30-day spike cap
 
-Since v8.56 `apy30d` winsorizes isolated spikes before averaging (`computeSpikeCappedMean` in `worker/src/cron/yield-helpers.ts`): a sample above `max(2 × window median, 2% APY, 90th percentile of the window)` counts as that cap. The multiple and the floor are the `yield-spike` constants. The chart's spike marker uses the same multiple and floor against a trailing mean, so the two need not flag identical points.
+Since v8.56 `apy30d` winsorizes isolated spikes before averaging (`computeSpikeCappedMean` in `worker/src/cron/yield-helpers.ts`): a sample above `max(2 × window median, 2% APY)` counts as that cap. The multiple and the floor are the `yield-spike` constants. The chart's spike marker uses the same multiple and floor against a trailing mean, so the two need not flag identical points.
 
 - Samples are capped, never dropped. A window with no sample above the cap publishes the plain mean unchanged.
-- The 90th-percentile term means at most the top tenth of the window is ever capped. A level that held for longer than that (about three days of a full window) is treated as part of the distribution and counts in full.
+- The cap applies in full while at most 5% of the window is above it (about 1.5 days of a full two-hourly window) and fades linearly to no cap at 15% (about 4.5 days). A level that held longer than that is part of the distribution and counts in full, and `apy30d` never steps as a spike lengthens or ages out.
 - Fewer than 24 samples, or a zero or negative median, fall back to the plain mean.
 - `apy7d`, `yieldStability`, `apyVariance30d`, `apyMin30d` and `apyMax30d` use the raw samples. `yield_history` is not rewritten, and the plain mean and capped-sample count are returned beside `apy30d` by `computeYieldCandidateStatistics` (not yet published).
-- Limit: a real one-off distribution, or a higher rate that has held for less than a tenth of the window, is counted at the cap and so understated until it has lasted longer. Because `apy30d` no longer follows a spike upward, `yield-spike` can stay raised for longer during one.
+- Limit: a real one-off distribution, or a higher rate that has held for less than about 15% of the window, is partly or fully counted at the cap and so understated until it has lasted longer. Because `apy30d` no longer follows a spike upward, `yield-spike` can stay raised for longer during one.
 
 ---
 

@@ -4,14 +4,14 @@
     "title": "30-Day APY Caps Isolated Spikes",
     "date": "2026-11-18",
     "effectiveAt": 1795046400,
-    "summary": "The 30-day APY is still a mean of the current source's samples, but an isolated spike now counts as a cap of twice the window median. A few short reward spikes could lift the plain mean well above what the source paid on a typical day, while the history chart already marked those points as spikes. A level that holds for more than a tenth of the window is not capped.",
+    "summary": "The 30-day APY is still a mean of the current source's samples, but an isolated spike now counts as a cap of twice the window median. A few short reward spikes could lift the plain mean well above what the source paid on a typical day, while the history chart already marked those points as spikes. The cap fades out as a level persists and is gone once 15% of the window is above it.",
     "impact": [
-      "`apy30d` is the mean of the 30-day samples after capping each one at `max(2 × window median, 2% APY, 90th percentile of the window)`. The 2× multiple and 2% floor are the `yield-spike` warning's. The percentile term means at most the top tenth of the window is capped, so a sustained episode counts in full. Samples are capped, never dropped, and a series with no sample above the cap publishes exactly the plain mean it published before.",
+      "`apy30d` is the mean of the 30-day samples after capping each one at `max(2 × window median, 2% APY)`. The 2× multiple and 2% floor are the `yield-spike` warning's. The cap applies in full while at most 5% of the window is above it and fades linearly to no cap at 15%, so a sustained episode counts in full and the value never steps. Samples are capped, never dropped, and a series with no sample above the cap publishes exactly the plain mean it published before.",
       "Fewer than 24 samples in the window, or a zero or negative median, fall back to the plain mean.",
       "Everything derived from `apy30d` follows the capped value: PYS (`benchmarkSpread`, `effectiveYield`), `excessYield`, `yieldToRisk`, source arbitration utility, and the `yield-spike`, `negative-trend` and `zero-yield` comparisons.",
       "`apy7d`, `yieldStability`, `apyVariance30d`, `apyMin30d` and `apyMax30d` still use every raw sample, so a spike still lowers stability and stays visible as the 30-day maximum. Stored `yield_history` rows are not rewritten.",
-      "Known limit: a real one-off distribution, or a new higher rate that has held for less than a tenth of the window, is counted at the cap, so the 30-day APY understates it until it has lasted longer.",
-      "On DeFiLlama daily series for the 55 resolvable configured pool ids, 49 are unchanged and 2 move by more than 0.25 percentage points (sdUSD on Ethereum and on Fraxtal). Pharos's own two-hourly samples will differ.",
+      "Known limit: a real one-off distribution, or a new higher rate that has held for less than about 15% of the window, is partly or fully counted at the cap, so the 30-day APY understates it until it has lasted longer.",
+      "On DeFiLlama daily series for the 55 resolvable configured pool ids, 52 are unchanged and none moves by more than 0.25 percentage points; the largest move is 0.12 (bbqUSDC). Pharos's own two-hourly samples will differ.",
       "Planned activation is provisionally 2026-11-19 00:00 UTC (1795046400), following the next-UTC-midnight convention; re-date effectiveAt at release."
     ],
     "commits": [],
