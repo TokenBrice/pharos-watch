@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
-      "sha256": "2c05aac28a09b881e8ae26cda5415773070faa6b43c12496a21050a3c5b7b72a"
+      "sha256": "32336f52c84288becf89b5afd8d7b599f2696bc68f5920a72986c9c4bb3e6100"
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
@@ -78,11 +78,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "c828febf11efa0f8367640ea54174bf830c67f3404513f8426a4adf7dc71aaba"
+      "sha256": "8c2260b788dd82974cdb8e4f8017eb26d0e0a1d7bc828dcf05ae42b930bfdfe9"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "d505456b4019ac0b0c2d5542718483e2d0457df1750a0e71c48301a42ba25940"
+      "sha256": "c24f88ed8b391e12be7e94584cf519ee5b74ef93932a6913e801524ebe503ab6"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -1042,7 +1042,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-lifecycle.ts",
-      "sha256": "3b989c76edf4d190d84d568f7505ba0473ee066a4dd82df7b38a794a46f9e265"
+      "sha256": "3de378c6dd1834ba700c52ecfb232e24bf31df637e11f9d5c593e43b9abbc911"
     },
     {
       "path": "shared/types/stablecoin-meta-control-schemas.ts",
@@ -1054,7 +1054,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-meta-primitives.ts",
-      "sha256": "2ae0d4a1c18804ed51fb5621f5fe84cc0454f54b09c90d1d075215d2e27c8731"
+      "sha256": "b63ffb35898ceb05b36d8f4997e7ee062e6b85b73dcd001df46c7377d49ea988"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -1299,19 +1299,19 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   ],
   "captures": [
     {
-      "sha256": "134e7f5e9f45224595913951528aab0632d83e232996779630f37f7e0316b4ce",
-      "r2Key": "captures/bd-basedollar/2026-11-17-block-58633990-shock-coverage.json.gz"
+      "sha256": "ca17a11172068dd2e08e16dbc5f2fb8cfb8505b21dfe0897acfd1bceef919c4e",
+      "r2Key": "captures/bd-basedollar/2026-11-18-block-59062057-shock-coverage.json.gz"
     },
     {
-      "sha256": "36be6b97676663cc581074b5234ee4321f771b8abb8d40ea86b68319d32f70b3",
-      "r2Key": "captures/bold-liquity/2026-11-17-block-26434690-shock-coverage.json.gz"
+      "sha256": "fddca45b432ad3e67c3359f030e311a0e6d85380e9cb6dc89fcbe5a86a4ac8e3",
+      "r2Key": "captures/bold-liquity/2026-11-18-block-26441773-shock-coverage.json.gz"
     },
     {
-      "sha256": "a5dc14adbb78ff96aabc9d48ea8e5a445262a00afcc1e6500bc0384097baee9f",
-      "r2Key": "captures/lusd-liquity/2026-11-17-block-26434658-shock-coverage.json.gz"
+      "sha256": "9863167e37732b73067dddc4899b557399931ac2e54d14efd3c1844baf2dc1b2",
+      "r2Key": "captures/lusd-liquity/2026-11-18-block-26441773-shock-coverage.json.gz"
     }
   ],
-  "digest": "8e1b332bda25e06c89021e54415343cd0d7e85cb6186eb71d9d3401bc08fe78c"
+  "digest": "0da3bfed276d65dbf5fcf7e0ef6eac0f3e0b12b9c1e8683a7469dd2fd83d5c16"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -88,7 +88,9 @@
     {
       "type": "danger",
       "title": "Mynt minting and redemption stopped",
-      "message": "Reviewed November 12, 2026: the November 7 Zero emergency halt blocks Mynt conversions against both DOC and ZUSD. Pinned calls still revert. Ordinary DLLR transfers are separate; current reserve composition and recovery value are unavailable. Sovryn describes containment and recovery conditions without a reopening date. Source: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611"
+      "message": "Reviewed November 12, 2026: the November 7 Zero emergency halt blocks Mynt conversions against both DOC and ZUSD. Pinned calls still revert. Ordinary DLLR transfers are separate; current reserve composition and recovery value are unavailable. Sovryn describes containment and recovery conditions without a reopening date. Source: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611",
+      "kind": "paused",
+      "asOf": "2026-11-12"
     }
   ]
 }

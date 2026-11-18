@@ -83,12 +83,16 @@
     {
       "type": "warning",
       "title": "Legacy depeg risk",
-      "message": "USDX trades at a material discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Use live runtime data for the current discount; Pharos tracks the active provider entry separately from the historical cemetery incident."
+      "message": "USDX trades at a material discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Use live runtime data for the current discount; Pharos tracks the active provider entry separately from the historical cemetery incident.",
+      "kind": "depeg",
+      "asOf": "2026-06-12"
     },
     {
       "type": "info",
       "title": "Mint wind-down",
-      "message": "Kava governance halted new USDX issuance in the Mint/Lend/Swap wind-down (proposal #222); the CDP debt limit is zero and only repayment remains."
+      "message": "Kava governance halted new USDX issuance in the Mint/Lend/Swap wind-down (proposal #222); the CDP debt limit is zero and only repayment remains.",
+      "kind": "paused",
+      "asOf": "2026-10-30"
     }
   ]
 }

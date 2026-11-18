@@ -68,7 +68,10 @@ describe("V9 safety consumer projections", () => {
       value: {
         score: known.score, assetGrade: null, partialEvidence: true,
         pillars: { backing: 80, exit: null, control: 80 },
-        coverageUsd: { total: 400, score: 100, pillars: { backing: 100, exit: 0, control: 100 } },
+        coverageUsd: {
+          total: 400, score: 100, pillars: { backing: 100, exit: 0, control: 100 },
+          excludedIds: { score: ["gap"], pillars: { backing: ["gap"], exit: ["partial", "gap"], control: ["gap"] } },
+        },
       },
     });
   });

@@ -294,6 +294,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         hasData={hasData}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
+        inactiveOpenIncidents={feed.inactiveOpenIncidents}
         activeStatus={feed.activeStatus}
         tapeSettled={tapeSettled}
         activeHealth={feed.activeHealth}

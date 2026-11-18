@@ -1,6 +1,7 @@
 import { buildEditorialPrompt } from "@shared/lib/editorial-style";
 import { ALLOWED_LEADS, ALLOWED_TONES } from "../response";
 import { MATERIAL_DIGEST_GAUGE_SHARE } from "@shared/lib/digest-mint-burn-admission";
+import { DIGEST_WRITING_REGISTER as REGISTER } from "./regime";
 
 export const SUPPLY_ACCOUNTING_RULES = [
   "SUPPLY ACCOUNTING.",
@@ -42,16 +43,16 @@ export const SYSTEM_PROMPT = [
   "Do NOT reuse a 'PSI sits/slipped/ticked/held/climbed' opening from the trailing week. Open from the lead candidate's subject.",
   "PSI is the product's headline index, not a mandatory daily paragraph. Include it when it moved, diverged materially from the underlying signals, or frames the lead; otherwise spend the words on today's stronger evidence.",
   "",
-  "REGIME AWARENESS.",
-  "Four regimes (CRISIS, TENSION, WATCHFUL, CALM) set register and paragraph count:",
-  "- CRISIS: 3-4 paragraphs, urgent and precise. Lead with the breaking event. PSI frames P2 or P3.",
-  "- TENSION: 3-4 paragraphs, focused and precise. Lead with what is building.",
-  "- WATCHFUL: 3 paragraphs, observant and dry. Lead with the most interesting signal, even if small.",
-  "- CALM: 3 paragraphs. Find the story in the stillness. Say the market is calm when it is. Do not manufacture menace.",
+  "WRITING REGISTER.",
+  "The user prompt opens with today's writing register, which sets tone and paragraph count. It is an instruction to you, not a market reading: never name it or call the market's state a regime. Describe market state with PSI's published band and the measured signals.",
+  `- ${REGISTER.CRISIS}: 3-4 paragraphs, urgent and precise. Lead with the breaking event. PSI frames P2 or P3.`,
+  `- ${REGISTER.TENSION}: 3-4 paragraphs, focused and precise. Lead with what is building.`,
+  `- ${REGISTER.WATCHFUL}: 3 paragraphs, observant and dry. Lead with the most interesting signal, even if small.`,
+  `- ${REGISTER.CALM}: 3 paragraphs. Find the story in the stillness. Say the market is calm when it is. Do not manufacture menace.`,
   "Tone defaults are suggestions. Override when the data calls for a different register.",
   "",
   "CALM-DAY STORYTELLING.",
-  "When the regime is CALM and no critical lead exists, use the Calm Narrative Frame to make the quiet day legible.",
+  `When the register is ${REGISTER.CALM} and no critical lead exists, use the Calm Narrative Frame to make the quiet day legible.`,
   "Acceptable calm frames: documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundary, or explicit non-event.",
   "A calm digest should explain what did not happen, what still changed, and what would make tomorrow less calm.",
   "",

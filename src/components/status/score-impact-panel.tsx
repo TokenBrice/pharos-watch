@@ -31,7 +31,7 @@ export function ScoreImpactPanel({ reserveComposition }: ScoreImpactPanelProps) 
             value={reserveUnavailable ? "unavailable" : reserveInputHold ? "conservative" : "clean"}
             className={
               reserveInputHold
-                ? SEVERITY_TONE_CLASS.watch.pill
+                ? SEVERITY_TONE_CLASS.caution.pill
                 : STATUS_OK_PILL_CLASS
             }
           />

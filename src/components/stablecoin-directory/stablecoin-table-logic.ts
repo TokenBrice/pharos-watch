@@ -182,9 +182,11 @@ export function filterStablecoins(
 export function resolveEffectiveSortKey(
   sortKey: StablecoinTableSortKey,
   visibleColumns: ReadonlySet<ColumnId>,
+  gradeInRowSummary = false,
 ): StablecoinTableSortKey {
   const columnId = SORT_KEY_TO_COLUMN[sortKey];
-  return visibleColumns.has(columnId) ? sortKey : "mcap";
+  // The phone row's risk summary prints the grade, so a grade order stays legible without its column.
+  return visibleColumns.has(columnId) || (gradeInRowSummary && sortKey === "grade") ? sortKey : "mcap";
 }
 
 export function getStablecoinTableRowRiskLevel(

@@ -62,12 +62,14 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
       state={state}
     >
       <div className="flex flex-col gap-2">
+        {/* The movers keep their full width so amounts never clip; the gauge
+            column gives way instead and its Net/coverage line wraps. */}
         <div className="flex items-center gap-4">
-          <div className="min-w-0 shrink-0">
+          <div className="min-w-0 flex-1">
             {state === "loading" ? (
               <Skeleton className="h-9 w-32" />
             ) : gauge ? (
-              <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <div className="text-3xl font-bold tracking-tight text-foreground">
                 {gauge.band ? gauge.band.charAt(0) + gauge.band.slice(1).toLowerCase() : "—"}
               </div>
             ) : null}
@@ -92,7 +94,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
               )}
             </p>
           </div>
-          <ul className="ml-auto flex flex-1 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
+          <ul className="ml-auto flex shrink-0 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
             {state === "empty" || (state === "stale-with-data" && !hasActivity) ? (
               <li className="pharos-meta">No 24h activity</li>
             ) : topMovers.length === 0 ? (

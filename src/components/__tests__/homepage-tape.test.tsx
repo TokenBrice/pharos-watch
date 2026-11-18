@@ -13,9 +13,14 @@ type LatestEventsResult = {
 };
 
 const useLatestEventsMock = vi.fn<() => LatestEventsResult>();
+const useHomepageSnapshotMock = vi.fn<() => { data: unknown }>(() => ({ data: undefined }));
 
 vi.mock("@/hooks/use-events", () => ({
   useLatestEvents: () => useLatestEventsMock(),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useHomepageSnapshot: () => useHomepageSnapshotMock(),
 }));
 
 vi.mock("@/lib/logos", () => ({
@@ -31,6 +36,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  useHomepageSnapshotMock.mockReturnValue({ data: undefined });
   useLatestEventsMock.mockReset();
   mockLatestEvents();
 });
@@ -47,6 +53,10 @@ function mockLatestEvents(overrides: Partial<LatestEventsResult> = {}) {
 
 function mockEvents(events: TapeEvent[]) {
   mockLatestEvents({ data: { events, nextCursor: null, total: null, totalExact: false } });
+}
+
+function dewsMove(symbol: string, coinId: string, prevBand: string, newBand: string, severity: TapeEvent["severity"], ago: number, type: TapeEvent["type"] = "dews.escalated") {
+  return makeTapeEvent({ id: `evt-${coinId}`, type, severity, ts: Date.now() - ago, coinId, title: `${symbol} DEWS ${prevBand} → ${newBand}`, payload: { prevBand, newBand }, sourceUrl: "/depeg/" });
 }
 
 describe("HomepageTape", () => {
@@ -118,6 +128,9 @@ describe("HomepageTape", () => {
     expect(screen.queryByText("USDT grade A -> B+")).toBeNull();
     expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
     expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(2);
+    // Severity beside every logo.
+    expect(screen.getAllByRole("img", { name: "Severe" })).toHaveLength(2);
+    expect(screen.getAllByRole("img", { name: "Critical" })).toHaveLength(2);
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
@@ -187,50 +200,19 @@ describe("HomepageTape", () => {
     expect(screen.queryByText(/×\d/)).toBeNull();
   });
 
-  it("consolidates DEWS band changes across coins into one cell with stacked logos", () => {
-    mockEvents([
-          makeTapeEvent({
-            id: "evt-sdx",
-            type: "dews.escalated",
-            severity: "notice",
-            ts: Date.now() - 60_000,
-            coinId: "sdx-stable",
-            title: "SDX DEWS CALM → WATCH",
-            payload: { prevBand: "CALM", newBand: "WATCH" },
-            sourceUrl: "/depeg/",
-          }),
-          makeTapeEvent({
-            id: "evt-usdm",
-            type: "dews.escalated",
-            severity: "notice",
-            ts: Date.now() - 65_000,
-            coinId: "usdm-mountain",
-            title: "USDM DEWS CALM → WATCH",
-            payload: { prevBand: "CALM", newBand: "WATCH" },
-            sourceUrl: "/depeg/",
-          }),
-          makeTapeEvent({
-            id: "evt-usdgo",
-            type: "dews.escalated",
-            severity: "notice",
-            ts: Date.now() - 70_000,
-            coinId: "usdgo-goldfinch",
-            title: "USDGO DEWS CALM → WATCH",
-            payload: { prevBand: "CALM", newBand: "WATCH" },
-            sourceUrl: "/depeg/",
-          }),
-    ]);
+  it("consolidates a DEWS sweep across coins into one cell that names its coins", () => {
+    mockEvents([["FRAX", "frax-frax"], ["alUSD", "alusd-alchemix"], ["STBT", "stbt-matrixdock"], ["HBD", "hbd-hive"]]
+      .map(([symbol, coinId], i) => dewsMove(symbol, coinId, "WATCH", "ALERT", "warning", 60_000 + 5_000 * i)));
 
     render(<HomepageTape />);
 
-    // Three per-coin chips collapse into one consolidated "DEWS CALM → WATCH".
-    expect(screen.getAllByText("DEWS CALM → WATCH")).toHaveLength(2);
-    expect(screen.queryByText("SDX DEWS CALM → WATCH")).toBeNull();
-    expect(screen.queryByText("USDM DEWS CALM → WATCH")).toBeNull();
-    expect(screen.queryByText("USDGO DEWS CALM → WATCH")).toBeNull();
-    // Badge reflects the coin count, not the literal event count.
-    expect(screen.getAllByText("×3")).toHaveLength(2);
-    expect(screen.getAllByLabelText("3 coins")).toHaveLength(4); // stack + badge × marquee dup
+    // One cell, doubled by the marquee loop.
+    expect(screen.getAllByText("DEWS WATCH → ALERT")).toHaveLength(2);
+    expect(screen.queryByText("FRAX DEWS WATCH → ALERT")).toBeNull();
+    // Three symbols, then the remainder.
+    expect(screen.getAllByText("FRAX, alUSD, STBT +1")).toHaveLength(2);
+    expect(screen.queryByText(/×\d/)).toBeNull();
+    expect(screen.getAllByRole("img", { name: "Warning" })).toHaveLength(2);
   });
 
   it("advances event ages on the viewer's minute clock between polls", () => {
@@ -256,32 +238,39 @@ describe("HomepageTape", () => {
     expect(screen.queryByText("5m ago")).toBeNull();
   });
 
-  it("keeps DEWS escalations separate from de-escalations across the same coins", () => {
+  it("folds CALM ↔ WATCH churn out and pins recent warning-and-above events ahead of newer notices", () => {
+    vi.useFakeTimers();
     mockEvents([
-          makeTapeEvent({
-            id: "evt-sdx-up",
-            type: "dews.escalated",
-            severity: "notice",
-            coinId: "sdx-stable",
-            title: "SDX DEWS CALM → WATCH",
-            payload: { prevBand: "CALM", newBand: "WATCH" },
-          }),
-          makeTapeEvent({
-            id: "evt-usdm-down",
-            type: "dews.deescalated",
-            severity: "info",
-            coinId: "usdm-mountain",
-            title: "USDM DEWS WATCH → CALM",
-            payload: { prevBand: "WATCH", newBand: "CALM" },
-          }),
+      makeTapeEvent({ id: "evt-freeze", type: "freeze.address.blocked", severity: "notice", title: "USDT freeze blocked", coinId: "usdt-tether" }),
+      dewsMove("SDX", "sdx-stable", "CALM", "WATCH", "notice", 1_000),
+      dewsMove("USDM", "usdm-mountain", "WATCH", "CALM", "info", 2_000, "dews.deescalated"),
+      dewsMove("FRAX", "frax-frax", "WATCH", "ALERT", "warning", 3_000),
+      dewsMove("alUSD", "alusd-alchemix", "ALERT", "WATCH", "notice", 4_000, "dews.deescalated"),
+      makeTapeEvent({ id: "evt-old", type: "freeze.address.blocked", ts: Date.now() - 2 * 86_400_000, title: "Old USDT freeze", coinId: "usdt-tether" }),
     ]);
 
     render(<HomepageTape />);
+    act(() => { vi.advanceTimersByTime(0); });
 
-    // Single-coin DEWS entries keep their original symbol-prefixed title.
-    expect(screen.getAllByText("SDX DEWS CALM → WATCH")).toHaveLength(2);
-    expect(screen.getAllByText("USDM DEWS WATCH → CALM")).toHaveLength(2);
-    expect(screen.queryByText(/×\d/)).toBeNull();
+    expect(screen.queryByText(/CALM/)).toBeNull();
+    // Serious single-coin moves stay separate.
+    expect(screen.getAllByText("FRAX DEWS WATCH → ALERT")).toHaveLength(2);
+    expect(screen.getAllByText("alUSD DEWS ALERT → WATCH")).toHaveLength(2);
+    expect(screen.getAllByRole("link")[0]?.textContent).toContain("FRAX DEWS WATCH → ALERT");
+    // A two-day-old warning keeps its chronological place.
+    expect(screen.getAllByRole("link")[1]?.textContent).toContain("USDT freeze blocked");
+  });
+
+  it("pins the live active-depeg count over the census", () => {
+    mockEvents([makeTapeEvent({ id: "evt-f", type: "freeze.address.blocked", title: "USDT freeze blocked", coinId: "usdt-tether" })]);
+    const { unmount } = render(<HomepageTape placement="top" />);
+    screen.getByText("Chains");
+    unmount();
+
+    useHomepageSnapshotMock.mockReturnValue({ data: { incidents: { data: { activeDepegCount: 18 } } } });
+    render(<HomepageTape placement="top" />);
+    expect(screen.getByRole("link", { name: "18 active depegs" }).getAttribute("href")).toMatch(/^\/depeg/);
+    expect(screen.queryByText("Chains")).toBeNull();
   });
 
 });

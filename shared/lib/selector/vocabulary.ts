@@ -154,6 +154,9 @@ export const EXCLUSION_REASONS = [
   "howey-uncertain",
   "template-coverage-gap",
   "coverage-too-thin",
+  /** `selector-v2.13`: a curated danger notice, or a paused mint/redemption, on the coin. */
+  "critical-notice",
+  "paused-notice",
 ] as const;
 
 export const SELECTOR_SNAPSHOT_VERIFICATION_KIND = "pharos-server-recomputed-v1" as const;

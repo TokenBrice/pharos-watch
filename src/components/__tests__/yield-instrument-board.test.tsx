@@ -168,6 +168,17 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByRole("link", { name: "View full yield analysis for sUSDe" }).getAttribute("href"))
       .toBe("/stablecoin/susde-ethena/yield");
   });
+  it.each(rowRenderers)("leads the coin badges with the row's top exceptional state on %s", (_name, renderRow) => {
+    const { container } = renderRow({
+      ...baseRow,
+      warningSignals: [],
+      coinStates: [{ kind: "paused", notice: { type: "warning", title: "Morpho flags deposits as disabled", kind: "paused" }, venue: "steakUSDG" }],
+    });
+    expect(container.querySelector('[data-coin-state="paused"]')?.getAttribute("title"))
+      .toBe("Paused · Venue steakUSDG: Morpho flags deposits as disabled");
+    expect(screen.queryByText("No warnings")).toBeNull();
+  });
+
   it("renders the rank-attribution chip when pys delta is material", () => {
     const row = {
       ...baseRow,

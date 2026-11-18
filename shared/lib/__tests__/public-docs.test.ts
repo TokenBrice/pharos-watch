@@ -51,6 +51,15 @@ describe("PUBLIC_DOCS registry", () => {
     }
   });
 
+  it("strips agent navigation from HTML but not agent Markdown", () => {
+    const navigated = DOC_SOURCES.filter(({ body }) => body.includes("> **Agent navigation**"));
+    expect(navigated.length).toBeGreaterThan(0);
+    for (const { body } of navigated) {
+      expect(preparePublicDocMarkdown(body, { stripTitle: true, stripAgentNavigation: true })).not.toContain("Agent navigation");
+      expect(preparePublicDocMarkdown(body, { absoluteLinks: true })).toContain("Agent navigation");
+    }
+  });
+
   it("never rewrites link destinations, code spans, or fenced blocks", () => {
     for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });

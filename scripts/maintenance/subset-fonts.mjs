@@ -13,19 +13,24 @@
  * subsetted against `data/fonts/glyphs-allowlist.txt` while preserving the
  * `wght 200..800` variable axis.
  *
+ * It also writes the static social-card instances under
+ * `worker/assets/fonts/social-card/` (see SOCIAL_CARD_JOBS).
+ *
  * Modes:
- *   (default)   regenerate the woff2 files in place
- *   --check     structural verification: each committed woff2 exists, parses
- *               as a valid font via fontTools, and preserves the expected
- *               variable axes (Newsreader: wght 200..800 + opsz). Byte-for-
- *               byte determinism is not feasible because pyftsubset's woff2
- *               compressor is non-deterministic across runs.
+ *   (default)      regenerate the woff2 files and the social-card TTFs in place
+ *   --social-card  regenerate only the social-card TTFs (byte-deterministic)
+ *   --check        structural verification: each committed woff2 exists, parses
+ *                  as a valid font via fontTools, and preserves the expected
+ *                  variable axes (Newsreader: wght 200..800 + opsz). Byte-for-
+ *                  byte determinism is not feasible because pyftsubset's woff2
+ *                  compressor is non-deterministic across runs.
  *
  * Requires `pyftsubset` (fonttools) on PATH for the default mode. `--check`
- * additionally requires Python with fontTools importable.
+ * and `--social-card` require Python with fontTools (and brotli, to read
+ * woff2 sources) importable as `python3`.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,6 +42,56 @@ const ORIGINALS_DIR = resolve(SRC_DIR, "originals");
 const ALLOWLIST_PATH = resolve(REPO_ROOT, "data/fonts/glyphs-allowlist.txt");
 
 const CHECK_MODE = process.argv.includes("--check");
+const SOCIAL_CARD_ONLY = process.argv.includes("--social-card");
+
+const SOCIAL_CARD_DIR = resolve(REPO_ROOT, "worker/assets/fonts/social-card");
+/**
+ * Satori and resvg render variable fonts at their default instance and cannot
+ * read woff2, so social cards use static TTF instances of the site's own faces.
+ * Mono drops `calt` so code ligatures never fuse tickers such as "USD0++".
+ */
+const SOCIAL_CARD_JOBS = [
+  { source: "BricolageGrotesque-Variable.woff2", axes: { wght: 800 }, family: "Bricolage Grotesque 96pt", style: "ExtraBold", output: "BricolageGrotesque-800.ttf" },
+  { source: "BricolageGrotesque-Variable.woff2", axes: { wght: 600 }, family: "Bricolage Grotesque 96pt", style: "SemiBold", output: "BricolageGrotesque-600.ttf" },
+  { source: "BricolageGrotesque-Variable.woff2", axes: { wght: 400 }, family: "Bricolage Grotesque 96pt", style: "Regular", output: "BricolageGrotesque-400.ttf" },
+  { source: "JetBrainsMono-Variable.woff2", axes: { wght: 500 }, family: "JetBrains Mono", style: "Medium", output: "JetBrainsMono-500.ttf", dropFeatures: ["calt"] },
+  { source: "JetBrainsMono-Variable.woff2", axes: { wght: 700 }, family: "JetBrains Mono", style: "Bold", output: "JetBrainsMono-700.ttf", dropFeatures: ["calt"] },
+  { source: "originals/Newsreader-Variable.ttf", axes: { wght: 500, opsz: 72 }, family: "Newsreader 72pt", style: "Medium", output: "Newsreader-72pt-500.ttf" },
+  { source: "originals/Newsreader-Italic-Variable.ttf", axes: { wght: 400, opsz: 72 }, family: "Newsreader 72pt", style: "Italic", output: "Newsreader-72pt-Italic-400.ttf" },
+];
+/** The drawable range; keep it equal to SOCIAL_CARD_TEXT in shared/lib/social-card/tokens.ts. */
+const SOCIAL_CARD_UNICODES = "U+0020-007E,U+00A0-00FF,U+2013,U+2018,U+2019,U+201C,U+201D,U+2026,U+20AC";
+// Pinned instance, subset and name records with source timestamps, so a rerun is byte-identical.
+const SOCIAL_CARD_PYTHON = `
+import json, sys
+from fontTools import subset
+from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
+unicodes = subset.parse_unicodes(sys.argv[2])
+for job in json.loads(sys.argv[1]):
+    font = TTFont(job["source"], recalcTimestamp=False)
+    font.flavor = None
+    font = instancer.instantiateVariableFont(font, job["axes"])
+    features = {r.FeatureTag for t in ("GSUB", "GPOS") if t in font for r in font[t].table.FeatureList.FeatureRecord}
+    options = subset.Options(layout_features=sorted(features - set(job.get("dropFeatures", []))), name_IDs=["*"],
+                             hinting=False, notdef_outline=True, recalc_timestamp=False)
+    options.drop_tables += ["DSIG", "STAT", "gasp"]
+    subsetter = subset.Subsetter(options)
+    subsetter.populate(unicodes=unicodes)
+    subsetter.subset(font)
+    family, style = job["family"], job["style"]
+    ribbi = style in ("Regular", "Italic", "Bold")
+    postscript = f"{family}-{style}".replace(" ", "")
+    names = {1: family if ribbi else f"{family} {style}", 2: style if ribbi else "Regular", 3: postscript, 4: f"{family} {style}", 6: postscript}
+    if not ribbi:
+        names.update({16: family, 17: style})
+    for name_id in (1, 2, 3, 4, 6, 16, 17, 25):
+        font["name"].removeNames(nameID=name_id)
+    for name_id, value in names.items():
+        font["name"].setName(value, name_id, 3, 1, 0x409)
+    font.save(job["output"])
+    print(f"  {job['output']}: {len(font.getGlyphOrder())} glyphs")
+`;
 
 const GEIST_JOBS = [
   { ttf: "Geist-Regular.ttf", woff2: "Geist-Regular.woff2" },
@@ -136,6 +191,24 @@ function buildNewsreaderSubsetWoff2(ttfPath, outPath, unicodesArg) {
     ],
     ttfPath,
   );
+}
+
+function buildSocialCardInstances() {
+  mkdirSync(SOCIAL_CARD_DIR, { recursive: true });
+  const jobs = SOCIAL_CARD_JOBS.map((job) => ({
+    ...job,
+    source: join(SRC_DIR, job.source),
+    output: join(SOCIAL_CARD_DIR, job.output),
+  }));
+  const result = spawnSync("python3", ["-c", SOCIAL_CARD_PYTHON, JSON.stringify(jobs), SOCIAL_CARD_UNICODES], {
+    stdio: ["ignore", "inherit", "pipe"],
+  });
+  if (result.status !== 0) {
+    console.error(
+      `[subset-fonts] social-card instancing failed (needs python3 with fontTools and brotli):\n${result.stderr?.toString() ?? ""}`,
+    );
+    process.exit(1);
+  }
 }
 
 function fileSize(path) {
@@ -274,9 +347,13 @@ function main() {
     return;
   }
 
-  ensureBinary("pyftsubset");
-  regenerate(SRC_DIR);
-  reportSizes(SRC_DIR, ORIGINALS_DIR, "regenerated woff2");
+  if (!SOCIAL_CARD_ONLY) {
+    ensureBinary("pyftsubset");
+    regenerate(SRC_DIR);
+    reportSizes(SRC_DIR, ORIGINALS_DIR, "regenerated woff2");
+  }
+  console.log("\n[subset-fonts] social-card instances:");
+  buildSocialCardInstances();
 }
 
 main();

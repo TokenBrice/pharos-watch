@@ -5,8 +5,11 @@ import { stableJsonStringifyV1 } from "./stable-json";
 import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH } from "./social-preview";
 
 export const SOCIAL_SCORECARD_METADATA_HEADER = "X-Pharos-Scorecard";
-export const SOCIAL_SCORECARD_RENDERER_REVISION = "scorecard-3";
+export const SOCIAL_SCORECARD_RENDERER_REVISION = "scorecard-5";
 export const SOCIAL_SCORECARD_OVERVIEW_ID = "safety-scores";
+/** Why a coin has no dated scorecard: it has no published grade. Worker route and Pages creator answer it alike. */
+export const SOCIAL_SCORECARD_REASON_HEADER = "X-Scorecard-Reason";
+export const SOCIAL_SCORECARD_NOT_RATED_REASON = "not-rated";
 export const SOCIAL_SCORECARD_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const SOCIAL_SCORECARD_MAX_RECORD_BYTES = 2_810_000;
 const SOCIAL_SCORECARD_MAX_HEADER_BYTES = 4096;

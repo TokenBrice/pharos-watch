@@ -10,7 +10,6 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
-import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
 import * as depegTrustPolicy from "../../lib/depeg-trust-policy";
@@ -177,6 +176,8 @@ describe("handlePegSummary", () => {
         value: JSON.stringify({ computedAtSec: nowSec, depegEventsToday: 2, depegEventsYesterday: 1, pegData: [makeCachedPegCoin()] }),
       }] },
       { match: "dex_prices", rows: [] },
+      // Priced on today's snapshot: one missed cycle is not a sustained absence.
+      { match: "pharos:peg-summary:recently-priced-ids", rows: [{ stablecoin_id: "usdt-tether" }] },
     ]);
     const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
     expect(body.coins).toHaveLength(1);
@@ -249,11 +250,15 @@ describe("handlePegSummary", () => {
         value: JSON.stringify({ computedAtSec: cachedAt, depegEventsToday: 0, depegEventsYesterday: 0, pegData: [makeCachedPegCoin()] }),
       }] },
       { match: "dex_prices", rows: [] },
+      // No observed price on today's or yesterday's snapshot: the unobserved window is NR.
+      { match: "pharos:peg-summary:recently-priced-ids", rows: [] },
     ]);
     const body = await readJsonResponse(await handlePegSummary(db), 200) as {
       coins: PegSummaryCoin[]; summary: { coinsAtPeg: number; totalTracked: number };
     };
-    expect(body.coins[0]).toMatchObject({ price: null, currentDeviationBps: null, currentPriceUnavailable: true, pegScore: 99 });
+    expect(body.coins[0]).toMatchObject({
+      price: null, currentDeviationBps: null, currentPriceUnavailable: true, pegScore: null, pegPct: null, recent90d: null,
+    });
     expect(body.summary.coinsAtPeg).toBe(0);
     expect(body.summary.totalTracked).toBe(0);
   });
@@ -301,7 +306,7 @@ describe("handlePegSummary", () => {
 
   it("publishes wholly unknown legacy-open coverage as unavailable, not zero or perfect occupancy", async () => {
     const db = makePegSummaryDb(
-      [makeAsset({ id: "usdt-tether", symbol: "USDT", price: null })],
+      [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })],
       undefined,
       [makeDepegEventRow({ started_at: nowSec - 6 * 365 * 86400, ended_at: null })],
     );
@@ -1439,9 +1444,6 @@ describe("active-depeg census scope", () => {
       const { summary } = body;
       if (summary === null) throw new Error("A served census response must carry a summary");
       expect(summary.activeDepegCount).toBe(census);
-
-      const timeline = await loadTimelineOgPage(db, CENSUS_NOW);
-      expect(timeline).toMatchObject({ kind: "ok", hero: String(census) });
     } finally {
       sqlite.close();
     }

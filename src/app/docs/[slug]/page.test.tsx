@@ -34,6 +34,12 @@ describe("DocPage", () => {
     expect(html).not.toMatch(/npx |--execute|Maintenance Checklist|runbook/i);
   });
 
+  it("hides agent navigation, keeps the lifecycle anchor", async () => {
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "depeg-detection" }) }));
+    expect(html).not.toContain("Agent navigation");
+    expect(html).toContain('id="event-lifecycle"');
+  });
+
   it("opens external markdown links in a new tab with an isolated opener", async () => {
     const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "redemption-backstops" }) }));
     const rendered = anchors(html);

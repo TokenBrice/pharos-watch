@@ -26,7 +26,8 @@ import type {
   SelectorLowerRanked,
   SelectorProfile,
 } from "./types";
-import { selectorComponentProseLabel, selectorExclusionReasonLabel } from "./selector-labels";
+import { isDewsAlertBand, THREAT_BAND_LABELS } from "../classification/risk";
+import { selectorComponentProseLabel, selectorDewsBand, selectorExclusionReasonLabel } from "./selector-labels";
 
 export interface WhatToWatchTemplate {
   /** Free-form prose ≤80 chars after substitution. */
@@ -186,6 +187,15 @@ export function renderWatchText(
   profile: SelectorProfile,
   row: MergedRow,
 ): string | undefined {
+  // A live DEWS Alert or worse that the profile still admits is forced to the
+  // top of the watch line, ahead of structural context.
+  if (row.dewsScore != null) {
+    const band = selectorDewsBand(row.dewsScore);
+    if (isDewsAlertBand(band)) {
+      return `DEWS reads ${THREAT_BAND_LABELS[band]} (${Math.round(row.dewsScore)}/100); review the stress signals before sizing.`;
+    }
+  }
+
   if (row.safetyBindingCap != null) {
     return `Safety Score is capped at ${Math.round(row.safetyBindingCap.limit)}: ${row.safetyBindingCap.reason}`;
   }

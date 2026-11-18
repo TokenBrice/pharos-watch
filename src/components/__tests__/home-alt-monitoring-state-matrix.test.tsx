@@ -72,6 +72,8 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
   useBlacklistSummary: useBlacklistSummaryMock,
 }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: useActiveDepegEventsMock }));
+vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: () => ({ resolver: { data: undefined } }) }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: useHomeAltFiltersMock }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({ usePinnedStablecoins: usePinnedStablecoinsMock }));
@@ -198,6 +200,7 @@ const SURFACES: SurfaceCase[] = [
         loadedCount: active.data?.events.length ?? 0,
       });
       usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
+      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
     },
     emptyText: "No open confirmed incidents",
     readyText: "USDC",

@@ -42,7 +42,7 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        className={cn("border p-5 text-state-danger-strong", SEVERITY_TONE_CLASS.alert.banner)}
+        className={cn("border p-5 text-state-danger-strong", SEVERITY_TONE_CLASS.danger.banner)}
       >
         <h2 className="text-base font-semibold">Status data failed to load</h2>
         <p className="mt-2 text-sm">{error.message}</p>
@@ -87,7 +87,7 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className={cn("border px-4 py-3 text-sm text-state-warn-strong", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("border px-4 py-3 text-sm text-state-warn-strong", SEVERITY_TONE_CLASS.caution.banner)}
         >
           <span className="font-medium">Status refresh failed.</span> Showing the last successful response.{" "}
           {error.message}

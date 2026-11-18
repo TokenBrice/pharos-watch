@@ -54,7 +54,10 @@
     {
       "type": "danger",
       "title": "Swellchain shutdown deadline",
-      "message": "Swellchain's June 23, 2026 bridge-withdrawal deadline and June 30, 2026 chain-shutdown window have passed. Remaining USDK-related positions may require direct contract interaction and should be treated as effectively wound down."
+      "message": "Swellchain's June 23, 2026 bridge-withdrawal deadline and June 30, 2026 chain-shutdown window have passed. Remaining USDK-related positions may require direct contract interaction and should be treated as effectively wound down.",
+      "kind": "deadline",
+      "deadline": "2026-06-23",
+      "asOf": "2026-06-30"
     }
   ]
 }

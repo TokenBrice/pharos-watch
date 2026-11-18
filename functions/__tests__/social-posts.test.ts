@@ -83,31 +83,26 @@ describe("daily social artifacts", () => {
   });
 });
 
-async function evergreenContext(kind: "rendered" | "authored" = "rendered") {
-  let bytes = await sharp({ create: { width: 1200, height: 630, channels: 4, background: "#15283b" } }).png().toBuffer();
-  const source = "a".repeat(64);
-  if (kind === "rendered") {
-    const data = Buffer.from(`pharos-source-sha256\0${source}`);
-    const chunk = Buffer.alloc(data.length + 12);
-    chunk.writeUInt32BE(data.length);
-    chunk.write("tEXt", 4);
-    data.copy(chunk, 8);
-    chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
-    bytes = Buffer.concat([bytes.subarray(0, -12), chunk, bytes.subarray(-12)]);
-  }
+const LEGACY_METADATA = { "png-sha256": "a".repeat(64), "source-fingerprint": "b".repeat(64), "semantic-hash": "c".repeat(64), kind: "rendered" };
+async function evergreenContext(customMetadata: Record<string, string> = LEGACY_METADATA) {
+  // A tEXt chunk stands in for the source stamp older objects carry; it is never parsed.
+  const plain = await sharp({ create: { width: 1200, height: 630, channels: 4, background: "#15283b" } }).png().toBuffer();
+  const text = Buffer.from("pharos-source-sha256\0legacy");
+  const chunk = Buffer.alloc(text.length + 12);
+  chunk.writeUInt32BE(text.length);
+  chunk.write("tEXt", 4);
+  text.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+  const bytes = Buffer.concat([plain.subarray(0, -12), chunk, plain.subarray(-12)]);
   const hash = createHash("sha256").update(bytes).digest("hex");
-  const semanticHash = kind === "rendered" ? "b".repeat(64) : hash;
-  const filename = `old-route-${semanticHash}.png`;
-  const customMetadata: Record<string, string> = {
-    "png-sha256": hash, "source-fingerprint": kind === "rendered" ? source : hash, "semantic-hash": semanticHash, kind,
-  };
+  const filename = `image-${"d".repeat(64)}.png`;
   const stored = { arrayBuffer: async () => Uint8Array.from(bytes).buffer, text: async () => "", customMetadata };
   const get = vi.fn(async () => stored as typeof stored | null);
   const put = vi.fn(async () => { throw new Error("reader must never write"); });
   const next = vi.fn(async (_input?: Request | string, _init?: RequestInit) => new Response(null, { status: 404 }));
   return {
     request: new Request(`https://pharos.watch/og/v2/${filename}`),
-    env: { SOCIAL_PREVIEWS: { get, put } }, next, get, bytes, hash, filename, customMetadata,
+    env: { SOCIAL_PREVIEWS: { get, put } }, next, get, bytes, hash, filename,
   };
 }
 
@@ -120,11 +115,13 @@ describe("permanent evergreen preview assets", () => {
     expect(Buffer.from(await response.arrayBuffer())).toEqual(ctx.bytes);
     expect(response.headers.get("etag")).toBe(`"${ctx.hash}"`);
     expect(response.headers.get("cache-control")).toContain("immutable");
+    // Article JSON-LD names these images, so they stay indexable.
+    expect(response.headers.has("x-robots-tag")).toBe(false);
     expect(ctx.get).not.toHaveBeenCalled();
   });
 
-  it.each(["rendered", "authored"] as const)("resolves a removed/rolled-back identity from its permanent object (%s)", async (kind) => {
-    const ctx = await evergreenContext(kind);
+  it.each([["legacy", LEGACY_METADATA], ["current", { "png-sha256": "e".repeat(64) }], ["no", {}]])("resolves a removed/rolled-back identity from R2 whatever its metadata (%s)", async (_generation, metadata) => {
+    const ctx = await evergreenContext(metadata);
     const response = await serveEvergreenPreview(ctx);
     expect(response.status).toBe(200);
     expect(Buffer.from(await response.arrayBuffer())).toEqual(ctx.bytes);
@@ -181,17 +178,15 @@ describe("permanent evergreen preview assets", () => {
     expect(ctx.get).not.toHaveBeenCalled();
   });
 
-  it("rejects corrupted PNG bytes, source stamps and object identity metadata", async () => {
-    const ctx = await evergreenContext();
-    for (const field of ["png-sha256", "source-fingerprint", "semantic-hash", "kind"]) {
-      const original = ctx.customMetadata[field];
-      ctx.customMetadata[field] = "c".repeat(64);
+  it.each(["static", "stored"])("rejects corrupted or truncated %s PNG bytes", async (source) => {
+    for (const corrupt of [(bytes: Buffer) => { bytes[0] = 0; return bytes; }, (bytes: Buffer) => bytes.subarray(0, -12)]) {
+      const ctx = await evergreenContext();
+      const bytes = Uint8Array.from(corrupt(ctx.bytes));
+      if (source === "static") ctx.next.mockImplementation(async () => new Response(bytes, { headers: { "Content-Type": "image/png" } }));
+      else ctx.get.mockResolvedValue({ arrayBuffer: async () => bytes.buffer, text: async () => "", customMetadata: {} });
       const response = await serveEvergreenPreview(ctx);
       expect(response.status).toBe(502);
       expect(response.headers.get("cache-control")).toBe("no-store");
-      ctx.customMetadata[field] = original;
     }
-    ctx.bytes[0] = 0;
-    expect((await serveEvergreenPreview(ctx)).status).toBe(502);
   });
 });

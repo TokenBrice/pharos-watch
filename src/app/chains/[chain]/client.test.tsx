@@ -9,8 +9,9 @@ import { makeChain, makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 
 const push = vi.fn();
 const refetchAll = vi.fn();
-const { useChainProfileDataMock } = vi.hoisted(() => ({
+const { useChainProfileDataMock, useCoinStatesMock } = vi.hoisted(() => ({
   useChainProfileDataMock: vi.fn(),
+  useCoinStatesMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -35,6 +36,8 @@ vi.mock("@/components/methodology-hint", () => ({
 vi.mock("@/hooks/use-chain-profile-data", () => ({
   useChainProfileData: useChainProfileDataMock,
 }));
+
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
 
 function makeHookState(overrides: Record<string, unknown> = {}) {
   return {
@@ -62,6 +65,7 @@ describe("ChainProfileClient", () => {
     refetchAll.mockReset();
     useChainProfileDataMock.mockReset();
     useChainProfileDataMock.mockReturnValue(makeHookState());
+    useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: true });
   });
 
   it("shows an unavailable share and suppresses composition without an admitted detail total", () => {
@@ -75,22 +79,31 @@ describe("ChainProfileClient", () => {
   });
 
 
-  it("renders the missing-chain fallback when the requested chain is absent", () => {
-    useChainProfileDataMock.mockReturnValue(makeHookState({
-      chain: null,
-      canConfirmMissingChain: true,
-      chainsQuery: {
-        data: { chains: [] },
-        error: null,
-        dataUpdatedAt: 1_710_500_000_000,
-        meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
-      },
-    }));
+  const absent = {
+    chain: null, canConfirmMissingChain: true,
+    chainsQuery: { data: { chains: [] }, error: null, dataUpdatedAt: 1_710_500_000_000, meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" } },
+  };
 
-    render(<ChainProfileClient chainId="ethereum" />);
+  it("keeps the untracked fallback for an absent chain only when no tracked coin lives there", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState(absent));
+
+    render(<ChainProfileClient chainId="unregistered-chain" />);
 
     expect(screen.getByText("Pharos doesn't have a chain read for this one yet.")).toBeTruthy();
     expect(screen.getByText("View all chains")).toBeTruthy();
+  });
+
+  it("names a tracked coin's critical state on a chain with no read", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({ ...absent, coins: [], totalUsd: null }));
+    useCoinStatesMock.mockReturnValue({
+      byId: new Map([["iusd-initia", [{ kind: "critical", notice: { type: "danger", title: "Initia L1 halted", kind: "paused", asOf: "2026-10-30" } }]]]), liveReady: true,
+    });
+    const { container } = render(<ChainProfileClient chainId="initia" />);
+    expect(screen.getByRole("status").textContent)
+      .toContain("1 tracked coin reports a critical or paused state: iUSD — Initia L1 halted (updated 2026-10-30).");
+    expect(container.querySelector("[data-coin-state=critical]")?.textContent).toContain("Critical notice · Initia L1 halted");
+    expect(container.querySelector("[data-slot=skeleton]")).toBeNull();
+    expect(screen.queryByText(/may have been removed/)).toBeNull();
   });
 
   it("shows unavailable supply rather than untracked copy for a coverage-listed chain", () => {

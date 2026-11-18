@@ -42,7 +42,7 @@ export default async function StablecoinYieldDetailPage({ params }: { params: Pr
 
   return (
     <Suspense fallback={<Skeleton className="h-[600px] w-full rounded-xl" />}>
-      <YieldAnalysisClient id={id} staticCoin={staticCoin} logoSrc={getLogoSrc(logosById, coin.id)} />
+      <YieldAnalysisClient id={id} staticCoin={staticCoin} logoSrc={getLogoSrc(logosById, coin.id)} notices={coin.notices} />
     </Suspense>
   );
 }

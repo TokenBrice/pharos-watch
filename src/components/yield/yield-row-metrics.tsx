@@ -340,7 +340,8 @@ export function YieldSignalsIndicator({
   const warningSignalCount = selectInvestmentWarningSignals(row.warningSignals).length;
 
   if (warningSignalCount === 0 && !sourceRiskSummary) {
-    return variant === "mobile" ? <span>No warnings</span> : null;
+    // The row's state chip already speaks for a coin or venue in an exceptional state.
+    return variant === "mobile" && !row.coinStates?.length ? <span>No warnings</span> : null;
   }
 
   if (variant === "mobile") {

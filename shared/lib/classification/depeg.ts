@@ -93,6 +93,17 @@ export const OPEN_INCIDENT_EVIDENCE_LABELS = {
   unconfirmed: "Recovery unconfirmed",
 } as const satisfies Record<OpenIncidentEvidence, string>;
 
+/**
+ * Distinct words for states that were all called "pending": a threshold
+ * crossing in `/api/depeg-events` `pending[]` that detection has not
+ * confirmed yet, and a DDR incident (`pending_lock`) whose forecast has not
+ * been locked. A confirmed event's `pendingReason` is a quality flag, not a state.
+ */
+export const DEPEG_PENDING_STATE_LABELS = {
+  crossing: "Awaiting confirmation",
+  ddrLock: "Forecast not locked yet",
+} as const;
+
 /** The pulsing "live" dot behind an active depeg. */
 export const DEPEG_LIVE_PING_CLASS = "bg-red-400";
 

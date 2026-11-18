@@ -16,7 +16,7 @@ Current aggregation admits each `CLIENT_CORE_AGGREGATE_ACTIVE_IDS` member once a
 
 Supply uses nullable helpers: absent/empty/invalid is unavailable, finite zero is measured. Snapshot/cohort rows disclose observed/unavailable counts with known subtotals. No observed member means no numeric cap; incomplete denominators withhold shares. A recorded partial-chain remainder (a guard publishing `partialCoverage`) stays in the known subtotal but is not a complete observation, so it withholds shares like an unavailable member; a chain gap below the guard's 2% materiality bound removes nothing from the published aggregate and withholds nothing here (Pricing v6.78). Partial cohorts remain visible with coverage. Atlas unknown markers are neutral, distinct from zero-floor size, with explicit accessible unavailable labels. Atlas cohort counts, subtotals and completeness come from the full core non-USD census, including omitted API rows and members without a plotted logo; ranks require every non-USD census member to report complete supply, and an incomplete cohort withholds coin shares.
 
-The asset table reads scores from the compact DEX table projection (`useDexLiquidityTable`), not the full pool-detail map; missing scores remain unavailable and observed zero stays numeric.
+The asset table reads scores from the compact DEX table projection (`useDexLiquidityTable`), not the full pool-detail map; missing scores remain unavailable and observed zero stays numeric. Each coin-table row leads with its highest exceptional state (`CoinStateChip` from `useCoinStates`, the shared directory-table slot), so an off-peg or halted coin never ranks unmarked.
 
 ### Permanent Series Boundary
 
@@ -42,7 +42,7 @@ The marker census starts with the core non-USD registry, using registry names, s
 
 ## Share Card
 
-Canonical metadata and the ordinary Share menu use the generated immutable evergreen `/og/v2/` preview, not a live total or peg-share image ([OG images](./og-images.md#1-route-cards)). `/api/og/page/alt-pegs` remains a compatibility numerical endpoint (`worker/src/api/og-page/alt-pegs.ts`) using `buildNonUsdMarketSnapshot` over the published cache with explicit partial coverage and figure-free failure states; it and legacy `og-alt-pegs.png` are not this page's canonical image selection.
+Canonical metadata and the ordinary Share menu use the generated immutable evergreen `/og/v2/` preview, not a live total or peg-share image ([OG images](./og-images.md#1-route-cards)). The retired `/api/og/page/alt-pegs` card now answers a permanent redirect to that image ([OG images](./og-images.md#8-dynamic-worker-cards-apiog)); legacy `og-alt-pegs.png` remains an inert compatibility asset, not this page's selection.
 
 ## Crawlability And Discoverability
 

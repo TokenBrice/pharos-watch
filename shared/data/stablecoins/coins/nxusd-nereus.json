@@ -42,7 +42,9 @@
     {
       "type": "warning",
       "title": "Sustained soft depeg",
-      "message": "NXUSD has shown a sustained soft-depeg pattern, with extended periods between $0.95 and $1.01 on CoinGecko/DefiLlama feeds. Treat collateral classification as advisory rather than live redemption assurance."
+      "message": "NXUSD has shown a sustained soft-depeg pattern, with extended periods between $0.95 and $1.01 on CoinGecko/DefiLlama feeds. Treat collateral classification as advisory rather than live redemption assurance.",
+      "kind": "depeg",
+      "asOf": "2026-05-13"
     }
   ],
   "liveReservesConfig": {

@@ -149,6 +149,8 @@ export interface ThresholdGaugeProps {
   /** Repeat the value under its knob; switch off when a headline sits directly above. */
   showValueLabel?: boolean;
   unavailableLabel?: string;
+  /** Draw the reading in neutral ink: the caller's coverage chip is neutral (a reviewed or distressed ratio is no calm claim). */
+  neutral?: boolean;
   className?: string;
 }
 
@@ -295,6 +297,7 @@ export function ThresholdGauge({
   domain,
   showValueLabel = true,
   unavailableLabel = "Unavailable",
+  neutral = false,
   className,
 }: ThresholdGaugeProps) {
   const value = typeof valuePct === "number" && Number.isFinite(valuePct) && valuePct >= 0 ? valuePct : null;
@@ -371,12 +374,12 @@ export function ThresholdGauge({
             <div className={cn("absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 overflow-hidden rounded-full", TRACK_CLASS)}>
               <div
                 data-gauge-fill=""
-                className={cn("h-full rounded-full", COVERAGE_FILL_CLASS[tone])}
+                className={cn("h-full rounded-full", neutral ? SEVERITY_TONE_CLASS.neutral.bar : COVERAGE_FILL_CLASS[tone])}
                 style={{ width: `${Math.max(position.left, 1.5)}%` }}
               />
             </div>
             {position.clamped === "high" ? (
-              <span aria-hidden="true" className={cn("absolute left-full top-1/2 ml-px -translate-y-1/2", CLAMP_HIGH_ARROW_CLASS[tone])} />
+              <span aria-hidden="true" className={cn("absolute left-full top-1/2 ml-px -translate-y-1/2", neutral ? CLAMP_LOW_ARROW_CLASS : CLAMP_HIGH_ARROW_CLASS[tone])} />
             ) : null}
             {position.clamped === "low" ? (
               <span aria-hidden="true" className={cn("absolute right-full top-1/2 mr-px -translate-y-1/2", CLAMP_LOW_ARROW_CLASS)} />
@@ -412,7 +415,7 @@ export function ThresholdGauge({
               style={{ left: `${label.left}%`, top: `${label.lane * LANE_HEIGHT_PX}px` }}
             >
               {label.kind === "value" && value != null && tone != null ? (
-                <span className={cn("font-mono font-semibold tabular-nums", COVERAGE_TEXT_CLASS[tone])}>
+                <span className={cn("font-mono font-semibold tabular-nums", neutral ? "text-foreground" : COVERAGE_TEXT_CLASS[tone])}>
                   {formatValue(value)}
                 </span>
               ) : label.kind === "unavailable" ? (

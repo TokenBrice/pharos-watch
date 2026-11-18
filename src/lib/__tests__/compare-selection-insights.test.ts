@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCompareSelectionInsights } from "@/lib/compare-selection-insights";
+import type { CoinState } from "@shared/lib/coin-state";
 
 function build(ids: string[]) {
   return buildCompareSelectionInsights({ selectedIds: ids });
@@ -10,6 +11,19 @@ describe("buildCompareSelectionInsights", () => {
     const insights = build(["usdc-circle", "usdt-tether"])!;
     expect(insights.lens).toContain("Same-peg peer set");
     expect(insights.structure).toContain("Common peg target: US Dollar");
+  });
+
+  it("names exceptional members, most critical first", () => {
+    const insights = buildCompareSelectionInsights({
+      selectedIds: ["usdc-circle", "usdt-tether", "usds-sky"],
+      coinStatesById: new Map<string, readonly CoinState[]>([
+        ["usdc-circle", [{ kind: "dews", band: "ALERT" }]],
+        ["usds-sky", [{ kind: "critical", notice: { type: "danger", title: "Chain halted" } }]],
+      ]),
+    })!;
+    expect(insights.exceptional.map((member) => [member.symbol, member.state.kind])).toEqual([["USDS", "critical"], ["USDC", "dews"]]);
+    expect(insights.lens).toContain("Same-peg peer set with 2 members in an exceptional state");
+    expect(build(["usdc-circle", "usdt-tether"])!.exceptional).toEqual([]);
   });
 
   it("builds set claims and detail links from registry meta for every selected coin", () => {

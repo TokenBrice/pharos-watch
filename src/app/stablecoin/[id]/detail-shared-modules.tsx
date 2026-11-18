@@ -112,8 +112,8 @@ const NOT_REVIEWED_CHIP: EvidenceIndexChip = { label: "Not reviewed", toneClass:
 /** The Control strip's restrained score tint, as on the Price feed header pill. */
 const CONTROL_SCORE_TONE_CLASS: Record<ControlComponentRoles["components"][number]["tone"], string> = {
   neutral: SEVERITY_TONE_CLASS.neutral.pill,
-  warn: SEVERITY_TONE_CLASS.watch.pill,
-  critical: SEVERITY_TONE_CLASS.alert.pill,
+  warn: SEVERITY_TONE_CLASS.caution.pill,
+  critical: SEVERITY_TONE_CLASS.danger.pill,
 };
 
 function formatIndexScore(score: number): string {
@@ -201,6 +201,7 @@ export function buildDetailSharedModules({
     liveMetadata: liveScopeMetadata,
     oracle: coin.oracleRiskSummary ?? null,
     parent: backingParent,
+    distressed: viewModel.coinStates.some((state) => state.kind === "depeg" || state.kind === "critical" || state.kind === "paused"),
   });
   const custody = coin.custodyProfileSummary ?? null;
   const custodyNotReviewed = custody === null && !frozen && needsCustodyReview(coin);

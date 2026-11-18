@@ -125,7 +125,9 @@
     {
       "type": "warning",
       "title": "Subscriptions paused",
-      "message": "Midas' mRe7YIELD page shows primary-market subscriptions paused as of 2026-10-30; redemptions remain open."
+      "message": "Midas' mRe7YIELD page shows primary-market subscriptions paused as of 2026-10-30; redemptions remain open.",
+      "kind": "paused",
+      "asOf": "2026-10-30"
     }
   ],
   "launchDate": "2025-02-06",

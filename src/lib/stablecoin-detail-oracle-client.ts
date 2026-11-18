@@ -127,12 +127,12 @@ const TIER_LABELS: Record<OracleRiskTier, string> = {
  */
 const TIER_SEVERITY: Record<OracleRiskTier, SeverityTone> = {
   "oracleless": "ok",
-  "privileged-internal-pricing": "watch",
+  "privileged-internal-pricing": "caution",
   "redundant-with-failover": "ok",
   "medianized-with-delay": "info",
   "standard-external": "info",
-  "single-source-or-laggy": "watch",
-  "opaque-or-unknown": "alert",
+  "single-source-or-laggy": "caution",
+  "opaque-or-unknown": "danger",
 };
 
 const ROLE_TITLES: Record<OracleRiskRole, string> = {

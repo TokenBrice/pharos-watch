@@ -50,6 +50,10 @@ const RICHNESS_CHECKS = [
 const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pending)\b/gi;
 const MAX_LOADING_WORD_RATIO = 0.15;
 const MAX_LOADING_WORD_COUNT = 4;
+// Link previews: Slack reads about the first 32 KB of a page and misses later
+// tags; Apple Messages limits the main resource to 1 MB.
+const OG_IMAGE_MAX_BYTE_OFFSET = 32_768;
+const PREVIEW_HTML_WARN_BYTES = 1_000_000;
 const INDEXABLE_SNIPPET_LENGTHS = {
   title: { min: 35, max: 70 },
   description: { min: 110, max: 180 },
@@ -875,19 +879,11 @@ function canonicalUrlForRoute(route) {
   return `${PHAROS_ORIGIN}${route === "/" ? "/" : route}`;
 }
 
-// Returns the same-origin path that must exist in `out/` for an og:image / twitter:image
-// reference, or `null` for external URLs (e.g. the dynamic /api/og/* worker route) that
-// are not served by the static export.
-function localOgImagePath(value) {
+// The static export must include every same-origin image.
+function localOgImagePath(value, parsed) {
   if (!value) return null;
   if (value.startsWith("/")) return value;
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return null;
-  }
-  if (parsed.hostname !== PHAROS_HOSTNAME) return null;
+  if (parsed?.hostname !== PHAROS_HOSTNAME) return null;
   return parsed.pathname;
 }
 
@@ -933,6 +929,8 @@ export function buildSeoPageRecord(
   const visibleText = richnessCheck || visibleFaqRequired ? extractVisibleText(html) : "";
   const words = richnessCheck ? wordCount(visibleText) : 0;
   const loadingWords = richnessCheck ? (visibleText.match(LOADING_SHELL_PATTERN)?.length ?? 0) : 0;
+  const ogImageTag = [...html.matchAll(/<meta\b[^>]*>/gi)]
+    .find((match) => parseAttributes(match[0]).get("property")?.toLowerCase() === "og:image");
 
   return {
     filePath,
@@ -945,6 +943,8 @@ export function buildSeoPageRecord(
     ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
     ogSiteName: getMetaContents(html, "property", "og:site_name")[0] ?? "",
     ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
+    ogImageByteOffset: ogImageTag ? Buffer.byteLength(html.slice(0, ogImageTag.index)) : null,
+    htmlBytes: Buffer.byteLength(html),
     twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
     twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
     robotsTags,
@@ -1346,6 +1346,8 @@ const SAFETY_RESULTS_REGION_LABEL = "Safety score cards";
 const SAFETY_RESULTS_REGION_ID = "data";
 registerCommonJs();
 registerEsm();
+const { API_HOSTNAME } = await import("../../shared/lib/runtime-origins.ts");
+const { dossierOgFallbackPath } = await import("../../shared/lib/social-preview-asset.ts");
 const { admitSafetyScoresPreviewRows, SAFETY_SCORES_PREVIEW_PROJECTION_VERSIONS, SAFETY_SCORES_PREVIEW_MAX_ROWS } =
   await import("../../src/lib/safety-grade-snapshot.ts");
 const SAFETY_PROFILE_HREF_PATTERN = /^\/stablecoin\/[^/]+\/$/;
@@ -1820,6 +1822,7 @@ export function collectSeoStaticCheckResult({
   validateStaticHeaders(outDir, errors);
   validateStaticRedirects(redirectRules, errors);
   const longTitleRoutes = [];
+  const largeHtmlRecords = [];
   validateTaxonomyRedirectDestinations(redirectRules, outDir, errors);
 
   for (const record of pageRecords) {
@@ -1864,6 +1867,14 @@ export function collectSeoStaticCheckResult({
     }
     if (!record.ogTitle) errors.push(`${record.route}: missing og:title`);
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
+    if (!record.ogImage) {
+      errors.push(`${record.route}: missing or empty og:image`);
+    } else if (record.ogImageByteOffset > OG_IMAGE_MAX_BYTE_OFFSET) {
+      errors.push(
+        `${record.route}: first og:image tag starts at byte ${record.ogImageByteOffset} (maximum ${OG_IMAGE_MAX_BYTE_OFFSET}); link-preview crawlers read only the start of a page`,
+      );
+    }
+    if (record.htmlBytes > PREVIEW_HTML_WARN_BYTES) largeHtmlRecords.push(record);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);
     if (indexable && !record.ogSiteName) errors.push(`${record.route}: missing og:site_name`);
 
@@ -1917,7 +1928,16 @@ export function collectSeoStaticCheckResult({
       ["og:image", record.ogImage],
       ["twitter:image", record.twitterImage],
     ]) {
-      const localPath = localOgImagePath(value);
+      const preview = URL.parse(value);
+      let localPath = localOgImagePath(value, preview);
+      if (preview?.hostname === API_HOSTNAME) {
+        const id = /^\/stablecoin\/([^/]+)\/$/.exec(record.route)?.[1];
+        localPath = id ? dossierOgFallbackPath(preview, id) : null;
+        if (!localPath) {
+          errors.push(`${record.route}: ${field} has an invalid API-hosted dossier preview`);
+          continue;
+        }
+      }
       if (!localPath) continue;
       if (missingOgImagePaths.has(localPath)) {
         errors.push(`${record.route}: ${field} references missing file ${localPath}`);
@@ -2118,6 +2138,12 @@ export function collectSeoStaticCheckResult({
   if (longTitleRoutes.length > 0) {
     warnings.push(
       `${longTitleRoutes.length} indexable <title>s exceed ${TITLE_WARN_LENGTH} chars (search truncation), e.g. ${longTitleRoutes.slice(0, 5).join(", ")}`,
+    );
+  }
+  if (largeHtmlRecords.length > 0) {
+    const largest = largeHtmlRecords.sort((a, b) => b.htmlBytes - a.htmlBytes).slice(0, 5);
+    warnings.push(
+      `${largeHtmlRecords.length} HTML pages exceed ${PREVIEW_HTML_WARN_BYTES} decoded bytes (Apple Messages' 1 MB preview limit), e.g. ${largest.map((record) => `${record.route} (${record.htmlBytes})`).join(", ")}`,
     );
   }
   validateStablecoinProfileRender(pageRecords, errors);

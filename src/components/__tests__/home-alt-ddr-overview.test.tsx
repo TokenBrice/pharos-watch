@@ -93,7 +93,7 @@ describe("HomeAltDdrOverview", () => {
 
     expect(screen.getByText("1 forecasts")).toBeTruthy();
     expect(screen.getByText("WITHDRAWN").closest("a")?.textContent).toContain("invalidated");
-    expect(screen.getByText("PENDING").closest("a")?.textContent).toContain("pending lock");
+    expect(screen.getByText("PENDING").closest("a")?.textContent).toContain("Forecast not locked yet");
     expect(screen.getByText("NO-CALL").closest("a")?.textContent).toContain("no call");
     expect(screen.getByText("VALID").closest("a")?.textContent).toContain("locked ~1d");
     expect(screen.getByText("WITHDRAWN").closest("a")?.textContent).not.toContain("~1d");

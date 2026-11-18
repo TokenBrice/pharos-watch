@@ -57,8 +57,8 @@ describe("DepegOutlookHero source availability", () => {
     expect(markup).toContain("0 bps");
     const v = render(<DepegOutlookHero {...baseProps} pendingSources={pending(loading)} />);
     for (let i = 0; i < 2; i++) {
-      expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 9 : 0);
-      for (const slot of ["min-h-20", "min-h-32", "min-h-28", "border-t border-border/60 pt-3 min-h-84 sm:min-h-76"])
+      expect(v.container.querySelectorAll('[class*="min-h-"]:not(button)')).toHaveLength(loading ? 10 : 0);
+      for (const slot of ["min-h-20", "min-h-32", "min-h-28", "min-h-67 sm:min-h-52", "border-t border-border/60 pt-3 min-h-84 sm:min-h-76"])
         expect(v.container.innerHTML.includes(`class="${slot}"`)).toBe(loading);
       v.rerender(<DepegOutlookHero {...baseProps} />);
     }
@@ -88,6 +88,23 @@ describe("DepegOutlookHero open-incident wording", () => {
     expect(one).not.toContain("right now");
     const many = renderHero({ ...observedZero, activeDepegCount: 3 }, 0, 0);
     expect(many).toContain("coins with open confirmed incidents");
+  });
+});
+
+describe("DepegOutlookHero open incidents", () => {
+  it("names the census top five with deviation, verdict and cap", () => {
+    const frozen = makeFrozenDdrV2Row(makeDdrSourceRow({ resolution: { tier: "recovery_unlikely", factors: [] } }));
+    const rows = Array.from({ length: 7 }, (_, i) => ({
+      id: `coin-${i}`, symbol: `C${i}`, deviationBps: i === 0 ? -4_510 : null, held: i === 1,
+      marketCapUsd: i === 0 ? 49e6 : null, ddr: i === 0 ? frozen : null,
+    }));
+    const html = markup({ openIncidents: rows, stats: { ...observedZero, activeDepegCount: 7 } });
+    expect(html).toContain("Top 5 of 7 by holder exposure");
+    expect(html).toContain('href="/stablecoin/coin-0#depeg-resolver"');
+    for (const text of ["−4510 bps", "Terminal", "$49.0M", "Mkt closed"]) expect(html).toContain(text);
+    expect(html).not.toContain("C5<");
+    expect(html).toContain("Awaiting confirmation");
+    expect(markup({ openIncidents: [] })).not.toContain("Open incidents");
   });
 });
 

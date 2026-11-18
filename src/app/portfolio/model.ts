@@ -1,5 +1,6 @@
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
+import type { CoinState } from "@shared/lib/coin-state";
 import { formatDecimal } from "@shared/lib/format";
 
 export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.map((stablecoin) => ({
@@ -72,4 +73,23 @@ export function parseUsdInput(raw: string): number {
 
 export function buildHeldCardIds(holdings: readonly PortfolioHolding[]): Set<string> {
   return new Set(holdings.map((holding) => holding.coinId));
+}
+
+export interface ExceptionalHolding {
+  coinId: string;
+  amount: number;
+  states: readonly CoinState[];
+}
+
+/** Holdings in an exceptional state (`useCoinStates`), largest entered exposure first. */
+export function rankExceptionalHoldings(
+  holdings: readonly PortfolioHolding[],
+  statesById: ReadonlyMap<string, readonly CoinState[]>,
+): ExceptionalHolding[] {
+  return holdings
+    .flatMap((holding) => {
+      const states = statesById.get(holding.coinId);
+      return states?.length ? [{ coinId: holding.coinId, amount: holding.amount, states }] : [];
+    })
+    .sort((left, right) => right.amount - left.amount);
 }

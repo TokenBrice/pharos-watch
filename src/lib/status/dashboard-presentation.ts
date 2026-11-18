@@ -17,16 +17,16 @@ export const STATUS_PAGE_RISK_LABELS: Record<StatusPageActionRisk, string> = {
 export const STATUS_PAGE_RISK_CLASSES: Record<StatusPageActionRisk, string> = {
   "read-only": SEVERITY_TONE_CLASS.ok.pill,
   low: SEVERITY_TONE_CLASS.info.pill,
-  moderate: SEVERITY_TONE_CLASS.watch.pill,
-  high: SEVERITY_TONE_CLASS.alert.pill,
+  moderate: SEVERITY_TONE_CLASS.caution.pill,
+  high: SEVERITY_TONE_CLASS.danger.pill,
 };
 
 export type OperationalTone = "ok" | "warning" | "error" | "unknown";
 
 export const OPERATIONAL_PILL_CLASS: Record<OperationalTone, string> = {
   ok: `bg-state-positive-solid/15 ${SEVERITY_TONE_CLASS.ok.text}`,
-  warning: `bg-state-warn-solid/15 ${SEVERITY_TONE_CLASS.watch.text}`,
-  error: `bg-state-danger-solid/15 ${SEVERITY_TONE_CLASS.alert.text}`,
+  warning: `bg-state-warn-solid/15 ${SEVERITY_TONE_CLASS.caution.text}`,
+  error: `bg-state-danger-solid/15 ${SEVERITY_TONE_CLASS.danger.text}`,
   unknown: `bg-muted ${SEVERITY_TONE_CLASS.neutral.text}`,
 };
 

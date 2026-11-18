@@ -153,7 +153,7 @@ const UNKNOWN_POSTURE_TONE = `${SEVERITY_TONE_CLASS.neutral.pill} border-dashed`
 const POSTURE_TONES: Record<CustodyPostureKey, string> = {
   "segregated-remote": SEVERITY_TONE_CLASS.ok.pill,
   segregated: SEVERITY_TONE_CLASS.ok.pill,
-  mixed: SEVERITY_TONE_CLASS.watch.pill,
+  mixed: SEVERITY_TONE_CLASS.caution.pill,
   omnibus: SEVERITY_TONE_CLASS.rose.pill,
   "partly-disclosed": SEVERITY_TONE_CLASS.neutral.pill,
   "structure-undisclosed": UNKNOWN_POSTURE_TONE,

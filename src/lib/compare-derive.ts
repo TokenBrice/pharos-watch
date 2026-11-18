@@ -48,6 +48,7 @@ import {
 } from "@shared/lib/mint-burn-coin-helpers";
 import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { CoinState } from "@shared/lib/coin-state";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { SUPPLY_PERIMETER_CHANGES, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 
@@ -90,6 +91,8 @@ export interface ComparisonCoinEntry {
   /** A usable whole-feed publication exists, even when it contains no ratings. */
   bluechipPublicationAvailable: boolean;
   bluechipRating?: BluechipRating | null;
+  /** Exceptional states, highest first (`useCoinStates`); null while none is known and the live inputs have not loaded. */
+  coinStates?: readonly CoinState[] | null;
 }
 
 export interface SupplySeriesEntry {
@@ -196,6 +199,8 @@ export function deriveComparisonCoins({
   redemptionMap,
   yieldMap,
   stressMap,
+  coinStatesById,
+  coinStatesReady = false,
 }: {
   selectedIds: string[];
   assetMap: Map<string, StablecoinData>;
@@ -208,6 +213,9 @@ export function deriveComparisonCoins({
   redemptionMap?: Record<string, RedemptionBackstopEntry>;
   yieldMap?: Map<string, YieldRanking>;
   stressMap?: Record<string, StressSignalEntry>;
+  coinStatesById?: ReadonlyMap<string, readonly CoinState[]>;
+  /** The live state inputs have loaded, so a coin with no state is known calm rather than unknown. */
+  coinStatesReady?: boolean;
 }): ComparisonCoinEntry[] {
   if (assetMap.size === 0) return [];
   return selectedIds
@@ -218,6 +226,7 @@ export function deriveComparisonCoins({
       const pegCoin = pegCoinMap.get(id);
       const dexCoin = dexData?.[id];
       const flowCoin = flowCoinMap.get(id);
+      const coinStates = coinStatesById?.get(id) ?? [];
       return {
         id,
         symbol: data.symbol,
@@ -233,6 +242,7 @@ export function deriveComparisonCoins({
         flow: flowCoin ?? null,
         bluechipPublicationAvailable: bluechipMap != null,
         bluechipRating: bluechipMap?.[id] ?? null,
+        coinStates: coinStates.length > 0 || coinStatesReady ? coinStates : null,
       };
     })
     .filter((coin): coin is NonNullable<typeof coin> => coin != null);

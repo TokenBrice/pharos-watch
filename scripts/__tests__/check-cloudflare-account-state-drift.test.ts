@@ -42,6 +42,7 @@ interface FixtureLiveState {
     customDomains: string[];
   };
   r2BucketLifecycles: Record<string, { enabledObjectDeletionRules: string[] }>;
+  r2BucketLocks: Record<string, Array<{ id: string; enabled: boolean; prefix?: string; condition: { type: string } }>>;
   accessApplications: Array<{
     type: string;
     selfHostedDomains: string[];
@@ -88,6 +89,7 @@ function createFixtureFetch(
           id, enabled: true, conditions: { prefix: "" }, deleteObjectsTransition: { condition: { type: "Age", maxAge: 86400 } },
         })),
       },
+      [`${account}/r2/buckets/pharos-social-previews/lock`]: { rules: liveState.r2BucketLocks["pharos-social-previews"] },
       [`${account}/workers/scripts/stablecoin-api/settings`]: { bindings: [
         { type: "d1", name: "DB", id: databaseId },
         ...(heavy.publicWorkflowBinding ? [{ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" }] : []),
@@ -463,6 +465,17 @@ describe("Cloudflare account-state drift comparison", () => {
       .rejects.toThrow("Lifecycle connection failed");
   });
 
+  it.each([
+    [403, { success: false }],
+    [200, { success: true, result: {} }],
+    [200, { success: true, result: { rules: [{}] } }],
+  ])("fails closed on unreadable lock evidence (HTTP %s, %j)", async (status, body) => {
+    const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
+      path.endsWith("/r2/buckets/pharos-social-previews/lock") ? Response.json(body, { status }) : undefined);
+    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      .rejects.toThrow("Cloudflare R2 bucket pharos-social-previews lock lookup");
+  });
+
   it("rejects zero or multiple exact zones before fetching account resources", async () => {
     for (const count of [0, 2]) {
       const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path, result) => {
@@ -514,6 +527,14 @@ describe("Cloudflare account-state drift comparison", () => {
     } else {
       expect(report.drift).toContain('pages.customDomains: missing "ops.pharos.watch"');
       expect(errors).toContain('  - pages.customDomains: missing "ops.pharos.watch"');
+      const lock = "r2.buckets.pharos-social-previews.lock";
+      expect(report.drift.filter((entry: string) => entry.startsWith(lock))).toEqual([
+        `${lock}.evergreen-v2-permanent: missing`,
+        `${lock}.scorecards-v1-permanent.enabled: expected true, found false`,
+        `${lock}.scorecards-v1-permanent.prefix: expected "scorecards/v1/", found "scorecards/v2/"`,
+        `${lock}.scorecards-v1-permanent.condition.type: expected "Indefinite", found "Age"`,
+        `${lock}: unexpected rule "unexpected-rule"`,
+      ]);
       expect(logs).toEqual([]);
     }
     const output = JSON.stringify({ report, logs, errors });

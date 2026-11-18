@@ -364,6 +364,16 @@ describe("applyFilters", () => {
   });
 });
 
+describe("exceptional-state filter", () => {
+  it("matches any state a row carries and never a row with none known", () => {
+    const depeg = { kind: "depeg", deviationBps: -900, ddrTier: null, ddrMethodologyVersion: null } as const;
+    const critical = { kind: "critical", notice: { type: "danger", title: "Chain halted" } } as const;
+    const rows = [makeRow({ id: "a", states: [critical, depeg] }), makeRow({ id: "b", states: [] }), makeRow({ id: "c" })];
+    const ids = (states: ScreenerFilters["states"]) => applyFilters(rows, { ...SCREENER_FILTER_DEFAULTS, states }).map((row) => row.id);
+    expect([ids(["depeg"]), ids(["paused"]), ids([])]).toEqual([["a"], [], ["a", "b", "c"]]);
+  });
+});
+
 describe("hasActiveFilters", () => {
   it.each<Partial<ScreenerFilters>>([
     { dewsMin: 50 },
@@ -378,6 +388,7 @@ describe("hasActiveFilters", () => {
     { safetyEvidence: ["limited"] },
     { custodyModels: ["onchain"] },
     { blacklistable: ["yes"] },
+    { states: ["depeg"] },
   ])("reports true when %o narrows the default set", (patch) => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, ...patch })).toBe(true);
   });
@@ -416,6 +427,7 @@ describe("resolveScreenerFilterDataState", () => {
     report: { loading: false, hasData: true },
     peg: { loading: false, hasData: true },
     liquidity: { loading: false, hasData: true },
+    clock: { loading: false, hasData: true },
   };
 
   it.each<{ filters: Partial<ScreenerFilters>; source: keyof ScreenerFilterSources }>([
@@ -432,6 +444,8 @@ describe("resolveScreenerFilterDataState", () => {
     { filters: { mintAuthorityScores: ["nr"] }, source: "report" },
     { filters: { pegScoreMin: 80 }, source: "peg" },
     { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
+    { filters: { states: ["depeg"] }, source: "peg" },
+    { filters: { states: ["dews"] }, source: "dews" },
   ])("qualifies active $source predicates by publication availability ($filters)", ({ filters, source }) => {
     const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
     // The active key requires its own publication, so an errored empty read is unavailable...
@@ -452,6 +466,8 @@ describe("resolveScreenerFilterDataState", () => {
     { filters: { safetyGrades: ["A"] }, source: "report" },
     { filters: { pegScoreMin: 80 }, source: "peg" },
     { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
+    // A deadline filter waits for the day clock, never reading as zero matches.
+    { filters: { states: ["deadline"] }, source: "clock" },
   ] as const)("resolves every publication state from the required $source", ({ filters, source }) => {
     const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
     const resolve = (state: ScreenerFilterSources[typeof source]) =>
@@ -478,6 +494,10 @@ describe("resolveScreenerFilterDataState", () => {
     ])) as ScreenerFilterSources;
     expect(resolveScreenerFilterDataState({
       ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["no-privileged-mint"],
+    }, unavailable)).toBe("ready");
+    // Curated notice states need no live feed.
+    expect(resolveScreenerFilterDataState({
+      ...SCREENER_FILTER_DEFAULTS, states: ["critical", "paused"],
     }, unavailable)).toBe("ready");
     expect(resolveScreenerFilterDataState({
       ...SCREENER_FILTER_DEFAULTS, coins: ["usdc-circle"], dewsMin: 80,

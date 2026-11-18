@@ -445,7 +445,7 @@ export function AdminActionExecutionDialog({
         )}
 
         {readiness.blocked && (
-          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-danger-ink", SEVERITY_TONE_CLASS.alert.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-danger-ink", SEVERITY_TONE_CLASS.danger.banner)}>
             <div className="font-medium">Live execution blocked</div>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-xs">
               {readiness.reasons.map((reason) => (
@@ -461,8 +461,8 @@ export function AdminActionExecutionDialog({
             htmlFor={acknowledgementInputId}
             className={`flex min-h-11 items-start gap-2 rounded-md border px-3 py-2 text-sm ${
               action.risk === "high"
-                ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-ink")
-                : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink")
+                ? cn(SEVERITY_TONE_CLASS.danger.banner, "text-state-danger-ink")
+                : cn(SEVERITY_TONE_CLASS.caution.banner, "text-state-warn-ink")
             }`}
           >
             <input
@@ -490,12 +490,12 @@ export function AdminActionExecutionDialog({
           </div>
         )}
         {execution?.warning && (
-          <div className={cn("rounded-md border px-3 py-2 text-xs text-state-warn-strong", SEVERITY_TONE_CLASS.watch.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-xs text-state-warn-strong", SEVERITY_TONE_CLASS.caution.banner)}>
             {execution.warning}
           </div>
         )}
         {execution?.status === "unknown" && (
-          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.caution.banner)}>
             The action may have started. Retry the same execution to reconcile this idempotency key, or explicitly
             create a new execution after checking downstream state.
           </div>

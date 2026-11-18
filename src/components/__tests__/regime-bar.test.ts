@@ -71,7 +71,7 @@ describe("RegimeBar freshness", () => {
       });
       const html = renderToStaticMarkup(createElement(RegimeBar));
       if (state === "fresh") {
-        expect(html).toContain('aria-label="Market regime: Bedrock, PSI 5, raw instant"');
+        expect(html).toContain('aria-label="Market regime: Bedrock, PSI 5.0, raw instant"');
         expect(html).toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);
         expect(html).not.toContain("Retained observation");
       } else {
@@ -108,8 +108,9 @@ describe("RegimeBarToggle", () => {
     fresh();
     const html = renderToStaticMarkup(createElement(RegimeBarToggle));
     expect(html).toMatch(/^<button type="button" aria-expanded="false" aria-controls="regime-bar-panel"/);
-    expect(html).toContain('aria-label="Market regime: Steady, PSI 72, raw instant. Market regime details"');
-    expect(html).toContain("PSI <span");
+    // One decimal, as on the pages.
+    expect(html).toContain('aria-label="Market regime: Steady, PSI 72.0, raw instant. Market regime details"');
+    expect(html).toMatch(/PSI <span[^>]*>72\.0<\/span>/);
   });
 
 });

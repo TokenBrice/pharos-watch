@@ -33,9 +33,11 @@ const FEATURED_DOCS = [
   },
   {
     slug: "depeg-detection",
+    // Peg monitors need the lifecycle, not the engineering spec above it.
+    fragment: "event-lifecycle",
     label: "Peg monitors",
     description:
-      "Two-stage depeg confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.",
+      "Opens at the event lifecycle: threshold onset, 15-minute confirmation, open-event updates, and recovery. The full spec covers peg-score inputs and severity bands.",
   },
 ] as const;
 
@@ -82,7 +84,7 @@ export default function DocsIndexPage() {
               return (
                 <Link
                   key={featured.slug}
-                  href={`/docs/${featured.slug}/`}
+                  href={`/docs/${featured.slug}/${"fragment" in featured ? `#${featured.fragment}` : ""}`}
                   className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
                 >
                   <p className="pharos-label text-muted-foreground/80">{featured.label}</p>

@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { QUICK_NAV_ITEMS } from "@/lib/nav-config";
-import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
+import { OPEN_NAV_DRAWER_EVENT, setNavDrawerOpen } from "@/lib/nav-drawer";
 
-const { pathnameMock } = vi.hoisted(() => ({ pathnameMock: vi.fn() }));
+const { pathnameMock, snapshotMock } = vi.hoisted(() => ({
+  pathnameMock: vi.fn(),
+  snapshotMock: vi.fn(() => ({ data: undefined as unknown })),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({ useHomepageSnapshot: snapshotMock }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathnameMock(),
@@ -55,15 +60,30 @@ describe("MobileBottomNav", () => {
   });
 
 
-  it("dispatches the drawer-open event from Menu", () => {
+  it("badges Depeg with the open-incident count and names it for assistive tech", () => {
+    pathnameMock.mockReturnValue("/");
+    snapshotMock.mockReturnValue({ data: { incidents: { data: { activeDepegCount: 1 } } } });
+    render(<MobileBottomNav />);
+    const depeg = screen.getByRole("link", { name: /^Depeg/ });
+    expect(depeg.textContent).toContain(", 1 active depeg");
+    expect(depeg.querySelector('[aria-hidden="true"].rounded-full')?.textContent).toBe("1");
+    snapshotMock.mockReturnValue({ data: undefined });
+  });
+
+  it("dispatches the drawer-open event from Menu and exposes its state", () => {
     pathnameMock.mockReturnValue("/");
     const handleOpen = vi.fn();
     window.addEventListener(OPEN_NAV_DRAWER_EVENT, handleOpen);
 
     render(<MobileBottomNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    const menu = screen.getByRole("button", { name: "Menu" });
+    expect([menu.getAttribute("aria-haspopup"), menu.getAttribute("aria-expanded")]).toEqual(["dialog", "false"]);
+    fireEvent.click(menu);
 
     expect(handleOpen).toHaveBeenCalledOnce();
+    act(() => setNavDrawerOpen(true));
+    expect(menu.getAttribute("aria-expanded")).toBe("true");
+    act(() => setNavDrawerOpen(false));
     window.removeEventListener(OPEN_NAV_DRAWER_EVENT, handleOpen);
   });
 

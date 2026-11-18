@@ -1,3 +1,4 @@
+import { DEWS_THREAT_BANDS, type ThreatBand } from "../classification/risk";
 import type { ExclusionReason, SelectorProfile, WeightKey } from "./types";
 
 const SELECTOR_PROFILE_LABELS: Readonly<Record<SelectorProfile, string>> = {
@@ -33,6 +34,8 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "howey-uncertain": "regulatory uncertainty",
   "template-coverage-gap": "template coverage",
   "coverage-too-thin": "coverage",
+  "critical-notice": "critical holder notice",
+  "paused-notice": "paused mint or redemption",
 };
 
 /**
@@ -106,6 +109,11 @@ function lookupSelectorLabel<T extends string>(
   key: string,
 ): string | undefined {
   return (labels as Readonly<Record<string, string>>)[key];
+}
+
+/** The band the stress-signals producer publishes for a DEWS score. */
+export function selectorDewsBand(score: number): ThreatBand {
+  return DEWS_THREAT_BANDS.find(({ upper }) => score <= upper)?.band ?? "DANGER";
 }
 
 export function selectorProfileLabel(profile: SelectorProfile): string {

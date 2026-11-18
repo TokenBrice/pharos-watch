@@ -35,8 +35,8 @@ const CHIP_CLASS = "border-border/60 bg-muted/30 text-2xs font-medium text-muted
 /** Restrained score-pill tint, as on the Control strip: neutral unless the input is the problem. Never green. */
 const SCORE_PILL_TONE_CLASS: Record<PillarStripTone, string> = {
   neutral: SEVERITY_TONE_CLASS.neutral.pill,
-  warn: SEVERITY_TONE_CLASS.watch.pill,
-  critical: SEVERITY_TONE_CLASS.alert.pill,
+  warn: SEVERITY_TONE_CLASS.caution.pill,
+  critical: SEVERITY_TONE_CLASS.danger.pill,
 };
 
 /** Stands in for the schema's placeholder tier on a route whose review is unresolved. */

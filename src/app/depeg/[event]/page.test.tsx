@@ -27,9 +27,21 @@ const { EVENTS, EVENTS_BY_SLUG } = vi.hoisted(() => {
   const events = [
     { ...base, id: 1, slug: "disputed-event", provenance: { auditVerdict: "disputed" as const, confidenceTier: "high" } },
     { ...base, id: 2, slug: "confirmed-event", provenance: { auditVerdict: "confirmed" as const } },
+    { ...base, id: 3, slug: "ongoing-event", endedAt: null, recoveryPrice: null, provenance: null },
   ];
   return { EVENTS: events, EVENTS_BY_SLUG: new Map(events.map((event) => [event.slug, event])) };
 });
+
+const resolver = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock("@/hooks/api-hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/api-hooks")>()),
+  useDepegResolver: () => ({ data: resolver.data, error: null }),
+}));
+const flags = vi.hoisted(() => ({ resolver: true }));
+vi.mock("@/lib/feature-flags", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/feature-flags")>()),
+  isDepegResolverEnabled: () => flags.resolver,
+}));
 
 vi.mock("@/lib/depeg-event-page-data", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/depeg-event-page-data")>();
@@ -48,7 +60,7 @@ vi.mock("@/lib/page-metadata", async (importOriginal) => {
   return {
     ...actual,
     getPageSocialPreview: (canonical: string) =>
-      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed)-event\/$/.test(canonical) ? "/depeg/" : canonical),
+      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed|ongoing)-event\/$/.test(canonical) ? "/depeg/" : canonical),
   };
 });
 
@@ -63,6 +75,7 @@ import DepegEventPage, { generateMetadata } from "./page";
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { buildDepegEventDescription, buildDepegEventSynopsis } from "@/lib/depeg-event-display";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 
 async function renderPage(slug: string) {
   const tree = await DepegEventPage({ params: Promise.resolve({ event: slug }) });
@@ -88,6 +101,26 @@ describe("DepegEventPage provenance audit verdict", () => {
     const line = provenanceLine();
     expect(within(line).queryByText("Disputed")).toBeNull();
     expect(line.textContent).toContain("audit: confirmed");
+  });
+});
+
+describe("ongoing event Now strip", () => {
+  it("leads an open event with the resolver's live state", async () => {
+    resolver.data = { _meta: DDR_TEST_META, rows: [makeFrozenDdrV2Row(makeDdrSourceRow({ stablecoinId: "usdc-circle", symbol: "USDC", eventId: 3, currentDeviationBps: -4_510 }))] };
+    await renderPage("ongoing-event");
+    const strip = screen.getByRole("region", { name: "USDC live state" });
+    for (const text of ["45.1% below peg", "Stress signals"]) expect(strip.textContent).toContain(text);
+    expect(within(strip).getByRole("link").getAttribute("href")).toBe("/stablecoin/usdc-circle#depeg-resolver");
+    resolver.data = { _meta: DDR_TEST_META, rows: [] };
+    await renderPage("ongoing-event");
+    expect(screen.getAllByRole("region", { name: "USDC live state" })[1].textContent).toContain("No live resolver row for this incident");
+  });
+
+  it("adds no live strip to a resolved event, nor while the resolver is off", async () => {
+    await renderPage("confirmed-event");
+    flags.resolver = false;
+    await renderPage("ongoing-event").finally(() => { flags.resolver = true; });
+    expect(screen.queryByRole("region", { name: /live state/ })).toBeNull();
   });
 });
 

@@ -45,9 +45,37 @@ function addRequiredStringDrift(drift, path, expected, actualValues) {
   }
 }
 
+function compareR2BucketLocks(drift, requiredLocks, observedLocks) {
+  for (const [bucket, expectedRules] of Object.entries(requiredLocks)) {
+    const path = `r2.buckets.${bucket}.lock`;
+    const rules = observedLocks?.[bucket];
+    if (!Array.isArray(rules)) {
+      drift.push(`${path}: unreadable`);
+      continue;
+    }
+    for (const expected of expectedRules) {
+      const rulePath = `${path}.${expected.id}`;
+      const matches = rules.filter((rule) => rule?.id === expected.id);
+      if (matches.length !== 1) {
+        drift.push(`${rulePath}: ${matches.length === 0 ? "missing" : `expected one, found ${matches.length}`}`);
+        continue;
+      }
+      const [actual] = matches;
+      addValueDrift(drift, `${rulePath}.enabled`, expected.enabled, actual.enabled);
+      addValueDrift(drift, `${rulePath}.prefix`, expected.prefix, actual.prefix);
+      addValueDrift(drift, `${rulePath}.condition.type`, expected.condition.type, actual.condition?.type);
+    }
+    for (const rule of rules) {
+      if (!expectedRules.some(({ id }) => id === rule?.id)) {
+        drift.push(`${path}: unexpected rule ${JSON.stringify(rule?.id)}`);
+      }
+    }
+  }
+}
+
 /**
  * Compare normalized, secret-free Cloudflare account state against the committed manifest.
- * The live-state shape intentionally excludes environment-variable values and all resource IDs.
+ * The live-state shape excludes secret environment-variable values and account and zone IDs.
  */
 export function compareCloudflareAccountState(manifest, liveState) {
   const drift = [];
@@ -94,6 +122,7 @@ export function compareCloudflareAccountState(manifest, liveState) {
     addRequiredStringDrift(drift, "pages.production.kvBindings", binding, production.kvBindings);
   }
   drift.push(...comparePagesR2Storage(manifest.pages.production.requiredR2Bindings, production.r2Bindings, liveState?.r2BucketLifecycles));
+  compareR2BucketLocks(drift, manifest.r2BucketLocks, liveState?.r2BucketLocks);
 
   const accessApplications = asArray(liveState?.accessApplications);
   for (const expected of manifest.accessApplications) {
@@ -303,8 +332,26 @@ async function readZoneCacheSetting(fetchImpl, apiToken, zoneId, setting) {
   return result.value;
 }
 
+async function readR2BucketLockRules(fetchImpl, apiToken, accountId, bucket) {
+  const operation = `Cloudflare R2 bucket ${bucket} lock lookup`;
+  const result = await readCloudflareResult(fetchImpl, apiToken,
+    `/accounts/${encodeURIComponent(accountId)}/r2/buckets/${encodeURIComponent(bucket)}/lock`, operation);
+  if (!isRecord(result) || !Array.isArray(result.rules) || result.rules.some((rule) =>
+    !isRecord(rule) || typeof rule.id !== "string" || !rule.id.trim() || typeof rule.enabled !== "boolean"
+    || (rule.prefix !== undefined && typeof rule.prefix !== "string")
+    || !isRecord(rule.condition) || typeof rule.condition.type !== "string"
+    || !rule.condition.type.trim()
+  )) {
+    throw new Error(`${operation} returned malformed lock rules.`);
+  }
+  // Bucket-wide rules may omit the prefix.
+  return result.rules.map(({ id, enabled, prefix = "", condition }) => ({
+    id, enabled, prefix, condition: { type: condition.type },
+  }));
+}
+
 /**
- * Fetch Cloudflare state using only GET requests, then discard IDs and secret values before comparison.
+ * Fetch Cloudflare state using only GET requests, then discard account and zone IDs and secret values before comparison.
  */
 export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSettingsToken = apiToken, fetchImpl = fetch }) {
   const zones = asArray(
@@ -362,9 +409,14 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
   ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
   const unified = normalizeUnifiedPagesBindings(production);
-  const r2BucketLifecycles = await fetchRequiredR2BucketLifecycles({
-    accountId, requiredR2Bindings: manifest.pages.production.requiredR2Bindings, apiToken, fetchImpl,
-  });
+  const [r2BucketLifecycles, r2BucketLocks] = await Promise.all([
+    fetchRequiredR2BucketLifecycles({
+      accountId, requiredR2Bindings: manifest.pages.production.requiredR2Bindings, apiToken, fetchImpl,
+    }),
+    Promise.all(Object.keys(manifest.r2BucketLocks).map(async (bucket) =>
+      [bucket, await readR2BucketLockRules(fetchImpl, apiToken, accountId, bucket)],
+    )).then(Object.fromEntries),
+  ]);
   const heavyConfig = manifest.heavyWorker;
   const scriptBase = `/accounts/${encodeURIComponent(accountId)}/workers/scripts`;
   const [heavySettings, publicSettings, heavySubdomain, workflow, routes] = await Promise.all([
@@ -416,6 +468,7 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, zoneSett
       customDomains: normalizePagesDomains(pageDomains),
     },
     r2BucketLifecycles,
+    r2BucketLocks,
     accessApplications: normalizeAccessApplications(accessApplications),
     workerDomains: normalizeWorkerDomains(workerDomains),
     heavyWorker: {

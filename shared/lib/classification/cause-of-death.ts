@@ -26,10 +26,18 @@ export const CAUSE_HEX_DARK: Record<CauseOfDeath, string> = {
 
 export const CAUSE_META: Record<
   CauseOfDeath,
-  { label: string; definition: string; textColor: string; borderColor: string }
+  {
+    label: string;
+    /** Chip-length form for compact surfaces such as social cards; same meaning as `label`. */
+    shortLabel: string;
+    definition: string;
+    textColor: string;
+    borderColor: string;
+  }
 > = {
   "algorithmic-failure": {
     label: "Algorithmic Failure",
+    shortLabel: "Algorithmic",
     definition:
       "The stabilizing mechanism broke: a reflexive mint, burn, or seigniorage design could not absorb selling.",
     textColor: "text-[#bc484b] dark:text-[#ed7473]",
@@ -37,6 +45,7 @@ export const CAUSE_META: Record<
   },
   "counterparty-failure": {
     label: "Counterparty Failure",
+    shortLabel: "Counterparty",
     definition:
       "A party the coin depended on failed: a custodian, bridge, issuer entity, fund manager, or key holder.",
     textColor: "text-[#936d24] dark:text-[#bf9752]",
@@ -44,18 +53,21 @@ export const CAUSE_META: Record<
   },
   "liquidity-drain": {
     label: "Liquidity Drain",
+    shortLabel: "Liquidity drain",
     definition: "Exits outpaced the liquid backing, and the price fell below peg and stayed there.",
     textColor: "text-[#a95d3a] dark:text-[#d78863]",
     borderColor: "border-[#a95d3a]/30",
   },
   regulatory: {
     label: "Regulatory",
+    shortLabel: "Regulatory",
     definition: "A regulator or licensing regime ended issuance, whether or not the coin was solvent.",
     textColor: "text-[#6570a9] dark:text-[#8e9ad7]",
     borderColor: "border-[#6570a9]/30",
   },
   abandoned: {
     label: "Abandoned",
+    shortLabel: "Abandoned",
     definition:
       "The issuer or protocol stopped maintaining the coin: a sunset, migration, acquisition, or loss of demand.",
     textColor: "text-[#6d7580] dark:text-[#969fab]",

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
+import { useHomepageSnapshot } from "@/hooks/api-hooks";
 import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import {
@@ -100,6 +101,9 @@ function NavMenuItem({
 export function TopNav() {
   const pathname = usePathname();
   const topOffsetClass = stickyChromeTopOffsetClass(pathname);
+  // Neutral count of open confirmed incidents on the Depeg item: the compact
+  // snapshot's incidents lane (the /depeg/ census), absent while unavailable.
+  const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
 
   // Desktop-only hover-to-open for the section disclosures, gated to
   // hover-capable + fine pointers so touch laptops keep tap-to-open. A separate
@@ -259,6 +263,7 @@ export function TopNav() {
           {QUICK_NAV_ITEMS.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
+            const badge = item.href === "/depeg/" && activeDepegCount ? activeDepegCount : null;
             return (
               <Link
                 key={item.href}
@@ -283,6 +288,16 @@ export function TopNav() {
                 <span className="min-[1440px]:hidden">{item.compactLabel ?? item.shortLabel ?? item.label}</span>
                 <span className="hidden min-[1440px]:inline min-[1680px]:hidden">{item.shortLabel ?? item.label}</span>
                 <span className="hidden min-[1680px]:inline">{item.label}</span>
+                {/* A 16px glyph is too small to carry a count; it reads as a neutral pill after the label. */}
+                {badge ? (
+                  <span
+                    aria-hidden="true"
+                    className="rounded-full bg-muted px-1.5 py-px font-mono text-2xs font-semibold leading-none tabular-nums text-muted-foreground"
+                  >
+                    {badge}
+                  </span>
+                ) : null}
+                {badge ? <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span> : null}
               </Link>
             );
           })}

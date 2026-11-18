@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
+import { useHomepageSnapshot } from "@/hooks/api-hooks";
 import { useLatestEvents } from "@/hooks/use-events";
 import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -10,6 +11,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatTapeEventTitle, projectTapeEventsForReader } from "@/lib/tape-derive";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
@@ -35,25 +37,26 @@ interface TapeItemProps {
   nowMs: number;
 }
 
-const STACKED_LOGO_LIMIT = 4;
+// A consolidated cell names this many coins, then "+N"; its logo stack matches.
+const NAMED_COIN_LIMIT = 3;
 
 function StackedCoinLogos({ coinIds, logos }: { coinIds: ReadonlyArray<string>; logos: Record<string, string> }) {
-  const visible = coinIds.slice(0, STACKED_LOGO_LIMIT);
-  const overflow = coinIds.length - visible.length;
+  // Identity only: the cell's text names the coins and the remainder.
   return (
-    <span className="inline-flex items-center" aria-label={`${coinIds.length} coins`}>
-      {visible.map((coinId, idx) => (
+    <span className="inline-flex items-center" aria-hidden="true">
+      {coinIds.slice(0, NAMED_COIN_LIMIT).map((coinId, idx) => (
         <span key={coinId} className={idx === 0 ? "" : "-ml-1.5"}>
           <StablecoinLogo src={getLogoSrc(logos, coinId)} name={coinId} size={18} />
         </span>
       ))}
-      {overflow > 0 ? (
-        <span className="-ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-border/60 bg-background/80 px-1 text-[10px] font-semibold tabular-nums text-foreground/80">
-          +{overflow}
-        </span>
-      ) : null}
     </span>
   );
+}
+
+function namedCoins(coinIds: ReadonlyArray<string>): string {
+  const named = coinIds.slice(0, NAMED_COIN_LIMIT).map((id) => CLIENT_TRACKED_META_BY_ID.get(id)?.symbol ?? id);
+  const rest = coinIds.length - named.length;
+  return rest > 0 ? `${named.join(", ")} +${rest}` : named.join(", ");
 }
 
 function consolidatedDewsTitle(event: TapeEvent): string | null {
@@ -66,9 +69,9 @@ function consolidatedDewsTitle(event: TapeEvent): string | null {
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
 type HomepageTapePlacement = "inline" | "top";
 
-// The "top" chrome strip leads with the global registry counts (replacing the
-// retired masthead), then the live events ticker flows to the right.
-// Each count names its universe in a hover tooltip so the bare numbers are not
+// The "top" chrome strip leads with the live active-depeg count, or with these
+// registry counts (replacing the retired masthead) while that lane has no data,
+// then the live events ticker flows to the right. Each count names its universe in a hover tooltip so the bare numbers are not
 // read as one census. Coin-set universes take the shared vocabulary; pegs and
 // chains are not coin sets, so they define themselves here.
 const TAPE_STATS: ReadonlyArray<{ label: string; value: number; definition: string }> = [
@@ -135,7 +138,6 @@ function TapeItem({ entry, logoSrc, logoName, logos, nowMs }: TapeItemProps) {
   const { event, count, coinIds } = entry;
   const consolidated = coinIds && coinIds.length > 1;
   const title = consolidated ? (consolidatedDewsTitle(event) ?? formatTapeEventTitle(event)) : formatTapeEventTitle(event);
-  const badgeValue = consolidated ? coinIds.length : count;
 
   return (
     <Link
@@ -143,23 +145,25 @@ function TapeItem({ entry, logoSrc, logoName, logos, nowMs }: TapeItemProps) {
       href={resolveEventHref(event)}
       className="pharos-focus-ring group inline-flex items-center gap-1.5 rounded-md px-2 py-1 whitespace-nowrap text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground"
     >
+      {/* Severity is a channel on every cell, beside the logo, never instead of it. */}
+      <span
+        role="img"
+        aria-label={SEVERITY_LABEL[event.severity]}
+        className={`inline-block h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
+      />
       {consolidated ? (
         <StackedCoinLogos coinIds={coinIds} logos={logos} />
       ) : logoName ? (
         <StablecoinLogo src={logoSrc} name={logoName} size={18} />
-      ) : (
-        <span
-          aria-label={SEVERITY_LABEL[event.severity]}
-          className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
-        />
-      )}
+      ) : null}
       <span className="text-foreground/80 group-hover:text-foreground">{title}</span>
-      {badgeValue > 1 ? (
+      {consolidated ? <span className="text-foreground/80">{namedCoins(coinIds)}</span> : null}
+      {!consolidated && count > 1 ? (
         <span
-          aria-label={consolidated ? `${badgeValue} coins` : `${badgeValue} similar events`}
+          aria-label={`${count} similar events`}
           className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-muted-foreground"
         >
-          ×{badgeValue}
+          ×{count}
         </span>
       ) : null}
       <span className="tabular-nums text-muted-foreground/80">
@@ -188,14 +192,17 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
   // into a single cell with a count badge.
   const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
+  // Live market state for the pinned slot: the compact snapshot's incidents
+  // lane, the /depeg/ census; the static registry counts only while it is unavailable.
+  const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
   // The hourly poll cannot refresh a relative age; a minute clock does.
   const nowSec = useMinuteClockSec();
   const nowMs = nowSec * 1000;
   const logos = logosById;
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
-    () => collapseForHomepageStrip(projectTapeEventsForReader(events).filter((event) => eventClassSlug(event.type) !== "score")),
-    [events],
+    () => collapseForHomepageStrip(projectTapeEventsForReader(events).filter((event) => eventClassSlug(event.type) !== "score"), nowMs),
+    [events, nowMs],
   );
   const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);
 
@@ -217,9 +224,18 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
           // Desktop-only: on phones the counts cost a second chrome row, so the
           // strip stays a single ticker line there.
           <div className="sticky left-0 z-10 hidden shrink-0 items-center gap-1.5 border-r border-border/60 bg-card px-3 py-1.5 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:flex">
-            {TAPE_STATS.map((stat) => (
-              <TapeStatChip key={stat.label} {...stat} />
-            ))}
+            {activeDepegCount !== null ? (
+              <Link
+                prefetch={false}
+                href="/depeg/"
+                className="pharos-focus-ring inline-flex h-6 items-center gap-1 rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <span className="pharos-numeric font-semibold text-foreground/90">{activeDepegCount}</span>{" "}
+                <span>active {activeDepegCount === 1 ? "depeg" : "depegs"}</span>
+              </Link>
+            ) : (
+              TAPE_STATS.map((stat) => <TapeStatChip key={stat.label} {...stat} />)
+            )}
           </div>
         ) : (
           <div className="pointer-events-none sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:flex">

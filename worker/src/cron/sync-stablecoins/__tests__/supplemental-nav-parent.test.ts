@@ -7,7 +7,6 @@ import type { PeggedAsset } from "../enrich-prices-shared";
 import type { CoinGeckoMcapData } from "../supplemental-assets/shared";
 import syzusd from "@shared/data/stablecoins/coins/syzusd-yuzu.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
-import sbold from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
 import ybold from "@shared/data/stablecoins/coins/ybold-yearn.json";
 import bold from "@shared/data/stablecoins/coins/bold-liquity.json";
 import susdc from "@shared/data/stablecoins/coins/susdc-spark-v1.json";
@@ -17,7 +16,7 @@ import usdc from "@shared/data/stablecoins/coins/usdc-circle.json";
 const mocks = vi.hoisted(() => ({ resolveNav: vi.fn(), onChainMcap: vi.fn(), evmCall: vi.fn() }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [syzusd, yzusd, sbold, ybold, bold, susdc, armusdcs, { ...usdc, contracts: [] }].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+  stablecoins: [syzusd, yzusd, ybold, bold, susdc, armusdcs, { ...usdc, contracts: [] }].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
 }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
@@ -127,7 +126,7 @@ describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)"
   });
 });
 
-describe.each(["sbold-k3-capital", "ybold-yearn"])("%s same-run BOLD supply valuation", (id) => {
+describe.each(["ybold-yearn"])("%s same-run BOLD supply valuation", (id) => {
   beforeEach(() => {
     mocks.resolveNav.mockReset().mockImplementation(resolveVaultNavSupplyPrice);
     mocks.evmCall.mockReset().mockResolvedValue(`0x${(1_087n * 10n ** 15n).toString(16).padStart(64, "0")}`);

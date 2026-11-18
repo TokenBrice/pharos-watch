@@ -6,13 +6,20 @@ import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeAltMiniCardGrid } from "@/components/homepage/home-alt-mini-card-grid";
 
-vi.mock("@/components/home-alt-mini-cards/active-depegs-card", () => ({ ActiveDepegsCard: () => null }));
+vi.mock("@/components/home-alt-mini-cards/active-depegs-card", () => ({ ActiveDepegsCard: () => <div data-testid="active-depegs-card" /> }));
 vi.mock("@/components/home-alt-mini-cards/mint-burn-card", () => ({ MintBurnCard: () => null }));
 vi.mock("@/components/home-alt-mini-cards/peg-health-card", () => ({ PegHealthCard: () => null }));
 vi.mock("@/components/home-alt-mini-cards/psi-band-card", () => ({ PsiBandCard: () => null }));
 vi.mock("@/components/home-alt-mini-cards/recent-freezes-card", () => ({ RecentFreezesCard: () => null }));
 vi.mock("@/components/home-alt-mini-cards/supply-moves-card", () => ({ SupplyMovesCard: () => null }));
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
+// Open incidents set the grid order; the digest lane stays real.
+const market = vi.hoisted(() => ({ activeDepegCount: 0 }));
+vi.mock("@/hooks/api-hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/api-hooks")>()),
+  useHomepageSnapshot: () => ({ data: { incidents: { data: { activeDepegCount: market.activeDepegCount } } } }),
+  usePegSummary: () => ({ data: undefined }),
+}));
 vi.mock("next/link", async () => {
   // The helper must load inside the hoisted mock factory.
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -53,6 +60,7 @@ function setupSlot(initialWidth: number) {
 }
 
 afterEach(() => {
+  market.activeDepegCount = 0;
   cleanup();
   for (const client of clients.splice(0)) client.clear();
   vi.restoreAllMocks();
@@ -83,8 +91,9 @@ describe("HomeAltMiniCardGrid digest visibility", () => {
     expect(client.getQueryState(["digest-archive"])).toBeUndefined();
     expect(client.getQueryState(["daily-digest"])).toBeUndefined();
     expect(screen.getByText(/Current headline/).textContent).toBe("#400 — Current headline");
-    expect(screen.getByText(/Previous headline/).textContent).toBe("#399 — Previous headline");
-    expect(screen.getByText(/Earlier headline/).textContent).toBe("#398 — Earlier headline");
+    // Prior leaves carry their edition date.
+    expect(screen.getByText(/Previous headline/).textContent).toBe("Nov 14, 2023 · #399 — Previous headline");
+    expect(screen.getByText(/Earlier headline/).textContent).toBe("Nov 14, 2023 · #398 — Earlier headline");
     expect(screen.getByText("Current excerpt.")).toBeTruthy();
 
     resize(0);
@@ -92,6 +101,22 @@ describe("HomeAltMiniCardGrid digest visibility", () => {
     expect(client.getQueryCache().find({ queryKey: ["digest-promo"] })?.getObserversCount()).toBe(0);
     expect(Array.from(view.container.querySelectorAll("div")).some((node) => node.classList.contains("@4xl:auto-rows-[322px]"))).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("leads with Active depegs while incidents are open, never reordering", () => {
+    const { tree, client } = setupSlot(400);
+    const rows = (container: HTMLElement) => container.querySelectorAll("div.grid.gap-3");
+    const steady = render(tree);
+    market.activeDepegCount = 18;
+    // A later read never reorders a settled grid.
+    steady.rerender(<QueryClientProvider client={client}><HomeAltMiniCardGrid /></QueryClientProvider>);
+    expect(rows(steady.container)[1]!.lastElementChild?.getAttribute("data-testid")).toBe("active-depegs-card");
+    expect(rows(steady.container)[0]!.lastElementChild?.className).toContain("@4xl:col-span-1");
+    steady.unmount();
+    const [rowOne, rowTwo] = rows(render(tree).container);
+    expect(rowOne!.firstElementChild?.getAttribute("data-testid")).toBe("active-depegs-card");
+    expect(rowTwo!.lastElementChild?.className).toContain("@4xl:col-span-1");
+    expect(screen.getAllByTestId("active-depegs-card")).toHaveLength(1);
   });
 
   it("keeps unavailable current copy and blank prior leaves without fabricating archive titles", async () => {

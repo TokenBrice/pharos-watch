@@ -9,17 +9,16 @@ const query = {
 };
 
 describe("command palette live supply metadata", () => {
-  it("omits unavailable caps while preserving explicit zero and independent price health", () => {
+  it("omits unavailable caps, preserves explicit zero and derives no peg status from list price", () => {
     const data = { peggedAssets: [
-      makeStablecoin({ id: "usdc-circle", price: 1, circulating: {} }),
-      makeStablecoin({ id: "usdt-tether", price: 1, circulating: { peggedUSD: 0 } }),
+      makeStablecoin({ id: "usdc-circle", price: 0.9, circulating: {} }),
+      makeStablecoin({ id: "usdt-tether", price: 0.9, circulating: { peggedUSD: 0 } }),
       makeStablecoin({ id: "dai-makerdao", price: 1, circulating: { peggedUSD: Number.NaN } }),
     ] };
     const metadata = buildStablecoinLiveMetadata(data, query, nowMs);
-    expect(metadata.get("usdc-circle")?.marketCapUsd).toBeUndefined();
-    expect(metadata.get("dai-makerdao")?.marketCapUsd).toBeUndefined();
-    expect(metadata.get("usdt-tether")?.marketCapUsd).toBe(0);
-    expect(metadata.get("usdc-circle")?.health).toBeDefined();
+    expect(metadata.has("usdc-circle")).toBe(false);
+    expect(metadata.has("dai-makerdao")).toBe(false);
+    expect(metadata.get("usdt-tether")).toEqual({ marketCapUsd: 0 });
     expect(buildPopularStablecoinIds(data, metadata)[0]).toBe("usdt-tether");
   });
 
@@ -28,7 +27,7 @@ describe("command palette live supply metadata", () => {
     expect(buildPopularStablecoinIds(undefined, new Map())).toEqual([]);
   });
 
-  it.each(["aged", "failed", "warning", "server-stale"] as const)("dates retained caps and suppresses current peg claims for %s evidence", (reason) => {
+  it.each(["aged", "failed", "warning", "server-stale"] as const)("dates retained caps for %s evidence", (reason) => {
     const data = { peggedAssets: [makeStablecoin({ id: "usdc-circle", price: 1, circulating: { peggedUSD: 0 } })] };
     const state = {
       ...query,
@@ -37,60 +36,6 @@ describe("command palette live supply metadata", () => {
     };
     const metadata = buildStablecoinLiveMetadata(data, state, nowMs + (reason === "aged" ? 60_001 : 0));
     expect(metadata.get("usdc-circle")).toEqual({ marketCapUsd: 0, marketCapAsOf: nowMs / 1000 });
-  });
-
-  it("admits peg health only through the inclusive canonical fresh budget", () => {
-    const data = { peggedAssets: [makeStablecoin({ id: "usdc-circle", price: 1 })] };
-    expect(buildStablecoinLiveMetadata(data, query, nowMs + 60_000).get("usdc-circle")?.health).toEqual({ kind: "peg", status: "calm" });
-    expect(buildStablecoinLiveMetadata(data, query, nowMs + 60_001).get("usdc-circle")?.health).toBeUndefined();
-  });
-
-  it("grades raw deviations before rounding at the watch and off-peg boundaries", () => {
-    const cases = [
-      [0.99504, "calm"],
-      [0.99496, "watch"],
-      [0.99004, "watch"],
-      [0.98996, "alert"],
-      [1.00496, "calm"],
-      [1.00504, "watch"],
-      [1.00996, "watch"],
-      [1.01004, "alert"],
-    ] as const;
-    for (const [price, status] of cases) {
-      const data = { peggedAssets: [makeStablecoin({ id: "usdc-circle", price })] };
-      expect(buildStablecoinLiveMetadata(data, query, nowMs).get("usdc-circle")?.health, String(price))
-        .toEqual({ kind: "peg", status });
-    }
-  });
-
-  it("withholds peg health when the only reference is a single coin's own price", () => {
-    const data = { peggedAssets: [makeStablecoin({ id: "kgst-kyrgyz-som", pegType: "peggedKGS", price: 0.010856 })] };
-    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("kgst-kyrgyz-som")?.health).toBeUndefined();
-  });
-
-  it("admits peg health from a live FX reference", () => {
-    const data = {
-      peggedAssets: [makeStablecoin({ id: "kgst-kyrgyz-som", pegType: "peggedKGS", price: 0.010856 })],
-      fxFallbackRates: { peggedKGS: 0.0118 },
-    };
-    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("kgst-kyrgyz-som")?.health).toEqual({ kind: "peg", status: "alert" });
-  });
-
-  it("withholds peg health when a two-coin peer median mirrors half of a real move", () => {
-    const data = { peggedAssets: [
-      makeStablecoin({ id: "try-test-alpha", pegType: "peggedTRY", price: 0.029 }),
-      makeStablecoin({ id: "try-test-beta", pegType: "peggedTRY", price: 0.025 }),
-    ] };
-    const metadata = buildStablecoinLiveMetadata(data, query, nowMs);
-    expect(metadata.get("try-test-alpha")?.health).toBeUndefined();
-    expect(metadata.get("try-test-beta")?.health).toBeUndefined();
-  });
-
-  it("requires the registry peg unit to agree with the snapshot peg type", () => {
-    const data = { peggedAssets: [
-      makeStablecoin({ id: "usdc-circle", pegType: "peggedEUR", price: 1 }),
-    ] };
-    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("usdc-circle")?.health).toBeUndefined();
   });
 
   it("does not turn a fresh request receipt into a producer generation, while retaining NAV classification", () => {

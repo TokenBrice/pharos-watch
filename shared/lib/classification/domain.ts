@@ -1,4 +1,5 @@
 import type { GovernanceType, Infrastructure, StablecoinStatus } from "../../types/stablecoin-taxonomy";
+import type { SocialCardLifecycle } from "../social-card/spec";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
 /** Full labels used in metadata, descriptions, and structured data. */
@@ -46,3 +47,15 @@ export const STABLECOIN_STATUS_LABELS = {
   delisted: "Delisted",
   frozen: "Frozen",
 } as const satisfies Record<StablecoinStatus, string>;
+
+/**
+ * Stamp tones over the lens of a non-active social-card dossier (dark ground):
+ * the Cemetery's bronze plaque for a historical record, frost for coins that
+ * are upcoming or not yet tracked, neutral for a listing review.
+ */
+export const LIFECYCLE_STAMP_HEX = {
+  historical: "#c9a46a",
+  review: "#a3b3be",
+  "pre-launch": "#4bc4de",
+  "launched-untracked": "#4bc4de",
+} as const satisfies Record<Exclude<SocialCardLifecycle, "active">, string>;

@@ -24,6 +24,18 @@ describe("AiSummary", () => {
     expect(link.getAttribute("data-prefetch")).toBe("auto");
   });
 
+  it("folds the note under an open notice, keeping it crawlable", () => {
+    const text = "The bridge exit is usable. ".repeat(20);
+    render(<AiSummary title="Summary" text={text} updatedAt="2026-11-14" openNotice={{ title: "Initia L1 halted" }} />);
+    expect(screen.getByText("May not reflect the current notice: Initia L1 halted.")).toBeTruthy();
+    const fold = document.querySelector("details")!;
+    expect(fold.open).toBe(false);
+    expect(fold.querySelector("summary")?.textContent).toContain("Editorial note");
+    // One fold, no second "Read the full note" clamp inside it.
+    expect(fold.textContent).toContain("The bridge exit is usable.");
+    expect(screen.queryByRole("button", { name: /Read the full note/ })).toBeNull();
+  });
+
   it("does not invent review provenance for AI drafts", () => {
     render(<AiSummary
       title="Evidence correction"

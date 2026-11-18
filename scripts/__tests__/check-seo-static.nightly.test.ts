@@ -80,6 +80,7 @@ async function writePage(
     googleBotRobots = [],
     ogType = "website",
     ogSiteName = "Pharos Watch",
+    ogImage = "https://images.example.test/card.png",
     canonical = pageUrl(route),
     title = `${h1} | Pharos`,
     description = `${h1} description`,
@@ -94,6 +95,7 @@ async function writePage(
     googleBotRobots?: string[];
     ogType?: string | null;
     ogSiteName?: string | null;
+    ogImage?: string | null;
     canonical?: string | null;
     title?: string;
     description?: string;
@@ -109,6 +111,7 @@ async function writePage(
   const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
   const ogSiteNameTag = ogSiteName ? `<meta property="og:site_name" content="${ogSiteName}"/>` : "";
+  const ogImageTag = ogImage === null ? "" : `<meta property="og:image" content="${ogImage}"/>`;
   const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
   await writeFile(
     filePath,
@@ -126,6 +129,7 @@ async function writePage(
     ${ogTypeTag}
     <meta name="twitter:card" content="summary_large_image"/>
     ${extraHead}
+    ${ogImageTag}
   </head>
   <body>
     <main>
@@ -251,6 +255,7 @@ describe("check-seo-static", () => {
     redirects?: string;
     errors?: string[];
     absentErrors?: string[];
+    warnings?: string[];
   };
 
   // One row per gate rule: the fixture that should trip it (or prove it stays quiet).
@@ -269,6 +274,21 @@ describe("check-seo-static", () => {
       name: "fails missing og:site_name on indexable pages",
       overrides: { "/": { ogSiteName: null } },
       errors: ["/: missing og:site_name"],
+    },
+    {
+      name: "fails missing or empty og:image",
+      overrides: { "/": { ogImage: "" }, "/stability-index/": { ogImage: null } },
+      errors: ["/: missing or empty og:image", "/stability-index/: missing or empty og:image"],
+    },
+    {
+      name: "fails an og:image tag past byte 32,768",
+      overrides: { "/": { extraHead: `<style>${"a".repeat(32_768)}</style>` } },
+      errors: ["/: first og:image tag starts at byte "],
+    },
+    {
+      name: "warns on decoded HTML over 1 MB",
+      overrides: { "/": { extraMain: "x".repeat(1_000_000) } },
+      warnings: ["1 HTML pages exceed 1000000 decoded bytes"],
     },
     {
       name: "allows noindex pages to omit canonical",
@@ -492,6 +512,9 @@ describe("check-seo-static", () => {
     for (const fragment of fixture.absentErrors ?? []) {
       expect(result.errors.filter((error) => error.includes(fragment))).toEqual([]);
     }
+    expect(result.warnings).toEqual(
+      expect.arrayContaining((fixture.warnings ?? []).map((fragment) => expect.stringContaining(fragment))),
+    );
   });
 
   it("enforces the retained depeg History preview in pilot profile HTML", async () => {
@@ -635,21 +658,24 @@ describe("check-seo-static", () => {
     ]));
   });
 
-  it.each([
-    { kind: "missing", og: "https://pharos.watch/og-missing.png", twitter: "/og-missing.png", localFile: null,
-      errors: ["/: og:image references missing file /og-missing.png", "/: twitter:image references missing file /og-missing.png"] },
-    { kind: "local", og: "https://pharos.watch/og-card.png", twitter: "/og-card.png", localFile: "og-card.png", errors: [] },
-    { kind: "external", og: "https://api.pharos.watch/api/og/stablecoin/usdt-tether",
-      twitter: "https://api.pharos.watch/api/og/stablecoin/usdt-tether", localFile: null, errors: [] },
-  ])("checks $kind social image references", async ({ og, twitter, localFile, errors }) => {
+  it("checks static image files and admits the matching API dossier preview with its local fallback", async () => {
     const root = await makeOutDir();
-    if (localFile) await writeFile(path.join(root, localFile), "");
-    await writeBaselinePages(root, [], {
-      "/": { extraHead: `<meta property="og:image" content="${og}"/><meta name="twitter:image" content="${twitter}"/>` },
-    }, ["/", "/stability-index/"]);
-
+    const hash = "a".repeat(64);
+    const route = "/stablecoin/usdc-circle/";
+    const ogImage = `https://api.pharos.watch/api/og/v2/dossier/usdc-circle?fallback=${hash}`;
+    await mkdir(path.join(root, "og/v2"), { recursive: true });
+    await writeFile(path.join(root, `og/v2/image-${hash}.png`), "");
+    await writeBaselinePages(root, [route], {
+      "/": { ogImage: "https://pharos.watch/og-missing.png", extraHead: '<meta name="twitter:image" content="/og-missing.png"/>' },
+      "/stability-index/": { ogImage },
+    }, ["/", "/stability-index/", route]);
+    await writePage(root, route, { ogImage, extraHead: `<meta name="twitter:image" content="${ogImage}"/>` });
     const result = collectFixtureSeoResult(root);
-    expect(result.errors.filter((error) => error.includes("references missing file"))).toEqual(errors);
+    expect(result.errors.filter(error => /references missing file|API-hosted dossier preview/.test(error))).toEqual([
+      "/: og:image references missing file /og-missing.png",
+      "/: twitter:image references missing file /og-missing.png",
+      "/stability-index/: og:image has an invalid API-hosted dossier preview",
+    ]);
   });
 
   it("asserts required structured-data fields for representative routes", async () => {

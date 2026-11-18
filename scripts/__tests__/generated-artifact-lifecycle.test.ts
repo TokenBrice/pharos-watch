@@ -5,6 +5,7 @@ import { cachedGlobMatcher } from "../lib/glob-matcher.mts";
 import { collectModuleSpecifiers, resolveModuleSpecifier } from "../lib/pr-import-graph.mts";
 import { V9_SCORE_INPUT_DATA_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
 import { describe, expect, it } from "vitest";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { buildGeneratedArtifactPhases as phases, GENERATED_ARTIFACT_REGISTRY, selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 
 interface Artifact {
@@ -54,6 +55,10 @@ describe("generated artifact lifecycle", () => {
     for (const path of ["AGENTS.md", "CLAUDE.md"]) expect(registry.flatMap((a) => a.outputPaths)).not.toContain(path);
   });
 
+  it("leaves frozen legacy OG cards outside generated artifact selection", () => {
+    expect(selectChangedGeneratedArtifactIds(["public/og-editorial-about.png", "public/og-learn-fiat-cash.png"])).toEqual([]);
+  });
+
   it("records the atomic writer as a source of every artifact that publishes through it", () => {
     for (const id of [catalog, "stablecoin-client-registry"]) {
       expect(registry.find((a) => a.id === id)?.sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
@@ -69,6 +74,10 @@ describe("generated artifact lifecycle", () => {
     const previews = registry.find((a) => a.id === "social-preview-images")!;
     expect(previews.outputPaths).toContain("src/generated/social-preview-images.json");
     expect(previews.requiredBrowsers).toEqual([]);
+    // Bootstrap writes only the map; the post-refresh Pages build renders the PNGs.
+    const command = (options: Record<string, unknown>) => phases(options).flatMap((p) => p.artifacts).find((a) => a.id === previews.id)?.command;
+    expect(command({ bootstrap: true })).toMatch(/build-og-evergreen\.ts --map-only$/);
+    expect(command({ buildLifecycles: ["post-refresh"] })).toMatch(/build-og-evergreen\.ts$/);
   });
 });
 
@@ -78,7 +87,7 @@ describe("check-mode artifact selection", () => {
       catalog, "postman", "openapi", "world-map", "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects", "stablecoin-client-registry", "stablecoin-worker-full-catalog",
       projection, "depeg-event-search-data",
-      "case-study-client-index", "llms-txt", "changelog-registry",
+      "case-study-client-index", "llms-txt", "changelog-registry", "social-preview-images",
     ];
     expect(registry.filter((a) => a.ciDriftCheck === false).map((a) => a.id).sort())
       .toEqual([...projections, manifest].sort());

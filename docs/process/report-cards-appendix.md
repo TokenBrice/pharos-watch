@@ -903,9 +903,10 @@ Canonical accepted state is stored in:
 - `report-cards:v9`
 - `report-cards:v9:cohort:v1`
 - `report-cards:v9:score-index`
+- `report-cards:v9:scorecard-pillars:v1`
 - `report-cards:v9:publication-health`
 
-Publication envelope/compact score index bind identical generation, result digest and full Safety Score identity; health names accepted generation/timestamp. The writer atomically commits envelope/cohort/index/health behind the publication fence; holds preserve accepted rows. Index schema 2 retains rated/NR/pipeline-gap status, nullable grade/score, compact partial metadata, evidence/publication clocks and expected card count, enabling score-only reads without decompression/dependency graphs. See [score-index availability](../worker-and-api-limits.md#safety-score-publication-mechanics).
+Publication envelope/compact score index bind identical generation, result digest and full Safety Score identity; health names accepted generation/timestamp. The writer atomically commits envelope/cohort/index/health behind the publication fence; holds preserve accepted rows. Index schema 2 retains rated/NR/pipeline-gap status, nullable grade/score, compact partial metadata, evidence/publication clocks and expected card count, enabling score-only reads without decompression or dependency graphs. The same transaction writes a companion scorecard projection of available pillar scores and grades for rated coins. Its separate cache key lets older readers continue to admit the index during deployment and rollback. See [score-index availability](../worker-and-api-limits.md#safety-score-publication-mechanics).
 
 Canonical arrays/digest inputs share one locale-independent code-unit comparator throughout compilation/publication assessment. Identical-fact replay cannot change equal-scoring route selection, dependency-path order or reviewed-transfer sequence hashes solely with runtime locale.
 

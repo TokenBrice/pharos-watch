@@ -9,6 +9,7 @@ import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { useDetailEvidence } from "@/lib/detail-evidence";
 import {
+  useDepegResolver,
   useDexLiquidityCoin,
   usePegSummary,
   useRegisteredApiQuery,
@@ -23,6 +24,8 @@ import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useQuerySlice, type QueryResultLike, type QuerySlice } from "@/hooks/use-query-slice";
 import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
+import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
 import {
@@ -37,6 +40,7 @@ import {
   STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
 } from "@/lib/api-query-descriptors";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
+import { isDdrBookUsable, selectCurrentDdrVerdicts } from "@shared/lib/depeg-resolver/current-verdict";
 
 export interface StablecoinDetailSupplementalQueryControls {
   liquidity?: boolean;
@@ -162,6 +166,19 @@ export function useStablecoinDetailViewModel({
   }, [liveSummaryQuery.data, liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error,
     liveSummaryQuery.isError, liveSummaryQuery.isFetching, liveSummaryQuery.meta, summaryIsSnapshot]);
   const pegQuery = usePegSummary();
+  // The open incident's published DDR verdict, from the book the first-fold outlook reads (one shared query).
+  const liveDepeg = current && !coin.flags.navToken
+    && pegQuery.data?.coins?.some((candidate) => candidate.id === id && candidate.activeDepeg) === true;
+  const resolverQuery = useDepegResolver({ enabled: liveDepeg && isDepegResolverEnabled() });
+  const resolverData = liveDepeg ? resolverQuery.data : undefined;
+  // The shared book gate and row choice (the frozen forecast of the active event), as coin-state chips use.
+  const ddrVerdict = useMemo(
+    () => (isDdrBookUsable(resolverData) ? selectCurrentDdrVerdicts(resolverData!.rows).get(id) ?? null : null),
+    [id, resolverData],
+  );
+  // Deadline states read the reader's day clock, so they appear only after hydration.
+  const dayNowMs = useUtcDayNowMs();
+  const nowSec = dayNowMs === null ? null : Math.floor(dayNowMs / 1000);
   const liquidityQuery = useDexLiquidityCoin(id, { enabled: liquidityEnabled });
   const reportCardsQuery = useReportCardsV9Detail(id, { enabled: reportCardsEnabled });
   const redemptionBackstopsQuery = useRedemptionBackstopCoin(id, { enabled: redemptionEnabled });
@@ -315,7 +332,7 @@ export function useStablecoinDetailViewModel({
       buildStablecoinDetailViewModel({
         core: { id, coin, summary, logoSrc, handleRetryAll, savedAssessment },
         queries,
-        supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves, nowMs },
+        supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves, nowMs, ddrVerdict, nowSec },
       }),
     [
       id,
@@ -331,6 +348,8 @@ export function useStablecoinDetailViewModel({
       blacklist,
       reserves,
       nowMs,
+      ddrVerdict,
+      nowSec,
     ],
   );
 

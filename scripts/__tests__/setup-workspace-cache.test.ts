@@ -76,6 +76,42 @@ describe("setup-workspace caches", () => {
     }
   });
 
+  it("cleans up a timed-out Firefox install and repairs dpkg before retrying", () => {
+    const step = steps.find((candidate) => candidate.if === "${{ inputs.install-playwright-firefox == 'true' }}")!;
+    const run = spawnSync("bash", ["-eo", "pipefail", "-c", `
+      installs=0
+      locks=0
+      sudo() {
+        case "$1" in
+          tee) cat >&2 ;;
+          pkill) echo "kill package tools: $*" ;;
+          fuser) locks=$((locks + 1)); echo "probe locks"; [[ "$locks" == 1 ]] ;;
+          timeout) echo "repair dpkg: $*" ;;
+          *) return 99 ;;
+        esac
+      }
+      timeout() {
+        installs=$((installs + 1))
+        echo "install: $*"
+        if [[ "$installs" == 1 ]]; then return 124; fi
+      }
+      sleep() { :; }
+      ${step.run}
+    `], { encoding: "utf8", timeout: 5000 });
+    expect(run.status).toBe(0);
+    expect(run.stderr).toContain('Acquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::Retries "2";\nDPkg::Lock::Timeout "60";');
+    const install = "install: --kill-after=10s 6m npx --no-install playwright install --with-deps firefox";
+    expect(run.stdout.trim().split("\n")).toEqual([
+      install,
+      expect.stringContaining("attempt 1 failed"),
+      "kill package tools: pkill -KILL -u root -x apt-get|dpkg|dpkg-deb",
+      "probe locks",
+      "probe locks",
+      "repair dpkg: timeout --kill-after=10s 60s dpkg --configure -a",
+      install,
+    ]);
+  });
+
   it("restores an exact-key dependency cache without generated outputs", () => {
     const { inputs } = z.object({
       inputs: z.record(z.string(), z.object({ default: z.string() })),

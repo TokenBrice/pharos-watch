@@ -499,13 +499,14 @@ describe("stablecoin detail view-model builder", () => {
     } as StablecoinLiveSummary;
     const read = (nowMs = now) => buildDetailPegPriceSnapshot(coin.id, coin,
       { coins: [{ ...legacy, id: coin.id }] } as PegSummaryResponse, summary, nowMs);
-    expect(read()).toMatchObject({ deviationBps: -2000, consensusSources: ["coingecko"], agreeSources: ["coingecko"], dexPriceCheck: dex });
+    // An unusable primary price never reads calm downstream.
+    expect(read()).toMatchObject({ deviationBps: -2000, consensusSources: ["coingecko"], agreeSources: ["coingecko"], dexPriceCheck: dex, priceUnusable: true });
     expect(read(now + 1000)).toMatchObject({ deviationBps: -2000, dexPriceCheck: null });
     expect(read(now + 540000).dexPriceCheck).toBeNull();
     delete summary.currentPeg!.dexPriceCheckExpiresAt;
     expect(read().dexPriceCheck).toBeNull();
     delete summary.currentPeg;
-    expect(read()).toMatchObject({ deviationBps: 0, consensusSources: [], agreeSources: [] });
+    expect(read()).toMatchObject({ deviationBps: 0, consensusSources: [], agreeSources: [], priceUnusable: false });
   });
 
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
@@ -707,6 +708,19 @@ describe("stablecoin detail view-model builder", () => {
       archetype: "yield-bearing-hybrid",
       label: "Yield-Bearing Hybrid",
     });
+    expect(viewModel.coinStates.some((state) => state.kind === "depeg")).toBe(false);
+  });
+
+  it("keeps a curated danger depeg notice critical beside the live depeg", () => {
+    const coin = { ...TRACKED_META_BY_ID.get("usdt-tether")!, notices: [{ type: "danger" as const, kind: "depeg" as const, title: "Curated depeg", message: "Not superseded." }] };
+    const params = makeReadyDetailParams({ id: coin.id, coin, queries: {
+      pegSummary: { data: { summary: {} as never, coins: [{ id: coin.id, pegScore: 20, activeDepeg: true, currentDeviationBps: -4500 }] } as never, dataUpdatedAt: 1 },
+    } });
+    params.supplemental.ddrVerdict = { tier: "at_risk", methodologyVersion: null };
+    const viewModel = buildStablecoinDetailViewModel(params);
+    if (viewModel.status !== "ready") throw new Error("expected a ready dossier");
+    expect(viewModel.coinStates).toMatchObject([{ kind: "critical", notice: { title: "Curated depeg" } }, { kind: "depeg", ddrTier: "at_risk" }]);
+    expect(viewModel.hero.state).toBe(viewModel.coinStates[0]);
   });
 
   it("inherits parent mechanism archetypes for variant verdicts", () => {

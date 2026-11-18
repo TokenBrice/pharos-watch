@@ -206,7 +206,7 @@ function ScoreEnrichment({ event }: { event: TapeEvent }) {
   const newScore = typeof p.newScore === "number" ? p.newScore : null;
   const isUpgrade = event.type === "score.upgraded";
   const ArrowIcon = isUpgrade ? TrendingUp : TrendingDown;
-  const arrowColor = isUpgrade ? SEVERITY_TONE_CLASS.ok.text : SEVERITY_TONE_CLASS.alert.text;
+  const arrowColor = isUpgrade ? SEVERITY_TONE_CLASS.ok.text : SEVERITY_TONE_CLASS.danger.text;
   return renderDeltaPills(
     prev,
     next,
@@ -230,7 +230,7 @@ function BandTransitionEnrichment({ event }: { event: TapeEvent }) {
   const newScore = typeof p.newScore === "number" ? p.newScore : null;
   const isEscalation = event.type.endsWith(".shifted_down") || event.type === "dews.escalated";
   const ArrowIcon = isEscalation ? TrendingDown : TrendingUp;
-  const arrowColor = isEscalation ? SEVERITY_TONE_CLASS.alert.text : SEVERITY_TONE_CLASS.ok.text;
+  const arrowColor = isEscalation ? SEVERITY_TONE_CLASS.danger.text : SEVERITY_TONE_CLASS.ok.text;
   return renderDeltaPills(
     prev,
     next,
@@ -253,7 +253,7 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
     const prevRounded = Math.round(prev);
     const nextRounded = Math.round(next);
     const delta = nextRounded - prevRounded;
-    const arrowColor = SEVERITY_TONE_CLASS.alert.text;
+    const arrowColor = SEVERITY_TONE_CLASS.danger.text;
     return renderDeltaPills(
       prevRounded,
       nextRounded,
@@ -262,7 +262,7 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
       arrowColor,
       undefined,
       formatSignedDelta(delta),
-      SEVERITY_TONE_CLASS.alert.text,
+      SEVERITY_TONE_CLASS.danger.text,
     );
   }
   const signals = Array.isArray(p?.newSignals) ? p.newSignals : Array.isArray(p?.signals) ? p.signals : null;

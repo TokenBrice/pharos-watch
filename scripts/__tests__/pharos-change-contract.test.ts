@@ -560,10 +560,10 @@ describe("reading selectors and context modes", () => {
       expect(plan.checks).toEqual([...before.checks.slice(0, index), ...extra, ...before.checks.slice(index)]);
       expect(plan.classification.deploy).toEqual(before.classification.deploy);
     } finally { pricing.sourceGlobs = sources; }
-    for (const file of ["public/og-editorial-about.png", "public/og-cemetery.png", "scripts/maintenance/state/og-editorial-signatures.json", "scripts/maintenance/state/og-cemetery-signature.json"]) {
+    for (const file of ["public/og-editorial-about.png", "public/og-cemetery.png", "scripts/maintenance/state/og-cemetery-signature.json"]) {
       const contract = route([file]);
       expect(contract.unmappedPaths).toEqual([]);
-      expect(contract.mappings.map((mapping) => mapping.id)).toEqual([file === "public/og-cemetery.png" ? "frontend-routes" : "scripts-tooling"]);
+      expect(contract.mappings.map((mapping) => mapping.id)).toEqual([file.startsWith("public/") ? "frontend-routes" : "scripts-tooling"]);
       expect(buildFocusedCheckPlan([file]).checks.length).toBeGreaterThan(0);
     }
   });

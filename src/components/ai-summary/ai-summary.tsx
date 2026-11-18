@@ -2,6 +2,7 @@ import { IntentLink } from "@/components/intent-link";
 import { buildAiDisclosureLine, formatAiSummaryIsoDate } from "@/components/ai-summary/ai-disclosure";
 import { AiSummaryProse } from "@/components/ai-summary/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
 import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types/editorial";
@@ -12,6 +13,12 @@ import {
 
 export type AiSummaryProps = StablecoinAiSummary & {
   claimValues?: AiSummaryClaimValues;
+  /**
+   * A current danger or paused notice the dossier leads with. The note may not
+   * reflect it, so its prose folds and the card says why, keeping the lead
+   * slot the first thing read.
+   */
+  openNotice?: { title: string } | null;
 };
 
 export function AiSummary({
@@ -25,6 +32,7 @@ export function AiSummary({
   factsAsOf,
   claimTokens,
   claimValues,
+  openNotice = null,
 }: AiSummaryProps) {
   // One date grammar across the card: ISO days, as in every dossier footer.
   const updatedDate = formatAiSummaryIsoDate(updatedAt);
@@ -43,9 +51,22 @@ export function AiSummary({
         <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
-        <AiSummaryProse textLength={resolved.text.length}>
-          <TermText text={resolved.text} />
-        </AiSummaryProse>
+        {openNotice ? (
+          <>
+            <p className="text-pretty text-sm text-muted-foreground" data-ai-summary-held>
+              May not reflect the current notice: {openNotice.title}.
+            </p>
+            <ModuleDisclosure label="Editorial note" className="mt-1">
+              <AiSummaryProse textLength={resolved.text.length} clamp={false}>
+                <TermText text={resolved.text} />
+              </AiSummaryProse>
+            </ModuleDisclosure>
+          </>
+        ) : (
+          <AiSummaryProse textLength={resolved.text.length}>
+            <TermText text={resolved.text} />
+          </AiSummaryProse>
+        )}
         {/* Provenance footer: one sentence-case line (dateline + disclosure),
             the policy link at the far edge, in the dossier footer grammar. */}
         <div className="mt-4 flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-t border-border/40 pt-3 text-xs leading-relaxed text-muted-foreground">

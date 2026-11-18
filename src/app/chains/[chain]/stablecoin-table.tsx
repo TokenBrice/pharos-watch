@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { formatCompactUsdOrSubDollar, formatSignedPercent } from "@shared/lib/format";
+import type { CoinState } from "@shared/lib/coin-state";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
@@ -26,9 +28,12 @@ import { cn } from "@/lib/utils";
 export function StablecoinTable({
   coins,
   backingFilter,
+  coinStates,
 }: {
   coins: ChainDetailCoin[];
   backingFilter: string | null;
+  /** Each coin's exceptional states (`useCoinStates`); the row shows the highest one. */
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
 }) {
   const router = useRouter();
 
@@ -96,17 +101,20 @@ export function StablecoinTable({
           >
             <TableCell className="tabular-nums text-muted-foreground">{index + 1}</TableCell>
             <TableCell>
-              <Link
-                href={buildStablecoinUrl(coin.id)}
-                prefetch={false}
-                aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
-                className="pharos-focus-ring flex items-center gap-2 rounded-md font-medium group-hover:text-primary"
-              >
-                <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={24} />
-                <span className="hidden sm:inline">{coin.name}</span>
-                <span className="text-muted-foreground">({coin.symbol})</span>
-                <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Link
+                  href={buildStablecoinUrl(coin.id)}
+                  prefetch={false}
+                  aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
+                  className="pharos-focus-ring flex items-center gap-2 rounded-md font-medium group-hover:text-primary"
+                >
+                  <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={24} />
+                  <span className="hidden sm:inline">{coin.name}</span>
+                  <span className="text-muted-foreground">({coin.symbol})</span>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
+                </Link>
+                {coinStates?.get(coin.id)?.slice(0, 1).map((state) => <CoinStateChip key={state.kind} state={state} />)}
+              </div>
             </TableCell>
             <TableCell className="text-right font-mono tabular-nums">{formatCompactUsdOrSubDollar(coin.supplyUsd)}</TableCell>
             <TableCell className="text-right">

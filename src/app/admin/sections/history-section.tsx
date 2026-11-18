@@ -265,7 +265,7 @@ export function HistorySection({
               historyEvidence.state === "error" ||
               historyEvidence.state === "stale" ||
               historyEvidence.completeness !== "complete"
-                ? SEVERITY_TONE_CLASS.watch.pill
+                ? SEVERITY_TONE_CLASS.caution.pill
                 : undefined
             }
           />

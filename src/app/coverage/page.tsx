@@ -84,9 +84,9 @@ const route = createClientFeaturePage({
       <>
         {PRE_LAUNCH_STABLECOIN_COUNT}{" "}
         <Link href="/upcoming/" className="pharos-prose-link">
-          upcoming stablecoins
+          pre-launch stablecoins
         </Link>{" "}
-        are excluded until they enter active tracking.
+        (upcoming, or launched and awaiting data) are excluded until they enter active tracking.
       </>,
     ],
     preface: (

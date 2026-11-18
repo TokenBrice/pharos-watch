@@ -146,15 +146,15 @@ export const NOTICE_TONE_COLORS: Record<"unavailable" | "network" | "error", Not
     title: "Connection issue",
     message: "Unable to reach the Pharos data API right now.",
     detail: "Retry when your connection stabilizes.",
-    tone: "border-orange-500/30 bg-orange-500/8 text-orange-700 dark:text-orange-400",
-    iconBg: "bg-orange-500/15",
+    tone: "border-state-warn bg-state-warn-subtle text-state-warn",
+    iconBg: "bg-state-warn-subtle",
   },
   error: {
     title: "Failed to load this dataset",
     message: "The dataset could not be loaded right now.",
     detail: null,
-    tone: "border-red-500/30 bg-red-500/8 text-red-700 dark:text-red-400",
-    iconBg: "bg-red-500/15",
+    tone: "border-state-danger bg-state-danger-subtle text-state-danger",
+    iconBg: "bg-state-danger-subtle",
   },
 };
 
@@ -166,10 +166,10 @@ export const CONFIDENCE_LEVEL_COLORS: Record<"high" | "single-source" | "low" | 
 };
 
 export const DATA_HEALTH_COLORS: Record<"degraded" | "stale" | "unavailable" | "error", string> = {
-  degraded: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  stale: "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  degraded: "border-state-warn bg-state-warn-subtle text-state-warn",
+  stale: "border-state-warn bg-state-warn-subtle text-state-warn",
   unavailable: "border-border/60 bg-muted/40 text-muted-foreground",
-  error: "border-destructive/50 bg-destructive/10 text-destructive",
+  error: "border-state-danger bg-state-danger-subtle text-state-danger",
 };
 
 export const RATIO_QUALITY_COLORS: Record<"healthy" | "caution" | "critical", string> = {

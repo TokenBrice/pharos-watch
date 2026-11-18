@@ -30,6 +30,12 @@
   "r2BucketLifecycles": {
     "pharos-social-previews": { "enabledObjectDeletionRules": ["old-preview-expiry"] }
   },
+  "r2BucketLocks": {
+    "pharos-social-previews": [
+      { "id": "scorecards-v1-permanent", "enabled": false, "prefix": "scorecards/v2/", "condition": { "type": "Age", "maxAgeSeconds": 86400 } },
+      { "id": "unexpected-rule", "enabled": false, "condition": { "type": "Indefinite" } }
+    ]
+  },
   "accessApplications": [
     {
       "type": "self_hosted",

@@ -10,6 +10,7 @@ import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner
 import type { ApiMeta } from "@/lib/api";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "@/lib/request-lifecycle";
 
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { DepegClient } from "./client";
 import {
   makeCoin,
@@ -32,7 +33,7 @@ const mocks = vi.hoisted(() => ({
 
 const sourceHooks = { peg: mocks.usePegSummary, dews: mocks.useStressSignals, events: mocks.useInfiniteDepegEvents };
 
-vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: vi.fn() }));
+vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: vi.fn(() => ({ data: undefined, error: null })) }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -84,6 +85,7 @@ vi.mock("@/components/depeg/depeg-outlook-hero", () => ({
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
       data-resolver-total={props.book?.total ?? "unavailable"}
+      data-open-incidents={props.openIncidents?.map((row) => row.id).join(",")}
       data-footer={props.footer == null ? "none" : "present"}
     >
       {props.alertQueue?.(false)}
@@ -102,6 +104,7 @@ vi.mock("@/components/depeg/depeg-control-board", () => ({
       data-row-ids={rows.map((row) => row.coin.id).join(",")}
       data-evidence={rows.map((row) => `${row.coin.id}:${row.openIncidentEvidence ?? "none"}`).join(",")}
       data-pending-rows={String(rows.filter((row) => row.pendingIncident).length)}
+      data-caps={rows.map((row) => `${row.coin.id}:${row.marketCapUsd}`).join(",")}
     >
       <span>Leaderboard controls</span>
     </div>
@@ -301,6 +304,17 @@ describe("DepegClient", () => {
     advanceTime(60_000);
     expect(screen.getByTestId("depeg-control-board").dataset.evidence)
       .toBe("off:outside,par:unconfirmed,dup:unconfirmed,blind:unconfirmed,calm:none");
+  });
+
+  it("feeds stablecoin-list caps to the hero ranking and board rows", () => {
+    vi.mocked(useStablecoins).mockReturnValue({ data: { peggedAssets: [{ id: "small", circulating: { peggedUSD: 49e6 } }, { id: "big", circulating: { peggedUSD: 1.5e9 } }] }, error: null } as never);
+    try {
+      mountDepegRoute({ coins: [makeCoin("big", "BIG", { activeDepeg: true, currentDeviationBps: -14 }), makeCoin("small", "SMALL", { activeDepeg: true, currentDeviationBps: -4_500 }), makeCoin("calm", "CALM")] });
+      expect(screen.getByTestId("depeg-hero").dataset.openIncidents).toBe("small,big");
+      expect(screen.getByTestId("depeg-control-board").dataset.caps).toBe("big:1500000000,small:49000000,calm:null");
+    } finally {
+      vi.mocked(useStablecoins).mockImplementation(() => ({ data: undefined, error: null }) as never);
+    }
   });
 
   it("preserves observed zero pending and DEWS counts from successful empty sources", () => {

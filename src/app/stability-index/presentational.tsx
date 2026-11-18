@@ -385,6 +385,7 @@ export function PsiContributorsTableCard({
           <>
             <p className="text-sm text-muted-foreground mb-4">
               Which stablecoins are currently pushing the score below 100, ranked by total impact.
+              Breadth counts each open incident by its coin&apos;s size, whatever its deviation now, so a large coin near peg can outrank a small one far off it; each row names the larger cost.
               Long-lasting depegs (over 30 days) receive a scoring depreciation - the percentage in parentheses next to the age shows the remaining impact weight.
             </p>
             <TableFrame
@@ -447,7 +448,12 @@ export function PsiContributorsTableCard({
                         className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-brand-accent-text transition-colors rounded-sm"
                       >
                         <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
-                        <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>
+                        <span className="min-w-0">
+                          <span className={cn("block", index === 0 && "font-semibold")}>{row.symbol}</span>
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {row.driver === "breadth" ? "Open incident, counted by size" : "Deviation depth"}
+                          </span>
+                        </span>
                         {index === 0 && (
                           <span className="ml-1 rounded-full bg-state-warn-solid/15 px-1.5 py-0.5 text-xs font-semibold text-state-warn">
                             Top

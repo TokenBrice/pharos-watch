@@ -16,6 +16,7 @@ const {
   useMintBurnFlowsMock,
   supplyHistoryQueryOptionsMock,
   mintBurnFlowsCoinQueryOptionsMock,
+  useCoinStatesMock,
 } = vi.hoisted(() => ({
   useQueriesMock: vi.fn(),
   useBluechipRatingsMock: vi.fn(),
@@ -29,6 +30,7 @@ const {
   useMintBurnFlowsMock: vi.fn(),
   supplyHistoryQueryOptionsMock: vi.fn(),
   mintBurnFlowsCoinQueryOptionsMock: vi.fn(),
+  useCoinStatesMock: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", async () => {
@@ -40,6 +42,7 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 vi.mock("../api-hooks", () => ({
+  useDepegResolver: () => ({ data: undefined }),
   useBluechipRatings: useBluechipRatingsMock,
   useDexLiquidity: useDexLiquidityMock,
   usePegSummary: usePegSummaryMock,
@@ -58,6 +61,8 @@ vi.mock("../use-mint-burn-flows", () => ({
   useMintBurnFlows: useMintBurnFlowsMock,
   mintBurnFlowsCoinQueryOptions: mintBurnFlowsCoinQueryOptionsMock,
 }));
+
+vi.mock("../use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
 
 import { useCompareDataModel } from "../use-compare-data-model";
 import { COMPARE_COLORS } from "@/lib/compare-config";
@@ -92,6 +97,7 @@ describe("useCompareDataModel", () => {
     useRedemptionBackstopsMock.mockReset();
     useReportCardsV9Mock.mockReset();
     useStressSignalsMock.mockReset();
+    useCoinStatesMock.mockReset().mockReturnValue({ byId: new Map(), liveReady: false });
     useYieldRankingsMock.mockReset();
     useStablecoinsMock.mockReset();
     useMintBurnFlowsMock.mockReset();
@@ -175,6 +181,19 @@ describe("useCompareDataModel", () => {
     expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: true });
   });
 
+
+  it("carries coin states, claiming calm only once the peg summary loads", () => {
+    const selectedIds = ["iusd-initia", "usdc-circle"];
+    useStablecoinsMock.mockReturnValue(makeQueryResult({ data: { peggedAssets: selectedIds.map((id) => makeStablecoin({ id })), fxFallbackRates: {} } }));
+    const byId = new Map([["iusd-initia", [{ kind: "critical", notice: { type: "danger", title: "Halted" } }]]]);
+    useCoinStatesMock.mockReturnValue({ byId, liveReady: false });
+    const { result, rerender } = renderHook(() => useCompareDataModel({ selectedIds, flowHours: 24, radarCohort: "peg", range: "all" }));
+    expect(result.current.comparisonCoins.map((coin) => coin.coinStates?.[0]?.kind ?? coin.coinStates)).toEqual(["critical", null]);
+    expect(result.current.coinStatesById.get("iusd-initia")?.[0]?.kind).toBe("critical");
+    useCoinStatesMock.mockReturnValue({ byId, liveReady: true });
+    rerender();
+    expect(result.current.comparisonCoins[1]?.coinStates).toEqual([]);
+  });
 
   it.each(["pending", "failed", "empty", "matching", "retained"] as const)(
     "preserves %s Bluechip publication state without gating the stablecoin list",

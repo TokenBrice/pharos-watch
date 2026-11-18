@@ -117,7 +117,9 @@
     {
       "type": "info",
       "title": "mMEV wound down; redeem in mROX",
-      "message": "Midas discontinued mMEV on 10 May 2026 to avoid redundancy with mROX and told holders to withdraw and reinvest in mROX. Redemptions still settle; the token is not frozen."
+      "message": "Midas discontinued mMEV on 10 May 2026 to avoid redundancy with mROX and told holders to withdraw and reinvest in mROX. Redemptions still settle; the token is not frozen.",
+      "kind": "paused",
+      "asOf": "2026-10-30"
     }
   ],
   "launchDate": "2025-02-04",

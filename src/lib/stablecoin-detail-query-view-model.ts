@@ -67,6 +67,12 @@ export interface DetailPegPriceSnapshot {
   consensusSources: string[] | null;
   agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
+  /**
+   * No usable current price: the peg row marks it unavailable or unusable, or
+   * the quote is the `missing` source. Price-derived readings (Peg Score,
+   * DEWS) then cannot be shown as calm.
+   */
+  priceUnusable: boolean;
 }
 
 export interface DetailFeatureAvailabilitySnapshot {
@@ -168,6 +174,9 @@ export function buildDetailPegPriceSnapshot(
       ? (currentPeg.agreeSources ?? [])
       : (summaryData?.agreeSources ?? null),
     dexPriceCheck: currentPeg?.dexPriceCheck ?? null,
+    priceUnusable: currentPeg?.currentPriceUnavailable === true
+      || currentPeg?.primaryTrust === "unusable"
+      || (currentPeg ?? summaryData)?.priceSource === "missing",
   };
 }
 
@@ -361,10 +370,11 @@ export function buildDetailStaleQueries(
     liquidity,
     staleQueryFrom("reportCards", queries.reportCards, (data) => Boolean(data?.cards?.length)),
     staleQueryFrom("redemptionBackstops", queries.redemptionBackstops, (data) => Boolean(data?.coins)),
-    staleQueryFrom("yieldRankings", supplemental.yieldRankings, (data) => Boolean(data)),
-    staleQueryFrom("stressSignals", supplemental.stressSignals, (data) => Boolean(data)),
+    { ...staleQueryFrom("yieldRankings", supplemental.yieldRankings, (data) => Boolean(data)), secondary: true },
+    { ...staleQueryFrom("stressSignals", supplemental.stressSignals, (data) => Boolean(data)), secondary: true },
     {
       label: "Supply history",
+      secondary: true,
       staleTime: CRON_24H,
       dataUpdatedAt: queries.supplyHistory.dataUpdatedAt,
       error: queries.supplyHistory.error,
@@ -377,6 +387,7 @@ export function buildDetailStaleQueries(
   if (queries.annualPriceHistory?.enabled) {
     result.push({
       label: "Annual price history",
+      secondary: true,
       staleTime: CRON_24H,
       dataUpdatedAt: queries.annualPriceHistory.dataUpdatedAt,
       error: queries.annualPriceHistory.error,
@@ -391,6 +402,7 @@ export function buildDetailStaleQueries(
     const meta = resolveDetailFlowMeta(flows);
     result.push({
       preset: "mintBurnFlows",
+      secondary: true,
       dataUpdatedAt: flows.dataUpdatedAt,
       error: flows.error,
       hasData: flowEntry != null,
@@ -401,6 +413,7 @@ export function buildDetailStaleQueries(
   if (supplemental.blacklist.enabled) {
     result.push({
       preset: "blacklist",
+      secondary: true,
       dataUpdatedAt: supplemental.blacklist.dataUpdatedAt,
       error: supplemental.blacklist.error,
       hasData: supplemental.blacklist.summary !== undefined,
@@ -409,7 +422,7 @@ export function buildDetailStaleQueries(
     });
   }
   if (supplemental.reserves.enabled) {
-    result.push(reserveStaleQuery(supplemental.reserves));
+    result.push({ ...reserveStaleQuery(supplemental.reserves), secondary: true });
   }
   const restoredSupply = restoredSupplyStaleQuery(queries.liveSummary);
   if (restoredSupply) result.push(restoredSupply);

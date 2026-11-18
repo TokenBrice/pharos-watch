@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AboutPageContent } from "@/components/about/about-page-content";
 import { BLACKLIST_STABLECOINS } from "@shared/types/blacklist";
-import { PRE_LAUNCH_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 vi.mock("next/link", async () => {
   // Vitest hoists mock factories; import the shared mock inside its factory.
@@ -40,11 +41,14 @@ describe("About structured-data documentation links", () => {
 });
 
 describe("About coverage copy", () => {
-  it("uses one pre-launch count and the reviewed freeze-scan count", () => {
+  it("counts upcoming launches as /upcoming/ does and uses the reviewed freeze-scan count", () => {
     const html = renderToStaticMarkup(<AboutPageContent />);
+    // Launched rows awaiting data are not upcoming.
+    const upcoming = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
     expect(html).toContain(`freeze monitoring across ${BLACKLIST_STABLECOINS.length} stablecoins`);
-    expect(html).toContain(`${PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches`);
-    expect(html).toContain(`${PRE_LAUNCH_STABLECOIN_COUNT} upcoming stablecoins`);
+    expect(html).toContain(`${upcoming} upcoming launches`);
+    expect(html).toContain(`${upcoming} upcoming stablecoins`);
+    expect(/^<dd[^>]*>(\d+)<\/dd>/.exec(html.split(">Upcoming</dt>")[1] ?? "")?.[1]).toBe(String(upcoming));
   });
 });
 

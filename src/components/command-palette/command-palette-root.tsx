@@ -12,14 +12,14 @@ import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { useCoinStates } from "@/hooks/use-coin-states";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { groupCommandPaletteResults } from "@/components/command-palette/command-palette-model";
 import { clampCommandPaletteSelectedIndex } from "@/components/command-palette/command-palette-actions";
 import {
-  PEG_STATUS_DOT,
   buildPopularStablecoinIds,
   buildStablecoinLiveMetadata,
   formatCommandPaletteMarketCap,
-  getStablecoinHealthLabel,
 } from "@/components/command-palette/live-metadata";
 import { buildCommandPaletteSearchResults } from "@/components/command-palette/results";
 import { useCommandPaletteVerbActions } from "@/components/command-palette/use-verb-actions";
@@ -91,6 +91,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { data: stablecoinsData, meta, dataUpdatedAt, error } = useStablecoins();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
+  // The one exceptional-state ladder; its live reads run only while the palette is open.
+  const { byId: coinStates } = useCoinStates({ enabled: open });
   const freshnessNow = useFreshnessBoundary([{
     ...DATA_HEALTH_PRESETS.stablecoins,
     dataUpdatedAt,
@@ -369,6 +371,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               {group.items.map((item) => {
                 const currentIndex = flatIndex++;
                 const isSelected = currentIndex === selectedIndex;
+                const coinState = item.coinId ? coinStates.get(item.coinId)?.[0] : undefined;
 
                 return (
                   <button type="button"
@@ -416,13 +419,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <span className="truncate block">
-                        {item.label}
-                        {item.frozen ? (
-                          <span className="ml-2 rounded-sm border border-border px-1 text-3xs uppercase text-muted-foreground">
-                            Frozen
-                          </span>
-                        ) : null}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate">{item.label}</span>
+                        {coinState ? <CoinStateChip state={coinState} className="shrink-0" /> : null}
                       </span>
                       {item.sublabel && (
                         <span className={`text-muted-foreground text-xs truncate block ${item.mono ? "font-mono" : ""}`}>
@@ -442,18 +441,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     ) : item.section === "Stablecoins" ? (
                       <span className="shrink-0 pl-3 text-right pharos-numeric text-xs text-muted-foreground" title="Supply unavailable">—</span>
                     ) : null}
-                    {item.stablecoinHealth?.kind === "peg" ? (
-                      <span className="ml-2 inline-flex shrink-0 items-center" title={getStablecoinHealthLabel(item.stablecoinHealth)}>
-                        <span
-                          className={`size-1.5 rounded-full ${PEG_STATUS_DOT[item.stablecoinHealth.status]}`}
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">{getStablecoinHealthLabel(item.stablecoinHealth)}</span>
-                      </span>
-                    ) : item.stablecoinHealth?.kind === "nav" ? (
+                    {item.stablecoinHealth?.kind === "nav" ? (
                       <span
                         className="ml-2 shrink-0 rounded-sm border border-state-info px-1 py-0.5 font-mono text-3xs leading-none text-state-info"
-                        title={getStablecoinHealthLabel(item.stablecoinHealth)}
+                        title="NAV-priced token"
                       >
                         NAV<span className="sr-only">-priced token</span>
                       </span>

@@ -5,8 +5,10 @@ import { SEVERITY_NAMED_TONE_CLASSES } from "@shared/lib/classification";
  *
  * This module owns the orthogonal "how bad is this signal" UI-state ramp that
  * ~100 component files were spelling by hand, with 18 emerald and 21 amber
- * variants in circulation. The `ok`/`watch`/`alert`/`sky` rows are backed by
- * state tokens. The two named-palette rows (`info` blue, `rose`) are
+ * variants in circulation. The `ok`/`caution`/`danger`/`sky` rows are backed by
+ * state tokens. The keys deliberately avoid "watch" and "alert": those words
+ * name DEWS bands (yellow and amber), so the amber step is `caution` and the
+ * red step is `danger`. The two named-palette rows (`info` blue, `rose`) are
  * classification colours (score tiers, the detail rail's "structurally short"
  * slot), so their values live in `SEVERITY_NAMED_TONE_CLASSES` in
  * `shared/lib/classification.ts` and are re-exposed here unchanged; edit them
@@ -19,8 +21,8 @@ import { SEVERITY_NAMED_TONE_CLASSES } from "@shared/lib/classification";
  * | tone    | shape  | occurrences of the chosen spelling |
  * |---------|--------|------------------------------------|
  * | ok      | pill   | 16 (next: 3)                       |
- * | watch   | pill   | 13 (next: 11)                      |
- * | alert   | pill   | 16 (next: 10)                      |
+ * | caution | pill   | 13 (next: 11)                      |
+ * | danger  | pill   | 16 (next: 10)                      |
  * | neutral | pill   | 15 (next: 8)                       |
  * | info    | pill   | 12 (next: 2)                       |
  *
@@ -33,7 +35,7 @@ import { SEVERITY_NAMED_TONE_CLASSES } from "@shared/lib/classification";
  *              *graded* value; a bar showing a share of a basket is a composition,
  *              not a risk level, and stays neutral (owner ruling 2026-08-11).
  *
- * `alert` is red, not rose: rose and sky are two further hues the product uses
+ * `danger` is red, not rose: rose and sky are two further hues the product uses
  * as *named palette* slots rather than as severity steps, so they get their own
  * entries (WS8.14) instead of being silently re-hued onto red/blue.
  *
@@ -52,7 +54,7 @@ import { SEVERITY_NAMED_TONE_CLASSES } from "@shared/lib/classification";
  * tokens, and stay where they are.
  */
 
-export type SeverityTone = "ok" | "watch" | "alert" | "neutral" | "info" | "sky" | "rose";
+export type SeverityTone = "ok" | "caution" | "danger" | "neutral" | "info" | "sky" | "rose";
 
 export interface SeverityToneClasses {
   /** Outlined badge/chip: border + tint + text. */
@@ -72,13 +74,13 @@ export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
     text: "text-state-positive",
     bar: "bg-state-positive-solid",
   },
-  watch: {
+  caution: {
     pill: "border-state-warn bg-state-warn-subtle text-state-warn",
     banner: "border-state-warn bg-state-warn-subtle",
     text: "text-state-warn",
     bar: "bg-state-warn-solid",
   },
-  alert: {
+  danger: {
     pill: "border-state-danger bg-state-danger-subtle text-state-danger",
     banner: "border-state-danger bg-state-danger-subtle",
     text: "text-state-danger",

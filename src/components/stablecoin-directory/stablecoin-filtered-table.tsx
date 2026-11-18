@@ -4,11 +4,16 @@ import { useMemo } from "react";
 import { useDexLiquidityTable, usePegSummary, useReportCardsV9Table } from "@/hooks/api-hooks";
 import { logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-directory/stablecoin-table";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 import type { PegRateSource } from "@shared/lib/peg-rates";
+
+// Cohort titles promise "Ranked by Risk", so the embedded table opens in grade
+// order (best first); the market-cap directory keeps its own default.
+const COHORT_RISK_SORT = { key: "grade", direction: "desc" } as const;
 
 interface StablecoinFilteredTableProps {
   activeFilters: readonly FilterTag[];
@@ -25,6 +30,7 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
   const dexLiquidity = liquidityQuery.data;
   const reportCardsData = reportCardsQuery.data;
   const failedQueries = [pegSummaryQuery, liquidityQuery, reportCardsQuery].filter((query) => query.error);
+  const coinStates = useCoinStates().byId;
 
   const tableInputs = useMemo(
     () =>
@@ -63,6 +69,8 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
         pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}
         reportCards={tableInputs.reportCards}
+        coinStates={coinStates}
+        initialSort={COHORT_RISK_SORT}
         reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}
         sourceGenerations={{
           stablecoins: meta?.updatedAt,

@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { ReportCardGradeSchema } from "./report-card-grade";
+import { ReportCardGradeSchema, SAFETY_GRADE_VALUES } from "./report-card-grade";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import { ScoreSchema, Sha256Schema, UnixSecondsSchema } from "./safety-schema-primitives";
+import { V9_QUALITY_PILLARS } from "./safety-score-v9-quality-pillars";
 
 const SubjectIdSchema = z.string().min(1).max(100).regex(/^[a-z0-9](?:[a-z0-9]|-[a-z0-9])*$/);
 const SubjectTextSchema = z.string().min(1).max(160).refine((text) => !/\p{Cc}/u.test(text));
+const PillarIdSchema = z.enum(V9_QUALITY_PILLARS);
+const PillarRatingSchema = z.object({ score: ScoreSchema, grade: z.enum(SAFETY_GRADE_VALUES) }).strict();
+export const ScorecardPillarRatingsSchema = z.partialRecord(PillarIdSchema, PillarRatingSchema);
+export type ScorecardPillarRatings = z.infer<typeof ScorecardPillarRatingsSchema>;
+
 const CoinSubjectSchema = z.object({
   kind: z.literal("stablecoin"),
   id: SubjectIdSchema,
@@ -13,6 +19,9 @@ const CoinSubjectSchema = z.object({
   score: ScoreSchema.nullable(),
   grade: ReportCardGradeSchema,
   ratingStatus: z.enum(["rated", "not-rated"]),
+  pillars: z.array(PillarRatingSchema.extend({ id: PillarIdSchema })).max(V9_QUALITY_PILLARS.length)
+    .refine(pillars => new Set(pillars.map(pillar => pillar.id)).size === pillars.length, "Pillar IDs must be unique")
+    .optional(),
 }).strict().superRefine((subject, ctx) => {
   if ((subject.ratingStatus === "rated" && (subject.score === null || subject.grade === "NR"))
     || (subject.ratingStatus === "not-rated" && (subject.score !== null || subject.grade !== "NR"))) {

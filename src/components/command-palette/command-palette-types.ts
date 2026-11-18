@@ -91,11 +91,8 @@ export type CommandPaletteResultKind =
   | "verb-hint"
   | "verb-run";
 
-export type CommandPalettePegStatus = "calm" | "watch" | "alert";
-
-export type CommandPaletteStablecoinHealth =
-  | { kind: "peg"; status: CommandPalettePegStatus }
-  | { kind: "nav" };
+/** Static NAV classification; peg and incident state come from the coin-state ladder. */
+export type CommandPaletteStablecoinHealth = { kind: "nav" };
 
 export interface CommandPaletteStablecoinLiveMetadata {
   marketCapUsd?: number;
@@ -119,7 +116,6 @@ export interface CommandPaletteResultDescriptor extends CommandPaletteSectionedI
   marketCapUsd?: number;
   marketCapAsOf?: number;
   stablecoinHealth?: CommandPaletteStablecoinHealth;
-  frozen?: boolean;
   href?: string;
   external?: boolean;
   pageIcon?: NavItem["icon"];

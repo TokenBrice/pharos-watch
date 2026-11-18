@@ -13,6 +13,8 @@ import type { D1Database } from "@shared/types/cloudflare-runtime";
 import {
   SOCIAL_SCORECARD_METADATA_HEADER,
   SOCIAL_SCORECARD_MAX_IMAGE_BYTES,
+  SOCIAL_SCORECARD_NOT_RATED_REASON,
+  SOCIAL_SCORECARD_REASON_HEADER,
   SOCIAL_SCORECARD_RENDERER_REVISION,
   decodeSocialScorecardMetadata,
   sealSocialScorecard,
@@ -41,7 +43,8 @@ export interface SocialScorecardEnv {
   SITE_SESSION_SIGNING_KEY_PREVIOUS?: string;
 }
 
-async function captureSocialScorecard(request: Request, stablecoinId: string, serviceBinding?: ProxyServiceBinding): Promise<SealedSocialScorecard> {
+/** Null when the coin has no published grade, so nothing to date: a definite answer, not an outage to retry. */
+async function captureSocialScorecard(request: Request, stablecoinId: string, serviceBinding?: ProxyServiceBinding): Promise<SealedSocialScorecard | null> {
   // OG is public-exempt, not a site-data endpoint. Always address the canonical
   // public lane even over a binding; no request header or input chooses a URL.
   const upstream = await fetchUpstreamProxy(request, {
@@ -50,6 +53,8 @@ async function captureSocialScorecard(request: Request, stablecoinId: string, se
     timeoutMs: 15_000, timeoutReason: new DOMException("Scorecard capture timed out", "TimeoutError"),
     logPrefix: "social-scorecard", timeoutMessage: "Scorecard capture timed out", fetchFailedMessage: "Scorecard capture unavailable",
   });
+  if (upstream.ok && upstream.response.status === 404
+    && upstream.response.headers.get(SOCIAL_SCORECARD_REASON_HEADER) === SOCIAL_SCORECARD_NOT_RATED_REASON) return null;
   if (!upstream.ok || !upstream.response.ok || upstream.response.status !== 200
     || upstream.response.headers.get("Content-Type")?.split(";")[0].trim() !== "image/png") {
     throw new Error("Scorecard source unavailable");
@@ -59,6 +64,7 @@ async function captureSocialScorecard(request: Request, stablecoinId: string, se
   if (image.byteLength > SOCIAL_SCORECARD_MAX_IMAGE_BYTES) throw new Error("Scorecard image too large");
   const now = Math.floor(Date.now() / 1000);
   if (metadata.rendererRevision !== SOCIAL_SCORECARD_RENDERER_REVISION || metadata.subject.id !== stablecoinId
+    || (metadata.subject.kind === "stablecoin" && metadata.subject.ratingStatus !== "rated")
     || metadata.asOfSec <= 0 || metadata.asOfSec > now || metadata.publishedAtSec > now
     || now - metadata.asOfSec >= metadata.freshnessBudgetSec || now - metadata.publishedAtSec >= metadata.freshnessBudgetSec) {
     throw new Error("Scorecard source identity or freshness invalid");
@@ -182,15 +188,14 @@ export async function createSocialScorecard(request: Request, env: SocialScoreca
   } catch {
     return jsonError(400, "Expected only a canonical stablecoinId");
   }
-  const ipHash = await hashClientIp(`social-scorecard:${ip}`, secret);
-  const quotaDenied = await reserveCreationAttempt(env.DB, ipHash);
-  if (quotaDenied) return quotaDenied;
-  // A successful dual reservation remains charged on capture/storage failure.
-  let snapshot: SealedSocialScorecard;
+  let snapshot: SealedSocialScorecard | null;
   try {
     snapshot = await captureSocialScorecard(request, stablecoinId, env.SITE_API);
   } catch {
     return jsonError(503, "Published scorecard temporarily unavailable", { "Retry-After": "60" });
+  }
+  if (!snapshot) {
+    return jsonError(404, "No published grade to date", { [SOCIAL_SCORECARD_REASON_HEADER]: SOCIAL_SCORECARD_NOT_RATED_REASON });
   }
   const key = `${SOCIAL_SCORECARD_OBJECT_PREFIX}${snapshot.id}`;
   try {
@@ -199,6 +204,10 @@ export async function createSocialScorecard(request: Request, env: SocialScoreca
       // Even a corrupt existing object must never be silently replaced.
       openSocialScorecard(snapshot.id, await existing.text());
     } else {
+      // Content addressing dedupes first: re-sharing a sealed edition reserves
+      // nothing. A successful dual reservation remains charged on storage failure.
+      const quotaDenied = await reserveCreationAttempt(env.DB, await hashClientIp(`social-scorecard:${ip}`, secret));
+      if (quotaDenied) return quotaDenied;
       await env.SOCIAL_PREVIEWS.put(key, JSON.stringify(snapshot.record), {
         onlyIf: { etagDoesNotMatch: "*" },
         httpMetadata: { contentType: "application/json" },

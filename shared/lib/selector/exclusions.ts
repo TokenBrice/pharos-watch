@@ -147,6 +147,13 @@ function applyUniversalExclusions(
     return fail(row.id, "howey-uncertain");
   }
 
+  // A curated danger notice (chain halt, stopped mint/redeem, sanctions) is a
+  // live break no profile recommends through; it precedes an open depeg, as on
+  // the coin-state ladder.
+  if (row.holderNotice?.kind === "critical") {
+    return fail(row.id, "critical-notice", "hard", row.holderNotice.title);
+  }
+
   // Active depeg — scales with depegTolerance. A missing current deviation is
   // not "within the ceiling": the event flag alone fails closed (R2).
   if (row.activeDepeg) {
@@ -157,6 +164,11 @@ function applyUniversalExclusions(
     if (Math.abs(row.currentDeviationBps) > ceiling) {
       return fail(row.id, "active-depeg");
     }
+  }
+
+  // A paused mint, deposit or redemption breaks the route a holder enters or exits by.
+  if (row.holderNotice?.kind === "paused") {
+    return fail(row.id, "paused-notice", "hard", row.holderNotice.title);
   }
 
   // Terminal grade.

@@ -293,6 +293,23 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
   },
   {
+    id: "dated-scorecard-logo",
+    family: "provider-transport",
+    description: "The dated scorecard's coin logo, read from the same-owned Pages site once per render.",
+    files: ["worker/src/api/og-scorecard.tsx"],
+    tests: ["worker/src/api/__tests__/og-source-availability.test.tsx"],
+    allowBareFetch: true,
+    directFetchJustification:
+      "The logo is optional decoration on a same-owned Pages asset: one time-bounded GET per render, and a failure, an oversized body or a format Satori cannot draw yields the monogram instead of an error.",
+    resilience: {
+      transport: "direct-fetch",
+      timeout: "One 2.5-second AbortSignal covers the request and the body read.",
+      body: "Cancels unsuccessful or undrawable responses and reads the rest through the bounded byte reader under LOGO_MAX_BYTES.",
+      circuitSources: [],
+    },
+    requiredMarkers: ["AbortSignal.timeout", "readResponseBytesWithinLimitWithSignal", "cancelResponseBodyQuietly", "LOGO_MAX_BYTES"],
+  },
+  {
     id: "safety-map-producer-dispatch",
     family: "provider-transport",
     description: "Pre-digest GitHub workflow_dispatch of the Safety Score map producer.",

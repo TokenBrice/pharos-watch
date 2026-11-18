@@ -68,6 +68,7 @@ vi.mock("../api-hooks", () => ({
   useStressSignals: mocks.useStressSignals,
   useYieldRankingsCoin: mocks.useYieldRankings,
   useRedemptionBackstopCoin: () => queryResult({ refetch: mocks.refetchRedemptionBackstops }),
+  useDepegResolver: () => queryResult({}),
 }));
 
 vi.mock("../use-mint-burn-flows", () => ({
@@ -252,14 +253,14 @@ describe("useStablecoinDetailViewModel", () => {
         version: 1, stablecoinId: coin.id, generatedAt: Date.now(),
         updatedAt: { liveSummary: updatedAt * 1000 }, lanes: { liveSummary: data },
       });
+      // One stable result across re-renders, as React Query returns.
+      const live = { ...queryResult({ data, error: state === "failed" ? new Error("refresh failed") : null,
+        isFetching: state === "fetching",
+        meta: { updatedAt: state === "missing-clock" ? null : updatedAt,
+          ageSeconds: 0, status: state === "stale" ? "stale" : "fresh" } }),
+      isFetchedAfterMount: state !== "prefetched" };
       mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
-        descriptor.queryKey[0] === "stablecoin-live-summary"
-          ? { ...queryResult({ data, error: state === "failed" ? new Error("refresh failed") : null,
-            isFetching: state === "fetching",
-            meta: { updatedAt: state === "missing-clock" ? null : updatedAt,
-              ageSeconds: 0, status: state === "stale" ? "stale" : "fresh" } }),
-            isFetchedAfterMount: state !== "prefetched" }
-          : queryResult());
+        descriptor.queryKey[0] === "stablecoin-live-summary" ? live : queryResult());
       renderHook(() => useStablecoinDetailViewModel({
         id: coin.id, coin, summary: null, supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
       }));

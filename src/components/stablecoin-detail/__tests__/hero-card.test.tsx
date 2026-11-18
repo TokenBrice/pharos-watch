@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
 import { HeroPriceMetric, HeroSupplyMetric } from "@/components/stablecoin-detail/hero-card-metrics";
+import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildSafetyVerdictLine } from "@/lib/stablecoin-detail-hero-metrics";
-import { HolderAlerts } from "@/components/stablecoin-detail/holder-alerts";
+import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import type * as FeatureFlags from "@/lib/feature-flags";
@@ -17,6 +19,8 @@ import type { YieldRanking } from "@shared/types/yield";
 
 const hydration = vi.hoisted(() => ({ hydrated: false }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => hydration.hydrated }));
+const clock = vi.hoisted(() => ({ nowMs: null as number | null }));
+vi.mock("@/hooks/use-utc-day-clock", () => ({ useUtcDayNowMs: () => clock.nowMs }));
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -97,7 +101,7 @@ type HeroPriceProps = Parameters<typeof HeroPriceMetric>[0]["price"];
 
 const priceState = (overrides: Partial<HeroPriceProps> = {}): HeroPriceProps => ({
   pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, referenceMarketClosed: false,
-  isNavToken: false, limitedDepegCoverageNote: null, ...overrides,
+  isNavToken: false, limitedDepegCoverageNote: null, caveat: null, ...overrides,
 });
 
 const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
@@ -394,12 +398,15 @@ describe("HeroCard", () => {
 
   it("lays four signal tiles two by two on a phone and on the market row's quarters from sm", () => {
     const model = buildStablecoinDetailHeroViewModel(makeHeroProps());
-    const keyMetric = { key: "backing-ratio", label: "Collateralization", value: "209.5%", subValue: "vs debt", colorClass: "text-foreground" };
+    const keyMetric = { key: "backing-ratio", label: "Collateralization", value: "209.5%", subValue: "vs debt", colorClass: "text-foreground", railTwin: true };
     const html = renderToStaticMarkup(<HeroCard model={model} keyMetric={keyMetric} />);
     expect(html).toContain('class="mt-2.5 grid gap-2.5 sm:mt-3 sm:gap-3 grid-cols-2 sm:grid-cols-4"');
     expect(html).toContain('class="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3"');
     // Supply spans two quarters, so both rows share their column edges.
     expect(html).toContain('class="col-span-2 min-w-0 pharos-inset px-3 py-2.5"');
+    // The xl rail carries the ratio, so the cell hides there.
+    expect(html).toContain("lg:grid-cols-4 xl:grid-cols-3");
+    expect(html).toMatch(/class="min-h-\[8\.25rem\][^"]*xl:hidden"/);
   });
 
   it("renders the existing unavailable placeholder when live price is null", () => {
@@ -445,6 +452,14 @@ describe("HeroCard", () => {
       expect(html).not.toMatch(/\+1 BPS/i);
       expect(html).toContain("N/A");
     }
+  });
+
+  it.each(["card", "cell"] as const)("qualifies an inherited %s price: the caveat calms only an at-peg tone", (variant) => {
+    const html = (deviationBps: number) =>
+      renderToStaticMarkup(<HeroPriceMetric coin={coin} coinData={coinData} price={priceState({ deviationBps, caveat: "Price inherited from AUSD" })} variant={variant} />);
+    expect(html(-6)).toContain("Price inherited from AUSD");
+    expect(html(-6)).not.toContain(deviationColorClass(6));
+    expect(html(-300)).toContain(deviationColorClass(300));
   });
 
   it.each(["card", "cell"] as const)("labels a frozen archive's %s price as its last observation, not a live peg reading", (variant) => {
@@ -644,6 +659,12 @@ describe("HeroIdentityHeader", () => {
     expect(header).toContain("[&amp;&gt;[aria-haspopup=menu]]:shadow-none");
   });
 
+  it("gives the variant chip its own row below sm", () => {
+    const header = renderHeader({ variantParent: CLIENT_TRACKED_META_BY_ID.get("usde-ethena")!, variantKind: "savings-passthrough" });
+    expect(header).toMatch(/<div class="hidden min-w-0 sm:flex"><a[^>]*>.*?Wraps Ethena USDe/);
+    expect(header).toMatch(/<div class="sm:hidden"><a[^>]*class="[^"]*text-2xs[^"]*"[^>]*>.*?Wraps Ethena USDe/);
+  });
+
   it("passes the report-card read to the mobile grade", () => {
     expect(renderHeader({ reportCard: null }, "failed")).toContain("Grade unavailable");
     expect(renderHeader({ reportCard: null }, "pending")).toContain('aria-label="Loading Safety Score"');
@@ -718,34 +739,77 @@ describe("hero verdict, fourth figure and holder alerts", () => {
     expect(renderHero()).not.toMatch(/Bluechip/i);
   });
 
-  it("states the grade's one reason: the binding cap, else the weakest pillar", () => {
-    const cap = { binding: true, limit: 84, reason: "Less than two years of known implementation history." };
-    expect(buildSafetyVerdictLine({ score: 84, bindingCap: cap, weakestPillar: { pillar: "backing", score: 81.7 } }))
+  it("states the grade's one reason: binding cap, then peg multiplier, else weakest pillar", () => {
+    const cap = { kind: "track-record", source: "track-record", binding: true, limit: 84, reason: "Less than two years of known implementation history." };
+    expect(buildSafetyVerdictLine(makeV9Card({ score: 84, bindingCap: cap as never })))
       .toEqual({ lead: "Capped at 84", detail: "Less than two years of known implementation history" });
-    expect(buildSafetyVerdictLine({ score: 87, bindingCap: null, weakestPillar: { pillar: "control", score: 80.2 } }))
-      .toEqual({ lead: "Weakest pillar", detail: "Economic Control 80/100" });
-    expect(buildSafetyVerdictLine({ score: null, bindingCap: null, weakestPillar: null })).toBeNull();
+    expect(buildSafetyVerdictLine(makeV9Card({ score: 26, qualityScore: 52, pegMultiplier: 0.51, pegAdjustedScore: 26 })))
+      .toEqual({ lead: "Peg performance", detail: "x0.510 on pillar quality 52/100" });
+    expect(buildSafetyVerdictLine(makeV9Card({ score: 85, qualityScore: 85, pegMultiplier: 1, pegAdjustedScore: 84.7 })))
+      .toEqual({ lead: "Weakest pillar", detail: "Backing 83/100" });
+    expect(buildSafetyVerdictLine(null)).toBeNull();
   });
 
-  it("leads with holder alerts: warnings and notices and a live depeg, never a danger notice twice", () => {
-    const markup = renderToStaticMarkup(
-      <HolderAlerts
-        symbol="USDC"
-        activeDepeg
-        notices={[
-          { type: "warning", title: "USDC on Noble is being discontinued", message: "Move USDC off Noble before 2027-01-12." },
-          { type: "info", title: "Single-name equity collateral", message: "A position backs part of the supply." },
-          { type: "danger", title: "Exploit", message: "Shown by the danger banner." },
-        ]}
-      />,
-    );
-    expect(markup).toContain("USDC is trading off its peg");
-    expect(markup).toContain("USDC on Noble is being discontinued");
-    expect(markup).toContain("Single-name equity collateral");
-    expect(markup).not.toContain("Exploit");
-    // Notice text runs the full width of its banner.
-    expect(markup).not.toContain("max-w-");
-    expect(renderToStaticMarkup(<HolderAlerts symbol="USDC" notices={[]} />)).toBe("");
+  it("renders every notice in one grammar", () => {
+    const notices = [
+      { type: "danger", title: "L1 halted", message: "Read https://example.com/a first.", kind: "paused", asOf: "2026-10-30" },
+      { type: "warning", title: "Migration", message: "M.", kind: "deadline", deadline: "2026-11-26" },
+      { type: "info", title: "Caveat", message: "M." },
+      { type: "warning", title: "Exploit repaid", message: "M.", kind: "history" },
+      { type: "info", title: "Wound down", message: "M.", kind: "deadline", deadline: "2026-11-01" },
+      { type: "danger", title: "Market closed", message: "M.", kind: "deadline", deadline: "2026-07-15" },
+      { type: "danger", title: "Peg broken", message: "M.", kind: "depeg" },
+    ] as const;
+    const markup = renderToStaticMarkup(<NoticeStack notices={notices} />);
+    expect(markup).toContain("Paused now · Action may be needed");
+    // Without the reader's clock a deadline names its date and asks nothing.
+    expect(markup).not.toContain("Deadline · Action may be needed");
+    expect(markup).toMatch(/data-notice-deadline="2026-11-26"[^>]*>Nov 26, 2026</);
+    expect(markup).toContain("Updated Oct 30, 2026");
+    expect(markup).toMatch(/href="https:\/\/example.com\/a"[^>]*>More details/);
+    // A caveat has no kicker; history is a calm fold.
+    expect(markup.split("Caveat")[1]!.split("<details")[0]).not.toMatch(/Action may be needed|Notice</);
+    expect(markup).toMatch(/<details[^>]*>.*Past event: Exploit repaid/s);
+    expect(markup).not.toMatch(/border-l-|max-w-/);
+    // With the clock only a deadline ahead asks to act, and a spent one folds out of the lead.
+    const today = Date.parse("2026-11-17T12:00:00Z");
+    clock.nowMs = today;
+    const clocked = renderToStaticMarkup(<NoticeStack notices={notices} />);
+    clock.nowMs = null;
+    expect(clocked.match(/Action may be needed/g)).toHaveLength(2);
+    expect(clocked).toMatch(/<details[^>]*>.*Deadline passed Jul 15, 2026: Market closed/s);
+    const lead = (nowSec?: number) => placeCoinNotices(notices, { liveDepeg: true, nowSec }).critical.map((notice) => notice.title);
+    expect([lead(), lead(today / 1000)]).toEqual([["L1 halted", "Market closed", "Peg broken"], ["L1 halted", "Peg broken"]]);
+    expect(renderToStaticMarkup(<NoticeStack archive notices={[notices[0]]} />)).not.toMatch(/Action may be needed|state-danger/);
+    expect(renderToStaticMarkup(<NoticeStack notices={[]} />)).toBe("");
+  });
+
+  it("mutes Peg and DEWS readings that cannot read calm", () => {
+    const hero = (overrides: HeroBuilderOverrides) => buildStablecoinDetailHeroViewModel(makeHeroProps(overrides));
+    const tile = (model: ReturnType<typeof hero>, key: string) => model.tertiaryMetrics.find((metric) => metric.key === key)!.display;
+    const rail = (model: ReturnType<typeof hero>, key: string) => model.signalRailItems.find((item) => item.key === key);
+    const superseded = hero({ coinStates: [{ kind: "depeg", deviationBps: -4500, ddrTier: null, ddrMethodologyVersion: null }] });
+    expect(tile(superseded, "dews")).toMatchObject({ value: "Watch", sub: "Superseded by the live depeg", color: "text-muted-foreground" });
+    expect(rail(superseded, "dews")?.href).toBe("#depeg-resolver");
+    // A weak score keeps its tone; a withheld one reads NR.
+    expect(rail(hero({ priceUnusable: true }), "peg")).toMatchObject({ primary: "95", secondary: "No usable price", colorClass: "text-muted-foreground" });
+    expect(rail(hero({ priceUnusable: true, pegScoreResult: { ...pegScoreResult, pegScore: 60 } }), "peg")).toMatchObject({ secondary: "No usable price", colorClass: pegScoreColor(60) });
+    expect(rail(hero({ priceUnusable: true, pegScoreResult: { ...pegScoreResult, pegScore: null, currentPriceUnavailable: true } }), "peg"))
+      .toMatchObject({ primary: "NR", secondary: "No usable price" });
+    // An inherited quote counts only against a closed exit; DEWS from under half its signals is no all-clear.
+    const halted = { kind: "critical", notice: { type: "danger", title: "Initia L1 halted" } } as const;
+    expect(tile(hero({ coinStates: [halted], priceInheritedFrom: "ausd-agora" }), "peg-score").sub).toBe("Price inherited from AUSD");
+    expect(tile(hero({ priceInheritedFrom: "ausd-agora" }), "peg-score").sub).toBe("99.4% at peg");
+    const dews = (signals: StressSignalEntry["signals"]) => tile(hero({ stressSignal: { ...stressSignal, signals } }), "dews");
+    const [on, off] = [{ value: 31, available: true }, { value: 0, available: false }];
+    expect(dews({ supply: on, flows: off })).toEqual(dews({ supply: on }));
+    expect(dews({ supply: on, flows: off, yield: off })).toMatchObject({ sub: "1 of 3 signals", color: "text-muted-foreground" });
+  });
+
+  it("dates a frozen archive's figures instead of printing live-looking deltas", () => {
+    const html = renderHero({ coin: { status: "frozen", frozenAt: "2026-04-27" } });
+    expect(html.match(/Last observed · 2026-04-27/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(html).not.toMatch(/24H|24h|7D|7d</);
   });
 
   it("keeps the case-study callout on one row at every width", () => {

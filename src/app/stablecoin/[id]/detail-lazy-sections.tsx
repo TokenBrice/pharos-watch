@@ -1,8 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ComponentProps } from "react";
+import { lazy, Suspense, type ComponentProps } from "react";
+import { ActiveDepegAlert } from "@/components/coin-notice";
 import { LazySection } from "@/components/lazy-section";
+import type { ActiveDepegOutlookProps } from "@/components/stablecoin-detail/depeg-resolver-card";
 import { HistoryTabs as HistoryTabsShell } from "@/components/stablecoin-detail/history-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -82,11 +84,19 @@ export const DistributionSection = dynamic(
   () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },
 );
-// The first-fold DDR outlook during a live depeg; its loading state holds the panel's footprint.
-export const ActiveDepegOutlook = dynamic(
-  () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.ActiveDepegOutlook),
-  { loading: () => <div aria-hidden="true" className="h-44 animate-pulse rounded-xl border border-border/60 bg-muted/30 sm:h-36" /> },
+// The first-fold DDR outlook during a live depeg. While its chunk loads, the
+// plain depeg alert (symbol and live deviation, known synchronously) holds the
+// panel's footprint: `dynamic`'s loading slot cannot read props, Suspense can.
+const LazyActiveDepegOutlook = lazy(() =>
+  import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => ({ default: mod.ActiveDepegOutlook })),
 );
+export function ActiveDepegOutlook(props: ActiveDepegOutlookProps) {
+  return (
+    <Suspense fallback={<ActiveDepegAlert symbol={props.symbol} deviationBps={props.deviationBps} forecast={{ read: "pending" }} />}>
+      <LazyActiveDepegOutlook {...props} />
+    </Suspense>
+  );
+}
 export const StablecoinDepegResolverCard = dynamic(
   () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.StablecoinDepegResolverCard),
   { loading: () => <Skeleton className="h-[420px] w-full rounded-xl" /> },

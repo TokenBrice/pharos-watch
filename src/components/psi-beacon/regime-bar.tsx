@@ -115,7 +115,8 @@ function useRegimeModel() {
 type RegimeModel = NonNullable<ReturnType<typeof useRegimeModel>>;
 
 function regimeLabel(model: RegimeModel): string {
-  const reading = `${sentenceCaseBand(model.band)}, PSI ${Math.round(model.score)}, ${model.displayBasis}`;
+  // One PSI precision everywhere: the same one-decimal reading the pages print.
+  const reading = `${sentenceCaseBand(model.band)}, PSI ${model.score.toFixed(1)}, ${model.displayBasis}`;
   return model.isCurrent
     ? `Market regime: ${reading}`
     // Global chrome carries no data-health state words (docs/homepage.md#data-health): a neutral date only.
@@ -195,7 +196,7 @@ export function RegimeBar() {
               {isCurrent && daysInBand ? <span>for {daysInBand} {daysInBand === 1 ? "day" : "days"}</span> : null}
             </span>
             {separator}
-            <span>PSI <span className="font-mono tabular-nums">{Math.round(score)}</span> ({displayBasis})</span>
+            <span>PSI <span className="font-mono tabular-nums">{score.toFixed(1)}</span> ({displayBasis})</span>
             {separator}
             <span>
               Severity <span className="font-mono tabular-nums">{formatComponent(components?.severity)}</span>
@@ -275,7 +276,7 @@ export function RegimeBarToggle({ className }: { className?: string }) {
     >
       <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: model.color }} aria-hidden="true" />
       <span aria-hidden="true">
-        PSI <span className="font-mono tabular-nums text-foreground">{Math.round(model.score)}</span>
+        PSI <span className="font-mono tabular-nums text-foreground">{model.score.toFixed(1)}</span>
       </span>
     </button>
   );

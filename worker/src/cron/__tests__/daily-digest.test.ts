@@ -50,7 +50,7 @@ import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-scor
 import { buildDailyDigestInput, buildDigestSafetyMapCapture } from "../daily-digest/input";
 import { insertDigestRecord } from "../digest/platform";
 import { DAILY_EXEMPLAR, SYSTEM_PROMPT } from "../daily-digest/prompt/policy";
-import { classifyRegime } from "../daily-digest/prompt/regime";
+import { classifyRegime, DIGEST_WRITING_REGISTER } from "../daily-digest/prompt/regime";
 import { ALLOWED_TONES, hasBlockingDigestQualityIssues, parseDigestModelResponse, validateDigestModelOutput, type DigestValidationProfile, type ParsedDigestResponse } from "../daily-digest/response";
 import { collectActiveDepegs, collectLiquidityShifts, collectMintBurnFlows, collectResolvedDepegs, collectSupplyVelocity } from "../daily-digest/collectors-market";
 import { collectDewsStress, collectGradeTransitions, collectSafetyScores, collectYieldAnomalies } from "../daily-digest/collectors-risk";
@@ -107,6 +107,16 @@ describe("response and editorial contracts", () => {
   ] as const)("hard-fails %s", (_label, parsed, code) => {
     const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [], leadRequirements: [{ candidateIds: ["depeg:pmusd-active"], severity: "hard", mentionTokens: ["PMUSD"], reason: "PMUSD critical depeg must lead" }] });
     expect(issues).toContainEqual(expect.objectContaining({ code, severity: "hard" }));
+  });
+
+  it("hard-fails internal register words, soft-flags regime-band phrasing, keeps public bands", () => {
+    const codes = (extendedCopy: string, text = "T.") => issueCodes(fixture({ extended: extendedCopy, text }), { kind: "daily" });
+    expect(codes("PSI reads 93.1 in BEDROCK with the regime at TENSION.\n\nB.\n\nC.")).toContain("internal-register-word");
+    expect(codes(DEFAULT_EXTENDED, "Market regime: WATCHFUL.")).toContain("internal-register-word");
+    expect(codes("PSI fell to CRISIS while USDT sat at DEWS CALM.\n\nTension built in the pools.\n\nC.")).not.toContain("internal-register-word");
+    const regimeAtCrisis = validateDigestModelOutput(fixture({ extended: "The regime is CRISIS.\n\nB.\n\nC." }), { kind: "daily" });
+    expect(regimeAtCrisis).toContainEqual(expect.objectContaining({ code: "regime-band-phrase", severity: "soft" }));
+    expect(regimeAtCrisis.map((issue) => issue.code)).not.toContain("internal-register-word");
   });
 
   const extended = (quote: string): ParsedDigestResponse => parseDigestModelResponse(JSON.stringify({ title: "Calm Market", text: "USDT held its peg.", extended: `${quote}\n\n${"USDT supply stayed near the prior print while the next observable trigger remained unchanged. ".repeat(6).trim()}\n\n${"The market snapshot kept its measured shape as flows and prices moved within the stated range. ".repeat(5).trim()}`, meta: { lead: "depeg", tone: "dry", coins: ["USDT"] } }));
@@ -336,7 +346,9 @@ describe("intelligence, prompt, and regime contracts", () => {
     const psi = buildRiskTape(input).find((item) => item.id === "risk-tape:psi");
     expect(psi?.value).toContain(band);
     expect(psi?.tone).toBe(band === "BEDROCK" ? "positive" : band === "STEADY" ? "neutral" : band === "TREMOR" ? "warning" : "critical");
-    expect(buildUserPrompt(input)).toContain(`Market regime: ${classifyRegime(input)}`);
+    const prompt = buildUserPrompt(input);
+    expect(prompt).toContain(`Writing register: ${DIGEST_WRITING_REGISTER[classifyRegime(input)]}`);
+    expect(prompt).not.toMatch(/\b(?:TENSION|WATCHFUL)\b|regime: /);
   });
   it.each([
     [110e9, "10.00% above", "10% above"],
@@ -361,6 +373,7 @@ describe("intelligence, prompt, and regime contracts", () => {
     expect(SYSTEM_PROMPT.startsWith(buildEditorialPrompt("daily"))).toBe(true);
     expect(SYSTEM_PROMPT).toContain(`Allowed tones: ${ALLOWED_TONES.join(", ")}.`);
     expect(SYSTEM_PROMPT).not.toContain("FORBIDDEN TICS");
+    expect(SYSTEM_PROMPT).not.toMatch(/\b(?:TENSION|WATCHFUL)\b/);
     expect(scanEditorialText(DAILY_EXEMPLAR, { register: "daily" }).filter(({ severity }) => severity === "hard")).toEqual([]);
     const pillar = { score: 91, evidenceLevel: "strong" as const, freshness: "current" as const, reasons: [] };
     const safetyPromptData: DigestInputData = { ...BASE_DIGEST_INPUT, safetyScores: { model: "v9", mentionedCoins: [{ symbol: "USDT", grade: "A+", score: 88, pillars: { backing: pillar, exit: { ...pillar, score: 86 }, control: { ...pillar, score: 84 } }, reasonCodes: ["bounded-mechanism-review"], caps: [], bindingCap: null }], gradeDistribution: { "A+": 1 }, provenance: { ...BASE_SAFETY_CONTEXT.identity, publishedAt: BASE_SAFETY_CONTEXT.publishedAt } } };
@@ -1601,7 +1614,7 @@ describe("daily digest generation", () => {
       expect(input.mintBurnFlows).toBeUndefined();
       expect(input.degradedSources).toContain("mint-burn-gauge-unavailable");
       expect(input.dataQuality.degradedSources).toContain("mint-burn-gauge-unavailable");
-      expect(firstRequestBody().messages[0].content).toContain("Market regime: WATCHFUL");
+      expect(firstRequestBody().messages[0].content).toContain("Writing register: observant");
       expect(firstRequestBody().messages[0].content).toContain("mint-burn-gauge-unavailable");
       expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
       expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);

@@ -8,6 +8,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
 import { useDexLiquidityTable, usePegSummary, useReportCardsV9Table } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
 import {
   buildHomepageCriticalViewModel,
@@ -72,6 +73,8 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const { data: dexLiquidity } = dexLiquidityQuery;
   const { data: reportCardsData } = reportCardsQuery;
   const pinned = usePinnedStablecoins();
+  // Passive: chips read the peg/resolver/stress entries other homepage sections already load; this table fetches none.
+  const coinStates = useCoinStates({ enabled: false }).byId;
   const eligibleIds =
     filters.activeUniverse === "core"
       ? CLIENT_CORE_AGGREGATE_ACTIVE_IDS
@@ -153,6 +156,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           eligibleIds={eligibleIds}
           logos={logos}
           pegScores={pegScores}
+          coinStates={coinStates}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}
           reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}

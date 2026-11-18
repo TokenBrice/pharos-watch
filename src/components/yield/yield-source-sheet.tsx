@@ -177,9 +177,9 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                   className={cn(
                     "rounded-full border px-1.5 py-0.5 font-medium",
                     scoreQualification === "rated" && SEVERITY_TONE_CLASS.ok.pill,
-                    scoreQualification === "estimated" && SEVERITY_TONE_CLASS.watch.pill,
+                    scoreQualification === "estimated" && SEVERITY_TONE_CLASS.caution.pill,
                     scoreQualification === "partial" && SEVERITY_TONE_CLASS.sky.pill,
-                    scoreQualification === "NR" && SEVERITY_TONE_CLASS.alert.pill,
+                    scoreQualification === "NR" && SEVERITY_TONE_CLASS.danger.pill,
                   )}
                   title="Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"
                 >

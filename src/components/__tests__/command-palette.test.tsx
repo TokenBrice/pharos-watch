@@ -17,7 +17,9 @@ const {
   addToWatchlistMock,
   removeFromWatchlistMock,
   clearWatchlistMock,
+  useCoinStatesMock,
 } = vi.hoisted(() => ({
+  useCoinStatesMock: vi.fn(),
   pushMock: vi.fn(),
   addToHistoryMock: vi.fn(),
   clearHistoryMock: vi.fn(),
@@ -53,6 +55,8 @@ vi.mock("@/hooks/use-theme-toggle", () => ({
     toggleTheme: toggleThemeMock,
   }),
 }));
+
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
 
 vi.mock("@/hooks/use-watchlist", () => ({
   useWatchlist: () => ({
@@ -99,6 +103,7 @@ describe("CommandPalette", () => {
       callback(0);
       return 0;
     });
+    useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: true });
     queryClient = new QueryClient();
     queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
       data: stablecoinsPayload(),
@@ -129,7 +134,20 @@ describe("CommandPalette", () => {
     });
 
     expect(navRow.textContent).toContain("NAV");
-    expect(navRow.textContent).not.toContain("Off peg");
+  });
+
+  it("names a coin's exceptional state, reading states only while open", () => {
+    useCoinStatesMock.mockReturnValue({
+      byId: new Map([["usdc-circle", [{ kind: "depeg", deviationBps: -150, ddrTier: null, ddrMethodologyVersion: null }]]]),
+      liveReady: true,
+    });
+    renderPalette();
+    expect(useCoinStatesMock).toHaveBeenCalledWith({ enabled: true });
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
+    const depegRow = screen.getByRole("option", { name: /^USD CoinDepeg/i });
+    expect(depegRow.querySelector("[data-coin-state=depeg]")?.textContent).toContain("Depeg");
+    // Calm coins add nothing: one state, one chip.
+    expect(document.querySelectorAll("[data-coin-state]")).toHaveLength(1);
   });
 
   it("shows live market caps when the stablecoin observer resolves while open", async () => {
@@ -166,19 +184,18 @@ describe("CommandPalette", () => {
     });
     renderPalette();
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
-    expect(screen.getByRole("option", { name: /USD CoinUSDC.*At peg/i })).toBeDefined();
+    expect(screen.getByRole("option", { name: /USD CoinUSDC/i }).textContent).not.toContain("As of");
     const reads = fetch.mock.calls.length;
     act(() => vi.advanceTimersByTime(1001));
     const retained = screen.getByRole("option", { name: /USD CoinUSDC/i });
     expect(retained.textContent).toContain("$76.00B");
     expect(retained.textContent).toContain("As of");
-    expect(retained.textContent).not.toContain("At peg");
     expect(fetch.mock.calls.length).toBe(reads);
     fireEvent.click(retained);
     expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
   });
 
-  it("does not label a failed cached read at peg, but retains dated caps and static search", () => {
+  it("retains dated caps and static search over a failed cached read", () => {
     queryClient.getQueryCache().find({ queryKey: STABLECOINS_QUERY_KEY })!.setState({
       error: new Error("offline"), status: "error",
     });
@@ -186,7 +203,6 @@ describe("CommandPalette", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
     const row = screen.getByRole("option", { name: /USD CoinUSDC/i });
     expect(row.textContent).toContain("As of");
-    expect(row.textContent).not.toContain("At peg");
     fireEvent.click(row);
     expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
   });
@@ -197,7 +213,6 @@ describe("CommandPalette", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), { target: { value: "USDC" } });
     const row = screen.getByRole("option", { name: /USD CoinUSDC/i });
     expect(row.textContent).not.toContain("$76.00B");
-    expect(row.textContent).not.toContain("At peg");
     fireEvent.click(row);
     expect(pushMock).toHaveBeenCalledWith("/stablecoin/usdc-circle/");
   });

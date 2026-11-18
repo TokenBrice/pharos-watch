@@ -28,6 +28,8 @@ import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { CUSTODY_MODEL_VALUES } from "@shared/types/custody";
+import type { CoinState, CoinStateKind } from "@shared/lib/coin-state";
+import type { ThreatBand } from "@shared/lib/classification";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   type CustodyModel,
@@ -63,6 +65,10 @@ export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
 /** Lifecycle rows published in the screener; policy-withheld records stay detail-only. */
 export const SCREENER_LIFECYCLE_VALUES = ["active", "pre-launch", "frozen"] as const satisfies readonly StablecoinStatus[];
 
+/** Exceptional states (`resolveCoinStates`) the screener filters on; lifecycle keeps its own filter. */
+export const SCREENER_STATE_VALUES = ["critical", "depeg", "paused", "dews", "deadline"] as const satisfies readonly CoinStateKind[];
+export type ScreenerStateValue = (typeof SCREENER_STATE_VALUES)[number];
+
 export interface ScreenerFilters {
   coins: readonly string[];
   dewsMin: number;
@@ -82,6 +88,7 @@ export interface ScreenerFilters {
   mechanisms: readonly MechanismArchetype[];
   pegs: readonly PegCurrency[];
   lifecycle: readonly StablecoinStatus[];
+  states: readonly ScreenerStateValue[];
   blacklistable: readonly BlacklistableValue[];
   mintAuthority: readonly MintAuthorityStatusKind[];
   mintAuthorityScoreMin: number;
@@ -108,6 +115,7 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   mechanisms: [],
   pegs: [],
   lifecycle: [],
+  states: [],
   blacklistable: [],
   mintAuthority: [],
   mintAuthorityScoreMin: 0,
@@ -218,6 +226,11 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.lifecycle,
     allowedValues: SCREENER_LIFECYCLE_VALUES,
   },
+  states: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.states,
+    allowedValues: SCREENER_STATE_VALUES,
+  },
   blacklistable: {
     kind: "enumList",
     defaultValue: SCREENER_FILTER_DEFAULTS.blacklistable,
@@ -302,6 +315,10 @@ export interface ScreenerRow {
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
   supplySeries?: ReadonlyArray<number | null>;
+  /** Exceptional states, highest first (`useCoinStates`); absent or empty means none known, not calm. */
+  states?: readonly CoinState[];
+  /** Published DEWS band beside `dewsScore`; null when unread. */
+  dewsBand?: ThreatBand | null;
 }
 
 export type ScreenerSortKey =
@@ -342,7 +359,8 @@ export interface ScreenerFilterSourceState {
   error?: unknown;
 }
 
-export type ScreenerFilterSources = Record<"dews" | "report" | "peg" | "liquidity", ScreenerFilterSourceState>;
+/** `clock` is the visitor's day clock (`useCoinStates().clockReady`), which deadline states need. */
+export type ScreenerFilterSources = Record<"dews" | "report" | "peg" | "liquidity" | "clock", ScreenerFilterSourceState>;
 
 function isScoreRangeActive(minValue: number, maxValue: number): boolean {
   return minValue > 0 || maxValue < 100;
@@ -386,7 +404,11 @@ export function resolveScreenerFilterDataState(
     filters.mintAuthorityScores.length > 0;
 
   const required = [
-    ...(dewsActive ? [sources.dews] : []),
+    // A depeg or DEWS state comes from a live feed and a deadline state from the
+    // day clock; the other curated notice states need neither.
+    ...(dewsActive || filters.states.includes("dews") ? [sources.dews] : []),
+    ...(filters.states.includes("depeg") ? [sources.peg] : []),
+    ...(filters.states.includes("deadline") ? [sources.clock] : []),
     ...(reportActive ? [sources.report] : []),
     ...(filters.pegScoreMin > 0 ? [sources.peg] : []),
     ...(filters.liquidityScoreMin > 0 ? [sources.liquidity] : []),
@@ -416,6 +438,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const mintAuthoritySet = filters.mintAuthority.length > 0 ? new Set(filters.mintAuthority) : null;
   const mintAuthorityScoreSet = filters.mintAuthorityScores.length > 0 ? new Set(filters.mintAuthorityScores) : null;
   const custodyModelSet = filters.custodyModels.length > 0 ? new Set(filters.custodyModels) : null;
+  const stateSet = filters.states.length > 0 ? new Set<CoinStateKind>(filters.states) : null;
 
   return rows.filter((row) => {
     // Picker handoffs use `coins` as an exact inspection mode. The remaining
@@ -441,6 +464,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (typeSet && !typeSet.has(row.type)) return false;
     if (pegSet && !pegSet.has(row.peg)) return false;
     if (lifecycleSet && !lifecycleSet.has(row.lifecycle)) return false;
+    if (stateSet && !row.states?.some((state) => stateSet.has(state.kind))) return false;
     if (blacklistableSet) {
       if (!row.blacklistable || !blacklistableSet.has(row.blacklistable)) return false;
     }
@@ -551,6 +575,7 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   count += filters.mechanisms.length;
   count += filters.pegs.length;
   count += filters.lifecycle.length;
+  count += filters.states.length;
   count += filters.blacklistable.length;
   count += filters.mintAuthority.length;
   count += filters.mintAuthorityScores.length;

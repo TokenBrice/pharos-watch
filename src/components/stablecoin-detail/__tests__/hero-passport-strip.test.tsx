@@ -132,11 +132,13 @@ describe("HeroPassportStrip", () => {
   });
 
   it.each([
-    ["permissionless-onchain", "Permissionless", "Permissionless onchain"],
-    ["whitelisted-onchain", "Whitelisted", "Whitelisted onchain"],
-    ["issuer-api", "Institutional", "Issuer / institutional"],
-    ["manual", "Manual", "Manual / discretionary"],
-  ] as const)("keeps compact %s access visible and its full name accessible", (accessModel, shortLabel, fullLabel) => {
+    ["permissionless-onchain", "Permissionless", "Permissionless onchain", "open"],
+    ["whitelisted-onchain", "Whitelisted", "Whitelisted onchain", "open"],
+    ["issuer-api", "Institutional", "Issuer / institutional", "open"],
+    ["manual", "Manual", "Manual / discretionary", "open"],
+    // A suspended route is the holder's answer, whatever its access model.
+    ["permissionless-onchain", "Suspended", "Permissionless onchain route suspended", "suspended"],
+  ] as const)("keeps compact %s access visible and its full name accessible", (accessModel, shortLabel, fullLabel, routeStatus) => {
     const redemptionBackstop: RedemptionBackstopEntry = {
       stablecoinId: "usdc-circle", score: 65, dexLiquidityScore: null,
       accessScore: 40, settlementScore: 65, executionCertaintyScore: 60,
@@ -144,7 +146,7 @@ describe("HeroPassportStrip", () => {
       routeFamily: "offchain-issuer", accessModel, settlementModel: "same-day",
       executionModel: "rules-based-nav", outputAssetType: "stable-single",
       provider: "supply-full-model", sourceMode: "estimated", resolutionState: "resolved",
-      routeStatus: "open", routeStatusSource: "static-config", holderEligibility: "verified-customer",
+      routeStatus, routeStatusSource: "static-config", holderEligibility: "verified-customer",
       capacityConfidence: "heuristic", capacitySemantics: "eventual-only",
       feeConfidence: "undisclosed-reviewed", feeModelKind: "undisclosed-reviewed", modelConfidence: "low",
       immediateCapacityUsd: null, immediateCapacityRatio: null, feeBps: null, queueEnabled: false,

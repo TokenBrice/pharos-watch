@@ -8,13 +8,14 @@ import { TableSourceLink } from "@/components/table/client";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
-import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { GRADE_RADAR_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { gradeRange } from "@shared/lib/report-card-core";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { SelectorComponent, SelectorProfile, SelectorRecommendation } from "@shared/lib/selector";
 import {
   selectorComponentLowestSubDimensionLabel,
   selectorComponentScoreLabel,
+  selectorDewsBand,
   selectorProfileLabel,
 } from "@shared/lib/selector/selector-labels";
 
@@ -136,10 +137,12 @@ function buildEvidenceChips(rec: SelectorRecommendation): TextChip[] {
           ariaLabel: `Oldest input ${spokenAge(worst)} old when results were computed`,
         });
       } else if (dews?.rawValue != null) {
+        // The band word, never a bare number.
+        const band = THREAT_BAND_LABELS[selectorDewsBand(dews.rawValue)];
         chips.push({
           label: "DEWS",
-          value: String(Math.round(dews.rawValue)),
-          ariaLabel: `DEWS stress score ${Math.round(dews.rawValue)} of 100. Lower is better.`,
+          value: `${band} ${Math.round(dews.rawValue)}`,
+          ariaLabel: `DEWS stress ${band}, score ${Math.round(dews.rawValue)} of 100. Lower is better.`,
         });
       }
       break;

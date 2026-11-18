@@ -51,6 +51,8 @@ softening rules for discovery surfaces do not apply here.
   record; sourced context such as an announcement date stays separate and never
   replaces them. Unauthored pages retain the structural event record. Editorial presence does
   not change the 500 bps route-admission threshold.
+  An event the build snapshot records as open (`endedAt: null`) leads with the client `DepegEventNowStrip` (`src/app/depeg/[event]/now-strip.tsx`): it reads `useDepegResolver()` for the same incident (`eventId` or `live.currentEventId`), states live deviation, DDR verdict and age so far for an active row, names the state of a closed, missing (“No live resolver row for this incident”) or unreadable row instead, and links to the dossier's `#depeg-resolver`. With the depeg-resolver flag off it renders nothing, so that link cannot dangle.
+  The static title, record and metadata are unchanged; resolved events carry no strip.
 
 ---
 
@@ -82,15 +84,14 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
 
 - **Left command rail**, top to bottom, hairline-separated: the headline count =
   `PegSummaryStats.activeDepegCount` in neutral ink (`HERO_KPI_VALUE_CLASS`), with the worst live
-  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread); a four-cell figure grid (pending
-  confirmations, DEWS ALERT-or-worse, holding peg, median deviation); **Recovery outlook · DDR** — the
+  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread);
+  **Open incidents** — the census the headline counts (peg-summary `activeDepeg` rows) ranked by `rankOpenIncidents()` on holder exposure (circulating supply × |live deviation|, unavailable exposure last), naming the top five as `Top 5 of N` with live deviation in basis points (as the worst-move chip), compact DDR verdict and market cap, each linking to the dossier's `#depeg-resolver`;
+  a four-cell figure grid (awaiting confirmation, meaning the `pending[]` threshold crossings; DEWS ALERT-or-worse; holding peg; median deviation); **Recovery outlook · DDR** — the
   whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
   recovery-call accuracy and its call fraction, with only the policy-scope label and a
-  `see the grading` link beneath the figure (see [Forecast Grading](#forecast-grading)); then
-  the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail layer. Supporting
-  figures stay neutral.
-- **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`) fills the full column height
-  beside the rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
+  `see the grading` link beneath the figure (see [Forecast Grading](#forecast-grading)). Supporting
+  figures stay neutral. `DEPEG_PENDING_STATE_LABELS` (`shared/lib/classification/depeg.ts`) keeps the two pending states apart: crossings read “Awaiting confirmation” (board pill `awaiting`) and DDR `pending_lock` rows “Forecast not locked yet”, never a bare “pending”.
+- **Right field:** `DEWSRadarPanel` (`src/components/dews/dews-summary.tsx`), then the DEWS alert queue (`DEWSAlertFeed embedded`) under it as the radar's detail layer, so the precursor column balances the depeg rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
   band, and a **double-ring halo marks an elevated coin that also has an open confirmed incident**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
@@ -105,7 +106,7 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   confirmed. At zero it reads `0 coins with open confirmed incidents` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the
   same claim as zero stress, nor that every peg holds.
-- **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. After the first-result deadline, unanswered sources say “Loading…”; reservation participation is latched once from the sources still pending at the hero’s first show. Already-settled sources use their compact natural layout; already-empty or unscored resolver groups stay omitted. Only first-show pending sources retain responsive slots through later data, empty and failed reads, including their headline/stat cells, queue and radar dependencies. A DEWS count waiting on a readable snapshot’s missing catalog says “Loading peg catalog…”. Settled unreadable sources retain their unavailable presentation. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
+- **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. After the first-result deadline, unanswered sources say “Loading…”; reservation participation is latched once from the sources still pending at the hero’s first show. Already-settled sources use their compact natural layout; already-empty or unscored resolver groups stay omitted. Only first-show pending sources retain responsive slots through later data, empty and failed reads, including their headline/stat cells, open-incident list, queue and radar dependencies. A DEWS count waiting on a readable snapshot’s missing catalog says “Loading peg catalog…”. Settled unreadable sources retain their unavailable presentation. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
 
 ### Metric ownership
 
@@ -151,10 +152,9 @@ Two eligibility caveats:
 `DepegResolverModule` renders the `DEFAULT_VISIBLE_ROWS` most urgent forecasts and keeps the rest
 behind an explicit toggle that mounts them only when opened.
 
-- **Urgency order:** incidents at a new worst — **live** deviation beyond the **live** event peak
-  (`row.live.peakDeviationBps`) — first, then the widest live deviation, then
-  `stablecoinId`/`eventId` so equally urgent rows cannot reshuffle between refreshes. Both
-  comparisons use live fields, never `getCurrentDeviationBps()`/`getPeakDeviationBps()` — those
+- **Urgency order:** verdict severity first — terminal evidence / no recovery expected, then stress signals / at risk, then an active incident without a current verdict (forecast not locked yet, no-call, insufficient signal), then no break signals / recovery likely; an incident no longer active ranks last.
+  Then incidents at a new worst — **live** deviation beyond the **live** event peak (`row.live.peakDeviationBps`) — then holder exposure (circulating supply × |live deviation|, unavailable exposure after every observation), then the widest live deviation, then `stablecoinId`/`eventId` so equally urgent rows cannot reshuffle between refreshes.
+  Each card shows the coin's market cap under its name (“Market cap unavailable” without an observed supply). The new-worst comparisons use live fields, never `getCurrentDeviationBps()`/`getPeakDeviationBps()` — those
   return lock-time evidence for frozen predictions, and a frozen lock peak can be far shallower
   than the live event. A null or zero live peak cannot establish a new worst. The test carries an
   absolute noise floor (`max(25 bps, 2%)`) so jitter cannot satisfy it. Hero and header caption it
@@ -198,7 +198,8 @@ unique open event from the active-events detail read: a gap-free off-peg observa
 at-par observation within that limit reads "Inside recovery band, awaiting confirmation";
 missing, ambiguous, blind, expired or future evidence reads "Recovery unconfirmed". Spot
 bps never classify the band, the page minute clock expires the readings, and the census
-stays `summary.activeDepegCount`, never the capped event detail.
+stays `summary.activeDepegCount`, never the capped event detail. A threshold crossing awaiting confirmation reads `awaiting`.
+Each row's meta line adds the coin's market cap (`cap unavailable` without an observed supply), a label rather than a sort key.
 
 An absent live deviation or DEWS reading yields a neutral `unknown` status, never green `clear`;
 known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,
@@ -209,7 +210,7 @@ A live deviation measured while the coin's FX or metal reference market is close
 time so prerendered and hydrated output agree) is shown as "Mkt closed" ("Reference market closed"
 on the detail hero, compare table and OG cards), counts as unavailable for sorting and status, and
 never feeds the at-peg or health buckets. A move at or beyond the 2,500 bps severe band, in
-either direction, still prints. Native-currency prices still convert at the last close. The same rule covers the directory table, screener, command palette and the home
+either direction, still prints. Native-currency prices still convert at the last close. The same rule covers the directory table, screener and the home
 active-depegs card. Resolver cards print "Reference market closed" in place of the live "Now"
 deviation and leave a held reading out of the peg ratio, the displayed live peak and urgency
 ordering; the DDR payload carries no price observation clock, so its overlay generation time
@@ -217,12 +218,14 @@ ordering; the DDR payload carries no price observation clock, so its overlay gen
 
 The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
 
-Peg Health text and gauge share one tier from `getPegScoreTier` (90/70).
+Peg Health text and gauge share one tier from `getPegScoreTier` (90/70). A null PegScore
+reads `NR` on a neutral gauge; when the row's `currentPriceUnavailable` is set, the `NR`
+names its reason ("No usable price") in its title and accessible text.
 
-Peg occupancy beside Peg Health is a **recorded-window peg occupancy estimate**.
-Its visible caption and row accessible description disclose that terminal tracking
-closure can leave unobserved time: the percentage proves neither recovery nor
-continuous observation. Board rows do not infer a closure reason from live status
+Peg occupancy beside Peg Health is a **recorded-window peg occupancy estimate**, as its
+visible caption says. The Peg health column help and the row's accessible description, not
+visible per-row copy, disclose that terminal tracking closure can leave unobserved time: the
+percentage proves neither recovery nor continuous observation. Board rows do not infer a closure reason from live status
 or an event count; this qualification also applies to legacy/unknown provenance.
 The presentation does not change PegScore or producer percentages.
 
@@ -340,12 +343,13 @@ history anchor; the API, tracker, detail history and feeds retain the full event
 | --- | --- | --- |
 | `usePegSummary()` | `/api/peg-summary` | hero figures, board rows |
 | `useStressSignals()` | `/api/stress-signals` | radar, alert queue, board DEWS column |
-| `useInfiniteDepegEvents({ includePending: true })` | `/api/depeg-events` | pending incidents, recent feed |
-| `useDepegResolver()` | `/api/depeg-resolver` | forecast worklist, and the hero's recovery posture |
+| `useInfiniteDepegEvents({ includePending: true })` | `/api/depeg-events` | crossings awaiting confirmation, recent feed |
+| `useDepegResolver()` | `/api/depeg-resolver` | forecast worklist, the hero's recovery posture and open-incident verdicts |
 | `useDepegResolverReview()` | `/api/depeg-resolver-review` | hero forecast track record; full ledger behind the grading disclosure |
 
 `DEWSRadarPanel` additionally reads `useStablecoins()` for market-cap mark sizing through the shared
-query cache. A refresh error keeps a retained radar; its load-error notice appears only with no data,
+query cache; the route's own read of that list supplies circulating supply (`getCirculatingRawOrNull()`) to the hero's exposure ranking, the worklist order and the cap labels on cards and board rows.
+A refresh error keeps a retained radar; its load-error notice appears only with no data,
 and the route's shared DEWS notice owns retained age.
 The route starts that stablecoin read independently before the hero loading return, avoiding a
 peg-summary → radar-sizing request waterfall. The hero waits for a first result (data or error)

@@ -63,6 +63,22 @@
    "pharos.watch"
   ]
  },
+ "r2BucketLocks": {
+  "pharos-social-previews": [
+   {
+    "id": "evergreen-v2-permanent",
+    "enabled": true,
+    "prefix": "evergreen/v2/",
+    "condition": { "type": "Indefinite" }
+   },
+   {
+    "id": "scorecards-v1-permanent",
+    "enabled": true,
+    "prefix": "scorecards/v1/",
+    "condition": { "type": "Indefinite" }
+   }
+  ]
+ },
  "accessApplications": [
   {
    "key": "operator-ui",

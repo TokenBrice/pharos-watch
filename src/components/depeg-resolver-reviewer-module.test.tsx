@@ -123,6 +123,7 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.getByRole("img", { name: "0 scored of 0, 0 still maturing" })).toBeTruthy();
     expect(screen.getByText("1 policy-universe incidents")).toBeTruthy();
     expect(fullSummary.headline.pendingLockCount).toBe(1);
+    expect(screen.getAllByText("forecast not locked yet").length).toBeGreaterThan(0);
   });
 
   it.each([19, 20])("keeps maturing counts in the headline accuracy scope at %i outcomes", (count) => {

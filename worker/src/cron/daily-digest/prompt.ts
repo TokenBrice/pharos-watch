@@ -6,7 +6,7 @@ import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admi
 import { digestGaugeWeightFact } from "@shared/lib/digest-mint-burn-admission";
 import { round1 } from "@shared/lib/math";
 import { activeDepegEditorialCandidateId } from "./editorial-candidates";
-import { classifyRegime } from "./prompt/regime";
+import { classifyRegime, DIGEST_WRITING_REGISTER } from "./prompt/regime";
 import {
   formatDigestUsdPrice,
   pushDataQualityLines,
@@ -42,8 +42,7 @@ export function buildUserPrompt(
     recentLeadSignalIds?: readonly (string | null | undefined)[];
   } = {},
 ): string {
-  const regime = classifyRegime(data);
-  const lines: string[] = [`Market regime: ${regime}`];
+  const lines: string[] = [`Writing register: ${DIGEST_WRITING_REGISTER[classifyRegime(data)]}`];
 
   if (data.safetyContext?.status === "unavailable") {
     lines.push(

@@ -3,6 +3,7 @@ export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
   cohort: "report-cards:v9:cohort:v1",
   scoreIndex: "report-cards:v9:score-index",
+  scorecardPillars: "report-cards:v9:scorecard-pillars:v1",
   acceptedBaseline: "report-cards:v9:accepted-baseline:v1",
   lenderCollateral: "report-cards:v9:lender-collateral:v1",
   publicationHealth: "report-cards:v9:publication-health",

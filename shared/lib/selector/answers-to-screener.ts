@@ -101,6 +101,12 @@ export function selectorAnswersToScreenerFilters(
     reason: "howey-uncertain-exclusion",
     affectedIds: [],
   });
+  // The Screener's `states` filter selects a state; it cannot exclude one.
+  divergenceWarnings.push({
+    kind: "screener-cannot-express",
+    reason: "holder-notice-gate",
+    affectedIds: [],
+  });
 
   return { filters, divergenceWarnings };
 }

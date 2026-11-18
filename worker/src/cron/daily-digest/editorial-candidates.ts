@@ -485,7 +485,7 @@ function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInp
       `breadth ${psi.components.breadth}`,
       data.historicalContext ? `${data.historicalContext.psiBandStreak} day ${psi.band} streak` : "",
     ],
-    whyItMatters: "PSI frames the market regime, but it should lead only when context or breadth changed.",
+    whyItMatters: "PSI's published band frames market state, but it should lead only when context or breadth changed.",
   });
 }
 

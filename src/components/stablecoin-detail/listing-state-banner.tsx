@@ -16,7 +16,7 @@ export function ListingStateBanner({ coin }: { coin: ListingStateCoin }) {
   return (
     <section
       aria-label={`${coin.symbol} listing status`}
-      className={`rounded-lg border ${SEVERITY_TONE_CLASS.watch.banner} px-4 py-3 text-sm`}
+      className={`rounded-lg border ${SEVERITY_TONE_CLASS.caution.banner} px-4 py-3 text-sm`}
     >
       <div className="flex items-start gap-3">
         <Icon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-state-warn" />

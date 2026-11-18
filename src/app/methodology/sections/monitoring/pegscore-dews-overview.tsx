@@ -98,6 +98,13 @@ export function PegScoreDewsOverview() {
             activate the current-depeg penalty.
           </p>
           <p>
+            Since peg methodology 6.49, a coin with no usable price for a full UTC day (no observed quote, a
+            rejected quote, or only a nominal par reference) publishes no PegScore, time at peg or recent
+            90-day view; a single missed price cycle keeps the score.
+            Detection needs an observed price, so its event-free window is unobserved rather than at peg: it
+            reads NR, never 100, while its recorded depeg events stay published.
+          </p>
+          <p>
             PegScore excludes false-positive and disputed audit verdicts, but retains events with no audit data.
             Unknown non-null verdicts are not scoreable evidence. DDR uses the stricter policy: no-data verdicts
             are also ineligible there. Legacy unaudited null verdicts remain eligible in both systems.
@@ -159,7 +166,7 @@ export function PegScoreDewsOverview() {
             {
               label: "Minimum data",
               value:
-                "PegScore requires >=7 tracking days; DEWS requires >=2 available signals (total weight >=0.30) plus fresh core source tables",
+                "PegScore requires >=7 known tracking days and a usable price within the last UTC day; DEWS requires >=2 available signals (total weight >=0.30) plus fresh core source tables",
             },
             {
               label: "Required sources",

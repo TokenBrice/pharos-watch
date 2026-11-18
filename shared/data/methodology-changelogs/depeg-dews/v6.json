@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.49",
+    "title": "PegScore is NR after a full day without a usable price",
+    "date": "2026-11-18",
+    "effectiveAt": 1794960000,
+    "summary": "The public peg summary publishes no PegScore, time at peg or 90-day peg view for a coin that has gone at least a full UTC day without a usable price observation, or never had one. Depeg detection needs an observed price, so an event-free window without one is unobserved time, not time at peg.",
+    "impact": [
+      "The rule applies to a row with `currentPriceUnavailable: true` (no price row, a price the intake pipeline rejected, or only a nominal par reference such as `protocol-par`) whose daily price history records no observed price on the current or previous UTC day. `pegScore`, `pegPct` and `recent90d` are then null, and `currentPriceUnavailable` names the reason. A shorter miss, such as a failed sync cycle, keeps the score; a failed price-history read withholds it. Depeg events, worst deviation, the active-depeg flag and tracking coverage stay published.",
+      "Before this rule such coins were scored from their tracking anchor as if every unobserved day were at peg. On 17 November 2026 XUSD, DLLR, WUSD, FUSD, BD, USDQ, USDK (KAST) and USBD published 100, DEURO 99 and IDRT 95, each last priced on 14 November or earlier; they read NR until a usable price returns. AID (84), last priced on 16 November, keeps its score until it has gone a full UTC day without one.",
+      "Weights, the seven-known-day minimum and the scores of priced coins are unchanged. Safety Score capture reads the peg analytics producer, not this projection, and applies its own current-price admission, so Safety Scores do not move."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.48",
     "title": "Historical backfill holds closed reference markets",
     "date": "2026-11-16",

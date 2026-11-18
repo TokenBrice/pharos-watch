@@ -6,6 +6,8 @@ import type { HeroCardViewModel } from "@/lib/stablecoin-detail-hero-view-model"
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
 import type { GatedQueryViewState } from "@/lib/query-view-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
+import type { CoinState } from "@shared/lib/coin-state";
+import type { DdrResolutionTier } from "@shared/types/depeg-resolver";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type {
@@ -110,6 +112,10 @@ export interface StablecoinDetailViewModelSupplementalInputs {
   blacklist: DetailBlacklistInput;
   reserves: DetailReservesInput;
   nowMs?: number;
+  /** The published DDR verdict for the coin's open incident, once the resolver book is read. */
+  ddrVerdict?: { tier: DdrResolutionTier; methodologyVersion: string | null } | null;
+  /** The reader's clock (Unix seconds) after hydration; deadline states need it. */
+  nowSec?: number | null;
 }
 
 export interface StablecoinDetailStaleQuery {
@@ -135,6 +141,8 @@ export interface StablecoinDetailStaleQuery {
   awaitingLiveRead?: boolean;
   /** The served generation is the designed daily-history fallback, not a live detail refresh. */
   dailySnapshot?: boolean;
+  /** A supplemental lane: its public warning sits under the lead slot, never above the identity. */
+  secondary?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;
@@ -209,6 +217,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   staleQueries: StablecoinDetailStaleQuery[];
   featureStates: StablecoinDetailFeatureStates;
   verdict: StablecoinVerdict;
+  /** What is wrong with the coin right now, highest precedence first (`resolveCoinStates`); empty when calm or unknown. */
+  coinStates: CoinState[];
   mintAuthority: MintAuthorityDetailViewModel;
   hero: HeroCardViewModel;
 }

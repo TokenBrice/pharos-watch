@@ -4,6 +4,7 @@ export type { StablecoinPublicationWaiver, StablecoinPriceGapReview } from "./st
 import { logWorkerEventArgs } from "./structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { numberValue } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
@@ -766,19 +767,21 @@ export function evaluateStablecoinActivePriceCoverage(
     const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
     const previousAsset = options.previousAcceptedAssetsById?.get(stablecoinId);
-    const previousCap = getCirculatingRawOrNull(previousAsset);
+    // A reviewed supply hold withholds prior packets too: no retained last-known cap.
+    const capDetail = getOnchainSupplyHoldReason(stablecoinId) ? undefined : previousDetail;
+    const previousCap = capDetail === previousDetail ? getCirculatingRawOrNull(previousAsset) : null;
     const lastKnownMarketCapUsd = marketCapUsd ?? previousCap
-      ?? previousDetail?.lastKnownMarketCapUsd ?? previousDetail?.marketCapUsd ?? null;
+      ?? capDetail?.lastKnownMarketCapUsd ?? capDetail?.marketCapUsd ?? null;
     const lastKnownMarketCapObservedAt = marketCapUsd != null
       ? dateSecondsOrNull(asset?.supplyObservedAt) ?? nowSec
       : previousCap != null
         ? dateSecondsOrNull(previousAsset?.supplyObservedAt)
-        : previousDetail?.lastKnownMarketCapUsd != null
-          ? previousDetail.lastKnownMarketCapObservedAt ?? null
+        : capDetail?.lastKnownMarketCapUsd != null
+          ? capDetail.lastKnownMarketCapObservedAt ?? null
           : options.previousCoverage?.observedAt ?? null;
     const lastKnownMarketCapSource = marketCapUsd != null || previousCap != null
-      ? "publication" : previousDetail?.lastKnownMarketCapSource
-        ?? (previousDetail?.marketCapUsd != null ? "publication" : null);
+      ? "publication" : capDetail?.lastKnownMarketCapSource
+        ?? (capDetail?.marketCapUsd != null ? "publication" : null);
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
     const lastAcceptedObservedAt = previousAccepted?.observedAt ?? previousDetail?.lastAcceptedObservedAt ?? null;

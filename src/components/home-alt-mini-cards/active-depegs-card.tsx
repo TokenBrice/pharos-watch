@@ -7,23 +7,35 @@ import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { holderExposureUsd, isResolverBookAvailable } from "@/components/depeg/depeg-resolver-book-summary";
+import { getResolution, getTierMeta, getTierVocabulary, isCurrentForecast } from "@/components/depeg/depeg-resolver-row-card-model";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
+import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
 import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatCompactUsdShort, formatElapsedSeconds } from "@shared/lib/format";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
-import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, OPEN_INCIDENT_EVIDENCE_LABELS, type OpenIncidentEvidence } from "@shared/lib/classification";
+import {
+  DEPEG_DIRECTION_CLASSES,
+  DEPEG_PENDING_STATE_LABELS,
+  DIRECTION_TONE_CLASSES,
+  OPEN_INCIDENT_EVIDENCE_LABELS,
+  type OpenIncidentEvidence,
+} from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 
 // Rows under the headline; the headline count is never this cap (R7).
-const MAX_ROWS = 3;
+const MAX_ROWS = 4;
 
 interface ActiveRow {
   id: string;
@@ -33,13 +45,31 @@ interface ActiveRow {
   held: boolean;
   ageSec: number | null;
   evidence: OpenIncidentEvidence;
+  /** Circulating USD; null when the supply read has no observation for the coin. */
+  marketCapUsd: number | null;
+  /** Holder exposure (USD off peg), the ranking key; null when either operand is unavailable. */
+  exposureUsd: number | null;
+  /** DDR call: the published tier (in the vocabulary it was locked under), or a forecast not locked yet. */
+  verdict: DdrCall | null;
 }
+
+interface DdrCall {
+  label: string;
+  title: string;
+  accent: string;
+}
+
+// Larger first; an unavailable value sorts after every observed one (R1).
+const rankValue = (value: number | null) => value ?? -1;
 
 export function ActiveDepegsCard(): React.JSX.Element {
   const activeQuery = useActiveDepegEvents();
   const pegSummaryQuery = usePegSummary();
+  const stablecoinsQuery = useStablecoins();
+  const { resolver } = useDepegResolverSurfaces();
   const { data } = activeQuery;
   const { data: pegSummaryData, isLoading: isPegSummaryLoading } = pegSummaryQuery;
+  const resolverData = resolver.data;
   const logos = logosById;
   const logoMap = logos ?? {};
   const nowSec = useMinuteClockSec();
@@ -48,23 +78,52 @@ export function ActiveDepegsCard(): React.JSX.Element {
     () => selectActiveDepegCoins(pegSummaryData?.coins ?? [], ACTIVE_STABLECOIN_ID_SET),
     [pegSummaryData?.coins],
   );
+  const marketCaps = useMemo(
+    () => new Map((stablecoinsQuery.data?.peggedAssets ?? []).map((coin) => [coin.id, getCirculatingRawOrNull(coin)])),
+    [stablecoinsQuery.data?.peggedAssets],
+  );
+  // Only valid frozen predictions are verdicts, and only from a usable book (docs/homepage.md).
+  const verdicts = useMemo(() => {
+    const byId = new Map<string, DdrCall>();
+    if (!isResolverBookAvailable(resolverData)) return byId;
+    for (const row of resolverData.rows) {
+      // As rankOpenIncidents: only the coin's active incident speaks, never an older closed one.
+      if (row.live.eventState !== "active") continue;
+      if (isCurrentForecast(row)) {
+        const meta = getTierMeta(getResolution(row).tier, getTierVocabulary(row));
+        byId.set(row.stablecoinId, { label: meta.short, title: meta.label, accent: meta.accent });
+      } else if (row.prediction.state === "pending_lock" && !byId.has(row.stablecoinId)) {
+        const label = DEPEG_PENDING_STATE_LABELS.ddrLock;
+        byId.set(row.stablecoinId, { label, title: label, accent: "" });
+      }
+    }
+    return byId;
+  }, [resolverData]);
   // The complete summary owns the incident census; the event page supplies detail only.
   const activeRows = useMemo<ActiveRow[]>(() => {
     const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
     return activeCoins.map((coin: PegSummaryCoin) => {
       const event = eventsById.get(coin.id);
       const held = isCurrentDeviationHeld(coin.pegCurrency, resolvePriceObservedAtSec(coin), coin.currentDeviationBps);
+      const bps = held ? null : coin.currentDeviationBps;
+      const marketCapUsd = marketCaps.get(coin.id) ?? null;
       return {
         id: coin.id,
         symbol: coin.symbol ?? event?.symbol ?? coin.id,
-        bps: held ? null : coin.currentDeviationBps,
+        bps,
         held,
         ageSec: event && nowSec > 0 ? Math.max(0, nowSec - event.startedAt) : null,
         evidence: classifyOpenIncidentEvidence(data?.events, coin.id, nowSec),
+        marketCapUsd,
+        exposureUsd: holderExposureUsd(marketCapUsd, bps),
+        verdict: verdicts.get(coin.id) ?? null,
       };
     }).sort((a, b) =>
-      (b.bps == null ? -1 : Math.abs(b.bps)) - (a.bps == null ? -1 : Math.abs(a.bps)));
-  }, [activeCoins, data?.events, nowSec]);
+      rankValue(b.exposureUsd) - rankValue(a.exposureUsd)
+      || rankValue(b.bps == null ? null : Math.abs(b.bps)) - rankValue(a.bps == null ? null : Math.abs(a.bps)));
+  }, [activeCoins, data?.events, nowSec, marketCaps, verdicts]);
+  // Name the key the order actually used: without any supply it is the deviation alone.
+  const rankKey = activeRows.some((row) => row.exposureUsd != null) ? "USD off peg" : "deviation";
 
   // Same figure and denominator as the /depeg/ hero: the peg summary's confirmed
   // (non-NAV) active-depeg count over the peg catalog it was read from.
@@ -116,15 +175,15 @@ export function ActiveDepegsCard(): React.JSX.Element {
         />
       </div>
       {activeRows.length > MAX_ROWS ? (
-        <p className="-mb-2 hidden pharos-meta sm:block">Top {MAX_ROWS} of {activeRows.length} by deviation</p>
+        <p className="-mb-2 pharos-meta">Top {MAX_ROWS} of {activeRows.length} by {rankKey}</p>
       ) : null}
       <ul
         aria-label={
           activeRows.length > MAX_ROWS
-            ? `Top ${MAX_ROWS} of ${activeRows.length} active depegs by deviation`
-            : "Active depegs by deviation"
+            ? `Top ${MAX_ROWS} of ${activeRows.length} active depegs by ${rankKey}`
+            : `Active depegs by ${rankKey}`
         }
-        className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex"
+        className="flex flex-col border-t border-border/50 pt-2 font-mono text-xs"
       >
         {activeRows.slice(0, MAX_ROWS).map((row, index) => (
           <DepegRow key={row.id} row={row} logoSrc={getLogoSrc(logoMap, row.id)} isLead={index === 0} />
@@ -143,35 +202,53 @@ function DepegRow({
   logoSrc: string | undefined;
   isLead: boolean;
 }): React.JSX.Element {
-  const arrow = row.bps != null && row.bps < 0 ? "↓" : "↑";
+  const below = row.bps != null && row.bps < 0;
   const colorClass =
-    row.bps == null ? "text-muted-foreground" : row.bps < 0
+    row.bps == null ? "text-muted-foreground" : below
       ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text;
+  const isNew = row.ageSec != null && row.ageSec <= WEEK_SECONDS;
   return (
     <li>
       <Link
         prefetch={false}
         href={buildStablecoinUrl(row.id)}
         title={OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}
-        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
+        className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-0.5 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate tracking-tight text-foreground">{row.symbol}</span>
+          <span className="truncate tracking-tight text-foreground">{row.symbol}</span>{" "}
+          {isNew ? (
+            <span className="shrink-0 rounded-sm border border-border/70 px-1 font-sans text-3xs font-semibold text-foreground/80">
+              New
+            </span>
+          ) : null}
           <span className="sr-only">{`, ${OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}`}</span>
-          <span aria-hidden="true" className="text-muted-foreground/40">
-            ·
-          </span>
-          <span className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}>
-            {row.held ? (
-              <span title="Reference market closed">Mkt closed</span>
-            ) : row.bps == null ? "Observation unavailable" : (
-              <><span aria-hidden="true" className="mr-0.5">{arrow}</span>{Math.abs(row.bps).toFixed(0)}</>
-            )}
-          </span>
         </span>
-        <span className="pharos-numeric text-muted-foreground">
-          {row.ageSec != null ? formatElapsedSeconds(row.ageSec) : "Age unavailable"}
+        <span
+          className={`shrink-0 font-semibold pharos-numeric ${colorClass}`}
+          title={row.exposureUsd != null ? `${formatCompactUsdShort(row.exposureUsd)} ${below ? "below" : "above"} peg` : undefined}
+        >
+          {row.held ? (
+            <span title="Reference market closed">Mkt closed</span>
+          ) : row.bps == null ? "Observation unavailable" : (
+            <><span aria-hidden="true" className="mr-0.5">{below ? "↓" : "↑"}</span>{Math.abs(row.bps).toFixed(0)}</>
+          )}
+        </span>
+        {/* Second line: DDR verdict, market cap and incident age; unavailable stays named. */}
+        <span className="col-span-2 col-start-2 truncate text-2xs text-muted-foreground">
+          {row.verdict ? (
+            <>
+              <span className={cn("font-sans font-semibold", row.verdict.accent)} title={row.verdict.title}>
+                <span className="sr-only">DDR: </span>
+                {row.verdict.label}
+              </span>
+              {" · "}
+            </>
+          ) : null}
+          <span>{row.marketCapUsd != null ? `${formatCompactUsdShort(row.marketCapUsd)} mkt cap` : "Market cap unavailable"}</span>
+          {" · "}
+          <span>{row.ageSec != null ? formatElapsedSeconds(row.ageSec) : "Age unavailable"}</span>
         </span>
       </Link>
     </li>

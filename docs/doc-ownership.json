@@ -626,7 +626,7 @@
         { "sources": ["worker/src/api/public-status-history.ts", "worker/src/api/__tests__/public-status-history*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apipublic-status-history" }] },
         { "sources": ["worker/src/telegram/webhook/telegram-pulse.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apitelegram-pulse" }] },
         { "sources": ["worker/src/api/stability-index.ts", "worker/src/api/__tests__/stability-index*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apistability-index" }] },
-        { "sources": ["worker/src/api/og.tsx", "worker/src/api/og-page/**", "worker/src/api/__tests__/og*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiog" }] },
+        { "sources": ["worker/src/api/og.tsx", "worker/src/api/og-legacy-redirects.json", "worker/src/api/__tests__/og*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apiog" }] },
         { "sources": ["worker/src/api/report-cards-v9.ts", "worker/src/api/__tests__/report-cards-v9*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apireport-cardsv9" }] },
         { "sources": ["worker/src/api/safety-grades.ts", "worker/src/api/__tests__/safety-grades*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apisafety-grades" }] },
         { "sources": ["worker/src/api/dependency-graph.ts", "worker/src/api/__tests__/dependency-graph*.ts"], "required": [{ "path": "docs/api-reference.md", "anchor": "get-apidependency-graphv1" }] },
@@ -1541,7 +1541,6 @@
       "risk": "medium",
       "sources": [
         "scripts/**",
-        "public/og-editorial-*.png",
         "public/critical-css-loader.js",
         "public/datasets/top-stablecoins/**",
         "public/datasets/depeg-history/**",
@@ -1714,11 +1713,9 @@
         "public/datasets/stablecoin-cemetery.*",
         "public/llms.txt",
         "public/og-cemetery.png",
+        "public/og-editorial-*.png",
         "public/portfolio-bootstrap.js",
         "shared/lib/public-docs.ts",
-        "shared/lib/og-route-cards.ts",
-        "shared/lib/og-route-glyphs.ts",
-        "scripts/maintenance/build-og-route-timeless.ts",
         "shared/lib/social-preview.ts",
         "shared/lib/social-preview-asset.ts",
         "shared/lib/social-preview-storage.ts",
@@ -1726,13 +1723,13 @@
         "shared/types/social-scorecard.ts",
         "worker/src/api/og-scorecard.tsx",
         "worker/src/lib/og-render.ts",
-        "worker/src/lib/og-templates/scorecard.tsx",
         "functions/share/scorecard/**",
         "functions/_site-data/scorecard.ts",
         "functions/og/v2/**",
         "functions/lib/social-scorecard.ts",
-        "public/og/v2/**",
         "scripts/lib/social-preview*",
+        "scripts/lib/social-card-*",
+        "shared/lib/social-card/**",
         "scripts/maintenance/build-og-evergreen.*",
         "scripts/maintenance/publish-social-previews.ts",
         "next.config.ts",
@@ -1760,7 +1757,11 @@
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "reading": [
         {
-          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "worker/src/lib/og-templates/scorecard.tsx", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "public/og/v2/**", "scripts/lib/social-preview*", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
+          "sources": ["public/og-editorial-*.png"],
+          "local": [{ "path": "docs/og-images.md", "anchor": "2-editorial-content-cards-publicog-editorial-png" }]
+        },
+        {
+          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "scripts/lib/social-preview*", "scripts/lib/social-card-*", "shared/lib/social-card/**", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
           "local": [
             { "path": "docs/og-images.md", "anchor": "1-route-cards" },
             { "path": "docs/og-images.md", "anchor": "dated-scorecards" },
