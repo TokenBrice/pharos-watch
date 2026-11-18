@@ -3,11 +3,11 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DlPool, ResolvedYieldEntry, SafetyScoreSnapshot, YieldResolutionResult } from "./types";
 import { resolveYieldTypeLabel } from "./source-risk";
 import { YIELD_VARIANT_CHILD_VENUE_PROTOCOLS } from "@shared/lib/yield-source-risk-registry";
-import { isBlockedYieldOpportunitySource, matchAllDlPools } from "../yield-helpers";
+import { isBlockedYieldOpportunitySource, matchAllDlPools, resolveGenerallyAccessibleDlApy } from "../yield-helpers";
 import { getPriceDerivedApy } from "./state";
 import { LAYER3_EXCLUDED_VENUE_PROJECTS } from "../../lib/yield-config/yield-config-lending-protocols";
 import { ON_CHAIN_RATE_CONFIGS, PRICE_DERIVED_FALLBACK_IDS, RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
-import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_POOL_MAP, YIELD_POOL_RESTRICTED_REWARD_IDS } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
@@ -226,13 +226,15 @@ export async function resolveTrackedYieldSources(params: {
       ) {
         continue;
       }
+      const accessibleApy = resolveGenerallyAccessibleDlApy(fullPool, YIELD_POOL_RESTRICTED_REWARD_IDS.has(fullPool.pool));
+      if (!accessibleApy) continue;
       resolved.push({
         id,
         symbol,
         yield: {
-          currentApy: fullPool.apy,
-          apyBase: fullPool.apyBase,
-          apyReward: fullPool.apyReward,
+          currentApy: accessibleApy.apy,
+          apyBase: accessibleApy.apyBase,
+          apyReward: accessibleApy.apyReward,
           sourcePool: fullPool.pool,
           sourceTvlUsd: fullPool.tvlUsd,
           dataSource: "defillama",

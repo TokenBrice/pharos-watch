@@ -22,6 +22,7 @@ import {
   matchAllDlPools,
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
+  resolveGenerallyAccessibleDlApy,
 } from "../yield-helpers";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
@@ -327,6 +328,25 @@ describe("detectWarningSignals", () => {
     const signals = detectWarningSignals({ ...base, currentApy: -1, apy30d: 5 });
     expect(signals).toContain("negative-trend");
     expect(signals).not.toContain("yield-spike");
+  });
+});
+
+describe("resolveGenerallyAccessibleDlApy", () => {
+  // steakUSDG on Robinhood Chain, DeFiLlama 2026-11-17: the reward leg is a
+  // whitelist-only Merkl campaign; Morpho reports the vault at 3.81% net.
+  const steakUsdg = { apy: 7.004, apyBase: 3.848, apyReward: 3.156 };
+
+  it("passes an unrestricted pool through unchanged", () => {
+    expect(resolveGenerallyAccessibleDlApy(steakUsdg, false)).toEqual(steakUsdg);
+  });
+
+  it("publishes a restricted-reward pool as a base-only payload", () => {
+    expect(resolveGenerallyAccessibleDlApy(steakUsdg, true)).toEqual({ apy: 3.848, apyBase: 3.848, apyReward: null });
+  });
+
+  it("fails closed when a restricted-reward pool has no finite base APY", () => {
+    expect(resolveGenerallyAccessibleDlApy({ ...steakUsdg, apyBase: null }, true)).toBeNull();
+    expect(resolveGenerallyAccessibleDlApy({ ...steakUsdg, apyBase: Number.NaN }, true)).toBeNull();
   });
 });
 
