@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import sharp from "sharp";
@@ -53,14 +53,23 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       return [name, resolve(root, "worker", path)];
     })),
   }));
+  const logo = readFileSync(resolve(root, "public/logos/2-usdc.svg"), "utf8");
   writeFileSync(entry, `
     const row = ${JSON.stringify(row)};
     const db = { prepare() { return { bind() { return { first: async () => row }; } }; } };
+    // A render's one outbound request, the coin's registered logo, answered locally.
+    const logoRequests = [];
+    globalThis.fetch = async (input) => {
+      logoRequests.push(String(input));
+      return new Response(${JSON.stringify(logo)}, { headers: { "Content-Type": "image/svg+xml" } });
+    };
     export default {
       async fetch(request) {
+        const path = new URL(request.url).pathname;
+        if (path === "/logo-requests") return Response.json(logoRequests);
         // Exercise the same cold request-time loading boundary as production OG.
         const { handleScorecardOg } = await import(${JSON.stringify(resolve(root, "worker/src/api/og-scorecard.tsx"))});
-        return handleScorecardOg(db, new URL(request.url).pathname.split("/").pop());
+        return handleScorecardOg(db, path.split("/").pop());
       },
     };
   `);
@@ -82,6 +91,7 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       expect(await image.metadata()).toMatchObject({ format: "png", width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT });
       await image.raw().toBuffer();
     }
+    expect(await (await worker.fetch("/logo-requests")).json()).toEqual(Array(2).fill("https://pharos.watch/logos/2-usdc.svg"));
   } finally {
     try {
       await worker?.stop();

@@ -2,6 +2,7 @@
  * Drawing parts shared by the templates, as plain Satori element objects.
  * Text is always a Satori text node: text inside a nested SVG image never renders.
  */
+import { PHAROS_MARK_ON_DARK_SVG, PHAROS_MARK_ON_LIGHT_SVG } from "./brand";
 import type { SocialCardGlyph } from "./spec";
 import { fitBlock, type FittedBlock, type SocialCardMeasurer } from "./text";
 import { DARK, FROST, PAPER, SOCIAL_CARD_FONTS, SocialCardError, type SocialCardFace } from "./tokens";
@@ -24,8 +25,6 @@ export interface SocialCardLogo {
 /** Everything a template needs besides the spec; both runtimes build it from the same files. */
 export interface SocialCardAssets {
   measure: SocialCardMeasurer;
-  /** `public/pharos-mark-on-dark.svg` and `-on-light.svg` as data URIs. */
-  brand: { dark: string; paper: string };
   /** Keyed by registered public path ("/logos/1-usdt.svg"). */
   logos: ReadonlyMap<string, SocialCardLogo>;
 }
@@ -72,6 +71,8 @@ export function label(measure: SocialCardMeasurer, value: string, face: SocialCa
 }
 
 type Theme = "dark" | "paper";
+const MARK_ON_DARK = `data:image/svg+xml,${encodeURIComponent(PHAROS_MARK_ON_DARK_SVG)}`;
+const MARK_ON_LIGHT = `data:image/svg+xml,${encodeURIComponent(PHAROS_MARK_ON_LIGHT_SVG)}`;
 
 /** The only small text on a card: mark, "Pharos" and the destination kind. */
 export function lockup(assets: SocialCardAssets, kind: string, theme: Theme): { node: SocialCardElement; width: number } {
@@ -80,7 +81,7 @@ export function lockup(assets: SocialCardAssets, kind: string, theme: Theme): { 
   const kindLabel = label(assets.measure, kind, "mono-500", 22, ink.muted);
   return {
     node: h("div", { alignItems: "center", height: 44 },
-      img(theme === "dark" ? assets.brand.dark : assets.brand.paper, 40),
+      img(theme === "dark" ? MARK_ON_DARK : MARK_ON_LIGHT, 40),
       h("div", { marginLeft: 14 }, name.node),
       h("div", { width: 2, height: 26, marginLeft: 16, marginRight: 16, background: theme === "dark" ? DARK.lineStrong : PAPER.line }),
       kindLabel.node),

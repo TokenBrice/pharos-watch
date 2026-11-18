@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { GRADE_ON_DARK_HEX } from "../../shared/lib/classification";
+import { PHAROS_MARK_ON_DARK_SVG, PHAROS_MARK_ON_LIGHT_SVG } from "../../shared/lib/social-card/brand";
 import type { SocialCardSpec, SocialScorecardCard } from "../../shared/lib/social-card/spec";
-import { buildSocialCardElement, buildSocialScorecardElement } from "../../shared/lib/social-card/templates";
-import { SocialCardError } from "../../shared/lib/social-card/tokens";
+import { buildSocialCardElement, buildSocialScorecardElement, buildSocialScorecardOverviewElement } from "../../shared/lib/social-card/templates";
+import { FROST, SocialCardError } from "../../shared/lib/social-card/tokens";
 import { renderSvgPngWithResvg } from "../lib/og-resvg-render.mts";
 import {
   loadSocialCardAssets,
@@ -60,5 +62,26 @@ describe("social card renderer", () => {
     const legend = JSON.stringify(buildSocialCardElement({ ...hub, subject: { kind: "grade-shield" } } as SocialCardSpec, assets));
     for (const family of ["A", "B", "C", "D", "F"] as const) expect(legend).toContain(`2.5px solid ${GRADE_ON_DARK_HEX[family]}`);
     expect(() => buildSocialScorecardElement({ ...scorecard, grade: "NR" }, assets)).toThrow('"NR" is not a published grade');
+  });
+
+  it("dates the pillarless Worker scorecard and the letterless overview with a frost outline", () => {
+    const sealed = JSON.stringify(buildSocialScorecardElement({ ...scorecard, pillars: [] }, assets));
+    const overview = JSON.stringify(buildSocialScorecardOverviewElement({ meanScore: 71.84, rated: 142, notRated: 3, unavailable: 0, asOf: "17 Nov 2026" }, assets));
+    expect(sealed).not.toContain("By pillar");
+    expect(JSON.stringify(buildSocialScorecardElement({ ...scorecard, identity: { ...usdt, name: "Usdt" }, pillars: [] }, assets))).not.toContain('"Usdt"');
+    expect(overview).toContain('"142\u00a0rated\u00a0· 3\u00a0not\u00a0rated"');
+    expect(overview).toContain('"71.8"');
+    expect(overview).not.toMatch(/unavailable|"children":"[A-F][+-]?"/);
+    for (const card of [sealed, overview]) {
+      expect(card).toContain(`"border":"2px solid ${FROST}"`);
+      expect(card).not.toContain(`"background":"${FROST}"`);
+      expect(card).toContain('"As of 17 Nov 2026"');
+    }
+    expect(() => buildSocialScorecardOverviewElement({ meanScore: 70, rated: 0, notRated: 2, unavailable: 0, asOf: "17 Nov 2026" }, assets)).toThrow("at least one rated");
+  });
+
+  it("inlines the brand marks exactly as public/ serves them", () => {
+    expect(PHAROS_MARK_ON_DARK_SVG).toBe(readFileSync("public/pharos-mark-on-dark.svg", "utf8").trim());
+    expect(PHAROS_MARK_ON_LIGHT_SVG).toBe(readFileSync("public/pharos-mark-on-light.svg", "utf8").trim());
   });
 });

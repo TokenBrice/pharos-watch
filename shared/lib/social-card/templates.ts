@@ -13,6 +13,7 @@ import {
   at, chip, chipHeight, chipWidth, font, glyph, h, img, label, lens, lockup, logoChip, logoDisc, monogram, plate, shield,
   stamp, steps, svgUri, text, type SocialCardAssets, type SocialCardElement, type Style,
 } from "./parts";
+import type { SocialScorecardOverviewCard } from "./scorecard";
 import type {
   SocialCardDossier, SocialCardHub, SocialCardHubSubject, SocialCardIdentity, SocialCardRecord, SocialCardSpec,
   SocialCardVersus, SocialScorecardCard,
@@ -474,22 +475,66 @@ export function buildSocialCardElement(input: SocialCardSpec, assets: SocialCard
   }
 }
 
+
 const isSafetyGrade = (grade: string): grade is SafetyGrade => (SAFETY_GRADE_VALUES as readonly string[]).includes(grade);
 const gradeColor = (where: string, grade: string) => {
   if (!isSafetyGrade(grade)) throw new SocialCardError(`${where}: "${grade}" is not a published grade`);
   return GRADE_ON_DARK_HEX[gradeRange(grade)];
 };
 
-/** The dated scorecard: the only card that shows a grade, so the grade is the hero and its date sits in the one frost pill. */
+/** The one date on a scorecard: a frost outline, never a frost fill behind text (D5: "As of" only). */
+function asOfPill(where: string, asOf: string): SocialCardElement {
+  return h("div", { ...font("mono-700"), fontSize: 26, lineHeight: 1.2, color: FROST, border: `2px solid ${FROST}`, borderRadius: 8, padding: "5px 14px", whiteSpace: "nowrap" },
+    `As of ${budget(where, "asOf", asOf, 16)}`);
+}
+
+/** The scorecard's hero inside the lens: the value, its score out of 100 and what it is. */
+function scorecardLens(measure: SocialCardAssets["measure"], where: string, ring: string, value: { text: string; color: string; size: number }, figure: string | null, caption: string): SocialCardElement[] {
+  const { cx, cy } = LENS;
+  const hero = fitBlock(measure, where, { field: "lens", text: value.text, face: "display-800", sizes: steps(value.size, 72, 4), lineHeight: 1, tracking: -0.04, width: 224, maxLines: 1 });
+  return [
+    lens(cx, cy, LENS.r),
+    plate(cx, cy, 140, { border: `4px solid ${ring}` }),
+    h("div", { ...at(cx - 130, cy - 118, 260, 236), flexDirection: "column", alignItems: "center", justifyContent: "center" },
+      text(hero, value.color, { textAlign: "center", justifyContent: "center", width: 260 }),
+      h("div", { alignItems: "baseline", marginTop: 4 },
+        figure === null ? null : label(measure, figure, "mono-700", 40, DARK.text).node,
+        h("div", { marginLeft: figure === null ? 0 : 6 }, label(measure, "/100", "mono-500", 24, DARK.muted).node)),
+      h("div", { marginTop: 2 }, label(measure, caption, "mono-500", 20, DARK.muted).node)),
+  ];
+}
+
+/**
+ * The dated scorecard: the only card that shows a grade, so the grade is the
+ * hero in the lens, coloured by its family, and its date is the one outlined
+ * pill. Sealed editions carry no pillar scores; without them the identity
+ * stacks like a dossier's, with no empty pillar heading.
+ */
 export function buildSocialScorecardElement(card: SocialScorecardCard, assets: SocialCardAssets): SocialCardElement {
   const where = `Scorecard ${card.identity.symbol}`;
   const { measure } = assets;
   const subject = identity(where, "identity", card.identity);
-  const asOf = budget(where, "asOf", card.asOf, 16);
-  count(where, "pillars", card.pillars, 1, 4);
+  count(where, "pillars", card.pillars, 0, 4);
   const score = finite(where, "score", card.score);
   if (score < 0 || score > 100) throw new SocialCardError(`${where} score: ${score} is outside 0-100`);
   const color = gradeColor(`${where} grade`, card.grade);
+  const hero = scorecardLens(measure, where, color, { text: card.grade, color, size: 132 }, String(Math.round(score)), "Safety Score");
+  const pill = asOfPill(where, card.asOf);
+  const pillHeight = Math.round(26 * 1.2) + 14;
+  if (card.pillars.length === 0) {
+    // A name that only repeats the ticker ("GHO", "Dai") is not printed twice.
+    const repeated = subject.name.toLowerCase() === subject.symbol.toLowerCase();
+    const identityLines = fitStack(measure, where, [
+      { field: "identity.symbol", text: subject.symbol, face: "display-800", sizes: steps(112, 48, 4), lineHeight: 1, tracking: -0.035, width: COLUMN.width, maxLines: 1 },
+      ...(repeated ? [] : [{ field: "identity.name", text: subject.name, face: "display-600" as const, sizes: steps(32, 24), lineHeight: 1.15, width: COLUMN.width, maxLines: 2, gap: 12 }]),
+    ], BODY.bottom - BODY.top, 88 + 24 + 36 + pillHeight);
+    return canvas(DARK.ground, ...hero,
+      column(lockup(assets, "Dated scorecard", "dark").node, [
+        h("div", { width: 88, height: 88, marginBottom: 24 }, mark(assets, subject, 88, `${where} identity`)),
+        ...placed(identityLines, [DARK.text, DARK.muted]),
+        h("div", { marginTop: 36 }, pill),
+      ]));
+  }
   const pillars = card.pillars.map((pillar, index) => ({
     name: budget(where, `pillars[${index}].name`, pillar.name, 20),
     score: finite(where, `pillars[${index}].score`, pillar.score),
@@ -507,7 +552,6 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
   const barWidth = COLUMN.width - nameColumn - 56 - 12 - 44;
   const rowHeight = 36;
   const pillarsHeight = 24 + 12 + pillars.length * rowHeight + (pillars.length - 1) * 12;
-  const pillHeight = Math.round(26 * 1.2) + 14;
   const roomy = identityHeight + pillarsHeight + pillHeight + 40 + 36 <= BODY.bottom - BODY.top;
   if (!roomy && identityHeight + pillarsHeight + pillHeight + 24 + 24 > BODY.bottom - BODY.top) throw new SocialCardError(`${where}: the scorecard column overflows`);
   const row = (pillar: (typeof pillars)[number], index: number) => h("div", { alignItems: "center", height: rowHeight, marginTop: index > 0 ? 12 : 0 },
@@ -516,16 +560,7 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
       h("div", { width: Math.max(10, Math.round((barWidth * Math.min(100, Math.max(0, pillar.score))) / 100)), height: 10, borderRadius: 5, background: pillar.color })),
     h("div", { width: 56, justifyContent: "flex-end" }, label(measure, String(Math.round(pillar.score)), "mono-700", 26, DARK.text).node),
     h("div", { width: 44, marginLeft: 12 }, label(measure, pillar.grade, "mono-700", 26, pillar.color).node));
-  const grade = fitBlock(measure, where, { field: "grade", text: card.grade, face: "display-800", sizes: steps(132, 100, 4), lineHeight: 1, tracking: -0.04, width: 220, maxLines: 1 });
-  const { cx, cy } = LENS;
-  return canvas(DARK.ground,
-    lens(cx, cy, LENS.r),
-    plate(cx, cy, 140, { border: `4px solid ${color}` }),
-    h("div", { ...at(cx - 130, cy - 106, 260, 212), flexDirection: "column", alignItems: "center", justifyContent: "center" },
-      text(grade, color, { textAlign: "center", justifyContent: "center", width: 260 }),
-      h("div", { alignItems: "baseline", marginTop: 6 },
-        label(measure, String(Math.round(score)), "mono-700", 40, DARK.text).node,
-        h("div", { marginLeft: 6 }, label(measure, "/100", "mono-500", 24, DARK.muted).node))),
+  return canvas(DARK.ground, ...hero,
     column(lockup(assets, "Dated scorecard", "dark").node, [
       h("div", { alignItems: "flex-start", height: identityHeight },
         h("div", { width: 72, height: 72, flexShrink: 0, marginTop: Math.round((ticker.height - 72) / 2) }, mark(assets, subject, 72, `${where} identity`)),
@@ -533,9 +568,38 @@ export function buildSocialScorecardElement(card: SocialScorecardCard, assets: S
           text(ticker, DARK.text),
           text(name, DARK.muted, { marginTop: 6 }))),
       h("div", { flexDirection: "column", marginTop: roomy ? 40 : 24 },
-        label(measure, "Safety Score", "mono-500", 20, DARK.muted).node,
+        label(measure, "By pillar", "mono-500", 20, DARK.muted).node,
         h("div", { flexDirection: "column", marginTop: 12 }, ...pillars.map(row))),
-      h("div", { marginTop: roomy ? 36 : 24 },
-        h("div", { ...font("mono-700"), fontSize: 26, lineHeight: 1.2, color: DARK.ground, background: FROST, borderRadius: 8, padding: "7px 16px", whiteSpace: "nowrap" }, `As of ${asOf}`)),
+      h("div", { marginTop: roomy ? 36 : 24 }, pill),
+    ]));
+}
+
+/**
+ * The dated Safety Scores overview: the accepted cohort's mean rated score in
+ * the lens and its counts, never an aggregate letter grade, so the ring is a
+ * neutral frost focus ring rather than a grade family.
+ */
+export function buildSocialScorecardOverviewElement(card: SocialScorecardOverviewCard, assets: SocialCardAssets): SocialCardElement {
+  const where = "Scorecard overview";
+  const { measure } = assets;
+  const mean = finite(where, "meanScore", card.meanScore);
+  if (mean < 0 || mean > 100) throw new SocialCardError(`${where} meanScore: ${mean} is outside 0-100`);
+  const counts = ([[card.rated, "rated"], [card.notRated, "not rated"], [card.unavailable, "unavailable"]] as const).map(([value, noun]) => {
+    if (!Number.isInteger(value) || value < 0) throw new SocialCardError(`${where} ${noun}: ${value} is not a count`);
+    return { value, noun };
+  });
+  if (card.rated < 1) throw new SocialCardError(`${where}: a mean rated score needs at least one rated stablecoin`);
+  // No-break spaces keep each count whole; a line that must wrap breaks after a separator.
+  const tally = counts.filter(({ value }) => value > 0).map(({ value, noun }) => `${value.toLocaleString("en-US")} ${noun}`.replace(/ /g, "\u00a0")).join("\u00a0· ");
+  const pill = asOfPill(where, card.asOf);
+  const [headline, line] = fitStack(measure, where, [
+    { field: "headline", text: "Safety Scores", face: "display-800", sizes: steps(104, 56, 4), lineHeight: 1, tracking: -0.035, width: COLUMN.width, maxLines: 2 },
+    { field: "counts", text: tally, face: "mono-500", sizes: steps(26, 22), lineHeight: 1.3, width: COLUMN.width, maxLines: 2, gap: 24 },
+  ], BODY.bottom - BODY.top, 36 + Math.round(26 * 1.2) + 14);
+  return canvas(DARK.ground,
+    ...scorecardLens(measure, where, FROST, { text: mean.toFixed(1), color: DARK.text, size: 120 }, null, "Mean rated score"),
+    column(lockup(assets, "Dated scorecard", "dark").node, [
+      ...placed([headline, line], [DARK.text, DARK.muted]),
+      h("div", { marginTop: 36 }, pill),
     ]));
 }

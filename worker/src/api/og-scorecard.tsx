@@ -1,25 +1,78 @@
-import { createElement } from "react";
+import { bytesToBase64 } from "@shared/lib/base64";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { SocialCardElement, SocialCardLogo } from "@shared/lib/social-card/parts";
+import { socialScorecardCard } from "@shared/lib/social-card/scorecard";
+import { buildSocialScorecardElement, buildSocialScorecardOverviewElement } from "@shared/lib/social-card/templates";
+import { isTrustedLogoSvg } from "@shared/lib/social-card/tokens";
 import {
   SOCIAL_SCORECARD_METADATA_HEADER,
+  SOCIAL_SCORECARD_NOT_RATED_REASON,
   SOCIAL_SCORECARD_OVERVIEW_ID,
+  SOCIAL_SCORECARD_REASON_HEADER,
   SOCIAL_SCORECARD_RENDERER_REVISION,
   encodeSocialScorecardMetadata,
   validateSocialScorecardPng,
 } from "@shared/lib/social-scorecard";
 import { SocialScorecardMetadataSchema, type SocialScorecardMetadata } from "@shared/types/social-scorecard";
-import { renderPng } from "../lib/og-render";
-import { Scorecard } from "../lib/og-templates/scorecard";
+import { renderPng, socialCardMeasurer } from "../lib/og-render";
+import { cancelResponseBodyQuietly, readResponseBytesWithinLimitWithSignal } from "../lib/response-body";
 import { loadActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
 
 function unavailable(reason: string, status = 503): Response {
   return new Response("Dated scorecard unavailable", {
     status,
-    headers: { "Content-Type": "text/plain", "Cache-Control": "no-store", "X-Scorecard-Reason": reason, ...(status === 503 ? { "Retry-After": "60" } : {}) },
+    headers: { "Content-Type": "text/plain", "Cache-Control": "no-store", [SOCIAL_SCORECARD_REASON_HEADER]: reason, ...(status === 503 ? { "Retry-After": "60" } : {}) },
   });
+}
+
+const LOGO_TIMEOUT_MS = 2_500;
+const LOGO_MAX_BYTES = 512 * 1024;
+const LOGO_SIGNATURES: Readonly<Record<string, (bytes: Uint8Array) => boolean>> = {
+  "image/png": (bytes) => bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47,
+  "image/jpeg": (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+  "image/svg+xml": (bytes) => isTrustedLogoSvg(new TextDecoder().decode(bytes)),
+};
+
+/**
+ * The one outbound request of a render: the coin's registered logo from the
+ * site, its body read before anything else. Satori and resvg draw PNG, JPEG
+ * and SVG; WebP, a timeout or anything unexpected falls back to the monogram.
+ * The Worker cannot inspect pixels, so every logo sits on the light plate the
+ * site uses for logos in dark mode.
+ */
+async function fetchScorecardLogo(logoPath: string): Promise<SocialCardLogo | null> {
+  // One budget for the request and its body read.
+  const signal = AbortSignal.timeout(LOGO_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${SITE_ORIGIN}${logoPath}`, { signal });
+    const type = response.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() ?? "";
+    const admits = LOGO_SIGNATURES[type];
+    if (!response.ok || !admits) {
+      await cancelResponseBodyQuietly(response);
+      return null;
+    }
+    const bytes = await readResponseBytesWithinLimitWithSignal(response, LOGO_MAX_BYTES, signal);
+    return bytes.byteLength > 0 && admits(bytes) ? { color: `data:${type};base64,${bytesToBase64(bytes)}`, lightPlate: true } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The element an admitted edition draws; null when the subject has nothing rated to show. */
+async function scorecardElement(metadata: SocialScorecardMetadata): Promise<SocialCardElement | null> {
+  const drawn = socialScorecardCard(metadata);
+  if (!drawn) return null;
+  const measure = await socialCardMeasurer();
+  if (drawn.kind === "overview") return buildSocialScorecardOverviewElement(drawn.card, { measure, logos: new Map() });
+  const { logoPath, ...identity } = drawn.card.identity;
+  const logo = logoPath ? await fetchScorecardLogo(logoPath) : null;
+  return logo && logoPath
+    ? buildSocialScorecardElement(drawn.card, { measure, logos: new Map([[logoPath, logo]]) })
+    : buildSocialScorecardElement({ ...drawn.card, identity }, { measure, logos: new Map() });
 }
 
 function admitSubject(snapshot: SafetyScoreGradeSnapshot, id: string): SocialScorecardMetadata["subject"] | null {
@@ -61,13 +114,18 @@ export async function handleScorecardOg(db: D1Database, id: string): Promise<Res
     }
     const subject = admitSubject(snapshot, id);
     if (!subject) return unavailable("subject-unavailable");
+    // A dated scorecard shows a published grade; a not-rated coin has none to date.
+    if (subject.kind === "stablecoin" && subject.ratingStatus !== "rated") return unavailable(SOCIAL_SCORECARD_NOT_RATED_REASON, 404);
+    if (subject.kind === "overview" && subject.ratedCount === 0) return unavailable("no-rated-subjects");
     const metadata = SocialScorecardMetadataSchema.parse({
       schemaVersion: 1, rendererRevision: SOCIAL_SCORECARD_RENDERER_REVISION,
       publication: snapshot.safetyScoreIdentity, asOfSec: snapshot.asOfSec,
       publishedAtSec: snapshot.updatedAt, subject, imageSha256: "0".repeat(64),
       freshnessBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     });
-    const image = await renderPng(createElement(Scorecard, { metadata }));
+    const element = await scorecardElement(metadata);
+    if (!element) return unavailable("subject-unavailable");
+    const image = await renderPng(element);
     validateSocialScorecardPng(image);
     // Rendering can cross an expiry, hold or publication change. Re-admit the
     // exact source, never relabel the old pixels as the newest generation.

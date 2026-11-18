@@ -1,4 +1,10 @@
 // harfbuzzjs ships no types; worker/src/lib/og-harfbuzz.ts uses only these entry points.
+// The bare specifier is the wrangler alias to og-harfbuzz.ts (in Node, the package's promise of the same API).
+declare module "harfbuzzjs" {
+  const harfBuzz: unknown;
+  export default harfBuzz;
+}
+
 declare module "harfbuzzjs/hb.js" {
   type WasmCallback = (...args: number[]) => unknown;
   interface HarfBuzzModuleArg {

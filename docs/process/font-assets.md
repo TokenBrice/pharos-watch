@@ -11,11 +11,11 @@ How the self-hosted webfonts under `src/assets/fonts/` are produced and staged. 
 | Bricolage Grotesque, JetBrains Mono | committed woff2, no tracked original | none — there is no regeneration path; replace the woff2 by hand |
 | Social-card instances (static TTF) | the four faces above | `npm run subset:fonts -- --social-card` — see [Social-card instances](#social-card-instances) |
 
-Runtime loaders are `src/lib/fonts/digest.ts` and `src/lib/fonts/redesign.ts`; `src/lib/fonts/geist.ts` exposes legacy variable names only. The Geist TTFs at the top of `worker/assets/fonts/` are hand-kept copies for the legacy Worker OG cards (Satori needs raw TTF) and are not an output of this pipeline; `worker/assets/fonts/social-card/` is.
+Runtime loaders are `src/lib/fonts/digest.ts` and `src/lib/fonts/redesign.ts`; `src/lib/fonts/geist.ts` exposes legacy variable names only. The Worker bundles no Geist: its only fonts are the social-card instances in `worker/assets/fonts/social-card/`, an output of this pipeline.
 
 ## Social-card instances
 
-Social previews and the dated scorecard (`shared/lib/social-card/`, [OG Images](../og-images.md)) draw with the site's own faces. Satori and resvg cannot read woff2 and render a variable font at its default instance whatever `font-weight` asks for, so `worker/assets/fonts/social-card/` holds static TTF instances that the Node renderer (`scripts/lib/social-card-render.ts`) reads and the Worker can bundle as the same bytes.
+Social previews and the dated scorecard (`shared/lib/social-card/`, [OG Images](../og-images.md)) draw with the site's own faces. Satori and resvg cannot read woff2 and render a variable font at its default instance whatever `font-weight` asks for, so `worker/assets/fonts/social-card/` holds static TTF instances that the Node renderer (`scripts/lib/social-card-render.ts`) reads. The Worker's dated scorecard (`worker/src/lib/og-fonts.ts`) bundles the same bytes for the four faces it draws: Bricolage 800 and 600, JetBrains Mono 500 and 700 (about 118 KB); it has no serif.
 
 | File | Source | Instance |
 | --- | --- | --- |
