@@ -423,7 +423,9 @@ function record(spec: SocialCardRecord, assets: SocialCardAssets): SocialCardEle
   const symbol = spec.identity ? label(measure, spec.identity.symbol, "mono-700", 24, PAPER.text) : null;
   const dateline = spec.dateline ? label(measure, symbol ? `· ${spec.dateline}` : spec.dateline, "mono-500", 24, PAPER.muted) : null;
   const room = COLUMN.right - COLUMN.left - brand.width - 40;
-  const headIdentity = symbol !== null && 40 + 12 + symbol.width + (dateline ? 10 + dateline.width : 0) <= room;
+  // A 40 px mark has no room for monogram letters: without a logo, the dateline carries the symbol alone.
+  const headMark = spec.identity?.logoPath ? 40 + 12 : 0;
+  const headIdentity = symbol !== null && headMark + symbol.width + (dateline ? 10 + dateline.width : 0) <= room;
   if (dateline && !headIdentity && label(measure, spec.dateline ?? "", "mono-500", 24, PAPER.muted).width > room) throw new SocialCardError(`${where} dateline: does not fit beside the lockup`);
   const pillWidth = spec.pill ? Math.ceil(measure.width(spec.pill.text, "mono-700", 24)) + 32 + 16 : 0;
   const facts = (spec.facts ?? []).map((value, index) => fitBlock(measure, where, { field: `facts[${index}]`, text: value, face: "mono-500", sizes: [26, 24, 22], lineHeight: 1.36, width: width - pillWidth, maxLines: 1 }));
@@ -440,8 +442,8 @@ function record(spec: SocialCardRecord, assets: SocialCardAssets): SocialCardEle
   const [title, dek] = fitStack(measure, where, blocks, BODY.bottom - BODY.top - 14 - head - footer, identityRow);
   const topRight = headIdentity && spec.identity && symbol
     ? h("div", { alignItems: "center" },
-      mark(assets, spec.identity, 40, `${where} identity`, { ring: PAPER.muted }),
-      h("div", { marginLeft: 12 }, symbol.node),
+      headMark ? mark(assets, spec.identity, 40, `${where} identity`, { ring: PAPER.muted }) : null,
+      h("div", { marginLeft: headMark ? 12 : 0 }, symbol.node),
       dateline ? h("div", { marginLeft: 10 }, dateline.node) : null)
     : spec.dateline ? label(measure, spec.dateline, "mono-500", 24, PAPER.muted).node : null;
   const factsNode = facts.length || spec.pill
