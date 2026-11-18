@@ -1,11 +1,12 @@
 name: Ops Follow-up Reminders
 
-# Comments once a week on open `ops:followup` issues whose `Due: YYYY-MM-DD` line has passed,
-# so the issue author gets a GitHub notification (docs/process/agent-artifacts.md#follow-up-issues).
+# Checks daily for open `ops:followup` issues whose `Due: YYYY-MM-DD` line has passed and comments
+# at most once a week on each (the six-day marker window below), so the issue author gets a GitHub
+# notification within a day of the date (docs/process/agent-artifacts.md#follow-up-issues).
 
 on:
   schedule:
-    - cron: "30 7 * * 1"
+    - cron: "30 7 * * *"
   workflow_dispatch:
 
 concurrency: {group: ops-followups-publication, cancel-in-progress: false}

@@ -39,4 +39,4 @@ The assigned verifier runs checks after writers finish; implementation agents re
 
 ## Completion Evidence
 
-Report changed schedule/slot/runner, connection and CPU-budget evidence, checks actually run (or handed to the verifier), first production execution or pending acceptance, and abandonment/lease/experiment-cleanup/rollback follow-up.
+Report changed schedule/slot/runner, connection and CPU-budget evidence, checks actually run (or handed to the verifier), first production execution or pending acceptance, and abandonment/lease/experiment-cleanup/rollback follow-up. File anything still pending as a [follow-up issue](../../../docs/process/agent-artifacts.md#follow-up-issues) and report its number.

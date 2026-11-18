@@ -43,4 +43,4 @@ The assigned verifier runs applicable checks after writers finish; report unrun 
 
 ## Completion Evidence
 
-Report work/assets, `sourceGeneration`, `baseInputGenerationId`, `clockSec`, evidence, replay/diff/movers, artifact ID, methodology targets when applicable, actual verifier results, post-deploy acceptance or pending evidence, and risks.
+Report work/assets, `sourceGeneration`, `baseInputGenerationId`, `clockSec`, evidence, replay/diff/movers, artifact ID, methodology targets when applicable, actual verifier results, post-deploy acceptance or pending evidence, and risks. File anything still pending as a [follow-up issue](../../../docs/process/agent-artifacts.md#follow-up-issues) and report its number.
