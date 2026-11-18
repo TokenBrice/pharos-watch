@@ -4,6 +4,7 @@ export type { StablecoinPublicationWaiver, StablecoinPriceGapReview } from "./st
 import { logWorkerEventArgs } from "./structured-log";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { numberValue } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
@@ -766,7 +767,8 @@ export function evaluateStablecoinActivePriceCoverage(
     const consecutiveMissingGenerations = previousStreak == null ? null : previousStreak + 1;
     const previousAccepted = acceptedObservation(options.previousAcceptedAssetsById?.get(stablecoinId));
     const previousAsset = options.previousAcceptedAssetsById?.get(stablecoinId);
-    const previousCap = getCirculatingRawOrNull(previousAsset);
+    // A reviewed supply hold withholds the prior packet too; it is not a last-known cap.
+    const previousCap = getOnchainSupplyHoldReason(stablecoinId) ? null : getCirculatingRawOrNull(previousAsset);
     const lastKnownMarketCapUsd = marketCapUsd ?? previousCap
       ?? previousDetail?.lastKnownMarketCapUsd ?? previousDetail?.marketCapUsd ?? null;
     const lastKnownMarketCapObservedAt = marketCapUsd != null
