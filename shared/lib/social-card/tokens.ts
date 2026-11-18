@@ -82,7 +82,7 @@ export const SOCIAL_CARD_FONTS: Readonly<Record<SocialCardFace, SocialCardFontFa
  * Bricolage lacks), – ‘ ’ “ ” … and €. Equal to SOCIAL_CARD_UNICODES in
  * scripts/maintenance/subset-fonts.mjs; anything else would draw a missing-glyph box.
  */
-const DRAWABLE = /^[\x20-\x7E -£¥-¬®-ÿ–‘’“”…€]*$/;
+const DRAWABLE = /^[\x20-\x7E -£¥-¬®-ÿ\u2013\u2018\u2019\u201C\u201D\u2026\u20AC]*$/;
 
 /** A spec the lens system cannot draw honestly: over budget, undrawable glyph, or copy that does not fit. */
 export class SocialCardError extends Error {
@@ -94,7 +94,7 @@ export class SocialCardError extends Error {
 
 /** Normalises whitespace as Satori does and maps ₮ to T; throws on an undrawable glyph or empty text. */
 export function drawable(text: string, where: string): string {
-  const value = text.replaceAll("₮", "T").replace(/\s+/g, " ").trim();
+  const value = text.replaceAll("\u20AE", "T").replace(/\s+/g, " ").trim();
   if (!value) throw new SocialCardError(`${where}: empty text`);
   if (!DRAWABLE.test(value)) {
     const glyphs = [...new Set([...value].filter((character) => !DRAWABLE.test(character)))];

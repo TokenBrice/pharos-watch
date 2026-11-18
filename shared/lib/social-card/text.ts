@@ -72,8 +72,8 @@ export function createSocialCardMeasurer(hb: HarfBuzzApi, fonts: Readonly<Partia
 }
 
 // UAX #14 never breaks after spaces before closing punctuation, nor after an opening bracket or quote.
-const GLUED_BEFORE = /^[)\]}!?,.:;/’”…%]/;
-const GLUED_AFTER = /[([{“‘]$/;
+const GLUED_BEFORE = /^[)\]}!?,.:;/\u2019\u201D\u2026%]/;
+const GLUED_AFTER = /[([{\u201C\u2018]$/;
 
 /**
  * Soft-wrap units, each keeping its trailing space. Only breaks Satori
@@ -91,7 +91,7 @@ function breakUnits(text: string): string[] {
 }
 
 /** Satori measures each UAX #14 segment on its own, so hyphen, dash and slash breaks split a unit's measurement too. */
-const segments = (unit: string) => unit.split(/(?<=[-/])(?=\p{L})|(?<=–)(?=\S)/u);
+const segments = (unit: string) => unit.split(/(?<=[-/])(?=\p{L})|(?<=\u2013)(?=\S)/u);
 
 interface TextStyle {
   face: SocialCardFace;
