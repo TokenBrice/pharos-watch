@@ -119,6 +119,16 @@ describe("stability index view-model", () => {
     ], 63_000_000_000);
     expect(contributors[0]?.symbol).toBe("USDC");
     expect(contributors[0]?.total).toBeGreaterThan(contributors[1]?.total ?? 0);
+    expect(contributors[0]?.driver).toBe("severity");
+  });
+
+  it("names breadth when a large coin near peg outranks a small one far off", () => {
+    const rows = buildPsiContributorRows([
+      { id: "pmusd", symbol: "pmUSD", bps: -4_510, mcapUsd: 49_000_000, ageDays: 199, factor: 0.25 },
+      { id: "xaum", symbol: "XAUm", bps: 14, mcapUsd: 1_500_000_000, ageDays: 3, factor: 1 },
+    ], 300_000_000_000);
+    expect(rows.map((row) => [row.symbol, row.driver])).toEqual([["XAUm", "breadth"], ["pmUSD", "breadth"]]);
+    expect(rows[0]!.severity).toBeLessThan(rows[0]!.breadth);
   });
 
   it("keeps 30d statistics inside source-anchored UTC days despite gaps", () => {

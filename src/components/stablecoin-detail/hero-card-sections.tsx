@@ -2,20 +2,25 @@
 
 import type { ReactNode } from "react";
 import { IntentLink } from "@/components/intent-link";
-import { BadgeCheck, Rocket } from "lucide-react";
+import { AlertTriangle, Archive, BadgeCheck, CircleDashed, Rocket, ShieldAlert, type LucideIcon } from "lucide-react";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatShortDate } from "@shared/lib/format";
-import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
+import type { CoinState } from "@shared/lib/coin-state";
+import type { StablecoinVerdict, StablecoinVerdictArchetype } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 import {
   HERO_CHIP_BACKING_LABELS,
   HERO_CHIP_GOVERNANCE_LABELS,
   HERO_CHIP_PEG_LABELS,
+  VERDICT_TONES,
   getHeroPegLabel,
 } from "@shared/lib/classification";
 import { InfrastructureBadge } from "./hero-card-identity";
@@ -46,8 +51,27 @@ export function isHeroVerdictShown(verdict: StablecoinVerdict): boolean {
   return isHeroVerdictEnabled() && verdict.archetype !== "uncategorized" && verdict.archetype !== "institutional-default";
 }
 
-export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
+/** One icon per verdict archetype; the "verified" check is for identity labels only. */
+const VERDICT_ICONS: Record<StablecoinVerdictArchetype, LucideIcon> = {
+  "pre-launch": Rocket,
+  "quarantined-record": Archive,
+  "delisted-record": Archive,
+  "frozen-archive": Archive,
+  distressed: AlertTriangle,
+  "low-safety-score": ShieldAlert,
+  "yield-bearing-hybrid": BadgeCheck,
+  "decentralized-benchmark": BadgeCheck,
+  "institutional-default": BadgeCheck,
+  uncategorized: CircleDashed,
+};
+
+/**
+ * The hero's lead chip: the coin's highest exceptional state when one exists
+ * (the shared `CoinStateChip`), else its verdict in the verdict's own tone.
+ */
+export function HeroChipRail({ coin, verdict, state = null }: { coin: StablecoinMeta; verdict: StablecoinVerdict; state?: CoinState | null }) {
   const showVerdict = isHeroVerdictShown(verdict);
+  const VerdictIcon = VERDICT_ICONS[verdict.archetype];
   const launchDate = formatChipLaunchDate(coin.launchDate);
   const pegLabel = coin.flags.navToken
     ? getHeroPegLabel(
@@ -61,15 +85,22 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
   return (
     <div className="border-b border-border/40 px-4 py-2 sm:px-5">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {/* The verdict leads the chip row instead of taking a line of its own. */}
-        {showVerdict ? (
+        {/* The state, else the verdict, leads the chip row instead of taking a line of its own. */}
+        {state ? (
+          <span id={`hero-verdict-${coin.id}`} data-hero-verdict-lane className="inline-flex max-w-full">
+            <CoinStateChip state={state} className="h-5 px-2.5 py-0 text-xs" />
+          </span>
+        ) : showVerdict ? (
           <span
             id={`hero-verdict-${coin.id}`}
             data-archetype={verdict.archetype}
             data-hero-verdict-lane
-            className="inline-flex h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-none text-state-info-bright"
+            className={cn(
+              "inline-flex h-5 items-center gap-1 rounded-full border px-2.5 text-xs font-medium leading-none",
+              SEVERITY_TONE_CLASS[VERDICT_TONES[verdict.archetype]].pill,
+            )}
           >
-            <BadgeCheck aria-hidden="true" className="h-3 w-3 shrink-0" />
+            <VerdictIcon aria-hidden="true" className="h-3 w-3 shrink-0" />
             {verdict.label}
           </span>
         ) : null}

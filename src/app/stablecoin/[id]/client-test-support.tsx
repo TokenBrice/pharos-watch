@@ -164,7 +164,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
     stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasFlowHistory: false, hasBlacklist: false,
     supplyHistory: [], reserves: null, reserveFetchError: null,
     refetchReserves: null, isFetchingReserves: false, supplyError: null, staleQueries: [],
-    featureStates: makeFeatureStates(),
+    featureStates: makeFeatureStates(), coinStates: [],
     mintAuthority: { status: "not-reviewed" as const, processDiagnostics: [], processMetrics: [] },
     hero: { signalRailItems: [] } as never, handleRetryAll: vi.fn(),
   };
@@ -177,10 +177,7 @@ export function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     childVariants: [TRACKED_META_BY_ID.get("susds-sky")!, TRACKED_META_BY_ID.get("stusds-sky")!],
     isVariant: false,
     hasVariants: true,
-    verdict: {
-      archetype: "uncategorized",
-      label: "Uncategorized",
-    },
+    verdict: { archetype: "uncategorized", label: "Uncategorized" },
     ...overrides,
   };
 }
@@ -199,9 +196,6 @@ export function makeFrozenViewModel(coin: StablecoinMeta) {
     hasVariants: false,
     blacklistSymbol: null,
     pegReferenceUnavailable: false,
-    verdict: {
-      archetype: "frozen-archive",
-      label: "Frozen Archive",
-    },
+    verdict: { archetype: "frozen-archive", label: "Frozen Archive" },
   };
 }

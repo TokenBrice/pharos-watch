@@ -5,8 +5,8 @@ import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { ReserveRisk, ReserveSlice } from "@shared/types/reserves";
 import { formatIsoDate, formatIsoTimestamp } from "@shared/lib/format";
 
-/** `neutral` is informational; `watch` is an active condition (amber). Nothing here is red. */
-export type ReserveNoticeTone = "neutral" | "watch";
+/** `neutral` is informational; `caution` is an active condition (amber). Nothing here is red. */
+export type ReserveNoticeTone = "neutral" | "caution";
 
 export interface ReserveNoticeModel {
   title: string;
@@ -90,7 +90,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve refresh delayed",
       message: "Showing the last worker-resolved reserve snapshot while refresh retries.",
-      tone: "watch",
+      tone: "caution",
     };
   }
 
@@ -98,7 +98,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing curated reserve baseline.",
-      tone: "watch",
+      tone: "caution",
     };
   }
 
@@ -106,7 +106,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing the estimated reserve template.",
-      tone: "watch",
+      tone: "caution",
     };
   }
 
@@ -126,7 +126,7 @@ export function buildReserveFetchNotice(
       message: hasFallbackView
         ? "Unable to reach the live reserve API. Showing the current fallback view."
         : "Unable to reach the live reserve API right now. Please check your connection and try again.",
-      tone: "watch",
+      tone: "caution",
     };
   }
 
@@ -135,7 +135,7 @@ export function buildReserveFetchNotice(
     message: hasFallbackView
       ? "Unable to load the live reserve feed right now. Showing the current fallback view."
       : "Unable to load reserve composition right now.",
-    tone: "watch",
+    tone: "caution",
   };
 }
 

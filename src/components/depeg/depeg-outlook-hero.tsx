@@ -1,17 +1,21 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { DEWSRadarPanel } from "@/components/dews/dews-summary";
 import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { getTierMeta } from "@/components/depeg/depeg-resolver-row-card-model";
+import { describeDdrVerdict } from "@/components/depeg/depeg-resolver-row-card-state";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
-import type { ResolverBookSummary } from "@/components/depeg/depeg-resolver-book-summary";
+import type { OpenIncidentRow, ResolverBookSummary } from "@/components/depeg/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
 import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
-import { formatPercent } from "@shared/lib/format";
+import { DEPEG_PENDING_STATE_LABELS } from "@shared/lib/classification";
+import { formatCompactUsdShort, formatPercent } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 import type { PegSummaryStats } from "@shared/types/peg";
 
@@ -23,6 +27,8 @@ interface DepegOutlookHeroProps {
   catalogCount?: number | null;
   /** Threshold crossings still awaiting confirmation. */
   pendingCount: number | null;
+  /** The confirmed census ranked by holder exposure; null while the peg summary is unread. */
+  openIncidents?: readonly OpenIncidentRow[] | null;
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
   dewsAlertCount: number | null;
   /** First reads still needed by each figure or rail group. */
@@ -48,6 +54,52 @@ function StatCell({ label, value, detail, reserve }: { label: ReactNode; value: 
         <span className="pharos-numeric text-lg font-semibold leading-tight text-foreground">{value}</span>
         <span className="text-xs text-muted-foreground">{detail}</span>
       </p>
+    </div>
+  );
+}
+
+/** Open incidents named under the headline; the headline counts the whole census. */
+const OPEN_INCIDENT_ROWS = 5;
+
+function OpenIncidentList({ rows }: { rows: readonly OpenIncidentRow[] }) {
+  const visible = rows.slice(0, OPEN_INCIDENT_ROWS);
+  return (
+    <div className="border-t border-border/60 pt-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h3 className="pharos-section-title">Open incidents</h3>
+        <p className="pharos-meta">
+          {rows.length > visible.length ? `Top ${visible.length} of ${rows.length} by holder exposure` : "By holder exposure"}
+        </p>
+      </div>
+      <ul className="mt-1.5">
+        {visible.map((row) => {
+          // Basis points, like the worst-move chip and the homepage card.
+          const deviation = row.held
+            ? "Mkt closed"
+            : row.deviationBps == null
+              ? "—"
+              : `${row.deviationBps < 0 ? "−" : row.deviationBps > 0 ? "+" : ""}${Math.abs(row.deviationBps).toFixed(0)} bps`;
+          const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
+          const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
+          return (
+            <li key={row.id}>
+              <Link
+                prefetch={false}
+                href={buildStablecoinUrl(row.id, "#depeg-resolver")}
+                aria-label={`${row.symbol}: ${row.held ? "reference market closed" : row.deviationBps == null ? "deviation unavailable" : deviation}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
+                className="pharos-focus-ring -mx-1 flex min-h-11 items-center gap-x-2 rounded-sm px-1 text-xs hover:bg-muted/50 sm:min-h-8"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{row.symbol}</span>
+                <span className="pharos-numeric w-18 shrink-0 text-right text-foreground" title={row.held ? "Reference market closed" : undefined}>
+                  {deviation}
+                </span>
+                <span className={cn("w-24 shrink-0 truncate", verdict.accent)}>{verdict.label}</span>
+                <span className="pharos-numeric w-14 shrink-0 text-right text-muted-foreground">{cap}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -78,6 +130,7 @@ export function DepegOutlookHero({
   activeDepegIds,
   catalogCount,
   pendingCount,
+  openIncidents,
   dewsAlertCount,
   pendingSources,
   book,
@@ -150,10 +203,18 @@ export function DepegOutlookHero({
             />
           </div>
 
+          {/* The first question is "what is off peg": name the largest incidents
+              under the count, before the precursor queue. */}
+          {openIncidents?.length || reservedSources?.peg ? (
+            <div className={reservedSources?.peg ? "min-h-67 sm:min-h-52" : undefined}>
+              {openIncidents?.length ? <OpenIncidentList rows={openIncidents} /> : null}
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 border-t border-border/60 pt-3">
             <StatCell
               reserve={reservedSources?.events}
-              label="Pending"
+              label={DEPEG_PENDING_STATE_LABELS.crossing}
               value={pendingCount == null ? "—" : String(pendingCount)}
               detail={pendingCount == null ? pendingSources?.events ? "Loading event data…" : "event data unavailable" : pendingCount === 1 ? "crossing" : "crossings"}
             />
@@ -230,7 +291,6 @@ export function DepegOutlookHero({
               ) : null}
             </div>
           ) : null}
-          {queue || reserveQueue ? <div className={cn("border-t border-border/60 pt-3", reserveQueue && "min-h-84 sm:min-h-76")}>{queue}</div> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-2 lg:col-span-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -245,8 +305,10 @@ export function DepegOutlookHero({
             maxHeight={520}
             reserveSpace={reserveRadar}
             reserveLegend={reserveQueue}
-            className="flex-1"
           />
+          {/* The precursor queue is the radar's detail layer, so it sits under it and balances
+              the rail's depeg column instead of lengthening it. */}
+          {queue || reserveQueue ? <div className={cn("border-t border-border/60 pt-3", reserveQueue && "min-h-84 sm:min-h-76")}>{queue}</div> : null}
         </div>
       </div>
       {footer ? <div className="border-t border-border/60 px-5 py-4 sm:px-6">{footer}</div> : null}

@@ -12,6 +12,7 @@ import {
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useQuerySlice } from "@/hooks/use-query-slice";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -114,6 +115,8 @@ export function useCompareDataModel({
   const yieldQuery = useYieldRankings({ enabled: metricsEnabled });
   const stressQuery = useStressSignals({ enabled: metricsEnabled });
   const flowQuery = useMintBurnFlows(24, { enabled: metricsEnabled });
+  // Shares the peg-summary and stress entries above; adds the published DDR verdicts.
+  const coinStates = useCoinStates({ enabled: metricsEnabled });
 
   const list = useQuerySlice(listQuery);
   const peg = useQuerySlice(pegQuery);
@@ -253,11 +256,15 @@ export function useCompareDataModel({
       redemptionMap: redemption.data?.coins,
       yieldMap,
       stressMap: stress.data?.signals,
+      coinStatesById: coinStates.byId,
+      coinStatesReady: coinStates.liveReady,
     });
   }, [
     assetMap,
     bluechip.data,
     cardMap,
+    coinStates.byId,
+    coinStates.liveReady,
     comparisonMetaMap,
     dexData,
     flowCoinMap,
@@ -345,6 +352,7 @@ export function useCompareDataModel({
   ]);
 
   return {
+    coinStatesById: coinStates.byId,
     cohortBaseline,
     comparisonCoins,
     detailErrors,

@@ -14,11 +14,20 @@ const CLAMP_THRESHOLD_CHARS = 250;
  * on desktop. The full text stays in the DOM. After mount the toggle hides
  * whenever the clamp is not actually cutting anything at the current width.
  */
-export function AiSummaryProse({ textLength, children }: { textLength: number; children: ReactNode }) {
+export function AiSummaryProse({
+  textLength,
+  clamp = true,
+  children,
+}: {
+  textLength: number;
+  /** False inside a fold that already hides the note: no second toggle. */
+  clamp?: boolean;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [overflowing, setOverflowing] = useState(true);
   const proseRef = useRef<HTMLParagraphElement>(null);
-  const collapsible = textLength > CLAMP_THRESHOLD_CHARS;
+  const collapsible = clamp && textLength > CLAMP_THRESHOLD_CHARS;
 
   useEffect(() => {
     const node = proseRef.current;

@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   useSort: vi.fn(),
   useStablecoins: vi.fn(),
   useStressSignals: vi.fn(),
+  useCoinStates: vi.fn(),
   TableExportMenu: vi.fn(),
   useUrlFilters: vi.fn(),
 }));
@@ -65,6 +66,10 @@ vi.mock("@/hooks/api-hooks", () => ({
   useStressSignals: mocks.useStressSignals,
 }));
 
+vi.mock("@/hooks/use-coin-states", () => ({
+  useCoinStates: mocks.useCoinStates,
+}));
+
 vi.mock("@/hooks/use-url-filters", () => ({
   useUrlFilters: mocks.useUrlFilters,
 }));
@@ -83,6 +88,7 @@ function refetch() {
 
 function setDefaultMocks() {
   mocks.useHydrated.mockReturnValue(true);
+  mocks.useCoinStates.mockReturnValue({ byId: new Map(), liveReady: false });
   mocks.useUrlFilters.mockReturnValue({
     searchParams: new URLSearchParams(),
     replaceParams: vi.fn(),
@@ -214,6 +220,17 @@ describe("ScreenerClient freshness notices", () => {
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       triggerLabel: "Export", triggerClassName: "min-w-24", disabled: false,
     });
+  });
+
+  it("carries coin states and the DEWS band into rows and filters on the state", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1_700_000_000, meta: null, refetch });
+    mocks.useStressSignals.mockReturnValue({ ...mocks.useStressSignals(), data: { signals: { "usdc-circle": { score: 44, band: "ALERT" } } } });
+    const depeg = { kind: "depeg", deviationBps: -900, ddrTier: null, ddrMethodologyVersion: null } as const;
+    mocks.useCoinStates.mockReturnValue({ byId: new Map([["usdc-circle", [depeg]]]), liveReady: true });
+    mocks.useUrlFilters.mockReturnValue({ searchParams: new URLSearchParams("states=depeg"), replaceParams: vi.fn() });
+    render(<ScreenerClient />);
+    const table = mocks.ScreenerTable.mock.calls.at(-1)?.[0] as { rows: ScreenerRow[] };
+    expect(table.rows).toMatchObject([{ id: "usdc-circle", states: [depeg], dewsBand: "ALERT", dewsScore: 44 }]);
   });
 
   it("exports every filtered sorted row, independently of the table's displayed page", () => {

@@ -258,6 +258,17 @@ describe("buildBackingMetricsView", () => {
     expect(build({ collateralization: reviewed })?.coverage?.tone).toBe("over");
   });
 
+  it("keeps a full band green only for a live ratio on a calm coin", () => {
+    expect(build({ liveRatio: 1.24 })?.coverage?.neutral).toBe(false);
+    // "As reviewed" is not live; distress outranks a calm badge.
+    expect(build({ collateralization: reviewed })?.coverage?.neutral).toBe(true);
+    expect(build({ liveRatio: 1.24, distressed: true })?.coverage?.neutral).toBe(true);
+    // A short ratio keeps its warning tone either way.
+    expect(build({ collateralization: { ...reviewed, ratio: 0.211 }, distressed: true })?.coverage?.neutral).toBe(false);
+    const { container } = render(<BackingMetricsCard view={build({ liveRatio: 1.24, distressed: true })!} anchorTwin />);
+    expect(container.innerHTML).not.toContain("emerald");
+  });
+
   it("places the MCR and shutdown markers from the reviewed numeric parameters", () => {
     const view = build({
       collateralization: reviewed,

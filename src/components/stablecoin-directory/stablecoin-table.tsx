@@ -9,6 +9,7 @@ import type { FilterTag } from "@shared/types/stablecoin-meta-primitives";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { CoinState } from "@shared/lib/coin-state";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -39,6 +40,8 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  /** Exceptional states by coin id (`useCoinStates`); each row leads with its highest. Omitted: no state column. */
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
   /** The loaded report-cards response's methodology version, for the CSV label. */
   reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
@@ -71,6 +74,7 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  coinStates,
   reportCardsMethodologyVersion,
   sourceGenerations,
   initialVisibleColumns,
@@ -221,6 +225,7 @@ export function StablecoinTable({
       pegScores={pegScores}
       dexLiquidity={dexLiquidity}
       reportCards={reportCards}
+      coinStates={coinStates}
       pinnedStablecoinSet={rows.pinnedStablecoinSet}
       onTogglePinnedStablecoin={onTogglePinnedStablecoin}
       activeCursorIndex={activeCursorIndex}

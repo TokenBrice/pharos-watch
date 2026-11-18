@@ -44,6 +44,7 @@ import type { YieldBenchmarkKey, YieldType } from "@shared/types/yield-vocabular
 import type { YieldWorkbenchRanking } from "@/lib/yield-row-types";
 import { getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
+import { COIN_STATE_KIND_VALUES, type CoinState } from "@shared/lib/coin-state";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
@@ -70,11 +71,58 @@ function getSourcePosture(row: YieldWorkbenchRanking, sourceDepthLens: YieldSour
   });
 }
 
-function buildYieldRowFacet(row: YieldWorkbenchRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
+const LINKED_VARIANT_SOURCE_PREFIX = "linked-variant:";
+
+/**
+ * Every state but a DEWS band keeps a row out of "Best-paid risk in view" and
+ * the warning-free risk bands (lifecycle, critical, depeg, paused, deadline); a
+ * DEWS band is a precursor the row still shows, not a disqualifier.
+ */
+export function isYieldBlockingCoinState(state: CoinState): boolean {
+  return state.kind !== "dews";
+}
+
+/**
+ * A yield row's exceptional states (`resolveCoinStates` via `useCoinStates`):
+ * its own coin's, plus every state but a DEWS band or pre-launch of the
+ * tracked variant its selected source deposits into (`linked-variant:<venueId>:…`),
+ * carrying that venue's symbol (`venue`). Highest precedence first, one state per kind.
+ */
+function resolveYieldRowCoinStates(
+  row: Pick<YieldWorkbenchRanking, "id" | "provenance">,
+  statesById: ReadonlyMap<string, readonly CoinState[]> | null | undefined,
+): readonly CoinState[] {
+  if (!statesById) return [];
+  const own = statesById.get(row.id) ?? [];
+  const sourceKey = row.provenance?.sourceKey;
+  const venueId = sourceKey?.startsWith(LINKED_VARIANT_SOURCE_PREFIX)
+    ? sourceKey.slice(LINKED_VARIANT_SOURCE_PREFIX.length).split(":", 1)[0]
+    : null;
+  if (!venueId || venueId === row.id) return own;
+  const venueSymbol = TRACKED_META_BY_ID.get(venueId)?.symbol ?? venueId;
+  const ownKinds = new Set(own.map((state) => state.kind));
+  const venue = (statesById.get(venueId) ?? [])
+    .filter((state) => state.kind !== "dews" && state.kind !== "pre-launch" && !ownKinds.has(state.kind))
+    .map((state): CoinState => ({ ...state, venue: venueSymbol }));
+  if (venue.length === 0) return own;
+  return [...own, ...venue].sort(
+    (left, right) => COIN_STATE_KIND_VALUES.indexOf(left.kind) - COIN_STATE_KIND_VALUES.indexOf(right.kind),
+  );
+}
+
+function buildYieldRowFacet(
+  row: YieldWorkbenchRanking,
+  watchlistIds: ReadonlySet<string> | null,
+  statesById: ReadonlyMap<string, readonly CoinState[]> | null,
+): YieldRowFacet {
   const sourceDepthLens = getSourceDepthLens(row);
   const inWatchlist = watchlistIds?.has(row.id) ?? false;
   const sourceChanged = row.provenance?.sourceSwitch === true;
-  const hasWarning = selectInvestmentWarningSignals(row.warningSignals).length > 0;
+  const coinStates = resolveYieldRowCoinStates(row, statesById);
+  // A blocking coin or venue state is a warning too, so every warnings-hidden
+  // risk band (the landing band included) and watchlist attention read it.
+  const hasWarning = selectInvestmentWarningSignals(row.warningSignals).length > 0
+    || coinStates.some(isYieldBlockingCoinState);
   const observations = row.sourceRisk?.observationCount30d;
   return {
     row,
@@ -89,14 +137,16 @@ function buildYieldRowFacet(row: YieldWorkbenchRanking, watchlistIds: ReadonlySe
     isRising: row.currentApy > row.apy30d && observations != null && observations >= 7,
     inWatchlist,
     needsWatchlistAttention: inWatchlist && (hasWarning || sourceChanged),
+    coinStates,
   };
 }
 
 export function buildYieldRowFacets(
   rows: readonly YieldWorkbenchRanking[],
   watchlistIds: ReadonlySet<string> | null,
+  statesById: ReadonlyMap<string, readonly CoinState[]> | null = null,
 ): YieldRowFacet[] {
-  return rows.map((row) => buildYieldRowFacet(row, watchlistIds));
+  return rows.map((row) => buildYieldRowFacet(row, watchlistIds, statesById));
 }
 
 function countPegs(facets: readonly YieldRowFacet[]): Map<PegCurrency, number> {
@@ -397,5 +447,6 @@ export function rankYieldRows(
       sourceDepthLens: facet.sourceDepthLens,
       sourcePosture: facet.sourcePosture,
       cohortPercentile: computeRowCohortPercentile(facet.row, cohortIndex),
+      coinStates: facet.coinStates,
     }));
 }

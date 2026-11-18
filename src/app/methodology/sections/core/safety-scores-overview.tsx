@@ -8,6 +8,12 @@ import {
   MethodologyPreconditions,
 } from "../../methodology-shared";
 
+/** Policy grade bands; the page header leads with the same table. */
+export const SAFETY_GRADE_FACTS = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map((threshold, index, bands) => ({
+  label: threshold.grade,
+  value: `${threshold.minScore}–${index === 0 ? 100 : bands[index - 1]!.minScore - 1}`,
+}));
+
 export function SafetyScoresOverview() {
   const { markdownParagraphs, historyLinks } = SAFETY_SCORES_SECTION_CONTENT;
 
@@ -31,12 +37,7 @@ export function SafetyScoresOverview() {
           { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
-      <MethodologyFacts
-        facts={V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map((threshold, index, bands) => ({
-          label: threshold.grade,
-          value: `${threshold.minScore}–${index === 0 ? 100 : bands[index - 1]!.minScore - 1}`,
-        }))}
-      />
+      <MethodologyFacts facts={SAFETY_GRADE_FACTS} />
       <MethodologyPreconditions
         facts={[
           { label: "Minimum data", value: "At least two usable evidenced pillars; price an unavailable third at C/U with original weights" },

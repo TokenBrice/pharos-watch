@@ -85,9 +85,10 @@ describe("DepegControlBoard", () => {
     expect(text).toBeDefined();
   });
 
-  it("renders an unavailable peg score as NR with a neutral gauge", () => {
-    renderBoard([makeRow({ pegScore: null })]);
+  it("renders an unavailable peg score as NR with a neutral gauge and its price reason", () => {
+    renderBoard([makeRow({ pegScore: null, currentPriceUnavailable: true })]);
     expect(screen.getByLabelText("Peg score for SUSD").firstElementChild?.className).toContain("bg-muted-foreground");
+    expect(screen.getAllByTitle("No usable price")[0].textContent).toBe("NR, no usable price");
   });
 
   it.each(["CALM", "WATCH", "ALERT", "WARNING", "DANGER", null] as const)(
@@ -175,7 +176,7 @@ describe("DepegControlBoard", () => {
     expect(within(renderedRow()).getByText("22m")).toBeTruthy();
   });
 
-  it.each(["open", "pending", "floor", "warning", "danger"] as const)(
+  it.each(["open", "awaiting", "floor", "warning", "danger"] as const)(
     "preserves the known %s status ahead of unknown observations",
     (status) => {
       const row = makeRow({
@@ -186,7 +187,7 @@ describe("DepegControlBoard", () => {
       }, status === "warning" || status === "danger"
         ? makeDews({ band: status === "warning" ? "WARNING" : "DANGER" })
         : null);
-      if (status === "pending") {
+      if (status === "awaiting") {
         row.pendingIncident = makePendingIncident({ stablecoinId: row.coin.id, symbol: row.coin.symbol });
       }
       renderBoard([row]);
@@ -250,8 +251,15 @@ describe("DepegControlBoard", () => {
     expect(description.textContent).toMatch(/recorded-window peg occupancy estimate/i);
     expect(description.textContent).toMatch(/tracking closure can leave unobserved time/i);
     expect(description.textContent).toMatch(/not proof of recovery or continuous observation/i);
+    // The caveat is accessible description, not per-row copy.
+    expect(within(description).getByText(/tracking closure/i).className).toContain("sr-only");
     expect(within(row).queryByText(/recovered|coverage lost|asset removed|direction superseded/i)).toBeNull();
   });
+  it.each([[276_400_000, "$276.4M cap"], [null, "cap unavailable"]] as const)("labels market cap %s without zero-filling", (marketCapUsd, label) => {
+    renderBoard([{ ...makeRow(), marketCapUsd }]);
+    expect(within(screen.getByRole("button", { name: /open susd depeg detail/i })).getByText(label)).toBeTruthy();
+  });
+
   it("renders rows without side-stripe or blanket severity tint and keeps units explicit", () => {
     renderBoard([makeRow()]);
 

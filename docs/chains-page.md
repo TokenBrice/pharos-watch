@@ -46,6 +46,8 @@ Profiles use the instrument header: a one-line deck with the registry editorial 
 
 Coverage-listed chains without a numeric row render unavailable supply/retry, not an untracked/removed fallback. Disclose excluded chain observations separately from excluded global assets. Changes require known current/historical pairs; missing history is `—`, explicit zero history remains known. Positive supply grown from zero has null ratio but valid absolute delta; zero-to-zero is measured no change.
 
+A settled read with no row for the chain (no chain read, every observation excluded, or a failed read) keeps only the hero's identity band; no metric or Chain Health skeleton waits for a row that is not coming. When active tracked coins (registry `chainIds`) still live on the chain, the body lists them with their highest `CoinStateChip` and its status line names each critical or paused state with the notice title and `asOf` date (`1 tracked coin reports a critical or paused state: iUSD — Initia L1 halted; … (updated 2026-10-30).`); the untracked/removed fallback is kept for a chain with no tracked coin. There is no chain-halt model: a halt surfaces only through its coins' curated notices. The live stablecoin table also shows each coin's highest state. States come from `useCoinStates` ([coin exceptional state](./design-language.md#coin-exceptional-state)).
+
 Without an admitted finite nonnegative `chainDetail.totalUsd`, the profile hook returns `totalUsd: null` and the route withholds composition/backing/table models rather than inventing a zero denominator. An explicit observed zero detail remains valid.
 
 ## Chain Health Score

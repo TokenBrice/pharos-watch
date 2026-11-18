@@ -15,6 +15,9 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: vi.fn(),
 }));
 
+const { useCoinStatesMock } = vi.hoisted(() => ({ useCoinStatesMock: vi.fn() }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: useCoinStatesMock }));
+
 vi.mock("@/components/dependency-watershed/dependency-map-basin-list", () => ({
   DependencyMapBasinList: ({ model }: { model: { hubs: readonly unknown[] } }) => (
     <div data-testid="mobile-summary">summary:{model.hubs.length}</div>
@@ -24,6 +27,9 @@ vi.mock("@/components/dependency-watershed/dependency-map-basin-list", () => ({
 vi.mock("./dependency-hubs-board", () => ({
   DependencyHubsBoard: ({ model }: { model: { hubs: readonly unknown[] } }) => (
     <div data-testid="dependency-hubs-board">board:{model.hubs.length}</div>
+  ),
+  LiveIncidentsUpstream: ({ coinStates }: { coinStates: ReadonlyMap<string, unknown> }) => (
+    <div data-testid="live-incidents">incidents:{[...coinStates.keys()].join(",")}</div>
   ),
 }));
 
@@ -46,6 +52,7 @@ describe("DependencyMapClient", () => {
   beforeEach(() => {
     mockUseDependencyGraph.mockReset();
     mockUseStablecoins.mockReset();
+    useCoinStatesMock.mockReturnValue({ byId: new Map(), liveReady: true });
 
     mockUseDependencyGraph.mockReturnValue(
       makeQueryResult(projectDependencyGraph(makeReportCardsV9Response({
@@ -87,6 +94,16 @@ describe("DependencyMapClient", () => {
     expect(screen.getByText(/Market-cap data is unavailable/)).toBeTruthy();
     expect(screen.getByText("Supply data unavailable")).toBeTruthy();
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
+  });
+
+  it("feeds the live coin-state layer to the incidents list and the graph nodes", async () => {
+    useCoinStatesMock.mockReturnValue({
+      byId: new Map([["usdc-circle", [{ kind: "depeg", deviationBps: -150, ddrTier: null, ddrMethodologyVersion: null }]]]),
+      liveReady: true,
+    });
+    render(<DependencyMapClient />);
+    expect(screen.getByTestId("live-incidents").textContent).toBe("incidents:usdc-circle");
+    expect(await screen.findByRole("button", { name: /^USDC, .*Depeg/ })).toBeTruthy();
   });
 
   it("does not turn a first supply read in flight into an unavailable claim", () => {

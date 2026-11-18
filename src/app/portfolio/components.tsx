@@ -3,14 +3,19 @@
 import { useCallback, useRef, useState } from "react";
 import { Share2, Trash2, Wallet, X } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { COIN_STATE_TONES } from "@shared/lib/classification";
+import type { CoinState } from "@shared/lib/coin-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 import { formatDecimal } from "@shared/lib/format";
-import { formatUsd, parseUsdInput, PORTFOLIO_COIN_OPTIONS } from "./model";
+import { formatUsd, parseUsdInput, PORTFOLIO_COIN_OPTIONS, type ExceptionalHolding } from "./model";
 
 /**
  * Compact "One Beam" hero strip for /portfolio (the beam-header-strip variant of
@@ -18,7 +23,16 @@ import { formatUsd, parseUsdInput, PORTFOLIO_COIN_OPTIONS } from "./model";
  * exist the beam is the live Total Portfolio Value; before that it lights the
  * size of the gradeable registry the portfolio can draw from.
  */
-export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: number; totalUsd: number }) {
+export function PortfolioHeroStrip({
+  holdingCount,
+  totalUsd,
+  faceValueNote = false,
+}: {
+  holdingCount: number;
+  totalUsd: number;
+  /** A holding is in an exceptional state, so the entered total may overstate what it is worth. */
+  faceValueNote?: boolean;
+}) {
   const hasHoldings = holdingCount > 0;
   return (
     <section className="pharos-card-shell px-5 py-5 sm:px-6 sm:py-6" aria-label="Portfolio overview">
@@ -30,7 +44,9 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
           </p>
           <p className="pharos-meta">
             {hasHoldings
-              ? "Total portfolio value across your holdings"
+              ? faceValueNote
+                ? "Sum of your entered amounts at face value, not live prices"
+                : "Total portfolio value across your holdings"
               : "Active stablecoins you can model as holdings"}
           </p>
         </div>
@@ -41,6 +57,42 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
           </div>
         </dl>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Lists the holdings in an exceptional state (`resolveCoinStates`), largest
+ * entered exposure first, ahead of every portfolio figure. The callout takes
+ * the loudest tone among the states it lists.
+ */
+export function PortfolioStateCallout({ holdings, totalUsd }: { holdings: readonly ExceptionalHolding[]; totalUsd: number }) {
+  if (holdings.length === 0) return null;
+  const tones = new Set(holdings.flatMap((holding) => holding.states.map((state) => COIN_STATE_TONES[state.kind])));
+  const tone = tones.has("danger") ? "danger" : tones.has("caution") ? "caution" : "neutral";
+  const exposureUsd = holdings.reduce((sum, holding) => sum + holding.amount, 0);
+  return (
+    <section
+      aria-label="Holdings in an exceptional state"
+      className={cn("rounded-xl border px-4 py-3 text-sm text-foreground", SEVERITY_TONE_CLASS[tone].banner)}
+    >
+      <p className="font-medium">
+        {holdings.length} {holdings.length === 1 ? "holding is" : "holdings are"} in an exceptional state
+        {exposureUsd > 0 && totalUsd > 0 ? ` · ${formatUsd(exposureUsd)} of ${formatUsd(totalUsd)} entered` : ""}
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {holdings.map((holding) => (
+          <li key={holding.coinId} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-semibold">{TRACKED_META_BY_ID.get(holding.coinId)?.symbol ?? holding.coinId}</span>
+            <span className="pharos-numeric text-xs text-muted-foreground">
+              {holding.amount > 0 ? formatUsd(holding.amount) : "No amount entered"}
+            </span>
+            {holding.states.map((state, index) => (
+              <CoinStateChip key={state.kind} state={state} showDetail={index === 0} />
+            ))}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -58,12 +110,14 @@ export function PortfolioLoadingState() {
 function HoldingRow({
   coinId,
   amount,
+  state,
   logos,
   onSetAmount,
   onRemove,
 }: {
   coinId: string;
   amount: number;
+  state?: CoinState;
   logos?: Record<string, string>;
   onSetAmount: (coinId: string, amount: number) => void;
   onRemove: (coinId: string) => void;
@@ -102,6 +156,7 @@ function HoldingRow({
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{meta.name}</div>
         <div className="text-xs text-muted-foreground">{meta.symbol}</div>
+        {state ? <CoinStateChip state={state} className="mt-1" /> : null}
       </div>
       <div className="flex items-center gap-2 sm:shrink-0">
         <div className="relative min-w-0 flex-1 sm:flex-none">
@@ -137,6 +192,7 @@ function HoldingRow({
 export function PortfolioHoldingsEditor({
   holdings,
   heldCardIds,
+  coinStatesById,
   logos,
   toast,
   onSetAmount,
@@ -147,6 +203,7 @@ export function PortfolioHoldingsEditor({
 }: {
   holdings: PortfolioHolding[];
   heldCardIds: Set<string>;
+  coinStatesById?: ReadonlyMap<string, readonly CoinState[]>;
   logos?: Record<string, string>;
   toast: string | null;
   onSetAmount: (coinId: string, amount: number) => void;
@@ -188,6 +245,7 @@ export function PortfolioHoldingsEditor({
             key={holding.coinId}
             coinId={holding.coinId}
             amount={holding.amount}
+            state={coinStatesById?.get(holding.coinId)?.[0]}
             logos={logos}
             onSetAmount={onSetAmount}
             onRemove={onRemove}

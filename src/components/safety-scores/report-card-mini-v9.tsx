@@ -6,8 +6,11 @@ import { LazySection } from "@/components/lazy-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { CompareRadarV9 } from "@/components/compare/radar-chart-v9";
 import { SafetyGradeBadge } from "@/components/safety-scores/safety-grade-badge";
+import { SafetyScoreTopDriver, type SafetyScoreTopDriverProps } from "@/components/safety-scores/safety-score-top-driver";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
+import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   SafetyScorePublicationIdentity,
@@ -16,6 +19,20 @@ import { hasPlottableV9RadarPillars, type V9TableConsumerCard as V9ConsumerCard 
 import { describePartialEvidence, formatPartialEvidenceHeadline } from "@/lib/safety-score-reason-labels";
 
 const PILLAR_SR_LABELS = { backing: "Backing", exit: "Exit", control: "Economic Control" } as const;
+
+// The table projection names a binding cap or a withheld score, but not the
+// peg multiplier, so an uncapped card shows no driver rather than a weakest
+// pillar that may not be what set its grade. It carries no evidence-freshness
+// verdict either, so the chip names no evidence age (the dossier owns it).
+function cardTopDriver(card: V9ConsumerCard): SafetyScoreTopDriverProps["driver"] {
+  if (card.ratingStatus === "not-rated") {
+    return { kind: "withheld", label: null, value: null, reason: card.nrReasons[0]?.message ?? "Required evidence is withheld." };
+  }
+  if (card.bindingCap !== null) {
+    return { kind: "cap-bound", label: card.bindingCap.kind, value: card.bindingCap.limit, reason: card.bindingCap.reason };
+  }
+  return null;
+}
 
 export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
   card,
@@ -65,6 +82,7 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
               <span className="sr-only">. {partial.summary}</span>
             </p>
           ) : null}
+          <SafetyScoreTopDriver driver={cardTopDriver(card)} coinId={card.id} subjectLabel={symbol} link={false} />
 
           {hasPlottableV9RadarPillars(card) ? (
             <div className="w-full max-w-[11rem]">
@@ -76,7 +94,7 @@ export const ReportCardMiniV9 = memo(function ReportCardMiniV9({
               </p>
               <LazySection minHeight={140} rootMargin="200px">
                 <CompareRadarV9
-                  series={[{ card, identity, color: "#10b981" }]}
+                  series={[{ card, identity, color: GRADE_RADAR_COLORS[card.grade === null ? "NR" : gradeRange(card.grade)] }]}
                   cohortSeries={[]}
                   size={140}
                 />

@@ -1,5 +1,6 @@
 import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "../stablecoins/client-registry";
 import { resolveMechanismArchetype } from "../classification";
+import { resolveCoinStates } from "../coin-state";
 import { getCirculatingRawOrNull } from "../supply";
 import { canonicalizeForSid } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
@@ -113,6 +114,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     // `dexDeviationBps` is the DEX-vs-primary source disagreement, not the
     // peg-domain deviation, so it cannot stand in for an unread peg deviation.
     const currentDeviationBps = peg?.currentDeviationBps ?? null;
+    // Notices alone resolve to critical, then paused (deadlines need a clock).
+    const holderNotice = resolveCoinStates({ notices: meta.alerts })[0];
 
     const row: MergedRow = {
       id,
@@ -135,6 +138,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       lastEventAt: peg?.lastEventAt ?? null,
 
       dewsScore: stress?.score ?? null,
+      holderNotice: holderNotice?.kind === "critical" || holderNotice?.kind === "paused"
+        ? { kind: holderNotice.kind, title: holderNotice.notice.title }
+        : null,
       safetyGrade: rowSafetyGrade,
       safetyScore: rowSafetyScore,
       safetyProvenance: rowSafetyProvenance,
@@ -222,6 +228,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         safetyNrReasons: row.safetyNrReasons,
         pegScore: row.pegScore,
         dewsScore: row.dewsScore,
+        // Omitted when absent, so rows without a notice keep their content hash.
+        holderNotice: row.holderNotice ?? undefined,
         liquidityScore: row.liquidityScore,
         protocolSlug: row.protocolSlug,
         variantOf: row.variantOf,

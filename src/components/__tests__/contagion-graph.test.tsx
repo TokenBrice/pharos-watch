@@ -232,6 +232,19 @@ describe("ContagionGraph", () => {
     expect(screen.getAllByText("1 (0 visible)")).toHaveLength(2);
   });
 
+  it("rings live states and names live incidents upstream", () => {
+    const graph = (states: Map<string, object[]>) => <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} coinStates={states as never} />;
+    const { container, rerender } = render(graph(new Map([["usde-ethena", [{ kind: "depeg", deviationBps: -210, ddrTier: null, ddrMethodologyVersion: null }]]])));
+    expect([...container.querySelectorAll("[data-state-ring]")].map(ring => ring.getAttribute("data-state-ring"))).toEqual(["depeg"]);
+    screen.getByRole("button", { name: /^USDe, Grade A, market cap [^,]+, Depeg: / });
+    fireEvent.click(screen.getByRole("button", { name: /^USDC, Grade A/ }));
+    const panel = () => screen.getAllByRole("region", { name: "Selected node details" })[0];
+    expect(within(panel()).getByText("Live incidents upstream").parentElement?.textContent).toContain("USDeDepeg");
+    // A scheduled deadline, like pre-launch, is not a live incident.
+    rerender(graph(new Map([["usde-ethena", [{ kind: "deadline", notice: { type: "warning", title: "M", deadline: "2026-12-01" }, daysToDeadline: 13 }]]])));
+    expect(within(panel()).queryByText("Live incidents upstream")).toBeNull();
+  });
+
   it("mounts one live graph in fullscreen and restores the opener on close", async () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
     fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));

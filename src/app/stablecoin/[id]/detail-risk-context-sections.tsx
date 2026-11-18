@@ -2,7 +2,7 @@
 
 import type { ReactNode, Ref } from "react";
 import { ChartPie, Scale, Unlink } from "lucide-react";
-import { CoinNotices } from "@/components/coin-notice";
+import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { BACKING_METRICS_ANCHOR_ID, BackingMetricsCard } from "@/components/stablecoin-detail/backing-metrics-card";
 import { BridgingDeploymentsModule } from "@/components/stablecoin-detail/bridging-card";
@@ -28,6 +28,7 @@ import { DETAIL_MODULE_TITLE_CLASS, SECTION_SCROLL_MT } from "@/components/stabl
 import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
@@ -446,7 +447,10 @@ export function DetailRiskContextSections({
   const parentArchetype = isWrapperVariant && viewModel.variantParent
     ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
     : null;
-  const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
+  // A frozen archive's record holds every notice its lead slot does not (that keeps only current danger notices).
+  const dayNowMs = useUtcDayNowMs();
+  const archived = placeCoinNotices(viewModel.coin.notices, { nowSec: dayNowMs === null ? null : dayNowMs / 1000 });
+  const overviewNotices = [...archived.paused, ...archived.rest];
   const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
   const reservesLoading = viewModel.featureStates.reserves.status === "loading";
   const qualitySummary = viewModel.coin.reserveQualitySummary ?? null;
@@ -566,9 +570,9 @@ export function DetailRiskContextSections({
           visibility={evidenceAnchors.control}
         />
 
-        {/* Warning and info notices lead the page as Holder alerts (under the
-            hero); a frozen archive keeps them here as part of its record. */}
-        {viewModel.coin.status === "frozen" && overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+        {/* A live coin's notices sit in its first fold (`placeCoinNotices`); a
+            frozen archive keeps all but its current danger notices here as its record. */}
+        {viewModel.coin.status === "frozen" ? <NoticeStack notices={overviewNotices} archive /> : null}
         {viewModel.hasFlows ? (
           <>
             {frozenNote}

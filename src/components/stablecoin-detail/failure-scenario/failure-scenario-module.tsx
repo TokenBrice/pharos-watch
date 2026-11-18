@@ -89,7 +89,7 @@ function ScenarioFigureValue({ value }: { value: string }) {
  * stated with a glyph and a label, never by hue alone. Partial stays neutral.
  */
 const VERDICT_PRESENTATION: Record<FailureScenarioDefenderVerdict, { icon: LucideIcon; tone: string }> = {
-  "cannot-stop": { icon: CircleX, tone: SEVERITY_TONE_CLASS.alert.text },
+  "cannot-stop": { icon: CircleX, tone: SEVERITY_TONE_CLASS.danger.text },
   partial: { icon: CircleMinus, tone: "text-foreground/80" },
   "can-stop": { icon: CircleCheck, tone: SEVERITY_TONE_CLASS.ok.text },
   unverified: { icon: CircleDashed, tone: "text-muted-foreground" },
@@ -97,7 +97,7 @@ const VERDICT_PRESENTATION: Record<FailureScenarioDefenderVerdict, { icon: Lucid
 
 const FALSIFIER_PRESENTATION: Record<FailureScenarioFalsifierStatus, { icon: LucideIcon; tone: string }> = {
   "not-met": { icon: Circle, tone: "text-muted-foreground" },
-  met: { icon: CircleCheck, tone: SEVERITY_TONE_CLASS.alert.text },
+  met: { icon: CircleCheck, tone: SEVERITY_TONE_CLASS.danger.text },
   unverified: { icon: CircleDashed, tone: "text-muted-foreground" },
 };
 
@@ -109,12 +109,12 @@ function DraftNotice({ note }: { note?: string }) {
       aria-label="Draft scenario"
       className={cn(
         "flex items-start gap-2 rounded-md border border-dashed px-3 py-1.5 text-xs leading-relaxed text-foreground/85",
-        SEVERITY_TONE_CLASS.watch.banner,
+        SEVERITY_TONE_CLASS.caution.banner,
       )}
     >
-      <FilePen aria-hidden="true" className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", SEVERITY_TONE_CLASS.watch.text)} />
+      <FilePen aria-hidden="true" className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", SEVERITY_TONE_CLASS.caution.text)} />
       <span className="text-pretty">
-        <span className={cn("font-semibold", SEVERITY_TONE_CLASS.watch.text)}>Draft, not approved:</span> development
+        <span className={cn("font-semibold", SEVERITY_TONE_CLASS.caution.text)}>Draft, not approved:</span> development
         preview only.{note ? <> {note}</> : null}
       </span>
     </p>
@@ -235,7 +235,7 @@ function StateStamp({ selection }: { selection: FailureScenarioSelection }) {
   }
   return (
     <>
-      <span className={cn("whitespace-nowrap font-medium", SEVERITY_TONE_CLASS.watch.text)}>Draft, not approved</span> ·{" "}
+      <span className={cn("whitespace-nowrap font-medium", SEVERITY_TONE_CLASS.caution.text)}>Draft, not approved</span> ·{" "}
       <span className="whitespace-nowrap">state at block {block}</span>
     </>
   );
@@ -311,7 +311,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
             Hypothetical scenario
           </Badge>
           {isDraft ? (
-            <Badge variant="outline" className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.watch.pill)}>
+            <Badge variant="outline" className={cn(CHIP_CLASS, SEVERITY_TONE_CLASS.caution.pill)}>
               <FilePen aria-hidden="true" />
               Draft — not approved
             </Badge>

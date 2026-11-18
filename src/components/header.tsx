@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
 import { RegimeBarToggle } from "@/components/psi-beacon/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
-import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   NAV_GROUPS,
@@ -15,10 +15,10 @@ import {
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
-import { ChevronLeft, ChevronRight, ExternalLink, Menu, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { openCommandPalette } from "@/lib/command-palette";
-import { OPEN_NAV_DRAWER_EVENT } from "@/lib/nav-drawer";
+import { OPEN_NAV_DRAWER_EVENT, setNavDrawerOpen } from "@/lib/nav-drawer";
 
 function MobileNavLink({
   item,
@@ -99,6 +99,7 @@ export function Header() {
   const categoryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const returnFocusCategoryKeyRef = useRef<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
+  const drawerOpenerRef = useRef<HTMLElement | null>(null);
   // One taxonomy at every width: the drawer's categories are the desktop
   // menus, and a columned menu (Resources) keeps its columns as subheads.
   const mobileCategories = NAV_GROUPS.map((group) => {
@@ -136,6 +137,9 @@ export function Header() {
 
   useEffect(() => {
     function handleOpenNavDrawer() {
+      // The bottom-nav Menu is the drawer's one entry point (no header twin);
+      // focus returns to whatever opened it.
+      drawerOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setActiveCategoryKey(null);
       returnFocusCategoryKeyRef.current = null;
       setOpen(true);
@@ -144,6 +148,12 @@ export function Header() {
     window.addEventListener(OPEN_NAV_DRAWER_EVENT, handleOpenNavDrawer);
     return () => window.removeEventListener(OPEN_NAV_DRAWER_EVENT, handleOpenNavDrawer);
   }, []);
+
+  // Openers read the drawer state for aria-expanded.
+  useEffect(() => {
+    setNavDrawerOpen(open);
+    return () => setNavDrawerOpen(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -196,15 +206,15 @@ export function Header() {
           </button>
 
           <Sheet open={open} onOpenChange={handleOpenChange}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-11 w-11">
-                <Menu className="h-4 w-4" />
-                <span className="sr-only">Menu</span>
-              </Button>
-            </SheetTrigger>
             <SheetContent
               side="left"
               showCloseButton={false}
+              onCloseAutoFocus={(event) => {
+                // Without a recorded opener, Radix restores focus itself.
+                if (!drawerOpenerRef.current) return;
+                event.preventDefault();
+                drawerOpenerRef.current.focus();
+              }}
               // Motion overrides retime the shadcn slide (500/300ms ease-in-out)
               // to the canon 220ms decelerating curve and drop it entirely for
               // prefers-reduced-motion — kept local so ui/sheet stays stock.

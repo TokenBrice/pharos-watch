@@ -38,9 +38,14 @@ import {
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
-  PRE_LAUNCH_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 import { HEADLINE_STABLECOIN_COUNT } from "@/lib/universe-vocabulary";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+
+// Launched rows are live, not upcoming: /upcoming/ and /learn/mechanisms/ leave
+// them out too, so About counts the same upcoming set.
+const UPCOMING_STABLECOIN_COUNT = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
 
 // Intentionally extends pharos-prose-link with inline-flex/gap-1 for icon-paired links (ExternalLink icon)
 // and frost-blue hover for visual differentiation. Cannot collapse to pharos-prose-link which has no flex layout.
@@ -348,7 +353,7 @@ export function AboutPageContent() {
   const trackedFeatures = getTrackedFeatures({
     activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
     deadStablecoins: DEAD_STABLECOIN_COUNT,
-    preLaunchStablecoins: PRE_LAUNCH_STABLECOIN_COUNT,
+    preLaunchStablecoins: UPCOMING_STABLECOIN_COUNT,
   });
   const faqItems = getAboutFaqItems({
     activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
@@ -361,7 +366,7 @@ export function AboutPageContent() {
     { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
     { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
     { label: "Stable-value", value: ACTIVE_STABLE_VALUE_INVESTMENT_COUNT },
-    { label: "Pre-launch", value: PRE_LAUNCH_STABLECOIN_COUNT },
+    { label: "Upcoming", value: UPCOMING_STABLECOIN_COUNT },
     { label: "Sources", value: "50+" },
   ];
   const operatingPrincipleIds = [
@@ -441,7 +446,7 @@ export function AboutPageContent() {
           <p>
             Pharos tracks {CORE_AGGREGATE_STABLECOIN_COUNT} core stablecoins and cash equivalents, plus{" "}
             {ACTIVE_VARIANT_STABLECOIN_COUNT} variants, {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT} stable-value investments,{" "}
-            {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
+            {UPCOMING_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
             universe with honest governance classification, transitive dependency scoring, and live reserve composition
             where available. Real-time depeg detection, freeze monitoring across {BLACKLIST_STABLECOINS.length} stablecoins,
             and a 30-minute ecosystem-wide stability index surface stress as it builds, before it reaches the

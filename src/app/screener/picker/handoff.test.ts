@@ -3,6 +3,8 @@ import { SCREENER_URL_SCHEMA } from "@/lib/screener-filters";
 import { decodeState } from "@/lib/url-state";
 import { buildScreenerUrl } from "@shared/lib/selector";
 import { makeInput } from "@shared/lib/selector/__tests__/fixture";
+import { buildScreenerHandoff } from "@/lib/selector-handoff";
+import { mockSelectorOutput } from "./picker.test-support";
 
 describe("Picker → Screener URL contract", () => {
   it("decodes every emitted field through the real schema and preserves the exact shortlist", () => {
@@ -29,6 +31,13 @@ describe("Picker → Screener URL contract", () => {
     expect(decoded.liquidityScoreMin).toBe(65);
     expect(decoded.custodyModels).toEqual(["onchain"]);
     expect(decoded.supplyMin).toBe(5_000_000);
+  });
+
+  it.each(["treasury", "yield", "trading"] as const)("labels every %s Picker-only gate instead of printing its key", (profile) => {
+    const chips = buildScreenerHandoff(mockSelectorOutput({ profile })).filterChips.filter((chip) => chip.label === "Picker-only");
+    expect(chips.map((chip) => chip.value)).toContain("Critical or paused notice gate");
+    // A raw reason key has no space.
+    expect(chips.filter((chip) => !chip.value.includes(" "))).toEqual([]);
   });
 
 });

@@ -53,7 +53,7 @@ import type {
 
 // Re-export the split-out types and scoring helpers retained on this module's
 // public surface. [audit Q-130]
-export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPalettePegStatus, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor, CommandPaletteResultKind } from "./command-palette-types";
+export type { CommandPaletteSection, CommandPaletteActionId, CommandPaletteActionIcon, CommandPaletteActionDefinition, CommandPaletteGroup, CommandPaletteSectionedItem, CommandPaletteHistoryItem, CommandPaletteStablecoinHealth, CommandPaletteStablecoinLiveMetadata, CommandPaletteResultDescriptor, CommandPaletteResultKind } from "./command-palette-types";
 export {
   rankCommandPaletteResults,
 } from "./command-palette-scoring";
@@ -284,7 +284,6 @@ export function buildPopularStablecoinDescriptors(
       kind: "stablecoin",
       logoId: coinId,
       ...projectStablecoinLiveMetadata(coinId, liveMetadata),
-      frozen: status === "frozen",
       href,
       history: { id: coinId, type: "stablecoin", label: name, sublabel: symbol, href },
     });
@@ -510,7 +509,6 @@ export function buildCommandPaletteResultDescriptors({
         kind: "stablecoin",
         logoId: id,
         ...projectStablecoinLiveMetadata(id, stablecoinLiveMetadata),
-        frozen: status === "frozen",
         href,
         history: { id, type: "stablecoin", label: name, sublabel: symbol, href },
       });

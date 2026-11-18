@@ -195,6 +195,7 @@ function priorityLabelsFor(input: SelectorInput): string[] {
 const DIVERGENCE_LABELS: Record<string, string> = {
   "active-depeg-gate": "Active-depeg gate",
   "howey-uncertain-exclusion": "Legal uncertainty exclusion",
+  "holder-notice-gate": "Critical or paused notice gate",
   "bluechip-grade-floor": "Bluechip D/F exclusion",
   "inherited-blacklist-status": "Upstream blacklist exposure",
   "yield-native-only": "Native yield rail",

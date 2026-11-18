@@ -11,6 +11,8 @@ import type {
   YieldRanking,
 } from "@shared/types/yield";
 import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
+import { projectTopDriver } from "@shared/lib/safety-score-v9/public-top-driver";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatIsoDate, formatIsoTimestamp, formatSignedPercent } from "@shared/lib/format";
 import {
@@ -50,27 +52,58 @@ const SAFETY_PILLAR_LABELS: Record<"backing" | "exit" | "control", string> = {
   control: "Economic Control",
 };
 
-/** The one reason a reader needs beside a grade: the binding cap, else the weakest pillar. */
+/** The one reason a reader needs beside a grade: the binding cap, the peg multiplier that moved it, else the weakest pillar. */
 export interface SafetyVerdictLine {
   lead: string;
   detail: string;
 }
 
-export function buildSafetyVerdictLine(card: {
-  score: number | null;
-  bindingCap: { binding?: boolean; limit?: number | null; reason?: string | null } | null;
-  weakestPillar: { pillar: "backing" | "exit" | "control"; score: number } | null;
-} | null): SafetyVerdictLine | null {
-  if (!card || card.score === null) return null;
-  const cap = card.bindingCap;
-  if (cap?.binding && typeof cap.limit === "number" && cap.reason) {
-    return { lead: `Capped at ${cap.limit}`, detail: cap.reason.trim().replace(/\.$/, "") };
+/**
+ * The grade's one reason in words. The branch comes from `projectTopDriver`,
+ * the rule Compare, the Screener and the Safety Score cards share; the
+ * peg-bound wording is the score waterfall's ("Peg performance · x0.510 on
+ * pillar quality 52/100").
+ */
+export function buildSafetyVerdictLine(card: SafetyScoreV9CurrentCard | null): SafetyVerdictLine | null {
+  const driver = card ? projectTopDriver(card) : null;
+  if (!card || !driver || driver.value === null) return null;
+  if (driver.kind === "cap-bound") {
+    return driver.reason ? { lead: `Capped at ${driver.value}`, detail: driver.reason.trim().replace(/\.$/, "") } : null;
+  }
+  if (driver.kind === "peg-bound") {
+    const quality = driver.quality === undefined ? "" : ` on pillar quality ${driver.quality.toFixed(0)}/100`;
+    return { lead: "Peg performance", detail: `x${driver.value.toFixed(3)}${quality}` };
   }
   const weakest = card.weakestPillar;
-  if (weakest) {
+  if (driver.kind === "pillar-bound" && weakest) {
     return { lead: "Weakest pillar", detail: `${SAFETY_PILLAR_LABELS[weakest.pillar]} ${Math.round(weakest.score)}/100` };
   }
   return null;
+}
+
+/** DEWS is a precursor: once a depeg is confirmed it is no longer the reading that matters. */
+export const HERO_DEWS_SUPERSEDED = "Superseded by the live depeg";
+
+/** Why a price-derived reading cannot stand: peg-summary has no usable current price. */
+export const HERO_NO_USABLE_PRICE = "No usable price";
+
+/**
+ * A Peg or DEWS reading that must not read calm keeps its value, with the
+ * reason as its sub-line, and drops its tone unless that tone already warns
+ * (`keepTone`): a caveat never calms a warning. A dash or a pending read is
+ * unchanged.
+ */
+export function muteHeroDisplay<T extends HeroDisplayValue | HeroDewsDisplay>(display: T, reason: string | null, keepTone = false): T {
+  return reason && !display.pending && display.value !== "—"
+    ? { ...display, sub: reason, color: keepTone ? display.color : HERO_MUTED_CLASS }
+    : display;
+}
+
+/** "3 of 8 signals" when a live DEWS score was computed from fewer than half its signals; null otherwise. */
+export function formatDewsCoverageGap(stressSignal: Pick<StressSignalEntry, "signals"> | null): string | null {
+  const signals = Object.values(stressSignal?.signals ?? {});
+  const available = signals.filter((signal) => signal.available).length;
+  return available * 2 < signals.length ? `${available} of ${signals.length} signals` : null;
 }
 
 /** "as of 2026-10-22": the release date a saved value was published. */
@@ -110,7 +143,8 @@ export function buildSavedLiquidityDisplay(saved: SavedSafetyAssessment | null):
 /**
  * The peg tile's figure. Its sub-line is the time at peg: the incident count
  * belongs to the passport's Record field alone. A NAV token has no peg, so its
- * tile carries no value and the hero leaves it out.
+ * tile carries no value and the hero leaves it out. A score withheld for want
+ * of a usable price reads NR, like one too new to rate.
  */
 export function buildPegScoreDisplay(
   isNavToken: boolean,
@@ -133,6 +167,9 @@ export function buildPegScoreDisplay(
         : pegScoreResult.pegPct == null ? undefined : `${pegScoreResult.pegPct.toFixed(1)}% at peg`,
       color: pegScoreColor(pegScoreResult.pegScore),
     };
+  }
+  if (pegScoreResult?.currentPriceUnavailable === true) {
+    return { value: "NR", sub: HERO_NO_USABLE_PRICE, color: HERO_MUTED_CLASS };
   }
   if (tooNewForPegScore) {
     return {

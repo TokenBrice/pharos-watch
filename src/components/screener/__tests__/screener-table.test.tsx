@@ -132,6 +132,16 @@ describe("ScreenerTable desktop table", () => {
     await waitFor(() => expect(container.textContent).toContain(`Exit ${reason} (assumed ${score})`));
     expect(container.textContent).not.toContain("pipeline gap");
   });
+  it("leads the row with its state and names the DEWS band", async () => {
+    installViewportMatchMedia(1400);
+    const critical = { kind: "critical", notice: { type: "danger", title: "Chain halted" } } as const;
+    const { container } = render(
+      <ScreenerTable rows={[{ ...row, dewsScore: 44, dewsBand: "ALERT", states: [critical] }]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />,
+    );
+    await waitFor(() => expect(container.querySelector('[data-coin-state="critical"]')?.textContent).toContain("Critical notice"));
+    expect(screen.getByText("Alert")).toBeTruthy();
+  });
+
   it("labels the safety summary badge with the projected V9 grade and score", async () => {
     installViewportMatchMedia(1400);
 

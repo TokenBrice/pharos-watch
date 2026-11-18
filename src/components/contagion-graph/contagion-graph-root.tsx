@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import type { DependencyHubExposure } from "@shared/lib/dependency-hubs-model";
 import type { ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
+import type { CoinState } from "@shared/lib/coin-state";
 
 interface ContagionGraphProps {
   cards: readonly ContagionGraphCard[];
@@ -24,6 +25,7 @@ interface ContagionGraphProps {
   hubExposures?: readonly DependencyHubExposure[];
   modeControls?: ReactNode;
   commonModeGroups?: SharedFailureDomainGroups | null;
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
 }
 
 export function ContagionGraph({
@@ -40,8 +42,9 @@ export function ContagionGraph({
   hubExposures,
   modeControls,
   commonModeGroups,
+  coinStates,
 }: ContagionGraphProps) {
-  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes, exposureOverlay, onUseAsExposureRoot, hubExposures, syncUrlState: syncUrlState && !minimalChrome, trackActions: !minimalChrome });
+  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes, exposureOverlay, onUseAsExposureRoot, hubExposures, coinStates, syncUrlState: syncUrlState && !minimalChrome, trackActions: !minimalChrome });
 
 
   const stage = graph.nodes.length > 0 || graph.emptyFocusCoin

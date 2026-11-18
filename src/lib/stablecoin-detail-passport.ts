@@ -13,7 +13,11 @@ import {
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { GENIUS_STATUS_SHORT_LABELS, GENIUS_STATUS_TEXT_CLS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
-import { REDEMPTION_ACCESS_LABELS, REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/classification";
+import {
+  formatRedemptionRouteStatus,
+  REDEMPTION_ACCESS_LABELS,
+  REDEMPTION_ACCESS_PASSPORT_LABELS,
+} from "@shared/lib/classification";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-client-coin";
@@ -212,12 +216,22 @@ export function buildHeroPassportItems({
 
   if (redemptionBackstop) {
     const accessLabel = REDEMPTION_ACCESS_LABELS[redemptionBackstop.accessModel];
+    // A suspended or paused route is the holder's answer, whatever access model it would have.
+    const routeStatus = redemptionBackstop.routeStatus ?? "unknown";
+    const stopped = routeStatus === "suspended" || routeStatus === "paused";
+    const statusLabel = formatRedemptionRouteStatus(routeStatus);
     items.push({
       key: "redeemability",
       category: "Redeemability",
-      value: REDEMPTION_ACCESS_PASSPORT_LABELS[redemptionBackstop.accessModel],
+      value: stopped
+        ? `${statusLabel.charAt(0).toUpperCase()}${statusLabel.slice(1)}`
+        : REDEMPTION_ACCESS_PASSPORT_LABELS[redemptionBackstop.accessModel],
       href: "#redemption",
-      ariaLabel: `Redeemability: ${accessLabel} — jump to redemption route`,
+      // The Freeze field's restricted tone: a stopped exit is a restriction, not an alarm colour.
+      ...(stopped ? { valueClass: FREEZE_TONE_RESTRICTED } : {}),
+      ariaLabel: stopped
+        ? `Redeemability: ${accessLabel} route ${statusLabel} — jump to redemption route`
+        : `Redeemability: ${accessLabel} — jump to redemption route`,
     });
   }
 

@@ -5,7 +5,7 @@ import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildComparePrefillUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
-import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { getScoreColor } from "@/lib/severity-colors";
 import type { SavedSafetyAssessment } from "@/lib/api";
 import {
   buildDewsDisplay,
@@ -16,11 +16,15 @@ import {
   buildPerformanceVsUsdDisplay,
   buildSavedDewsDisplay,
   buildSavedLiquidityDisplay,
+  formatDewsCoverageGap,
   formatPoolCount,
   formatSavedAssessmentAsOf,
+  HERO_DEWS_SUPERSEDED,
   HERO_MUTED_CLASS,
+  HERO_NO_USABLE_PRICE,
   HERO_PENDING_DEWS_DISPLAY,
   HERO_PENDING_DISPLAY,
+  muteHeroDisplay,
   type HeroDewsDisplay,
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
@@ -30,9 +34,10 @@ import {
   type HeroPassportCoin,
   type HeroPassportItemViewModel,
 } from "@/lib/stablecoin-detail-passport";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import { getPegScoreTier, isDewsAlertBand, REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import type { CoinState } from "@shared/lib/coin-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
-import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { roundForDisplay } from "@shared/lib/format";
 import type {
@@ -96,6 +101,8 @@ export interface HeroCardViewModel {
   /** The release's dated grade while the live report card is pending; null otherwise. */
   savedGrade: SavedSafetyAssessment | null;
   verdict: StablecoinVerdict;
+  /** The coin's highest exceptional state (`resolveCoinStates`): the hero chip names it instead of the verdict. */
+  state: CoinState | null;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
   variantChipClass: string | null;
@@ -109,6 +116,8 @@ export interface HeroCardViewModel {
     referenceMarketClosed: boolean;
     isNavToken: boolean;
     limitedDepegCoverageNote: string | null;
+    /** Why the price cannot read as a calm peg reading (no usable price, or an inherited quote under a critical/paused state). */
+    caveat: string | null;
   };
   market: {
     mcap: number | null;
@@ -169,6 +178,12 @@ export interface BuildHeroCardViewModelParams {
   savedAssessment?: SavedSafetyAssessment | null;
   /** Live reads still in their first fetch (the prerender included): placeholders, never "unavailable". */
   pendingReads?: HeroPendingReads;
+  /** Exceptional states, highest precedence first; the Peg and DEWS tiles read them. */
+  coinStates?: readonly CoinState[];
+  /** No usable current price (peg row unavailable or unusable, or the `missing` source). */
+  priceUnusable?: boolean;
+  /** The parent whose quote the price is derived from (`priceDerivation.inheritedFrom`). */
+  priceInheritedFrom?: string | null;
 }
 
 export interface HeroPendingReads {
@@ -247,17 +262,21 @@ function buildTertiaryMetrics(
 function buildSignalRailItems(
   reportCard: V9ConsumerCard | null,
   isNavToken: boolean,
-  effectivePegScore: number | null,
+  pegDisplay: HeroDisplayValue,
   liquidityData: DexLiquidityData | undefined,
   dewsDisplay: HeroDewsDisplay,
   {
     savedGrade,
-    pegPending,
+    pegCaveat,
+    dewsHref,
     liquidityFallback,
   }: {
     /** The release's dated grade while the live report card is pending. */
     savedGrade: SavedSafetyAssessment | null;
-    pegPending: boolean;
+    /** Why the peg score cannot read calm (see `muteHeroDisplay`); null when it can. */
+    pegCaveat: string | null;
+    /** A live depeg supersedes DEWS: its row links to the resolver instead. */
+    dewsHref: string;
     /** The saved release score or the pending placeholder, without live liquidity data. */
     liquidityFallback: HeroDisplayValue | null;
   },
@@ -283,13 +302,14 @@ function buildSignalRailItems(
           colorClass: REPORT_CARD_GRADE_COLORS[savedGrade.grade],
         },
     {
+      // The Peg tile's figure and tone; its sub-line names only the tile's caveat, never the time at peg.
       key: "peg",
       label: "Peg",
-      primary: effectivePegScore != null ? String(effectivePegScore) : isNavToken ? "NAV" : pegPending ? "" : "—",
-      secondary: null,
+      primary: isNavToken ? "NAV" : pegDisplay.value,
+      secondary: pegCaveat !== null && pegDisplay.sub === pegCaveat ? pegCaveat : null,
       href: "#report-card",
-      colorClass: effectivePegScore != null ? pegScoreColor(effectivePegScore) : HERO_MUTED_CLASS,
-      ...(effectivePegScore == null && !isNavToken && pegPending ? { pending: true as const } : {}),
+      colorClass: pegDisplay.color,
+      ...(pegDisplay.pending ? { pending: true as const } : {}),
     },
     liveLiquidity
       ? {
@@ -314,7 +334,7 @@ function buildSignalRailItems(
       label: "DEWS",
       primary: dewsDisplay.value,
       secondary: dewsDisplay.sub ?? null,
-      href: "#report-card",
+      href: dewsHref,
       colorClass: dewsDisplay.color,
       ...(dewsDisplay.pending ? { pending: true as const } : {}),
     },
@@ -348,6 +368,9 @@ export function buildStablecoinDetailHeroViewModel({
   redemptionBackstop,
   savedAssessment = null,
   pendingReads = {},
+  coinStates = [],
+  priceUnusable = false,
+  priceInheritedFrom = null,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const blacklistStatus = getResolvedBlacklistStatus(coin.id);
@@ -356,7 +379,21 @@ export function buildStablecoinDetailHeroViewModel({
   // NAV tokens and frozen archives have no live peg/DEWS reading to wait for.
   const awaitsSignals = !isNavToken && coin.status !== "frozen";
   const pegPending = awaitsSignals && pegScoreResult === null && pendingReads.peg === true;
-  const pegScoreDisplay = pegPending ? HERO_PENDING_DISPLAY : buildPegScoreDisplay(isNavToken, pegScoreResult);
+  const stateKinds = new Set(coinStates.map((state) => state.kind));
+  const liveDepeg = stateKinds.has("depeg");
+  // Why a price-derived reading cannot read calm: no usable price, or a price
+  // inherited from a parent quote while a current notice says the exit is closed.
+  const priceCaveat = priceUnusable
+    ? HERO_NO_USABLE_PRICE
+    : priceInheritedFrom && (stateKinds.has("critical") || stateKinds.has("paused"))
+      ? `Price inherited from ${CLIENT_TRACKED_META_BY_ID.get(priceInheritedFrom)?.symbol ?? priceInheritedFrom}`
+      : null;
+  // The caveat calms only a calm score: a weak one keeps its tier colour beside the reason.
+  const pegScoreDisplay = muteHeroDisplay(
+    pegPending ? HERO_PENDING_DISPLAY : buildPegScoreDisplay(isNavToken, pegScoreResult),
+    priceCaveat,
+    effectivePegScore != null && getPegScoreTier(effectivePegScore) !== "good",
+  );
   // Without live data, a pending read shows the dated release value or a placeholder.
   const liquidityFallback = liquidityData === undefined && pendingReads.liquidity === true
     ? buildSavedLiquidityDisplay(savedAssessment) ?? HERO_PENDING_DISPLAY
@@ -365,7 +402,18 @@ export function buildStablecoinDetailHeroViewModel({
   const savedDews = stressSignal === null && awaitsSignals && pendingReads.stress === true
     ? buildSavedDewsDisplay(savedAssessment) ?? HERO_PENDING_DEWS_DISPLAY
     : null;
-  const dewsDisplay = savedDews ?? buildDewsDisplay(stressSignal);
+  const dewsBase = savedDews ?? buildDewsDisplay(stressSignal);
+  // DEWS is a precursor score: a confirmed live depeg supersedes it at any band. Below
+  // ALERT, a reading without a usable price or computed from fewer than half its signals
+  // is no all-clear.
+  const dewsDisplay = muteHeroDisplay(
+    dewsBase,
+    liveDepeg
+      ? HERO_DEWS_SUPERSEDED
+      : dewsBase.band && !isDewsAlertBand(dewsBase.band)
+        ? priceCaveat ?? (savedDews ? null : formatDewsCoverageGap(stressSignal))
+        : null,
+  );
   const excessYieldDisplay = yieldRanking === null && pendingReads.yield === true
     ? HERO_PENDING_DISPLAY
     : buildExcessYieldDisplay(yieldRanking);
@@ -400,6 +448,7 @@ export function buildStablecoinDetailHeroViewModel({
     reportCard,
     savedGrade,
     verdict,
+    state: coinStates[0] ?? null,
     variantParent,
     variantKind,
     variantChipClass: variantKind ? getVariantDisplay(variantKind).chipClass : null,
@@ -416,6 +465,7 @@ export function buildStablecoinDetailHeroViewModel({
       referenceMarketClosed,
       isNavToken,
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
+      caveat: priceCaveat,
     },
     market: {
       mcap,
@@ -427,9 +477,10 @@ export function buildStablecoinDetailHeroViewModel({
     peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),
-    signalRailItems: buildSignalRailItems(reportCard, isNavToken, effectivePegScore, liquidityData, dewsDisplay, {
+    signalRailItems: buildSignalRailItems(reportCard, isNavToken, pegScoreDisplay, liquidityData, dewsDisplay, {
       savedGrade,
-      pegPending,
+      pegCaveat: priceCaveat,
+      dewsHref: liveDepeg ? "#depeg-resolver" : "#report-card",
       liquidityFallback,
     }),
     passportItems: buildHeroPassportItems({

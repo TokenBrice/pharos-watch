@@ -1,20 +1,9 @@
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { DEPEG_RECOVERY_THRESHOLD_RATIO, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { formatCompactUsd } from "@shared/lib/format";
-import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinListResponse } from "@shared/types/supply";
-import type {
-  CommandPalettePegStatus,
-  CommandPaletteStablecoinHealth,
-  CommandPaletteStablecoinLiveMetadata,
-} from "@/components/command-palette/command-palette-model";
+import type { CommandPaletteStablecoinLiveMetadata } from "@/components/command-palette/command-palette-model";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { compareFiniteDesc } from "@shared/lib/sort";
-import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
@@ -26,23 +15,6 @@ export interface StablecoinLiveQueryState {
 }
 
 const POPULAR_STABLECOIN_COUNT = 6;
-
-export const PEG_STATUS_DOT: Record<CommandPalettePegStatus, string> = {
-  calm: "bg-[var(--severity-healthy)]",
-  watch: "bg-[var(--severity-mild)]",
-  alert: "bg-[var(--severity-severe)]",
-};
-
-const PEG_STATUS_LABEL: Record<CommandPalettePegStatus, string> = {
-  calm: "At peg",
-  watch: "Peg watch",
-  alert: "Off peg",
-};
-
-export function getStablecoinHealthLabel(health: CommandPaletteStablecoinHealth): string {
-  if (health.kind === "nav") return "NAV-priced token";
-  return PEG_STATUS_LABEL[health.status];
-}
 
 export function formatCommandPaletteMarketCap(marketCap: number): string {
   return formatCompactUsd(marketCap);
@@ -67,38 +39,10 @@ export function buildStablecoinLiveMetadata(
   }, nowMs);
   const isCurrent = hasClock && healthInfo.state === "fresh";
 
-  const { rates, sources, counts } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, stablecoinsData.fxFallbackRates);
+  // Peg and incident state is not derived here: rows read the coin-state ladder (`useCoinStates`).
   for (const asset of peggedAssets) {
     const marketCapUsd = hasClock ? getCirculatingRawOrNull(asset) : null;
-    const meta = TRACKED_META_BY_ID.get(asset.id);
-    const peg = normalizePegType(asset.pegType);
-    let health: CommandPaletteStablecoinHealth | undefined;
-    if (meta?.flags.navToken) {
-      health = { kind: "nav" };
-    } else if (isCurrent && peg && isObservedPrice(asset) && asset.price != null) {
-      // The registry peg unit decides whether the snapshot pegType may anchor
-      // the reference, and the shared trust gate rejects a thin peer median.
-      const registryPegType = normalizePegType(pegTypeFromCurrency(meta?.flags.pegCurrency));
-      const referenceIsAuthoritative = (registryPegType == null || registryPegType === peg)
-        && isAuthoritativeDepegPegReference({
-          pegType: peg,
-          pegCurrency: meta?.flags.pegCurrency,
-          pegRateSource: sources[peg] ?? null,
-          pegRateContributorCount: counts[peg] ?? null,
-        });
-      const reference = referenceIsAuthoritative ? getPegReference(peg, rates, meta?.commodityOunces) : null;
-      const signal = reference != null ? deriveDepegSignal(asset.price, reference) : null;
-      // A closed reference market repeats the last close: held, so it never reads as an alert.
-      if (signal != null && !isCurrentDeviationHeld(meta?.flags.pegCurrency, resolvePriceObservedAtSec(asset), signal.bps)) {
-        const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
-        health = {
-          kind: "peg",
-          status: signalCrossesThreshold(signal, threshold)
-            ? "alert"
-            : signalCrossesThreshold(signal, threshold * DEPEG_RECOVERY_THRESHOLD_RATIO) ? "watch" : "calm",
-        };
-      }
-    }
+    const health = TRACKED_META_BY_ID.get(asset.id)?.flags.navToken ? { kind: "nav" as const } : undefined;
     if (marketCapUsd !== null || health) {
       map.set(asset.id, {
         ...(marketCapUsd !== null ? { marketCapUsd } : {}),

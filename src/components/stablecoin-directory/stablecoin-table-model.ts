@@ -197,7 +197,10 @@ export function useStablecoinTableRows({
   densityConfig: { rowHeight: number; iconSize: number };
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
-  const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sort.key, renderedSet), [renderedSet, sort.key]);
+  const effectiveSortKey = useMemo(
+    () => resolveEffectiveSortKey(sort.key, renderedSet, isMobileColumns && !isOverview),
+    [isMobileColumns, isOverview, renderedSet, sort.key],
+  );
   const trackedIds = useMemo(
     () => buildTrackedIdSet(activeFilters, reportCards, eligibleIds),
     [activeFilters, eligibleIds, reportCards],

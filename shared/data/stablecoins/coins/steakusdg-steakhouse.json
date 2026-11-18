@@ -79,7 +79,9 @@
     {
       "type": "warning",
       "title": "Morpho flags deposits as disabled",
-      "message": "On 15 October 2026, the exact Morpho vault page and API reported deposits disabled. This does not establish a withdrawal suspension. Existing holders still depend on available USDG market liquidity to redeem."
+      "message": "On 15 October 2026, the exact Morpho vault page and API reported deposits disabled. This does not establish a withdrawal suspension. Existing holders still depend on available USDG market liquidity to redeem.",
+      "kind": "paused",
+      "asOf": "2026-10-15"
     }
   ],
   "contracts": [

@@ -26,7 +26,7 @@ The `/stablecoins/` profile directory is headed `Stablecoin list` (`#stablecoin-
 
 Governance scope lives in `GOVERNANCE_CONTENT`: the `decentralized` cohort's base title is `Decentralized Stablecoins`, its description names Pharos's DeFi governance cohort, and its folded intro states that this classification does not imply every control, reserve, or redemption route is decentralized. The count interpolation, filter tag and member projection stay as computed.
 
-Cohort pages lead with data: header (title, deck, Compare leaders/Alerts actions, folded intro), then the live table, then the static directory, linked directories and related hubs. Related-hub cards show only the hub title, which already carries the count. Keep the table in the first desktop viewport; crawlable context belongs below it or in the fold, not above it.
+Cohort pages lead with data: header (title, deck, Compare leaders/Alerts actions, folded intro), then the live table, then the static directory, linked directories and related hubs. The live table opens in Safety grade order, best first, so the "Ranked by Risk" title is true; phones keep that order through each row's risk summary. The market-cap directory keeps its own default. Each row leads with its highest exceptional state (`CoinStateChip`). Related-hub cards show only the hub title, which already carries the count. Keep the table in the first desktop viewport; crawlable context belongs below it or in the fold, not above it.
 
 Peg hubs add three static, registry-only sections between the live table and the directory (`src/lib/peg-hub-content.ts`, `src/components/taxonomy/peg-hub-sections.tsx`, mounted through the shell's `staticSections`):
 

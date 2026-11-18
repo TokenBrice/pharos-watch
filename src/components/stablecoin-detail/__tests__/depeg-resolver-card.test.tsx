@@ -32,7 +32,24 @@ describe("StablecoinDepegResolverCard", () => {
   ])("omits %s, never unavailable", (_case, _meta, rows, id) => {
     queryMock.mockReturnValue({ data: { _meta, rows }, error: null, refetch: vi.fn() });
     expect(render(<StablecoinDepegResolverCard stablecoinId={id} />).container.innerHTML).toBe("");
-    expect(render(<ActiveDepegOutlook stablecoinId={id} symbol="X" fallback="alert" />).container.textContent).toBe("alert");
+    // No book row: no resolver state, no link.
+    const outlook = render(<ActiveDepegOutlook stablecoinId={id} symbol="X" deviationBps={null} />).container;
+    expect(outlook.querySelector("[data-active-depeg-alert]")?.getAttribute("data-active-depeg-alert")).toBe("none");
+    expect(outlook.querySelector("a")).toBeNull();
+  });
+
+  it.each([
+    ["loading", undefined, null, "Loading forecast"],
+    ["not locked", "pending", null, "Forecast not locked yet"],
+    ["unreadable", undefined, new Error("HTTP 502"), "Forecast unavailable"],
+  ] as const)("stands in with the live deviation while the forecast is %s", (_case, rows, error, kicker) => {
+    const row = makeFrozenDdrV2Row();
+    const pending = { ...row, kind: "pending", prediction: { ...row.prediction, state: "pending_lock" }, frozen: null };
+    queryMock.mockReturnValue({ data: rows ? { _meta: DDR_TEST_META, rows: [pending] } : undefined, error });
+    render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" deviationBps={-4570} />);
+    screen.getByText("LUSD is trading 45.7% below its peg");
+    screen.getByText(kicker);
+    expect(screen.getByRole("link").getAttribute("href")).toBe("#depeg-resolver");
   });
 
   it.each([
@@ -109,7 +126,7 @@ describe("StablecoinDepegResolverCard", () => {
     const row = makeFrozenDdrV2Row();
     row.live.currentDeviationBps = -4569;
     queryMock.mockReturnValue({ data: { _meta: DDR_TEST_META, rows: [row] }, error: null });
-    render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" />);
+    render(<ActiveDepegOutlook stablecoinId={row.stablecoinId} symbol="LUSD" deviationBps={-4569} />);
     expect(screen.getByRole("heading").textContent).toMatch(/LUSD is trading 45\.7%/);
     screen.getByText(getTierMeta(getResolution(row).tier, getTierVocabulary(row)).label);
     expect(screen.getByRole("link").getAttribute("href")).toBe("#depeg-resolver");

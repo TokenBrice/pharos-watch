@@ -8,6 +8,7 @@ import {
   compareResolverUrgency,
   isResolverBookAvailable,
   summarizeResolverBook,
+  type MarketCapById,
 } from "@/components/depeg/depeg-resolver-book-summary";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
@@ -16,6 +17,8 @@ import { DDR_PUBLIC_WARNING, type DdrResponse } from "@shared/types/depeg-resolv
 interface DepegResolverModuleProps {
   data: DdrResponse | undefined;
   logos?: Record<string, string>;
+  /** Circulating supply for exposure ranking and the card cap line; undefined while unread. */
+  marketCaps?: MarketCapById;
 }
 
 /**
@@ -83,11 +86,11 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
   );
 }
 
-export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
+export function DepegResolverModule({ data, logos, marketCaps }: DepegResolverModuleProps) {
   const [showAll, setShowAll] = useState(false);
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
-  const ordered = useMemo(() => [...rows].sort(compareResolverUrgency), [rows]);
+  const ordered = useMemo(() => [...rows].sort((a, b) => compareResolverUrgency(a, b, marketCaps)), [rows, marketCaps]);
   const book = useMemo(() => summarizeResolverBook(rows), [rows]);
 
   if (!isDepegResolverEnabled()) return null;
@@ -135,7 +138,11 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
           <div className="pharos-stagger-entrance grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             {visible.map((row, i) => (
               <div key={`${row.stablecoinId}:${row.eventId}`} style={{ "--stagger-index": i } as CSSProperties}>
-                <DepegResolverRowCard row={row} logos={logos} />
+                <DepegResolverRowCard
+                  row={row}
+                  logos={logos}
+                  marketCapUsd={marketCaps ? marketCaps.get(row.stablecoinId) ?? null : undefined}
+                />
               </div>
             ))}
           </div>

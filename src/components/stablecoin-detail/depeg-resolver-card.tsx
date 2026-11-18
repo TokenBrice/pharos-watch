@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
 import { ArrowDown } from "lucide-react";
+import { ActiveDepegAlert } from "@/components/coin-notice";
 import { DDR_VERDICT_CLASSES, DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
 import { formatDeviationBps } from "@shared/lib/format";
 import { isResolverBookAvailable } from "@/components/depeg/depeg-resolver-book-summary";
@@ -22,6 +23,7 @@ import {
   isCurrentForecast,
 } from "@/components/depeg/depeg-resolver-row-card-model";
 import { StablecoinDepegResolverRows } from "@/components/depeg/depeg-resolver-row-card-parts";
+import { describeDdrVerdict } from "@/components/depeg/depeg-resolver-row-card-state";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useDepegResolver } from "@/hooks/api-hooks";
@@ -32,8 +34,11 @@ import { cn } from "@/lib/utils";
 /** In-page target of the outlook's link: the full resolver card in the Risk zone. */
 export const DEPEG_RESOLVER_ANCHOR_ID = "depeg-resolver";
 
-export function ActiveDepegOutlookSkeleton() {
-  return <div aria-hidden="true" className="h-44 animate-pulse rounded-xl border border-border/60 bg-muted/30 sm:h-36" />;
+export interface ActiveDepegOutlookProps {
+  stablecoinId: string;
+  symbol: string;
+  /** The dossier's live deviation, known before the book loads. */
+  deviationBps: number | null;
 }
 
 function formatUtcDate(sec: number): string {
@@ -46,31 +51,38 @@ function formatUtcDate(sec: number): string {
  * the first thing a holder needs. It reads the same resolver query as the full
  * card (`#depeg-resolver`) and states the published frozen forecast only: the
  * verdict in its tier tone, the live and peak deviation, the event's age, its
- * leading break signals and the duration line (or why none is shown). Without
- * a published forecast for the coin it renders `fallback` (the plain
- * active-depeg holder alert), never an empty or placeholder panel.
+ * leading break signals and the duration line (or why none is shown). Until
+ * the book loads, and without a published forecast, it renders the plain
+ * active-depeg alert (the live deviation and what the resolver has published),
+ * never an empty or placeholder panel.
  */
-export function ActiveDepegOutlook({
-  stablecoinId,
-  symbol,
-  fallback = null,
-}: {
-  stablecoinId: string;
-  symbol: string;
-  fallback?: ReactNode;
-}) {
+export function ActiveDepegOutlook({ stablecoinId, symbol, deviationBps }: ActiveDepegOutlookProps) {
   const enabled = isDepegResolverEnabled();
   const resolver = useDepegResolver({ enabled });
   const headingId = useId();
 
-  if (!enabled) return <>{fallback}</>;
-  // First read in flight: hold the panel's footprint so the first fold does not jump.
-  if (resolver.data == null && resolver.error == null) return <ActiveDepegOutlookSkeleton />;
-  const forecasts = isResolverBookAvailable(resolver.data)
-    ? (resolver.data?.rows ?? []).filter((row) => row.stablecoinId === stablecoinId).filter(isCurrentForecast)
-    : [];
+  if (!enabled) return <ActiveDepegAlert symbol={symbol} deviationBps={deviationBps} forecast={null} />;
+  // First read in flight: the alert holds the panel's footprint so the first fold does not jump.
+  if (resolver.data == null && resolver.error == null) {
+    return <ActiveDepegAlert symbol={symbol} deviationBps={deviationBps} forecast={{ read: "pending" }} />;
+  }
+  if (!isResolverBookAvailable(resolver.data)) {
+    return <ActiveDepegAlert symbol={symbol} deviationBps={deviationBps} forecast={{ read: "unavailable" }} />;
+  }
+  const rows = (resolver.data?.rows ?? []).filter((candidate) => candidate.stablecoinId === stablecoinId);
+  const forecasts = rows.filter(isCurrentForecast);
   const row = forecasts.find((candidate) => candidate.live.eventState === "active") ?? forecasts[0];
-  if (!row) return <>{fallback}</>;
+  if (!row) {
+    // No locked forecast: name the resolver's state for this break (the full card shows its row).
+    const incident = rows.find((candidate) => candidate.live.eventState === "active") ?? rows[0];
+    return (
+      <ActiveDepegAlert
+        symbol={symbol}
+        deviationBps={deviationBps}
+        forecast={incident ? { read: "state", label: describeDdrVerdict(incident).label } : null}
+      />
+    );
+  }
 
   const resolution = getResolution(row);
   const meta = getTierMeta(resolution.tier, getTierVocabulary(row));
@@ -108,11 +120,11 @@ export function ActiveDepegOutlook({
     <section
       aria-labelledby={headingId}
       data-active-depeg-outlook
-      className={cn("overflow-hidden rounded-xl border", severe ? SEVERITY_TONE_CLASS.alert.banner : SEVERITY_TONE_CLASS.watch.banner)}
+      className={cn("overflow-hidden rounded-xl border", severe ? SEVERITY_TONE_CLASS.danger.banner : SEVERITY_TONE_CLASS.caution.banner)}
     >
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:gap-5 sm:p-5">
         <div className="min-w-0 flex-1">
-          <p className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold uppercase tracking-wide", severe ? "text-state-danger" : "text-state-warn")}>
+          <p className={cn("pharos-label flex flex-wrap items-center gap-x-2 gap-y-0.5", severe ? "text-state-danger" : "text-state-warn")}>
             <span aria-hidden="true" className="relative flex h-2 w-2">
               <span
                 className={cn(
@@ -124,7 +136,7 @@ export function ActiveDepegOutlook({
             </span>
             Active depeg
             {ageLabel ? (
-              <span className="font-medium normal-case tracking-normal text-foreground/70">· {ageLabel} so far</span>
+              <span className="font-medium text-foreground/70">· {ageLabel} so far</span>
             ) : null}
           </p>
           <h2 id={headingId} className="mt-1.5 text-pretty text-lg font-semibold leading-snug text-foreground sm:text-xl">
@@ -158,7 +170,7 @@ export function ActiveDepegOutlook({
         </div>
         <div className={cn("flex shrink-0 flex-col justify-between rounded-lg border px-4 py-3 sm:w-72", meta.band)}>
           <div>
-            <p className="text-2xs font-medium uppercase tracking-wide text-foreground/70">Depeg Duration Resolver</p>
+            <p className="pharos-label text-foreground/70">Depeg Duration Resolver</p>
             <p className={cn("mt-1 text-2xl font-semibold leading-tight", meta.accent)}>{meta.label}</p>
             {durationLine ?? blurb ? (
               <p className="mt-1.5 text-pretty text-xs leading-relaxed text-foreground/80">

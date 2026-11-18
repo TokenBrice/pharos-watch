@@ -1,4 +1,5 @@
 import type { YieldRiskBudgetKey } from "@shared/lib/classification";
+import type { CoinState } from "@shared/lib/coin-state";
 import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
 import type {
   YieldAttentionFilter,
@@ -96,6 +97,8 @@ export type YieldViewModelRow = YieldWorkbenchRanking & {
   sourceDepthLens: YieldSourceDepthLens;
   sourcePosture: YieldSourcePosture;
   cohortPercentile: YieldCohortPercentile | null;
+  /** The coin's and its linked venue's exceptional states, highest first (`resolveYieldRowCoinStates`); absent when none are known. */
+  coinStates?: readonly CoinState[];
 };
 
 export interface YieldRowFacet {
@@ -111,6 +114,7 @@ export interface YieldRowFacet {
   isRising: boolean;
   inWatchlist: boolean;
   needsWatchlistAttention: boolean;
+  coinStates: readonly CoinState[];
 }
 
 /**

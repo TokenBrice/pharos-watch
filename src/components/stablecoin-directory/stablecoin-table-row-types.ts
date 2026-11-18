@@ -4,6 +4,7 @@ import type { DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinData } from "@shared/types/supply";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { CoinState } from "@shared/lib/coin-state";
 
 export type StablecoinTableRowVariant = "default" | "figmaOverview";
 
@@ -23,6 +24,8 @@ export interface StablecoinVirtualRowProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  /** The row's highest exceptional state (`resolveCoinState`), or null when none is known. */
+  coinState?: CoinState | null;
   showPinnedControl?: boolean;
   isPinned?: boolean;
   onTogglePinned?: (coinId: string) => void;

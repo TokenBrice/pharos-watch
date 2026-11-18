@@ -18,12 +18,13 @@ import { DEWSAlertFeed } from "@/components/dews/dews-alert-feed";
 import { DepegFeed } from "@/components/depeg/depeg-feed";
 import { DepegResolverModule } from "@/components/depeg/depeg-resolver-module";
 import { DepegResolverReviewerModule } from "@/components/depeg/depeg-resolver-reviewer-module";
-import { isResolverBookAvailable, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
+import { isResolverBookAvailable, rankOpenIncidents, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import type { ApiMeta } from "@/lib/api";
 import { classifyOpenIncidentEvidence } from "@shared/lib/active-depegs";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { PegCurrency } from "@shared/types/core";
 import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
@@ -76,7 +77,14 @@ export function DepegClient() {
     refetch: refetchPeg,
   } = usePegSummary();
   // Radar sizing is independent of the peg-summary response and its loading shell.
-  useStablecoins();
+  const { data: stablecoinsData, error: stablecoinsError } = useStablecoins();
+  // Circulating USD for exposure ranking and cap labels: undefined while the first
+  // read is in flight, an empty map after a failed one (every cap unavailable).
+  const marketCapById = useMemo(() => {
+    const assets = stablecoinsData?.peggedAssets;
+    if (assets) return new Map(assets.map((coin) => [coin.id, getCirculatingRawOrNull(coin)]));
+    return stablecoinsError ? new Map<string, number | null>() : undefined;
+  }, [stablecoinsData, stablecoinsError]);
   const {
     data: dewsData,
     error: dewsError,
@@ -170,8 +178,9 @@ export function DepegClient() {
       openIncidentEvidence: coin.activeDepeg
         ? classifyOpenIncidentEvidence(activeEventsData?.events, coin.id, nowSeconds)
         : null,
+      marketCapUsd: marketCapById ? marketCapById.get(coin.id) ?? null : undefined,
     }));
-  }, [filteredPegCoins, dewsData, pendingByCoin, activeEventsData, nowSeconds]);
+  }, [filteredPegCoins, dewsData, pendingByCoin, activeEventsData, nowSeconds, marketCapById]);
   const trackedIds = useMemo(
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
@@ -192,6 +201,17 @@ export function DepegClient() {
   const resolverBook = useMemo(
     () => (isResolverBookAvailable(resolverData) ? summarizeResolverBook(resolverData.rows) : null),
     [resolverData],
+  );
+  // The census the headline counts, ranked by holder exposure for the hero's named rows.
+  const openIncidents = useMemo(
+    () => pegData
+      ? rankOpenIncidents(
+        pegData.coins,
+        resolverEnabled && isResolverBookAvailable(resolverData) ? resolverData.rows : [],
+        marketCapById ?? null,
+      )
+      : null,
+    [pegData, resolverEnabled, resolverData, marketCapById],
   );
 
   // The worker answers an unreadable DEWS publication with an empty `signals`
@@ -296,6 +316,7 @@ export function DepegClient() {
         activeDepegIds={activeDepegIds}
         catalogCount={pegData?.coins ? pegData.coins.length : null}
         pendingCount={eventsData ? pendingIncidents.length : null}
+        openIncidents={openIncidents}
         dewsAlertCount={dewsAlertCount}
         book={resolverEnabled ? resolverBook : null}
         lineage={resolverEnabled ? resolverData?._meta.lineage ?? null : null}
@@ -313,7 +334,7 @@ export function DepegClient() {
       {/* Recovery forecasts: the most urgent incidents, full book on demand. */}
       {resolverEnabled ? (
         <SectionErrorBoundary name="depeg-resolver">
-          <DepegResolverModule data={resolverData} logos={logos} />
+          <DepegResolverModule data={resolverData} logos={logos} marketCaps={marketCapById} />
         </SectionErrorBoundary>
       ) : null}
 

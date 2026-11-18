@@ -217,7 +217,9 @@
     {
       "type": "danger",
       "title": "BabelFish minting and redemption stopped",
-      "message": "Reviewed November 12, 2026: the November 4 ownership stop removed the converter's XUSD mint/burn authority. The Sovryn XUSD/WRBTC pair was delisted November 2, and no current market was verified in the checked indexes. Ordinary XUSD transfers remain separate. The disclosed reward-inventory loss does not establish an equal shortfall for remaining holders; no reopening date is set. Sources: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611 ; https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612"
+      "message": "Reviewed November 12, 2026: the November 4 ownership stop removed the converter's XUSD mint/burn authority. The Sovryn XUSD/WRBTC pair was delisted November 2, and no current market was verified in the checked indexes. Ordinary XUSD transfers remain separate. The disclosed reward-inventory loss does not establish an equal shortfall for remaining holders; no reopening date is set. Sources: https://forum.sovryn.com/t/sovryn-mitigation-and-recovery-manifest/3611 ; https://forum.sovryn.com/t/sovryn-attack-disclosure-bob-rootstock-and-babelfish/3612",
+      "kind": "paused",
+      "asOf": "2026-11-12"
     }
   ]
 }

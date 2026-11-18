@@ -279,7 +279,7 @@ function MintBurnBalanceBar({ score, alert, burned, minted }: { score: number; a
         className="relative mx-1 h-2 rounded-full bg-muted"
       >
         <span
-          className={cn("absolute inset-y-0", alert ? SEVERITY_TONE_CLASS.watch.bar : "bg-muted-foreground/45")}
+          className={cn("absolute inset-y-0", alert ? SEVERITY_TONE_CLASS.caution.bar : "bg-muted-foreground/45")}
           style={{ left: `${Math.min(pos, 50)}%`, width: `${Math.abs(pos - 50)}%` }}
         />
         <span className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-muted-foreground" />
@@ -484,7 +484,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                       <dd
                         className={cn(
                           "mt-0.5 pharos-numeric text-sm font-semibold",
-                          pressureState === "worsening" ? SEVERITY_TONE_CLASS.watch.text : "text-foreground",
+                          pressureState === "worsening" ? SEVERITY_TONE_CLASS.caution.text : "text-foreground",
                         )}
                       >
                         {formatBankRunGaugeScore(pressureScore)}

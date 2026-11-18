@@ -5,9 +5,12 @@ import { formatCompactUsd } from "@shared/lib/format";
 import { SEVERITY_RANK, type TapeEventSeverity } from "@shared/types/tape-event";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { tapeClassLabel } from "@/lib/tape-class-style";
+import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 
 const DIGEST_THRESHOLD = 3;
+/** The canonical class roster breaks severity ties, so a busy class never outranks on volume alone. */
+const CLASS_RANK = new Map(TAPE_CLASSES.map(({ slug }, rank) => [slug, rank]));
 const PSI_BAND_RANK: Readonly<Record<string, number>> = Object.fromEntries(
   PSI_CONDITION_BANDS.map(({ band }, rank) => [band, rank]),
 );
@@ -240,10 +243,12 @@ function digestEvents(events: readonly TapeEvent[]): DigestedClass[] {
       useDigestWrapper,
     });
   }
+  // Max severity first (the day header reads it from classes[0]), then the class roster.
   out.sort((a, b) => {
     const sevDelta = SEVERITY_RANK[b.maxSeverity] - SEVERITY_RANK[a.maxSeverity];
     if (sevDelta !== 0) return sevDelta;
-    if (b.rawCount !== a.rawCount) return b.rawCount - a.rawCount;
+    const rankDelta = (CLASS_RANK.get(a.classSlug) ?? CLASS_RANK.size) - (CLASS_RANK.get(b.classSlug) ?? CLASS_RANK.size);
+    if (rankDelta !== 0) return rankDelta;
     return a.classSlug.localeCompare(b.classSlug);
   });
   return out;

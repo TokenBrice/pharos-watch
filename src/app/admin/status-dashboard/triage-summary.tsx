@@ -172,10 +172,10 @@ export function TriageSummary({
   });
   const reserveForecastTone =
     reserveForecast.state === "blocked"
-      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-strong")
+      ? cn(SEVERITY_TONE_CLASS.danger.banner, "text-state-danger-strong")
       : reserveForecast.state === "clear"
         ? "border-state-positive bg-state-positive-subtle text-state-positive-strong"
-        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink");
+        : cn(SEVERITY_TONE_CLASS.caution.banner, "text-state-warn-ink");
   const publicHeadline = describePublicHeadline(healthData, Boolean(healthSync?.errorMessage));
 
   return (
@@ -353,7 +353,7 @@ export function TriageSummary({
           Diagnostics
           <span className="text-xs font-normal text-muted-foreground">State machine, fetch clocks, divergence</span>
           {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
-            <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+            <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", SEVERITY_TONE_CLASS.caution.pill)}>
               New signal
             </span>
           ) : null}

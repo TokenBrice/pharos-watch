@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
+import { formatBps, formatCompactUsdShort, formatElapsedSeconds } from "@shared/lib/format";
 import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   compactLockTiming,
@@ -59,10 +59,13 @@ export function CoinLockup({
   row,
   logos,
   logoSize = 26,
+  marketCapUsd,
 }: {
   row: Pick<DdrV2ResponseRow, "stablecoinId" | "symbol" | "name">;
   logos?: Record<string, string>;
   logoSize?: number;
+  /** Shown as a third line when passed; null reads as unavailable, never zero. */
+  marketCapUsd?: number | null;
 }) {
   return (
     <Link
@@ -75,6 +78,11 @@ export function CoinLockup({
           {row.symbol}
         </span>
         <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
+        {marketCapUsd !== undefined ? (
+          <span className="pharos-numeric block truncate text-xs text-muted-foreground">
+            {marketCapUsd == null ? "Market cap unavailable" : `${formatCompactUsdShort(marketCapUsd)} market cap`}
+          </span>
+        ) : null}
       </span>
     </Link>
   );

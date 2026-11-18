@@ -10,6 +10,9 @@ import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
+import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
+import { isSpentDeadline } from "@shared/lib/coin-state";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { PysBreakdown } from "@/components/yield/pys-breakdown";
@@ -43,6 +46,7 @@ import {
 } from "@shared/lib/stablecoins/client-registry";
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
+import type { CoinNotice } from "@shared/types/stablecoin-meta-primitives";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
@@ -69,6 +73,8 @@ interface YieldAnalysisClientProps {
   id: string;
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
+  /** The coin's curated notices; the decision-critical ones lead the workbench. */
+  notices?: readonly CoinNotice[];
 }
 
 interface WarningSignalEvent {
@@ -304,12 +310,19 @@ function YieldAnalysisFrame({
   id,
   staticCoin,
   logoSrc,
+  notices,
   model,
   children,
 }: YieldAnalysisClientProps & {
   model: YieldDetailReadyModel | null;
   children: ReactNode;
 }) {
+  // The dossier's alert set (danger, paused and deadline notices, never history or a spent
+  // deadline) leads here too, above the yield figures: a closed deposit or a paused mint is the answer.
+  const dayNowMs = useUtcDayNowMs();
+  const nowSec = dayNowMs === null ? null : Math.floor(dayNowMs / 1000);
+  const placed = placeCoinNotices(notices, { nowSec });
+  const alerts = [...placed.critical, ...placed.paused, ...placed.rest.filter((notice) => notice.kind === "deadline" && (nowSec === null || !isSpentDeadline(notice, nowSec)))];
   return (
     <div className="space-y-6">
       <Button variant="ghost" asChild className="w-fit">
@@ -318,6 +331,7 @@ function YieldAnalysisFrame({
           Back to {staticCoin.symbol} detail
         </Link>
       </Button>
+      <NoticeStack notices={alerts} archive={TRACKED_META_BY_ID.get(id)?.status === "frozen"} />
       <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} model={model} />
       {children}
     </div>
@@ -397,7 +411,7 @@ function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEve
   return events.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAnalysisClientProps) {
+export default function YieldAnalysisClient({ id, staticCoin, logoSrc, notices }: YieldAnalysisClientProps) {
   const rankingsQuery = useYieldRankings();
   const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
   const { getParam, replaceParams } = useUrlFilters();
@@ -560,7 +574,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   if (stateBody) {
     return (
-      <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={null}>
+      <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} notices={notices} model={null}>
         {stateBody}
       </YieldAnalysisFrame>
     );
@@ -571,7 +585,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   const currentWarningSignals = readyModel.warningSignals;
 
   return (
-    <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
+    <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} notices={notices} model={readyModel}>
       {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} staticCoin={staticCoin} /> : null}
 
       <YieldSourceRiskCard

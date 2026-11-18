@@ -1,6 +1,6 @@
 # Methodology Page Contract
 
-`/methodology/` is the public long-form explanation of scoring and dependency exposure. `src/app/methodology/page.tsx` owns metadata, breadcrumb/Article/visible FAQ JSON-LD and reader guide; section bodies live under `src/app/methodology/sections/`.
+`/methodology/` is the public long-form explanation of scoring and dependency exposure. `src/app/methodology/page.tsx` owns metadata, breadcrumb/Article/visible FAQ JSON-LD and reader guide; section bodies live under `src/app/methodology/sections/`. The header answers first: an "At a glance" block states what a grade means, the pillar weights and the policy grade bands (`SAFETY_GRADE_FACTS`, shared with the Safety overview) and links `#safety-scores-methodology`; the mobile reader guide, reading-rhythm card and editorial preface follow it.
 
 The title names the current Safety Score version (`SAFETY_SCORE_METHODOLOGY_VERSION_LABEL`); the description reads the grade range and pillar weights from `V9_CANDIDATE_POLICY_V1`. TechArticle `datePublished`/`dateModified` are the oldest and newest `SAFETY_SCORE_METHODOLOGY_CHANGELOG` entry dates, the same source the scoring changelog page uses, and the header shows that version and newest date as "Safety Score methodology v{X} · updated {date}".
 

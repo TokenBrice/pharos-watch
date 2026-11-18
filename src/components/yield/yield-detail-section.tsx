@@ -271,7 +271,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             {view.warningSignals.map((signal) => (
               <span
                 key={signal}
-                className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}
+                className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.caution.pill)}
               >
                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                 {formatYieldWarningSignal(signal)}

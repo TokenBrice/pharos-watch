@@ -20,6 +20,7 @@ const {
   scatterPropsMock,
   referenceRatesPropsMock,
   staleQueriesMock,
+  coinStatesByIdMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsSummaryMock: vi.fn(),
@@ -31,6 +32,7 @@ const {
   scatterPropsMock: vi.fn(),
   referenceRatesPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
+  coinStatesByIdMock: { current: new Map() as ReadonlyMap<string, readonly unknown[]> },
 }));
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
@@ -40,8 +42,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
+  usePegSummary: () => ({ data: {}, isError: false }),
   useYieldAdapterManifest: useYieldAdapterManifestMock,
   useYieldRankingsSummary: useYieldRankingsSummaryMock,
+}));
+
+vi.mock("@/hooks/use-coin-states", () => ({
+  useCoinStates: () => ({ byId: coinStatesByIdMock.current, liveReady: true, clockReady: true }),
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -150,6 +157,23 @@ describe("YieldClient", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    coinStatesByIdMock.current = new Map();
+  });
+
+  it("passes over a paused coin's best-paid row", () => {
+    coinStatesByIdMock.current = new Map([["usdc-circle", [{ kind: "paused", notice: { type: "warning", title: "Deposits disabled", kind: "paused" } }]]]);
+    searchParamsMock.set("risk", "any");
+    useYieldRankingsSummaryMock.mockReturnValue({ ...useYieldRankingsSummaryMock(), data: projectYieldRankingsSummary({
+      rankings: [makeYieldRanking({ id: "usdc-circle", symbol: "USDC", apy30d: 9, pharosYieldScore: 91 }), makeYieldRanking({ id: "usdt-tether", symbol: "USDT", apy30d: 5, pharosYieldScore: 78 })],
+      riskFreeRate: 4.25, scalingFactor: 1, medianApy: 5, updatedAt: 1_776_000_000, warnings: [],
+    }) });
+    render(<YieldClient />);
+    const hero = screen.getByRole("group", { name: "Yield landscape overview" });
+    within(hero).getByText((_, node) => node?.textContent === "Best-paid risk in view · USDT");
+    // The Highest APY tile still names USDC, led by its state, counted as a warning.
+    const tile = within(hero).getByText("Highest APY").closest("button")!;
+    expect(tile.querySelector('[data-coin-state="paused"]')).not.toBeNull();
+    expect(tile.textContent).toContain("1 warning");
   });
 
   it.each([

@@ -10,6 +10,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { countActiveByArchetype, getCoinsByLifecycleStatus } from "@shared/lib/stablecoins/by-mechanism";
+import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -122,6 +123,13 @@ export default function MechanismExplainersHub() {
   const mechanismTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + counts[a], 0);
   const upcomingTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + preLaunchCounts[a], 0);
   const frozenTotal = MECHANISM_ARCHETYPE_VALUES.reduce((sum, a) => sum + frozenCounts[a], 0);
+  // Coins with an unresolved mechanism sit in no design: name the gap to each
+  // lifecycle census instead of letting the hub disagree with it silently.
+  const activeAll = ACTIVE_STABLECOINS.length;
+  const upcomingAll = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
+  const frozenAll = FROZEN_STABLECOINS.length;
+  const unresolvedTotal = activeAll - mechanismTotal + upcomingAll - upcomingTotal + frozenAll - frozenTotal;
+  const ofTotal = (shown: number, total: number) => (shown === total ? "" : ` of ${total}`);
 
   return (
     <LearnPageShell
@@ -142,14 +150,24 @@ export default function MechanismExplainersHub() {
             <p className="pharos-numeric text-muted-foreground">
               <span className="text-foreground">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
             </p>
+            {mechanismTotal !== activeAll ? (
+              <p className="pharos-numeric text-muted-foreground">
+                <span className="text-foreground">{mechanismTotal}</span> of {activeAll} active
+              </p>
+            ) : null}
             {upcomingTotal > 0 ? (
               <p className="pharos-numeric text-muted-foreground">
-                <span className="text-foreground">+{upcomingTotal}</span> upcoming
+                <span className="text-foreground">+{upcomingTotal}</span>{ofTotal(upcomingTotal, upcomingAll)} upcoming
               </p>
             ) : null}
             {frozenTotal > 0 ? (
               <p className="pharos-numeric text-muted-foreground">
-                <span className="text-foreground">+{frozenTotal}</span> frozen
+                <span className="text-foreground">+{frozenTotal}</span>{ofTotal(frozenTotal, frozenAll)} frozen
+              </p>
+            ) : null}
+            {unresolvedTotal > 0 ? (
+              <p className="pharos-numeric text-muted-foreground">
+                <span className="text-foreground">{unresolvedTotal}</span> with an unresolved mechanism, in no design
               </p>
             ) : null}
           </div>

@@ -65,7 +65,8 @@
     {
       "type": "danger",
       "title": "Multi-jurisdiction sanctions exposure",
-      "message": "A7A5 is a blocked asset: OFAC designated its issuer Old Vector LLC on 2025-08-14 and the A7 Network on 2026-10-01, calling A7A5 a blocked token; the EU bans transactions in it and the UK sanctioned its issuer and venues."
+      "message": "A7A5 is a blocked asset: OFAC designated its issuer Old Vector LLC on 2025-08-14 and the A7 Network on 2026-10-01, calling A7A5 a blocked token; the EU bans transactions in it and the UK sanctioned its issuer and venues.",
+      "asOf": "2026-10-30"
     }
   ]
 }

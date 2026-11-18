@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Newspaper, Send } from "lucide-react";
 import { useDigestPromo } from "@/hooks/api-hooks";
+import { formatDigestDateLabel } from "@/lib/digest";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import type { DigestPromoEdition } from "@shared/types/digest";
@@ -49,8 +50,10 @@ export function DailyDigestCard(): React.JSX.Element {
 
       {/* Serif promo on a squared edition stack — the two previous editions
           peek above the front card as straight offset leaves (no tilt), so
-          the archive reads as a filed record rather than a loose paper pile. */}
-      <div className="absolute inset-x-0 bottom-3 z-10 h-[164px] text-left">
+          the archive reads as a filed record rather than a loose paper pile.
+          Top-anchored under the actions: a shorter grid row clips the front
+          card's excerpt, never the actions. */}
+      <div className="absolute inset-x-0 top-[9.125rem] z-10 h-[164px] text-left">
         <DigestFoldPreview
           entry={previousEditions[1]}
           className="left-10 right-7 top-0 h-[150px] border-border/35 bg-card/80 pt-2.5"
@@ -95,6 +98,8 @@ function DigestFoldPreview({
 }): React.JSX.Element {
   const title = compactDigestText(entry?.digestTitle);
   const editionPrefix = entry?.editionNumber ? `#${entry.editionNumber}` : null;
+  // Dated so an older headline peeking above the front card never reads as today's.
+  const editionDate = entry ? formatDigestDateLabel(entry.slug, "short") : null;
 
   return (
     <div aria-hidden="true" className={cn("absolute overflow-hidden rounded-xl border px-4 py-3", className)}>
@@ -105,6 +110,7 @@ function DigestFoldPreview({
             "max-w-full truncate text-[9px] font-semibold uppercase leading-none tracking-wide text-foreground/50",
           )}
         >
+          {editionDate ? `${editionDate} · ` : null}
           {editionPrefix && <span className="text-teal-700/75 dark:text-teal-400/75">{editionPrefix}</span>}
           {editionPrefix ? ` — ${title}` : title}
         </p>

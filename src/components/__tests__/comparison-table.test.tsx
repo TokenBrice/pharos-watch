@@ -130,6 +130,21 @@ describe("ComparisonTable", () => {
     expect(html).not.toMatch(/\bbest\b/i);
   });
 
+  it("leads Overview with coin state and mutes an unpriced Peg Score", () => {
+    const halted = makeCoin("iusd-initia", "iUSD");
+    halted.coinStates = [{ kind: "critical", notice: { type: "danger", title: "Initia chain halted" } }];
+    halted.pegDetails = { ...halted.pegDetails!, pegScore: 100, currentPriceUnavailable: true };
+    const calm = makeCoin("usdc-circle", "USDC");
+    calm.coinStates = [];
+    const unknown = makeCoin("usdt-tether", "USDT");
+    const html = renderToStaticMarkup(<ComparisonTable coins={[halted, calm, unknown]} pegRates={PEG_RATES} logos={{}} />);
+    const firstRow = html.split("</tr>").find((chunk) => chunk.includes('scope="row"'));
+    for (const text of ["Current state", "Critical notice · Initia chain halted", ">None<", "No comparable data available"]) expect(firstRow).toContain(text);
+    const pegScore = metricRow(html, "Peg Score");
+    expect(pegScore?.match(/>no usable current price</g)).toHaveLength(1);
+    for (const text of ["100/100", "95/100"]) expect(pegScore).toContain(text);
+  });
+
   it("keeps a pipeline-gap card out of the withheld top-driver chip", () => {
     const coin = makeCoin("xmd", "XMD");
     coin.safetyCard = makeReportCardsV9PipelineGapCard();

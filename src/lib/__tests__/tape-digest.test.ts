@@ -76,6 +76,17 @@ describe("single-page digest", () => {
     expect(digestByDayForTest([], NOW_MS)).toEqual([]);
   });
 
+  it("orders classes by max severity, then the class roster, never by volume", () => {
+    const churn = (severity: TapeEventSeverity) => Array.from({ length: 5 }, (_, i) =>
+      makeEvent(NOW_MS - 10 - i, "dews.escalated", { coinId: `c${i}`, severity }));
+    const depeg = makeEvent(NOW_MS - 1, "depeg.opened", { severity: "warning" });
+    const mint = makeEvent(NOW_MS - 2, "mint_burn.large_mint", { severity: "notice" });
+    const order = (events: TapeEvent[]) => digestByDayForTest(sortDesc(events), NOW_MS)[0]!.classes.map((c) => c.classSlug);
+    expect(order([...churn("warning"), depeg, mint])).toEqual(["depeg", "dews", "mint_burn"]);
+    // A strictly higher severity still leads.
+    expect(order([...churn("severe"), depeg, mint])).toEqual(["dews", "depeg", "mint_burn"]);
+  });
+
   it("sets useDigestWrapper at the digest threshold", () => {
     const events = sortDesc([
       makeEvent(NOW_MS - 1, "depeg.opened", { coinId: "a" }),

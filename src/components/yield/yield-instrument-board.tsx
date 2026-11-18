@@ -7,6 +7,7 @@ import Link from "next/link";
 import { memo, useMemo, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight, ChevronDown } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { Badge } from "@/components/ui/badge";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { TablePagination, type TablePaginationProps } from "@/components/table-pagination";
@@ -313,6 +314,7 @@ function YieldInstrumentRowBase({
             <span className="hidden max-w-[150px] truncate text-xs text-muted-foreground xl:inline">{row.name}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} /> : null}
             <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>

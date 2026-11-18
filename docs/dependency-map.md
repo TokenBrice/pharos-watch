@@ -15,6 +15,7 @@ The page combines:
 1. `useDependencyGraph()` (`GET /api/dependency-graph/v1`) for accepted nodes, canonical dependency edges, and common-mode groups. Its registered `dependencyGraph` descriptor uses <!-- GENERATED-START: dependency-safety-polling -->60-minute `staleTime` and 120-minute `refetchInterval`.<!-- GENERATED-END: dependency-safety-polling -->
 2. `useStablecoins()` (`GET /api/stablecoins`) for nullable circulating USD context through `getCirculatingRawOrNull()`.
 3. Static `logosById` for token logos.
+4. `useCoinStates()` for the [live state overlay](#live-state-overlay), a presentation layer that never feeds edges, totals or layout.
 
 A held V9 publication serves the retained snapshot without a page-level hold notice; the held-ratings notice lives on `/status` (ADR-42). Missing or invalid V9 data renders unavailable; the page never falls back to V8 or reconstructs dependency edges from a retired card model. The standalone graph takes its edge set only from the slim response's `edges`; it has no static fallback source.
 
@@ -168,6 +169,16 @@ The hero reports gross mapped dependent supply, upstream hub count, and unique d
 Wrapper and vault-claim splits use only the published edge `wrapperForm`. A serial edge without it (every serial edge on a report v5 publication) stays in direct USD totals but cannot be classified. The hero, board and mobile basin list then disclose that exposure's known USD as "split unavailable" and qualify any classified subtotal as covering classified claims only. They never print an unclassified category as $0.00, and own-family figures exclude form-unknown exposure.
 
 Two clocks are explicit: methodology version and V9 publication time, then market-cap source time (or `unknown`). Graph filters and node limits never change these full-graph exposure totals.
+
+## Live State Overlay
+
+The map stays structural: published edges, exposure totals, hub ranking, supernodes and layout never read live state. One presentation layer sits on top: `useCoinStates()`, the [coin exceptional-state](./design-language.md#coin-exceptional-state) ladder over curated lifecycle and notices, the live peg summary, DEWS bands and published DDR verdicts. A coin without a known state shows nothing extra; absent live data claims no state, never calm.
+
+- **Live incidents upstream** leads the page, above the hero, when any published upstream (a hub with at least one live dependent) carries a live state: any state but pre-launch or deadline, which are scheduled, not incidents. Rows keep the hub model's order and show the hub, its highest live state as a `CoinStateChip` with specifics, its direct dependent count and largest dependent's share, and the board's direct exposure figure under the same unavailable and known-only rules; **Exposure** hands the hub to the Exposure workspace. Every such upstream is listed; the list is linked coins, not a loss forecast, and renders nothing when no upstream has a live state.
+- **Network nodes** in a state carry an outer ring in the state's tone (`COIN_STATE_TONES`; DEWS uses its band ladder) and name the state in the hub label and accessible name. The selection panel shows the node's chip and lists its published upstreams in a live state under **Live incidents upstream**, by the same rule.
+- **Hub board rows** carry the hub's chip beside its name.
+
+The Watershed view, the mobile basin list and detail-page snapshots draw no state layer; the page-level list covers every view.
 
 ## Adaptive Supernodes
 

@@ -34,6 +34,7 @@ import {
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { SafetyScoreTopDriver } from "@/components/safety-scores/safety-score-top-driver";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import {
@@ -126,6 +127,43 @@ function formatComparisonBps(value: number | null | undefined): ReactNode {
 
 function formatScore100(value: number | null | undefined): ReactNode {
   return value == null ? NULL_VALUE : `${formatScore(value, { trimInteger: true })}/100`;
+}
+
+/** Every exceptional state, the top one with its specifics; "None" only once the live state inputs have loaded. */
+function renderCoinStates(coin: ComparisonCoinEntry): ReactNode {
+  if (coin.coinStates == null) return NULL_VALUE;
+  if (coin.coinStates.length === 0) return <span className="text-muted-foreground">None</span>;
+  return (
+    <span className="flex flex-col items-center gap-1">
+      {coin.coinStates.map((state, index) => (
+        <CoinStateChip key={state.kind} state={state} showDetail={index === 0} />
+      ))}
+    </span>
+  );
+}
+
+/** Under a critical or paused notice, a price that is unavailable, unusable or inherited leaves Peg Score reading only past history. */
+function pegScoreCaveat(coin: ComparisonCoinEntry): string | null {
+  if (!coin.coinStates?.some((state) => state.kind === "critical" || state.kind === "paused")) return null;
+  const current = resolveCurrentPeg(coin.data, coin.pegDetails);
+  if (current?.currentPriceUnavailable === true || !hasObservedDisplayPrice(coin.data)) return "no usable current price";
+  if (current?.primaryTrust === "unusable") return "unusable price source";
+  return coin.data.priceDerivation ? "price inherited from its parent" : null;
+}
+
+function renderPegScore(coin: ComparisonCoinEntry): ReactNode {
+  const score = coin.pegDetails?.pegScore;
+  const caveat = score == null ? null : pegScoreCaveat(coin);
+  if (caveat === null) return formatScore100(score);
+  return (
+    <span
+      className="text-muted-foreground"
+      title={`Peg Score reads the recorded history; with ${caveat} under the current notice it does not show the peg holding now.`}
+    >
+      {formatScore100(score)}
+      <span className="block text-3xs">{caveat}</span>
+    </span>
+  );
 }
 
 function formatCurrentSupply(coin: ComparisonCoinEntry): ReactNode {
@@ -224,8 +262,9 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     {
       key: "overview",
       title: "Overview",
-      description: "The compact substitution view: peg, scale, safety, liquidity, and design. Market-cap changes use USD-valued circulation, not token counts or price returns.",
+      description: "Current state first, then the compact substitution view: peg, scale, safety, liquidity, and design. Market-cap changes use USD-valued circulation, not token counts or price returns.",
       metrics: [
+        { key: "state", label: "Current state", render: renderCoinStates },
         {
           key: "price",
           label: "Price",
@@ -250,7 +289,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
               : formatComparisonBps(read.deviationBps);
           },
         },
-        { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: (coin) => formatScore100(coin.pegDetails?.pegScore) },
+        { key: "peg-score", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, numeric: true, render: renderPegScore },
         { key: "market-cap", label: "Market cap", numeric: true, render: formatCurrentSupply },
         { key: "supply-24h", label: "Market-cap change · 24h", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevDayRawOrNull(coin.data)) },
         { key: "supply-7d", label: "Market-cap change · 7d", numeric: true, render: (coin) => formatSupplyChange(coin, getPrevWeekRawOrNull(coin.data)) },

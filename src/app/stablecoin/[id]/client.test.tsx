@@ -96,11 +96,13 @@ vi.mock("@/components/ai-summary/ai-summary", () => ({
   AiSummary: () => <div data-testid="ai-summary" />,
 }));
 
-vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices"));
+// A probe: which notices each lead-slot stack holds.
+vi.mock("@/components/coin-notice", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/coin-notice")>()),
+  NoticeStack: ({ notices }: { notices: readonly { title: string }[] }) => notices.length > 0 ? <div data-testid="notice-stack">{notices.map((n) => n.title).join(" | ")}</div> : null,
+}));
 
 vi.mock("@/components/tape/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
-
-vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
 
@@ -920,6 +922,26 @@ describe("StablecoinDetailClient (frozen S14)", () => {
   });
 });
 
+describe("StablecoinDetailClient lead slot", () => {
+  it("orders lead-slot notices around the hero", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      coin: { ...coin, notices: [
+        { type: "warning", title: "Deadline", message: "M.", kind: "deadline", deadline: "2026-11-26" },
+        { type: "warning", title: "Paused", message: "M.", kind: "paused" },
+        { type: "danger", title: "Danger", message: "M." },
+      ] },
+      staleQueries: [{ preset: "yieldRankings", dataUpdatedAt: 0, error: new Error("HTTP 502"), hasData: false, meta: null, secondary: true }],
+    }));
+    renderDetail(coin);
+    const stacks = screen.getAllByTestId("notice-stack");
+    expect(stacks.map((stack) => stack.textContent)).toEqual(["Danger", "Paused", "Deadline"]);
+    // Danger and paused lead the hero; the rest, then the lane's warning, follow it.
+    const order = [stacks[1]!, screen.getByTestId("hero-card"), stacks[2]!, document.querySelector("[data-health-state]")!];
+    expect(order.slice(1).every((next, i) => order[i]!.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
+});
+
 describe("StablecoinDetailClient (frozen)", () => {
   beforeEach(() => {
     useStablecoinDetailViewModelMock.mockReset();
@@ -932,6 +954,13 @@ describe("StablecoinDetailClient (frozen)", () => {
     renderDetail(coin);
     expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
+  });
+
+  it("keeps a frozen archive's past danger notice in its Risk-zone record", () => {
+    const frozen = makeFrozenViewModel({ ...TRACKED_META_BY_ID.get("usds-sky")!, notices: [{ type: "danger", title: "Past halt", message: "M.", kind: "history" }] });
+    useStablecoinDetailViewModelMock.mockReturnValue(frozen);
+    renderDetail(frozen.coin);
+    expect(screen.getByTestId("notice-stack").textContent).toBe("Past halt");
   });
 
   it("renders FrozenDataNote labels above each chart section", () => {

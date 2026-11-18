@@ -35,6 +35,11 @@ export interface PsiContributorRow extends StabilityContributor {
   severity: number;
   breadth: number;
   total: number;
+  /**
+   * The larger cost. Breadth counts an open incident by coin size whatever its
+   * current deviation, so a large coin near peg can outrank a small one far off it.
+   */
+  driver: "severity" | "breadth";
 }
 
 export interface PsiComponentPoint {
@@ -225,7 +230,11 @@ export function buildPsiContributorRows(
         totalMcapUsd,
         factor: contributor.factor,
       });
-      return { ...contributor, ...contribution };
+      return {
+        ...contributor,
+        ...contribution,
+        driver: contribution.severity > contribution.breadth ? ("severity" as const) : ("breadth" as const),
+      };
     })
     .sort((a, b) => b.total - a.total);
 }

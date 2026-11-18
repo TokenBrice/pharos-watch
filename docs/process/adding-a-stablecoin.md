@@ -615,7 +615,7 @@ The `write-ai-summaries` skill (see Phase 2) is the standard path for drafting a
 
 ### 6c. Notices
 
-If the coin needs explicit user-facing caveats, add `notices`.
+If the coin needs explicit user-facing caveats, add `notices` (`type` danger | warning | info, `title`, `message`). Give a notice a `kind` when it carries state rather than a standing caveat: `paused` (mint, deposit, subscription, redemption or transfer stopped now), `deadline` (holders must act by its required `deadline` date; only for whole-token deadlines, not one chain route), `depeg` (curated peg behaviour that a live incident supersedes) or `history` (a resolved or past event, never an alarm). Add `asOf` (YYYY-MM-DD) whenever the facts can go stale. Danger, `paused` and `deadline` notices reach every cross-coin surface through the client list's `alerts` projection and the coin-state ladder ([Design Language](../design-language.md#coin-exceptional-state)).
 
 ### 6d. Historical annotation corpus (optional)
 

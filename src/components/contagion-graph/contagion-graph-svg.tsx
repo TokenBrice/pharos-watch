@@ -25,6 +25,8 @@ import {
   type HubTier,
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
+import type { CoinState } from "@shared/lib/coin-state";
+import { coinStateToneClass, describeCoinState } from "@/components/coin-state-chip";
 import type { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
@@ -79,6 +81,8 @@ interface EdgeRenderProps {
 
 interface NodeRenderProps {
   node: GraphNode;
+  /** The node's highest live exceptional state, drawn as an outer tone ring and named in its labels. */
+  state: CoinState | null;
   position: { x: number; y: number };
   focusMode: FocusMode;
   logos?: Record<string, string>;
@@ -277,6 +281,7 @@ function getNodePresentation({
 
 const ContagionGraphNode = memo(function ContagionGraphNode({
   node,
+  state,
   position,
   focusMode,
   logos,
@@ -317,7 +322,9 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
   const tickerFontSize = HUB_LABEL_FONT_SIZE * nodeScale;
   const labelGap = showTickerLabels ? tickerFontSize * 0.7 : isCoreHub ? 12 : 10;
   const labelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + visualR + labelGap));
-  const labelText = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade === null ? "Pipeline gap" : node.grade}`;
+  const stateText = state ? describeCoinState(state) : null;
+  const baseLabel = showTickerLabels ? graphNodeLabel(node) : `${graphNodeLabel(node)} · ${node.grade === null ? "Pipeline gap" : node.grade}`;
+  const labelText = stateText ? `${baseLabel} · ${stateText.label}` : baseLabel;
   return (
     <g
       key={node.id}
@@ -325,7 +332,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
       data-node-id={node.id}
       data-pinned={isPinnedPosition ? "true" : undefined}
       role="button"
-      aria-label={`${graphNodeLabel(node)}, ${node.grade === null ? "Pipeline gap" : `Grade ${node.grade}`}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
+      aria-label={`${graphNodeLabel(node)}, ${node.grade === null ? "Pipeline gap" : `Grade ${node.grade}`}, ${node.mcap === null ? "mcap n/a" : `market cap ${formatCurrency(node.mcap)}`}${stateText ? `, ${stateText.label}${stateText.detail ? `: ${stateText.detail}` : ""}` : ""}${pinnedSelectionId === node.id ? ", Selected" : ", Trace"}${isPinnedPosition ? ", Pinned position" : ""}`}
       style={{ cursor: nodeCursor }}
       onPointerDown={(event) => onPointerDown(event, node.id)}
       onMouseEnter={() => onMouseEnter(node.id)}
@@ -359,6 +366,21 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
           stroke={color}
           strokeWidth={1.4}
           opacity={0.55}
+        />
+      )}
+
+      {state && (
+        <circle
+          data-state-ring={state.kind}
+          cx={position.x}
+          cy={position.y}
+          r={visualR + 5 * nodeScale}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className={coinStateToneClass(state, "text")}
+          opacity={nodeOpacity}
+          pointerEvents="none"
         />
       )}
 
@@ -443,7 +465,7 @@ const ContagionGraphNode = memo(function ContagionGraphNode({
   );
 }, (previous, next) => {
   const id = next.node.id;
-  return previous.node === next.node && previous.position === next.position
+  return previous.node === next.node && previous.state === next.state && previous.position === next.position
     && previous.focusMode === next.focusMode && previous.logos === next.logos
     && (previous.activeHoveredId === null) === (next.activeHoveredId === null)
     && (previous.activeHoveredId === id) === (next.activeHoveredId === id)
@@ -596,6 +618,7 @@ export function ContagionGraphSvg({
           <ContagionGraphNode
             key={node.id}
             node={node}
+            state={graph.coinStates.get(node.id)?.[0] ?? null}
             position={position}
             focusMode={focusMode}
             logos={logos}

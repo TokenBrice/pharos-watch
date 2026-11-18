@@ -104,7 +104,7 @@ Historical Markdown timeline files are intentionally not maintained.
 - Enforce R1–R5 through review, not an additional lint or doc-sync gate.
 - Keep durable behavior and non-obvious invariants; omit restatements of component trees and implementation order that source makes obvious.
 - Do not hardcode volatile inventory counts or exhaustive file lists. Link to the owning registry or generate the view.
-- Give any doc at or above roughly 50 KB or 400 lines a top `Agent navigation` block (short heading list with grep hints) so agents section-read instead of loading it wholesale; the ~1,500-line rule for `docs/api-reference.md` stays the hard case.
+- Give any doc at or above roughly 50 KB or 400 lines a top `Agent navigation` block (short heading list with grep hints) so agents section-read instead of loading it wholesale; the ~1,500-line rule for `docs/api-reference.md` stays the hard case. The public `/docs/<slug>/` HTML page hides that block; its Markdown copy keeps it.
 - Keep temporary audits, calibration captures, screenshots, and handoffs under ignored `/agents/` paths.
 - Put repeatable operating policy in `docs/process/` and incident remediation in `docs/runbooks/`.
 - Runbook navigation is generated from curated `runbook` labels and applicability (`symptom`, `procedure`, or `reference`) on existing `docs`/`background`, selector `reading.local`/`contract`/`required`, and mapping `required` references in [doc-ownership.json](./doc-ownership.json). Metadata-preserving enumeration deduplicates repeated identical entries and rejects conflicting labels. Label each new incident page there and regenerate with `node --import tsx scripts/maintenance/generate-runbook-index.ts`; the generator rejects missing or stale coverage.

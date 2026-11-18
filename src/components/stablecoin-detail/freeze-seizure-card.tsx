@@ -50,10 +50,10 @@ const METHODOLOGY_TOPIC: Record<BlacklistabilityClientStatus, MethodologyContext
  * exposed is amber; only "Not freezable" is green.
  */
 export const FREEZE_STATUS_DISPLAY: Record<BlacklistabilityClientStatus, { label: string; tone: SeverityTone }> = {
-  freezable: { label: "Freezable", tone: "watch" },
+  freezable: { label: "Freezable", tone: "caution" },
   "not-freezable": { label: "Not freezable", tone: "ok" },
-  possible: { label: "Restrictable", tone: "watch" },
-  inherited: { label: "Upstream freeze risk", tone: "watch" },
+  possible: { label: "Restrictable", tone: "caution" },
+  inherited: { label: "Upstream freeze risk", tone: "caution" },
 };
 
 /**

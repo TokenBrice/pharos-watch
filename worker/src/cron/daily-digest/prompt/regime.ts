@@ -4,6 +4,18 @@ import { REGIME_CRITICAL_DEGRADED_SOURCES } from "../degraded-sources";
 
 type DigestRegime = "CRISIS" | "TENSION" | "WATCHFUL" | "CALM";
 
+/**
+ * The only regime vocabulary the model sees. Regime labels are internal and
+ * leaked into copy ("the regime at TENSION" beside a Bedrock PSI); CRISIS and
+ * CALM also name public PSI and DEWS bands. Market state belongs to PSI.
+ */
+export const DIGEST_WRITING_REGISTER = {
+  CRISIS: "urgent",
+  TENSION: "focused",
+  WATCHFUL: "observant",
+  CALM: "quiet",
+} as const satisfies Record<DigestRegime, string>;
+
 const PSI_REGIME = {
   BEDROCK: "CALM",
   STEADY: "CALM",

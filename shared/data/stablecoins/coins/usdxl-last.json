@@ -290,7 +290,10 @@
     {
       "type": "danger",
       "title": "HypurrFi market closure deadline",
-      "message": "HypurrFi announced that Legacy and Pooled markets will wind down and close by July 15, 2026. USDXL borrow rates were raised to 30% to incentivize repayment before closure; users with debt positions should verify repayment and migration routes directly in HypurrFi/Euler tooling."
+      "message": "HypurrFi announced that Legacy and Pooled markets will wind down and close by July 15, 2026. USDXL borrow rates were raised to 30% to incentivize repayment before closure; users with debt positions should verify repayment and migration routes directly in HypurrFi/Euler tooling.",
+      "kind": "deadline",
+      "deadline": "2026-07-15",
+      "asOf": "2026-06-12"
     },
     {
       "type": "info",

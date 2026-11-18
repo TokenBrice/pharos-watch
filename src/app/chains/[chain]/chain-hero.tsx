@@ -238,10 +238,9 @@ function IdentityRow({ meta, status }: { meta: ChainMeta; status: React.ReactNod
   );
 }
 
-function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
+function MarketMetrics({ chain, supplyCoverage }: {
   chain: ChainSummary | null;
   supplyCoverage?: ChainsSupplyCoverage;
-  supplyUnavailable?: boolean;
 }) {
   const unavailableCount = chain?.unavailableSupplyObservationCount ?? 0;
   const partialShare = unavailableCount > 0 || (supplyCoverage?.aggregateUnavailableAssetCount ?? 0) > 0;
@@ -250,7 +249,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
       <div>
         <p className="pharos-label">{unavailableCount > 0 ? "Partial supply" : "Total supply"}</p>
         <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-foreground">
-          {chain ? formatCompactUsd(chain.totalUsd) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-24" />}
+          {chain ? formatCompactUsd(chain.totalUsd) : <Skeleton className="h-7 w-24" />}
         </div>
         {unavailableCount > 0 ? (
           <p className="mt-1 text-xs text-muted-foreground">{unavailableCount} unavailable supply observations excluded</p>
@@ -259,7 +258,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
       <div>
         <p className="pharos-label">{partialShare ? "Partial global share" : "Global share"}</p>
         <div className="mt-1 font-mono text-2xl font-bold leading-none tabular-nums">
-          {chain ? formatChainShare(chain.dominanceShare) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-16" />}
+          {chain ? formatChainShare(chain.dominanceShare) : <Skeleton className="h-7 w-16" />}
         </div>
         {(supplyCoverage?.aggregateUnavailableAssetCount ?? 0) > 0 ? (
           <p className="mt-1 text-xs text-muted-foreground">{supplyCoverage?.aggregateUnavailableAssetCount} assets excluded from global supply</p>
@@ -364,28 +363,31 @@ export function ChainHero({
   apiMeta,
   dataUpdatedAt,
   supplyCoverage,
-  supplyUnavailable,
+  unavailable = false,
 }: {
   meta: ChainMeta;
   chain: ChainSummary | null;
   apiMeta: ApiMeta | null;
   dataUpdatedAt: number;
   supplyCoverage?: ChainsSupplyCoverage;
-  supplyUnavailable?: boolean;
+  /** The read settled with no row for this chain: the body owns that state, so no skeleton waits for one. */
+  unavailable?: boolean;
 }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
       {/* identity context rides the card's top edge as a slim band; the chain name is the page H1 */}
-      <div className="border-b border-border/60 px-5 py-2.5 sm:px-6">
+      <div className={cn("px-5 py-2.5 sm:px-6", !unavailable && "border-b border-border/60")}>
         <IdentityRow meta={meta} status={<ChainsFreshnessChip meta={apiMeta} dataUpdatedAt={dataUpdatedAt} />} />
       </div>
-      <div className="space-y-6 px-5 py-6 sm:px-6">
-        <MarketMetrics chain={chain} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
+      {unavailable ? null : (
+        <div className="space-y-6 px-5 py-6 sm:px-6">
+          <MarketMetrics chain={chain} supplyCoverage={supplyCoverage} />
 
-        <div className="h-px w-full bg-border/60" />
+          <div className="h-px w-full bg-border/60" />
 
-        <HealthZone chain={chain} apiMeta={apiMeta} />
-      </div>
+          <HealthZone chain={chain} apiMeta={apiMeta} />
+        </div>
+      )}
     </Card>
   );
 }
