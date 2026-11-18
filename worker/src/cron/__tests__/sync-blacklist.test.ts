@@ -107,6 +107,8 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       ? config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature)
       : undefined,
   getBlacklistConfigsForSymbolAndChain: () => [],
+  // This fixture roster has no Ethereum USDT configuration.
+  getBlacklistConfigByContract: () => undefined,
 }));
 
 // Real implementations by default; individual tests inject repair-stage throws.
@@ -292,6 +294,7 @@ function makeDb(syncStateRows: Record<string, unknown>[] = [], tables: Parameter
   return mockD1([
     ...tables,
     ...emptyBlacklistAggregateTables(),
+    { match: "blacklist-summary-latest-event-type-history", rows: [] },
     { match: "blacklist_sync_state", rows: syncStateRows },
     { match: "blacklist_events", rows: [] },
   ]);

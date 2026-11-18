@@ -397,6 +397,10 @@ describe("mint/burn retention", () => {
     const cutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
     insertEvent("corrected", cutoff - HOUR_SEC - 1, { amountUsd: 30_000_000 });
     insertEvent("reconciled", cutoff - HOUR_SEC - 2, { amountUsd: 30_000_000 });
+    insertEvent("corrected-without-proof", cutoff - HOUR_SEC - 3, { amountUsd: 30_000_000 });
+    sqlite.prepare(`UPDATE mint_burn_events SET stablecoin_id = 'usdz-anzen', symbol = 'USDz',
+      flow_type = 'bridge_transfer' WHERE id = 'corrected-without-proof'`).run();
+
     const claim = (id: string, amountUsd: number) => sqlite.prepare(
       `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table,
          source_row_id, transition, created_at)
@@ -404,11 +408,12 @@ describe("mint/burn retention", () => {
     ).run(`e-${id}`, JSON.stringify({ amountUsd, flowType: "standard", burnType: null }), id);
     claim("corrected", 20_000_000);
     claim("reconciled", 30_000_000);
+    claim("corrected-without-proof", 30_000_000);
 
     await pruneMintBurnRetention(db, NOW_SEC);
-    expect(eventIds()).toEqual(["corrected"]);
+    expect(eventIds()).toEqual(["corrected", "corrected-without-proof"]);
 
-    sqlite.prepare("UPDATE tape_events SET suppressed_at = 1 WHERE source_row_id = 'corrected'").run();
+    sqlite.prepare("UPDATE tape_events SET suppressed_at = 1 WHERE source_row_id IN ('corrected', 'corrected-without-proof')").run();
     await pruneMintBurnRetention(db, NOW_SEC);
     expect(eventIds()).toEqual([]);
   });

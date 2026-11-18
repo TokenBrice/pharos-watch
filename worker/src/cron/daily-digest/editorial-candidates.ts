@@ -436,33 +436,42 @@ function addLiquidityAndBlacklistCandidates(candidates: DigestEditorialCandidate
     });
   }
 
-  if (data.blacklistActivity && data.blacklistActivity.eventCount > 0 && data.blacklistActivity.editorialEligible !== false) {
-    const total = data.blacklistActivity.totalAmountUsd;
-    const count = data.blacklistActivity.eventCount;
-    const unpricedEventCount = data.blacklistActivity.unpricedEventCount ?? 0;
+  const blacklist = buildBlacklistActivityCandidate(data.blacklistActivity, data.degradedSources);
+  if (blacklist) addCandidate(candidates, blacklist);
+}
+
+export function buildBlacklistActivityCandidate(
+  activity: DigestInputData["blacklistActivity"],
+  degradedSources?: readonly string[],
+): DigestEditorialCandidate | null {
+  if (activity && activity.eventCount > 0 && activity.editorialEligible !== false) {
+    const total = activity.totalAmountUsd;
+    const count = activity.eventCount;
+    const unpricedEventCount = activity.unpricedEventCount ?? 0;
     // An unpriced event is not a zero-dollar event: suppression and the top
     // artifact risk stay reserved for a fully-priced zero total.
     const zeroValue = total <= 0 && unpricedEventCount === 0;
-    addCandidate(candidates, {
+    return {
       id: candidateId("blacklist", ["last-24h"]),
       kind: "blacklist",
       title: "Blacklist activity changed",
-      symbols: data.blacklistActivity.topEvents.map((event) => event.symbol),
+      symbols: activity.topEvents.map((event) => event.symbol),
       impactScore: total / 1_000_000 + count,
       novelty: "new",
-      confidence: confidenceForData(data.degradedSources, "blacklist"),
+      confidence: confidenceForData(degradedSources, "blacklist"),
       artifactRisk: zeroValue ? "high" : unpricedEventCount > 0 || total < 1_000_000 ? "medium" : "low",
       headlineFacts: [
         `${count} events`,
         unpricedEventCount > 0
           ? `at least ${formatCurrency(total)} affected, ${unpricedEventCount} with unknown amount`
           : `${formatCurrency(total)} affected`,
-        ...data.blacklistActivity.topEvents.slice(0, 2).map((event) => `${event.symbol} ${event.type} on ${event.chain}: ${event.amountUsd == null ? "amount unknown" : formatCurrency(event.amountUsd)}`),
+        ...activity.topEvents.slice(0, 2).map((event) => `${event.symbol} ${event.type} on ${event.chain}: ${event.amountUsd == null ? "amount unknown" : formatCurrency(event.amountUsd)}`),
       ],
       whyItMatters: "Issuer enforcement becomes market-relevant when value, issuer, or chain concentration changes.",
       ...(zeroValue ? { suppressReason: "zero-dollar blacklist activity, do not dramatize without a pattern change" } : {}),
-    });
+    };
   }
+  return null;
 }
 
 function addPsiCandidate(candidates: DigestEditorialCandidate[], data: DigestInputData): void {

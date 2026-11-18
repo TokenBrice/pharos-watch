@@ -5,6 +5,9 @@ import {
 } from "./blacklist";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/blacklist";
 
+// Reviewed TetherToken.destroyBlackFunds leaves isBlackListed set.
+export const BLACKLIST_POST_WIPE_CONTRACT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+
 export interface BlacklistCurrentBalanceSnapshot {
   id?: string;
   stablecoin: BlacklistStablecoin;
@@ -32,6 +35,7 @@ export interface BlacklistActiveRecord {
   blacklistedAt: number;
   destroyedAt: number | null;
   frozenAmountUsd: number | null;
+  blockPersistsAfterDestroy?: boolean;
   /** No transaction position is available for conflicting Tron block events. */
   orderAmbiguityReason?: "tron-cross-transaction-order";
 }
@@ -125,6 +129,7 @@ function resolveBlacklistAmount(
 export function buildBlacklistActiveRecords(
   events: BlacklistEvent[],
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot> = new Map(),
+  postWipeAmounts: ReadonlyMap<string, number | null> = new Map(),
 ): BlacklistActiveRecord[] {
   const active = new Map<string, BlacklistActiveRecord>();
   const ordered = [...events].sort(compareBlacklistEvents);
@@ -158,6 +163,11 @@ export function buildBlacklistActiveRecords(
       continue;
     }
     if (event.eventType === "blacklist") {
+      const existing = active.get(key);
+      if (existing?.blockPersistsAfterDestroy) {
+        active.set(key, { ...existing, blacklistedAt: event.timestamp, destroyedAt: null });
+        continue;
+      }
       const amount = resolveBlacklistAmount(event, currentBalances);
       active.set(key, {
         key,
@@ -172,9 +182,21 @@ export function buildBlacklistActiveRecords(
     }
 
     if (event.eventType === "destroy") {
-      // One destroy closes every alias identity of the account, mirroring the
-      // unblacklist branch; a sibling legacy/scoped record must not stay active.
-      for (const lookupKey of buildBlacklistIdentityLookupKeys(event)) {
+      const lookupKeys = buildBlacklistIdentityLookupKeys(event);
+      const postWipeAmount = postWipeAmounts.get(event.id);
+      if (postWipeAmount !== undefined) {
+        // On the reviewed deployment the wipe itself proves the address remains blocked.
+        const blacklistedAt = active.get(key)?.blacklistedAt ?? event.timestamp;
+        for (const lookupKey of lookupKeys) active.delete(lookupKey);
+        active.set(key, {
+          key, stablecoin: event.stablecoin, chainId: event.chainId, address: event.address,
+          blacklistedAt, destroyedAt: event.timestamp, blockPersistsAfterDestroy: true,
+          frozenAmountUsd: postWipeAmount,
+        });
+        continue;
+      }
+      // A wipe must also close the balance recorded under a sibling legacy identity.
+      for (const lookupKey of lookupKeys) {
         const existing = active.get(lookupKey);
         if (!existing) continue;
         // The destroy event closes the record; destroyed rows are excluded from
@@ -209,9 +231,7 @@ export function computeBlacklistActiveSummaryStats(
       ambiguousOrderCount++;
       continue;
     }
-    // Destroyed funds are no longer frozen — exclude from the frozen total
-    // and gap counts. They still count toward confirmed active addresses.
-    if (record.destroyedAt != null) continue;
+    if (record.destroyedAt != null && !record.blockPersistsAfterDestroy) continue;
     if (record.frozenAmountUsd == null) {
       activeAmountGapCount++;
       continue;

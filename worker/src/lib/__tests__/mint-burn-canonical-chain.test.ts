@@ -9,9 +9,9 @@ import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 const NON_ETHEREUM_CANONICAL_CHAIN_EXCEPTIONS: Record<string, string> = {};
 
 describe("isCanonicalMintBurnPair", () => {
-  it("USDai canonical chain is arbitrum", () => {
-    expect(isCanonicalMintBurnPair("usdai-usd-ai", "arbitrum")).toBe(true);
-    expect(isCanonicalMintBurnPair("usdai-usd-ai", "ethereum")).toBe(false);
+  it.each([["usdai-usd-ai", "arbitrum"], ["meusd-mezo", "mezo"]])("uses %s's native chain %s", (id, chain) => {
+    expect(isCanonicalMintBurnPair(id, chain)).toBe(true);
+    expect(isCanonicalMintBurnPair(id, "ethereum")).toBe(false);
   });
 
   it("maps every configured non-Ethereum-only stablecoin to a canonical chain", () => {

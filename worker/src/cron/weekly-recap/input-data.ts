@@ -1,5 +1,7 @@
+import { DigestSupplyQuantityEvidenceSchema } from "@shared/types/digest";
 import { getLatestSupplyPerimeterChange } from "@shared/lib/supply-perimeter-changes";
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import {
@@ -22,11 +24,19 @@ import {
 } from "@shared/types/safety-score-publication";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import { rollupDigestInputs, type RollupSummary } from "../daily-digest/collectors-shared";
+import { currentDepegBps } from "../daily-digest/digest-evidence";
 import {
   activeDepegEditorialCandidateId,
+  buildBlacklistActivityCandidate,
   buildEditorialCandidates,
   resolvedDepegEditorialCandidateId,
 } from "../daily-digest/editorial-candidates";
+import {
+  summarizeWeeklyBlacklistActivity,
+  WEEKLY_BLACKLIST_QUERY_UNAVAILABLE,
+  WEEKLY_BLACKLIST_UNPRICED,
+  type WeeklyBlacklistActivity,
+} from "./blacklist";
 import type {
   DailyDigestSourceRow,
   SpikeDepeg,
@@ -75,10 +85,12 @@ function weeklySignalId(kind: WeeklyRiskKind, parts: readonly string[]): string 
 }
 
 function toSpikeDepeg(signal: WeeklyDepegSignal | undefined): SpikeDepeg | null {
-  if (!signal) return null;
+  if (signal?.observedAt == null) return null;
   return {
     id: signal.id,
-    date: signal.date,
+    date: formatIsoDate(signal.observedAt),
+    observedAt: signal.observedAt,
+    severityBasis: signal.severityBasis,
     symbol: signal.symbol,
     bps: signal.bps,
     mcapUsd: signal.mcapUsd,
@@ -154,11 +166,9 @@ function collectCanonicalWeeklyRiskCandidates(parsed: WeeklyParsedRow[]): Weekly
   parsed.forEach((row, index) => {
     for (const candidate of canonicalDailyCandidates(parsed, index)) {
       const kind = weeklyRiskKind(candidate);
-      if (kind == null || kind === "depeg") continue;
+      if (kind == null || kind === "depeg" || kind === "blacklist") continue;
       if (kind === "grade" && (row.inputData.gradeTransitions?.length ?? 0) === 0) continue;
-      // Blacklist candidates summarize a bounded daily window, while the other
-      // daily candidate ids describe a stable signal identity across the week.
-      const identity = candidate.kind === "blacklist" ? `${candidate.id}:${row.date}` : candidate.id;
+      const identity = candidate.id;
       const weekly: WeeklyRiskLeaderboardSignal = {
         id: `weekly:${identity}`,
         kind,
@@ -182,19 +192,33 @@ function collectCanonicalWeeklyRiskCandidates(parsed: WeeklyParsedRow[]): Weekly
 function buildWeeklyRiskLeaderboard(params: {
   parsed: WeeklyParsedRow[];
   depegs: WeeklyDepegSignal[];
+  blacklist: WeeklyBlacklistActivity | null;
 }): WeeklyRiskLeaderboardSignal[] {
   const rows = collectCanonicalWeeklyRiskCandidates(params.parsed);
+  const blacklist = buildBlacklistActivityCandidate(params.blacklist ?? undefined);
+  if (blacklist) {
+    rows.push({
+      id: "weekly:blacklist:event-period",
+      kind: "blacklist",
+      label: `Recorded blacklist activity${params.blacklist?.coverage.reason != null ? " (period coverage unconfirmed)" : ""}: ${blacklist.headlineFacts.join("; ")}`,
+      symbols: [...new Set(blacklist.symbols)].slice(0, 4),
+      impactScore: blacklist.impactScore,
+      severityScore: blacklist.impactScore,
+      ...(blacklist.suppressReason ? { suppressReason: blacklist.suppressReason } : {}),
+    });
+  }
 
   for (const depeg of params.depegs) {
     rows.push({
       id: depeg.id,
       kind: "depeg",
-      label: `${depeg.date} ${depeg.symbol}: ${depeg.label}, ${formatCurrency(depeg.mcapUsd)} mcap`,
+      label: `${depeg.symbol}: ${depeg.label}, ${formatCurrency(depeg.mcapUsd)} mcap`,
       symbols: [depeg.symbol],
       date: depeg.date,
       impactScore: depeg.impactScore,
       severityScore: depeg.severityScore,
       critical: depeg.critical,
+      ...(depeg.eventAt != null ? { eventAt: depeg.eventAt } : {}),
       ...(depeg.carriedOver ? { carriedOver: true } : {}),
       ...(depeg.suppressReason ? { suppressReason: depeg.suppressReason } : {}),
     });
@@ -207,7 +231,7 @@ function buildWeeklyRiskLeaderboard(params: {
       // critical carried over from prior weeks competes on decayed severity
       // (the "Four Names Share The Critical Shelf" fix).
       const freshCritical = (row: WeeklyRiskLeaderboardSignal): boolean =>
-        Boolean(row.critical) && !row.carriedOver;
+        Boolean(row.critical) && !row.carriedOver && (row.kind !== "depeg" || row.eventAt != null);
       const criticalDelta = Number(freshCritical(b)) - Number(freshCritical(a));
       return suppressionDelta || criticalDelta || b.severityScore - a.severityScore || b.impactScore - a.impactScore;
     })
@@ -459,13 +483,14 @@ function sanitizeSafetyForWeekly(
   });
 }
 
-interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskLeaderboard"> {
+interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskLeaderboard" | "topBlacklistEvents"> {
   allDepegObservations: WeeklyDepegSignal[];
+  rankedDepegSignals: WeeklyDepegSignal[];
 }
 
 /**
  * An active depeg is a standing condition only when its start predates the
- * declared edition window. Legacy rows without `startedAt` fall back to the
+ * declared event period. Legacy rows without `startedAt` fall back to the
  * age persisted with that edition; with neither, freshness is unknown and the
  * event is not demoted to carried-over.
  */
@@ -475,64 +500,79 @@ function depegStartedBeforeWindow(
   weekWindowStartSec: number,
 ): boolean {
   let estimatedStartSec: number | null = null;
+  const capturedAt = row.inputData.dataQuality?.generatedAt ?? row.generatedAt;
   if (depeg.startedAt != null) {
     estimatedStartSec = depeg.startedAt;
   } else if (depeg.ageHours != null) {
-    estimatedStartSec = row.generatedAt - depeg.ageHours * 3_600;
+    estimatedStartSec = capturedAt - depeg.ageHours * HOUR_SECONDS;
   } else {
     const standing = row.inputData.standingConditions?.find((entry) =>
       depeg.stablecoinId != null ? entry.stablecoinId === depeg.stablecoinId : entry.symbol === depeg.symbol);
-    if (standing != null) estimatedStartSec = row.generatedAt - standing.ageDays * 86_400;
+    if (standing != null) estimatedStartSec = capturedAt - standing.ageDays * DAY_SECONDS;
   }
   return estimatedStartSec != null && estimatedStartSec < weekWindowStartSec;
 }
 
 function collectWeeklyTopSignals(
   parsed: WeeklyParsedRow[],
-  declaredWindowStartSec?: number,
+  eventPeriod: DigestEventPeriod,
 ): WeeklyTopSignals {
-  // The declared window start is authoritative even when the first readable
-  // edition is missing; only standalone callers fall back to the first edition.
-  const weekWindowStartSec = declaredWindowStartSec ?? (parsed[0]?.date
-    ? Math.floor(Date.parse(`${parsed[0].date}T00:00:00Z`) / 1000)
-    : 0);
-  const allDepegObservations = parsed.flatMap((d, index) => {
+  const allDepegObservations: WeeklyDepegSignal[] = parsed.flatMap((d, index) => {
     const dailyCandidates = canonicalDailyCandidates(parsed, index);
+    const capturedAt = d.inputData.dataQuality?.generatedAt ?? d.generatedAt;
     return [
-      ...(d.inputData.topDepegs ?? []).map((depeg) => {
-        // Post-truth-layer dailies carry the live deviation; archived rows fall
-        // back to the stored peak.
-        const severityBps = depeg.currentBps ?? depeg.bps;
+      ...(d.inputData.topDepegs ?? []).flatMap((depeg) => {
+        const startedAt = depeg.startedAt;
+        if (startedAt != null && (startedAt >= eventPeriod.end || startedAt > capturedAt)) return [];
+        const eventAt = startedAt != null && Number.isSafeInteger(startedAt) && startedAt >= eventPeriod.start
+          ? startedAt : undefined;
+        const quoteAt = depeg.priceObservedAt;
+        const observedAt = quoteAt != null && Number.isSafeInteger(quoteAt) &&
+          quoteAt > 0 && quoteAt <= d.generatedAt && quoteAt >= eventPeriod.start && quoteAt < eventPeriod.end &&
+          (startedAt == null || quoteAt >= startedAt) &&
+          currentDepegBps(depeg, capturedAt) != null ? quoteAt : undefined;
+        const severityBps = observedAt != null ? depeg.currentBps! : depeg.bps;
+        if (!Number.isFinite(severityBps)) return [];
         const canonicalCandidate = findDailyDepegCandidate(
           dailyCandidates,
           "depeg",
           activeDepegEditorialCandidateId(depeg),
           depeg.symbol,
         );
-        const impactScore = canonicalCandidate?.impactScore
+        const impactScore = (observedAt != null || (depeg.currentBps == null && eventAt != null)
+          ? canonicalCandidate?.impactScore : null)
           ?? getDepegEditorialImpactScore(severityBps, depeg.mcapUsd);
-        // An event that predates the week window is a standing condition the
-        // reader has already seen in prior recaps, not fresh weekly news.
-        const carriedOver = depegStartedBeforeWindow(depeg, d, weekWindowStartSec);
+        const carriedOver = depegStartedBeforeWindow(depeg, d, eventPeriod.start);
         const severityScore = impactScore * (carriedOver ? 0.5 : 1);
         const eventIdentity = `${depeg.stablecoinId ?? depeg.symbol.toUpperCase()}:${depeg.startedAt ?? "active"}`;
-        return {
+        const magnitude = `${Math.abs(severityBps)} bps ${severityBps >= 0 ? "above" : "below"} peg`;
+        const basis = observedAt != null
+          ? `active, ${magnitude} observed at ${new Date(observedAt * 1000).toISOString()}`
+          : `active${eventAt != null ? ` since ${formatIsoDate(eventAt)}` : ""}, stored lifetime peak ${magnitude} (peak time unknown)`;
+        return [{
           id: weeklySignalId("depeg", [eventIdentity]),
           eventIdentity,
           symbol: depeg.symbol,
-          label: `${Math.abs(severityBps)} bps active ${severityBps >= 0 ? "above" : "below"} peg${carriedOver ? " (carried over from before this week)" : ""}`,
+          label: `${basis}${carriedOver ? " (carried over from before this week)" : ""}`,
           impactScore,
           severityScore,
           mcapUsd: depeg.mcapUsd,
           bps: Math.abs(severityBps),
-          date: d.date,
+          ...(observedAt != null ? { date: formatIsoDate(observedAt), observedAt } : {}),
+          ...(eventAt != null ? { eventAt } : {}),
+          severityBasis: observedAt != null ? "current" as const : "peak-fallback" as const,
           kind: "active" as const,
-          critical: isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd }),
+          critical: (observedAt != null || (eventAt != null && capturedAt <= eventPeriod.end)) &&
+            isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd }),
           carriedOver,
           suppressReason: depeg.suppressReason,
-        };
+        }];
       }),
-      ...(d.inputData.resolvedDepegs ?? []).map((depeg) => {
+      ...(d.inputData.resolvedDepegs ?? []).flatMap((depeg) => {
+        const recoveredAt = depeg.endedAt;
+        if (!Number.isFinite(depeg.peakBps) || (recoveredAt != null &&
+          (!Number.isSafeInteger(recoveredAt) || recoveredAt < eventPeriod.start ||
+            recoveredAt >= eventPeriod.end || recoveredAt > capturedAt))) return [];
         const canonicalCandidate = findDailyDepegCandidate(
           dailyCandidates,
           "resolved-depeg",
@@ -543,48 +583,54 @@ function collectWeeklyTopSignals(
           ?? depeg.impactScore
           ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
         const eventIdentity = `${depeg.stablecoinId ?? depeg.symbol.toUpperCase()}:${depeg.startedAt ?? `resolved:${depeg.endedAt ?? d.date}`}`;
-        return {
+        return [{
           id: weeklySignalId("depeg", [eventIdentity]),
           eventIdentity,
           symbol: depeg.symbol,
-          label: `${Math.abs(depeg.peakBps)} bps resolved after ${depeg.durationHours}h`,
+          label: `resolved after ${depeg.durationHours}h${recoveredAt == null ? "" : ` on ${formatIsoDate(recoveredAt)}`}; stored lifetime peak ${Math.abs(depeg.peakBps)} bps (peak time unknown)`,
           impactScore,
           severityScore: impactScore,
           mcapUsd: depeg.mcapUsd,
           bps: Math.abs(depeg.peakBps),
-          date: d.date,
+          ...(recoveredAt != null ? { eventAt: recoveredAt } : {}),
+          severityBasis: "peak-fallback" as const,
           kind: "resolved" as const,
-          critical: isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
-        };
+          critical: recoveredAt != null && depeg.startedAt != null && depeg.startedAt >= eventPeriod.start &&
+            depeg.startedAt <= recoveredAt && isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
+        }];
       }),
     ];
   });
-  const allDepegSignals = [...allDepegObservations]
-    .sort(
-      (a, b) =>
-        Number(b.critical) - Number(a.critical) || b.severityScore - a.severityScore || b.impactScore - a.impactScore,
-    )
+  const topDepegs = (observations: WeeklyDepegSignal[]) => observations
+    .sort((a, b) =>
+      Number(b.critical) - Number(a.critical) || b.severityScore - a.severityScore || b.impactScore - a.impactScore)
     .filter((signal, index, sorted) =>
-      sorted.findIndex((candidate) => candidate.eventIdentity === signal.eventIdentity) === index,
-    );
-  const topDepegSignals = allDepegSignals.slice(0, 7);
+      sorted.findIndex((candidate) => candidate.eventIdentity === signal.eventIdentity) === index)
+    .slice(0, 7);
+  const rankedDepegSignals = topDepegs(allDepegObservations.filter((signal) =>
+    signal.observedAt != null || signal.eventAt != null));
+  const topDepegSignals = [
+    ...topDepegs(allDepegObservations.filter((signal) => signal.severityBasis === "current")),
+    ...topDepegs(allDepegObservations.filter((signal) => signal.severityBasis === "peak-fallback")),
+  ];
   const topSupplySignals = topSignals(
     parsed,
     (d) => {
+      const supplyLabel = (raw: unknown) => {
+        if (raw === undefined) return "legacy USD-value change";
+        const evidence = DigestSupplyQuantityEvidenceSchema.safeParse(raw).data;
+        return evidence ? `token-count change at ${evidence.valuationPriceUsd} USD per token` : null;
+      };
       const rows: { symbol: string; label: string; amountUsd: number }[] = [];
-      if (d.inputData.biggestSupplyChange) {
-        rows.push({
-          symbol: d.inputData.biggestSupplyChange.symbol,
-          label: `${d.date} largest weekly mover`,
-          amountUsd: d.inputData.biggestSupplyChange.changeUsd,
-        });
+      const mover = d.inputData.biggestSupplyChange;
+      const moverBasis = supplyLabel(mover?.quantityEvidence);
+      if (mover && moverBasis != null) {
+        rows.push({ symbol: mover.symbol, label: `${d.date} largest weekly mover (${moverBasis})`, amountUsd: mover.changeUsd });
       }
       for (const velocity of d.inputData.supplyVelocity ?? []) {
-        rows.push({
-          symbol: velocity.coin,
-          label: `${d.date} ${velocity.signal}`,
-          amountUsd: velocity.change1d,
-        });
+        const basis = supplyLabel(velocity.quantityEvidence);
+        if (basis == null) continue;
+        rows.push({ symbol: velocity.coin, label: `${d.date} ${velocity.signal} (${basis})`, amountUsd: velocity.change1d });
       }
       return rows;
     },
@@ -633,18 +679,6 @@ function collectWeeklyTopSignals(
         date: d.date,
       })),
     (row) => Math.abs(row.intensity),
-  );
-  const topBlacklistEvents = topSignals(
-    parsed,
-    (d) =>
-      (d.inputData.blacklistActivity?.topEvents ?? []).map((event) => ({
-        symbol: event.symbol,
-        chain: event.chain,
-        type: event.type,
-        amountUsd: event.amountUsd,
-        date: d.date,
-      })),
-    (row) => row.amountUsd ?? 0,
   );
   const topGradeTransitions = topSignals(
     parsed,
@@ -707,13 +741,13 @@ function collectWeeklyTopSignals(
 
   return {
     allDepegObservations,
+    rankedDepegSignals,
     topDepegSignals,
     topSupplySignals,
     topDewsChanges,
     maxAlertPlusMcapUsd,
     totalDewsBandChanges,
     topPressureSignals,
-    topBlacklistEvents,
     topGradeTransitions,
     topYieldAnomalies,
     topLiquidityShifts,
@@ -762,7 +796,7 @@ function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegObservations
         : null,
     )
     .filter((entry): entry is { date: string; score: number } => entry !== null);
-  const { maxDepegByBps, maxDepegByImpact } = allDepegObservations.reduce<{
+  const { maxDepegByBps, maxDepegByImpact } = allDepegObservations.filter((signal) => signal.observedAt != null).reduce<{
     maxDepegByBps: WeeklyDepegSignal | undefined;
     maxDepegByImpact: WeeklyDepegSignal | undefined;
   }>(
@@ -819,8 +853,6 @@ function buildWeeklyWowDeltas(
     psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
     activeDepegObservations: { current: current.activeDepegObs, prior: prior.activeDepegObs },
     uniqueDepegSignals: { current: current.uniqueDepegSignals, prior: prior.uniqueDepegSignals },
-    blacklistEvents: { current: current.blacklistEvents, prior: prior.blacklistEvents },
-    blacklistUsd: { current: current.blacklistUsd, prior: prior.blacklistUsd },
     gradeTransitions: { current: current.gradeTransitions, prior: prior.gradeTransitions },
     gauge: { current: current.gaugeMid, prior: prior.gaugeMid },
     dataCoverage: { currentDays: current.days, priorDays: prior.days, currentPsiDays: current.psiObservationDays, priorPsiDays: prior.psiObservationDays },
@@ -832,8 +864,8 @@ export function buildWeeklyInputData(
   priorDailyRows: DailyDigestSourceRow[] = [],
   safetyContext?: DigestSafetyContext,
   gradeTransitionPeriods?: WeeklyInputData["gradeTransitionPeriods"],
-  /** Declared edition window, independent of which editions are readable. */
-  editionWindow?: DigestEventPeriod,
+  eventPeriods?: WeeklyInputData["eventPeriods"],
+  blacklist?: { current: WeeklyBlacklistActivity | null; prior: WeeklyBlacklistActivity | null },
 ): WeeklyInputData | null {
   const currentParsed = parseDailyRows(currentDailyRows);
   const prior = parseDailyRows(priorDailyRows);
@@ -859,7 +891,11 @@ export function buildWeeklyInputData(
   const current = rollupDigestInputs(parsed.map((d) => d.inputData), undefined, gradeTransitionPeriods?.current);
   const dominantBand = current.psiObservationDays >= 3 ? current.psiDominantBand : null;
 
-  const { allDepegObservations, ...topSignalsResult } = collectWeeklyTopSignals(parsed, editionWindow?.start);
+  const depegPeriod = eventPeriods?.current ?? {
+    start: Math.floor(Date.parse(`${parsed[0].date}T00:00:00Z`) / 1_000),
+    end: parsed[parsed.length - 1].generatedAt + 1,
+  };
+  const { allDepegObservations, rankedDepegSignals, ...topSignalsResult } = collectWeeklyTopSignals(parsed, depegPeriod);
   const {
     topDepegSignals,
     topSupplySignals,
@@ -867,7 +903,6 @@ export function buildWeeklyInputData(
     maxAlertPlusMcapUsd,
     totalDewsBandChanges,
     topPressureSignals,
-    topBlacklistEvents,
     topGradeTransitions,
     topYieldAnomalies,
     topLiquidityShifts,
@@ -877,7 +912,8 @@ export function buildWeeklyInputData(
 
   const riskLeaderboard = buildWeeklyRiskLeaderboard({
     parsed,
-    depegs: topDepegSignals,
+    depegs: rankedDepegSignals,
+    blacklist: blacklist?.current ?? null,
   });
 
   const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed, gradeTransitionPeriods?.prior);
@@ -901,17 +937,28 @@ export function buildWeeklyInputData(
   const degradedSourcesThisWeek = [
     ...currentParsed.degradedSources,
     ...parsed.flatMap((day) => day.inputData.degradedSources ?? []),
+    ...(blacklist?.current === null ? [WEEKLY_BLACKLIST_QUERY_UNAVAILABLE] : []),
+    ...(blacklist?.current?.coverage.reason === "weekly-blacklist-coverage-query" ? [blacklist.current.coverage.reason] : []),
   ];
   const degradedSources = [
     ...degradedSourcesThisWeek,
     ...prior.degradedSources,
     ...priorParsed.flatMap((day) => day.inputData.degradedSources ?? []),
+    ...(blacklist?.prior === null ? [WEEKLY_BLACKLIST_QUERY_UNAVAILABLE] : []),
+    ...(blacklist?.prior?.coverage.reason === "weekly-blacklist-coverage-query" ? [blacklist.prior.coverage.reason] : []),
   ];
+  const currentBlacklist = summarizeWeeklyBlacklistActivity(blacklist?.current);
+  const blacklistCountReason = currentBlacklist
+    ? currentBlacklist.coverage.reason
+    : blacklist ? WEEKLY_BLACKLIST_QUERY_UNAVAILABLE : "weekly-blacklist-event-period-unavailable";
+  const blacklistUsdReason = blacklistCountReason ??
+    ((currentBlacklist?.unpricedEventCount ?? 0) > 0 ? WEEKLY_BLACKLIST_UNPRICED : null);
 
   return {
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
     periodType: "trailing-daily-editions",
+    ...(eventPeriods ? { eventPeriods } : {}),
     ...(gradeTransitionPeriods ? { gradeTransitionPeriods } : {}),
     ...(safetyContext ? { safetyContext } : {}),
     ...(degradedSources.length > 0 ? { degradedSources: [...new Set(degradedSources)] } : {}),
@@ -940,10 +987,18 @@ export function buildWeeklyInputData(
     },
     activeDepegObservationsThisWeek: current.activeDepegObs,
     uniqueDepegSignalsThisWeek: current.uniqueDepegSignals,
-    totalBlacklistEventsThisWeek: current.blacklistEvents,
-    totalBlacklistAmountUsd: current.blacklistUsd,
-    blacklistUnpricedEventCount: current.blacklistUnpricedEvents,
-    metricUnavailableReasons: current.unavailableReasons,
+    totalBlacklistEventsThisWeek: blacklistCountReason == null ? currentBlacklist?.eventCount ?? null : null,
+    totalBlacklistAmountUsd: blacklistUsdReason == null ? currentBlacklist?.knownAmountUsd ?? null : null,
+    blacklistUnpricedEventCount: blacklistCountReason == null ? currentBlacklist?.unpricedEventCount ?? null : null,
+    ...(blacklist ? { blacklistLedgerObservations: {
+      current: currentBlacklist,
+      prior: summarizeWeeklyBlacklistActivity(blacklist.prior),
+    } } : {}),
+    metricUnavailableReasons: {
+      ...current.unavailableReasons,
+      ...(blacklistCountReason == null ? {} : { blacklistEvents: [blacklistCountReason] }),
+      ...(blacklistUsdReason == null ? {} : { blacklistUsd: [blacklistUsdReason] }),
+    },
     gradeTransitionCount: current.gradeTransitions,
     gaugeRange: gauges.length >= 3 ? { min: Math.min(...gauges), max: Math.max(...gauges) } : null,
     spikeMetrics,
@@ -955,7 +1010,7 @@ export function buildWeeklyInputData(
       maxAlertPlusMcapUsd,
       totalDewsBandChanges,
       topPressureSignals,
-      topBlacklistEvents,
+      topBlacklistEvents: blacklist?.current?.topEvents ?? [],
       topGradeTransitions,
       topYieldAnomalies,
       topLiquidityShifts,

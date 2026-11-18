@@ -2,7 +2,7 @@ import type { MintBurnBridgeClassifiableRow, MintBurnTxContext } from "../mint-b
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { BRIDGE_TOPICS } from "../mint-burn-bridge-classifier-protocols";
 import receipts from "./fixtures/mint-burn-bridge-receipts.json";
-import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, encodePacked, keccak256, parseAbiParameters } from "viem/utils";
 
 /** Real RPC observations, trimmed by emitter; hashes and blocks retain provenance. */
 export const BRIDGE_RECEIPTS = receipts;
@@ -44,6 +44,17 @@ export function rebindReceipt(original: BridgeReceipt, source: MintBurnContractC
     log.topics = log.topics.map((word) => word.replace(source.contractAddress.slice(2).toLowerCase(), target.contractAddress.slice(2).toLowerCase()));
     if (from.protocol !== "layerzero-oft" || to.protocol !== "layerzero-oft") continue;
     if (log.address === from.knownBridgeContractAddresses[0]) log.address = to.knownBridgeContractAddresses[0];
+    if (log.topics[0] === BRIDGE_TOPICS.packetDelivered) {
+      const abi = parseAbiParameters("(uint32 srcEid, bytes32 sender, uint64 nonce) origin, address receiver");
+      const [origin] = decodeAbiParameters(abi, log.data as `0x${string}`);
+      const receiver = to.oappAddress as `0x${string}`;
+      const receiverWord = `0x${receiver.slice(2).toLowerCase().padStart(64, "0")}` as const;
+      log.data = encodeAbiParameters(abi, [origin, receiver]);
+      fixture.logs.find((entry) => entry.topics[0] === BRIDGE_TOPICS.oftReceived)!.topics[1] = keccak256(
+        encodePacked(["uint64", "uint32", "bytes32", "uint32", "bytes32"],
+          [origin.nonce, origin.srcEid, origin.sender, to.endpointId, receiverWord]),
+      );
+    }
     if (log.topics[0] !== BRIDGE_TOPICS.packetSent) continue;
     const abi = parseAbiParameters("bytes,bytes,address");
     const [payload, options, library] = decodeAbiParameters(abi, log.data as `0x${string}`);

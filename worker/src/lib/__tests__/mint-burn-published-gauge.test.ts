@@ -17,8 +17,8 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
   return {
     gauge: { score: -12.5, band: "CAUTIOUS" },
     coins: [
-      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -20, netFlow24hUsd: -5_000_000, valuation: COMPLETE_VALUATION },
-      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: null, netFlow24hUsd: 1_000_000 },
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: -5_000_000 },
+      { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -12.5, netFlow24hUsd: 1_000_000, valuation: COMPLETE_VALUATION },
     ],
     chains: [{ chainId: "ethereum", netFlow24hUsd: -4_000_000 }],
     ...overrides,
@@ -186,6 +186,14 @@ describe("parsePublishedMintBurnGauge", () => {
 });
 
 describe("readPublishedMintBurnGauge", () => {
+  it.each([["usdt-tether", 100], ["meusd-mezo", null], ["usdz-anzen", null], ["ousd-origin-protocol", null]])(
+    "rejects a cached composite with superseded %s scope", async (stablecoinId, pressureShiftScore) => {
+      const prior = payload({ coins: [{ stablecoinId, symbol: "SYM", pressureShiftScore, netFlow24hUsd: 1e9, valuation: COMPLETE_VALUATION }] });
+      const db = mockD1([cacheTable(JSON.stringify(prior), 60)]);
+      expect(await readPublishedMintBurnGauge(db, NOW_SEC)).toEqual({ kind: "unavailable", reason: "publication-scope-changed" });
+    },
+  );
+
   it("returns missing when nothing has been published", async () => {
     const result = await readPublishedMintBurnGauge(mockD1([cacheTable(null, 0)]), NOW_SEC);
     expect(result).toEqual({ kind: "unavailable", reason: "missing" });

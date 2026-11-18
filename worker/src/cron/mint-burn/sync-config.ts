@@ -514,7 +514,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     configBudget,
     txContextCache,
     signal,
-    { deadlineMs, ...(rangeSupplyProof?.status === "proven" ? { rangeSupplyProof } : {}), blockHashesByTx: rpcEndpoints.length > 1 || requiresReviewedSupplyBurnProof(config) ? new Map(allConfigLogs.flatMap(({ logs }) =>
+    { deadlineMs, ...(rangeSupplyProof?.status === "proven" ? { rangeSupplyProof } : {}), blockHashesByTx: rpcEndpoints.length > 1 || config.originDollarRebaseVault || requiresReviewedSupplyBurnProof(config) ? new Map(allConfigLogs.flatMap(({ logs }) =>
       logs.filter((log) => typeof log.blockHash === "string")
         .map((log) => [log.transactionHash, log.blockHash.toLowerCase()] as const))) : undefined },
   ), (result) => result.txContextShortfalls > (result.txContextRequestsNotStarted ?? 0));
@@ -739,6 +739,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanCoverage = {
         configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
         fromBlock, toBlock: scanTo, fromTimestamp, toTimestamp, finalizedBlock: chainHead, acceptedAt: runTimestamp,
+        materializedStablecoinId: config.stablecoinId,
       };
     }
   }

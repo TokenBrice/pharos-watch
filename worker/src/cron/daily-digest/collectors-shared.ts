@@ -7,9 +7,15 @@ import type {
   DigestV9SafetyCoin,
 } from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/supply";
+import type { AdmittedDeviationBps, ReferenceAdmission } from "@shared/types/reference-admission";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestEvidence } from "./digest-evidence";
+
+export type DigestCurrentPegObservation = CurrentPegObservation & {
+  referenceAdmission?: ReferenceAdmission | null;
+  admittedDeviationBps?: AdmittedDeviationBps;
+};
 
 export interface CanonicalSafetyGradeRow {
   id: string;
@@ -34,7 +40,7 @@ export interface CollectorContext {
   stablecoinAssetById: Map<string, StablecoinData>;
   mcapById: Map<string, number>;
   /** Current peg observations under the same authority `/api/peg-summary` uses. */
-  currentPegObservationById: ReadonlyMap<string, CurrentPegObservation>;
+  currentPegObservationById: ReadonlyMap<string, DigestCurrentPegObservation>;
   stablecoinsCacheIsFresh: boolean;
   nowSec: number;
   todayTs: number;
@@ -110,9 +116,10 @@ export interface RollupSummary {
    */
   activeDepegObs: number | null;
   uniqueDepegSignals: number | null;
-  blacklistEvents: number | null;
-  blacklistUsd: number | null;
-  blacklistUnpricedEvents: number | null;
+  /** @deprecated Weekly blacklist totals come from the event ledger. */
+  blacklistEvents?: null;
+  blacklistUsd?: null;
+  blacklistUnpricedEvents?: null;
   unavailableReasons: Partial<Record<"mcapEnd" | "activeDepegObs" | "uniqueDepegSignals" | "blacklistEvents" | "blacklistUsd" | "gradeTransitions", string[]>>;
   gradeTransitions: number | null;
   gaugeMid: number | null;
@@ -177,10 +184,6 @@ export function rollupDigestInputs(
     ["active-depegs-query", "resolved-depegs-query"],
     (input) => input.depegSignalKeys?.active == null || input.depegSignalKeys?.resolved == null,
   );
-  // Legacy editions omitted sub-threshold activity entirely. Their missing
-  // accounting cannot establish an observed zero for a weekly total.
-  const blacklistObserved = observed("blacklistEvents", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
-  const blacklistUsdObserved = observed("blacklistUsd", ["blacklist-activity-query"], (input) => input.blacklistActivity == null);
   const gradesObserved = observed("gradeTransitions", ["grade-transitions-query", "safety-canonical-snapshot"], (input) =>
     !DigestGradeTransitionAccountingSchema.safeParse(input.gradeTransitionAccounting).data?.complete &&
       !(input.degradedSources ?? []).some((source) => source.startsWith("safety-canonical-snapshot")));
@@ -219,9 +222,6 @@ export function rollupDigestInputs(
     psiObservationDays: psiScores.length,
     activeDepegObs: activeObserved ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount!, 0) : null,
     uniqueDepegSignals: signalsObserved ? depegKeys.size : null,
-    blacklistEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.eventCount, 0) : null,
-    blacklistUsd: blacklistUsdObserved ? aggregateInputs.reduce((s, d) => s + d.blacklistActivity!.totalAmountUsd, 0) : null,
-    blacklistUnpricedEvents: blacklistObserved ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity!.unpricedEventCount ?? 0), 0) : null,
     unavailableReasons,
     gradeTransitions: gradesObserved && gradeTransitionPeriod && !unavailableReasons.gradeTransitions ? gradeIds.size : null,
     gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,

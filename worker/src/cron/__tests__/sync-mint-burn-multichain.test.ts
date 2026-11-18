@@ -114,9 +114,18 @@ describe("syncMintBurn — multi-chain invariant", () => {
       mintBurnScanResult(to, [makeMintLog({ contract, blockNumber: to, txHash: mintBurnTestHash(to) })]));
     vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) =>
       new Map(blocks.map((block) => [block, timestamp])));
+    const actualRecalc = (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours;
+    vi.mocked(recalcAffectedHours).mockImplementation(async (database, hours, options) => {
+      await actualRecalc(database, hours, options);
+      sqlite.exec("UPDATE mint_burn_hourly SET mint_volume_usd = 999 WHERE chain_id = 'ethereum'");
+    });
     const result = await syncMintBurn(db, "alchemy-key");
     expect(vi.mocked(phases.runMintBurnConfigPhase).mock.calls[0]![0].budget.limit).toBe(200);
     expect(result.status).toBe("ok");
+    expect(sqlite.prepare("SELECT mint_volume_usd FROM mint_burn_hourly WHERE chain_id = 'ethereum'").get())
+      .toEqual({ mint_volume_usd: 999 });
+    expect(sqlite.prepare("SELECT chain_id FROM mint_burn_writer_epoch_coverage").all())
+      .toEqual([{ chain_id: "arbitrum" }]);
     expect(new Set(vi.mocked(buildAlchemyUrl).mock.calls.map(([chain]) => chain))).toEqual(new Set(["ethereum", "arbitrum"]));
     expect(JSON.parse(result.metadata).chainHeads).toEqual({ ethereum: heads[0], arbitrum: heads[1] });
     for (const [i, config] of MINT_BURN_CONFIGS.entries()) {

@@ -16,7 +16,8 @@ import { projectScoreDowngraded, projectScoreUpgraded } from "../score";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
-import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { commitMintBurnMaterializedCoverage, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { collectAffectedHours, recalcAffectedHours } from "../../mint-burn-pipeline/persistence";
 
 type Row = Record<string, unknown>;
 
@@ -78,6 +79,55 @@ describe("mint_burn projector", () => {
     expect(sqlite.prepare(`SELECT id FROM mint_burn_events m WHERE ${mintBurnTapeEligibleSql("m")}`).all())
       .toEqual(lifecycle === "accepted" ? [{ id: "event" }] : []);
   });
+
+  it.each([["usdz-anzen", "bridge_transfer"], ["ousd-origin-protocol", "protocol_internal"]])(
+    "preserves %s claims through a proof gap and retracts a proved %s", async (stablecoinId, excludedClass) => {
+      const { db, sqlite } = fixtures.open();
+      const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === stablecoinId)!;
+      const hour = Math.floor(SEC / 3600) * 3600 - 3600;
+      const key = mintBurnConfigKey(config);
+      const insert = (id: string) => insertFlow(sqlite, { id, stablecoin_id: stablecoinId, symbol: config.symbol,
+        block_number: 101, timestamp: hour + 10 });
+      const hours = collectAffectedHours([{ stablecoin_id: stablecoinId, chain_id: "ethereum", timestamp: hour }]);
+      const certify = async (revision: string) => {
+        await recalcAffectedHours(db, hours, { materializationRevision: revision });
+        await commitMintBurnMaterializedCoverage(db, {
+          configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+          fromBlock: 100, toBlock: 102, fromTimestamp: hour, toTimestamp: hour + 3600,
+          finalizedBlock: 102, acceptedAt: SEC, materializedStablecoinId: stablecoinId,
+          materialization: { hours: [hour], revision },
+        }, []);
+      };
+      insert("ordinary");
+      insert("control");
+      await certify("initial");
+      expect((await projectMintBurnLargeFlows(db)).projected).toBe(2);
+      const claim = (id: string) => sqlite.prepare(
+        "SELECT event_id, suppressed_at, suppression_reason FROM tape_events WHERE source_row_id = ?",
+      ).get(id);
+      const ordinary = claim("ordinary");
+      const control = claim("control");
+
+      sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, 'ethereum', ?)").run(stablecoinId, hour);
+      sqlite.prepare("UPDATE mint_burn_events SET flow_type = ? WHERE id = 'control'").run(excludedClass);
+      insert("late-ordinary");
+      await projectMintBurnLargeFlows(db);
+      expect(claim("ordinary")).toEqual(ordinary);
+      expect(claim("control")).toEqual(control);
+      expect(claim("late-ordinary")).toBeUndefined();
+
+      await recalcAffectedHours(db, hours);
+      await projectMintBurnLargeFlows(db);
+      expect(claim("control")).toEqual(control);
+      expect(claim("late-ordinary")).toBeUndefined();
+
+      await certify("recovered");
+      await projectMintBurnLargeFlows(db);
+      expect(claim("ordinary")).toEqual(ordinary);
+      expect(claim("late-ordinary")).toMatchObject({ suppressed_at: null });
+      expect(claim("control")).toMatchObject({ suppressed_at: SEC, suppression_reason: "flow-claim-retracted" });
+    },
+  );
 
   it("projects admitted legs only and honors the operator disable policy before limiting rows", async () => {
     const { db, sqlite } = fixtures.open();
@@ -325,8 +375,8 @@ describe("mint_burn projector", () => {
   });
 });
 
-const MATCH_FETCH_SAMPLES = "WHERE stored_at > ?";
-const MATCH_PRIOR_BAND = "WHERE stored_at <= ?";
+const MATCH_FETCH_SAMPLES = "WHERE s.stored_at > ?";
+const MATCH_PRIOR_BAND = "WHERE s.stored_at <= ?";
 
 function tables(samples: Row[], priors: Row[] = []): MockTableConfig[] {
   return [
@@ -419,6 +469,38 @@ describe("psi projector", () => {
     await projectPsiBandShifts(db, { since: 0 });
     expect(select.all()).toEqual(events);
     expect(cursor.get()).toEqual({ value: String(SEC + 900) });
+  });
+
+  it.each([
+    [false, 92], [true, 70],
+  ])("supersedes a PSI transition and retains its permalink after exact sample repair (reversed=%s)", async (reversed, corrected) => {
+    const { db, sqlite } = fixtures.open();
+    const day = SEC - (SEC % 86400);
+    const at = day + 900;
+    const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, methodology_version, components, input_snapshot) VALUES (?, ?, ?, '3.3', '{}', '{}')");
+    insert.run(day, 92, "BEDROCK");
+    insert.run(at, 88.2, "STEADY");
+    await projectPsiBandShifts(db);
+    const select = sqlite.prepare("SELECT event_id, suppressed_at, suppression_reason FROM tape_events");
+    const original = select.get();
+    sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, 92, 'BEDROCK', '{}', ?)")
+      .run(day, JSON.stringify({ referenceMarketRepair: { method: "samples",
+        sampleScores: { [reversed ? day : at]: corrected } } }));
+    await projectPsiBandShifts(db, { since: day, until: at, dryRun: true });
+    expect(select.get()).toEqual(original);
+    await projectPsiBandShifts(db, { since: day, until: at });
+    expect(select.all()).toContainEqual({ ...original, suppressed_at: expect.any(Number), suppression_reason: "psi-sample-corrected" });
+    const visible = sqlite.prepare("SELECT type FROM tape_events WHERE suppressed_at IS NULL");
+    expect(visible.all()).toEqual(reversed ? [{ type: "psi.shifted_up" }] : []);
+    expect(sqlite.prepare("SELECT score FROM stability_index_samples WHERE stored_at = ?").get(at)).toEqual({ score: 88.2 });
+    const correctedClaim = select.all().find((row) => row.event_id !== original?.event_id);
+    sqlite.prepare("UPDATE stability_index SET input_snapshot = '{}' WHERE computed_at = ?").run(day);
+    await projectPsiBandShifts(db, { since: day, until: at });
+    expect(visible.all()).toEqual([{ type: "psi.shifted_down" }]);
+    expect(select.all()).toContainEqual(original);
+    if (reversed) expect(select.all()).toContainEqual({
+      ...correctedClaim, suppressed_at: expect.any(Number), suppression_reason: "psi-sample-corrected",
+    });
   });
 
   it("derives the same nonempty shift identity independently of persistence", async () => {

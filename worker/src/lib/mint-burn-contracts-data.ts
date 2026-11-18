@@ -36,6 +36,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
   dustThreshold: number;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  originDollarRebaseVault?: string;
   enabled?: boolean;
 }> = [
   { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
@@ -104,7 +105,13 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
     ], "avusd-avant"),
   },
   { stablecoinId: "pmusd-precious-metals", dustThreshold: 10_000 },
-  { stablecoinId: "usdz-anzen", dustThreshold: 10_000 },
+  {
+    stablecoinId: "usdz-anzen",
+    dustThreshold: 10_000,
+    bridgeDetection: layerZeroOftBridgeDetection([
+      "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+    ], "usdz-anzen", "ethereum", undefined, "0x000000000000000000000000000000000000dead"),
+  },
   { stablecoinId: "tbill-openeden", dustThreshold: 10_000 },
   // --- Top-100 supported expansion (Ethereum only) ---
   {
@@ -135,7 +142,11 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   // --- Top-150 supported expansion (Ethereum only) ---
   { stablecoinId: "wusd-worldwide", dustThreshold: 10_000 },
   { stablecoinId: "sbc-brale", dustThreshold: 10_000 },
-  { stablecoinId: "ousd-origin-protocol", dustThreshold: 10_000 },
+  {
+    stablecoinId: "ousd-origin-protocol",
+    dustThreshold: 10_000,
+    originDollarRebaseVault: "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+  },
   { stablecoinId: "usp-pikudao", dustThreshold: 10_000 },
   { stablecoinId: "ustb-superstate", dustThreshold: 1_000 },
   { stablecoinId: "ousg-ondo-finance", dustThreshold: 100 },
@@ -493,11 +504,12 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   // --- Top-50/100/150 supported expansion (Ethereum only) ---
   // Mechanical default-block entries live in EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.
   ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
-    ({ stablecoinId, dustThreshold, bridgeDetection, enabled }): MintBurnContractConfigSpec => ({
+    ({ stablecoinId, dustThreshold, bridgeDetection, originDollarRebaseVault, enabled }): MintBurnContractConfigSpec => ({
       chain: ETHEREUM,
       stablecoinId,
       dustThreshold,
       bridgeDetection,
+      originDollarRebaseVault,
       ...(enabled === false ? { enabled } : {}),
       startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
       tier: "extended",

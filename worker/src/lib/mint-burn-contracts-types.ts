@@ -127,6 +127,7 @@ export interface MintBurnContractConfig {
   enabled?: boolean;
   tier?: MintBurnTier;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  originDollarRebaseVault?: string;
   adapterKind: MintBurnAdapterKind;
   startBlockSource: string;
   startBlockConfidence: MintBurnStartBlockConfidence;
@@ -144,6 +145,7 @@ export interface MintBurnContractConfigSpec {
   enabled?: boolean;
   tier?: MintBurnTier;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  originDollarRebaseVault?: string;
   adapterKind?: MintBurnAdapterKind;
   startBlockSource?: string;
   startBlockConfidence?: MintBurnStartBlockConfidence;

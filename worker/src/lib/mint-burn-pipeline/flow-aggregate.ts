@@ -1,8 +1,9 @@
 import { logWorkerEventArgs, logWorkerEvent } from "../structured-log";
 import { getCache } from "../db-cache";
 import { compactMintBurnPublication } from "../mint-burn-publication";
-import { errorResponse } from "../api-response";
+import { errorResponse, jsonResponse } from "../api-response";
 import { computeGaugeScore, getGaugeBand } from "../mint-burn-scoring";
+import { hasSupersededMintBurnAggregateScope } from "../mint-burn-published-gauge";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 import type { StablecoinData } from "@shared/types/supply";
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
@@ -20,6 +21,7 @@ import {
   aggregateHourlyRowsByChain,
   buildHourlyFlowSeries,
   cachedFlowFallbackResponse,
+  filterMintBurnReceiptClassifiedHours,
   finalizeMintBurnFlowResponse,
   mintBurnWindowCoverage,
   resolveFlowUpdatedAt,
@@ -58,6 +60,7 @@ import {
   computeFlowIntensity,
   FLOW_INTENSITY_MIN_DATA_DAYS,
   detectFlightToQualityFromValuedNets,
+  getMintBurnPressureUnavailableReason,
   getFlightToQualityUnavailableReason,
   type FlightToQualityResult,
   type ValuedNetFlow24h,
@@ -97,7 +100,9 @@ import {
 /** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
 
-export type CoinFlowSummary = MintBurnCoinFlow & Required<Pick<MintBurnCoinFlow, "coverage" | "valuation">>;
+export type CoinFlowSummary = MintBurnCoinFlow & Required<Pick<MintBurnCoinFlow, "coverage" | "valuation">> & {
+  pressureUnavailableReason?: NonNullable<ReturnType<typeof getMintBurnPressureUnavailableReason>>;
+};
 
 /** Known-valuation window net with its valuation tally. */
 interface WindowNetFlow {
@@ -308,7 +313,9 @@ export async function fetchAggregateData(
   ]);
   const scanSegments = decodeMintBurnScanCoverage(batchResults[6] as D1Result<MintBurnScanSegment>);
 
-  const scannedHourlyRows = filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], hourlyPairs);
+  const scannedHourlyRows = filterMintBurnReceiptClassifiedHours(
+    filterRowsToTrackedPairs((batchResults[0].results ?? []) as HourlyRow[], hourlyPairs), hourlyConfigs, scanSegments,
+  );
   const hourlyRows = filterRowsByWindow(scannedHourlyRows, params.windowStart, params.windowEnd);
   const hourly24hRows = filterRowsByWindow(filterRowsToTrackedPairs(scannedHourlyRows, trackedPairs), params.window24h, params.windowEnd);
   const baselineRows = filterRowsToTrackedPairs((batchResults[4].results ?? []) as DailyBaselineRow[], trackedPairs);
@@ -446,7 +453,8 @@ export function buildCoinSummaries(
     const baselineValuation = baseline?.valuation ?? "complete";
     const inputsAdmitPressure = !partialScope && classificationComplete && baselineClassification.completeness === "complete"
       && valuation24h.completeness === "complete" && baselineValuation === "complete";
-    const pressureShiftScore = has24hWindow && has24hActivity && baseline && inputsAdmitPressure
+    const pressureUnavailableReason = getMintBurnPressureUnavailableReason(id);
+    const pressureShiftScore = !pressureUnavailableReason && has24hWindow && has24hActivity && baseline && inputsAdmitPressure
       ? computeFlowIntensity({
           currentDailyNet: knownNetFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -460,7 +468,8 @@ export function buildCoinSummaries(
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
       if (pressureShiftScore !== null) scoredMcapUsd += mcap;
       // A baseline shorter than the minimum history is NR whatever the valuation.
-      if (has24hWindow && (has24hActivity || partialScope || !classificationComplete) && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !inputsAdmitPressure) {
+      if (!pressureUnavailableReason && has24hWindow && (has24hActivity || partialScope || !classificationComplete)
+        && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !inputsAdmitPressure) {
         partialValuationInputs += 1;
         partialValuationMcapUsd += mcap;
       }
@@ -501,6 +510,7 @@ export function buildCoinSummaries(
       symbol: config.symbol,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
+      ...(pressureUnavailableReason ? { pressureUnavailableReason } : {}),
       netFlowDirection24h: complete24hWindow && classificationComplete ? provenNetFlowDirection24h({
         knownNetUsd: knownNetFlow24h,
         has24hActivity: has24hActivity === true,
@@ -705,6 +715,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
 
   return finalizeMintBurnFlowResponse(
     db, cacheKey, syncStartSec, applyAggregateFtqState(body, ftqSource), data.freshnessLookup, data.publicationPolicy,
+    true, { receiptClassificationFiltered: true },
   );
 }
 
@@ -813,6 +824,9 @@ export async function reconcileCachedAggregateSafetyResponse(
 ): Promise<Response> {
   const payload = tryParseJson(cached.value, { onFailure: () => undefined });
   if (!isRecord(payload) || !isRecord(payload.gauge)) return cachedFlowFallbackResponse(cached);
+  if (hasSupersededMintBurnAggregateScope(payload)) {
+    return jsonResponse({ error: "Mint/burn aggregate awaits refresh", reason: "publication-scope-changed" }, { status: 503, noStore: true });
+  }
   const source = await loadAggregateFtqSource(db);
   let reason = source.dependency.reason ?? null;
   if (source.classification) {

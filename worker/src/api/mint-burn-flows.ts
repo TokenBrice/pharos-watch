@@ -1,4 +1,5 @@
 import { getCache } from "../lib/db-cache";
+import { needsCurrentMintBurnReceiptClassification } from "../lib/mint-burn-published-gauge";
 import { compactMintBurnPublication } from "../lib/mint-burn-publication";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
 import { MINT_BURN_FLOWS_HOURS_QUERY } from "@shared/lib/api-endpoints/queries";
@@ -21,6 +22,7 @@ import {
   aggregateHourlyRowsByChain,
   buildHourlyFlowSeries,
   finalizeMintBurnFlowResponse,
+  filterMintBurnReceiptClassifiedHours,
   type HourlyRow,
   MINT_BURN_CRON_JOB,
   mintBurnHourlyWindow,
@@ -113,9 +115,13 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB),
     ]);
 
-    const hourlyRows = ((snapshot[0].results ?? []) as HourlyRow[]).map((row) => ({ ...row, stablecoin_id: stablecoinId }));
-    const rows = hourlyRows.filter((row) => trackedChainIds.includes(row.chain_id));
     const scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);
+    const hourlyRows = filterMintBurnReceiptClassifiedHours(
+      ((snapshot[0].results ?? []) as HourlyRow[]).map((row) => ({ ...row, stablecoin_id: stablecoinId })),
+      hourlyConfigs,
+      scanSegments,
+    );
+    const rows = hourlyRows.filter((row) => trackedChainIds.includes(row.chain_id));
     const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp;
     const freshnessLookupWarning =
       latestSuccessfulSyncLookup.status === "lookup_failed"
@@ -123,7 +129,8 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
         : null;
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
-    const scanCoverage = mintBurnWindowCoverage(configs, scanSegments, context.legacy, window.start, window.end, context.watermark);
+    const legacy = needsCurrentMintBurnReceiptClassification(stablecoinId) ? new Map() : context.legacy;
+    const scanCoverage = mintBurnWindowCoverage(configs, scanSegments, legacy, window.start, window.end, context.watermark);
     const chainMap = aggregateHourlyRowsByChain(rows);
 
     // Signed nets of a partial window are unavailable; volumes stay known subtotals.
@@ -131,7 +138,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       const valuation = summarizeMintBurnValuation(v.valuation);
       const classification = summarizeMintBurnClassification(v.classification);
       const chainScanCoverage = mintBurnWindowCoverage(
-        configs.filter((config) => config.chain.chainId === chainId), scanSegments, context.legacy, window.start, window.end, context.watermark,
+        configs.filter((config) => config.chain.chainId === chainId), scanSegments, legacy, window.start, window.end, context.watermark,
       );
       return {
         chainId,
@@ -147,7 +154,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     });
 
     const hourly = buildHourlyFlowSeries(hourlyRows, (ts) =>
-      mintBurnWindowCoverage(hourlyConfigs, scanSegments, context.legacy, ts, ts + 3600, context.watermark),
+      mintBurnWindowCoverage(hourlyConfigs, scanSegments, legacy, ts, ts + 3600, context.watermark),
       window, new Set(hourlyConfigs.filter((config) => hasMintBurnClassificationReview(config.stablecoinId))
         .map((config) => mintBurnPairKey(config.stablecoinId, config.chain.chainId))));
 
@@ -200,6 +207,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup, context.policy, hours === 24);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup, context.policy, hours === 24,
+      { receiptClassificationFiltered: true });
   });
 }

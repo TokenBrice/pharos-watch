@@ -42,15 +42,13 @@ function formatWireDate(ts: number): string {
   }).toUpperCase();
 }
 
-function formatWeeklyMasthead(ts: number): string {
-  const d = new Date(ts * 1000);
-  const end = formatLongDate(d, { utc: true });
-  const start = new Date(d.getTime() - 6 * 86400_000).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-  return `${start} – ${end}`;
+function formatWeeklyMasthead({ generatedAt, weekStart, weekEnd }: WeeklyTeaserEntry): string {
+  const formatDate = (date: Date) => formatLongDate(date, { utc: true });
+  if (weekStart && weekEnd && weekStart <= weekEnd && weekEnd <= digestDateSlug(generatedAt)) {
+    const start = formatDate(new Date(weekStart));
+    return weekStart === weekEnd ? start : `${start} – ${formatDate(new Date(weekEnd))}`;
+  }
+  return `Published ${formatDate(new Date(generatedAt * 1000))}`;
 }
 
 // Editorial typography imported from @/lib/digest for consistent wire-service aesthetic
@@ -93,11 +91,12 @@ function filterDigestArchiveEntries(
   });
 }
 
-function WeeklyTeaser({
-  entry,
-}: {
-  entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number };
-}) {
+type WeeklyTeaserEntry = Pick<DigestArchiveEntry, "digestTitle" | "digestExtended" | "generatedAt" | "editionNumber"> & {
+  weekStart?: string;
+  weekEnd?: string;
+};
+
+function WeeklyTeaser({ entry }: { entry: WeeklyTeaserEntry }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
   if (paragraphs.length === 0) return null;
 
@@ -112,7 +111,7 @@ function WeeklyTeaser({
         <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
           {weeklyLabel}
         </p>
-        <p className="text-xs text-muted-foreground">{formatWeeklyMasthead(entry.generatedAt)}</p>
+        <p className="text-xs text-muted-foreground">{formatWeeklyMasthead(entry)}</p>
       </div>
       <h3 className="mt-2 text-lg font-bold tracking-tight" style={EDITORIAL_BODY_STYLE}>
         {entry.digestTitle || "The Week in Review"}

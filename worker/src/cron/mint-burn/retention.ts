@@ -5,7 +5,7 @@ import { mintBurnHourlyBucketAggregatesSql } from "../../lib/mint-burn-pipeline/
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-hourly-valuation";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
-import { mintBurnTapeClaimStaleSql } from "../../lib/mint-burn-tape-claim";
+import { mintBurnTapeClaimSourceMismatchSql } from "../../lib/mint-burn-tape-claim";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
@@ -64,7 +64,7 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
        AND claim.source_row_id = event.id
        AND claim.transition = 'updated'
        AND claim.suppressed_at IS NULL
-       AND ${mintBurnTapeClaimStaleSql("claim", "event")}
+       AND ${mintBurnTapeClaimSourceMismatchSql("claim", "event")}
   )`;
 
 /**

@@ -1,3 +1,4 @@
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
@@ -7,7 +8,7 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import type { PreparedTelegramDigestAppendices } from "../../telegram/digest/digest-appendices";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../../lib/digest-style-gate";
-import type { CollectorContext } from "../daily-digest/collectors-shared";
+import type { CollectorContext, DigestCurrentPegObservation } from "../daily-digest/collectors-shared";
 import type { CurrentPegObservation } from "../../lib/current-peg-observations";
 import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
 import type {
@@ -230,12 +231,12 @@ export function publishedGaugePayload(overrides: Record<string, unknown> = {}): 
   return {
     gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0, classificationSource: "safety-score-v9-publication", partialValuationInputs: 0 },
     coins: [
-      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000, gaugeWeightUsd: 100e9, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, pressureUnavailableReason: "treasury-boundary-unverified", netFlow24hUsd: 200_000_000, gaugeWeightUsd: 100e9, valuation: COMPLETE_FLOW_VALUATION },
       { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000, gaugeWeightUsd: 50e9, valuation: COMPLETE_FLOW_VALUATION },
       { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000, valuation: COMPLETE_FLOW_VALUATION },
       // Both classified risky coins need a published net: an omitted cohort
       // member is unbounded, so its absence would withhold the FTQ verdict.
-      { stablecoinId: "xaut-tether", symbol: "XAUT", pressureShiftScore: null, netFlow24hUsd: 0, valuation: COMPLETE_FLOW_VALUATION },
+      { stablecoinId: "xaut-tether", symbol: "XAUT", pressureShiftScore: 100, netFlow24hUsd: 0, gaugeWeightUsd: 100e9, valuation: COMPLETE_FLOW_VALUATION },
     ],
     chains: [
       { chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "complete" },
@@ -327,7 +328,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
     first("FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1", {
       score: 91.2, band: "BEDROCK", stored_at: nowSec - 600, components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
     }),
-    first("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?", { avg: 90.6 }),
+    first("stability_index_samples AS s LEFT JOIN stability_index AS d", { avg: 90.6 }),
     first("FROM stability_index WHERE computed_at = ?", { score: 89.5, band: "STEADY" }),
     empty("FROM blacklist_events"),
     {
@@ -339,7 +340,10 @@ function makeDailyDigestTables(): MockTableConfig[] {
         { stablecoin_id: "usdc-circle", snapshot_date: todayTs, circulating_usd: 60_000_000 },
         { stablecoin_id: "usdc-circle", snapshot_date: todayTs - 86_400, circulating_usd: 61_000_000 },
         { stablecoin_id: "usdc-circle", snapshot_date: weekAgoTs, circulating_usd: 62_000_000 },
-      ],
+      ].map((row) => ({ ...row, circulating_native: row.circulating_usd,
+        valuation_price_usd: 1, valuation_observed_at_sec: row.snapshot_date,
+        supply_provenance: JSON.stringify({ supplySource: "defillama", supplyObservedAt: row.snapshot_date, supplyChainGuard: null }),
+      })),
     },
     empty("WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?"),
   ];
@@ -421,15 +425,18 @@ class DerivedCurrentPegObservationMap extends Map<string, CurrentPegObservation>
   }
 
   override get(id: string): CurrentPegObservation | undefined {
-    return super.get(id) ?? (this.assets.has(id) ? currentPegObservation(1) : undefined);
+    const asset = this.assets.get(id);
+    return super.get(id) ?? (asset ? currentPegObservation(1, {
+      currentDeviationBps: asset.price == null ? null : deriveDepegSignal(asset.price, 1)?.bps ?? null,
+    }) : undefined);
   }
 }
 
 /** Minimal current peg observation; `valueUsd` is the admitted per-token reference. */
 export function currentPegObservation(
   valueUsd: number | null,
-  overrides: Partial<CurrentPegObservation> = {},
-): CurrentPegObservation {
+  overrides: Partial<DigestCurrentPegObservation> = {},
+): DigestCurrentPegObservation {
   return {
     currentDeviationBps: null, currentSignal: null, primaryTrust: "unusable", dexPriceCheck: null,
     pegReference: valueUsd == null ? null : { valueUsd, source: "median", contributorCount: 1, asOf: 0 },

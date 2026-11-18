@@ -1,3 +1,4 @@
+import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 /**
  * Mint/Burn flow scoring — pure functions for Flow Intensity Score (FIS),
  * Bank Run Gauge composite, and flight-to-quality detection.
@@ -26,6 +27,11 @@ export interface FlowIntensityInput {
   dataAgeDays: number;
   /** Current 24 h absolute flow (|mint| + |burn|), USD — used for activity gate */
   currentDailyAbs: number;
+}
+
+export function getMintBurnPressureUnavailableReason(stablecoinId: string):
+  NonNullable<MintBurnCoinFlow["pressureUnavailableReason"]> | null {
+  return stablecoinId === "usdt-tether" ? "treasury-boundary-unverified" : null;
 }
 
 // Calibrated so the denominator approximates a normal ~30% daily swing in baseline absolute flow.

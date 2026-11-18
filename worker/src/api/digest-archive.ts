@@ -1,5 +1,7 @@
 import { errorResponse, jsonFreshResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { formatIsoDate } from "@shared/lib/format";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { DigestArchiveCursorSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
@@ -76,6 +78,8 @@ type DigestArchiveInput = {
 type DigestArchiveMeta = {
   llm?: { servedModel?: unknown; copyServedModel?: unknown; attempts?: { servedModel?: unknown }[] };
   type?: string;
+  weekStart?: unknown;
+  weekEnd?: unknown;
   internal?: unknown;
   editorialStyleVersion?: string;
   editorialStyleHash?: string;
@@ -225,6 +229,9 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
       forwardLookOutcomes,
       riskTape,
       digestType,
+      ...(meta?.type === "weekly" && isValidIsoDateOnly(meta.weekStart) && isValidIsoDateOnly(meta.weekEnd)
+        && meta.weekStart <= meta.weekEnd && meta.weekEnd <= formatIsoDate(r.generated_at)
+        ? { weekStart: meta.weekStart, weekEnd: meta.weekEnd } : {}),
       editorialStyleVersion: meta?.editorialStyleVersion ?? "pre-policy",
       editorialStyleHash: meta?.editorialStyleHash ?? "pre-policy",
       editionNumber: r.edition_number,

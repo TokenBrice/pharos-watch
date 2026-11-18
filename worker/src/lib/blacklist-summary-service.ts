@@ -11,7 +11,7 @@ import {
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { BlacklistReconciliationStatus } from "@shared/types/status";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
-import { CONTRACT_CONFIGS } from "./blacklist-contracts";
+import { CONTRACT_CONFIGS, getBlacklistConfigByContract } from "./blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "./blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "./blacklist-current-balances";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
@@ -28,6 +28,7 @@ import {
 import { buildBlacklistAddressCountKey, isBlacklistStablecoin, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { mapBlacklistEventRow, type BlacklistEventRow } from "./blacklist-api";
 import {
+  BLACKLIST_POST_WIPE_CONTRACT,
   buildBlacklistActiveRecords,
   buildBlacklistIdentityLookupKeys,
   buildBlacklistRecordIdentityKey,
@@ -38,8 +39,11 @@ import {
 import { loadBlacklistReconciliationStatus } from "./blacklist-reconciliation-status";
 import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
   BLACKLIST_DERIVED_GENERATION_KEY,
+  BLACKLIST_POST_WIPE_BALANCE_PREFIX,
+  BLACKLIST_POST_WIPE_MAX_AGE_SEC,
 } from "./blacklist-cache-keys";
 import { claimCadenceBucket, failCadenceBucket, type CadenceBucketClaim } from "./cadence-bucket";
 import { captureBlacklistSummaryFence, type BlacklistSummaryFence } from "./blacklist-cache-invalidation";
@@ -48,6 +52,7 @@ import { reconcileBlacklistIdentities } from "./blacklist/identity-reconciliatio
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
 import { loadBlacklistConfigStates } from "../cron/blacklist/sync-support";
 import { getOldestBlacklistSuccessAt } from "../cron/blacklist/state";
+import { parseJsonObject } from "./json-parse";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -67,14 +72,17 @@ const BlacklistSummaryCachePayloadSchema = BlacklistSummaryResponseSchema.requir
 interface BuiltBlacklistSummary {
   payload: BlacklistSummaryPayload;
   freshness: CronTimestampLookupResult;
+  postWipeValidThrough?: number;
 }
 
 interface CachedBlacklistSummarySnapshot {
   version: typeof BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION;
   materializedAt: number;
+  generation: string | null;
   freshnessTs: number | null;
   freshnessStatus?: CronTimestampLookupResult["status"];
   payload: BlacklistSummaryPayload;
+  postWipeValidThrough?: number;
 }
 
 const BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY = "blacklist-summary:request-materialization-claim";
@@ -205,7 +213,12 @@ function isDestroySnapshot(snapshot: BlacklistCurrentBalanceSnapshot): boolean {
   return sourceCategory(snapshot.source) === "destroy";
 }
 
-async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEvent[]> {
+async function queryLatestEventTypeHistory(db: D1Database, now: number): Promise<{
+  events: BlacklistEvent[];
+  postWipeAmounts: Map<string, number | null>;
+  postWipeValidThrough?: number;
+}> {
+  const config = getBlacklistConfigByContract("ethereum", BLACKLIST_POST_WIPE_CONTRACT);
   const activeHistoryResult = await db
     .prepare(
       `/* blacklist-summary-latest-event-type-history */
@@ -228,14 +241,47 @@ async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEve
               amount_native, amount_usd_at_event, amount_source, amount_status,
               tx_hash, block_number, transaction_index, timestamp, methodology_version,
               contract_address, config_key, event_signature, event_topic0,
-              suppression_reason, explorer_tx_url, explorer_address_url
+              suppression_reason, explorer_tx_url, explorer_address_url,
+              CASE WHEN event_type = 'destroy' AND chain_id = 'ethereum' AND stablecoin = 'USDT'
+                AND LOWER(contract_address) = ?
+              THEN (SELECT value FROM cache WHERE key = ? || latest_event_type.id) END AS post_wipe_balance,
+              (SELECT MAX(last_block, COALESCE(cursor_value, 0))
+               FROM blacklist_sync_state WHERE config_key = ? AND (cursor_kind IS NULL OR cursor_kind = 'evm_block'))
+                AS committed_block
        FROM latest_event_type
        WHERE rn = 1 OR chain_id = 'tron'
        ORDER BY ${blacklistEventOrderSql("ASC")}`,
     )
-    .all<BlacklistEventRow>();
+    .bind(BLACKLIST_POST_WIPE_CONTRACT, BLACKLIST_POST_WIPE_BALANCE_PREFIX, config?.configKey ?? null)
+    .all<BlacklistEventRow & { post_wipe_balance: string | null; committed_block: number | null }>();
 
-  return (activeHistoryResult.results ?? []).map(mapBlacklistEventRow);
+  const rows = activeHistoryResult.results ?? [];
+  const postWipeAmounts = new Map<string, number | null>();
+  let postWipeValidThrough: number | undefined;
+  const events = rows.map((row) => {
+    const event = mapBlacklistEventRow(row);
+    if (!config || row.chain_id !== "ethereum" || row.stablecoin !== "USDT"
+      || row.contract_address?.toLowerCase() !== BLACKLIST_POST_WIPE_CONTRACT) return event;
+    if (row.event_type === "destroy") {
+      const { amountUsd, observedAt, blockNumber, blockHash } = parseJsonObject<{
+        amountUsd?: unknown; observedAt?: unknown; blockNumber?: unknown; blockHash?: unknown;
+      }>(row.post_wipe_balance) ?? {};
+      postWipeAmounts.set(row.id, null);
+      if (typeof amountUsd === "number" && Number.isFinite(amountUsd) && amountUsd >= 0
+        && typeof blockNumber === "number" && Number.isSafeInteger(blockNumber) && blockNumber >= row.block_number
+        && row.committed_block != null && blockNumber <= row.committed_block
+        && typeof blockHash === "string" && /^0x[0-9a-f]{64}$/.test(blockHash)
+        && typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt >= row.timestamp
+        && observedAt <= now && now - observedAt <= BLACKLIST_POST_WIPE_MAX_AGE_SEC) {
+        postWipeAmounts.set(row.id, amountUsd);
+        const validThrough = observedAt + BLACKLIST_POST_WIPE_MAX_AGE_SEC;
+        postWipeValidThrough = Math.min(postWipeValidThrough ?? validThrough, validThrough);
+      }
+    }
+    // Legacy rows can name the exact contract while omitting its configuration key.
+    return { ...event, configKey: config.configKey };
+  });
+  return { events, postWipeAmounts, postWipeValidThrough };
 }
 
 function buildFreezeLedgerMeta(
@@ -373,13 +419,14 @@ interface ActiveBlacklistRecords {
  * records and must not define the active address set.
  */
 function resolveActiveBlacklistRecords(
-  activeHistory: BlacklistEvent[],
+  activeHistory: Awaited<ReturnType<typeof queryLatestEventTypeHistory>>,
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
 ): ActiveBlacklistRecords {
-  const activeRecordEvents = activeHistory;
-  const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances);
+  const activeRecordEvents = activeHistory.events;
+  const activeRecords = buildBlacklistActiveRecords(activeRecordEvents, currentBalances, activeHistory.postWipeAmounts);
   const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
-  const frozenAddresses = activeRecords.filter((record) => record.destroyedAt == null && !record.orderAmbiguityReason).length;
+  const frozenAddresses = activeRecords.filter((record) =>
+    (record.destroyedAt == null || record.blockPersistsAfterDestroy) && !record.orderAmbiguityReason).length;
 
   const perCoinFrozenAddressCount = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<
     BlacklistStablecoin,
@@ -463,15 +510,18 @@ function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPay
   return BlacklistSummaryCachePayloadSchema.safeParse(value).success;
 }
 
-function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySnapshot | null {
+function parseBlacklistSummarySnapshot(value: string, now = Math.floor(Date.now() / 1000)): CachedBlacklistSummarySnapshot | null {
   try {
     const parsed = JSON.parse(value) as Partial<CachedBlacklistSummarySnapshot>;
     if (
       parsed.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION ||
       typeof parsed.materializedAt !== "number" ||
+      (parsed.generation !== null && typeof parsed.generation !== "string") ||
       (parsed.freshnessTs !== null && typeof parsed.freshnessTs !== "number") ||
       (parsed.freshnessStatus !== undefined &&
         !["ok", "missing", "lookup_failed"].includes(parsed.freshnessStatus)) ||
+      (parsed.postWipeValidThrough !== undefined &&
+        (!Number.isSafeInteger(parsed.postWipeValidThrough) || parsed.postWipeValidThrough < now)) ||
       !isBlacklistSummaryPayload(parsed.payload)
     ) {
       return null;
@@ -479,9 +529,11 @@ function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySna
     return {
       version: parsed.version,
       materializedAt: parsed.materializedAt,
+      generation: parsed.generation,
       freshnessTs: parsed.freshnessTs,
       freshnessStatus: parsed.freshnessStatus,
       payload: parsed.payload,
+      postWipeValidThrough: parsed.postWipeValidThrough,
     };
   } catch {
     return null;
@@ -490,11 +542,16 @@ function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySna
 
 async function readBlacklistSummarySnapshot(db: D1Database): Promise<CachedBlacklistSummarySnapshot | null> {
   const row = await db
-    .prepare("/* blacklist-summary-snapshot-read */ SELECT value, updated_at FROM cache WHERE key = ?")
-    .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)
-    .first<{ value: string; updated_at: number }>();
+    .prepare(`/* blacklist-summary-snapshot-read */ SELECT snapshot.value, generation.value AS generation
+      FROM cache AS snapshot
+      LEFT JOIN cache AS generation ON generation.key = ?
+      LEFT JOIN cache AS rollback ON rollback.key = ?
+      WHERE snapshot.key = ? AND (rollback.updated_at IS NULL OR rollback.updated_at <= snapshot.updated_at)`)
+    .bind(BLACKLIST_DERIVED_GENERATION_KEY, BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)
+    .first<{ value: string; generation: string | null }>();
   if (!row) return null;
-  return parseBlacklistSummarySnapshot(row.value);
+  const snapshot = parseBlacklistSummarySnapshot(row.value);
+  return snapshot?.generation === row.generation ? snapshot : null;
 }
 
 async function writeBlacklistSummarySnapshot(
@@ -615,7 +672,7 @@ async function buildBlacklistSummaryPayload(
 
     loadBlacklistCurrentBalanceMap(db),
 
-    queryLatestEventTypeHistory(db),
+    queryLatestEventTypeHistory(db, now),
     // Gap cache writers are unfenced; a delayed pre-invalidation upsert cannot be summary evidence.
     runWithOverloadRetry(() => queryBlacklistGapMetrics(db, now), 3, undefined, { waitOutResourceWindow: true }),
     loadBlacklistReconciliationStatus(db),
@@ -665,8 +722,7 @@ async function buildBlacklistSummaryPayload(
   );
 
   // ---------------- Per-coin detail fields (detail-page block) ----------------
-  // perCoinFrozenAddressCount is resolved alongside activeRecordEvents in
-  // resolveActiveBlacklistRecords so its legacy-vs-snapshot branch matches frozenAddresses.
+  // The detail-page count describes latest freeze actions. The global count also includes persistent blocks after a wipe.
 
   const emptyCoverage = () => ({ knownCount: 0, unavailableCount: 0 });
   const perCoinFrozenCoverage = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, emptyCoverage()]));
@@ -767,6 +823,7 @@ async function buildBlacklistSummaryPayload(
       }),
     },
     freshness,
+    postWipeValidThrough: activeHistory.postWipeValidThrough,
   };
 }
 
@@ -789,8 +846,10 @@ async function buildAndWriteBlacklistSummarySnapshot(
   const snapshot: CachedBlacklistSummarySnapshot = {
     version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
     materializedAt: now,
+    generation: fence.generation,
     freshnessTs: built.freshness.timestamp,
     freshnessStatus: built.freshness.status,
+    postWipeValidThrough: built.postWipeValidThrough,
     payload: behindConfigs === undefined
       ? built.payload
       : { ...built.payload, refresh: { observedAt: now, behindConfigs } },
@@ -825,7 +884,7 @@ async function materializeBlacklistSummaryForRequest(
     if (claim.kind === "claimed") {
       try {
         const fence = await captureBlacklistSummaryFence(db);
-        const incumbent = fence.summaryValue == null ? null : parseBlacklistSummarySnapshot(fence.summaryValue);
+        const incumbent = await readBlacklistSummarySnapshot(db);
         if (incumbent) return incumbent;
         const { configStates } = await loadBlacklistConfigStates(db);
         const { oldestSuccessAt } = getOldestBlacklistSuccessAt(configStates);
@@ -849,14 +908,16 @@ async function materializeBlacklistSummaryForRequest(
 }
 
 
-function blacklistSummaryHeaders(snapshot: CachedBlacklistSummarySnapshot): Record<string, string> {
+function blacklistSummaryHeaders(snapshot: CachedBlacklistSummarySnapshot, now: number): Record<string, string> {
+  // Leave room for the producer-backed browser cache's freshness and revalidation horizons.
+  const expiresSoon = snapshot.postWipeValidThrough != null && snapshot.postWipeValidThrough - now < 360;
   return buildCronFreshnessHeaders(
     {
       timestamp: snapshot.freshnessTs,
       status: snapshot.freshnessStatus ?? (snapshot.freshnessTs == null ? "missing" : "ok"),
     },
     API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
-    CACHE_PROFILES.producerBacked,
+    expiresSoon ? CACHE_PROFILES.noStore : CACHE_PROFILES.producerBacked,
   );
 }
 
@@ -865,7 +926,7 @@ export const handleBlacklistSummary = async (db: D1Database): Promise<Response> 
   try {
     const snapshot = await readBlacklistSummarySnapshot(db)
       ?? await materializeBlacklistSummaryForRequest(db, now);
-    return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot));
+    return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot, now));
   } catch (error) {
     if (error instanceof Error
       && ["blacklist-summary-aggregate-missing", "blacklist-gap-aggregate-missing", "blacklist-summary-superseded"].includes(error.message)) {

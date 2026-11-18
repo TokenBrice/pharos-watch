@@ -106,6 +106,7 @@ export const MintBurnPublicationSchema = z.object({
     chainId: z.string(),
     status: z.enum(["admitted", "pending-admission", "disabled"]),
     reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "classification-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket", "reactivation-pending"]).nullable(),
+    disposition: z.literal("bridge-spoke-non-issuer-flow").optional(),
     admittedAt: z.number().int().nonnegative().nullable(),
     baselineFrom: z.number().int().nonnegative().nullable(),
     baselineTo: z.number().int().nonnegative().nullable(),
@@ -251,6 +252,7 @@ export const MintBurnCoinFlowSchema = z.object({
   symbol: z.string(),
   pressureShiftScore: SignedFlowIntensitySchema.nullable(),
   pressureShiftState: PressureShiftStateSchema,
+  pressureUnavailableReason: z.literal("treasury-boundary-unverified").optional(),
   /** `null` when missing valuation or scan evidence leaves the direction unproven. */
   netFlowDirection24h: NetFlowDirection24hSchema.nullable(),
   /** Legacy reader safety gate: null unless the full 24h scan is proved. */

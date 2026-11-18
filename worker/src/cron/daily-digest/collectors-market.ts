@@ -1,16 +1,25 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import type { StablecoinData } from "@shared/types/supply";
 import type { DigestInputData } from "@shared/types/digest";
+import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { getNativeEventPriceObservation, isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
-import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
+import { deriveDepegSignal, hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
-import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "@shared/lib/supply-perimeter-changes";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { normalizePegType } from "@shared/lib/peg-rates";
+import { readAdmittedNativeEventObservation } from "../../lib/psi-reference";
+import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
+import { classifyDepegLifecycle } from "../../lib/depeg-lifecycle";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
+import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
 import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
@@ -40,7 +49,26 @@ import {
   depegSignalKey,
   type CollectorContext,
   type CollectorResult,
+  type DigestCurrentPegObservation,
 } from "./collectors-shared";
+import { sortDigestLifecycleFlags, type DigestLifecycleFlag, type DigestLifecycleIncident } from "./lifecycle-review";
+
+function digestQuoteObservedAt(asset: StablecoinData | undefined, legacy: boolean): number | null {
+  if (!asset || asset.priceSource === "cached") return null;
+  if (asset.priceObservedAtMode === "upstream") return asset.priceObservedAt ?? null;
+  if (!legacy || asset.priceObservedAtMode !== undefined) return null;
+  // Old producers used priceUpdatedAt for both fetch and upstream clocks. Only a
+  // selected feed with a source clock can recover a dated observation.
+  const at = asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt;
+  if (at == null) return null;
+  const distinctSourceClock = asset.priceObservedAt !== undefined || (asset.priceSyncedAt != null && at < asset.priceSyncedAt);
+  const sources = normalizePricingSourceKeys(asset.priceSource);
+  const verified = sources.length > 0 && sources.every((key) => {
+    const feed = getPricingSourceRegistryEntry(key);
+    return feed?.supportsUpstreamObservedAt && (feed.requiresObservedAt || distinctSourceClock);
+  });
+  return verified ? at : null;
+}
 
 function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: number; bps: number }): string | undefined {
   if (isCriticalDepegRisk(params)) {
@@ -70,13 +98,14 @@ export async function collectActiveDepegs(
     activeDepegCount: number | null;
     activeDepegSignalKeys: string[] | null;
     topDepegs: DigestInputData["topDepegs"];
-    lifecycleFlags: DepegLifecycleFlag[];
+    lifecycleFlags: DigestLifecycleFlag[];
+    lifecycleUnavailable: DigestLifecycleIncident[];
   }>
 > {
   try {
     const activeDepegs = await ctx.db
       .prepare(
-        `SELECT e.stablecoin_id, e.symbol, e.peg_type, e.source, e.direction, e.peak_deviation_bps,
+        `SELECT e.id AS event_id, e.stablecoin_id, e.symbol, e.peg_type, e.source, e.direction, e.peak_deviation_bps,
                 e.started_at, e.start_price, e.peak_price, e.peg_reference, p.quote_mode,
                 p.audit_verdict, nq.value AS current_native_quote
          FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
@@ -84,6 +113,7 @@ export async function collectActiveDepegs(
          WHERE e.ended_at IS NULL`,
       )
       .all<{
+        event_id: number;
         stablecoin_id: string;
         symbol: string;
         peg_type: string | null;
@@ -98,12 +128,13 @@ export async function collectActiveDepegs(
         peak_price: number | null;
         peg_reference: number | null;
       }>();
-    const rows = activeDepegs.results ?? [];
+    if (!activeDepegs.success || !Array.isArray(activeDepegs.results)) throw new Error("active depeg census unavailable");
+    const rows = activeDepegs.results;
     let activeDepegCount = 0;
     const activeDepegSignalKeys: string[] = [];
     let supplyUnavailable = false;
-    let referenceUnavailable = false;
-    let heldDeviation = false;
+    const admissionIssues = new Set<string>();
+    const lifecycleUnavailable: DigestLifecycleIncident[] = [];
 
     const withImpact = rows.flatMap((row) => {
       if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
@@ -112,85 +143,88 @@ export async function collectActiveDepegs(
       // Reviewed disputes stay in the evidence rows but are not public event counts.
       if (!isDisputedAuditVerdict(row.audit_verdict)) activeDepegCount++;
       activeDepegSignalKeys.push(depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "active"));
+      const incident = { eventId: row.event_id, stablecoinId: row.stablecoin_id, startedAt: row.started_at };
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
       if (mcapUsd == null) {
         supplyUnavailable = true;
+        lifecycleUnavailable.push(incident);
         return [];
       }
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / HOUR_SECONDS));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
       const quoteEvent = { ...row, peg_reference: row.peg_reference ?? NaN, peg_type: row.peg_type ?? undefined };
       const nativeEvent = isNativePegEvent(quoteEvent);
-      const nativeObservation = nativeEvent
-        ? getNativeEventPriceObservation(quoteEvent, ctx.nowSec, decodeNativeEventQuote(row.current_native_quote))
-        : null;
-      const usdObservedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt;
+      const nativeObservation = nativeEvent ? readAdmittedNativeEventObservation(quoteEvent, ctx.nowSec) : null;
+      const published: Pick<DigestCurrentPegObservation,
+        "currentDeviationBps" | "referenceAdmission" | "admittedDeviationBps" | "pegReference" | "pegReferenceUnavailable" | "currentPriceUnavailable"
+      > | undefined = asset?.currentPeg;
+      const current = ctx.currentPegObservationById.get(row.stablecoin_id);
+      const publishedUnavailable = published?.currentPriceUnavailable || published?.pegReferenceUnavailable ||
+        published?.currentDeviationBps === null;
+      const observation = !hasPublishedDeviation(current) && (hasPublishedDeviation(published) || publishedUnavailable)
+        ? published : current ?? published;
+      const admission = ReferenceAdmissionSchema.safeParse(observation?.referenceAdmission).data;
+      const legacy = !hasPublishedDeviation(observation);
+      const pegCurrency = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency;
+      const usdObservedAt = digestQuoteObservedAt(asset, legacy || pegCurrency === "USD");
       const livePrice = nativeEvent ? nativeObservation?.value ?? null :
         ctx.stablecoinsCacheIsFresh &&
-        usdObservedAt != null && usdObservedAt <= ctx.nowSec &&
+        usdObservedAt != null && Number.isSafeInteger(usdObservedAt) && usdObservedAt > 0 && usdObservedAt <= ctx.nowSec &&
         ctx.nowSec - usdObservedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins &&
-        typeof asset?.price === "number" &&
-        Number.isFinite(asset.price) &&
-        asset.price > 0
+        asset != null && hasUsableCurrentPrice(asset)
           ? asset.price
           : null;
       const priceObservedAt = nativeEvent ? nativeObservation?.observedAt : usdObservedAt;
       const direction = row.direction;
       const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
-      // Native-quote events measure against the event-native reference. A
-      // USD-quoted event measures against the current authoritative reference
-      // (same authority as /api/peg-summary): the reference latched when the
-      // event opened drifts with FX and commodity prices, so it mis-ranks and
-      // mis-flags long-open events. An unavailable current reference is
-      // unknown, never the latched value (R2).
       const latchedReference =
         typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
           ? row.peg_reference
           : null;
-      const observation = nativeEvent ? null : ctx.currentPegObservationById.get(row.stablecoin_id);
-      const observationReference = observation?.pegReference?.valueUsd ?? null;
+      const observationReference = observation?.pegReference?.valueUsd;
       const currentReference =
-        observation != null && !observation.pegReferenceUnavailable &&
+        observation?.pegReferenceUnavailable === false &&
         observationReference != null && Number.isFinite(observationReference) && observationReference > 0
           ? observationReference
           : null;
-      if (!nativeEvent && currentReference == null) referenceUnavailable = true;
-      // Severity decisions run on the live deviation; the stored peak is
-      // context only. Without a usable live price the peak remains the basis,
-      // flagged so downstream consumers never mistake it for a current
-      // observation. The published reference is the one a live deviation is
-      // measured against this run.
       const liveReference = nativeEvent ? latchedReference : currentReference;
-      const liveSignal = livePrice != null && liveReference != null
-        ? deriveDepegSignal(livePrice, liveReference)
-        : null;
-      // A 24/7 token measured while its 24/5 reference market is shut compares
-      // against a repeated close: that is session drift, so the live deviation is
-      // unknown (R2) and the row falls back to its labelled stored peak exactly
-      // like an unavailable current reference.
-      const deviationHeld = liveSignal != null && isReferenceDeviationHeld(
-        TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency,
-        priceObservedAt ?? ctx.nowSec,
-        Math.abs(observation?.currentSignal?.rawBps ?? liveSignal.rawBps),
-      );
-      if (deviationHeld) heldDeviation = true;
-      const currentBps = deviationHeld ? null : liveSignal?.bps ?? null;
-      const pegReference = nativeEvent ? latchedReference : currentReference;
-      // A USD price without a live deviation is not a current observation:
-      // publishing it would pair "(stored peak; live price unavailable)" with
-      // "current $X", and the response lint only checks rows carrying
-      // currentBps. Native rows keep their event-native quote clock.
-      const publishesCurrentObservation = nativeEvent ? livePrice != null : currentBps != null;
+      const fixedUsd = observation?.referenceAdmission == null && currentReference === 1 &&
+        (pegCurrency === "USD" || (pegCurrency == null && normalizePegType(row.peg_type ?? undefined) === "peggedUSD"));
+      const hasUsableQuote = livePrice != null && liveReference != null && (nativeEvent || !observation?.currentPriceUnavailable);
+      const projection = projectCurrentPegDeviation(observation, fixedUsd, usdObservedAt);
+      const signal = hasUsableQuote && (nativeEvent || legacy) ? deriveDepegSignal(livePrice, liveReference) : null;
+      const legacyHeld = !nativeEvent && legacy && projection != null && signal != null &&
+        isReferenceDeviationHeld(pegCurrency, priceObservedAt ?? ctx.nowSec, signal.rawBps);
+      const matchingAdmission = admission?.status === "admitted" && admission.quoteObservedAtSec === usdObservedAt &&
+        admission.decisionAtSec <= ctx.nowSec;
+      const currentBps = !hasUsableQuote || legacyHeld ? null
+        : nativeEvent ? signal?.bps ?? null
+        : legacy || fixedUsd || matchingAdmission ? projection : null;
+      const publishesCurrentObservation = currentBps != null;
+      const pegReference = publishesCurrentObservation ? liveReference : null;
+      if (!publishesCurrentObservation) {
+        lifecycleUnavailable.push(incident);
+        if (nativeEvent) {
+          admissionIssues.add("active-depeg-reference-unavailable");
+          admissionIssues.add("active-depeg-native-quote-unavailable");
+        } else if (legacyHeld || admission?.status === "held-closed-session") {
+          admissionIssues.add("active-depeg-reference-market-closed");
+        } else {
+          admissionIssues.add("active-depeg-reference-unavailable");
+          if (admission && admission.status !== "admitted") {
+            admissionIssues.add(`active-depeg-${admission.reason}`);
+          }
+        }
+      }
       const severityBps = currentBps ?? bps;
       const severityBasis: "current" | "peak-fallback" = currentBps != null ? "current" : "peak-fallback";
       const impactScore = getDepegMarketImpactScore(severityBps, mcapUsd);
       return {
-        stablecoinId: row.stablecoin_id,
+        ...incident,
         symbol: row.symbol,
         bps,
         direction,
         mcapUsd,
-        startedAt: row.started_at,
         ageHours,
         impactScore,
         peakBps: row.peak_deviation_bps,
@@ -198,7 +232,7 @@ export async function collectActiveDepegs(
         severityBasis,
         quoteMode: nativeEvent ? "native-peg" as const : "usd" as const,
         ...(nativeEvent && row.peak_price != null ? { peakPriceNative: row.peak_price } : {}),
-        ...(nativeEvent && livePrice != null ? { currentPriceNative: livePrice } : {}),
+        ...(nativeEvent && publishesCurrentObservation && livePrice != null ? { currentPriceNative: livePrice } : {}),
         ...(pegReference != null ? { pegReference } : {}),
         // Marks a reference re-read each run, so editions stay comparable while it drifts.
         ...(!nativeEvent && pegReference != null ? { pegReferenceBasis: "current" as const } : {}),
@@ -265,25 +299,29 @@ export async function collectActiveDepegs(
 
     // Lifecycle review runs over the FULL open-event set, not the top-8 slice:
     // a stalled collapse must not escape review by ranking ninth.
-    const lifecycleFlags = classifyDepegLifecycle(withImpact);
+    const lifecycleFlags = sortDigestLifecycleFlags(withImpact.flatMap((row) =>
+      classifyDepegLifecycle([row]).map((flag) => ({
+        ...flag,
+        eventId: row.eventId,
+        startedAt: row.startedAt,
+        evaluatedAt: ctx.nowSec,
+        priceObservedAt: row.priceObservedAt,
+      }))));
 
-    // An open USD event without a current authoritative reference cannot be
-    // measured this run. It is named so lifecycle persistence keeps the prior
-    // review queue instead of overwriting it with a queue that silently drops
-    // the coin.
     const qualityReasons = [
       ...(supplyUnavailable ? ["active-depeg-supply-unavailable"] : []),
-      ...(referenceUnavailable ? ["active-depeg-reference-unavailable"] : []),
-      ...(heldDeviation ? ["active-depeg-reference-market-closed"] : []),
+      ...admissionIssues,
     ];
     return collectorResult(
-      { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags },
+      { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags, lifecycleUnavailable },
       [],
       qualityReasons,
     );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query active depegs:", error);
-    return collectorDegraded({ activeDepegCount: null, activeDepegSignalKeys: null, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
+    return collectorDegraded({
+      activeDepegCount: null, activeDepegSignalKeys: null, topDepegs: [], lifecycleFlags: [], lifecycleUnavailable: [],
+    }, "active-depegs-query");
   }
 }
 
@@ -339,82 +377,116 @@ export async function collectBlacklistActivity(
   return collectorOk({ eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] });
 }
 
-export async function collectSupplyVelocity(
-  ctx: CollectorContext,
-): Promise<CollectorResult<DigestInputData["supplyVelocity"]>> {
+function supplyMoverCheckpoint(row: NativeSupplyHistoryRow | undefined, through: number) {
+  return row && hasNativeSupplyEvidence(row) ? readNativeSupplyCheckpoint(row, through) : undefined;
+}
+
+function legacyUsdDelta(current: number | null | undefined, previous: number | null | undefined) {
+  return current != null && previous != null && Number.isFinite(current) && current >= 0 &&
+    Number.isFinite(previous) && previous >= 0 ? current - previous : null;
+}
+
+export async function collectNativeSupplyMovers(ctx: CollectorContext): Promise<CollectorResult<Pick<DigestInputData,
+  "biggestSupplyChange" | "supplyVelocity" | "supplyChanges7d">>> {
+  const empty = { biggestSupplyChange: null, supplyChanges7d: [] };
+  const cohort = ctx.coreAggregateStablecoinAssets.flatMap((coin) => {
+    const mcap = getCirculatingRawOrNull(coin);
+    return mcap == null || isOutageFallbackCarry(coin) ? [] : [{
+      id: coin.id, symbol: coin.symbol, name: coin.name, mcap, prevWeek: getPrevWeekRawOrNull(coin),
+    }];
+  });
+  if (cohort.length === 0) return ctx.coreAggregateStablecoinAssets.length === 0
+    ? collectorOk(empty) : collectorDegraded(empty, "supply-movers-unavailable");
+  const yesterday = ctx.todayTs - DAY_SECONDS;
+  const weekAgo = ctx.todayTs - 7 * DAY_SECONDS;
+  type SupplyRow = NativeSupplyHistoryRow & {
+    circulating_usd: number;
+    valuation_price_usd?: number | null;
+    valuation_observed_at_sec?: number | null;
+  };
+  const readRows = (withNative: boolean) => ctx.db.prepare(`SELECT stablecoin_id, snapshot_date, circulating_usd
+          ${withNative ? ", circulating_native, supply_provenance, valuation_price_usd, valuation_observed_at_sec" : ""}
+         FROM supply_history WHERE stablecoin_id IN (SELECT value FROM json_each(?))
+           AND snapshot_date IN (?, ?, ?)`)
+    .bind(JSON.stringify(cohort.map((coin) => coin.id)), ctx.todayTs, yesterday, weekAgo).all<SupplyRow>();
   try {
-    const top10 = ctx.coreAggregateStablecoinAssets
-      .flatMap((coin) => {
-        const mcap = getCirculatingRawOrNull(coin);
-        return mcap == null ? [] : [{ id: coin.id, symbol: coin.symbol, mcap }];
-      })
-      .sort(compareFiniteDesc<{ id: string; symbol: string; mcap: number }>((coin) => coin.mcap))
-      .slice(0, 10);
-
-    if (top10.length > 0) {
-      const yesterday = ctx.todayTs - DAY_SECONDS;
-      const weekAgo = ctx.todayTs - 7 * DAY_SECONDS;
-      const top10IdInClause = buildInClause(top10.map((coin) => coin.id));
-      const supplyRows = await ctx.db
-        .prepare(
-          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${top10IdInClause.sql}) AND snapshot_date IN (?, ?, ?)`,
-        )
-        .bind(...top10IdInClause.binds, ctx.todayTs, yesterday, weekAgo)
-        .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-
-      const snapMap = new Map<string, Map<number, number>>();
-      for (const row of supplyRows.results ?? []) {
-        let byDate = snapMap.get(row.stablecoin_id);
-        if (!byDate) {
-          byDate = new Map();
-          snapMap.set(row.stablecoin_id, byDate);
-        }
-        byDate.set(row.snapshot_date, row.circulating_usd);
-      }
-
-      const velocitySignals: NonNullable<DigestInputData["supplyVelocity"]> = [];
-      for (const coin of top10) {
-        const byDate = snapMap.get(coin.id);
-        if (!byDate) continue;
-        const todayVal = byDate.get(ctx.todayTs);
-        const yesterdayVal = byDate.get(yesterday);
-        const weekAgoVal = byDate.get(weekAgo);
-        if (todayVal == null || yesterdayVal == null || weekAgoVal == null) continue;
-        // A reviewed perimeter change is not a supply move: leave out a window that straddles it.
-        const dates = [ctx.todayTs, yesterday, weekAgo];
-        if (dates.some((date) => isAmbiguousSupplyPerimeterDay(coin.id, date)
-          || isEarlierSupplyPerimeter(coin.id, date) !== isEarlierSupplyPerimeter(coin.id, ctx.todayTs))) continue;
-
-        const change1d = todayVal - yesterdayVal;
-        const change7d = todayVal - weekAgoVal;
-        const dailyAvg7d = change7d / 7;
-        const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
-        const sameDirection = (change1d > 0 && change7d > 0) || (change1d < 0 && change7d < 0);
-        const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
-        const hasMaterialDailyMove = Math.abs(change1d) >= 1_000_000 && Math.abs(change1d) >= coin.mcap * 0.001;
-        const hasMaterialWeeklyMove = Math.abs(change7d) >= 10_000_000 && Math.abs(change7d) >= coin.mcap * 0.002;
-
-        if (!hasMaterialDailyMove && !hasMaterialWeeklyMove) continue;
-
-        if (
-          (directionReversed && hasMaterialDailyMove) ||
-          (sameDirection && velocityRatio > 2.5 && hasMaterialDailyMove) ||
-          (sameDirection && velocityRatio < 0.4 && hasMaterialWeeklyMove)
-        ) {
-          const signal = directionReversed ? "reversed" : velocityRatio > 2.5 ? "accelerating" : "decelerating";
-          velocitySignals.push({ stablecoinId: coin.id, coin: coin.symbol, change1d, change7d, signal });
-        }
-      }
-
-      if (velocitySignals.length > 0) {
-        return collectorOk(velocitySignals);
-      }
+    const rows = await readRows(true).catch((error: unknown) => {
+      if (isMissingNativeSupplyColumn(error)) return readRows(false);
+      throw error;
+    });
+    if (!rows.success) throw new Error(rows.error ?? "Supply history read failed");
+    const byCoin = new Map<string, Map<number, SupplyRow>>();
+    for (const row of rows.results) {
+      const history = byCoin.get(row.stablecoin_id) ?? new Map<number, SupplyRow>();
+      history.set(row.snapshot_date, row);
+      byCoin.set(row.stablecoin_id, history);
     }
+    const top10 = new Set(cohort.slice().sort(compareFiniteDesc((coin: typeof cohort[number]) => coin.mcap))
+      .slice(0, 10).map((coin) => coin.id));
+    let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
+    let biggestAbsChange = 0;
+    const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
+    const supplyVelocity: NonNullable<DigestInputData["supplyVelocity"]> = [];
+    let admitted = false;
+    for (const coin of cohort) {
+      const history = byCoin.get(coin.id);
+      const today = history?.get(ctx.todayTs);
+      const week = history?.get(weekAgo);
+      if (!hasComparableSupplyPerimeter(coin.id, ctx.todayTs, weekAgo)) continue;
+      const current = supplyMoverCheckpoint(today, ctx.nowSec);
+      const weekCheckpoint = supplyMoverCheckpoint(week, ctx.nowSec - 7 * DAY_SECONDS);
+      const price = today?.valuation_price_usd;
+      const priceAt = today?.valuation_observed_at_sec;
+      if (current === null || weekCheckpoint === null ||
+          (price != null && (!Number.isFinite(price) || price <= 0)) ||
+          (priceAt != null && (!Number.isSafeInteger(priceAt) || priceAt < ctx.todayTs || priceAt > ctx.nowSec))) continue;
+      const quantityEvidence = current && weekCheckpoint && price != null && priceAt != null ? {
+        basis: "native-quantity" as const, current, weekAgo: weekCheckpoint,
+        valuationPriceUsd: price, valuationObservedAt: priceAt,
+      } : undefined;
+      const weeklyChange = quantityEvidence
+        ? (quantityEvidence.current.quantity - quantityEvidence.weekAgo.quantity) * quantityEvidence.valuationPriceUsd
+        : legacyUsdDelta(coin.mcap, coin.prevWeek);
+      if (weeklyChange != null && Number.isFinite(weeklyChange)) {
+        admitted = true;
+        if (coin.mcap > 1_000_000) {
+          supplyChanges7d.push({ stablecoinId: coin.id, coin: coin.symbol, change7d: weeklyChange, quantityEvidence });
+          if (Math.abs(weeklyChange) > biggestAbsChange) {
+            biggestAbsChange = Math.abs(weeklyChange);
+            biggestSupplyChange = { id: coin.id, symbol: coin.symbol, name: coin.name, changeUsd: weeklyChange,
+              currentMcap: coin.mcap, quantityEvidence };
+          }
+        }
+      }
+
+      const yesterdayRow = history?.get(yesterday);
+      if (!top10.has(coin.id) || !hasComparableSupplyPerimeter(coin.id, ctx.todayTs, yesterday)) continue;
+      const dayAgo = supplyMoverCheckpoint(yesterdayRow, ctx.nowSec - DAY_SECONDS);
+      if (dayAgo === null) continue;
+      const velocityEvidence = quantityEvidence && dayAgo ? { ...quantityEvidence, dayAgo } : undefined;
+      const change7d = velocityEvidence ? weeklyChange : legacyUsdDelta(today?.circulating_usd, week?.circulating_usd);
+      const change1d = velocityEvidence
+        ? (velocityEvidence.current.quantity - velocityEvidence.dayAgo.quantity) * velocityEvidence.valuationPriceUsd
+        : legacyUsdDelta(today?.circulating_usd, yesterdayRow?.circulating_usd);
+      if (change1d == null || change7d == null || !Number.isFinite(change1d) || !Number.isFinite(change7d)) continue;
+      admitted = true;
+      const directionReversed = Math.sign(change1d) === -Math.sign(change7d) && change1d !== 0 && change7d !== 0;
+      const sameDirection = Math.sign(change1d) === Math.sign(change7d) && change7d !== 0;
+      const velocityRatio = change7d !== 0 ? Math.abs(change1d / (change7d / 7)) : 0;
+      const materialDay = Math.abs(change1d) >= 1_000_000 && Math.abs(change1d) >= coin.mcap * 0.001;
+      const materialWeek = Math.abs(change7d) >= 10_000_000 && Math.abs(change7d) >= coin.mcap * 0.002;
+      const signal = directionReversed && materialDay ? "reversed"
+        : sameDirection && velocityRatio > 2.5 && materialDay ? "accelerating"
+        : sameDirection && velocityRatio < 0.4 && materialWeek ? "decelerating" : null;
+      if (signal != null) supplyVelocity.push({ stablecoinId: coin.id, coin: coin.symbol, change1d, change7d,
+        signal, quantityEvidence: velocityEvidence });
+    }
+    return admitted ? collectorOk({ biggestSupplyChange, supplyChanges7d, supplyVelocity: supplyVelocity.length ? supplyVelocity : undefined })
+      : collectorDegraded(empty, "supply-movers-unavailable");
   } catch (error) {
-    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to compute supply velocity:", error);
-    return collectorDegraded(undefined, "supply-velocity-query");
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to read native supply checkpoints:", error);
+    return collectorDegraded(empty, "supply-velocity-query");
   }
-  return collectorOk(undefined);
 }
 
 export async function collectResolvedDepegs(

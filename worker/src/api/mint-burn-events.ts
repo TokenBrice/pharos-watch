@@ -14,6 +14,7 @@ import { mintBurnConfigKey } from "../lib/mint-burn-contract-identity";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../lib/mint-burn-pipeline/flow-aggregate";
 import { buildInClause } from "../lib/db";
 import { mintBurnSupplyProofAcceptedSql } from "../lib/mint-burn-supply-proofs";
+import { mintBurnReceiptClassifiedEventSql } from "../lib/mint-burn-tape-claim";
 
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
@@ -100,7 +101,7 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
       filterBindings.push(burnType);
     }
     if (scope === "counted") {
-      conditions.push(supplyAccepted);
+      conditions.push(supplyAccepted, mintBurnReceiptClassifiedEventSql("mint_burn_events"));
       conditions.push("flow_type = 'standard'");
       conditions.push("((direction = 'mint' AND burn_type IS NOT 'review_required') OR (direction = 'burn' AND burn_type = 'effective_burn'))");
     }

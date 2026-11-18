@@ -32,6 +32,8 @@ import { getCache } from "./db-cache";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
 import { tryParseJson } from "./json-parse";
+import { getMintBurnPressureUnavailableReason } from "./mint-burn-scoring";
+import { isMintBurnBridgeSpoke } from "./mint-burn-canonical-chain";
 
 /**
  * The gauge and every per-coin field it is derived from are pinned to the
@@ -111,7 +113,24 @@ export interface PublishedMintBurnGauge {
 
 export type PublishedMintBurnGaugeResult =
   | { kind: "ok"; gauge: PublishedMintBurnGauge }
-  | { kind: "unavailable"; reason: "missing" | "malformed" | "expired" | "future-timestamp" };
+  | { kind: "unavailable"; reason: "missing" | "malformed" | "expired" | "future-timestamp" | "publication-scope-changed" };
+
+export const MINT_BURN_RECEIPT_CLASSIFICATION_VERSION = 3;
+
+export function needsCurrentMintBurnReceiptClassification(stablecoinId: string): boolean {
+  return stablecoinId === "usdz-anzen" || stablecoinId === "ousd-origin-protocol";
+}
+
+/** A prior composite cannot be served if its scope included a newly withheld input. */
+export function hasSupersededMintBurnAggregateScope(payload: unknown): boolean {
+  return isRecord(payload) && Array.isArray(payload.coins) && payload.coins.some((coin) =>
+    isRecord(coin) && typeof coin.stablecoinId === "string" && (
+      isMintBurnBridgeSpoke(coin.stablecoinId, "ethereum")
+      || (coin.pressureShiftScore != null && getMintBurnPressureUnavailableReason(coin.stablecoinId) != null)
+      || (needsCurrentMintBurnReceiptClassification(coin.stablecoinId)
+        && payload.receiptClassificationVersion !== MINT_BURN_RECEIPT_CLASSIFICATION_VERSION)
+    ));
+}
 
 /** Optional non-negative weight: absent is `null`; present but invalid is a contract break (`false`). */
 function parseOptionalWeight(value: unknown): number | null | false {
@@ -264,6 +283,7 @@ export async function readPublishedMintBurnGauge(
   const ageSec = cacheClock.ageSeconds;
   if (ageSec > PUBLISHED_GAUGE_MAX_AGE_SEC) return { kind: "unavailable", reason: "expired" };
   const payload = tryParseJson(cached.value, { onFailure: () => undefined });
+  if (hasSupersededMintBurnAggregateScope(payload)) return { kind: "unavailable", reason: "publication-scope-changed" };
   const gauge = parsePublishedMintBurnGauge(
     payload,
     cached.updatedAt,

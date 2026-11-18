@@ -19,6 +19,7 @@ import {
   createBlacklistRunBudget,
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
+import { publishBlacklistEventCoverage } from "./blacklist/coverage";
 import { deriveSyncBlacklistStatus } from "./blacklist/sync-support";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -99,6 +100,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   };
   const budget = runBudget.subrequestBudget;
   const summaryFence = await captureBlacklistSummaryFence(db);
+  const coverageGeneration = summaryFence.generation;
   const scan = await scanBlacklistConfigs({
     db,
     etherscanApiKey,
@@ -378,8 +380,18 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
+  let coveragePublicationFailed = false;
+  try {
+    await publishBlacklistEventCoverage(db, scan, coverageGeneration, maintenanceRunBudget, chainRpcs, signal);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    coveragePublicationFailed = true;
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Failed to publish blacklist event coverage", error);
+  }
+
   // Final status: publication and repair throws raise ok to degraded, never lower error.
   const failureReasons = [
+    ...(coveragePublicationFailed ? ["blacklist-coverage-publication-failed"] : []),
     ...(producerSnapshotReason != null ? [producerSnapshotReason] : []),
     ...(producerSnapshotError != null ? ["blacklist-snapshot-publication-failed"] : []),
     ...(amountRepair.outcome === "failed" ? ["blacklist-evm-amount-repair-failed"] : []),

@@ -131,17 +131,18 @@ describe("canonical comparable digest evidence", () => {
   it("evaluates a native-peg depeg under the six-hour event-native budget", async () => {
     const NATIVE_QUOTE_AGE_SEC = 20 * 60;
     const DAY_SECONDS = 86_400;
-    // Wednesday 16:00 UTC, with the prior run also inside FX trading hours, so
-    // both legs are live native deviations rather than a closed-market hold.
     const now = 1_795_017_600;
-    const collect = async (at: number, quote: number) => {
+    const collect = async (at: number, quote: number, kind: "traded-pair" | "conversion" = "traded-pair") => {
       const ctx = makeCollectorCtx(mockD1([{
         match: "FROM depeg_events",
         rows: [{
           stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live",
           direction: "below", peak_deviation_bps: -800, started_at: now - 3 * DAY_SECONDS,
           start_price: 0.985, peak_price: 0.92, peg_reference: 1, quote_mode: "native-peg",
-          current_native_quote: JSON.stringify({ value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko" }),
+          current_native_quote: JSON.stringify({
+            value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko",
+            derivation: { kind, lineage: { venue: "bitstamp", pair: "EURC/EUR" } },
+          }),
         }],
       }]));
       ctx.nowSec = at;
@@ -160,6 +161,9 @@ describe("canonical comparable digest evidence", () => {
       stablecoinId: "eurc-circle", quoteMode: "native-peg", severityBasis: "current",
       currentBps: -800, priceObservedAt: now - NATIVE_QUOTE_AGE_SEC,
     });
+    const converted = await collect(now, 0.92, "conversion");
+    expect(converted[0]).toMatchObject({ severityBasis: "peak-fallback" });
+    expect(converted[0].priceObservedAt).toBeUndefined();
     const armed = buildNextTriggers({ ...input(now), topDepegs: current })
       .find((row) => row.metric === "depeg-bps");
     expect(armed).toMatchObject({ stablecoinId: "eurc-circle", symbol: "EURC" });

@@ -7,6 +7,7 @@ import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-k
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { isMintBurnBridgeSpoke } from "./mint-burn-canonical-chain";
 
 /** netFlow90dUsd is the longest published aggregate. */
 const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
@@ -196,7 +197,9 @@ export function mintBurnPreviouslyAdmitted(
 export function mintBurnPublicationDisabled(
   config: MintBurnContractConfig, configs: readonly MintBurnContractConfig[],
   rows: readonly MintBurnAdmissionRow[], disabledKeys: ReadonlySet<string>,
+  scope: "public" | "diagnostic" = "public",
 ): "operator-disabled" | "shared-bucket-disabled" | null {
+  if (scope === "public" && isMintBurnBridgeSpoke(config.stablecoinId, config.chain.chainId)) return "operator-disabled";
   if (config.enabled === false || disabledKeys.has(mintBurnConfigKey(config))) return "operator-disabled";
   // shortcut: legacy hours have no contract attribution; split storage before individual sibling rollback.
   return configs.some((sibling) => sibling.stablecoinId === config.stablecoinId
@@ -273,6 +276,8 @@ export function resolveMintBurnPublication(
     publication.legs.push({
       configKey: key, configFingerprint: fingerprint, stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
       status: disabled ? "disabled" : admitted ? "admitted" : "pending-admission", reason,
+      ...(disabled && isMintBurnBridgeSpoke(config.stablecoinId, config.chain.chainId)
+        ? { disposition: "bridge-spoke-non-issuer-flow" as const } : {}),
       admittedAt: prior && prior !== "grandfathered" ? prior.admitted_at : admitted && !prior ? now : null,
       baselineFrom: prior && prior !== "grandfathered" ? prior.baseline_from : tail?.from_timestamp ?? null,
       baselineTo: prior && prior !== "grandfathered" ? prior.baseline_to : frontier,

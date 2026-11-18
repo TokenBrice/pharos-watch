@@ -177,6 +177,9 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     { match: "mint_burn_sync_state", rows: options.syncRows ?? [] },
     { match: "pharos:mint-burn-scan-coverage:merge", rows: [] },
     { match: "pharos:mint-burn-scan-coverage:compact", rows: [] },
+    { match: "pharos:mint-burn-writer-epoch:merge", rows: [] },
+    { match: "pharos:mint-burn-writer-epoch:compact", rows: [] },
+    { match: "pharos:mint-burn-writer-epoch:certify-hours", rows: [] },
     { match: "pharos:mint-burn-coverage-gaps", rows: [] },
     {
       match: "price_cache",

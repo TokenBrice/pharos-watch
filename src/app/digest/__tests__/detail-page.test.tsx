@@ -58,6 +58,7 @@ vi.mock("@/lib/digest-registry", () => {
   return {
     DIGEST_ENTRIES: entries,
     INDEXABLE_DIGEST_ENTRIES: entries.filter((row) => row.digestType === "weekly"),
+    DIGEST_CORRECTIONS: new Map(),
     DIGEST_BY_DATE: {
       get(date: string) {
         return entries.find((row) => row.date === date);
