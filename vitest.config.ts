@@ -184,6 +184,8 @@ export default defineConfig({
       "satori/yoga.wasm": path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),
       "@cf-wasm/resvg/workerd": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
       "@resvg/resvg-wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
+      // Exact match only: scripts reach the real package through createRequire, which Vite never aliases.
+      harfbuzzjs: path.resolve(__dirname, "worker/src/__mocks__/harfbuzz-stub.ts"),
     },
   },
 });
