@@ -5,7 +5,7 @@ import { type YieldHistorySnapshotRow } from "./history-repository";
 import { weightedMedian } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeYieldStability } from "../yield-helpers";
+import { computeSpikeCappedMean, computeYieldStability } from "../yield-helpers";
 
 export function computeYieldCandidateStatistics(
   y: ResolvedYield,
@@ -35,7 +35,10 @@ export function computeYieldCandidateStatistics(
   apy7dSamples.push(y.currentApy);
 
   const apy7d = apy7dSamples.reduce((sum, value) => sum + value, 0) / apy7dSamples.length;
-  const apy30d = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+  // The headline 30d APY caps isolated spikes (yield v8.56). Stability, the
+  // standard deviation and min/max below keep every raw sample, so a spike
+  // still lowers `yieldStability` and stays visible in `apyMax30d`.
+  const { mean: apy30d, rawMean: apy30dRawMean, cappedSamples: apy30dCappedSamples } = computeSpikeCappedMean(samples);
   // B5: score the same variance the read path re-derives from the 2-dp rounded
   // `yieldStability` (computeYieldStability rounds), so the served PYS cannot
   // diverge from the published one and emit a phantom ±1 `pysDelta`.
@@ -43,7 +46,7 @@ export function computeYieldCandidateStatistics(
   const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
   const stdDev30d =
     samples.length >= 2
-      ? Math.sqrt(samples.reduce((sum, value) => sum + (value - apy30d) ** 2, 0) / samples.length)
+      ? Math.sqrt(samples.reduce((sum, value) => sum + (value - apy30dRawMean) ** 2, 0) / samples.length)
       : null;
   const apyMin30d = samples.length > 0 ? samples.reduce((min, value) => Math.min(min, value), Infinity) : null;
   const apyMax30d = samples.length > 0 ? samples.reduce((max, value) => Math.max(max, value), -Infinity) : null;
@@ -54,7 +57,7 @@ export function computeYieldCandidateStatistics(
         Math.floor(getYieldHistorySampleAt(sourceKey, y.sourceObservedAt, startSec) / DAY_SECONDS),
       ]).size;
 
-  return { apy7d, apy30d, yieldStability, apyVarianceScore, stdDev30d, apyMin30d, apyMax30d, distinctObservationDays30d };
+  return { apy7d, apy30d, apy30dRawMean, apy30dCappedSamples, yieldStability, apyVarianceScore, stdDev30d, apyMin30d, apyMax30d, distinctObservationDays30d };
 }
 
 export function computeTvlWeightedMedianApy(

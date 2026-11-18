@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.55`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.56`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -435,9 +435,18 @@ Rollback compatibility is part of the contract. Production-shaped `v7.48` payloa
 | `effectiveYield` | `max(0, apy30d + 0.25 * excessYield + hurdleRebase)` | Benchmark-aware yield before risk and consistency penalties; rebase is zero for USD-currency rows or missing rates |
 | `rowUtility`     | `effectiveYield / sourceRisk.sourceRiskPenalty` after neutral/clamp resolution | Source-risk-adjusted utility term used before the safety penalty                             |
 | `apy7d`          | Timestamp-filtered 7d average                                                  | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing)                |
-| `apy30d`         | Simple average of 30d samples                                                  | 30-day trailing APY                                                                          |
-| `apyVariance30d` | Standard deviation of 30d APY samples | Published APY volatility measure (despite the field name, not variance) |
+| `apy30d`         | Spike-capped average of 30d samples                                            | 30-day trailing APY; see [30-day spike cap](#30-day-spike-cap)                                |
+| `apyVariance30d` | Standard deviation of the raw 30d APY samples around their plain mean | Published APY volatility measure (despite the field name, not variance) |
 | `medianApy` | Global TVL-weighted median over selected rows with finite positive APY and TVL | Persisted and published as null when no eligible observations exist; divergence warnings and chart reference lines are omitted |
+
+#### 30-day spike cap
+
+Since v8.56 `apy30d` winsorizes the upper tail of the window before averaging (`computeSpikeCappedMean` in `worker/src/cron/yield-helpers.ts`): a sample above `max(2 × window median, 2% APY)` counts as that cap. The multiple and the floor are the `yield-spike` constants, so the headline, the warning and the chart's spike marker share one rule; the reference differs (window median here, trailing mean for the marker), so the three need not flag identical points.
+
+- Samples are capped, never dropped. A window with no sample above the cap publishes the plain mean unchanged.
+- Fewer than 24 samples, or a zero or negative median, fall back to the plain mean.
+- `apy7d`, `yieldStability`, `apyVariance30d`, `apyMin30d` and `apyMax30d` use the raw samples. `yield_history` is not rewritten, and the plain mean and capped-sample count are returned beside `apy30d` by `computeYieldCandidateStatistics` (not yet published).
+- Limit: a real one-off distribution, or a higher rate that has held for less than half the window, is counted at the cap and so understated until the median catches up. Because `apy30d` no longer follows a spike upward, `yield-spike` can stay raised for longer during one.
 
 ---
 

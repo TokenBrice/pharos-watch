@@ -28,6 +28,7 @@ export {
   PYS_MAX_SOURCE_RISK_PENALTY,
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
+import { median } from "@shared/lib/stats";
 import { normalizeChainId } from "@shared/types/chain-identity";
 import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
@@ -39,6 +40,8 @@ const NEGATIVE_TREND_THRESHOLD = 0.7;
 const REWARD_HEAVY_THRESHOLD = 0.8;
 const TVL_OUTFLOW_THRESHOLD = -0.2;
 const YIELD_SPIKE_MIN_APY = 2.0; // only flag spike if currentApy > 2%
+// Below this many samples the window median is too thin to call a sample a spike.
+const SPIKE_CAPPED_MEAN_MIN_SAMPLES = 24; // about two days at the two-hourly cadence
 const NEGATIVE_TREND_MIN_APY = 1.0; // only flag negative trend if apy30d > 1%
 const ZERO_YIELD_HISTORY_THRESHOLD = 0.5; // flag when current=0 but 30d avg > 0.5%
 const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
@@ -96,6 +99,26 @@ export function computeYieldStability(apySamples: number[]): number | null {
   const cv = Math.sqrt(variance) / Math.abs(mean);
   if (!Number.isFinite(cv)) return null;
   return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
+}
+
+/**
+ * 30-day headline mean with the upper tail winsorized (yield v8.56): a sample
+ * above `max(YIELD_SPIKE_THRESHOLD × window median, YIELD_SPIKE_MIN_APY)` counts
+ * as that cap, the same 2× / 2% rule the `yield-spike` warning and the history
+ * chart's spike marker use. Samples are never dropped and stored history is
+ * untouched. Fewer than `SPIKE_CAPPED_MEAN_MIN_SAMPLES` samples or a
+ * non-positive median return the plain mean, which is always reported as
+ * `rawMean`.
+ */
+export function computeSpikeCappedMean(samples: number[]): { mean: number; rawMean: number; cappedSamples: number } {
+  const rawMean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+  const windowMedian = samples.length >= SPIKE_CAPPED_MEAN_MIN_SAMPLES ? median(samples) : null;
+  if (windowMedian == null || windowMedian <= 0) return { mean: rawMean, rawMean, cappedSamples: 0 };
+  const cap = Math.max(windowMedian * YIELD_SPIKE_THRESHOLD, YIELD_SPIKE_MIN_APY);
+  const cappedSamples = samples.filter((value) => value > cap).length;
+  if (cappedSamples === 0) return { mean: rawMean, rawMean, cappedSamples };
+  const mean = samples.reduce((sum, value) => sum + Math.min(value, cap), 0) / samples.length;
+  return { mean, rawMean, cappedSamples };
 }
 
 interface WarningInput {
