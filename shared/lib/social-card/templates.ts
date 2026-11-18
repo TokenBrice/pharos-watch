@@ -121,7 +121,7 @@ export function normalizeSocialCardSpec(spec: SocialCardSpec): SocialCardSpec {
         identity: spec.identity && identity(where, "identity", spec.identity),
         dateline: spec.dateline === undefined ? undefined : budget(where, "dateline", spec.dateline, 32),
         title: budget(where, "title", spec.title, 90),
-        dek: spec.dek === undefined ? undefined : budget(where, "dek", spec.dek, 120),
+        dek: spec.dek === undefined ? undefined : budget(where, "dek", spec.dek, 150),
         pill: spec.pill && { ...spec.pill, text: budget(where, "pill.text", spec.pill.text, 16) },
         facts: spec.facts?.map((value, index) => budget(where, `facts[${index}]`, value, 40)),
         ruler: spec.ruler && { ...spec.ruler, currencySymbol: budget(where, "ruler.currencySymbol", spec.ruler.currencySymbol, 3) },

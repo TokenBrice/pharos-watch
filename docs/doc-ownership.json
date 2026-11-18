@@ -1723,12 +1723,13 @@
         "shared/types/social-scorecard.ts",
         "worker/src/api/og-scorecard.tsx",
         "worker/src/lib/og-render.ts",
-        "shared/lib/social-card/**",
         "functions/share/scorecard/**",
         "functions/_site-data/scorecard.ts",
         "functions/og/v2/**",
         "functions/lib/social-scorecard.ts",
         "scripts/lib/social-preview*",
+        "scripts/lib/social-card-*",
+        "shared/lib/social-card/**",
         "scripts/maintenance/build-og-evergreen.*",
         "scripts/maintenance/publish-social-previews.ts",
         "next.config.ts",
@@ -1756,7 +1757,7 @@
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
       "reading": [
         {
-          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "shared/lib/social-card/**", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "scripts/lib/social-preview*", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
+          "sources": ["shared/lib/social-preview.ts", "shared/lib/social-preview-asset.ts", "shared/lib/social-preview-storage.ts", "shared/lib/social-scorecard.ts", "shared/types/social-scorecard.ts", "worker/src/api/og-scorecard.tsx", "worker/src/lib/og-render.ts", "functions/share/scorecard/**", "functions/_site-data/scorecard.ts", "functions/og/v2/**", "functions/lib/social-scorecard.ts", "scripts/lib/social-preview*", "scripts/lib/social-card-*", "shared/lib/social-card/**", "scripts/maintenance/build-og-evergreen.*", "scripts/maintenance/publish-social-previews.ts"],
           "local": [
             { "path": "docs/og-images.md", "anchor": "1-route-cards" },
             { "path": "docs/og-images.md", "anchor": "dated-scorecards" },

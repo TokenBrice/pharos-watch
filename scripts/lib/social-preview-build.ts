@@ -1,4 +1,6 @@
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { availableParallelism } from "node:os";
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -91,6 +93,15 @@ export async function loadSocialPreviewEntries(repoRoot: string): Promise<Social
   };
 }
 
+/** One slice of a sharded render: the same CLI, the same catalog, only every N-th missing image. */
+function renderShard(repoRoot: string, index: number, count: number): Promise<void> {
+  return new Promise((resolveShard, reject) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "scripts/maintenance/build-og-evergreen.ts", "--shard", `${index}/${count}`], { cwd: repoRoot, stdio: ["ignore", "ignore", "inherit"] });
+    child.on("error", reject);
+    child.on("exit", (code) => (code === 0 ? resolveShard() : reject(new Error(`Social preview render shard ${index}/${count} exited with ${code}`))));
+  });
+}
+
 function sha256(contents: string | Uint8Array): string {
   return createHash("sha256").update(contents).digest("hex");
 }
@@ -116,8 +127,10 @@ async function admitAuthoredPng(repoRoot: string, file: string): Promise<Buffer>
  * also writes the route map; `render` also rasterizes every current image that
  * public/og/v2 lacks. A URL hashes its inputs, so an existing file is that image.
  */
-export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSocialPreviewEntries }: {
+export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSocialPreviewEntries, shard }: {
   repoRoot: string; mode: "check" | "map" | "render"; load?: (repoRoot: string) => Promise<SocialPreviewEntries>;
+  /** Render only the K-th of N slices of the missing images and write no map: a child of a sharded render. */
+  shard?: { index: number; count: number };
 }): Promise<{ routes: number; images: number; rendered: number }> {
   const { entries, fonts, background } = await load(repoRoot);
   const digests = new Map<string, string>();
@@ -155,20 +168,28 @@ export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSoci
   if (mode === "render") {
     const fontBuffers = fonts.map((file) => readFileSync(resolve(repoRoot, file)));
     mkdirSync(resolve(repoRoot, "public/og/v2"), { recursive: true });
-    // ponytail: sequential, ~28 ms per image (42 s for 1,518 on an M-series laptop); move
-    // rasterization into a worker_threads pool if CI renders approach a minute or more.
-    for (const [url, image] of images) {
-      const destination = resolve(repoRoot, `public${url}`);
-      if (existsSync(destination)) continue;
-      const bytes = "bytes" in image
-        ? image.bytes
-        : await renderSvgPngWithResvg({ svg: await image.svg(), fontBuffers, background, width: SOCIAL_PREVIEW_WIDTH });
-      admitPng(bytes, url);
-      atomicWriteFileSync(destination, bytes);
-      rendered++;
+    // Slices follow the URL's content hash, so they stay stable whatever a sibling already wrote.
+    const missing = [...images].filter(([url]) => !existsSync(resolve(repoRoot, `public${url}`))
+      && (!shard || Number.parseInt(url.slice(-12, -4), 16) % shard.count === shard.index));
+    // resvg dominates (~60 ms per card), so large default batches fan out to child
+    // processes of the same CLI; each URL is its own file, so slices never collide.
+    const children = shard || load !== loadSocialPreviewEntries ? 1 : Math.min(8, Math.max(1, availableParallelism() - 1), Math.ceil(missing.length / 64));
+    if (children > 1) {
+      await Promise.all(Array.from({ length: children }, (_, index) => renderShard(repoRoot, index, children)));
+      rendered = missing.filter(([url]) => existsSync(resolve(repoRoot, `public${url}`))).length;
+      if (rendered !== missing.length) throw new Error(`Sharded render left ${missing.length - rendered} social previews unrendered`);
+    } else {
+      for (const [url, image] of missing) {
+        const bytes = "bytes" in image
+          ? image.bytes
+          : await renderSvgPngWithResvg({ svg: await image.svg(), fontBuffers, background, width: SOCIAL_PREVIEW_WIDTH });
+        admitPng(bytes, url);
+        atomicWriteFileSync(resolve(repoRoot, `public${url}`), bytes);
+        rendered++;
+      }
     }
   }
-  if (mode !== "check") {
+  if (mode !== "check" && !shard) {
     // A render writes the map after its images; bootstrap's map names images the Pages build renders.
     const content = `${JSON.stringify(Object.fromEntries(Object.entries(map).sort(([left], [right]) => left.localeCompare(right))), null, 2)}\n`;
     const destination = resolve(repoRoot, SOCIAL_PREVIEW_MAP_PATH);
