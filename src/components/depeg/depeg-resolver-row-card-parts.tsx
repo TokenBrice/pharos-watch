@@ -34,6 +34,8 @@ import { DDR_KILL_SAVE_CLASSES } from "@shared/lib/classification";
 export interface DepegResolverRowCardProps {
   row: DdrV2ResponseRow;
   logos?: Record<string, string>;
+  /** The /depeg/ worklist passes the coin's circulating supply; omitted elsewhere. */
+  marketCapUsd?: number | null;
 }
 
 function SeverityPips({ kind, weight }: { kind: "kill" | "anchor"; weight: number }) {
@@ -108,10 +110,10 @@ function DisclosureChevron() {
   );
 }
 
-export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) {
+export function DepegResolverRowCard({ row, logos, marketCapUsd }: DepegResolverRowCardProps) {
   const predictionState = getPredictionState(row);
   if (predictionState !== "frozen") {
-    return <StateOnlyCard row={row} state={predictionState} logos={logos} />;
+    return <StateOnlyCard row={row} state={predictionState} logos={logos} marketCapUsd={marketCapUsd} />;
   }
 
   const frozen = predictionState === "frozen";
@@ -163,7 +165,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         {/* Identity + direction share a row; verdict facts sit on a second row so
             the direction chip never wraps differently between sibling cards. */}
         <div className="flex items-center justify-between gap-x-3">
-          <CoinLockup row={row} logos={logos} logoSize={52} />
+          <CoinLockup row={row} logos={logos} logoSize={52} marketCapUsd={marketCapUsd} />
           <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
             {formatDdrDirection(row)}
           </span>

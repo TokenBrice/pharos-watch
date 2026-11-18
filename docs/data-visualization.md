@@ -150,7 +150,7 @@ Supply the context needed to avoid misreading:
 - methodology link or label for coined scores
 - a short caveat where correlation, sample scope, or retained stale data could be mistaken for something stronger
 
-The global regime bar uses the `stabilityIndex` data-health preset, producer metadata and PSI generation. Non-fresh/failed-refresh evidence gets neutral color and a visibly/accessibly retained as-of observation, not a current-regime claim. Its 30 cells are completed UTC days ending yesterday relative to that generation; missing days stay empty and older rows are excluded. The 3px line itself is decorative and never focusable; its details panel opens from the labelled `RegimeBarToggle` ("PSI 72") in the header and closes on Esc or navigation.
+The global regime bar uses the `stabilityIndex` data-health preset, producer metadata and PSI generation. Non-fresh/failed-refresh evidence gets neutral color and a visibly/accessibly retained as-of observation, not a current-regime claim. Its 30 cells are completed UTC days ending yesterday relative to that generation; missing days stay empty and older rows are excluded. The 3px line itself is decorative and never focusable; its details panel opens from the labelled `RegimeBarToggle` ("PSI 72.4", the same one-decimal reading the pages print) in the header and closes on Esc or navigation.
 
 The non-USD share chart labels its latest sample date separately from coverage start and HTTP receipt time. Its cohort amounts and shares are non-null producer observations (an observed empty cohort is zero); absent overall history remains unavailable. Server freshness metadata feeds the existing Alt Pegs page stale-data banner even when a stalled snapshot is returned over successful HTTP.
 

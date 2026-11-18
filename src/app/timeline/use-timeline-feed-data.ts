@@ -8,6 +8,7 @@ import type { TimelineEventQueryParams } from "./timeline-controller";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { deriveDataHealth } from "@/lib/data-health";
 import { CRON_15MIN } from "@/lib/cron-intervals";
+import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 
 export type TimelineActiveStatus = "available" | "retained" | "loading" | "incomplete" | "unavailable";
 
@@ -54,13 +55,18 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   const suppressedCount = rawEvents.length - visibleEvents.length;
   // Only a complete, fresh canonical read can establish current activity; a retained
   // complete read is shown as of its producer observation. Tape openings, recoveries
-  // and filters never participate in this authority.
-  const openIncidents = useMemo(
-    () => activeStatus === "available" || activeStatus === "retained"
-      ? [...activeIncidents.data!.events].sort((a, b) => a.startedAt - b.startedAt || a.id - b.id)
-      : null,
-    [activeStatus, activeIncidents.data],
-  );
+  // and filters never participate in this authority. The census is the active
+  // registry, as on /depeg/; open records on frozen or retired coins stay apart.
+  const openCohorts = useMemo(() => {
+    if (activeStatus !== "available" && activeStatus !== "retained") return null;
+    const newestFirst = [...activeIncidents.data!.events].sort((a, b) => b.startedAt - a.startedAt || b.id - a.id);
+    return {
+      census: newestFirst.filter((event) => ACTIVE_STABLECOIN_ID_SET.has(event.stablecoinId)),
+      inactive: newestFirst.filter((event) => !ACTIVE_STABLECOIN_ID_SET.has(event.stablecoinId)),
+    };
+  }, [activeStatus, activeIncidents.data]);
+  const openIncidents = openCohorts?.census ?? null;
+  const inactiveOpenIncidents = openCohorts?.inactive ?? null;
 
   // Per-page digestion + seam reducer. Each TanStack Query page reference is
   // stable across renders (see use-events.ts), so memoising on `pages` keeps
@@ -105,6 +111,7 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     events,
     visibleEvents,
     openIncidents,
+    inactiveOpenIncidents,
     activeIncidents,
     activeStatus,
     activeHealth,

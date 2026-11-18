@@ -44,6 +44,7 @@ import {
   getDepegEventClosurePresentation,
 } from "@/lib/depeg-event-display";
 import { getDepegEditorial } from "./editorials";
+import { DepegEventNowStrip } from "./now-strip";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/lib/case-studies";
 
 export function generateStaticParams() {
@@ -290,6 +291,16 @@ export default async function DepegEventPage(
         ]}
       />
       <JsonLdScript json={safeJsonLd(newsArticleJsonLd)} />
+
+      {/* The record below is the build snapshot; a still-open event leads with its live state. */}
+      {event.endedAt == null ? (
+        <DepegEventNowStrip
+          stablecoinId={event.stablecoinId}
+          eventId={event.id}
+          symbol={event.symbol}
+          startedAt={event.startedAt}
+        />
+      ) : null}
 
       <div className="space-y-2">
         <p className="pharos-kicker">

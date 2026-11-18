@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
+import { useHomepageSnapshot } from "@/hooks/api-hooks";
 import { trackEvent } from "@/lib/analytics";
 import { QUICK_NAV_ITEMS, isNavItemActive } from "@/lib/nav-config";
-import { openNavDrawer } from "@/lib/nav-drawer";
+import { openNavDrawer, useNavDrawerOpen } from "@/lib/nav-drawer";
 import { getRouteCapabilities } from "@/lib/route-capabilities";
 
 // Four route slots plus Menu fill the five-column bar; the remaining rail
@@ -14,6 +15,9 @@ const MOBILE_ROUTE_ITEMS = QUICK_NAV_ITEMS.filter((item) => getRouteCapabilities
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  // Same neutral open-incident count as the desktop rail; absent while unavailable.
+  const activeDepegCount = useHomepageSnapshot().data?.incidents.data?.activeDepegCount ?? null;
+  const drawerOpen = useNavDrawerOpen();
 
   return (
     <nav
@@ -24,6 +28,7 @@ export function MobileBottomNav() {
         {MOBILE_ROUTE_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isNavItemActive(pathname, item);
+          const badge = item.href === "/depeg/" && activeDepegCount ? activeDepegCount : null;
 
           return (
             <Link
@@ -40,14 +45,27 @@ export function MobileBottomNav() {
                   : "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
               }
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
+              <span className="relative">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                {badge ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-muted px-1 text-center font-mono text-3xs font-semibold leading-4 tabular-nums text-foreground ring-2 ring-background"
+                  >
+                    {badge}
+                  </span>
+                ) : null}
+              </span>
               <span className="text-2xs font-medium leading-none">{item.shortLabel ?? item.label}</span>
+              {badge ? <span className="sr-only">{`, ${badge} active ${badge === 1 ? "depeg" : "depegs"}`}</span> : null}
             </Link>
           );
         })}
         <button
           type="button"
           onClick={openNavDrawer}
+          aria-haspopup="dialog"
+          aria-expanded={drawerOpen}
           className="pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:text-foreground motion-reduce:transition-none"
           aria-label="Menu"
         >

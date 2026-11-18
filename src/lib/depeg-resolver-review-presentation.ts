@@ -1,6 +1,6 @@
 import { actualOutcomeFromSourceEventState } from "@shared/lib/depeg-resolver-review";
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
-import { DDR_REVIEW_TONE_CLASSES } from "@shared/lib/classification";
+import { DDR_REVIEW_TONE_CLASSES, DEPEG_PENDING_STATE_LABELS } from "@shared/lib/classification";
 import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDRR_SCORED_VERDICTS } from "@shared/types/depeg-resolver-review";
 import type {
@@ -51,7 +51,7 @@ export const DDR_VERDICT_TONES: Readonly<Record<DdrrVerdictReview, string>> = {
 };
 
 export const DDR_COVERAGE_LABELS: Readonly<Record<DdrrCoverageState, string>> = {
-  pending_lock: "pending lock",
+  pending_lock: DEPEG_PENDING_STATE_LABELS.ddrLock.toLowerCase(),
   lock_deferred: "lock deferred",
   data_quality_gap: "data quality gap",
   orphan_closed: "orphan closed",

@@ -5,10 +5,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import type { DepegEvent } from "@shared/types/peg";
 
-const { useActiveDepegEventsMock, usePegSummaryMock } = vi.hoisted(() => ({
+const { useActiveDepegEventsMock, usePegSummaryMock, useStablecoinsMock, useResolverMock } = vi.hoisted(() => ({
   useActiveDepegEventsMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
+  useStablecoinsMock: vi.fn(() => ({ data: undefined })),
+  useResolverMock: vi.fn(() => ({ resolver: { data: undefined } })),
 }));
+
+vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
+vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: useResolverMock }));
 
 // The headline reads the worker's `summary.activeDepegCount` (the /depeg/ hero
 // authority). Fixtures that only list coins get that count the way the worker
@@ -43,7 +48,7 @@ vi.mock("next/image", () => ({
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 function makeEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
@@ -130,12 +135,12 @@ describe("ActiveDepegsCard", () => {
     expect(screen.getByText("19")).toBeTruthy();
     expect(screen.queryByText("4")).toBeNull();
     expect(screen.getByText("coins with open confirmed incidents")).toBeTruthy();
-    const list = screen.getByRole("list", { name: "Top 3 of 19 active depegs by deviation" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+    // Without supply the order falls back to deviation.
+    const list = screen.getByRole("list", { name: "Top 4 of 19 active depegs by deviation" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    screen.getByText("Top 4 of 19 by deviation");
     expect(screen.getByText("C19")).toBeTruthy();
-    expect(screen.getByText("C18")).toBeTruthy();
-    expect(screen.getByText("C17")).toBeTruthy();
-    expect(screen.queryByText("C16")).toBeNull();
+    expect(screen.getByText("C16")).toBeTruthy();
     expect(screen.queryByText("C15")).toBeNull();
   });
 
@@ -160,10 +165,10 @@ describe("ActiveDepegsCard", () => {
     render(<ActiveDepegsCard />);
 
     expect(screen.getByText("120")).toBeTruthy();
-    const list = screen.getByRole("list", { name: "Top 3 of 120 active depegs by deviation" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+    const list = screen.getByRole("list", { name: "Top 4 of 120 active depegs by deviation" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
     expect(screen.getByText("C120")).toBeTruthy();
-    expect(within(list).getAllByText("Age unavailable")).toHaveLength(3);
+    expect(within(list).getAllByText("Age unavailable")).toHaveLength(4);
   });
 
   it("says no open confirmed incidents at zero, not that every peg holds", () => {
@@ -198,6 +203,38 @@ describe("ActiveDepegsCard", () => {
     // Past the continuous-observation limit the at-par reading expires.
     act(() => { vi.advanceTimersByTime(60_000); });
     expect(screen.getByText(", Recovery unconfirmed")).toBeTruthy();
+  });
+
+  it("ranks rows by USD off peg with DDR call, cap and recency", () => {
+    const now = 1_700_000_000 + 10 * 86_400;
+    vi.useFakeTimers({ now: now * 1000 });
+    useActiveDepegEventsMock.mockReturnValue({ isLoading: false, data: { events: [
+      makeEvent({ id: 1, stablecoinId: "usdc-circle", symbol: "USDC", startedAt: now - 2 * 86_400 }),
+      makeEvent({ id: 2, stablecoinId: "eur-stasis", symbol: "EURS", startedAt: now - 9 * 86_400 }),
+    ] } });
+    usePegSummaryMock.mockReturnValue({ isLoading: false, data: { coins: [
+      { id: "eur-stasis", symbol: "EURS", activeDepeg: true, currentDeviationBps: -2000 },
+      { id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -100 },
+      { id: "fixture-coin-03", symbol: "C03", activeDepeg: true, currentDeviationBps: -5000 },
+    ] } });
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [
+      { id: "eur-stasis", circulating: { peggedEUR: 10_000_000 } }, { id: "usdc-circle", circulating: { peggedUSD: 500_000_000 } },
+    ] } } as never);
+    const ddrRow = (tier: string, eventState: string) => ({ kind: "prediction", stablecoinId: "usdc-circle", live: { eventState },
+      prediction: { state: "frozen", predictionMethodologyVersion: "v5.0" }, frozen: { resolution: { tier } } });
+    // A later, closed incident's frozen call must not overwrite the active one.
+    useResolverMock.mockReturnValue({ resolver: { data: { _meta: { degraded: false },
+      rows: [ddrRow("at_risk", "active"), ddrRow("recovery_likely", "closed_pending_review")] } } } as never);
+    render(<ActiveDepegsCard />);
+    act(() => { vi.advanceTimersByTime(0); });
+
+    // $5.0M USDC > $2.0M EURS; unknown supply (C03) last despite the widest gap.
+    const rows = within(screen.getByRole("list", { name: "Active depegs by USD off peg" })).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent?.match(/USDC|EURS|C03/)?.[0])).toEqual(["USDC", "EURS", "C03"]);
+    for (const text of ["New", "$500.0M mkt cap"]) within(rows[0]!).getByText(text);
+    within(rows[0]!).getByTitle("Stress signals");
+    expect(within(rows[1]!).queryByText("New")).toBeNull();
+    within(rows[2]!).getByText("Market cap unavailable");
   });
 
   it("keeps the incident count when event detail retrieval fails", () => {

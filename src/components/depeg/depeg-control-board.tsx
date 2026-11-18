@@ -22,7 +22,7 @@ import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg/de
 import type { PegCurrency } from "@shared/types/core";
 import type { GovernanceType } from "@shared/types/stablecoin-taxonomy";
 import { GOVERNANCE_FILTER_OPTIONS, OPEN_INCIDENT_EVIDENCE_LABELS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { formatCurrency, formatElapsedSeconds, formatTrackingSpanDays } from "@shared/lib/format";
+import { formatCompactUsdShort, formatCurrency, formatElapsedSeconds, formatTrackingSpanDays } from "@shared/lib/format";
 import { formatPegOccupancy } from "@shared/lib/peg-format";
 import type { ThreatBand } from "@shared/lib/classification";
 
@@ -60,7 +60,7 @@ const BOARD_GRID_CLASS =
 const METRIC_HELP = {
   deviation: "Current deviation from the peg in basis points. 100 bps equals 1%.",
   dews: "DEWS is the Depeg Early Warning Score, a 0-100 stress score. Higher is more stressed.",
-  pegHealth: "Peg Health shows Peg Score, where 100 is best, alongside a record-derived peg occupancy estimate, not proof of recovery or continuous observation.",
+  pegHealth: "Peg Health shows Peg Score, where 100 is best, alongside a recorded-window peg occupancy estimate. Tracking closure can leave unobserved time, so occupancy is not proof of recovery or continuous observation.",
   events: "Confirmed depeg event count for the asset, over the span Pharos has tracked it.",
   dexCheck: "DEX check compares trusted DEX prices with the primary peg signal when available.",
 };
@@ -136,7 +136,10 @@ function InstrumentRow({
     coin.pegScore !== null ? (
       <span className={pegScoreColor(coin.pegScore)}>{coin.pegScore}</span>
     ) : (
-      <span className="text-muted-foreground">NR</span>
+      // A score withheld for want of a usable price names that reason.
+      <span className="text-muted-foreground" title={coin.currentPriceUnavailable ? "No usable price" : undefined}>
+        NR{coin.currentPriceUnavailable ? <span className="sr-only">, no usable price</span> : null}
+      </span>
     );
   // The response's pending ageSec is request-frozen; derive from firstSeenAt
   // so the row follows the same display clock as the last-event age.
@@ -177,6 +180,11 @@ function InstrumentRow({
           ) : null}
           <span className="pharos-meta pharos-numeric">{eventAge}</span>
           <span className="pharos-meta pharos-numeric">{coin.pegCurrency}</span>
+          {row.marketCapUsd !== undefined ? (
+            <span className="pharos-meta pharos-numeric">
+              {row.marketCapUsd == null ? "cap unavailable" : `${formatCompactUsdShort(row.marketCapUsd)} cap`}
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="col-span-2 grid grid-cols-2 gap-x-4 gap-y-3 lg:contents">
@@ -208,9 +216,10 @@ function InstrumentRow({
           value={pegHealthValue}
         >
           <LinearGauge value={coin.pegScore} tone={metricTone(coin.pegScore)} ariaLabel={`Peg score for ${coin.symbol}`} />
+          {/* The caveat lives in the column help and this row's accessible description, not in every row. */}
           <p id={occupancyBasisId} className="mt-1 text-xs text-muted-foreground">
-            <span className="font-mono">{formatPegOccupancy(coin.pegPct, 1)}</span> recorded-window peg occupancy estimate.
-            {" "}Tracking closure can leave unobserved time; this is not proof of recovery or continuous observation.
+            <span className="font-mono">{formatPegOccupancy(coin.pegPct, 1)}</span> recorded-window peg occupancy estimate
+            <span className="sr-only">. Tracking closure can leave unobserved time; this is not proof of recovery or continuous observation.</span>
           </p>
         </MetricCell>
         <MetricCell

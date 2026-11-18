@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { YieldSafetyBadge } from "@/components/yield/yield-row-metrics";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
-import { useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { usePegSummary, useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
@@ -19,6 +21,7 @@ import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import {
   YIELD_LANDING_RISK_BUDGET,
   YIELD_RISK_BUDGET_SPECS,
+  describeYieldPickLiveState,
   prepareYieldUniverse,
   selectTopPysRows,
   selectVisibleYieldRows,
@@ -26,6 +29,7 @@ import {
 } from "@/lib/yield-view-model";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import type { YieldSafetySnapshotMeta } from "@shared/types/yield";
+import type { CoinState } from "@shared/lib/coin-state";
 
 // The /yield/ page opens on this risk band; the home card answers for the same view.
 const LANDING_BAND_LABEL =
@@ -56,13 +60,15 @@ interface OverviewData {
 
 /**
  * Same derivation as the /yield/ hero with no URL filters: dedupe, prepare the
- * universe, select the landing band's visible rows, then rank by PYS.
+ * universe with the same coin/venue states, select the landing band's visible
+ * rows, then rank by PYS.
  */
 function buildOverview(
   rankings: YieldRankingSummary[],
   snapshot: YieldSafetySnapshotMeta | null,
+  coinStatesById: ReadonlyMap<string, readonly CoinState[]>,
 ): Omit<OverviewData, "medianApy"> {
-  const universe = prepareYieldUniverse(dedupeYieldRankings(rankings), null);
+  const universe = prepareYieldUniverse(dedupeYieldRankings(rankings), null, coinStatesById);
   const visibleRows = selectVisibleYieldRows(universe, {});
   const leaders = selectTopPysRows(visibleRows, LEADERBOARD_SIZE);
 
@@ -111,16 +117,19 @@ function LeadFigure({
   bestPaid,
   inViewCount,
   totalRowCount,
+  liveStateNote,
 }: {
   bestPaid: YieldViewModelRow | null;
   inViewCount: number;
   totalRowCount: number;
+  liveStateNote: string | null;
 }): React.JSX.Element {
   return (
     <div className="space-y-2 pb-3">
       <p className="text-sm font-medium text-muted-foreground">
         Best-paid risk in view
         {bestPaid ? <span className="text-foreground/70"> · {bestPaid.symbol}</span> : null}
+        {bestPaid?.coinStates?.[0] ? <CoinStateChip state={bestPaid.coinStates[0]} className="ml-2 align-middle" /> : null}
       </p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <RailHeroFigureTransition rail="yield">
@@ -131,6 +140,7 @@ function LeadFigure({
         {bestPaid ? (
           <span className="pharos-numeric text-xs text-muted-foreground">PYS {formatScore(bestPaid.pharosYieldScore)}</span>
         ) : null}
+        {bestPaid && liveStateNote ? <span className="text-xs text-muted-foreground">{liveStateNote}</span> : null}
         <UniverseChip
           universe="yieldRows"
           value={`${inViewCount} in view of ${totalRowCount} · ${LANDING_BAND_LABEL}`}
@@ -212,6 +222,7 @@ function LeaderRow({
         <span className="flex min-w-0 items-center gap-1.5">
           <CoinCell logoSrc={logoSrc} />
           <span className="truncate font-mono text-xs tracking-tight text-foreground">{row.symbol}</span>
+          {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} className="shrink-0" /> : null}
         </span>
         <span aria-hidden="true" className="hidden h-1.5 overflow-hidden rounded-full bg-muted/60 sm:block">
           {row.pharosYieldScore === null ? null : (
@@ -244,14 +255,19 @@ function LeaderRow({
 
 export function HomeAltYieldOverview(): React.JSX.Element | null {
   const { data, isLoading } = useYieldRankingsSummary();
+  // The same state ladder as the /yield/ hero, so both pick the same row, read
+  // passively: the cards above already load the peg summary and resolver, and a
+  // DEWS band never blocks a yield row, so this card fetches none of them.
+  const coinStates = useCoinStates({ enabled: false });
+  const pegSummary = usePegSummary({ enabled: false });
   const logos = logosById;
   const logoMap = logos ?? {};
 
   const overview = useMemo<OverviewData | null>(() => {
     if (!data) return null;
-    const built = buildOverview(data.rankings, data.provenance?.safetySnapshot ?? null);
+    const built = buildOverview(data.rankings, data.provenance?.safetySnapshot ?? null, coinStates.byId);
     return { ...built, medianApy: data.medianApy };
-  }, [data]);
+  }, [coinStates.byId, data]);
   if (isLoading) return <HomeAltYieldOverviewFallback />;
 
   if (!overview || overview.leaders.length === 0) {
@@ -281,6 +297,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           bestPaid={overview.bestPaid}
           inViewCount={overview.inViewCount}
           totalRowCount={overview.totalRowCount}
+          liveStateNote={describeYieldPickLiveState(pegSummary, coinStates.clockReady)}
         />
         <StatStrip
           coveredCount={overview.coveredCount}

@@ -1,19 +1,21 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg/depeg-resolver-row-card-parts";
-import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
+import { compareResolverUrgency, rankOpenIncidents, summarizeResolverBook } from "@/components/depeg/depeg-resolver-book-summary";
 import { getDisplayedLivePeakDeviationBps } from "@/components/depeg/depeg-resolver-row-card-model";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
   type DdrPredictionMeta,
+  type DdrResolutionTier,
   type DdrResponse,
   type DdrRow,
   type DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "./depeg-resolver-test-support";
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -247,10 +249,15 @@ describe("DepegResolverModule", () => {
     expect(summarizeResolverBook(mixed.slice(1)).total).toBe(0);
     render(<DepegResolverModule data={response({ rows: mixed })} />);
     expect(screen.getByText(/forecast.*across 6 incident rows/).textContent).toContain("1 forecast across 6 incident rows");
+    // An invalidated incident ranks last, behind the toggle.
+    fireEvent.click(screen.getByRole("button", { name: "Show all 6 incident rows" }));
     expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
   });
 
   describe("new-worst flag compares live deviation with the live event peak", () => {
+    const tiered = (id: string, tier: DdrResolutionTier, current: number, eventState = "active"): DdrV2ResponseRow => makePredictionRow(
+      makeSourceRow({ stablecoinId: id, symbol: id.toUpperCase(), resolution: { tier, factors: [] }, peakDeviationBps: -10_000, currentDeviationBps: current }), { eventState });
+
     function peakRow(
       id: string,
       frozenPeak: number | null,
@@ -285,6 +292,23 @@ describe("DepegResolverModule", () => {
       const tieB = peakRow("tie-b", -100, { peak: -2_000, current: -500 });
       const order = [tieB, falseFlag, wider, tieA, realFlag].sort(compareResolverUrgency).map((r) => r.stablecoinId);
       expect(order).toEqual(["usda", "wide", "tie-a", "tie-b", "alusd"]);
+    });
+
+    it("ranks verdict, then exposure; unknown caps and closed incidents last", () => {
+      const caps = new Map<string, number | null>([["terminal", 1e6], ["small", 1e6], ["large", 1e9], ["likely", 1e10], ["nocap", null]]);
+      const rows = [tiered("likely", "recovery_likely", -5_000), tiered("nocap", "at_risk", -9_000), tiered("small", "at_risk", -1_000), tiered("large", "at_risk", -100),
+        { ...makePendingRow("pending_lock"), stablecoinId: "unlocked" }, tiered("closed", "recovery_unlikely", -9_000, "closed_pending_review"), tiered("terminal", "recovery_unlikely", -50)];
+      expect([...rows].sort((a, b) => compareResolverUrgency(a, b, caps)).map((r) => r.stablecoinId))
+        .toEqual(["terminal", "large", "small", "nocap", "unlocked", "likely", "closed"]);
+      render(<DepegResolverModule data={response({ rows: rows.slice(0, 2) })} marketCaps={caps} />);
+      for (const text of ["$10.0B market cap", "Market cap unavailable"]) screen.getByText(text);
+    });
+
+    it("names the confirmed census by holder exposure, unavailable caps last", () => {
+      const coin = (id: string, bps: number, activeDepeg = true) => makePegSummaryCoin({ id, symbol: id, currentDeviationBps: bps, activeDepeg });
+      expect(rankOpenIncidents([coin("calm", -10, false), coin("big", -14), coin("nocap", -9_000), coin("small", -4_500)],
+        [tiered("big", "at_risk", -14), tiered("small", "recovery_likely", -4_500, "closed_pending_review")], new Map([["small", 49e6], ["big", 1.5e9]])))
+        .toMatchObject([{ id: "small", ddr: null }, { id: "big", ddr: { stablecoinId: "big" } }, { id: "nocap", ddr: null, marketCapUsd: null }]);
     });
 
     it("captions the count as a new worst, never as past their worst", () => {
@@ -556,7 +580,7 @@ describe("DepegResolverModule", () => {
       />,
     );
 
-    expect(screen.getByText("Prediction lock pending")).toBeTruthy();
+    expect(screen.getByText("Forecast not locked yet")).toBeTruthy();
     expect(screen.queryByText("Stress signals")).toBeNull();
     expect(screen.queryByText(/~resolve/)).toBeNull();
 

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/header";
 import { NAV_GROUPS } from "@/lib/nav-config";
+import { openNavDrawer } from "@/lib/nav-drawer";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -82,13 +83,15 @@ function categoryButton(label: string, itemCount: number) {
   return screen.getByRole("button", { name: `${label}, ${itemCount} pages` });
 }
 
+// The bottom-nav Menu is the only opener; the header carries no duplicate.
 function openDrawer() {
-  fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+  act(() => openNavDrawer());
 }
 
 describe("Header mobile drawer", () => {
   it("drills into config-derived categories, returns with focus, and resets after closing", () => {
     render(<Header />);
+    expect(screen.queryByRole("button", { name: "Menu" })).toBeNull();
     openDrawer();
 
     for (const category of categories) {

@@ -67,6 +67,7 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
 }));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: hooks.useActiveDepegEvents }));
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({ useDepegResolverSurfaces: hooks.useDepegResolverSurfaces }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: hooks.useMintBurnFlows }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: hooks.useStablecoins }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({
