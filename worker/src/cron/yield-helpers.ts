@@ -249,28 +249,6 @@ export function selectVariantDlPool<T extends VariantDlPoolCandidate>(
   };
 }
 
-export interface DlApyComponents {
-  apy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-}
-
-/**
- * DeFiLlama's `apy` is `apyBase + apyReward`. When the reward leg is an
- * eligibility-gated campaign (`YIELD_POOL_RESTRICTED_REWARD_IDS`), a general
- * depositor earns the base rate only, so the row publishes `apyBase` as a
- * base-only payload. Without a finite base rate the generally accessible yield
- * is unavailable: return null rather than publish the gated total (R2).
- */
-export function resolveGenerallyAccessibleDlApy(
-  pool: DlApyComponents,
-  rewardRestricted: boolean,
-): DlApyComponents | null {
-  if (!rewardRestricted) return { apy: pool.apy, apyBase: pool.apyBase, apyReward: pool.apyReward };
-  if (pool.apyBase == null || !Number.isFinite(pool.apyBase)) return null;
-  return { apy: pool.apyBase, apyBase: pool.apyBase, apyReward: null };
-}
-
 /**
  * Returns ALL DL pools that are yield sources for the given coin.
  *

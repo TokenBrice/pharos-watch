@@ -24,12 +24,7 @@ describe("parseRiskFreeRateCache", () => {
       buildRiskFreeRateCachePayload({ rate: 4.25, source: "fred", recordDate: "2026-03-14", fetchedAt: nowSec - 3600 }),
     );
     const result = parseRiskFreeRateCache(payload, nowSec - 7200, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(4.25);
-    expect(result!.source).toBe("fred");
-    expect(result!.ageSeconds).toBe(3600);
-    expect(result!.lastMarketRate).toBe(4.25);
-    expect(result!.lastMarketSource).toBe("fred");
+    expect(result).toMatchObject({ rate: 4.25, source: "fred", ageSeconds: 3600, lastMarketRate: 4.25, lastMarketSource: "fred" });
   });
 
   it("does not turn a future fetchedAt into age zero", () => {
@@ -39,26 +34,17 @@ describe("parseRiskFreeRateCache", () => {
     expect(parseRiskFreeRateCache(payload, nowSec, nowSec)?.ageSeconds).toBe(-86400);
   });
 
-  it("returns null for malformed JSON", () => {
+  it("returns null for malformed JSON or an empty string", () => {
     expect(parseRiskFreeRateCache("{bad json", nowSec, nowSec)).toBeNull();
+    expect(parseRiskFreeRateCache("", nowSec, nowSec)).toBeNull();
   });
 
   it("falls back to legacy scalar format", () => {
-    const result = parseRiskFreeRateCache("3.75", nowSec - 86400, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(3.75);
-    expect(result!.source).toBe("legacy-scalar");
+    expect(parseRiskFreeRateCache("3.75", nowSec - 86400, nowSec)).toMatchObject({ rate: 3.75, source: "legacy-scalar" });
   });
 
   it("accepts negative rates for non-USD benchmark support", () => {
-    const result = parseRiskFreeRateCache("-1.5", nowSec, nowSec, { key: "CHF" });
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(-1.5);
-    expect(result!.key).toBe("CHF");
-  });
-
-  it("returns null for empty string", () => {
-    expect(parseRiskFreeRateCache("", nowSec, nowSec)).toBeNull();
+    expect(parseRiskFreeRateCache("-1.5", nowSec, nowSec, { key: "CHF" })).toMatchObject({ rate: -1.5, key: "CHF" });
   });
 });
 
@@ -122,6 +108,7 @@ describe("parseRiskFreeRatesCache", () => {
 
 describe("parseDlStablecoinPoolsCache", () => {
   const nowSec = 1710500000;
+  const steak = "32f586b4-5358-5aa2-88ee-c842139e7023";
 
   it("parses structured payload with data array", () => {
     const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
@@ -138,11 +125,8 @@ describe("parseDlStablecoinPoolsCache", () => {
     expect(parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec)).toBeNull();
   });
 
-  it("returns null for malformed JSON", () => {
+  it("returns null for malformed or non-object JSON", () => {
     expect(parseDlStablecoinPoolsCache("{bad", nowSec, nowSec)).toBeNull();
-  });
-
-  it("returns null for non-array non-object JSON", () => {
     expect(parseDlStablecoinPoolsCache('"just a string"', nowSec, nowSec)).toBeNull();
   });
 
@@ -150,17 +134,19 @@ describe("parseDlStablecoinPoolsCache", () => {
     const raw = JSON.stringify({
       updatedAt: nowSec - 3600,
       source: "sync-dex-liquidity",
-      poolCount: 2,
+      poolCount: 4,
       data: [
         makeDlYieldPool({ pool: "bad-apy", project: "sdai", tvlUsd: 1e8, apy: Number.NaN }),
         makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
+        makeDlYieldPool({ pool: steak, apy: 403.8, apyBase: 3.8, apyReward: 400 }),
+        makeDlYieldPool({ pool: steak, apy: 7, apyBase: 400 }),
       ],
     });
 
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
 
-    expect(result?.pools.map((pool) => pool.pool)).toEqual(["valid"]);
-    expect(result?.meta.poolCount).toBe(1);
+    expect(result?.pools.map(({ pool, apy, apyReward }) => [pool, apy, apyReward])).toEqual([["valid", 5, null], [steak, 3.8, null]]);
+    expect(result?.meta.poolCount).toBe(2);
   });
 
   it("rejects structured DL cache payloads with future updatedAt", () => {

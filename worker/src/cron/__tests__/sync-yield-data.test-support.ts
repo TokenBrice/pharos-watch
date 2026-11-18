@@ -95,7 +95,6 @@ vi.mock("@shared/lib/stablecoins/registry", () =>
   ])),
 );
 
-// Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());

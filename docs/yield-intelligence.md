@@ -190,7 +190,7 @@ Ethereum Frankencoin Savings is an exact external `lending-opportunity` for ZCHF
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
-**Restricted rewards:** DL's `apy` is `apyBase + apyReward`, including campaigns a general depositor cannot claim. A pool listed in `YIELD_POOL_RESTRICTED_REWARD_IDS` (same file as `YIELD_POOL_MAP`, each entry citing its campaign) publishes `apyBase` as its APY with `apyReward: null`, a base-only payload. If such a pool has no finite `apyBase`, the row is unavailable for that run instead of publishing the gated total. The first entry is steakUSDG on Robinhood Chain, whose reward leg is a Merkl whitelist campaign for Robinhood users. Rows already in `yield_history` keep their recorded totals, so the 30-day mean converges over the following 30 days.
+**Restricted rewards:** DL's `apy` is `apyBase + apyReward`, including campaigns a general depositor cannot claim. A pool listed in `YIELD_POOL_RESTRICTED_REWARD_IDS` (same file as `YIELD_POOL_MAP`, each entry citing its campaign) is converted at DL intake (`filterValidDlPools`) to a base-only payload, `apy: apyBase` with `apyReward: null`, so every lane that reads the pool publishes the base. The intake APY envelope bounds that base, not the gated total. A listed pool without a finite `apyBase` is rejected at intake, like an envelope breach, instead of publishing the gated total. The first entry is steakUSDG on Robinhood Chain, whose reward leg is a Merkl whitelist campaign for Robinhood users. Rows already in `yield_history` keep their recorded totals, so the 30-day mean converges over the following 30 days.
 
 ### Tier 2.5: Protocol-Native Yield APIs
 

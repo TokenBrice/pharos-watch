@@ -1,6 +1,6 @@
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield-vocabulary";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
-import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_POOL_MAP, YIELD_POOL_RESTRICTED_REWARD_IDS } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import type {
   DlPool,
@@ -465,6 +465,20 @@ interface DlStablecoinPoolsCachePayload {
  */
 const DL_POOL_APY_ENVELOPE_PERCENT = DETERMINISTIC_APY_SANITY_MAX;
 
+/**
+ * DeFiLlama's `apy` is `apyBase + apyReward`. A pool in `YIELD_POOL_RESTRICTED_REWARD_IDS` pays its reward only
+ * to eligible depositors, so every lane reads it as a base-only payload. The envelope bounds that published base; a
+ * restricted row without a finite base has no publishable APY and is rejected, never published at its gated total (R2).
+ */
+function isRestrictedRewardDlPool(row: { pool?: unknown }): boolean {
+  return typeof row.pool === "string" && YIELD_POOL_RESTRICTED_REWARD_IDS.has(row.pool);
+}
+
+function exceedsDlPoolApyEnvelope(row: Record<string, unknown>): boolean {
+  if (isRestrictedRewardDlPool(row)) return !isFiniteNumber(row.apyBase) || row.apyBase > DL_POOL_APY_ENVELOPE_PERCENT;
+  return isFiniteNumber(row.apy) && row.apy > DL_POOL_APY_ENVELOPE_PERCENT;
+}
+
 function isValidDlPool(value: unknown): value is DlPool {
   if (!isRecord(value)) return false;
   if (typeof value.pool !== "string" || value.pool.trim() === "") return false;
@@ -473,7 +487,7 @@ function isValidDlPool(value: unknown): value is DlPool {
   if (typeof value.symbol !== "string" || value.symbol.trim() === "") return false;
   if (value.poolMeta != null && typeof value.poolMeta !== "string") return false;
   if (!isFiniteNumber(value.tvlUsd) || value.tvlUsd < 0) return false;
-  if (!isFiniteNumber(value.apy) || value.apy > DL_POOL_APY_ENVELOPE_PERCENT) return false;
+  if (!isFiniteNumber(value.apy) || exceedsDlPoolApyEnvelope(value)) return false;
   if (!isNullableFiniteNumber(value.apyBase)) return false;
   if (!isNullableFiniteNumber(value.apyReward)) return false;
   if (value.apyMean30d != null && !isFiniteNumber(value.apyMean30d)) return false;
@@ -502,18 +516,12 @@ export function filterValidDlPools(
   const rejected: unknown[] = [];
   for (const row of rows) {
     if (isValidDlPool(row)) {
-      pools.push(row);
+      pools.push(isRestrictedRewardDlPool(row) ? { ...row, apy: row.apyBase!, apyReward: null } : row);
     } else {
       rejected.push(row);
     }
   }
-  const envelopeRejected = rejected.filter(
-    (row) =>
-      isRecord(row) &&
-      typeof row.apy === "number" &&
-      Number.isFinite(row.apy) &&
-      row.apy > DL_POOL_APY_ENVELOPE_PERCENT,
-  );
+  const envelopeRejected = rejected.filter((row) => isRecord(row) && exceedsDlPoolApyEnvelope(row));
   const rejectedExamples = summarizeInvalidRows(rejected, (row, index) => {
     if (isRecord(row) && typeof row.pool === "string") return row.pool;
     return `row-${index}`;

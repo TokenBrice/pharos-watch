@@ -17,7 +17,7 @@ import {
   RATE_DERIVED_CONFIGS,
 } from "../../lib/yield-config/yield-config-rate-sources";
 import { YIELD_ADAPTER_MANIFEST } from "../../lib/yield-config/yield-config";
-import { YIELD_POOL_MAP, YIELD_POOL_RESTRICTED_REWARD_IDS } from "../../lib/yield-config/yield-config-pools";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import {
   DIRECT_PROTOCOL_API_STRATEGIES,
@@ -82,12 +82,6 @@ describe("yield config registry", () => {
       .map((coin) => coin.id);
 
     expect(missing).toEqual([]);
-  });
-
-  it("only marks curated native pins as restricted-reward pools", () => {
-    const pinnedPools = new Set(Object.values(YIELD_POOL_MAP));
-    expect([...YIELD_POOL_RESTRICTED_REWARD_IDS].filter((pool) => !pinnedPools.has(pool))).toEqual([]);
-    expect(YIELD_POOL_RESTRICTED_REWARD_IDS.has(YIELD_POOL_MAP["steakusdg-steakhouse"]!)).toBe(true);
   });
 
   it("does not expose stale PikuDAO USP native DeFiLlama pool coverage", () => {

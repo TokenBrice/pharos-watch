@@ -1,7 +1,7 @@
 /**
  * Pinned DL pools whose `apyReward` is an eligibility-gated campaign that a
  * general depositor cannot claim. DeFiLlama folds the campaign into `apy`, so
- * these rows publish `apyBase` as the headline and drop the reward component.
+ * DL intake (`filterValidDlPools`) publishes them as base-only payloads.
  * Each entry cites the campaign and must be removed when it ends or opens up.
  */
 export const YIELD_POOL_RESTRICTED_REWARD_IDS: ReadonlySet<string> = new Set([
