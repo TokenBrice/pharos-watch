@@ -1,17 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
 import * as ogRenderer from "../../lib/og-render";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { makeScorecardImageFixture, makeScorecardMetadataFixture } from "@shared/test-utils/social-scorecard";
-import { decodeSocialScorecardMetadata, SOCIAL_SCORECARD_METADATA_HEADER } from "@shared/lib/social-scorecard";
+import { decodeSocialScorecardMetadata, SOCIAL_SCORECARD_METADATA_HEADER, SOCIAL_SCORECARD_REASON_HEADER } from "@shared/lib/social-scorecard";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { sha256HexFromBytes } from "@shared/lib/sha256";
+import { mockFetch, type MockFetchOutcome } from "@shared/test-utils/mock-fetch";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { handleScorecardOg } from "../og-scorecard";
+
+// Node's harfbuzzjs is a promise that vitest's module interop cannot await; the measurer is stubbed below.
+vi.mock("harfbuzzjs", () => ({ default: {} }));
 
 function scorecardMetadata(response: Response) {
   return decodeSocialScorecardMetadata(response.headers.get(SOCIAL_SCORECARD_METADATA_HEADER));
 }
+
+const logoUrl = `${SITE_ORIGIN}/logos/2-usdc.svg`;
+const logoSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><circle cx="1" cy="1" r="1"/></svg>';
+const mockLogo = (respond: () => MockFetchOutcome | Response) => mockFetch([{ match: logoUrl, respond }], { requireMatch: true, strictUrl: true });
+/** The element handed to the renderer, as searchable JSON (no-break spaces read as spaces). */
+const drawn = () => JSON.stringify(vi.mocked(ogRenderer.renderPng).mock.calls[0][0]).replace(/\u00a0/g, " ");
 
 describe("admitted dated scorecard rendering", () => {
   const now = 1_795_000_000;
@@ -34,10 +44,12 @@ describe("admitted dated scorecard rendering", () => {
     vi.useFakeTimers(); vi.setSystemTime(now * 1000);
     mockIndex();
     vi.spyOn(ogRenderer, "renderPng").mockResolvedValue(makeScorecardImageFixture());
+    vi.spyOn(ogRenderer, "socialCardMeasurer").mockResolvedValue({ width: (text, _face, size) => text.length * size * 0.3 });
+    mockLogo(() => new Response(logoSvg, { headers: { "Content-Type": "image/svg+xml" } }));
   });
-  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-  it("renders the published hysteresis grade and served methodology, date and full identity", async () => {
+  it("renders the published hysteresis grade, its date and the registered logo", async () => {
     const response = await handleScorecardOg(db, "usdc-circle");
     expect(response.status).toBe(200);
     const metadata = scorecardMetadata(response);
@@ -45,11 +57,24 @@ describe("admitted dated scorecard rendering", () => {
     expect(metadata.publication.methodologyVersion).toBe("10.37");
     expect(metadata.publication.publicationGenerationId).toBe(snapshot().safetyScoreIdentity.publicationGenerationId);
     expect(metadata.imageSha256).toBe(sha256HexFromBytes(new Uint8Array(await response.arrayBuffer())));
-    const markup = renderToStaticMarkup(vi.mocked(ogRenderer.renderPng).mock.calls[0][0]);
-    expect(markup).toContain("Published grade");
-    expect(markup).toContain("Methodology v10.37");
-    expect(markup).toContain(new Date(metadata.asOfSec * 1000).toISOString().slice(0, 10));
+    const card = drawn();
+    for (const shown of ["A", "82", "USDC", "USD Coin", "As of 18 Nov 2026"]) expect(card).toContain(`"${shown}"`);
+    expect(card).toContain(`data:image/svg+xml;base64,${btoa(logoSvg)}`);
+    expect(card).not.toMatch(/methodology|not live/i);
+    expect(fetch).toHaveBeenCalledOnce();
     expect(activeSafetyScoreSource.loadActiveSafetyScoreIndex).toHaveBeenCalledTimes(2);
+  });
+
+  it.each<[string, () => MockFetchOutcome | Response]>([
+    ["WebP", () => new Response(new Uint8Array([0x52, 0x49, 0x46, 0x46]), { headers: { "Content-Type": "image/webp" } })],
+    ["mislabelled", () => new Response(logoSvg, { headers: { "Content-Type": "image/png" } })],
+    ["missing", () => new Response("missing", { status: 404 })],
+    ["unreachable", () => new Error("network down")],
+  ])("draws the monogram when the logo is %s", async (_case, respond) => {
+    mockLogo(respond);
+    expect((await handleScorecardOg(db, "usdc-circle")).status).toBe(200);
+    expect(drawn()).toContain("3px dashed");
+    expect(drawn()).not.toMatch(/data:image\/(?:webp|png|svg\+xml;base64)/);
   });
 
   it("renders a complete overview with unavailable members disclosed and no aggregate letter", async () => {
@@ -60,18 +85,21 @@ describe("admitted dated scorecard rendering", () => {
     const response = await handleScorecardOg(db, "safety-scores");
     expect(response.status).toBe(200);
     expect(scorecardMetadata(response).subject).toEqual({ kind: "overview", id: "safety-scores", ratedCount: 1, notRatedCount: 0, unavailableCount: 1, totalCount: 2, averageScore: 82 });
-    const markup = renderToStaticMarkup(vi.mocked(ogRenderer.renderPng).mock.calls[0][0]);
-    expect(markup).toContain("Mean rated score");
-    expect(markup).not.toContain("Published grade");
+    const card = drawn();
+    for (const shown of ["Safety Scores", "82.0", "Mean rated score", "1 rated · 1 unavailable", "As of 18 Nov 2026"]) expect(card).toContain(`"${shown}"`);
+    expect(card).not.toMatch(/"children":"[A-F][+-]?"|not rated/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("preserves an admitted NR without inventing a score", async () => {
+  it("answers a not-rated coin with a machine-readable reason instead of dating a grade it lacks", async () => {
     const source = snapshot();
     source.cards[0] = { id: "usdc-circle", score: null, grade: "NR", ratingStatus: "not-rated", partialEvidence: null };
     mockIndex({ kind: "v9", snapshot: source });
     const response = await handleScorecardOg(db, "usdc-circle");
-    expect(response.status).toBe(200);
-    expect(scorecardMetadata(response).subject).toMatchObject({ score: null, grade: "NR" });
+    expect(response.status).toBe(404);
+    expect(response.headers.get(SOCIAL_SCORECARD_REASON_HEADER)).toBe("not-rated");
+    expect(response.headers.has("Retry-After") || response.headers.has(SOCIAL_SCORECARD_METADATA_HEADER)).toBe(false);
+    expect(ogRenderer.renderPng).not.toHaveBeenCalled();
   });
 
   it.each(["error", "held", "stale", "future", "stale-observation", "future-observation", "quarantined", "missing"])("fails closed before render for %s evidence", async (fault) => {

@@ -59,6 +59,13 @@ export const SOCIAL_CARD_FONT_DIR = "worker/assets/fonts/social-card";
 /** A registered local logo under public/; group 1 is the extension. */
 export const SOCIAL_CARD_LOGO_PATH = /^\/(?:logos|chains|dexes)\/[a-z0-9][a-z0-9._-]*\.(png|jpe?g|webp|svg)$/i;
 
+/** A logo SVG drawn as an image must be self-contained: no script, foreign content, imports or external references. */
+export function isTrustedLogoSvg(svg: string): boolean {
+  const references = [...svg.matchAll(/\b(?:xlink:)?href\s*=\s*["']([^"']+)["']/gi), ...svg.matchAll(/url\(\s*["']?([^"')\s]+)/gi)];
+  return !/<(?:script|foreignObject)\b|@import/i.test(svg)
+    && references.every((reference) => reference[1].startsWith("#") || reference[1].startsWith("data:image/"));
+}
+
 /** Static instances of the site's faces, made by `npm run subset:fonts -- --social-card`. */
 export const SOCIAL_CARD_FONTS: Readonly<Record<SocialCardFace, SocialCardFontFace>> = {
   "display-800": { file: "BricolageGrotesque-800.ttf", family: "Bricolage", weight: 800, style: "normal" },

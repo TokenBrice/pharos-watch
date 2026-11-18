@@ -137,11 +137,11 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   },
   {
     sourcePath: "worker/src/lib/og-render.ts",
-    stateNames: ["wasmInitialization"],
-    owner: "OG-image WASM initialization",
+    stateNames: ["wasmInitialization", "scorecardMeasurer"],
+    owner: "OG-image WASM initialization and scorecard text measurer",
     kind: "coordination",
-    resetOrTtl: "One shared initialization promise per isolate; cleared after an initialization failure or isolate recycle.",
-    durableTruth: "The bundled WASM modules are authoritative; the promise only coalesces initialization work.",
+    resetOrTtl: "One shared promise each per isolate; cleared after a failure or isolate recycle.",
+    durableTruth: "The bundled WASM modules and font files are authoritative; the promises only coalesce initialization work.",
   },
   {
     sourcePath: "worker/src/lib/og-harfbuzz.ts",

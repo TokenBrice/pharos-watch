@@ -10,17 +10,19 @@ import satori, { type SatoriOptions } from "satori";
 import sharp, { type Sharp } from "sharp";
 import type { SocialCardAssets, SocialCardElement, SocialCardLogo } from "../../shared/lib/social-card/parts";
 import type { SocialCardIdentity, SocialCardSpec, SocialScorecardCard } from "../../shared/lib/social-card/spec";
-import { buildSocialCardElement, buildSocialScorecardElement, normalizeSocialCardSpec } from "../../shared/lib/social-card/templates";
+import type { SocialScorecardOverviewCard } from "../../shared/lib/social-card/scorecard";
+import { buildSocialCardElement, buildSocialScorecardElement, buildSocialScorecardOverviewElement, normalizeSocialCardSpec } from "../../shared/lib/social-card/templates";
 import { createSocialCardMeasurer, type HarfBuzzApi } from "../../shared/lib/social-card/text";
-import { CARD_HEIGHT, CARD_WIDTH, SOCIAL_CARD_FONT_DIR, SOCIAL_CARD_FONTS, SOCIAL_CARD_LOGO_PATH, type SocialCardFace } from "../../shared/lib/social-card/tokens";
+import { CARD_HEIGHT, CARD_WIDTH, SOCIAL_CARD_FONT_DIR, SOCIAL_CARD_FONTS, SOCIAL_CARD_LOGO_PATH, isTrustedLogoSvg, type SocialCardFace } from "../../shared/lib/social-card/tokens";
 
 /**
  * Every file whose bytes reach a rendered card apart from the spec's own logos:
  * the templates, the authorities they read (colours, grade families, canvas
- * size), the fonts and the brand marks.
+ * size), the inlined brand marks and the fonts.
  */
 export const SOCIAL_CARD_RENDER_SOURCES = [
   "scripts/lib/social-card-render.ts",
+  "shared/lib/social-card/brand.ts",
   "shared/lib/social-card/parts.ts",
   "shared/lib/social-card/spec.ts",
   "shared/lib/social-card/templates.ts",
@@ -31,8 +33,6 @@ export const SOCIAL_CARD_RENDER_SOURCES = [
   "shared/lib/classification/grades.ts",
   "shared/lib/report-card-core.ts",
   "shared/lib/social-preview.ts",
-  "public/pharos-mark-on-dark.svg",
-  "public/pharos-mark-on-light.svg",
   ...Object.values(SOCIAL_CARD_FONTS).map(({ file }) => `${SOCIAL_CARD_FONT_DIR}/${file}`),
 ] as const;
 
@@ -45,12 +45,8 @@ export interface SocialCardRenderAssets extends SocialCardAssets {
 /** Rasters are normalised to this square; the largest drawn logo is 216px. */
 const LOGO_SIZE = 384;
 
-/** Trusted local SVG only: no script, foreign content, imports or external references. */
 function admitSvg(svg: string, path: string): string {
-  const references = [...svg.matchAll(/\b(?:xlink:)?href\s*=\s*["']([^"']+)["']/gi), ...svg.matchAll(/url\(\s*["']?([^"')\s]+)/gi)];
-  if (/<(?:script|foreignObject)\b|@import/i.test(svg) || references.some((reference) => !reference[1].startsWith("#") && !reference[1].startsWith("data:image/"))) {
-    throw new Error(`Social card logo has an external or executable resource: ${path}`);
-  }
+  if (!isTrustedLogoSvg(svg)) throw new Error(`Social card logo has an external or executable resource: ${path}`);
   return svg;
 }
 
@@ -125,7 +121,7 @@ export const identitiesOf = (spec: SocialCardSpec | SocialScorecardCard): readon
   }
 };
 
-/** Fonts, HarfBuzz metrics, brand marks and every logo the specs draw (greyscale where a historical record needs it). */
+/** Fonts, HarfBuzz metrics and every logo the specs draw (greyscale where a historical record needs it). */
 export async function loadSocialCardAssets(repoRoot: string, specs: readonly (SocialCardSpec | SocialScorecardCard)[]): Promise<SocialCardRenderAssets> {
   const faces = Object.keys(SOCIAL_CARD_FONTS) as SocialCardFace[];
   const bytes = Object.fromEntries(faces.map((face) => [face, readFileSync(resolve(repoRoot, SOCIAL_CARD_FONT_DIR, SOCIAL_CARD_FONTS[face].file))])) as Record<SocialCardFace, Buffer>;
@@ -134,10 +130,8 @@ export async function loadSocialCardAssets(repoRoot: string, specs: readonly (So
   const greyPaths = new Set(specs.flatMap((spec) => "template" in spec && spec.template === "dossier" && spec.lifecycle === "historical" && spec.identity.logoPath ? [spec.identity.logoPath] : []));
   const paths = [...new Set(specs.flatMap((spec) => identitiesOf(spec).flatMap((identity) => identity.logoPath ? [identity.logoPath] : [])))].sort();
   const logos = new Map(await Promise.all(paths.map(async (path) => [path, await readLogo(repoRoot, path, greyPaths.has(path))] as const)));
-  const mark = (file: string) => svgDataUri(admitSvg(readFileSync(resolve(repoRoot, "public", file), "utf8"), file));
   return {
     measure: createSocialCardMeasurer(hb, bytes),
-    brand: { dark: mark("pharos-mark-on-dark.svg"), paper: mark("pharos-mark-on-light.svg") },
     logos,
     fonts: faces.map((face) => ({ name: SOCIAL_CARD_FONTS[face].family, data: bytes[face], weight: SOCIAL_CARD_FONTS[face].weight, style: SOCIAL_CARD_FONTS[face].style })),
     fontBuffers: faces.map((face) => new Uint8Array(bytes[face])),
@@ -161,6 +155,7 @@ export function renderSocialCardSvg(spec: SocialCardSpec, assets: SocialCardRend
   return toSvg(buildSocialCardElement(spec, assets), assets);
 }
 
-export function renderSocialScorecardSvg(card: SocialScorecardCard, assets: SocialCardRenderAssets): Promise<string> {
-  return toSvg(buildSocialScorecardElement(card, assets), assets);
+/** A coin or overview scorecard; production renders these in the Worker, this is for review and tests. */
+export function renderSocialScorecardSvg(card: SocialScorecardCard | SocialScorecardOverviewCard, assets: SocialCardRenderAssets): Promise<string> {
+  return toSvg("identity" in card ? buildSocialScorecardElement(card, assets) : buildSocialScorecardOverviewElement(card, assets), assets);
 }
