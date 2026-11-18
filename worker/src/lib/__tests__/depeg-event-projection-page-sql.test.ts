@@ -1,3 +1,4 @@
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
@@ -77,7 +78,8 @@ first_event.source, first_event.peg_type, first_provenance.quote_mode,
 COALESCE(effective_alias.current_event_id, incidents.current_event_id)`;
 
 const LEGACY_PUBLIC_DEPEG_EVENTS_SQL = `(
-  SELECT events.*, COALESCE(projection.first_started_at, events.started_at) AS effective_started_at
+  SELECT events.*, COALESCE(projection.first_started_at, events.started_at) AS effective_started_at,
+    ${reviewedDepegDisputeSql("events")} AS reviewed_dispute
     FROM depeg_events_with_provenance events
     LEFT JOIN (${LEGACY_PROJECTION_SQL}) projection ON projection.current_event_id = events.id
 )`;
@@ -357,8 +359,9 @@ describe("public depeg page effective onset", () => {
     expect(load.available).toBe(true);
     if (!load.available) return;
     const published = rows(fixture, null, { conditions: [], bindings: [] }, 1000, 0);
-    const idsSql = buildPublicDepegEventsPageQuery("", [], 1, 0).sql.split(", ordinary AS")[0]
-      + " SELECT effective_event_id FROM effective_ids)";
+    const { sql } = buildPublicDepegEventsPageQuery("", [], 1, 0);
+    const idsSql = sql.slice(sql.indexOf("WITH effective_ids AS"), sql.indexOf(", ordinary AS"))
+      + " SELECT effective_event_id FROM effective_ids";
     const effectiveIds = fixture.sqlite.prepare(idsSql).all().map((row) => row.effective_event_id);
     const byId = new Map(published.map((row) => [row.id as number, row]));
     let projectedRows = 0;

@@ -22,6 +22,7 @@ import { computeStablecoinScores, loadConfidentHistoryStability } from "../dex-l
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import {
   buildDexLiquidityPublicationGenerationId,
+  buildDexScoreDetailsJson,
   DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE,
   persistScores,
   pruneOldDexLiquidityGenerations,
@@ -813,10 +814,10 @@ describe("dex-liquidity persistence", () => {
     const db = makeDb({
       currentRouteRows: [{
         stablecoin_id: "usdt-tether",
-        score_components_json: JSON.stringify({
+        score_components_json: buildDexScoreDetailsJson(Object.assign(makeFullScoreResult(), {
           exitRouteObservations: [previousObservation],
           exitRouteObservationCoverage: coverage,
-        }),
+        })),
       }],
     });
 

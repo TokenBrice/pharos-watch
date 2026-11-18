@@ -196,71 +196,43 @@ describe("snapshotSafetyGradeHistory", () => {
     );
   });
 
-  it("suppresses the first clean recovery transition and clears its marker", async () => {
-    const current = makeReportCardsV9Response({
-      updatedAt: Math.floor(Date.now() / 1000),
-      cards: [makeWorkerV9Card({ grade: "A", score: 85 })],
-    });
-    const card = current.cards[0]!;
-    const identity = current.safetyScoreIdentity;
-    mockLoadActiveSafetyScoreIndex.mockResolvedValue({
-      kind: "v9",
-      snapshot: current,
-    });
-    mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
-      schemaVersion: 1,
-      attemptedAtSec: current.updatedAt,
-      outcome: "published-clean",
-      publicationGenerationId: identity.publicationGenerationId,
-      quarantines: [],
-      affectedAssetIds: [],
-    });
-    mockGetCache.mockResolvedValue({
-      value: JSON.stringify([card.id]),
-      updatedAt: current.updatedAt - 1_800,
-    });
-    mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue([
-      {
-        history_id: "history:alpha",
-        stablecoin_id: card.id,
-        recorded_at: current.updatedAt - 86_400,
-        model: identity.model,
-        identity_schema_version: identity.schemaVersion,
-        methodology_version: identity.methodologyVersion,
-        policy_id: identity.policyId,
-        policy_digest: identity.policyDigest,
-        evaluation_build_digest:
-          identity.evaluationBuildDigest,
-        base_input_generation_id:
-          identity.baseInputGenerationId,
-        model_publication_generation_id:
-          identity.publicationGenerationId,
-        transition_kind: "organic-grade-change",
-        grade: "B",
-        score: 75,
-        prev_grade: "A",
-        prev_score: 85,
-      },
-    ]);
-    const all = vi.fn().mockResolvedValue({ results: [] });
-    const db = makeNoopD1({
-      prepare: vi.fn(() => ({ all })),
-    });
-
-    const result = await snapshotSafetyGradeHistory(db);
-
-    expect(result).toMatchObject({
-      status: "degraded",
-      itemCount: 0,
-    });
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      suppressedTransitions: 1,
-      gradeHistorySuppressed: true,
-    });
-    expect(mockDeleteCache).toHaveBeenCalledWith(
-      db,
-      "safety-score-history:v2:operationally-affected",
+  it.each(["A", "C"] as const)("uses a same-day clean A recovery as the next predecessor for %s", async (nextGrade) => {
+    const recoveryAt = Date.UTC(2026, 10, 16, 4) / 1000;
+    const clock = vi.spyOn(Date, "now");
+    const { db, sqlite } = fixtures.open();
+    const { fetchLatestSafetyScoreHistoryV2Rows } = await vi.importActual<typeof import("../../lib/safety-score-history-v2")>(
+      "../../lib/safety-score-history-v2",
     );
+    mockFetchLatestSafetyScoreHistoryV2Rows.mockImplementation(fetchLatestSafetyScoreHistoryV2Rows);
+    const publish = (updatedAt: number, grade: "A" | "B" | "C", score: number) => {
+      clock.mockReturnValue(updatedAt * 1000);
+      const snapshot = makeReportCardsV9Response({ updatedAt, cards: [makeWorkerV9Card({ grade, score })] });
+      mockLoadActiveSafetyScoreIndex.mockResolvedValue({ kind: "v9", snapshot });
+      mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
+        outcome: "published-clean", publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId,
+      });
+      return snapshot.cards[0]!.id;
+    };
+    try {
+      const assetId = publish(recoveryAt - 1_800, "B", 75);
+      expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: 1 });
+      mockGetCache.mockResolvedValue({ value: JSON.stringify([assetId]), updatedAt: recoveryAt - 1_200 });
+      publish(recoveryAt, "A", 85);
+      expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: 1 });
+      expect(mockDeleteCache).toHaveBeenCalledWith(db, "safety-score-history:v2:operationally-affected");
+      const history = () => sqlite.prepare("SELECT * FROM safety_score_history_v2 ORDER BY recorded_at").all();
+      expect(history()).toMatchObject([{ grade: "B" }, {
+        grade: "A", score: 85, prev_grade: null, transition_kind: "restoration-baseline",
+      }]);
+      mockGetCache.mockResolvedValue(null);
+      publish(recoveryAt + 86_400, nextGrade, nextGrade === "A" ? 85 : 55);
+      expect(await snapshotSafetyGradeHistory(db)).toMatchObject({ itemCount: nextGrade === "A" ? 0 : 1 });
+      if (nextGrade === "C") expect(history()[2]).toMatchObject({
+        grade: "C", prev_grade: "A", prev_score: 85, transition_kind: "organic-grade-change",
+      });
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   /**

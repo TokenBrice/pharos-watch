@@ -799,7 +799,6 @@ describe("processPoolMetrics", () => {
 
     const entry = makeCurveEntry({
       A: 200,
-      registryId: "factory-stable-ng",
       executionCoins: [
         { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
         { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9995 },

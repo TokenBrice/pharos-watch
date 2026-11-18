@@ -232,6 +232,21 @@ describe("live-reserves-store", () => {
     expect(result?.liveAt).toBeUndefined();
   });
 
+  it("withholds a retained USD1 ratio from before the liability clock cutover", () => {
+    const id = "usd1-world-liberty-financial";
+    const coin = WORKER_TRACKED_META_BY_ID.get(id)!;
+    const config = coin.liveReservesConfig!;
+    expect(config.version).toBe(4);
+    const record = reserveCompositionInput("usd1", {
+      stablecoinId: id, source: config.adapter,
+      metadata: { freshnessMode: "verified", sourceTimestamp: 1_000, collateralizationRatio: 1.01 },
+    });
+    const state = reserveSyncStateInput("usd1", { stablecoinId: id, adapterKey: config.adapter });
+    expect(evaluateLiveReserveAdmission(record, state, coin, 1_200).eligible).toBe(true);
+    const old = { ...record, configFingerprint: computeLiveReserveConfigFingerprint({ ...config, version: 3 }) };
+    expect(evaluateLiveReserveAdmission(old, state, coin, 1_200).reasons).toEqual(["config-mismatch"]);
+  });
+
   it.each([1, 2])("admits only corrected HCHF backing from retained binding v%i", async (version) => {
     const id = "hchf-hedera-swiss-franc";
     const coin = WORKER_TRACKED_META_BY_ID.get(id)!;

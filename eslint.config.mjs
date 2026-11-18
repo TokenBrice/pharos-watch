@@ -90,8 +90,11 @@ const frontendToWorkerRestrictedImportPatterns = [
   },
 ];
 
-// The sole reviewed waiver documented in docs/process/boundary-waivers.md.
-const FRONTEND_TO_WORKER_WAIVED_FILES = ["scripts/ci/check-frozen-invariants.ts"];
+// Reviewed waivers documented in docs/process/boundary-waivers.md.
+const FRONTEND_TO_WORKER_WAIVED_FILES = [
+  "scripts/ci/check-frozen-invariants.ts",
+  "scripts/maintenance/replay-reference-closures.ts", // Runs the Worker lifecycle against captured evidence.
+];
 
 function isWithinPath(parentDir, candidatePath) {
   const relativePath = relative(parentDir, candidatePath);

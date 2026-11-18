@@ -37,6 +37,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        id: workspace
         with:
           node-modules-cache: "true"
       # Reserve adapter fixtures are captures of live issuer dashboards, so
@@ -45,6 +46,9 @@ jobs:
       # the day a fixture crossed 90 days. The weekly ratchet is the owner.
       - name: Check reserve HTML fixture capture ages
         run: npm run check:html-fixture-age
+      - name: Check reviewed calendar horizons
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+        run: npm run check:calendar-horizon
 
   gitleaks:
     runs-on: ubuntu-latest

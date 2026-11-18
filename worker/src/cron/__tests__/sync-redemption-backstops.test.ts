@@ -191,6 +191,34 @@ describe("syncRedemptionBackstops", () => {
     );
   });
 
+  it.each([false, true])("checks Mento phase at publication while dating the stored delay to assessment (reopened: %s)", async (reopened) => {
+    const id = "chfm-mento";
+    const reopen = Date.parse("2026-11-15T23:00:00Z") / 1000;
+    const assessed = reopen - 60;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(assessed * 1000);
+    try {
+      configuredIdsMock = [id];
+      loadStablecoinsCacheMock.mockResolvedValueOnce({
+        kind: "ok", updatedAt: assessed, payload: { peggedAssets: [makeAsset({ id })] },
+      });
+      resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeResolvedSnapshot(id, assessed, {
+        routeStatus: "open", routeStatusSource: "onchain", freshnessKind: "same-run-onchain",
+        sourceTimestamp: assessed, settlementDelaySec: 60, capacityKind: "documented-bound",
+        immediateCapacityUsd: null, immediateCapacityRatio: null,
+      }));
+      const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+      await syncRedemptionBackstops(mockD1(), new AbortController().signal, undefined, async ({ stage }) => {
+        if (stage === "publishing-redemption-backstops") clock.mockReturnValue((reopened ? reopen : reopen - 10) * 1000);
+      });
+      const [stored] = upsertRedemptionBackstopSnapshotsMock.mock.calls[0][1] as RedemptionBackstopEntry[];
+      expect(stored.updatedAt).toBe(assessed);
+      expect(stored.resolutionState).toBe(reopened ? "missing-capacity" : "resolved");
+      expect(stored.settlementDelaySec).toBe(reopened ? undefined : 60);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it.each(["reserve", "stablecoins"])("opens no manifest or rows on a global %s admission hold", async (input) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

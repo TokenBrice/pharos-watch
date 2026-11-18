@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { createDewsDb } from "./compute-dews.test-support";
 import { computeDEWS } from "../../lib/dews";
 
@@ -9,7 +11,7 @@ interface CoinFixture {
   id: string;
   symbol: string;
   pegType: string;
-  /** Current observed supply, USD-denominated (peggedUSD/peggedEUR bucket). */
+  /** Observed token quantities for the current, prior-day and prior-week checkpoints. */
   circulating: number;
   circulatingPrevDay: number;
   circulatingPrevWeek: number;
@@ -80,7 +82,7 @@ vi.mock("@shared/lib/psi-eligible", () => {
   const metaFor = (fixture: CoinFixture) => ({
     id: fixture.id,
     symbol: fixture.symbol,
-    flags: { navToken: false },
+    flags: { navToken: false, pegCurrency: getPegTaxonomyByType(fixture.pegType)?.currency },
   });
   // Mirror the real module: the DEWS cohort is the PSI universe less NAV tokens.
   const dewsEligibleCoins = () => (fixtures ?? []).map(metaFor).filter((coin) => coin.flags?.navToken !== true);
@@ -100,17 +102,11 @@ vi.mock("@shared/lib/psi-eligible", () => {
   };
 });
 
-vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1, peggedEUR: 1.08 } })),
-  getPegReference: vi.fn((pegType: string) => (pegType === "peggedEUR" ? 1.08 : 1)),
-  normalizePegType: vi.fn((pegType: string | undefined) => pegType),
-}));
-
-
 // eslint-disable-next-line no-var
 var insertedSignals: Record<string, { score: number; band: string; signalsJson: string }> = {};
 
-vi.mock("../../lib/db-cache", () => ({
+vi.mock("../../lib/db-cache", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/db-cache")>(),
   getCache: vi.fn(async (_db: unknown, key: string) => {
     if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
     return {
@@ -121,9 +117,10 @@ vi.mock("../../lib/db-cache", () => ({
           pegType: fixture.pegType,
           price: fixture.price,
           priceConfidence: fixture.priceConfidence,
-          circulating: { [fixture.pegType]: fixture.circulating },
-          circulatingPrevDay: { [fixture.pegType]: fixture.circulatingPrevDay },
-          circulatingPrevWeek: { [fixture.pegType]: fixture.circulatingPrevWeek },
+          circulating: { [fixture.pegType]: fixture.circulating * fixture.price },
+          circulatingNative: fixture.circulating,
+          supplyObservedAt: Math.floor(Date.now() / 1000),
+          supplySource: "onchain-circulating-supply",
         })),
       }),
       updatedAt: Math.floor(Date.now() / 1000),
@@ -143,6 +140,15 @@ function makeDb(): D1Database {
   const stmt = (sql: string) => {
     let boundArgs: unknown[] = [];
     const all = async <T>() => {
+      if (sql.includes("pharos:dews:native-supply-history")) {
+        const day = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
+        return { results: fixtures.flatMap((fixture) => [1, 7].map((offset) => {
+          const snapshotDate = day - offset * DAY_SECONDS;
+          return { stablecoin_id: fixture.id, snapshot_date: snapshotDate,
+            circulating_native: offset === 1 ? fixture.circulatingPrevDay : fixture.circulatingPrevWeek,
+            supply_provenance: JSON.stringify({ supplySource: "onchain-circulating-supply", supplyObservedAt: snapshotDate, supplyChainGuard: null }) };
+        })) as T[] };
+      }
       if (sql.includes("pharos:dews:publication-generation-ids")
         || sql.includes("pharos:dews:stress-latest-generation-ids")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };

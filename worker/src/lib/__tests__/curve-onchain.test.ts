@@ -7,15 +7,18 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmBlockNumber: vi.fn(),
   fetchEvmBlockTimestamp: vi.fn(),
   fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEvmRpcBatch: vi.fn(),
 }));
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fetchEvmRpcBatch } from "../evm-rpc";
 const mockEvmCall = vi.mocked(fetchEvmCallHexAtBlock);
+const mockRpcBatch = vi.mocked(fetchEvmRpcBatch);
 const mockBlockNumber = vi.mocked(fetchEvmBlockNumber);
 const mockBlockTimestamp = vi.mocked(fetchEvmBlockTimestamp);
 
 const FRESH_BLOCK_NUMBER = 19_000_000;
 const NOW = 1_800_000_000_000;
 const FRESH_BLOCK_TIMESTAMP = 1_799_999_970;
+const PAR_MARK = { price: 1, observedAt: NOW / 1000 };
 const THREE_POOL_ADDRESS = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7";
 
 function hexWord(value: bigint | number | string): `0x${string}` {
@@ -31,6 +34,7 @@ function makeCurveConfig(overrides: Partial<CurvePoolConfig> = {}): CurvePoolCon
     inputDecimals: 6,
     outputDecimals: 6,
     chain: "ethereum",
+    terminalQuoteAsset: "USDC",
     ...overrides,
   };
 }
@@ -48,17 +52,21 @@ afterEach(() => {
 
 describe("fetchCurveOnchainPrices", () => {
   it("preserves all post-A19 RPC calldata, pinned blocks and route clocks", async () => {
-    const baselineRoutes = curveExpandedPostA19.routes as CurvePoolConfig[];
+    const baselineRoutes: CurvePoolConfig[] = (curveExpandedPostA19.routes as Omit<CurvePoolConfig, "terminalQuoteAsset">[])
+      .map((route) => ({ ...route, terminalQuoteAsset: "USDC" }));
     mockEvmCall.mockImplementation(async (_chain, address, calldata) => {
       const outputIndex = Number(BigInt(`0x${calldata.slice(74, 138)}`));
       const route = baselineRoutes.find((config) =>
         config.poolAddress === address && config.outputIndex === outputIndex)!;
       return hexWord((route.outputDecimals === 2 ? 100n : 1n) * 10n ** BigInt(route.outputDecimals));
     });
-    const baseline = await fetchCurveOnchainPrices(baselineRoutes);
+    const baseline = await fetchCurveOnchainPrices(baselineRoutes, PAR_MARK);
     const baselineCalls = [...mockEvmCall.mock.calls];
     mockEvmCall.mockClear();
-    const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS);
+    mockRpcBatch.mockResolvedValue([
+      hexWord(10n ** 24n), hexWord(10n ** 24n), hexWord(10n ** 21n), hexWord(10n ** 23n),
+    ]);
+    const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, PAR_MARK);
     expect(baseline.kind).toBe("ok");
     expect(baseline.value.prices.size).toBe(baselineRoutes.length);
     expect(mockEvmCall.mock.calls).toStrictEqual(baselineCalls);
@@ -71,6 +79,33 @@ describe("fetchCurveOnchainPrices", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it.each([
+    [99_225, 57_000, false],
+    [200_000, 45_000, false],
+    [200_000, 57_000, true],
+  ])("requires pmUSD exit inventory %s and executable second-size proceeds %s", async (inventory, proceeds, accepted) => {
+    const pmusd = CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "pmusd-precious-metals")!;
+    const crvusd = CURVE_POOL_CONFIGS.find(({ stablecoinId }) => stablecoinId === "crvusd-curve")!;
+    mockEvmCall.mockImplementation(async (_chain, address) =>
+      hexWord(address === pmusd.poolAddress ? 1_754_385_964_912_280_702n : 10n ** 18n));
+    const units = 10n ** 18n;
+    mockRpcBatch.mockResolvedValue([
+      hexWord(BigInt(inventory) * units), hexWord(3_488_300n * units), hexWord(570n * units),
+      hexWord(BigInt(proceeds) * units),
+    ]);
+    const outcome = await fetchCurveOnchainPrices([pmusd, crvusd], PAR_MARK);
+    expect(outcome.value.prices.has(pmusd.stablecoinId)).toBe(accepted);
+    expect(outcome.value.prices.get(crvusd.stablecoinId)).toBe(1);
+    expect(mockRpcBatch.mock.calls[0]?.[1].map(({ params }) => params[1])).toEqual(Array(4).fill("0x121eac0"));
+  });
+
+  it.each([null, { price: 0.87, observedAt: NOW / 1000 - 301 }])("withholds Curve prices without a fresh USDC/USD mark", async (mark) => {
+    const outcome = await fetchCurveOnchainPrices([makeCurveConfig()], mark);
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.prices.size).toBe(0);
+    expect(mockEvmCall).not.toHaveBeenCalled();
+  });
+
   it("parses get_dy response into implied price", async () => {
     // get_dy(1, 2, 1e6) returns 999000 for USDT (6 decimals out)
     // Implied price = inputFloat/outputFloat = 1.0/0.999 ≈ 1.001
@@ -78,7 +113,7 @@ describe("fetchCurveOnchainPrices", () => {
     mockEvmCall.mockResolvedValue(mockHexResponse);
 
     const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.size).toBe(1);
     expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(1.001, 3);
@@ -107,7 +142,7 @@ describe("fetchCurveOnchainPrices", () => {
       inputDecimals: 6,
       outputDecimals: 18,
     });
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.value.prices.get("dai-makerdao")).toBeCloseTo(0.999, 3);
   });
 
@@ -128,7 +163,7 @@ describe("fetchCurveOnchainPrices", () => {
       outputDecimals: 2,
       useUnderlying: true,
     });
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
 
     const calldata = mockEvmCall.mock.calls[0][2] as string;
     const dx = BigInt(`0x${calldata.slice(-64)}`);
@@ -141,7 +176,7 @@ describe("fetchCurveOnchainPrices", () => {
     mockEvmCall.mockResolvedValue(hexWord(999000));
 
     const config = makeCurveConfig(); // USDT out, 6 decimals
-    await fetchCurveOnchainPrices([config]);
+    await fetchCurveOnchainPrices([config], PAR_MARK);
 
     const calldata = mockEvmCall.mock.calls[0][2] as string;
     expect(BigInt(`0x${calldata.slice(-64)}`)).toBe(BigInt(10) ** BigInt(6));
@@ -150,7 +185,7 @@ describe("fetchCurveOnchainPrices", () => {
   it("returns no-data outcome when RPC returns null for every pool", async () => {
     mockEvmCall.mockResolvedValue(null);
     const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
   });
@@ -169,7 +204,7 @@ describe("fetchCurveOnchainPrices", () => {
       outputDecimals: 18,
       useUnderlying: true,
     });
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.001, 3);
 
     // Verify the underlying selector was used, not get_dy
@@ -192,6 +227,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 6,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
       },
       {
         stablecoinId: "gho-aave",
@@ -201,11 +237,12 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
     ];
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.value.prices.get("crvusd-curve")).toBeCloseTo(1.001, 3);
     const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
     expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
@@ -221,11 +258,14 @@ describe("fetchCurveOnchainPrices", () => {
       mockEvmCall.mockImplementation(async (_chain, address) => hexWord(
         address === target.poolAddress ? 10n ** BigInt(target.outputDecimals) : 1_020_000n,
       ));
-      const outcome = await fetchCurveOnchainPrices([target, usdt]);
-      expect(outcome.value.prices.get(id)).toBeCloseTo(1 / 1.02, 8);
+      const outcome = await fetchCurveOnchainPrices([target, usdt], { price: 0.87, observedAt: 1_799_999_750 });
+      expect(outcome.value.prices.get(id)).toBeCloseTo(0.87 / 1.02, 8);
+      expect(outcome.value.pricePoolKeysByCoinId.get(id)).toEqual([
+        `ethereum:${target.poolAddress.toLowerCase()}`, `arbitrum:${usdt.poolAddress.toLowerCase()}`,
+      ]);
       expect(outcome.value.routeTypeByCoinId.get(id)).toBe("one-hop");
       expect(outcome.value.hopDepthByCoinId.get(id)).toBe(1);
-      expect(outcome.value.observedAtByCoinId.get(id)).toBe(1_799_999_800);
+      expect(outcome.value.observedAtByCoinId.get(id)).toBe(1_799_999_750);
     },
   );
 
@@ -237,7 +277,7 @@ describe("fetchCurveOnchainPrices", () => {
       const config = targets.find((target) => target.poolAddress === address) ?? usdt;
       return hexWord(10n ** BigInt(config.outputDecimals));
     });
-    const outcome = await fetchCurveOnchainPrices(dependency === "missing" ? targets : [...targets, usdt]);
+    const outcome = await fetchCurveOnchainPrices(dependency === "missing" ? targets : [...targets, usdt], PAR_MARK);
     expect(outcome.value.prices.size).toBe(0);
   });
 
@@ -251,7 +291,7 @@ describe("fetchCurveOnchainPrices", () => {
       hop: { viaStablecoinId: "via" },
     });
     mockEvmCall.mockResolvedValue(hexWord(1_000_000));
-    const outcome = await fetchCurveOnchainPrices([dependent, via]);
+    const outcome = await fetchCurveOnchainPrices([dependent, via], PAR_MARK);
     expect([...outcome.value.prices]).toEqual([["dependent", 1], ["via", 1]]);
     expect([...outcome.value.observedAtByCoinId]).toEqual([
       ["dependent", 1_799_999_800], ["via", 1_799_999_800],
@@ -277,6 +317,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
       {
@@ -287,10 +328,11 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 6,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
       },
     ];
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
     expect(outcome.value.prices.get("gho-aave")).toBeCloseTo(expectedGho, 3);
   });
@@ -309,6 +351,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 6,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
       },
       {
         stablecoinId: "gho-aave",
@@ -318,11 +361,12 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "crvusd-curve" },
       },
     ];
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.value.prices.has("crvusd-curve")).toBe(false);
     expect(outcome.value.prices.has("gho-aave")).toBe(false);
   });
@@ -348,14 +392,14 @@ describe("fetchCurveOnchainPrices", () => {
       outputDecimals: 18,
       useUnderlying: true,
     });
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.value.prices.get("lusd-liquity")).toBeCloseTo(1.016, 2);
   });
 
   it("returns upstream-error outcome when every RPC call throws", async () => {
     mockEvmCall.mockRejectedValue(new Error("network down"));
     const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
   });
@@ -371,7 +415,7 @@ describe("fetchCurveOnchainPrices", () => {
         ...makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
       },
     ];
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.size).toBe(1);
     expect(outcome.value.prices.get("usdt-tether")).toBeCloseTo(1.001, 3);
@@ -387,6 +431,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
       },
       {
         stablecoinId: "token-b",
@@ -396,6 +441,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-c" },
       },
       {
@@ -406,13 +452,14 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-b" },
       },
     ];
 
     mockEvmCall.mockResolvedValue(hexWord("1000000000000000000"));
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.value.prices.has("token-b")).toBe(true);
     expect(outcome.value.prices.has("token-a")).toBe(false);
   });
@@ -436,6 +483,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-b" },
         routeType: "chained-hop",
         maxHopDepth: 2,
@@ -448,6 +496,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-c" },
       },
       {
@@ -458,10 +507,11 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
       },
     ];
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     const expectedTokenA = (1.0 / 0.997) * (1.0 / 0.998) * (1.0 / 0.999);
     expect(outcome.value.prices.get("token-a")).toBeCloseTo(expectedTokenA, 3);
     expect(outcome.value.routeTypeByCoinId.get("token-a")).toBe("chained-hop");
@@ -480,6 +530,7 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-b" },
         routeType: "chained-hop",
         maxHopDepth: 2,
@@ -492,13 +543,14 @@ describe("fetchCurveOnchainPrices", () => {
         inputDecimals: 18,
         outputDecimals: 18,
         chain: "ethereum",
+        terminalQuoteAsset: "USDC",
         hop: { viaStablecoinId: "token-a" },
         routeType: "chained-hop",
         maxHopDepth: 2,
       },
     ];
 
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
   });
@@ -514,10 +566,11 @@ describe("fetchCurveOnchainPrices", () => {
       inputDecimals: 18,
       outputDecimals: 18,
       chain: "ethereum",
+      terminalQuoteAsset: "USDC",
       hop: { viaStablecoinId: "token-b" },
     };
 
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.has("token-a")).toBe(false);
   });
@@ -536,7 +589,7 @@ describe("fetchCurveOnchainPrices", () => {
       routeType: "trusted-wrapper",
     });
 
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.value.prices.get("wrapper-token")).toBe(1);
     expect(outcome.value.routeTypeByCoinId.get("wrapper-token")).toBe("trusted-wrapper");
     expect(outcome.value.hopDepthByCoinId.get("wrapper-token")).toBe(0);
@@ -550,7 +603,7 @@ describe("fetchCurveOnchainPrices", () => {
       makeCurveConfig(),
       makeCurveConfig({ stablecoinId: "usdc-usd-coin", inputIndex: 0, outputIndex: 1 }),
     ];
-    const outcome = await fetchCurveOnchainPrices(configs);
+    const outcome = await fetchCurveOnchainPrices(configs, PAR_MARK);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.observedAtByCoinId.get("usdt-tether")).toBe(FRESH_BLOCK_TIMESTAMP);
     expect(outcome.value.observedAtByCoinId.get("usdc-usd-coin")).toBe(FRESH_BLOCK_TIMESTAMP);
@@ -563,7 +616,7 @@ describe("fetchCurveOnchainPrices", () => {
     "applies the block freshness cutoff at age %s", async (age, kind, size) => {
       mockBlockTimestamp.mockResolvedValue(1_800_000_000 - age);
       mockEvmCall.mockResolvedValue(hexWord(1_000_000));
-      const outcome = await fetchCurveOnchainPrices([makeCurveConfig()]);
+      const outcome = await fetchCurveOnchainPrices([makeCurveConfig()], PAR_MARK);
       expect(outcome.kind).toBe(kind);
       expect(outcome.value.prices.size).toBe(size);
       if (age === 300) expect(outcome.value.prices.get("usdt-tether")).toBe(1);
@@ -573,7 +626,7 @@ describe("fetchCurveOnchainPrices", () => {
   it("returns upstream-error when block number RPC fails", async () => {
     mockBlockNumber.mockResolvedValue(null);
     const config = makeCurveConfig();
-    const outcome = await fetchCurveOnchainPrices([config]);
+    const outcome = await fetchCurveOnchainPrices([config], PAR_MARK);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
     expect(mockEvmCall).not.toHaveBeenCalled();

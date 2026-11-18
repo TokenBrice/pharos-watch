@@ -1,4 +1,4 @@
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD } from "@shared/lib/depeg-config";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { getPrimaryPriceAgeSec, getPrimaryTrustSources, type PrimaryPriceTrustInput } from "@shared/lib/depeg-primary-trust";
@@ -118,7 +118,7 @@ export interface DexAggregateClock {
 }
 
 /** Every repeated clock and the optional independent header must validate. */
-export function getDexAggregateObservedAt(payload: unknown, nowSec: number): DexAggregateClock {
+export function getDexAggregateObservedAt(payload: unknown, nowSec: number, purpose: "affirmative" | "display" = "affirmative"): DexAggregateClock {
   const sources = getDexPriceSourceEntries(payload);
   const unavailable: DexAggregateClock = { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-unavailable" };
   if (sources == null) return unavailable;
@@ -126,8 +126,9 @@ export function getDexAggregateObservedAt(payload: unknown, nowSec: number): Dex
   if (contributors.length === 0) return unavailable;
   let oldest = Infinity;
   for (const source of contributors) {
-    const clock = source != null && typeof source === "object" && "aggregateObservedAt" in source
-      ? source.aggregateObservedAt : null;
+    if (source == null || typeof source !== "object" || !("aggregateObservedAt" in source)) return unavailable;
+    const clock = purpose === "display" && source.aggregateObservedAt === null && "displayAggregateObservedAt" in source
+      ? source.displayAggregateObservedAt : source.aggregateObservedAt;
     if (clock == null) return unavailable;
     if (typeof clock !== "number" || !Number.isFinite(clock) || clock <= 0) {
       return { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-invalid" };
@@ -172,6 +173,11 @@ export function isAffirmativeDexPriceRow(
   tier: DexPriceTrustTier,
 ): boolean {
   return getDexAggregateRejectionReason(row, nowSec, tier) == null;
+}
+
+export function isFreshDexPoolObservation(observedAt: number | null | undefined, nowSec: number): observedAt is number {
+  return observedAt != null && Number.isSafeInteger(observedAt) && observedAt > 0 &&
+    observedAt <= nowSec && nowSec - observedAt <= DEX_PROTOCOL_SOURCE_FRESHNESS_SEC;
 }
 
 export function hasFreshMultiSourcePrimaryAgreement(

@@ -323,37 +323,45 @@ describe("stablecoin publication health", () => {
     expect(after.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
   });
 
-  it("recomputes scheduled closures from compact legacy gaps across close and reopen without a new run", async () => {
+  it.each([
+    ["pre-close legacy gap", false],
+    ["in-closure gap", true],
+  ] as const)("keeps the correct warning across close and reopen for a compact %s", async (_, exempt) => {
     const { sqlite, db } = fixtures.open();
     const id = "chfm-mento";
     const close = Date.UTC(2026, 9, 30, 21) / 1000;
-    insertRun(sqlite, "sync-stablecoins", close - 60, {
+    const startedAt = exempt ? close : close - 60;
+    insertRun(sqlite, "sync-stablecoins", startedAt, {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: priceCoverage({
         complete: false, pricedActiveCount: activeIds.length - 1,
         pricedActiveIds: activeIds.filter((candidate) => candidate !== id),
         missingActiveIds: [id], missingPriceCount: 1,
-        missingActiveState: [[id, 800, 1.2, "mento-fpmm", close - 900, "no-accepted-price"]],
+        missingActiveState: [[id, 800, 1.2, "mento-fpmm", close - 900, "no-accepted-price",
+          ...(exempt ? [null, null, null, null, null, startedAt] : [])]],
         alertEligibleIds: [id], alertEligibleCount: 1,
         // Legacy review/closure decisions are never read as current truth.
         acknowledgedGapIds: [id], expiredGapReviewIds: [id], scheduledClosureGapIds: [id],
       }),
     });
-    const before = (await loadStablecoinCoverageHealth(db, close - 1)).activePriceCoverage;
-    expect(before).toMatchObject({ scheduledClosureGapIds: [], alertEligibleIds: [id], acknowledgedGapIds: [] });
+    if (!exempt) {
+      const before = (await loadStablecoinCoverageHealth(db, close - 1)).activePriceCoverage;
+      expect(before).toMatchObject({ scheduledClosureGapIds: [], alertEligibleIds: [id], acknowledgedGapIds: [] });
+    }
     const during = (await loadStablecoinCoverageHealth(db, close)).activePriceCoverage;
     expect(during).toMatchObject({
-      status: "incomplete", missingPriceCount: 1, missingActiveIds: [id], scheduledClosureGapIds: [id],
-      alertEligibleIds: [], alertEligibleCount: 0, acknowledgedGapIds: [],
+      status: "incomplete", missingPriceCount: 1, missingActiveIds: [id], scheduledClosureGapIds: exempt ? [id] : [],
+      alertEligibleIds: exempt ? [] : [id], alertEligibleCount: exempt ? 0 : 1, acknowledgedGapIds: [],
     });
     expect(during.expiredGapReviewIds).not.toContain(id);
     expect(during.missingActiveAssets[0]).toMatchObject({
-      currentPrice: null, consecutiveMissingGenerations: 800, alertEligible: false, acknowledgedGap: null,
-      scheduledClosure: { reason: "market-closed", lane: "mento-fpmm" },
+      currentPrice: null, consecutiveMissingGenerations: 800, alertEligible: !exempt, acknowledgedGap: null,
+      scheduledClosure: exempt ? { reason: "market-closed", lane: "mento-fpmm" } : null,
     });
     const reopen = Date.UTC(2026, 10, 1, 23) / 1000;
-    for (const [elapsed, eligible] of [[0, false], [CRON_INTERVALS["sync-stablecoins"], false],
-      [2 * CRON_INTERVALS["sync-stablecoins"], true]] as const) {
+    const interval = CRON_INTERVALS["sync-stablecoins"];
+    for (const elapsed of [0, interval, 2 * interval]) {
+      const eligible = !exempt || elapsed >= 2 * interval;
       const after = (await loadStablecoinCoverageHealth(db, reopen + elapsed)).activePriceCoverage;
       expect(after).toMatchObject({ scheduledClosureGapIds: [], alertEligibleIds: eligible ? [id] : [],
         alertEligibleCount: eligible ? 1 : 0, missingActiveIds: [id] });

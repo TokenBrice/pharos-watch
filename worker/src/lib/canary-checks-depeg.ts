@@ -1,3 +1,4 @@
+import { hasCurrentPendingClosureVerdict, type PendingDepegRow } from "./depeg-pending";
 import { CANARY_METADATA_BUDGET } from "./canary-check-results";
 import {
   DEX_FRESHNESS_SEC,
@@ -229,12 +230,6 @@ interface PendingConfirmationSummaryRow {
   severe_recent: number | null;
 }
 
-interface PendingConfirmationRow {
-  stablecoin_id: string;
-  first_seen_at: number;
-  reason: string | null;
-}
-
 /**
  * Pending candidates are deleted with an outcome and never create a
  * `depeg_events` row, so an expired extreme move or a row that outlives the
@@ -264,19 +259,17 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
     }
     const pending = await loadPendingCandidates(db);
     const olderThanBase = pending.filter((row) => row.first_seen_at <= observedAt - baseExpirySec);
-    // Confirmation waits on FX and metal candidates while their reference market is shut;
-    // the first run after the reopen expires or promotes them.
-    const held = referenceMarketHeld(observedAt, stalledGraceSec);
-    // A non-extreme candidate cannot outlive the extended limit; an extreme
-    // move gets the severe limit. One producer interval of grace keeps the
-    // run that may still keep the row from being reported before the next run
-    // can expire it.
+    const held = referenceMarketHeld(observedAt, 0);
+    const heldByConfirmation = (row: PendingDepegRow) => {
+      const since = held.get(row.stablecoin_id);
+      const at = row.reference_market_held_at;
+      return since != null && hasCurrentPendingClosureVerdict(row) && !isExtremeMovePending(row.reason) && at != null && Number.isSafeInteger(at) &&
+        at >= Math.max(since, row.first_seen_at, observedAt - stalledGraceSec) && at <= observedAt &&
+        row.first_seen_at >= since - extendedExpirySec - stalledGraceSec;
+    };
     const stalled = pending.filter((row) => {
       const limitSec = isExtremeMovePending(row.reason) ? severeExpirySec : extendedExpirySec;
-      // Only a candidate that was not already stalled when the closure began is held.
-      const since = held.get(row.stablecoin_id);
-      const heldByClosure = since != null && row.first_seen_at >= since - limitSec - stalledGraceSec;
-      return !heldByClosure && row.first_seen_at < observedAt - limitSec - stalledGraceSec;
+      return !heldByConfirmation(row) && row.first_seen_at < observedAt - limitSec - stalledGraceSec;
     });
     const oldestFirstSeen = pending[0]?.first_seen_at ?? null;
     const metadata = {
@@ -284,7 +277,7 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
       oldestPendingAgeSec: oldestFirstSeen == null ? null : Math.max(0, observedAt - oldestFirstSeen),
       olderThanBaseExpiryCount: olderThanBase.length,
       stalledExpiredCount: stalled.length,
-      ...(held.size > 0 && { referenceMarketHeldCount: pending.filter((row) => held.has(row.stablecoin_id)).length }),
+      ...(held.size > 0 && { referenceMarketHeldCount: pending.filter(heldByConfirmation).length }),
       unconfirmedSevereRecent: Number(summary.severe_recent),
       unconfirmedSevereLookbackSec: STATUS_DEPEG_DETECTION_THRESHOLDS.unconfirmedSevereLookbackSec,
       baseExpirySec,
@@ -315,16 +308,15 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
   }
 }
 
-async function loadPendingCandidates(db: D1Database): Promise<PendingConfirmationRow[]> {
+async function loadPendingCandidates(db: D1Database): Promise<PendingDepegRow[]> {
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT /* pharos:depeg-pending-aged-candidates */
-           stablecoin_id, first_seen_at, reason
+        `SELECT /* pharos:depeg-pending-aged-candidates */ *
          FROM depeg_pending
          ORDER BY first_seen_at ASC`,
       )
-      .all<PendingConfirmationRow>(),
+      .all<PendingDepegRow>(),
   );
   return rows.results ?? [];
 }
@@ -521,6 +513,7 @@ interface BlindOpenEventRow {
   symbol: string;
   last_trusted_price_at: number | null;
   price_coverage_gap_started_at: number | null;
+  blind_since?: number;
   total_count: number | null;
   acknowledged_count: number | null;
   acknowledged_ids_json: string | null;
@@ -563,22 +556,32 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
            WHERE ended_at IS NULL
              AND stablecoin_id NOT IN (SELECT value FROM json_each(?))
              AND (last_trusted_price_at IS NOT NULL OR price_coverage_gap_started_at IS NOT NULL)
-             AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
-             AND NOT EXISTS (SELECT 1 FROM json_each(?) AS hold
-               WHERE json_extract(hold.value, '$.id') = depeg_events.stablecoin_id
-                 AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0))
-                   >= json_extract(hold.value, '$.after'))
+           ),
+           closure AS (SELECT json_extract(value, '$.id') AS asset_id,
+             json_extract(value, '$.since') AS closure_start,
+             json_extract(value, '$.after') AS pre_close_cutoff FROM json_each(?)),
+           clocked AS (
+             SELECT blind.*, closure.pre_close_cutoff, CASE
+               WHEN price_coverage_gap_started_at >= closure.closure_start
+                 AND last_trusted_price_at < closure.pre_close_cutoff THEN last_trusted_price_at
+               ELSE MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0))
+             END AS blind_since
+             FROM blind LEFT JOIN closure ON closure.asset_id = blind.stablecoin_id
+           ),
+           actionable AS (
+             SELECT * FROM clocked WHERE blind_since < ?
+               AND (pre_close_cutoff IS NULL OR blind_since < pre_close_cutoff)
            )
            SELECT *, COUNT(*) OVER () AS total_count, SUM(acknowledged) OVER () AS acknowledged_count,
-             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 1) AS acknowledged_ids_json,
-             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 0 AND unresolved = 1) AS notice_ids_json
-           FROM blind
-           ORDER BY acknowledged ASC, MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
+             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM actionable WHERE acknowledged = 1) AS acknowledged_ids_json,
+             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM actionable WHERE acknowledged = 0 AND unresolved = 1) AS notice_ids_json
+           FROM actionable
+           ORDER BY acknowledged ASC, blind_since ASC
            LIMIT 25`,
         )
         .bind(JSON.stringify([...reviews.values()].map(({ eventId, stablecoinId }) => ({ eventId, stablecoinId }))),
-          JSON.stringify(notices), JSON.stringify([...FROZEN_IDS]), blindBefore, JSON.stringify([...held].map(([id, since]) =>
-            ({ id, after: since - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec }))))
+          JSON.stringify(notices), JSON.stringify([...FROZEN_IDS]), JSON.stringify([...held].map(([id, since]) =>
+            ({ id, since, after: since - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec }))), blindBefore)
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];
@@ -607,7 +610,7 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
     // Partition the existing detail sample so counts/review IDs survive the canary metadata cap.
     const events = blind.slice(0, 10).map((row) => ({
       eventId: row.id, stablecoinId: row.stablecoin_id, symbol: row.symbol,
-      blindAgeSec: Math.max(0, observedAt - Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0)),
+      blindAgeSec: Math.max(0, observedAt - (row.blind_since ?? Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0))),
     }));
     const acknowledgedBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId === event.stablecoinId);
     const actionableBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId !== event.stablecoinId && !noticeIds.includes(event.eventId));

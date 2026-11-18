@@ -55,7 +55,7 @@ export function classifyNativeQuoteImplausibility(
     type: "fresh",
   });
   if (!decision.accepted) {
-    return implausibility("native-quote-above-peg-reference-band", true);
+    return implausibility("native-quote-above-peg-reference-band", decision.reasonCode !== "hard_cap_exceeded");
   }
 
   const signal = deriveDepegSignal(input.price, 1);

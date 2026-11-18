@@ -1,16 +1,13 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
-import type {
-  ActivePriceCoverageGap,
-  ActivePriceCoverageHealth,
-  StablecoinPublicationHealth,
-} from "@shared/types/status";
+import type { ActivePriceCoverageHealth, StablecoinPublicationHealth } from "@shared/types/status";
 import { tryParseJson } from "./json-parse";
 import {
   parseMissingActivePriceDetailsById,
   resolveStablecoinPriceGapReviews,
   resolveStablecoinMarketHours,
+  isScheduledClosureGap,
 } from "./stablecoin-publication-coverage";
 
 export function unknownStablecoinPublicationHealth(
@@ -155,41 +152,47 @@ function parseActivePriceCoverageHealth(
   const nominalReferenceIds = parsed.data.nominalReferenceIds ?? [];
   const nominalReferenceCount = parsed.data.nominalReferenceCount ?? 0;
   const accountedIds = [...pricedActiveIds, ...nominalReferenceIds];
+  const accountedIdSet = new Set(accountedIds);
   const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
   const marketHours = resolveStablecoinMarketHours([...ACTIVE_IDS], nowSec);
-  const parseOptions = { nowSec, reviewsById: reviews.activeById };
+  const parseOptions = { nowSec, observedAt, reviewsById: reviews.activeById, marketHours };
   const missingDetailsById = parseMissingActivePriceDetailsById(coverage, parseOptions);
   const missingActiveAssets = (missingActiveIds.length > 0
     ? missingActiveIds
     : [...missingDetailsById.keys()])
     .map((stablecoinId) => missingDetailsById.get(stablecoinId))
-    .filter((entry): entry is ActivePriceCoverageGap => entry != null);
+    .flatMap((entry) => {
+      if (!entry) return [];
+      const { firstMissingAt: _firstMissingAt, ...gap } = entry;
+      return [gap];
+    });
   const derivedAlertEligibleIds = missingActiveAssets
     .filter((entry) => entry.alertEligible)
     .map((entry) => entry.stablecoinId);
   // Recompute from registry truth even for metadata written before a review
   // was added, renewed, removed, or expired. Compact streaks keep re-alerting
   // after expiry even when the producer persisted an empty eligible-ID list.
-  const scheduledClosureGapIds = missingActiveIds.filter((id) => marketHours.closedById.has(id)
-    && !pricedActiveIds.includes(id) && (missingDetailsById.get(id)?.currentPrice ?? 0) <= 0);
+  const scheduledClosureGapIds = missingActiveIds.filter((id) =>
+    !accountedIdSet.has(id) && missingDetailsById.get(id)?.scheduledClosure != null);
   const scheduledIds = new Set(scheduledClosureGapIds);
   const acknowledgedGapIds = missingActiveIds.filter((id) => !scheduledIds.has(id)
     && reviews.activeById.has(id)
-    && !pricedActiveIds.includes(id)
+    && !accountedIdSet.has(id)
     && (missingDetailsById.get(id)?.currentPrice ?? 0) <= 0,
   );
   const acknowledgedIds = new Set(acknowledgedGapIds);
   const alertEligibleIds = [...new Set([
     ...stringArray(coverage.alertEligibleIds),
     ...derivedAlertEligibleIds,
-  ])].filter((id) => !acknowledgedIds.has(id) && !marketHours.alertSuppressedIds.has(id) && !nominalReferenceIds.includes(id));
+  ])].filter((id) => !acknowledgedIds.has(id) && !accountedIdSet.has(id)
+    && !isScheduledClosureGap(marketHours, id, missingDetailsById.get(id)?.firstMissingAt));
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
     && presentActiveCount === ACTIVE_IDS.size
     && pricedActiveCount != null && pricedActiveCount + nominalReferenceCount === ACTIVE_IDS.size
     && nominalReferenceCount === nominalReferenceIds.length
     && accountedIds.length === ACTIVE_IDS.size
-    && new Set(accountedIds).size === ACTIVE_IDS.size
+    && accountedIdSet.size === ACTIVE_IDS.size
     && accountedIds.every((stablecoinId) => ACTIVE_IDS.has(stablecoinId))
     && missingPriceCount === 0
     && missingActiveIds.length === 0;

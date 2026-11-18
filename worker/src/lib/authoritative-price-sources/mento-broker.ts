@@ -135,10 +135,20 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
     const observedAt = Math.min(head.timestamp, oracleTime, parent.trustedParent.observedAt);
     const age = Math.floor(Date.now() / 1000) - observedAt;
     if (age < 0 || age >= maxObservationAgeSec) return reject("dependency-age");
-    const price = Number(small) / Number(UNIT) * parent.trustedParent.price;
-    if (!Number.isFinite(price) || price <= 0) return reject("price-invalid");
+    const exitPriceUsd = Number(small) / Number(UNIT) * parent.trustedParent.price;
+    if (!Number.isFinite(exitPriceUsd) || exitPriceUsd <= 0) return reject("price-invalid");
     validatedHeads.set(context, { block, head });
-    return { price, source: "mento-broker", confidence: "fallback", observedAt, observedAtMode: "upstream" };
+    return {
+      price: exitPriceUsd, source: "mento-broker", confidence: "fallback", observedAt, observedAtMode: "upstream",
+      metadata: {
+        inheritedFrom: parent.parentId,
+        parentSource: parent.trustedParent.source,
+        parentConfidence: parent.trustedParent.confidence,
+        parentObservedAt: parent.trustedParent.observedAt,
+        parentObservedAtMode: parent.trustedParent.observedAtMode,
+        parentReplaySafe: parent.trustedParent.replaySafe,
+      },
+    };
   } catch { return reject("state-malformed"); }
 }
 export const mentoBrokerProvider: PriceSourceProvider = {

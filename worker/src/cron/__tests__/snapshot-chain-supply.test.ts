@@ -268,7 +268,7 @@ describe("snapshotChainSupply", () => {
     },
   );
 
-  it.each(["restored", "stale", "missing"] as const)(
+  it.each(["restored", "stale", "stale-partition", "missing"] as const)(
     "preserves all affected rows on %s chain input and replaces a legacy marker on recovery",
     async (unavailable) => {
       const { sqlite, db } = createLatestSchemaSqlite();
@@ -279,7 +279,10 @@ describe("snapshotChainSupply", () => {
         payload.peggedAssets[1]!.chainCirculating = { Ethereum: { current: 50 } };
         Object.assign(payload.peggedAssets[0]!, {
           supplyRestored: unavailable === "restored",
-          supplyObservedAt: unavailable === "missing" ? nowSec : nowSec - 6 * 86400,
+          supplyObservedAt: unavailable === "missing" || unavailable === "stale-partition" ? nowSec : nowSec - 6 * 86400,
+          ...(unavailable === "stale-partition" ? {
+            chainPartition: { basis: "onchain-share", admission: "carried", observedAt: nowSec - 1801, onchainUsd: 100, ratio: 1 },
+          } : {}),
           ...(unavailable === "missing" ? { chainCirculating: { Ethereum: { current: null } } } : {}),
         });
         const marker = buildChainSupplySnapshotCompletionMarker({ snapshotDate });
@@ -295,7 +298,7 @@ describe("snapshotChainSupply", () => {
         expect(JSON.parse(blocked.metadata ?? "{}")).toMatchObject({
           reason: "chain_observations_unavailable",
           deferredChainIds: expect.arrayContaining(["ethereum"]),
-          [unavailable === "restored" ? "restoredOnlyIds" : unavailable === "stale" ? "staleSupplyIds" : "missingSupplyIds"]:
+          [unavailable === "restored" ? "restoredOnlyIds" : unavailable === "missing" ? "missingSupplyIds" : "staleSupplyIds"]:
             ["usdt-tether"],
         });
         expect(sqlite.prepare("SELECT total_usd FROM chain_supply_history").all()).toEqual([{ total_usd: 99 }]);
@@ -306,6 +309,7 @@ describe("snapshotChainSupply", () => {
         Object.assign(payload.peggedAssets[0]!, {
           supplyRestored: false,
           supplyObservedAt: nowSec + 60,
+          chainPartition: undefined,
           chainCirculating: { Ethereum: { current: 70 } },
         });
         putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);

@@ -8,7 +8,7 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
-import type { LlamaPool } from "../dex-liquidity/types";
+import type { LlamaPool, PoolEntry } from "../dex-liquidity/types";
 import type { PoolProcessingRejection } from "../dex-liquidity/process-pool-types";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import * as priceValidation from "../../lib/price-validation";
@@ -1167,34 +1167,67 @@ describe("dex liquidity scoring stage cycle", () => {
     ]);
   });
 
-  it("prices a euro quote from FX references when the stablecoins cache is unusable", async () => {
+  it.each([[false, true], [true, false], [true, true]])("requires both clocks to retain ratio prices (market %s, ratio %s)", async (hasMarketMark, hasRatioClock) => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    phaseFixtures.current.stagedPools.registryEvaluatedAtSec = now;
+    const admitted = hasMarketMark && hasRatioClock;
     let observations: unknown;
+    const retainedSnapshot: { pool?: PoolEntry } = {};
+    const score = vi.mocked(computeStablecoinScores).getMockImplementation()!;
+    vi.mocked(computeStablecoinScores).mockImplementationOnce(async (...args) => {
+      retainedSnapshot.pool = structuredClone(args[1].get("usdc-circle")?.pools.find((pool) => pool.source === "direct_api"));
+      return score(...args);
+    });
     const publishPrices = vi.mocked(computeDexPrices).getMockImplementation()!;
     vi.mocked(computeDexPrices).mockImplementationOnce(async (...args) => {
       observations = structuredClone(args[0].exactPriceEvidenceByStablecoin?.get("usdc-circle"));
       return publishPrices(...args);
     });
     vi.spyOn(priceValidation, "loadPriceValidationReferences").mockResolvedValueOnce({
-      rates: { peggedEUR: 1.25 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000),
+      rates: { peggedEUR: 1.25 }, type: "fresh", updatedAt: now,
     });
+    const observedAt = now - 60;
+    const counterpartyPrice = { stablecoinId: "eurc-circle", priceUsd: 1.25, observedAtSec: observedAt, observedAtMode: "upstream", source: "kraken+coinbase" };
+    if (hasMarketMark) {
+      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+        kind: "ok", updatedAt: now, payload: { peggedAssets: [{
+          ...makeTrackedStablecoin("eurc-circle", "EURC", 1.25),
+          priceSource: "kraken+coinbase", priceConfidence: "high", agreeSources: ["kraken", "coinbase"],
+          priceObservedAt: observedAt,
+        }] },
+      });
+    }
     vi.mocked(convertToGtNewPools).mockImplementation(realPoolShaping.convertToGtNewPools);
     vi.mocked(extractPriceObservations).mockImplementation(realPoolShaping.extractPriceObservations);
     vi.mocked(fetchFluidPools).mockResolvedValueOnce(apiResult([apiPool({ tokens: [
           { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
           { address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", symbol: "EURC", decimals: 6 },
-        ], price: 0.8, tvlUsd: 1_000_000, volume24hUsd: 100_000, balances: [500_000, 400_000] })]));
+        ], price: 0.8, ratioObservedAtSec: hasRatioClock ? now - 20 : undefined,
+        tvlUsd: 1_000_000, volume24hUsd: 100_000, balances: [500_000, 400_000] })]));
 
     await runScoringCycle();
 
-    expect(observations).toEqual([
-      expect.objectContaining({ price: 1, protocol: "fluid", sourceFamily: "direct_api" }),
-    ]);
+    expect(observations).toEqual(admitted ? [expect.objectContaining({
+      price: expect.closeTo(1), observedAt, counterpartyPrice,
+    })] : undefined);
     const converted = vi.mocked(convertToGtNewPools).mock.results.flatMap((result) =>
       result.type === "return" ? result.value.get("usdc-circle") ?? [] : [],
     );
     expect(converted).toEqual([
-      expect.objectContaining({ address: "0x1111111111111111111111111111111111111111", price: 1 }),
+      expect.objectContaining({
+        address: "0x1111111111111111111111111111111111111111", tvlUsd: 1_000_000,
+        price: admitted ? expect.closeTo(1) : 0,
+        priceObservedAt: admitted ? observedAt : null,
+        measurement: expect.objectContaining({ tvlMeasured: true, priceMeasured: admitted }),
+      }),
     ]);
+    expect(converted[0]?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
+    const retained = retainedSnapshot.pool;
+    expect(retained).toMatchObject({ source: "direct_api", tvlUsd: 1_000_000 });
+    expect(retained?.price).toEqual(admitted ? expect.closeTo(1) : undefined);
+    expect(retained?.priceObservedAt).toBe(admitted ? observedAt : undefined);
+    expect(retained?.priceCounterparty).toEqual(admitted ? counterpartyPrice : undefined);
   });
 
   it("records drift and evidence telemetry when previous run metadata exists", async () => {

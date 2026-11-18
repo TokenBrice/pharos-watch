@@ -59,6 +59,19 @@ describe("deriveAuthoritativePegSignal", () => {
     });
   });
 
+  it("requires the dated XAGm entitlement before measuring a silver deviation", () => {
+    const ozPerToken = 0.998380822;
+    const input = {
+      assetId: "xagm-matrixdock", price: 30 * ozPerToken, quoteObservedAtSec: 123456, pegCurrency: "SILVER",
+      pegType: "peggedSILVER", pegRates: { peggedSILVER: 30 }, pegRateSources: { peggedSILVER: "fx" as const },
+      pegRateCounts: { peggedSILVER: 0 }, commodityOunces: 1,
+    };
+    expect(deriveAuthoritativePegSignal(input)).toMatchObject({ kind: "rejected", reason: "invalid-reference" });
+    expect(deriveAuthoritativePegSignal({ ...input, commodityEntitlement: { source: "matrixdock-frs", generation: "ethereum:123",
+      ozPerToken, observedAtSec: 123450, quoteObservedAtSec: input.quoteObservedAtSec } }))
+      .toMatchObject({ kind: "signal", pegReference: input.price, deviationBps: 0 });
+  });
+
   it("rejects a commodity peg when its derived rate is missing", () => {
     expect(deriveAuthoritativePegSignal({
       price: 3_000,

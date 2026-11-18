@@ -10,6 +10,9 @@ import {
 } from "../../lib/dex-api-common";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
+const PRICE_ASSESSED_AT = 100_000;
+const QUOTE_OBSERVED_AT = PRICE_ASSESSED_AT - 60;
+
 const MOCK_POOL: DexApiPool = {
   source: "fluid",
   chain: "ethereum",
@@ -20,11 +23,18 @@ const MOCK_POOL: DexApiPool = {
     { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT", decimals: 6 },
   ],
   price: 0.9998,
+  ratioObservedAtSec: PRICE_ASSESSED_AT - 20,
   tvlUsd: 500_000,
   volume24hUsd: 100_000,
   feeRate: 0.0001,
   balances: [250_000, 250_000],
 };
+
+function datedMarketPrices(prices: Map<string, number>) {
+  return Object.assign(prices, { marketMarks: new Map([...prices].map(([id, priceUsd]) => [
+    id, { priceUsd, observedAtSec: QUOTE_OBSERVED_AT, source: "kraken+coinbase" },
+  ])) });
+}
 
 function buildContractMetaByChainAddress(
   entries: Array<
@@ -62,6 +72,9 @@ function convertToGtNewPools(
     buildSymbolToChainScopedIds(symbolToIds, chains),
     undefined,
     effectiveTrackedPrices,
+    undefined,
+    undefined,
+    PRICE_ASSESSED_AT,
   );
 }
 
@@ -79,7 +92,8 @@ function extractPriceObservations(
     buildChainAddressToId(addressToId, chains),
     buildSymbolToChainScopedIds(symbolToIds, chains),
     undefined,
-    effectiveTrackedPrices,
+    datedMarketPrices(effectiveTrackedPrices),
+    PRICE_ASSESSED_AT,
   );
 }
 
@@ -151,14 +165,14 @@ describe("convertToGtNewPools", () => {
     expect(gtPool.symbol).toContain("USDC");
   });
 
-  it("prefers tracked stablecoin live prices over unconditional $1 quote assumptions", () => {
+  it("retains a ratio-derived price with a verified ratio clock and an admitted market mark", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,
       tokens: [
         { address: "0xusr", symbol: "USR", decimals: 18 },
         { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
       ],
-      price: 0.25,
+      price: 0.99,
     };
     const addressToId = new Map([
       ["0xusr", "usr-resolv"],
@@ -169,14 +183,19 @@ describe("convertToGtNewPools", () => {
       [pool],
       addressToId,
       new Map(),
-      new Map([
-        ["usr-resolv", 0.2],
+      datedMarketPrices(new Map([
+        ["usr-resolv", 0.99],
         ["usdc-circle", 1],
-      ]),
+      ])),
     );
 
-    expect(result.get("usr-resolv")![0].price).toBeCloseTo(0.25);
-    expect(result.get("usdc-circle")![0].price).toBeCloseTo(0.8);
+    expect(result.get("usdc-circle")![0]).toMatchObject({
+      price: expect.closeTo(1), priceObservedAt: QUOTE_OBSERVED_AT,
+      priceCounterparty: {
+        stablecoinId: "usr-resolv", priceUsd: 0.99, observedAtSec: QUOTE_OBSERVED_AT, source: "kraken+coinbase",
+      },
+      measurement: { priceMeasured: true },
+    });
   });
 
   it("sets price to 0 when pool.price is null and no priceUsd", () => {
@@ -203,7 +222,6 @@ describe("convertToGtNewPools", () => {
     const gtPool = result.get("usdc")![0];
 
     expect(gtPool.symbol).toContain("0xA0b86991");
-    expect(gtPool.price).toBeGreaterThan(0);
   });
 
   it("hydrates missing tracked token symbols from contract metadata before formatting pair labels", () => {

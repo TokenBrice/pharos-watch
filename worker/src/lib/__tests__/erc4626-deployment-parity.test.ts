@@ -30,8 +30,8 @@ const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(ca
 describe("ERC-4626 deployment parity", () => {
   it("preserves every rate field in deterministic source order, including Axis and independent precisions", () => {
     expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(58);
-    // Source configs now own the stablecoin-ID ordering formerly applied by the registry.
-    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("8bce15f88fcb44b8e92df8b85825076cc35b1be0a7d4076fcbea481f64e9bc9e");
+    // The source-ordered fixture includes XGLD's reviewed XAUt return denomination.
+    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("112e553c307b65a6645e9c27e30bb7c4109989c4e3ae161cc97f2e032d4a1bad");
   });
 
   it("preserves every NAV deployment triple, trust flag and route order", () => {

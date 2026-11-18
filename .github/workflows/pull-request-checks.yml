@@ -133,6 +133,13 @@ jobs:
           args=(--base="${PR_BASE_SHA}" --plan-out=.tmp/pr-test-plan.json)
           if [[ -s .tmp/test-timings.json ]]; then args+=(--timings=.tmp/test-timings.json); fi
           npm run test:pr -- "${args[@]}"
+      - name: Verify donor credit continuity against the published ledger
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if ! git diff --quiet "$PR_BASE_SHA" -- shared/data/funding/donations.json; then
+            git show "${PR_BASE_SHA}:shared/data/funding/donations.json" | node --import tsx scripts/ci/check-donation-ledger-transition.ts
+          fi
       - name: Check incident review keys
         # Data check lane, run once per PR instead of per validation shard:
         # reads only the committed reviews, the migration artefact and the

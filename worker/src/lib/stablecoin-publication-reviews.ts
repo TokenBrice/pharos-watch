@@ -1,3 +1,4 @@
+import { MENTO_CALENDAR_REVIEW_DEADLINE_SEC } from "@shared/lib/reference-market-hours";
 export interface StablecoinPublicationWaiver {
   stablecoinId: string;
   owner: string;
@@ -226,7 +227,7 @@ export const STABLECOIN_MARKET_HOURS_CALENDARS = [{
     "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/swap/FPMM.sol",
   ],
   reviewedAt: Date.UTC(2026, 9, 29, 10, 35) / 1000,
-  reviewDeadline: Date.UTC(2027, 9, 29, 10, 35) / 1000,
+  reviewDeadline: MENTO_CALENDAR_REVIEW_DEADLINE_SEC,
   assets: [
     { stablecoinId: "cadm-mento", lane: "mento-broker" },
     { stablecoinId: "audm-mento", lane: "mento-broker" },

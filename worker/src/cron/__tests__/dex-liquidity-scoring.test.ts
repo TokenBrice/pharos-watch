@@ -1803,6 +1803,7 @@ describe("dex-liquidity scoring", () => {
 
   it("joins a DeFiLlama Slipstream fingerprint to the unique exact target inside the TVL window", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const capturedAt = Date.parse("2026-07-27T16:40:00Z") / 1000;
     const cadc = "0x043eb4b75d0805c43d7c834902e335621983cf03";
     const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
     const metrics = initSourcePoolGraph("cadc-cad-coin", "CADC");
@@ -1850,7 +1851,7 @@ describe("dex-liquidity scoring", () => {
       tickSpacing,
       retainedTvlUsd,
       retainedPoolPriceUsd: 0.711,
-      capturedAt: 1_785_084_000,
+      capturedAt,
     });
     const primary = makeTarget(
       "base:0x09da4832d34bebbb55783340d5bede7a70f5c48e",
@@ -1872,7 +1873,7 @@ describe("dex-liquidity scoring", () => {
       new Map([["cadc-cad-coin", metrics]]),
       new Map(),
       undefined,
-      1_785_084_100,
+      capturedAt + 100,
       new Map(),
       undefined,
       slipstreamTargets,

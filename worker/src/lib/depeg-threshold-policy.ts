@@ -16,3 +16,10 @@ export function getDepegThresholdBpsForPegCurrency(pegCurrency: string | undefin
 export function getDepegRecoveryThresholdBps(pegType: string | undefined): number {
   return Math.round(getDepegThresholdBps(pegType) * DEPEG_RECOVERY_THRESHOLD_RATIO);
 }
+
+/** One unit of floating-point precision at par, expressed in basis points. */
+const PAR_ROUNDOFF_BPS = Number.EPSILON * 10_000;
+
+export function isWithinRecoveryBand(absRawBps: number, recoveryThresholdBps: number): boolean {
+  return absRawBps <= recoveryThresholdBps + PAR_ROUNDOFF_BPS;
+}

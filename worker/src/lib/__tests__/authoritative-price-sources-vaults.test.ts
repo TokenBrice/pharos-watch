@@ -15,6 +15,7 @@ import {
   AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS,
   createAuthoritativeLivePriceOverrideStats,
 } from "../authoritative-price-sources";
+import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import { CIRCUIT_SOURCE } from "../constants";
 import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -577,6 +578,25 @@ describe("authoritative-price-sources", () => {
         source: "protocol-redeem-cached-rate",
       }),
     ]);
+  });
+
+  it("keeps a rejected sBOLD supply-valuation rate unavailable to subsequent price enrichment", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const id = "sbold-k3-capital";
+      const at = Math.floor(Date.now() / 1000) - 60;
+      const parent = freshParent("bold-liquity", 1, "coingecko+pyth");
+      sqlite.prepare("INSERT INTO authoritative_vault_rates (stablecoin_id, rate, observed_at, updated_at) VALUES (?, ?, ?, ?)")
+        .run(id, 1.09, at, at);
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(ZERO_WORD_HEX).mockRejectedValueOnce(new Error("RPC unavailable"));
+      expect(await resolveVaultNavSupplyPrice(id, new Map([[parent.id, parent]]), db)).toBeNull();
+      expect(sqlite.prepare("SELECT rate FROM authoritative_vault_rates WHERE stablecoin_id = ?").get(id)).toEqual({ rate: 0 });
+      const overrides = await fetchLiveOverrides([unpricedChild(id), parent], { db });
+      expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(2);
+      expect(overrides.has(id)).toBe(false);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it.each(["fresh", "stale", "incumbent"] as const)("evaluates the bounded offline vault rate with an open circuit (%s)", async (kind) => {
