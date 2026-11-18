@@ -81,7 +81,7 @@ export function RequestSourceAttributionCard({
         totals ? (
           <>
             <AttributionBadge tone="sky">Site {formatAttributionValue(totals.siteSharePct, totals.measurement.siteSharePct, true)}</AttributionBadge>
-            <AttributionBadge tone="watch">External {formatAttributionValue(totals.externalSharePct, totals.measurement.externalSharePct, true)}</AttributionBadge>
+            <AttributionBadge tone="caution">External {formatAttributionValue(totals.externalSharePct, totals.measurement.externalSharePct, true)}</AttributionBadge>
           </>
         ) : null
       }

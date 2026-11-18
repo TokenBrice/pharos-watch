@@ -134,6 +134,8 @@ describe("calendar-only catalog dates", () => {
     ["frozenAt", (date) => ({ frozenAt: date })],
     ["pegScoreCoverage.startDate", (date) => ({ pegScoreCoverage: { ...coverage, startDate: date } })],
     ["pegScoreCoverage.reviewedAt", (date) => ({ pegScoreCoverage: { ...coverage, reviewedAt: date } })],
+    ["notices.0.deadline", (date) => ({ notices: [{ type: "warning", title: "T", message: "M", kind: "deadline", deadline: date }] })],
+    ["notices.0.asOf", (date) => ({ notices: [{ type: "danger", title: "T", message: "M", asOf: date }] })],
   ];
 
   describe.each(fields)("%s", (field, overrides) => {
@@ -152,6 +154,14 @@ describe("calendar-only catalog dates", () => {
       expect(StablecoinMetaSourceAssetSchema.parse(coin)).toEqual(coin);
     });
   });
+
+  it.each([{ kind: "deadline" }, { kind: "paused", deadline: "2026-11-26" }])(
+    "couples a notice deadline date to kind deadline (%o)",
+    (extra) => {
+      const result = StablecoinMetaSourceAssetSchema.safeParse(makeCoin({ notices: [{ type: "warning", title: "T", message: "M", ...extra }] }));
+      expect(result.success).toBe(false);
+    },
+  );
 
   it.each(["2024", "2024-02", "2024-Q1", "2024-H1", "2024-02-29"])(
     "keeps fuzzy launch-date precision %s",

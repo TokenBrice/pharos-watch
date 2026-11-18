@@ -93,7 +93,7 @@ export function AttributionPanel({
       badges={badges ? <div className="flex flex-wrap gap-2">{badges}</div> : null}
     >
       {error ? (
-        <div className={cn("rounded-xl border px-3 py-2 text-sm", SEVERITY_TONE_CLASS.watch.pill)}>{error}</div>
+        <div className={cn("rounded-xl border px-3 py-2 text-sm", SEVERITY_TONE_CLASS.caution.pill)}>{error}</div>
       ) : isLoading && !hasData ? (
         <div className="text-sm text-muted-foreground">{loadingLabel}</div>
       ) : !hasData ? (

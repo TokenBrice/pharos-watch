@@ -86,9 +86,19 @@
   "windDownSourceUrl": "https://x.com/StandX_Official/status/2110613283967230232",
   "notices": [
     {
-      "type": "info",
+      "type": "warning",
+      "title": "StandX wind-down: yield ended, minting closed",
+      "message": "StandX's October 15, 2026 announcement ends all yield from October 15 and closes new DUSD minting on October 20. This is an announced closure schedule, not evidence that current holder assets are lost or redemption is already suspended.",
+      "kind": "paused",
+      "asOf": "2026-10-21"
+    },
+    {
+      "type": "warning",
       "title": "StandX wind-down: redemption deadline January 31, 2027",
-      "message": "StandX's October 15, 2026 announcement ends all yield from October 15 and closes new DUSD minting on October 20. Holders may submit DUSD redemption requests through January 31, 2027; the issuer says the current seven-day process completes by February 7. StandX also plans to remove its PancakeSwap and Raydium DUSD liquidity on January 31. This is an announced closure schedule, not evidence that current holder assets are lost or redemption is already suspended."
+      "message": "Holders may submit DUSD redemption requests through January 31, 2027; the issuer says the current seven-day process completes by February 7. StandX also plans to remove its PancakeSwap and Raydium DUSD liquidity on January 31.",
+      "kind": "deadline",
+      "deadline": "2027-01-31",
+      "asOf": "2026-10-21"
     }
   ],
   "launchDate": "2025-04-09"

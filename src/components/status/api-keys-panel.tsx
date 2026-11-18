@@ -392,7 +392,7 @@ export function ApiKeysPanel() {
         {errorMessage ? (
           <div
             role="alert"
-            className={cn("rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
+            className={cn("rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.danger.pill)}
           >
             {errorMessage}
           </div>
@@ -406,7 +406,7 @@ export function ApiKeysPanel() {
         {!isLoading && error ? (
           <div
             role="alert"
-            className={cn("space-y-3 rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
+            className={cn("space-y-3 rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.danger.pill)}
           >
             <p>{error.message}</p>
             <Button

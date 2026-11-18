@@ -133,7 +133,7 @@ export function FreshnessIndicator({
               "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-medium",
               compact && "min-h-6 rounded-md px-2 py-0 leading-none",
               isStale || isUnavailable
-                ? SEVERITY_TONE_CLASS.watch.pill
+                ? SEVERITY_TONE_CLASS.caution.pill
                 : "border-border/60 bg-background/60 text-muted-foreground",
               className,
             )}

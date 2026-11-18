@@ -58,7 +58,7 @@ export function TokenRevealDialog({
         <div
           role="status"
           aria-live="assertive"
-          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.caution.banner)}
         >
           {revealedToken.label}. The token is ready. Copy it to the approved credential store now.
         </div>
@@ -143,7 +143,7 @@ export function TokenUnavailableReplayDialog({
         </DialogHeader>
         <div
           role="alert"
-          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.caution.banner)}
         >
           <p className="font-medium">
             {apiKey.name} · ID {apiKey.id} · <span className="font-mono">{apiKey.maskedToken}</span>

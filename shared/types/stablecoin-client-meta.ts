@@ -8,6 +8,7 @@ import type {
   MintAuthorityProfile,
 } from "./stablecoin-meta-control-schemas";
 import type {
+  CoinNotice,
   StablecoinLink,
 } from "./stablecoin-meta-primitives";
 import type {
@@ -179,6 +180,9 @@ export type ClientMintAuthorityStatus =
   | "inherited-authority"
   | "unknown";
 
+/** A state-bearing curated notice in the list projection; its message stays in the detail projection. */
+export type StablecoinClientAlert = Pick<CoinNotice, "type" | "title" | "kind" | "deadline" | "asOf">;
+
 export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_CLIENT_LIST_FIELDS)[number]> & {
   /** Chain IDs are derived from contracts and tradedContracts at build time. */
   chainIds?: string[];
@@ -195,6 +199,8 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
   hasCuratedReserves?: boolean;
   /** Compact yield taxonomy badge; source-specific yield configuration stays in detail. */
   yieldType?: NonNullable<StablecoinMeta["yieldConfig"]>["yieldType"];
+  /** Danger, paused and deadline notices in authored order (never resolved history), for cross-coin state chips. */
+  alerts?: StablecoinClientAlert[];
 };
 
 export type StablecoinClientDetailMeta = StablecoinClientListMeta &
