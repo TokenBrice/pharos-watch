@@ -4,12 +4,13 @@ import { DONOR_CLAIM_SIWE_DOMAIN, buildDonorClaimSiweMessage } from "@shared/lib
 import {
   creditDonorKey,
   donorKeyCreditId,
+  resolveDonorKeyCreditIds,
   isEligibleDonor,
   summarizeDonorKeyEligibility,
   type DonorKeyCredit,
   type DonorKeyEligibilitySummary,
 } from "@shared/lib/funding/donor-eligibility";
-import { DonationsFileSchema } from "@shared/lib/funding/schema";
+import { TransferDonationsFileSchema } from "@shared/lib/funding/schema";
 import type { DonationsFile } from "@shared/lib/funding/schema";
 import {
   DONOR_API_KEY_MIN_USD,
@@ -61,7 +62,7 @@ let donationsLedgerState:
 
 function getDonationsLedger(): DonationsFile {
   if (!donationsLedgerState) {
-    const parsed = DonationsFileSchema.safeParse(donationsAsset);
+    const parsed = TransferDonationsFileSchema.safeParse(donationsAsset);
     donationsLedgerState = parsed.success
       ? { ok: true, value: parsed.data }
       : { ok: false, error: parsed.error };
@@ -156,15 +157,24 @@ function creditInserts(
   nowSec: number,
   guard: { keyPrefix: string; expiresAt: number | null },
 ): D1PreparedStatement[] {
-  // Each insert lands only if the key carries the expiry this batch set, so a
-  // claim that lost a race credits nothing.
-  return donations.map((donation) => db
-    .prepare(
-      `INSERT OR IGNORE INTO api_key_donor_credits (address, chain, tx_hash, credited_at)
-       SELECT ?, ?, ?, ?
-       WHERE EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = ? AND is_active = 1 AND expires_at IS ?)`,
-    )
-    .bind(address, donation.chain, donation.tx_hash.toLowerCase(), nowSec, guard.keyPrefix, guard.expiresAt));
+  return donations.flatMap((donation) => {
+    const args = [address, donation.chain, donation.tx_hash.toLowerCase()];
+    const fence = [nowSec, guard.keyPrefix, guard.expiresAt];
+    const statements: D1PreparedStatement[] = [];
+    if (donation.transfer_discriminator !== undefined) {
+      statements.push(db.prepare(
+        `INSERT OR IGNORE INTO api_key_donor_transfer_credits (address, chain, tx_hash, transfer_discriminator, credited_at)
+         SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = ? AND is_active = 1 AND expires_at IS ?)`,
+      ).bind(...args, donation.transfer_discriminator, ...fence));
+    }
+    if (donation.transfer_discriminator === undefined || donation.legacy_credit) {
+      statements.push(db.prepare(
+        `INSERT OR IGNORE INTO api_key_donor_credits (address, chain, tx_hash, credited_at)
+         SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM api_keys WHERE key_prefix = ? AND is_active = 1 AND expires_at IS ?)`,
+      ).bind(...args, ...fence));
+    }
+    return statements;
+  });
 }
 
 /**
@@ -183,17 +193,19 @@ async function extendDonorClaim(
   let creditedIds: Set<string>;
   try {
     const credited = await db
-      .prepare("SELECT chain, tx_hash FROM api_key_donor_credits WHERE address = ?")
+      .prepare(`SELECT chain, tx_hash, NULL AS transfer_discriminator FROM api_key_donor_credits WHERE address = ?1
+        UNION ALL SELECT chain, tx_hash, transfer_discriminator FROM api_key_donor_transfer_credits WHERE address = ?1`)
       .bind(address)
-      .all<{ chain: string; tx_hash: string }>();
-    creditedIds = new Set(credited.results.map((row) => donorKeyCreditId(row.chain, row.tx_hash)));
+      .all<{ chain: string; tx_hash: string; transfer_discriminator: string | null }>();
+    creditedIds = resolveDonorKeyCreditIds(summary.rows.map(({ donation }) => donation),
+      credited.results.map((row) => ({ ...row, transfer_discriminator: row.transfer_discriminator ?? undefined })));
   } catch {
     return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
   }
   const credit = creditDonorKey(summary.rows, creditedIds, Math.max(nowSec, existing.expires_at));
   if (credit.newlyCounted.length === 0 && credit.expiresAt != null) {
     const pendingGrade = summary.rows.some((row) => row.status === "grade-unavailable"
-      && !creditedIds.has(donorKeyCreditId(row.donation.chain, row.donation.tx_hash)));
+      && !creditedIds.has(donorKeyCreditId(row.donation.chain, row.donation.tx_hash, row.donation.transfer_discriminator)));
     if (pendingGrade) {
       return claimError(503, UNAVAILABLE_MESSAGE, "grade_unavailable", RATE_LIMIT_RETRY_AFTER_SEC);
     }
@@ -203,15 +215,15 @@ async function extendDonorClaim(
   let updated: D1Result[];
   try {
     updated = await db.batch([
+      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: existing.key_prefix, expiresAt: existing.expires_at }),
       db
         .prepare("UPDATE api_keys SET expires_at = ?, updated_at = ? WHERE key_prefix = ? AND is_active = 1 AND expires_at = ?")
         .bind(credit.expiresAt, nowSec, existing.key_prefix, existing.expires_at),
-      ...creditInserts(db, address, credit.newlyCounted, nowSec, { keyPrefix: existing.key_prefix, expiresAt: credit.expiresAt }),
     ]);
   } catch {
     return claimError(503, UNAVAILABLE_MESSAGE, "issue_failed");
   }
-  if ((updated[0]?.meta?.changes ?? 0) === 0) {
+  if ((updated[updated.length - 1]?.meta?.changes ?? 0) === 0) {
     return claimError(409, ALREADY_CLAIMED_MESSAGE, "claim_exists");
   }
   clearApiKeyCache(existing.key_prefix);

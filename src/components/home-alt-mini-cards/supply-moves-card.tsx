@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
-import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { getMarketCapBaseline, getSupplyChangeBaseline } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -12,7 +12,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { hasReviewedProtocolInternalFlowSince } from "@shared/lib/reviewed-protocol-internal-flows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinData } from "@shared/types/supply";
@@ -40,8 +40,10 @@ interface Mover {
 function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAtSec: number): {
   ups: Mover[];
   downs: Mover[];
+  evaluated: boolean;
 } {
   const movers: Mover[] = [];
+  let evaluated = false;
   for (const c of coins) {
     if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
     // Anchor the comparison to the supply payload's own observation clock:
@@ -53,17 +55,26 @@ function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAt
       observedAtSec - REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC,
       observedAtSec,
     )) continue;
-    const current = getCirculatingRawOrNull(c);
-    const prev = getPrevWeekRawOrNull(c);
-    if (current === null || prev === null) continue;
-    if (current < MIN_TRACKED_MCAP_USD && prev < MIN_TRACKED_MCAP_USD) continue;
-    const pctChange = getSupplyChangePercent(c, prev);
-    if (pctChange === null || !Number.isFinite(pctChange) || pctChange === 0) continue;
+    const baseline = getSupplyChangeBaseline(c, "week");
+    const cap = getCirculatingRawOrNull(c);
+    const priorCap = getMarketCapBaseline(c, "week");
+    if (cap == null || priorCap == null || (cap < MIN_TRACKED_MCAP_USD && priorCap < MIN_TRACKED_MCAP_USD)) continue;
+    let current = cap;
+    let previous = priorCap;
+    if (c.circulatingNative != null && baseline?.circulatingNative != null) {
+      current = c.circulatingNative;
+      previous = baseline.circulatingNative;
+    }
+    if (previous <= 0 || current < 0) continue;
+    const pctChange = ((current - previous) / previous) * 100;
+    if (!Number.isFinite(pctChange)) continue;
+    evaluated = true;
+    if (pctChange === 0) continue;
     movers.push({ id: c.id, symbol: c.symbol, name: c.name, pctChange });
   }
   const ups = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);
   const downs = movers.filter((mover) => mover.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange).slice(0, 4);
-  return { ups, downs };
+  return { ups, downs, evaluated };
 }
 
 function formatPct(pct: number): string {
@@ -78,7 +89,7 @@ export function SupplyMovesCard(): React.JSX.Element {
   const logos = logosById;
   const logoMap = logos ?? {};
 
-  const { ups, downs } = useMemo(() => {
+  const { ups, downs, evaluated } = useMemo(() => {
     // Prefer the payload generation clock over the browser receipt time; the
     // latter only remains as a fallback for a legacy response without `_meta`.
     const payloadObservedAtSec = query.meta?.updatedAt ?? Math.floor(query.dataUpdatedAt / 1000);
@@ -112,7 +123,7 @@ export function SupplyMovesCard(): React.JSX.Element {
         <>
           Biggest supply moves{" "}
           <span className="text-2xs font-normal text-muted-foreground/70">
-            {"· 7d · over $10M market cap"}
+            {"· 7d change · over $10M market cap"}
           </span>
         </>
       }
@@ -120,7 +131,7 @@ export function SupplyMovesCard(): React.JSX.Element {
       loadingContent={<Skeleton className="h-32 w-full" />}
       emptyContent={
         <div className="flex flex-1 items-center justify-center text-center pharos-meta">
-          No qualifying 7-day supply moves
+          {evaluated ? "No qualifying 7-day supply moves" : "7-day supply moves unavailable"}
         </div>
       }
       hasRenderableData={peak !== null}

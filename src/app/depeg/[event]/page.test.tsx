@@ -26,7 +26,10 @@ const { EVENTS, EVENTS_BY_SLUG } = vi.hoisted(() => {
   };
   const events = [
     { ...base, id: 1, slug: "disputed-event", provenance: { auditVerdict: "disputed" as const, confidenceTier: "high" } },
-    { ...base, id: 2, slug: "confirmed-event", provenance: { auditVerdict: "confirmed" as const } },
+    { ...base, id: 2, slug: "confirmed-event", provenance: { auditVerdict: "confirmed" as const }, admittedCoverage: [
+      { fromSec: base.startedAt, toSec: base.startedAt + 1_200 },
+      { fromSec: base.startedAt + 2_400, toSec: base.endedAt },
+    ] },
     { ...base, id: 3, slug: "ongoing-event", endedAt: null, recoveryPrice: null, provenance: null },
   ];
   return { EVENTS: events, EVENTS_BY_SLUG: new Map(events.map((event) => [event.slug, event])) };
@@ -125,6 +128,34 @@ describe("ongoing event Now strip", () => {
 });
 
 describe("depeg event page metadata and briefing", () => {
+  it("qualifies the BRZ peak in search and social metadata", async () => {
+    const metadata = await generateMetadata({ params: Promise.resolve({ event: "brz-2023-02-07" }) });
+    expect(metadata.description).toContain("peak unverified");
+    expect(metadata.openGraph?.description).toContain("peak unverified");
+    expect(metadata.twitter?.description).toContain("peak unverified");
+    expect(metadata.robots).toMatchObject({ index: false, follow: true });
+  });
+
+  it("labels recorded duration and shows both timestamps when admitted coverage starts on time but has a gap", async () => {
+    const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: "confirmed-event" }) }));
+    expect(html).toContain("Recorded detector start");
+    expect(html).toContain("First admissible observation");
+    expect(html).toContain("Recorded duration");
+  });
+
+  it.each(["kag-2026-06-14", "eurr-2026-05-24"])("qualifies the legacy detector start for %s", async (event) => {
+    const params = Promise.resolve({ event });
+    const html = renderToStaticMarkup(await DepegEventPage({ params }));
+    const article = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map((match) => JSON.parse(match[1]))
+      .find((entry) => entry["@type"] === "NewsArticle");
+    expect(article).toBeDefined();
+    expect(article).not.toHaveProperty("datePublished");
+    expect(html).toContain("Recorded detector start");
+    expect(html).toContain("First admissible observation");
+    expect(html).toContain("no admissible onset is documented");
+  });
+
   it("qualifies a disputed audit verdict in metadata without dropping the measured deviation", async () => {
     const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.provenance?.auditVerdict === "disputed")!;
     expect(event).toBeDefined();

@@ -20,7 +20,6 @@ import { COMPARE_COLORS } from "@/lib/compare-config";
 import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
-import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import {
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
@@ -188,24 +187,9 @@ export function useCompareDataModel({
       .filter((entry): entry is NonNullable<typeof entry> => entry != null);
   }, [cardMap, reportCardsData, selectedIds]);
 
-  // pegRates and assetMap share the same dependency (listData), so they are
-  // combined into one memoised block to avoid redundant re-computation.
-  const { pegRates, assetMap } = useMemo(() => {
-    if (!listData?.peggedAssets) {
-      return {
-        pegRates: {} as Record<string, number>,
-        assetMap: new Map<string, StablecoinData>(),
-      };
-    }
-    const tableInputs = buildStablecoinTableInputs({
-      stablecoins: listData.peggedAssets,
-      fxFallbackRates: listData.fxFallbackRates,
-    });
-    return {
-      pegRates: tableInputs.pegRates,
-      assetMap: new Map(listData.peggedAssets.map((a) => [a.id, a] as const)),
-    };
-  }, [listData]);
+  const assetMap = useMemo(() => new Map<string, StablecoinData>(
+    listData?.peggedAssets?.map((asset) => [asset.id, asset]),
+  ), [listData]);
 
   const supplyHistoryWindow =
     range === "all" ? "all" : range === "1y" ? 365 : STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS;
@@ -369,7 +353,6 @@ export function useCompareDataModel({
     globalError,
     handleRetry,
     hasPrimaryData,
-    pegRates,
     radarCards,
     shareAsOfUpdatedAt,
     supplySeries,

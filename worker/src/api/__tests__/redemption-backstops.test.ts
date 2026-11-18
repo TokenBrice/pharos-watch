@@ -15,6 +15,55 @@ describe("handleRedemptionBackstops", () => {
     vi.useRealTimers();
   });
 
+  it.each(["chfm-mento", "jpym-mento"])("rechecks retained %s at the close and reopen", async (id) => {
+    vi.useFakeTimers();
+    const close = Date.parse("2026-11-20T21:00:00Z") / 1000;
+    const reopen = Date.parse("2026-11-22T23:00:00Z") / 1000;
+    const read = async (observedAt: number, now: number, delay: number, paused = false) => {
+      vi.setSystemTime(now * 1000);
+      const delayed = delay > 0;
+      const db = makeCompletedRunsDb([completedRun("run-mento", {
+        min_updated_at: observedAt, max_updated_at: observedAt, completed_at: observedAt,
+      })], {
+        "run-mento": [makeRedemptionRow({
+          stablecoin_id: id, updated_at: observedAt,
+          immediate_capacity_usd: delayed ? null : paused ? 0 : 10_000_000,
+          immediate_capacity_ratio: delayed ? null : paused ? 0 : 1,
+          details_json: JSON.stringify({
+            resolutionState: "resolved", routeStatus: paused ? "paused" : "open", routeStatusSource: "onchain",
+            freshnessKind: "same-run-onchain", sourceTimestamp: observedAt, settlementDelaySec: delay,
+            capacityKind: delayed ? "documented-bound" : "live-direct-bounded",
+            capacitySemantics: delayed ? "eventual-only" : "immediate-bounded",
+          }),
+        })],
+      });
+      const response = await handleRedemptionBackstops(db);
+      return {
+        row: RedemptionBackstopsResponseSchema.parse(await readJsonResponse(response, 200)).coins[id],
+        cacheControl: response.headers.get("Cache-Control"),
+      };
+    };
+    expect(await read(close - 120, close - 30, 0)).toMatchObject({
+      row: { immediateCapacityUsd: 10_000_000, settlementDelaySec: 0 },
+      cacheControl: expect.stringContaining("s-maxage=30"),
+    });
+    expect(await read(close - 120, close, 0)).toMatchObject({
+      row: { immediateCapacityUsd: null, score: null, routeStatus: "unknown", resolutionState: "missing-capacity" },
+    });
+    expect(await read(close - 120, close, 0, true)).toMatchObject({
+      row: { immediateCapacityUsd: 0, routeStatus: "paused" },
+    });
+    expect(await read(reopen - 1_800, reopen - 60, 1_800)).toMatchObject({
+      row: { score: 88, settlementDelaySec: 60 }, cacheControl: expect.stringContaining("s-maxage=60"),
+    });
+    expect(await read(reopen - 1_800, reopen, 1_800)).toMatchObject({
+      row: { immediateCapacityUsd: null, score: null, resolutionState: "missing-capacity" },
+    });
+    expect(await read(reopen, reopen, 0)).toMatchObject({
+      row: { immediateCapacityUsd: 10_000_000, resolutionState: "resolved" },
+    });
+  });
+
   it("returns 503 when the run manifest cannot be read", async () => {
     const db = mockD1Strict([
       {

@@ -162,6 +162,7 @@ export const API_PATHS = {
   chainsDetail: (chainId: string) => buildQueryPath("/api/chains", { chain: chainId }),
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  ogDepegBriefing: () => "/api/og/v2/depeg/briefing",
   ogScorecard: (stablecoinId: string) => `/api/og/v2/scorecard/${encodeURIComponent(stablecoinId)}`,
   ogDossier: (stablecoinId: string, fallback: string) =>
     buildQueryPath(`/api/og/v2/dossier/${encodeURIComponent(stablecoinId)}`, { fallback }),

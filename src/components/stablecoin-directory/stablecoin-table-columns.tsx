@@ -1,13 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { QueryKey } from "@tanstack/react-query";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
-import type { StablecoinTableSortKey } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { usesLegacyChangeWindow, type StablecoinTableSortKey } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import type { StablecoinData } from "@shared/types/supply";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { TableDensity } from "@/hooks/use-table-density";
 
@@ -133,8 +134,8 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
   },
   { id: "mcap", label: "Market cap", sortKey: "mcap", className: "w-[144px] text-right" },
-  { id: "change24h", label: "24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
-  { id: "change7d", label: "7d", sortKey: "change7d", className: "w-[144px] text-right", title: "7-day market cap change" },
+  { id: "change24h", label: "MCap 24h", sortKey: "change24h", className: "w-[92px] text-right", title: "24-hour market cap change" },
+  { id: "change7d", label: "MCap 7d", sortKey: "change7d", className: "w-[144px] text-right", title: "7-day market cap change" },
   {
     id: "grade",
     label: "Grade",
@@ -213,14 +214,25 @@ export function StablecoinTableHeader({
   isVisible,
   sort,
   sticky,
+  rows,
   variant = "default",
 }: {
   showPinnedControls: boolean;
   isVisible: (id: ColumnId) => boolean;
   sort?: StablecoinTableSortProps;
   sticky?: boolean;
+  rows?: readonly StablecoinData[];
   variant?: StablecoinTableVisualVariant;
 }) {
+  const headers = useMemo(() => STABLECOIN_HEADER_DEFS.map((column) => {
+    if (rows && column.id === "change24h" && usesLegacyChangeWindow(rows, "day")) {
+      return { ...column, label: "24h", title: "24-hour change in published USD balances" };
+    }
+    if (rows && column.id === "change7d" && usesLegacyChangeWindow(rows, "week")) {
+      return { ...column, label: "7d", title: "7-day change in published USD balances" };
+    }
+    return column;
+  }), [rows]);
   return (
     <TableHeader className={`${sticky ? "sticky top-0 z-10 bg-muted" : "bg-muted"} ${variant === "figmaOverview" ? "pharos-overview-table-header" : ""}`}>
       <TableRow rowIntent={sort ? undefined : "static"}>
@@ -229,7 +241,7 @@ export function StablecoinTableHeader({
             <span className="sr-only">Starred</span>
           </TableHead>
         ) : null}
-        {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
+        {headers.filter((column) => isVisible(column.id)).map((column) =>
           sort && column.sortKey ? (
             <SortableTableHead
               key={column.id}

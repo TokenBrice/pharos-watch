@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NominalPriceReferenceSchema, PriceConfidenceSchema, PriceObservedAtModeSchema } from "./price";
 import { PriceDerivationSchema } from "./price";
 import { CurrentPegSchema } from "./current-peg";
+import { SupplyChangeBaselinesSchema } from "./supply";
 
 const StablecoinDetailPegBucketsSchema = z.record(z.string(), z.number().finite().nonnegative());
 
@@ -34,6 +35,7 @@ export const StablecoinLiveSummarySchema = z.object({
   circulatingPrevDay: StablecoinDetailPegBucketsSchema,
   circulatingPrevWeek: StablecoinDetailPegBucketsSchema,
   circulatingPrevMonth: StablecoinDetailPegBucketsSchema,
+  supplyChangeBaselines: SupplyChangeBaselinesSchema.optional(),
   nativeSupply: NativeSupplyCheckpointsSchema,
 });
 export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;

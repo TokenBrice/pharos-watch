@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluatePhysicalToUsdExit } from "../physical-to-usd-exit";
 import { PhysicalToUsdRouteSchema, type PhysicalToUsdRoute } from "../redemption-backstop-configs/schema";
+import { PAXG_REVIEWED_REDEMPTION_TERMS } from "../redemption-backstop-configs/offchain-issuer/commodity";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "../safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { makeExitRoute, makeNormalizedExitRoute } from "./safety-score-v9-exit.test-support";
@@ -148,6 +149,16 @@ describe("physical-to-USD exit", () => {
     expect(explicit).toMatchObject({ modelConfidence: "medium", assumptions: [], maximumSettlementSec: 15 * 86400 });
     expect(score(assumed).routes[0]?.confidenceFactor).toBe(0.35);
     expect(score(explicit).routes[0]?.confidenceFactor).toBe(0.75);
+  });
+  it.each([
+    ["2026", 48 * 86400, null],
+    ["2027", null, "physical-settlement-calendar-unavailable"],
+  ] as const)("requires covered PAXG release and sale days across Christmas %s", (year, maximumSettlementSec, rejectionReason) => {
+    const at = Date.parse(`${year}-12-23T12:00:00Z`) / 1_000;
+    const config = PAXG_REVIEWED_REDEMPTION_TERMS.config.physicalToUsd!;
+    const reviewed = year === "2026" ? config : { ...config, reviewedAt: "2027-12-01", reviewExpiresAt: "2027-12-30" };
+    expect(evaluatePhysicalToUsdExit(reviewed, { usdPerTroyOunce: 3000, observedAtSec: at }, 2_000_000, at))
+      .toMatchObject({ maximumSettlementSec, rejectionReason });
   });
   it("models silver tax by release jurisdiction, not as a tax on every vaulted sale", () => {
     const config = terms();

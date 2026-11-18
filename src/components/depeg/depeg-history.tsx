@@ -20,8 +20,10 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { formatDuration, formatEventDate, formatBps, formatCurrency, formatUtcDayLabel } from "@shared/lib/format";
-import { formatNativePrice, formatPegOccupancy } from "@shared/lib/peg-format";
+import { formatChartDate, formatDuration, formatBps, formatCurrency, formatUtcDayLabel } from "@shared/lib/format";
+import { formatPegOccupancy } from "@shared/lib/peg-format";
+import { hasUnverifiedDepegPeak } from "@/lib/depeg-event-config";
+import { formatEventPrice, hasUnverifiedAnalyticRecovery } from "@/lib/depeg-event-display";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -129,6 +131,8 @@ export function DepegHistory({
   const sorted = useMemo(() => sortEvents(events), [events]);
   const metrics = isFullyLoaded ? computePegStability(sorted, observationStartedAt) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;
+  const worstPeakUnverified = worstDeviationBps != null &&
+    countedEvents.some(event => event.peakDeviationBps === worstDeviationBps && hasUnverifiedDepegPeak(event));
   const [showAllIncidents, setShowAllIncidents] = useState(false);
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
     useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
@@ -235,7 +239,7 @@ export function DepegHistory({
           <div>
             <span className="text-muted-foreground">Worst depeg </span>
             <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(worstDeviationBps))}`}>
-              {formatBps(worstDeviationBps)}
+              {formatBps(worstDeviationBps)}{worstPeakUnverified ? " · Peak unverified" : ""}
             </span>
           </div>
         )}
@@ -311,7 +315,7 @@ export function DepegHistory({
       ) : null}
       <ol className="space-y-2 md:hidden" aria-label="Compact depeg event history">
         {visibleRows.map((event) => (
-          <DepegEventCard key={event.id} event={event} pegCurrency={pegCurrency} />
+          <DepegEventCard key={event.id} event={event} />
         ))}
       </ol>
       {showPagination ? (
@@ -349,7 +353,7 @@ export function DepegHistory({
         }
       >
         {visibleRows.map((event) => (
-          <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
+          <DepegRow key={event.id} event={event} />
         ))}
       </DataTableShell>
       {isCollapsible ? (
@@ -365,7 +369,7 @@ export function DepegHistory({
   );
 }
 
-function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency: string }) {
+function DepegEventCard({ event }: { event: DepegEvent }) {
   const isOngoing = event.endedAt === null;
   const absBps = Math.abs(event.peakDeviationBps);
   const devColor = deviationColorClass(absBps);
@@ -374,7 +378,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
     <li className="pharos-inset px-3 py-2">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-xs text-muted-foreground">{formatEventDate(event.startedAt)}</p>
+          <p className="font-mono text-xs text-muted-foreground">{formatChartDate(event.startedAt * 1000, "short-year")}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge
               variant="outline"
@@ -391,7 +395,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
         <div className="shrink-0 text-right">
           <p className={`font-mono text-sm font-semibold tabular-nums ${devColor}`}>
             {event.peakDeviationBps > 0 ? "+" : ""}
-            {event.peakDeviationBps} bps
+            {event.peakDeviationBps} bps{event.peakBasis ? " from peer median · Lower confidence" : ""}{hasUnverifiedDepegPeak(event) ? " · Peak unverified" : ""}
           </p>
           <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
             {isOngoing ? "Ongoing" : formatDuration(event.startedAt, event.endedAt)}
@@ -402,21 +406,19 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
         <div>
           <dt className="text-muted-foreground">Start</dt>
           <dd className="mt-0.5 font-mono tabular-nums">
-            {formatNativePrice(event.startPrice, pegCurrency, event.pegReference)}
+            {formatEventPrice(event.startPrice, event, "start", 4) ?? "—"}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Peak</dt>
           <dd className="mt-0.5 font-mono tabular-nums">
-            {event.peakPrice != null ? formatNativePrice(event.peakPrice, pegCurrency, event.pegReference) : "—"}
+            {formatEventPrice(event.peakPrice, event, "peak", 4) ?? "—"}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Recovery</dt>
           <dd className="mt-0.5 font-mono tabular-nums">
-            {event.recoveryPrice != null
-              ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference)
-              : "—"}
+            {hasUnverifiedAnalyticRecovery(event) ? "Unverified" : (formatEventPrice(event.recoveryPrice, event, "recovery", 4) ?? "—")}
           </dd>
         </div>
       </dl>
@@ -424,15 +426,16 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
   );
 }
 
-function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: string }) {
+function DepegRow({ event }: { event: DepegEvent }) {
   const isOngoing = event.endedAt === null;
   const absBps = Math.abs(event.peakDeviationBps);
   const devColor = deviationColorClass(absBps);
+  const date = formatChartDate(event.startedAt * 1000, "short-year");
 
   return (
     <TableRow>
-      <TableCell className="whitespace-nowrap text-xs" title={formatEventDate(event.startedAt)}>
-        <span className="font-mono">{formatEventDate(event.startedAt)}</span>
+      <TableCell className="whitespace-nowrap text-xs" title={date}>
+        <span className="font-mono">{date}</span>
       </TableCell>
       <TableCell>
         <Badge
@@ -455,7 +458,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
       </TableCell>
       <TableCell className={`text-right font-mono tabular-nums text-sm ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}
-        {event.peakDeviationBps} bps
+        {event.peakDeviationBps} bps{event.peakBasis ? " from peer median · Lower confidence" : ""}{hasUnverifiedDepegPeak(event) ? " · Peak unverified" : ""}
       </TableCell>
       <TableCell className="text-right font-mono tabular-nums text-sm">
         {isOngoing ? (
@@ -471,13 +474,13 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
         )}
       </TableCell>
       <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
-        {formatNativePrice(event.startPrice, pegCurrency, event.pegReference)}
+        {formatEventPrice(event.startPrice, event, "start", 4) ?? "—"}
       </TableCell>
       <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
-        {event.peakPrice != null ? formatNativePrice(event.peakPrice, pegCurrency, event.pegReference) : "—"}
+        {formatEventPrice(event.peakPrice, event, "peak", 4) ?? "—"}
       </TableCell>
       <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
-        {event.recoveryPrice != null ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference) : "—"}
+        {hasUnverifiedAnalyticRecovery(event) ? "Unverified" : (formatEventPrice(event.recoveryPrice, event, "recovery", 4) ?? "—")}
       </TableCell>
     </TableRow>
   );

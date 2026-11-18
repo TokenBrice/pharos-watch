@@ -173,12 +173,12 @@ describe("handleStabilityIndex contract tests", () => {
     const todayMidnight = nowSec - (nowSec % 86400);
     const db = mockD1([
       {
-        match: "WHERE stored_at >= ?",
+        match: "WHERE s.stored_at >= ?",
         rows: [],
         first: { avg: 80.6 },
       },
       {
-        match: "WHERE stored_at > ?",
+        match: "WHERE s.stored_at > ?",
         rows: [],
         first: { avg: 79.8 },
       },
@@ -431,16 +431,40 @@ describe("daily PSI stored provenance compatibility", () => {
     const snapshot = JSON.stringify({
       source: "daily-avg", sampleCount: 24, methodologyBreakdown: { "3.0": 24 },
       replay: "x".repeat(100_000),
+      referenceMarketRepair: { method: "unavailable", reason: "samples-unavailable" },
     });
     for (const day of [now - 86400, cutoff, cutoff - 1]) {
       insert.run(day, JSON.stringify({ severity: 0, breadth: 0, stressBreadth: 0, trend: 0 }), snapshot);
     }
     const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
-    const body = StabilityIndexResponseSchema.parse(await response.json());
+    const raw = await response.json() as { history: Array<{ referenceMarketRepair?: unknown }> };
+    const body = StabilityIndexResponseSchema.parse(raw);
     expect(body.history.map((row) => row.date)).toEqual([now - 86400, cutoff, cutoff - 1]);
     expect(body.history[1].dailyProvenance?.sampleCount).toBe(24);
     expect(body.history[2].dailyProvenance).toBeUndefined();
     expect(body.history[2].score).toBe(90);
+    expect(raw.history[2]?.referenceMarketRepair).toEqual({ method: "unavailable", reason: "samples-unavailable" });
+    expect(body.history[2]?.referenceMarketRepair).toEqual(raw.history[2]?.referenceMarketRepair);
+  });
+
+  it.each([false, true])("weights each sample once in the corrected rolling average (duplicate day=%s)", async (duplicate) => {
+    const { sqlite, db } = fixtures.open();
+    const day = 1_799_971_200;
+    const at = day + 23 * 3600;
+    vi.useFakeTimers();
+    vi.setSystemTime((day + 86400 + 60) * 1000);
+    const insertSample = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, '{}', '{}')");
+    insertSample.run(at, 88.2, "STEADY");
+    insertSample.run(day + 86400 + 10, 90, "BEDROCK");
+    const insertDay = sqlite.prepare("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, '{}', ?)");
+    insertDay.run(day, 60, "TREMOR", JSON.stringify({ referenceMarketRepair: { method: "samples", sampleScores: { [at]: 60 } } }));
+    if (duplicate) insertDay.run(day, 88.2, "STEADY", "{}");
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      current: { score: 90, avg24h: 75, avg24hBand: "STEADY" },
+      history: expect.arrayContaining([expect.objectContaining({ date: day, referenceMarketRepair: { method: "samples" } })]),
+    });
+    expect(sqlite.prepare("SELECT score FROM stability_index_samples WHERE stored_at = ?").get(at)).toEqual({ score: 88.2 });
   });
 
   it.each(["continuous", "missing-day", "band-change", "malformed-components"] as const)(

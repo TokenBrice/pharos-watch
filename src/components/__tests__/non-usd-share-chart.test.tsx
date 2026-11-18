@@ -60,12 +60,12 @@ describe("NonUsdShareChart", () => {
     // Unframed on /alt-pegs/: the chart stage is the only frame (no card around it).
     expect(container.querySelector(".pharos-card-shell")).toBeNull();
 
-    expect(screen.getByRole("heading", { name: /share of total stablecoin market outside usd/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /non-usd share of tracked core stablecoin supply/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
     expect(screen.getByText(/non-commodity bucket includes currency-linked plus other non-commodity pegs/i)).toBeTruthy();
     expect(
-      screen.getByRole("table", { name: /share of total stablecoin market outside usd over 1 points/i }),
+      screen.getByRole("table", { name: /non-usd share of tracked core stablecoin supply over 1 points/i }),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /open large share chart/i }));

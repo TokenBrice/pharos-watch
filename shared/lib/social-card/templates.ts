@@ -4,6 +4,7 @@
  * path and field: budgets, glyph range and real-metric fit are checked while
  * the layout is built, so building the element is also the validation.
  */
+import { formatUsdPriceAdaptive } from "../format";
 import { PEG_BAND_HEX } from "../classification";
 import { LIFECYCLE_STAMP_HEX } from "../classification/domain";
 import { GRADE_ON_DARK_HEX } from "../classification/grades";
@@ -191,6 +192,7 @@ const money = (symbol: string, value: number, places: number) =>
 
 /** A fixed low as recorded, to three significant digits and at least cents: $0.879, $0.74, $0.012. */
 const priceLabel = (symbol: string, price: number) => {
+  if (symbol === "$" && price < 0.01) return `$${formatUsdPriceAdaptive(price)}`;
   const rounded = Number(price.toPrecision(3));
   return money(symbol, rounded, Math.min(4, Math.max(2, decimals(rounded))));
 };
@@ -477,6 +479,33 @@ export function buildSocialCardElement(input: SocialCardSpec, assets: SocialCard
   }
 }
 
+
+/** The dated tracker uses the Worker font set and the same measured text as the scorecards. */
+export function buildSocialDepegBriefingElement(card: {
+  assessedAt: string; marketAt: string | null; nativeAt: string | null;
+  total: number; recoveredToday: number; newToday: number | null;
+  rows: readonly { symbol: string; current: string; peak: string }[];
+}, assets: SocialCardAssets): SocialCardElement {
+  const { measure } = assets;
+  return canvas(DARK.ground,
+    h("div", { ...at(COLUMN.left, 50, 1008, 44), alignItems: "center", justifyContent: "space-between" },
+      lockup(assets, "Depeg briefing", "dark").node,
+      label(measure, `${card.assessedAt} UTC`, "mono-500", 24, DARK.muted).node),
+    h("div", { ...at(COLUMN.left, 158, 448, 336), flexDirection: "column", justifyContent: "center", gap: 10 },
+      label(measure, `${card.total}`, "display-800", 96, DARK.text).node,
+      label(measure, "Open incidents", "display-600", 38, DARK.text).node,
+      label(measure, `${card.recoveredToday} recovered in 24h`, "mono-500", 24, DARK.soft).node,
+      label(measure, card.newToday == null ? "New in 24h unavailable" : `${card.newToday} new in 24h`, "mono-500", 24, DARK.soft).node),
+    h("div", { ...at(550, 123, 554, 385), flexDirection: "column", justifyContent: "center", gap: 11 },
+      label(measure, `Top ${card.rows.length} of ${card.total} open incidents`, "mono-500", 22, DARK.muted).node,
+      ...card.rows.map(row => h("div", { flexDirection: "column" },
+        label(measure, row.symbol, "display-800", 32, DARK.text).node,
+        label(measure, row.current, "mono-700", 26, DARK.text).node,
+        label(measure, row.peak, "mono-500", 22, DARK.muted).node))),
+    h("div", { ...at(COLUMN.left, 501, 1008, 34), alignItems: "center", gap: 30 },
+      label(measure, card.marketAt ? `Market ${card.marketAt} UTC` : "Market unavailable", "mono-500", 22, DARK.muted).node,
+      card.nativeAt ? label(measure, `Native ${card.nativeAt} UTC`, "mono-500", 22, DARK.muted).node : null));
+}
 
 const isSafetyGrade = (grade: string): grade is SafetyGrade => (SAFETY_GRADE_VALUES as readonly string[]).includes(grade);
 const gradeColor = (where: string, grade: string) => {

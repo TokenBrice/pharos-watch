@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCommodityPeerMedianSeries } from "../commodity-median";
+import { buildCommodityPeerMedianSeries, findCommodityPeerMedian } from "../commodity-median";
 
 describe("buildCommodityPeerMedianSeries", () => {
   it("takes the median of unequal peer daily means, sorted without imputation", () => {
@@ -37,6 +37,26 @@ describe("buildCommodityPeerMedianSeries", () => {
       { timestamp: 3 * day, rate: 250 },
     ]);
     expect(result.SILVER).toEqual([{ timestamp: day, rate: 25 }]);
+  });
+
+  it("normalizes a historical XAGm peer at its own quote before counting the quorum", () => {
+    const timestamp = 123_456;
+    const ozPerToken = 0.998380822;
+    const peers = [29, 31].map((price, i) => ({
+      assetId: `peer-${i}`, sourceId: `source-${i}`, commodityOunces: 1, prices: [{ price, timestamp }],
+    }));
+    const xagm = { assetId: "xagm-matrixdock", sourceId: "source-3" };
+    const point = { price: ozPerToken * 30, timestamp };
+    expect(findCommodityPeerMedian([...peers, { ...xagm, prices: [point] }], "subject", timestamp, 60)).toBeNull();
+    const partial = { ozPerToken, observedAtSec: timestamp - 1 };
+    const receipt = { ...partial, source: "matrixdock-frs" as const, generation: "ethereum:123", quoteObservedAtSec: timestamp };
+    for (const commodityEntitlement of [partial, { ...receipt, generation: "unverified" }, { ...receipt, quoteObservedAtSec: timestamp + 1 }]) {
+      expect(findCommodityPeerMedian([...peers, { ...xagm, prices: [{ ...point, commodityEntitlement }] }], "subject", timestamp, 60)).toBeNull();
+    }
+    const prices = [{ ...point, commodityEntitlement: receipt }];
+    const median = findCommodityPeerMedian([...peers, { ...xagm, prices }], "subject", timestamp, 60);
+    expect(median?.usdPerUnit).toBeCloseTo(30, 12);
+    expect(median?.contributors).toContain(xagm.assetId);
   });
 
   it("skips excluded or empty source series", () => {

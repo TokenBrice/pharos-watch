@@ -4,6 +4,7 @@ import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import type { SupplyHistoryWindow } from "@shared/lib/api-query-history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
+import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import type { ChainsResponse } from "@shared/types/chains";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
@@ -37,7 +38,7 @@ import type {
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { RedemptionBackstopCoinResponse } from "@shared/types/redemption";
-import type { YieldRankingsCoinResponse } from "@shared/types/yield";
+import type { YieldRanking, YieldRankingsCoinResponse } from "@shared/types/yield";
 import type {
   SafetyScoreHistoryResponse,
   SafetyScoreHistoryV2Response,
@@ -120,6 +121,29 @@ function defineTapeEventsQuery() {
   );
 }
 
+/** Older Workers may still publish USD benchmark metrics for a native-unit yield. */
+function qualifyYieldRankings<
+  Row extends Pick<YieldRanking, "warningSignals" | "pharosYieldScore"> & { provenance?: { sourceKey?: string | null } | null },
+  Response extends { rankings: Row[] },
+>(response: Response): Response {
+  return {
+    ...response,
+    rankings: response.rankings.map((row) => {
+      if (!hasYieldBenchmarkUnitMismatch(row)) return row;
+      return {
+        ...row,
+        pharosYieldScore: null,
+        pysNullReason: "missing-inputs",
+        ...("excessYield" in row ? { excessYield: null } : {}),
+        ...("yieldToRisk" in row ? { yieldToRisk: null } : {}),
+        benchmarkKey: undefined,
+        benchmarkLabel: undefined,
+        benchmarkRate: undefined,
+      };
+    }),
+  };
+}
+
 const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
   dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerIntervalSec * 1000,
@@ -139,9 +163,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   stablecoinLiveSummary: defineParameterizedApiQuery(
     "meta",
     // Schema loading stays outside the shared shell's eager module graph.
-    createLazySchema<StablecoinLiveSummary>(async () =>
-      (await import("@shared/types/stablecoin-live-summary")).StablecoinLiveSummarySchema,
-    ),
+    createLazySchema<StablecoinLiveSummary>(async () => (await import("@shared/types/stablecoin-live-summary")).StablecoinLiveSummarySchema),
     (stablecoinId: string) => ({
       queryKey: ["stablecoin-live-summary", stablecoinId] as const,
       reconcileMeta: reconcileStablecoinLiveSummary<StablecoinLiveSummary>,
@@ -156,9 +178,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.stablecoins,
     },
     "meta",
-    createLazySchema<StablecoinListResponse>(
-      async () => (await import("@shared/types/supply")).StablecoinListResponseSchema,
-    ),
+    createLazySchema<StablecoinListResponse>(async () => (await import("@shared/types/supply")).StablecoinListResponseSchema),
   ),
   homepageSnapshot: defineApiQuery(
     { queryKey: ["homepage-snapshot"] as const, path: API_PATHS.homepageSnapshot(), producerIntervalMs: CRON_15MIN },
@@ -247,7 +267,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   yieldRankingsCoin: defineParameterizedApiQuery(
     "meta",
-    createLazySchema<YieldRankingsCoinResponse>(async () => (await import("@shared/types/yield")).YieldRankingsCoinResponseSchema),
+    createLazySchema<YieldRankingsCoinResponse>(async () =>
+      (await import("@shared/types/yield")).YieldRankingsCoinResponseSchema.transform(qualifyYieldRankings),
+    ),
     (stablecoinId: string) => ({
       queryKey: ["yield-rankings-coin", stablecoinId] as const,
       path: API_PATHS.yieldRankingsCoin(stablecoinId),
@@ -277,9 +299,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       producerIntervalMs: CRON_DAILY_DIGEST,
     },
     "meta",
-    createLazySchema<DigestArchiveResponse>(
-      async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema,
-    ),
+    createLazySchema<DigestArchiveResponse>(async () => (await import("@shared/types/digest")).DigestArchiveResponseSchema),
   ),
   digestPromo: defineApiQuery(
     {
@@ -585,7 +605,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<YieldRankingsResponse>(
-      async () => (await import("@shared/types/yield")).YieldRankingsResponseSchema,
+      async () => (await import("@shared/types/yield")).YieldRankingsResponseSchema.transform(qualifyYieldRankings),
     ),
   ),
   yieldRankingsSummary: defineApiQuery(
@@ -596,7 +616,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<YieldRankingsSummaryResponse>(
-      async () => (await import("@shared/types/yield-summary")).YieldRankingsSummaryResponseSchema,
+      async () => (await import("@shared/types/yield-summary")).YieldRankingsSummaryResponseSchema.transform(qualifyYieldRankings),
     ),
   ),
   yieldAdapterManifest: defineParameterizedStaticApiQuery(

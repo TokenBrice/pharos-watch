@@ -198,8 +198,21 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(viewModel.capacitySummary.headline).toBe("Unavailable");
   });
 
+  it("describes a measured delayed inventory bound", () => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      capacitySemantics: "eventual-only", capacityKind: "documented-bound",
+      immediateCapacityUsd: null, immediateCapacityRatio: null,
+      capacityProfile: { eventualUsd: 10_000_000, scoringUsd: 10_000_000, scoringHorizon: "eventual", capacityProfileConfidence: "documented-bound" },
+    }));
+    expect(viewModel.capacitySummary).toMatchObject({
+      headline: "$10.0M",
+      detail: expect.stringContaining("Measured inventory"),
+    });
+  });
+
   it.each([30_000_000, 0])("shows admitted full-supply eventual capacity of %s", (eventualUsd) => {
     const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      capacityBasis: "issuer-term-redemption",
       capacitySemantics: "eventual-only", immediateCapacityUsd: null, immediateCapacityRatio: null,
       capacityProfile: { eventualUsd, scoringUsd: null, scoringHorizon: "eventual", capacityProfileConfidence: "documented-bound" },
     }));

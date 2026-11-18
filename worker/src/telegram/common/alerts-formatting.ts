@@ -1,6 +1,7 @@
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
+import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { DEWS_SIGNAL_LABELS } from "@shared/lib/dews-config";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { DEWS_BAND_CODE_BY_VALUE, TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
@@ -36,9 +37,10 @@ export interface DepegAlertPayload {
   symbol: string;
   direction: "above" | "below";
   deviationBps: number;
-  price: number;
-  pegReference: number;
+  price: number | null;
+  pegReference: number | null;
   priceCurrency?: string;
+  peakBasis?: "peer-relative" | "native-peg";
   reopenedAfterMinutes?: number;
   contextLine?: string;
 }
@@ -50,6 +52,7 @@ export interface DepegResolved {
   peakDeviationBps: number;
   recoveryPrice: number | null;
   priceCurrency?: string;
+  peakBasis?: DepegAlertPayload["peakBasis"];
   contextLine?: string;
 }
 
@@ -59,9 +62,10 @@ export interface DepegWorsening {
   direction: "above" | "below";
   previousDeviationBps: number;
   currentDeviationBps: number;
-  price: number;
-  pegReference: number;
+  price: number | null;
+  pegReference: number | null;
   priceCurrency?: string;
+  peakBasis?: DepegAlertPayload["peakBasis"];
   contextLine?: string;
 }
 
@@ -153,29 +157,45 @@ function formatDurationMinutes(durationMinutes: number): string {
 function formatPrice(value: number, currency = "USD", fractionDigits = 4): string {
   const normalizedCurrency = currency.trim().toUpperCase();
   const prefix = getPegTaxonomyByCurrency(normalizedCurrency)?.symbol ?? `${normalizedCurrency || currency} `;
-  return escapeHtml(`${prefix}${value.toFixed(fractionDigits)}`);
+  const digits = normalizedCurrency === "USD" && (fractionDigits === 4 || value !== 1)
+    ? formatUsdPriceAdaptive(value) : value.toFixed(fractionDigits);
+  return escapeHtml(`${prefix}${digits}`);
 }
 
 function formatBpsPercent(bps: number): string {
   return `${(bps / 100).toFixed(1)}%`;
 }
 
-function depegOffsetPhrase(bps: number, direction: "above" | "below", peg: string): string {
-  return `${formatBpsPercent(bps)} ${direction} ${peg}`;
+function depegOffsetPhrase(bps: number, direction: "above" | "below", reference: number | null, currency?: string): string {
+  const target = reference != null && Number.isFinite(reference) && reference > 0
+    ? formatPrice(reference, currency, 2) : "peg";
+  return `${formatBpsPercent(bps)} ${direction} ${target}`;
+}
+
+function peerOffsetPhrase(bps: number, direction: "above" | "below", reference?: number | null, currency?: string): string {
+  const value = reference != null && Number.isFinite(reference) && reference > 0 ? ` (${formatPrice(reference, currency, 2)})` : "";
+  return `${formatBpsPercent(bps)} ${direction} the peer median${value} (lower confidence)`;
 }
 
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  const peg = formatPrice(e.pegReference, e.priceCurrency, 2);
   const verb = e.direction === "below" ? "lost its peg" : "broke above its peg";
   const again = e.reopenedAfterMinutes != null
     ? ` again, ${formatDurationMinutes(e.reopenedAfterMinutes)} after recovering`
     : "";
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> ${verb}${again}: ${formatPrice(e.price, e.priceCurrency)}, ${depegOffsetPhrase(e.deviationBps, e.direction, peg)}${formatContextLine(e.contextLine)}`;
+  const price = e.price == null ? "" : `${formatPrice(e.price, e.priceCurrency)}, `;
+  if (e.peakBasis === "peer-relative") {
+    return `${glyph} <b>${escapeHtml(e.symbol)}</b> diverged from peers${again}: ${price}${peerOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${formatContextLine(e.contextLine)}`;
+  }
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> ${verb}${again}: ${price}${depegOffsetPhrase(e.deviationBps, e.direction, e.pegReference, e.priceCurrency)}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const duration = formatDurationMinutes(e.durationMinutes);
+  if (e.peakBasis === "peer-relative") {
+    const recovery = e.recoveryPrice != null ? ` · recovery price ${formatPrice(e.recoveryPrice, e.priceCurrency)}` : "";
+    return `<b>${escapeHtml(e.symbol)}</b> peer-relative incident resolved after ${duration}${recovery}\nPeak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)${formatContextLine(e.contextLine)}`;
+  }
   const headline = e.recoveryPrice != null
     ? `<b>${escapeHtml(e.symbol)}</b> is back on peg at ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
     : `<b>${escapeHtml(e.symbol)}</b> is back on peg`;
@@ -190,8 +210,11 @@ export function formatDepegResolvedLine(e: DepegResolved): string {
  */
 export function formatDepegWorseningLine(e: DepegWorsening): string {
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  const peg = formatPrice(e.pegReference, e.priceCurrency, 2);
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, peg)} (${formatPrice(e.price, e.priceCurrency)})\nWas ${formatBpsPercent(e.previousDeviationBps)} at the previous check${formatContextLine(e.contextLine)}`;
+  const price = e.price == null ? "" : ` (${formatPrice(e.price, e.priceCurrency)})`;
+  if (e.peakBasis === "peer-relative") {
+    return `${glyph} <b>${escapeHtml(e.symbol)}</b> peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}${formatContextLine(e.contextLine)}`;
+  }
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, e.pegReference, e.priceCurrency)}${price}\nWas ${formatBpsPercent(e.previousDeviationBps)} at the previous check${formatContextLine(e.contextLine)}`;
 }
 
 /** Plain-language gloss for each Safety Score pillar, shared by alerts and /why. */
@@ -340,7 +363,9 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegTriggered,
     format: formatDepegTriggeredLine,
-    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.direction === "below" ? "lost its peg" : "broke above its peg"}, ${formatBpsPercent(e.deviationBps)} ${e.direction}`,
+    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.peakBasis === "peer-relative"
+      ? peerOffsetPhrase(e.deviationBps, e.direction)
+      : `${e.direction === "below" ? "lost its peg" : "broke above its peg"}, ${formatBpsPercent(e.deviationBps)} ${e.direction}`}`,
     severity: (e) => e.deviationBps,
     layoutOrder: 0,
     rankOrder: 0,
@@ -349,7 +374,9 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegWorsening ?? [],
     format: formatDepegWorseningLine,
-    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} depeg deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction}`,
+    compact: (e) => `${DEPEG_DIRECTION_GLYPH[e.direction]} ${symbolHtml(e.symbol)} ${e.peakBasis === "peer-relative"
+      ? `peer divergence deepened to ${peerOffsetPhrase(e.currentDeviationBps, e.direction)}`
+      : `depeg deepened to ${formatBpsPercent(e.currentDeviationBps)} ${e.direction}`}`,
     severity: (e) => e.currentDeviationBps,
     layoutOrder: 1,
     rankOrder: 1,
@@ -358,7 +385,9 @@ const ALERT_FAMILY_DESCRIPTORS: readonly AlertFamilyDescriptor[] = [
     family: "depeg",
     getEvents: (alerts) => alerts.depegResolved,
     format: formatDepegResolvedLine,
-    compact: (e) => `${symbolHtml(e.symbol)} back on peg after ${formatDurationMinutes(e.durationMinutes)}`,
+    compact: (e) => e.peakBasis === "peer-relative"
+      ? `${symbolHtml(e.symbol)} peer incident resolved, peak ${formatBpsPercent(e.peakDeviationBps)} from the peer median (lower confidence)`
+      : `${symbolHtml(e.symbol)} back on peg after ${formatDurationMinutes(e.durationMinutes)}`,
     severity: () => 0,
     isRecovery: () => true,
     layoutOrder: 2,

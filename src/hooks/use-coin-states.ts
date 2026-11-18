@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useDepegResolver, usePegSummary, useStressSignals } from "@/hooks/api-hooks";
 import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
+import { readPublishedDeviation } from "@/lib/current-peg";
 import { DAY_MS } from "@/lib/constants";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { resolveCoinStates, type CoinState } from "@shared/lib/coin-state";
@@ -56,7 +57,7 @@ export function useCoinStates({ enabled = true }: { enabled?: boolean } = {}): C
         status: meta.status,
         notices: meta.alerts,
         activeDepeg: depegEligible ? pegCoin?.activeDepeg : false,
-        deviationBps: pegCoin?.currentDeviationBps,
+        deviationBps: readPublishedDeviation(meta.flags.pegCurrency, pegCoin).deviationBps,
         ddrTier: verdict?.tier,
         ddrMethodologyVersion: verdict?.methodologyVersion,
         dewsBand: signals?.[meta.id]?.band,

@@ -181,7 +181,7 @@ describe("redemption backstop config consistency", () => {
   // onto another family the same module also allows (psm-and-basket permits
   // both). These reviewed rows pin the published route shape by value.
   it.each([
-    ["usdc-circle", "offchain-issuer", "supply-ratio", "dynamic-or-unclear"],
+    ["usdc-circle", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
     ["usdcv-societe-generale-forge", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
     ["chfau-allunity", "offchain-issuer", "supply-full", "fee-bps"],
     ["m-m0", "offchain-issuer", "supply-full", "dynamic-or-unclear"],

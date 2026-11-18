@@ -402,6 +402,25 @@ describe("buildDispatchSnapshotState", () => {
     expect(row?.pendingKind).toBe(changeIdentity ? undefined : "severe-downgrade");
   });
 
+  it("preserves a pending recovery when stale snapshots are reseeded", () => {
+    const pending = { stablecoinId: "usdc-circle", eventId: 7, recoveryPending: true };
+    const state = buildDispatchSnapshotState(sourceData({
+      depegCache: cache({ "usdc-circle": pending }, nowSec - 2 * 24 * 3600),
+    }), nowSec);
+    expect(state.mustSeedSnapshots).toBe(true);
+    expect(state.currentSnapshots.depeg).toEqual({ "usdc-circle": pending });
+    const staleAt = nowSec - 2 * 24 * 3600;
+    const separateRetry = { depegCache: cache({}, staleAt), depegRecoveriesCache: cache({ "usdc-circle": pending }, staleAt) };
+    expect(buildDispatchSnapshotState(sourceData(separateRetry), nowSec).currentSnapshots.depeg)
+      .toEqual({ "usdc-circle": pending });
+    expect(buildDispatchSnapshotState(sourceData({ ...separateRetry, depegCache: cache({}) }), nowSec).safeDepegSnapshot)
+      .toEqual({});
+    const replacement = { event_id: 8, stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below" as const,
+      peak_deviation_bps: 190, start_price: 0.981, peak_price: 0.981, peg_reference: 1, started_at: nowSec - 120 };
+    expect(buildDispatchSnapshotState(sourceData({ ...separateRetry, activeDepegRows: [replacement] }), nowSec)
+      .currentSnapshots.depeg["usdc-circle"]).toMatchObject({ eventId: 8 });
+  });
+
   it("defers a due safety alert and a new depeg through a seed run that sends nothing", async () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60, asOfSec: nowSec - 120,

@@ -68,7 +68,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   TRONGRID: { key: "trongrid", scope: "source-wide" },
   ANTHROPIC: { key: "anthropic-api", scope: "source-wide" },
   BLUECHIP: { key: "bluechip-api", scope: "source-wide" },
-  CG_TICKER: { key: "coingecko-ticker", scope: "source-wide" },
+  CG_TICKER: { key: "coingecko-ticker", scope: "retired" },
   KINESIS_KAU: { key: "kinesis-kau-horizon", scope: "source-wide" },
   KINESIS_KAG: { key: "kinesis-kag-horizon", scope: "source-wide" },
   COINGECKO_CONFIRM: { key: "coingecko-confirm", scope: "source-wide" },

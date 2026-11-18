@@ -879,6 +879,7 @@ describe("TimelineClient", () => {
   it.each([
     { body: '{"reason":"flow-claim-retracted"}', retracted: true },
     { body: '{"reason":"freeze-claim-retracted"}', retracted: true },
+    { body: '{"reason":"depeg-claim-retracted"}', retracted: true },
     { body: '{"reason":"event-not-found"}', retracted: false },
     { body: '{"reason":"unknown"}', retracted: false },
     { body: 'null', retracted: false },

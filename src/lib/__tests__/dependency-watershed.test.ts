@@ -4,7 +4,7 @@ import { buildWatershedModel, publicationSupplyOf, type WatershedInput, type Wat
 import { createWidthScale } from "../dependency-watershed/geometry";
 import { formatHubDirect, hubDirectKnown } from "../dependency-watershed/known";
 import { findDependencyCycle } from "../dependency-watershed/ranks";
-import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
+import { buildDirectHubExposures, exposureFootprint } from "@shared/lib/dependency-exposure";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
 const liveEdges = fixture.edges as ReportCardsV9DependencyEdge[];
@@ -97,6 +97,42 @@ describe("buildWatershedModel on the live publication", () => {
     const model = build();
     expect(model.disclosures.doubleSerialDependentIds).toEqual(["susdc-spark", "susdt-spark"]);
     expect(model.disclosures.unknownEdgeCount).toBe(model.edges.filter(edge => edge.usd === null).length);
+  });
+
+  it("caps USD1's overlap at the known rUSD exposure without reducing wsrUSD exposure", () => {
+    const { direct, indirect } = build().hubFootprint("usd1-world-liberty-financial");
+    expect(direct.knownUsd).toBeCloseTo(73_386.87, 2);
+    expect(indirect.knownUsd).toBeCloseTo(36_704_192.22, 2);
+    expect(direct.overlapUsd + indirect.overlapUsd).toBeCloseTo(73_386.87, 2);
+  });
+
+  it("uses the same direct and indirect dollars for xDAI in Watershed and Exposure", () => {
+    const root = "usds-sky";
+    const edges = liveEdges.filter(edge =>
+      (edge.from === root && edge.to === "susds-sky")
+      || (edge.to === "xdai-gnosis" && (edge.from === root || edge.from === "susds-sky")));
+    const supplyOf = publicationSupplyOf(liveNodes);
+    const footprint = exposureFootprint([root], edges, supplyOf, {
+      sharedBooks: { bookIdOf: () => null, measuredHoldingUsd: () => null },
+      familyOf: () => null, wrapperFormOf: () => "unknown",
+    });
+    const model = build({ edges });
+    const { direct, indirect } = model.hubFootprint(root);
+    expect({ direct, indirect }).toEqual({ direct: footprint.direct, indirect: footprint.indirect });
+    expect(footprint.rows.find(row => row.id === "xdai-gnosis")).toMatchObject({ minHop: 1, share: 1 });
+    expect(footprint.reached).toBe(2);
+    expect(direct.knownUsd - supplyOf("susds-sky")!.usd).toBeCloseTo(669_198.40, 2);
+    expect(indirect.knownUsd).toBeCloseTo(43_944_028.21, 2);
+  });
+
+  it("marks indirect dollars known even when their only dependent also has a direct path", () => {
+    const model = build({
+      nodes: [node("root", 100), node("parent", null), node("mixed", 0), node("missing", null)],
+      edges: [serial("root", "parent"), basket("root", "mixed", 0.1), basket("parent", "mixed", 0.9), serial("parent", "missing")],
+    });
+    expect(model.hubFootprint("root").indirect).toMatchObject({
+      knownUsd: 0, hasKnownUsd: true, complete: false, excludedSupplyUnknownIds: ["missing"],
+    });
   });
 });
 

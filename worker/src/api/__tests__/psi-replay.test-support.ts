@@ -5,8 +5,8 @@ import type { PsiHistoricalDewsRow } from "../../lib/psi-replay";
 import type { DepegRow } from "../../lib/depeg-helpers";
 
 export function seedPsiSupply(sqlite: DatabaseSync, rows: PsiSupplyRow[]) {
-  const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
-  for (const row of rows) insert.run(row.stablecoin_id, row.snapshot_date, row.circulating_usd, row.price ?? null);
+  const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, ?, ?, ?)");
+  for (const row of rows) insert.run(row.stablecoin_id, row.snapshot_date, row.circulating_usd, row.price ?? null, row.price_observed_at ?? null);
 }
 
 export function seedPsiDews(sqlite: DatabaseSync, rows: PsiHistoricalDewsRow[]) {

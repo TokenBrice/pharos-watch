@@ -6,6 +6,7 @@ import { RedemptionBusinessDayTermsSchema, type RedemptionBusinessDayTerms } fro
 import { RedemptionBackstopConfigSchema } from "../redemption-backstop-configs/schema";
 import { resolveReviewedRedemptionSettlementDelay } from "../redemption-backstop-configs/settlement";
 import { getRedemptionBackstopConfig } from "../redemption-backstops";
+import { checkCalendarHorizon } from "../../../scripts/ci/check-calendar-horizon";
 
 const clock = Date.parse("2026-10-05T12:00:00Z") / 1000;
 const terms: RedemptionBusinessDayTerms = {
@@ -92,6 +93,21 @@ describe("reviewed business-day completion bounds", () => {
       clock, undefined, calendar)).toEqual({ state: "unknown", reason: "conditional-terms" });
     expect(RedemptionBusinessDayTermsSchema.safeParse({ ...receipt,
       cutoff: { ...receipt.cutoff, time: "16:00" } }).success).toBe(false);
+  });
+  it("counts the first open day after a closed-day EURI receipt", () => {
+    const receipt = Date.parse("2026-12-24T22:00:00Z") / 1_000;
+    const review = getRedemptionBackstopConfig("euri-banking-circle")!.v9RouteReviewTerms!;
+    expect(walkBusinessDaySettlement(review.businessDayTerms!, receipt, receipt))
+      .toMatchObject({ state: "known", completionDate: "2027-01-04" });
+  });
+  it.each([
+    ["2027-08-11T00:00:00Z", true],
+    ["2027-08-11T00:00:01Z", false],
+  ])("guards EURI 60 days before issuer terms expire at %s (%s)", (date, expected) => {
+    const review = getRedemptionBackstopConfig("euri-banking-circle")!.v9RouteReviewTerms!;
+    expect(resolveReviewedRedemptionSettlementDelay(review, Date.parse("2027-10-10T00:00:00Z") / 1_000)).toBeGreaterThan(0);
+    expect(resolveReviewedRedemptionSettlementDelay(review, Date.parse("2027-10-10T00:00:01Z") / 1_000)).toBeUndefined();
+    expect(checkCalendarHorizon(Date.parse(date) / 1_000)).toBe(expected);
   });
   it.each(["euri-banking-circle", "brlv-crown", "fusd-finchain", "mre7yield-midas", "mmev-midas", "mhyper-midas"])("does not turn reviewed %s normal terms into an unconditional scalar", (id) => {
     const config = getRedemptionBackstopConfig(id)!;

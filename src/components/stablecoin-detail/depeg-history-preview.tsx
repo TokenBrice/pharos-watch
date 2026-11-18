@@ -68,15 +68,17 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
         {snapshot.events.map((event) => (
           <tr key={event.id}>
             <td className="whitespace-nowrap">{formatIsoDate(event.startedAt)}</td>
-            <td className="text-right">{formatBps(event.peakDeviationBps)}</td>
             <td className="text-right">
-              {event.endedAt == null ? (
+              {formatBps(event.peakDeviationBps)}{event.peakBasis ? " from peer median · Lower confidence" : ""}
+            </td>
+            <td className="text-right">
+              {event.durationSeconds == null ? (
                 <>
                   <span className="sr-only">Duration unavailable at capture</span>
                   <span aria-hidden="true">—</span>
                 </>
               ) : (
-                formatDuration(event.startedAt, event.endedAt)
+                formatDuration(event.startedAt, event.startedAt + event.durationSeconds)
               )}
             </td>
             <td>

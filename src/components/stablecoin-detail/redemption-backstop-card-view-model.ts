@@ -202,7 +202,9 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
       title,
       headline: hasAdmittedEventualBound ? formatCurrency(eventualUsd, 1) : "Not separately quantified",
       detail: hasAdmittedEventualBound
-        ? `${capacityEvidence} Modeled as eventual redeemability of current supply, not as an immediate cash buffer.`
+        ? entry.capacityBasis === "issuer-term-redemption" || entry.capacityBasis === "full-system-eventual" || entry.capacityKind === "documented-eventual"
+          ? `${capacityEvidence} Modeled as eventual redeemability of current supply under documented terms.`
+          : `${capacityEvidence} Measured inventory is available on the route’s delayed settlement horizon.`
         : `${capacityEvidence} Eventual route capacity is unquantified; no current-supply coverage or immediate cash buffer is asserted.`,
     };
   }

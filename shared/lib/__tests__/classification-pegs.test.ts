@@ -23,4 +23,10 @@ describe("classification-pegs", () => {
     ).toHaveLength(0);
   });
 
+  it("describes the shared VAR category as a variable reference", () => {
+    expect(PEG_METADATA.VAR).toMatchObject({
+      label: "a variable reference", shortLabel: "Variable", filterLabel: "Variable",
+      badge: { label: "Variable Peg" }, chart: { label: "Variable" },
+    });
+  });
 });

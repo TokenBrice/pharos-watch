@@ -1,8 +1,9 @@
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import type { DepegEventEntry } from "@shared/types/peg";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
-import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import type { DepegClosureClassification } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { getDepegEventClosurePresentation } from "@/lib/depeg-event-display";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 import { STABLECOIN_DETAIL_HISTORY_PILOT_IDS } from "@/lib/presentation-pilots.mjs";
 import {
@@ -41,10 +42,11 @@ export interface DepegHistorySnapshotEvent {
   startedAt: number;
   endedAt: number | null;
   peakDeviationBps: number;
+  peakBasis?: DepegEventEntry["peakBasis"];
   pegType: string;
   pegReference: number;
   closure: DepegClosureClassification;
-  /** Closed duration in seconds; null while the record is open at capture. */
+  /** Duration to admitted recovery or the recorded tracking close; null for open records. */
   durationSeconds: number | null;
   source: DepegEventEntry["source"];
   /** Present only when the event owns a permanent `/depeg/[slug]/` route. */
@@ -173,19 +175,18 @@ function projectEvent(
   entry: DepegEventEntry,
   permanentPageSlugs: ReadonlySet<string>,
 ): DepegHistorySnapshotEvent {
+  const { closure, isRecovery } = getDepegEventClosurePresentation(entry);
+  const end = isRecovery ? entry.analyticRecoveryAt ?? entry.endedAt : entry.endedAt;
   return {
     id: entry.id,
     startedAt: entry.startedAt,
     endedAt: entry.endedAt,
     peakDeviationBps: entry.peakDeviationBps,
+    ...(entry.peakBasis ? { peakBasis: entry.peakBasis } : {}),
     pegType: entry.pegType,
     pegReference: entry.pegReference,
-    closure: classifyDepegClosure({
-      endedAt: entry.endedAt,
-      closeReason: entry.closeReason,
-      recoveryPrice: entry.recoveryPrice,
-    }),
-    durationSeconds: entry.endedAt == null ? null : entry.endedAt - entry.startedAt,
+    closure,
+    durationSeconds: end == null ? null : end - entry.startedAt,
     source: entry.source,
     href: permanentPageSlugs.has(entry.slug) ? `/depeg/${entry.slug}/` : null,
     provenance: entry.provenance

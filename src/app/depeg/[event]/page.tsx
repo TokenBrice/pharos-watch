@@ -1,3 +1,4 @@
+import { hasUnverifiedDepegPeak } from "@/lib/depeg-event-config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,6 +43,8 @@ import {
   formatEventTimestamp,
   formatEventUtcTime,
   getDepegEventClosurePresentation,
+  getDepegEventOnset,
+  hasUnverifiedAnalyticRecovery,
 } from "@/lib/depeg-event-display";
 import { getDepegEditorial } from "./editorials";
 import { DepegEventNowStrip } from "./now-strip";
@@ -98,6 +101,7 @@ export async function generateMetadata(
     title,
     description,
     canonical: `/depeg/${event.slug}/`,
+    ...(hasUnverifiedDepegPeak(event) ? { socialPreview: { ...getPageSocialPreview("/depeg/"), title, description } } : {}),
     robots: NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug) ? { index: false, follow: true } : undefined,
   });
 }
@@ -126,33 +130,44 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
 }
 
 function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {
-  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
-  const peakPrice = formatEventPrice(event.peakPrice, event.pegType, event.pegReference);
+  const { firstAdmissible, qualified } = getDepegEventOnset(event);
+  const showAdmissibleObservation = qualified || firstAdmissible != null;
+  const startPrice = formatEventPrice(event.startPrice, event, "start");
+  const peakPrice = formatEventPrice(event.peakPrice, event, "peak");
   const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
   const recoveryPrice = isRecovery
-    ? formatEventPrice(event.recoveryPrice, event.pegType, event.pegReference)
+    ? formatEventPrice(event.recoveryPrice, event, "recovery")
     : null;
   const durationSec = event.endedAt != null ? event.endedAt - event.startedAt : null;
+  const affectedSec = event.admittedCoverage?.reduce((seconds, interval) => seconds + interval.toSec - interval.fromSec, 0);
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Direction</dt>
-        <dd className="font-medium text-foreground">{depegDirectionLabel(event.direction)}</dd>
+        <dd className="font-medium text-foreground">{depegDirectionLabel(event.direction, event.peakBasis)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak deviation</dt>
-        <dd className="pharos-numeric font-medium text-foreground">{formatDeviationBps(event.peakDeviationBps)}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">{formatDeviationBps(event.peakDeviationBps)}{event.peakBasis ? " from peer median · Lower confidence" : ""}{hasUnverifiedDepegPeak(event) ? " · Peak unverified" : ""}</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Started</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{showAdmissibleObservation ? "Recorded detector start" : "Started"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {formatEventTimestamp(event.startedAt, includeTime)}
+          {formatEventTimestamp(event.startedAt, includeTime || showAdmissibleObservation)}
         </dd>
       </div>
+      {showAdmissibleObservation && (
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">First admissible observation</dt>
+          <dd className="pharos-numeric font-medium text-foreground">
+            {firstAdmissible == null ? "Not documented" : formatEventTimestamp(firstAdmissible, true)}
+          </dd>
+        </div>
+      )}
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{isRecovery ? "Recovered" : closure === "open" ? "Ended" : "Tracking closed"}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{isRecovery ? "Recovered" : closure === "open" ? "Ended" : hasUnverifiedAnalyticRecovery(event) ? "Recorded detector close" : "Tracking closed"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {event.endedAt != null ? formatEventTimestamp(event.endedAt, includeTime) : "Ongoing"}
+          {event.endedAt != null ? formatEventTimestamp((isRecovery ? event.analyticRecoveryAt : null) ?? event.endedAt, includeTime) : "Ongoing"}
         </dd>
       </div>
       <div>
@@ -160,15 +175,21 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
         <dd className="font-medium text-foreground">{closureLabel}</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Duration</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{qualified || affectedSec !== undefined ? "Recorded duration" : "Duration"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
           {durationSec != null ? formatApproxDurationSeconds(durationSec, { style: "long" }) : "—"}
         </dd>
       </div>
+      {affectedSec !== undefined && (
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Admitted affected time</dt>
+          <dd className="pharos-numeric font-medium text-foreground">{formatApproxDurationSeconds(affectedSec, { style: "long" })}</dd>
+        </div>
+      )}
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{event.onsetBasis ? "Opening peer median" : "Opening peg reference"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {formatEventPrice(event.pegReference) ?? "—"}{event.pegReference == null ? "" : pegReferenceUnit(event.pegType)}
+          {formatEventPrice(event.pegReference, event, "reference") ?? "—"}
         </dd>
       </div>
       {startPrice ? (
@@ -193,12 +214,6 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
   );
 }
 
-/** " per 1 EUR" for pegs whose prices are shown in the peg currency: their reference is US dollars per unit of it. */
-function pegReferenceUnit(pegType: string | undefined): string {
-  const peg = getPegTaxonomyByType(pegType);
-  return peg && peg.nativePriceUsesUsdSymbol !== true ? ` per 1 ${peg.currency}` : "";
-}
-
 function buildDepegRecordContext({
   event,
   versionLabel,
@@ -206,16 +221,16 @@ function buildDepegRecordContext({
   event: DepegEventEntry;
   versionLabel: string;
 }): string {
-  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
-  const pegReference = formatEventPrice(event.pegReference);
-  const pegReferenceWithUnit = pegReference ? `${pegReference}${pegReferenceUnit(event.pegType)}` : pegReference;
+  const startPrice = formatEventPrice(event.startPrice, event, "start");
+  const pegReference = formatEventPrice(event.pegReference, event, "reference");
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
-  const pricePath = startPrice && pegReferenceWithUnit
-    ? `The checked-in price path starts at ${startPrice} against a recorded peg reference of ${pegReferenceWithUnit}.`
+  const referenceLabel = event.onsetBasis ? "peer median (lower confidence)" : "peg reference";
+  const pricePath = startPrice && pegReference
+    ? `The checked-in price path starts at ${startPrice} against a recorded ${referenceLabel} of ${pegReference}.`
     : startPrice
       ? `The checked-in price path starts at ${startPrice}.`
-      : pegReferenceWithUnit
-        ? `The checked-in record uses a peg reference of ${pegReferenceWithUnit}.`
+      : pegReference
+        ? `The checked-in record uses a ${referenceLabel} of ${pegReference}.`
         : "The checked-in record preserves the measured direction and peak deviation.";
   const confirmation = event.confirmationSources
     ? ` Confirmation evidence is recorded as “${event.confirmationSources}”.`
@@ -240,6 +255,7 @@ export default async function DepegEventPage(
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
   const curated = findCuratedAnnotation(event);
   const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
+  const { qualified } = getDepegEventOnset(event);
   const baseHeroTitle = buildDepegEventTitle(event, isCollision);
   const heroTitle = curated?.label
     ? `${curated.label}${isCollision ? ` — ${formatEventUtcTime(event.startedAt)}` : ""}`
@@ -274,9 +290,9 @@ export default async function DepegEventPage(
     id: canonicalUrl,
     headline: heroTitle,
     description: heroDescription,
-    datePublished: formatIsoTimestamp(event.startedAt),
-    dateModified: formatIsoTimestamp(modifiedAtSeconds),
-    image: [`${SITE_URL}${getPageSocialPreview(canonicalUrl).url}`],
+    ...(!qualified ? { datePublished: formatIsoTimestamp(event.startedAt) } : {}),
+    ...(event.endedAt != null || !qualified ? { dateModified: formatIsoTimestamp(modifiedAtSeconds) } : {}),
+    image: [`${SITE_URL}${getPageSocialPreview(hasUnverifiedDepegPeak(event) ? "/depeg/" : canonicalUrl).url}`],
     mainEntityOfPage: canonicalUrl,
     identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
   });

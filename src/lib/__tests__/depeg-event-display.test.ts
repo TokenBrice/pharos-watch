@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
+import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 import {
   buildDepegEventDescription,
   buildDepegEventSynopsis,
   buildDepegEventTitle,
   formatEventNavigationLabel,
+  formatEventPrice,
+  getDepegEventOnset,
 } from "@/lib/depeg-event-display";
 import { formatDeviationBps, formatLongDate } from "@shared/lib/format";
 import type { DepegEventDisplayInput } from "@/lib/depeg-event-display";
-import { DepegEventSchema } from "@shared/types/peg";
+import { DepegEventSchema, DepegEventStoredSnapshotSchema } from "@shared/types/peg";
 import { classifyDepegClosure, type DepegClosureInput } from "@shared/lib/depeg-closure";
 
 const GYD_MARCH_19 = DEPEG_EVENT_ENTRIES.filter((event) => event.slug.startsWith("gyd-2026-03-19-down-"));
@@ -67,12 +70,51 @@ describe("depeg event search title and description", () => {
     endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, pegReference: 1, closeReason: "recovered-primary",
   };
 
+  it("decodes the archived basis for a weekend EURC move and keeps its quotes in USD", () => {
+    const [peer] = DepegEventStoredSnapshotSchema.parse([{
+      id: 1, ...usdc, source: "live", stablecoinId: "eurc-circle", symbol: "EURC", pegType: "peggedEUR",
+      startedAt: Date.parse("2026-11-14T12:00:00Z") / 1000, endedAt: null, recoveryPrice: null, closeReason: null,
+      onsetBasis: "peer-relative", peakBasis: "peer-relative", peakPeerMedianUsd: 1.08,
+      pegReference: 1.08, startPrice: 1.026, peakPrice: 1.026, peakDeviationBps: -500,
+    }]);
+    expect(buildDepegEventTitle(peer, false)).toContain("5.00% Below Peer Median (lower confidence)");
+    expect(formatEventPrice(peer.pegReference, peer, "reference")).toBe("$1.0800 USD");
+    expect(formatEventPrice(peer.startPrice, peer, "start")).toBe("$1.0260 USD");
+    expect(formatEventPrice(peer.peakPrice, peer, "peak")).toBe("$1.0260 USD");
+    expect(buildDepegEventSynopsis(peer)).toContain("moved below the peer median at 12:00 UTC");
+  });
+
+  it.each([
+    [null, /Detector close recorded.*12:30 UTC.*Recovery is unverified/],
+    [900, /Recovered.*12:15 UTC.*€1.00/],
+    [undefined, /Recovered.*12:30 UTC.*€1.00/],
+  ] as const)("decodes explicitly known, unknown and absent analytic recovery (%s)", (recoveryOffset, expected) => {
+    const startedAt = Date.parse("2026-11-16T12:00:00Z") / 1000;
+    const [event] = DepegEventStoredSnapshotSchema.parse([{
+      id: 1, ...usdc, source: "live", stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR",
+      startedAt, endedAt: startedAt + 1800, startPrice: 1.026, pegReference: 1.08,
+      recoveryPrice: 1.08, recoveryPegReference: 1.08,
+      ...(recoveryOffset === undefined ? {} : { analyticRecoveryAt: recoveryOffset === null ? null : startedAt + recoveryOffset }),
+      admittedCoverage: [{ fromSec: startedAt, toSec: startedAt + 900 }],
+    }]);
+    expect(buildDepegEventSynopsis(event)).toMatch(expected);
+  });
+
   it("leads with the symbol, date and deviation, without a clause dash", () => {
     expect(buildDepegEventTitle(usdc, false)).toBe("USDC Depeg, March 11, 2023: 12.1% Below Peg");
     expect(buildDepegEventTitle({ ...usdc, direction: "above", peakDeviationBps: 2100 }, false)).toBe(
       "USDC Depeg, March 11, 2023: 21.0% Above Peg",
     );
     expect(buildDepegEventTitle(usdc, false)).not.toMatch(/[‒-―]/);
+  });
+
+  it.each([89169, 89170, 89172, 89173])("qualifies the reviewed BRZ peak on event %s", (id) => {
+    const brz = { ...usdc, id, stablecoinId: "brz-transfero", symbol: "BRZ", pegType: "peggedBRL",
+      direction: "above" as const, peakDeviationBps: 6156 };
+    expect(buildDepegEventTitle(brz, false)).toContain("peak unverified");
+    expect(buildDepegEventDescription(brz, false)).toContain("peak unverified");
+    expect(buildDepegEventTitle(brz, false)).not.toContain("61.56%");
+    expect(buildDepegEventSynopsis(brz)).toMatch(/61\.6%.*peak unverified/);
   });
 
   it("omits an unavailable deviation instead of printing a placeholder", () => {
@@ -93,7 +135,10 @@ describe("depeg event search title and description", () => {
     expect(buildDepegEventDescription(usdc, true, null)).toMatch(/^USDC fell 12\.1% below its peg at 03:00 UTC on March 11, 2023\./);
   });
 
-  it("renders the synopsis prices in the peg's native unit", () => {
+  it.each([
+    [{ peakQuoteDomain: "usd", peakPegReference: 1.1, recoveryPegReference: 1.17 }, "€0.9545", "€1.00"],
+    [{}, "$1.05 USD", "$1.17 USD"],
+  ] as const)("renders prices using their own observed reference (%j)", (referenceFields, peak, recovery) => {
     const eurc: DepegEventDisplayInput = {
       ...usdc,
       symbol: "EURC",
@@ -101,11 +146,46 @@ describe("depeg event search title and description", () => {
       pegReference: 1.17,
       peakPrice: 1.05,
       recoveryPrice: 1.17,
+      ...referenceFields,
     };
     const synopsis = buildDepegEventSynopsis(eurc);
-    expect(synopsis).toContain("at €0.8974");
-    expect(synopsis).toContain("€1.00");
-    expect(synopsis).not.toContain("$1.05");
+    expect(synopsis).toContain(`at ${peak}`);
+    expect(synopsis).toContain(recovery);
+  });
+
+  it.each([
+    ["tryb-2026-07-13", "₺1.00", "₺0.8247"],
+    ["eurs-2026-07-12", "€1.00", null],
+  ])("labels recorded native par for %s", (slug, reference, peak) => {
+    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
+    expect(formatEventPrice(event.pegReference, event, "reference")).toBe(reference);
+    if (peak) expect(formatEventPrice(event.peakPrice, event, "peak")).toBe(peak);
+  });
+
+  it.each(["legacy", "empty", "annotated"] as const)("distinguishes recorded onset from %s admitted coverage", (coverage) => {
+    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.id === 90187)!;
+    const reopen = Date.parse("2026-06-14T23:00:00Z") / 1000;
+    const first = coverage === "annotated" ? reopen + 300 : null;
+    const admittedCoverage = coverage === "legacy" ? undefined : first == null ? [] : [{ fromSec: first, toSec: event.endedAt! }];
+    const row = { ...event, admittedCoverage };
+    expect(getDepegEventOnset(row)).toEqual({ firstAdmissible: first, qualified: true });
+    expect(buildDepegEventTitle(row, false)).toContain("Depeg Recorded");
+    const synopsis = buildDepegEventSynopsis(row);
+    expect(synopsis).toContain("Detector start recorded on June 14, 2026 at 22:34 UTC");
+    expect(synopsis).toContain(first == null ? "no admissible onset is documented" : "first admissible observation June 14, 2026 at 23:05 UTC");
+    expect(synopsis).not.toContain("moved below peg at");
+  });
+
+  it("restores the native BRLA replay recovery while respecting an explicit close reason", () => {
+    const event = readDepegEventSnapshot({ missing: "throw" }).find((row) => row.id === 90497)!;
+    expect(formatEventPrice(event.recoveryPrice, event, "recovery")).toBe("R$0.9864");
+    expect(formatEventPrice(event.recoveryPrice, { ...event, closeReason: "recovered-primary" }, "recovery")).toBe("$0.9864 USD");
+  });
+
+  it("does not use EURR's later severe peak as evidence of a closed-session onset", () => {
+    const event = readDepegEventSnapshot({ missing: "throw" }).find((row) => row.id === 90024)!;
+    expect(getDepegEventOnset(event)).toEqual({ firstAdmissible: null, qualified: true });
+    expect(buildDepegEventSynopsis(event)).toContain("no admissible onset is documented");
   });
 
   it("qualifies a disputed audit verdict without dropping the measured deviation", async () => {

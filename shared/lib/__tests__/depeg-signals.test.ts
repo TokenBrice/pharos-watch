@@ -5,9 +5,19 @@ import {
   deriveDepegSignal,
   pickMoreSevereBps,
   relativeBps,
+  readDeviationProjection,
   signalCrossesThreshold,
   signalsShareDirection,
 } from "../depeg-signals";
+
+describe("readDeviationProjection", () => {
+  it("reserves undefined for omission and permits an unaccompanied number only for USD", () => {
+    expect(readDeviationProjection({}, false, 100)).toBeUndefined();
+    expect(readDeviationProjection({ admittedDeviationBps: null }, true, 100)).toBeNull();
+    expect(readDeviationProjection({ admittedDeviationBps: -2.5 }, false, 100)).toBeNull();
+    expect(readDeviationProjection({ admittedDeviationBps: -2.5 }, true, 100)).toBe(-2.5);
+  });
+});
 
 describe("relativeBps", () => {
   it("preserves signed raw and rounded forms on both sides of rounding boundaries", () => {

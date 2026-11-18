@@ -4,7 +4,7 @@ import {
   getTierVocabulary,
   isCurrentForecast,
 } from "@/components/depeg/depeg-resolver-row-card-model";
-import { isCurrentDeviationHeld, resolvePriceObservedAtSec } from "@/lib/current-peg";
+import { readPublishedDeviation } from "@/lib/current-peg";
 import type { DdrTierVocabulary } from "@shared/lib/classification";
 import {
   DDR_RESOLUTION_TIER_VALUES,
@@ -165,9 +165,9 @@ export function summarizeResolverBook(rows: readonly DdrV2ResponseRow[]): Resolv
 export interface OpenIncidentRow {
   id: string;
   symbol: string;
-  /** Live deviation; null when unobserved or read against a closed reference market (`held`). */
+  /** Admitted live deviation, or null when unavailable. */
   deviationBps: number | null;
-  held: boolean;
+  referenceNote: string | null;
   marketCapUsd: number | null;
   /** The resolver row for the coin's active incident, a current forecast first. */
   ddr: DdrV2ResponseRow | null;
@@ -186,13 +186,13 @@ export function rankOpenIncidents(
   return coins
     .filter((coin) => coin.activeDepeg)
     .map((coin) => {
-      const held = isCurrentDeviationHeld(coin.pegCurrency, resolvePriceObservedAtSec(coin), coin.currentDeviationBps);
+      const { deviationBps, referenceNote } = readPublishedDeviation(coin.pegCurrency, coin);
       const active = resolverRows.filter((row) => row.stablecoinId === coin.id && row.live.eventState === "active");
       return {
         id: coin.id,
         symbol: coin.symbol,
-        deviationBps: held ? null : coin.currentDeviationBps,
-        held,
+        deviationBps,
+        referenceNote,
         marketCapUsd: marketCaps?.get(coin.id) ?? null,
         ddr: active.find(isCurrentForecast) ?? active[0] ?? null,
       };

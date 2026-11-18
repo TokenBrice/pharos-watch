@@ -78,7 +78,7 @@ describe("CompareClient and coin selector", () => {
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount,
       flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [{ id: "usdc-circle", data: [] }],
       flowUpdatedAt: null, freshnessQueries: [], globalError: null, handleRetry: vi.fn(), hasPrimaryData: true,
-      pegRates: {}, radarCards: [], supplySeries: [],
+      radarCards: [], supplySeries: [],
     });
     const { container } = render(<CompareClient />);
     expect(screen.getByRole("heading", { name: "Live Flow Signals" })).toBeTruthy();
@@ -97,7 +97,7 @@ describe("CompareClient and coin selector", () => {
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount: 0,
       flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [{ id: "usdc-circle", data: [] }],
       flowUpdatedAt, freshnessQueries: [], globalError: null, handleRetry: vi.fn(), hasPrimaryData: true,
-      pegRates: {}, radarCards: [], supplySeries: [],
+      radarCards: [], supplySeries: [],
     });
     vi.useFakeTimers();
     vi.setSystemTime(nowSec * 1000);
@@ -121,7 +121,7 @@ describe("CompareClient and coin selector", () => {
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount: 0,
       flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [],
       flowUpdatedAt: null, freshnessQueries: [], globalError: null, handleRetry: vi.fn(), hasPrimaryData: true,
-      pegRates: {}, radarCards: [], supplySeries: [],
+      radarCards: [], supplySeries: [],
     });
     const { container } = render(<CompareClient />);
     const hero = screen.getByRole("group", { name: "Comparison scope overview" });

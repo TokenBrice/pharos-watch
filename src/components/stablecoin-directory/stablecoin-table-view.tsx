@@ -188,7 +188,7 @@ function DefaultFooter({ count }: { count: number }) {
         </Link>
       </span>
       <span className="pharos-meta sm:text-right">
-        Rows open the detail dossier. Green and red deltas reflect USD market-cap growth and decline, not token-supply change or price return.
+        Rows open the detail dossier. MCap columns compare dated USD market caps. The 24h and 7d columns use published USD balances when dated caps are unavailable.
       </span>
     </div>
   );
@@ -344,6 +344,7 @@ export function StablecoinTableView(props: StablecoinTableViewProps) {
         showPinnedControls={props.showPinnedControls}
         isVisible={props.isVisible}
         sort={props.sort}
+        rows={props.displayed}
         sticky
         variant={props.variant}
       />

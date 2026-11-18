@@ -38,6 +38,24 @@ function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {
 }
 
 describe("DepegHistory provenance badges", () => {
+  it("shows the incident's UTC date and prices with their own quote basis", () => {
+    const localeDate = Date.prototype.toLocaleDateString;
+    vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(function (this: Date, locales, options) {
+      return localeDate.call(this, locales, { timeZone: "America/Los_Angeles", ...options });
+    });
+    const startedAt = Date.parse("2026-07-13T01:32:54Z") / 1000;
+    mockEvents([makeEvent({
+      startedAt, endedAt: startedAt + 60, pegType: "peggedEUR", pegReference: 1.17,
+      startPrice: 1.10, peakPrice: 1.05, peakQuoteDomain: "usd", peakPegReference: 1.10,
+      recoveryPrice: 1.15, closeReason: "recovered-primary",
+    })]);
+    render(<DepegHistory stablecoinId="eurs-stasis" />);
+    const table = within(screen.getByTestId("stablecoin-depeg-history-table"));
+    expect(table.getByText("Jul 13, 2026")).toBeTruthy();
+    expect(table.getByText("€0.9545")).toBeTruthy();
+    expect(table.getByText("$1.1500 USD")).toBeTruthy();
+  });
+
   it("keeps the older worst incident after pagination regardless of the 90-day chart seed", () => {
     const now = Math.floor(Date.now() / 1000);
     const day = 86_400;

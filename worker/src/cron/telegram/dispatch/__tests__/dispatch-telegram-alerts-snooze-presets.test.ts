@@ -216,8 +216,10 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.presetQueryFailures + metadata.presetResolutionFailures).toBeGreaterThanOrEqual(1);
     // /api/status.telegramBot.presetQueryFailures reads this durable counter.
     expect(readPersistedPresetFailureCount(harness)).toBeGreaterThanOrEqual(1);
-    expect(harness.sqlite.prepare("SELECT state FROM telegram_jobs WHERE kind = 'alert'").get())
+    // The seed has no peak price, so only the basis-aware planner can retry it.
+    expect(harness.sqlite.prepare("SELECT state FROM telegram_reference_alert_plans WHERE kind = 'alert'").get())
       .toEqual({ state: "planning" });
+    expect(harness.sqlite.prepare("SELECT job_id FROM telegram_jobs WHERE state = 'planning'").all()).toEqual([]);
   });
 
   it("clears the preset failure counters on the next clean run", async () => {

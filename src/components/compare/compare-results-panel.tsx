@@ -33,7 +33,7 @@ const FlowComparisonChart = dynamic(
 export function CompareResultsPanel({ data, selection, logos, flowUpdatedMinutes, radarCohort, setRadarCohort }: {
   data: Pick<ReturnType<typeof useCompareDataModel>,
     | "cohortBaseline" | "comparisonCoins" | "detailErrors" | "detailLoading" | "flowCardData"
-    | "flowCoverageCount" | "flowErrorNotice" | "flowScopeLabel" | "flowSeries" | "pegRates" | "radarCards" | "supplySeries">;
+    | "flowCoverageCount" | "flowErrorNotice" | "flowScopeLabel" | "flowSeries" | "radarCards" | "supplySeries">;
   selection: Pick<ReturnType<typeof useCompareSelection>, "selectedIds" | "flowHours" | "setFlowHours" | "range" | "setRange">;
   logos: Record<string, string>;
   flowUpdatedMinutes: number | null;
@@ -41,11 +41,11 @@ export function CompareResultsPanel({ data, selection, logos, flowUpdatedMinutes
   setRadarCohort: (next: CompareRadarCohort) => void;
 }) {
   const { cohortBaseline, comparisonCoins, detailErrors, detailLoading, flowCardData, flowCoverageCount,
-    flowErrorNotice, flowScopeLabel, flowSeries, pegRates, radarCards, supplySeries } = data;
+    flowErrorNotice, flowScopeLabel, flowSeries, radarCards, supplySeries } = data;
   const { selectedIds, flowHours, setFlowHours, range, setRange } = selection;
   return (
     <div className="space-y-6 animate-fade-in">
-      <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
+      <ComparisonTable coins={comparisonCoins} logos={logos} detailErrors={detailErrors} />
 
       {flowErrorNotice ? <QueryErrorNotice {...flowErrorNotice} /> : null}
       {(flowCardData.length > 0 || flowSeries.length > 0) && (

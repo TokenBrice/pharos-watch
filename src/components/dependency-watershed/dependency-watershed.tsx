@@ -5,6 +5,7 @@ import { formatCurrency } from "@shared/lib/format";
 import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { computeDependencyExposure, type DependencyExposureResult } from "@/hooks/use-dependency-exposure-mode";
+import { formatFootprintLayer, formatFootprintOverlap } from "@/lib/dependency-watershed/footprint-display";
 import { buildWatershedModel } from "@/lib/dependency-watershed/model";
 import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import { WatershedLegend } from "./watershed-legend";
@@ -27,16 +28,13 @@ const RELATIONSHIP_OPTIONS = [
 
 /** "Downstream of X: $Y of mapped dependent supply across N coins" — a relationship, never an outcome. */
 export function downstreamHeadline(names: string, result: DependencyExposureResult): { lead: string; detail: string } {
-  const knownRows = result.rows.filter(row => row.exposureUsd !== null);
   const complete = result.direct.complete && result.indirect.complete;
-  const total = knownRows.length ? `${formatCurrency(result.direct.knownUsd + result.indirect.knownUsd, 2)}${complete ? "" : " (known supply only)"}` : "USD unavailable";
-  const usd = (value: number, available: boolean) => available ? formatCurrency(value, 2) : "USD unavailable";
-  // A complete layer with no rows is an observed zero, not an unavailable read.
-  const directAvailable = knownRows.some(row => row.minHop === 1) || (result.direct.complete && knownRows.length > 0);
-  const indirectAvailable = knownRows.some(row => row.minHop > 1) || (result.indirect.complete && knownRows.length > 0);
+  const total = result.direct.hasKnownUsd || result.indirect.hasKnownUsd
+    ? `${formatCurrency(result.direct.knownUsd + result.indirect.knownUsd, 2)}${complete ? "" : " (known supply only)"}`
+    : "USD unavailable";
   return {
     lead: `Downstream of ${names}: ${total} of mapped dependent supply across ${result.reached} ${result.reached === 1 ? "coin" : "coins"}`,
-    detail: `direct ${usd(result.direct.knownUsd, directAvailable)} · indirect ${usd(result.indirect.knownUsd, indirectAvailable)} (includes ${usd(result.direct.overlapUsd + result.indirect.overlapUsd, knownRows.length > 0)} counted in more than one layer)`,
+    detail: `direct ${formatFootprintLayer(result.direct)} · indirect ${formatFootprintLayer(result.indirect)} · ${formatFootprintOverlap(result.direct, result.indirect)}`,
   };
 }
 
@@ -172,7 +170,7 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
       </div>
       <WatershedLegend model={model} labelOf={labelOf} />
       <WatershedOtherBasins model={model} labelOf={labelOf} roots={rootSet} onCommit={trace} />
-      <WatershedTable model={model} publication={publication} labelOf={labelOf} />
+      <WatershedTable model={model} labelOf={labelOf} />
       <p className="break-all text-xs text-muted-foreground">
         Publication supply basis · V10 {publication.methodologyVersion} · publication {publication.publicationGenerationId.split(":").pop()?.slice(0, 7)} · {supplyClocks.length === 0 ? "supply clock not published" : supplyClocks.length === 1 ? `supply as of ${formatEventTimestamp(supplyClocks[0]!, true)}` : `mixed supply clocks, ${formatEventTimestamp(supplyClocks[0]!, true)} to ${formatEventTimestamp(supplyClocks[supplyClocks.length - 1]!, true)}`}
         {publication.publicationStatus === "held" ? " · held publication" : ""}

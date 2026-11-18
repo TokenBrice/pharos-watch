@@ -41,6 +41,16 @@ describe("ChartBrush keyboard + ARIA contract", () => {
     expect(screen.getByRole("slider").getAttribute("aria-valuetext")).toMatch(/^Full range:/);
   });
 
+  it("announces the UTC month at a month boundary in a western timezone", () => {
+    const localeDate = Date.prototype.toLocaleDateString;
+    vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(function (this: Date, locales, options) {
+      return localeDate.call(this, locales, { timeZone: "America/Los_Angeles", ...options });
+    });
+    const domain = [Date.UTC(2026, 9, 1), Date.UTC(2026, 10, 1)] as const;
+    render(<ChartBrush domain={domain} value={domain} onChange={() => {}} />);
+    expect(screen.getByRole("slider").getAttribute("aria-valuetext")).toBe("Oct 2026 to Nov 2026");
+  });
+
   it("ArrowRight shifts an existing window forward by 5% of the span", () => {
     const onChange = vi.fn();
     const value: BrushedRange = [DOMAIN[0] + 2 * DAY, DOMAIN[0] + 5 * DAY];

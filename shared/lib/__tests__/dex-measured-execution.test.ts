@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
+  DexMeasuredExecutionObservationHistorySchema,
   DexMeasuredExecutionTargetSchema,
   buildDexMeasuredCapacityCurve,
   buildDexMeasuredExecutionTargetId,
@@ -10,7 +11,7 @@ import {
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
 } from "../../types/measured-execution";
-import { ExitRouteCapacityPointSchema } from "../../types/exit-route";
+import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "../../types/exit-route";
 import { canonicalExitRouteScopedId } from "../../types/exit-route-identity";
 import { SolanaDexShadowTargetSchema } from "../../types/solana-dex-bank";
 
@@ -121,6 +122,29 @@ describe("DEX measured execution contract", () => {
   it("accepts a fresh identity-consistent lower-bound profile", () => {
     const nowSec = 10_000;
     expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec), nowSec))).toEqual([]);
+  });
+
+  it("preserves per-leg valuation evidence and rejects a changed quote clock", () => {
+    const nowSec = 10_000;
+    const quotedTarget = target(nowSec);
+    const mark = { stablecoinId: quotedTarget.tokenIn.trackedAssetId!, priceUsd: quotedTarget.tokenIn.referencePriceUsd,
+      source: "kraken", observedAtSec: quotedTarget.capturedAt - 5 };
+    quotedTarget.tokenIn.marketMark = mark;
+    const measured = profile(nowSec, quotedTarget);
+    const input = validationInput(measured, nowSec, { quotedTarget, currentTarget: quotedTarget });
+    const valuationObservations = [{ quoteGenerationId: measured.quoteGenerationId, quotedAt: measured.quotedAt, tokenIn: mark }];
+    const history = DexMeasuredExecutionObservationHistorySchema.parse({
+      completeProducerCycleCount: 1, successfulObservationCount: 1, consecutiveSuccessCount: 1,
+      observationWindowStartedAt: nowSec, observationWindowEndedAt: nowSec, latestOperationalFailureAt: null,
+      conservativeStatistic: "pointwise-minimum", conservativeCapacityCurve: measured.capacityCurve, valuationObservations,
+    });
+    expect(validateDexMeasuredExecutionProfile(input)).toEqual([]);
+    const projected = toDexMeasuredExecutionPublicProfile(measured, { observationHistory: history });
+    expect(projected.tokenIn.marketMark).toEqual(mark);
+    expect(ExitRouteObservationHistorySchema.parse(projected.observationHistory)).toMatchObject({ successfulObservationCount: 1 });
+    expect(history.valuationObservations).toEqual(valuationObservations);
+    measured.tokenIn = { ...measured.tokenIn, marketMark: { ...mark, observedAtSec: mark.observedAtSec + 1 } };
+    expect(validateDexMeasuredExecutionProfile({ ...input, profile: measured })).toContain("target-snapshot-mismatch");
   });
 
   it("keeps a quote when only the pool token labels differ from the current row", () => {

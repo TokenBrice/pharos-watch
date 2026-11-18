@@ -7,6 +7,8 @@ export const FREEZE_CLAIM_RETRACTED_REASON = "freeze-claim-retracted";
 /** A flow claim whose source became ineligible has no public event representation. */
 export const FLOW_CLAIM_RETRACTED_REASON = "flow-claim-retracted";
 
+export const DEPEG_CLAIM_RETRACTED_REASON = "depeg-claim-retracted";
+
 export const TAPE_EVENT_SEVERITY_VALUES = [
   "info",
   "notice",

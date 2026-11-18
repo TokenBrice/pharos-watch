@@ -143,11 +143,22 @@ const flowEmpty = { coins: [], gauge: { band: "NEUTRAL", score: 0 } };
 const stablecoinReady = {
   peggedAssets: [{
     circulating: { peggedUSD: 20_000_000 },
-    circulatingPrevWeek: { peggedUSD: 10_000_000 },
+    circulatingNative: 20_000_000,
+    supplyObservedAt: UPDATED_AT / 1000,
+    supplyChangeBaselines: {
+      week: { observedAt: UPDATED_AT / 1000 - 7 * 86400, circulatingUsd: 10_000_000, circulatingNative: 10_000_000 },
+    },
     id: "usdc-circle",
     name: "USD Coin",
     symbol: "USDC",
   }],
+};
+const stablecoinQuiet = {
+  peggedAssets: stablecoinReady.peggedAssets.map((coin) => ({
+    ...coin,
+    circulating: { peggedUSD: 10_000_000 },
+    circulatingNative: 10_000_000,
+  })),
 };
 const freezesReady = {
   events: [{
@@ -238,7 +249,7 @@ const SURFACES: SurfaceCase[] = [
   {
     Component: SupplyMovesCard,
     configure(state) {
-      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
+      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, stablecoinQuiet));
     },
     emptyText: "No qualifying 7-day supply moves",
     readyText: "USDC",

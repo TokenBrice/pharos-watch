@@ -51,6 +51,16 @@ describe("depeg event indexing policy", () => {
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: -499 })).toBe(false);
   });
 
+  it("keeps reviewed pre-epoch BRZ incidents citable without indexing their unverified peaks", () => {
+    const rows = [89169, 89170, 89172, 89173, 89174].map(id => ({
+      id, slug: `brz-${id}`, stablecoinId: "brz-transfero", startedAt: EPOCH - 86_400,
+      endedAt: EPOCH - 82_800, peakDeviationBps: 500,
+    }));
+    const pages = selectStaticDepegEventPages(rows);
+    expect(pages.map(({ id }) => id)).toEqual([89169, 89170, 89172, 89173]);
+    expect([...buildNoindexDepegEventSlugs(pages)].sort()).toEqual(pages.map(({ slug }) => slug));
+  });
+
   it("gates static pages on severity while preserving pinned editorials", () => {
     const selected = selectStaticDepegEventPages([
       { slug: "usdc-2023-03-11", startedAt: 1_678_492_800, peakDeviationBps: 1300 },

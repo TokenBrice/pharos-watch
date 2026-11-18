@@ -1,3 +1,5 @@
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -65,7 +67,7 @@ const route = createClientFeaturePage({
           href="/pharoswatchbot/#bot"
           description="Get instant Telegram alerts for depeg events and DEWS threat level changes"
         />
-        <ShareButton />
+        <ShareButton depegBriefingUrl={`${API_ORIGIN}${API_PATHS.ogDepegBriefing()}`} />
       </>
     ),
     preface: (

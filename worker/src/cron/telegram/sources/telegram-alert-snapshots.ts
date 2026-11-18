@@ -2,6 +2,9 @@ import { isDewsAlertable, type DepegAlertPayload } from "../../../telegram/commo
 import { setCacheMany } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
+import type { DepegEventQuoteDomain } from "@shared/types/peg";
 import {
   getReportCardGradeRank,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
@@ -18,6 +21,7 @@ export const SNAPSHOT_KEYS = {
   // Per-coin DEWS escalation persistence and quiet-window clocks.
   dewsCandidates: "alert:dews-candidate-snapshot",
   depeg: "alert:depeg-snapshot",
+  depegRecoveries: "alert:depeg-pending-recoveries",
   safety: "alert:safety-snapshot",
   // Reserve-drift snapshot. Written by the four-hourly reserve slot
   // (four-hourly-reserves.ts) as the LAUNCH-STYLE id-set of currently-drifting
@@ -47,7 +51,7 @@ export type DewsCandidateSnapshot = Record<string, {
   fromBand?: string;
   quietSinceSec?: number;
 }>;
-export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number }>;
+export type DepegSnapshot = Record<string, DepegAlertPayload & { eventId?: number; recoveryPending?: true }>;
 export type SafetySnapshot = Record<string,
   Omit<AlertSafetySourceRow, "v9Explain"> & Partial<Pick<AlertSafetySourceRow, "v9Explain">>
 >;
@@ -70,6 +74,46 @@ export interface ActiveDepegRow {
   start_price: number;
   peak_price: number | null;
   peg_reference: number;
+  peg_type?: string;
+  source?: string;
+  quote_mode?: string | null;
+  peak_peg_reference?: number | null;
+  peak_quote_domain?: DepegEventQuoteDomain | null;
+  pending_reason?: string | null;
+  peer_basis_json?: string | null;
+}
+
+type PeakDomainRow = Pick<ActiveDepegRow, "peak_quote_domain" | "source" | "peg_type" | "peg_reference" | "quote_mode">;
+
+function isNativeDepegPeak(row: PeakDomainRow): boolean {
+  return row.peak_quote_domain == null ? isNativePegEvent(row) : row.peak_quote_domain === "native-peg";
+}
+
+export function projectDepegPeakBasis(
+  row: PeakDomainRow & Pick<ActiveDepegRow, "pending_reason" | "peer_basis_json">,
+): Pick<DepegAlertPayload, "peakBasis"> {
+  const receipt = parseJsonObject<{ peak?: { basis?: unknown } | null }>(row.peer_basis_json);
+  const basis = receipt?.peak?.basis;
+  if (basis === "peer-relative" || basis === "native-peg") return { peakBasis: basis };
+  if (basis === "benchmark") return {};
+  if (row.peak_quote_domain === "native-peg") return { peakBasis: "native-peg" };
+  if (row.pending_reason?.split("+").includes("peer-relative")) return { peakBasis: "peer-relative" };
+  return isNativeDepegPeak(row) ? { peakBasis: "native-peg" } : {};
+}
+
+export function projectDepegPeakPrice(row: ActiveDepegRow): Pick<DepegAlertPayload, "price" | "pegReference" | "priceCurrency" | "peakBasis"> {
+  const peg = getPegTaxonomyByType(row.peg_type);
+  const native = isNativeDepegPeak(row);
+  const price = row.peak_price != null && Number.isFinite(row.peak_price) && row.peak_price > 0 ? row.peak_price : null;
+  const reference = row.peak_peg_reference;
+  const legacyPar = row.peak_quote_domain == null && row.peg_reference === 1 && (native || peg?.currency === "USD");
+  return {
+    price,
+    pegReference: reference != null && Number.isFinite(reference) && reference > 0 ? reference
+      : legacyPar ? 1 : null,
+    priceCurrency: native ? peg?.currency : "USD",
+    ...projectDepegPeakBasis(row),
+  };
 }
 
 export function parseSnapshotMap<T extends Record<string, unknown>>(
@@ -100,15 +144,13 @@ export function filterAlertableBands(snapshot: DewsSnapshot | null): DewsSnapsho
 export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   const snapshot: DepegSnapshot = {};
   for (const row of rows) {
-    const displayPrice = row.peak_price ?? row.start_price;
     snapshot[row.stablecoin_id] = {
       eventId: row.event_id,
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
       direction: row.direction,
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-      price: Number(displayPrice ?? 0),
-      pegReference: Number(row.peg_reference ?? 1),
+      ...projectDepegPeakPrice(row),
     };
   }
   return snapshot;
@@ -156,12 +198,20 @@ export interface TelegramAlertSnapshots {
 export function buildTelegramSnapshotCacheEntries(
   snapshots: TelegramAlertSnapshots,
 ): Array<{ key: string; value: string }> {
+  // Older Workers interpret every entry in the depeg snapshot as an active event.
+  const active: DepegSnapshot = {};
+  const pending: DepegSnapshot = {};
+  for (const [id, row] of Object.entries(snapshots.depeg)) {
+    if (row.recoveryPending) pending[id] = row;
+    else active[id] = row;
+  }
   const writes: Array<{ key: string; value: string }> = [
     ...(snapshots.dewsUnavailable ? [] : [
       { key: SNAPSHOT_KEYS.dews, value: JSON.stringify(snapshots.dews) },
       { key: SNAPSHOT_KEYS.dewsAlertable, value: JSON.stringify(snapshots.dewsAlertable) },
     ]),
-    { key: SNAPSHOT_KEYS.depeg, value: JSON.stringify(snapshots.depeg) },
+    { key: SNAPSHOT_KEYS.depeg, value: JSON.stringify(active) },
+    { key: SNAPSHOT_KEYS.depegRecoveries, value: JSON.stringify(pending) },
     { key: SNAPSHOT_KEYS.reserveDispatched, value: JSON.stringify(snapshots.reserveDispatched) },
     { key: SNAPSHOT_KEYS.reserveObserved, value: JSON.stringify(snapshots.reserveObserved ?? null) },
   ];

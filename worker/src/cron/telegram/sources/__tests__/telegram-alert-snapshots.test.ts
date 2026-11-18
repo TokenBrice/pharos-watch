@@ -90,6 +90,7 @@ describe("buildDepegSnapshot", () => {
       start_price: 0.985,
       peak_price: 0.985,
       peg_reference: 1,
+      peg_type: "peggedUSD",
     }];
     const result = buildDepegSnapshot(rows);
     expect(result["usdc-circle"]).toEqual({
@@ -100,6 +101,7 @@ describe("buildDepegSnapshot", () => {
       deviationBps: 150,
       price: 0.985,
       pegReference: 1,
+      priceCurrency: "USD",
     });
   });
 
@@ -187,22 +189,25 @@ describe("writeSnapshots", () => {
     vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
     const { db, sqlite } = fixtures.open();
     const batch = vi.spyOn(db, "batch");
+    const pending = { stablecoinId: "eurc-circle", symbol: "EURC", direction: "below", deviationBps: 310,
+      price: 1.06, pegReference: 1.1, eventId: 1, recoveryPending: true } as const;
 
     await writeSnapshots(db, {
       dews: { "usdc-circle": "CALM" },
       dewsAlertable: {},
       dewsCandidates: { "usdc-circle": { quietSinceSec: 1776945000 } },
-      depeg: {},
+      depeg: { "eurc-circle": pending },
       reserveDispatched: null,
     });
 
-    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([6]);
+    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([7]);
     const rows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     expect(new Set(rows.map((row) => row.updated_at))).toEqual(new Set([1776945600]));
     expect(Object.fromEntries(rows.map((row) => [row.key, JSON.parse(String(row.value))]))).toEqual({
       [SNAPSHOT_KEYS.dews]: { "usdc-circle": "CALM" },
       [SNAPSHOT_KEYS.dewsAlertable]: {},
       [SNAPSHOT_KEYS.depeg]: {},
+      [SNAPSHOT_KEYS.depegRecoveries]: { "eurc-circle": pending },
       [SNAPSHOT_KEYS.reserveDispatched]: null,
       [SNAPSHOT_KEYS.reserveObserved]: null,
       [SNAPSHOT_KEYS.dewsCandidates]: { "usdc-circle": { quietSinceSec: 1776945000 } },
@@ -235,7 +240,7 @@ describe("writeSnapshots", () => {
       reserveDispatched: [],
     });
 
-    expect(batchSizes).toEqual([6]);
+    expect(batchSizes).toEqual([7]);
     const keys = db
       .getHistory()
       .filter((entry) => entry.sql.includes("INSERT INTO cache"))

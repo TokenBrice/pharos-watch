@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@shared/lib/format";
-import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
-import { computeDependencyExposure } from "@/hooks/use-dependency-exposure-mode";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { DEPENDENCY_TYPE_PRESENTATION } from "@/components/contagion-graph/contagion-graph-model";
 import type { WatershedReadyModel } from "./watershed-stage";
@@ -30,45 +28,37 @@ function SortHeader<K extends string>({ label, column, sort, onSort }: { label: 
   );
 }
 
-export function WatershedTable({ model, publication, labelOf }: { model: WatershedReadyModel; publication: DependencyGraphResponse; labelOf: (id: string) => string }) {
+export function WatershedTable({ model, labelOf }: { model: WatershedReadyModel; labelOf: (id: string) => string }) {
   const [open, setOpen] = useState(false);
   const [hubSort, setHubSort] = useState<SortState<HubKey>>({ key: "direct", desc: true });
   const [edgeSort, setEdgeSort] = useState<SortState<EdgeKey>>({ key: "usd", desc: true });
-  // Indirect totals use the same footprint engine as Exposure mode, computed only once the table opens.
-  const indirect = useMemo(() => open
-    ? new Map([...model.hubExposures.keys()].map(id => {
-      const result = computeDependencyExposure(publication, [id]);
-      const hasRows = result.rows.some(row => row.minHop > 1);
-      const known = result.rows.some(row => row.minHop > 1 && row.exposureUsd !== null);
-      return [id, {
-        knownUsd: !hasRows ? 0 : known ? result.indirect.knownUsd : null,
-        complete: result.indirect.complete,
-        unknownCount: result.indirect.excludedSupplyUnknownIds.length + result.indirect.unknownShareEdgeCount,
-      }];
-    }))
-    : null, [open, model, publication]);
-  const hubRows = useMemo(() => [...model.hubExposures.values()].map(hub => ({
-    id: hub.hubId,
-    label: labelOf(hub.hubId),
-    layer: model.layers.get(hub.hubId) ?? null,
-    direct: model.directKnown.has(hub.hubId) ? hub.direct.knownUsd : null,
-    indirect: indirect?.get(hub.hubId) ?? null,
-    dependents: hub.dependentCount,
-    unknown: hub.direct.excludedSupplyUnknownIds.length + hub.direct.unknownShareEdgeCount
-      + (indirect?.get(hub.hubId)?.unknownCount ?? 0),
-    complete: hub.direct.complete,
-  })).sort((a, b) => {
+  const footprints = useMemo(() => open
+    ? new Map([...model.hubExposures.keys()].map(id => [id, model.hubFootprint(id)]))
+    : null, [open, model]);
+  const hubRows = useMemo(() => [...model.hubExposures.values()].map(hub => {
+    const footprint = footprints?.get(hub.hubId);
+    return {
+      id: hub.hubId,
+      label: labelOf(hub.hubId),
+      layer: model.layers.get(hub.hubId) ?? null,
+      direct: footprint?.direct,
+      indirect: footprint?.indirect,
+      dependents: hub.dependentCount,
+      unknown: footprint ? [footprint.direct, footprint.indirect].reduce((count, layer) =>
+        count + layer.excludedSupplyUnknownIds.length + layer.unknownShareEdgeCount, 0) : null,
+    };
+  }).sort((a, b) => {
     const value = (row: typeof a): number | string | null => {
       switch (hubSort.key) {
         case "hub": return row.label;
         case "layer": return row.layer;
-        case "direct": return row.direct;
-        case "indirect": return row.indirect?.knownUsd ?? null;
+        case "direct": return row.direct?.hasKnownUsd ? row.direct.knownUsd : null;
+        case "indirect": return row.indirect?.hasKnownUsd ? row.indirect.knownUsd : null;
         case "dependents": return row.dependents;
       }
     };
     return compareNullable(value(a), value(b), hubSort.desc) || a.id.localeCompare(b.id);
-  }), [model, labelOf, indirect, hubSort]);
+  }), [model, labelOf, footprints, hubSort]);
   const edgeRows = useMemo(() => [...model.edges].sort((a, b) => {
     const value = (row: typeof a) => edgeSort.key === "from" ? labelOf(row.from) : edgeSort.key === "to" ? labelOf(row.to) : edgeSort.key === "relationship" ? row.relationship : row[edgeSort.key];
     return compareNullable(value(a), value(b), edgeSort.desc) || a.key.localeCompare(b.key);
@@ -90,10 +80,10 @@ export function WatershedTable({ model, publication, labelOf }: { model: Watersh
           <TableBody>{hubRows.map(row => <TableRow key={row.id}>
             <TableCell>{row.label}</TableCell>
             <TableCell className="pharos-numeric">{row.layer ?? "—"}</TableCell>
-            <TableCell className="pharos-numeric">{row.direct === null ? "Unavailable" : `${formatCurrency(row.direct, 2)}${row.complete ? "" : " (known only)"}`}</TableCell>
-            <TableCell className="pharos-numeric">{row.indirect === null || row.indirect.knownUsd === null ? "Unavailable" : `${formatCurrency(row.indirect.knownUsd, 2)}${row.indirect.complete ? "" : " (known only)"}`}</TableCell>
+            <TableCell className="pharos-numeric">{!row.direct?.hasKnownUsd ? "Unavailable" : `${formatCurrency(row.direct.knownUsd, 2)}${row.direct.complete ? "" : " (known only)"}`}</TableCell>
+            <TableCell className="pharos-numeric">{!row.indirect?.hasKnownUsd ? "Unavailable" : `${formatCurrency(row.indirect.knownUsd, 2)}${row.indirect.complete ? "" : " (known only)"}`}</TableCell>
             <TableCell className="pharos-numeric">{row.dependents}</TableCell>
-            <TableCell className="pharos-numeric">{row.unknown}</TableCell>
+            <TableCell className="pharos-numeric">{row.unknown ?? "—"}</TableCell>
           </TableRow>)}</TableBody>
         </TableFrame>
         <TableFrame tableId="dependency-watershed-links" density="compact" chrome="embedded" tableClassName="min-w-[44rem] text-left text-sm" caption="Published dependency links with mapped USD" captionClassName="sr-only">

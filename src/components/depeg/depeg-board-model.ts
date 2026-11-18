@@ -5,11 +5,11 @@ import {
   QUALITY_TIER_3_CLASSES,
   THREAT_BAND_ACCENT_CLASSES,
 } from "@shared/lib/classification";
-import { isDeviationHeld, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
 
 /** A held deviation is not an observed reading, so it never supports a "clear" verdict. */
 function hasObservedDeviation(row: DepegTrackerRow): boolean {
-  return !isDeviationHeld(row) && Number.isFinite(row.coin.currentDeviationBps);
+  return readTrackerDeviation(row).deviationBps != null;
 }
 
 export function statusLabel(row: DepegTrackerRow): string {

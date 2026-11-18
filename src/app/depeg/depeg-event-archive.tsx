@@ -12,6 +12,7 @@ import {
 import {
   MIN_DEPEG_PAGE_DEVIATION_BPS,
   getPeakDeviationMagnitudeBps,
+  hasUnverifiedDepegPeak,
 } from "@/lib/depeg-event-config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
@@ -79,7 +80,7 @@ function ArchiveMonthGroups({
                       </span>
                     ) : null}
                     <span className={`pharos-numeric text-xs ${deviationColorClass(peakBps)}`}>
-                      {direction} {formatDeviationBps(peakBps)}
+                      {direction} {formatDeviationBps(peakBps)}{event.peakBasis ? " from peer median · Lower confidence" : ""}{hasUnverifiedDepegPeak(event) ? " · Peak unverified" : ""}
                     </span>
                     <span className="ml-auto text-xs text-muted-foreground hover:text-foreground">
                       <span className="hidden sm:inline">View page </span>→

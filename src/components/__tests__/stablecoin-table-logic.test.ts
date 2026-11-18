@@ -20,6 +20,9 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { DexLiquidityMap } from "@shared/types/dex-liquidity";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
+import { formatComparisonPrice } from "@/lib/current-peg";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { buildCsvBody } from "@shared/lib/csv";
 import type { ExportPreamble } from "@/lib/exports/preamble";
@@ -35,7 +38,7 @@ vi.mock("@/lib/exports/csv", () => ({
 }));
 
 function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
-  return makeStablecoin({
+  const coin = makeStablecoin({
     id, name, symbol: id.toUpperCase(),
     priceSource: "coingecko", priceConfidence: "high",
     circulatingPrevDay: { peggedUSD: 1_000_000 },
@@ -43,11 +46,33 @@ function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> =
     supplySource: "defillama", chains: ["ethereum"],
     ...overrides,
   });
+  const day = coin.circulatingPrevDay?.peggedUSD;
+  const week = coin.circulatingPrevWeek?.peggedUSD;
+  return { ...coin, supplyChangeBaselines: {
+    ...(day != null ? { day: { circulatingUsd: day, circulatingNative: null, observedAt: 1_700_000_000 - 86_400 } } : {}),
+    ...(week != null ? { week: { circulatingUsd: week, circulatingNative: null, observedAt: 1_700_000_000 - 7 * 86_400 } } : {}),
+  } };
 }
 
 const sortAsc = (key: StablecoinTableSortKey) => ({ key, direction: "asc" as const });
 const sortDesc = (key: StablecoinTableSortKey) => ({ key, direction: "desc" as const });
 describe("nominal price consumers", () => {
+  it("displays the observed USD NAV when the GBP reference is a three-contributor peer median", () => {
+    const quote = makeCoin("gbpsafo-spiko", "GBPSAFO", { price: 1.31, pegType: "peggedGBP", priceObservedAt: FX_REOPEN_QUOTE_AT });
+    const peer = { ...makePegSummaryCoin({ pegCurrency: "GBP", pegType: "peggedGBP", priceObservedAt: FX_REOPEN_QUOTE_AT }),
+      ...makeFxCurrentPeg("admitted", 0) };
+    const median = { ...peer, pegReference: { ...peer.pegReference, source: "median" as const, contributorCount: 3 },
+      referenceAdmission: { ...peer.referenceAdmission, kind: "median" as const, source: "peer-median" as const } };
+    const reference = getQuoteMatchedNavPriceReference("GBP", quote.priceObservedAt, [median]);
+    expect(reference).toBeNull();
+    const { referenceAdmission: _verdict, admittedDeviationBps: _bps, ...legacy } = median;
+    expect(getQuoteMatchedNavPriceReference("GBP", undefined, [legacy])).toBe(1.1);
+    expect(getQuoteMatchedNavPriceReference("GBP", undefined, [legacy, median])).toBeNull();
+    expect(formatComparisonPrice(quote, "GBP", reference)).toBe("$1.3100");
+    expect(getQuoteMatchedNavPriceReference("GBP", quote.priceObservedAt, [peer])).toBe(1.1);
+    expect(getQuoteMatchedNavPriceReference("GBP", quote.priceObservedAt, [{ ...peer, pegType: "peggedEUR" }])).toBeNull();
+  });
+
   it("sorts nominal prices as missing and exports no observed quote", () => {
     downloadCsvMock.mockReset();
     const nominal = makeCoin("nominal", "Nominal", {
@@ -161,14 +186,20 @@ describe("carried supply consumers", () => {
       supplyObservedAt: Math.floor(Date.now() / 1000) - 3 * 86_400,
     });
 
-    expect(getSupplyChangePercent(restored, 95_000_000)).toBeNull();
+    const dated = { ...restored, supplyChangeBaselines: { day: {
+      circulatingUsd: 110_000_000, circulatingNative: null, observedAt: 1_792_700_000,
+    } } };
+    expect(getSupplyChangePercent(dated, "day")).toBeNull();
+    expect(getSupplyChangePercent({ ...dated, supplyRestored: false }, "day"))
+      .toBeCloseTo(-100 / 11);
+    expect(getSupplyChangePercent({ ...dated, supplyRestored: false }, 95_000_000)).toBeNull();
     expect(sortStablecoins({
       filtered: [restored, makeCoin("fresh", "Fresh")], sort: sortDesc("change24h"), effectiveSortKey: "change24h",
     }).map((coin) => coin.id)).toEqual(["fresh", "restored"]);
 
     exportStablecoinsCsv([restored], new Map([["restored", 1]]));
     const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
-    expect(columns.find((column) => column.header === "24h Change (%)")!.accessor(restored, 0)).toBeNull();
+    expect(columns.find((column) => column.header === "24h Market Cap Change (%)")!.accessor(restored, 0)).toBeNull();
   });
 });
 
@@ -207,9 +238,9 @@ describe("supply availability consumers", () => {
     exportStablecoinsCsv([unavailable, missingDay, zero], new Map([["unavailable", 1], ["missing-day", 2], ["zero", 3]]));
     const [rows, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
     const supplyColumns = columns.filter((column) =>
-      ["Market Cap (USD)", "24h Change (%)", "7d Change (%)"].includes(column.header));
+      ["Market Cap (USD)", "24h Market Cap Change (%)", "7d Market Cap Change (%)"].includes(column.header));
     expect(buildCsvBody(rows, supplyColumns)).toEqual([
-      "Market Cap (USD),24h Change (%),7d Change (%)",
+      "Market Cap (USD),24h Market Cap Change (%),7d Market Cap Change (%)",
       ",,",
       "50,,25",
       "0,-100,-100",
@@ -513,6 +544,28 @@ describe("sortStablecoins", () => {
     expect(resolveDisplayedNativePrice(noReference, undefined, pegScores)).toBeNull();
   });
 
+  it.each(["matched", "held", "stale", "unmatched", "median"] as const)(
+    "only sorts a non-USD NAV as a native price with matched direct FX (%s)", (scenario) => {
+      const quoteAt = FX_REOPEN_QUOTE_AT;
+      const nav = makeCoin("gbpsafo-spiko", "GBP NAV", {
+        price: 1.21, priceObservedAt: scenario === "unmatched" ? quoteAt - 60 : quoteAt,
+      });
+      const current = scenario === "held" || scenario === "stale"
+        ? makeFxCurrentPeg("stale-reference", null) : makeFxCurrentPeg("admitted", 0);
+      const peer: PegSummaryCoin = {
+        ...makePegSummaryCoin({ id: "gbpa-agant", pegCurrency: "GBP", pegType: "peggedGBP", priceObservedAt: quoteAt, price: 1.1 }),
+        ...current,
+        ...(scenario === "held" ? { referenceAdmission: {
+          ...current.referenceAdmission, status: "held-closed-session", reason: "reference-market-closed",
+        } } : {}),
+      };
+      if (scenario === "median" && peer.pegReference) peer.pegReference = { ...peer.pegReference, source: "median", contributorCount: 3 };
+      const key = resolveDisplayedNativePrice(nav, undefined, new Map([[peer.id, peer]]));
+      if (scenario === "matched") expect(key).toMatchObject({ value: expect.closeTo(1.1), currency: "GBP" });
+      else expect(key).toBeNull();
+    },
+  );
+
   it("treats missing Worker deviations as absent peg signals", () => {
     const coins = [
       makeCoin("missing", "Missing", { price: null }),
@@ -602,7 +655,7 @@ describe("supply-change semantics", () => {
     downloadCsvMock.mockReset();
     exportStablecoinsCsv([partial, unchanged, zero], new Map());
     const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[]];
-    for (const header of ["24h Change (%)", "7d Change (%)"]) {
+    for (const header of ["24h Market Cap Change (%)", "7d Market Cap Change (%)"]) {
       const column = columns.find((item) => item.header === header)!;
       expect(column.accessor(partial, 0)).toBeNull();
       expect(column.accessor(unchanged, 1)).toBe(0);
@@ -640,7 +693,7 @@ describe("supply-change semantics", () => {
       CsvColumn<StablecoinData>[],
       string,
     ];
-    const changeColumn = columns.find((column) => column.header === "24h Change (%)");
+    const changeColumn = columns.find((column) => column.header === "24h Market Cap Change (%)");
     expect(changeColumn?.accessor(missing, 0)).toBeNull();
   });
 });

@@ -5,9 +5,32 @@ import {
   getPrevDayRawOrNull,
   getPrevWeekRawOrNull,
   getPrevMonthRawOrNull,
+  hasDatedUsdValuation,
+  projectUsdMarketCapBaselineBuckets,
 } from "../supply";
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { NUMERIC_INPUT_STATES } from "../../test-utils/boundary-contract-vectors.test-support";
+
+describe("dated USD supply valuations", () => {
+  const stockAt = Date.parse("2026-11-18T00:15:00Z") / 1000;
+  it("admits a directly reported USD cap at its stock clock and requires a dated price for chain stock", () => {
+    expect(hasDatedUsdValuation("defillama", stockAt, null, null, stockAt)).toBe(true);
+    expect(hasDatedUsdValuation("coingecko-fallback", stockAt, null, null, stockAt)).toBe(true);
+    expect(hasDatedUsdValuation("onchain-total-supply", stockAt, null, null, stockAt)).toBe(false);
+    expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt - 86400, stockAt)).toBe(false);
+    expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt + 1, stockAt)).toBe(false);
+    expect(hasDatedUsdValuation("onchain-total-supply", stockAt, 1.1, stockAt - 60, stockAt)).toBe(true);
+  });
+  it("preserves both a matching multi-peg allocation and an unattributed historical total for old readers", () => {
+    const asset = { circulating: { peggedUSD: 70, peggedEUR: 40 }, supplyChangeBaselines: {
+      week: { observedAt: stockAt, circulatingUsd: 100, circulatingNative: null },
+    } };
+    expect(projectUsdMarketCapBaselineBuckets(asset, "day", { peggedUSD: 61 })).toEqual({ peggedUSD: 61 });
+    expect(projectUsdMarketCapBaselineBuckets(asset, "week", { peggedUSD: 60, peggedEUR: 40 }))
+      .toEqual({ peggedUSD: 60, peggedEUR: 40 });
+    expect(projectUsdMarketCapBaselineBuckets(asset, "week", { peggedUSD: 70, peggedEUR: 40 })).toEqual({ unattributed: 100 });
+  });
+});
 
 describe("sumPegBucketsOrNull", () => {
   it("preserves absent and invalid records instead of publishing a known subtotal", () => {

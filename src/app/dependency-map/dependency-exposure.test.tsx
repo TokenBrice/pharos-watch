@@ -26,9 +26,9 @@ describe("Exposure mode", () => {
     data.nodes.forEach(node => { node.circulatingUsdAtEvaluation = null; });
     const view = render(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
     const headline = screen.getByRole("heading", { level: 3 });
-    expect(headline.textContent).not.toMatch(/\$/);
     expect(headline.textContent).toContain("direct USD unavailable");
-    expect(headline.textContent).toContain("indirect USD unavailable");
+    expect(headline.textContent).toContain("indirect $0.00");
+    expect(headline.textContent).toContain("Layer overlap upper bound $0.00 (known supply only)");
     data.nodes.find(node => node.id === "known")!.circulatingUsdAtEvaluation = 0;
     view.rerender(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
     expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("direct $0.00 (known supply only)");

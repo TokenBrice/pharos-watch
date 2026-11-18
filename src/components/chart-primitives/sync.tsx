@@ -14,6 +14,7 @@ import {
 } from "react";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
+import { formatChartDate } from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
 // D4 — Linked-axis brushing + synchronized crosshair context
@@ -262,7 +263,7 @@ export function ChartBrush({ domain, value, onChange, height = 28, series, class
   const toPx = value ? tsToPx(value[1]) : 0;
 
   const rangeDateFmt = (ms: number) =>
-    new Date(ms).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    formatChartDate(ms, "month-year");
   const ariaValueText = value
     ? `${rangeDateFmt(value[0])} to ${rangeDateFmt(value[1])}`
     : `Full range: ${rangeDateFmt(domainFrom)} to ${rangeDateFmt(domainTo)}`;

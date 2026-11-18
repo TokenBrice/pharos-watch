@@ -14,6 +14,7 @@ vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRunti
   stablecoins: [
     { id: "usdt-tether", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
     { id: "usdc-circle", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "eurc-circle", flags: { pegCurrency: "EUR", backing: "rwa-backed" }, commodityOunces: undefined },
     { id: "dai-makerdao", flags: { backing: "crypto-backed" }, commodityOunces: undefined },
   ],
 }));
@@ -119,6 +120,16 @@ describe("handleChains", () => {
     const body = await response.json() as { chains: Array<{ totalUsd: number; healthFactors: { quality: number | null } }> };
     expect(body.chains[0]?.totalUsd).toBe(100);
     expect(body.chains[0]?.healthFactors.quality).toBeNull();
+  });
+  it("reads a non-USD cohort reference from a cache predating currentPeg", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const cache = stablecoinsCache([asset("eurc-circle", { Ethereum: { current: 100 } }, {
+      pegType: "peggedEUR", price: 1.1, circulating: { peggedEUR: 100 },
+    })]);
+    const payload = JSON.parse(cache.first.value);
+    cache.first.value = JSON.stringify({ ...payload, fxFallbackRates: { peggedEUR: 1.1 } });
+    const response = await handleChains(mockD1([cache]));
+    expect(await response.json()).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
   });
   it("returns 503 when the stablecoins cache is missing", async () => {
     const response = await handleChains(mockD1([

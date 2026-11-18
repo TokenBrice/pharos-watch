@@ -9,7 +9,7 @@ import { DEWSBadge } from "@/components/dews/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { compareDepegTrackerRows, type DepegTableSortKey } from "@/components/depeg/depeg-table-logic";
-import { isDeviationHeld, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
 import { cn } from "@/lib/utils";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import {
@@ -125,12 +125,10 @@ function InstrumentRow({
   const prefetch = usePrefetchStablecoin();
   const occupancyBasisId = useId();
   const coin = row.coin;
-  // A closed reference market repeats the last close: the deviation is held, not read.
-  const deviationHeld = isDeviationHeld(row);
-  const currentDeviationBps = deviationHeld ? null : coin.currentDeviationBps;
-  const deviationClass = currentDeviationBps == null
+  const { deviationBps, referenceNote } = readTrackerDeviation(row);
+  const deviationClass = deviationBps == null
     ? "text-muted-foreground"
-    : deviationColorClass(Math.abs(currentDeviationBps));
+    : deviationColorClass(Math.abs(deviationBps));
   const trackingSpan = formatTrackingSpanDays(coin.trackingSpanDays);
   const pegHealthValue =
     coin.pegScore !== null ? (
@@ -193,14 +191,12 @@ function InstrumentRow({
           label="Deviation"
           value={
             <span className={cn(deviationClass)}>
-              {deviationHeld ? (
-                <span title="Reference market closed">Mkt closed</span>
-              ) : currentDeviationBps != null ? `${currentDeviationBps > 0 ? "+" : ""}${currentDeviationBps} bps` : "—"}
+              {referenceNote ?? (deviationBps != null ? `${deviationBps > 0 ? "+" : ""}${deviationBps} bps` : "—")}
             </span>
           }
           subline={coin.worstDeviationBps != null ? `worst ${coin.worstDeviationBps > 0 ? "+" : ""}${coin.worstDeviationBps} bps` : "worst —"}
         >
-          <DeviationBar bps={currentDeviationBps} />
+          <DeviationBar bps={deviationBps} />
         </MetricCell>
         <MetricCell
           label="DEWS"

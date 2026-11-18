@@ -25,6 +25,8 @@ export const MIN_PEER_MEDIAN_CONTRIBUTORS = 3;
  * compatibility.
  */
 export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput): boolean {
+  if (input.pegCurrency === "VAR" || input.pegCurrency === "OTHER" ||
+    input.pegType === "peggedVAR" || input.pegType === "peggedOTHER") return false;
   const isCommodityPeg =
     input.pegCurrency === "GOLD" || input.pegCurrency === "SILVER" ||
     input.pegType === "peggedGOLD" || input.pegType === "peggedSILVER";
@@ -49,8 +51,6 @@ export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput):
   const pegCurrency = input.pegCurrency ?? null;
   if (
     pegCurrency === "USD" ||
-    pegCurrency === "VAR" ||
-    pegCurrency === "OTHER" ||
     pegCurrency === "GOLD" ||
     pegCurrency === "SILVER"
   ) {

@@ -1,10 +1,10 @@
-import { resolveCurrentDeviation, resolveCurrentPeg } from "@/lib/current-peg";
+import { resolveCurrentDeviation, resolveCurrentPeg, resolveDisplayPegReference, resolveQuoteReference } from "@/lib/current-peg";
 import type { SupplyHistoryPoint } from "@shared/types/supply";
 import type { NativeSupplyCheckpoints, StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { getNavPriceReference } from "@/lib/nav-price-reference";
+import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
 import type {
   DetailQueryResource,
@@ -16,7 +16,7 @@ import type {
   StablecoinDetailViewModelQueryInputs,
   StablecoinDetailViewModelSupplementalInputs,
 } from "@/lib/stablecoin-detail-view-model-types";
-import { getCirculatingRawOrNull, getPrevDayRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   BlacklistStablecoin,
@@ -60,8 +60,8 @@ export interface DetailPegPriceSnapshot {
   pegRef: number | null;
   deviationBps: number | null;
   pegReferenceUnavailable: boolean;
-  /** The peg's reference market was shut at the observation: the current deviation is held. */
-  referenceMarketClosed: boolean;
+  /** Reader copy for a closed or stale reference. */
+  referenceNote: string | null;
   pegScoreResult: PegSummaryCoin | null;
   /** Null when neither the peg row nor the admitted summary was read. */
   consensusSources: string[] | null;
@@ -137,8 +137,10 @@ export function buildDetailMarketSnapshot(
   const observedPrice = isObservedPrice(coinData) ? coinData.price : null;
   return {
     mcap,
-    supply: deriveSupplyFromMarketCap(mcap, observedPrice),
-    prevDay: getPrevDayRawOrNull(coinData),
+    supply: (coin.flags.pegCurrency ?? "USD") === "USD"
+      ? deriveSupplyFromMarketCap(mcap, observedPrice)
+      : nativeSupply?.current ?? null,
+    prevDay: getUsdMarketCapBaselineOrNull(coinData, "day"),
     nativeSupply,
     performanceVsUsd1y: computePerformanceVsUsd1y(coin, observedPrice, supplyHistory, nowMs),
   };
@@ -154,16 +156,17 @@ export function buildDetailPegPriceSnapshot(
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
   const currentPeg = resolveCurrentPeg(summaryData, pegScoreResult, nowMs);
+  const currency = coin.flags.pegCurrency ?? "USD";
   const pegRef = isNavToken
-    ? getNavPriceReference(coin.flags.pegCurrency, pegSummaryData?.coins)
-    : currentPeg?.pegReference?.valueUsd ?? null;
+    ? getQuoteMatchedNavPriceReference(currency, summaryData?.priceObservedAt, pegSummaryData?.coins)
+    : resolveDisplayPegReference(summaryData, pegScoreResult, currency);
   // A NAV token has no fixed peg, so no reference market can hold its read.
   const deviation = resolveCurrentDeviation(summaryData, pegScoreResult, isNavToken ? null : coin.flags.pegCurrency);
   return {
     pegRef,
     deviationBps: deviation.deviationBps,
-    pegReferenceUnavailable: !isNavToken && currentPeg?.pegReferenceUnavailable === true,
-    referenceMarketClosed: deviation.referenceMarketClosed,
+    pegReferenceUnavailable: !isNavToken && resolveQuoteReference(summaryData, pegScoreResult)?.pegReferenceUnavailable === true,
+    referenceNote: deviation.referenceNote,
     pegScoreResult,
     // Legacy archives have no active peg row; unread provenance stays null.
     // A present publication's empty lists never borrow sibling sources.

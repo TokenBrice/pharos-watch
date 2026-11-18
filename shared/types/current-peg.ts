@@ -6,6 +6,7 @@ export const CurrentPegSchema = PegSummaryCoinSchema.pick({
   currentDeviationBps: true, pegReference: true, pegReferenceUnavailable: true,
   currentPriceUnavailable: true, primaryTrust: true, dexPriceCheck: true,
 }).required().extend({
+  ...PegSummaryCoinSchema.pick({ referenceAdmission: true, admittedDeviationBps: true }).shape,
   /** Exclusive Unix-second expiry under the producer's DEX UI evidence budget; absent on older blocks. */
   dexPriceCheckExpiresAt: z.number().finite().positive().nullable().optional(),
 });

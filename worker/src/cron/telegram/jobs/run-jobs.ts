@@ -7,6 +7,7 @@ import { D1_BATCH_SIZE } from "../../../lib/constants";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
 import {
   buildTelegramDeliveryInsertStatements,
+  telegramPlanningTable,
   type TelegramDeliveryInput,
   type TelegramJobRow,
 } from "../../../telegram/delivery/jobs";
@@ -25,8 +26,11 @@ const CAPPED_KINDS: ReadonlySet<string> = new Set(["alert", "freeze"]);
  */
 const MAX_ROWS_PER_BATCH = 420;
 
-const OPEN_PLANNING_JOB_SQL = `SELECT job_id, kind, payload_json, state, cursor, planned_count, created_at, expires_at, completed_at, error
-   FROM telegram_jobs WHERE state IN ('planning', 'ready') AND state = 'planning'`;
+const PLANNING_JOB_COLUMNS = "job_id, kind, payload_json, state, cursor, planned_count, created_at, expires_at, completed_at, error";
+const OPEN_PLANNING_JOB_SQL = `SELECT ${PLANNING_JOB_COLUMNS} FROM (
+     SELECT ${PLANNING_JOB_COLUMNS} FROM telegram_jobs WHERE state IN ('planning', 'ready') AND state = 'planning'
+     UNION ALL SELECT ${PLANNING_JOB_COLUMNS} FROM telegram_reference_alert_plans WHERE state = 'planning'
+   ) WHERE 1 = 1`;
 
 export interface TelegramFanoutResult {
   pages: number;
@@ -84,12 +88,15 @@ export async function fanOutPlanningTelegramJobs(
     jobsCancelled: 0,
     cappedRows: 0,
   };
-  const cancelled = await db.prepare(
-    `UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = COALESCE(error, 'expired_while_planning'),
-        payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
-      WHERE state = 'planning' AND expires_at <= ?`,
-  ).bind(nowSec, nowSec).run();
-  result.jobsCancelled = Number(cancelled.meta?.changes ?? 0);
+  for (const table of ["telegram_jobs", "telegram_reference_alert_plans"] as const) {
+    // SAFETY: table is a static planning table name.
+    const cancelled = await db.prepare(
+      `UPDATE ${table} SET state = 'cancelled', completed_at = ?, error = COALESCE(error, 'expired_while_planning'),
+          payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
+        WHERE state = 'planning' AND expires_at <= ?`,
+    ).bind(nowSec, nowSec).run();
+    result.jobsCancelled += Number(cancelled.meta?.changes ?? 0);
+  }
 
   const maxPages = options.maxPages ?? TELEGRAM_FANOUT_MAX_PAGES_PER_RUN;
 
@@ -108,10 +115,12 @@ export async function fanOutPlanningTelegramJobs(
     ).first<TelegramJobRow>();
     if (!job) break;
     frontier = { createdAt: Number(job.created_at), jobId: job.job_id };
+    const table = telegramPlanningTable(job.job_id);
     const handler = getTelegramJobKindHandler(job.kind);
     if (!handler?.buildPage) {
       await db.prepare(
-        `UPDATE telegram_jobs SET state = 'cancelled', completed_at = ?, error = 'no_fanout_builder',
+        // SAFETY: telegramPlanningTable returns only literal table names.
+        `UPDATE ${table} SET state = 'cancelled', completed_at = ?, error = 'no_fanout_builder',
             payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}
           WHERE job_id = ? AND state = 'planning'`,
       ).bind(nowSec, job.job_id).run();
@@ -128,7 +137,8 @@ export async function fanOutPlanningTelegramJobs(
         if (error.mode === "query") result.presetQueryFailures += 1;
         else result.presetResolutionFailures += 1;
       }
-      await db.prepare("UPDATE telegram_jobs SET error = ? WHERE job_id = ? AND state = 'planning'")
+      // SAFETY: telegramPlanningTable returns only literal table names.
+      await db.prepare(`UPDATE ${table} SET error = ? WHERE job_id = ? AND state = 'planning'`)
         .bind(classifyTelegramLogError(error), job.job_id).run();
       logTelegramEvent({
         level: "warn",
@@ -177,7 +187,8 @@ export async function fanOutPlanningTelegramJobs(
           // the job payload's message text is scrubbed in the same atomic batch.
           const clearMessageText = nextState === "ready" ? `, payload_json = ${CLEAR_JOB_MESSAGE_TEXT_SQL}` : "";
           const advance = db.prepare(
-            `UPDATE telegram_jobs
+            // SAFETY: telegramPlanningTable returns only literal table names.
+            `UPDATE ${table}
                 SET cursor = ?, planned_count = ?, state = ?, error = NULL${clearMessageText}
               WHERE job_id = ? AND state = 'planning' AND cursor IS ?`,
           ).bind(

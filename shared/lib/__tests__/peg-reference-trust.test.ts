@@ -54,9 +54,9 @@ describe("peg reference trust", () => {
       expected: false,
     },
     {
-      label: "variable pegs stay trusted without peer-count gating",
+      label: "variable pegs without a resolved denominator are unavailable",
       input: { pegCurrency: "VAR", pegType: "peggedVAR" },
-      expected: true,
+      expected: false,
     },
     {
       label: "non-USD fiat fallback is trusted",

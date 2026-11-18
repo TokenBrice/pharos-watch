@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { hasUnverifiedDepegPeak } from "./depeg-event-config";
 import {
   DepegDirectionSchema,
   DepegEventStoredSnapshotSchema,
@@ -8,7 +9,6 @@ import {
 } from "@shared/types/peg";
 
 export const DEPEG_EVENT_DATA_DIR = join(process.cwd(), "data/depeg-events");
-const DEPEG_EVENT_INDEX_PATH = join(DEPEG_EVENT_DATA_DIR, "index.json");
 
 const DepegEventIndexEntrySchema = z.object({
   slug: z.string().min(1),
@@ -18,7 +18,8 @@ const DepegEventIndexEntrySchema = z.object({
   direction: DepegDirectionSchema,
   peakDeviationBps: z.number(),
   startedAt: z.number(),
-});
+  retainedPage: DepegEventStoredSnapshotSchema.element.optional(),
+}).refine(({ retainedPage, slug }) => !retainedPage || retainedPage.slug === slug, "retained page slug mismatch");
 const DepegEventIndexSchema = z.array(DepegEventIndexEntrySchema);
 export type DepegEventIndexEntry = z.infer<typeof DepegEventIndexEntrySchema>;
 
@@ -57,10 +58,10 @@ function readDepegEventShard(path: string): DepegEventEntry[] {
   return parseEventArray(readFileSync(path, "utf8"), path);
 }
 
-function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }): DepegEventIndexEntry[] {
+export function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }, path: string): DepegEventIndexEntry[] {
   let raw: string;
   try {
-    raw = readFileSync(DEPEG_EVENT_INDEX_PATH, "utf8");
+    raw = readFileSync(path, "utf8");
   } catch (cause) {
     if (missing === "empty" && isMissingFile(cause)) return [];
     throw cause;
@@ -70,10 +71,10 @@ function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }): Depeg
   try {
     parsed = JSON.parse(raw);
   } catch (cause) {
-    throw new Error(`Failed to parse ${DEPEG_EVENT_INDEX_PATH} as JSON.`, { cause });
+    throw new Error(`Failed to parse ${path} as JSON.`, { cause });
   }
   if (!Array.isArray(parsed)) {
-    throw new Error(`Expected ${DEPEG_EVENT_INDEX_PATH} to contain an array of depeg event index entries.`);
+    throw new Error(`Expected ${path} to contain an array of depeg event index entries.`);
   }
 
   const result = DepegEventIndexSchema.safeParse(parsed);
@@ -81,15 +82,15 @@ function readDepegEventIndex({ missing }: { missing: "empty" | "throw" }): Depeg
     const firstIssue = result.error.issues[0];
     const issuePath = firstIssue?.path.length ? firstIssue.path.join(".") : "<root>";
     const issueMessage = firstIssue?.message ?? "schema validation failed";
-    throw new Error(`Invalid depeg event index data at ${DEPEG_EVENT_INDEX_PATH}:${issuePath}: ${issueMessage}`);
+    throw new Error(`Invalid depeg event index data at ${path}:${issuePath}: ${issueMessage}`);
   }
   return result.data;
 }
 
-export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw" }): DepegEventEntry[] {
+export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw" }, dataDir = DEPEG_EVENT_DATA_DIR): DepegEventEntry[] {
   let shardNames: string[];
   try {
-    shardNames = readdirSync(DEPEG_EVENT_DATA_DIR)
+    shardNames = readdirSync(dataDir)
       .filter((name) => /^\d{4}\.json$/.test(name))
       .sort();
   } catch (cause) {
@@ -99,26 +100,31 @@ export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw"
 
   if (shardNames.length === 0) {
     if (missing === "empty") return [];
-    throw new Error(`No yearly depeg event shards found under ${DEPEG_EVENT_DATA_DIR}.`);
+    throw new Error(`No yearly depeg event shards found under ${dataDir}.`);
   }
 
-  const entries = shardNames.flatMap((name) => readDepegEventShard(join(DEPEG_EVENT_DATA_DIR, name)));
+  const entries = shardNames.flatMap((name) => readDepegEventShard(join(dataDir, name)));
   return entries.sort((a, b) => {
     if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
     return b.id - a.id;
   });
 }
 
-export function readDepegEventPageEntries(): DepegEventEntry[] {
-  const index = readDepegEventIndex({ missing: "throw" });
-  const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }).map((event) => [event.slug, event] as const));
-  return index.map((entry) => {
-    const event = bySlug.get(entry.slug);
+export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): DepegEventEntry[] {
+  const index = readDepegEventIndex({ missing: "throw" }, join(dataDir, "index.json"));
+  const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }, dataDir).map((event) => [event.slug, event] as const));
+  const pages = index.map((entry) => {
+    const event = entry.retainedPage ?? bySlug.get(entry.slug);
     if (!event) {
       throw new Error(
-        `Depeg event index entry ${entry.slug} has no matching event in the yearly shards under ${DEPEG_EVENT_DATA_DIR}.`,
+        `Depeg event index entry ${entry.slug} has no matching event in the yearly shards under ${dataDir}.`,
       );
     }
     return event;
   });
+  const indexedSlugs = new Set(index.map(({ slug }) => slug));
+  for (const event of bySlug.values()) {
+    if (hasUnverifiedDepegPeak(event) && !indexedSlugs.has(event.slug)) pages.push(event);
+  }
+  return pages;
 }

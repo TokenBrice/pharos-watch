@@ -3,6 +3,7 @@
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
 import type { DepegEvent } from "@shared/types/peg";
 
 const { useActiveDepegEventsMock, usePegSummaryMock, useStablecoinsMock, useResolverMock } = vi.hoisted(() => ({
@@ -144,16 +145,19 @@ describe("ActiveDepegsCard", () => {
     expect(screen.queryByText("C15")).toBeNull();
   });
 
-  it("counts an open incident whose current observation is unavailable", () => {
-    useActiveDepegEventsMock.mockReturnValue({ data: { events: [makeEvent()] }, isLoading: false });
+  it.each([
+    ["Observation unavailable", { currentDeviationBps: null }],
+    ["Reference not yet updated", { priceObservedAt: FX_REOPEN_QUOTE_AT, ...makeFxCurrentPeg("stale-reference", null) }],
+  ] as const)("counts an open incident whose current reading is %s", (note, observation) => {
+    useActiveDepegEventsMock.mockReturnValue({ data: { events: [makeEvent({ stablecoinId: "eur-stasis", symbol: "EURS" })] }, isLoading: false });
     usePegSummaryMock.mockReturnValue({
-      data: { coins: [{ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: null }] },
+      data: { coins: [{ id: "eur-stasis", symbol: "EURS", pegCurrency: "EUR", activeDepeg: true, ...observation }] },
       isLoading: false,
     });
     render(<ActiveDepegsCard />);
 
     expect(screen.getByText("1")).toBeTruthy();
-    expect(screen.getByText("Observation unavailable")).toBeTruthy();
+    expect(screen.getByText(note)).toBeTruthy();
     expect(screen.getByText("coin with an open confirmed incident")).toBeTruthy();
     expect(screen.queryByText("No open confirmed incidents")).toBeNull();
   });

@@ -8,7 +8,7 @@ import { EventCard } from "@/components/tape/event-card";
 import { SEVERITY_LABEL as SEVERITY_LABEL_BARE } from "@shared/lib/classification/tape";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { ApiFetchError, type ApiMeta } from "@/lib/api";
-import { FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
+import { DEPEG_CLAIM_RETRACTED_REASON, FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 import type { DepegEvent } from "@shared/types/peg";
 import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
@@ -113,7 +113,7 @@ export function TimelineFeed({
     try {
       const body: unknown = JSON.parse(permalinkBufferError.bodyText);
       if (typeof body === "object" && body !== null && "reason" in body) {
-        permalinkRetracted = body.reason === FLOW_CLAIM_RETRACTED_REASON || body.reason === FREEZE_CLAIM_RETRACTED_REASON;
+        permalinkRetracted = body.reason === FLOW_CLAIM_RETRACTED_REASON || body.reason === FREEZE_CLAIM_RETRACTED_REASON || body.reason === DEPEG_CLAIM_RETRACTED_REASON;
       }
     } catch {
       // An unreadable 404 body cannot establish a retraction.

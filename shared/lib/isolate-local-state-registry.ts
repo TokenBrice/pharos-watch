@@ -80,6 +80,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The subscriber timezone in D1 and the runtime timezone database are authoritative; cached formatters carry no business state.",
   },
   {
+    sourcePath: "shared/lib/peg-utils.ts",
+    stateNames: ["closureCache"],
+    owner: "Peg reference closure intervals",
+    kind: "cache",
+    resetOrTtl: "One interval list per reference market, reused for the same end time when the requested start is covered; resets with the isolate.",
+    durableTruth: "The shared reference session calendar and requested time range are authoritative; cached intervals only avoid recomputing closure windows.",
+  },
+  {
     sourcePath: "shared/lib/safety-score-v9/compile.ts",
     stateNames: ["validatedCompiledFactSets", "validatedAssetFacts"],
     owner: "Safety Score V9 fact compilation",
@@ -254,14 +262,6 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "counter",
     resetOrTtl: "One in-memory count per job until isolate recycle.",
     durableTruth: "cron_runs and durable cron-event records are authoritative; counts only tune log severity.",
-  },
-  {
-    sourcePath: "worker/src/lib/fx-rate-state.ts",
-    stateNames: ["_fxCalendar"],
-    owner: "FX business-day calendar",
-    kind: "cache",
-    resetOrTtl: "Caches computed closing-day sets by year until isolate recycle.",
-    durableTruth: "Deterministic calendar rules and current FX cache rows are authoritative.",
   },
   {
     sourcePath: "worker/src/lib/request-source-attribution.ts",

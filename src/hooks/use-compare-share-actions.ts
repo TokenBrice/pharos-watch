@@ -1,19 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { trackEvent } from "@/lib/analytics";
 import { canvasToBlob, loadImage, renderCompareShareImage } from "@/lib/compare-share-image";
 import { copyText } from "@/lib/clipboard";
 import { triggerBlobDownload } from "@/lib/exports/download";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { formatCurrency } from "@shared/lib/format";
-import { formatNativePrice } from "@shared/lib/peg-format";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
-import { getPegReference } from "@shared/lib/peg-rates";
+import { formatComparisonPrice } from "@/lib/current-peg";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
 import type { StablecoinData } from "@shared/types/supply";
+import type { PegSummaryCoin } from "@shared/types/peg";
 import type { ComparisonMeta } from "@/lib/compare-derive";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
@@ -23,7 +22,8 @@ interface CompareCoinForShare {
   name: string;
   data: StablecoinData;
   meta: ComparisonMeta;
-  pegDetails?: { pegScore: number | null } | null;
+  navPriceReference?: number | null;
+  pegDetails?: PegSummaryCoin | null;
   liquidity?: { liquidityScore: number | null } | null;
   safetyCard?: Pick<SafetyScoreV9CurrentCard, "grade" | "ratingStatus" | "partialEvidence"> | null;
 }
@@ -37,7 +37,6 @@ interface CompareRadarCard {
 interface UseCompareShareActionsOptions {
   comparisonCoins: CompareCoinForShare[];
   logos: Record<string, string> | undefined;
-  pegRates: Record<string, number>;
   radarCards: CompareRadarCard[];
   axisOrder: readonly string[];
   axisLabels: Record<string, string>;
@@ -48,7 +47,6 @@ interface UseCompareShareActionsOptions {
 export function useCompareShareActions({
   comparisonCoins,
   logos,
-  pegRates,
   radarCards,
   axisOrder,
   axisLabels,
@@ -91,14 +89,13 @@ export function useCompareShareActions({
 
     const shareCoins: ShareCoinData[] = comparisonCoins.map((coin, index) => {
       const cap = getCirculatingRawOrNull(coin.data);
-      const prev = getPrevWeekRawOrNull(coin.data);
-      const weeklyPct = getSupplyChangePercent(coin.data, prev);
-      const pegRef = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
+      const weeklyPct = getSupplyChangePercent(coin.data, "week");
+      const navReference = coin.meta.flags.navToken ? coin.navPriceReference ?? null : undefined;
 
       return {
         symbol: coin.symbol,
         name: coin.name,
-        price: formatNativePrice(isObservedPrice(coin.data) ? coin.data.price : null, coin.meta.flags.pegCurrency, pegRef),
+        price: formatComparisonPrice(coin.data, coin.meta.flags.pegCurrency ?? "USD", navReference, coin.pegDetails),
         marketCap: cap != null ? formatCurrency(cap) : "—",
         pegScore: coin.pegDetails?.pegScore != null ? `${coin.pegDetails.pegScore.toFixed(1)}` : "—",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "—",
@@ -128,7 +125,7 @@ export function useCompareShareActions({
     }
 
     return { coins: shareCoins, pharosLogo, radarData, asOfUpdatedAt };
-  }, [asOfUpdatedAt, axisLabels, axisOrder, comparisonCoins, logos, pegRates, radarCards]);
+  }, [asOfUpdatedAt, axisLabels, axisOrder, comparisonCoins, logos, radarCards]);
 
   const handleTwitterShare = useCallback(async () => {
     setShareLoading(true);

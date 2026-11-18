@@ -28,6 +28,7 @@ interface ShareButtonProps {
   stablecoinId?: string;
   /** False when the subject has no published grade to date, such as a not-rated coin. */
   datedScorecard?: boolean;
+  depegBriefingUrl?: string;
 }
 
 async function fetchOgBlob(signal: AbortSignal, stablecoinId?: string): Promise<Blob> {
@@ -75,7 +76,7 @@ async function createDatedScorecard(stablecoinId: string, signal: AbortSignal): 
   throw new RequestFailure("http", "/_site-data/scorecard", "Site session required", { status: 401 });
 }
 
-export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = false, datedScorecard = true }: ShareButtonProps) {
+export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = false, datedScorecard = true, depegBriefingUrl }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [datedShare, setDatedShare] = useState<SocialScorecardCreated | null>(null);
   const [manualCopyUrl, setManualCopyUrl] = useState<string | null>(null);
@@ -243,6 +244,11 @@ export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = 
           <DropdownMenuItem onSelect={shareDatedScorecard}>
             <Share2 />
             Share dated scorecard
+          </DropdownMenuItem>
+        )}
+        {depegBriefingUrl && (
+          <DropdownMenuItem asChild>
+            <a href={depegBriefingUrl} target="_blank" rel="noopener noreferrer"><ImageIcon />Open dated depeg briefing</a>
           </DropdownMenuItem>
         )}
         {canCopyImage && (

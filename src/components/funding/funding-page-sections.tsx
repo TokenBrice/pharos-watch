@@ -10,7 +10,7 @@ import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { CostLineItem, CostsFile, Donation, FundingChain } from "@shared/lib/funding/schema";
+import { fundingTransferId, type CostLineItem, type CostsFile, type Donation, type FundingChain } from "@shared/lib/funding/schema";
 import type { DonationSummary, MonthlyFunding } from "@shared/lib/funding/helpers";
 import {
   DONOR_API_KEY_DAYS_PER_MIN_USD,
@@ -318,7 +318,7 @@ function DonationTable({ rows, label }: { rows: readonly Donation[]; label: stri
           const chain = CHAIN_META[d.chain];
           const amount = formatDonationUsd(d.usd_at_receipt, d.price_note);
           return (
-            <TableRow key={`${d.chain}-${d.tx_hash}`} rowIntent="static" className="hover:bg-muted/20">
+            <TableRow key={fundingTransferId(d.chain, d.tx_hash, d.transfer_discriminator)} rowIntent="static" className="hover:bg-muted/20">
               <TableHead scope="row" className="h-auto max-w-56 truncate px-3 py-2 font-mono text-xs font-normal text-foreground">
                 {displayText}
               </TableHead>

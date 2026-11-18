@@ -178,6 +178,7 @@ describe("public status helpers", () => {
         .map((entry) => [entry.key, circuit]),
     );
     expect(countPublicImpactOpenCircuits(dedicated)).toBe(0);
+    expect(countPublicImpactOpenCircuits({ "coingecko-ticker": circuit })).toBe(0);
     // These dedicated routes formerly contributed four false source-wide outages.
     const dedicatedOutage = {
       "mento-fpmm": circuit,

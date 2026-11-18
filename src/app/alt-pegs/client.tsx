@@ -269,8 +269,8 @@ export function AltPegsClient() {
       <footer className="space-y-1 border-t border-border/50 pt-4 text-xs text-muted-foreground">
         <p>
           Current figures: Pharos stablecoin list over the core universe, refreshed every{" "}
-          <span className="pharos-numeric">{Math.round(STABLECOINS_INTERVAL_SEC / 60)}</span> minutes. History: provider-wide
-          supply snapshots, a different population, so its latest sample is never read as the current cap.
+          <span className="pharos-numeric">{Math.round(STABLECOINS_INTERVAL_SEC / 60)}</span> minutes. Share history uses tracked core supply at each date, including retired assets only before their retirement dates.
+          The separate cohort history uses provider-wide supply snapshots.
         </p>
         <p>
           Euro stablecoins are reshaped by EU MiCA rules; see the{" "}

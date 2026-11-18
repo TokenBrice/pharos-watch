@@ -23,6 +23,7 @@ import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   getDexMeasuredExecutionFreshnessMaxSec,
+  toDexMeasuredExecutionPublicHistory,
   type DexExactQuoteAdapterId,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
@@ -933,7 +934,9 @@ export function measuredExecutionProfilesForPool(
 export function observationHistoryForProfile(
   profile: P4MeasuredExecutionPublicProfile,
 ): DexMeasuredExecutionObservationHistory | undefined {
-  return "observationHistory" in profile ? profile.observationHistory : undefined;
+  const history: DexMeasuredExecutionObservationHistory | undefined = profile.observationHistory;
+  // Staged pool packets can predate the producer's public projection.
+  return history && "valuationObservations" in history ? toDexMeasuredExecutionPublicHistory(history) : history;
 }
 
 export function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {

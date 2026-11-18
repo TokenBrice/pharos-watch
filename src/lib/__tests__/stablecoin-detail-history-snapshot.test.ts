@@ -216,6 +216,19 @@ describe("stablecoin detail history snapshot", () => {
     expect(snapshot!.events[0].durationSeconds).toBe(3_600);
   });
 
+  it("uses analytic recovery for retained history and keeps a peer peak's basis", () => {
+    const startedAt = 1_700_000_000;
+    const endedAt = startedAt + 3600;
+    const snapshot = build([
+      makeEntry({ id: 1, startedAt, endedAt, analyticRecoveryAt: startedAt + 1800 }),
+      makeEntry({ id: 2, startedAt, endedAt, analyticRecoveryAt: null, peakBasis: "peer-relative" }),
+    ]);
+    expect(snapshot?.events).toMatchObject([
+      { id: 2, closure: "unknown_closed", durationSeconds: 3600, peakBasis: "peer-relative" },
+      { id: 1, closure: "recovered", durationSeconds: 1800, endedAt },
+    ]);
+  });
+
   it("links only events that own a permanent page", () => {
     const snapshot = build([
       makeEntry({ id: 1, slug: "usdt-2023-03-11" }),

@@ -14,6 +14,12 @@ import type { LinkPreviewOptions } from "./telegram";
  * each job owns one `telegram_deliveries` row per (chat, chunk).
  */
 export type TelegramJobKind = "alert" | "freeze" | "freeze_batch" | "rollup" | "broadcast" | "digest";
+export const REFERENCE_ALERT_PLAN_PREFIX = "alert:ref-v1:";
+
+export function telegramPlanningTable(jobId: string) {
+  return jobId.startsWith(REFERENCE_ALERT_PLAN_PREFIX) ? "telegram_reference_alert_plans" : "telegram_jobs";
+}
+
 export type TelegramJobState = "planning" | "ready" | "done" | "cancelled";
 export type TelegramDeliveryState =
   | "pending"
@@ -217,11 +223,15 @@ export async function buildTelegramJobStatements(
   spec: TelegramJobSpec,
 ): Promise<D1PreparedStatement[]> {
   const direct = spec.deliveries != null;
+  const table = telegramPlanningTable(spec.jobId);
+  // A completed reference plan already has a receipt in the ordinary queue.
+  const dedupeReceipt = table === "telegram_jobs" ? "" : " WHERE NOT EXISTS (SELECT 1 FROM telegram_jobs WHERE job_id = ?)";
   const statements = [
     db.prepare(
-      `INSERT OR IGNORE INTO telegram_jobs (
+      // SAFETY: the table is one of two literal planning tables; the predicate is static.
+      `INSERT OR IGNORE INTO ${table} (
          job_id, kind, payload_json, state, cursor, planned_count, created_at, expires_at
-       ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`,
+       ) SELECT ?, ?, ?, ?, NULL, ?, ?, ?${dedupeReceipt}`,
     ).bind(
       spec.jobId,
       spec.kind,
@@ -230,6 +240,7 @@ export async function buildTelegramJobStatements(
       direct ? spec.deliveries!.length : 0,
       spec.createdAt,
       spec.expiresAt,
+      ...(dedupeReceipt ? [spec.jobId] : []),
     ),
   ];
   if (direct) {

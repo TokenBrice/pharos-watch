@@ -170,6 +170,12 @@ describe("ShareButton", () => {
     expect(screen.getByRole("link", { name: "Download dated PNG" }).getAttribute("href")).toBe(imageUrl);
   });
 
+  it("opens the dated briefing from the depeg share menu", () => {
+    const url = "https://api.pharos.watch/api/og/v2/depeg/briefing";
+    render(<ShareButton depegBriefingUrl={url} />);
+    expect(screen.getByRole("link", { name: "Open dated depeg briefing" }).getAttribute("href")).toBe(url);
+  });
+
   it("offers no dated scorecard for a coin without a published grade", () => {
     render(<ShareButton stablecoinId="usdc-circle" datedScorecard={false} />);
     expect(screen.queryByRole("button", { name: "Share dated scorecard" })).toBeNull();

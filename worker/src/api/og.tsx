@@ -1,3 +1,5 @@
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { handleDepegBriefingOg } from "./og-depeg";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { isEvergreenImageHash } from "@shared/lib/social-preview-asset";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
@@ -34,6 +36,7 @@ function decodeOgCapture(raw: string): string | Response {
 }
 
 export async function handleOg(db: D1Database, path: string, fallback: string | null = null): Promise<Response | null> {
+  if (path === API_PATHS.ogDepegBriefing()) return handleDepegBriefingOg(db);
   const legacy = LEGACY_OG_PATTERN.exec(path);
   if (legacy) return legacyOgRedirect(legacy[1]);
   const dated = DATED_OG_PATTERN.exec(path);

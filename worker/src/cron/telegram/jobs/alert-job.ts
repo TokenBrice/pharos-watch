@@ -4,7 +4,7 @@ import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/teleg
 import { chunkArray } from "../../../lib/db";
 import { sha256Hex } from "../../../lib/hash";
 import type { ConsolidatedAlerts } from "../../../telegram/common/alerts-formatting";
-import type { TelegramDeliveryInput, TelegramJobSpec } from "../../../telegram/delivery/jobs";
+import { REFERENCE_ALERT_PLAN_PREFIX, type TelegramDeliveryInput, type TelegramJobSpec } from "../../../telegram/delivery/jobs";
 import {
   loadFanoutSubscriptionInputs,
   type AlertStablecoinIds,
@@ -77,8 +77,12 @@ export async function buildTelegramAlertJobSpec(args: {
   };
   const digest = await sha256Hex(JSON.stringify({ payload, baseline: args.baselineDigestInput }));
   const ttls = eventAlertTypes(args.events).map((type) => TELEGRAM_ALERT_TTL_SEC[type]);
+  const { depegTriggered, depegWorsening, depegResolved } = payload.events;
+  const needsCurrentFormatter = [...depegTriggered, ...depegWorsening].some((event) =>
+    event.pegReference == null || event.price == null || event.peakBasis === "peer-relative") ||
+    depegResolved.some((event) => event.peakBasis === "peer-relative");
   return {
-    jobId: `alert:${digest.slice(0, 32)}`,
+    jobId: `${needsCurrentFormatter ? REFERENCE_ALERT_PLAN_PREFIX : "alert:"}${digest.slice(0, 32)}`,
     kind: "alert",
     payload,
     createdAt: args.detectedAt,
