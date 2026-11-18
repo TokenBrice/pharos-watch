@@ -14,7 +14,9 @@ import {
 import {
   DexLiquidityHistoryPointSchema,
 } from "../dex-liquidity";
+import { PersistedNativePegQuoteSchema } from "../native-peg-quote";
 import {
+  StablecoinDataOutputSchema,
   StablecoinDataSchema,
   StablecoinListResponseSchema,
   SupplyHistoryResponseSchema,
@@ -77,6 +79,19 @@ describe("price derivation provenance contract (K-207)", () => {
       ...makeStablecoin(), priceDerivation: { ...priceDerivation, ...invalid },
     }).success).toBe(false);
   });
+});
+
+it.each([
+  { kind: "traded-pair", lineage: { venue: "kraken", pair: "EURS/EUR" } },
+  { kind: "conversion", lineage: { fxSource: "oxr", fxObservedAtSec: 1_700_000_000 } },
+  { kind: "unknown", lineage: {} },
+])("preserves $kind lineage on native quotes and accepts legacy quotes", (derivation) => {
+  const legacy = { value: 1, observedAt: 1_700_000_100, source: "coingecko" };
+  expect(PersistedNativePegQuoteSchema.parse(legacy)).toEqual(legacy);
+  expect(PersistedNativePegQuoteSchema.parse({ ...legacy, derivation })).toEqual({ ...legacy, derivation });
+  expect(PersistedNativePegQuoteSchema.safeParse({
+    ...legacy, derivation: { ...derivation, lineage: { fxObservedAtSec: 1.5 } },
+  }).success).toBe(false);
 });
 
 const baseEvent = {
@@ -156,6 +171,36 @@ describe("depeg chronology contract", () => {
   it("accepts the optional catalog-retirement marker without requiring it", () => {
     expect(DepegEventSchema.parse({ ...baseEvent, retired: true }).retired).toBe(true);
     expect(DepegEventSchema.parse(baseEvent)).not.toHaveProperty("retired");
+  });
+
+  it.each([
+    ["restored-evidenced", "usd", [
+      { fromSec: baseEvent.startedAt + 60, toSec: baseEvent.startedAt + 120 },
+      { fromSec: baseEvent.startedAt + 180, toSec: baseEvent.endedAt },
+    ]],
+    ["admitted-coverage", "usd", []],
+    ["repaired", "native-peg", [{ fromSec: baseEvent.startedAt, toSec: baseEvent.endedAt }]],
+  ])("preserves %s event observations in the API and archive", (disposition, peakQuoteDomain, admittedCoverage) => {
+    const fields = {
+      peakPegReference: 1.05,
+      peakQuoteDomain,
+      recoveryPegReference: 1.07,
+      admittedCoverage,
+      disposition,
+    };
+    const event = { ...baseEvent, ...fields };
+    expect(DepegEventSchema.parse(event)).toMatchObject(fields);
+    expect(DepegEventStoredSnapshotSchema.parse([{ ...event, slug: "event" }])[0]).toMatchObject(fields);
+    const legacy = DepegEventSchema.parse(baseEvent);
+    for (const field of Object.keys(fields)) expect(legacy).not.toHaveProperty(field);
+  });
+
+  it.each([
+    { admittedCoverage: [{ fromSec: 20, toSec: 10 }] },
+    { admittedCoverage: [{ fromSec: 10, toSec: 10 }] },
+    { admittedCoverage: [{ fromSec: 10, toSec: 30 }, { fromSec: 20, toSec: 40 }] },
+  ])("rejects invalid admitted coverage %j", ({ admittedCoverage }) => {
+    expect(DepegEventSchema.safeParse({ ...baseEvent, admittedCoverage }).success).toBe(false);
   });
 
   it("parses every current build-time archive row under the chronology contract", () => {
@@ -301,6 +346,28 @@ describe("supply history provenance contract (K-031)", () => {
       { date: 1, circulatingUsd: 1, price: 1, supplyProvenance: { supplySource: 7, supplyObservedAt: null, supplyChainGuard: null } },
     ]).success).toBe(false);
   });
+});
+
+it.each([
+  {},
+  { circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null },
+  { circulatingNative: 0, valuationPriceUsd: 2.5, valuationObservedAtSec: 1_700_000_000 },
+  { circulatingNative: 125.5, valuationPriceUsd: 2.5, valuationObservedAtSec: 1_700_000_000 },
+])("round-trips native quantity fields %j in current and historical supply", (fields) => {
+  const coin = makeStablecoin();
+  const current = StablecoinDataSchema.parse({ ...coin, ...fields });
+  expect(current).toStrictEqual({ ...StablecoinDataSchema.parse(coin), ...fields });
+  expect(StablecoinDataOutputSchema.parse(current)).toEqual(current);
+  const history = { date: 1_700_000_000, circulatingUsd: 500, price: 2, ...fields };
+  expect(SupplyHistoryResponseSchema.parse([history])).toEqual([history]);
+});
+
+it.each([
+  { circulatingNative: -1 }, { circulatingNative: Infinity },
+  { valuationPriceUsd: 0 }, { valuationObservedAtSec: 1.5 },
+])("rejects invalid native quantity metadata %j", (fields) => {
+  expect(StablecoinDataSchema.safeParse({ ...makeStablecoin(), ...fields }).success).toBe(false);
+  expect(SupplyHistoryResponseSchema.safeParse([{ date: 1, circulatingUsd: 1, price: 1, ...fields }]).success).toBe(false);
 });
 
 describe("StablecoinListResponseSchema compatibility", () => {
