@@ -15,6 +15,7 @@ import {
 } from "../yield-sync/cache";
 import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 
 describe("parseRiskFreeRateCache", () => {
   const nowSec = 1710500000;
@@ -108,7 +109,7 @@ describe("parseRiskFreeRatesCache", () => {
 
 describe("parseDlStablecoinPoolsCache", () => {
   const nowSec = 1710500000;
-  const steak = "32f586b4-5358-5aa2-88ee-c842139e7023";
+  const steak = YIELD_POOL_MAP["steakusdg-steakhouse"]!;
 
   it("parses structured payload with data array", () => {
     const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
@@ -145,11 +146,7 @@ describe("parseDlStablecoinPoolsCache", () => {
   });
 
   it("rejects structured DL cache payloads with future updatedAt", () => {
-    const raw = buildDlStablecoinPoolsCache([
-      makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
-    ], nowSec + 1);
-
-    expect(parseDlStablecoinPoolsCache(raw, nowSec, nowSec)).toBeNull();
+    expect(parseDlStablecoinPoolsCache(buildDlStablecoinPoolsCache([makeDlYieldPool()], nowSec + 1), nowSec, nowSec)).toBeNull();
   });
 });
 
