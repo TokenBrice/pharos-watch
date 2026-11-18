@@ -14,6 +14,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { YieldHistoryChart } from "@/components/yield/yield-history-chart";
 import { TableSourceLink } from "@/components/table/client";
 import { YieldSourceRiskBar } from "@/components/yield/yield-source-risk-bar";
@@ -600,6 +601,7 @@ export function YieldMobileCard({
       <p className="mt-1.5 truncate text-2xs text-muted-foreground">{row.yieldSource}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {row.coinStates?.[0] ? <CoinStateChip state={row.coinStates[0]} /> : null}
         {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
         <YieldSafetyBadge
           grade={grade}

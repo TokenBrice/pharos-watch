@@ -62,6 +62,8 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(slow.filters.dewsMax).toBeGreaterThan(fast.filters.dewsMax!);
     expect(fast.divergenceWarnings.map((warning) => warning.reason)).toContain("effective-tvl-floor-1h");
     expect(slow.divergenceWarnings.map((warning) => warning.reason)).not.toContain("effective-tvl-floor-1h");
+    // The holder-notice gate has no Screener twin.
+    expect(slow.divergenceWarnings.map((warning) => warning.reason)).toContain("holder-notice-gate");
   });
 
   it("decentralization=required + treasury → types includes 'decentralized'", () => {

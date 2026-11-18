@@ -12,6 +12,7 @@ import { logosById } from "@/lib/logos";
 import { usePegSummary, useReportCardsV9Table, useStressSignals, useDexLiquidityTable } from "@/hooks/api-hooks";
 import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { buildQueryFreshnessGroup } from "@/lib/query-refetch-group";
 import { useUrlState } from "@/hooks/use-url-state";
 import {
@@ -31,7 +32,7 @@ import {
   CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
-import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
 import { resolveCustodyModel } from "@shared/lib/report-card-policy";
@@ -170,6 +171,9 @@ export function ScreenerClient() {
     meta: dexMeta,
   } = useDexLiquidityTable();
 
+  // Shares the peg-summary and stress entries above; adds only the DDR verdicts.
+  const { byId: coinStates, clockReady } = useCoinStates();
+
   const { state: filters, replaceState: setFilters } = useUrlState(SCREENER_URL_SCHEMA, {
     enabled: hasHydrated,
     fallback: SCREENER_FILTER_DEFAULTS,
@@ -231,6 +235,7 @@ export function ScreenerClient() {
       const mintAuthorityScore = safetyPublicationAvailable
         ? resolveMintAuthorityScoreDisplay(safety?.mint)
         : null;
+      const dewsBand = stressData?.signals[meta.id]?.band;
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -243,6 +248,7 @@ export function ScreenerClient() {
         supplyUsd: supplyById.get(meta.id) ?? null,
         pegScore: pegCoin?.pegScore ?? null,
         dewsScore: stressData?.signals[meta.id]?.score ?? null,
+        dewsBand: dewsBand !== undefined && isThreatBand(dewsBand) ? dewsBand : null,
         liquidityScore: dexData?.[meta.id]?.liquidityScore ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
@@ -273,16 +279,19 @@ export function ScreenerClient() {
         // The registry peg unit owns the reference market; a NAV token has none to close.
         pegDeviationSeries: buildPegDeviationSeries(assetById.get(meta.id), pegCoin, meta.flags.navToken ? null : meta.flags.pegCurrency),
         supplySeries: supplySeriesById.get(meta.id),
+        states: coinStates.get(meta.id),
       });
     }
     return rows;
-  }, [stablecoinsData, pegById, safetyById, safetyPublicationAvailable, stressData, dexData]);
+  }, [stablecoinsData, pegById, safetyById, safetyPublicationAvailable, stressData, dexData, coinStates]);
 
   const scoreFilterDataState = resolveScreenerFilterDataState(filters, {
     dews: { loading: isStressLoading, hasData: stressData != null, error: stressError },
     report: { loading: isReportLoading, hasData: safetyProjection?.status === "available", error: reportError },
     peg: { loading: isPegLoading, hasData: pegData != null, error: pegError },
     liquidity: { loading: isDexLoading, hasData: dexData != null, error: dexError },
+    // Deadline states wait for the visitor's day clock: loading until then, never zero matches.
+    clock: { loading: !clockReady, hasData: clockReady },
   });
   const filteredRows = useMemo(
     () => scoreFilterDataState === "ready" ? applyFilters(allRows, filters) : [],

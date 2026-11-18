@@ -278,6 +278,11 @@ export interface MergedRow {
   lastEventAt: number | null;
 
   dewsScore: number | null;
+  /**
+   * The coin's highest curated holder-notice state (`resolveCoinStates`
+   * critical or paused); absent on frozen historical fixtures.
+   */
+  holderNotice?: { kind: "critical" | "paused"; title: string } | null;
   safetyGrade: ReportCardGrade | null;
   safetyScore: number | null;
   /**

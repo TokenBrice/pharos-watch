@@ -2,7 +2,7 @@
 
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { DependencyHubsBoard } from "./dependency-hubs-board";
+import { DependencyHubsBoard, LiveIncidentsUpstream } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
@@ -53,6 +53,22 @@ describe("DependencyHubsBoard", () => {
     render(<DependencyHubsBoard model={model} />);
     const cells = within(screen.getByRole("table")).getAllByRole("row")[1].querySelectorAll("td");
     expect(cells[1].querySelector("p")!.textContent).toBe("Unavailable");
+  });
+  it("lists live-state upstreams and chips their board rows", () => {
+    const states = new Map([
+      ["coin-0", [{ kind: "pre-launch" as const }, { kind: "critical" as const, notice: { type: "danger" as const, title: "Halted" } }]],
+      ["coin-7", [{ kind: "dews" as const, band: "ALERT" as const }]],
+    ]);
+    const { container, unmount } = render(<LiveIncidentsUpstream model={model} coinStates={states} />);
+    const rows = within(container).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
+    for (const text of ["Coin 0", "Critical notice · Halted", "1 direct dependent · 100% from C7", "$100.00"]) expect(rows[0].textContent).toContain(text);
+    unmount();
+    render(<DependencyHubsBoard model={model} coinStates={states} />);
+    expect([...document.querySelectorAll("[data-coin-state]")].map(chip => chip.closest("tr")?.textContent?.includes("Coin 0"))).toEqual([true]);
+    // Deadlines, like pre-launch, are scheduled, not incidents.
+    const deadline = { kind: "deadline" as const, notice: { type: "warning" as const, title: "M", deadline: "2026-12-01" }, daysToDeadline: 13 };
+    expect(render(<LiveIncidentsUpstream model={model} coinStates={new Map([["coin-1", [deadline]]])} />).container.textContent).toBe("");
   });
   it("does not publish a board for a graph with no dependents", () => {
     const model = buildDependencyHubsModel({ cards, edges: [], mcapMap: new Map() });

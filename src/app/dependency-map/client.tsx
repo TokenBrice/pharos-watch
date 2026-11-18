@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useDependencyGraph } from "@/hooks/use-dependency-graph";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { logosById } from "@/lib/logos";
 import { DependencyMapBasinList } from "@/components/dependency-watershed/dependency-map-basin-list";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
@@ -14,7 +15,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
-import { DependencyHubsBoard } from "./dependency-hubs-board";
+import { DependencyHubsBoard, LiveIncidentsUpstream } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
 import { SharedFailureDomainsBoard } from "./shared-failure-domains-board";
@@ -23,6 +24,8 @@ import type { SupplyOf } from "@shared/lib/dependency-exposure";
 export function DependencyMapClient() {
   const reportCardsQuery = useDependencyGraph();
   const stablecoinsQuery = useStablecoins();
+  // The live-state layer: the coin-state ladder over the structural publication.
+  const { byId: coinStates } = useCoinStates();
   const {
     data: reportData,
     isLoading: isLoadingCards,
@@ -135,6 +138,7 @@ export function DependencyMapClient() {
           <QueryErrorNotice error={stablecoinsError} hasData={false} onRetry={() => { void refetchStablecoins(); }} />
         </div>
       )}
+      <LiveIncidentsUpstream model={dependencyHubsModel} coinStates={coinStates} logos={logos} onExposure={exposureWorkspace.addRoot} />
       <DependencyHero
         model={dependencyHubsModel}
         methodologyVersion={reportData.methodologyVersion}
@@ -146,13 +150,14 @@ export function DependencyMapClient() {
         workspace={exposureWorkspace}
         commonModeGroups={reportData.commonModeGroups ?? null}
         supplyPending={supplyPending}
+        coinStates={coinStates}
         mobileSummary={<DependencyMapBasinList model={dependencyHubsModel} publication={reportData} logos={logos} labelOf={id => { const card = cards.find(entry => entry.id === id); return card ? stablecoinLabel(card) : id; }} onExposure={exposureWorkspace.addRoot} />}
       />
       <section className="pharos-card-shell space-y-2 p-4" aria-label="Dependency coverage">
         <h2 className="font-semibold">Known, not in the scored graph</h2>
         <p className="text-sm text-muted-foreground">{coveragePublished.length ? `${knownNotInGraphCount} known relationships excluded from scored graph totals.` : "Not published for this generation."}{coveragePublished.length > 0 && coveragePublished.length < reportData.nodes.length ? ` Coverage not published for ${reportData.nodes.length - coveragePublished.length} coins.` : ""} <Link href="/coverage/" className="underline">Coverage Matrix gaps</Link> (use the dependency Gaps filter).</p>
       </section>
-      <DependencyHubsBoard model={dependencyHubsModel} logos={logos} onExposure={exposureWorkspace.addRoot} />
+      <DependencyHubsBoard model={dependencyHubsModel} logos={logos} onExposure={exposureWorkspace.addRoot} coinStates={coinStates} />
       <SharedFailureDomainsBoard groups={reportData.commonModeGroups ?? null} cards={cards} supplyOf={domainSupplyOf} />
     </div>
   );

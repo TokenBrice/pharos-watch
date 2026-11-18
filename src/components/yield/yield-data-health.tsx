@@ -47,7 +47,7 @@ export function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryR
       {visible.map((warning) => (
         <div
           key={`${warning.code}:${warning.message}`}
-          className={cn("rounded-xl border px-4 py-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-xl border px-4 py-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.caution.banner)}
         >
           <p className="font-medium">{warning.message}</p>
           {warning.reasons && warning.reasons.length > 0 ? (

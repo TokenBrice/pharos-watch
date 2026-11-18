@@ -7,8 +7,10 @@ import {
   filterStablecoins,
   prioritizePinnedStablecoins,
   resolveDisplayedNativePrice,
+  resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import type { ColumnId } from "@/lib/column-visibility";
 import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
@@ -533,6 +535,15 @@ describe("sortStablecoins", () => {
     expect(new Set(result.slice(1).map((coin) => coin.id))).toEqual(new Set(["missing", "invalid"]));
   });
 
+});
+
+describe("resolveEffectiveSortKey", () => {
+  it("keeps a grade order on phone, where the row risk summary prints the grade", () => {
+    const phoneColumns = new Set<ColumnId>(["rank", "name", "price", "mcap", "change24h"]);
+    expect(resolveEffectiveSortKey("grade", phoneColumns)).toBe("mcap");
+    expect(resolveEffectiveSortKey("grade", phoneColumns, true)).toBe("grade");
+    expect(resolveEffectiveSortKey("stability", phoneColumns, true)).toBe("mcap");
+  });
 });
 
 describe("blacklistable projection", () => {

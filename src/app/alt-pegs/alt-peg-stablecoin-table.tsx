@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
+import { useCoinStates } from "@/hooks/use-coin-states";
 import { getCoreNonUsdPeg } from "@shared/lib/alt-peg-snapshot";
 import type { AltPegDistributionRow } from "@/lib/alt-peg-market";
 import type {
@@ -64,6 +65,7 @@ export function AltPegStablecoinTable({
   sourceGenerations,
 }: AltPegStablecoinTableProps) {
   const pinnedStablecoins = usePinnedStablecoins();
+  const coinStates = useCoinStates().byId;
 
   const filteredData = useMemo(() => {
     if (!data) return undefined;
@@ -115,6 +117,7 @@ export function AltPegStablecoinTable({
         pegScores={pegScores}
         dexLiquidity={dexLiquidity}
         reportCards={reportCards}
+        coinStates={coinStates}
         reportCardsMethodologyVersion={reportCardsMethodologyVersion}
         sourceGenerations={sourceGenerations}
         pinnedStablecoinIds={pinnedStablecoins.pinnedIds}

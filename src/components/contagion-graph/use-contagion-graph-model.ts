@@ -32,6 +32,9 @@ import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-graph-constants";
 import { buildDependencyHubsModel, type DependencyHubExposure } from "@shared/lib/dependency-hubs-model";
 import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { CoinState } from "@shared/lib/coin-state";
+
+const NO_COIN_STATES: ReadonlyMap<string, readonly CoinState[]> = new Map();
 
 interface UseContagionGraphModelOptions {
   cards: readonly ContagionGraphCard[];
@@ -44,6 +47,8 @@ interface UseContagionGraphModelOptions {
   exposureOverlay?: ExposureOverlay | null;
   onUseAsExposureRoot?: (coinId: string) => void;
   hubExposures?: readonly DependencyHubExposure[];
+  /** Live exceptional states (`useCoinStates`): a presentation layer that never changes layout, edges or totals. */
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
 }
 
 const subscribeToNothing = () => () => {};
@@ -158,6 +163,7 @@ export function useContagionGraphModel({
   exposureOverlay: controlledExposureOverlay = null,
   onUseAsExposureRoot,
   hubExposures,
+  coinStates = NO_COIN_STATES,
 }: UseContagionGraphModelOptions) {
   const exposureOverlay = controlledExposureOverlay?.roots.length ? controlledExposureOverlay : null;
   // Quarantine malformed edges individually; identifiable unknown basket shares stay drawable.
@@ -477,6 +483,7 @@ export function useContagionGraphModel({
     exposureNodeIds,
     highlightedPathEdges,
     onUseAsExposureRoot,
+    coinStates,
     visibleNodeIds,
     activeHoveredEdge,
     activeHoveredId,

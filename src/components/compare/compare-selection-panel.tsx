@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Share2, X, Download, type LucideIcon } from "lucide-react";
 import { CoinSelector } from "@/components/coin-selector";
+import { CoinStateChip } from "@/components/coin-state-chip";
 import { CompareEmptyState } from "@/components/compare/compare-empty-state";
 import type { useCompareSelection } from "@/hooks/use-compare-selection";
 import type { useCompareShareActions } from "@/hooks/use-compare-share-actions";
@@ -12,6 +13,7 @@ import { buildCompareSelectionInsights } from "@/lib/compare-selection-insights"
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 import type { CoinOption } from "@/lib/compare-types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import type { CoinState } from "@shared/lib/coin-state";
 
 const COMPARE_SHARE_BUTTON_CLASS =
   "pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5";
@@ -50,6 +52,7 @@ interface CompareMobileSelectionControlsProps {
   selectedIds: readonly string[];
   selectedCoins: readonly (CoinOption | null)[];
   coinOptions: CoinOption[];
+  coinStatesById?: ReadonlyMap<string, readonly CoinState[]>;
   logos?: Record<string, string>;
   disabledIds: Set<string>;
   onSelect: (slotIndex: number, coin: CoinOption) => void;
@@ -61,6 +64,7 @@ function CompareMobileSelectionControls({
   selectedIds,
   selectedCoins,
   coinOptions,
+  coinStatesById,
   logos,
   disabledIds,
   onSelect,
@@ -88,19 +92,24 @@ function CompareMobileSelectionControls({
           </button>
         ) : null}
       </div>
-      {selectedCoins.map((coin, index) =>
-        coin ? (
-          <CoinSelector
-            key={coin.id}
-            coins={coinOptions}
-            selected={coin}
-            logos={logos}
-            disabledIds={disabledIds}
-            onSelect={(selectedCoin) => onSelect(index, selectedCoin)}
-            onRemove={() => onRemove(index)}
-          />
-        ) : null,
-      )}
+      {selectedCoins.map((coin, index) => {
+        if (!coin) return null;
+        // The matrix shows one column at a time on a phone, so each chip carries its coin's state.
+        const state = coinStatesById?.get(coin.id)?.[0];
+        return (
+          <div key={coin.id} className="space-y-1">
+            <CoinSelector
+              coins={coinOptions}
+              selected={coin}
+              logos={logos}
+              disabledIds={disabledIds}
+              onSelect={(selectedCoin) => onSelect(index, selectedCoin)}
+              onRemove={() => onRemove(index)}
+            />
+            {state ? <CoinStateChip state={state} showDetail /> : null}
+          </div>
+        );
+      })}
       {selectedIds.length < MAX_COMPARE_COINS ? (
         <CoinSelector
           coins={coinOptions}
@@ -115,10 +124,11 @@ function CompareMobileSelectionControls({
   );
 }
 
-export function CompareSelectionPanel({ selection, share, logos }: {
+export function CompareSelectionPanel({ selection, share, logos, coinStatesById }: {
   selection: ReturnType<typeof useCompareSelection>;
   share: ReturnType<typeof useCompareShareActions>;
   logos: Record<string, string>;
+  coinStatesById?: ReadonlyMap<string, readonly CoinState[]>;
 }) {
   const { selectedIds, selectedCoins, coinOptions, disabledIds, handleSelect, handleRemove, setSelectedIds, applyPreset } = selection;
   const { toast, shareLoading, handleTwitterShare, handleWebShare, handleDownload } = share;
@@ -127,8 +137,8 @@ export function CompareSelectionPanel({ selection, share, logos }: {
     .map(stablecoinLabel)
     .join(" vs ");
   const selectionInsights = useMemo(
-    () => buildCompareSelectionInsights({ selectedIds }),
-    [selectedIds],
+    () => buildCompareSelectionInsights({ selectedIds, coinStatesById }),
+    [coinStatesById, selectedIds],
   );
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
@@ -169,6 +179,16 @@ export function CompareSelectionPanel({ selection, share, logos }: {
                   <p className="pharos-label">How to read this set</p>
                   {selectionInsights.lens ? (
                     <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
+                  ) : null}
+                  {selectionInsights.exceptional.length > 0 ? (
+                    <ul aria-label="Members in an exceptional state" className="mt-2 space-y-1">
+                      {selectionInsights.exceptional.map((member) => (
+                        <li key={member.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                          <span className="font-semibold text-foreground">{stablecoinLabel(member)}</span>
+                          <CoinStateChip state={member.state} showDetail />
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                   <p className="mt-2 text-xs text-muted-foreground">
                     {selectionInsights.cohort} {selectionInsights.structure}
@@ -226,6 +246,7 @@ export function CompareSelectionPanel({ selection, share, logos }: {
         selectedIds={selectedIds}
         selectedCoins={selectedCoins}
         coinOptions={coinOptions}
+        coinStatesById={coinStatesById}
         logos={logos}
         disabledIds={disabledIds}
         onSelect={handleSelect}

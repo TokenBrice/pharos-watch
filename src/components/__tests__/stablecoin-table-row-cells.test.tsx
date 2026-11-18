@@ -100,6 +100,20 @@ describe("StablecoinTableRowCells peg deviation", () => {
   });
 });
 
+describe("StablecoinTableRowCells exceptional state", () => {
+  it("names the top state by the symbol and in the link name", () => {
+    const row: StablecoinTableRowCellProps = {
+      ...buildRow(),
+      isVisible: (column) => column === "name",
+      coinState: { kind: "critical", notice: { type: "danger", title: "Chain halted" } },
+    };
+    const model = buildStablecoinTableRowModel({ coin: row.coin, density: row.density, variant: "default" });
+    const html = renderToStaticMarkup(<table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>);
+    expect(html).toContain('data-coin-state="critical"');
+    expect(html).toContain("details, Critical notice: Chain halted");
+  });
+});
+
 describe("StablecoinTableRowCells supply availability", () => {
   it("renders partial current supply but uses existing unavailable glyphs for changes without a sparkline", () => {
     const row = buildRow();

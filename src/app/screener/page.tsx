@@ -39,8 +39,9 @@ const SCREENER_SUPPORT_SECTION = (
           <p className="pharos-label">Reading the filters</p>
           <p>
             Numeric thresholds narrow the candidate set on DEWS stress, the V10 mint component, the three Safety Score
-            pillars, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
-            archetype, curated mint-authority route and V10 mint-posture band, peg, and lifecycle.
+            pillars, and USD-denominated supply. Multi-select pills filter by exceptional state (critical or paused
+            notice, active depeg, DEWS Alert or worse, holder deadline), Safety Grade, type, mechanism archetype,
+            curated mint-authority route and V10 mint-posture band, peg, and lifecycle.
           </p>
           <p>
             Cross-reference results against the{" "}

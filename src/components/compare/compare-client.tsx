@@ -67,7 +67,7 @@ export function CompareClient() {
         queries={freshnessQueries}
       />
       <CompareScopeHero coinOptions={coinOptions} selectedCount={selectedIds.length} />
-      <CompareSelectionPanel selection={selection} share={share} logos={logos} />
+      <CompareSelectionPanel selection={selection} share={share} logos={logos} coinStatesById={data.coinStatesById} />
       {selectedIds.length >= 2 && (
         <CompareResultsPanel
           data={data}

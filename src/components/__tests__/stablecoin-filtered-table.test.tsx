@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({ stablecoins: vi.fn(), peg: vi.fn(), liquidity:
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: mocks.stablecoins }));
 vi.mock("@/hooks/api-hooks", () => ({ usePegSummary: mocks.peg, useDexLiquidityTable: mocks.liquidity, useReportCardsV9Table: mocks.ratings }));
 vi.mock("@/lib/logos", () => ({ logosById: {} }));
+vi.mock("@/hooks/use-coin-states", () => ({ useCoinStates: () => ({ byId: new Map(), liveReady: false }) }));
 vi.mock("@/lib/stablecoin-table-inputs", () => ({
   buildStablecoinTableInputs: ({ pegSummaryCoins, reportCardsV9 }: { pegSummaryCoins: unknown; reportCardsV9: { cards: unknown } }) => ({
     pegRateSources: {}, pegScores: pegSummaryCoins, reportCards: reportCardsV9.cards,
@@ -64,6 +65,11 @@ it.each([
   expect(saved.refetch).toHaveBeenCalledOnce();
   expect(mocks.stablecoins().refetch).not.toHaveBeenCalled();
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
+});
+
+it("opens cohort hubs in grade order, matching their Ranked by Risk title", () => {
+  render(<StablecoinFilteredTable activeFilters={["rwa-backed"]} />);
+  expect(screen.getByTestId("saved-table").textContent).toContain('"initialSort":{"key":"grade","direction":"desc"}');
 });
 
 it("marks a failed stablecoins read as unavailable for the shared table", () => {

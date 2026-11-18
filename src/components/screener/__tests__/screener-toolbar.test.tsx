@@ -55,6 +55,22 @@ it.each<[string, string[], string[], number]>([
   expect(vi.getTimerCount()).toBe(0);
 });
 
+describe("ScreenerToolbar exact Picker shortlist", () => {
+  it("folds filters behind a phone toggle", () => {
+    const onChange = renderToolbar({ coins: ["usdc-circle"] });
+    const toggle = screen.getByRole("button", { name: "Show filters" });
+    const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+    expect(panel.classList.contains("hidden")).toBe(true);
+    expect(panel.classList.contains("md:block")).toBe(true);
+    fireEvent.click(toggle);
+    expect(panel.classList.contains("hidden")).toBe(false);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Depeg" }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ states: ["depeg"] }));
+    expect(screen.getByRole("button", { name: "DEWS Alert+" }).getAttribute("title")).toBe("DEWS Alert or worse");
+  });
+});
+
 describe("ScreenerToolbar floor/ceiling guard", () => {
   it("clears a URL-carried DEWS ceiling when the visible DEWS floor passes it", () => {
     const onChange = renderToolbar({ dewsMax: 40 });

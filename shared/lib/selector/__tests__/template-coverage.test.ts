@@ -67,6 +67,15 @@ describe("template coverage", () => {
     expect(gaps).toEqual([]);
   });
 
+  it("leads the watch line with an admitted DEWS Alert+", () => {
+    const capped = { safetyBindingCap: { kind: "parent", limit: 60, source: "parent", reason: "Parent limit.", binding: true } } as const;
+    for (const profile of SELECTOR_PROFILES) {
+      expect(renderWatchText(lowest("liquidity"), profile, makeRow({ ...capped, dewsScore: 44 })))
+        .toBe("DEWS reads Alert (44/100); review the stress signals before sizing.");
+    }
+    expect(renderWatchText(lowest("liquidity"), "treasury", makeRow({ ...capped, dewsScore: 35 }))).toMatch(/^Safety Score is capped/);
+  });
+
   it("prioritizes the selected peg warning over recent listing and other warnings", () => {
     const selected = lowest("pegStability", ["current-deviation", "recent-listing", "depeg-history"]);
     const row = makeRow({ currentDeviationBps: -64 });

@@ -15,6 +15,7 @@ import { DependencyExposureWorkspace, type DependencyExposureWorkspaceState } fr
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 import type { SharedFailureDomainGroups } from "@/lib/shared-failure-domains-model";
 import { formatClaimSubtotal } from "@/lib/dependency-watershed/known";
+import type { CoinState } from "@shared/lib/coin-state";
 
 const ContagionGraph = dynamic(
   () => import("@/components/contagion-graph/contagion-graph-root").then((module) => module.ContagionGraph),
@@ -35,11 +36,13 @@ interface DependencyHeroProps {
   supplyPending?: boolean;
   /** Rendered under the summary on small screens (the basin list). */
   mobileSummary?: ReactNode;
+  /** Live exceptional states, overlaid on Network nodes and the selection panel. */
+  coinStates?: ReadonlyMap<string, readonly CoinState[]>;
 }
 
 const VIEW_OPTIONS: { value: DependencyMapView; label: string }[] = [{ value: "watershed", label: "Watershed" }, { value: "network", label: "Network" }];
 
-export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups, supplyPending = false, mobileSummary }: DependencyHeroProps) {
+export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, methodologyVersion, publishedAt, workspace, commonModeGroups, supplyPending = false, mobileSummary, coinStates }: DependencyHeroProps) {
   const [view, setView] = useState<DependencyMapView>("network");
   const desktop = useMediaQuery("(min-width: 768px)", true);
   useEffect(() => {
@@ -57,7 +60,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
   const labels = useMemo(() => new Map(cards.map(card => [card.id, stablecoinLabel(card)])), [cards]);
   const labelOf = useMemo(() => (id: string) => labels.get(id) ?? id, [labels]);
   const viewControls = desktop && <div className="pharos-segmented m-3" role="group" aria-label="Dependency map view">{VIEW_OPTIONS.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} className="pharos-focus-ring pharos-segmented-item text-sm" onClick={() => switchView(option.value)}>{option.label}</button>)}</div>;
-  const network = <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={<div className="flex flex-wrap">{workspace.modeControls}{viewControls}</div>} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} />;
+  const network = <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={<div className="flex flex-wrap">{workspace.modeControls}{viewControls}</div>} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} coinStates={coinStates} />;
   const publication = workspace.exposure.publication;
   const supply = model.mappedSupply;
   const hasKnownSupply = supply.known;

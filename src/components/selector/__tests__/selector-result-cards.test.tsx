@@ -211,6 +211,7 @@ describe("SelectorShortlistCard", () => {
         profile="trading" isMobile={false} />,
     );
     expect(screen.queryByText("Oldest input")).toBeNull();
-    expect(screen.getByText("DEWS stress score 12 of 100. Lower is better.")).toBeTruthy();
+    expect(screen.getByText("DEWS stress Calm, score 12 of 100. Lower is better.")).toBeTruthy();
+    expect(screen.getByText("Calm 12")).toBeTruthy();
   });
 });

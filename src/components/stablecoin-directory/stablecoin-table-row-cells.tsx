@@ -4,6 +4,7 @@ import Link from "next/link";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CoinStateChip, describeCoinState } from "@/components/coin-state-chip";
 import { TableCell } from "@/components/table";
 import { DeviationIcon } from "@/components/severity-icon";
 import { MintAuthorityScoreBadge } from "@/components/safety-scores/mint-authority-score-badge";
@@ -132,6 +133,7 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
 }
 
 function IdentityCells({ row, model }: RowCellsProps) {
+  const state = row.coinState ? describeCoinState(row.coinState) : null;
   return (
     <>
       {row.isVisible("rank") ? (
@@ -147,7 +149,7 @@ function IdentityCells({ row, model }: RowCellsProps) {
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
                 onMouseEnter={() => row.onPrefetch(row.coin.id)}
-                aria-label={`View ${row.coin.name} (${row.coin.symbol}) details${model.variantContext ? `, ${model.variantContext}` : ""}`}
+                aria-label={`View ${row.coin.name} (${row.coin.symbol}) details${model.variantContext ? `, ${model.variantContext}` : ""}${state ? `, ${state.label}${state.detail ? `: ${state.detail}` : ""}` : ""}`}
                 data-stablecoin-detail-link="true"
               >
                 <StablecoinLogo src={row.logos?.[row.coin.id]} name={row.coin.name} size={row.densityConfig.iconSize} />
@@ -162,6 +164,7 @@ function IdentityCells({ row, model }: RowCellsProps) {
                         {model.variantDisplay.shortLabel}
                       </span>
                     ) : null}
+                    {row.coinState ? <CoinStateChip state={row.coinState} /> : null}
                   </span>
                   <span className={`max-w-[140px] truncate text-xs text-muted-foreground ${model.isOverview ? "block" : "hidden lg:block"}`}>
                     {row.coin.name}
