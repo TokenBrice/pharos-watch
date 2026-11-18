@@ -269,9 +269,9 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
                     source switches no longer contaminate the displayed 7d/30d averages. The 30-day APY caps isolated
-                    spikes: a sample above twice the window&apos;s median (and above 2% APY) counts as that cap, so a few
+                    spikes: a sample above twice the window&apos;s median (and above 2% APY and the window&apos;s 90th percentile) counts as that cap, so a few
                     short reward bursts cannot lift the headline above what the source paid on a typical day. The 7-day
-                    APY, stability and the 30-day range keep every raw sample. A real one-off distribution is
+                    APY, stability and the 30-day range keep every raw sample. A level held for more than a tenth of the window counts in full; a shorter real one-off distribution is
                     understated by this rule.
                   </p>
                   <p>

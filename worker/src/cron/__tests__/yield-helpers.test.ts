@@ -247,12 +247,13 @@ describe("computeSpikeCappedMean", () => {
     ["clean series", [...fill(12, 4), ...fill(12, 4.4)], 4.2, 0],
     ["flat series", fill(24, 5), 5, 0],
     ["spike counts as 2x the median", [...fill(23, 4), 40], 100 / 24, 1],
-    ["exactly 2x the median is kept", [...fill(23, 4), 8], 100 / 24, 0],
-    ["too few samples: plain mean", [...fill(22, 4), 40], 128 / 23, 0],
-    ["zero median: plain mean", [...fill(13, 0), ...fill(11, 10)], 110 / 24, 0],
-    ["negative median: plain mean", [...fill(23, -1), 50], 27 / 24, 0],
-    ["cap never drops below the 2% floor", [...fill(22, 0.5), 1.5, 6], 14.5 / 24, 1],
-    ["steakUSDG-like window (#2095)", [...fill(406, 7.02), ...fill(9, 27.8)], (406 * 7.02 + 9 * 14.04) / 415, 9],
+    ["exactly 2x kept", [...fill(23, 4), 8], 100 / 24, 0],
+    ["too few samples", [...fill(22, 4), 40], 128 / 23, 0],
+    ["zero median", [...fill(13, 0), ...fill(11, 10)], 110 / 24, 0],
+    ["negative median", [...fill(23, -1), 50], 27 / 24, 0],
+    ["2% floor", [...fill(22, 0.5), 1.5, 6], 14.5 / 24, 1],
+    ["sustained level is kept", [...fill(20, 4), ...fill(4, 40)], 10, 0],
+    ["#2095-like", [...fill(406, 7.02), ...fill(9, 27.8)], (406 * 7.02 + 9 * 14.04) / 415, 9],
   ])("%s", (_name, samples, mean, capped) => {
     const result = computeSpikeCappedMean(samples);
     expect(result.mean).toBeCloseTo(mean, 10);
