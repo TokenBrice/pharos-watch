@@ -1,10 +1,11 @@
-import { hasPublishedDeviation, readDeviationProjection } from "@shared/lib/depeg-signals";
+import { hasPublishedDeviation, readDeviationProjection, relativeBps } from "@shared/lib/depeg-signals";
 export { hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
 import type { PegSummaryCoin } from "@shared/types/peg";
+import type { CurrentPeg } from "@shared/types/current-peg";
 import type { AdmittedDeviationBps, ReferenceAdmission } from "@shared/types/reference-admission";
 import type { StablecoinData } from "@shared/types/supply";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
@@ -65,6 +66,8 @@ export function isCurrentDeviationHeld(
 }
 
 interface PublishedReferenceRead extends PriceClockRow {
+  price?: number | null;
+  pegReference?: CurrentPeg["pegReference"];
   currentDeviationBps?: number | null;
   admittedDeviationBps?: AdmittedDeviationBps;
   referenceAdmission?: ReferenceAdmission | null;
@@ -110,8 +113,12 @@ export function readUnroundedPublishedDeviation(
   }
   const published = current?.pegReferenceUnavailable || current?.currentPriceUnavailable
     ? null : current?.currentDeviationBps ?? null;
+  const price = current?.price;
+  const reference = current?.pegReference?.valueUsd;
+  const raw = published != null && pegCurrency !== "USD" && price != null && reference != null
+    ? relativeBps(price, reference)?.rawBps ?? published : published;
   const observedAtSec = resolvePriceObservedAtSec(current) ?? resolvePriceObservedAtSec(legacyClock);
-  const held = isCurrentDeviationHeld(pegCurrency, observedAtSec, published);
+  const held = isCurrentDeviationHeld(pegCurrency, observedAtSec, raw);
   return {
     deviationBps: held || !Number.isFinite(published) ? null : published,
     referenceNote: held ? "Reference market closed" : null,

@@ -112,6 +112,9 @@ export function buildYieldStorageRows(input: {
       publication_state: "published",
     });
 
+    // Persist the non-best current row to clear a former winner without sampling its rejected APY.
+    if (source.rejected) continue;
+
     historyRows.push({
       stablecoin_id: source.id,
       source_key: source.sourceKey,

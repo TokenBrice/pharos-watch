@@ -397,6 +397,25 @@ describe("missing detail price enrichment", () => {
 });
 
 describe("detail response paths", () => {
+  it.each([
+    { kind: "unattributed", priorDay: { unattributed: 100_000_000 } },
+    { kind: "mixed-peg", priorDay: { peggedEUR: 60_000_000, peggedUSD: 40_000_000 } },
+  ])("preserves $kind EURC prior-day supply in detail and live summary", async ({ priorDay }) => {
+    const id = "eurc-circle";
+    const db = makeDb({
+      id, pegType: "peggedEUR", circulating: { peggedUSD: 70_000_000, peggedEUR: 40_000_000 },
+      circulatingPrevDay: priorDay,
+      supplyChangeBaselines: { day: { observedAt: NOW - 86_400, circulatingUsd: 100_000_000, circulatingNative: null } },
+    }, NOW - 60, 60);
+    const ctx = { waitUntil: vi.fn() } as unknown as ExecutionContext;
+
+    const detail = await handleStablecoinDetail(db, id, ctx);
+    expect(StablecoinDetailResponseSchema.parse(await detail.json()).currentCirculatingPrevDayUSD)
+      .toEqual(priorDay);
+    const summary = await handleStablecoinLiveSummary(db, id, ctx);
+    expect(await summary.json()).toHaveProperty("circulatingPrevDay", priorDay);
+  });
+
   it.each([false, true])("projects the actual canonical enrichment path with independent clocks and quarantine (%s)", async (quarantined) => {
     const db = makeDb({
       priceObservedAt: NOW - 120,

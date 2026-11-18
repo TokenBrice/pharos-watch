@@ -60,8 +60,8 @@ const DOT_SEPARATED_ROW_CLASS =
 const SOURCE_DEPTH_TARGET = 3;
 
 /**
- * The DEX check agrees when its deviation is within 50 bps of the primary
- * price's deviation (`agrees` in shared/lib/current-peg-observations.ts).
+ * Clocked DEX checks compare quotes directly. Legacy checks compare peg
+ * deviations (`agrees` in shared/lib/current-peg-observations.ts).
  * ponytail: display copy of that literal; import it once it is exported.
  */
 const DEX_AGREEMENT_THRESHOLD_LABEL = "0.5%";

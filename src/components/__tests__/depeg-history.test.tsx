@@ -56,6 +56,25 @@ describe("DepegHistory provenance badges", () => {
     expect(table.getByText("$1.1500 USD")).toBeTruthy();
   });
 
+  it("uses the admitted recovery time on both live layouts and preserves detector intervals", () => {
+    const startedAt = 1_700_000_000;
+    const event = makeEvent({ startedAt, endedAt: startedAt + 1_800, closeReason: "recovered-primary" });
+    mockEvents([
+      { ...event, id: 1, analyticRecoveryAt: startedAt + 900 },
+      { ...event, id: 2 },
+      { ...event, id: 3, analyticRecoveryAt: null },
+    ]);
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    for (const layout of [
+      screen.getByTestId("stablecoin-depeg-history-table"),
+      screen.getByRole("list", { name: "Compact depeg event history" }),
+    ]) {
+      expect(within(layout).getByText("15m")).toBeTruthy();
+      expect(within(layout).getAllByText("30m")).toHaveLength(2);
+    }
+  });
+
   it("keeps the older worst incident after pagination regardless of the 90-day chart seed", () => {
     const now = Math.floor(Date.now() / 1000);
     const day = 86_400;

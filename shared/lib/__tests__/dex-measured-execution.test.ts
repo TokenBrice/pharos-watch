@@ -147,6 +147,20 @@ describe("DEX measured execution contract", () => {
     expect(validateDexMeasuredExecutionProfile({ ...input, profile: measured })).toContain("target-snapshot-mismatch");
   });
 
+  it("accepts a legacy quote without a mark when the numerical snapshot matches", () => {
+    const nowSec = 10_000;
+    const quotedTarget = target(nowSec);
+    const legacyQuote = profile(nowSec, quotedTarget);
+    quotedTarget.tokenIn = { ...quotedTarget.tokenIn, marketMark: {
+      stablecoinId: quotedTarget.tokenIn.trackedAssetId!, priceUsd: quotedTarget.tokenIn.referencePriceUsd,
+      source: "kraken", observedAtSec: quotedTarget.capturedAt - 5,
+    } };
+    const input = validationInput(legacyQuote, nowSec, { quotedTarget, currentTarget: quotedTarget });
+    expect(validateDexMeasuredExecutionProfile(input)).toEqual([]);
+    legacyQuote.tokenIn = { ...legacyQuote.tokenIn, referencePriceUsd: 1.01 };
+    expect(validateDexMeasuredExecutionProfile({ ...input, profile: legacyQuote })).toContain("target-snapshot-mismatch");
+  });
+
   it("keeps a quote when only the pool token labels differ from the current row", () => {
     // The direct-api pool row intermittently omits a token symbol, and the target
     // builder then substitutes the tracked asset id. The label is not identity.

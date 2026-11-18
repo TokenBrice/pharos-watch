@@ -4,9 +4,10 @@
     "title": "Admitted event coverage and dated index inputs",
     "date": "2026-11-18",
     "effectiveAt": 1795040700,
-    "summary": "Public FX evidence ships off by default. On a clocked publication PSI uses the event's admitted quote and reference, preserving a prior admitted contribution during a hold when comparable event history exists. Pre-depeg stress breadth excludes active events.",
+    "summary": "Public FX evidence ships off by default. On a clocked publication PSI uses the event's admitted quote and reference, preserving a prior admitted contribution during a hold when comparable event history exists. DEWS stress breadth excludes only coins with a depeg contribution at the sample time.",
     "impact": [
-      "Historical calculation uses date-effective core membership, exact seven-day pairs and admitted event intervals. Missing active-event evidence can preserve the published day.",
+      "Historical calculation uses date-effective core membership, exact seven-day pairs with no explicitly partial endpoint, and admitted event intervals. Legacy weekend replay uses measured opening severity. Missing active-event evidence can preserve the published day.",
+      "Compatibility scoring accepts fresh legacy native quotes while the reference market is open. Independent-market credit requires traded-pair lineage.",
       "Reviewed event repairs change only affected contributions and their rolling averages. Live weekly trend compares USD caps seven UTC dates apart. Older publications retain their prior-week USD buckets. Token-count movement is recorded separately."
     ],
     "commits": [],

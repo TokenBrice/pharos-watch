@@ -353,15 +353,16 @@ function countBusinessDailyPublishesBehind(sourceDaySec: number, expectedDaySec:
   return missed;
 }
 
-function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
+function resolveBusinessDailyExpectedDaySec(nowSec: number, legacy: boolean): number {
   const dayStartSec = startOfUtcDaySec(new Date(nowSec * 1000));
-  return isTargetFixingDay(dayStartSec) && nowSec >= berlinMidnightSec(dayStartSec) + ECB_PUBLICATION_OFFSET_SEC
+  const cutoffSec = legacy ? dayStartSec + 16 * HOUR_SECONDS : berlinMidnightSec(dayStartSec) + ECB_PUBLICATION_OFFSET_SEC;
+  return isTargetFixingDay(dayStartSec) && nowSec >= cutoffSec
     ? dayStartSec
     : previousBusinessDailyPublishDaySec(dayStartSec);
 }
 
-export function assessEcbRelease(sourceDaySec: number, nowSec: number): { expectedDate: string; missedPublishes: number } {
-  const expected = resolveBusinessDailyExpectedDaySec(nowSec);
+export function assessEcbRelease(sourceDaySec: number, nowSec: number, legacy = false): { expectedDate: string; missedPublishes: number } {
+  const expected = resolveBusinessDailyExpectedDaySec(nowSec, legacy);
   return { expectedDate: formatUtcDate(expected), missedPublishes: countBusinessDailyPublishesBehind(sourceDaySec, expected) };
 }
 
@@ -387,6 +388,7 @@ function evaluateFxSourceFreshness(
   cadence: FxSourceCadence | undefined,
   sourceDate: string | null | undefined,
   nowSec: number,
+  legacy = false,
 ): FxSourceFreshness {
   if (mode !== "live" && mode !== "cached") {
     return { status: "none", ageSec: null, cadence: null, warning: null };
@@ -406,7 +408,7 @@ function evaluateFxSourceFreshness(
   }
 
   if (normalizedCadence === "business-daily" && sourceDaySec != null) {
-    const { expectedDate, missedPublishes } = assessEcbRelease(sourceDaySec, nowSec);
+    const { expectedDate, missedPublishes } = assessEcbRelease(sourceDaySec, nowSec, legacy);
     if (missedPublishes === 0) {
       return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
     }
@@ -543,6 +545,8 @@ function assessFxPegAdmission(state: FxRateState, pegKey: string, nowSec: number
     state.sourceCadenceByPeg[pegKey],
     state.sourceDateByPeg[pegKey],
     nowSec,
+    state.observations === undefined ||
+      (state.observations[pegKey] === undefined && state.legacyDetectionPegs?.includes(pegKey) === true),
   );
   if (freshness.status !== "none") return { ...freshness, issue: null, updatedAt };
   return {

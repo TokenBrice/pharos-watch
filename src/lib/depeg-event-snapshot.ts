@@ -110,14 +110,19 @@ export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw"
   });
 }
 
+/** Resolve the permanent route index against the current ledger, newest first. */
 export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): DepegEventEntry[] {
   const index = readDepegEventIndex({ missing: "throw" }, join(dataDir, "index.json"));
   const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }, dataDir).map((event) => [event.slug, event] as const));
-  const pages = index.map((entry) => {
-    const event = entry.retainedPage ?? bySlug.get(entry.slug);
+  const pages = index.map(({ slug, retainedPage }) => {
+    const current = bySlug.get(slug);
+    const verdict = current?.provenance?.auditVerdict;
+    // A reviewed row can supersede the historical claim at its reserved URL.
+    const reviewed = current?.id === retainedPage?.id && verdict != null && verdict !== "no_data";
+    const event = reviewed ? current : retainedPage ?? current;
     if (!event) {
       throw new Error(
-        `Depeg event index entry ${entry.slug} has no matching event in the yearly shards under ${dataDir}.`,
+        `Depeg event index entry ${slug} has no matching event in the yearly shards under ${dataDir}.`,
       );
     }
     return event;
@@ -126,5 +131,5 @@ export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): Depeg
   for (const event of bySlug.values()) {
     if (hasUnverifiedDepegPeak(event) && !indexedSlugs.has(event.slug)) pages.push(event);
   }
-  return pages;
+  return pages.sort((a, b) => b.startedAt - a.startedAt || a.slug.localeCompare(b.slug));
 }

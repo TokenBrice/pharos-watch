@@ -85,7 +85,7 @@ function isEligibleBullionContributor(row: ReferenceContributor, session: Refere
     (row.observedAtMode === "upstream" || (row.observedAtMode === undefined && row.derivation === "traded-market"));
 }
 
-function distinctBullionRows(rows: LocalMedianRow[]): LocalMedianRow[] {
+function distinctAssetRows(rows: LocalMedianRow[]): LocalMedianRow[] {
   const byAsset = new Map<string, LocalMedianRow | null>();
   for (const row of rows) {
     const member = row.contributor;
@@ -165,9 +165,12 @@ export function derivePegRates(
   fallbackRates?: Record<string, number>,
   fxReferenceObservations?: unknown,
   decisionAtSec = Math.floor(Date.now() / 1000),
+  legacyBullionPegs?: readonly string[],
 ): PegRatesResult {
   const groups = new Map<string, LocalMedianRow[]>();
-  const metalSession = isRecord(fxReferenceObservations) ? getReferenceSessionState("metal", decisionAtSec) : null;
+  const clocked = isRecord(fxReferenceObservations);
+  const metalSession = clocked ? getReferenceSessionState("metal", decisionAtSec) : null;
+  const fiatSession = clocked ? getReferenceSessionState("fx", decisionAtSec) : null;
 
   for (const asset of assets) {
     const meta = metaById?.get(asset.id);
@@ -195,10 +198,8 @@ export function derivePegRates(
     }
 
     if (!Number.isFinite(price)) continue;
-    const contributor = selectedFxMedianContributor(asset);
-    if (metalSession && isBullionPeg(peg) && !isEligibleBullionContributor(contributor, metalSession, decisionAtSec)) continue;
     const rows = groups.get(peg) ?? [];
-    rows.push({ price, contributor });
+    rows.push({ price, contributor: selectedFxMedianContributor(asset) });
     groups.set(peg, rows);
   }
 
@@ -213,7 +214,7 @@ export function derivePegRates(
   const observations: NonNullable<PegRatesResult["observations"]> = Object.create(null);
   const contributors: NonNullable<PegRatesResult["contributors"]> = Object.create(null);
   const selectedObservations = new Map<string, FxReferenceEvidence>();
-  if (isRecord(fxReferenceObservations)) {
+  if (clocked) {
     for (const [peg, raw] of Object.entries(fxReferenceObservations)) {
       if (getPegTaxonomyByType(peg)?.canonicalPegType !== peg) continue;
       const parsed = FxReferenceEvidenceSchema.safeParse(raw);
@@ -235,14 +236,25 @@ export function derivePegRates(
   }
   for (const [peg, group] of groups) {
     const bullion = isBullionPeg(peg);
-    let rows = metalSession && bullion ? distinctBullionRows(group) : group;
     const fallback = mergedFallbacks[peg];
     const producer = selectedObservations.get(peg);
+    const clockedBullion = bullion && metalSession !== null && !legacyBullionPegs?.includes(peg);
+    const clockedFiat = fiatSession !== null && !fallback && getPegTaxonomyByType(peg)?.pegClass === "fiat_fx";
+    let rows = group;
+    if (clockedBullion) {
+      rows = distinctAssetRows(rows.filter(({ contributor }) => isEligibleBullionContributor(contributor, metalSession, decisionAtSec)));
+    } else if (clockedFiat) {
+      const earliest = Math.max(1, decisionAtSec - REFERENCE_INTRADAY_BUDGET_SEC,
+        fiatSession.open ? fiatSession.sessionOpenedAtSec + 1 : fiatSession.closureStartSec);
+      rows = distinctAssetRows(rows.filter(({ contributor: { observedAtSec: at, observedAtMode, provenanceKey } }) =>
+        observedAtMode === "upstream" && provenanceKey !== "" && provenanceKey !== "cached" &&
+        at !== null && Number.isSafeInteger(at) && at >= earliest && at <= decisionAtSec));
+    }
     if (bullion && producer?.source === "peer-median") {
       rows = rows.filter(({ contributor }) => contributor.observedAtSec !== null && contributor.observedAtSec > producer.observedAtSec);
     }
     counts[peg] = rows.length;
-    if (bullion && (metalSession || fallback) && rows.length < MIN_PEER_MEDIAN_CONTRIBUTORS) continue;
+    if ((clockedFiat || clockedBullion || (bullion && fallback)) && rows.length < MIN_PEER_MEDIAN_CONTRIBUTORS) continue;
     if (fallback && !bullion) continue;
     // Keep the scoring reference unrounded; display medians round at the API edge.
     rates[peg] = median(rows.map(({ price }) => price))!;

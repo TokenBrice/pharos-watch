@@ -13,6 +13,7 @@ import {
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { pricesAgreeWithinBps } from "./price-divergence";
+import { haveDisjointPriceInputs, type UpstreamKeysBySource } from "./price-consensus";
 import {
   FIAT_UPPER_BAND_REQUIRES_CORROBORATION,
   getReferencePriceForContext,
@@ -56,6 +57,7 @@ export interface PublishablePriceInput {
   confidence: PriceConfidence | null | undefined;
   agreeSources?: string[];
   candidatePrices?: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
   fiatPremiumEvidence?: FiatPremiumEvidence;
   mode: "primary_authoritative" | "fallback_enrichment";
   validationContext: PriceValidationContext;
@@ -169,7 +171,10 @@ function hasFiatPremiumCorroboration(input: PublishablePriceInput): boolean {
       pricesAgreeWithinBps(selected.quote.priceUsd, other.quote.priceUsd, DIVERGENCE_THRESHOLD_BPS)));
 }
 
-function hasIndependentSevereCandidateCorroboration(input: PublishablePriceInput): boolean {
+export function hasIndependentSevereCandidateCorroboration(
+  input: Pick<PublishablePriceInput, "candidatePrices" | "upstreamKeysBySource" | "validationContext" | "validationReferences">,
+  requireAuthoritative = false,
+): boolean {
   if (!input.candidatePrices) return false;
 
   const severeSources = Object.entries(input.candidatePrices)
@@ -186,7 +191,14 @@ function hasIndependentSevereCandidateCorroboration(input: PublishablePriceInput
     ))
     .map(([source]) => source);
 
-  return hasIndependentSevereSourceFamilyCorroboration(severeSources);
+  const keys = input.upstreamKeysBySource;
+  if (!keys) return hasIndependentSevereSourceFamilyCorroboration(severeSources);
+
+  const candidates = severeSources.filter((source) => keys[source]?.length !== 0);
+  return candidates.some((source, index) => candidates.slice(index + 1).some((other) =>
+    hasIndependentSevereSourceFamilyCorroboration([source, other]) &&
+    (!requireAuthoritative || hasDepegAuthoritativeSource([source, other])) &&
+    haveDisjointPriceInputs({ upstreamKeys: keys[source] }, { upstreamKeys: keys[other] })));
 }
 
 function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput): boolean {
@@ -199,6 +211,7 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
   }
 
   if (
+    !input.upstreamKeysBySource &&
     input.confidence === "high" &&
     hasIndependentSevereSourceFamilyCorroboration(
       input.agreeSources && input.agreeSources.length > 0
@@ -378,6 +391,7 @@ export function validatePublishedAssetPrice(input: {
     priceListFillDefault?: DefiLlamaListFillDefaultQuote | null;
   };
   candidatePrices?: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
   fiatPremiumEvidence?: FiatPremiumEvidence;
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
@@ -389,6 +403,7 @@ export function validatePublishedAssetPrice(input: {
     confidence: input.asset.priceConfidence ?? null,
     agreeSources: input.asset.agreeSources,
     candidatePrices: input.candidatePrices,
+    upstreamKeysBySource: input.upstreamKeysBySource,
     fiatPremiumEvidence: input.fiatPremiumEvidence,
     mode: priceValidationModeForAsset(input.asset),
     validationContext: input.validationContext,

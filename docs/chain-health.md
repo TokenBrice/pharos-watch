@@ -52,7 +52,7 @@ Supply without a published Safety Score contributes to neither numerator nor den
 
 ## Peg Coverage
 
-Eligible supply includes held, stale and otherwise unpriced comparisons. When FX admission evidence is published, only admitted comparisons contribute observed peg coverage. A legacy publication compares the observed USD price with its published per-asset peg reference, or $1 for fixed USD pegs. Older callers can supply cohort rates for rows that predate the entire peg block. The factor and composite can be unavailable when the observed share is below 95%. Chain history uses the admitted supply partition's own clock.
+Eligible supply includes held, stale and otherwise unpriced comparisons. When FX admission evidence is published, only admitted comparisons contribute observed peg coverage. A legacy publication compares the observed USD price with a reference derived from the assets eligible for the chain aggregate, or $1 for fixed USD pegs. The factor and composite can be unavailable when the observed share is below 95%. Chain history uses the admitted supply partition's own clock.
 
 A published current peg projection must match the quote clock for a scheduled peg. Fixed USD uses the dollar identity. A legacy reading uses the unrounded observed price and eligible reference for supply weighting. An explicit unavailable reading keeps the allocation in eligible supply and withholds its contribution to observed supply.
 

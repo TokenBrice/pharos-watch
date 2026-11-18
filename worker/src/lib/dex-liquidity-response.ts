@@ -307,6 +307,10 @@ export function normalizeTopPools(
     if (!pool || typeof pool !== "object" || Array.isArray(pool)) continue;
     const poolRecord = pool as Record<string, unknown>;
     const cleaned = pickAllowedKeys(poolRecord, ALLOWED_POOL_KEYS);
+    if (cleaned.price === undefined && typeof poolRecord.displayPrice === "number" &&
+      Number.isFinite(poolRecord.displayPrice) && poolRecord.displayPrice > 0) {
+      cleaned.price = poolRecord.displayPrice;
+    }
     if (typeof poolRecord.chain === "string") {
       cleaned.chain = toChainDisplay(poolRecord.chain);
     }

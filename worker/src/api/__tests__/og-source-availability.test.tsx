@@ -96,6 +96,81 @@ describe("dated depeg briefing", () => {
     expect(drawn()).toContain("1 recovered in 24h");
   });
 
+  it("counts canonical openings and terminal recoveries across incident fragments", async () => {
+    const { db, sqlite } = nativeQuoteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const start = now - 26 * 3600;
+    const restart = now - 3600;
+    const key = `ddr2:${"a".repeat(32)}`;
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference)
+      VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -300, ?, 0.97, 1)`);
+    insert.run(101, start);
+    insert.run(102, restart);
+    insert.run(103, restart + 1);
+    sqlite.prepare(`INSERT INTO depeg_event_provenance
+      (event_id, source_kind, audit_verdict, created_at, updated_at)
+      VALUES (103, 'live', 'disputed', ?, ?)`).run(restart, restart);
+    sqlite.prepare("UPDATE depeg_events SET ended_at = ?, close_reason = 'recovered-primary', recovery_price = 1 WHERE id = 101").run(now - 3 * 3600);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
+      VALUES (?, 101, 'observed', ?), (?, 102, 'observed', ?)`).run(key, start, key, restart);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id,
+      current_event_id, first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'usdt-tether', 'USD', 'below', 101, 102, ?, ?, 300, ?, ?, ?)`).run(key, start, restart, "b".repeat(64), start, restart);
+    expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+    expect(drawn()).toContain("Top 1 of 1 open incidents");
+    expect(drawn()).toContain("0 new in 24h");
+    expect(drawn()).toContain("0 recovered in 24h");
+
+    sqlite.prepare("UPDATE depeg_events SET ended_at = ?, close_reason = 'recovered-primary', recovery_price = 1 WHERE id = 102").run(now - 60);
+    vi.mocked(ogRenderer.renderPng).mockClear();
+    expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+    expect(drawn()).toContain("0 new in 24h");
+    expect(drawn()).toContain("1 recovered in 24h");
+  });
+
+  it.each(["currentPriceUnavailable", "pegReferenceUnavailable"] as const)("honors a published %s flag before legacy reconstruction", async (flag) => {
+    const now = Math.floor(Date.now() / 1000);
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98, priceObservedAt: now - 60, currentPeg: {
+      currentDeviationBps: null, currentPriceUnavailable: false, pegReferenceUnavailable: false, [flag]: true,
+      pegReference: null, primaryTrust: "unusable", dexPriceCheck: null,
+    } });
+    const db = makeDepegDb([
+      marketTable([asset], now, { peggedUSD: 1 }),
+      { match: "peak_deviation_bps", rows: [{ stablecoin_id: asset.id, symbol: asset.symbol, direction: "below",
+        peak_deviation_bps: -500, peg_reference: 1, peg_type: "peggedUSD", source: "live", started_at: now - 600 }] },
+    ]);
+    expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+    expect(drawn()).toContain("Current unavailable");
+    expect(drawn()).toContain("Peak -500 bps");
+    expect(drawn()).not.toContain("-200 bps");
+  });
+
+  it.each([
+    ["EURC", "eurc-circle", "peggedEUR", 1.1, true],
+    ["USDT", "usdt-tether", "peggedUSD", 1, undefined],
+  ] as const)("keeps %s legacy fallback and honors its refusal in a mixed publication", async (symbol, id, pegType, reference, legacyFxReference) => {
+    const now = FX_REOPEN_QUOTE_AT;
+    vi.setSystemTime(now * 1000);
+    const asset = makeAsset({ id, symbol, pegType, price: reference * 0.98, priceObservedAt: now,
+      currentPeg: { currentDeviationBps: -200, currentPriceUnavailable: false, pegReferenceUnavailable: false,
+        legacyFxReference, pegReference: legacyFxReference ? { source: "fx", valueUsd: reference, asOf: now, contributorCount: 0 } : null,
+        primaryTrust: "unusable", dexPriceCheck: null } });
+    for (const refused of [false, true]) {
+      asset.currentPeg!.pegReferenceUnavailable = refused;
+      const db = makeDepegDb([
+        { match: "FROM cache WHERE key = ?", rows: [{ key: "stablecoins", updated_at: now, value: JSON.stringify({
+          peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.1 }, fxReferenceObservations: {},
+        }) }] },
+        { match: "peak_deviation_bps", rows: [{ stablecoin_id: asset.id, symbol: asset.symbol, direction: "below",
+          peak_deviation_bps: -500, peg_reference: reference, peg_type: pegType, source: "live", started_at: now - 600 }] },
+      ]);
+      vi.mocked(ogRenderer.renderPng).mockClear();
+      expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+      expect(drawn()).toContain(refused ? "Current unavailable" : "-200 bps");
+    }
+  });
+
   it.each([["stale-reference", null, "Reference not yet updated"], ["admitted", 0, "0 bps"]] as const)(
     "uses the %s USD projection through the published cache",
     async (status, expected, copy) => {

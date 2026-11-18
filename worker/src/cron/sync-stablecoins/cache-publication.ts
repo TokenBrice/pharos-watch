@@ -5,7 +5,8 @@ import { formatSchemaLikeIssues } from "@shared/lib/schema-like";
 import { derivePegRates, normalizePegType, type PegRatesResult } from "@shared/lib/peg-rates";
 import { readRecord } from "@shared/lib/type-guards";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
-import { CommodityEntitlementSchema, StablecoinDataSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { CommodityEntitlementSchema, StablecoinDataSchema, XAGM_ENTITLEMENT_PEG_TYPE, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
 import type { FxReferenceEvidenceMap, SelectedPegReference } from "@shared/types/fx-reference";
 import { CurrentPegSchema } from "@shared/types/current-peg";
 import { deriveCurrentPegObservationMap, selectCurrentPegDexPrices, type CurrentPegDexRow } from "../../lib/current-peg-observations";
@@ -17,6 +18,8 @@ import { prepareCacheUpsert } from "../../lib/db-cache";
 import { executeAtomicBatch } from "../../lib/db";
 import { getLatestSuccessfulReserveSnapshotMetadata } from "../../lib/live-reserves/store";
 import { recordFxAdmissionCoverage } from "../../lib/fx-admission-coverage";
+import { REALTIME_FX_CURRENCY_TO_PEG } from "../../lib/fx-config";
+import { getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
 import { prepareStablecoinsGenerationCompanion } from "../../lib/stablecoins-cache";
 import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { PeggedAsset } from "./enrich-prices";
@@ -262,6 +265,12 @@ export async function validateAndWriteStablecoinsCache(
 
   // One optional cohort read: unavailable DEX evidence never becomes an agreement verdict.
   const fxReferenceObservations = admission.payload.fxReferenceObservations;
+  const fxState = input.detectionFxState ?? null;
+  const legacyFxPegs = new Set(Object.values(REALTIME_FX_CURRENCY_TO_PEG).filter((peg) =>
+    fxState?.metadataIdentity === "verified" && fxState.legacyDetectionPegs?.includes(peg) &&
+    !fxState.observations?.[peg] && !input.fxReferenceObservations?.[peg] &&
+    fxFallbackRates?.[peg] === fxState.rates[peg] &&
+    getFxReferenceTypeFromState(fxState, peg, REFERENCE_INTRADAY_BUDGET_SEC, now) === "fresh"));
   const generation = `stablecoins:${syncStartSec}`;
   const pegRates = derivePegRates(admission.payload.peggedAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates, fxReferenceObservations, now);
   if (fxReferenceObservations !== undefined) {
@@ -276,7 +285,7 @@ export async function validateAndWriteStablecoinsCache(
     return [];
   });
   const observations = deriveCurrentPegObservationMap({
-    peggedAssets: admission.payload.peggedAssets, pegRates, fxReferenceObservations, generation, asOf: syncStartSec, now,
+    peggedAssets: admission.payload.peggedAssets, pegRates, fxReferenceObservations, legacyFxPegs, generation, asOf: syncStartSec, now,
     dexPrices: selectCurrentPegDexPrices(dexRows, now),
   });
   for (const asset of admission.payload.peggedAssets) {
@@ -294,7 +303,13 @@ export async function validateAndWriteStablecoinsCache(
     validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache",
   );
   if (cacheWriteAbort) return cacheWriteAbort;
-  const stablecoinsCacheBody = JSON.stringify(admission.payload);
+  // The rollback Worker rederives from pegType using a static ounce.
+  const stablecoinsCacheBody = JSON.stringify({
+    ...admission.payload,
+    peggedAssets: admission.payload.peggedAssets.map((asset) =>
+      asset.id === "xagm-matrixdock" && normalizePegType(asset.pegType) === "peggedSILVER"
+        ? { ...asset, pegType: XAGM_ENTITLEMENT_PEG_TYPE } : asset),
+  });
   const bootstrap = admission.payload.peggedAssets.find(asset => asset.id === "buidl-blackrock"
     && asset.supplySource === "defillama" && asset.supplyRestored);
   // A delayed legacy carry cannot overwrite native success or bootstrap an absent predecessor.
@@ -334,12 +349,14 @@ export async function validateAndWriteStablecoinsCache(
       coverageAssets = coverageAssets.map((row, i) => ({ ...row, priceObservedAt: assets[i].priceObservedAt ?? null }));
       if (input.fxReferenceObservations !== undefined) {
         const internal = deriveCurrentPegObservationMap({ peggedAssets: coverageAssets, fxFallbackRates,
-          fxReferenceObservations: input.fxReferenceObservations, generation, asOf: syncStartSec, now });
+          fxReferenceObservations: input.fxReferenceObservations, legacyFxPegs, generation, asOf: syncStartSec, now });
         for (const row of coverageAssets) row.currentPeg = internal.get(row.id);
       }
     }
-    const legacy = input.fxReferenceObservations === undefined
-      ? { state: input.detectionFxState ?? null, decisionAt: now, contributors: pegRates.contributors } : undefined;
+    const legacy = {
+      state: fxState, decisionAt: now, contributors: pegRates.contributors,
+      pegs: input.fxReferenceObservations === undefined ? undefined : legacyFxPegs,
+    };
     await recordFxAdmissionCoverage(db, coverageAssets, syncStartSec,
       previous?.updated_at ?? null, coverageGeneration, previous?.generation ?? null, legacy).catch((error: unknown) => {
       logWorkerEventArgs("handler", "warn", "[sync-stablecoins] FX admission coverage write failed:", error);

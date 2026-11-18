@@ -441,6 +441,34 @@ describe("handleFeedback", () => {
   });
 
   it.each([
+    ["2026-11-18T14:00:00Z", 149.6, "unconfirmed", "+1.496%"],
+    ["2026-11-21T14:00:00Z", 2499.6, "pending", "reference-market-closed"],
+    ["2026-11-21T14:00:00Z", -2499.6, "pending", "reference-market-closed"],
+    ["2026-11-21T14:00:00Z", 2500.4, "confirmed", "+25.004%"],
+  ] as const)("uses the unrounded legacy EURC move at %s (%s bps)", async (date, bps, label, evidence) => {
+    const now = Date.parse(date) / 1000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }, { match: "cache", rows: [], first: {
+        value: JSON.stringify({ fxFallbackRates: { peggedEUR: 1.1 },
+          peggedAssets: [{ id: "eurc-circle", symbol: "EURC", price: 1.1 * (1 + bps / 10000), pegType: "peggedEUR",
+            priceObservedAt: now - 60, priceObservedAtMode: "upstream", priceSource: "pyth",
+            circulating: { peggedEUR: 50_000_000 } }] }),
+        updated_at: now,
+      } }]);
+      queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
+      const response = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "data-correction", stablecoinId: "eurc-circle",
+        description: "The reported peg deviation appears incorrect." })), makeEnv());
+      expect(response.status).toBe(200);
+      const issue = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
+      expect(issue.labels).toContain(`verified: ${label}`);
+      expect(issue.body).toContain(evidence);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it.each([
     [1.067, 0, 600, "confirmed", "-3.000%"],
     [1.067, 0, null, "confirmed", "-3.000%"],
     [1.1, 0, 600, "unconfirmed", "+0.000%"],

@@ -928,25 +928,57 @@ describe("loadRedemptionBackstopSnapshot", () => {
 });
 
 describe("loadRedemptionBackstopLiveSignalRows", () => {
-  const LIVE_SIGNAL_ROWS_SQL =
-    "SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
+  it("stores rollback-safe Mento rows and withdraws DDR and API capacity at the phase boundary", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers();
+    try {
+      const id = "chfm-mento";
+      for (const [transition, delayed] of [
+        [Date.parse("2026-11-20T21:00:00Z") / 1000, false],
+        [Date.parse("2026-11-22T23:00:00Z") / 1000, true],
+      ] as const) {
+        const observedAt = transition - 60;
+        const runId = `phase:${transition}`;
+        vi.setSystemTime(observedAt * 1000);
+        await upsertRedemptionBackstopSnapshots(db, [makeRedemptionWriteRecord({
+          stablecoinId: id, updatedAt: observedAt, score: delayed ? 85 : 86,
+          routeStatus: "open", routeStatusSource: "onchain",
+          sourceTimestamp: observedAt, freshnessKind: "same-run-onchain",
+          capacityKind: delayed ? "documented-bound" : "live-direct-bounded",
+          settlementDelaySec: delayed ? 60 : 0,
+          immediateCapacityUsd: delayed ? null : 1_000_000,
+          immediateCapacityRatio: delayed ? null : 0.2,
+          ...(delayed ? { capacityProfile: {
+            eventualUsd: 1_000_000, scoringHorizon: "eventual", capacityProfileConfidence: "documented-bound",
+          } } : {}),
+        })], { runId });
+
+        const stored = sqlite.prepare(`SELECT score, immediate_capacity_usd, immediate_capacity_ratio, details_json
+          FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?`).get(runId);
+        expect(stored).toMatchObject({ score: null, immediate_capacity_usd: null, immediate_capacity_ratio: null });
+        const details = JSON.parse(String(stored?.details_json));
+        expect(details).toMatchObject({ routeStatus: "unknown", immediateCapacityUsd: null, immediateCapacityRatio: null });
+        expect(details.capacityProfile).toBeUndefined();
+        expect(details.settlementDelaySec).toBeUndefined();
+        expect((await loadRedemptionBackstopLiveSignalRows(db, [id]))[0]?.immediate_capacity_ratio).toBe(delayed ? null : 0.2);
+        const current = (await buildRedemptionBackstopsSnapshot(db, id)).coins[id];
+        expect(current).toMatchObject({ score: delayed ? 85 : 86, settlementDelaySec: delayed ? 60 : 0 });
+        if (delayed) expect(current.capacityProfile?.eventualUsd).toBe(1_000_000);
+
+        vi.setSystemTime(transition * 1000);
+        expect((await loadRedemptionBackstopLiveSignalRows(db, [id]))[0]?.immediate_capacity_ratio).toBeNull();
+        const expired = (await buildRedemptionBackstopsSnapshot(db, id)).coins[id];
+        expect(expired).toMatchObject({ score: null, routeStatus: "unknown", immediateCapacityUsd: null });
+        expect(expired.capacityProfile).toBeUndefined();
+        expect(expired.settlementDelaySec).toBeUndefined();
+      }
+    } finally { sqlite.close(); vi.useRealTimers(); }
+  });
 
   it("serves narrow live-signal rows from the latest valid completed run", async () => {
     const db = mockD1Strict([
       completedRunsQuery([completedRunRow()]),
       runRowsQuery("run-live", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.42 })]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-live"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: 0.42,
-            route_family: "offchain-issuer",
-            updated_at: 1_700_000_000,
-          },
-        ],
-      },
     ]);
 
     const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
@@ -970,18 +1002,6 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
         completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_010 }),
       ]),
       runRowsQuery("run-valid", [makeRealisticRedemptionRow()]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-valid"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: null,
-            route_family: "offchain-issuer",
-            updated_at: 1_700_000_000,
-          },
-        ],
-      },
     ]);
 
     const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);
@@ -999,18 +1019,6 @@ describe("loadRedemptionBackstopLiveSignalRows", () => {
       ]),
       runRowsQuery("run-partial", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.1 })]),
       runRowsQuery("run-valid", [makeRealisticRedemptionRow({ immediate_capacity_ratio: 0.42, updated_at: 1_699_999_990 })]),
-      {
-        match: LIVE_SIGNAL_ROWS_SQL,
-        matchBinds: ["run-valid"],
-        rows: [
-          {
-            stablecoin_id: "eurc-circle",
-            immediate_capacity_ratio: 0.42,
-            route_family: "offchain-issuer",
-            updated_at: 1_699_999_990,
-          },
-        ],
-      },
     ]);
 
     const rows = await loadRedemptionBackstopLiveSignalRows(db, ["eurc-circle"]);

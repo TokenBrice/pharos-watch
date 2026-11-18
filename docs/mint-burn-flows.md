@@ -302,7 +302,9 @@ Before the conservation prepass, an initial range whose paged scan/proof cost ex
 
 ### Bridge Classifier
 
-Matched receipts establish USDz OFT bridge legs. Ethereum MUSD's spoke is diagnostic for native issuance flow. A matched OUSD vault receipt identifies trustee-fee mints as protocol-internal. Reclassification needs a changed proof fingerprint and complete-hour replay. A legacy rebuild invalidates the affected hour for public totals, counted events and Tape until the receipt-aware writer certifies a new revision. Migration 0314 preserves the recorded fee reviews and exclusions for the rollback reader.
+Matched receipts establish USDz OFT bridge legs. A matched OUSD vault receipt identifies trustee-fee mints as protocol-internal. Reclassification needs a changed proof fingerprint and complete-hour replay. A legacy rebuild invalidates the affected hour for public totals, counted events and Tape until the receipt-aware writer certifies a new revision. Migrations 0314 and 0315 preserve recorded fee reviews, USDz bridge reviews, and receipt-proven exclusions across legacy reclassification. A receipt-aware rewrite can resolve those reviews.
+
+Ethereum MUSD is a bridge spoke tracked for diagnostics. The event ledger records the spoke as `bridge_transfer`, including writes from the rollback Worker. Migration 0315 also corrects its retained issuer-flow buckets, expires affected flow caches, and retracts prior MUSD Ethereum Tape claims.
 
 Dispatch lives in `worker/src/lib/mint-burn-bridge-classifier.ts`; receipt decoders and canonical Keccak-derived signatures live in `worker/src/lib/mint-burn-bridge-classifier-protocols.ts`. Deployment/token identities live in the resolved contract config. A top-level selector, an unpaired topic, or a shared endpoint appearing anywhere in a transaction cannot exclude a movement.
 

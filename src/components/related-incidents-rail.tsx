@@ -33,6 +33,7 @@ interface RelatedItem {
   symbol: string;
   startedAt: number;
   peakDeviationBps: number;
+  peakReview?: DepegEventSearchEntry["peakReview"];
   direction: "above" | "below";
 }
 
@@ -49,6 +50,7 @@ function toRelatedItem(event: DepegEventSearchEntry): RelatedItem {
     symbol: event.symbol,
     startedAt: event.startedAt,
     peakDeviationBps: event.peakDeviationBps,
+    peakReview: event.peakReview,
     direction: event.direction,
   };
 }
@@ -170,7 +172,9 @@ export function RelatedIncidentsRail({
                       {item.symbol}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      peak {formatDeviationBps(item.peakDeviationBps)} {item.direction === "below" ? "below" : "above"} peg
+                      {item.peakReview === "unverified"
+                        ? "Peak unverified"
+                        : `peak ${formatDeviationBps(item.peakDeviationBps)} ${item.direction === "below" ? "below" : "above"} peg`}
                     </span>
                   </Link>
                 </li>

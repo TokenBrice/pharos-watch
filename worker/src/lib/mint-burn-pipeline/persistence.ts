@@ -5,6 +5,7 @@ import { applyReviewedProtocolInternalFlows, applySupplyExcludedProtocolInternal
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../mint-burn-hourly-valuation";
 import { needsCurrentMintBurnReceiptClassification } from "../mint-burn-published-gauge";
+import { isMintBurnBridgeSpoke } from "../mint-burn-canonical-chain";
 import { isMintBurnWriterEpochSchemaMissing } from "./scan-coverage";
 import { mintBurnHourlyBucketAggregatesSql } from "./hourly-aggregates";
 
@@ -35,6 +36,12 @@ function receiptFlowExclusion(row: MintBurnRow) {
     && (row.flow_type === "bridge_transfer" || row.flow_type === "protocol_internal") ? row.flow_type : null;
 }
 
+function usdzReceiptReview(row: MintBurnRow) {
+  const reason = row.burn_review_reason;
+  return row.stablecoin_id === "usdz-anzen" && row.burn_type === "review_required"
+    && (reason === "known-bridge-pool-without-bridge-signal" || reason === "tx-context-unavailable") ? reason : null;
+}
+
 export async function insertMintBurnRows(
   db: D1Database,
   rows: MintBurnRow[],
@@ -53,7 +60,9 @@ export async function insertMintBurnRows(
       row.stablecoin_id, row.chain_id, Math.floor(row.timestamp / 3600) * 3600, row.id,
     ])));
     const protectReceipts = chunk.some((row) => needsCurrentMintBurnReceiptClassification(row.stablecoin_id));
-    const insertSql = protectReceipts ? `${MINT_BURN_EVENT_INSERT_SQL}, receipt_flow_exclusion)` : `${MINT_BURN_EVENT_INSERT_SQL})`;
+    const protectUsdzReviews = chunk.some((row) => row.stablecoin_id === "usdz-anzen");
+    const insertSql = `${MINT_BURN_EVENT_INSERT_SQL}${protectReceipts ? ", receipt_flow_exclusion" : ""}${
+      protectUsdzReviews ? ", usdz_receipt_review" : ""})`;
     const results = await executeAtomicBatch(db, [
       enqueue,
       ...prepareMultiRowInsertStatements(db, insertSql, chunk.map((row) => [
@@ -74,11 +83,12 @@ export async function insertMintBurnRows(
         row.block_number,
         row.timestamp,
         row.explorer_tx_url,
-        row.flow_type,
+        isMintBurnBridgeSpoke(row.stablecoin_id, row.chain_id) ? "bridge_transfer" : row.flow_type,
         row.amount_raw,
         row.below_display_threshold,
         row.supply_proof_id ?? null,
         ...(protectReceipts ? [receiptFlowExclusion(row)] : []),
+        ...(protectUsdzReviews ? [usdzReceiptReview(row)] : []),
       ])),
     ], { signal: options.signal, returnResults: true });
     for (const result of results.slice(1)) inserted += Number(result?.meta?.changes ?? 0);
@@ -118,6 +128,7 @@ export async function updateEventClassifications(
     const proofId = row.supply_proof_id ?? null;
     const supplyReview = `? = 'review_required' AND ? IN ('unproven-supply-destruction', 'supply-proof-context-unavailable')`;
     const supplyReviewBinds = [row.burn_type, row.burn_review_reason];
+    const flowType = isMintBurnBridgeSpoke(row.stablecoin_id, row.chain_id) ? "bridge_transfer" : row.flow_type;
     const assignments = [
       { column: "burn_type", sql: `CASE WHEN ${keepSupply} AND ${supplyReview}
           THEN CASE WHEN direction = 'mint' THEN NULL WHEN flow_type = 'bridge_transfer' THEN 'bridge_burn'
@@ -128,13 +139,16 @@ export async function updateEventClassifications(
       { column: "flow_type", sql: `CASE WHEN ? = 'standard' AND (flow_type = 'atomic_roundtrip'
           OR (${keepSupply} AND ${supplyReview} AND flow_type IN ('bridge_transfer', 'protocol_internal')))
           THEN flow_type ELSE ? END`,
-        binds: [row.flow_type, proofId, ...supplyReviewBinds, row.flow_type] },
+        binds: [flowType, proofId, ...supplyReviewBinds, flowType] },
       { column: "supply_proof_id", sql: `CASE WHEN ${keepSupply} THEN supply_proof_id ELSE ? END`, binds: [proofId, proofId] },
       { column: "amount_raw", sql: `CASE WHEN ${keepSupply} THEN amount_raw ELSE COALESCE(amount_raw, ?) END`,
         binds: [proofId, row.amount_raw ?? null] },
     ];
     if (needsCurrentMintBurnReceiptClassification(row.stablecoin_id)) {
       assignments.push({ column: "receipt_flow_exclusion", sql: "?", binds: [receiptFlowExclusion(row)] });
+    }
+    if (row.stablecoin_id === "usdz-anzen") {
+      assignments.push({ column: "usdz_receipt_review", sql: "?", binds: [usdzReceiptReview(row)] });
     }
     const changedSql = `(${assignments.map(({ column, sql }) => `${column} IS NOT (${sql})`).join(" OR ")})`;
     const changedBinds = assignments.flatMap(({ binds }) => binds);

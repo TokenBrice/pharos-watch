@@ -107,6 +107,31 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
 });
 
 describe("applyPoolChallenge", () => {
+  it("counts two pool protocols only when their known USD conversions are disjoint", () => {
+    const firstPool = "base:0x0000000000000000000000000000000000000001";
+    const secondPool = "base:0x0000000000000000000000000000000000000002";
+    const first = { price: 0.92, tvlUsd: 1_000_000, protocol: "aerodrome", chain: "base" };
+    const second = { ...first, protocol: "aero" };
+    const withLineage = (pool: typeof first, poolKey: string, venue: string) => ({
+      ...pool, pricePoolKeys: [poolKey], upstreamKeys: [poolKey, venue],
+    });
+    const bitstamp = withLineage(first, firstPool, "venue:bitstamp");
+    for (const { offered, expected } of [
+      { offered: [bitstamp], expected: 1 },
+      { offered: [bitstamp, withLineage(second, secondPool, "venue:bitstamp")], expected: 1 },
+      { offered: [bitstamp, { ...second, pricePoolKeys: [], upstreamKeys: [] }], expected: 1 },
+      { offered: [bitstamp, second], expected: 1 },
+      { offered: [bitstamp, withLineage(second, secondPool, "venue:kraken")], expected: 0.92 },
+      { offered: [first, second], expected: 0.92 },
+    ]) {
+      const { results, pegTypes, stats } = makePoolChallengeInputs({
+        assetId: "dola-inverse-finance", result: makePriceConsensusResult(),
+      });
+      applyPoolChallenge(results, new Map([["dola-inverse-finance", offered]]), pegTypes, stats);
+      expect(results.get("dola-inverse-finance")?.price).toBe(expected);
+    }
+  });
+
   it("uses bounded price evidence rather than unrelated retained TVL for conflicting protocol medians", () => {
     const pool = (poolId: string, project: string, price: number, tvlUsd: number, priceEvidenceTvlUsd?: number): PoolEntry => ({
       poolId, project, price, tvlUsd, priceEvidenceTvlUsd,

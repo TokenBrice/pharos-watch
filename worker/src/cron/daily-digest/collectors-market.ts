@@ -2,7 +2,6 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { StablecoinData } from "@shared/types/supply";
 import type { DigestInputData } from "@shared/types/digest";
 import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
-import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
@@ -18,6 +17,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { classifyDepegLifecycle } from "../../lib/depeg-lifecycle";
+import { admittedDepegRecoveryAt } from "../../lib/tape-projectors/depeg";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { compareFiniteDesc } from "@shared/lib/sort";
@@ -503,8 +503,10 @@ export async function collectResolvedDepegs(
     const eligibleIds = [...ctx.trackedStablecoinIds];
     const resolvedRows = await ctx.db
       .prepare(
-        `SELECT e.symbol, e.direction, e.peak_deviation_bps, e.started_at, e.ended_at,
-                e.stablecoin_id, e.close_reason, e.recovery_price, p.audit_verdict
+        `SELECT e.id, e.symbol, e.direction, e.peak_deviation_bps, e.started_at, e.ended_at,
+                e.stablecoin_id, e.peg_type, e.close_reason, e.recovery_price, e.recovery_peg_reference,
+                e.price_coverage_json, e.last_trusted_price_at, e.price_coverage_gap_started_at,
+                e.admitted_coverage_json, e.disposition, p.audit_verdict
          FROM depeg_events e
          LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
          WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?
@@ -512,23 +514,22 @@ export async function collectResolvedDepegs(
          ORDER BY ABS(e.peak_deviation_bps) DESC`,
       )
       .bind(cutoff24h, JSON.stringify(eligibleIds))
-      .all<{
+      .all<Parameters<typeof admittedDepegRecoveryAt>[0] & {
         symbol: string;
         direction: "above" | "below";
         peak_deviation_bps: number;
-        started_at: number;
-        ended_at: number;
-        stablecoin_id: string;
-        close_reason: string | null;
-        recovery_price: number | null;
         audit_verdict: string | null;
       }>();
+    if (resolvedRows.success !== true || !Array.isArray(resolvedRows.results)) {
+      throw new Error(resolvedRows.error ?? "Resolved depeg read failed");
+    }
     let supplyUnavailable = false;
 
-    const recoveredRows = (resolvedRows.results ?? []).filter((row) => {
-      if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) return false;
-      const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
-      return closure === "recovered" || closure === "legacy_recovered";
+    const recoveredRows = resolvedRows.results.flatMap((row) => {
+      if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) return [];
+      const recoveryAt = admittedDepegRecoveryAt(row, { inferLegacyClose: true });
+      return recoveryAt != null && recoveryAt >= cutoff24h && recoveryAt <= ctx.nowSec
+        ? [{ ...row, recoveryAt }] : [];
     });
     // Reviewed disputes stay in the evidence rows but are not public event counts.
     const countedRecoveredRows = recoveredRows.filter((row) => !isDisputedAuditVerdict(row.audit_verdict));
@@ -543,10 +544,10 @@ export async function collectResolvedDepegs(
           symbol: row.symbol,
           peakBps: Math.abs(row.peak_deviation_bps),
           direction: row.direction,
-          durationHours: Math.round((row.ended_at - row.started_at) / HOUR_SECONDS),
+          durationHours: Math.round((row.recoveryAt - row.started_at) / HOUR_SECONDS),
           mcapUsd,
           startedAt: row.started_at,
-          endedAt: row.ended_at,
+          endedAt: row.recoveryAt,
           impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
         }];
       });

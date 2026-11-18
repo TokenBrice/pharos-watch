@@ -12,6 +12,8 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 
 The dated depeg dataset selects event starts over exactly 90 UTC dates with an exclusive end boundary. Capture v1 identifies incomplete coverage. Capture time and observed market time are separate. Top Stablecoins distinguishes nominal par from an observed quote, keeps unavailable values null and observed zero numeric, assigns CNHT to offshore CNH, and attaches chain evidence and captured membership when available.
 
+Top Stablecoins projects malformed or unsupported price observation modes as `unsupported` with a null observed price. Legacy rows may omit the mode. A nominal fallback requires a finite, positive price.
+
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
@@ -1204,13 +1206,15 @@ Optional `circulatingNative` is a token count. Optional `valuationPriceUsd` is t
 
 Optional `fxReferenceObservations` and `selectedPegReferences` are objects keyed by peg type. Each FX observation records the USD per unit, source, cadence and observation time. Each selected reference identifies its kind and generation and carries either a dated provider observation or the median's USD value and contributors. A present empty map records that no entries were admitted. Legacy publications can omit the maps.
 
+In a mixed generation, `currentPeg.legacyFxReference: true` identifies a peg whose verified carried FX rate passed legacy freshness checks for that publication. XAGm uses `pegType: "entitlement-priced"` on the list to withhold static-ounce comparisons on rollback. Its `price` remains in USD per token and `commodityEntitlement` is present when the issuer's receipt matches the quote.
+
 Read the [peg-summary admission verdict](#peg-summary-admission) for the same quoted observation when available. The legacy list `currentPeg` projection can omit admission fields. A peg-summary verdict from a different quote does not replace the list observation's value or clock. Native market lineage, where recorded on a native quote, uses optional `derivation` with `kind` (`traded-pair`, `conversion`, `unknown`) and `lineage` with optional members `venue`, `pair`, `fxSource` and `fxObservedAtSec`. Omitted derivation is equivalent to unknown for independent voting. See [pricing lineage](./pricing-pipeline.md#primary-consensus).
 
 ### Stablecoin detail
 
-When the canonical list supplies dated `supplyChangeBaselines`, detail forwards the map with its admitted current supply. The `currentCirculatingPrevDayUSD` field uses the dated day value or, when the map or day key is omitted, the admitted legacy previous-day buckets. An empty map or explicit null day returns an empty previous-day bucket.
+When the canonical list supplies dated `supplyChangeBaselines`, detail forwards the map with its admitted current supply. Detail and the compact live summary use the list publisher's previous-day bucket projection. It keeps the published attribution when the buckets match the dated total and uses `unattributed` when a dated total cannot be apportioned. An omitted map or day key falls back to the admitted legacy buckets. An empty map or explicit null day returns an empty previous-day bucket.
 
-Commodity detail history overlays canonical native quantities on compatible completed checkpoints. Each wrapper checkpoint retains its own observation clock. Market-price admission requires the dated same-day quote, while a separately dated valuation can support its supply valuation. During a wrapper history gap the endpoint can serve current wrapper stock with the historical trend unavailable. The quantity fields are optional and have the same legacy semantics as [supply history](#get-apisupply-history).
+Commodity detail history overlays canonical native quantities on compatible completed checkpoints. Each wrapper checkpoint retains its own observation clock. Market-price admission requires the dated same-day quote, while a separately dated valuation can support its supply valuation. For native quantities derived from protocol TVL, use the latest eligible quote from the same UTC day at or before the TVL timestamp. If no quote qualifies, the row keeps its USD TVL and omits the native bucket. During a wrapper history gap the endpoint can serve current wrapper stock with the historical trend unavailable. The quantity fields are optional and have the same legacy semantics as [supply history](#get-apisupply-history).
 
 ### Depeg events
 
@@ -1241,6 +1245,12 @@ For a verified whole-ledger capture, request `?limit=1000&ledgerGeneration=lates
 | `admittedDeviationBps` | Signed number when the comparison is admitted, including zero. Null means unavailable for the current census. Omission selects legacy behavior. |
 
 The older `currentDeviationBps` remains a compatibility field. When the new projection is present, use it for census and current comparisons, including a null projection. The verdict status identifies market closure, stale reference or unavailable evidence. Reference `asOf` reflects the original observation on clocked scheduled pegs. [Status and reason contract](./architecture.md#adr-45)
+
+Current comparisons with an admission verdict require a token quote no more than six hours old. If the comparison would otherwise be admitted, an older quote yields `quote-over-budget` and a null deviation, including when the reference has its own fresh clock.
+
+A verified carried legacy FX peg can use `currentDeviationBps` in a mixed generation. That row uses its legacy census rules and omits the clocked admission fields.
+
+For legacy FX publications, an explicit per-asset `currentPeg.pegReferenceUnavailable` withholds the peg reference and deviation from peg summary and excludes that asset from the assessed cohort. The observed quote can still be available.
 
 ### DEX liquidity
 

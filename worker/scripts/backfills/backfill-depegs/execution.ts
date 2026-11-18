@@ -210,8 +210,9 @@ export async function executeBackfillForCoin(opts: {
     const onsetMaxGap = replaceIds.size === 0 ? replay.maxObservationGapSec : HOURLY_REPLAY_MAX_GAP_SEC;
     const unsafeReplacement = existingRows.existingBackfillRows.some((row) => !hasEvidenceThrough(row))
       || candidates?.some((event) => {
-        const onset = observationIndexes.get(event.startedAt) ?? 0;
-        return event.endedAt == null || !adjacent(onset - 1, onset, onsetMaxGap)
+        const onset = observationIndexes.get(event.startedAt) ?? -1;
+        const observedSevereOnset = replaceIds.size === 0 && assessed[onset]?.severeClosure === true;
+        return event.endedAt == null || (!observedSevereOnset && !adjacent(onset - 1, onset, onsetMaxGap))
           || assessed[onset - 1]?.state === event.direction;
       });
     const degradedReason = replay.degradedReason ?? (unsafeReplacement ? "insufficient-boundary-evidence" : null);

@@ -334,6 +334,38 @@ describe("DDR historical context", () => {
 });
 
 describe("DDR supply history provenance", () => {
+  it("retains a partial USD checkpoint as unavailable instead of treating it as issuance or skipping it", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    const onset = Math.floor(startedAt / 86_400) * 86_400;
+    const baseline = onset - 7 * 86_400;
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
+      VALUES ('usdc-circle', ?, ?, ?)`);
+    insert.run(baseline - 86_400, 1_000_000_000, null);
+    insert.run(baseline, 400_000_000, JSON.stringify({
+      supplySource: "defillama", supplyObservedAt: baseline,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+        quarantinedSince: baseline - 86_400,
+        chains: [{
+          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 600_000_000, baselineObservedAt: baseline - 86_400,
+          baselineSource: "state", resolution: "unavailable",
+        }],
+      },
+    }));
+    insert.run(onset, 1_000_000_000, null);
+
+    const loaded = await loadDdrContext(db, [activeRow({ started_at: onset })], NOW_SEC);
+    if (loaded.kind !== "ok") throw new Error(loaded.reason);
+    const snapshots = loaded.context.supplyByCoin.get("usdc-circle") ?? [];
+    expect(snapshots).toContainEqual({ date: baseline, usd: null });
+    expect(buildSupplyContext(snapshots, onset, NOW_SEC, [], false)).toMatchObject({
+      covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
+    });
+  });
+
   it.each([900, null])("withholds a same-day replacement when the quantity observation offset is %j", async (replacementOffset) => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);

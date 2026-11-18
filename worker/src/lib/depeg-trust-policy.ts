@@ -119,7 +119,7 @@ export interface DexAggregateClock {
 
 /** Every repeated clock and the optional independent header must validate. */
 export function getDexAggregateObservedAt(payload: unknown, nowSec: number, purpose: "affirmative" | "display" = "affirmative"): DexAggregateClock {
-  const sources = getDexPriceSourceEntries(payload);
+  const sources = getDexPriceSourceEntries(payload, purpose);
   const unavailable: DexAggregateClock = { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-unavailable" };
   if (sources == null) return unavailable;
   const contributors = Array.isArray(payload) ? sources : [payload, ...sources];

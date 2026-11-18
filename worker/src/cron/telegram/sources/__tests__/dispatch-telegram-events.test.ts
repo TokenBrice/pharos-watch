@@ -412,6 +412,29 @@ describe("buildTelegramDispatchEvents", () => {
     ]);
   });
 
+  it("emits the first native worsening against a main-era snapshot", async () => {
+    const now = 1_800_000_000;
+    const row = {
+      ...activeDepeg(600, "below", 42), stablecoin_id: "tryb-bilira", symbol: "TRYB",
+      peg_type: "peggedTRY", source: "live", start_price: 0.984, peak_price: 0.94,
+    };
+    const sources = eventSources({
+      activeDepegRows: [row],
+      dewsCache: { value: "{}", updatedAt: now },
+      depegCache: { value: JSON.stringify({
+        "tryb-bilira": { stablecoinId: row.stablecoin_id, symbol: row.symbol, eventId: 42,
+          direction: "below", deviationBps: 160, price: 0.984, pegReference: 1 },
+      }), updatedAt: now },
+    });
+    const { events, nextDepegSnapshot } = await buildTelegramDispatchEvents(
+      preparingD1(), sources, buildDispatchSnapshotState(sources, now), () => "TRYB",
+    );
+    expect(events.depegWorsening).toEqual([expect.objectContaining({
+      previousDeviationBps: 160, currentDeviationBps: 600, priceCurrency: "TRY", peakBasis: "native-peg",
+    })]);
+    expect(nextDepegSnapshot["tryb-bilira"]).toMatchObject({ eventId: 42, deviationBps: 600, peakBasis: "native-peg" });
+  });
+
   it("emits depeg worsening only when a supported subscriber step is crossed", async () => {
     const { events } = await buildTelegramDispatchEvents(
       preparingD1(),

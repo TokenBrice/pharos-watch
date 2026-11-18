@@ -12,6 +12,7 @@ import {
   type YieldPysInputsAtPublish,
 } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -233,6 +234,81 @@ describe("publishYieldCoordinatorResults", () => {
       },
     };
   }
+
+  it("publishes USDY's legacy source key for rollback while keeping wrapper rankings and history", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const { ondo } = OPTIONAL_YIELD_SOURCES;
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const source = makeEvaluatedSource({
+      id: ondo.stablecoinId, symbol: "USDY", sourceKey: ondo.sourceKey,
+      dataSource: "protocol-api", yieldType: "nav-appreciation", currentApy: 5, apy30d: 5,
+      sourceObservedAt: startSec, comparisonAnchorObservedAt: startSec - 30 * DAY_SECONDS,
+    });
+    const benchmark = makeBenchmarkMeta();
+    const artifacts = buildPreviewYieldRankingsArtifacts({
+      evaluatedSources: [source], bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+      riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: makeBenchmarkRegistry(benchmark),
+      dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), medianApy: 5, startSec,
+    });
+    try {
+      expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+        evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
+      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
+      const canonical = await readYieldRankingsCache(db);
+      for (const [value, sourceKey] of [[String(legacy?.value), ondo.legacySourceKey], [canonical!.value, ondo.sourceKey]]) {
+        const [row] = JSON.parse(value).rankings;
+        expect(row).toMatchObject({
+          currentApy: 5, pharosYieldScore: 28,
+          provenance: { sourceKey, sourceAgeSeconds: 0, comparisonAnchorAgeSeconds: 30 * DAY_SECONDS },
+        });
+      }
+      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: ondo.sourceKey, apy: 5 }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps a stale Yearn quote in decision evidence and publishes only the admitted Aave APY", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const id = "usdc-circle";
+    const aaveKey = "protocol-api:aave-v3:usdc";
+    const yearnKey = "protocol-api:yearn:ethereum:usdc";
+    const input = baseEvaluationInput({
+      startSec, safetyScores: new Map([[id, { score: 80, grade: "B+" }]]),
+      resolved: [
+        { id, symbol: "USDC", yield: resolvedYield({
+          sourceKey: aaveKey, dataSource: "protocol-api", currentApy: 4, apyBase: 4, sourceObservedAt: startSec,
+        }) },
+        { id, symbol: "USDC", yield: resolvedYield({
+          sourceKey: yearnKey, dataSource: "protocol-api", currentApy: 5, sourceFetchedAt: startSec,
+          sourceObservedAt: startSec - 7 * DAY_SECONDS,
+        }) },
+      ],
+    });
+    const evaluated = await evaluateYieldSourcesCooperative(input);
+    const benchmark = input.riskFreeRates.USD!;
+    const artifacts = buildPreviewYieldRankingsArtifacts({
+      ...evaluated, riskFreeRate: benchmark.rate, riskFreeRateMeta: benchmark, riskFreeRates: input.riskFreeRates,
+      dlPoolsMeta: makeYieldSourceMeta(), safetySnapshot: makeSafetySnapshotMeta(), startSec,
+    });
+    try {
+      expect((await publishYieldCoordinatorResults({ ...makePublishParams({ db }), ...artifacts,
+        evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
+      const cached = await readYieldRankingsCache(db);
+      const [ranking] = JSON.parse(cached!.value).rankings;
+      expect(ranking).toMatchObject({ currentApy: 4, altSources: [], provenance: { sourceKey: aaveKey } });
+      expect(ranking.alternateSummary).toBeUndefined();
+      expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: aaveKey, apy: 4 }]);
+      const decision = sqlite.prepare("SELECT rejected_count, alternatives_json FROM yield_source_decisions").get()!;
+      expect(decision.rejected_count).toBe(1);
+      expect(JSON.parse(String(decision.alternatives_json))).toMatchObject([
+        { sourceKey: yearnKey, apy30d: 5, rejected: true, anomalies: ["source-stale"] },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
 
   it.each([1, 1.001, 0.999])("persists an anchor without publishing zero, then publishes the measured return at rate %s", async (nextRate) => {
     const { sqlite, db } = createLatestSchemaSqlite();

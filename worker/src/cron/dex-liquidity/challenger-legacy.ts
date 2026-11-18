@@ -10,6 +10,7 @@ interface LegacyDexPoolSource {
   chain: string;
   price: number;
   tvl: number;
+  observedAt?: unknown;
 }
 
 interface LegacyChallengerPoolRow {
@@ -124,7 +125,7 @@ export async function loadLegacyDexPoolChallengers(
     // Rows written before the challenger projection existed keep the historical
     // display-slice fallback rather than losing legacy evidence entirely.
     if (qualifying.length === 0 && row.top_pools_json != null) {
-      const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+      const pools = decodeLegacyJsonArray<LegacyChallengerPoolRow & { project?: unknown; price?: unknown }>(
         row.top_pools_json,
         {
           stablecoinId: row.stablecoin_id,
@@ -152,6 +153,7 @@ export async function loadLegacyDexPoolChallengers(
           tvlUsd,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
+          ...(typeof pool.priceObservedAt === "number" && { priceObservedAt: pool.priceObservedAt }),
         });
       }
     }
@@ -204,6 +206,7 @@ export async function loadLegacyDexPoolChallengers(
           tvlUsd: tvl,
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
+          ...(typeof source.observedAt === "number" && { priceObservedAt: source.observedAt }),
         });
     }
     if (qualifying.length > 0) {

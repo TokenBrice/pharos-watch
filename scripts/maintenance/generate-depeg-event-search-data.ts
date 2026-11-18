@@ -4,7 +4,7 @@ import {
   type DepegEventEntry,
   type DepegEventSearchEntry,
 } from "@shared/types/peg";
-import { selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
+import { hasUnverifiedDepegPeak, selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
 import { readDepegEventPageEntries } from "../../src/lib/depeg-event-snapshot";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
@@ -47,7 +47,10 @@ function toSearchEntry(event: DepegEventEntry): DepegEventSearchEntry {
 }
 
 const staticPageEvents = sortStaticPages(readDepegEventPageEntries());
-const relatedEntries = staticPageEvents.map(toClientEntry);
+const relatedEntries = staticPageEvents.map((event): DepegEventSearchEntry => ({
+  ...toClientEntry(event),
+  ...(hasUnverifiedDepegPeak(event) ? { peakReview: "unverified" } : {}),
+}));
 const searchEntries = staticPageEvents.slice(0, SEARCH_EVENT_LIMIT).map(toSearchEntry);
 
 const clientIndexTypes = "readonly DepegEventSearchEntry[]";

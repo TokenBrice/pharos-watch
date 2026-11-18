@@ -1,4 +1,5 @@
 import { TELEGRAM_ALERT_JOB_FAMILIES } from "@shared/lib/telegram-alert-families";
+import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import type { TelegramAlertType } from "@shared/types/status";
 import { TELEGRAM_ALERT_POLICY, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { chunkArray } from "../../../lib/db";
@@ -52,6 +53,11 @@ function eventAlertTypes(events: TelegramDispatchEvents): TelegramAlertType[] {
     .map((spec) => spec.family);
 }
 
+function needsAdaptiveUsdPrecision(value: number | null, currency = "USD", legacyDigits = 4): boolean {
+  return value != null && Number.isFinite(value) && value > 0 && currency.trim().toUpperCase() === "USD" &&
+    Number(formatUsdPriceAdaptive(value)) !== Number(value.toFixed(legacyDigits));
+}
+
 /**
  * Deterministic alert job for one detection. The id binds the events and the
  * baseline they were diffed against, so a crash between detection and commit
@@ -79,8 +85,11 @@ export async function buildTelegramAlertJobSpec(args: {
   const ttls = eventAlertTypes(args.events).map((type) => TELEGRAM_ALERT_TTL_SEC[type]);
   const { depegTriggered, depegWorsening, depegResolved } = payload.events;
   const needsCurrentFormatter = [...depegTriggered, ...depegWorsening].some((event) =>
-    event.pegReference == null || event.price == null || event.peakBasis === "peer-relative") ||
-    depegResolved.some((event) => event.peakBasis === "peer-relative");
+    event.pegReference == null || event.price == null || event.peakBasis === "peer-relative" ||
+    needsAdaptiveUsdPrecision(event.price, event.priceCurrency) ||
+    needsAdaptiveUsdPrecision(event.pegReference, event.priceCurrency, 2)) ||
+    depegResolved.some((event) => event.peakBasis === "peer-relative" ||
+      needsAdaptiveUsdPrecision(event.recoveryPrice, event.priceCurrency));
   return {
     jobId: `${needsCurrentFormatter ? REFERENCE_ALERT_PLAN_PREFIX : "alert:"}${digest.slice(0, 32)}`,
     kind: "alert",

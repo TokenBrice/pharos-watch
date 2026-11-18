@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
+import { ApiFetchError } from "@/lib/api";
 import { projectTapeEventsForReader } from "@/lib/tape-derive";
 import { digestPage, mergeDigestedPages } from "@/lib/tape-digest";
 import type { TimelineEventQueryParams } from "./timeline-controller";
@@ -9,6 +10,7 @@ import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { deriveDataHealth } from "@/lib/data-health";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import { DEPEG_CLAIM_RETRACTED_REASON, FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 
 export type TimelineActiveStatus = "available" | "retained" | "loading" | "incomplete" | "unavailable";
 
@@ -17,6 +19,20 @@ interface UseTimelineFeedDataArgs {
   permalinkId: string;
   nowMs: number;
 }
+
+function isRetractedPermalinkError(error: Error | null): boolean {
+  if (!(error instanceof ApiFetchError) || error.status !== 404 || !error.bodyText) return false;
+  try {
+    const body: unknown = JSON.parse(error.bodyText);
+    return typeof body === "object" && body !== null && "reason" in body && (
+      body.reason === DEPEG_CLAIM_RETRACTED_REASON || body.reason === FLOW_CLAIM_RETRACTED_REASON ||
+      body.reason === FREEZE_CLAIM_RETRACTED_REASON
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTimelineFeedDataArgs) {
   const events = useEvents(queryParams, { autoLoadAll: false });
   const activeIncidents = useActiveDepegEvents({ autoLoadAll: true });
@@ -47,11 +63,31 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     pages,
   } = events;
 
+  // A permalink miss resolves one exact identity. Loaded events avoid a redundant round-trip.
+  const isInLoadedFeed = useMemo(
+    () => (permalinkId ? rawEvents.some((e) => e.id === permalinkId) : false),
+    [permalinkId, rawEvents],
+  );
+  const [retractedEventIds, setRetractedEventIds] = useState<ReadonlySet<string>>(() => new Set());
+  const permalinkRetracted = retractedEventIds.has(permalinkId);
+  const permalinkBuffer = useLatestEvents({
+    eventId: permalinkId,
+    enabled: !!permalinkId && !isInLoadedFeed && !permalinkRetracted,
+  });
+  // An authoritative withdrawal outlives a later refresh error or a replay of cached rows.
+  if (permalinkId && !permalinkRetracted && isRetractedPermalinkError(permalinkBuffer.error)) {
+    setRetractedEventIds(new Set([...retractedEventIds, permalinkId]));
+  }
+
   // Peg is filtered server-side (`pegCurrency` SQL clause in /api/events);
   // no client-side re-filter is needed.
   // Operational yield advisories are projected out of every reader surface;
   // raw events and cursors still drive pagination.
-  const visibleEvents = useMemo(() => projectTapeEventsForReader(rawEvents), [rawEvents]);
+  const unretractedEvents = useMemo(
+    () => retractedEventIds.size ? rawEvents.filter((event) => !retractedEventIds.has(event.id)) : rawEvents,
+    [rawEvents, retractedEventIds],
+  );
+  const visibleEvents = useMemo(() => projectTapeEventsForReader(unretractedEvents), [unretractedEvents]);
   const suppressedCount = rawEvents.length - visibleEvents.length;
   // Only a complete, fresh canonical read can establish current activity; a retained
   // complete read is shown as of its producer observation. Tape openings, recoveries
@@ -72,33 +108,24 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   // stable across renders (see use-events.ts), so memoising on `pages` keeps
   // Load More O(page-size + seam) instead of O(total).
   const perPageDigests = useMemo(
-    () => (pages ? pages.map((page) => digestPage(projectTapeEventsForReader(page.data.events), nowMs)) : []),
-    [pages, nowMs],
+    () => (pages ?? []).map(({ data: { events: pageEvents } }) => {
+      const admitted = retractedEventIds.size ? pageEvents.filter((event) => !retractedEventIds.has(event.id)) : pageEvents;
+      return digestPage(projectTapeEventsForReader(admitted), nowMs);
+    }),
+    [pages, nowMs, retractedEventIds],
   );
   const digestedDays = useMemo(() => mergeDigestedPages(perPageDigests), [perPageDigests]);
 
-  // A permalink miss resolves one exact identity, never a capped latest page.
-  // Existing loaded events still avoid a redundant round-trip.
-  const isInLoadedFeed = useMemo(
-    () => (permalinkId ? rawEvents.some((e) => e.id === permalinkId) : false),
-    [permalinkId, rawEvents],
-  );
-  const permalinkBuffer = useLatestEvents({
-    eventId: permalinkId,
-    enabled: !!permalinkId && !isInLoadedFeed,
-  });
-
   const rawBufferEvent = useMemo(() => {
-    if (!permalinkId || isInLoadedFeed) return null;
+    if (!permalinkId || isInLoadedFeed || permalinkRetracted) return null;
     return permalinkBuffer.data?.events.find((e) => e.id === permalinkId) ?? null;
-  }, [permalinkId, isInLoadedFeed, permalinkBuffer.data]);
+  }, [permalinkId, isInLoadedFeed, permalinkRetracted, permalinkBuffer.data]);
   const bufferEvent = useMemo(
     () => (rawBufferEvent ? projectTapeEventsForReader([rawBufferEvent])[0] ?? null : null),
     [rawBufferEvent],
   );
-  // A linked event that exists but is suppressed is resolved, not a missing identity.
-  const permalinkSuppressed = rawBufferEvent != null && bufferEvent == null;
-  const permalinkResolved = !!permalinkId && (isInLoadedFeed || rawBufferEvent != null);
+  // Operational advisories can still resolve the permalink even if the reader hides them.
+  const permalinkResolved = !permalinkRetracted && (isInLoadedFeed || rawBufferEvent != null);
 
   // The server total counts suppressed and rejected rows too, so a visible
   // total is only known once the raw traversal is complete; the loaded visible
@@ -116,9 +143,10 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     activeStatus,
     activeHealth,
     digestedDays,
+    lastEventTs: unretractedEvents[0]?.ts ?? null,
     permalinkBuffer,
     bufferEvent,
-    permalinkSuppressed,
+    permalinkRetracted,
     permalinkResolved,
     visibleTotal,
   };

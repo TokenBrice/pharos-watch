@@ -1,5 +1,6 @@
 import type { DepegDirection } from "../types/peg";
 import type { AdmittedDeviationBps, ReferenceAdmission } from "../types/reference-admission";
+import { PAR_ROUNDOFF_BPS } from "./depeg-config";
 
 interface PublishedDeviationEvidence {
   referenceAdmission?: ReferenceAdmission | null;
@@ -51,9 +52,13 @@ export function relativeBps(value: number, reference: number): RelativeBpsResult
     return null;
   }
 
-  const rawBps = ((value / reference) - 1) * 10000;
-  if (!Number.isFinite(rawBps)) return null;
-  const bps = Math.round(rawBps);
+  const ratio = value / reference;
+  const computedBps = (ratio - 1) * 10000;
+  if (!Number.isFinite(computedBps)) return null;
+  const bps = Math.round(computedBps);
+  // Allow for rounding in the inputs and ratio, preserving tiny moves around zero.
+  const toleranceBps = 2 * PAR_ROUNDOFF_BPS * Math.max(1, ratio);
+  const rawBps = bps !== 0 && Math.abs(computedBps - bps) <= toleranceBps ? bps : computedBps;
   return {
     bps,
     absBps: Math.abs(bps),

@@ -16,6 +16,7 @@ import { defineReviewedStablecoinRedeemConfig } from "@shared/lib/redemption-bac
 import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { admittedDeviationBps, evaluateReferenceAdmission } from "@shared/lib/reference-admission";
+import { deriveCurrentPegObservationMap } from "@shared/lib/current-peg-observations";
 import { asRawDeviationBps } from "@shared/types/reference-admission";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 
@@ -122,6 +123,45 @@ describe("buildRedemptionCurrentDepegObservationMap", () => {
     const db = mockD1Strict([activeDepegQuery([{ stablecoin_id: id, direction: "below", started_at: observed }])]);
     const availability = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, readings(observed + 120));
     expect(availability.get(id)?.routeStatus).toBe("unknown");
+  });
+
+  it("gates an exact 25% EURC discount on a weekday and across the FX close", async () => {
+    const id = "eurc-circle";
+    const reference = 1.1016;
+    const sessionOpenedAtSec = Date.parse("2026-11-15T22:00:00Z") / 1000;
+    const close = Date.parse("2026-11-20T22:00:00Z") / 1000;
+    for (const [now, price, expected] of [
+      [Date.parse("2026-11-18T14:00:00Z") / 1000, 0.8262, "degraded"],
+      [close + 900, 0.8262, "degraded"],
+      [close + 900, 0.82620001, "unknown"],
+    ] as const) {
+      const observed = now - 60;
+      const asset = {
+        ...authoritativeAsset(observed, id),
+        symbol: "EURC", pegType: "peggedEUR", price, priceObservedAtMode: "upstream" as const,
+      };
+      const options = {
+        peggedAssets: [asset], fxFallbackRates: { peggedEUR: reference }, now,
+        fxReferenceObservations: {
+          peggedEUR: {
+            pegKey: "peggedEUR", usdPerUnit: reference, source: "openExchangeRates", cadence: "intraday",
+            observedAtSec: now > close ? close - 60 : observed,
+            repricing: {
+              source: "openExchangeRates", sessionOpenedAtSec,
+              firstInSessionObservedAtSec: sessionOpenedAtSec + 3600, preCloseUsdPerUnit: 1.09,
+            },
+          },
+        } as const,
+      };
+      const currentPeg = deriveCurrentPegObservationMap({ ...options, asOf: now }).get(id);
+      expect(currentPeg?.referenceAdmission?.status).toBe(expected === "degraded" ? "admitted" : "held-closed-session");
+      const readings = buildRedemptionCurrentDepegObservationMap({
+        ...options, peggedAssets: [{ ...asset, currentPeg }], stablecoinsGenerationAt: now,
+      });
+      const db = mockD1Strict([activeDepegQuery([{ stablecoin_id: id, direction: "below", started_at: observed }])]);
+      const availability = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, readings);
+      expect(availability.get(id)?.routeStatus).toBe(expected);
+    }
   });
 
   it("excludes a frozen stablecoin from the current deviation map", () => {

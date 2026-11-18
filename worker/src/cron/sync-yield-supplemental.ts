@@ -145,8 +145,8 @@ async function loadSupplementalCatchUpEvidence(
     const parsed = parseYieldSupplementalSourcesCache(row.value, row.updatedAt, nowSec);
     if (!parsed || parsed.updatedAt !== row.updatedAt || parsed.ageSeconds >= maxAgeSec
       || parsed.sourceCount !== parsed.candidates.length) continue;
-    const payload = JSON.parse(row.value) as { source?: unknown; updatedAt?: unknown; sourceCount?: unknown; data?: unknown };
-    if (payload.source !== "sync-yield-supplemental" || payload.updatedAt !== row.updatedAt
+    const payload = JSON.parse(row.value) as { source?: unknown; updatedAt?: unknown; updatedAtV2?: unknown; sourceCount?: unknown; data?: unknown };
+    if (payload.source !== "sync-yield-supplemental" || (payload.updatedAtV2 ?? payload.updatedAt) !== row.updatedAt
       || payload.sourceCount !== parsed.candidates.length || !Array.isArray(payload.data)
       || payload.data.length !== parsed.candidates.length) continue;
     provenFamilies.push({ family, updatedAt: parsed.updatedAt, snapshotHash: supplementalFamilySnapshotHash(row) });

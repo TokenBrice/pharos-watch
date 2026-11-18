@@ -1,5 +1,5 @@
 import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, PAR_ROUNDOFF_BPS } from "@shared/lib/depeg-config";
 import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
 import { createCurrentPegReader } from "../current-peg-observations";
 import { formatIsoDate } from "@shared/lib/format";
@@ -255,7 +255,7 @@ export async function loadSevereActiveDepegAvailabilityMap(
     const currentObservation = currentObservationsById.get(row.stablecoin_id);
     const state = currentObservation == null
       ? "uncertain"
-      : currentObservation.currentDeviationBps <= -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS
+      : currentObservation.currentDeviationBps <= -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS + PAR_ROUNDOFF_BPS
         ? "severe"
         : "non-severe";
     const incident: EvaluatedOpenIncident = {

@@ -124,12 +124,12 @@ export function buildPrimaryConsensusResults(params: {
       },
     };
     let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);
+    const votingSources = sourceBuild.sources.filter((source) => source.nonVotingReason == null);
     // As the sole leg the aggregate keeps its own window and publishes as single-source.
     if (
       eligibleDexAggregate &&
-      (sourceBuild.sources.length === 0 ||
-        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!,
-          sourceBuild.sources.filter((source) => source.nonVotingReason == null), params.nowSec))
+      (votingSources.length === 0 ||
+        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!, votingSources, params.nowSec))
     ) {
       collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
       sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);

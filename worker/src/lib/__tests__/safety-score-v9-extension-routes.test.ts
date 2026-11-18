@@ -11,7 +11,8 @@ import {
 } from "@shared/lib/redemption-backstops";
 import { fixedFee } from "@shared/lib/redemption-backstop-configs/shared";
 import type { ExitExecutionCertificate, ExitRouteObservation } from "@shared/types/exit-route";
-import type { ReferenceAdmission } from "@shared/types/reference-admission";
+import { asRawDeviationBps, type ReferenceAdmission } from "@shared/types/reference-admission";
+import { evaluateReferenceAdmission, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
@@ -165,13 +166,15 @@ function dexPegFixture({
   assetId,
   routeOverrides,
   pegDataById = {},
+  clockSec = NOW,
 }: {
   assetId: string;
   routeOverrides: Pick<ExitRouteObservation, "routeId" | "output"> & Partial<ExitRouteObservation>;
   pegDataById?: Record<string, unknown>;
+  clockSec?: number;
 }) {
-  const fixedInput = fixedInputStub(undefined);
-  const route = dexRouteObservation(NOW, routeOverrides);
+  const fixedInput = fixedInputStub(undefined, clockSec);
+  const route = dexRouteObservation(clockSec, routeOverrides);
   (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
     [assetId]: singleObservationDexLiquidity(route),
   };
@@ -1662,6 +1665,40 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     const value = valuation();
     if (withDatedPrice) expect(value).toMatchObject({ unitValueUsd: 0.997, observedAtSec: NOW - 500 });
     else expect(value).toBeNull();
+  });
+
+  it("withholds an FX exit valuation when the current or retained token quote exceeds six hours", () => {
+    const assetId = "eurcv-societe-generale-forge";
+    const outputId = "eurc-circle";
+    const clockSec = Date.UTC(2026, 10, 12, 12) / 1000;
+    const quoteObservedAtSec = clockSec - REFERENCE_INTRADAY_BUDGET_SEC - 3600;
+    const referenceObservedAtSec = clockSec - 5 * 3600;
+    const { fixedInput } = dexPegFixture({
+      assetId, clockSec,
+      routeOverrides: { routeId: `dex:${assetId}:eurc`, output: { kind: "tracked-stablecoin", trackedAssetIds: [outputId] } },
+      pegDataById: { [outputId]: {
+        pegCurrency: "EUR", priceObservedAt: quoteObservedAtSec, currentDeviationBps: -300,
+        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 1, asOf: referenceObservedAtSec },
+      } },
+    });
+    const admitAt = (decisionAtSec: number) => evaluateReferenceAdmission({
+      kind: "fx", purpose: "current", quoteObservedAtSec, decisionAtSec, rawDeviationBps: asRawDeviationBps(-300),
+      preCloseUsdPerUnit: 1.11, generation: "fixture-fx",
+      observation: { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday", usdPerUnit: 1.1, observedAtSec: referenceObservedAtSec },
+    });
+    const valuation = (input: SafetyScoreV9CompilerInput) => buildSafetyScoreV9RouteReviews(input, assetId)[0]?.output?.valuation;
+    const boundary = clockSec - 3600;
+    const retained = admitAt(boundary);
+    const expired = admitAt(clockSec);
+    expect(retained.status).toBe("admitted");
+    expect(expired).toMatchObject({ status: "stale-reference", reason: "quote-over-budget", budgetSec: REFERENCE_INTRADAY_BUDGET_SEC });
+    expect(valuation(fixedInput)?.unitValueUsd).toBeCloseTo(1.067);
+    const withAdmission = (referenceAdmission: ReferenceAdmission, clockSec: number): SafetyScoreV9CompilerInput => ({
+      ...fixedInput, clockSec, pegEvidenceById: { [outputId]: { referenceAdmission, admittedDeviationBps: -300 } },
+    });
+    expect(valuation(withAdmission(retained, boundary))?.unitValueUsd).toBeCloseTo(1.067);
+    expect(valuation(withAdmission(retained, clockSec))).toBeNull();
+    expect(valuation(withAdmission(expired, clockSec))).toBeNull();
   });
 
   it.each([

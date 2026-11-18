@@ -1,5 +1,5 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { ChainPartitionProvenanceSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
+import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
 import { PriceDerivationSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -501,6 +501,7 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Previ
               delete row.circulatingPrevMonth;
             }
           }
+          if (asset.pegType !== undefined) asset.pegType = decodePublishedPegType(asset.id, asset.pegType);
           return [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)];
         }),
       ),

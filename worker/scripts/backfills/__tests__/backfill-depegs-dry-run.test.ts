@@ -416,6 +416,32 @@ describe("handleBackfillDepegs replay windows", () => {
     expect(sqlite.prepare("SELECT id FROM depeg_events").all()).toEqual([]);
   });
 
+  it("previews corroborated severe PAXG moves inside a closure", async () => {
+    const at = (date: string) => Date.parse(date) / 1000;
+    const { db } = fixtures.open();
+    const url = makeApiUrl("/api/backfill-depegs?stablecoin=paxg-paxos&dry-run=true");
+    for (const [onset, previous, low, sources, eventCount] of [
+      ["2026-11-14T14:00Z", "2026-11-13T21:30Z", 2800, ["a", "b", "c"], 1],
+      ["2026-11-13T22:05Z", "2026-11-13T21:55Z", 2800, ["a", "b", "c"], 1],
+      ["2026-11-14T14:00Z", "2026-11-13T21:30Z", 3880, ["a", "b", "c"], 0],
+      ["2026-11-14T14:00Z", "2026-11-13T21:30Z", 2800, ["a", "b", "b"], 0],
+    ] as const) {
+      const start = at(onset);
+      const times = [at(previous), start, start + 1800, start + 3600, at("2026-11-16T12:00Z")];
+      const prices = times.map((timestamp, index) => ({ timestamp, price: index === 0 || index === 4 ? 4000 : low }));
+      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({ prices, diagnostics: makeReplayDiagnostics(5) });
+      vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce({ GOLD: sources.map((sourceId, index) => ({
+        assetId: `peer-${index}`, sourceId, commodityOunces: 1, prices: times.map((timestamp) => ({ timestamp, price: 4000 })),
+      })) });
+      mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
+        tokens: [{ date: String(times[0]), totalCirculatingUSD: { peggedGOLD: 2e9 } }] } }]);
+      const response = await handleBackfillDepegsTrusted({ db, url, coingeckoApiKey: "cg-test-key" });
+      expect(await readJsonResponse(response, 200)).toMatchObject({ previews: [{
+        addedBackfillEventsSample: eventCount ? [{ startedAt: start, endedAt: times[4], peakDeviationBps: -3000 }] : [],
+      }] });
+    }
+  });
+
   it("preserves a PAXG incident when hourly quotes straddle the maintenance closure", async () => {
     const at = (clock: string) => Date.parse(`2026-11-17T${clock}Z`) / 1000;
     const prices = ["21:30", "21:45", "23:15"].map((clock) => ({ timestamp: at(clock), price: 4000 }));

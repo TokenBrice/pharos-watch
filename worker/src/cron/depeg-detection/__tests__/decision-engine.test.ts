@@ -100,6 +100,22 @@ function assertNativeOpening({ circulating, nativePrice, expectedBps, expectedRe
 }
 
 describe("decideDepegAsset", () => {
+  it("keeps legacy fiat detection closed until Sunday 23:00 UTC", () => {
+    const pegRates = { peggedEUR: 1.10 };
+    const fx = referenceState(pegRates, Date.UTC(2026, 10, 20, 18, 30) / 1000, false);
+    fx.sources = { frankfurter: "ok" };
+    const meta = { ...usdMeta, id: "eurc-circle", symbol: "EURC", flags: { ...usdMeta.flags, pegCurrency: "EUR" as const } };
+    const referenceContext = attachDetectionReferenceContext(pegRates, [], new Map(), new Set(), fx);
+    for (const [hour, minute, expected] of [[22, 15, false], [23, 1, true]] as const) {
+      const now = Date.UTC(2026, 10, 22, hour, minute) / 1000;
+      const asset = makeAsset({ id: meta.id, symbol: meta.symbol, pegType: "peggedEUR", price: 1.067,
+        priceSource: "coingecko", priceObservedAt: now - 60, priceUpdatedAt: now - 60, priceObservedAtMode: "upstream" });
+      const decision = decideDepegAsset({ now, asset, meta, pegRates, pegRateSources: { peggedEUR: "fx" },
+        pegRateCounts: {}, referenceContext });
+      expect(decision.commands).toMatchObject(expected ? [{ type: "upsert-pending", payload: { bps: -300 } }] : []);
+    }
+  });
+
   it("retains a dated reference hold only while the same market closure explains the coverage gap", () => {
     const close = Date.UTC(2026, 10, 13, 22) / 1000;
     const existing = makeExistingEvent({ started_at: close - 2000, direction: "below", peak_deviation_bps: -360,
@@ -416,7 +432,9 @@ describe("decideDepegAsset", () => {
       zarp.dexRow.source_total_tvl = 1605155;
       zarp.protocolSources.forEach((source, i) => { source.price = i ? 1.022914 : 0.984958; });
       expect(decideDepegAsset(zarp).deadBandNotice?.price).toBe(0.991964);
-      for (const [dex_price_usd, notice] of [[1.007, false], [1.016, false], [1.0075, true], [1.015, true]] as const) {
+      for (const [dex_price_usd, notice] of [
+        [1.007, false], [1.0075, false], [1.007501, true], [1.014999, true], [1.015, false], [1.016, false],
+      ] as const) {
         expect(Boolean(decideDepegAsset({ ...zarp, dexRow: { ...zarp.dexRow, dex_price_usd } }).deadBandNotice)).toBe(notice);
       }
       for (const [price, families, age, tvl] of [[0.992, 2, 30, 5e6], [0.992, 1, 30, 5e6],

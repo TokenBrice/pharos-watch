@@ -189,10 +189,13 @@ function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoin
       const chains = [...new Set(coin.chains.filter((chain) => typeof chain === "string").map((chain) => chain.trim()).filter(Boolean))];
       if (chains.length === 0 && nativeChain) chains.push(nativeChain);
       const priceSource = typeof coin.priceSource === "string" ? coin.priceSource : null;
-      const priceObservedAtMode = PriceObservedAtModeSchema.safeParse(coin.priceObservedAtMode).data ?? null;
-      const observed = !frozen && coin.price !== null && coin.price > 0 && isObservedPrice({ priceSource, priceObservedAtMode });
+      const mode = PriceObservedAtModeSchema.nullish().safeParse(coin.priceObservedAtMode);
+      const priceObservedAtMode = mode.success ? mode.data ?? null : "unsupported";
+      const positivePrice = coin.price !== null && Number.isFinite(coin.price) && coin.price > 0;
+      const observed = !frozen && positivePrice && isObservedPrice({ priceSource, priceObservedAtMode });
       const nominalReference = NominalPriceReferenceSchema.safeParse(coin.nominalPriceReference).data;
-      const nominalFallback = priceObservedAtMode === "nominal_reference" || priceSource === "protocol-par";
+      const nominalFallback = positivePrice && priceObservedAtMode !== "unsupported"
+        && (priceObservedAtMode === "nominal_reference" || priceSource === "protocol-par");
       const sourceClock = coin.priceObservedAt;
       // DefiLlama's untracked CNHT row uses the onshore currency code.
       const pegCurrency = coin.id === "280" ? "CNH" : TRACKED_META_BY_ID.get(coin.id)?.flags.pegCurrency;
@@ -916,19 +919,19 @@ export function buildTopicSpecs(
   envelope: SnapshotEnvelope | null,
   depegEvents: DepegEvent[],
   snapshotDate: string,
-  options: { historical?: boolean; depegCapture?: DepegLedgerCapture; repointCurrent?: boolean } = {},
+  options: { historical?: boolean; depegCapture?: DepegLedgerCapture; requireCurrentSafety?: boolean } = {},
 ): TopicSpec<unknown>[] {
   const historical = options.historical ?? isHistoricalSnapshotDate(snapshotDate);
   const envelopeSnapshotDate = envelope?.snapshotDate || snapshotDate;
   if (options.depegCapture?.apiTotal != null && options.depegCapture.apiTotal > options.depegCapture.eventCount) {
     throw new Error("Depeg ledger capture contains fewer events than the reported source total");
   }
-  const requireCurrentSafety = options.repointCurrent === true || process.env[PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY] === "1"
+  const requireCurrentSafety = options.requireCurrentSafety === true || process.env[PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY] === "1"
     || (!historical && options.depegCapture !== undefined);
   const pegMechanismProjection = projectPegMechanismDistribution(envelope);
   const scoresProjection = projectScoresLatest(envelope, { historical: historical && !requireCurrentSafety });
   if (requireCurrentSafety && !scoresProjection.displayProjection?.safety) {
-    throw new Error(`Public snapshot ${envelopeSnapshotDate} has no accepted current Safety projection for the latest alias`);
+    throw new Error(`Public snapshot ${envelopeSnapshotDate} has no accepted current Safety projection for the current dataset`);
   }
   const methodologyVersion = (
     keys: readonly string[],

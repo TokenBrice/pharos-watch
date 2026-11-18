@@ -51,7 +51,7 @@ import {
 } from "../supply-gap-reconciliation";
 import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain-supply";
 import { fillMissingSupplyHistory } from "../phase-helpers";
-import { restoreMissingTrackedAssets } from "../shared";
+import { normalizeStablecoinsPayload, restoreMissingTrackedAssets } from "../shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); });
@@ -680,6 +680,42 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(await fillMissingSupplyHistory(db, [asset])).toBe(1);
     expect(asset.circulatingPrevDay).toEqual({ peggedUSD: 980 });
     expect(asset.supplyChangeBaselines?.day?.circulatingNative).toBe(1000);
+  });
+
+  it("clears only the rejected week on a carried USD stock and its legacy wire", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const day = DAY_MS / 1000;
+    const stockAt = Math.floor(now / day) * day - 2 * day - 300;
+    const weekAt = stockAt - 7 * day;
+    const legacy = {
+      circulatingPrevDay: { peggedUSD: 103_000_000 },
+      circulatingPrevWeek: { peggedUSD: 91_000_000 },
+      circulatingPrevMonth: { peggedUSD: 102_000_000 },
+    };
+    const asset: PeggedAsset = {
+      id: "usdc-circle", name: "USDC", symbol: "USDC", pegType: "peggedUSD", price: 1,
+      supplySource: "coingecko-fallback", supplyObservedAt: stockAt, supplyRestored: true,
+      circulating: { peggedUSD: 110_000_000 }, ...legacy,
+    };
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines).toBeUndefined();
+    expect(normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets[0]).toMatchObject(legacy);
+
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance, valuation_price_usd, valuation_observed_at_sec)
+      VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, Math.floor(weekAt / day) * day, 91_000_000, JSON.stringify({
+        supplySource: "onchain-total-supply", supplyObservedAt: weekAt, supplyChainGuard: null,
+      }), 1, weekAt - day);
+    expect(await fillMissingSupplyHistory(db, [asset])).toBe(0);
+    expect(asset.circulatingPrevWeek).toEqual({});
+    const wire = normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets[0];
+    expect(wire.supplyObservedAt).toBe(stockAt);
+    expect(wire.supplyChangeBaselines).toEqual({ week: null });
+    expect(wire.circulatingPrevDay).toEqual(legacy.circulatingPrevDay);
+    expect(wire.circulatingPrevWeek).toEqual({});
+    expect(wire.circulatingPrevMonth).toEqual(legacy.circulatingPrevMonth);
   });
 
   it("withholds the first KAU wrapper comparison against a dated legacy program row", async () => {

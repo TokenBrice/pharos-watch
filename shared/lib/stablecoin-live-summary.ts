@@ -1,7 +1,7 @@
 import type { StablecoinDetailResponse } from "../types/supply";
 import { StablecoinLiveSummarySchema, type StablecoinLiveSummary } from "../types/stablecoin-live-summary";
 import { isObservedPrice } from "./pricing-source-policy";
-import { admitSupplyBuckets, sumPegBucketsOrNull } from "./supply";
+import { admitSupplyBuckets, projectUsdMarketCapBaselineBuckets, sumPegBucketsOrNull } from "./supply";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter } from "./supply-perimeter-changes";
 
 const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
@@ -91,6 +91,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     }
   }
   if (supplyUnavailable || currentNative == null || !Number.isFinite(currentNative) || currentNative < 0) currentNative = null;
+  const baselineAsset = { circulating, supplyChangeBaselines: detail.supplyChangeBaselines };
 
   return normalizeStablecoinLiveSummary(StablecoinLiveSummarySchema.parse({
     price: detail.price ?? null,
@@ -112,8 +113,12 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse, s
     ...(detail.supplyChangeBaselines !== undefined ? { supplyChangeBaselines: detail.supplyChangeBaselines } : {}),
     circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : historyObservedAt == null ? {} : detailBucketsAt(detail, historyObservedAt - 86_400, "totalCirculatingUSD", stablecoinId),
-    circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
-    circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+    circulatingPrevWeek: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+      baselineAsset, "week", detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD", stablecoinId),
+    ),
+    circulatingPrevMonth: supplyObservedAt == null ? {} : projectUsdMarketCapBaselineBuckets(
+      baselineAsset, "month", detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD", stablecoinId),
+    ),
     nativeSupply: {
       current: currentNative,
       prevWeek: currentNative == null || supplyObservedAt == null

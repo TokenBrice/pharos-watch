@@ -1,5 +1,5 @@
 import { computePegScore, getPegIncidentCoverage, type PegScoreResult } from "@shared/lib/peg-score";
-import { PegReferenceHoldSchema } from "@shared/lib/peg-utils";
+import { isScoredPegEvent, PegReferenceHoldSchema } from "@shared/lib/peg-utils";
 import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { CanonicalTextSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
@@ -469,15 +469,14 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
     );
   }
 
-  // The input-corruption erratum (docs/runbooks/depeg-artifact-removal.md)
-  // quarantines a live event that had no replay provenance by recording only an
-  // excluding audit verdict; its public provenance is exactly
-  // `{"auditVerdict":"disputed"}`, with no clock. That is complete audit
-  // evidence, not partial provenance: the event classifies as audit-excluded.
-  if (
-    event.source === "live" &&
+  // The public projector records a verified repair or dispute with an empty
+  // ledger and an exclusion flag, including when no replay provenance exists.
+  const reviewedEmpty = event.admittedCoverage?.length === 0 && provenance.pegScoreEligible === false;
+  const liveAuditVerdict = event.source === "live" &&
     (provenance.sourceKind == null || provenance.sourceKind === "live") &&
-    isPegScoreExcludedAuditVerdict(provenance.auditVerdict) &&
+    isPegScoreExcludedAuditVerdict(provenance.auditVerdict);
+  if (
+    (liveAuditVerdict || (reviewedEmpty && provenance.sourceKind == null && provenance.auditVerdict == null)) &&
     provenance.confidenceTier == null &&
     provenance.pegScoreEligible !== true &&
     (provenance.updatedAt == null || provenance.updatedAt <= clockSec) &&
@@ -510,7 +509,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
   }
 
   const excludedByAudit = isPegScoreExcludedAuditVerdict(provenance.auditVerdict);
-  if (provenance.pegScoreEligible === excludedByAudit) {
+  if (provenance.pegScoreEligible === excludedByAudit && !reviewedEmpty) {
     throw new Error(
       `[safety-score-v9-peg-provenance] ${eventLabel(event)} has contradictory peg-score eligibility`,
     );
@@ -570,7 +569,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
 
 function classifyEvent(event: CanonicalPegEvent): SafetyScoreV9PegEvidenceClass {
   const provenance = event.provenance;
-  if (isPegScoreExcludedAuditVerdict(provenance?.auditVerdict)) {
+  if (!isScoredPegEvent(event)) {
     return "audit-excluded";
   }
   if (provenance?.confidenceTier != null) {
@@ -617,7 +616,11 @@ function updateClassStats(
 }
 
 function parseEvent(value: DepegEvent, index: number): CanonicalPegEvent {
-  const parsed = PegProvenanceEventSchema.safeParse(value);
+  const {
+    analyticRecoveryAt: _analyticRecoveryAt, onsetBasis: _onsetBasis, peakBasis: _peakBasis,
+    peakPeerMedianUsd: _peakPeerMedianUsd, peakReview: _peakReview, retired: _retired, ...scoreEvent
+  } = value;
+  const parsed = PegProvenanceEventSchema.safeParse(scoreEvent);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const path = issue?.path.length ? ` at ${issue.path.join(".")}` : "";

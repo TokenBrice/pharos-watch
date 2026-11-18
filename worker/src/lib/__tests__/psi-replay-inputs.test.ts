@@ -5,7 +5,7 @@ import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeDepegRow as makeFixtureDepegRow } from "../../test-helpers/__shared/fixtures";
 import type { DepegRow } from "../depeg-helpers";
-import { seedPsiDews, seedPsiEvent, seedPsiSupply } from "../../api/__tests__/psi-replay.test-support";
+import { seedPsiDews, seedPsiEvent, seedPsiPairedHistory, seedPsiSupply } from "../../api/__tests__/psi-replay.test-support";
 import {
   loadHistoricalPsiArchives,
   loadPsiEligibleDepegEvents,
@@ -93,6 +93,37 @@ describe("PSI replay input loaders", () => {
     expect((await replay()).input).toMatchObject({ mcap7dChangePct: 20, nativeQuantityMomentum: { [id]: 0 } });
     update.run(80e9, null, prior);
     expect((await replay()).input.nativeQuantityMomentum).toBeUndefined();
+  });
+
+  it("omits a weekly pair with partial coverage at either endpoint without native quantity", async () => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.UTC(2026, 10, 17) / 1000;
+    const prior = day - 7 * DAY_SECONDS;
+    const id = "usdc-circle";
+    seedPsiPairedHistory(sqlite, day, "dai-makerdao", 100e6);
+    seedPsiSupply(sqlite, [
+      { stablecoin_id: id, snapshot_date: prior, circulating_usd: 1e9 },
+      { stablecoin_id: id, snapshot_date: day, circulating_usd: 400e6 },
+    ]);
+    const replay = async () => replayHistoricalPsiForDay({
+      day, now: day + DAY_SECONDS, methodologyVersion: "3.70", depegEvents: [],
+      ...await loadHistoricalPsiArchives(db, day, day),
+    });
+    expect((await replay()).result?.score).toBe(95);
+    const update = sqlite.prepare("UPDATE supply_history SET supply_provenance = ? WHERE stablecoin_id = ? AND snapshot_date = ?");
+    for (const endpoint of [day, prior]) {
+      if (endpoint === prior) sqlite.exec("ALTER TABLE supply_history DROP COLUMN circulating_native");
+      update.run(JSON.stringify({ supplySource: "defillama", supplyObservedAt: endpoint + 60, supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, quarantinedSince: prior - DAY_SECONDS,
+        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0, baselineUsd: 600e6,
+          baselineObservedAt: prior - DAY_SECONDS, baselineSource: "state", resolution: "unavailable" }],
+      } }), id, endpoint);
+      const { input, result } = await replay();
+      expect(input).toMatchObject({ mcap7dChangePct: 0, totalMcapUsd: 500e6 });
+      expect(input.trendUnavailableIds).toContain(id);
+      expect(result?.score).toBe(100);
+      update.run(null, id, endpoint);
+    }
   });
 
   it.each([false, true])("matches wide and narrow gold replay after Sunday reopen (recent mark=%s)", async (recent) => {
@@ -199,6 +230,26 @@ describe("PSI replay input loaders", () => {
       { id: 1, admittedCoverage: [] },
       { id: 2, coverageUnavailable: true },
     ]);
+  });
+
+  it("scores severe legacy weekend openings in either direction and holds a sub-severe opening", async () => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.UTC(2026, 10, 14) / 1000;
+    const start = day + 22 * 3600;
+    const id = "eurc-circle";
+    seedPsiPairedHistory(sqlite, day, id, 1e9);
+    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: "peggedEUR", peg_reference: 1,
+      source: "live", started_at: start, ended_at: start + 3 * 3600 }));
+    const update = sqlite.prepare("UPDATE depeg_events SET direction = ?, start_price = ?, peak_deviation_bps = ? WHERE id = 1");
+    const archives = await loadHistoricalPsiArchives(db, day, day);
+    for (const [bps, score] of [[-3000, 29], [3000, 29], [-1000, 100]]) {
+      update.run(bps < 0 ? "below" : "above", 1 + bps / 10000, bps);
+      const replay = replayHistoricalPsiForDay({
+        ...archives, day, now: day + DAY_SECONDS, methodologyVersion: "3.70",
+        depegEvents: await loadPsiEligibleDepegEvents(db), sampleSlots: [start + 1800],
+      });
+      expect(replay.result?.score).toBe(score);
+    }
   });
 
   it("honors empty reviewed coverage and the admitted peer basis at a Saturday sample", async () => {

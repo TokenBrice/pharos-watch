@@ -63,7 +63,7 @@ See [Organic grade-transition accounting](#organic-grade-transition-accounting) 
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
 | Safety Map census | dated map manifest + validated `mapSummary` | Mapped supply, per-tier coin counts and supply shares, tier leaders, not-rated count, and explicit poster freshness/date |
-| Resolved depegs | `depeg_events` (last 24h) | Only closures positively classified by `classifyDepegClosure` as `recovered` or `legacy_recovered` are recovery evidence; filters: peak >100 bps AND observed mcap >$20M; top 5 by impact score |
+| Resolved depegs | `depeg_events` (last 24h) | The admitted recovery clock determines 24h membership, including signal keys, and ends the reported duration. Legacy recovery closures can use their recorded end time. Editorial filters require a peak >100 bps and observed mcap >$20M, with the top 5 by impact score. |
 | Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (versioned cache key owned by `mint-burn-flow-cache-keys.ts`, 24 closed UTC hours) | Bank Run Gauge (mcap-weighted, **re-binned, never recomputed**), Flight-to-Quality (canonical V9 classification), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net; incomplete scan-window nets remain unavailable, never inactive/zero |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | Accepted `stress_signals` generation + `stress_signal_history` | Full band distribution, ALERT+ known-supply subtotal/coverage and band-change count; an accepted generation older than two `compute-dews` intervals is unavailable, not today's distribution. Up to 5 band moves and 5 elevated coins (mcap >$10M) for presentation only |
@@ -448,6 +448,8 @@ Trigger history keeps hit, missed, expired, pending and unavailable separate. Di
 Older and newer links on a daily page point to the adjacent daily edition. On a weekly page they point to the previous and next weekly, taken from `INDEXABLE_DIGEST_ENTRIES`, so the indexable editions link to each other and not to the noindex dailies.
 
 Render every published editorial paragraph and only captured, admitted intelligence/context. The stored map uses immutable `imageUrl`/`manifest.date`, never latest, with a validated deterministic tally; missing/failed posters or unusable snapshot context show unavailable states, not invented figures or silent disappearance.
+
+Corrected editions show the dated notice alongside the original text. The correction excerpt supplies the SEO and article JSON-LD descriptions, social preview descriptions and the preview image deck.
 
 The dated snapshot is immutable archived evidence: a failed refetch never withdraws retained `inputData`, only a settled read with no `inputData` is unavailable, and the capture is never aged as current data.
 

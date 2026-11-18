@@ -126,6 +126,15 @@ describe("threshold helpers", () => {
     expect(roundedToThreshold.absRawBps).toBeCloseTo(99.5);
     expect(signalCrossesThreshold(roundedToThreshold, 100)).toBe(false);
   });
+
+  it("normalizes integer bps tails while preserving sub-bps moves", () => {
+    for (const [price, ref, bps] of [[1.4, 1.12, 2500], [0.8475, 1.13, -2500], [1.122, 1.1, 200]] as const) {
+      expect(deriveDepegSignal(price, ref)?.rawBps).toBe(bps);
+    }
+    expect(deriveDepegSignal(1.12199, 1.1)!.rawBps).toBeLessThan(200);
+    expect(deriveDepegSignal(1.12201, 1.1)!.rawBps).toBeGreaterThan(200);
+    expect(signalCrossesThreshold(deriveDepegSignal(1.399999, 1.12), 2500)).toBe(false);
+  });
 });
 
 describe("pickMoreSevereBps", () => {

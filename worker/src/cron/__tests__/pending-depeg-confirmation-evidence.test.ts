@@ -13,6 +13,8 @@ import { emptyEvidence } from "./pending-depeg-confirmation.test-support";
 import { makePendingDepegRow } from "../../test-helpers/pending-depeg-fixtures";
 import { tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 import { loadDexPrices } from "../../lib/depeg-helpers";
+import { buildStoredChallengerPoolsJson } from "../dex-liquidity/challenger-publish";
+import type { PoolEntry } from "../dex-liquidity/types";
 
 vi.mock("../../lib/circuit-breaker", () => ({ recordOutcomeSafe: vi.fn(async () => undefined) }));
 
@@ -215,6 +217,56 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
 });
 
 describe("collectConfirmationEvidence pool challenger status classification", () => {
+  it("withholds a pool funded by the same named venue as a USD primary without ancestry", async () => {
+    const asset = makeAsset({ id: COIN_ID, symbol: "USDT", price: 0.98, priceSource: "kraken",
+      agreeSources: ["kraken"], priceConfidence: "single-source", priceObservedAtMode: "local_fetch" });
+    const pool = { price: 0.98, tvlUsd: 6_000_000, protocol: "uniswap-v3", chain: "ethereum",
+      sourceFamily: "direct_api", observedAt: NOW_SEC - 30 };
+    for (const [upstreamKeys, expected] of [
+      [["venue:bitstamp", "venue:kraken"], "insufficient"], [["venue:bitstamp"], "confirm"], [undefined, "confirm"],
+    ] as const) {
+      const evidence = await collect(noOffchain({ asset, coingeckoAllowed: false,
+        poolChallengers: new Map([[COIN_ID, [upstreamKeys ? { ...pool, upstreamKeys } : pool]]]) }));
+      expect(evidence.poolStatus).toBe(expected);
+      expect(evidence.poolConfirmations).toHaveLength(expected === "confirm" ? 1 : 0);
+    }
+  });
+
+  it.each(["venue", "pool"] as const)("counts a shared conversion %s only once on both sides of publication", async (identity) => {
+    const coin = "usg-tangent";
+    const protocols = ["uniswap-v3", "balancer", "curve", "sushiswap"];
+    const venues = ["kraken", "kraken+binance", "binance", "coinbase"];
+    const poolKeys = protocols.map((_, index) => `ethereum:0x${String(index + 1).repeat(40)}`);
+    const [left, right, independent] = ["a", "b", "c"].map((digit) => `ethereum:0x${digit.repeat(40)}`);
+    const conversionPools = [[left!], [left!, right!], [right!], [independent!]];
+    const retained: PoolEntry[] = protocols.map((project, index) => ({
+      poolId: poolKeys[index]!, project, stablecoinId: coin, chain: "ethereum", price: 0.98, source: "direct_api",
+      tvlUsd: index === 1 ? 2e6 : 1e6, priceObservedAt: NOW_SEC - 30 - index, symbol: "USG-USDC", volumeUsd1d: 100, poolType: "stable",
+      priceCounterparty: {
+        stablecoinId: index === 3 ? COIN_ID : "usdc-circle", source: identity === "venue" ? venues[index]! : "pyth",
+        priceUsd: 0.98, observedAtSec: NOW_SEC - 30,
+        ...(identity === "pool" && { upstreamKeys: conversionPools[index], pricePoolKeys: conversionPools[index] }),
+      },
+    }));
+    const samples = retained.map((pool, index) => ({
+      price: pool.price!, observedAt: pool.priceObservedAt!, tvlUsd: pool.tvlUsd, protocol: pool.project,
+      chain: pool.chain, sourceFamily: "direct_api", pricePoolKeys: [pool.poolId, ...(pool.priceCounterparty?.pricePoolKeys ?? [])],
+      upstreamKeys: [pool.poolId, ...(pool.priceCounterparty?.upstreamKeys ?? venues[index]!.split("+").map((venue) => `venue:${venue}`))],
+    }));
+    for (const [indices, expected] of [
+      [[0, 1, 2], [0]], [[2, 0, 1], [0]], [[0, 2], [0, 2]], [[0, 1, 2, 3], [0, 3]],
+    ] as const) {
+      const evidence = await collect(noOffchain({
+        row: row({ stablecoin_id: coin, symbol: "USG" }),
+        asset: makeAsset({ id: coin, symbol: "USG", pegType: "peggedUSD", price: 0.98, priceSource: "pyth" }),
+        poolChallengers: new Map([[coin, indices.map((index) => samples[index]!)]]),
+      }));
+      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, indices.map((index) => retained[index]!), 100_000)!);
+      expect(evidence.poolStatus).toBe(expected.length === 1 ? "insufficient" : "confirm");
+      expect(stored.map((pool: { poolId: string }) => pool.poolId).sort()).toEqual(expected.map((index) => poolKeys[index]));
+    }
+  });
+
   it.each([undefined, NOW_SEC - 6 * 3_600, NOW_SEC - 30])("requires an original clock for a high-TVL confirmer (%s)", async (observedAt) => {
     const candidate = { price: 0.96, tvlUsd: 5_100_000, protocol: "curve", chain: "ethereum", sourceFamily: "curve", observedAt };
     const evidence = await collect(noOffchain({ poolChallengers: new Map([[COIN_ID, [candidate]]]) }));

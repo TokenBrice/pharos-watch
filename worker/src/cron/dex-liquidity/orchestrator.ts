@@ -1002,6 +1002,7 @@ async function buildDexLiquidityPoolState(
   }), native: {
     usda: refreshUsdaV2Price({ metrics,
       sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
+      marketMarks: sourceState.stablecoinPriceById.marketMarks,
       nowSec: Math.floor(Date.now() / 1000) }),
     pathUsd: await refreshTempoPathUsdPrice({ sourcePools: metrics,
       stablecoinPriceById: sourceState.stablecoinPriceById,

@@ -209,7 +209,8 @@ export async function derivePegAnalyticsSnapshot(
     // with no usable price observation has an UNOBSERVED deviation, not a
     // withheld or quiet one. Downstream scoring must be able to tell the two
     // apart instead of reading the shared null as "at peg".
-    const currentPegObservation = currentPegObservationById.get(meta.id) ?? {
+    const observation = currentPegObservationById.get(meta.id);
+    const currentPegObservation = observation ?? {
       currentDeviationBps: null,
       pegReference: null,
       pegReferenceUnavailable: false,
@@ -232,7 +233,7 @@ export async function derivePegAnalyticsSnapshot(
 
     const clocked = options.fxReferenceObservations !== undefined;
     const capturedPeg = asset?.currentPeg;
-    const needsAdmission = getReferenceMarket(meta.flags.pegCurrency) !== null &&
+    const needsAdmission = observation?.legacyFxReference !== true && getReferenceMarket(meta.flags.pegCurrency) !== null &&
       (clocked || capturedPeg?.referenceAdmission !== undefined || capturedPeg?.admittedDeviationBps !== undefined);
     const packet = needsAdmission && !clocked && capturedPeg ? capturedPeg : currentPegObservation;
     const admission = ReferenceAdmissionSchema.safeParse("referenceAdmission" in packet ? packet.referenceAdmission : undefined);

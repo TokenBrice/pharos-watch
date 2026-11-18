@@ -376,6 +376,9 @@ export function buildPrimarySourceCandidates(
   ].filter((source): source is SourcePrice => source != null);
   for (const source of baseSources) {
     source.upstreamKeys ??= directUsdVenueKeys(source.source, asset.symbol);
+    if (source.source === "kraken" && collected.krakenQuoteBasis === "last-trade" && source.observedAt == null) {
+      source.nonVotingReason = "undated-trade";
+    }
   }
   const curveSource = baseSources.find((source) => source.source === "curve-onchain");
   const canVoteIndependently = (source: SourcePrice, pricePoolKeys: readonly string[] | undefined): boolean => {
@@ -473,8 +476,9 @@ export function buildPrimarySourceCandidates(
   }
 
   const hasPromotedDexProtocolSource = promotedDexProtocolCandidates.length > 0;
+  const votingBaseSources = baseSources.filter((source) => source.nonVotingReason == null);
   const agreesWithHardSource = (dexSource: SourcePrice): boolean =>
-    baseSources.some(
+    votingBaseSources.some(
       (source) =>
         haveDisjointPriceInputs(dexSource, source) &&
         isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier) &&
@@ -491,7 +495,6 @@ export function buildPrimarySourceCandidates(
   // Beside base legs a lane must fit the co-leg budget, and only lanes that fit
   // it can corroborate one another; otherwise one lane would date the composite.
   const coLegNowSec = nowSec ?? Math.floor(Date.now() / 1000);
-  const votingBaseSources = baseSources.filter((source) => source.nonVotingReason == null);
   const coLegBudgetSec = votingBaseSources.length > 0 ? getDexCoLegBudgetSec(votingBaseSources) : null;
   const laneAgeSec = (dexSource: SourcePrice): number | null =>
     typeof dexSource.observedAt === "number" ? coLegNowSec - dexSource.observedAt : null;

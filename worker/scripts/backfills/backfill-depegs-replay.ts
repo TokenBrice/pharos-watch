@@ -30,7 +30,7 @@ export interface BackfillCoinReplayResult {
   authoritativeSource: string | null;
   marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
   maxObservationGapSec?: number;
-  assessed?: { timestamp: number; state: string | null }[];
+  assessed?: { timestamp: number; state: string | null; severeClosure?: true }[];
   degradedReason?: "missing-historical-supply" | "no-admitted-observations" | "no-admitted-observations-in-comparison-window"
     | "unclocked-reference" | "unclocked-native-quote" | "no-historical-prices";
 }
@@ -219,8 +219,8 @@ export async function backfillCoin(opts: {
       quoteDomain: quoteMode,
       confirmationMaxGapSec: maxGapSec,
       maxObservationGapSec: maxGapSec,
-      onEvaluated(timestamp, state) {
-        assessed.push({ timestamp, state });
+      onEvaluated(timestamp, state, severeClosure) {
+        assessed.push({ timestamp, state, ...(severeClosure ? { severeClosure: true } : {}) });
         if (state != null) {
           admitted = true;
           if ((replayWindow?.compareStartSec == null || timestamp >= replayWindow.compareStartSec)

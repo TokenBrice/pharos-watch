@@ -5,7 +5,7 @@ import { getCirculatingRawOrNull } from "./supply";
 import { isObservedPrice } from "./pricing-source-policy";
 import { isAuthoritativeDepegPegReference } from "./peg-reference-trust";
 import type { StablecoinData } from "../types/supply";
-import { deriveDepegSignal, type DepegSignal } from "./depeg-signals";
+import { deriveDepegSignal, relativeBps, type DepegSignal } from "./depeg-signals";
 import { classifyPrimaryDepegTrust } from "./depeg-primary-trust";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./depeg-config";
 import type { CurrentPeg } from "../types/current-peg";
@@ -23,7 +23,7 @@ export interface CurrentPegObservation extends CurrentPeg {
   currentSupplyUnavailable: boolean;
 }
 
-/** A clocked generation opts in as a whole, including rows without a matching clock. */
+/** A clocked generation opts in by default, including pegs without a matching clock. */
 export function hasFxReferenceEvidence(observations: unknown): boolean {
   return isRecord(observations);
 }
@@ -58,6 +58,7 @@ export function deriveCurrentPegObservationMap(options: {
   peggedAssets: StablecoinData[];
   fxFallbackRates?: Record<string, number>;
   fxReferenceObservations?: unknown;
+  legacyFxPegs?: ReadonlySet<string>;
   pegRates?: PegRatesResult;
   generation?: string;
   asOf: number;
@@ -70,7 +71,7 @@ export function deriveCurrentPegObservationMap(options: {
     options.peggedAssets, WORKER_TRACKED_META_BY_ID, options.fxFallbackRates, options.fxReferenceObservations, decisionAtSec,
   );
   const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = referenceRates;
-  const admissionEnabled = hasFxReferenceEvidence(options.fxReferenceObservations);
+  const evidence = options.fxReferenceObservations;
   const result = new Map<string, CurrentPegObservation>();
 
   for (const meta of WORKER_ACTIVE_STABLECOINS) {
@@ -97,6 +98,16 @@ export function deriveCurrentPegObservationMap(options: {
     const pegReferenceUnavailable = !navToken && !!observedAsset && (!authoritative || !parityQuote);
     const signal = parityQuote && authoritative ? deriveDepegSignal(observedAsset.price, pegRef) : null;
     const rawSignal = signal && Number.isFinite(signal.rawBps) ? signal : null;
+    const published = asset?.currentPeg;
+    const legacyFxReference = isRecord(evidence) && !!referencePegType && source === "fx" && pegRef != null &&
+      !Object.prototype.hasOwnProperty.call(evidence, referencePegType) &&
+      (options.legacyFxPegs?.has(referencePegType) ?? (
+        published?.legacyFxReference === true && !published.pegReferenceUnavailable &&
+        published.referenceAdmission === undefined && published.admittedDeviationBps === undefined &&
+        published.pegReference?.source === "fx" && published.pegReference.valueUsd === pegRef &&
+        published.pegReference.asOf === options.asOf
+      ));
+    const admissionEnabled = hasFxReferenceEvidence(evidence) && !legacyFxReference;
     const rawDeviationBps = admissionEnabled && rawSignal ? asRawDeviationBps(rawSignal.rawBps) : null;
     const fixedUsd = !navToken && pegCurrency === "USD";
     const referenceAdmission = !admissionEnabled || fixedUsd ? undefined : evaluateSelectedReference({
@@ -135,9 +146,11 @@ export function deriveCurrentPegObservationMap(options: {
         : dexRawSignal?.bps ?? (dexReference == null && meta.id !== "xagm-matrixdock"
           ? deriveDexDeviationBps(dexRow.dex_price_usd, null, pegRates, meta.commodityOunces, currentDeviationBps, dexRow.deviation_from_primary_bps)
           : null);
-      if ((!dexAdmission || dexAdmission.status === "admitted") && dexBps != null) dexPriceCheck = {
+      const quoteDifference = dexAdmission && observedAsset ? relativeBps(dexRow.dex_price_usd, observedAsset.price) : null;
+      if (dexBps != null && (!dexAdmission || (dexAdmission.status === "admitted" && quoteDifference))) dexPriceCheck = {
         dexPrice: dexRow.dex_price_usd, dexDeviationBps: dexBps,
-        agrees: currentDeviationBps != null ? Math.abs(currentDeviationBps - dexBps) < 50 : Math.abs(dexBps) < 50,
+        agrees: quoteDifference ? quoteDifference.absRawBps < 50
+          : Math.abs(dexBps - (currentDeviationBps ?? 0)) < 50,
         sourcePools: dexRow.source_pool_count, sourceTvl: dexRow.source_total_tvl,
         ...(dexRow.observedAtSec != null ? { observedAtSec: dexRow.observedAtSec } : {}),
         ...(dexAdmission ? { referenceAdmission: dexAdmission } : {}),
@@ -149,6 +162,7 @@ export function deriveCurrentPegObservationMap(options: {
       dexPriceCheck,
       dexPriceCheckExpiresAt: dexPriceCheck && !currentPriceUnavailable ? dexRow?.expiresAt ?? null : null,
       currentDeviationBps,
+      ...(legacyFxReference && pegReference ? { legacyFxReference: true as const } : {}),
       ...(referenceAdmission ? { referenceAdmission } : {}),
       ...(admissionEnabled ? {
         admittedDeviationBps: referenceAdmission ? admittedDeviationBps(rawDeviationBps, referenceAdmission) : rawDeviationBps,

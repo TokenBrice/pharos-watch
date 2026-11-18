@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
@@ -9,7 +9,9 @@ import {
   selectDexPriceChallengerRowsFromPools,
 } from "../challenger-publish";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
+import { buildStoredTopPoolsJson } from "../persistence";
 import { loadDexPoolChallengers } from "../../../lib/depeg-helpers";
+import { normalizeTopPools } from "../../../lib/dex-liquidity-response";
 import { POOL_CHALLENGE_MIN_TVL } from "../../../lib/price-depeg-voting-policy";
 import { filterRetainedPools } from "../scoring-helpers";
 import { seedPublishedDexGeneration } from "./scoring-test-support";
@@ -21,16 +23,16 @@ afterEach(() => loaderFixtures.closeAll());
 
 const SNAPSHOT = 1_700_000_000;
 const COIN = ACTIVE_STABLECOINS[0]!.id;
-const publicationInput = (generationId: string, pools = challengerPools(1), snapshotAt = SNAPSHOT) => ({
+const publicationInput = (generationId: string, pools = challengerPools(1), snapshotAt = SNAPSHOT, coin = COIN) => ({
   generationId,
   snapshotAt,
-  retainedPoolsByStablecoin: new Map([[COIN, pools]]),
+  retainedPoolsByStablecoin: new Map([[coin, pools]]),
   minPoolTvlUsd: 20_000,
 });
 
-async function loadedPools(db: D1Database) {
+async function loadedPools(db: D1Database, coin = COIN) {
   return (await loadPublishedDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100))
-    .challengersByStablecoin.get(COIN)?.map((row) => row.poolId);
+    .challengersByStablecoin.get(coin)?.map((row) => row.poolId);
 }
 
 function challengerPools(count: number): PoolEntry[] {
@@ -158,6 +160,37 @@ describe("challenger publish", () => {
     );
   });
 
+  it("packs one challenger per proven upstream in both wire formats", async () => {
+    const { db, sqlite, generationId } = seedPublishedDexGeneration();
+    const coin = "usg-tangent";
+    const [first, duplicate, independent, legacy] = challengerPools(4).map((pool, index): PoolEntry => ({
+      ...pool,
+      poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+      project: ["uniswap-v3", "balancer", "curve", "sushiswap"][index]!,
+      price: 0.92,
+      ...(index < 3 && { source: "direct_api", priceCounterparty: {
+        stablecoinId: "usdc-circle", source: index === 2 ? "binance" : "kraken",
+        priceUsd: 0.92, observedAtSec: SNAPSHOT - 30,
+      } }),
+    }));
+    first!.priceObservedAt = SNAPSHOT - 30;
+    duplicate!.tvlUsd = 1_000_000;
+    const pools = [duplicate!, independent!, first!, legacy!];
+    const expected = [first!.poolId, independent!.poolId, legacy!.poolId].sort();
+    try {
+      expect(selectDexPriceChallengerRowsFromPools(coin, [duplicate!, first!], 20_000).map((row) => row.poolId))
+        .toEqual([first!.poolId]);
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools, SNAPSHOT, coin));
+      expect((await loadedPools(db, coin))?.sort()).toEqual(expected);
+      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, pools, 20_000)!);
+      expect(stored.map((row: { poolId: string }) => row.poolId).sort()).toEqual(expected);
+      const topPools = buildStoredTopPoolsJson(coin, pools);
+      expect(JSON.parse(topPools).filter((row: { price?: number }) => row.price !== undefined)
+        .map((row: { poolId: string }) => row.poolId).sort()).toEqual(expected);
+      expect(normalizeTopPools(topPools).map((row) => row.price)).toEqual([0.92, 0.92, 0.92, 0.92]);
+    } finally { sqlite.close(); }
+  });
+
   it("stores NULL and omits both lineage keys when a pool has no proven counterparty", async () => {
     const { db, sqlite, generationId } = seedPublishedDexGeneration();
     try {
@@ -167,6 +200,26 @@ describe("challenger publish", () => {
       const [row] = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(COIN)!;
       expect(row).not.toHaveProperty("pricePoolKeys");
       expect(row).not.toHaveProperty("upstreamKeys");
+    } finally { sqlite.close(); }
+  });
+
+  it("keeps incomplete and primary-overlapping $6M quotes out of both challenger storage paths", async () => {
+    const { db, sqlite, generationId } = seedPublishedDexGeneration();
+    const pools = ["bitstamp+coingecko", "bitstamp+kraken"].map((source, index): PoolEntry => ({
+      ...challengerPools(1)[0]!, chain: "ethereum", poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+      project: "uniswap-v3", price: 0.98, source: "direct_api", tvlUsd: 6_000_000,
+      priceCounterparty: { stablecoinId: "usdc-circle", source, priceUsd: 0.98, observedAtSec: SNAPSHOT - 60 },
+    }));
+    try {
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools));
+      expect(await loadedPools(db)).toEqual([]);
+      const topPools = buildStoredTopPoolsJson(COIN, pools);
+      expect(normalizeTopPools(topPools).map(({ price }) => price)).toEqual([0.98, 0.98]);
+      expect(JSON.parse(topPools).map((pool: { price?: number }) => pool.price)).toEqual([undefined, undefined]);
+      sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = ? WHERE stablecoin_id = ?")
+        .run(topPools, buildStoredChallengerPoolsJson(COIN, pools, 20_000), COIN);
+      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+      expect(await loadedPools(db)).toBeUndefined();
     } finally { sqlite.close(); }
   });
 
@@ -180,11 +233,15 @@ describe("challenger publish", () => {
           source: "direct_api", priceCounterparty: { stablecoinId: "usdc-circle", priceUsd: 1,
             source: "bitstamp", observedAtSec: SNAPSHOT - 60 },
         };
-        await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, [pool]));
+        const independentCoin = "eurc-circle";
+        await publishDexPriceChallengerSnapshots(db, {
+          ...publicationInput(generationId),
+          retainedPoolsByStablecoin: new Map([[independentCoin, [pool]]]),
+        });
         if (mode === "old writer") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = NULL");
         if (mode === "invalid receipt") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = 'garbage'");
         if (mode === "empty envelope") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = '{}'");
-        const loaded = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(COIN)?.[0];
+        const loaded = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(independentCoin)?.[0];
         expect(loaded?.upstreamKeys).toEqual(mode === "current" ? [pool.poolId, "venue:bitstamp"] :
           mode === "invalid receipt" ? [] : undefined);
       } finally { sqlite.close(); }
@@ -424,6 +481,31 @@ describe("challenger publish", () => {
 });
 
 describe("challenger load", () => {
+  it("expires dated pool votes independently of the head and fences its undated fallback", async () => {
+    const { db, sqlite } = loaderScenario(SNAPSHOT);
+    const observedAt = SNAPSHOT - 28 * 60;
+    sqlite.prepare("UPDATE dex_prices SET updated_at = ? WHERE stablecoin_id = 'coin-a'").run(SNAPSHOT);
+    sqlite.exec(`INSERT INTO dex_price_challenger_publications_v2
+      (publication_id, generation_id, snapshot_at, published_at, sealed)
+      VALUES (1, 'liquidity', ${SNAPSHOT}, ${SNAPSHOT}, 1);
+      INSERT INTO dex_price_challenger_payloads_v2
+      (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd, price_observed_at)
+      VALUES (1, 'coin-a', 'aero', 'Base', 'aero', 'direct_api', 0.92, 1000000, ${observedAt}),
+             (1, 'coin-a', 'aerodrome', 'Base', 'aerodrome', 'direct_api', 0.92, 1000000, ${observedAt});
+      INSERT INTO dex_price_challenger_heads_v2 (stablecoin_id, publication_id, has_rows)
+      VALUES ('coin-a', 1, 1);`);
+    const read = (now: number) => loadDexPoolChallengers(db, 20_000, DEX_FRESHNESS_SEC, now);
+    expect((await read(observedAt + DEX_PROTOCOL_SOURCE_FRESHNESS_SEC)).get("coin-a")).toHaveLength(2);
+    expect((await read(SNAPSHOT + 60 * 60)).get("coin-a")).toEqual([]);
+    sqlite.exec("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0");
+    expect((await read(SNAPSHOT + 60 * 60)).get("coin-a")).toBeUndefined();
+    sqlite.prepare("UPDATE dex_prices SET updated_at = ?, price_sources_json = ?").run(
+      SNAPSHOT + 60,
+      JSON.stringify([{ protocol: "aero", chain: "Base", price: 0.92, tvl: 1_000_000, observedAt }]),
+    );
+    expect((await read(SNAPSHOT + 60 * 60)).get("coin-a")).toBeUndefined();
+  });
+
   it("reads v2 head and exact payload coherently despite same-clock replacement and old-writer skew", async () => {
     const { db, sqlite, payload } = loaderScenario();
     payload(100, "old-worker");

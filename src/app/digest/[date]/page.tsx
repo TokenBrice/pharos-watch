@@ -52,6 +52,9 @@ function formatDate(dateStr: string): string {
 }
 
 function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDate: string): string {
+  const correction = DIGEST_CORRECTIONS.get(digest.date);
+  if (correction) return correction.excerpt;
+
   const summary = summarizeText(digest.text, 180);
   // summarizeText only ends in "…" when the first sentence is longer than the budget.
   const firstSentence = summary.endsWith("…") ? null : summary;

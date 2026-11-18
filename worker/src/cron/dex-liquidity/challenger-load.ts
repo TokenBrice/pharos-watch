@@ -3,6 +3,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { readDexPriceLineage, type DexPriceLineage } from "./price-lineage";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import type {
   DexPriceChallengerLoadRow,
@@ -17,6 +18,10 @@ export type {
 };
 
 type LegacyDexPoolChallengerLoadResult = Awaited<ReturnType<typeof loadLegacyDexPoolChallengers>>;
+
+function isChallengerObservationFresh(row: DexPriceChallengerLoadRow, nowSec: number): boolean {
+  return row.priceObservedAt == null || isFreshDexPoolObservation(row.priceObservedAt, nowSec);
+}
 
 function readStoredChallengerLineage(json: string | null | undefined): DexPriceLineage {
   if (json == null) return {};
@@ -163,7 +168,13 @@ export async function loadPublishedDexPoolChallengers(
     rowsByCoinAndSnapshot.set(key, existing);
   }
 
+  const expiredObservationSnapshots = new Map<string, number>();
   for (const snapshot of snapshotByCoin.values()) {
+    const key = `${snapshot.stablecoin_id}:${snapshot.snapshot_at}`;
+    const rows = rowsByCoinAndSnapshot.get(key) ?? [];
+    const freshRows = rows.filter((row) => isChallengerObservationFresh(row, nowSec));
+    if (freshRows.length < rows.length) expiredObservationSnapshots.set(snapshot.stablecoin_id, snapshot.snapshot_at);
+
     const ageSec = nowSec - snapshot.snapshot_at;
     if (ageSec > maxAgeSec) {
       staleSnapshotCoins.push(snapshot.stablecoin_id);
@@ -177,9 +188,6 @@ export async function loadPublishedDexPoolChallengers(
       continue;
     }
 
-    const key = `${snapshot.stablecoin_id}:${snapshot.snapshot_at}`;
-    const rows = rowsByCoinAndSnapshot.get(key) ?? [];
-
     if (snapshot.has_rows === 0) {
       challengersByStablecoin.set(snapshot.stablecoin_id, []);
       publishedCoins.add(snapshot.stablecoin_id);
@@ -190,7 +198,7 @@ export async function loadPublishedDexPoolChallengers(
     if (rows.length > 0) {
       challengersByStablecoin.set(
         snapshot.stablecoin_id,
-        rows
+        freshRows
           .filter((row) => Number.isFinite(row.priceUsd) && row.priceUsd > 0 && Number.isFinite(row.tvlUsd) && row.tvlUsd >= minPoolTvlUsd)
           .sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId)),
       );
@@ -209,8 +217,12 @@ export async function loadPublishedDexPoolChallengers(
     for (const [coinId, legacyRows] of loadedLegacy) {
       if (publishedCoins.has(coinId)) continue;
       if (!legacyFallbackCoins.has(coinId) && snapshotByCoin.has(coinId)) continue;
-      if (legacyRows && legacyRows.length > 0) {
-        challengersByStablecoin.set(coinId, legacyRows);
+      const expiredSnapshot = expiredObservationSnapshots.get(coinId);
+      const freshLegacyRows = legacyRows.filter((row) =>
+        isChallengerObservationFresh(row, nowSec) &&
+        (row.priceObservedAt != null || expiredSnapshot === undefined || row.snapshotAt > expiredSnapshot));
+      if (freshLegacyRows.length > 0) {
+        challengersByStablecoin.set(coinId, freshLegacyRows);
         legacyFallbackCoins.add(coinId);
         legacyUsedCoins.add(coinId);
       }

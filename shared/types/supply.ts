@@ -167,6 +167,11 @@ export const SupplyObservationProvenanceSchema = z.object({
   supplySource: z.string().nullable(),
   supplyObservedAt: z.number().int().nonnegative().nullable(),
   supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
+  nativeQuantityUnavailable: z.literal(true).optional(),
+  marketQuote: z.object({
+    price: z.number().finite().positive(),
+    observedAt: UnixSecondsSchema.positive().nullable(),
+  }).optional(),
 });
 export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
 
@@ -193,6 +198,13 @@ export const CommodityEntitlementSchema = z.object({
   ozPerToken: z.number().finite().positive(),
   observedAtSec: UnixSecondsSchema.positive(),
 });
+
+/** XAGm's cache label withholds the static-ounce comparison on rollback. */
+export const XAGM_ENTITLEMENT_PEG_TYPE = "entitlement-priced";
+
+export function decodePublishedPegType(assetId: string, pegType: string): string {
+  return assetId === "xagm-matrixdock" && pegType === XAGM_ENTITLEMENT_PEG_TYPE ? "peggedSILVER" : pegType;
+}
 
 const StablecoinDataRawSchema = z.object({
   id: z.string(),

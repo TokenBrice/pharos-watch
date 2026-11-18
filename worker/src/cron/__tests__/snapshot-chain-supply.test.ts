@@ -268,7 +268,7 @@ describe("snapshotChainSupply", () => {
     },
   );
 
-  it.each(["restored", "stale", "stale-partition", "missing"] as const)(
+  it.each(["restored", "stale", "stale-partition", "stale-total-with-fresh-partition", "missing"] as const)(
     "preserves all affected rows on %s chain input and replaces a legacy marker on recovery",
     async (unavailable) => {
       const { sqlite, db } = createLatestSchemaSqlite();
@@ -282,6 +282,10 @@ describe("snapshotChainSupply", () => {
           supplyObservedAt: unavailable === "missing" || unavailable === "stale-partition" ? nowSec : nowSec - 6 * 86400,
           ...(unavailable === "stale-partition" ? {
             chainPartition: { basis: "onchain-share", admission: "carried", observedAt: nowSec - 1801, onchainUsd: 100, ratio: 1 },
+          } : {}),
+          ...(unavailable === "stale-total-with-fresh-partition" ? {
+            supplyObservedAt: nowSec - 2000,
+            chainPartition: { basis: "onchain-share", admission: "entered", observedAt: nowSec - 1250, onchainUsd: 98, ratio: 0.98 },
           } : {}),
           ...(unavailable === "missing" ? { chainCirculating: { Ethereum: { current: null } } } : {}),
         });

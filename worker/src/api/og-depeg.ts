@@ -4,16 +4,14 @@ import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admissi
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildSocialDepegBriefingElement } from "@shared/lib/social-card/templates";
-import { StablecoinListResponseSchema } from "@shared/types/supply";
-import { decodeCachedJson } from "../lib/cache-json";
-import { getCache } from "../lib/db-cache";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { renderPng, socialCardMeasurer } from "../lib/og-render";
 import { admittedDepegRecoveryAt } from "../lib/tape-projectors/depeg";
+import { effectiveStartedAtSql, EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../lib/depeg-event-projection";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
-import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
-import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { deriveDepegSignal, readDeviationProjection } from "@shared/lib/depeg-signals";
 import { getReferenceMarket, isReferenceDeviationHeld, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
 import {
   isNativePegEvent,
@@ -33,29 +31,18 @@ function freshUntil(clock: number | null | undefined, budget: number, now: numbe
     ? clock + budget : null;
 }
 
-async function loadDepegOgMarket(db: D1Database) {
-  const cache = await getCache(db, "stablecoins").catch(() => null);
-  return decodeCachedJson(cache, {
-    missingReason: "missing-cache",
-    parseErrorReason: "json-parse-failed",
-    normalize: (raw) => {
-      const parsed = StablecoinListResponseSchema.safeParse(raw);
-      return parsed.success ? { ok: true, payload: parsed.data } : { ok: false, reason: "published-contract-invalid" };
-    },
-  });
-}
-
 async function renderDepegBriefing(db: D1Database): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
   const oneDayAgo = now - DAY_SECONDS;
   const [stablecoins, openEvents, closedEvents, newTodayResult] = await Promise.all([
-    loadDepegOgMarket(db),
+    loadStablecoinsCache(db, { contract: "published" }),
     db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
                        e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode, p.audit_verdict,
                        nq.value AS current_native_quote
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
-                WHERE e.ended_at IS NULL AND NOT ${reviewedDepegDisputeSql("e")}`)
+                WHERE e.ended_at IS NULL AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
+                  AND NOT ${reviewedDepegDisputeSql("e")}`)
       .all<NativeEventPriceEvidence & {
         stablecoin_id: string; symbol: string; direction: "above" | "below";
         peak_deviation_bps: number; current_native_quote: string | null;
@@ -63,23 +50,22 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
       }>(),
     db.prepare(`SELECT e.*, p.audit_verdict
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
-                WHERE e.ended_at IS NOT NULL AND e.ended_at > ? AND NOT ${reviewedDepegDisputeSql("e")}`)
+                WHERE e.ended_at IS NOT NULL AND e.ended_at > ?
+                  AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL} AND NOT ${reviewedDepegDisputeSql("e")}`)
       .bind(oneDayAgo).all<Parameters<typeof admittedDepegRecoveryAt>[0] & { audit_verdict: string | null }>(),
-    (() => {
-      const newTodayAudit = notDisputedAuditVerdictSql("p.audit_verdict");
-      return db.prepare(`SELECT COUNT(*) as count
-                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
-                WHERE e.started_at > ? AND e.started_at <= ? AND NOT ${reviewedDepegDisputeSql("e")} AND ${newTodayAudit.sql}`)
-        .bind(oneDayAgo, now, ...newTodayAudit.binds).first<{ count: number }>();
-    })(),
+    db.prepare(`SELECT COUNT(*) as count
+                FROM depeg_events e
+                WHERE e.started_at > ? AND e.started_at <= ? AND ${effectiveStartedAtSql("e")} > ?
+                  AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL} AND NOT ${reviewedDepegDisputeSql("e")}`)
+      .bind(oneDayAgo, now, oneDayAgo).first<{ count: number }>(),
   ]);
   if (openEvents.success !== true || !Array.isArray(openEvents.results) ||
       closedEvents.success !== true || !Array.isArray(closedEvents.results)) {
     return unavailable("incident-ledger-unavailable");
   }
-  const marketFreshUntil = stablecoins.ok
+  const marketFreshUntil = stablecoins.kind === "ok"
     ? freshUntil(stablecoins.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now) : null;
-  const assets = stablecoins.ok ? stablecoins.payload.peggedAssets : [];
+  const assets = stablecoins.kind === "ok" ? stablecoins.payload.peggedAssets : [];
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   let legacyObservations: Map<string, CurrentPegObservation> | undefined;
   let expiresAt = Math.min(now + SECONDS_PER_MINUTE, marketFreshUntil ?? Infinity);
@@ -119,12 +105,15 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
     if (!nativeEvent && usdAvailable) expiresAt = Math.min(expiresAt, marketFreshUntil!, quoteFreshUntil!);
     const current = !nativeEvent && usdAvailable ? asset.currentPeg : undefined;
     const admission = current?.referenceAdmission;
-    const usesPublishedDeviation = !nativeEvent && (admission != null || current?.admittedDeviationBps !== undefined
-      || (stablecoins.ok && stablecoins.payload.fxReferenceObservations !== undefined));
+    const currentUnavailable = current?.currentPriceUnavailable || current?.pegReferenceUnavailable;
+    const projectedBps = readDeviationProjection(current, pegCurrency === "USD", quoteAt);
+    const usesPublishedDeviation = !nativeEvent && (currentUnavailable || projectedBps !== undefined
+      || (pegCurrency !== "USD" && stablecoins.kind === "ok" && stablecoins.payload.fxReferenceObservations !== undefined &&
+        current?.legacyFxReference !== true));
     let legacySignal = null;
     if (nativeEvent && nativeObservation && !nativeHeld) {
       legacySignal = deriveDepegSignal(nativeObservation.value, row.peg_reference);
-    } else if (!usesPublishedDeviation && usdAvailable && !nativeEvent && stablecoins.ok) {
+    } else if (!usesPublishedDeviation && usdAvailable && !nativeEvent && stablecoins.kind === "ok") {
       legacyObservations ??= deriveCurrentPegObservationMap({
         peggedAssets: assets, fxFallbackRates: stablecoins.payload.fxFallbackRates, asOf: stablecoins.updatedAt ?? now,
       });
@@ -136,10 +125,8 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
       ? currentAdmissionUnavailableReason(admission, pegCurrency, asset?.priceObservedAt, now) : null;
     const deviationHeld = admission?.status === "held-closed-session" || expiredAdmission === "reference-market-closed"
       || legacyHeld || nativeHeld;
-    const admittedBps = !current?.currentPriceUnavailable && !current?.pegReferenceUnavailable
-      && (admission == null ? pegCurrency === "USD" : admission.status === "admitted"
-        && pegCurrency && expiredAdmission == null && admission.referenceObservedAtSec === current?.pegReference?.asOf)
-      ? current?.admittedDeviationBps : null;
+    const admittedBps = admission == null || (pegCurrency && expiredAdmission == null &&
+      admission.referenceObservedAtSec === current?.pegReference?.asOf) ? projectedBps : null;
     if (admittedBps != null && admission?.referenceObservedAtSec != null && admission.budgetSec != null) {
       expiresAt = Math.min(expiresAt, admission.referenceObservedAtSec + admission.budgetSec);
     }

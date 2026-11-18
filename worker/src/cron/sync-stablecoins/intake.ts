@@ -1,7 +1,7 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
-import { detectDefiLlamaListFillDefaultPrices } from "@shared/lib/pricing-source-policy";
+import { detectDefiLlamaListFillDefaultPrices, isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
@@ -14,6 +14,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { PriceCacheEntry } from "../../lib/price-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import { validatePublishedAssetPrice } from "../../lib/price-publish-policy";
 import { reportStablecoinsStage, returnIfAborted } from "./runtime";
 import { createCronResult } from "../../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
@@ -21,7 +22,7 @@ import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { PeggedAsset } from "./enrich-prices";
-import { buildPreviousTrustedPriceLookup } from "./pricing";
+import { buildPreviousTrustedPriceLookup, createValidationContextResolver } from "./pricing";
 import {
   admitPeggedAssetRows,
   applyTrackedAssetOverrides,
@@ -281,6 +282,7 @@ export async function loadStablecoinsIntake(
   }
 
   const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(input.db, true).catch(() => null);
+  const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, input.syncStartSec, replayPriceCache ?? undefined);
   const supplementalTokensPromise = fetchSupplementalTrackedTokens(
     cgData,
     input.signal,
@@ -295,7 +297,7 @@ export async function loadStablecoinsIntake(
     replayPriceCache,
     {
       validationReferences,
-      previousTrustedPrices: buildPreviousTrustedPriceLookup(previousAssetsById, input.syncStartSec, replayPriceCache ?? undefined),
+      previousTrustedPrices,
     },
   );
 
@@ -511,10 +513,16 @@ export async function loadStablecoinsIntake(
     delete asset.valuationPriceUsd;
     delete asset.valuationObservedAtSec;
   }
+  const validationContexts = createValidationContextResolver();
   const listObservations = new Map(assets.filter((asset) => !asset.frozen).map((asset) => [
     asset, {
       usd: getCirculatingRawOrNull(asset),
-      price: asset.priceListFillDefault ? null : asset.price,
+      price: !asset.priceListFillDefault && isObservedPrice(asset) && validatePublishedAssetPrice({
+        asset,
+        validationContext: validationContexts.get(asset),
+        validationReferences,
+        previousTrustedPrice: previousTrustedPrices.get(asset.id),
+      }).accepted ? asset.price : null,
       priceObservedAt: asset.priceObservedAtMode === "upstream" ? asset.priceObservedAt : null,
     },
   ]));
@@ -661,7 +669,12 @@ export async function loadStablecoinsIntake(
     if (isKinesisWrapperSupplyId(asset.id)) continue;
     const price = observation.price;
     const native = price != null && Number.isFinite(price) && price > 0 ? observation.usd / price : null;
-    if (native == null || !Number.isFinite(native)) continue;
+    if (native == null || !Number.isFinite(native)) {
+      asset.circulatingNative = null;
+      asset.valuationPriceUsd = null;
+      asset.valuationObservedAtSec = null;
+      continue;
+    }
     const priceClock = observation.priceObservedAt;
     asset.circulatingNative = native;
     asset.valuationPriceUsd = price;

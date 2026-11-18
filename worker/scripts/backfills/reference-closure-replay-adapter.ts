@@ -2,7 +2,7 @@
 export { decideDepegAsset } from "../../src/cron/depeg-detection/decision-engine";
 export { persistDepegCommands } from "../../src/cron/depeg-detection/persistence";
 export { buildDuplicateOpenEventRepair } from "../../src/cron/depeg-detection/repair";
-export { buildConfirmationPlan, isNativeQuoteForPending, type ConfirmationEvidenceInput } from "../../src/cron/pending-depeg-confirmation";
+export { buildConfirmationPlan, isNativeQuoteForPending, SELECT_PENDING_CONFIRMATION_SQL, type ConfirmationEvidenceInput } from "../../src/cron/pending-depeg-confirmation";
 export { evaluatePromotionDecision } from "../../src/cron/pending-depeg-confirmation-decision";
 export { collectConfirmationEvidence } from "../../src/cron/pending-depeg-confirmation-evidence";
 export { FxSyncRunState } from "../../src/cron/sync-fx-rates-helpers";

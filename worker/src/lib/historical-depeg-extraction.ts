@@ -2,6 +2,7 @@ import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_EVENT_MIN_SUPPLY_USD,
   DEPEG_EXTREME_MOVE_BPS,
+  DEPEG_SEVERITY_BPS,
 } from "@shared/lib/depeg-config";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { admitSupplyBuckets } from "@shared/lib/supply";
@@ -72,7 +73,7 @@ export interface BackfillEventExtractionOptions {
   admitReference?: (timestamp: number, rawBps: number) => boolean;
   /** Independent traded native evidence, when a replay has a separately identified source. */
   fiatCorroborationAt?: (timestamp: number) => PricePoint | null;
-  onEvaluated?: (timestamp: number, state: string | null) => void;
+  onEvaluated?: (timestamp: number, state: string | null, severeClosure: boolean) => void;
 }
 
 export function parseSupplyData(
@@ -89,7 +90,10 @@ export function parseSupplyData(
       continue;
     }
     // An invalid USD record is not permission to publish a different number.
-    if (usd.status === "invalid") continue;
+    if (usd.status === "invalid") {
+      if (!map.has(ts)) map.set(ts, null);
+      continue;
+    }
     const buckets = point.totalCirculating ?? point.circulating;
     const native = admitSupplyBuckets(buckets);
     if (native.status !== "observed") continue;
@@ -125,7 +129,11 @@ function isCorroboratedBySample(bps: number, peakBps: number): boolean {
 }
 
 /** True when a nearby sample of the same episode lands within tolerance of the candidate peak. */
-type EvaluatedPoint = PricePoint & DepegSignal & { pegRef: number; supply: number };
+type EvaluatedPoint = PricePoint & DepegSignal & { pegRef: number; supply: number; severeClosureStart: number | null };
+
+function sharesSevereClosure(left: EvaluatedPoint, right: EvaluatedPoint): boolean {
+  return left.severeClosureStart !== null && left.severeClosureStart === right.severeClosureStart;
+}
 
 function isCorroboratedPeak(
   points: readonly (EvaluatedPoint | null)[],
@@ -140,8 +148,9 @@ function isCorroboratedPeak(
       const neighbour = points[index + offset * step];
       if (!neighbour || neighbour.direction !== candidate.direction || !signalCrossesThreshold(neighbour, threshold)) break;
       const gap = Math.abs(neighbour.timestamp - candidate.timestamp);
-      if (gap > maxGapSec || openMarketSeconds(market, Math.min(neighbour.timestamp, candidate.timestamp),
-        Math.max(neighbour.timestamp, candidate.timestamp)) !== gap) break;
+      if (gap > maxGapSec || (!sharesSevereClosure(candidate, neighbour) &&
+        openMarketSeconds(market, Math.min(neighbour.timestamp, candidate.timestamp),
+          Math.max(neighbour.timestamp, candidate.timestamp)) !== gap)) break;
       if (gap > 0 && isCorroboratedBySample(neighbour.rawBps, candidate.rawBps)) return true;
     }
   }
@@ -266,23 +275,29 @@ export function extractDepegEvents(
     if (options?.admitReference
       ? !options.admitReference(timestamp, depegSignal.rawBps)
       : isReferenceDeviationHeld(pegCurrency, timestamp, Math.abs(depegSignal.rawBps))) return null;
-    return { ...point, ...depegSignal, pegRef, supply };
+    const session = options?.admitReference && referenceMarket && depegSignal.absRawBps >= DEPEG_SEVERITY_BPS.severe
+      ? getReferenceSessionState(referenceMarket, timestamp) : null;
+    return { ...point, ...depegSignal, pegRef, supply, severeClosureStart: session?.closureStartSec ?? null };
   });
 
   for (let index = 0; index < evaluated.length; index++) {
     const point = evaluated[index];
     const offPeg = signalCrossesThreshold(point, threshold);
     const recovered = point != null && isWithinRecoveryBand(point.absRawBps, recoveryThreshold);
-    options?.onEvaluated?.(prices[index]!.timestamp, point == null ? null : offPeg ? point.direction : recovered ? "in-band" : "intermediate");
+    options?.onEvaluated?.(prices[index]!.timestamp,
+      point == null ? null : offPeg ? point.direction : recovered ? "in-band" : "intermediate",
+      point?.severeClosureStart != null);
     const preceding = previous;
     previous = point ?? null;
     if (!point) continue;
     const { timestamp, price, pegRef, supply } = point;
     const wallGap = preceding ? timestamp - preceding.timestamp : Infinity;
-    const hasCoverage = preceding && wallGap > 0 && wallGap <= maxObservationGapSec
-      && openMarketSeconds(referenceMarket, preceding.timestamp, timestamp) === wallGap;
+    const withinGap = preceding && wallGap > 0 && wallGap <= maxObservationGapSec;
+    const hasCoverage = withinGap && openMarketSeconds(referenceMarket, preceding.timestamp, timestamp) === wallGap;
+    // Severe closure samples can corroborate a peak without proving duration across the closure.
+    const canCorroborate = hasCoverage || (withinGap && sharesSevereClosure(preceding, point));
     const { bps, rawBps, absRawBps, direction } = point;
-    const sameEpisode = hasCoverage && preceding.direction === direction
+    const sameEpisode = canCorroborate && preceding.direction === direction
       && signalCrossesThreshold(preceding, threshold) && offPeg;
     if (!sameEpisode) continuousFrom = timestamp;
     if (hasCoverage && current?.admittedCoverage && current.direction === direction && preceding.direction === direction
@@ -386,7 +401,7 @@ export function extractDepegEvents(
           && (options?.maxObservationGapSec == null
             ? timestamp - pending.peakTs <= confirmationMaxGapSec + 7 * DAY_SECONDS
               && openMarketSeconds(referenceMarket, pending.peakTs, timestamp) <= confirmationMaxGapSec
-            : hasCoverage);
+            : canCorroborate);
         if (corroboratesStoredPeak) pending.peakCorroborated = true;
         const corroboratesCandidate = isCorroboratedPeak(evaluated, index, point, threshold, maxObservationGapSec, referenceMarket);
         if (!corroboratesStoredPeak && !pending.peakCorroborated && corroboratesCandidate) {

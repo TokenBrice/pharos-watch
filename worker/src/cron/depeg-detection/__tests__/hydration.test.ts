@@ -5,6 +5,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import type { FxReferenceObservation } from "@shared/types/fx-reference";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/depeg-threshold-policy";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
@@ -13,13 +14,14 @@ import { hydrateDepegDetection } from "../hydration";
 import { loadFreshFxRates } from "../../sync-stablecoins/shared";
 import { detectDepegEvents } from "../../detect-depegs";
 import { decideDepegAsset } from "../decision-engine";
-import { persistFxRateState, type FxRatesMeta } from "../../../lib/fx-rate-state";
+import { loadFxRateState, persistFxRateState, type FxRatesMeta } from "../../../lib/fx-rate-state";
 import { makePendingDepegRow } from "../../../test-helpers/pending-depeg-fixtures";
 import { buildConfirmationPlan } from "../../pending-depeg-confirmation";
 import { normalizePendingDepegRow, SELECT_PENDING_DEPEGS_SQL } from "../../../lib/depeg-pending";
 import { referenceState, tradedPair } from "./reference-fixtures";
 import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
 import { persistDepegCommands } from "../persistence";
+import { deriveDetectionPegRates } from "../reference-policy";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const NOW = 1_780_358_400;
@@ -42,6 +44,55 @@ function quoteResponse(updatedAt = NOW - 60) {
 }
 
 describe("hydrateDepegDetection", () => {
+  it("detects severe moves against the retained direct close when a later FX selection cannot qualify", async () => {
+    const now = Date.UTC(2026, 10, 21, 0, 20) / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    for (const { id, peg, market, close, selected, moves } of [
+      {
+        id: "cngn-compliant-naira", peg: "peggedNGN", market: "fx",
+        close: { usdPerUnit: 0.000625, source: "fawazahmed0", cadence: "calendar-daily", observedAtSec: Date.UTC(2026, 10, 20) / 1000 },
+        selected: { usdPerUnit: 0.000575, source: "fawazahmed0", cadence: "calendar-daily", observedAtSec: now - 1200 },
+        moves: [-3000, 3000, -400],
+      },
+      {
+        id: "paxg-paxos", peg: "peggedGOLD", market: "metal",
+        close: { usdPerUnit: 4100, source: "gold-api.com", cadence: "intraday", observedAtSec: Date.UTC(2026, 10, 20, 21, 50) / 1000 },
+        selected: { usdPerUnit: 3800, source: "peer-median", cadence: "intraday", observedAtSec: Date.UTC(2026, 10, 20, 21, 57, 30) / 1000 },
+        moves: [-3000, -200],
+      },
+    ] as const) {
+      const { db } = fixtures.open();
+      const rates = { [peg]: selected.usdPerUnit };
+      const observation: FxReferenceObservation = { pegKey: peg, ...close };
+      const session = getReferenceSessionState(market, close.observedAtSec);
+      if (!session.open) throw new Error("Expected the retained sample to precede the close");
+      const fx = referenceState(rates, selected.observedAtSec);
+      await persistFxRateState(db, rates, {
+        ...fx, usableSyncAt: now - 60, sourceCadenceByPeg: { [peg]: selected.cadence },
+        observations: { [peg]: { pegKey: peg, ...selected } },
+        referenceSourceSamples: { [`${peg}:${close.source}`]: { observation,
+          evidence: { sessionOpenedAtSec: session.sessionOpenedAtSec, firstInSessionObservedAtSec: close.observedAtSec, preCloseUsdPerUnit: null } } },
+      }, now - 60);
+      const state = await loadFxRateState(db);
+      const meta = PSI_ELIGIBLE_META_BY_ID.get(id)!;
+      for (const bps of moves) {
+        const asset = makeAsset({
+          id, symbol: meta.symbol, pegType: peg, price: close.usdPerUnit * (1 + bps / 10_000),
+          priceSource: "coingecko", priceConfidence: "single-source", priceUpdatedAt: now - 60,
+          priceObservedAt: now - 60, priceObservedAtMode: "upstream", circulating: { [peg]: 60_000_000 },
+        });
+        const selection = await deriveDetectionPegRates(db, [asset], PSI_ELIGIBLE_META_BY_ID, new Set(), rates, state, now);
+        expect(selection.observations?.[peg]).toEqual(observation);
+        const decision = decideDepegAsset({ now, asset, meta, pegRates: selection.rates,
+          pegRateSources: selection.sources, pegRateCounts: selection.counts, referenceContext: selection.referenceContext });
+        expect(decision.commands).toMatchObject(Math.abs(bps) === 3000
+          ? [{ type: "upsert-pending", payload: { bps, pegReference: close.usdPerUnit,
+            referenceAdmission: { referenceObservedAtSec: close.observedAtSec, generation: String(now - 60) } } }]
+          : []);
+      }
+    }
+  });
+
   it("returns open events, derived FX fallback and native quotes while persisting the upstream observation clock", async () => {
     const { db, sqlite } = fixtures.open();
     seedEvents(sqlite);
@@ -139,6 +190,29 @@ describe("hydrateDepegDetection", () => {
     const row = makePendingDepegRow({ stablecoin_id: eurc.id, peg_type: eurc.pegType!, first_seen_at: NOW - 1_000 });
     expect(buildConfirmationPlan({ ...inputs, db, row, pendingState: normalizePendingDepegRow(row),
       openSet: new Set(), nativePegQuote: undefined }).kind).toBe("ready");
+  });
+
+  it("uses the legacy gold median when only GBP has source-clocked evidence", async () => {
+    const { db } = fixtures.open();
+    const rates = { peggedGOLD: 4100, peggedGBP: 1.27 };
+    const observedAtSec = NOW - 60;
+    await persistFxRateState(db, rates, {
+      ...referenceState(rates, observedAtSec, false),
+      legacyDetectionPegs: ["peggedGOLD"],
+      observations: {
+        peggedGBP: { pegKey: "peggedGBP", usdPerUnit: 1.27, source: "openExchangeRates", cadence: "intraday", observedAtSec },
+      },
+    }, observedAtSec);
+    const peers = ["paxg-paxos", "xaut-tether", "xaum-matrixdock"].map((id, i) => makeAsset({
+      id, pegType: "peggedGOLD", price: 4165.60, priceUpdatedAt: observedAtSec, priceObservedAt: observedAtSec,
+      priceSource: i < 2 ? "coingecko" : "dexscreener-exact", priceObservedAtMode: i < 2 ? "upstream" : "local_fetch",
+    }));
+    const fx = await loadFreshFxRates(db);
+    quoteResponse();
+    const hydrated = await hydrateDepegDetection(db, peers, fx.fxFallbackRates, undefined, undefined, undefined, fx.detectionFxState);
+    expect([hydrated.pegRates.peggedGOLD, hydrated.pegRateCounts.peggedGOLD]).toEqual([4165.60, 3]);
+    expect(decideDepegAsset({ ...hydrated, asset: peers[0], meta: PSI_ELIGIBLE_META_BY_ID.get(peers[0].id) }))
+      .toMatchObject({ observation: { kind: "observed" }, commands: [] });
   });
 
   it.each(["dex", "native"] as const)("repeated %s observation leaves persisted recovery and coverage unchanged", async (source) => {

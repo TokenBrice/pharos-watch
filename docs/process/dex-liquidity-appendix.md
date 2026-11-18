@@ -691,7 +691,7 @@ Missing global TVL is unavailable; measured zero stays numeric. Coverage counts 
 
 Price age follows the original oldest eligible input. A ratio uses an independently dated USD counterparty, and exact-read and discovery clocks remain distinct. A Curve bulk wrapper only bounds recency. Withhold undated Youves marks and treat Stellar peg estimates as valuation context.
 
-Aggregate and protocol prices publish pool and upstream identities only when every contributing observation proves its lineage. Challenger rows without a counterparty receipt store SQL `NULL` in `price_lineage_json` and use the legacy protocol-independence check. Incomplete receipts carry empty lineage arrays.
+Aggregate and protocol prices publish pool and upstream identities only when every contributing observation proves its lineage. Challenger rows without a counterparty receipt store SQL `NULL` in `price_lineage_json` and use the legacy protocol-independence check. The challenger writer excludes incomplete receipts and receipts that overlap a configured primary route. Top-pool marks excluded for lineage use `displayPrice`. Protocol prices excluded from voting are available in `displaySources`, while rollback readers only see the eligible `sources` array.
 
 #### Price population and publication
 

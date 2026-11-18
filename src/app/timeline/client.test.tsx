@@ -911,6 +911,38 @@ describe("TimelineClient", () => {
     }
   });
 
+  it("keeps a retracted depeg out of the exact buffer and cached feed", () => {
+    const event = makeTapeEvent({ id: "evt-withdrawn" });
+    const other = makeTapeEvent({ id: "evt-other", coinId: "usdt-tether" });
+    const path = "/api/events?event=evt-withdrawn";
+    const cached = { data: { events: [event], nextCursor: null, total: 1, totalExact: true }, isLoading: false, meta: null };
+    const eventCard = () => document.querySelector('[data-event-id="evt-withdrawn"]');
+    const notice = () => screen.queryByText(/Retracted after its source data changed/);
+    window.history.replaceState(null, "", "/timeline/?event=evt-withdrawn");
+    mockEvents([]);
+    useLatestEventsMock.mockReturnValue({ ...cached, error: null });
+    const { rerender } = render(<TimelineClient />);
+    expect(eventCard()?.textContent).toContain("-500 bps");
+
+    const transientError = new ApiFetchError(path, 503, null);
+    useLatestEventsMock.mockReturnValue({ ...cached, error: transientError });
+    rerender(<TimelineClient />);
+    expect(eventCard()).not.toBeNull();
+    expect(notice()).toBeNull();
+
+    useLatestEventsMock.mockReturnValue({ ...cached, error: new ApiFetchError(path, 404, '{"reason":"depeg-claim-retracted"}') });
+    rerender(<TimelineClient />);
+    expect(eventCard()).toBeNull();
+    expect(notice()).not.toBeNull();
+
+    mockEvents([event, other]);
+    useLatestEventsMock.mockReturnValue({ ...cached, error: transientError });
+    rerender(<TimelineClient />);
+    expect(eventCard()).toBeNull();
+    expect(notice()).not.toBeNull();
+    expect(document.querySelector('[data-event-id="evt-other"]')).not.toBeNull();
+  });
+
   it.each([false, true])("renders and focuses a PINNED permalink when the filtered feed is empty: %s", (emptyFeed) => {
     vi.useFakeTimers();
     const pinned: TapeEvent = makeTapeEvent({

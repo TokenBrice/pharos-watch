@@ -3,6 +3,7 @@ import { z } from "zod";
 import { median } from "./stats";
 import { isPegScoreExcludedAuditVerdict } from "./depeg-audit";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
+import { DEPEG_SEVERITY_BPS } from "./depeg-config";
 import { getReferenceSessionState, isReferenceMarketClosed, replayReferenceMarketEventStart, type ReferenceMarket } from "./reference-market-hours";
 import { getPegTaxonomyByType } from "./peg-taxonomy";
 
@@ -71,11 +72,13 @@ export function activePegPeakBps(event: PegScoreEvent, now: number, market: Refe
   const coverage = event.priceCoverage;
   const lastTrusted = coverage?.lastTrustedObservationAt;
   if (lastTrusted == null || !coverage || lastTrusted > now || coverage.lastObservationKind === "trusted-at-par") return null;
+  const currentTrusted = hasCurrentTrustedDepegObservation(event, now);
   const admitted = event.admittedCoverage === undefined
-    ? !isReferenceMarketClosed(market, lastTrusted)
+    ? !isReferenceMarketClosed(market, lastTrusted) || (currentTrusted && coverage.lastObservationKind !== "blind" &&
+      Number.isFinite(event.peakDeviationBps) && Math.abs(event.peakDeviationBps) >= DEPEG_SEVERITY_BPS.severe)
     : event.admittedCoverage.some(({ fromSec, toSec }) => fromSec <= lastTrusted && lastTrusted < toSec);
   if (!admitted) return null;
-  if (hasCurrentTrustedDepegObservation(event, now)) return event.peakDeviationBps;
+  if (currentTrusted) return event.peakDeviationBps;
   const hold = event.referenceHold;
   if (!hold || !isCurrentPegReferenceHold(hold, now) || coverage.gapStartedAt == null || hold.lastTrustedAtSec !== lastTrusted ||
       hold.declaredAtSec < coverage.gapStartedAt || hold.declaredAtSec > now ||

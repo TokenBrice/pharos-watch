@@ -1,4 +1,4 @@
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD, DEPEG_RECOVERY_THRESHOLD_RATIO } from "@shared/lib/depeg-config";
+import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD, DEPEG_RECOVERY_THRESHOLD_RATIO, PAR_ROUNDOFF_BPS } from "@shared/lib/depeg-config";
 
 
 /** Maximum open depeg events materialized by one detection, confirmation, or orphan-cleanup pass. */
@@ -16,9 +16,6 @@ export function getDepegThresholdBpsForPegCurrency(pegCurrency: string | undefin
 export function getDepegRecoveryThresholdBps(pegType: string | undefined): number {
   return Math.round(getDepegThresholdBps(pegType) * DEPEG_RECOVERY_THRESHOLD_RATIO);
 }
-
-/** One unit of floating-point precision at par, expressed in basis points. */
-const PAR_ROUNDOFF_BPS = Number.EPSILON * 10_000;
 
 export function isWithinRecoveryBand(absRawBps: number, recoveryThresholdBps: number): boolean {
   return absRawBps <= recoveryThresholdBps + PAR_ROUNDOFF_BPS;

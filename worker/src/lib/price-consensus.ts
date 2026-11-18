@@ -33,7 +33,7 @@ export interface SourcePrice {
   weight: number;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
-  nonVotingReason?: "venue-mirror" | "unproven-pool-independence";
+  nonVotingReason?: "venue-mirror" | "unproven-pool-independence" | "undated-trade";
   upstreamKeys?: readonly string[];
   metadata?: Record<string, unknown>;
 }
@@ -47,6 +47,7 @@ export interface ConsensusResult {
   agreeSources: string[];
   disagreeSources: string[];
   allPrices: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
   diagnosticPrices?: Record<string, number>;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
@@ -54,11 +55,16 @@ export interface ConsensusResult {
   observedAtModeBySource: Record<string, PriceObservedAtMode | null>;
 }
 
+export type UpstreamKeysBySource = Readonly<Record<string, readonly string[] | undefined>>;
+
 export interface ConsensusOptions {
   mode?: "fixed" | "nav";
 }
 
-export function haveDisjointPriceInputs(left: SourcePrice, right: SourcePrice): boolean {
+export function haveDisjointPriceInputs(
+  left: Pick<SourcePrice, "upstreamKeys">,
+  right: Pick<SourcePrice, "upstreamKeys">,
+): boolean {
   return !left.upstreamKeys?.some((key) => right.upstreamKeys?.includes(key));
 }
 
@@ -83,7 +89,9 @@ function collapseRepeatedSourceQuotes(sources: readonly SourcePrice[]): SourcePr
     const representative = entries.reduce((best, candidate) => (candidate.weight > best.weight ? candidate : best));
     return {
       ...representative,
-      upstreamKeys: [...new Set(entries.flatMap((entry) => entry.upstreamKeys ?? []))],
+      upstreamKeys: entries.some((entry) => entry.upstreamKeys !== undefined)
+        ? [...new Set(entries.flatMap((entry) => entry.upstreamKeys ?? []))]
+        : undefined,
       price: median(entries.map((entry) => entry.price)) ?? representative.price,
       weight: Math.max(...entries.map((entry) => entry.weight)),
       observedAt: observedAtValues.length > 0 ? Math.min(...observedAtValues) : null,
@@ -159,13 +167,26 @@ export function computePriceConsensus(
   const independentSources = collapsePriceSourcesByIndependentFamily(
     sources.filter((source) => source.nonVotingReason == null), pegRef,
   );
+  // A sole undated trade can supply a display mark with its own unknown clock.
+  const undatedDisplay = independentSources.length === 0
+    ? sources.find((source) => source.nonVotingReason === "undated-trade")
+    : undefined;
+  if (undatedDisplay) independentSources.push(undatedDisplay);
   if (independentSources.length === 0) return null;
 
   const allPrices: Record<string, number> = {};
-  for (const s of independentSources) allPrices[s.source] = s.price;
+  const upstreamKeysBySource: Record<string, readonly string[]> = {};
+  for (const s of independentSources) {
+    allPrices[s.source] = s.price;
+    if (s.upstreamKeys) upstreamKeysBySource[s.source] = s.upstreamKeys;
+  }
+  const priceInputs = {
+    allPrices,
+    ...(Object.keys(upstreamKeysBySource).length > 0 && { upstreamKeysBySource }),
+  };
   const observedAtBySource = buildObservedAtRecord(independentSources);
   const observedAtModeBySource = buildObservedAtModeRecord(independentSources);
-  const diagnosticSources = sources.filter((source) => source.nonVotingReason != null);
+  const diagnosticSources = sources.filter((source) => source.nonVotingReason != null && source !== undatedDisplay);
   const diagnosticPrices = diagnosticSources.length > 0
     ? { diagnosticPrices: Object.fromEntries(diagnosticSources.map(({ source, price }) => [source, price])) }
     : {};
@@ -185,7 +206,7 @@ export function computePriceConsensus(
       confidence: "single-source",
       agreeSources: [s.source],
       disagreeSources: diagnosticDisagreements(s.price),
-      allPrices,
+      ...priceInputs,
       ...diagnosticPrices,
       observedAt: observedAtBySource[s.source] ?? null,
       observedAtMode: observedAtModeBySource[s.source] ?? null,
@@ -216,7 +237,7 @@ export function computePriceConsensus(
       confidence: "high",
       agreeSources,
       disagreeSources: [...disagreeSources, ...diagnosticDisagreements(clusterPrice)],
-      allPrices,
+      ...priceInputs,
       ...diagnosticPrices,
       observedAt: pickConservativeObservedAt(agreeSources, observedAtBySource),
       observedAtMode: pickConservativeObservedAtMode(agreeSources, observedAtModeBySource),
@@ -238,7 +259,7 @@ export function computePriceConsensus(
       ...independentSources.filter((source) => source !== chosen).map((source) => source.source),
       ...diagnosticDisagreements(chosen.price),
     ],
-    allPrices,
+    ...priceInputs,
     ...diagnosticPrices,
     observedAt: observedAtBySource[chosen.source] ?? null,
     observedAtMode: observedAtModeBySource[chosen.source] ?? null,

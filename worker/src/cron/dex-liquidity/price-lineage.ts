@@ -1,13 +1,48 @@
 import { isCanonicalPricePoolKey } from "@shared/lib/pricing-source-pool-provenance";
-import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { getPricingSourceRegistryEntry, PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import { BINANCE_MARKETS, BITSTAMP_MARKETS, COINBASE_PRODUCTS, KRAKEN_MARKETS } from "@shared/lib/pricing-provider-config";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import type { DexPriceObs } from "./types";
 
 export interface DexPriceLineage {
   pricePoolKeys?: readonly string[];
   upstreamKeys?: readonly string[];
+}
+
+type ChallengerLineage = DexPriceLineage & {
+  observedAt?: number | null;
+  priceObservedAt?: number | null;
+  tvlUsd?: number;
+  tvl?: number;
+};
+
+/** A connected set of price-forming pools or venues can provide one vote. */
+export function selectIndependentChallengerPools<T extends ChallengerLineage>(
+  pools: readonly T[],
+  observedAt: (pool: T) => number = (pool) => pool.priceObservedAt ?? pool.observedAt ?? 0,
+): T[] {
+  const ranked = [...pools].sort((a, b) => observedAt(b) - observedAt(a) ||
+    (b.tvlUsd ?? b.tvl ?? 0) - (a.tvlUsd ?? a.tvl ?? 0));
+  const byIdentity = new Map<string, { pool: T; rank: number; identities: Set<string> }>();
+  const selected = new Set<T>();
+  for (const [rank, pool] of ranked.entries()) {
+    const identities = new Set([...(pool.pricePoolKeys ?? []), ...(pool.upstreamKeys ?? [])]);
+    let best = { pool, rank };
+    // Keep every link in the group even when a different pool supplies its vote.
+    for (const key of identities) {
+      const other = byIdentity.get(key);
+      if (!other || !selected.delete(other.pool)) continue;
+      for (const linked of other.identities) identities.add(linked);
+      if (other.rank < best.rank) best = other;
+    }
+    selected.add(best.pool);
+    const group = { ...best, identities };
+    for (const key of identities) byIdentity.set(key, group);
+  }
+  return pools.filter((pool) => selected.delete(pool));
 }
 
 export function readDexPriceLineage(value: unknown): DexPriceLineage {
@@ -34,6 +69,28 @@ export interface DexObservationLineage {
 }
 
 export const CURVE_USDC_USD_VENUE_KEY = "venue:bitstamp";
+
+const curveConfigById = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
+const hardMarkets = PRICING_SOURCE_REGISTRY.filter((source) => source.trustTier === "hard_market");
+
+export function configuredPrimaryUpstreamKeys(stablecoinId: string): Set<string> {
+  const symbol = WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.symbol.toUpperCase();
+  const keys = new Set(hardMarkets.flatMap(({ key }) => directUsdVenueKeys(key, symbol) ?? []));
+  const visited = new Set<string>();
+  let config = curveConfigById.get(stablecoinId);
+  while (config && !visited.has(config.stablecoinId)) {
+    visited.add(config.stablecoinId);
+    keys.add(canonicalExitRouteScopedKey(config.chain, config.poolAddress));
+    keys.add(CURVE_USDC_USD_VENUE_KEY);
+    config = config.hop && curveConfigById.get(config.hop.viaStablecoinId);
+  }
+  return keys;
+}
+
+/** Main ignores the receipt, so only legacy-omitted or proven disjoint rows can vote there. */
+export function admitsRollbackDexVote(upstreamKeys: readonly string[] | undefined, claimedKeys: ReadonlySet<string>): boolean {
+  return upstreamKeys === undefined || (upstreamKeys.length > 0 && !upstreamKeys.some((key) => claimedKeys.has(key)));
+}
 
 /** Coinbase stablecoin-quoted books also depend on the Bitstamp USD conversion. */
 export function directUsdVenueKeys(source: string, symbol: string | undefined): string[] | undefined {

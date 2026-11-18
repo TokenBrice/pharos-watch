@@ -95,7 +95,7 @@ describe("parseSupplyData", () => {
     ], () => 2)).toEqual([{ ts: 100, supply: 200 }]);
   });
 
-  it("drops absent and invalid buckets but preserves explicit observed zero", () => {
+  it("keeps rejected USD checkpoints unavailable and preserves explicit observed zero", () => {
     expect(parseSupplyData([
       { date: "100" },
       { date: "200", circulating: {} },
@@ -104,7 +104,7 @@ describe("parseSupplyData", () => {
       { date: "500", totalCirculatingUSD: { peggedUSD: Number.POSITIVE_INFINITY } },
       { date: "600", circulating: { peggedUSD: 0 } },
       { date: "700", totalCirculatingUSD: { peggedJPY: 0 }, circulating: { peggedJPY: 200_000_000 } },
-    ])).toEqual([{ ts: 600, supply: 0 }, { ts: 700, supply: 0 }]);
+    ])).toEqual([{ ts: 500, supply: null }, { ts: 600, supply: 0 }, { ts: 700, supply: 0 }]);
   });
 
   it.each([
@@ -202,7 +202,7 @@ describe("dated historical references", () => {
     expect(ref.referenceAt("SILVER", ts)).toEqual(usable ? {
       usdPerUnit: 30, observedAtSec: ts - 63, source: "peer-median", kind: "median", contributors: ["a", "b", "c"],
       contributorEvidence: peers.slice(1).map(({ assetId, prices }) => ({
-        assetId, provenanceKey: assetId, observedAtSec: prices[0]!.timestamp, derivation: "spot-derived",
+        assetId, provenanceKey: assetId, observedAtSec: prices[0]!.timestamp, derivation: "spot-derived", observedAtMode: "upstream",
       })),
     } : null);
     expect(ref.referenceAt("SILVER", ts - 120)).toBeNull();

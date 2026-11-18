@@ -15,7 +15,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildSupplyObservationProvenance, classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import type { PeggedAsset } from "./enrich-prices";
-import { reviewedOnchainSupplyHoldFields, type PreviousStablecoinsCacheState } from "./shared";
+import { isSupplyObservationWithinRestoreCeiling, reviewedOnchainSupplyHoldFields, type PreviousStablecoinsCacheState } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
 
 /**
@@ -354,24 +354,41 @@ export async function fillMissingSupplyHistory(
       }
     } else asset.supplyChangeBaselines = {};
     // An assessed stock with no admissible count must survive JSON as explicitly unavailable.
-    if (current != null && !asset.supplyRestored && !asset.frozen) asset.circulatingNative ??= null;
+    if (current != null && !asset.supplyRestored && !asset.frozen) {
+      if (asset.id === "xaut-tether" && asset.supplySource !== "onchain-circulating-supply") asset.circulatingNative = null;
+      else asset.circulatingNative ??= null;
+    }
   }
   const today = bucketUnixSecondsToUtcDay(now);
   const completed = await getCompletedSupplySnapshot(db);
   const latestDate = completed?.snapshotDate ?? today - DAY_SECONDS;
-  const dates: number[] = [];
+  const runDates = new Set<number>();
   for (const [, days] of SUPPLY_WINDOWS) {
     const target = now - days * DAY_SECONDS;
     const firstDay = bucketUnixSecondsToUtcDay(target - DAY_SECONDS - SUPPLY_BASELINE_TOLERANCE_SEC);
     // A daily snapshot can admit an observation that arrived just before UTC midnight.
     const lastDay = Math.min(latestDate, bucketUnixSecondsToUtcDay(target + SUPPLY_BASELINE_TOLERANCE_SEC) + DAY_SECONDS);
-    for (let date = firstDay; date <= lastDay; date += DAY_SECONDS) dates.push(date);
+    for (let date = firstDay; date <= lastDay; date += DAY_SECONDS) runDates.add(date);
   }
-  if (dates.length === 0) return 0;
+  const dates = new Set(runDates);
+  const restoredUsdIds = new Set<string>();
+  for (const asset of assets) {
+    const clock = asset.supplyObservedAt;
+    if (!asset.supplyRestored || asset.pegType !== "peggedUSD" || chartPackets.has(asset) ||
+      clock == null || !isSupplyObservationWithinRestoreCeiling(clock, now)) continue;
+    restoredUsdIds.add(asset.id);
+    for (const [, days] of SUPPLY_WINDOWS) {
+      const targetDate = bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS);
+      // An older carry can target a close outside the run-relative window.
+      if (targetDate <= latestDate) dates.add(targetDate);
+      if (targetDate + DAY_SECONDS <= latestDate) dates.add(targetDate + DAY_SECONDS);
+    }
+  }
+  if (dates.size === 0) return 0;
   const historyRows = await runWithOverloadRetry(() => db.prepare(
     `SELECT stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance,
        price, price_observed_at, valuation_price_usd, valuation_observed_at_sec
-     FROM supply_history WHERE snapshot_date IN (${dates.map(() => "?").join(", ")})`,
+     FROM supply_history WHERE snapshot_date IN (${Array.from(dates, () => "?").join(", ")})`,
   ).bind(...dates).all<SupplyHistoryRow>(), 3, signal);
 
   const assetsById = new Map(assets.map(asset => [asset.id, asset]));
@@ -384,10 +401,12 @@ export async function fillMissingSupplyHistory(
   };
   const historyById = new Map<string, { assessedDates: Set<number>; closes: Close[]; legacyUsd: Map<number, number> }>();
   for (const row of historyRows.results ?? []) {
+    if (!runDates.has(row.snapshot_date) && !restoredUsdIds.has(row.stablecoin_id)) continue;
     const { provenance, invalid } = parseSupplyObservationProvenance(row.supply_provenance);
     const observedAt = provenance?.supplyObservedAt;
     const asset = assetsById.get(row.stablecoin_id);
-    const unassessed = observedAt == null && !invalid && row.circulating_native == null && row.valuation_price_usd == null &&
+    const unassessed = observedAt == null && !invalid && !provenance?.nativeQuantityUnavailable &&
+      row.circulating_native == null && row.valuation_price_usd == null &&
       row.valuation_observed_at_sec == null && classifySupplyCoverage(provenance) !== "partial";
     if (unassessed && (asset?.pegType !== "peggedUSD" || asset.supplySource !== "defillama" ||
       asset.supplyGapFill || asset.frozen || asset.supplyRestored || !Number.isFinite(row.circulating_usd) ||
@@ -408,9 +427,9 @@ export async function fillMissingSupplyHistory(
       classifySupplyCoverage(provenance) !== "complete" ||
       (isKinesisWrapperSupplyId(row.stablecoin_id) &&
         isKinesisWrapperSupplyCutoverActive(row.stablecoin_id, perimeterAt) !== (provenance?.supplySource === "onchain-total-supply")) ||
-      (row.stablecoin_id === "xaut-tether" && provenance?.supplySource !== "onchain-circulating-supply") ||
       !Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
-    const native = historicalSupplyQuantity(row.stablecoin_id, asset?.pegType, row, provenance, now);
+    const native = row.stablecoin_id === "xaut-tether" && provenance?.supplySource !== "onchain-circulating-supply"
+      ? null : historicalSupplyQuantity(row.stablecoin_id, asset?.pegType, row, provenance, now);
     history.closes.push({ snapshotDate: row.snapshot_date, observedAt, source: provenance?.supplySource ?? null, circulatingUsd: row.circulating_usd,
       circulatingNative: native });
   }
@@ -418,18 +437,31 @@ export async function fillMissingSupplyHistory(
   let fillCount = 0;
   for (const asset of assets) {
     throwIfAborted(signal);
+    if (chartPackets.has(asset)) continue;
+    const clock = asset.supplyObservedAt;
+    if (clock != null && asset.valuationObservedAtSec !== undefined &&
+      !hasDatedUsdValuation(asset.supplySource, clock, asset.valuationPriceUsd, asset.valuationObservedAtSec, now)) {
+      asset.supplyChangeBaselines = { day: null, week: null, month: null };
+      continue;
+    }
     const history = historyById.get(asset.id);
-    if (!history || chartPackets.has(asset)) continue;
+    if (!history) continue;
     if (asset.supplyRestored) {
-      asset.supplyChangeBaselines = {};
+      if (asset.pegType !== "peggedUSD" || clock == null || !Number.isSafeInteger(clock)) continue;
+      const rejected: SupplyChangeBaselines = {};
+      // A carry can withhold an assessed window without adopting a new close.
+      for (const [window, days, field] of SUPPLY_WINDOWS) {
+        if (!history.assessedDates.has(bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS))) continue;
+        rejected[window] = null;
+        asset[field] = {};
+      }
+      if (Object.keys(rejected).length) asset.supplyChangeBaselines = rejected;
       continue;
     }
     const baselines: SupplyChangeBaselines = { ...asset.supplyChangeBaselines };
-    const clock = asset.supplyObservedAt;
     const currentUsd = getCirculatingRawOrNull(asset);
     const undatedUsdList = clock == null && asset.pegType === "peggedUSD" && asset.supplySource === "defillama";
     if ((!undatedUsdList && (clock == null || !Number.isSafeInteger(clock) || clock <= 0 || clock > now || now - clock > DAY_SECONDS)) ||
-      (asset.id === "xaut-tether" && asset.supplySource !== "onchain-circulating-supply") ||
       asset.frozen || currentUsd == null ||
       classifySupplyCoverage(buildSupplyObservationProvenance(asset)) !== "complete") {
       asset.supplyChangeBaselines = { day: null, week: null, month: null };
@@ -466,7 +498,7 @@ export async function fillMissingSupplyHistory(
       let nearestDistance = SUPPLY_BASELINE_TOLERANCE_SEC + 1;
       for (const candidate of history.closes) {
         // A different producer cannot fill an omitted window in a source-owned packet.
-        if (missingOwnedWindow && candidate.source !== asset.supplySource) continue;
+        if ((missingOwnedWindow || asset.id === "xaut-tether") && candidate.source !== asset.supplySource) continue;
         if (!wrapper && (isAmbiguousSupplyPerimeterDay(asset.id, candidate.snapshotDate) ||
           isEarlierSupplyPerimeter(asset.id, candidate.snapshotDate) !== currentPerimeter)) continue;
         if (bucketUnixSecondsToUtcDay(candidate.observedAt) === targetDate && (!best || candidate.observedAt > best.observedAt)) best = candidate;

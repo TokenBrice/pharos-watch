@@ -12,6 +12,7 @@ import {
 import { createTempRepoTracker } from "./helpers/test-state";
 import { SnapshotIntegrityError } from "../lib/sync-from-api";
 import { readDepegEventPageEntries, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { buildDepegEventTitle } from "../../src/lib/depeg-event-display";
 import { projectDepegHistory } from "../lib/public-dataset-projections";
 import { readDepegLedgerCapture } from "../lib/depeg-ledger-capture";
 
@@ -93,6 +94,26 @@ describe("sync-depeg-events", () => {
     expect(dataset).toMatchObject([{ peakDeviationBps: -100 }]);
     expect(readDepegEventPageEntries(dataDir)).toMatchObject([{ slug: "usdc-2026-05-15", peakDeviationBps: -600 }]);
     expect(readDepegLedgerCapture(dataDir)).toMatchObject({ eventCount: 1, apiTotal: 1, ledgerProof });
+  });
+
+  it("publishes the current review and values at a retained same-event permalink", async () => {
+    const dataDir = makeRoot();
+    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
+    let row = event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: [row], total: 1 })));
+    await runDepegSync(args);
+    const [published] = readDepegEventPageEntries(dataDir);
+    expect(buildDepegEventTitle(published, false)).toContain("7.75% Below Peg");
+
+    row = { ...row, peakDeviationBps: -10, peakPrice: 0.999, provenance: { auditVerdict: "false_positive", pegScoreEligible: false } };
+    await runDepegSync(args);
+
+    const [corrected] = readDepegEventPageEntries(dataDir);
+    expect(corrected).toMatchObject({
+      id: published.id, slug: published.slug, peakDeviationBps: -10, peakPrice: 0.999,
+      provenance: { auditVerdict: "false_positive", pegScoreEligible: false },
+    });
+    expect(buildDepegEventTitle(corrected, false)).toContain("0.10% Below Peg (Disputed)");
   });
 
   it("assigns deterministic slugs for same-coin same-day events", () => {

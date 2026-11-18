@@ -14,6 +14,21 @@ const DAY = 86400;
 const sec = (iso: string) => Date.parse(iso) / 1000;
 
 describe("scheduled reference coverage", () => {
+  it("penalizes a fresh severe weekend observation with a legacy ledger omission", () => {
+    const now = sec("2026-11-14T12:00:00Z");
+    const startedAt = now - 900;
+    const event = makeEvent({
+      stablecoinId: "eurc-circle", pegType: "peggedEUR", startedAt, endedAt: null, peakDeviationBps: -3000,
+      confirmationSources: "primary:coingecko+primary:market:kraken",
+      priceCoverage: { intervals: [[startedAt, now]], lastTrustedObservationAt: now, gapStartedAt: null, lastObservationKind: "trusted-off-peg" },
+    });
+    const from = now - 180 * DAY;
+    expect(computePegScore([event], from, now, "EUR")).toMatchObject({ pegScore: 49, activeDepeg: true });
+    expect(computePegScore([{ ...event, admittedCoverage: [] }], from, now, "EUR").pegScore).toBe(100);
+    expect(computePegScore([{ ...event, peakDeviationBps: -2400 }], from, now, "EUR").pegScore).toBe(100);
+    expect(computePegScore([event], from, now + 1201, "EUR").pegScore).toBe(99);
+  });
+
   it("preserves blind time for uncovered events while excluding reviewed artifacts", () => {
     const from = NOW - 20 * DAY;
     const event = makeEvent({ startedAt: NOW - 10 * DAY, endedAt: NOW - 5 * DAY, peakDeviationBps: -180, admittedCoverage: [] });

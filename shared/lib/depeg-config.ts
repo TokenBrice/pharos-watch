@@ -14,6 +14,9 @@ export const DEPEG_THRESHOLD_BPS_NON_USD = 150;
 // threshold. This deadband prevents boundary noise from splitting one incident.
 export const DEPEG_RECOVERY_THRESHOLD_RATIO = 0.5;
 
+/** One unit of floating-point precision at par, expressed in basis points. */
+export const PAR_ROUNDOFF_BPS = Number.EPSILON * 10_000;
+
 export const DEX_FRESHNESS_SEC = 75 * 60;
 export const DEX_PROTOCOL_SOURCE_FRESHNESS_SEC = 35 * 60;
 export const DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD = 1_000_000;

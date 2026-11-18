@@ -8,7 +8,7 @@ import {
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
+import { admitSupplyBuckets } from "@shared/lib/supply";
 import { isAmbiguousSupplyPerimeterDay, isEarlierSupplyPerimeter, isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
@@ -1109,10 +1109,15 @@ async function executeBackfillSupplyHistory(
       if (!Number.isSafeInteger(entry.date) || entry.date <= 0) continue;
       const snapshotDate = bucketUnixSecondsToUtcDay(entry.date);
       if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
+      const usdBuckets = admitSupplyBuckets(entry.totalCirculatingUSD);
+      if (usdBuckets.status === "invalid") {
+        skippedDays++;
+        continue;
+      }
       const canonical = admitSupplyBuckets(entry.totalCirculating);
       const buckets = canonical.status === "absent" ? admitSupplyBuckets(entry.circulating) : canonical;
       const native = buckets.status === "observed" ? buckets.total : null;
-      const usd = getCirculatingRawOrNull({ circulating: entry.totalCirculatingUSD });
+      const usd = usdBuckets.status === "observed" ? usdBuckets.total : null;
       if (native == null && usd == null) continue;
       const quote = findAsOfSnapshot(screenedPrices, entry.date, (point) => point.timestamp, HISTORICAL_VALUATION_MAX_AGE_SEC);
       const marketCapUsd = usd ?? (native === 0 ? 0 : native != null && quote ? native * quote.price : null);

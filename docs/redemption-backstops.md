@@ -175,7 +175,7 @@ Captured-input replay uses the supported maintainer procedure in `docs/process/s
 
 ## Route Modeling
 
-An open downside incident remains unresolved for direct and dependent redemption overlays during a held or stale peg comparison. Apply severe boundaries to unrounded admitted basis points. PAXG's modeled physical-to-USD exit uses London vault and LBMA sale calendars. EURI counts five qualifying business days after actual receipt and shows a days estimate when reviewed calendar coverage cannot establish an exact bound.
+An open downside incident remains unresolved for direct and dependent redemption overlays during a held or stale peg comparison. Apply the inclusive severe boundary to unrounded admitted basis points with the shared floating-point tolerance. PAXG's modeled physical-to-USD exit uses London vault and LBMA sale calendars. EURI counts five qualifying business days after actual receipt and shows a days estimate when reviewed calendar coverage cannot establish an exact bound.
 
 ### Config Registry
 
@@ -204,7 +204,7 @@ The complete payout set is mandatory: untracked members cannot be dropped to cre
 
 ### Capacity Models
 
-Ordinary USDC and EURC bank redemptions use multi-day settlement. USDC has no immediate 7% buffer. Place supported delayed capacity in `capacityProfile.eventualUsd` and leave immediate fields unavailable absent affirmative immediate evidence. JupUSD uses its documented USDC buffer. USD3 needs an admitted dated share valuation for its native throttle. A reviewed Mento closure can preserve a delayed reserve-sync bound from the original packet. The redemption producer, API and Safety capture recheck the market phase at publication, request and scoring time respectively. Stored delays retain the original assessment clock. After reopening, immediate capacity requires a fresh in-session observation.
+Ordinary USDC and EURC bank redemptions use multi-day settlement. USDC has no immediate 7% buffer. Place supported delayed capacity in `capacityProfile.eventualUsd` and leave immediate fields unavailable absent affirmative immediate evidence. JupUSD uses its documented USDC buffer. USD3 needs an admitted dated share valuation for its native throttle. A reviewed Mento closure can preserve a delayed reserve-sync bound from the original packet. The redemption producer rechecks market phase at publication. The API, DDR and Safety capture recheck it at their respective read clocks. The dated Mento entry lives in the immutable generation's details, and older readers of that generation see unavailable capacity and score. Stored delays retain the original assessment clock. After reopening, immediate capacity requires a fresh in-session observation.
 
 Capacity resolution is dispatched in `worker/src/lib/redemption-backstop/capacity.ts`. `static.ts` under `worker/src/lib/redemption-backstop-capacity/` owns the three discriminated static models; `reserve-sync.ts` and `executable-observer.ts` retain live admission. `worker/src/lib/redemption-backstop/sources.ts` orchestrates the entry build. `buildBoundedCapacityFields` in `profile.ts` shares supply/day/profile arithmetic; each model retains its own null, zero, confidence and horizon policy.
 

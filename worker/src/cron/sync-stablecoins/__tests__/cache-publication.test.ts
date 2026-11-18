@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as currentPeg from "../../../lib/current-peg-observations";
 import { buildPricingOperatorConditions } from "../../operator-watch-pricing";
+import { FxSyncRunState } from "../../sync-fx-rates-helpers";
 import { handleStablecoins } from "../../../api/cache-handlers";
 import { handlePegSummary } from "../../../api/peg-summary";
 import { CurrentPegSchema } from "@shared/types/current-peg";
@@ -15,6 +16,8 @@ import { loadFreshFxRates, loadPreviousStablecoinsById, mergeSupplementalLastKno
 import { normalizeChainCirculating } from "../phase-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache } from "../../../lib/db-cache";
+import { isValidFxRate } from "../../../lib/fx-config";
+import { loadFxRateState, persistFxRateState } from "../../../lib/fx-rate-state";
 import { loadStablecoinsCache, prepareStablecoinsGenerationCompanion } from "../../../lib/stablecoins-cache";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
@@ -84,6 +87,44 @@ describe("validateAndWriteStablecoinsCache", () => {
     const conditions = await buildPricingOperatorConditions(db, { nowSec: start + 9 * 900, caches: {} });
     expect(conditions.find((row) => row.id === "reference-admission-outage:EUR")).toMatchObject({ active: staleEur, unknown: false });
     expect(conditions.find((row) => row.id === "reference-admission-outage:BRL")).toMatchObject({ active: false, unknown: false });
+  });
+
+  it("uses legacy EUR freshness with clocked GBP in the list, peg summary and watch", async () => {
+    const { db, sqlite } = fixtures.open();
+    const start = Date.parse("2026-11-18T10:00:00Z") / 1000;
+    const clock = vi.spyOn(Date, "now");
+    for (const row of fxRatesCacheRows(start - 60, { peggedEUR: 1.1 })) {
+      sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(row.key, row.value, row.updated_at);
+    }
+    for (let interval = 0; interval <= 9; interval++) {
+      const at = start + interval * 900;
+      clock.mockReturnValue(at * 1000);
+      if (interval % 2 === 0) {
+        const state = new FxSyncRunState({ prevState: await loadFxRateState(db), syncStartSec: at,
+          expectedPegKeys: ["peggedEUR", "peggedGBP"], initialSources: {}, validateRate: isValidFxRate });
+        state.applyFrankfurterRates({ GBP: 0.8 }, "2026-11-17", { EUR: "peggedEUR", GBP: "peggedGBP" });
+        state.enforcePublicationOrder();
+        await persistFxRateState(db, state.usableRates, state.buildPersistedMeta(), at);
+      }
+      const asset = makePeggedAsset({ id: "eurc-circle", pegType: "peggedEUR", pegMechanism: "fiat-backed", price: 1.122,
+        priceSource: "coingecko", priceObservedAt: at - 60, priceObservedAtMode: "upstream",
+        circulating: { peggedEUR: 1e8 }, chainCirculating: {}, chains: [] });
+      const selection = await loadFreshFxRates(db);
+      expect(selection.fxReferenceObservations).toHaveProperty("peggedGBP");
+      expect(await publish({ db, ...selection, assets: [asset], validationContext: "main", syncStartSec: at,
+        publishFxReferenceEvidence: interval === 9 })).toMatchObject({ written: true });
+      if (interval < 8) continue;
+      const served = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+      expect(served.peggedAssets[0].currentPeg?.currentDeviationBps).toBe(200);
+      const summary = await handlePegSummary(db);
+      expect(summary.status).toBe(200);
+      expect(await summary.json()).toMatchObject({ coins: expect.arrayContaining([
+        expect.objectContaining({ id: asset.id, currentDeviationBps: 200 }),
+      ]), summary: { totalTracked: 1 } });
+      const conditions = await buildPricingOperatorConditions(db, { nowSec: at, caches: {} });
+      expect(conditions.find((row) => row.id === "reference-admission-outage:EUR"))
+        .toMatchObject({ active: false, unknown: false, label: "EUR without an admitted reference for 0 open-session minutes" });
+    }
   });
 
   it("admits a legacy EUR peer median only while its original contributor clocks support the comparison", async () => {
@@ -177,7 +218,7 @@ describe("validateAndWriteStablecoinsCache", () => {
     } });
   });
 
-  it("joins the issuer's pinned XAGm entitlement from the successful reserve attempt", async () => {
+  it("publishes XAGm's quote and matched entitlement with an incomparable rollback peg", async () => {
     const { db, sqlite } = fixtures.open();
     const id = "xagm-matrixdock", now = Date.parse("2027-03-30T14:00:00Z") / 1000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
@@ -196,13 +237,23 @@ describe("validateAndWriteStablecoinsCache", () => {
     const input = { db, assets: [asset], validationContext: "main" as const, syncStartSec: now, fxFallbackRates: { peggedSILVER: 30 } };
     await publish(input);
     let coin = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body)).peggedAssets[0];
+    expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
     expect(coin.commodityEntitlement).toEqual({ ozPerToken, observedAtSec: now - 120, source: "matrixdock-frs", generation: "ethereum:100", quoteObservedAtSec: now });
     expect(coin.currentPeg?.currentDeviationBps).toBe(0);
+    expect((await loadPreviousStablecoinsById(db)).previousAssetsById.get(id)?.pegType).toBe("peggedSILVER");
+    const summary = await handlePegSummary(db);
+    expect(await summary.json()).toMatchObject({ coins: expect.arrayContaining([
+      expect.objectContaining({ id, pegType: "peggedSILVER", price: 29.95142466, currentDeviationBps: 0 }),
+    ]), summary: { totalTracked: 1, coinsAtPeg: 1 } });
     sqlite.prepare("UPDATE reserve_sync_state SET last_success_attempt_id = 'different'").run();
     await publish(input);
     coin = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body)).peggedAssets[0];
+    expect(coin).toMatchObject({ pegType: "entitlement-priced", price: 29.95142466 });
     expect(coin.commodityEntitlement).toBeUndefined();
     expect(coin.currentPeg?.currentDeviationBps).toBeNull();
+    expect(await (await handlePegSummary(db)).json()).toMatchObject({ coins: expect.arrayContaining([
+      expect.objectContaining({ id, pegType: "peggedSILVER", price: 29.95142466, currentDeviationBps: null }),
+    ]), summary: { totalTracked: 0, coinsAtPeg: 0 } });
   });
   it.each(["defillama", "onchain-total-supply", "missing", "clock", "newer"])("fences bootstrap against %s", async (source) => {
     const { db, sqlite } = fixtures.open();

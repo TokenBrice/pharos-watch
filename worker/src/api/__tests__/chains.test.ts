@@ -131,6 +131,25 @@ describe("handleChains", () => {
     const response = await handleChains(mockD1([cache]));
     expect(await response.json()).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
   });
+  it.each([false, true])("excludes ineligible assets from the legacy chain reference cohort (published block: %s)", async (published) => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const eur = { pegType: "peggedEUR", circulating: { peggedEUR: 100_000_000 } };
+    const eurc = asset("eurc-circle", { Ethereum: { current: 100_000_000 } }, {
+      ...eur, price: 1.1,
+      currentPeg: published ? {
+        currentDeviationBps: -435, pegReference: { valueUsd: 1.15, source: "median", contributorCount: 5, asOf: 1 },
+        pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+      } : undefined,
+    });
+    const ineligible = ["49", "53", "55", "56"].map((id) => asset(id, {}, { ...eur, price: 1.15 }));
+    const cache = stablecoinsCache([eurc, ...ineligible]);
+    const payload = JSON.parse(cache.first.value);
+    cache.first.value = JSON.stringify({ ...payload, fxFallbackRates: { peggedEUR: 1.1 } });
+    const response = await handleChains(mockD1([cache]));
+    expect(await response.json()).toMatchObject({
+      chains: [{ healthFactors: { pegStability: 100 }, pegStabilityCoverage: { coverage: 1 } }],
+    });
+  });
   it("returns 503 when the stablecoins cache is missing", async () => {
     const response = await handleChains(mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [] },

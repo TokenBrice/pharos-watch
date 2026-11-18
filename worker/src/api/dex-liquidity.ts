@@ -284,7 +284,7 @@ export const handleDexLiquidity = async (
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: (dexPrice ? getDexPriceSourceEntries(pricePayload) : null) as DexLiquidityData["priceSources"],
+      priceSources: (dexPrice ? getDexPriceSourceEntries(pricePayload, "display") : null) as DexLiquidityData["priceSources"],
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,

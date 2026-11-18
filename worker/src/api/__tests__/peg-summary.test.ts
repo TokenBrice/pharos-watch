@@ -165,6 +165,33 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it.each([undefined, {}])("keeps published unit refusals out of the census with FX map %j", async (fxReferenceObservations) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(OPEN_FX_QUOTE_AT * 1000);
+    const refused = {
+      currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true,
+      currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+    } as const;
+    const assets = [
+      makeAsset({ id: "xagm-matrixdock", pegType: "peggedSILVER", price: 29.4,
+        priceObservedAt: OPEN_FX_QUOTE_AT, currentPeg: refused }),
+      // An older envelope can carry the refusal without the underlying unit evidence.
+      makeAsset({ id: "susd-solayer", price: 1.06, priceSource: "protocol-redeem",
+        priceObservedAt: OPEN_FX_QUOTE_AT, currentPeg: refused }),
+      makeAsset({ id: "usdc-circle", price: 1, priceObservedAt: OPEN_FX_QUOTE_AT }),
+    ];
+    const response = await handlePegSummary(makePegSummaryDb(assets, { peggedSILVER: 30 }, [], {
+      updatedAt: OPEN_FX_QUOTE_AT, fxReferenceObservations,
+    }));
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(response, 200));
+    for (const { id, price } of assets.slice(0, 2)) {
+      expect(body.coins.find((coin) => coin.id === id)).toMatchObject({
+        price, currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true,
+      });
+    }
+    expect(body.summary).toMatchObject({ totalTracked: 1, coinsAtPeg: 1, medianDeviationBps: 0 });
+  });
+
   it.each([null, 0, -1, 1])("keeps historical analytics when the live price is %s", async (price) => {
     vi.useFakeTimers();
     vi.setSystemTime(nowSec * 1000);

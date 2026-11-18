@@ -1,12 +1,9 @@
-import { getStablecoinTableRowRiskLevel, getMarketCapBaseline, getSupplyChangePercent } from "@/components/stablecoin-directory/stablecoin-table-logic";
-import { formatObservedPrice, hasObservedDisplayPrice, hasPublishedDeviation, resolveCurrentDeviation, resolveDisplayPegReference } from "@/lib/current-peg";
+import { getStablecoinTableRowRiskLevel, getMarketCapBaseline, getSupplyChangePercent, resolveDisplayedNativePrice } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { formatObservedPrice, resolveCurrentDeviation, resolveDisplayPegReference } from "@/lib/current-peg";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-directory/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
-import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
-import { pegCurrencySymbol } from "@shared/lib/peg-format";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -41,16 +38,11 @@ export function buildStablecoinTableRowModel({
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const currency = meta?.flags.pegCurrency ?? "USD";
   const pegRef = resolveDisplayPegReference(coin, pegSummary, currency);
-  const priceReference = meta?.flags.navToken
-    ? getQuoteMatchedNavPriceReference(currency, coin.priceObservedAt, pegScores)
-    : pegRef;
   // A NAV token has no fixed peg for a reference market to hold.
   const { deviationBps: currentDeviationBps, referenceNote } = resolveCurrentDeviation(
     coin, pegSummary, meta?.flags.navToken ? null : meta?.flags.pegCurrency,
   );
-  const showPrice = isObservedPrice(coin) && (meta?.flags.navToken || priceReference != null
-    || pegCurrencySymbol(currency) === "$" || referenceNote != null
-    || (!hasPublishedDeviation(coin.currentPeg) && hasPublishedDeviation(pegSummary)));
+  const displayedPrice = resolveDisplayedNativePrice(coin, pegSummary, pegScores);
   const absPegDeviationBps = currentDeviationBps == null ? null : Math.abs(currentDeviationBps);
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";
@@ -87,8 +79,8 @@ export function buildStablecoinTableRowModel({
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
     referenceNote,
-    priceCell: showPrice
-      ? formatObservedPrice(hasObservedDisplayPrice(coin) ? coin.price : null, currency, priceReference)
+    priceCell: displayedPrice
+      ? formatObservedPrice(displayedPrice.value == null ? null : coin.price, displayedPrice.currency, displayedPrice.reference)
       : "—",
     pegDeviationColorClass: absPegDeviationBps === null
       ? "text-muted-foreground"

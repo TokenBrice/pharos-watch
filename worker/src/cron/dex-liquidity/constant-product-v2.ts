@@ -33,12 +33,15 @@ import type { EvmV2ExecutionCandidate, SourcePoolGraph, PoolEntry, SymbolLookups
 import { buildSolidlyV2ExecutionCandidate, enrichSolidlyV2ExecutionModels } from "./solidly-v2";
 import { enrichRaydiumStandardDiscoveryExecutionModels } from "./raydium-standard-discovery";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/dex-cron-constants";
+import type { DexValuationPrices } from "../../lib/dex-api-token-pricing";
+import { readDexPriceLineage } from "./price-lineage";
 
 /** Reuse this run's verified reserves; the target's own cached price never values its quote. */
 export function refreshUsdaV2Price(input: {
   metrics: ReadonlyMap<string, SourcePoolGraph>;
   sourceGenerationId: string;
   nowSec: number;
+  marketMarks?: DexValuationPrices["marketMarks"];
 }) {
   const pool = input.metrics.get("usda-alpha-partner")?.pools.find((row) =>
     row.poolId === "bsc:0xde66f1b24002c1d743ad1ef13cd4b2474295a6f6");
@@ -65,7 +68,16 @@ export function refreshUsdaV2Price(input: {
     return { status: "unavailable", reason: "insufficient-support" } as const;
   }
   const observedAt = Math.min(capture.blockTimestamp, quote!.referencePriceObservedAt!);
-  delete pool.priceCounterparty;
+  const mark = input.marketMarks?.get(quote!.trackedAssetId);
+  const sameQuote = mark?.priceUsd === quote!.referencePriceUsd && mark.source === quote!.referencePriceSourceId &&
+    mark.observedAtSec === quote!.referencePriceObservedAt;
+  pool.priceCounterparty = {
+    stablecoinId: quote!.trackedAssetId,
+    priceUsd: quote!.referencePriceUsd,
+    source: quote!.referencePriceSourceId,
+    observedAtSec: quote!.referencePriceObservedAt!,
+    ...readDexPriceLineage(sameQuote ? mark : undefined),
+  };
   Object.assign(pool, { price: priceUsd, priceObservedAt: observedAt, priceSource: "direct_api", priceEvidenceTvlUsd: supportUsd });
   return { status: "observed", priceUsd, supportUsd, observedAt } as const;
 }

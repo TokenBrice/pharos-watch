@@ -242,7 +242,6 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
 
   const { phosphorActive, phosphorToggleVisible, togglePhosphor } = useTimelinePhosphor();
   const focusedCoinMeta = filters.coin ? TRACKED_META_BY_ID.get(filters.coin) : null;
-  const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
   return (
     <div className={`space-y-6${phosphorActive ? " phosphor-green" : ""}`}>
@@ -271,7 +270,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         meta={meta}
         error={error}
         nowMs={nowMs}
-        lastEventTs={lastEventTs}
+        lastEventTs={feed.lastEventTs}
         hasData={hasData}
         phosphor={phosphorActive}
         showPhosphorToggle={phosphorToggleVisible}
@@ -290,7 +289,8 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         controller={feedController}
         logos={logos}
         nowMs={nowMs}
-        rawEvents={rawEvents}
+        rawEventCount={rawEvents.length}
+        lastEventTs={feed.lastEventTs}
         hasData={hasData}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
@@ -307,7 +307,8 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         isFetchingNextPage={isFetchingNextPage}
         nextCursor={nextCursor}
         total={feed.visibleTotal}
-        permalinkSuppressed={feed.permalinkSuppressed}
+        permalinkResolved={feed.permalinkResolved}
+        permalinkRetracted={feed.permalinkRetracted}
         meta={meta}
         dataUpdatedAt={dataUpdatedAt}
         permalinkId={permalinkId}

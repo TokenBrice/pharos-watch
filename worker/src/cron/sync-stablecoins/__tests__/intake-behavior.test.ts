@@ -68,6 +68,26 @@ describe("stablecoin intake admission", () => {
     });
   });
 
+  it("keeps a reported DefiLlama USD cap when the same-packet quote cannot value its units", async () => {
+    const nowSec = 1_777_000_000;
+    const { db } = fixtures.open();
+    upstream({ peggedAssets: [
+      ...Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
+        id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
+      })),
+      makePeggedAsset({ id: "1", symbol: "USDT", price: 10, priceSource: "defillama",
+        circulating: { peggedUSD: 100_000_000 } }),
+    ] });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    expect(result.assets.find((row) => row.id === "usdt-tether")).toMatchObject({
+      circulating: { peggedUSD: 100_000_000 },
+      circulatingNative: null,
+      valuationPriceUsd: null,
+      valuationObservedAtSec: null,
+    });
+  });
+
   it.each(["onchain-total-supply", "coingecko-fallback"])(
     "keeps preferred STAC with a fresh price after failed native reads and a cached %s row", async (supplySource) => {
       const nowSec = 1_777_000_000;
@@ -372,6 +392,42 @@ describe("stablecoin intake admission", () => {
       {}, { peggedEUR: 100 }, {},
     ]);
     expect(asset.circulatingPrevWeek).toEqual(bucket);
+  });
+
+  it("compares same-source XAUT dollar caps while withholding unscoped native quantities", async () => {
+    const now = 1_777_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const asset = makePeggedAsset({ id: "xaut-tether", pegType: "peggedGOLD", supplySource: "coingecko-fallback",
+      supplyObservedAt: now, circulating: { peggedGOLD: 3_300_000_000 }, circulatingNative: null });
+    const weekAt = now - 7 * DAY_SECONDS;
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance)
+      VALUES (?, ?, ?, ?, ?)`).run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 3_000_000_000, 1_000_000, JSON.stringify({
+      supplySource: asset.supplySource, supplyObservedAt: weekAt, supplyChainGuard: null,
+    }));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(asset.supplyChangeBaselines?.week).toEqual({
+      observedAt: weekAt, circulatingUsd: 3_000_000_000, circulatingNative: null,
+    });
+  });
+
+  it("withholds a weekly ZSD dollar comparison when the current valuation is undated", async () => {
+    const now = 1_777_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const asset = makePeggedAsset({ id: "zsd-zephyr-protocol", supplySource: "zephyr-protocol-stats",
+      supplyObservedAt: now, circulating: { peggedUSD: 100_000_000 }, circulatingNative: 100_000_000,
+      valuationPriceUsd: 1, valuationObservedAtSec: null });
+    const weekAt = now - 7 * DAY_SECONDS;
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
+      valuation_price_usd, valuation_observed_at_sec, supply_provenance) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 100_000_000, 0.98, weekAt, JSON.stringify({
+        supplySource: asset.supplySource, supplyObservedAt: weekAt, supplyChainGuard: null,
+      }));
+    await fillMissingSupplyHistory(db, [asset]);
+    expect(getUsdMarketCapBaselineOrNull(asset, "week")).toBeNull();
+    expect(asset.circulatingNative).toBe(100_000_000);
+    expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
   });
 
   it("distinguishes an unclocked non-USD weekly cap from a legacy USD list bucket with no D1 history", async () => {

@@ -31,6 +31,23 @@ const contributor = (key: string, clock: number | null, derivation: ReferenceCon
   ({ provenanceKey: key, observedAtSec: clock, derivation });
 
 describe("observation and admission wire contracts", () => {
+  it("withholds a current deviation after six hours even while the direct or median reference stays fresh", () => {
+    const quote = noon - 6 * hour;
+    const observedAtSec = quote + 600;
+    for (const input of [
+      direct(noon, { quoteObservedAtSec: quote }, { observedAtSec }),
+      { ...median(noon, ["a", "b", "c"].map((id) => contributor(id, observedAtSec))), quoteObservedAtSec: quote },
+    ]) {
+      expect(admittedDeviationBps(input.rawDeviationBps, evaluateReferenceAdmission(input))).toBe(-300);
+      const verdict = evaluateReferenceAdmission({ ...input, decisionAtSec: noon + 1 });
+      expect(verdict).toMatchObject({ status: "stale-reference", reason: "quote-over-budget", budgetSec: 6 * hour });
+      expect(admittedDeviationBps(input.rawDeviationBps, verdict)).toBeNull();
+      expect(evaluateReferenceAdmission({ ...input, decisionAtSec: noon + 1, purpose: "detection" })).toMatchObject({
+        status: "admitted", reason: "live-reference",
+      });
+    }
+  });
+
   const observation = direct(noon).observation;
   it.each([
     ["frankfurter", "business-daily"], ["openExchangeRates", "intraday"], ["fawazahmed0", "calendar-daily"],

@@ -266,6 +266,7 @@ export function buildStabilityInputForDay(
     const currentDate = currentSnapshot?.date;
     const priorDate = priorSnapshot?.date;
     if (current == null || prior == null || currentDate !== day || priorDate !== priorDay ||
+      currentSnapshot?.coverage === "partial" || priorSnapshot?.coverage === "partial" ||
       isAmbiguousSupplyPerimeterDay(coinId, currentDate) || isAmbiguousSupplyPerimeterDay(coinId, priorDate) ||
       (!isEarlierSupplyPerimeter(coinId, currentDate) && isEarlierSupplyPerimeter(coinId, priorDate))) {
       trendUnavailableIds.push(coinId);

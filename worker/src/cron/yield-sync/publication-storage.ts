@@ -1,5 +1,6 @@
 import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import { isRecord } from "@shared/lib/type-guards";
+import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_RANKINGS_VERSION_KEY } from "../../lib/yield-rankings-coin-cache";
 import {
   getCache,
@@ -138,7 +139,12 @@ export async function publishYieldRowsAtomically(
   if (isRecord(payload) && Array.isArray(payload.rankings)) {
     const publishedRankings = payload.rankings;
     const rankings = publishedRankings.filter((row) => !hasYieldBenchmarkUnitMismatch(row)).map((row) => {
-      if (row.dataSource !== "rate-derived" || !isRecord(row.provenance) || !("sourceFetchedAt" in row.provenance)) return row;
+      if (!isRecord(row.provenance)) return row;
+      const { ondo } = OPTIONAL_YIELD_SOURCES;
+      if (row.id === ondo.stablecoinId && row.provenance.sourceKey === ondo.sourceKey) {
+        return { ...row, provenance: { ...row.provenance, sourceKey: ondo.legacySourceKey } };
+      }
+      if (row.dataSource !== "rate-derived" || !("sourceFetchedAt" in row.provenance)) return row;
       const { sourceFetchedAt, ...provenance } = row.provenance;
       return {
         ...row,

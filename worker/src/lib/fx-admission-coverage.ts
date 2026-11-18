@@ -34,26 +34,33 @@ function parseCoverage(value: string | undefined) {
 export async function recordFxAdmissionCoverage(
   db: D1Database, assets: readonly StablecoinData[], generationAt: number, previousAt: number | null,
   generation: string, previousGeneration: string | null,
-  legacy?: { state: FxRateState | null; decisionAt: number; contributors: PegRatesResult["contributors"] },
+  legacyOptions?: {
+    state: FxRateState | null;
+    decisionAt: number;
+    contributors: PegRatesResult["contributors"];
+    pegs?: ReadonlySet<string>;
+  },
 ): Promise<void> {
   const priorRow = await getCache(db, CACHE_KEY);
   const prior = priorRow && priorRow.updatedAt === previousAt ? parseCoverage(priorRow.value) : null;
   const currencies: Coverage["currencies"] = {};
-  const originalClocks = legacy && new Map(assets.map((asset) => [asset.id, asset.priceObservedAt]));
+  const originalClocks = legacyOptions && !legacyOptions.pegs ? new Map(assets.map((asset) => [asset.id, asset.priceObservedAt])) : undefined;
   for (const asset of assets) {
     const flags = WORKER_ACTIVE_META_BY_ID.get(asset.id)?.flags;
     const currency = flags?.pegCurrency;
+    const peg = currency && REALTIME_FX_CURRENCY_TO_PEG[currency];
+    if (flags?.navToken || !currency || !peg) continue;
     const verdict = asset.currentPeg?.referenceAdmission;
+    const legacy = legacyOptions && verdict === undefined && (!legacyOptions.pegs || legacyOptions.pegs.has(peg)) ? legacyOptions : undefined;
     const decisionAt = legacy?.decisionAt ?? verdict?.decisionAtSec;
     const quoteAt = asset.priceObservedAt;
-    if (flags?.navToken || !currency || !REALTIME_FX_CURRENCY_TO_PEG[currency] || !isParityPrice(asset) ||
+    if (!isParityPrice(asset) ||
         asset.priceObservedAtMode !== "upstream" || quoteAt == null || decisionAt == null ||
         quoteAt > decisionAt || decisionAt - quoteAt > REFERENCE_INTRADAY_BUDGET_SEC ||
         decisionAt < generationAt || decisionAt - generationAt > STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC) continue;
     if (!legacy && (verdict?.generation !== `stablecoins:${generationAt}` || verdict.quoteObservedAtSec !== quoteAt)) continue;
     const session = getReferenceSessionState("fx", decisionAt);
     if (!session.open || quoteAt < session.sessionOpenedAtSec) continue;
-    const peg = REALTIME_FX_CURRENCY_TO_PEG[currency];
     const reference = asset.currentPeg?.pegReference;
     let admitted = verdict?.status === "admitted" && asset.currentPeg?.admittedDeviationBps != null;
     if (legacy && reference?.source === "median") {

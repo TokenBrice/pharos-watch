@@ -1,5 +1,6 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { classifyDepegClosure, isDepegRecovery } from "@shared/lib/depeg-closure";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { admittedDepegRecoveryAt } from "../../../lib/tape-projectors/depeg";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
@@ -199,8 +200,13 @@ export async function buildTelegramDispatchEvents(
         return [];
       }
       const peak = projectDepegPeakPrice(row);
+      // Main-era snapshots omitted both basis and currency even for a native event.
+      const legacyNativePeak = previous.peakBasis == null && previous.priceCurrency == null &&
+        previous.eventId != null && previous.pegReference === 1 &&
+        peak.peakBasis === "native-peg" && peak.priceCurrency != null && peak.priceCurrency !== "USD" &&
+        isNativePegEvent(row);
       // The regular snapshot write keeps this peak as the next baseline even when comparison is skipped.
-      if (previous.peakBasis !== peak.peakBasis) return [];
+      if (previous.peakBasis !== peak.peakBasis && !legacyNativePeak) return [];
       const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
       if (currentDeviationBps <= previous.deviationBps) return [];
       const crossesSupportedStep = TELEGRAM_DEPEG_STEPS.some((step) =>

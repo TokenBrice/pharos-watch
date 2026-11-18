@@ -48,11 +48,13 @@ Confirmed events feed DDR's canonical incidents and immutable public forecasts o
 
 `MIN_PEER_MEDIAN_CONTRIBUTORS` in `shared/lib/peg-reference-trust.ts` is the single quorum authority for peer-median references: non-USD fiat medians and commodity medians both require at least 3 live contributors, while a direct spot/FX reference does not need peers.
 
-Runtime-neutral deviation and directional-signal primitives live in `shared/lib/depeg-signals.ts`; Worker detection, confirmation, analytics, and historical backfills import that authority directly via `@shared/lib/depeg-signals`.
+Runtime-neutral deviation and directional-signal primitives live in `shared/lib/depeg-signals.ts`. The shared calculation normalizes floating-point error at integer-bps boundaries before threshold comparisons and retains distinct fractional-bps moves.
 
 ### Reference admission and calibration
 
-FX and bullion detection pairs the token quote with a source-clocked, same-unit reference. The [shared admission contract](./architecture.md#adr-45) covers the session, the first eligible observation after reopening, quote/reference pairing and repricing. A closed or unrefreshed reference can leave the published market price visible in USD while its current peg comparison is unavailable. The reader labels are **Reference market closed** and **Reference not yet updated**.
+FX and bullion detection pairs the token quote with a source-clocked, same-unit reference. The [shared admission contract](./architecture.md#adr-45) covers the session, the first eligible observation after reopening, quote/reference pairing and repricing. The inclusive severe boundary allows one floating-point unit at par, expressed in basis points. A closed or unrefreshed reference can leave the published market price visible in USD while its current peg comparison is unavailable. The reader labels are **Reference market closed** and **Reference not yet updated**.
+
+Clocked current comparisons require a token quote no more than six hours old. A quote beyond that budget supplies no current peg deviation, even when it pairs with a fresh reference.
 
 During a closure, a fresh traded median needs at least three provenance-distinct traded contributors observed inside that closure. The lower-confidence peer-relative path excludes the subject, needs three independent same-peg peers and corroborates the break in a traded native pair or independent 24/7 pool. The detector and confirmer withhold peer-relative pending rows, events and peak updates while the supported rollback Worker interprets them as benchmark moves. A raw move of at least 2,500 bps in either direction can open or sustain a candidate against a direct reference that was within budget at the close. The token quote must fall inside the closure and within its freshness budget. A shifted independent cohort blocks that benchmark comparison. For gold and silver, a fresh same-metal median can also establish a severe move when at least three distinct assets have upstream quotes inside the closure. At a lower calibrated band, the closing benchmark requires a fresh, independent same-direction native trade and a near-benchmark cohort. A dated silver entitlement is required to compare XAGm on its actual ounces per token. The entitlement must match the timestamp of the token quote used in the comparison.
 
@@ -62,9 +64,13 @@ The pending-confirmation canary accepts a closure hold only when the receipt mat
 
 A severe candidate still observed just before the close can confirm during the closure. If the independent evidence is missing, expiry resumes at reopening. A missing current comparison leaves the candidate visible to the coverage canary.
 
-During a Worker version transition, provider-status-only FX metadata and a missing FX state use the legacy numeric reference path. A carried rate retains its legacy provenance across mixed publications. The first OXR snapshot replacing a legacy rate, and rereads of that snapshot, can use the legacy path when repricing is the only missing check. The next distinct observation uses the new admission rules. An explicitly empty observations map withholds the comparison, as does rejected evidence for the peg. Detection allows up to three hours between an OXR reference and a quote, covering its accepted snapshot age and one hourly poll.
+During a Worker version transition, provider-status-only FX metadata and a missing FX state use the legacy numeric reference path. A carried rate retains its legacy provenance across mixed publications. Legacy detection uses the fixed UTC weekend closure from Friday 21:00 to Sunday 23:00. Legacy ECB fixings use the 16:00 UTC freshness cutoff. Clocked ECB fixings use the Berlin release clock. The first OXR snapshot replacing a legacy rate, and rereads of that snapshot, can use the legacy path when repricing is the only missing check. The next distinct observation uses the new admission rules. An explicitly empty observations map withholds the comparison, as does rejected evidence for the peg. Detection allows up to three hours between an OXR reference and a quote, covering its accepted snapshot age and one hourly poll.
 
 With source-clocked evidence, at least three eligible same-metal assets can supply the gold or silver median. During a closure, only upstream market quotes from within the closure and freshness budget enter that median. When the FX producer has a qualifying median, at least three distinct local assets must have quotes strictly newer than its oldest constituent to replace it. Only those newer quotes supply the replacement value and receipts. Otherwise the producer supplies both. Below quorum, the detector evaluates an available direct closing observation under the same severity and independent-cohort rules.
+
+Detection keeps the legacy bullion median when that metal's carried rate has a verified legacy marker and lacks its own source observation. For fiat medians in a source-clocked generation, detection and current peg display use the same eligible set for the median, contributor count, and oldest clock. Each contributor is a distinct asset with an upstream quote within the session and freshness budget.
+
+If a newer FX fixing or bullion median fails the closure checks, detection can use an eligible direct sample retained in the verified FX state. The comparison uses that sample's USD value and original source clock.
 
 With only a dated daily FX fixing, current peg display remains stale. Detection may use the fixing in an open session when both clocks meet the admission and repricing gates and the absolute move exceeds the applicable fixing-age band. Smaller moves remain `stale-reference`. Frankfurter age counts TARGET business days, and the dated secondary feed counts weekdays. The third age column applies from three days onward.
 
@@ -220,6 +226,8 @@ Protocol corroboration additionally requires original per-protocol/source-family
 
 The `dex_prices.updated_at` run-start clock is retained for row-age telemetry and independent aggregate-row policies, not as an affirmative source-admission veto. A row older than 35 minutes can still contain later original observations inside both source budgets; those source groups remain admissible.
 
+A DEX challenger with verified venue lineage that overlaps the named primary venue cannot corroborate that primary. This also applies to USD primaries whose ancestry array was omitted.
+
 The stablecoin detail page can show live deviation below the event-creation floor with an explicit coverage-limited label. An existing row closes as `coverage-lost-supply` with `recovery_price = NULL` only on observed sub-floor supply, including zero. Unavailable supply opens no new row and leaves the existing lifecycle and peak unchanged, but records blind price coverage rather than extending trusted intervals.
 
 ### Per-Asset Processing
@@ -344,7 +352,8 @@ Age checks:
 - A candidate initiated by that native quote additionally requires a fresh canonical USD price from at least one non-CoinGecko source family, normalized through the authoritative FX reference, to cross the full native-domain threshold in the same direction. Repeated CoinGecko native observations provide temporal persistence only, not independent source confirmation.
 - Default path: CoinGecko can confirm a primary that does not already contain the CoinGecko source family. A CoinGecko-family primary gets no off-chain confirmer because DefiLlama's `coingecko:{id}` price is a CoinGecko mirror, not an independent observation.
 - CoinGecko confirmation uses `/simple/price` with `precision=full` and `include_last_updated_at=true`. Missing, stale, or future-dated observations are ignored, and non-OK response bodies are canceled before later confirmation fetches.
-- Calculate deviation against the current peg reference recomputed during confirmation only when that reference passes the same authority gate as Stage 1; thin non-USD fiat references without FX fallback fall back to the stored pending-row `peg_reference` when valid, or wait without mutating when no safe reference is available
+- Recompute the peg reference through the Stage 1 authority gate. In the same open session, a legacy pending can reuse its stored reference when replacement evidence is wholly absent. A median consisting solely of the pending asset supplies no replacement. An explicit modern rejection withholds the reference.
+- XAGm secondary measurements require an entitlement matched to their own quote clock in both legacy and clocked FX modes.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
 - Canonical persisted keys are `temporal:15m`, `coingecko-confirm`, or `native:<peg>`.
@@ -353,6 +362,8 @@ Age checks:
 
 - Fetches the active configured Binance market batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
+- Confirmation checks Binance's family against the current primary and the families retained from every qualifying observation in the pending episode. CoinGecko confirmation also checks its family against the retained observations. Older pending rows can lack these receipts.
+- If an admitted observation ties the stored peak at the exact same price and in the same quote domain, its paired reference can complete a legacy peak. A different price cannot backfill that pair.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
 
@@ -368,9 +379,10 @@ Age checks:
 
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
+- Shared pool or conversion identities link challengers into one group. The newest eligible quote represents the group, with bounded TVL breaking clock ties. Confirmation, price hardening and the rollback-readable projections all use this rule. A disjoint group contributes independently.
 - Counts as confirmation only when **at least two distinct protocol/source-family groups** reach the full trigger threshold in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so, and the confirming groups are at least as numerous as the groups contradicting the pending direction (opposite-direction or back inside the bar). Multiple same-protocol pools from the same source family count as one group.
 - The single-high-TVL exception replaces only the two-group minimum, never the opposing-group vote: one confirming group can be unopposed or tied with one opposing group, but cannot confirm against two opposing groups.
-- Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely. That path reads the stored TVL-bounded challenger projection; only rows without one use the display-oriented `top_pools_json` slice.
+- Missing challenger tables or incomplete snapshots can fall back to the TVL-bounded challenger projection, top pools, or protocol sources. The writer excludes duplicate votes, quotes with explicitly incomplete ancestry and quotes that share inputs with a configured primary route from these voting fields. Display readers still surface the pool and protocol prices.
 - Persisted confirmation keys use `pool:<protocol>:<sourceFamily>`.
 
 ### Decision Matrix
@@ -388,7 +400,7 @@ Age checks:
 
 **Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
 
-Promotion inserts into `depeg_events` with `started_at` taken from the continuous episode’s first quote clock when recorded, or its first detection run on legacy input, direction = the active pending direction, the refreshed authoritative `peg_reference` (or the stored pending reference when the refreshed non-USD fiat reference is not authoritative), canonical `confirmation_sources` beginning with `temporal:15m`, and peak = worst of the stored pending peak, current same-domain authoritative price, and trustworthy same-direction confirmer prices, then atomically inserts the outcome and deletes from `depeg_pending` as one candidate transition.
+The event can start at the episode’s first quote clock when that clock follows the last live event’s end and falls inside the session that admitted it. Otherwise the event starts at discovery, including on a legacy reopening with a quote from the closure. Quote clocks still determine temporal ordering. Promotion records the active direction, the paired onset price and reference, confirmation sources beginning with `temporal:15m`, and the worst trusted same-direction price and reference pair. The event, outcome and pending deletion commit atomically.
 
 Native-currency confirmers on USD-origin candidates normalize their price by multiplying the native quote (reference 1) by the candidate's admitted USD peg reference before peak selection; native-origin candidates retain native prices and reference 1. Pool peak candidates are exposed and consumed only when the pool confirmation policy accepts them, so rejected minority pools cannot deepen a primary-led promotion or supply uncredited event peaks.
 
@@ -606,6 +618,9 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 - An open lifecycle alone cannot activate the current-depeg penalty: it needs a
   trusted off-peg observation, no explicit gap and age ≤1200 seconds. Historical
   observed peaks still contribute severity/spread when current coverage is unavailable.
+  A fresh legacy observation during a reference-market closure qualifies at the
+  severe band of 2,500 bps in either direction. An explicit admitted-coverage
+  ledger takes precedence, including an empty ledger.
 - Since v6.49 `/api/peg-summary` publishes `pegScore`, `pegPct` and `recent90d`
   as null on a row with `currentPriceUnavailable: true` (no price row, a rejected
   price, or a nominal-only reference such as `protocol-par`), which names the reason,

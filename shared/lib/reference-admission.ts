@@ -1,6 +1,6 @@
 import type { FxReferenceObservation } from "../types/fx-reference";
 import type { AdmittedDeviationBps, RawDeviationBps, ReferenceAdmission, ReferenceContributor } from "../types/reference-admission";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS, REFERENCE_CLOSURE_HOLD_BANDS_BPS } from "./depeg-config";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS, PAR_ROUNDOFF_BPS, REFERENCE_CLOSURE_HOLD_BANDS_BPS } from "./depeg-config";
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
 import { getPegTaxonomyByType, PEG_TAXONOMY } from "./peg-taxonomy";
 import { getReferenceMarket, getReferenceSessionState, isTargetFixingDay } from "./reference-market-hours";
@@ -207,10 +207,14 @@ export function evaluateReferenceAdmission(input: ReferenceAdmissionInput): Refe
   const admit = (reason: Extract<ReferenceAdmission, { status: "admitted" }>["reason"]): ReferenceAdmission =>
     ({ ...evidence, status: "admitted", reason, kind, source, cadence, referenceObservedAtSec, quoteObservedAtSec, budgetSec });
   const absMove = input.rawDeviationBps !== null && Number.isFinite(input.rawDeviationBps) ? Math.abs(input.rawDeviationBps) : null;
+  const quoteOverBudget = decisionAtSec - quoteObservedAtSec > REFERENCE_INTRADAY_BUDGET_SEC;
+  const quoteBudgetRejection = (input.purpose !== "detection" || daily) && quoteOverBudget
+    ? stale("quote-over-budget", REFERENCE_INTRADAY_BUDGET_SEC) : null;
   if (!session.open) {
-    const closureQuote = quoteObservedAtSec >= session.closureStartSec && decisionAtSec - quoteObservedAtSec <= REFERENCE_INTRADAY_BUDGET_SEC;
+    const severeMove = absMove != null && absMove >= DEPEG_SEVERITY_BPS.severe - PAR_ROUNDOFF_BPS;
+    const closureQuote = quoteObservedAtSec >= session.closureStartSec && !quoteOverBudget;
     const eligibleClose = referenceObservedAtSec <= session.closureStartSec && session.closureStartSec - referenceObservedAtSec <= budgetSec;
-    if (input.purpose === "detection" && closureQuote && absMove != null && absMove >= DEPEG_SEVERITY_BPS.severe) {
+    if (input.purpose === "detection" && closureQuote && severeMove) {
       if (kind !== "median" && eligibleClose) return admit("severe-deviation");
       // The severe bullion comparison can use contemporaneous prices for distinct tokens from the same venue.
       if (kind === "median" && market === "metal" && referenceObservedAtSec >= session.closureStartSec &&
@@ -233,15 +237,14 @@ export function evaluateReferenceAdmission(input: ReferenceAdmissionInput): Refe
       }
     }
     // Severe moves bypass the closure hold. Neither this nor a traded median supplies a missing clock.
-    const severe = input.purpose !== "detection" && absMove !== null && absMove >= DEPEG_SEVERITY_BPS.severe;
+    const severe = input.purpose !== "detection" && severeMove;
     if (!severe && (kind !== "median" || quoteObservedAtSec < session.closureStartSec
       || !hasClosureQuorum(input.contributors, session.closureStartSec))) {
       return { ...evidence, status: "held-closed-session", reason: "reference-market-closed" };
     }
     if (daily && input.purpose !== "detection") return stale("daily-fixing-only");
     if (decisionAtSec - referenceObservedAtSec > budgetSec) return stale("reference-over-budget");
-    if (daily && decisionAtSec - quoteObservedAtSec > REFERENCE_INTRADAY_BUDGET_SEC) return stale("quote-over-budget", REFERENCE_INTRADAY_BUDGET_SEC);
-    return admit(severe ? "severe-deviation" : "closed-session-traded-median");
+    return quoteBudgetRejection ?? admit(severe ? "severe-deviation" : "closed-session-traded-median");
   }
 
   if (quoteObservedAtSec < session.sessionOpenedAtSec) return stale("quote-before-reopen");
@@ -252,8 +255,8 @@ export function evaluateReferenceAdmission(input: ReferenceAdmissionInput): Refe
     const age = fixingAgeBucket(referenceObservedAtSec, decisionAtSec, cadence === "business-daily");
     const band = peg && DAILY_FIXING_MOVE_BANDS_BPS[peg.currency]?.[age];
     if (band === undefined || absMove === null || absMove <= band) return stale("daily-fixing-only");
-    if (decisionAtSec - quoteObservedAtSec > REFERENCE_INTRADAY_BUDGET_SEC) return stale("quote-over-budget", REFERENCE_INTRADAY_BUDGET_SEC);
   }
+  if (quoteBudgetRejection) return quoteBudgetRejection;
   if (kind !== "median" && !hasRepriced(input, session.sessionOpenedAtSec, referenceObservedAtSec)) {
     return stale("reference-not-repriced");
   }

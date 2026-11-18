@@ -15,6 +15,7 @@ import {
 } from "./mint-burn-pipeline/materialization-debt";
 import type { MintBurnAffectedHour, MintBurnPriceHistoryPoint } from "./mint-burn-pipeline/types";
 import { projectMintBurnPriceHistory, resolveMintBurnEventPrice } from "./mint-burn-pipeline/context";
+import { SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL, SUPPLY_HISTORY_MARKET_PRICE_SQL } from "./supply-history-db";
 
 export const DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT = 100;
 export const MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT = 500;
@@ -436,12 +437,13 @@ async function loadSupplyHistory(
   // 100-bound-parameter limit.
   const historyRows = await runChunkedInRead(
     ids,
-    (inClauseSql) => `SELECT stablecoin_id, snapshot_date, price, price_observed_at
+    (inClauseSql) => `SELECT stablecoin_id, snapshot_date, ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS price,
+         ${SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL} AS price_observed_at
        FROM supply_history
        WHERE stablecoin_id IN (${inClauseSql})
          AND snapshot_date >= ?
          AND snapshot_date <= ?
-         AND price IS NOT NULL
+         AND ${SUPPLY_HISTORY_MARKET_PRICE_SQL} IS NOT NULL
        ORDER BY stablecoin_id ASC, snapshot_date ASC`,
     async (whereSql, binds) => {
       const result = await db

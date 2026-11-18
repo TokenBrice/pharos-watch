@@ -54,25 +54,23 @@ export async function verifyDataCorrection(
     let inconclusiveReason: string | null = null;
     if (pegRefEligible && hasUsableCurrentPrice(coin) && !peg?.currentPriceUnavailable) {
       const projected = projectCurrentPegDeviation(peg, fixedUsd, coin.priceObservedAt);
-      if (fixedUsd && hasPegRef && projected != null) {
-        const deviation = peg?.admittedDeviationBps === undefined
-          ? relativeBps(coin.price, pegRef)?.rawBps
-          : projected;
-        if (deviation != null && Number.isFinite(deviation)) deviationBps = deviation;
+      const unrounded = projected != null && hasPegRef ? relativeBps(coin.price, pegRef)?.rawBps ?? null : null;
+      if (fixedUsd) {
+        deviationBps = unrounded;
       } else if (admission?.status === "admitted") {
         inconclusiveReason = currentAdmissionUnavailableReason(admission, meta.flags.pegCurrency,
           coin.priceObservedAtMode === "upstream" ? coin.priceObservedAt : null, now);
         if (!inconclusiveReason && hasPegRef && peg?.pegReference?.source === admission.kind &&
-            peg.pegReference.asOf === admission.referenceObservedAtSec) deviationBps = projected;
+            peg.pegReference.asOf === admission.referenceObservedAtSec) deviationBps = unrounded;
       } else if (peg?.referenceAdmission === undefined && peg?.admittedDeviationBps === undefined &&
-          projected != null && hasPegRef && hasQuoteClock) {
+          unrounded != null && hasQuoteClock) {
         if (cacheAgeSec < 0 || cacheAgeSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC || now - quoteObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
           inconclusiveReason = "quote-over-budget";
-        } else if (isReferenceDeviationHeld(meta.flags.pegCurrency, quoteObservedAt, projected) ||
-            isReferenceDeviationHeld(meta.flags.pegCurrency, now, projected)) {
+        } else if (isReferenceDeviationHeld(meta.flags.pegCurrency, quoteObservedAt, unrounded) ||
+            isReferenceDeviationHeld(meta.flags.pegCurrency, now, unrounded)) {
           inconclusiveReason = "reference-market-closed";
         } else {
-          deviationBps = projected;
+          deviationBps = unrounded;
         }
       } else {
         inconclusiveReason = admission?.reason ?? "reference-admission-unavailable";

@@ -15,7 +15,6 @@ import {
 import {
   normalizePendingDepegRow,
   buildPendingClosureHoldStatements,
-  SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
 import { throwIfAborted } from "../lib/abort";
@@ -33,6 +32,7 @@ import {
 import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
 import {
   buildConfirmationPlan,
+  SELECT_PENDING_CONFIRMATION_SQL,
 } from "./pending-depeg-confirmation";
 import { evaluatePromotionDecision } from "./pending-depeg-confirmation-decision";
 import { collectConfirmationEvidence } from "./pending-depeg-confirmation-evidence";
@@ -66,7 +66,7 @@ export async function confirmPendingDepegs(
   throwIfAborted(signal);
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   const pending = await db
-    .prepare(SELECT_PENDING_DEPEGS_SQL)
+    .prepare(SELECT_PENDING_CONFIRMATION_SQL)
     .all<PendingDepegRow>();
 
   const rows = pending.results ?? [];

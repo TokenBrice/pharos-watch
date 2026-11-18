@@ -292,6 +292,8 @@ The snapshot total is not a live balance guarantee and is distinct from the loca
 
 The producer summary cache is admitted fail-closed against the shared response schema with current-version `coverage`, `freezeLedgerMeta`, `dataQuality`, and `methodology` fields required. Invalid nested values or missing required fields trigger the canonical producer materializer; concurrent cold misses coordinate through a durable D1 cache claim so only one request rebuilds the snapshot. Valid retained snapshots keep their producer freshness and all additive fields rather than being projected through the parser. The producer payload is statically typed to the same response contract. Public response optionality is unchanged.
 
+A winning v6 snapshot retires the captured v5 row in the same D1 batch. A v5 publication at the same or a later second causes the v6 reader to rebuild from the ledger. A v5 row that changes during the rebuild fences out the pending v6 write.
+
 ## Schedule And Runtime
 
 - **Expression:** `3 */6 * * *`

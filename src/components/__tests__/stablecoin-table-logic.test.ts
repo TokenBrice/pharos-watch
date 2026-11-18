@@ -10,6 +10,7 @@ import {
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-directory/stablecoin-table-logic";
+import { buildStablecoinTableRowModel } from "@/components/stablecoin-directory/stablecoin-table-row-model";
 import type { ColumnId } from "@/lib/column-visibility";
 import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -544,8 +545,29 @@ describe("sortStablecoins", () => {
     expect(resolveDisplayedNativePrice(noReference, undefined, pegScores)).toBeNull();
   });
 
+  it("sorts the visible USD fallback during a legacy FX session hold", () => {
+    const at = Date.parse("2026-11-14T14:00:00Z") / 1000;
+    const eurc = makeCoin("eurc-circle", "EURC", {
+      price: 1.122, pegType: "peggedEUR", priceObservedAt: at,
+      currentPeg: {
+        currentDeviationBps: 200, currentPriceUnavailable: false, pegReferenceUnavailable: false,
+        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: at - 86_400 },
+        dexPriceCheck: null, primaryTrust: "unusable",
+      },
+    });
+    const usdc = makeCoin("usdc-circle", "USDC", { price: 1 });
+    const missing = makeCoin("missing", "Missing", { price: null });
+    const rows = sortStablecoins({
+      filtered: [missing, usdc, eurc], sort: sortDesc("price"), effectiveSortKey: "price",
+    });
+
+    expect(buildStablecoinTableRowModel({ coin: eurc, density: "compact", variant: "default" }).priceCell).toBe("$1.1220");
+    expect(resolveDisplayedNativePrice(eurc, undefined)).toEqual({ value: 1.122, currency: "USD", reference: null });
+    expect(rows.map((coin) => coin.id)).toEqual([eurc.id, usdc.id, missing.id]);
+  });
+
   it.each(["matched", "held", "stale", "unmatched", "median"] as const)(
-    "only sorts a non-USD NAV as a native price with matched direct FX (%s)", (scenario) => {
+    "sorts a non-USD NAV in the displayed unit (%s)", (scenario) => {
       const quoteAt = FX_REOPEN_QUOTE_AT;
       const nav = makeCoin("gbpsafo-spiko", "GBP NAV", {
         price: 1.21, priceObservedAt: scenario === "unmatched" ? quoteAt - 60 : quoteAt,
@@ -562,7 +584,7 @@ describe("sortStablecoins", () => {
       if (scenario === "median" && peer.pegReference) peer.pegReference = { ...peer.pegReference, source: "median", contributorCount: 3 };
       const key = resolveDisplayedNativePrice(nav, undefined, new Map([[peer.id, peer]]));
       if (scenario === "matched") expect(key).toMatchObject({ value: expect.closeTo(1.1), currency: "GBP" });
-      else expect(key).toBeNull();
+      else expect(key).toEqual({ value: 1.21, currency: "USD", reference: null });
     },
   );
 

@@ -92,6 +92,34 @@ describe("buildDewsScoringResult peg reference admission", () => {
       referenceAdmission: { primary: { status: "admitted" }, dex: { status: "unavailable" } } });
   });
 
+  it("checks both XAGm quote clocks with FX evidence off before scoring or releasing a closure hold", () => {
+    const open = Date.parse("2026-11-17T16:00:00Z") / 1000;
+    const closed = Date.parse("2026-11-21T00:01:00Z") / 1000;
+    const ozPerToken = 0.998380822;
+    const state = createSourceState();
+    const score = (nowSec: number, dexPriceUsd: number, dexAgeSec: number, withEntitlement = true) => {
+      const asset = { ...createAsset("xagm-matrixdock"), pegType: "peggedSILVER", price: 30 * ozPerToken,
+        priceSource: "coingecko", priceObservedAt: nowSec, priceObservedAtMode: "upstream" as const,
+        commodityEntitlement: withEntitlement ? { source: "matrixdock-frs" as const, generation: "ethereum:123",
+          quoteObservedAtSec: nowSec, ozPerToken, observedAtSec: nowSec - 60 } : undefined };
+      state.dexPrices.dexPriceMap.set(asset.id, { dexPriceUsd, updatedAt: nowSec - dexAgeSec, sourceTotalTvl: 10e6,
+        aggregateFamilies: ["coingecko"] });
+      return buildDewsScoringResult({ assetById: new Map([[asset.id, asset]]), nowSec, pegRates: { peggedSILVER: 30 },
+        pegRateSources: { peggedSILVER: "fallback" }, sourceState: state, registerMalformedPersistedInput: () => {} }).results[0]!;
+    };
+
+    expect(score(open, 24, 30, false).signals.diverg).toMatchObject({ primaryDevBps: 16, dexDevBps: 2_000 });
+    const corrected = score(open, 24, 30);
+    expect(corrected).toMatchObject({ score: 0, band: "CALM", evidenceKinds: [] });
+    expect(corrected.signals.diverg).toMatchObject({ primaryDevBps: 0, dexDevBps: undefined, spreadBps: 0 });
+    const overlapping = score(open, 24, 0).signals.diverg;
+    expect(overlapping).toMatchObject({ primaryDevBps: 0, dexDevBps: 1_987 });
+    expect(overlapping.venueSpreadBps).toBeUndefined();
+    expect(score(closed, 21, 30).signals.diverg).toMatchObject({ available: false, unavailableReason: "reference-market-closed" });
+    expect(score(closed, 24, 0).signals.diverg).toMatchObject({ available: false, unavailableReason: "reference-market-closed" });
+    expect(score(closed, 21, 0).signals.diverg).toMatchObject({ available: true, dexDevBps: 2_989 });
+  });
+
   it("retains peer contagion across an isolated-flow WARNING crossing", () => {
     const sourceState = createSourceState();
     const assets = ["usdt-tether", "usdc-circle"].map<StablecoinData>((id, i) => ({ ...createAsset(id),

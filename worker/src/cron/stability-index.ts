@@ -39,7 +39,7 @@ import { POOL_CHALLENGE_MIN_TVL } from "../lib/price-depeg-voting-policy";
 import { isEarlierSupplyPerimeter, isAmbiguousSupplyPerimeterDay } from "@shared/lib/supply-perimeter-changes";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
-import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
+import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
 import { isRecord } from "@shared/lib/type-guards";
 
 type PsiActiveDepegRow = NativeEventPriceEvidence & {
@@ -359,7 +359,6 @@ export async function computeAndStoreStabilityIndex(
   }[] = [];
   let replayPriceFallbackCount = 0;
   let openDepegsWithoutPrice = 0;
-  const dewsStressBreadth = computePsiStressBreadth(dewsRows, mcapById, new Set(grouped.keys()));
   const hasScheduledEvent = [...grouped.keys()].some((id) => getReferenceMarket(PSI_ELIGIBLE_META_BY_ID.get(id)?.flags.pegCurrency) != null);
   const legacyPegRates = perObservation ? null : derivePegRates(
     stablecoinsCache.payload.peggedAssets,
@@ -448,8 +447,8 @@ export async function computeAndStoreStabilityIndex(
           metadata: { reason: "event-quote-basis-unsupported", eventId: event.id, preservedCurrentSample: true },
         });
       }
-      const currentNative = native ? decodeNativeEventQuote(event.current_native_quote) : null;
-      const nativeQuote = native ? readAdmittedNativeEventObservation(event, now) : null;
+      const nativeQuote = native ? readAdmittedNativeEventObservation(event, now,
+        legacyPegRates != null && !peerRelative && session?.open === true) : null;
       const quoteUnit = { assetId: coinId, commodityEntitlement,
         quoteObservedAtSec: native ? nativeQuote?.observedAt : usdQuote?.observedAt };
       const eventReference = native ? getCommodityOuncesAtQuote(event.peg_reference, quoteUnit) : event.peg_reference;
@@ -498,9 +497,7 @@ export async function computeAndStoreStabilityIndex(
       } else if (native) {
         const quote = nativeQuote;
         observedAt = quote?.observedAt ?? null;
-        const traded = quote != null && quote.observedAt === currentNative?.observedAt &&
-          quote.value === currentNative.value && currentNative.derivation?.kind === "traded-pair";
-        if (quote && eventReference != null && (traded || (session?.open && quote.observedAt >= session.sessionOpenedAtSec))) {
+        if (quote && eventReference != null && (quote.traded || (session?.open && quote.observedAt >= session.sessionOpenedAtSec))) {
           bps = deriveDepegSignal(quote.value, eventReference)?.bps ?? null;
         }
       } else if (pegKey === "peggedUSD") {
@@ -612,6 +609,7 @@ export async function computeAndStoreStabilityIndex(
     ...(universeCoverageStatus !== "ok" ? ["universe-coverage"] : []),
   ];
 
+  const dewsStressBreadth = computePsiStressBreadth(dewsRows, mcapById, new Set(contributors.map(({ id }) => id)));
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {
     logWorkerEventArgs("handler", "warn",

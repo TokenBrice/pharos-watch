@@ -52,6 +52,26 @@ describe("fiat upper-band publication", () => {
 });
 
 describe("validatePrimaryPriceCandidate — severe downside with directional corroboration", () => {
+  it("requires disjoint upstreams for severe downside even when two source names agree", () => {
+    const pool = "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
+    const input = {
+      price: 0.45, source: "bitstamp", confidence: "high" as const,
+      agreeSources: ["bitstamp", "curve-onchain"],
+      candidatePrices: { bitstamp: 0.45, "curve-onchain": 0.45 },
+      validationContext: USD_CONTEXT,
+    };
+    expect(validatePrimaryPriceCandidate(input).accepted).toBe(true);
+    expect(validatePrimaryPriceCandidate({
+      ...input,
+      upstreamKeysBySource: { bitstamp: ["venue:bitstamp"], "curve-onchain": [pool, "venue:bitstamp"] },
+    })).toMatchObject({ accepted: false, reason: "severe_downside_requires_corroboration" });
+    expect(validatePrimaryPriceCandidate({
+      ...input, confidence: "low", source: "coinbase", agreeSources: ["coinbase"],
+      candidatePrices: { coinbase: 0.45, "curve-onchain": 0.36 },
+      upstreamKeysBySource: { coinbase: ["venue:coinbase"], "curve-onchain": [pool, "venue:bitstamp"] },
+    }).accepted).toBe(true);
+  });
+
   it("does not let the native CG-dependent leg bypass severe-downside or temporal-jump guards", () => {
     expect(validatePrimaryPriceCandidate({
       price: 0.38, source: "hive-native-cg", confidence: "single-source",

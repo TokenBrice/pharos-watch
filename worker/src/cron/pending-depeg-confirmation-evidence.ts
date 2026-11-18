@@ -1,4 +1,5 @@
-import { getClockedTradedNativeQuote, isIndependentDexObservation, isIndependentVenue, knownPoolVenue } from "./depeg-detection/reference-policy";
+import { getClockedTradedNativeQuote, independenceKey, isIndependentDexObservation, isIndependentVenue, knownPoolVenue } from "./depeg-detection/reference-policy";
+import { selectIndependentChallengerPools } from "./dex-liquidity/price-lineage";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEX_FRESHNESS_SEC, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
@@ -228,6 +229,7 @@ export async function collectConfirmationEvidence(
     threshold,
     recoveryThreshold,
     allowsUsdObservation,
+    pendingSourceFamilies,
     nativeSignal,
     nativePegQuote: suppliedNativePegQuote,
     nativeQuoteImplausibility: plannedNativeQuoteImplausibility,
@@ -263,6 +265,8 @@ export async function collectConfirmationEvidence(
 
   const geckoId = meta?.geckoId;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  const isIndependentConfirmer = (venue: string | undefined) =>
+    isIndependentVenue(asset, venue) && !pendingSourceFamilies?.includes(independenceKey(venue, row.stablecoin_id));
   const tradedNative = isNativeQuoteForPending(row, suppliedNativePegQuote)
     ? getClockedTradedNativeQuote(suppliedNativePegQuote, now) : undefined;
   const nativePegQuote = tradedNative && isIndependentVenue(asset, tradedNative.derivation?.lineage.venue)
@@ -311,7 +315,7 @@ export async function collectConfirmationEvidence(
         thresholdBps: threshold,
       },
     });
-  } else if (geckoId && !isNativeOrigin && isIndependentVenue(asset, "coingecko")) {
+  } else if (geckoId && !isNativeOrigin && isIndependentConfirmer("coingecko")) {
     const result = await evaluateOffchainConfirmer({
       db,
       symbol: row.symbol,
@@ -445,7 +449,7 @@ export async function collectConfirmationEvidence(
     if (BINANCE_SYMBOLS.has(cexSymbol)) addSource(evidence.unavailableSources, "cex:binance");
   } else {
     const cexPrice = cexPrices.get(cexSymbol);
-    if (cexPrice && cexPrice > 0 && !allowsUsdObservation && isIndependentVenue(asset, "binance")) {
+    if (cexPrice && cexPrice > 0 && !allowsUsdObservation && isIndependentConfirmer("binance")) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
       evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction, recoveryThreshold);
       if (evidence.cexStatus === "confirm") {
@@ -487,19 +491,22 @@ export async function collectConfirmationEvidence(
   if (isNativeOrigin) {
     addSource(evidence.unavailableSources, "pool:usd-native-origin");
   } else if (pools?.length) {
-    for (const pool of pools) {
+    const eligiblePools = pools.filter((pool) => {
       if (!knownPoolVenue(pool) || !isIndependentDexObservation(asset, pool)) {
         addSource(evidence.unavailableSources, "pool:independence-unverified");
-        continue;
+        return false;
       }
       if (!isFreshDexPoolObservation(pool.observedAt, now)) {
         addSource(evidence.unavailableSources, "pool:observation-clock-unusable");
-        continue;
+        return false;
       }
       if (allowsUsdObservation && !allowsUsdObservation(pool.price, pool.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC)) {
         addSource(evidence.unavailableSources, "pool:reference-observation-unadmitted");
-        continue;
+        return false;
       }
+      return true;
+    });
+    for (const pool of selectIndependentChallengerPools(eligiblePools)) {
       const poolSignal = deriveDepegSignal(pool.price, pegReference);
       if (poolSignal == null) continue;
       const poolGroupKey = dexPoolIndependentGroupKey(pool);

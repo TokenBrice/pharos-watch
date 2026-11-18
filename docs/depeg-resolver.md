@@ -126,7 +126,7 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 
 ### Inputs
 
-Supply factors use the nearest earlier USD snapshots when neither endpoint has native supply evidence, including pre-0306 rows. If either endpoint has native evidence, both counts must be admitted in their respective target UTC buckets and observed by the comparison time. A missing or rejected leg withholds the change. USD remains the unit for exposure and measured dollar-flow denominators.
+Supply factors use the nearest earlier USD snapshots when neither endpoint has native supply evidence, including pre-0306 rows. An explicitly partial checkpoint stays unavailable at its recorded date, even when the producer omits the native count. DDR withholds the comparison across that endpoint. If either endpoint has native evidence, both counts must be admitted in their respective target UTC buckets and observed by the comparison time. A missing or rejected leg withholds the change. USD remains the unit for exposure and measured dollar-flow denominators.
 
 **Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path plus the published V9 Economic Control mint-posture band (stored in the legacy-named `mintAuthorityScoreBand` field, with curated authority-posture fallback when no compatible V9 publication is installed) and recent reviewed mint-authority incident dates, optional issuer `windDownAnnouncedAt` / `windDownSourceUrl` (token-scoped; distinct from `frozenAt`), `mechanismArchetype`, governance flag, collateral quality, custody model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the V9 report-card safety grade / exit pillar as anchors when identified.
 

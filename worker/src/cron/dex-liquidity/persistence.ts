@@ -24,7 +24,8 @@ import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import { createDexRouteObservationPacking, publishedDexRouteCounts } from "./dex-route-observation-selection";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
-import { summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { projectRetainedPoolPrice, summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, selectIndependentChallengerPools } from "./price-lineage";
 import { normalizeProtocol } from "./pool-helpers";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
 import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
@@ -58,6 +59,27 @@ const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
    coverage_class, coverage_confidence, source_mix_json, methodology_version,
    exit_route_summary_json, volume_availability_json)`;
+
+export function buildStoredTopPoolsJson(stablecoinId: string, topPools: LiquidityMetrics["topPools"]): string {
+  const primaryKeys = configuredPrimaryUpstreamKeys(stablecoinId);
+  const candidates = topPools.flatMap((pool) => {
+    if (!pool.priceCounterparty) return [];
+    const observation = projectRetainedPoolPrice(pool);
+    const lineage = observation && getDexGroupLineage([observation]);
+    return observation && lineage && admitsRollbackDexVote(lineage.upstreamKeys, primaryKeys)
+      ? [{ pool, tvl: observation.tvl, observedAt: observation.observedAt,
+        upstreamKeys: lineage.upstreamKeys, pricePoolKeys: lineage.pricePoolKeys }]
+      : [];
+  });
+  const eligible = new Map(selectIndependentChallengerPools(candidates).map(({ pool, upstreamKeys, pricePoolKeys }) =>
+    [pool, { upstreamKeys, pricePoolKeys }]));
+  return JSON.stringify(topPools.map((entry) => {
+    const { volumeReading: _volumeReading, price, ...pool } = entry;
+    const lineage = eligible.get(entry);
+    // Main's legacy challenger loader reads the top-pool price field directly.
+    return pool.priceCounterparty && !lineage ? { ...pool, displayPrice: price } : { ...pool, price, ...lineage };
+  }));
+}
 
 const DEX_LIQUIDITY_ROW_COLUMNS = [
   "stablecoin_id",
@@ -1027,7 +1049,7 @@ export async function persistScores(
         JSON.stringify(m.protocolTvl),
         JSON.stringify(m.chainTvl),
         // `volumeReading` is producer-internal raw evidence (aged readings included); never published.
-        JSON.stringify(m.topPools.map(({ volumeReading: _volumeReading, ...pool }) => pool)),
+        buildStoredTopPoolsJson(id, m.topPools),
         retainedPools == null ? null : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL),
         sr.score,
         sr.hhi,

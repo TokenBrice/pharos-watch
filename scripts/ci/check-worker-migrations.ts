@@ -589,6 +589,7 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       db.exec(`
         INSERT INTO cache (key, value, updated_at)
         VALUES ('depeg-events:counts:v1', '[{"stablecoinId":"usdt-tether","active":1,"total":1}]', 1);
+        INSERT INTO cache (key, value, updated_at) VALUES ('mint-burn-flows:v8:coin:meusd-mezo:24', '{}', 1);
         INSERT INTO cache (key, value, updated_at)
         VALUES ('migration-gate-unrelated-cache', '{"retained":true}', 1);
       `);
@@ -599,8 +600,19 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
         INSERT INTO mint_burn_events (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
           tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
         VALUES ('legacy-fee', 'ousd-origin-protocol', 'OUSD', 'ethereum', 'mint', 12000000, 12000000,
-          '0x1', 100, 3600, 'https://example.org/tx/1', 'protocol_internal');
+          '0x1', 100, 3600, 'https://example.org/tx/1', 'protocol_internal'),
+          ('legacy-spoke', 'meusd-mezo', 'MUSD', 'ethereum', 'mint', 12000000, 12000000,
+          '0x2', 101, 3600, 'https://example.org/tx/2', 'standard');
+        INSERT INTO mint_burn_events (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+          tx_hash, block_number, timestamp, explorer_tx_url, flow_type, burn_type, burn_review_reason)
+        VALUES ('legacy-review', 'usdz-anzen', 'USDz', 'ethereum', 'burn', 12000000, 12000000,
+          '0x3', 102, 3600, 'https://example.org/tx/3', 'standard', 'review_required', 'known-bridge-pool-without-bridge-signal');
       `);
+      continue;
+    }
+    if (target === "mint_burn_hourly") {
+      db.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
+        VALUES ('meusd-mezo', 'ethereum', 3600, 1, 12000000, 12000000);`);
       continue;
     }
     if (target === "cron_runs") {
@@ -657,6 +669,10 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
           'USDT freeze · Ethereum', 'Fixture freeze.', '{"chainName":"Ethereum"}',
           'blacklist_events', 'migration-gate-fixture', 'opened', 1
         );
+        INSERT INTO tape_events (event_id, type, severity, ts, coin_id, chain, title, summary, payload_json,
+          source_table, source_row_id, transition, created_at)
+        VALUES ('legacy-spoke-claim', 'mint_burn.large_mint', 'notice', 3600000, 'meusd-mezo', 'ethereum',
+          'MUSD minted $12.0M', '', '{}', 'mint_burn_events', 'legacy-spoke', 'updated', 3600);
       `);
       continue;
     }

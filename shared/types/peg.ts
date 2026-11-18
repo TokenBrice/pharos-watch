@@ -182,6 +182,7 @@ export interface DepegEventSearchEntry {
   direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
+  peakReview?: DepegEvent["peakReview"];
   /** Reviewed audit verdict; absent when the ledger records none. */
   auditVerdict?: DepegAuditVerdict;
 }

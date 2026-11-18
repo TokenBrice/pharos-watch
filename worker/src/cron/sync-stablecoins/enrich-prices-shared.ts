@@ -6,6 +6,7 @@ import type { PriceDerivation } from "@shared/types/price";
 import type { DefiLlamaListFillDefaultQuote } from "@shared/lib/pricing-source-policy";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import type { FiatPremiumEvidence } from "../../lib/price-publish-policy";
+import type { UpstreamKeysBySource } from "../../lib/price-consensus";
 import { stampPriceMetadata } from "./shared";
 
 export interface PriceValidationStats {
@@ -28,6 +29,7 @@ export interface PrimaryPriceResult extends Pick<StablecoinData, "priceQuoteBasi
   agreeSources: string[];
   disagreeSources?: string[];
   allPrices?: Record<string, number>;
+  upstreamKeysBySource?: UpstreamKeysBySource;
   fiatPremiumEvidence?: FiatPremiumEvidence;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;

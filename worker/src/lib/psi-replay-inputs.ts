@@ -3,7 +3,6 @@ import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
-import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getReferenceMarket, isReferenceMarketClosed, replayReferenceMarketEventStart } from "@shared/lib/reference-market-hours";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
@@ -32,13 +31,18 @@ export async function loadSupplyHistoryRowsForWindow(
   endSec: number,
   includeQuantity = false,
 ): Promise<PsiSupplyRow[]> {
-  const load = (withQuantity: boolean) => db.prepare(
+  const load = (withQuantity: boolean, withProvenance = withQuantity) => db.prepare(
     `SELECT stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at
-      ${withQuantity ? ", circulating_native, supply_provenance" : ""} FROM supply_history
+      ${withQuantity ? ", circulating_native" : ""}${withProvenance ? ", supply_provenance" : ""} FROM supply_history
      WHERE snapshot_date BETWEEN ? AND ? ORDER BY snapshot_date`,
   ).bind(Math.max(0, startSec), endSec).all<PsiSupplyRow>();
   const rows = await load(includeQuantity).catch((error: unknown) => {
-    if (includeQuantity && error instanceof Error && /no such column: (circulating_native|supply_provenance)\b/i.test(error.message)) {
+    if (includeQuantity && error instanceof Error && /no such column: circulating_native\b/i.test(error.message)) {
+      return load(false, true);
+    }
+    throw error;
+  }).catch((error: unknown) => {
+    if (includeQuantity && error instanceof Error && /no such column: supply_provenance\b/i.test(error.message)) {
       return load(false);
     }
     throw error;
@@ -179,10 +183,8 @@ export function applyReferenceMarketClosureRule<T extends PsiDepegEventRow & {
       if (readAdmittedPeerOnset(opening) || readBenchmarkOnset(opening)?.admission) return [row];
     }
     const opening = row.start_price == null ? null : deriveDepegSignal(row.start_price, row.peg_reference);
-    // A severe print needs independent evidence to establish its onset during closure.
-    const openingBps = opening && opening.absRawBps < DEPEG_SEVERITY_BPS.severe ? opening.absRawBps : NaN;
     const countedFrom = replayReferenceMarketEventStart(
-      currency, row.started_at, row.ended_at, openingBps,
+      currency, row.started_at, row.ended_at, opening?.absRawBps ?? NaN,
     );
     return countedFrom == null ? [] : [countedFrom === row.started_at ? row : { ...row, counted_from: countedFrom }];
   });

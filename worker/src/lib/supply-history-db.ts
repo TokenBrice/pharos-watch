@@ -28,11 +28,18 @@ export interface HistoricalSupplyQuantityRow {
   price_observed_at: number | null;
 }
 
+// Assessed-unavailable rows keep the market quote separate from the legacy conversion price.
+export const SUPPLY_HISTORY_MARKET_PRICE_SQL =
+  "COALESCE(price, CASE WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.price') END)";
+export const SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL =
+  "CASE WHEN price IS NOT NULL THEN price_observed_at WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.observedAt') END";
+
 /** A pre-0306 USD cap can recover its units only at its own observed stock and price clock. */
 export function historicalSupplyQuantity(
   id: string, pegType: string | undefined, row: HistoricalSupplyQuantityRow,
   provenance: SupplyObservationProvenance | null, through: number,
 ): number | null {
+  if (provenance?.nativeQuantityUnavailable) return null;
   const native = row.circulating_native;
   if (native != null) return Number.isFinite(native) && native >= 0 ? native : null;
   const observedAt = provenance?.supplyObservedAt;

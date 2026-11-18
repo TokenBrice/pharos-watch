@@ -19,7 +19,6 @@ vi.mock("@/components/digest/editorial-colophon", () => ({
   },
 }));
 vi.mock("@/components/preferred-source-prompt", () => ({ PreferredSourcePrompt: () => null }));
-vi.mock("@/components/json-ld-script", () => ({ JsonLdScript: () => null }));
 vi.mock("@/components/digest/editorial-masthead", () => ({
   EditorialMasthead: ({ editor }: { editor?: string }) => <p>{editor}</p>,
 }));
@@ -30,11 +29,8 @@ vi.mock("@/lib/digest", () => ({
   splitDigestParagraphs: (extended: string) => [extended],
 }));
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
-vi.mock("@/lib/json-ld", () => ({
-  buildArticleJsonLd: () => ({}),
-  safeJsonLd: (value: unknown) => value,
-}));
-vi.mock("@/lib/digest-registry", () => {
+vi.mock("@/lib/digest-registry", async (importOriginal) => {
+  const registry = await importOriginal<typeof import("@/lib/digest-registry")>();
   const entry = (date: string, generatedAt: number, digestType: "daily" | "weekly", title = `Edition ${date}`) => ({
     date,
     title,
@@ -56,18 +52,18 @@ vi.mock("@/lib/digest-registry", () => {
     entry("2026-02-25", 1_772_021_621, "daily", "Legacy edition"),
   ];
   return {
+    ...registry,
     DIGEST_ENTRIES: entries,
     INDEXABLE_DIGEST_ENTRIES: entries.filter((row) => row.digestType === "weekly"),
-    DIGEST_CORRECTIONS: new Map(),
     DIGEST_BY_DATE: {
       get(date: string) {
-        return entries.find((row) => row.date === date);
+        return entries.find((row) => row.date === date) ?? registry.DIGEST_BY_DATE.get(date);
       },
     },
   };
 });
 
-import DigestDetailPage from "../[date]/page";
+import DigestDetailPage, { generateMetadata } from "../[date]/page";
 
 async function renderDigest(date: string): Promise<string> {
   const page = await DigestDetailPage({ params: Promise.resolve({ date }) });
@@ -122,4 +118,18 @@ describe("digest detail citation", () => {
       canonicalUrl: "https://pharos.watch/digest/2026-02-25/",
     });
   });
+});
+
+it("shares the March 1 correction while keeping the original digest in the article", async () => {
+  const date = "2026-03-01";
+  const metadata = await generateMetadata({ params: Promise.resolve({ date }) });
+  const html = await renderDigest(date);
+
+  expect(metadata.description).toMatch(/Pharos retracted two KAU depeg claims and one KAG claim/);
+  expect(metadata.openGraph?.description).toBe(metadata.description);
+  expect(metadata.twitter?.description).toBe(metadata.description);
+  expect(html).toContain(`"description":${JSON.stringify(metadata.description)}`);
+  expect(html).toContain('"dateModified":"2026-11-18T00:00:00Z"');
+  expect(html).toContain('aria-label="Editorial correction"');
+  expect(html).toContain("KAU depegged twice in one day on $399.63M.");
 });

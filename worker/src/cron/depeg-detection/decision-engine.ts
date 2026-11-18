@@ -21,6 +21,7 @@ import {
   dexProtocolGroupKey,
   markNativeOriginPending,
   parsePendingReason,
+  isNativeOriginPending,
   rowPriceCoverage,
   readDepegAdmittedCoverage,
   readDepegReferenceHold,
@@ -67,7 +68,7 @@ import {
 } from "./native-quote-policy";
 import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import { assessDetectionReference, assessIndependentPeerMove, benchmarkAdmission, canPersistPeerEvents, getClockedTradedNativeQuote, getTradedNativeEvidence, hasIncompatibleParityPrice, independentPrimaryTrustInput, observationPegMeta, independenceKey, isIndependentDexObservation, isIndependentVenue, sourceObservationClock } from "./reference-policy";
+import { assessDetectionReference, assessIndependentPeerMove, benchmarkAdmission, canPersistPeerEvents, getClockedTradedNativeQuote, getTradedNativeEvidence, hasIncompatibleParityPrice, independentPrimaryTrustInput, observationPegMeta, independenceKey, isIndependentDexObservation, isIndependentVenue, primaryVenueKeys, sourceObservationClock } from "./reference-policy";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -238,6 +239,7 @@ function buildPendingCommand(
     reason,
     ...(peerBasis ? { peerBasis } : {}),
     ...(nativeVenue ? { nativeVenue } : {}),
+    ...(!isNativeOriginPending(reason) && { sourceFamilies: [...(primaryVenueKeys(asset) ?? [])].sort() }),
     ...(referenceAdmission ? { referenceAdmission } : {}),
   };
   return { type: "upsert-pending", payload };

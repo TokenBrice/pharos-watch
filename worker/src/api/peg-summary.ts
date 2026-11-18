@@ -190,7 +190,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }
   const { peggedAssets, fxFallbackRates, fxReferenceObservations } = stablecoinsCache.payload;
-  const admissionEnabled = hasFxReferenceEvidence(fxReferenceObservations);
+  const clocked = hasFxReferenceEvidence(fxReferenceObservations);
 
   const now = Math.floor(Date.now() / 1000);
   // 2. Load DEX prices + shared peg analytics snapshot
@@ -280,6 +280,20 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     generation: `stablecoins:${stablecoinsCache.updatedAt}`,
     dexPrices,
   });
+  for (const asset of peggedAssets) {
+    if (asset.currentPeg?.pegReferenceUnavailable !== true) continue;
+    const observation = currentObservations.get(asset.id);
+    if (!observation) continue;
+    currentObservations.set(asset.id, {
+      ...observation,
+      currentDeviationBps: null,
+      currentSignal: null,
+      ...(observation.admittedDeviationBps !== undefined && { admittedDeviationBps: null }),
+      pegReference: null,
+      pegReferenceUnavailable: true,
+      dexPriceCheck: null,
+    });
+  }
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
 
   const coins: PegSummaryCoin[] = [];
@@ -302,6 +316,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
     const asset = priceById.get(meta.id);
     const observation = currentObservations.get(meta.id);
+    const admissionEnabled = clocked && observation?.legacyFxReference !== true;
     const currentBps = observation?.currentDeviationBps ?? null;
     const currentPriceUnavailable = observation?.currentPriceUnavailable ?? !isNavToken;
     const admittedBps = observation?.admittedDeviationBps ?? null;

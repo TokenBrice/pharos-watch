@@ -154,7 +154,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/depeg-config.ts",
-      "sha256": "f3b34d3419eb87169738a2381101c8f3600c324044483e8a9b9f4c43c77d864a"
+      "sha256": "7094cec13d45b02314c40e7117b427185a360657b5e59df196852f99d1ebe298"
     },
     {
       "path": "shared/lib/depeg-resolver/hash.ts",
@@ -250,7 +250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-utils.ts",
-      "sha256": "84b56a519fde6c604b40604222a9a242055a9381ee5e0173ad7b289a7a6e0a63"
+      "sha256": "0c0ab12e97e53eb23200205bbdb1692d30a3ad6f98bd4cd200babcad8b34e195"
     },
     {
       "path": "shared/lib/physical-commodity-delivery.ts",
@@ -414,11 +414,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/reference-admission.ts",
-      "sha256": "3a4110eaa9c685c8547d28d231389a251801633485fff3c5582db937b0e8dbc9"
+      "sha256": "125bceb9040d6fdd935adbc1e88c18f685d959511122248ca7c57f0ab685ce51"
     },
     {
       "path": "shared/lib/reference-market-hours.ts",
-      "sha256": "d13331ecc21e36d7ee6231f77c8e1b07b5ff4930c15720d3f04eae366409edc8"
+      "sha256": "5a9500fb0d0b634df0211db5106e2a5bfd5e1b8945346706ba0da66befb10c7b"
     },
     {
       "path": "shared/lib/report-card-core.ts",
@@ -842,7 +842,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/measured-execution.ts",
-      "sha256": "809b500b79ae850b1c95a6fbfe4cf25c8f93391eb7d858123c0094916b39cdda"
+      "sha256": "2cfe75878f11e6ae8298d6989af58d7c34bd2b351e9c3569635a2eb06025bffb"
     },
     {
       "path": "shared/types/methodology-envelope.ts",
@@ -858,7 +858,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/peg.ts",
-      "sha256": "5f889932d8a8e15600cee5e0b4d99854dca91050e3216b485600a2ff83f0b8ab"
+      "sha256": "5b13a8d9702b5bdc30d02995cf071cad2125119b790a08f52064a1aa8fc185a8"
     },
     {
       "path": "shared/types/price.ts",
@@ -1290,7 +1290,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/peg-provenance.ts",
-      "sha256": "9012b7c8051764fce1289069a592469c42b91aa402a8f529230e2ba4e6962885"
+      "sha256": "d133e1305d5b599b0dc5356230652ec9dbdfd84aad621725b3458b62db7b7c2e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/publication-assessment.ts",
@@ -1306,7 +1306,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/reference-evidence.ts",
-      "sha256": "7eeb2a70d401e07abb5c681a998179b80067db16883ebc3f49b41f00e9e7dabf"
+      "sha256": "dc29bbfcc558fb1e29e323238b37a2ca9f47134e434890b8c7d3a74e57e735d3"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-ccip-proof.ts",
@@ -1355,7 +1355,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-18-block-26441773-shock-coverage.json.gz"
     }
   ],
-  "digest": "30a2991fcc8dec4bae7e2eee55a698c4abb9f3da1337a39cb1cb99841030b84f"
+  "digest": "e066df1777d8b1a11b1e5f21fff7126b042b70ef8cd9677b74f877c7edfd9a02"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

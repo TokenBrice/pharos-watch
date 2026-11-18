@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, isParityPrice, normalizePegType } from "@shared/lib/peg-rates";
+import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getReferenceMarket, getReferenceMarketClosureStart, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
@@ -193,22 +194,29 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         pegRateSource,
         pegRateContributorCount,
       });
-    const pegRefAt = (quoteObservedAtSec: number | null) => pegReferenceTrusted && pegType != null
-      ? getPegReference(pegType, scheduled && selected ? { [pegType]: selected.usdPerUnit } : pegRates, meta.commodityOunces, {
-        assetId: meta.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec,
-      }) : null;
-    const pegRef = pegRefAt(asset.priceObservedAt ?? null) ?? pegRefAt(dexPrice?.updatedAt ?? null) ?? 0;
-    const price = isParityPrice(asset) ? asset.price ?? null : null;
+    const hasEntitlement = market === "metal" && asset.commodityEntitlement !== undefined;
+    const ouncesAt = (quoteObservedAtSec: number | null) => getCommodityOuncesAtQuote(meta.commodityOunces,
+      scheduled || hasEntitlement ? { assetId: meta.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec } : undefined);
+    const pegRefFor = (ounces: number | null) => pegReferenceTrusted && pegType != null && ounces != null
+      ? getPegReference(pegType, scheduled && selected ? { [pegType]: selected.usdPerUnit } : pegRates, ounces) : null;
+    const parityPrice = isParityPrice(asset) ? asset.price ?? null : null;
+    const primaryClock = nowSec != null && parityPrice != null && (scheduled || hasEntitlement)
+      ? getDewsPrimaryQuoteClock(asset, nowSec) : null;
+    const primaryOunces = ouncesAt(primaryClock);
+    const dexOunces = ouncesAt(dexPrice?.updatedAt ?? null);
+    const price = primaryOunces == null ? null : parityPrice;
+    const dexPriceUsd = dexOunces == null ? null : dexPrice?.dexPriceUsd ?? null;
+    // Both legs use the same denominator only after each qualifies for the same unit.
+    const pegRef = pegRefFor(primaryOunces ?? dexOunces) ?? 0;
     const closureStart = scheduled ? getReferenceMarketClosureStart(market, nowSec) : null;
     const legacyMarketHeld = !scheduled && market != null && nowSec != null && pegRef > 0
       && isReferenceDeviationHeld(meta.flags.pegCurrency, nowSec, Math.max(
         deriveDepegSignal(price ?? NaN, pegRef)?.absRawBps ?? 0,
-        deriveDepegSignal(dexPrice?.dexPriceUsd ?? NaN, pegRef)?.absRawBps ?? 0,
+        deriveDepegSignal(dexPriceUsd ?? NaN, pegRef)?.absRawBps ?? 0,
       ));
-    const primaryClock = !scheduled || price == null ? null : getDewsPrimaryQuoteClock(asset, nowSec);
     const reference = pegReferenceTrusted ? selected : undefined;
-    const evaluateLeg = (leg: number | null, quoteObservedAtSec: number | null) => {
-      const legPegRef = pegRefAt(quoteObservedAtSec);
+    const evaluateLeg = (leg: number | null, quoteObservedAtSec: number | null, ounces: number | null) => {
+      const legPegRef = pegRefFor(ounces);
       const raw = leg == null || legPegRef == null ? null : deriveDepegSignal(leg, legPegRef)?.rawBps;
       return evaluateReferenceAdmission({
         ...(legPegRef != null && reference ? reference : { kind: "none" }),
@@ -218,15 +226,16 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       });
     };
     const referenceAdmission = scheduled ? {
-      primary: evaluateLeg(price, primaryClock),
-      dex: evaluateLeg(dexPrice?.dexPriceUsd ?? null, dexPrice?.updatedAt ?? null),
+      primary: evaluateLeg(parityPrice, primaryClock, primaryOunces),
+      dex: evaluateLeg(dexPrice?.dexPriceUsd ?? null, dexPrice?.updatedAt ?? null, dexOunces),
     } : undefined;
     const priorReference = sourceState.previousSignals.referenceDivergenceById?.get(meta.id);
     const carriedReferenceDivergence = closureStart != null && priorReference != null
       && priorReference.observedAtSec >= closureStart - REFERENCE_INTRADAY_BUDGET_SEC ? priorReference : undefined;
-    const venueSpreadBps = !scheduled ? undefined
-      : primaryClock != null && price != null && dexPrice && hasIndependentDewsVenues(asset, dexPrice)
-        ? numberValue(deriveDepegSignal(price, dexPrice.dexPriceUsd)?.absBps) : null;
+    const venueSpreadBps = !scheduled && !hasEntitlement ? undefined
+      : !legacyMarketHeld && primaryClock != null && price != null && dexPrice && dexPriceUsd != null
+        && hasIndependentDewsVenues(asset, dexPrice)
+        ? numberValue(deriveDepegSignal(price, dexPriceUsd)?.absBps) : null;
     const pegReferenceUnavailableReason = pegType == null
       ? "peg-type-unavailable"
       : !hasPegReference
@@ -236,8 +245,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
           : closureStart != null || legacyMarketHeld
             ? "reference-market-closed"
             : referenceAdmission && ![referenceAdmission.primary, referenceAdmission.dex].some((leg) => leg.status === "admitted")
-              ? (price != null ? referenceAdmission.primary.reason : referenceAdmission.dex.reason)
-              : null;
+              ? (parityPrice != null ? referenceAdmission.primary.reason : referenceAdmission.dex.reason)
+              : primaryOunces == null && dexOunces == null ? "commodity-entitlement-unavailable" : null;
     const input: DEWSInput = {
       stablecoinId: meta.id,
       mcapUsd: current,
@@ -271,8 +280,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       venueSpreadBps,
       pegRateSource,
       pegRateContributorCount,
-      dexPriceUsd: dexPrice?.dexPriceUsd ?? null,
-      independentDexPrices: dexPrice?.independentPrices,
+      dexPriceUsd,
+      independentDexPrices: hasEntitlement ? dexPrice?.independentQuotes
+        ?.filter(({ observedAtSec }) => ouncesAt(observedAtSec) != null).map(({ price }) => price) : dexPrice?.independentPrices,
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
       hasBlacklistTracking,
@@ -323,7 +333,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         const signal = computeDivergSignal({
           ...input, price: null, dexPriceUsd: dex, venueSpreadBps: null, carriedReferenceDivergence: undefined,
           prevDivergAvailable: false,
-          referenceAdmission: { primary: referenceAdmission.primary, dex: evaluateLeg(dex, observedAtSec) },
+          referenceAdmission: { primary: referenceAdmission.primary, dex: evaluateLeg(dex, observedAtSec, ouncesAt(observedAtSec)) },
         });
         return signal.available && signal.value >= EVIDENCE_STRESS_THRESHOLD;
       });

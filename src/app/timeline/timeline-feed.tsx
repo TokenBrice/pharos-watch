@@ -7,8 +7,7 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { EventCard } from "@/components/tape/event-card";
 import { SEVERITY_LABEL as SEVERITY_LABEL_BARE } from "@shared/lib/classification/tape";
 import type { TapeEvent } from "@shared/types/tape-event";
-import { ApiFetchError, type ApiMeta } from "@/lib/api";
-import { DEPEG_CLAIM_RETRACTED_REASON, FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
+import type { ApiMeta } from "@/lib/api";
 import type { DepegEvent } from "@shared/types/peg";
 import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
@@ -24,7 +23,8 @@ interface TimelineFeedProps {
   controller: TimelineFeedController;
   logos: Record<string, string>;
   nowMs: number;
-  rawEvents: readonly TapeEvent[];
+  rawEventCount: number;
+  lastEventTs: number | null;
   /** An admitted response page, even an empty one, is observed data. */
   hasData: boolean;
   visibleEvents: readonly TapeEvent[];
@@ -43,7 +43,8 @@ interface TimelineFeedProps {
   isFetchingNextPage: boolean;
   nextCursor: string | null;
   total: number | null;
-  permalinkSuppressed?: boolean;
+  permalinkResolved: boolean;
+  permalinkRetracted: boolean;
   meta: ApiMeta | null;
   dataUpdatedAt: number;
   permalinkId: string;
@@ -67,7 +68,8 @@ export function TimelineFeed({
   controller,
   logos,
   nowMs,
-  rawEvents,
+  rawEventCount,
+  lastEventTs,
   hasData,
   visibleEvents,
   openIncidents,
@@ -84,7 +86,8 @@ export function TimelineFeed({
   isFetchingNextPage,
   nextCursor,
   total,
-  permalinkSuppressed = false,
+  permalinkResolved,
+  permalinkRetracted,
   meta,
   dataUpdatedAt,
   permalinkId,
@@ -102,23 +105,12 @@ export function TimelineFeed({
   onLoadMore,
   sentinelRef,
 }: TimelineFeedProps) {
-  const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
   // Layout Instability scores nodes that move, not nodes that appear. The census rows
   // land above the tape after it has painted, so the tape holds the pre-clock skeleton
   // until the census's first read settles and then mounts (a new node) at its final
   // offset; the swapped slot carries a different key so React replaces it, never moves it.
 
-  let permalinkRetracted = false;
-  if (permalinkBufferError instanceof ApiFetchError && permalinkBufferError.status === 404 && permalinkBufferError.bodyText) {
-    try {
-      const body: unknown = JSON.parse(permalinkBufferError.bodyText);
-      if (typeof body === "object" && body !== null && "reason" in body) {
-        permalinkRetracted = body.reason === FLOW_CLAIM_RETRACTED_REASON || body.reason === FREEZE_CLAIM_RETRACTED_REASON || body.reason === DEPEG_CLAIM_RETRACTED_REASON;
-      }
-    } catch {
-      // An unreadable 404 body cannot establish a retraction.
-    }
-  }
+  const showPermalinkNotice = permalinkRetracted || (!permalinkBufferIsLoading && !permalinkBufferError && !permalinkResolved);
 
   return (
     <>
@@ -126,7 +118,7 @@ export function TimelineFeed({
         error={error}
         hasData={hasData}
         onRetry={() => {
-          if (permalinkBufferError) refetchPermalink();
+          if (permalinkBufferError && !permalinkRetracted) refetchPermalink();
           void refetch();
         }}
         queries={[
@@ -149,7 +141,7 @@ export function TimelineFeed({
         ]}
       />
 
-      {permalinkId && !permalinkBufferIsLoading && (!permalinkBufferError || permalinkRetracted) && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
+      {permalinkId && showPermalinkNotice ? (
         <div
           title={permalinkId}
           className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
@@ -202,7 +194,7 @@ export function TimelineFeed({
           <div>
             <EventSkeleton />
           </div>
-        ) : !hasData ? null : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
+        ) : !hasData ? null : visibleEvents.length === 0 && !(hasNextPage && rawEventCount > 0) ? (
           <div>
             <EmptyState
               onClearAll={emptyStateFallback.apply}

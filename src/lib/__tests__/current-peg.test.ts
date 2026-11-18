@@ -32,6 +32,21 @@ describe("isCurrentDeviationHeld", () => {
     };
     expect(resolveCurrentDeviationBps(row, null, "GOLD")).toBeNull();
   });
+
+  it.each([2499.6, -2499.6, 2500.4, -2500.4])("uses the same quote pair before rounding %s bps at closure", (bps) => {
+    const row = makeStablecoin({
+      id: "eurc-circle", pegType: "peggedEUR", price: 1.1 * (1 + bps / 10000),
+      priceSource: "coingecko", priceObservedAt: SUNDAY,
+      currentPeg: {
+        currentDeviationBps: Math.round(bps), pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: SUNDAY - 60 },
+        pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
+      },
+    });
+    const held = Math.abs(bps) < 2500;
+    expect(resolveCurrentDeviation(row, null, "EUR")).toEqual({
+      deviationBps: held ? null : Math.round(bps), referenceNote: held ? "Reference market closed" : null,
+    });
+  });
 });
 
 describe("resolveCurrentDeviationBps", () => {

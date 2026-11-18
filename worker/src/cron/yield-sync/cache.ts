@@ -40,9 +40,12 @@ import {
   sha256Hex,
 } from "@shared/lib/sha256";
 import {
+  getSupplementalFamilyStaleThresholdSec,
+  resolveYieldSourceKeyRoute,
   type SupplementalSourceFamilyKey,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "./family-registry";
+import { getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 
 export function isYieldRelevantDlPool(
   pool: Pick<DlPool, "pool" | "symbol" | "stablecoin" | "exposure">,
@@ -921,14 +924,6 @@ function isSupplementalSourceFamilyKey(value: unknown): value is SupplementalSou
     && (SUPPLEMENTAL_SOURCE_FAMILY_KEYS as readonly string[]).includes(value);
 }
 
-interface YieldSupplementalSourcesCachePayload {
-  version: 1;
-  updatedAt: number;
-  source: string;
-  sourceCount: number;
-  data: ResolvedYieldCandidate[];
-}
-
 interface ParsedYieldSupplementalSourcesCache {
   candidates: ResolvedYieldCandidate[];
   updatedAt: number;
@@ -979,8 +974,12 @@ function filterValidSupplementalCandidates(
   for (const row of rows) {
     let candidate = row;
     if (isRecord(row) && isRecord(row.yield) && "sourceObservedAtV2" in row.yield) {
-      const { sourceObservedAtV2, ...source } = row.yield;
-      candidate = { ...row, yield: { ...source, sourceObservedAt: sourceObservedAtV2 } };
+      const { sourceObservedAtV2, currentApyV2, ...source } = row.yield;
+      candidate = { ...row, yield: {
+        ...source,
+        sourceObservedAt: sourceObservedAtV2,
+        ...("currentApyV2" in row.yield ? { currentApy: currentApyV2 } : {}),
+      } };
     }
     if (isResolvedYieldCandidate(candidate, nowSec)) {
       candidates.push(candidate);
@@ -1006,23 +1005,38 @@ export function buildYieldSupplementalFamilyCache(
   candidates: ResolvedYieldCandidate[],
   updatedAt = Math.floor(Date.now() / 1000),
 ): string {
-  const payload: YieldSupplementalSourcesCachePayload = {
-    version: YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION,
-    updatedAt,
-    source: "sync-yield-supplemental",
-    sourceCount: candidates.length,
-    // Each row carries both projections in one CAS generation. The v1 reader
-    // consumes the fetch clock; the v2 reader restores the upstream clock.
-    data: candidates.map((candidate) => candidate.yield.sourceFetchedAt == null ? candidate : {
+  let rollbackUpdatedAt = updatedAt;
+  const data = candidates.map((candidate) => {
+    const source = candidate.yield;
+    if (source.sourceFetchedAt == null) return candidate;
+    const family = resolveYieldSourceKeyRoute(source.sourceKey)?.family;
+    let unavailableForRollback = false;
+    if (source.sourceObservedAt != null && family != null) {
+      const validUntil = source.sourceObservedAt + getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000;
+      unavailableForRollback = validUntil < Math.max(updatedAt, source.sourceFetchedAt);
+      if (!unavailableForRollback) {
+        // The legacy worker can still sample rejected rows. Expire its family before any projected quote goes stale.
+        rollbackUpdatedAt = Math.min(rollbackUpdatedAt, validUntil - getSupplementalFamilyStaleThresholdSec(family));
+      }
+    }
+    return {
       ...candidate,
       yield: {
-        ...candidate.yield,
-        sourceObservedAt: candidate.yield.sourceFetchedAt,
-        sourceObservedAtV2: candidate.yield.sourceObservedAt ?? null,
+        ...source,
+        sourceObservedAt: source.sourceObservedAt ?? source.sourceFetchedAt,
+        sourceObservedAtV2: source.sourceObservedAt ?? null,
+        ...(unavailableForRollback ? { currentApy: null, currentApyV2: source.currentApy } : {}),
       },
-    }),
-  };
-  return JSON.stringify(payload);
+    };
+  });
+  return JSON.stringify({
+    version: YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION,
+    updatedAt: rollbackUpdatedAt,
+    ...(rollbackUpdatedAt === updatedAt ? {} : { updatedAtV2: updatedAt }),
+    source: "sync-yield-supplemental",
+    sourceCount: candidates.length,
+    data,
+  });
 }
 
 export function parseYieldSupplementalSourcesCache(
@@ -1040,7 +1054,7 @@ export function parseYieldSupplementalSourcesCache(
     }
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
       const { candidates, rejectedCount } = filterValidSupplementalCandidates(parsed.data, nowSec);
-      const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
+      const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAtV2 ?? parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
         logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected supplemental sources cache with future updatedAt");
         return null;

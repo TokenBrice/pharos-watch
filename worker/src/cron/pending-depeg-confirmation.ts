@@ -10,6 +10,8 @@ import {
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
+import { getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { assessDetectionReference, assessIndependentPeerMove, benchmarkAdmission, canPersistPeerEvents, getClockedTradedNativeQuote, getTradedNativeEvidence, hasIncompatibleParityPrice, independentPrimaryTrustInput, observationPegMeta, independenceKey, isIndependentVenue, sourceObservationClock } from "./depeg-detection/reference-policy";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { getDepegRecoveryThresholdBps, getDepegThresholdBps } from "../lib/depeg-threshold-policy";
@@ -49,6 +51,11 @@ import {
 } from "../lib/native-quote-plausibility";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
+
+export const SELECT_PENDING_CONFIRMATION_SQL = `SELECT pending.*, (
+  SELECT MAX(event.ended_at) FROM depeg_events event
+  WHERE event.stablecoin_id = pending.stablecoin_id AND event.source = 'live'
+) AS last_live_event_end_at FROM depeg_pending pending`;
 
 export type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
 export type ConfirmationTimestampStatus = "fresh" | "missing" | "invalid" | "future" | "stale";
@@ -147,6 +154,8 @@ export interface ConfirmationPlanReady {
   recoveryThreshold?: number;
   independentConfirmation?: { source: string; peerReceipt?: string; nativeReceipt?: DepegObservationReceipt };
   independentBasis?: boolean;
+  eventStartedAt?: number;
+  pendingSourceFamilies?: string[];
   allowsUsdObservation?: (price: number, observedAt: number | null | undefined, maxAgeSec?: number) => boolean;
   nativeSignal: DepegSignal | null;
   nativePegQuote: NativePegQuote | undefined;
@@ -204,7 +213,10 @@ export function isNativeQuoteForPending(row: PendingDepegRow, quote: NativePegQu
 export function pickPeakCandidate(candidates: PeakCandidate[], fallback: PeakCandidate & { bps: number; price: number }) {
   const comparable = candidates.filter((candidate) => candidate.quoteDomain === fallback.quoteDomain && candidate.price != null);
   const peakBps = pickMoreSevereBps(...comparable.map((candidate) => candidate.bps)) ?? fallback.bps;
-  const matching = comparable.find((candidate) => candidate.bps === peakBps && candidate.price != null);
+  const first = comparable.find((candidate) => candidate.bps === peakBps);
+  // Exact ties can add a paired reference to the same quote without replacing a historical peak.
+  const matching = first?.pegReference != null ? first : comparable.find((candidate) =>
+    candidate.bps === peakBps && candidate.price === first?.price && candidate.pegReference != null) ?? first;
   return {
     bps: peakBps,
     price: matching?.price ?? fallback.price ?? null,
@@ -383,6 +395,10 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   }
   const silverEntitlementRequired = row.stablecoin_id === "xagm-matrixdock";
   const meta = suppliedAsset ? observationPegMeta(suppliedAsset, registryMeta) : registryMeta;
+  const hasSecondaryQuoteUnit = (observedAt: number | null | undefined) =>
+    !silverEntitlementRequired || getCommodityOuncesAtQuote(meta?.commodityOunces, {
+      assetId: row.stablecoin_id, commodityEntitlement: suppliedAsset?.commodityEntitlement, quoteObservedAtSec: observedAt,
+    }) != null;
   const suppliedNativePegQuote = silverEntitlementRequired ? undefined : inputNativePegQuote;
   const incompatibleParity = suppliedAsset != null && hasIncompatibleParityPrice(suppliedAsset);
   const asset = incompatibleParity ? { ...suppliedAsset, price: null, priceObservedAt: null } : suppliedAsset;
@@ -418,10 +434,23 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     ? independenceKey(onset.venue) : "";
   const isPeerRelative = onset?.basis === "peer-relative" || parsePendingReason(pendingState.reason).has("peer-relative");
   const outcomeState = pendingState;
+  const market = getReferenceMarket(registryMeta?.flags.pegCurrency);
+  const onsetSession = market == null ? null : getReferenceSessionState(market, seenState.firstSeenAt);
+  const onsetBoundary = onsetSession?.open ? onsetSession.sessionOpenedAtSec : onsetSession?.closureStartSec;
+  const eventStartedAt =
+    pendingState.firstSeenAt > seenState.firstSeenAt ||
+    (row.last_live_event_end_at != null && pendingState.firstSeenAt <= row.last_live_event_end_at) ||
+    (onsetBoundary != null && pendingState.firstSeenAt < onsetBoundary)
+      ? seenState.firstSeenAt : pendingState.firstSeenAt;
 
   if (openSet.has(row.stablecoin_id)) {
     return { kind: "mutate", statements: buildOutcomeAndDeleteStmts(
       db, row, outcomeState, "superseded", now, {}, "open-event-already-exists",
+    ) };
+  }
+  if (row.last_live_event_end_at != null && row.last_live_event_end_at > seenState.firstSeenAt) {
+    return { kind: "mutate", statements: buildOutcomeAndDeleteStmts(
+      db, row, outcomeState, "superseded", now, {}, "live-event-ended-after-pending-discovery",
     ) };
   }
 
@@ -435,7 +464,11 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const defaultThreshold = getDepegThresholdBps(pegType ?? row.peg_type);
   const recoveryThreshold = getDepegRecoveryThresholdBps(pegType ?? row.peg_type);
   const currentMove = asset?.price == null ? null : deriveDepegSignal(asset.price, refreshedPegRef);
-  const reference = meta ? assessDetectionReference({ asset, meta, pegRates, pegRateSources, now, signal: currentMove, referenceContext: input.referenceContext }) : null;
+  const legacyPendingDiscoveredAt = !isNativeOrigin && !isPeerRelative && !silverEntitlementRequired &&
+    !onset?.referenceAdmission && !latest?.referenceAdmission && Number.isFinite(row.peg_reference) && row.peg_reference > 0
+    ? seenState.firstSeenAt : undefined;
+  const reference = meta ? assessDetectionReference({ asset, meta, pegRates, pegRateSources, now, signal: currentMove,
+    legacyPendingDiscoveredAt, referenceContext: input.referenceContext }) : null;
   const usableNative = native && (reference == null || native.quote.updatedAt >= reference.boundary) ? native : null;
   const independentNative = usableNative && isIndependentVenue(asset, usableNative.venue) &&
     (!isNativeOrigin || onsetNativeVenue !== "") ? usableNative : null;
@@ -451,7 +484,9 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const peerMove = reference && asset && (isNativeOrigin || peerWritesEnabled) && (isPeerRelative || !directAdmitted)
     ? assessIndependentPeerMove({ reference, asset,
       native: isNativeOrigin && (!onsetNativeVenue || usableNative?.venue === onsetNativeVenue) ? null : usableNative,
-      pools: input.challengerPools, excludedVenue: onsetNativeVenue || undefined,
+      pools: silverEntitlementRequired
+        ? input.challengerPools?.filter((pool) => hasSecondaryQuoteUnit(pool.observedAt)) : input.challengerPools,
+      excludedVenue: onsetNativeVenue || undefined,
       threshold: defaultThreshold, recoveryThreshold, now })
     : null;
   const nativeBasis = isNativeOrigin && clockedNative != null;
@@ -695,8 +730,13 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     recoveryThreshold,
     independentConfirmation,
     independentBasis,
-    allowsUsdObservation: reference && meta ? (price, observedAt, quoteMaxAgeSec) => {
-      if (peerMove || (silverEntitlementRequired && asset?.commodityEntitlement?.quoteObservedAtSec !== observedAt)) return false;
+    eventStartedAt,
+    pendingSourceFamilies: latest?.seenAt === seenState.lastSeenAt && latest.price === seenState.lastPrice &&
+      (onset == null || (onset.seenAt ?? onset.observedAt) === seenState.firstSeenAt)
+      ? pendingReceipt?.sourceFamilies ?? undefined : undefined,
+    allowsUsdObservation: (reference && meta) || silverEntitlementRequired ? (price, observedAt, quoteMaxAgeSec) => {
+      if (peerMove || !hasSecondaryQuoteUnit(observedAt)) return false;
+      if (!reference || !meta) return true;
       const signal = deriveDepegSignal(price, pegReference);
       const read = assessDetectionReference({ asset, meta, pegRates, pegRateSources, now,
         signal, quoteObservedAt: observedAt ?? null, quoteMaxAgeSec, cohort: reference.peer, referenceContext: input.referenceContext });

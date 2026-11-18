@@ -80,7 +80,7 @@ import { hasUnverifiedDepegPeak } from "../../src/lib/depeg-event-config";
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "../../src/lib/depeg-event-page-data";
 import { readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { PROTOCOL_LOGOS, prettifyProtocol } from "../../src/lib/dex-display-constants";
-import { DIGEST_ENTRIES } from "../../src/lib/digest-registry";
+import { DIGEST_CORRECTIONS, DIGEST_ENTRIES } from "../../src/lib/digest-registry";
 import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
 import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
@@ -887,14 +887,18 @@ function depegHubRuler(): SocialCardHubSubject {
 function digestCard(digest: (typeof DIGEST_ENTRIES)[number]): SocialCardSpec {
   const day = dayLabel(digest.date);
   const weekly = digest.digestType === "weekly";
+  const correctionExcerpt = DIGEST_CORRECTIONS.get(digest.date)?.excerpt;
   // Early editions repeat the title as the text's first paragraph.
-  const lead = firstSentence(digest.text.startsWith(digest.title) ? digest.text.slice(digest.title.length) : digest.text);
+  const lead = correctionExcerpt ?? firstSentence(digest.text.startsWith(digest.title) ? digest.text.slice(digest.title.length) : digest.text);
   return record(`/digest/${digest.date}/`, {
     label: weekly ? "Weekly recap" : "Daily digest", accent: "ink", masthead: true,
     dateline: digest.editionNumber > 0 ? `No. ${digest.editionNumber} · ${day}` : day,
     title: mustFit(`digest title for ${digest.date}`, B.record.title, digest.title),
     dek: fit(B.record.dek, lead),
-  }, { title: digest.title, description: CLAUSE_DASH.test(lead) ? `${weekly ? "Weekly recap" : "Daily digest"} for ${day}.` : `${day}: ${lead}` });
+  }, {
+    title: digest.title,
+    description: correctionExcerpt ?? (CLAUSE_DASH.test(lead) ? `${weekly ? "Weekly recap" : "Daily digest"} for ${day}.` : `${day}: ${lead}`),
+  });
 }
 
 function methodologyLaneCard(lane: (typeof METHODOLOGY_CHANGELOG_REGISTRY)[number]): SocialCardSpec {

@@ -15,6 +15,23 @@ it.each([[1_794_603_600, 0], [1_794_430_800, 1]])("holds sub-severe EUR readings
 });
 
 describe("extractDepegEvents peak corroboration", () => {
+  it("blocks an older supply from carrying across a rejected USD checkpoint", () => {
+    const day = 86_400;
+    const quotes = points([1, 1.02, 1.03, 1]).map((point) => ({ ...point, timestamp: point.timestamp + 5 * day }));
+    const boundary = quotes[0]!.timestamp - day;
+    const rejected = { date: String(boundary), totalCirculatingUSD: { peggedUSD: -1 }, totalCirculating: { peggedUSD: 910_000 } };
+    const valid = { date: rejected.date, totalCirculatingUSD: { peggedUSD: 1_200_000 } };
+    const history = [
+      { date: String(boundary - 3 * day), totalCirculatingUSD: { peggedUSD: 1_200_000 } },
+      { date: String(boundary + 2 * day), totalCirculatingUSD: { peggedUSD: 900_000 } },
+    ];
+    const run = (...rows: typeof history) => extractDepegEvents(quotes, () => 1, "peggedUSD", parseSupplyData([...history, ...rows]));
+    expect(run()).toMatchObject([{ peakDeviationBps: 300 }]);
+    expect(run(rejected)).toEqual([]);
+    expect(run(rejected, valid)).toHaveLength(1);
+    expect(run(valid, rejected)).toHaveLength(1);
+  });
+
   it("does not let an older large market cap cross a newer commodity supply boundary", () => {
     const at = Date.parse("2026-11-18T12:00:00Z") / 1000;
     const boundary = at - 86400;

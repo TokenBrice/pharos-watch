@@ -1,4 +1,6 @@
 import { createCurrentPegReader } from "../lib/current-peg-observations";
+import { hasFxReferenceEvidence } from "@shared/lib/current-peg-observations";
+import { hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -171,9 +173,20 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     }
   }
 
-  const readPeg = createCurrentPegReader({ ...stablecoinsResult.payload, asOf: stablecoinsResult.updatedAt });
+  const hasFxEvidence = hasFxReferenceEvidence(stablecoinsResult.payload.fxReferenceObservations);
+  const readPeg = createCurrentPegReader({
+    ...stablecoinsResult.payload,
+    peggedAssets: hasFxEvidence ? peggedAssets : activePeggedAssets,
+    asOf: stablecoinsResult.updatedAt,
+  });
   const response = aggregateChains({
-    peggedAssets: activePeggedAssets.map((asset) => ({ ...asset, currentPeg: readPeg(asset) })),
+    peggedAssets: activePeggedAssets.map((asset) => {
+      const peg = asset.currentPeg;
+      // A legacy list comparison uses the list's cohort. Explicit refusals still hold.
+      const useChainReference = !hasFxEvidence && peg?.currentDeviationBps != null &&
+        !peg.currentPriceUnavailable && !peg.pegReferenceUnavailable && !hasPublishedDeviation(peg);
+      return { ...asset, currentPeg: readPeg(useChainReference ? { ...asset, currentPeg: undefined } : asset) };
+    }),
     safetyScores,
     updatedAt: stablecoinsResult.updatedAt,
     ...(detailChainId != null ? { detailChainId } : {}),

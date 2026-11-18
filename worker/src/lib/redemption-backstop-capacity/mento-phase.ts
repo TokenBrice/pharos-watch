@@ -62,6 +62,10 @@ export function projectMentoMarketPhase(
     return delayClock === "stored" || delay === entry.settlementDelaySec ? entry : { ...entry, settlementDelaySec: delay };
   }
 
+  return withholdMentoMarketPhase(entry);
+}
+
+export function withholdMentoMarketPhase(entry: RedemptionBackstopEntry): RedemptionBackstopEntry {
   if (entry.resolutionState !== "resolved" && !entry.capacityProfile && entry.routeStatus === "unknown") return entry;
   return {
     ...entry,

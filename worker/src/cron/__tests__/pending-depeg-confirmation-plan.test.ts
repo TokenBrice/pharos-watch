@@ -12,9 +12,10 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 import { buildPendingClosureHoldStatements, hasCurrentPendingClosureVerdict, buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
-import { buildConfirmationPlan, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
+import { buildConfirmationPlan, SELECT_PENDING_CONFIRMATION_SQL, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
+import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 
-import { attachDetectionReferenceContext } from "../depeg-detection/reference-policy";
+import { attachDetectionReferenceContext, deriveDetectionPegRates } from "../depeg-detection/reference-policy";
 import { referenceState, tradedPair } from "../depeg-detection/__tests__/reference-fixtures";
 
 const NOW_SEC = 1_700_000_000;
@@ -126,10 +127,83 @@ function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanI
 afterEach(() => { for (const sqlite of openDbs.splice(0)) sqlite.close(); });
 
 describe("buildConfirmationPlan", () => {
+  it("requires the XAGm entitlement to match the challenger quote with legacy FX", async () => {
+    const { db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 0, 3) / 1_000;
+    const id = "xagm-matrixdock";
+    const meta = { ...goldMeta, id, flags: { ...goldMeta.flags, pegCurrency: "SILVER" as const } };
+    const unit = 29.95142466;
+    const input = makeInput(db, { kind: "ready", now, meta, rates: { peggedSILVER: 30 },
+      rateSources: { peggedSILVER: "fallback" },
+      row: { stablecoin_id: id, peg_type: "peggedSILVER", peg_reference: unit },
+      asset: { pegType: "peggedSILVER", price: unit * 0.98, commodityEntitlement: {
+        source: "matrixdock-frs", generation: "ethereum:1250", ozPerToken: 0.998380822,
+        observedAtSec: now - 90, quoteObservedAtSec: now - 30,
+      } },
+    });
+    attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
+    const plan = buildConfirmationPlan(input);
+    if (plan.kind !== "ready") throw new Error("Expected a valid primary entitlement");
+    const status = async (observedAt: number) => (await collectConfirmationEvidence({
+      ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), cexAllowed: false, cexPrices: null,
+      coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+      poolChallengers: new Map([[id, [{ price: unit * 0.97, tvlUsd: 8e6, protocol: "curve",
+        sourceFamily: "curve", chain: "ethereum", observedAt }]]]),
+    })).poolStatus;
+    expect(await status(now - 240)).toBe("insufficient");
+    expect(await status(now - 30)).toBe("confirm");
+  });
+
+  it("falls back to a legacy same-session stored reference only when independent FX evidence is absent", async () => {
+    const { db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 12, 16, 40) / 1_000;
+    const input = makeInput(db, { kind: "ready", now, meta: eurMeta,
+      row: { stablecoin_id: eurMeta.id, peg_type: "peggedEUR", peg_reference: 1.1, first_price: 1.078, last_price: 1.078 },
+      asset: { pegType: "peggedEUR", price: 1.078, priceSource: "coingecko", circulating: { peggedEUR: 100e6 } },
+    });
+    const resolve = async (fxState: Parameters<typeof deriveDetectionPegRates>[5]) => {
+      const rates = await deriveDetectionPegRates(db, [input.asset!], new Map([[eurMeta.id, eurMeta]]), new Set(), undefined, fxState, now);
+      return buildConfirmationPlan({ ...input, pegRates: rates.rates, pegRateSources: rates.sources, pegRateCounts: rates.counts });
+    };
+    expect(await resolve(null)).toMatchObject({ kind: "ready", pegReference: 1.1 });
+    expect(await resolve({ ...referenceState({}, now - 60), observations: {} }))
+      .toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
+  });
+
+  it("keeps the discovery onset when a qualifying quote predates recovery or reopening", async () => {
+    const { sqlite, db } = fixture();
+    const discovery = Date.UTC(2026, 10, 18, 12, 45) / 1_000;
+    sqlite.prepare(`INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+      started_at, ended_at, start_price, peak_price, peg_reference, source, close_reason)
+      VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -300, ?, ?, 0.97, 0.97, 1, 'live', 'recovered-primary')`)
+      .run(discovery - 2700, discovery - 900);
+    for (const [id, peg, first, quote, pegRef] of [
+      ["usdt-tether", "peggedUSD", discovery, discovery - 960, 1],
+      ["paxg-paxos", "peggedGOLD", Date.UTC(2026, 10, 22, 23, 0, 15) / 1000, Date.UTC(2026, 10, 22, 22, 41, 15) / 1000, 4100],
+    ] as const) {
+      const now = first + 900;
+      const meta = peg === "peggedGOLD" ? goldMeta : undefined;
+      const args = { stablecoinId: id, symbol: id, pegType: peg, pegReference: pegRef, direction: "below" as const,
+        price: pegRef * 0.98, bps: -200, reason: "low-confidence" };
+      await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, quoteObservedAt: quote }).run();
+      await buildUpsertPendingDepegStmt(db, { ...args, seenAt: now, quoteObservedAt: first + 45 }).run();
+      const row = sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).all().find((row) => row.stablecoin_id === id) as unknown as PendingDepegRow;
+      const input = makeInput(db, { kind: "ready", row, now, meta, rates: { [peg]: pegRef }, rateSources: { [peg]: "fallback" },
+        asset: { pegType: peg, price: args.price } });
+      attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
+      const plan = buildConfirmationPlan(input);
+      if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
+      expect(plan.pendingState.firstSeenAt).toBe(quote);
+      await db.batch(evaluatePromotionDecision({ db, plan, evidence: { ...plan.evidence, poolStatus: "confirm" }, now }));
+      expect(sqlite.prepare("SELECT started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL").get(id))
+        .toEqual({ started_at: first });
+    }
+  });
+
   it.each(["clocked", "legacy"] as const)("continues a severe pre-close pending using the %s weekend reference", (mode) => {
     const { db } = fixture();
-    const close = Date.UTC(2026, 10, 13, 22) / 1000;
-    const now = close + 2.5 * 3600;
+    const close = Date.UTC(2026, 10, 13, mode === "legacy" ? 21 : 22) / 1000;
+    const now = Date.UTC(2026, 10, 14, 0, 30) / 1000;
     const input = makeInput(db, { kind: "ready", now, meta: eurMeta, rates: { peggedEUR: 1.1 },
       rateSources: { peggedEUR: "fx" }, asset: { pegType: "peggedEUR", price: 0.77, priceSource: "coingecko" },
       row: { stablecoin_id: eurMeta.id, peg_type: "peggedEUR", first_seen_at: close - 1800, last_seen_at: close - 900,

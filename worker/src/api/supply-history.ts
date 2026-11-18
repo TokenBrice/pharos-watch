@@ -75,8 +75,9 @@ export const handleSupplyHistory = async (
       return {
         date: row.snapshot_date,
         circulatingUsd: row.circulating_usd,
-        price: row.price,
-        ...(row.circulating_native == null ? {} : { circulatingNative: row.circulating_native }),
+        price: provenance?.marketQuote?.price ?? row.price,
+        ...(provenance?.nativeQuantityUnavailable ? { circulatingNative: null }
+          : row.circulating_native == null ? {} : { circulatingNative: row.circulating_native }),
         ...(row.valuation_price_usd == null ? {} : { valuationPriceUsd: row.valuation_price_usd }),
         ...(row.valuation_observed_at_sec == null ? {} : { valuationObservedAtSec: row.valuation_observed_at_sec }),
         supplyProvenance: provenance,

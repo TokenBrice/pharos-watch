@@ -104,6 +104,9 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { decideDepegAsset } from "../depeg-detection/decision-engine";
+import { buildUpsertPendingDepegStmt } from "../../lib/depeg-pending";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 
 const NOW_SEC = 1_700_000_000;
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -177,6 +180,32 @@ afterEach(() => {
 });
 
 describe("confirmPendingDepegs", () => {
+  it("withholds Binance confirmation when any qualifying pending quote used Binance", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValue({
+      ...makeBinancePartialBatch(), value: { prices: new Map([["USDT", 0.98]]), diagnostics: [] },
+    });
+    const id = "usdt-tether";
+    const quote = (now: number, source: string, price = 0.98) => makeAsset({
+      id, symbol: "USDT", price, priceSource: source, agreeSources: [source], circulating: { peggedUSD: 1e8 },
+      priceConfidence: "single-source", priceObservedAtMode: "upstream", priceObservedAt: now, priceUpdatedAt: now,
+    });
+    for (const sources of [["kraken", "binance", "kraken"], ["kraken", "kraken", "kraken"]]) {
+      const { db, sqlite } = openFixture();
+      for (const [index, source] of sources.entries()) {
+        const now = NOW_SEC - 2700 + index * 900;
+        const decision = decideDepegAsset({ now, asset: quote(now, source), meta: PSI_ELIGIBLE_META_BY_ID.get(id),
+          pegRates: { peggedUSD: 1 }, pegRateSources: { peggedUSD: "median" }, pegRateCounts: { peggedUSD: 1 } });
+        const command = decision.commands.find((command) => command.type === "upsert-pending");
+        if (!command) throw new Error("Expected a qualifying pending observation");
+        await buildUpsertPendingDepegStmt(db, command.payload).run();
+      }
+      await confirmPendingDepegs(db, [quote(NOW_SEC, "coingecko", 1)]);
+      const events = sqlite.prepare("SELECT peak_deviation_bps FROM depeg_events").all();
+      expect(events).toEqual(sources.includes("binance") ? [] : [{ peak_deviation_bps: -200 }]);
+    }
+  });
+
   it.each([
     { id: "ust-terra", age: 1800, outcome: "promoted" },
     { id: "iron-iron-finance", age: 1800, outcome: "promoted" },

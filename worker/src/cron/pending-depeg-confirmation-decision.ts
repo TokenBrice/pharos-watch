@@ -56,6 +56,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       hasHardConfirmation ||
       (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence")));
   if (temporalSameDirectionConfirmed && hasSourceConfirmation) {
+    const startedAt = plan.eventStartedAt ?? pendingState.firstSeenAt;
     const currentSignal =
       authoritativePrice != null
         ? deriveDepegSignal(authoritativePrice, pegReference)
@@ -66,7 +67,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         : null;
     const pendingReceipt = readPendingObservationReceipt(row.peer_basis_json);
     const trustedObservationAt = plan.trustedObservationAt != null &&
-      plan.trustedObservationAt >= pendingState.firstSeenAt && plan.trustedObservationAt <= now
+      plan.trustedObservationAt >= startedAt && plan.trustedObservationAt <= now
       ? plan.trustedObservationAt : pendingState.lastSeenAt;
     const currentCorroboration = plan.independentConfirmation?.peerReceipt
       ? JSON.parse(plan.independentConfirmation.peerReceipt) as unknown : undefined;
@@ -125,7 +126,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       pegType: row.peg_type,
       direction: pendingState.direction,
       peakDeviationBps: Math.round(peak.bps),
-      startedAt: pendingState.firstSeenAt,
+      startedAt,
       endedAt: null,
       startPrice: pendingState.firstPrice,
       peakPrice: peak.price,
@@ -139,11 +140,11 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       closeReason: null,
       provenance: null,
       ...(pendingReceipt?.onset && (pendingReceipt.onset.basis === "native-peg" || pendingReceipt.onset.basis === "peer-relative") &&
-        pendingReceipt.onset.observedAt === pendingState.firstSeenAt ? {
-          admittedCoverage: trustedObservationAt > pendingState.firstSeenAt + 1
-            ? [{ fromSec: pendingState.firstSeenAt, toSec: pendingState.firstSeenAt + 1 },
+        pendingReceipt.onset.observedAt === startedAt ? {
+          admittedCoverage: trustedObservationAt > startedAt + 1
+            ? [{ fromSec: startedAt, toSec: startedAt + 1 },
               { fromSec: trustedObservationAt, toSec: trustedObservationAt + 1 }]
-            : [{ fromSec: pendingState.firstSeenAt, toSec: Math.max(trustedObservationAt, pendingState.firstSeenAt) + 1 }],
+            : [{ fromSec: startedAt, toSec: Math.max(trustedObservationAt, startedAt) + 1 }],
         } : {}),
       priceCoverage: {
         intervals: [[trustedObservationAt, trustedObservationAt]], lastTrustedObservationAt: trustedObservationAt, gapStartedAt: null,

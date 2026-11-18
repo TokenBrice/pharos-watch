@@ -2,9 +2,6 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { weightedMedian } from "@shared/lib/stats";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
-import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
-import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
-import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { executeAtomicBatch } from "../../lib/db";
 import { DEX_PROTOCOL_SOURCE_MIN_TVL_USD } from "../../lib/dex-cron-constants";
@@ -15,7 +12,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { classifyDexObservationPrice } from "./price-sanity";
-import { CURVE_USDC_USD_VENUE_KEY, directUsdVenueKeys, getDexGroupLineage, getDexObservationLineage, type DexPriceLineage } from "./price-lineage";
+import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, getDexObservationLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
@@ -26,50 +23,28 @@ const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
 const DISPLAY_PRICE_RATIO_MIN = 0.5,
   DISPLAY_PRICE_RATIO_MAX = 2.0;
 
-const curveConfigById = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
-const hardMarkets = PRICING_SOURCE_REGISTRY.filter((source) => source.trustTier === "hard_market");
-
-function configuredPrimaryUpstreamKeys(stablecoinId: string, symbol: string | undefined): Set<string> {
-  const keys = new Set(hardMarkets.flatMap(({ key }) => directUsdVenueKeys(key, symbol) ?? []));
-  const visited = new Set<string>();
-  let config = curveConfigById.get(stablecoinId);
-  while (config && !visited.has(config.stablecoinId)) {
-    visited.add(config.stablecoinId);
-    keys.add(canonicalExitRouteScopedKey(config.chain, config.poolAddress));
-    keys.add(CURVE_USDC_USD_VENUE_KEY);
-    config = config.hop && curveConfigById.get(config.hop.viaStablecoinId);
-  }
-  return keys;
-}
-
 /** The rollback reader gates independent votes on this clock and ignores lineage. */
 function projectAggregateClock(clock: number | null, lineage: DexPriceLineage | null, claimedKeys: ReadonlySet<string>) {
-  const keys = lineage?.upstreamKeys;
-  return clock != null && keys && (keys.length === 0 || keys.some((key) => claimedKeys.has(key)))
+  return clock != null && !admitsRollbackDexVote(lineage?.upstreamKeys, claimedKeys)
     ? { aggregateObservedAt: null, displayAggregateObservedAt: clock }
     : { aggregateObservedAt: clock };
 }
 
-function projectProtocolClocks(
+function projectProtocolSources(
   sources: ReturnType<typeof aggregateProtocolSources>, clock: number | null, primaryKeys: ReadonlySet<string>, nowSec: number,
 ) {
-  if (clock == null) return sources;
-  const claimed = new Set(primaryKeys);
-  // A stale, unregistered, or thin protocol cannot displace an eligible sibling.
-  // Prefer the freshest eligible clock so a duplicate cannot shorten a co-leg's usable window.
-  const eligible = sources.filter((source) => source.upstreamKeys?.length && source.tvl >= DEX_PROTOCOL_SOURCE_MIN_TVL_USD &&
+  const admissible = sources.filter((source) => admitsRollbackDexVote(source.upstreamKeys, primaryKeys));
+  const current = new Set(admissible.filter((source) => source.tvl >= DEX_PROTOCOL_SOURCE_MIN_TVL_USD &&
     isFreshDexPoolObservation(source.observedAt, nowSec) &&
-    validatePricingSourceFreshness({ source: `${source.protocol}-dex`, observedAt: source.observedAt, nowSec }).accepted)
-    .sort((left, right) => right.observedAt! - left.observedAt!);
-  const clocks = new Map<typeof sources[number], ReturnType<typeof projectAggregateClock>>();
-  for (const source of new Set([...eligible, ...sources])) {
-    const projected = projectAggregateClock(clock, source, claimed);
-    clocks.set(source, projected);
-    if (projected.aggregateObservedAt != null) {
-      for (const key of source.upstreamKeys ?? []) claimed.add(key);
-    }
-  }
-  return sources.map((source) => ({ ...source, ...clocks.get(source) }));
+    validatePricingSourceFreshness({ source: `${source.protocol}-dex`, observedAt: source.observedAt, nowSec }).accepted));
+  const currentKeys = new Set([...current].flatMap((source) => source.upstreamKeys ?? []));
+  // A stale, unregistered, or thin protocol cannot link otherwise independent current sources.
+  const candidates = admissible.filter((source) => current.has(source) || admitsRollbackDexVote(source.upstreamKeys, currentKeys));
+  const selected = new Set(selectIndependentChallengerPools(candidates, (source) => current.has(source) ? source.observedAt! : 0));
+  const displaySources = sources.map((source) => clock == null ? source : { ...source, ...(selected.has(source)
+    ? { aggregateObservedAt: clock }
+    : { aggregateObservedAt: null, displayAggregateObservedAt: clock }) });
+  return { displaySources, votingSources: displaySources.filter((_, index) => selected.has(sources[index]!)) };
 }
 
 // The completeness fence compares the generation's row counts against the
@@ -348,10 +323,16 @@ export async function computeDexPrices({
     const lineage = getDexGroupLineage(medianInputObs);
     const countedLineage = publishedObservations === medianInputObs ? lineage : getDexGroupLineage(publishedObservations);
     const meta = TRACKED_META_BY_ID.get(id);
-    const primaryKeys = configuredPrimaryUpstreamKeys(id, meta?.symbol.toUpperCase());
+    const primaryKeys = configuredPrimaryUpstreamKeys(id);
+    // The old fallback reads protocol prices even when their voting clock is withheld.
+    const { displaySources, votingSources: sources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
+    const hasDisplayOnlySources = sources.length !== displaySources.length;
     const priceSources = {
-      ...projectAggregateClock(aggregateObservedAt, lineage, primaryKeys),
-      sources: projectProtocolClocks(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec),
+      ...(hasDisplayOnlySources && aggregateObservedAt != null
+        ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt }
+        : projectAggregateClock(aggregateObservedAt, lineage, primaryKeys)),
+      sources,
+      ...(hasDisplayOnlySources && { displaySources }),
       ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
       aggregateContributors: countedLineage?.aggregateContributors ?? [],
     };

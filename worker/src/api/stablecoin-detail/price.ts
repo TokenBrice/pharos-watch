@@ -3,7 +3,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isKinesisWrapperSupplyId, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
-import { admitSupplyBuckets, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
+import { admitSupplyBuckets, getUsdMarketCapBaselineOrNull, projectUsdMarketCapBaselineBuckets } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
@@ -105,7 +105,7 @@ export async function overlayCanonicalDetail(
       const previousDay = getUsdMarketCapBaselineOrNull(coin, "day");
       if (coin.supplyChangeBaselines !== undefined) detail.supplyChangeBaselines = coin.supplyChangeBaselines;
       detail.currentCirculatingPrevDayUSD = previousDay == null ? {}
-        : coin.supplyChangeBaselines?.day ? { [coin.pegType]: previousDay } : coin.circulatingPrevDay;
+        : projectUsdMarketCapBaselineBuckets(coin, "day", coin.circulatingPrevDay);
       const supplyObservedAt = coin.supplyObservedAt;
       detail.currentSupplyObservedAt = typeof supplyObservedAt === "number" && Number.isFinite(supplyObservedAt) &&
         supplyObservedAt > 0 && supplyObservedAt <= now ? supplyObservedAt : canonical.updatedAt;

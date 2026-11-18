@@ -65,6 +65,7 @@ export function findCommodityPeerMedian(
     contributors: observations.map((peer) => peer.assetId),
     contributorEvidence: [...peers].map(([provenanceKey, peer]) => ({
       assetId: peer.assetId, observedAtSec: peer.timestamp, provenanceKey, derivation: "spot-derived" as const,
+      observedAtMode: "upstream" as const,
     })),
   };
 }

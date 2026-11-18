@@ -1,5 +1,5 @@
 import { getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
-import { evaluateReferenceAdmission } from "@shared/lib/reference-admission";
+import { currentAdmissionUnavailableReason, evaluateReferenceAdmission } from "@shared/lib/reference-admission";
 import { FxReferenceObservationSchema } from "@shared/types/fx-reference";
 import type { ReferenceAdmission } from "@shared/types/reference-admission";
 import { z } from "zod";
@@ -46,10 +46,8 @@ export function hasCurrentPegAdmission(
   pegCurrency: string, admission: ReferenceAdmission | undefined, quoteObservedAtSec: number | null | undefined,
   referenceKind: string | undefined, clockSec: number,
 ): boolean {
-  return admission?.status === "admitted" && admission.reason !== "daily-fixing-above-band" &&
-    admission.quoteObservedAtSec === quoteObservedAtSec && admission.kind === referenceKind &&
-    clockSec - admission.referenceObservedAtSec <= admission.budgetSec &&
-    isSameReferenceSession(pegCurrency, admission.decisionAtSec, clockSec);
+  return admission?.status === "admitted" && admission.kind === referenceKind &&
+    currentAdmissionUnavailableReason(admission, pegCurrency, quoteObservedAtSec, clockSec) === null;
 }
 
 const DirectMetalReferenceSchema = z.strictObject({

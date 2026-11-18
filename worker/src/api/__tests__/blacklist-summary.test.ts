@@ -22,7 +22,9 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
-    { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
+    { match: "blacklist-summary-fence-capture", rows: [], first: {
+      generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null,
+    } },
     ...["blacklist_events", "blacklist_current_balances"].map((table) => ({
       match: "SELECT value FROM cache WHERE key = ?",
       matchBinds: [`blacklist:identity-reconcile:v1:${table}`],
@@ -76,6 +78,7 @@ function makeBlacklistSummaryFallbackTables() {
     { match: "FROM blacklist_sync_state", rows: [] },
     { match: "cron_runs", rows: [], first: null },
     { match: "blacklist-summary-snapshot-write", rows: [] },
+    { match: "DELETE FROM cache WHERE key = ? AND changes() = 1", rows: [] },
   ];
 }
 

@@ -160,10 +160,10 @@ export async function snapshotChainSupply(
     const kinesis = isKinesisWrapperSupplyId(asset.id);
     const wrapper = kinesis && isKinesisWrapperSupplyCutoverActive(asset.id, nowSec);
     const requiresStateClock = asset.id === "buidl-blackrock" || wrapper;
-    const observation = asset.chainPartition?.observedAt ?? asset.supplyObservedAt
-      ?? (requiresStateClock ? null : cache.updatedAt);
-    const stale = observation == null || !Number.isSafeInteger(observation) || observation <= 0 ||
-      observation > nowSec || nowSec - observation > CACHE_MAX_AGE_SEC ||
+    const totalObservedAt = asset.supplyObservedAt ?? (requiresStateClock ? null : cache.updatedAt);
+    const observations = asset.chainPartition ? [totalObservedAt, asset.chainPartition.observedAt] : [totalObservedAt];
+    const stale = observations.some((at) =>
+      at == null || !Number.isSafeInteger(at) || at <= 0 || at > nowSec || nowSec - at > CACHE_MAX_AGE_SEC) ||
       (kinesis && wrapper !== (asset.supplySource === "onchain-total-supply"));
     if (restored) restoredOnlyIds.add(String(asset.id));
     if (stale) staleSupplyIds.add(String(asset.id));

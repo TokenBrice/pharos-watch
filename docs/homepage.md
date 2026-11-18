@@ -71,6 +71,8 @@ Before hydration, a real core profile directory plus Screener link remains visib
 
 Deviation text/severity, sorting and native-price reference use the stablecoins row’s `currentPeg`, published with that row’s quote. Older cached rows without `currentPeg` retain the peg-summary fallback. The shared observed-price rule shows deviation for finite positive observed quotes, including low/fallback confidence; confidence describes evidence rather than suppressing a measured deviation. Nominal references remain unobserved. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
+Price sorting uses the unrounded value in the displayed unit, including the observed USD quote when the cell falls back to USD. Unavailable prices sort last in either direction.
+
 Pins retain filtered-sort ranks. CSV keeps those ranks, full displayed order (not the page/virtual slice) and source-generation preamble. Partial-chain supply stays visible; its 24h/7d changes and sparkline are withheld via the shared provenance classifier. Changes show `—`, sort last in either direction and export empty; observed zero stays numeric.
 
 ## Loading Strategy

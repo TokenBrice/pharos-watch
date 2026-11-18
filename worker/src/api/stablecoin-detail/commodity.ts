@@ -1,6 +1,7 @@
 import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { findAsOfSnapshot } from "@shared/lib/rate-series";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
@@ -13,7 +14,6 @@ import {
   DETAIL_UPSTREAM_MAX_RETRIES,
   DETAIL_UPSTREAM_TIMEOUT_MS,
   extractDefiLlamaCoinChartPrices,
-  findNearestPrice,
   logUpstreamFailure,
   logUpstreamException,
 } from "./shared";
@@ -59,7 +59,8 @@ export async function fetchCommodityTokens(
 
   let prices: { timestamp: number; price: number }[] = [];
   if (priceResult?.response.ok) {
-    prices = extractDefiLlamaCoinChartPrices(priceResult.body, config.geckoId);
+    prices = extractDefiLlamaCoinChartPrices(priceResult.body, config.geckoId)
+      .filter(({ timestamp, price }) => Number.isSafeInteger(timestamp) && timestamp > 0 && price > 0);
   } else if (useProtocol) {
     logUpstreamFailure(
       "defillama-coins-chart",
@@ -84,22 +85,15 @@ export async function fetchCommodityTokens(
   let tokens: Record<string, unknown>[] = [];
 
   if (tvlHistory.length > 0) {
-    const pricesByDay = new Map<number, typeof prices>();
-    for (const quote of prices) {
-      if (quote.price <= 0) continue;
-      const day = bucketUnixSecondsToUtcDay(quote.timestamp);
-      const quotes = pricesByDay.get(day) ?? [];
-      quotes.push(quote);
-      pricesByDay.set(day, quotes);
-    }
     tokens = tvlHistory.map((point) => {
-      const price = findNearestPrice(pricesByDay.get(bucketUnixSecondsToUtcDay(point.date)) ?? [], point.date);
+      const dayStart = bucketUnixSecondsToUtcDay(point.date);
+      const quote = findAsOfSnapshot(prices, point.date, (entry) => entry.timestamp, point.date - dayStart);
       const marketCap = point.totalLiquidityUSD;
       return {
         date: point.date,
         ...(xaut ? { supplySource: "defillama", supplyObservedAt: point.date } : {}),
         totalCirculatingUSD: { [config.pegType]: marketCap },
-        totalCirculating: buildNativeSupplyBuckets(config.pegType, marketCap, price),
+        totalCirculating: buildNativeSupplyBuckets(config.pegType, marketCap, quote?.price),
       };
     });
   }

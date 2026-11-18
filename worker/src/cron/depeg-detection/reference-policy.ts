@@ -2,8 +2,8 @@ import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { COMMODITY_MEDIAN_EXCLUDES, derivePegRates, isParityPrice, normalizePegType, type PegRatesResult, type PegRateSource } from "@shared/lib/peg-rates";
 import { computePeerRelativeDeviation, type PeerRelativeQuote } from "@shared/lib/peer-relative-deviation";
-import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getReferenceMarket, getReferenceSessionState, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { getPegTaxonomyByType, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceSessionState, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
 import { admittedDeviationBps, evaluateReferenceAdmission, getClosureBenchmarkBandBps, REFERENCE_INTRADAY_BUDGET_SEC, type ReferenceAdmissionInput } from "@shared/lib/reference-admission";
 import { classifyDirectionalSignal, deriveDepegSignal, signalCrossesThreshold, type DepegSignal } from "@shared/lib/depeg-signals";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
@@ -101,9 +101,8 @@ export function isIndependentDexObservation(asset: PegAssetBase | undefined, sam
 }, excludedVenue?: string): boolean {
   const lineage = readDexPriceLineage(sample);
   if (lineage.upstreamKeys?.length === 0 || lineage.pricePoolKeys?.length === 0) return false;
-  const venues = [sample.protocol, sample.sourceFamily,
-    ...(lineage.upstreamKeys ?? []).filter((key) => key.startsWith("venue:")).map((key) => key.slice(6)),
-  ].filter((key): key is string => !!key);
+  const upstreamVenues = (lineage.upstreamKeys ?? []).filter((key) => key.startsWith("venue:")).map((key) => key.slice(6));
+  const venues = [sample.protocol, sample.sourceFamily, ...upstreamVenues].filter((key): key is string => !!key);
   if (excludedVenue && venues.some((venue) => independenceKey(venue, asset?.id) === excludedVenue)) return false;
   if (!asset) return true;
   const primary = readDexPriceLineage(asset);
@@ -111,7 +110,11 @@ export function isIndependentDexObservation(asset: PegAssetBase | undefined, sam
   const own = primary.upstreamKeys ?? primary.pricePoolKeys;
   const other = lineage.upstreamKeys ?? lineage.pricePoolKeys;
   // Legacy USD rows used the DEX protocol quorum before either writer published pool ancestry.
-  if (!excludedVenue && normalizePegType(asset.pegType) === "peggedUSD" && (own == null || other == null)) return true;
+  if (!excludedVenue && normalizePegType(asset.pegType) === "peggedUSD" && (own == null || other == null)) {
+    const sources = [...getPrimaryTrustSources(asset), ...(asset.priceSource?.split("+") ?? [])];
+    return !upstreamVenues.some((venue) =>
+      sources.some((source) => independenceKey(source, asset.id) === independenceKey(venue, asset.id)));
+  }
   if (venues.length && !isIndependentVenue(asset, ...venues)) return false;
   const poolPriced = [...getPrimaryTrustSources(asset), ...(asset.priceSource?.split("+") ?? [])]
     .some((source) => resolveDepegSourceFamily(source)?.startsWith("dex:") || source === "curve-onchain");
@@ -127,6 +130,44 @@ export function independenceKey(source: string | undefined, assetId?: string): s
   if (name === "dl") return "defillama";
   if (name === "unknown" || name === "legacy-challenger-pools") return "";
   return name;
+}
+
+function hasVerifiedLegacyRate(fxState: FxRateState | null | undefined, pegKey: string): boolean {
+  return fxState?.metadataIdentity === "verified" && fxState.rates[pegKey] > 0 &&
+    fxState.legacyDetectionPegs?.includes(pegKey) === true && !fxState.observations?.[pegKey];
+}
+
+function restoreDirectClosureReferences(
+  derived: ReturnType<typeof derivePegRates>, fxState: FxRateState, now: number,
+): void {
+  const { observations, contributors } = derived;
+  if (!observations || !contributors) return;
+  // Probe denominator eligibility at the severe boundary. Each decision still checks its actual quote and move.
+  const probe = { quoteObservedAtSec: now, decisionAtSec: now, rawDeviationBps: asRawDeviationBps(DEPEG_SEVERITY_BPS.severe), purpose: "detection" } as const;
+  const samples = Object.values(fxState.referenceSourceSamples ?? {})
+    .sort((a, b) => b.observation.observedAtSec - a.observation.observedAtSec);
+  for (const { observation } of samples) {
+    const { pegKey, source, observedAtSec, publishedAtSec, usdPerUnit } = observation;
+    if (source === "peer-median" || (publishedAtSec ?? observedAtSec) > fxState.usableSyncAt ||
+      !fxState.selectedReferenceEvidence?.[pegKey]) continue;
+    const peg = getPegTaxonomyByType(pegKey);
+    const market = getReferenceMarket(peg?.currency);
+    if (!market || !isReferenceMarketClosed(market, now)) continue;
+    const kind = market === "metal" ? "fallback" : "fx";
+    const selected = observations[pegKey];
+    const current = derived.sources[pegKey] === "median"
+      ? evaluateReferenceAdmission({ ...probe, kind: "median", pegKey, contributors: contributors[pegKey] ?? [] })
+      : selected && evaluateReferenceAdmission({ ...probe, kind, observation: selected });
+    if (current?.status === "admitted" ||
+      evaluateReferenceAdmission({ ...probe, kind, observation }).status !== "admitted") continue;
+    for (const key of [pegKey, ...(peg?.pegTypeAliases ?? [])]) {
+      derived.rates[key] = usdPerUnit;
+      derived.sources[key] = kind;
+      derived.counts[key] ??= 0;
+      observations[key] = observation;
+      delete contributors[key];
+    }
+  }
 }
 
 export async function deriveDetectionPegRates(
@@ -163,7 +204,11 @@ export async function deriveDetectionPegRates(
       preCloseUsdPerUnit: fxState.referenceSessionEvidenceByPeg[peg].preCloseUsdPerUnit ?? undefined,
     },
   }]));
-  const derived = derivePegRates(eligible, selectedMeta, selectedRates, fxState?.selectedReferenceEvidence ?? observations, decisionAtSec);
+  const legacyBullionPegs = fxState?.legacyDetectionPegs?.filter((peg) => hasVerifiedLegacyRate(fxState, peg));
+  const derived = derivePegRates(eligible, selectedMeta, selectedRates, fxState?.selectedReferenceEvidence ?? observations, decisionAtSec, legacyBullionPegs);
+  if (fxState?.metadataIdentity === "verified") {
+    restoreDirectClosureReferences(derived, fxState, decisionAtSec ?? Math.floor(Date.now() / 1000));
+  }
   const referenceContext = attachDetectionReferenceContext(derived.rates, eligible, metaById, openIds, fxState, fxState?.legacyRepricingByPeg, derived.counts, derived);
   return { ...derived, referenceContext };
 }
@@ -233,6 +278,7 @@ export function assessDetectionReference(input: {
   signal: DepegSignal | null;
   quoteObservedAt?: number | null;
   quoteMaxAgeSec?: number;
+  legacyPendingDiscoveredAt?: number;
   cohort?: { reference: number; contributors: PeerRelativeQuote[] } | null;
   referenceContext?: DetectionReferenceContext;
 }) {
@@ -252,10 +298,19 @@ export function assessDetectionReference(input: {
   const legacyWriter = !fxState || (fxState.observations === undefined &&
     (fxState.metadataIdentity === "legacy-timestamp" || fxState.metadataIdentity === "verified") &&
     fxState.legacyRepricingByPeg === undefined && (!pegKey || !fxState.sources?.[pegKey]));
-  let legacyReference = legacyWriter && (!kind || kind === "median");
+  const legacyBullionMedian = market === "metal" && pegKey != null && hasVerifiedLegacyRate(fxState, pegKey);
+  // A median made solely from the pending asset cannot replace its denominator.
+  const subjectOnlyMedian = kind === "median" && asset != null &&
+    contributors.length === 1 && contributors[0]?.assetId === asset.id;
+  if (legacyWriter && session.open && input.legacyPendingDiscoveredAt != null &&
+      input.legacyPendingDiscoveredAt >= session.sessionOpenedAtSec && pegKey &&
+      (subjectOnlyMedian || (kind === undefined && !Object.prototype.hasOwnProperty.call(pegRates, pegKey))) &&
+      !Object.prototype.hasOwnProperty.call(fxState?.rates ?? {}, pegKey) && fxState?.selectedReferenceEvidence === undefined &&
+      run?.selected?.observations?.[pegKey] === undefined) return null;
+  let legacyReference = (legacyWriter || legacyBullionMedian) && (!kind || kind === "median");
   let firstProviderSample = false;
   let referenceInput: ReferenceAdmissionInput;
-  if (kind === "median" && pegKey) {
+  if (kind === "median" && pegKey && !legacyBullionMedian) {
     referenceInput = { ...args, kind, pegKey, contributors };
   } else {
     const verified = pegKey != null && fxState?.metadataIdentity === "verified" && fxState.rates[pegKey] === pegRates[pegKey];
@@ -282,14 +337,16 @@ export function assessDetectionReference(input: {
     referenceInput = (kind === "fx" || kind === "fallback") && parsed.success && pegKey &&
       parsed.data.pegKey === pegKey && parsed.data.usdPerUnit === pegRates[pegKey]
       ? { ...args, kind, observation: parsed.data,
-        generation: run?.generation ?? (verified ? String(fxState.usableSyncAt) : undefined),
+        generation: run?.generation ?? (fxState?.metadataIdentity === "verified" ? String(fxState.usableSyncAt) : undefined),
         preCloseUsdPerUnit: anchor?.preCloseUsdPerUnit, firstInSessionObservedAtSec: anchor?.firstInSessionObservedAtSec }
       : { ...args, kind: "none" };
   }
   const verdict: ReferenceAdmission = evaluateReferenceAdmission(referenceInput);
   legacyReference ||= firstProviderSample && verdict.reason === "reference-not-repriced";
-  const legacyClosureHeld = legacyReference && isReferenceDeviationHeld(meta.flags.pegCurrency, now, signal?.absRawBps ?? NaN);
-  if (legacyReference && signal && session.open) return null;
+  if (!session.open && kind === "median" && verdict.status === "admitted") legacyReference = false;
+  const legacyClosureStart = legacyReference ? getLegacyReferenceClosureStart(market, now) : null;
+  const legacyClosureHeld = legacyClosureStart != null && !(signal && signal.absRawBps >= DEPEG_SEVERITY_BPS.severe);
+  if (legacyReference && signal && legacyClosureStart == null) return null;
 
   // Closure calibration measures a move against the last eligible close. The live
   // age budget is applied at the closure boundary for this exceptional path.
@@ -320,7 +377,7 @@ export function assessDetectionReference(input: {
     return entry != null && source !== COINGECKO_NATIVE_IMPLIED_SOURCE && entry.trustTier !== "cached_replay" &&
       entry.trustTier !== "hard_oracle" && entry.trustTier !== "hard_protocol";
   });
-  const boundary = session.open ? session.sessionOpenedAtSec : session.closureStartSec;
+  const boundary = legacyClosureStart ?? (session.open ? session.sessionOpenedAtSec : session.closureStartSec);
   const subjectClock = sourceObservationClock(asset);
   const peer = input.cohort === undefined && primaryFamilies != null && tradedSubject && asset != null && pegKey && group && subject != null &&
     subjectClock != null && subjectClock >= boundary &&
@@ -343,7 +400,7 @@ export function assessDetectionReference(input: {
   const cohort = cohortPegReference == null ? "missing" as const : cohortNearBenchmark ? "near-benchmark" as const : "shifted" as const;
   return {
     legacyClosureHeld,
-    legacySevere: !session.open && legacyReference && !legacyClosureHeld && cohort !== "shifted",
+    legacySevere: legacyClosureStart != null && !legacyClosureHeld && cohort !== "shifted",
     verdict,
     band,
     referenceInput,
@@ -352,7 +409,7 @@ export function assessDetectionReference(input: {
     closedTradedMedian,
     closureHeld,
     quoteInSession,
-    closed: !session.open,
+    closed: legacyReference ? legacyClosureStart != null : !session.open,
     boundary,
     peer: peer?.ok && quoteInSession && subject != null
       ? { reference: peer.medianUsd * (meta.commodityOunces ?? 1), contributors: peer.contributors }
@@ -367,6 +424,7 @@ export function benchmarkAdmission(
   ordinaryThreshold: number,
 ): { threshold: number; admission?: ReferenceAdmission } | null {
   if (!reference) return { threshold: ordinaryThreshold };
+  if (reference.legacyClosureHeld) return null;
   if (reference.legacySevere && signal && signal.absRawBps >= DEPEG_SEVERITY_BPS.severe) {
     return { threshold: DEPEG_SEVERITY_BPS.severe };
   }

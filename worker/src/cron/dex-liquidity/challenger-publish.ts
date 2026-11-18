@@ -5,7 +5,7 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
-import { getDexGroupLineage, type DexPriceLineage } from "./price-lineage";
+import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
 import { hasChallengerPriceLineageColumn } from "./challenger-types";
 import { projectRetainedPoolPrice } from "./scoring-helpers";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
@@ -65,11 +65,13 @@ export function selectDexPriceChallengerRowsFromPools(
   pools: PoolEntry[],
   minPoolTvlUsd: number,
 ): DexPriceChallengerPoolRow[] {
+  const primaryKeys = configuredPrimaryUpstreamKeys(stablecoinId);
   const qualifying = pools.flatMap((pool): DexPriceChallengerPoolRow[] => {
     if (isBlockedDexId(pool.project)) return [];
     const price = projectRetainedPoolPrice(pool);
     if (!price || price.tvl < minPoolTvlUsd) return [];
     const lineage = getDexGroupLineage([price]);
+    if (!admitsRollbackDexVote(lineage?.upstreamKeys, primaryKeys)) return [];
     return [{
       stablecoinId,
       poolId: pool.poolId,
@@ -91,9 +93,8 @@ export function selectDexPriceChallengerRowsFromPools(
     const prev = byPoolId.get(pool.poolId);
     if (!prev || pool.tvlUsd > prev.tvlUsd) byPoolId.set(pool.poolId, pool);
   }
-  const dedupedQualifying = [...byPoolId.values()].sort(
-    (a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId),
-  );
+  // Rollback readers only see independent rows, even when the wire omits lineage.
+  const dedupedQualifying = selectIndependentChallengerPools([...byPoolId.values()]);
 
   const totalQualifyingTvl = dedupedQualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
 

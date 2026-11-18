@@ -553,7 +553,7 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
         continue;
       }
       const divergence = decoded.payload.diverg;
-      const reference = divergence?.available === true
+      const reference = divergence?.available === true || divergence?.referenceCarried === true
         ? readReferenceDivergence(divergence.referenceDivergence, row.computed_at) : undefined;
       if (reference) referenceDivergenceById.set(row.stablecoin_id, reference);
       if (stale) continue;

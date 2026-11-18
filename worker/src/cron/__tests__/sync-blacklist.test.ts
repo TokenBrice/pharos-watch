@@ -241,7 +241,9 @@ import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../
 import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY } from "../../lib/blacklist-cache-keys";
 
 const mockD1 = createMockD1Preset([
-  { match: "blacklist-summary-fence-capture", rows: [], first: { generation: null, summaryValue: null } },
+  { match: "blacklist-summary-fence-capture", rows: [], first: {
+    generation: null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null,
+  } },
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
   { match: "blacklist:decode-retry:", rows: [] },

@@ -35,7 +35,13 @@ export type LegacyDecodeResult<T> =
   | { ok: false; reason: PersistedJsonDecodeReason };
 
 
-type DecodedStressSignal = { value: number; available?: boolean; componentCoverage?: number | null; referenceDivergence?: unknown };
+type DecodedStressSignal = {
+  value: number;
+  available?: boolean;
+  componentCoverage?: number | null;
+  referenceDivergence?: unknown;
+  referenceCarried?: unknown;
+};
 
 export function readReferenceDivergence(value: unknown, computedAt: number): DewsReferenceDivergence | undefined {
   const row = readRecord(value);

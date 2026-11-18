@@ -5,7 +5,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fuzzyDateRange } from "@shared/lib/classification/resolve-implementation-launch-date";
-import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { classifySupplyCoverage, parseSupplyObservationProvenance, type SupplyCoverage } from "@shared/lib/supply-provenance";
 import { isComparableNativeSupplySource } from "./dews/native-quantity";
 
 const historicalMembership = new Map([...filterCoreAggregateStablecoins(TRACKED_STABLECOINS), ...PSI_HISTORICAL_ASSETS]
@@ -39,6 +39,7 @@ export interface SupplySnapshot {
   mcap: number;
   price?: number;
   priceObservedAt?: number;
+  coverage?: SupplyCoverage;
   nativeQuantity?: { value: number; observedAt: number };
 }
 
@@ -84,16 +85,18 @@ export function buildPsiHistoricalSupplySnapshotMap(
     if (!historicalMembership.has(row.stablecoin_id)) continue;
     if (!Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
     const native = row.circulating_native;
-    const { provenance } = parseSupplyObservationProvenance(native == null ? null : row.supply_provenance);
+    const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
+    const coverage = classifySupplyCoverage(provenance);
     const observedAt = provenance?.supplyObservedAt;
     const nativeQuantity = native != null && Number.isFinite(native) && native >= 0 &&
       observedAt != null && observedAt > 0 && observedAt < row.snapshot_date + DAY_SECONDS &&
-      classifySupplyCoverage(provenance) === "complete" && isComparableNativeSupplySource(row.stablecoin_id, provenance?.supplySource)
+      coverage === "complete" && isComparableNativeSupplySource(row.stablecoin_id, provenance?.supplySource)
       ? { value: native, observedAt } : undefined;
     const list = supplyByCoin.get(row.stablecoin_id) ?? [];
     list.push({
       date: row.snapshot_date,
       mcap: row.circulating_usd,
+      ...(coverage === "unknown" ? {} : { coverage }),
       ...(typeof row.price === "number" && Number.isFinite(row.price) && row.price > 0 ? { price: row.price } : {}),
       ...(row.price_observed_at != null && Number.isSafeInteger(row.price_observed_at) && row.price_observed_at > 0
         ? { priceObservedAt: row.price_observed_at } : {}),

@@ -1,7 +1,7 @@
 import * as perimeters from "@shared/lib/supply-perimeter-changes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { admitCommodityDetailCache, buildNativeSupplyBuckets, buildTokenRowsFromMarketCaps, createDetailResponseHelpers, findNearestPrice } from "../stablecoin-detail/shared";
+import { admitCommodityDetailCache, buildNativeSupplyBuckets, buildTokenRowsFromMarketCaps, createDetailResponseHelpers } from "../stablecoin-detail/shared";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { StablecoinDetailResponseSchema } from "@shared/types/supply";
@@ -78,10 +78,6 @@ describe("native supply conversion", () => {
     expect(buildNativeSupplyBuckets("peggedUSD", 100, 2)).toEqual({ peggedUSD: 50 });
   });
 
-  it.each([0, Infinity])("does not use an unusable nearest quote %s", (price) => {
-    expect(findNearestPrice([{ timestamp: 100, price }, { timestamp: 300, price: 2 }], 100)).toBeNull();
-  });
-
 });
 
 describe("fetchCommodityTokens", () => {
@@ -151,7 +147,7 @@ describe("fetchCommodityTokens", () => {
     expect(tokens).toEqual([]);
   });
 
-  it("merges primary TVL with unsorted nearest prices without CoinGecko fallback", async () => {
+  it("merges primary TVL with unsorted as-of prices without CoinGecko fallback", async () => {
     const day = 86_400;
     fetchWithRetryMock
       .mockResolvedValueOnce(Response.json({ coins: { "coingecko:tether-gold": { prices: [
@@ -163,11 +159,25 @@ describe("fetchCommodityTokens", () => {
     expect(await fetchCommodityTokens(config)).toMatchObject([
       { date: 90, totalCirculatingUSD: { peggedGOLD: 180 }, totalCirculating: {} },
       { date: day + 110, totalCirculatingUSD: { peggedGOLD: 100 }, totalCirculating: { peggedGOLD: 50 } },
-      { date: day + 290, totalCirculatingUSD: { peggedGOLD: 200 }, totalCirculating: { peggedGOLD: 40 } },
+      { date: day + 290, totalCirculatingUSD: { peggedGOLD: 200 }, totalCirculating: { peggedGOLD: 50 } },
     ]);
     expect(fetchWithRetryMock.mock.calls.map(([url]) => new URL(url).hostname)).toEqual([
       "coins.llama.fi", "api.llama.fi",
     ]);
+  });
+
+  it("retains PAXG TVL when the only quotes are from the prior UTC day and later that day", async () => {
+    const midnight = Date.UTC(2026, 10, 17) / 1000;
+    const date = midnight + 60;
+    fetchWithRetryMock
+      .mockResolvedValueOnce(Response.json({ coins: { "coingecko:pax-gold": { prices: [
+        { timestamp: midnight - 60, price: 2_000 }, { timestamp: midnight + 86_340, price: 3_000 },
+      ] } } }))
+      .mockResolvedValueOnce(Response.json({ tvl: [{ date, totalLiquidityUSD: 200_000_000 }] }));
+
+    expect(await fetchCommodityTokens({
+      ...config, stablecoinId: "paxg-paxos", geckoId: "pax-gold", protocolSlug: "paxos-gold",
+    })).toEqual([{ date, totalCirculatingUSD: { peggedGOLD: 200_000_000 }, totalCirculating: {} }]);
   });
 
   it("uses VNXAU token cap history without calling the issuer-wide protocol", async () => {
@@ -179,7 +189,7 @@ describe("fetchCommodityTokens", () => {
     expect(fetchWithRetryMock.mock.calls.every(([url]) => !url.includes("/protocol/"))).toBe(true);
   });
 
-  it.each([0, -1, null])("preserves TVL without native units for unusable nearest price %s", async (price) => {
+  it.each([0, -1, Infinity, null])("preserves TVL without native units for unusable as-of price %s", async (price) => {
     fetchWithRetryMock
       .mockResolvedValueOnce(Response.json({ coins: { "coingecko:tether-gold": { prices:
         price === null ? [] : [{ timestamp: 100, price }, { timestamp: 86_700, price: 5 }],

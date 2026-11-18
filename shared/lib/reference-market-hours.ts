@@ -173,6 +173,26 @@ export function getReferenceMarketReopen(market: ReferenceMarket | null, nowSec:
 /** How long references get to reprice after a reopen before a stored deviation counts as open-market evidence. */
 export const REFERENCE_MARKET_REOPEN_GRACE_SEC = 6 * HOUR_SECONDS;
 
+/** Fixed UTC market hours used by detection before source-clocked evidence. */
+export function getLegacyReferenceClosureStart(market: ReferenceMarket, nowSec: number): number | null {
+  const closed = (at: number) => {
+    const clock = new Date(at * 1000);
+    const day = clock.getUTCDay(), hour = clock.getUTCHours();
+    const month = clock.getUTCMonth(), date = clock.getUTCDate();
+    if ((day === 5 && hour >= 21) || day === 6 || (day === 0 && hour < 23) ||
+      (month === 11 && (date === 25 || ((date === 24 || date === 31) && hour >= 22))) ||
+      (month === 0 && date === 1)) return true;
+    if (market !== "metal") return false;
+    const dayStart = bucketUnixSecondsToUtcDay(at);
+    const goodFriday = easterSundayUtcDaySec(clock.getUTCFullYear()) - 2 * DAY_SECONDS;
+    return dayStart === goodFriday || (dayStart === goodFriday - DAY_SECONDS && hour >= 21);
+  };
+  if (!closed(nowSec)) return null;
+  let start = Math.floor(nowSec / HOUR_SECONDS) * HOUR_SECONDS;
+  while (closed(start - HOUR_SECONDS)) start -= HOUR_SECONDS;
+  return start;
+}
+
 /**
  * The closure rule replayed over a stored event, for history built before the rule existed: a
  * sub-severe event that opened while its reference market was shut would not have opened then.

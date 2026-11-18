@@ -359,7 +359,7 @@ describe("fetchPrimaryPrices", () => {
 
     installPrimaryPriceRoutes({
       coingecko: { body: { tether: freshCgQuote(1.0001) } },
-      "api.kraken.com": { body: { error: [], result: { USDTZUSD: { c: ["1.0000"] } } } },
+      "api.kraken.com": { body: { error: [], result: { USDTZUSD: { a: ["1.0001"], b: ["0.9999"], c: ["1.0000"] } } } },
       "bitstamp.net": { body: [{ pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) }] },
     });
 

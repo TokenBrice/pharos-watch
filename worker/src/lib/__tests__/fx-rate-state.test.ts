@@ -44,6 +44,31 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(getEcbFixingClocks(day, sec(published))).toEqual({ observedAtSec: sec(observed), publishedAtSec: sec(published) });
   });
 
+  it("uses the legacy UTC cutoff for a verified legacy ECB fixing and Berlin for a clocked fixing", () => {
+    const observedAtSec = Date.parse("2026-11-16T13:10:00Z") / 1000;
+    vi.setSystemTime(new Date("2026-11-18T14:59:00Z"));
+    const rates = { peggedEUR: 1.10 };
+    const legacyMeta = {
+      usableSyncAt: Date.now() / 1000 - 60, ratesSha256: sha256Hex(JSON.stringify(rates)), mode: "live",
+      sources: { frankfurter: "ok" }, sourceUpdatedAtByPeg: { peggedEUR: observedAtSec },
+      sourceModeByPeg: { peggedEUR: "live" }, sourceCadenceByPeg: { peggedEUR: "business-daily" },
+      sourceDateByPeg: { peggedEUR: "2026-11-16" },
+    };
+    const legacy = buildState(legacyMeta, rates);
+    const clocked = buildState({ ...legacyMeta, observations: { peggedEUR: {
+      pegKey: "peggedEUR", usdPerUnit: 1.10, observedAtSec, cadence: "business-daily", source: "frankfurter",
+    } } }, rates);
+    expect(legacy?.metadataIdentity).toBe("verified");
+    expect(clocked?.observations?.peggedEUR).toBeDefined();
+    for (const [time, legacyType, clockedType] of [
+      ["14:59", "fresh", "fresh"], ["15:01", "fresh", "stale"], ["16:00", "stale", "stale"],
+    ] as const) {
+      const now = Date.parse(`2026-11-18T${time}:00Z`) / 1000;
+      expect(getFxReferenceTypeFromState(legacy, "peggedEUR", 21600, now)).toBe(legacyType);
+      expect(getFxReferenceTypeFromState(clocked, "peggedEUR", 21600, now)).toBe(clockedType);
+    }
+  });
+
 
   it.each(["business-daily", "calendar-daily"] as const)(
     "rejects persisted future and impossible source days for %s", (cadence) => {

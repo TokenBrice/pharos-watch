@@ -18,6 +18,7 @@ import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { hasNativeSupplyEvidence, readNativeSupplyCheckpoint } from "../../lib/dews/native-quantity";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -81,7 +82,7 @@ export interface DdrMintBurnHourlyRow {
 }
 export interface DdrSupplySnapshot {
   date: number;
-  usd: number;
+  usd: number | null;
   /** Omitted for USD-only history; null when reported native evidence failed admission. */
   native?: number | null;
   nativeObservedAt?: number | null;
@@ -219,10 +220,8 @@ export interface ActiveSupplyHistoryRow {
  * unbounded read on the same cohort.
  */
 function activeSupplyHistorySql(native: boolean): string {
-  const quantityColumns = native
-    ? "h.circulating_native, h.supply_provenance "
-    : "NULL AS circulating_native, NULL AS supply_provenance ";
-  const select = "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd, " + quantityColumns +
+  const quantityColumn = native ? "h.circulating_native" : "NULL AS circulating_native";
+  const select = "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd, " + quantityColumn + ", h.supply_provenance " +
     "FROM supply_history h " +
     "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id ";
   return select + "WHERE h.snapshot_date >= ? UNION ALL " + select +
@@ -521,8 +520,11 @@ export async function loadDdrContext(
   const supplyByCoin = new Map<string, DdrSupplySnapshot[]>();
   for (const s of supplyResult.rows) {
     const list = supplyByCoin.get(s.stablecoin_id) ?? [];
-    const snapshot: DdrSupplySnapshot = { date: s.snapshot_date, usd: s.circulating_usd };
-    if (hasNativeSupplyEvidence(s)) {
+    const { provenance } = parseSupplyObservationProvenance(s.supply_provenance);
+    const partial = classifySupplyCoverage(provenance) === "partial";
+    // Retain the date so an older whole-coin observation cannot replace a rejected endpoint.
+    const snapshot: DdrSupplySnapshot = { date: s.snapshot_date, usd: partial ? null : s.circulating_usd };
+    if (!partial && hasNativeSupplyEvidence(s)) {
       const checkpoint = readNativeSupplyCheckpoint(s, nowSec);
       snapshot.native = checkpoint?.quantity ?? null;
       snapshot.nativeObservedAt = checkpoint?.observedAt ?? null;
@@ -742,7 +744,7 @@ export async function loadDdrContext(
   // failures still degrade the run like any other resolver health input.
   const redemptionResult = await queryRows("redemption_backstop", async () => {
     try {
-      return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds) };
+      return { results: await loadRedemptionBackstopLiveSignalRows(db, activeCoinIds, nowSec) };
     } catch (error) {
       if (error instanceof RedemptionBackstopSnapshotUnavailableError && error.cause == null) return { results: [] };
       throw error;

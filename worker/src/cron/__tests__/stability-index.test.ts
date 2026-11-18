@@ -317,13 +317,14 @@ describe("computeAndStoreStabilityIndex", () => {
   });
 
   it.each(["absent", "stale", "future", "invalid", "legacy", "conversion"] as const)(
-    "keeps open-depeg-no-price for %s persisted native evidence",
+    "admits only a fresh compatible quote from %s persisted native evidence",
     async (kind) => {
       const now = Math.floor(Date.now() / 1000);
       const db = makeDb({ depegRows: [depegRow(CNGN_ID, now - 77 * 86400)] });
       db.sqlite.prepare("UPDATE depeg_events SET id = 90738, peg_type = 'peggedNGN', start_price = 0.95").run();
       vi.mocked(loadStablecoinsCache).mockResolvedValue(cacheOk([
-        makeStabilityAsset({ id: CNGN_ID, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007 }),
+        makeStabilityAsset({ id: CNGN_ID, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007,
+          circulating: { peggedNGN: 1e7 }, circulatingPrevWeek: { peggedNGN: 1e7 } }),
       ], now));
       if (kind !== "absent") {
         const observedAt = kind === "stale" ? now - PSI_NATIVE_EVIDENCE_MAX_AGE_SEC : kind === "future" ? now + 1 : now - 60;
@@ -338,8 +339,14 @@ describe("computeAndStoreStabilityIndex", () => {
       }
       const result = await computeAndStoreStabilityIndex(db);
       expect(result.status).toBe("ok");
-      expect(metadataOf(result).quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
       const snapshot = readInsertedInputSnapshot(db);
+      if (kind === "legacy") {
+        expect(snapshot.contributors).toEqual([expect.objectContaining({ id: CNGN_ID, bps: -200 })]);
+        expect(snapshot.openDepegsWithoutPrice).toBe(0);
+        expect(db.sqlite.prepare("SELECT score FROM stability_index_samples").get()).toMatchObject({ score: 98.8 });
+        return;
+      }
+      expect(metadataOf(result).quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
       expect(snapshot.contributors).toEqual([]);
       expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
       expect(snapshot.openDepegsWithoutPrice).toBe(1);
@@ -520,6 +527,33 @@ describe("computeAndStoreStabilityIndex", () => {
     const metadata = metadataOf(result);
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsStressBreadth).toBe(0);
+  });
+
+  it("counts DEWS stress while an open event is unpriced and deduplicates it once priced", async () => {
+    const now = Date.UTC(2026, 10, 18, 14) / 1000;
+    vi.setSystemTime(now * 1000);
+    const id = "eurc-circle";
+    const db = makeDb({
+      depegRows: [depegRow(id, now - 4 * 3600)],
+      dewsRows: [{ stablecoin_id: id, score: 90, band: "DANGER", computed_at: now }],
+    });
+    const update = db.sqlite.prepare(`UPDATE depeg_events SET peg_type = 'peggedEUR', peg_reference = 1.1,
+      last_trusted_price_at = ?, admitted_coverage_json = ?`);
+    for (const [lastTrusted, price, stress, count, score] of [
+      [now - 3 * 3600, null, 1.5 * Math.sqrt(5), 0, 96.6],
+      [now, 1.078, 0, 1, 25.3],
+    ] as const) {
+      update.run(lastTrusted, JSON.stringify([{ fromSec: now - 4 * 3600, toSec: lastTrusted + 1 }]));
+      const cache = cacheOk([makeStabilityAsset({ id, pegType: "peggedEUR", price,
+        circulating: { peggedEUR: 5e9 }, circulatingPrevWeek: { peggedEUR: 5e9 } })], now);
+      cache.payload.fxFallbackRates = { peggedEUR: 1.1 };
+      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce(cache);
+      expect((await computeAndStoreStabilityIndex(db)).status).toBe("ok");
+      const snapshot = readInsertedInputSnapshot(db);
+      expect(snapshot.contributors).toHaveLength(count);
+      expect(snapshot.dewsStressBreadth).toBeCloseTo(stress);
+      expect(db.sqlite.prepare("SELECT score FROM stability_index_samples").get()).toMatchObject({ score });
+    }
   });
 
   it("fails closed when the active depeg query is unavailable", async () => {

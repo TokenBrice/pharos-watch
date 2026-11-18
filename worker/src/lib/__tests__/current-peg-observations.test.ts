@@ -99,19 +99,19 @@ describe("current peg observations", () => {
     });
   });
 
-  it("retains an admitted DEX quote when the primary quote predates reopening", () => {
+  it("compares the admitted DEX quote directly to the primary quote from before reopening", () => {
     const reopen = Date.parse("2026-11-15T22:00:00Z") / 1000;
     const now = reopen + 300;
-    const asset = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price: 1.1, priceObservedAt: reopen - 1 });
+    const asset = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price: 1.15, priceObservedAt: reopen - 1 });
     const dex = { observedAtSec: now, expiresAt: now + 60, source_pool_count: 4,
-      source_total_tvl: 1e7, dex_price_usd: 1.15, deviation_from_primary_bps: 455 };
+      source_total_tvl: 1e7, dex_price_usd: 1.1, deviation_from_primary_bps: -435 };
     const row = deriveCurrentPegObservationMap({ peggedAssets: [asset], asOf: now,
       fxReferenceObservations: { peggedEUR: { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday",
         observedAtSec: now - 10, usdPerUnit: 1.1, repricing: { sessionOpenedAtSec: reopen, preCloseUsdPerUnit: 1.09 } } },
       dexPrices: new Map([[asset.id, dex]]),
     }).get(asset.id);
-    expect(row).toMatchObject({ currentDeviationBps: null, dexPriceCheck: {
-      dexDeviationBps: 455, referenceAdmission: { status: "admitted", quoteObservedAtSec: now },
+    expect(row).toMatchObject({ currentDeviationBps: null, referenceAdmission: { reason: "quote-before-reopen" }, dexPriceCheck: {
+      dexDeviationBps: 0, agrees: false, referenceAdmission: { status: "admitted", quoteObservedAtSec: now },
     } });
   });
 

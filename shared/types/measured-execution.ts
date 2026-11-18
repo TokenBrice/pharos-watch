@@ -570,8 +570,10 @@ function matchesMeasuredMarketMark(
 ): boolean {
   const left = quoted.marketMark;
   const right = target.marketMark;
-  if (!left || !right) return left === right;
-  return left.stablecoinId === right.stablecoinId && left.stablecoinId === target.trackedAssetId &&
+  // A legacy writer omitted the mark. The numerical snapshot still has to match,
+  // and closure admission separately requires each quote's own evidence.
+  if (!left) return true;
+  return right != null && left.stablecoinId === right.stablecoinId && left.stablecoinId === target.trackedAssetId &&
     left.priceUsd === right.priceUsd && left.priceUsd === quoted.referencePriceUsd &&
     right.priceUsd === target.referencePriceUsd &&
     left.source === right.source && left.observedAtSec === right.observedAtSec && left.observedAtSec <= capturedAt;

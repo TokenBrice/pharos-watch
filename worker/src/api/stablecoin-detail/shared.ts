@@ -3,7 +3,6 @@ import { setCache } from "../../lib/db-cache";
 import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS, API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/detail-cache-generation";
-import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -456,16 +455,6 @@ async function fetchSupplyHistoryFallback(
         totalCirculating: hasNative && (!xaut || xautScoped) ? { [pegType]: native } : {},
       };
     });
-}
-
-export function findNearestPrice(
-  sortedPrices: { timestamp: number; price: number }[],
-  date: number,
-): number | null {
-  const match = binarySearchNearest(sortedPrices, date, (p) => p.timestamp);
-  if (!match || bucketUnixSecondsToUtcDay(match.timestamp) !== bucketUnixSecondsToUtcDay(date)) return null;
-  const price = match.price;
-  return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
 }
 
 /** An omitted bucket means USD supply could not be converted with a usable price. */

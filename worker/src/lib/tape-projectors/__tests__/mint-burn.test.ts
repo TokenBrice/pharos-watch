@@ -1,6 +1,10 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { readFileSync, readdirSync } from "node:fs";
+import { URL } from "node:url";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { queryTapeEvents } from "../../tape-event-store";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -66,6 +70,42 @@ function insertFlow(sqlite: DatabaseSync, overrides: Row) {
 }
 
 describe("mint_burn projector", () => {
+  it("retires a prior $12M MUSD spoke claim and blocks legacy writers from counting new spoke rows", async () => {
+    const migrations = new URL("../../../../migrations/", import.meta.url);
+    const rollbackProtection = "0315_mint_burn_rollback_protection.sql";
+    using sqlite = new DatabaseSync(":memory:");
+    for (const name of readdirSync(migrations).filter((name) => name.endsWith(".sql") && name < rollbackProtection).sort()) {
+      sqlite.exec(readFileSync(new URL(name, migrations), "utf8"));
+    }
+    const db = createSqliteD1(sqlite);
+    const spoke = { stablecoin_id: "meusd-mezo", symbol: "MUSD", amount: 12_000_000, amount_usd: 12_000_000 };
+    insertFlow(sqlite, { ...spoke, id: "old-spoke" });
+    insertFlow(sqlite, { ...spoke, id: "issuer", chain_id: "mezo" });
+    sqlite.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
+      VALUES ('meusd-mezo', 'ethereum', 1699999200, 1, 12000000, 12000000),
+             ('meusd-mezo', 'mezo', 1699999200, 1, 12000000, 12000000);
+      INSERT INTO cache (key, value, updated_at) VALUES ('mint-burn-flows:v8:aggregate:24', '{}', 1),
+        ('mint-burn-flows:v8:coin:meusd-mezo:24', '{}', 1), ('mint-burn-flows:v8:coin:usdt-tether:24', '{}', 1);
+      INSERT INTO tape_events (event_id, type, severity, ts, coin_id, chain, title, summary, payload_json,
+        source_table, source_row_id, transition, created_at)
+      VALUES ('false-claim', 'mint_burn.large_mint', 'notice', 1700000000000, 'meusd-mezo', 'ethereum',
+        'MUSD minted $12.0M', '', '{}', 'mint_burn_events', 'old-spoke', 'updated', 1700000000)`);
+
+    sqlite.exec(readFileSync(new URL(rollbackProtection, migrations), "utf8"));
+    insertFlow(sqlite, { ...spoke, id: "new-legacy-spoke" });
+    sqlite.exec("UPDATE mint_burn_events SET flow_type = 'standard' WHERE id = 'old-spoke'");
+    expect(sqlite.prepare(`SELECT id FROM mint_burn_events m WHERE ${mintBurnTapeEligibleSql("m")} ORDER BY id`).all())
+      .toEqual([{ id: "issuer" }]);
+    expect(sqlite.prepare("SELECT chain_id, mint_count, mint_volume_usd FROM mint_burn_hourly ORDER BY chain_id").all())
+      .toEqual([{ chain_id: "ethereum", mint_count: 0, mint_volume_usd: 0 }, { chain_id: "mezo", mint_count: 1, mint_volume_usd: 12_000_000 }]);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'mint-burn-flows:%'").all())
+      .toEqual([{ key: "mint-burn-flows:v8:coin:usdt-tether:24" }]);
+    expect(sqlite.prepare("SELECT suppression_reason FROM tape_events WHERE event_id = 'false-claim'").get())
+      .toEqual({ suppression_reason: "flow-claim-retracted" });
+    expect((await queryTapeEvents(db, { filters: { coinIds: ["meusd-mezo"] }, limit: 10, cursor: null, includeTotal: true })).total)
+      .toBe(0);
+  });
+
   it.each(["pending", "accepted", "invalidated"])("withholds unaccepted range-proof Tape claims (%s)", (lifecycle) => {
     const { sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO mint_burn_supply_proofs

@@ -70,7 +70,7 @@ function supplyChange(
  * coins, the supply-history proxy decides.
  */
 export function deriveMintSurge(
-  snapshots: { date: number; usd: number }[],
+  snapshots: DdrSupplySnapshot[],
   startedAt: number,
   change7dPct: number | null,
   hourlyRows: DdrMintBurnHourlyRow[],
@@ -168,14 +168,14 @@ function dewsSignalAtLeast(
 /** Latest admitted supply snapshot no older than the dislocation-sizing budget; otherwise unavailable. */
 const DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC = 3 * 86400;
 
-function latestCirculatingUsd(snapshots: readonly { date: number; usd: number }[], nowSec: number): number | null {
-  let latest: { date: number; usd: number } | null = null;
+function latestCirculatingUsd(snapshots: readonly DdrSupplySnapshot[], nowSec: number): number | null {
+  let latest: DdrSupplySnapshot | null = null;
   for (const snapshot of snapshots) {
     if (snapshot.date > nowSec) continue;
     if (latest == null || snapshot.date > latest.date) latest = snapshot;
   }
   if (latest == null || nowSec - latest.date > DDR_DISLOCATION_SUPPLY_MAX_AGE_SEC) return null;
-  return Number.isFinite(latest.usd) && latest.usd > 0 ? latest.usd : null;
+  return latest.usd != null && Number.isFinite(latest.usd) && latest.usd > 0 ? latest.usd : null;
 }
 
 export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): DdrAssessmentRow[] {

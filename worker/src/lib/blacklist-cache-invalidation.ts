@@ -1,17 +1,21 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { BLACKLIST_DERIVED_GENERATION_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "./blacklist-cache-keys";
+import { BLACKLIST_DERIVED_GENERATION_KEY, BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, getBlacklistDerivedCacheKeys } from "./blacklist-cache-keys";
 
 export interface BlacklistSummaryFence {
   generation: string | null;
   summaryValue: string | null;
+  rollbackValue: string | null;
+  rollbackUpdatedAt: number | null;
 }
 
 export async function captureBlacklistSummaryFence(db: D1Database): Promise<BlacklistSummaryFence> {
   const row = await runWithOverloadRetry(() => db.prepare(`/* blacklist-summary-fence-capture */ SELECT
     (SELECT value FROM cache WHERE key = ?) AS generation,
-    (SELECT value FROM cache WHERE key = ?) AS summaryValue`)
-    .bind(BLACKLIST_DERIVED_GENERATION_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)
+    (SELECT value FROM cache WHERE key = ?) AS summaryValue,
+    rollback.value AS rollbackValue, rollback.updated_at AS rollbackUpdatedAt
+    FROM (SELECT 1) LEFT JOIN cache AS rollback ON rollback.key = ?`)
+    .bind(BLACKLIST_DERIVED_GENERATION_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY)
     .first<BlacklistSummaryFence>(), 3, undefined, { waitOutResourceWindow: true });
   if (row == null) throw new Error("blacklist-summary-fence-missing");
   return row;

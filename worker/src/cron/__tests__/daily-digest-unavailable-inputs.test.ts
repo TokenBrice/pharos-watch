@@ -99,6 +99,7 @@ describe("digest publishes unavailable inputs as unavailable", () => {
       { ...rows[0], stablecoin_id: "coin-0", started_at: 999, close_reason: "superseded" },
     ] }]));
     ctx.trackedStablecoinIds = new Set([...rows.map((row) => row.stablecoin_id), "usr-resolv"]);
+    ctx.nowSec = 3000;
     ctx.mcapById = new Map(rows.slice(0, 11).map((row, index) => [row.stablecoin_id, index === 9 ? 1_000_000 : 100_000_000]));
     const active = await collectActiveDepegs(ctx);
     const resolved = await collectResolvedDepegs(ctx);

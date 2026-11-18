@@ -377,6 +377,27 @@ describe("handleBackfillSupplyHistory", () => {
       .get("usdt-tether", day)).toEqual({ circulating_usd: 0, price: null });
   });
 
+  it("retains USD history when the reported USD bucket is rejected", async () => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+      .run("usdt-tether", day, 100_000_000, 1);
+    const url = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
+    for (const native of [50_000_000, 0]) {
+      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({
+        prices: [{ timestamp: day, price: 1 }],
+        diagnostics: { granularity: "hourly", sourcesUsed: ["coingecko"], quoteMode: "usd", quoteCurrency: "usd",
+          mergeReasons: [], perSourceStats: [], policyAdjustments: [], finalPointCount: 1 },
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
+        tokens: [{ date: day, totalCirculatingUSD: { peggedUSD: -1 }, totalCirculating: { peggedUSD: native } }],
+      }));
+      expect(await readJsonResponse(await backfill(db, url), 200)).toMatchObject({ rowsInserted: 0, skippedDays: 1 });
+      expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+        .get("usdt-tether", day)).toEqual({ circulating_usd: 100_000_000, price: 1 });
+    }
+  });
+
   it("keeps a prior positive row when an observed zero arrives without overwrite", async () => {
     const { db, sqlite } = fixtures.open();
     const day = Date.UTC(2026, 3, 9) / 1000;

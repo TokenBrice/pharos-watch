@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { formatCurrency } from "@shared/lib/format";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import type { DigestEditorialCandidate, DigestInputData, DigestNextTrigger } from "@shared/types/digest";
 import { collectActiveDepegs, collectResolvedDepegs } from "../collectors-market";
 import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
@@ -56,7 +57,8 @@ describe("canonical comparable digest evidence", () => {
   });
 
   it.each(["recovered-primary", "coverage-lost-supply"])("requires positive closure: %s", async (closeReason) => {
-    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", direction: "below", peak_deviation_bps: -900, started_at: 1, ended_at: 199999, close_reason: closeReason, recovery_price: closeReason === "recovered-primary" ? 1 : null }] }]));
+    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [{ stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below", peak_deviation_bps: -900, started_at: 1, ended_at: 199999, close_reason: closeReason, recovery_price: closeReason === "recovered-primary" ? 1 : null }] }]));
+    ctx.nowSec = 200000;
     ctx.evidence = {};
     await collectResolvedDepegs(ctx);
     const current = { ...input(200000), topDepegs: [], editorialCandidates: [] };
@@ -105,9 +107,10 @@ describe("canonical comparable digest evidence", () => {
     expect(active.value.activeDepegCount).toBe(2);
     expect(activeCtx.evidence.activeDepegs).toHaveLength(4);
 
+    const now = Math.floor(Date.now() / 1000);
     const resolvedRows = verdicts.map((audit_verdict, index) => ({
       stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
-      started_at: 1, ended_at: 2, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
+      started_at: now - 3600, ended_at: now - 60, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
     }));
     const resolvedCtx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: resolvedRows }]));
     resolvedCtx.evidence = {};
@@ -116,6 +119,31 @@ describe("canonical comparable digest evidence", () => {
     const resolved = await collectResolvedDepegs(resolvedCtx);
     expect(resolved.value.resolvedDepegCount).toBe(2);
     expect(resolvedCtx.evidence.recoveredDepegs).toHaveLength(4);
+  });
+
+  it("uses admitted recovery time for daily counts, signal keys and duration", async () => {
+    const now = 1_795_010_400;
+    const id = "eurc-circle";
+    const closedRow = (ended_at: number, atPar: boolean) => {
+      const started_at = ended_at - 3.5 * HOUR_SECONDS - 300;
+      const last = ended_at - 900;
+      return {
+        id: ended_at, stablecoin_id: id, symbol: "EURC", peg_type: "peggedEUR", direction: "below",
+        peak_deviation_bps: -310, started_at, ended_at, close_reason: "recovered-dex", recovery_price: 1.1,
+        recovery_peg_reference: 1.1, last_trusted_price_at: last,
+        price_coverage_json: JSON.stringify({ intervals: [[started_at, last]], atParIntervals: atPar ? [[last, last]] : [] }),
+      };
+    };
+    const admitted = closedRow(now - 600, true);
+    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [
+      closedRow(now - 300, false), admitted, closedRow(now - DAY_SECONDS + 60, true),
+    ] }]));
+    Object.assign(ctx, { nowSec: now, trackedStablecoinIds: new Set([id]), mcapById: new Map([[id, 1e8]]), evidence: {} });
+    const result = await collectResolvedDepegs(ctx);
+    expect(result.value.resolvedDepegCount).toBe(1);
+    expect(result.value.resolvedDepegSignalKeys).toEqual([`${id}:${admitted.started_at}:resolved`]);
+    expect(result.value.resolvedDepegs).toMatchObject([{ endedAt: admitted.last_trusted_price_at, durationHours: 3 }]);
+    expect(ctx.evidence?.recoveredDepegs).toEqual(result.value.resolvedDepegs);
   });
 
   it("never resolves or scores an unavailable active-event query", async () => {

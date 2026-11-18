@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
-import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
+import { decodePublishedPegType, StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/supply";
 
 const StablecoinsReferenceEnvelopeSchema = StablecoinListResponseSchema.pick({
   fxReferenceObservations: true, selectedPegReferences: true, fxAdmissionCoverageGeneration: true,
@@ -238,6 +238,8 @@ export async function loadStablecoinsCache(
     },
   );
 
+  const xagm = decoded.payload?.payload.peggedAssets.find((asset) => asset.id === "xagm-matrixdock");
+  if (xagm?.pegType !== undefined) xagm.pegType = decodePublishedPegType(xagm.id, xagm.pegType);
   if (!decoded.ok) {
     if (decoded.payload != null && mode === "lenient") {
       return {

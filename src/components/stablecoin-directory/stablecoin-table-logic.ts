@@ -1,12 +1,13 @@
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { hasObservedDisplayPrice, resolveCurrentDeviationBps, resolveDisplayPegReference } from "@/lib/current-peg";
+import { hasObservedDisplayPrice, hasPublishedDeviation, resolveCurrentDeviation, resolveCurrentDeviationBps, resolveDisplayPegReference } from "@/lib/current-peg";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { getQuoteMatchedNavPriceReference } from "@/lib/nav-price-reference";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter } from "@shared/lib/filter-tags";
+import { pegCurrencySymbol } from "@shared/lib/peg-format";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
@@ -52,39 +53,40 @@ interface SortState {
 export type StablecoinTableRowRiskLevel = "depeg" | "poor" | "warning" | "normal";
 
 export interface DisplayedNativePrice {
-  /** USD price converted into the peg quantity the Price cell prints; null when the cell prints "N/A". */
+  /** Unrounded price in the unit the cell displays. */
   value: number | null;
-  /** Peg currency the cell prints (and its symbol). */
+  /** Currency the cell prints. */
   currency: string;
   /** Reference used for the conversion; null when the cell prints the USD quote. */
   reference: number | null;
 }
 
 /**
- * The Price column's displayed unit: one authority for the cell and its sort,
- * so sorting never orders a different unit than the reader sees. Null when the
- * cell prints "—" (no observed price source, or a non-USD fiat peg with no
- * published reference).
+ * Share the Price column's visibility and unit between the cell and the sort.
  */
 export function resolveDisplayedNativePrice(
   coin: StablecoinData,
   pegSummary: PegSummaryCoin | undefined,
   pegScores?: Map<string, PegSummaryCoin>,
 ): DisplayedNativePrice | null {
-  if (!hasObservedDisplayPrice(coin)) return null;
+  if (!isObservedPrice(coin)) return null;
   const meta = TRACKED_META_BY_ID.get(coin.id);
   const currency = meta?.flags.pegCurrency ?? "USD";
   const reference = meta?.flags.navToken
     ? getQuoteMatchedNavPriceReference(currency, coin.priceObservedAt, pegScores)
     : resolveDisplayPegReference(coin, pegSummary, currency);
   const usesUsdSymbol = getPegTaxonomyByCurrency(currency)?.nativePriceUsesUsdSymbol === true;
-  if (reference == null && !usesUsdSymbol) return null;
-  const value = coin.price == null
-    ? null
-    : !usesUsdSymbol && reference != null && Number.isFinite(reference) && reference > 0
-      ? coin.price / reference
-      : coin.price;
-  return { value, currency, reference };
+  if (reference == null && !meta?.flags.navToken && pegCurrencySymbol(currency) !== "$"
+    && !resolveCurrentDeviation(coin, pegSummary, meta?.flags.pegCurrency).referenceNote
+    && (hasPublishedDeviation(coin.currentPeg) || !hasPublishedDeviation(pegSummary))) return null;
+
+  const price = hasObservedDisplayPrice(coin) ? coin.price : null;
+  const value = price != null && !usesUsdSymbol && reference != null ? price / reference : price;
+  return {
+    value: Number.isFinite(value) ? value : null,
+    currency: usesUsdSymbol || reference == null ? "USD" : currency,
+    reference,
+  };
 }
 
 export function getSupplyChangeBaseline(coin: StablecoinData, window: "day" | "week" | "month") {

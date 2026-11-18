@@ -23,7 +23,7 @@ import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles
 import { formatChartDate, formatDuration, formatBps, formatCurrency, formatUtcDayLabel } from "@shared/lib/format";
 import { formatPegOccupancy } from "@shared/lib/peg-format";
 import { hasUnverifiedDepegPeak } from "@/lib/depeg-event-config";
-import { formatEventPrice, hasUnverifiedAnalyticRecovery } from "@/lib/depeg-event-display";
+import { formatEventPrice, getDepegEventClosurePresentation, hasUnverifiedAnalyticRecovery } from "@/lib/depeg-event-display";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -369,6 +369,12 @@ export function DepegHistory({
   );
 }
 
+function formatEventDuration(event: DepegEvent): string {
+  const { isRecovery } = getDepegEventClosurePresentation(event);
+  const end = isRecovery ? event.analyticRecoveryAt ?? event.endedAt : event.endedAt;
+  return formatDuration(event.startedAt, end);
+}
+
 function DepegEventCard({ event }: { event: DepegEvent }) {
   const isOngoing = event.endedAt === null;
   const absBps = Math.abs(event.peakDeviationBps);
@@ -398,7 +404,7 @@ function DepegEventCard({ event }: { event: DepegEvent }) {
             {event.peakDeviationBps} bps{event.peakBasis ? " from peer median · Lower confidence" : ""}{hasUnverifiedDepegPeak(event) ? " · Peak unverified" : ""}
           </p>
           <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
-            {isOngoing ? "Ongoing" : formatDuration(event.startedAt, event.endedAt)}
+            {isOngoing ? "Ongoing" : formatEventDuration(event)}
           </p>
         </div>
       </div>
@@ -470,7 +476,7 @@ function DepegRow({ event }: { event: DepegEvent }) {
             Ongoing
           </span>
         ) : (
-          formatDuration(event.startedAt, event.endedAt)
+          formatEventDuration(event)
         )}
       </TableCell>
       <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">

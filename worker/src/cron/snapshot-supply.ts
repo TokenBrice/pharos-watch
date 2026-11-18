@@ -169,10 +169,17 @@ export async function snapshotSupply(
         const provenance = buildSupplyObservationProvenance(asset);
         const quantityEligible = (!kinesis || wrapper) && supplyObservedAt != null &&
           isDailyStockObservation(asset.id, snapshotDate, supplyObservedAt, assessedAt) && assessedAt - supplyObservedAt <= SUPPLY_SNAPSHOT_MAX_AGE_SEC;
+        const native = quantityEligible ? asset.circulatingNative ?? null : null;
+        const nativeQuantityUnavailable = asset.circulatingNative !== undefined && native == null;
+        if (provenance && nativeQuantityUnavailable) {
+          provenance.nativeQuantityUnavailable = true;
+          if (price != null) provenance.marketQuote = { price, observedAt: priceObservedAt };
+        }
         snapshotRows.push([
-          asset.id, snapshotDate, circulatingUsd, price, priceObservedAt,
+          asset.id, snapshotDate, circulatingUsd,
+          nativeQuantityUnavailable ? null : price, nativeQuantityUnavailable ? null : priceObservedAt,
           provenance == null ? null : JSON.stringify(provenance),
-          quantityEligible ? asset.circulatingNative ?? null : null,
+          native,
           quantityEligible ? asset.valuationPriceUsd ?? null : null,
           quantityEligible ? asset.valuationObservedAtSec ?? null : null,
         ]);

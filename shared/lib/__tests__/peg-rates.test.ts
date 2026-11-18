@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { PegAssetBase } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -33,6 +34,29 @@ describe("derivePegRates", () => {
     expect(result.rates.peggedEUR).toBe(1.2);
     expect(result.counts.peggedEUR).toBe(1);
     expect(result.contributors?.peggedEUR?.map(({ assetId }) => assetId)).toEqual(["market"]);
+  });
+
+  it("uses the same eligible source-clocked fiat peers for its median, count and clocks", () => {
+    const now = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    const peg = "peggedEUR";
+    const peers = [1.122, 1.1, 1.1, 1.1].map((price, i) => ({
+      ...asset(`eur-${i}`, peg, price, 2_000_000), priceSource: "coingecko",
+      priceObservedAt: now - 60 - i, priceObservedAtMode: "upstream" as const,
+    }));
+    const local = [peers[0], ...peers.slice(1).map((row) => ({ ...row, priceObservedAtMode: "local_fetch" as const }))];
+    const thin = derivePegRates(local, undefined, undefined, {}, now);
+    expect([thin.rates[peg], thin.counts[peg], thin.contributors?.[peg]]).toEqual([undefined, 1, undefined]);
+    expect(derivePegRates(local).rates[peg]).toBe(1.1);
+
+    const broad = derivePegRates([
+      ...peers, peers[0],
+      { ...peers[0], id: "undated", price: 2, priceObservedAt: null },
+      { ...peers[0], id: "expired", price: 2, priceObservedAt: now - REFERENCE_INTRADAY_BUDGET_SEC - 1 },
+      { ...peers[0], id: "future", price: 2, priceObservedAt: now + 1 },
+    ], undefined, undefined, {}, now);
+    expect([broad.rates[peg], broad.counts[peg]]).toEqual([1.1, 4]);
+    expect(broad.contributors?.[peg]?.map(({ assetId, observedAtSec }) => [assetId, observedAtSec]))
+      .toEqual(peers.map(({ id, priceObservedAt }) => [id, priceObservedAt]));
   });
 
   it("rejects invalid fallback rates consistently with and without fiat peers", () => {

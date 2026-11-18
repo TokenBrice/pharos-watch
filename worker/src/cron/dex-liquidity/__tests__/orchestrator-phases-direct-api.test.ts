@@ -448,7 +448,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       expect(rows).toEqual(admitted ? [expect.objectContaining({
         stablecoin_id: "usdc-circle", dex_price_usd: expect.closeTo(1), source_pool_count: 1, source_total_tvl: 4_000_000,
       })] : []);
-      if (admitted) expect(JSON.parse(rows[0]!.price_sources_json!).sources).toEqual([expect.objectContaining({
+      if (admitted) expect(JSON.parse(rows[0]!.price_sources_json!).displaySources).toEqual([expect.objectContaining({
         protocol: "raydium", observedAt, aggregateObservedAt: null, displayAggregateObservedAt: observedAt,
         upstreamKeys: [poolKey, "venue:coinbase", "venue:kraken"], sourceFamily: "direct_api",
       })]);

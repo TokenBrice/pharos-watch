@@ -211,14 +211,18 @@ export async function runPostEnrichmentPricePipeline(
         ? computePriceDivergenceBps(asset.price as number, nativePegImpliedUsd.priceUsd)
         : null;
 
-    const validateCurrentPrice = () => validatePublishedAssetPrice({
-      asset,
-      candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
-      fiatPremiumEvidence,
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-    });
+    const validateCurrentPrice = () => {
+      const candidatePrices = getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults);
+      return validatePublishedAssetPrice({
+        asset,
+        candidatePrices,
+        upstreamKeysBySource: candidatePrices && input.primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
+        fiatPremiumEvidence,
+        validationContext: validationContexts.get(asset),
+        validationReferences,
+        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      });
+    };
 
     const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
       if (nativePegImpliedUsd == null || nativePegImpliedUsd.updatedAt == null ||

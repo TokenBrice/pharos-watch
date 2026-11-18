@@ -184,6 +184,33 @@ describe("site-only stablecoin live summary", () => {
     expect([summary.circulatingPrevDay, summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{}, {}, {}]);
   });
 
+  it("withholds rejected weekly and monthly USD checkpoints even when detail history has values", async () => {
+    const detail: StablecoinDetailResponse = {
+      currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
+      currentCirculatingPrevDayUSD: { peggedEUR: 100_000_000 },
+      tokens: [
+        { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
+        { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
+      ],
+    };
+    expect(projectStablecoinLiveSummary(detail, "eurc-circle")).toMatchObject({
+      circulatingPrevWeek: { peggedEUR: 91_000_000 }, circulatingPrevMonth: { peggedEUR: 85_000_000 },
+    });
+    const supplyChangeBaselines = {
+      day: { observedAt: NOW - DAY, circulatingUsd: 100_000_000, circulatingNative: null },
+      week: null, month: null,
+    };
+    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({ ...detail, supplyChangeBaselines }));
+    const response = await handleStablecoinLiveSummary(db, "eurc-circle", ctx);
+    expect(response.status).toBe(200);
+    const summary = StablecoinLiveSummarySchema.parse(await response.json());
+    expect(summary).toMatchObject({
+      circulating: { peggedEUR: 110_000_000 }, circulatingPrevDay: { peggedEUR: 100_000_000 },
+      supplyChangeBaselines,
+    });
+    expect([summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{}, {}]);
+  });
+
   it("preserves settled failed-refresh warnings even for a recently produced generation", async () => {
     vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
       "Cache-Control": "no-store", "X-Data-Freshness": "stale", Warning: '110 - "Detail refresh failed"',

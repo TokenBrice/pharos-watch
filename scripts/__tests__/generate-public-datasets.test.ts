@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -100,8 +100,11 @@ async function writeBundle(root: string, date = DATE) {
   return dirs;
 }
 
-function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}) {
-  return execFileAsync(process.execPath, ["--import", "data:text/javascript,globalThis.fetch=async()=>{throw new TypeError('offline fixture')}", "--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
+function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}, snapshot?: unknown) {
+  const fetchFixture = snapshot === undefined
+    ? "globalThis.fetch=async()=>{throw new TypeError('offline fixture')}"
+    : `globalThis.fetch=async()=>Response.json(${JSON.stringify(snapshot)})`;
+  return execFileAsync(process.execPath, ["--import", `data:text/javascript,${encodeURIComponent(fetchFixture)}`, "--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
     cwd: root, timeout: 15_000,
     env: { ...process.env, API_BASE_URL: "", SMOKE_API_BASE: "", PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_DATE: DATE, PUBLIC_DATASETS_REQUIRE_API: "", PUBLIC_DATASETS_ALLOW_STUB: "", PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE: "",
@@ -310,6 +313,25 @@ describe("generate-public-datasets", () => {
     const base = makeEnvelope();
     const envelope = { ...base, stablecoins: [{ ...base.stablecoins[0]!, ...patch }] };
     expect(specFor("top-stablecoins", envelope).rows[0]).toMatchObject(expected);
+  });
+
+  it("keeps rejected ranking prices unavailable while admitting legacy omissions", () => {
+    const base = makeEnvelope();
+    const envelope = PublicSnapshotEnvelopeSchema.parse({
+      ...base,
+      stablecoins: [
+        { ...base.stablecoins[0], id: "usdt-tether", price: 0.98, priceSource: "coingecko", priceObservedAtMode: false },
+        { ...base.stablecoins[0], id: "zero-par", price: 0, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" },
+        { ...base.stablecoins[0], id: "legacy", price: 0.98, priceSource: "coingecko" },
+      ],
+    });
+    if (!isProjectionEnvelope(envelope)) throw new Error("expected a legacy projection envelope");
+    const { json } = render(specFor("top-stablecoins", envelope));
+    expect(json.rows).toEqual([
+      expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAtMode: "unsupported" }),
+      expect.objectContaining({ id: "zero-par", price: null, nominalReferenceUsd: null, nominalReferenceSource: null }),
+      expect.objectContaining({ id: "legacy", price: 0.98 }),
+    ]);
   });
 
   it.each([
@@ -676,7 +698,7 @@ describe("generate-public-datasets", () => {
 
     expect(() => projectScoresLatest(archivedEnvelope, { historical: false }))
       .toThrow("invalid V9 Safety publication");
-    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true, repointCurrent: true }))
+    expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true, requireCurrentSafety: true }))
       .toThrow("invalid V9 Safety publication");
     vi.stubEnv(PUBLIC_DATASETS_REQUIRE_CURRENT_SAFETY, "1");
     expect(() => specFor("scores-latest", archivedEnvelope, [], { historical: true }))
@@ -962,6 +984,29 @@ describe("generate-public-datasets", () => {
 
 
 describe("PR mirror integrity mode", () => {
+  it("rejects a mismatched Safety generation before replacing either current scores target", async () => {
+    const root = await makeRoot();
+    await copyDatasetWorkspace(root);
+    await mkdir(path.join(root, "data"));
+    await symlink(depegSnapshot.DEPEG_EVENT_DATA_DIR, path.join(root, "data/depeg-events"));
+    const dirs = await writeBundle(root);
+    const envelope = makeCurrentEnvelope();
+    const rejected = PublicSnapshotEnvelopeSchema.parse({
+      ...envelope, dews: [], liquidity: [], fxFallbackRates: null,
+      psi: { computedAt: envelope.generatedAt, score: 88, band: "stable", components: null, methodologyVersion: "1" },
+      safetyScoreIdentity: { ...envelope.safetyScoreIdentity, publicationGenerationId: "different-generation" },
+    });
+    const scorePath = path.join(dirs.datasetsDir, "scores-latest", `${DATE}.json`);
+    const before = await readFile(scorePath, "utf8");
+    for (const [redirectDate, importDate] of [[DATE, "2026-05-15"], ["2026-05-15", DATE]]) {
+      await writeFile(dirs.redirectsPath, buildPublicDatasetRedirectBlock(redirectDate));
+      await writeFile(dirs.currentDatasetModulePath, buildPublicDatasetCurrentModule(importDate));
+      await expect(runGenerator(root, [], { PUBLIC_DATASETS_API_URL: "https://api.example.test" }, rejected))
+        .rejects.toMatchObject({ code: 1, stderr: expect.stringContaining("Safety publication identity does not match") });
+      expect(await readFile(scorePath, "utf8")).toBe(before);
+    }
+  });
+
   it("projects reviewed retirement slots without moving redirect layout and rejects destination drift", async () => {
     const redirects = await readFile(path.resolve("public/_redirects"), "utf8");
     expect(projectRetiredPublicRouteRedirects(redirects)).toBe(redirects);

@@ -17,6 +17,7 @@ import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
 import { resolvedYield } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
+import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/family-registry";
 
 describe("parseRiskFreeRateCache", () => {
   const nowSec = 1710500000;
@@ -154,17 +155,25 @@ describe("parseDlStablecoinPoolsCache", () => {
 describe("parseYieldSupplementalSourcesCache", () => {
   const nowSec = 1710500000;
 
-  it("stores a rollback fetch clock and a distinct observation clock in one vault generation", () => {
-    for (const observedAt of [null, nowSec - 120]) {
+  it("preserves vault evidence while limiting what rollback can admit", () => {
+    const maxAge = getSupplementalFamilyStaleThresholdSec("yearnKong");
+    for (const [observedAt, rollbackUpdatedAt, rollbackApy] of [
+      [null, nowSec, 5],
+      [nowSec - 300, nowSec - 300, 5],
+      [nowSec - maxAge, nowSec - maxAge, 5],
+      [nowSec - 7 * 86400, nowSec, null],
+    ] as const) {
       const candidate = { symbol: "USDC", address: null, chain: "ethereum", yield: resolvedYield({
-        dataSource: "protocol-api", sourceKey: "protocol-api:morpho-vault:ethereum:usdc",
-        sourceFetchedAt: nowSec - 5, sourceObservedAt: observedAt,
+        dataSource: "protocol-api", sourceKey: "protocol-api:yearn:ethereum:usdc",
+        sourceFetchedAt: nowSec, sourceObservedAt: observedAt,
       }) };
       const raw = buildYieldSupplementalFamilyCache([candidate], nowSec);
-      expect(JSON.parse(raw)).toMatchObject({ version: 1, updatedAt: nowSec, data: [
-        { yield: { sourceObservedAt: nowSec - 5 } },
+      expect(JSON.parse(raw)).toMatchObject({ version: 1, updatedAt: rollbackUpdatedAt, data: [
+        { yield: { currentApy: rollbackApy, sourceObservedAt: observedAt ?? nowSec, sourceObservedAtV2: observedAt } },
       ] });
-      expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)?.candidates).toEqual([candidate]);
+      expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)).toMatchObject({
+        candidates: [candidate], updatedAt: nowSec, ageSeconds: 0, rejectedCount: 0,
+      });
     }
   });
 

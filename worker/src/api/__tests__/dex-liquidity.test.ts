@@ -261,6 +261,10 @@ describe("handleDexLiquidity", () => {
     const clock = label === "partial conversion lineage"
       ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt, upstreamKeys: [], pricePoolKeys: [] }
       : { aggregateObservedAt };
+    const protocol = { protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000, ...clock };
+    const priceSources = label === "aggregate-only" ? { aggregateObservedAt, sources: [] }
+      : label === "partial conversion lineage" ? { ...clock, sources: [], displaySources: [protocol] }
+      : [protocol];
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     try {
       const db = mockDexD1([
@@ -268,8 +272,7 @@ describe("handleDexLiquidity", () => {
         { match: "dex_prices", rows: [{
           stablecoin_id: row.stablecoin_id, dex_price_usd: 0.81, deviation_from_primary_bps: -1900,
           source_pool_count: 2, source_total_tvl: 1_000_000,
-          price_sources_json: JSON.stringify(label === "aggregate-only" ? { aggregateObservedAt, sources: [] }
-            : [{ protocol: "curve", chain: "Ethereum", price: 0.81, tvl: 1_000_000, ...clock }]),
+          price_sources_json: JSON.stringify(priceSources),
           updated_at: now + priceOffset,
         }] },
         { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: now + liquidityOffset })] },
@@ -285,6 +288,7 @@ describe("handleDexLiquidity", () => {
         expect(coin.dexPriceUsd).toBe(0.81);
         expect(coin.priceSourceCount).toBe(2);
         expect(coin.priceSources).toHaveLength(label === "aggregate-only" ? 0 : 1);
+        if (label !== "aggregate-only") expect(coin.priceSources?.[0]?.price).toBe(0.81);
       } else {
         expect(coin.dexPriceUsd).toBeNull();
         expect(coin.dexDeviationBps).toBeNull();

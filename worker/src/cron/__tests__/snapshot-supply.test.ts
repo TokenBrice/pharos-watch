@@ -36,6 +36,8 @@ vi.mock("@shared/lib/psi-historical-assets", () => ({
 import { snapshotSupply } from "../snapshot-supply";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { historicalSupplyQuantity, type HistoricalSupplyQuantityRow } from "../../lib/supply-history-db";
+import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 
 const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
 
@@ -765,6 +767,35 @@ describe("snapshotSupply", () => {
         { stablecoin_id: "usdt-tether", circulating_usd: 100, price: 1.0002, price_observed_at: nowSec - 300,
           circulating_native: 100, valuation_price_usd: 1, valuation_observed_at_sec: nowSec - 600 },
       ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps an independent market quote from reviving an explicitly unavailable historical quantity", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const observedAt = nowSec - 40;
+      const id = "usdt-tether";
+      const payload = { peggedAssets: [makeSnapshotAsset({
+        id, price: 1, priceSource: "kraken", priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+        circulating: { peggedUSD: 100_000_000 }, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+        circulatingNative: null, valuationPriceUsd: null, valuationObservedAtSec: null,
+      })] };
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", JSON.stringify(payload), nowSec);
+      expect((await snapshotSupply(db, undefined, { nowSec, requiredActiveIds: [id], snapshotEligibleIds: [id] })).itemCount).toBe(1);
+
+      // Replay main's same-day price repair against the row it would otherwise divide into native units.
+      expect(sqlite.prepare("UPDATE supply_history SET price = ?, price_observed_at = ? WHERE stablecoin_id = ? AND price IS NULL")
+        .run(1, observedAt, id).changes).toBe(0);
+      const row = sqlite.prepare("SELECT * FROM supply_history").get() as unknown as
+        HistoricalSupplyQuantityRow & { supply_provenance: string };
+      expect(row).toMatchObject({ circulating_usd: 100_000_000, price: null, price_observed_at: null });
+      const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
+      expect(provenance).toMatchObject({ nativeQuantityUnavailable: true, marketQuote: { price: 1, observedAt } });
+      expect(historicalSupplyQuantity(id, "peggedUSD", row, provenance, nowSec + 86_400)).toBeNull();
     } finally {
       sqlite.close();
     }

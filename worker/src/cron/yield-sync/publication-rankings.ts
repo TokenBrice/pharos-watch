@@ -269,7 +269,7 @@ function buildUniqueAltCandidates(
 ): EvaluatedYieldSource[] {
   const bySourceKey = new Map<string, EvaluatedYieldSource>();
   for (const candidate of candidates) {
-    if (candidate.sourceKey === selected.sourceKey) {
+    if (candidate.rejected || candidate.sourceKey === selected.sourceKey) {
       continue;
     }
     const existing = bySourceKey.get(candidate.sourceKey);

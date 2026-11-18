@@ -52,7 +52,7 @@ const STABILITY_COMPONENT_ROWS = [
       component: "Stress Breadth",
       range: `0–${PSI_COMPONENT_LIMITS.stressBreadth}`,
       formula: `min(${PSI_COMPONENT_LIMITS.stressBreadth}, dewsStressBreadth)`,
-      purpose: "Early-warning pressure from DEWS stress signals before full depegs",
+      purpose: "DEWS stress signals from assets without a depeg contribution at the sample time",
     },
   },
   {
@@ -61,7 +61,7 @@ const STABILITY_COMPONENT_ROWS = [
       component: "Trend",
       range: `−${PSI_COMPONENT_LIMITS.trend} to +${PSI_COMPONENT_LIMITS.trend}`,
       formula: `clamp(-${PSI_COMPONENT_LIMITS.trend}, ${PSI_COMPONENT_LIMITS.trend}, mcap7dChangePct)`,
-      purpose: "USD market-cap change across stock observations seven UTC dates apart. Legacy publications use the reported prior week.",
+      purpose: "USD market-cap change seven UTC dates apart. Historical pairs omit assets with explicitly partial supply at either endpoint. Legacy live publications use the reported prior week.",
     },
   },
 ];
@@ -228,8 +228,9 @@ export function StabilityIndexMethodologySection() {
             </li>
             <li>
               <span className="text-foreground font-medium">Native quote domains:</span> PSI compares prices and
-              references in the same unit. Live sampling can use a current, validated native trade. Historical
-              replay draws on timestamped native start or recovery evidence within the six-hour as-of budget.
+              references in the same unit. Live sampling can use a validated native trade or a fresh legacy quote
+              in open-session compatibility mode. Historical replay draws on timestamped native start
+              or recovery evidence within the six-hour as-of budget.
               Windows without retained evidence disclose the gap.
             </li>
             <li>

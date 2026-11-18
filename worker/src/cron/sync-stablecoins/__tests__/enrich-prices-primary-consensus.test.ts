@@ -157,7 +157,7 @@ describe("buildPrimaryConsensusResults", () => {
       const [row] = readPublicPriceRows(sqlite);
       expect(row).toMatchObject({ dex_price_usd: 0.98, source_pool_count: 2, source_total_tvl: 1_010_000 });
       const wire = JSON.parse(row!.price_sources_json!);
-      expect(wire).toMatchObject({ aggregateObservedAt: null, sources: [{ price: 0.98, aggregateObservedAt: null }] });
+      expect(wire).toMatchObject({ aggregateObservedAt: null, sources: [], displaySources: [{ price: 0.98, aggregateObservedAt: null }] });
       expect(getDexAggregateObservedAt(wire, nowSec, "display").aggregateObservedAt).toBe(nowSec);
       const loaded = await loadDexPrices(db, nowSec);
       expect(loaded.dexPriceRows.get(id)?.aggregateObservedAt).toBeNull();
@@ -204,7 +204,8 @@ describe("buildPrimaryConsensusResults", () => {
       const wire = JSON.parse(rows.find((row) => row.stablecoin_id === id)!.price_sources_json!);
       const displayClock = stale.priceObservedAt;
       expect(wire).toMatchObject({ aggregateObservedAt: null, displayAggregateObservedAt: displayClock });
-      expect(wire.sources).toEqual([
+      expect(wire.sources).toEqual([expect.objectContaining({ protocol: "balancer", aggregateObservedAt: displayClock })]);
+      expect(wire.displaySources).toEqual([
         expect.objectContaining({ protocol: "fluid", aggregateObservedAt: null, displayAggregateObservedAt: displayClock }),
         expect.objectContaining({ protocol: "balancer", observedAt: at, aggregateObservedAt: displayClock }),
         expect.objectContaining({ protocol: "uniswap-v3", aggregateObservedAt: null, displayAggregateObservedAt: displayClock,
@@ -212,7 +213,7 @@ describe("buildPrimaryConsensusResults", () => {
       ]);
       const directWire = JSON.parse(rows.find((row) => row.stablecoin_id === direct.stablecoinId)!.price_sources_json!);
       expect(directWire).toMatchObject({ aggregateObservedAt: null, displayAggregateObservedAt: at,
-        sources: [{ protocol: direct.project, aggregateObservedAt: null, displayAggregateObservedAt: at }] });
+        sources: [], displaySources: [{ protocol: direct.project, aggregateObservedAt: null, displayAggregateObservedAt: at }] });
     } finally { sqlite.close(); }
   });
 
@@ -226,6 +227,31 @@ describe("buildPrimaryConsensusResults", () => {
       resolveDlListQuote: () => undefined, results, stats: createStats(),
     });
     expect(results.size).toBe(0);
+  });
+
+  it("uses a dated Bitstamp quote without borrowing its clock for a Kraken trade", () => {
+    const nowSec = 1_800_000_000;
+    const id = "usdt-tether";
+    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    quoteMaps.bitstampPrices.set("USDT", 0.991);
+    quoteMaps.bitstampObservedAtBySymbol.set("USDT", nowSec - 12);
+    quoteMaps.krakenPrices.set("USDT", 0.987);
+    quoteMaps.krakenObservedAt = nowSec;
+    quoteMaps.krakenQuoteBasisBySymbol.set("USDT", "last-trade");
+    const results = new Map<string, PrimaryPriceResult>();
+    const runConsensus = () => buildPrimaryConsensusResults({
+      candidates: [{ id, name: "Tether", symbol: "USDT", pegType: "peggedUSD" }],
+      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
+      resolveDlListQuote: () => undefined, results, stats: createStats(),
+    });
+    runConsensus();
+    expect(results.get(id)).toMatchObject({ price: 0.991, agreeSources: ["bitstamp"], confidence: "single-source",
+      observedAt: nowSec - 12, allPrices: { bitstamp: 0.991 }, diagnosticPrices: { kraken: 0.987 } });
+    expect(results.get(id)?.allPrices).not.toHaveProperty("kraken");
+    quoteMaps.krakenObservedAtBySymbol.set("USDT", nowSec - 20);
+    runConsensus();
+    expect(results.get(id)).toMatchObject({ price: 0.989, confidence: "high", observedAt: nowSec - 20 });
+    expect(new Set(results.get(id)?.agreeSources)).toEqual(new Set(["bitstamp", "kraken"]));
   });
 
   it.each([["audx-aussie-dollar-token", "AUDX"], ["qcad-stablecorp", "QCAD"]])(

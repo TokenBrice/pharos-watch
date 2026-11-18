@@ -213,6 +213,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     confidence: candidate.confidence,
     agreeSources: candidate.agreeSources,
     candidatePrices: candidate.allPrices,
+    upstreamKeysBySource: candidate.upstreamKeysBySource,
     fiatPremiumEvidence: candidate.fiatPremiumEvidence,
     validationContext,
     validationReferences,
@@ -394,9 +395,11 @@ export function prevalidatePrices(input: {
 
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
+    const candidatePrices = getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults);
     const decision = validatePublishedAssetPrice({
       asset,
-      candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
+      candidatePrices,
+      upstreamKeysBySource: candidatePrices && primaryPriceResults?.get(asset.id)?.upstreamKeysBySource,
       fiatPremiumEvidence: getFiatPremiumEvidenceForCurrentAsset(asset, primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,

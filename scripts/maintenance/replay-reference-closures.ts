@@ -55,6 +55,7 @@ import {
   normalizePendingDepegRow,
   persistDepegCommands,
   POOL_CHALLENGE_MIN_TVL,
+  SELECT_PENDING_CONFIRMATION_SQL,
   type ConfirmationEvidenceInput,
   type DEWSInput,
   type PendingDepegRow,
@@ -558,7 +559,7 @@ async function runDetector(input: DecisionInput, db: SimulatorDb, evidence: Evid
       referenceHold: decision.referenceHold, admittedCoverage: decision.admittedCoverage });
   }
   await persistDepegCommands(db, commands);
-  const pending = await db.prepare("SELECT * FROM depeg_pending WHERE stablecoin_id = ?")
+  const pending = await db.prepare(`${SELECT_PENDING_CONFIRMATION_SQL} WHERE pending.stablecoin_id = ?`)
     .bind(input.asset.id).first<PendingDepegRow>();
   if (!pending) return { decision, opened: null, attempted, gaps };
 
@@ -741,33 +742,41 @@ function dewsDivergence(frame: Frame, asset: Asset, peg: string, meta: NonNullab
   const evidence = frame.evidence[asset.id];
   const capturedSelection = frame.dewsReferences.get(peg);
   const selection = capturedSelection ?? replayReferenceSelection(derived, peg, frame.at);
-  const pegRef = selection && isAuthoritativeDepegPegReference({
+  const referenceTrusted = selection && isAuthoritativeDepegPegReference({
     pegCurrency: meta.flags.pegCurrency, pegType: peg, pegRateSource: selection.kind,
     pegRateContributorCount: selection.kind === "median" ? selection.contributors.length : undefined,
-  }) ? getPegReference(peg, { [peg]: selection.usdPerUnit }, meta.commodityOunces, {
-      assetId: asset.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec: asset.priceObservedAt,
-    }) : null;
-  const price = isObservedPrice(asset) ? asset.price ?? null : null;
+  });
+  const ouncesAt = (quoteObservedAtSec: number | null) => getCommodityOuncesAtQuote(meta.commodityOunces, {
+    assetId: asset.id, commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec,
+  });
   const primaryClock = getDewsPrimaryQuoteClock(asset as StablecoinData, frame.at);
   const dexQuote = dexRow && isAffirmativeDexPriceRow(dexRow, frame.at, "depeg") ? {
     dexPriceUsd: dexRow.dex_price_usd, updatedAt: dexRow.aggregateObservedAt!, sourceTotalTvl: dexRow.source_total_tvl,
     aggregateFamilies: readDewsDexAggregateFamilies(evidence?.dexAggregate?.aggregateContributors, dexRow.source_pool_count),
   } : null;
   const standalone = evidence?.dexAggregate == null ? freshUsdQuote(evidence?.dex, frame.at) : undefined;
+  const dexClock = dexQuote?.updatedAt ?? standalone?.observedAtSec ?? null;
+  const primaryOunces = ouncesAt(primaryClock);
+  const dexOunces = ouncesAt(dexClock);
+  const price = isObservedPrice(asset) ? asset.price ?? null : null;
   const dexPriceUsd = dexQuote?.dexPriceUsd ?? standalone?.priceUsd ?? null;
-  const leg = (value: number | null, quoteObservedAtSec: number | null) => {
-    const raw = value != null && pegRef != null ? deriveDepegSignal(value, pegRef)?.rawBps : null;
+  const ounces = primaryOunces ?? dexOunces;
+  const pegRef = referenceTrusted && selection && ounces != null
+    ? getPegReference(peg, { [peg]: selection.usdPerUnit }, ounces) : null;
+  const leg = (value: number | null, quoteObservedAtSec: number | null, ounces: number | null) => {
+    const raw = value != null && pegRef != null && ounces != null ? deriveDepegSignal(value, pegRef)?.rawBps : null;
     return evaluateReferenceAdmission({
-      ...(selection && pegRef != null ? selection : { kind: "none" }),
+      ...(selection && pegRef != null && ounces != null ? selection : { kind: "none" }),
       decisionAtSec: frame.at, generation: capturedSelection?.generation ?? derived.generation, quoteObservedAtSec,
       rawDeviationBps: raw == null ? null : asRawDeviationBps(raw),
     });
   };
-  const referenceAdmission = { primary: leg(price, primaryClock), dex: leg(dexPriceUsd, dexQuote?.updatedAt ?? standalone?.observedAtSec ?? null) };
+  const referenceAdmission = { primary: leg(price, primaryClock, primaryOunces), dex: leg(dexPriceUsd, dexClock, dexOunces) };
   const session = getReferenceSessionState(marketOf(peg)!, frame.at);
   const carriedReferenceDivergence = !session.open && prior?.reference &&
     prior.reference.observedAtSec >= session.closureStartSec - REFERENCE_INTRADAY_BUDGET_SEC ? prior.reference : undefined;
-  const venueSpreadBps = primaryClock != null && price != null && dexQuote && hasIndependentDewsVenues(asset as StablecoinData, dexQuote)
+  const venueSpreadBps = primaryClock != null && primaryOunces != null && dexOunces != null
+    && price != null && dexQuote && hasIndependentDewsVenues(asset as StablecoinData, dexQuote)
     ? deriveDepegSignal(price, dexQuote.dexPriceUsd)?.absBps ?? null : null;
   const smoothing = prior != null && frame.at - prior.at <= TWO_HOURS ? prior.current : null;
   return computeDivergSignal({
