@@ -40,4 +40,4 @@ For standalone approved edits and coordinated additions, keep the research and p
 
 Never execute promotion here. Recommend it only when `stablecoin-runtime-price-marketcap-gate` proves both current price and circulating/market-cap paths, identity matches by contract or issuer domain, and the listing has non-zero live supply rather than preview-only zeros. Hand the evidence to `stablecoin-addition-orchestrator`, including current methodology consequences and unresolved coverage.
 
-Report changes/approvals, no-change coins, deferred conflicts, promotion evidence, and validation. Use ignored `agents/` scratch only for a campaign ledger with an owner/retention contract; do not create a durable shadow registry.
+Report changes/approvals, no-change coins, deferred conflicts, promotion evidence, and validation. File anything still pending, including a discovery backlog, as a [follow-up issue](../../../docs/process/agent-artifacts.md#follow-up-issues) and report its number. Use ignored `agents/` scratch only for a campaign ledger with an owner/retention contract; do not create a durable shadow registry.

@@ -36,4 +36,4 @@ Receipt diagnosis: `npm run check:pr -- --explain-receipt`; exit success only me
 
 ## Completion Evidence
 
-Report commits, focused verifier feedback and generated-artifact changes, PR/run/deploy proof, operational acceptance or pending window, excluded dirty files and skipped checks with reasons. Never label pending operational acceptance as success.
+Report commits, focused verifier feedback and generated-artifact changes, PR/run/deploy proof, operational acceptance or pending window, excluded dirty files and skipped checks with reasons. Never label pending operational acceptance as success. File anything still pending as a [follow-up issue](../../../docs/process/agent-artifacts.md#follow-up-issues) and report its number.

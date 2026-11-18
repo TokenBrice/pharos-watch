@@ -30,17 +30,17 @@ A campaign README, per-artifact rows (path/kind/owner/status/dates/source/destin
 
 ### Follow-up issues
 
-Open loops that outlive scratch go in GitHub issues, which are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (blocked on an owner call), `ops:campaign` (tracking issue for multi-PR work); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after `agents/` is cleaned:
+Agents run with memory off, so an open loop that outlives the session goes in a GitHub issue, never only in a final message or scratch: deferred or partial work, a dated or event-gated check, a decision only the owner can make. Root [Do this last](../../AGENTS.md#do-this-last) authorizes filing them unasked. Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (blocked on an owner call), `ops:campaign` (tracking issue for multi-PR work); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after the session ends and `agents/` is cleaned:
 
 ```
-Due: YYYY-MM-DD          (optional; read by .github/workflows/ops-followups.yml)
+Due: YYYY-MM-DD          (required with ops:followup; read by .github/workflows/ops-followups.yml)
 Origin: PR #N / commit / ADR-N
 Check: exact query, command or URL that answers it
 Done when: closing condition
 Evidence: agents/<path> (local, may be gone)
 ```
 
-Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
+The daily reminder reads only `ops:followup` issues with a `Due:` line, so every one carries it: an event-gated check takes the date of its next re-check, and a dated check gets its own issue because a bundle of unrelated items cannot carry one date. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when the check is rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
 
 ## Pinned On-Chain Evidence
 

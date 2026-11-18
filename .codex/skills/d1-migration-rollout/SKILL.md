@@ -38,4 +38,4 @@ The assigned verifier runs checks after writers finish; implementation agents ha
 
 ## Completion Evidence
 
-Report migration filenames/manifest state, fresh or production rehearsal results, checks actually run or assigned, deployment ordering, rollback bookmark/version, first affected-path result or pending acceptance, and cleanup/restore follow-up.
+Report migration filenames/manifest state, fresh or production rehearsal results, checks actually run or assigned, deployment ordering, rollback bookmark/version, first affected-path result or pending acceptance, and cleanup/restore follow-up. File anything still pending as a [follow-up issue](../../../docs/process/agent-artifacts.md#follow-up-issues) and report its number.
