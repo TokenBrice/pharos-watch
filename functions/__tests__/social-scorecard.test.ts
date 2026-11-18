@@ -50,6 +50,10 @@ function makeBucket() {
   return { bucket: { get, put }, store, writes };
 }
 
+function scorecardPng(metadata: ReturnType<typeof makeScorecardMetadataFixture>, image: Uint8Array<ArrayBuffer>) {
+  return new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } });
+}
+
 function setup() {
   const { bucket, store, writes } = makeBucket();
   const { sqlite } = databases.open();
@@ -59,20 +63,21 @@ function setup() {
   const image = makeScorecardImageFixture();
   const fetchMock = mockFetch([{
     match: `${API_ORIGIN}${API_PATHS.ogScorecard("usdc-circle")}`,
-    respond: () => new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } }),
+    respond: () => scorecardPng(metadata, image),
   }], { requireMatch: true, strictUrl: true });
   const env = { SOCIAL_PREVIEWS: bucket, DB: db, SELECTOR_SNAPSHOT_IP_HASH_SECRET: ipSecret };
-  const create = (overrides: Partial<Parameters<typeof onCreateRequest>[0]["env"]>, headers: Record<string, string> = {}) => onCreateRequest({
+  const post = (
+    body: unknown = { stablecoinId: "usdc-circle" },
+    headers: Record<string, string> = {},
+    overrides: Partial<Parameters<typeof onCreateRequest>[0]["env"]> = {},
+  ) => onCreateRequest({
     request: new Request(`${SITE_ORIGIN}/_site-data/scorecard`, {
       method: "POST", headers: { Origin: SITE_ORIGIN, "CF-Connecting-IP": `192.0.2.${++ipCounter}`, "Content-Type": "application/json", ...headers },
-      body: JSON.stringify({ stablecoinId: "usdc-circle" }),
+      body: JSON.stringify(body),
     }), env: { ...env, ...overrides },
   });
-  const post = (body: unknown = { stablecoinId: "usdc-circle" }, headers: Record<string, string> = {}) => onCreateRequest({
-    request: new Request(`${SITE_ORIGIN}/_site-data/scorecard`, {
-      method: "POST", headers: { Origin: SITE_ORIGIN, "CF-Connecting-IP": `192.0.2.${++ipCounter}`, "Content-Type": "application/json", ...headers }, body: JSON.stringify(body),
-    }), env,
-  });
+  const create = (overrides: Parameters<typeof post>[2], headers?: Parameters<typeof post>[1]) =>
+    post(undefined, headers, overrides);
   const get = (id: string, imageOnly = false, method = "GET", headers: Record<string, string> = {}) => onRequest({
     request: new Request(`${SITE_ORIGIN}/share/scorecard/${id}${imageOnly ? ".png" : "/"}`, { method, headers }),
     env, params: { path: imageOnly ? `${id}.png` : [id] },
@@ -90,6 +95,8 @@ afterEach(() => { databases.closeAll(); vi.useRealTimers(); vi.unstubAllGlobals(
 describe("retained dated scorecard Pages routes", () => {
   it("creates immediately readable HTML and PNG from one permanent sealed R2 object", async () => {
     const { post, get, bucket, store, writes, metadata, image, fetchMock } = setup();
+    if (metadata.subject.kind !== "stablecoin") throw new Error("Expected a coin scorecard");
+    metadata.subject.pillars = [{ id: "exit", score: 0, grade: "F" }];
     const response = await post();
     expect(response.status).toBe(201);
     const result = await response.json() as { url: string; imageUrl: string };
@@ -183,10 +190,10 @@ describe("retained dated scorecard Pages routes", () => {
   });
 
   it("supports public overview editions without a fictitious grade", async () => {
-    const { metadata, image, env, get } = setup();
+    const { metadata, image, post, get } = setup();
     metadata.subject = { kind: "overview", id: "safety-scores", ratedCount: 8, notRatedCount: 1, unavailableCount: 1, totalCount: 10, averageScore: 72.5 };
-    mockFetch([{ match: `${API_ORIGIN}${API_PATHS.ogScorecard("safety-scores")}`, respond: () => new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } }) }], { requireMatch: true });
-    const created = await onCreateRequest({ request: new Request(`${SITE_ORIGIN}/_site-data/scorecard`, { method: "POST", headers: { Origin: SITE_ORIGIN, "CF-Connecting-IP": `192.0.2.${++ipCounter}`, "Content-Type": "application/json" }, body: JSON.stringify({ stablecoinId: "safety-scores" }) }), env });
+    mockFetch([{ match: `${API_ORIGIN}${API_PATHS.ogScorecard("safety-scores")}`, respond: () => scorecardPng(metadata, image) }], { requireMatch: true });
+    const created = await post({ stablecoinId: "safety-scores" });
     expect(created.status).toBe(201);
     const { url } = await created.json() as { url: string };
     const html = await (await get(url.split("/").filter(Boolean).pop()!)).text();
@@ -201,22 +208,22 @@ describe("retained dated scorecard Pages routes", () => {
     const refused = await create(upstream(new Response("Dated scorecard unavailable", { status: 404, headers: { [SOCIAL_SCORECARD_REASON_HEADER]: "not-rated" } })));
     expect([refused.status, refused.headers.get(SOCIAL_SCORECARD_REASON_HEADER), refused.headers.has("Retry-After")]).toEqual([404, "not-rated", false]);
     metadata.subject = { kind: "stablecoin", id: "usdc-circle", name: "USD Coin", symbol: "USDC", score: null, grade: "NR", ratingStatus: "not-rated" };
-    expect((await create(upstream(new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } })))).status).toBe(503);
+    expect((await create(upstream(scorecardPng(metadata, image)))).status).toBe(503);
     expect(bucket.put).not.toHaveBeenCalled();
     expect(quotaRows()).toEqual([]);
   });
 
   it("uses only the canonical public OG lane, including over a service binding", async () => {
-    const { image, metadata, env, fetchMock } = setup();
+    const { image, metadata, create, fetchMock } = setup();
     const binding = { fetch: vi.fn(async (request: Request) => {
       expect(request.url).toBe(`${API_ORIGIN}${API_PATHS.ogScorecard("usdc-circle")}`);
       expect(request.headers.has("Cookie")).toBe(false);
       expect(request.headers.has(SITE_SESSION_HEADER)).toBe(false);
       expect(request.headers.has("X-Pharos-Site-Proxy-Secret")).toBe(false);
       expect(request.headers.has("Authorization")).toBe(false);
-      return new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } });
+      return scorecardPng(metadata, image);
     }) };
-    const response = await onCreateRequest({ request: new Request(`${SITE_ORIGIN}/_site-data/scorecard`, { method: "POST", headers: { Origin: SITE_ORIGIN, "CF-Connecting-IP": `192.0.2.${++ipCounter}`, "Content-Type": "application/json", Cookie: "private=user", [SITE_SESSION_HEADER]: "forged" }, body: JSON.stringify({ stablecoinId: "usdc-circle" }) }), env: { ...env, SITE_API: binding } });
+    const response = await create({ SITE_API: binding }, { Cookie: "private=user", [SITE_SESSION_HEADER]: "forged" });
     expect(response.status).toBe(201);
     expect(binding.fetch).toHaveBeenCalledOnce();
     expect(fetchMock).not.toHaveBeenCalled();

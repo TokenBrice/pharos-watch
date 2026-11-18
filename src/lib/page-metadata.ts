@@ -10,8 +10,9 @@ import {
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { ACTIVE_IDS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
@@ -477,7 +478,8 @@ export function buildPageMetadata({
   ogType = "website",
   publishedTime,
 }: BuildPageMetadataInput): Metadata {
-  const publicRoute = getRouteCapabilities(canonicalPathname(canonical)).chrome === "public";
+  const pathname = canonicalPathname(canonical);
+  const publicRoute = getRouteCapabilities(pathname).chrome === "public";
   const preview = getPageSocialPreview(publicRoute ? canonical : "/");
   const socialTitle = preview.title;
   const socialDescription = preview.description;
@@ -488,6 +490,14 @@ export function buildPageMetadata({
     type: preview.type,
     alt: preview.alt,
   };
+  const dossierId = /^\/stablecoin\/([^/]+)\/?$/.exec(pathname ?? "")?.[1];
+  const coin = dossierId && ACTIVE_IDS.has(dossierId) ? TRACKED_META_BY_ID.get(dossierId) : undefined;
+  if (coin) {
+    const hash = /^\/og\/v2\/image-([a-f0-9]{64})\.png$/.exec(preview.url)?.[1];
+    if (!hash) throw new Error(`Invalid evergreen preview for active dossier: ${canonical}`);
+    resolvedImage.url = `${API_ORIGIN}${API_PATHS.ogDossier(coin.id, hash)}`;
+    resolvedImage.alt = `${coin.name} (${coin.symbol}) Safety Score scorecard, dated`;
+  }
   const markdownAlternate = getMarkdownAlternateForCanonical(canonical);
   const alternates: Metadata["alternates"] = { canonical };
 

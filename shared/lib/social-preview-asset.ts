@@ -1,3 +1,5 @@
+import { API_PATHS } from "./api-endpoints/paths";
+import { API_ORIGIN } from "./runtime-origins";
 import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH } from "./social-preview";
 import { SOCIAL_PREVIEW_ASSET_OBJECT_PREFIX } from "./social-preview-storage";
 
@@ -8,6 +10,17 @@ const PNG_MAGIC = [137, 80, 78, 71, 13, 10, 26, 10];
 export interface SocialPreviewAssetIdentity {
   filename: string;
   key: string;
+}
+
+export function isEvergreenImageHash(value: string | null): value is string {
+  return value !== null && /^[a-f0-9]{64}$/.test(value);
+}
+
+export function dossierOgFallbackPath(preview: URL, id: string): string | null {
+  const hash = preview.searchParams.get("fallback");
+  return isEvergreenImageHash(hash) && preview.href === `${API_ORIGIN}${API_PATHS.ogDossier(id, hash)}`
+    ? `/og/v2/image-${hash}.png`
+    : null;
 }
 
 export function socialPreviewAssetIdentity(pathname: string): SocialPreviewAssetIdentity | null {

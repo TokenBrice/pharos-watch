@@ -17,6 +17,7 @@ import {
   validateSocialScorecardPng,
 } from "@shared/lib/social-scorecard";
 import { SocialScorecardMetadataSchema, type SocialScorecardMetadata } from "@shared/types/social-scorecard";
+import { V9_QUALITY_PILLARS } from "@shared/types/safety-score-v9-quality-pillars";
 import { renderPng, socialCardMeasurer } from "../lib/og-render";
 import { cancelResponseBodyQuietly, readResponseBytesWithinLimitWithSignal } from "../lib/response-body";
 import { loadActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
@@ -97,14 +98,23 @@ function admitSubject(snapshot: SafetyScoreGradeSnapshot, id: string): SocialSco
   const coin = TRACKED_META_BY_ID.get(id);
   const card = snapshot.cards.find((candidate) => candidate.id === id);
   if (!coin || !card || card.ratingStatus === "pipeline-gap" || card.grade === null) return null;
-  return { kind: "stablecoin", id, name: coin.name, symbol: coin.symbol, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus };
+  const ratings = snapshot.scorecardPillars?.id === id ? snapshot.scorecardPillars.ratings : undefined;
+  const pillars = V9_QUALITY_PILLARS.flatMap(pillar => {
+    const rating = ratings?.[pillar];
+    return rating ? [{ id: pillar, ...rating }] : [];
+  });
+  return {
+    kind: "stablecoin", id, name: coin.name, symbol: coin.symbol, score: card.score, grade: card.grade,
+    ratingStatus: card.ratingStatus, ...(pillars.length ? { pillars } : {}),
+  };
 }
 
 /** No live fallback: only the admitted accepted index can produce a retained edition. */
 export async function handleScorecardOg(db: D1Database, id: string): Promise<Response> {
   if (id !== SOCIAL_SCORECARD_OVERVIEW_ID && !ACTIVE_IDS.has(id)) return unavailable("unknown-subject", 404);
   try {
-    const active = await loadActiveSafetyScoreIndex(db);
+    const pillarSubjectId = id === SOCIAL_SCORECARD_OVERVIEW_ID ? undefined : id;
+    const active = await loadActiveSafetyScoreIndex(db, undefined, pillarSubjectId);
     const now = Math.floor(Date.now() / 1000);
     if (active.kind !== "v9" || !isSafetyScoreV9SnapshotFresh(active.snapshot, now)) return unavailable("publication-unavailable");
     const snapshot = active.snapshot;
@@ -129,7 +139,7 @@ export async function handleScorecardOg(db: D1Database, id: string): Promise<Res
     validateSocialScorecardPng(image);
     // Rendering can cross an expiry, hold or publication change. Re-admit the
     // exact source, never relabel the old pixels as the newest generation.
-    const afterRender = await loadActiveSafetyScoreIndex(db);
+    const afterRender = await loadActiveSafetyScoreIndex(db, undefined, pillarSubjectId);
     const assessedAt = Math.floor(Date.now() / 1000);
     if (afterRender.kind !== "v9" || !isSafetyScoreV9SnapshotFresh(afterRender.snapshot, assessedAt)
       || stableJsonStringifyV1(afterRender.snapshot.safetyScoreIdentity) !== stableJsonStringifyV1(metadata.publication)

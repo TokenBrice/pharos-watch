@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families and `image/png` for the dated scorecard, and can return `text/plain` on errors; and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: CORS preflights are bodyless without `Content-Type`; `GET /api/og/*` returns a bodyless `301` for retired image families, a bodyless `302` for dossier fallbacks and `image/png` for dated scorecards, and can return `text/plain` on errors; and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
 > **Agent navigation** — Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Safety Score Availability · Reserve Availability · Public Endpoints (generated from OpenAPI and the endpoint registry) · Pages Function endpoints. For one route, grep its path (for example, `/api/stablecoins`). Operator routes live in the internal [admin reference](./api-reference-admin.md).
 
@@ -308,7 +308,7 @@ API-key auth and quotas normally rely on D1. Protected cacheable `GET` edge-cach
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format; some errors add `reason`, `message` or domain diagnostics (the generated OpenAPI `ApiError` schema requires only a string `error` and allows additional properties). `GET /api/og/*` returns a `301` for retired image families and `image/png` for the dated scorecard; unknown OG route patterns return the normal JSON error body, while malformed scorecard ids and scorecard source/render failures return `text/plain`.
+JSON API handlers use `{ "error": "message" }` JSON format; some errors add `reason`, `message` or domain diagnostics (the generated OpenAPI `ApiError` schema requires only a string `error` and allows additional properties). Unknown OG route patterns return the normal JSON error body. Invalid dated-route ID encodings and explicit scorecard source or render failures return `text/plain`. Unavailable dossier scorecards return an evergreen fallback redirect. [OG routes](#get-apiog)
 
 | Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -922,16 +922,18 @@ PSI and history. [Full endpoint contract](https://pharos.watch/openapi.json#/pat
 
 ### `GET /api/og/*`
 
-Image routes, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage.
+Image routes omitted from OpenAPI. Active stablecoin dossiers use a current dated scorecard with a destination-specific evergreen fallback. Other canonical previews use the generated evergreen map.
 
 The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `depeg`, `safety-scores` and `stability-index`, with or without the `v2/` prefix) answer `301` to the absolute evergreen image of their former destination from a table frozen at retirement; an unknown id redirects to the home image ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).
 
 `/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.
 
+`/api/og/v2/dossier/:id?fallback=<hash>` serves the same admitted PNG and metadata for a rated active coin. If a current scorecard is unavailable, it sends a short-lived `302` to the evergreen PNG identified by the 64-character lowercase hex hash. An absent or invalid fallback selects the home evergreen PNG.
+
 - **Path:** `/api/og/*` and `/api/og/v2/*`
-- **Parameters:** Route-specific path segments select the retired family and id, or the scorecard subject.
-- **Success response schema:** a bodyless `301` redirect, or scorecard PNG image bytes; not represented by a JSON component schema.
-- **Policy:** API-key authentication exempt; unavailable on the site-data lane; one-year redirect caching, source-bounded scorecard caching.
+- **Parameters:** Path segments select the family and subject. The dossier route accepts the evergreen image hash as `fallback`.
+- **Success response:** a bodyless `301` or `302` redirect, or scorecard PNG image bytes.
+- **Policy:** API-key authentication exempt and unavailable on the site-data lane. Legacy redirects cache for one year, dossier fallbacks for three minutes, and scorecard PNGs for up to 60 seconds within the source freshness budget.
 
 ### `GET /api/report-cards/v9`
 

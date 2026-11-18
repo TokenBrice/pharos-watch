@@ -35,6 +35,7 @@ describe("admitted dated scorecard rendering", () => {
       publicationHealth: makeWorkerReportCardsV9Response({ updatedAt: metadata.publishedAtSec }).publicationHealth,
       completeness: { expectedCount: 1 },
       cards: [{ id: "usdc-circle", score: 82, grade: "A", ratingStatus: "rated", partialEvidence: null }],
+      scorecardPillars: { id: "usdc-circle", ratings: { backing: { score: 90, grade: "A+" }, control: { score: 0, grade: "F" } } },
     };
   }
   function mockIndex(source: activeSafetyScoreSource.ActiveSafetyScoreIndex = { kind: "v9", snapshot: snapshot() }) {
@@ -49,16 +50,19 @@ describe("admitted dated scorecard rendering", () => {
   });
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-  it("renders the published hysteresis grade, its date and the registered logo", async () => {
+  it("renders the published grade, available pillars, date and registered logo", async () => {
     const response = await handleScorecardOg(db, "usdc-circle");
     expect(response.status).toBe(200);
     const metadata = scorecardMetadata(response);
-    expect(metadata.subject).toMatchObject({ score: 82, grade: "A" });
+    expect(metadata.subject).toMatchObject({ score: 82, grade: "A", pillars: [
+      { id: "backing", score: 90, grade: "A+" }, { id: "control", score: 0, grade: "F" },
+    ] });
     expect(metadata.publication.methodologyVersion).toBe("10.37");
     expect(metadata.publication.publicationGenerationId).toBe(snapshot().safetyScoreIdentity.publicationGenerationId);
     expect(metadata.imageSha256).toBe(sha256HexFromBytes(new Uint8Array(await response.arrayBuffer())));
     const card = drawn();
-    for (const shown of ["A", "82", "USDC", "USD Coin", "As of 18 Nov 2026"]) expect(card).toContain(`"${shown}"`);
+    for (const shown of ["A", "82", "USDC", "USD Coin", "Backing", "90", "A+", "Economic control", "0", "F", "As of 18 Nov 2026"]) expect(card).toContain(`"${shown}"`);
+    expect(card).not.toContain('"Exit"');
     expect(card).toContain(`data:image/svg+xml;base64,${btoa(logoSvg)}`);
     expect(card).not.toMatch(/methodology|not live/i);
     expect(fetch).toHaveBeenCalledOnce();
@@ -121,12 +125,13 @@ describe("admitted dated scorecard rendering", () => {
     expect(ogRenderer.renderPng).not.toHaveBeenCalled();
   });
 
-  it.each(["expiry", "observation-expiry", "generation", "hold", "grade"])("re-admits after rendering and refuses %s changes", async (fault) => {
+  it.each(["expiry", "observation-expiry", "generation", "hold", "grade", "pillar"])("re-admits after rendering and refuses %s changes", async (fault) => {
     const initial = snapshot();
     const next = snapshot();
     if (fault === "observation-expiry") initial.asOfSec = next.asOfSec = now - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1;
     if (fault === "generation") next.safetyScoreIdentity = { ...next.safetyScoreIdentity, publicationGenerationId: "next-generation" };
     if (fault === "grade") next.cards[0].grade = "B+";
+    if (fault === "pillar") next.scorecardPillars!.ratings.backing!.score--;
     mockIndex().mockResolvedValueOnce({ kind: "v9", snapshot: initial })
       .mockResolvedValueOnce(fault === "hold" ? { kind: "held", reason: "v9-publication-held", detail: "held", snapshot: next } : { kind: "v9", snapshot: next });
     vi.mocked(ogRenderer.renderPng).mockImplementation(async () => {

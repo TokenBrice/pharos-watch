@@ -163,6 +163,8 @@ export const API_PATHS = {
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
   ogScorecard: (stablecoinId: string) => `/api/og/v2/scorecard/${encodeURIComponent(stablecoinId)}`,
+  ogDossier: (stablecoinId: string, fallback: string) =>
+    buildQueryPath(`/api/og/v2/dossier/${encodeURIComponent(stablecoinId)}`, { fallback }),
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
       limit: params?.limit,

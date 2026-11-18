@@ -153,14 +153,16 @@ describe("Safety Score V9 publication payload chunks", () => {
     const expectedFull = await (await handleReportCardsV9(db)).text();
     const detailUrl = new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle");
     const expectedDetail = await (await handleReportCardsV9Detail(db, detailUrl)).text();
-    const expectedIndex = await loadActiveSafetyScoreIndex(db);
+    const { id, pillars } = publication.cards.find(card => card.ratingStatus === "rated")!;
+    const expectedIndex = await loadActiveSafetyScoreIndex(db, undefined, id);
+    expect(expectedIndex).toMatchObject({ snapshot: { scorecardPillars: { id, ratings: { backing: { score: pillars.backing.score } } } } });
     const historical = seedHistoricalInlineRow(sqlite);
     const inline = historical.inline;
     const storedBytes = new TextEncoder().encode(inline).byteLength;
     const readers = async () => {
       expect(await loadSafetyScoreV9Publication(db)).toEqual(publication);
       expect((await loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId).toBe(publication.publicationGenerationId);
-      expect(await loadActiveSafetyScoreIndex(db)).toEqual(expectedIndex);
+      expect(await loadActiveSafetyScoreIndex(db, undefined, id)).toEqual(expectedIndex);
       expect(await loadSafetyPublicationSize(db)).toMatchObject({ kind: "observed", storedBytes });
       expect(await (await handleReportCardsV9(db)).text()).toBe(expectedFull);
       expect(await (await handleReportCardsV9Detail(db, detailUrl)).text()).toBe(expectedDetail);

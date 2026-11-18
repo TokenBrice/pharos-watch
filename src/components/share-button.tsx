@@ -14,6 +14,7 @@ import { copyText } from "@/lib/clipboard";
 import { triggerBlobDownload } from "@/lib/exports/download";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestBlob, requestResponse } from "@/lib/request";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { dossierOgFallbackPath } from "@shared/lib/social-preview-asset";
 import { SocialScorecardCreatedSchema, type SocialScorecardCreated } from "@shared/types/social-scorecard";
 import { trackEvent } from "@/lib/analytics";
 import { getSiteSessionGate, SITE_SESSION_CHECK_ENABLED } from "@/lib/site-session-gate";
@@ -29,10 +30,12 @@ interface ShareButtonProps {
   datedScorecard?: boolean;
 }
 
-async function fetchOgBlob(signal: AbortSignal): Promise<Blob> {
+async function fetchOgBlob(signal: AbortSignal, stablecoinId?: string): Promise<Blob> {
   const image = document.querySelector('meta[property="og:image"]')?.getAttribute("content");
   if (!image) throw new Error("Page preview is unavailable");
   const preview = new URL(image, SITE_ORIGIN);
+  const fallback = stablecoinId && dossierOgFallbackPath(preview, stablecoinId);
+  if (fallback) return requestBlob(fallback, { signal, timeoutMs: 15_000 });
   if (preview.origin !== SITE_ORIGIN || !preview.pathname.startsWith("/og/v2/")
     || !preview.pathname.endsWith(".png") || preview.search || preview.hash) {
     throw new Error("Page preview identity is invalid");
@@ -173,7 +176,7 @@ export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = 
       await requestSequence.current.run(async (signal) => {
         // WebKit requires the clipboard write to start in the selection gesture;
         // the ClipboardItem resolves the abortable image fetch afterward.
-        const blob = fetchOgBlob(signal);
+        const blob = fetchOgBlob(signal, stablecoinId);
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       });
       setStatus("copied");
@@ -186,14 +189,14 @@ export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = 
       trackEvent("social_share", { action: "copy_image", outcome: "error", surface });
     }
     resetStatus();
-  }, [resetStatus, surface]);
+  }, [resetStatus, stablecoinId, surface]);
 
   const downloadPng = useCallback(async () => {
     clearTimeout(resetTimer.current ?? undefined);
     setStatus("loading");
     setErrorMessage(null);
     try {
-      const blob = await requestSequence.current.run(fetchOgBlob);
+      const blob = await requestSequence.current.run((signal) => fetchOgBlob(signal, stablecoinId));
       triggerBlobDownload(blob, `pharos-${stablecoinId ?? "preview"}.png`);
       setStatus("idle");
       trackEvent("social_share", { action: "download_png", outcome: "success", surface });

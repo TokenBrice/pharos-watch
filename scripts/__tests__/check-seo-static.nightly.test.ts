@@ -658,21 +658,24 @@ describe("check-seo-static", () => {
     ]));
   });
 
-  it.each([
-    { kind: "missing", og: "https://pharos.watch/og-missing.png", twitter: "/og-missing.png", localFile: null,
-      errors: ["/: og:image references missing file /og-missing.png", "/: twitter:image references missing file /og-missing.png"] },
-    { kind: "local", og: "https://pharos.watch/og-card.png", twitter: "/og-card.png", localFile: "og-card.png", errors: [] },
-    { kind: "external", og: "https://api.pharos.watch/api/og/stablecoin/usdt-tether",
-      twitter: "https://api.pharos.watch/api/og/stablecoin/usdt-tether", localFile: null, errors: [] },
-  ])("checks $kind social image references", async ({ og, twitter, localFile, errors }) => {
+  it("checks static image files and admits the matching API dossier preview with its local fallback", async () => {
     const root = await makeOutDir();
-    if (localFile) await writeFile(path.join(root, localFile), "");
-    await writeBaselinePages(root, [], {
-      "/": { extraHead: `<meta property="og:image" content="${og}"/><meta name="twitter:image" content="${twitter}"/>` },
-    }, ["/", "/stability-index/"]);
-
+    const hash = "a".repeat(64);
+    const route = "/stablecoin/usdc-circle/";
+    const ogImage = `https://api.pharos.watch/api/og/v2/dossier/usdc-circle?fallback=${hash}`;
+    await mkdir(path.join(root, "og/v2"), { recursive: true });
+    await writeFile(path.join(root, `og/v2/image-${hash}.png`), "");
+    await writeBaselinePages(root, [route], {
+      "/": { ogImage: "https://pharos.watch/og-missing.png", extraHead: '<meta name="twitter:image" content="/og-missing.png"/>' },
+      "/stability-index/": { ogImage },
+    }, ["/", "/stability-index/", route]);
+    await writePage(root, route, { ogImage, extraHead: `<meta name="twitter:image" content="${ogImage}"/>` });
     const result = collectFixtureSeoResult(root);
-    expect(result.errors.filter((error) => error.includes("references missing file"))).toEqual(errors);
+    expect(result.errors.filter(error => /references missing file|API-hosted dossier preview/.test(error))).toEqual([
+      "/: og:image references missing file /og-missing.png",
+      "/: twitter:image references missing file /og-missing.png",
+      "/stability-index/: og:image has an invalid API-hosted dossier preview",
+    ]);
   });
 
   it("asserts required structured-data fields for representative routes", async () => {

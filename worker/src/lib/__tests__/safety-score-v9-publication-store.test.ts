@@ -684,6 +684,12 @@ describe("Safety Score V9 publication store", () => {
     });
   });
 
+  function readProjections(sqlite: ReturnType<typeof database>["sqlite"]) {
+    const { acceptedBaseline, lenderCollateral, cohort, scorecardPillars } = SAFETY_SCORE_V9_CACHE_KEYS;
+    return sqlite.prepare("SELECT * FROM cache WHERE key IN (?, ?, ?, ?) ORDER BY key")
+      .all(acceptedBaseline, lenderCollateral, cohort, scorecardPillars);
+  }
+
   it("publishes canonical ratings and advances held health without replacing them", async () => {
     const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication({
@@ -716,10 +722,10 @@ describe("Safety Score V9 publication store", () => {
       SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
+      SAFETY_SCORE_V9_CACHE_KEYS.scorecardPillars,
       V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
     ].sort());
-    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort);
+    const projectionRows = readProjections(sqlite);
 
     await persistSafetyScoreV9Publication(db, {
       publicationHealth: {
@@ -739,8 +745,7 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 120,
     });
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort)).toEqual(projectionRows);
+    expect(readProjections(sqlite)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,
@@ -792,8 +797,7 @@ describe("Safety Score V9 publication store", () => {
         affectedAssetIds: ["usdc-circle"],
       },
     });
-    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort);
+    const projectionRows = readProjections(sqlite);
 
     await persistSafetyScoreV9PublicationAttempt(db, {
       publicationAttempt: {
@@ -811,8 +815,7 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 130,
     });
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key")
-      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, SAFETY_SCORE_V9_CACHE_KEYS.cohort)).toEqual(projectionRows);
+    expect(readProjections(sqlite)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,

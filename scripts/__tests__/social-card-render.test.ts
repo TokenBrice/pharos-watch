@@ -22,7 +22,7 @@ const hub: SocialCardSpec = { template: "hub", path: "/", label: "Stablecoin int
 const dossier: SocialCardSpec = { template: "dossier", path: "/stablecoin/eurr-revolut/", label: "Upcoming stablecoin", copy, identity: { symbol: "EURR", name: "Revolut Euro" }, headline: "EURR", subline: "Revolut Euro", hook: "The neobank that rented its own coin", chips: ["EUR peg", "Launched Aug 2026"], lifecycle: "launched-untracked", stamp: "NOT YET TRACKED" };
 const versus: SocialCardSpec = { template: "versus", path: "/compare/usdt-vs-usdc/", label: "Stablecoin comparison", copy, left: { ...usdt, detail: "Tether · El Salvador" }, right: { ...usdc, detail: "Circle · United States" }, hook: "Same peg. Different promises." };
 const record: SocialCardSpec = { template: "record", path: "/depeg/usdc/", label: "Confirmed depeg record", copy, accent: "severity", identity: usdc, dateline: "11 Mar 2023", title: "USDC: 12.1% below peg", facts: ["Recovered after 46 hours"], ruler: { peg: 1, floor: 0.85, low: 0.879, currencySymbol: "$" } };
-const scorecard: SocialScorecardCard = { identity: usdt, grade: "A+", score: 87, asOf: "17 Nov 2026", pillars: [{ name: "Backing", score: 65, grade: "C+" }, { name: "Exit", score: 92, grade: "A+" }] };
+const scorecard: SocialScorecardCard = { identity: usdt, grade: "A+", score: 87, asOf: "17 Nov 2026", pillars: [{ name: "Backing", score: 65, grade: "C+" }, { name: "Exit", score: 92, grade: "A+" }, { name: "Economic control", score: 70, grade: "B" }] };
 
 let assets: SocialCardRenderAssets;
 beforeAll(async () => {
@@ -33,9 +33,11 @@ describe("social card renderer", () => {
   it("renders every template as a 1200×630 SVG that resvg rasterises within the size budget", async () => {
     const svgs = [...await Promise.all([hub, dossier, versus, record].map((spec) => renderSocialCardSvg(spec, assets))), await renderSocialScorecardSvg(scorecard, assets)];
     for (const svg of svgs) expect(svg).toMatch(/^<svg width="1200" height="630" viewBox="0 0 1200 630"/);
-    const png = await renderSvgPngWithResvg({ svg: svgs[3], fontBuffers: assets.fontBuffers, background: "#f4f6f7", width: 1200 });
-    expect(await sharp(png).metadata()).toMatchObject({ width: 1200, height: 630, format: "png" });
-    expect(png.byteLength).toBeLessThan(300 * 1024);
+    for (const svg of svgs.slice(-2)) {
+      const png = await renderSvgPngWithResvg({ svg, fontBuffers: assets.fontBuffers, background: "#f4f6f7", width: 1200 });
+      expect(await sharp(png).metadata()).toMatchObject({ width: 1200, height: 630, format: "png" });
+      expect(png.byteLength).toBeLessThan(300 * 1024);
+    }
   });
 
   it("fails loudly with the spec path instead of clipping or dropping copy", () => {
