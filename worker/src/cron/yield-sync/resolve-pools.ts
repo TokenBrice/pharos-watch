@@ -16,6 +16,7 @@ import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-con
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContracts, resolveYieldCandidateStablecoinId } from "./identity";
+import { isSupplementalVaultYieldSource } from "./family-registry";
 
 export function buildDlChainFilter(
   meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
@@ -420,11 +421,14 @@ export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidate
     return "duplicate";
   }
 
+  const legacyVaultClock = entry.yield.sourceFetchedAt == null && entry.yield.sourceObservedAt != null &&
+    isSupplementalVaultYieldSource(entry.yield.sourceKey);
   resolved.push({
     id: meta.id,
     symbol: meta.symbol,
     yield: {
       ...entry.yield,
+      ...(legacyVaultClock ? { sourceFetchedAt: entry.yield.sourceObservedAt, sourceObservedAt: null } : {}),
       chain: entry.yield.chain ?? entry.chain ?? null,
     },
   });
@@ -537,6 +541,7 @@ function appendResolvedAutoDiscoveredYield(
       }),
       exchangeRate: null,
       sourceKey: pool.pool,
+      sourceObservedAt: null,
       project: pool.project,
       chain: pool.chain ?? null,
     },
@@ -593,6 +598,7 @@ function appendExplicitPoolSources(
           dataSource: config.dataSource ?? "defillama",
           exchangeRate: null,
           sourceKey: pool.pool,
+          sourceObservedAt: null,
           yieldSource: config.yieldSource,
           yieldType: config.yieldType,
           project: pool.project,

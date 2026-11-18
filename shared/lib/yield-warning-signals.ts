@@ -10,6 +10,7 @@ const OPERATIONAL_YIELD_ADVISORY_SIGNALS: ReadonlySet<string> = new Set([
   "reference-benchmark-degraded",
   "benchmark-degraded",
   "benchmark-stale",
+  "benchmark-unit-mismatch",
 ]);
 
 export function isOperationalYieldAdvisory(signal: string): boolean {

@@ -14,6 +14,7 @@ import {
   type DeterministicOnChainHealthState,
 } from "../yield-sync/cache";
 import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
+import { resolvedYield } from "./yield-evaluation.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 
@@ -152,6 +153,20 @@ describe("parseDlStablecoinPoolsCache", () => {
 
 describe("parseYieldSupplementalSourcesCache", () => {
   const nowSec = 1710500000;
+
+  it("stores a rollback fetch clock and a distinct observation clock in one vault generation", () => {
+    for (const observedAt of [null, nowSec - 120]) {
+      const candidate = { symbol: "USDC", address: null, chain: "ethereum", yield: resolvedYield({
+        dataSource: "protocol-api", sourceKey: "protocol-api:morpho-vault:ethereum:usdc",
+        sourceFetchedAt: nowSec - 5, sourceObservedAt: observedAt,
+      }) };
+      const raw = buildYieldSupplementalFamilyCache([candidate], nowSec);
+      expect(JSON.parse(raw)).toMatchObject({ version: 1, updatedAt: nowSec, data: [
+        { yield: { sourceObservedAt: nowSec - 5 } },
+      ] });
+      expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec)?.candidates).toEqual([candidate]);
+    }
+  });
 
   it("rejects legacy array format", () => {
     const raw = JSON.stringify([{

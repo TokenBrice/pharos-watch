@@ -102,6 +102,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   // at most 5 bps per update with no minimum interval, not reconciled strategy profit.
   {
     stablecoinId: "xgld-unitas",
+    returnDenomination: "XAUt",
     chain: "bsc",
     contract: "0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7",
     selector: "0x3ba0b9a9",

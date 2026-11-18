@@ -1,5 +1,7 @@
 import type { DlPool, ResolvedYield, YieldEnvelopeRejection } from "./types";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { benchmarkRecordObservedAtSeconds, getYieldBenchmarkComparisonApy } from "@shared/lib/yield-benchmark-freshness";
+import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { computeApyFromRate, isDeterministicApyWithinSanityBounds } from "../yield-helpers";
 import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import type { RateDerivedConfig } from "../../lib/yield-config/yield-config-registry";
@@ -123,6 +125,7 @@ export function deriveOnChainRateObservation(params: {
   startSec: number;
   nativePoolId: string | null;
   sourceTvlUsd: number | null;
+  returnDenomination?: string;
 }): { source: ResolvedYield | null; rejection: YieldEnvelopeRejection | null } {
   const { id, symbol, rate, previousRate: prevRow, nativePoolId, sourceTvlUsd } = params;
   if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
@@ -140,6 +143,7 @@ export function deriveOnChainRateObservation(params: {
           dataSource: "onchain",
           exchangeRate: rate,
           sourceKey,
+          ...(params.returnDenomination ? { returnDenomination: params.returnDenomination } : {}),
           sourceObservedAt: params.startSec,
           comparisonAnchorObservedAt: prevRow.recordedAt,
         },
@@ -181,12 +185,11 @@ export function deriveOnChainRateObservation(params: {
 
 export function deriveBenchmarkRateYield(
   rateDerivedConfig: RateDerivedConfig,
+  key: YieldBenchmarkKey,
   benchmarkMeta: ParsedYieldBenchmarkMeta,
 ): ResolvedYield | null {
-  // Retained market evidence is usable with degraded qualification; a
-  // hardcoded fallback is not a measured product return.
-  if (benchmarkMeta.isFallback && benchmarkMeta.lastMarketRate == null) return null;
-  const apy = Math.max(0, benchmarkMeta.rate - rateDerivedConfig.spreadBps / 100);
+  if (benchmarkMeta.source === "hardcoded-fallback" || (benchmarkMeta.isFallback && benchmarkMeta.lastMarketRate == null)) return null;
+  const apy = Math.max(0, getYieldBenchmarkComparisonApy({ ...benchmarkMeta, key }) - rateDerivedConfig.spreadBps / 100);
   return {
     currentApy: apy,
     apyBase: apy,
@@ -197,7 +200,8 @@ export function deriveBenchmarkRateYield(
     exchangeRate: null,
     sourceKey: "rate-derived",
     yieldSource: rateDerivedConfig.label,
-    sourceObservedAt: benchmarkMeta.lastMarketFetchedAt ?? benchmarkMeta.fetchedAt ?? null,
+    sourceObservedAt: benchmarkRecordObservedAtSeconds(benchmarkMeta.recordDate),
+    sourceFetchedAt: benchmarkMeta.lastMarketFetchedAt ?? benchmarkMeta.fetchedAt,
     comparisonAnchorObservedAt: null,
     benchmarkOverrideKey: rateDerivedConfig.benchmarkOverrideKey ?? null,
   };

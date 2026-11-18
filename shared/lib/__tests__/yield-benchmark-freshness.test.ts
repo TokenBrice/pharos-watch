@@ -6,6 +6,7 @@ import {
   assessYieldBenchmarkRate,
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
+  getYieldBenchmarkRecordMaxAgeSeconds,
   isYieldBenchmarkRatePlausible,
 } from "@shared/lib/yield-benchmark-freshness";
 
@@ -42,6 +43,32 @@ describe("classifyYieldBenchmarkFreshness", () => {
     expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: null })).toBe("stale");
     expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: "not-a-date" })).toBe("stale");
     expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: "2099-01-01" })).toBe("stale");
+  });
+
+  it.each([
+    ["2026-11-05", "2026-11-13T12:00:00Z"],
+    ["2026-03-26", "2026-04-02T12:00:00Z"],
+    ["2026-04-01", "2026-04-10T12:00:00Z"],
+  ])("keeps CETES placement %s current through %s, subject to fetch TTL", (recordDate, deadline) => {
+    const nowSec = Date.parse(deadline) / 1_000;
+    const mxnMeta = { ...healthyMeta, key: "MXN" as const };
+    const ageBudget = getYieldBenchmarkRecordMaxAgeSeconds("MXN", recordDate);
+    expect(ageBudget).toBe(benchmarkRecordAgeSeconds(recordDate, nowSec));
+    expect(classifyYieldBenchmarkFreshness(mxnMeta, { recordDate, nowSec })).toBe("healthy");
+    expect(classifyYieldBenchmarkFreshness(mxnMeta, { recordDate, nowSec: nowSec + 1 })).toBe("stale");
+    expect(classifyYieldBenchmarkFreshness(
+      { ...mxnMeta, ageSeconds: YIELD_BENCHMARK_SCORE_TTL_SEC + 1 }, { recordDate, nowSec },
+    )).toBe("stale");
+  });
+
+  it.each([
+    ["2026-11-12T05:59:59Z", "stale"],
+    ["2026-11-12T06:00:00Z", "healthy"],
+  ])("uses the Mexico City effective date boundary at %s", (now, expected) => {
+    expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, key: "MXN" }, {
+      recordDate: "2026-11-12",
+      nowSec: Date.parse(now) / 1_000,
+    })).toBe(expected);
   });
 
   it("degrades on feed fallback but not on documented proxy selection alone", () => {
@@ -98,42 +125,62 @@ describe("isYieldBenchmarkRatePlausible", () => {
 });
 
 describe("assessYieldBenchmarkRate", () => {
-  it("confirms a persistent relative-band shift on the second consecutive observation", () => {
-    expect(assessYieldBenchmarkRate("USD", 0.4, 1.0)).toEqual({
-      accepted: false,
-      rejection: "relative-band",
-      confirmedLevelShift: false,
-    });
-    expect(assessYieldBenchmarkRate("USD", 0.41, 1.0, 0.4)).toEqual({
-      accepted: true,
-      rejection: null,
-      confirmedLevelShift: true,
+  const confirmation = {
+    recordDate: "2026-09-11",
+    nowSec: NOW_SEC,
+    previousRejection: { rate: 6, recordDate: "2026-09-10", fetchedAt: Date.UTC(2026, 8, 10, 12) / 1_000 },
+  };
+
+  it.each([
+    ["2026-09-11", true],
+    ["2026-09-10", false],
+    ["2026-09-09", false],
+    ["2026-09-13", false],
+    ["2026-09-31", false],
+  ])("confirms a pending September 10 shift only on a later effective fixing (%s)", (recordDate, confirmed) => {
+    expect(assessYieldBenchmarkRate("USD", 6.1, 4, { ...confirmation, recordDate })).toEqual({
+      accepted: confirmed,
+      rejection: confirmed ? null : "relative-band",
+      confirmedLevelShift: confirmed,
     });
   });
 
-  it("rejects a one-off spike and a different out-of-band level", () => {
-    expect(assessYieldBenchmarkRate("USD", 0.4, 1.0, null)).toMatchObject({
+  it("rejects a one-off spike or a pending level without matching dated evidence", () => {
+    expect(assessYieldBenchmarkRate("USD", 6, 4)).toMatchObject({
       accepted: false,
       rejection: "relative-band",
       confirmedLevelShift: false,
     });
-    expect(assessYieldBenchmarkRate("USD", 0.4, 1.0, 0.25)).toMatchObject({
-      accepted: false,
-      rejection: "relative-band",
-      confirmedLevelShift: false,
-    });
+    for (const previousRejection of [
+      { ...confirmation.previousRejection, rate: 7 },
+      { ...confirmation.previousRejection, recordDate: null },
+      { ...confirmation.previousRejection, fetchedAt: Date.UTC(2026, 8, 9, 12) / 1_000 },
+    ]) {
+      expect(assessYieldBenchmarkRate("USD", 6, 4, { ...confirmation, previousRejection })).toMatchObject({
+        accepted: false,
+        rejection: "relative-band",
+        confirmedLevelShift: false,
+      });
+    }
   });
 
   it("never confirms a persistent unit-scale drift", () => {
-    expect(assessYieldBenchmarkRate("TRY", 0.4, 40, 0.4)).toEqual({
+    expect(assessYieldBenchmarkRate("TRY", 0.4, 40, {
+      ...confirmation, previousRejection: { ...confirmation.previousRejection, rate: 0.4 },
+    })).toEqual({
       accepted: false,
       rejection: "unit-scale",
       confirmedLevelShift: false,
     });
-    expect(assessYieldBenchmarkRate("USD", 0.43, 4.3, 0.43)).toMatchObject({
+    expect(assessYieldBenchmarkRate("USD", 0.43, 4.3, {
+      ...confirmation, previousRejection: { ...confirmation.previousRejection, rate: 0.43 },
+    })).toMatchObject({
       accepted: false,
       rejection: "unit-scale",
       confirmedLevelShift: false,
     });
+    expect(assessYieldBenchmarkRate("USD", 19.9, 4, {
+      ...confirmation, previousRejection: { ...confirmation.previousRejection, rate: 20 },
+    })).toMatchObject({ accepted: false, rejection: "relative-band", confirmedLevelShift: false });
   });
 });

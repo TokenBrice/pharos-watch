@@ -1,6 +1,8 @@
+import { REVIEWED_BUSINESS_CALENDARS } from "../data/business-calendars/reviewed";
+import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "./iana-local-time";
 import { ZEPHYR_YIELD_HISTORY_POLICY } from "./yield-source-history";
 import { CRON_INTERVALS } from "./cron-jobs";
-import { DAY_MS } from "./time-constants";
+import { DAY_MS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants";
 
 /** First-party optional source declarations, in manifest order. Worker readers attach separately. */
 export const OPTIONAL_YIELD_SOURCES = {
@@ -97,7 +99,8 @@ export const OPTIONAL_YIELD_SOURCES = {
   },
   ondo: {
     stablecoinId: "usdy-ondo-finance",
-    sourceKey: "protocol-api:ondo-usdy-oracle",
+    sourceKey: "protocol-api:ondo-usdy-continuous-oracle",
+    legacySourceKey: "protocol-api:ondo-usdy-oracle",
     manifestLabel: "Ondo USDY oracle",
     yieldSource: "Ondo USDY Oracle",
     yieldType: "nav-appreciation",
@@ -153,8 +156,55 @@ export const SLOW_NAV_SOURCE_KEYS: ReadonlySet<string> = new Set(
   Object.values(OPTIONAL_YIELD_SOURCES).filter((source) => source.slowNav).map((source) => source.sourceKey),
 );
 
+const USYC_NAV_CALENDAR = REVIEWED_BUSINESS_CALENDARS["us-federal-reserve"];
+export const USYC_NAV_FUTURE_SKEW_SEC = 5 * SECONDS_PER_MINUTE;
+const USYC_NAV_REPORT_GRACE_SEC = 2 * HOUR_SECONDS;
+
+/** Circle normally reports at 06:45 ET on business days; allow two hours of delay. */
+export function getUsycNavReportWindow(
+  sourceObservedAtSec: number | null | undefined,
+): { expectedAtSec: number; staleAfterSec: number } | null {
+  if (sourceObservedAtSec == null || !Number.isSafeInteger(sourceObservedAtSec) || sourceObservedAtSec <= 0) return null;
+  const { timezone, coverage, weekendDays, holidays } = USYC_NAV_CALENDAR;
+  const observedDate = localDateInIanaTimezone(sourceObservedAtSec * 1000, timezone);
+  if (observedDate == null || observedDate < coverage.from || observedDate > coverage.to) return null;
+
+  const lastCoveredDayMs = Date.parse(coverage.to);
+  for (let dayMs = Date.parse(observedDate) + DAY_MS; dayMs <= lastCoveredDayMs; dayMs += DAY_MS) {
+    const date = new Date(dayMs);
+    const dateLabel = date.toISOString().slice(0, 10);
+    if (weekendDays.includes(date.getUTCDay()) || holidays.includes(dateLabel)) continue;
+    const reportHourMs = nextIanaLocalHourDueAt(dayMs, timezone, 6);
+    if (reportHourMs == null) return null;
+    const expectedAtSec = reportHourMs / 1000 + 45 * SECONDS_PER_MINUTE;
+    return { expectedAtSec, staleAfterSec: expectedAtSec + USYC_NAV_REPORT_GRACE_SEC };
+  }
+  return null;
+}
+
+export function getUsycNavFreshness(
+  sourceObservedAtSec: number | null | undefined,
+  nowSec: number,
+): "fresh" | "aging" | "stale" | "unknown" {
+  if (sourceObservedAtSec == null || !Number.isFinite(nowSec) || nowSec <= 0
+    || sourceObservedAtSec > nowSec + USYC_NAV_FUTURE_SKEW_SEC) return "unknown";
+  const window = getUsycNavReportWindow(sourceObservedAtSec);
+  if (window == null) return "unknown";
+  if (nowSec > window.staleAfterSec) return "stale";
+  return nowSec >= window.expectedAtSec ? "aging" : "fresh";
+}
+
 export function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {
   return sourceKey?.startsWith("aave-v3-onchain:") === true || sourceKey?.startsWith("compound-v3:") === true;
+}
+
+export function getYieldSourceAgingThresholdMs(
+  dataSource: string,
+  sourceKey: string | null | undefined,
+  staleThresholdMs: number,
+): number {
+  const cadenceMs = getYieldSourceProducerCadenceMs(dataSource, sourceKey);
+  return cadenceMs + (staleThresholdMs - cadenceMs) / 2;
 }
 
 export function getYieldSourceProducerCadenceMs(dataSource: string, sourceKey?: string | null): number {

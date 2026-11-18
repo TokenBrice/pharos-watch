@@ -50,6 +50,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { resolveYieldZone } from "@/lib/yield-scatter";
 import { resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
+import { getYieldBenchmarkComparisonApy, hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -649,7 +650,9 @@ export function YieldClient() {
                 </div>
                 <YieldScatterPlot
                   rankings={visibleRows}
-                  benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
+                  benchmarkRate={stats.referenceBenchmark
+                    ? getYieldBenchmarkComparisonApy({ ...stats.referenceBenchmark, key: stats.referenceBenchmark.key ?? "USD" })
+                    : visibleRows.some((row) => !hasYieldBenchmarkUnitMismatch(row)) ? data.riskFreeRate : null}
                   benchmarkLabel={stats.referenceBenchmark?.label}
                   benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
                   benchmarks={heroBenchmarks}

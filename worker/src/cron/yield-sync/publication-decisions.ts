@@ -1,6 +1,7 @@
 import {
   EXTERNAL_OPPORTUNITY_YIELD_TYPES,
 } from "@shared/lib/yield-opportunity-risk";
+import { getUsycNavReportWindow, OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import {
   type YieldDecisionReasonCode,
   type YieldDecisionRejectionReasonCode,
@@ -250,17 +251,12 @@ export function buildYieldSourceProvenance(params: {
   startSec: number;
   dlPoolsMeta: YieldSourceInputMeta;
 }): Record<string, unknown> {
-  const { source, isBest, evaluatedSources, startSec, dlPoolsMeta } = params;
-
-  const sourceObservedAt =
-    source.sourceObservedAt
-    ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-      ? (dlPoolsMeta.updatedAt ?? (dlPoolsMeta.ageSeconds != null ? startSec - dlPoolsMeta.ageSeconds : null))
-      : source.dataSource === "rate-derived"
-        ? null
-        : startSec);
-  // A source-local market print is authoritative over a family fetch age.
+  const { source, isBest, evaluatedSources, startSec } = params;
+  const sourceObservedAt = source.sourceObservedAt ?? null;
   const sourceAgeSeconds = sourceObservedAt != null ? Math.max(0, startSec - sourceObservedAt) : null;
+  const usycWindow = source.sourceKey === OPTIONAL_YIELD_SOURCES.hashnote.sourceKey
+    ? getUsycNavReportWindow(sourceObservedAt)
+    : null;
   const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const comparisonAnchorAgeSeconds =
     comparisonAnchorObservedAt != null ? Math.max(0, startSec - comparisonAnchorObservedAt) : null;
@@ -269,8 +265,11 @@ export function buildYieldSourceProvenance(params: {
   return {
     sourceKey: source.sourceKey,
     sourceObservedAt,
+    ...(source.dataSource === "rate-derived" && source.sourceFetchedAt !== undefined ? { sourceFetchedAt: source.sourceFetchedAt } : {}),
     sourceAgeSeconds,
-    sourceMaxAgeSeconds: getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
+    sourceMaxAgeSeconds: usycWindow != null && sourceObservedAt != null
+      ? usycWindow.staleAfterSec - sourceObservedAt
+      : source.sourceMaxAgeSeconds ?? getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
     comparisonAnchorObservedAt,
     comparisonAnchorAgeSeconds,
     confidenceTier: source.confidenceTier,
@@ -292,17 +291,19 @@ export function buildYieldSourceProvenance(params: {
     usedDefaultSafety: source.usedDefaultSafety,
     safetyReason: source.safetyReason,
     safetyScoreIdentity: source.safetyScoreIdentity ?? null,
-    benchmarkKey: source.benchmarkKey,
-    benchmarkLabel: source.benchmarkLabel,
-    benchmarkCurrency: source.benchmarkCurrency,
-    benchmarkRate: source.benchmarkRate,
-    benchmarkRecordDate: source.benchmarkRecordDate,
-    benchmarkIsFallback: source.benchmarkIsFallback,
-    benchmarkFallbackMode: source.benchmarkFallbackMode,
-    benchmarkSelectionMode: source.benchmarkSelectionMode,
-    benchmarkIsProxy: source.benchmarkIsProxy,
+    ...(source.benchmarkRate != null ? {
+      benchmarkKey: source.benchmarkKey,
+      benchmarkLabel: source.benchmarkLabel,
+      benchmarkCurrency: source.benchmarkCurrency,
+      benchmarkRate: source.benchmarkRate,
+      benchmarkSelectionMode: source.benchmarkSelectionMode,
+      benchmarkIsProxy: source.benchmarkIsProxy,
+    } : {}),
+    benchmarkRecordDate: source.benchmarkRate != null ? source.benchmarkRecordDate : null,
+    benchmarkIsFallback: source.benchmarkRate != null && source.benchmarkIsFallback,
+    benchmarkFallbackMode: source.benchmarkRate != null ? source.benchmarkFallbackMode : null,
     sourceFreshness: source.sourceFreshness,
-    benchmarkFreshness: source.benchmarkFreshness,
+    ...(source.benchmarkFreshness != null ? { benchmarkFreshness: source.benchmarkFreshness } : {}),
     scoreQualified: source.scoreQualified,
     anomalies: source.anomalies,
   };

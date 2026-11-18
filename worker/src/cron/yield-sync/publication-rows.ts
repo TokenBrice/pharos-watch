@@ -132,7 +132,7 @@ export function buildYieldStorageRows(input: {
       pys_at_publish: safePharosYieldScore,
       safety_at_publish: safeSafetyScore,
       variance_at_publish: safeVariance30d,
-      pys_inputs_at_publish: safetySnapshotUnavailable
+      pys_inputs_at_publish: safetySnapshotUnavailable || source.benchmarkRate == null
         ? null
         : JSON.stringify({
             schemaVersion: YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
@@ -146,6 +146,8 @@ export function buildYieldStorageRows(input: {
             scoreQualification: source.scoreQualification,
             benchmarkKey: source.benchmarkKey,
             evidenceClass: source.evidenceClass,
+            // A replay-only marker separates provider clocks from legacy transport clocks.
+            ...(source.sourceObservationVerified ? { sourceObservationVerified: true } : {}),
             // The v8.43 hurdle re-base is unrecoverable from the rest of the
             // snapshot: the governing USD rate lives only in the payload's
             // `riskFreeRate`, so a replay without it drifts on every non-USD row.

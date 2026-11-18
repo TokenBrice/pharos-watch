@@ -184,7 +184,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const chain = chainKey ? CHAIN_META[chainKey.toLowerCase()]?.name ?? chainKey : null;
   const deployment = ranking.sourceRisk?.deploymentPlace;
   const calculationMode = ranking.provenance?.calculationMode;
-  const excessYield = ranking.excessYield;
+  const excessYield = view.benchmarkRate == null ? null : ranking.excessYield;
   // An unmeasured stability is no tile at all, never a dash.
   const hasStability = ranking.yieldStability != null;
   // An excess that prints as ±0.00% (|excess| below half of the last displayed

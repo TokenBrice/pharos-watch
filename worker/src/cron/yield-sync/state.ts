@@ -58,6 +58,7 @@ import type {
   ChainRpcConfig,
 } from "../../lib/chain-registry";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
+import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import {
   fetchOnChainRates,
 } from "./sources-rpc";
@@ -90,51 +91,59 @@ export async function getPriceDerivedApy(
 } | null> {
   const now = Math.floor(Date.now() / 1000);
   const minLookbackSec = 7 * DAY_SECONDS;
-  const maxLookbackSec = 45 * DAY_SECONDS;
+  const earliestAnchorAt = now - getComparisonAnchorStaleThresholdMs("price-derived") / 1000;
+  // A daily snapshot or its same-day repair can carry an older quote. Use the
+  // bucket only to bound the indexed read, leaving room for day-boundary skew.
+  const earliestBucketAt = earliestAnchorAt - 2 * DAY_SECONDS;
 
-  const [recentRow, anchoredRow] = await Promise.all([
-    runWithOverloadRetry(() => db
-      .prepare(
-        "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
-      )
-      .bind(stablecoinId)
-      .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
-      3, signal, { waitOutResourceWindow: true }),
-    runWithOverloadRetry(() => db
-      .prepare(
-        `SELECT price, snapshot_date, price_observed_at
-         FROM supply_history
-         WHERE stablecoin_id = ?
-           AND price IS NOT NULL
-           AND price_observed_at IS NOT NULL
-           AND snapshot_date BETWEEN ? AND ?
-         ORDER BY snapshot_date ASC
-         LIMIT 1`,
-      )
-      .bind(stablecoinId, now - maxLookbackSec, now - minLookbackSec)
-      .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
-      3, signal, { waitOutResourceWindow: true }),
-  ]);
+  const recentRow = await runWithOverloadRetry(() => db
+    .prepare(
+      `SELECT /* pharos:yield-sync:price-latest */ price, price_observed_at
+       FROM supply_history
+       WHERE stablecoin_id = ?
+         AND snapshot_date >= ?
+         AND price > 0 AND price <= ?
+         AND typeof(price_observed_at) = 'integer'
+         AND price_observed_at BETWEEN ? AND ?
+       ORDER BY price_observed_at DESC, snapshot_date DESC
+       LIMIT 1`,
+    )
+    .bind(stablecoinId, earliestBucketAt, Number.MAX_VALUE, earliestAnchorAt + minLookbackSec, now)
+    .first<{ price: number; price_observed_at: number | null }>(),
+    3, signal, { waitOutResourceWindow: true });
 
-  if (!recentRow?.price || !anchoredRow?.price || anchoredRow.price <= 0) return null;
-
-  // `snapshot_date` is a UTC day bucket, not an observation clock. The quote's
-  // own clock (migration 0253) is the only admissible observation time; a row
-  // without one was not observed by this pipeline and cannot yield an APY.
   const isObservationClock = (value: number | null): value is number =>
-    typeof value === "number" && Number.isInteger(value) && value > 0 && value <= now;
-  if (!isObservationClock(recentRow.price_observed_at) || !isObservationClock(anchoredRow.price_observed_at)) {
-    return null;
-  }
+    typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= now;
+  if (!recentRow || !Number.isFinite(recentRow.price) || recentRow.price <= 0
+    || !isObservationClock(recentRow.price_observed_at)) return null;
+  const recentObservedAt = recentRow.price_observed_at;
+  const anchoredRow = await runWithOverloadRetry(() => db
+    .prepare(
+      `SELECT /* pharos:yield-sync:price-anchor */ price, price_observed_at
+       FROM supply_history
+       WHERE stablecoin_id = ?
+         AND snapshot_date >= ?
+         AND price > 0 AND price <= ?
+         AND typeof(price_observed_at) = 'integer'
+         AND price_observed_at BETWEEN ? AND ?
+       ORDER BY price_observed_at ASC, snapshot_date ASC
+       LIMIT 1`,
+    )
+    .bind(stablecoinId, earliestBucketAt, Number.MAX_VALUE, earliestAnchorAt, recentObservedAt - minLookbackSec)
+    .first<{ price: number; price_observed_at: number | null }>(),
+    3, signal, { waitOutResourceWindow: true });
 
-  const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / DAY_SECONDS;
-  if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
-  const apy = computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays);
+  if (!anchoredRow || !Number.isFinite(anchoredRow.price) || anchoredRow.price <= 0
+    || !isObservationClock(anchoredRow.price_observed_at)
+    || anchoredRow.price_observed_at < earliestAnchorAt) return null;
+  const lookbackSec = recentObservedAt - anchoredRow.price_observed_at;
+  if (lookbackSec < minLookbackSec) return null;
+  const apy = computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackSec / DAY_SECONDS);
   if (typeof apy !== "number" || !isDeterministicApyWithinSanityBounds(apy)) return null;
 
   return {
     apy,
-    sourceObservedAt: recentRow.price_observed_at,
+    sourceObservedAt: recentObservedAt,
     comparisonAnchorObservedAt: anchoredRow.price_observed_at,
   };
 }

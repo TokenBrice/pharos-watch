@@ -4,8 +4,6 @@ import {
   PYS_MAX_SOURCE_RISK_PENALTY,
   type PysSourceRiskPenaltyInput,
 } from "@shared/lib/yield-scoring";
-import { type YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
-import { resolveEvidenceNullReason } from "../../lib/yield-ranking-helpers";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
 import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
 import { countSourceSwitchesWithTail } from "./history-evidence";
@@ -129,7 +127,6 @@ export function selectYieldSourceGroup(params: {
   derivedPenaltyInputByKey: Map<string, PysSourceRiskPenaltyInput>;
   bestRowsByCoin?: Map<string, YieldHistorySnapshotRow[]>;
   safetySnapshotUnavailable: boolean;
-  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
   usdBenchmarkRate: number | null;
 }): YieldSourceGroupSelectionResult | null {
   let canonicalReference: EvaluatedYieldSource | undefined;
@@ -147,6 +144,7 @@ export function selectYieldSourceGroup(params: {
 
     if (
       canonicalReference &&
+      canonicalReference.returnDenomination === candidate.returnDenomination &&
       canonicalReference.sourceKey !== candidate.sourceKey &&
       getConfidencePriority(candidate.confidenceTier) < getConfidencePriority(canonicalReference.confidenceTier)
     ) {
@@ -166,6 +164,7 @@ export function selectYieldSourceGroup(params: {
 
     if (
       canonicalReference &&
+      canonicalReference.returnDenomination === candidate.returnDenomination &&
       canonicalReference.currentApy === 0 &&
       candidate.currentApy > 1 &&
       canonicalReference.sourceKey !== candidate.sourceKey &&
@@ -206,14 +205,7 @@ export function selectYieldSourceGroup(params: {
               candidate.sourceRiskPenalty + PYS_SWITCH_ARBITRATION_MARGIN,
             ),
             safetySnapshotUnavailable: params.safetySnapshotUnavailable,
-            evidenceNullReason: resolveEvidenceNullReason({
-              sourceFreshness: candidate.sourceFreshness,
-              // The evaluator emits this warning exactly when opportunity evidence is incomplete.
-              opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
-              benchmarkFreshness: candidate.benchmarkFreshness,
-              referenceBenchmarkFreshness:
-                candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,
-            }),
+            evidenceNullReason: candidate.pysNullReason,
           }),
         };
       });
@@ -262,13 +254,7 @@ export function selectYieldSourceGroup(params: {
             })
           : candidate.sourceRiskPenalty,
         safetySnapshotUnavailable: params.safetySnapshotUnavailable,
-        evidenceNullReason: resolveEvidenceNullReason({
-          sourceFreshness: candidate.sourceFreshness,
-          opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
-          benchmarkFreshness: candidate.benchmarkFreshness,
-          referenceBenchmarkFreshness:
-            candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,
-        }),
+        evidenceNullReason: candidate.pysNullReason,
       }),
       sourceSwitchCount30d: publishedSwitchCount,
       anomalies:

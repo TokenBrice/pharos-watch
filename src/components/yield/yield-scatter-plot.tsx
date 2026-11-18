@@ -58,7 +58,7 @@ interface ScatterDataPoint {
   pharosYieldScore: number | null;
   yieldSource: string;
   benchmarkLabel: string;
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   excessYield: number | null;
   tvl: number | null;
   logoSrc?: string;
@@ -72,7 +72,7 @@ interface ScatterDataPoint {
 
 interface YieldScatterPlotProps {
   rankings: YieldWorkbenchRanking[];
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   benchmarkLabel?: string;
   showBenchmarkReference?: boolean;
   benchmarkIsFallback?: boolean;
@@ -299,16 +299,17 @@ function CustomTooltip({
       <p className="text-muted-foreground">
         APY: <span className="pharos-numeric">{d.y.toFixed(2)}%</span>
       </p>
-      <p className="text-muted-foreground">
-        Benchmark: <span className="pharos-numeric">{d.benchmarkRate.toFixed(2)}%</span>{" "}
-        <span className="text-2xs">({d.benchmarkLabel})</span>
-      </p>
-      <p className="text-muted-foreground">
-        Excess:{" "}
-        <span className="pharos-numeric">
-          {d.excessYield !== null ? formatYieldApyDelta(d.excessYield) : "—"}
-        </span>
-      </p>
+      {d.benchmarkRate != null && (
+        <>
+          <p className="text-muted-foreground">
+            Benchmark: <span className="pharos-numeric">{d.benchmarkRate.toFixed(2)}%</span>{" "}
+            <span className="text-2xs">({d.benchmarkLabel})</span>
+          </p>
+          <p className="text-muted-foreground">
+            Excess: <span className="pharos-numeric">{d.excessYield != null ? formatYieldApyDelta(d.excessYield) : "—"}</span>
+          </p>
+        </>
+      )}
       {d.isClipped && d.clipThreshold !== null ? (
         <p className="text-muted-foreground">
           Chart rail:{" "}
@@ -374,7 +375,7 @@ export function YieldScatterPlot({
           pharosYieldScore: r.pharosYieldScore,
           yieldSource: r.yieldSource,
           benchmarkLabel: benchmark.label,
-          benchmarkRate: benchmark.rate ?? benchmarkRate,
+          benchmarkRate: benchmark.rate,
           excessYield: benchmark.rate != null ? r.apy30d - benchmark.rate : null,
           tvl: r.sourceTvlUsd,
           logoSrc: resolveCompactLogoSrc(logos?.[r.id], compactMarker ? 14 : 16),
@@ -555,7 +556,7 @@ export function YieldScatterPlot({
                     : { top: 10, right: 14, bottom: 16, left: 2 }
               }
             >
-              {showBenchmarkReference
+              {showBenchmarkReference && benchmarkRate != null
                 ? YIELD_SCATTER_QUADRANTS.map((quadrant) =>
                     shouldRenderYieldScatterQuadrant(quadrant, safetyDomain) ? (
                       <ReferenceArea
@@ -585,7 +586,7 @@ export function YieldScatterPlot({
                 strokeDasharray="3 4"
               />
 
-              {showBenchmarkReference ? (
+              {showBenchmarkReference && benchmarkRate != null ? (
                 <ReferenceLine
                   y={benchmarkRate}
                   stroke={CHART_SLATE}
@@ -687,7 +688,7 @@ export function YieldScatterPlot({
               <span className="hidden md:inline">
                 = above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks
               </span>
-            ) : showBenchmarkReference ? (
+            ) : showBenchmarkReference && benchmarkRate != null ? (
               <span className="hidden md:inline">
                 = above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}
               </span>

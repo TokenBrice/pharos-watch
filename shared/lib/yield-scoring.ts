@@ -155,7 +155,9 @@ export interface PysSourceRiskPenaltyResolution {
 export interface PysSourceRiskPenaltyInput {
   rewardShare?: number | null;
   sourceDepthRatio?: number | null;
+  /** Legacy replay telemetry. Overdue evidence is supplied separately. */
   sourceAgeSeconds?: number | null;
+  sourceOverdue?: boolean;
   sourceSwitchCount30d?: number | null;
   observationCount30d?: number | null;
   venueRiskTier?: string | null;
@@ -226,7 +228,6 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   let penalty = 0;
   const rewardShare = numberValue(input.rewardShare);
   const sourceDepthRatio = numberValue(input.sourceDepthRatio);
-  const sourceAgeSeconds = numberValue(input.sourceAgeSeconds);
   const sourceSwitchCount30d = numberValue(input.sourceSwitchCount30d);
   const observationCount30d = numberValue(input.observationCount30d);
 
@@ -236,7 +237,7 @@ export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): nu
   if (isThinYieldSourceDepth(sourceDepthRatio)) {
     penalty += 0.35;
   }
-  if (sourceAgeSeconds != null && sourceAgeSeconds > 6 * 60 * 60) {
+  if (input.sourceOverdue) {
     penalty += 0.25;
   }
   if (sourceSwitchCount30d != null && sourceSwitchCount30d > 0) {

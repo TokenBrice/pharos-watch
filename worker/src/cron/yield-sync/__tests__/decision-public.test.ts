@@ -218,6 +218,10 @@ describe("buildYieldPublicationViews", () => {
       dlPoolsMeta,
     });
     expect(published.viewsByCoinId.get("coin")?.selected.sourceKey).toBe("winner");
+    expect([...published.provenanceByKey.values()]).toMatchObject([{
+      sourceObservedAt: null,
+      sourceAgeSeconds: null,
+    }]);
   });
 });
 

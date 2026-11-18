@@ -11,6 +11,10 @@ import type { YieldRankingSummary } from "@shared/types/yield-summary";
 import {
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
+  getYieldBenchmarkComparisonApy,
+  getYieldBenchmarkRecordMaxAgeSeconds,
+  hasYieldBenchmarkUnitMismatch,
+  isYieldBenchmarkFixingEffective,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "@shared/lib/yield-benchmark-freshness";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
@@ -20,6 +24,7 @@ import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
 
 type YieldBenchmarkLike = {
+  key?: YieldBenchmarkKey;
   benchmarkKey?: YieldBenchmarkKey;
   benchmarkLabel?: string;
   benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
@@ -97,8 +102,8 @@ function getYieldBenchmarkForKey(
   benchmarks: YieldBenchmarkRegistry | null | undefined,
   key: YieldBenchmarkKey,
 ): YieldBenchmarkMeta | null {
-  if (!benchmarks) return null;
-  return benchmarks[key] ?? null;
+  const entry = benchmarks?.[key];
+  return entry == null ? null : entry.key === undefined ? { ...entry, key } : entry;
 }
 
 export function resolveYieldScatterBenchmarkFrame(params: {
@@ -111,12 +116,13 @@ export function resolveYieldScatterBenchmarkFrame(params: {
   usesDefaultBenchmarkFrame: boolean;
   sharedBenchmarkKey: YieldBenchmarkKey | null;
 } {
-  const visibleBenchmarkKeys = getYieldBenchmarkKeys(params.rankings);
+  const comparableRankings = params.rankings.filter((row) => !hasYieldBenchmarkUnitMismatch(row));
+  const visibleBenchmarkKeys = getYieldBenchmarkKeys(comparableRankings);
   const hasMixedBenchmarks = visibleBenchmarkKeys.length > 1;
   const sharedBenchmarkKey = visibleBenchmarkKeys.length === 1 ? visibleBenchmarkKeys[0] : null;
-  const referenceBenchmark = sharedBenchmarkKey
-    ? (getYieldBenchmarkForKey(params.benchmarks, sharedBenchmarkKey) ?? params.fallbackBenchmark ?? null)
-    : (getYieldBenchmarkForKey(params.benchmarks, "USD") ?? params.fallbackBenchmark ?? null);
+  const referenceBenchmark = comparableRankings.length === 0 && params.rankings.length > 0
+    ? null
+    : getYieldBenchmarkForKey(params.benchmarks, sharedBenchmarkKey ?? "USD") ?? params.fallbackBenchmark ?? null;
 
   return {
     referenceBenchmark,
@@ -129,6 +135,7 @@ export function resolveYieldScatterBenchmarkFrame(params: {
 export const YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD;
 
 export interface YieldBenchmarkAgeEvidence {
+  key?: YieldBenchmarkKey;
   /** Fetch age published on the registry entry. */
   ageSeconds?: number | null;
   fetchedAt?: number | null;
@@ -165,15 +172,15 @@ export function resolveYieldBenchmarkAge(
   value: YieldBenchmarkAgeEvidence | null | undefined,
   nowMs: number = Date.now(),
 ): YieldBenchmarkAgeAssessment {
-  const boundSeconds =
+  const publishedBound =
     value?.maxRecordAgeSec != null && Number.isFinite(value.maxRecordAgeSec) && value.maxRecordAgeSec > 0
-      ? value.maxRecordAgeSec
-      : YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC;
+      ? value.maxRecordAgeSec : undefined;
+  const boundSeconds = getYieldBenchmarkRecordMaxAgeSeconds(value?.key ?? "USD", value?.recordDate, publishedBound);
   const nowSec = Math.floor(nowMs / 1000);
   const fetchAge = value?.fetchedAt != null ? nowSec - value.fetchedAt : value?.ageSeconds ?? null;
   const recordAge = benchmarkRecordAgeSeconds(value?.recordDate, nowSec);
   const freshness = classifyYieldBenchmarkFreshness(
-    { ageSeconds: fetchAge, isFallback: value?.isFallback ?? false, fallbackMode: value?.fallbackMode ?? null },
+    { key: value?.key, ageSeconds: fetchAge, isFallback: value?.isFallback ?? false, fallbackMode: value?.fallbackMode ?? null },
     { recordDate: value?.recordDate, maxRecordAgeSec: boundSeconds, nowSec },
   );
   const ageSeconds = fetchAge == null ? recordAge : recordAge == null ? fetchAge : Math.max(fetchAge, recordAge);
@@ -214,13 +221,23 @@ export interface YieldBenchmarkDisplayHealth {
 
 /**
  * Reader-facing benchmark health, separate from `resolveYieldBenchmarkAge`'s
- * score qualification: record dates and fallback identity stay neutral facts.
+ * score qualification. CETES also warns when its effective placement expires.
  */
 export function resolveYieldBenchmarkDisplayHealth(
   value: YieldBenchmarkAgeEvidence | null | undefined,
   nowMs: number = Date.now(),
 ): YieldBenchmarkDisplayHealth {
   const health = deriveDataHealth(getYieldBenchmarkDisplayHealthInput(value), nowMs);
+  if (value?.key === "MXN") {
+    const nowSec = Math.floor(nowMs / 1000);
+    const recordAge = benchmarkRecordAgeSeconds(value.recordDate, nowSec);
+    if (!isYieldBenchmarkFixingEffective("MXN", value.recordDate, nowSec)) {
+      return { warning: true, marker: "unavailable" };
+    }
+    if (recordAge != null && recordAge > getYieldBenchmarkRecordMaxAgeSeconds("MXN", value.recordDate)) {
+      return { warning: true, marker: `${formatBenchmarkAge(recordAge)} old` };
+    }
+  }
   if (!isPublicWarning(health)) return { warning: false, marker: "" };
   return {
     warning: true,
@@ -288,6 +305,9 @@ export function resolveYieldRowBenchmark(
   registry: YieldBenchmarkRegistry | null | undefined,
   riskFreeRate?: number | null,
 ): YieldResolvedRowBenchmark {
+  if (hasYieldBenchmarkUnitMismatch(row)) {
+    return { rate: null, key: null, label: "Benchmark unavailable", isFallback: false, selectionMode: null, displayFallback: false, publishedRate: null };
+  }
   const benchmarkKey = getYieldRankingBenchmarkKey(row);
   const meta = getYieldBenchmarkForKey(registry, benchmarkKey);
   const usd = getYieldBenchmarkForKey(registry, "USD");
@@ -295,8 +315,8 @@ export function resolveYieldRowBenchmark(
   const isFallback = selectionMode === "fallback-usd" || row.benchmarkIsFallback === true;
   const resolved = [
     { rate: row.benchmarkRate, key: benchmarkKey, label: row.benchmarkLabel ?? meta?.label, displayFallback: false },
-    { rate: meta?.rate, key: benchmarkKey, label: meta?.label, displayFallback: false },
-    { rate: usd?.rate, key: "USD" as const, label: usd?.label, displayFallback: true },
+    { rate: meta && getYieldBenchmarkComparisonApy({ ...meta, key: benchmarkKey }), key: benchmarkKey, label: meta?.label, displayFallback: false },
+    { rate: usd && getYieldBenchmarkComparisonApy({ ...usd, key: "USD" }), key: "USD" as const, label: usd?.label, displayFallback: true },
     { rate: riskFreeRate, key: "USD" as const, label: usd?.label ?? "USD benchmark", displayFallback: true },
   ].find((candidate) => typeof candidate.rate === "number" && Number.isFinite(candidate.rate));
   const label = resolved

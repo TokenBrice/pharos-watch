@@ -8,6 +8,39 @@ const DAY_SECONDS = 24 * 60 * 60;
 const NOW_SEC = 1_779_210_000;
 
 describe("yield v8.16 coverage paths", () => {
+  it.each([
+    { bucketDays: 7, quoteDays: 6, expectedApy: null },
+    { bucketDays: 6, quoteDays: 8, expectedApy: 5 },
+    { bucketDays: 45, quoteDays: 45, quoteLagSec: 0, expectedApy: 5 },
+    { bucketDays: 44, quoteDays: 46, expectedApy: null },
+  ])("uses the $quoteDays-day quote interval, not the $bucketDays-day bucket interval", async ({
+    bucketDays, quoteDays, quoteLagSec = (3 * 60 + 55) * 60, expectedApy,
+  }) => {
+    const latestBucket = Date.UTC(2026, 10, 17) / 1000;
+    const nowSec = latestBucket + 55 * 60;
+    const latestQuote = nowSec - quoteLagSec;
+    const anchorQuote = latestQuote - quoteDays * DAY_SECONDS;
+    const stablecoinId = "filqa-fidelity-international";
+    vi.useFakeTimers().setSystemTime(nowSec * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, 1000000, ?, ?)",
+      );
+      insert.run(stablecoinId, latestBucket - bucketDays * DAY_SECONDS, 1, anchorQuote);
+      insert.run(stablecoinId, latestBucket, Math.pow(1.05, quoteDays / 365.25), latestQuote);
+      const result = await getPriceDerivedApy(db, stablecoinId);
+      if (expectedApy === null) expect(result).toBeNull();
+      else {
+        expect(result).toMatchObject({ sourceObservedAt: latestQuote, comparisonAnchorObservedAt: anchorQuote });
+        expect(result?.apy).toBeCloseTo(expectedApy);
+      }
+    } finally {
+      sqlite.close();
+      vi.useRealTimers();
+    }
+  });
+
   it("derives NAV-appreciation APY from supply_history anchors for v8.16 NAV additions", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_SEC * 1000));
@@ -102,7 +135,7 @@ describe("yield v8.16 coverage paths", () => {
     }
   });
 
-  it("anchors on the oldest clocked row when older in-window rows predate the price clock", async () => {
+  it("anchors on the oldest quote even when other rows have earlier UTC day labels", async () => {
     const nowSec = Date.UTC(2026, 9, 31, 12, 30) / 1000;
     const todayLabel = startOfUtcDaySec(new Date(nowSec * 1000));
     const clockedAnchorLabel = todayLabel - 20 * DAY_SECONDS;
@@ -116,13 +149,16 @@ describe("yield v8.16 coverage paths", () => {
       );
       // Pre-migration-0253 rows keep a NULL clock inside the 45-day window.
       insert.run("fpi-frax", todayLabel - 40 * DAY_SECONDS, 0.998, null);
-      insert.run("fpi-frax", clockedAnchorLabel, 1.0, clockedAnchorLabel + 3600);
+      insert.run("fpi-frax", todayLabel - 45 * DAY_SECONDS, 0.995, nowSec - 45 * DAY_SECONDS - 3600);
+      const anchorObservedAt = clockedAnchorLabel - 2 * DAY_SECONDS;
+      insert.run("fpi-frax", clockedAnchorLabel - DAY_SECONDS, 1.001, clockedAnchorLabel - DAY_SECONDS);
+      insert.run("fpi-frax", clockedAnchorLabel, 1.0, anchorObservedAt);
       insert.run("fpi-frax", todayLabel, 1.0015, nowSec - 3600);
 
       const result = await getPriceDerivedApy(createSqliteD1(sqlite), "fpi-frax");
 
       expect(result).not.toBeNull();
-      expect(result?.comparisonAnchorObservedAt).toBe(clockedAnchorLabel + 3600);
+      expect(result?.comparisonAnchorObservedAt).toBe(anchorObservedAt);
       expect(result?.sourceObservedAt).toBe(nowSec - 3600);
     } finally {
       sqlite.close();

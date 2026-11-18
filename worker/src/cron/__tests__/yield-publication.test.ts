@@ -27,6 +27,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/cons
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/publication";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication-admission";
 import { publishYieldCoordinatorResults } from "../yield-sync/publication";
+import { readYieldRankingsCache, readYieldRankingsCoinCache } from "../../lib/yield-rankings-coin-cache";
 import { publishYieldRowsAtomically } from "../yield-sync/publication-storage";
 import {
   FIXED_NOW,
@@ -50,6 +51,65 @@ import { computeApyFromRate } from "../yield-helpers";
 const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
 
 describe("yield current-row conflict updates", () => {
+  it("publishes xGLD native yield only to compatible readers and follows newer legacy generations on redeploy", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const usdt = { id: "usdt-tether", warningSignals: [], currentApy: 5 };
+    const xgld = { id: "xgld-unitas", warningSignals: ["benchmark-unit-mismatch"], currentApy: 5,
+      safetyScore: 80, safetyGrade: "A", pharosYieldScore: null, provenance: { sourceKey: "onchain:xgld-unitas" } };
+    const publish = (startSec: number) => publishYieldRowsAtomically(db, {
+      rankingsPayload: { rankings: [usdt, xgld], publication: { generationId: String(startSec) } },
+      startSec, generationId: String(startSec), yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+    });
+    try {
+      await publish(100);
+      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
+      expect(JSON.parse(String(legacy?.value)).rankings).toEqual([usdt]);
+      expect(JSON.parse((await readYieldRankingsCache(db))!.value).rankings).toEqual([usdt, xgld]);
+      expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([xgld]);
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = 200 WHERE key = 'yield-rankings'")
+        .run(JSON.stringify({ rankings: [usdt], publication: { generationId: "200" } }));
+      expect((await publish(150)).skippedBecauseNewer).toBe(true);
+      expect(JSON.parse((await readYieldRankingsCache(db))!.value).publication.generationId).toBe("200");
+      expect(JSON.parse((await readYieldRankingsCoinCache(db, xgld.id))!.value).rankings).toEqual([]);
+      sqlite.prepare("DELETE FROM cache WHERE key = 'yield-rankings'").run();
+      expect(await readYieldRankingsCache(db)).toBeNull();
+      expect(await readYieldRankingsCoinCache(db, xgld.id)).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("publishes the USTBL product fetch to rollback readers and the Friday fixing to current readers", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const friday = Date.parse("2026-03-13T00:00:00Z") / 1000;
+    const sunday = friday + 60 * 3600;
+    const fetchedAt = sunday - 900;
+    const source = makeEvaluatedSource({
+      id: "ustbl-spiko", dataSource: "rate-derived", sourceKey: "rate-derived",
+      sourceObservedAt: friday, sourceFetchedAt: fetchedAt,
+    });
+    const provenance = buildYieldSourceProvenance({
+      source, isBest: true, evaluatedSources: [source], startSec: sunday, dlPoolsMeta: makeYieldSourceMeta(),
+    });
+    try {
+      await publishYieldRowsAtomically(db, {
+        rankingsPayload: { publication: { generationId: "weekend" }, rankings: [
+          { id: source.id, dataSource: source.dataSource, warningSignals: [], provenance },
+        ] },
+        startSec: sunday, generationId: "weekend", yieldDataRows: [], historyRows: [], decisionRows: [], decisionAlternativeRows: [],
+      });
+      const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
+      expect(JSON.parse(String(legacy?.value)).rankings[0].provenance).toMatchObject({
+        sourceObservedAt: fetchedAt, sourceAgeSeconds: 900,
+      });
+      expect(JSON.parse((await readYieldRankingsCache(db))!.value).rankings[0].provenance).toMatchObject({
+        sourceObservedAt: friday, sourceAgeSeconds: 60 * 3600, sourceFetchedAt: fetchedAt,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("writes every non-key column, including nulls and generation clocks, without replacing keys", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const row = {
@@ -1535,7 +1595,8 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", (
     // while the row's hurdle stays its own rate rather than the USD reference.
     expect(payload.benchmarks?.EUR?.rate).toBe(2.17);
     expect(payload.provenance?.benchmarks?.EUR?.rate).toBe(2.17);
-    expect(payload.riskFreeRate).toBe(4.2);
+    expect(payload.provenance?.benchmark.rate).toBe(4.2);
+    expect(payload.riskFreeRate).toBeCloseTo(4.2441, 6);
   });
 
   it("keeps a row whose benchmark key has no registry entry on its own evaluated rate", () => {
@@ -1566,7 +1627,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", (
     // GBP is a null registry slot: the payload must neither fabricate an entry nor
     // re-base the row onto the USD reference.
     expect(payload.benchmarks?.GBP).toBeNull();
-    expect(payload.riskFreeRate).toBe(4.2);
+    expect(payload.riskFreeRate).toBeCloseTo(4.2441, 6);
   });
 
   it("publishes each registry entry's own record bound and publication-time record age", () => {

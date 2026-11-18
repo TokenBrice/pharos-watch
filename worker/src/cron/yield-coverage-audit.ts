@@ -1,3 +1,4 @@
+import { readYieldRankingsCache } from "../lib/yield-rankings-coin-cache";
 /**
  * Monthly yield coverage audit.
  *
@@ -293,7 +294,7 @@ export async function runYieldCoverageAudit(
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
     ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
-  const rankingsCacheRow = await getCache(db, "yield-rankings");
+  const rankingsCacheRow = await readYieldRankingsCache(db);
   const rankingsCache = readCachedJson<unknown>(
     "yield-coverage-audit",
     "yield-rankings",

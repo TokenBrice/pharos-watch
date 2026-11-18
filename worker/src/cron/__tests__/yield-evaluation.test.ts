@@ -115,6 +115,8 @@ function historyRows(sourceKey: string, count: number, startSec: number, apy = 5
     stablecoin_id: "coin-a",
     source_key: sourceKey,
     recorded_at: startSec - (index + 1) * 86400,
+    source_observed_at: startSec - (index + 1) * 86400,
+    source_observation_verified: 1,
     is_best: 1,
     apy,
     source_tvl_usd: 1_000_000,
@@ -215,6 +217,28 @@ const SOURCE_RISK_EVALUATION_SCENARIOS: Record<YieldSourceRiskGoldenCaseId, Sour
 };
 
 describe("evaluateYieldSourcesCooperative", () => {
+  it("evaluates linked iTRY with the same TRY product and fixing window as wiTRY", async () => {
+    const startSec = Math.floor(Date.now() / 1000);
+    const fixingAt = startSec - 60 * 3600;
+    const fixingDate = new Date(fixingAt * 1000).toISOString().slice(0, 10);
+    const input = baseEvaluationInput({ startSec });
+    input.riskFreeRates.TRY = {
+      ...freshUsdBenchmark(startSec, 40), key: "TRY", currency: "TRY", recordDate: fixingDate,
+      lastMarketRecordDate: fixingDate, source: "bist-tlref",
+    };
+    input.resolved = ["witry-brix", "itry-brix"].map((id) => ({
+      id, symbol: "TRY", yield: resolvedYield({
+        sourceKey: id === "witry-brix" ? "rate-derived" : "linked-variant:witry-brix:rate-derived",
+        dataSource: "rate-derived", yieldType: id === "witry-brix" ? "nav-appreciation" : "lending-opportunity",
+        sourceObservedAt: fixingAt, sourceFetchedAt: startSec,
+      }),
+    }));
+    const { evaluatedSources } = await evaluateYieldSourcesCooperative(input);
+    expect(evaluatedSources).toHaveLength(2);
+    for (const row of evaluatedSources) {
+      expect(row).toMatchObject({ sourceFreshness: "fresh", rejected: false, sourceMaxAgeSeconds: 10 * DAY_SECONDS });
+    }
+  });
 
   it("reports coin progress before each paced yield and finalizes warnings last", async () => {
     const trace: string[] = [];
@@ -557,7 +581,7 @@ describe("evaluateYieldSourcesCooperative", () => {
     expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
   });
 
-  it("uses DeFiLlama input metadata age when the source row lacks its own observed timestamp", async () => {
+  it("uses stale DeFiLlama batch age for delivery while preserving an unknown observation clock", async () => {
     const startSec = 1776729600;
     const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
       startSec,
@@ -581,8 +605,13 @@ describe("evaluateYieldSourcesCooperative", () => {
     }), { yieldToEventLoop: () => Promise.resolve() });
 
     const stale = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:stale");
-    expect(stale?.sourceObservedAt).toBe(startSec - 8 * 60 * 60);
-    expect(stale?.sourceRiskPenalty).toBeGreaterThan(1);
+    expect(stale).toMatchObject({
+      sourceObservedAt: null,
+      sourceFreshness: "stale",
+      rejected: true,
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+    });
   });
 
   it("uses DeFiLlama row-level observed timestamps before input metadata age", async () => {
@@ -779,6 +808,8 @@ describe("evaluateYieldSourcesCooperative", () => {
               stablecoin_id: "coin-a",
               source_key: "defillama:coin-a:base",
               recorded_at: startSec - 3600,
+              source_observed_at: startSec - 3600,
+              source_observation_verified: 1,
               is_best: 1,
               apy: 4.8,
               source_tvl_usd: 2_400_000,
@@ -803,6 +834,8 @@ describe("evaluateYieldSourcesCooperative", () => {
       stablecoin_id: "coin-a",
       source_key: "defillama:coin-a:base",
       recorded_at: startSec - (index + 1) * 3600,
+      source_observed_at: startSec - (index + 1) * 3600,
+      source_observation_verified: 1,
       is_best: 1,
       apy: 4.8,
       source_tvl_usd: 2_400_000,
@@ -823,7 +856,7 @@ describe("evaluateYieldSourcesCooperative", () => {
       sourceHistory: new Map([[buildHistoryKey("coin-a", "defillama:coin-a:base"), historyRows]]),
     }), { yieldToEventLoop: () => Promise.resolve() });
 
-    expect(result.evaluatedSources[0]?.observationCount30d).toBeLessThan(7);
+    expect(result.evaluatedSources[0]?.observationCount30d).toBe(2);
     expect(result.evaluatedSources[0]?.sourceRiskPenalty).toBeGreaterThan(1);
   });
 
@@ -1240,6 +1273,7 @@ describe("evaluateYieldSourcesCooperative", () => {
               stablecoin_id: "mmev-midas",
               source_key: sourceKey,
               recorded_at: startSec - 6 * 86400,
+              source_observed_at: startSec - 6 * 86400,
               is_best: 0,
               apy: 0,
               apy_base: null,
@@ -1253,6 +1287,7 @@ describe("evaluateYieldSourcesCooperative", () => {
               stablecoin_id: "mmev-midas",
               source_key: sourceKey,
               recorded_at: startSec - 5 * 86400,
+              source_observed_at: startSec - 5 * 86400,
               is_best: 0,
               apy: 0,
               apy_base: null,
@@ -1266,6 +1301,7 @@ describe("evaluateYieldSourcesCooperative", () => {
               stablecoin_id: "mmev-midas",
               source_key: sourceKey,
               recorded_at: startSec - 1 * 86400,
+              source_observed_at: startSec - 1 * 86400 - 3600,
               is_best: 1,
               apy: 5,
               apy_base: 5,

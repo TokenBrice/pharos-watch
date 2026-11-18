@@ -88,14 +88,18 @@ function dedupeCandidates(candidates: ResolvedYieldCandidate[]): {
     }
 
     droppedCount += 1;
-    // B27: the freshest observation wins and TVL only breaks an exact tie, so a
-    // transient APY spike no longer displaces the current value.
+    const candidateObservedAt = candidate.yield.sourceObservedAt;
+    const existingObservedAt = existing.yield.sourceObservedAt;
+    // Retrieval can order two clockless deliveries without dating either APY.
     const recency = compareObservationRecency(
-      candidate.yield.sourceObservedAt,
-      existing.yield.sourceObservedAt,
+      candidateObservedAt,
+      existingObservedAt,
     );
-    const keepCandidate = recency > 0
-      || (recency === 0 && (candidate.yield.sourceTvlUsd ?? 0) > (existing.yield.sourceTvlUsd ?? 0));
+    const deliveryRecency = !Number.isFinite(candidateObservedAt) && !Number.isFinite(existingObservedAt)
+      ? compareObservationRecency(candidate.yield.sourceFetchedAt, existing.yield.sourceFetchedAt)
+      : recency;
+    const keepCandidate = deliveryRecency > 0
+      || (deliveryRecency === 0 && (candidate.yield.sourceTvlUsd ?? 0) > (existing.yield.sourceTvlUsd ?? 0));
     const kept = keepCandidate ? candidate : existing;
     const discarded = keepCandidate ? existing : candidate;
     if (keepCandidate) byDedupKey.set(dedupKey, candidate);

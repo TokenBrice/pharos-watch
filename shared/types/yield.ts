@@ -143,6 +143,7 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
 const YieldRankingProvenanceSchema = z.object({
   sourceKey: z.string(),
   sourceObservedAt: z.number().nullable().optional(),
+  sourceFetchedAt: z.number().nullable().optional(),
   sourceAgeSeconds: z.number().nullable(),
   sourceMaxAgeSeconds: z.number().nullable().optional(),
   comparisonAnchorObservedAt: z.number().nullable().optional(),

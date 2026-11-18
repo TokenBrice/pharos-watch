@@ -79,7 +79,7 @@ function pickMetaYieldUrl(stablecoinId: string): string | null {
   return meta.links?.[0]?.url ?? liveDisplay?.url ?? null;
 }
 
-function resolveLinkedVariantSourceOwnerId(stablecoinId: string, sourceKey: string | null | undefined): string | null {
+export function resolveLinkedVariantSourceOwnerId(stablecoinId: string, sourceKey: string | null | undefined): string | null {
   const prefix = "linked-variant:";
   if (!sourceKey?.startsWith(prefix)) return null;
 

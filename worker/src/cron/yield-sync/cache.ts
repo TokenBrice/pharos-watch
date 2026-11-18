@@ -963,6 +963,7 @@ function isResolvedYieldCandidate(value: unknown, nowSec: number): value is Reso
   }
   if (!isNullableFiniteNumber(candidateYield.exchangeRate)) return false;
   if (!isObservedAt(candidateYield.sourceObservedAt, nowSec)) return false;
+  if (!isObservedAt(candidateYield.sourceFetchedAt, nowSec)) return false;
   if (!isObservedAt(candidateYield.comparisonAnchorObservedAt, nowSec)) return false;
   if (candidateYield.yieldSource != null && typeof candidateYield.yieldSource !== "string") return false;
   if (candidateYield.project != null && typeof candidateYield.project !== "string") return false;
@@ -976,8 +977,13 @@ function filterValidSupplementalCandidates(
   const candidates: ResolvedYieldCandidate[] = [];
   const rejected: unknown[] = [];
   for (const row of rows) {
-    if (isResolvedYieldCandidate(row, nowSec)) {
-      candidates.push(row);
+    let candidate = row;
+    if (isRecord(row) && isRecord(row.yield) && "sourceObservedAtV2" in row.yield) {
+      const { sourceObservedAtV2, ...source } = row.yield;
+      candidate = { ...row, yield: { ...source, sourceObservedAt: sourceObservedAtV2 } };
+    }
+    if (isResolvedYieldCandidate(candidate, nowSec)) {
+      candidates.push(candidate);
     } else {
       rejected.push(row);
     }
@@ -1005,7 +1011,16 @@ export function buildYieldSupplementalFamilyCache(
     updatedAt,
     source: "sync-yield-supplemental",
     sourceCount: candidates.length,
-    data: candidates,
+    // Each row carries both projections in one CAS generation. The v1 reader
+    // consumes the fetch clock; the v2 reader restores the upstream clock.
+    data: candidates.map((candidate) => candidate.yield.sourceFetchedAt == null ? candidate : {
+      ...candidate,
+      yield: {
+        ...candidate.yield,
+        sourceObservedAt: candidate.yield.sourceFetchedAt,
+        sourceObservedAtV2: candidate.yield.sourceObservedAt ?? null,
+      },
+    }),
   };
   return JSON.stringify(payload);
 }

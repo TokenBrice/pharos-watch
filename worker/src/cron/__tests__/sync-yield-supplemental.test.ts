@@ -107,7 +107,7 @@ import { fetchRoycoDawnSources } from "../yield-sync/sources-optional-royco";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import { type SupplementalSourceFamilySummary, type SupplementalSourceAccounting, loadSupplementalSourceFamilies, SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY } from "../yield-sync/sources-supplemental";
 import { type SupplementalSourceFamilyKey, SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/family-registry";
-import { PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
+import { parseYieldSupplementalSourcesCache, PENDLE_RATE_LIMIT_BACKOFF_REASON, buildYieldSupplementalCountDropState, buildYieldSupplementalFamilyCache, buildYieldSupplementalPendleBackoff, getYieldSupplementalCountDropStateCacheKey, getYieldSupplementalFamilyCacheKey, getYieldSupplementalPendleBackoffCacheKey, getYieldSupplementalRunOutcomeCacheKey } from "../yield-sync/cache";
 import { supplementalFamilySnapshotHash } from "../yield-sync/cache";
 import { buildYieldSupplementalRunOutcome } from "../yield-sync/cache";
 
@@ -1132,14 +1132,17 @@ describe("syncYieldSupplemental", () => {
     ]);
   });
 
-  it("breaks a dedupe tie on the larger TVL and reports zero degraded families", async () => {
+  it.each(["observation", "retrieval"] as const)("breaks a dedupe tie using %s clocks before TVL", async (clock) => {
     const observedAt = 1_774_526_400;
+    const clocks = clock === "observation"
+      ? [{ sourceObservedAt: observedAt }, { sourceObservedAt: observedAt }]
+      : [{ sourceObservedAt: null, sourceFetchedAt: observedAt }, { sourceObservedAt: null, sourceFetchedAt: observedAt - 1 }];
     vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([
       beefyCandidate({}, {
-        currentApy: 4.2, apyBase: 4.2, sourceTvlUsd: 1_000_000, sourceObservedAt: observedAt,
+        currentApy: 4.2, apyBase: 4.2, sourceTvlUsd: 1_000_000, ...clocks[0],
       }),
       beefyCandidate({}, {
-        currentApy: 3.8, apyBase: 3.8, sourceTvlUsd: 9_000_000, sourceObservedAt: observedAt,
+        currentApy: 3.8, apyBase: 3.8, sourceTvlUsd: 9_000_000, ...clocks[1],
       }),
     ]));
 
@@ -1148,12 +1151,12 @@ describe("syncYieldSupplemental", () => {
     const beefyCacheCall = vi
       .mocked(setCacheIfNewer)
       .mock.calls.find((call) => call[1] === "yield:supplemental-sources:v1:beefy");
-    const payload = JSON.parse(String(beefyCacheCall?.[2])) as {
-      sourceCount: number;
-      data: Array<{ yield: { currentApy: number; sourceTvlUsd: number } }>;
-    };
-    expect(payload.sourceCount).toBe(1);
-    expect(payload.data[0]?.yield).toMatchObject({ currentApy: 3.8, sourceTvlUsd: 9_000_000 });
+    const payload = parseYieldSupplementalSourcesCache(String(beefyCacheCall?.[2]), beefyCacheCall![3]);
+    expect(payload?.sourceCount).toBe(1);
+    const hasObservation = clock === "observation";
+    expect(payload?.candidates[0]?.yield).toMatchObject(hasObservation
+      ? { currentApy: 3.8, sourceTvlUsd: 9_000_000, sourceObservedAt: observedAt }
+      : { currentApy: 4.2, sourceTvlUsd: 1_000_000, sourceObservedAt: null, sourceFetchedAt: observedAt });
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       degradedFamilies?: string[];
@@ -1163,7 +1166,8 @@ describe("syncYieldSupplemental", () => {
     };
     expect(metadata.degradedFamilies).toEqual([]);
     expect(metadata.sourceCoverage?.sourceFamilySummaries?.beefy?.dedupeDiscardedValues).toEqual([
-      expect.objectContaining({ discardedApy: 4.2, keptApy: 3.8 }),
+      expect.objectContaining(hasObservation ? { discardedApy: 4.2, keptApy: 3.8 }
+        : { discardedApy: 3.8, keptApy: 4.2, discardedObservedAt: null, keptObservedAt: null }),
     ]);
   });
 

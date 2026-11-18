@@ -150,11 +150,11 @@ export function declutterScatterMarkers<T extends DeclutterablePoint>(
   return [...withMarkers.filter((point) => point.marker === "dot"), ...withMarkers.filter((point) => point.marker === "logo")];
 }
 
-export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisConfig {
+export function computeApyAxis(apys: number[], riskFreeRate: number | null): ApyAxisConfig {
   if (apys.length === 0) {
     return {
       domainMin: 0,
-      domainMax: Math.max(APY_AXIS_MIN, roundUp(riskFreeRate + 4, APY_AXIS_STEP)),
+      domainMax: Math.max(APY_AXIS_MIN, riskFreeRate == null ? APY_AXIS_MIN : roundUp(riskFreeRate + 4, APY_AXIS_STEP)),
       clipThreshold: null,
       clippedCount: 0,
       floorThreshold: null,
@@ -183,10 +183,10 @@ export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisCon
     : { domainMin: Math.min(0, roundDown(naturalMin * 1.08, APY_AXIS_STEP)), floorThreshold: null, floorClippedCount: 0 };
 
   const naturalMax = sorted[sorted.length - 1];
-  const paddedMax = roundUp(Math.max(riskFreeRate + 4, naturalMax * 1.08), APY_AXIS_STEP);
+  const paddedMax = roundUp(Math.max(riskFreeRate == null ? APY_AXIS_MIN : riskFreeRate + 4, naturalMax * 1.08), APY_AXIS_STEP);
   const q75 = percentileLinear(sorted, 75) ?? 0;
   const q90 = percentileLinear(sorted, 90) ?? 0;
-  const candidateThreshold = roundUp(Math.max(riskFreeRate + 6, q75 + 3, q90 * 1.25), APY_AXIS_STEP);
+  const candidateThreshold = roundUp(Math.max(riskFreeRate == null ? APY_AXIS_MIN : riskFreeRate + 6, q75 + 3, q90 * 1.25), APY_AXIS_STEP);
   const clippedCount = sorted.filter((value) => value > candidateThreshold).length;
   const shouldClip =
     canRail &&

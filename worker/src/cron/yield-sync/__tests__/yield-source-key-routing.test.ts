@@ -53,6 +53,7 @@ describe("yield source-key routing table", () => {
     { sourceKey: "protocol-api:etherfuse-cetes-current-issuance", venueProtocol: "etherfuse", family: null, chain: null },
     { sourceKey: "protocol-api:hashnote-usyc", venueProtocol: "hashnote", family: null, chain: null },
     { sourceKey: "protocol-api:ondo-usdy-oracle", venueProtocol: "ondo-yield-assets", family: null, chain: null },
+    { sourceKey: "protocol-api:ondo-usdy-continuous-oracle", venueProtocol: "ondo-yield-assets", family: null, chain: null },
     { sourceKey: "protocol-api:midas-mmev-nav-oracle", venueProtocol: "midas-rwa", family: null, chain: null },
     { sourceKey: "protocol-api:re-protocol-reusd", venueProtocol: "re-protocol", family: null, chain: null },
     { sourceKey: "protocol-api:zys-zephyr-protocol", venueProtocol: "zephyr-protocol", family: null, chain: null },

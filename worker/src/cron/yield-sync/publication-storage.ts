@@ -1,3 +1,6 @@
+import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-freshness";
+import { isRecord } from "@shared/lib/type-guards";
+import { YIELD_RANKINGS_VERSION_KEY } from "../../lib/yield-rankings-coin-cache";
 import {
   getCache,
   type CacheWriteResult,
@@ -128,7 +131,28 @@ export async function publishYieldRowsAtomically(
     decisionAlternativeRows: Array<Record<string, unknown>>;
   },
 ): Promise<YieldRowsWriteResult> {
-  const cacheValue = JSON.stringify(input.rankingsPayload);
+  const payload = input.rankingsPayload;
+  const cacheValue = JSON.stringify(payload);
+  // The previous formatter re-scores positive APYs even without a same-unit benchmark.
+  let legacyValue = cacheValue;
+  if (isRecord(payload) && Array.isArray(payload.rankings)) {
+    const publishedRankings = payload.rankings;
+    const rankings = publishedRankings.filter((row) => !hasYieldBenchmarkUnitMismatch(row)).map((row) => {
+      if (row.dataSource !== "rate-derived" || !isRecord(row.provenance) || !("sourceFetchedAt" in row.provenance)) return row;
+      const { sourceFetchedAt, ...provenance } = row.provenance;
+      return {
+        ...row,
+        provenance: {
+          ...provenance,
+          sourceObservedAt: sourceFetchedAt,
+          sourceAgeSeconds: typeof sourceFetchedAt === "number" ? Math.max(0, input.startSec - sourceFetchedAt) : null,
+        },
+      };
+    });
+    if (rankings.length !== publishedRankings.length || rankings.some((row, index) => row !== publishedRankings[index])) {
+      legacyValue = JSON.stringify({ ...payload, rankings });
+    }
+  }
   const yieldDataRowsJson = JSON.stringify(input.yieldDataRows);
   const historyRowsJson = JSON.stringify(input.historyRows);
   const decisionRowsJson = JSON.stringify(input.decisionRows);
@@ -177,7 +201,12 @@ export async function publishYieldRowsAtomically(
            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
            WHERE cache.updated_at < excluded.updated_at`,
       )
-      .bind("yield-rankings", cacheValue, input.startSec),
+      .bind("yield-rankings", legacyValue, input.startSec),
+    ...(legacyValue === cacheValue ? [] : [db.prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       SELECT ?, ?, ? WHERE ${cacheFreshGuard}
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    ).bind(YIELD_RANKINGS_VERSION_KEY, cacheValue, input.startSec, input.generationId)]),
     db
       .prepare(YIELD_DATA_INSERT_SQL)
       .bind(yieldDataRowsJson, input.generationId),

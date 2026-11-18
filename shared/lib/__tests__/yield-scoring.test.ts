@@ -16,6 +16,10 @@ import {
 } from "../yield-scoring";
 import { SOURCE_RISK_GOLDEN_ROWS } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 
+const scoringGoldenRows = SOURCE_RISK_GOLDEN_ROWS.map((row) =>
+  row.label === "stale-source-age" ? { ...row, input: { sourceOverdue: true } } : row,
+);
+
 describe("computeSourceRiskScoreFromPenalty", () => {
   it("returns null for missing or non-finite penalties", () => {
     expect(computeSourceRiskScoreFromPenalty(null)).toBeNull();
@@ -89,29 +93,30 @@ describe("computePysRewardShare", () => {
 describe("derivePysSourceRiskPenalty", () => {
   it("keeps unknown source-risk inputs neutral", () => {
     expect(derivePysSourceRiskPenalty({})).toBe(1);
+    expect(derivePysSourceRiskPenalty({ sourceAgeSeconds: 24 * 60 * 60 })).toBe(1);
   });
 
   it("matches source-risk golden row penalties", () => {
-    for (const row of SOURCE_RISK_GOLDEN_ROWS) {
+    for (const row of scoringGoldenRows) {
       expect(derivePysSourceRiskPenalty(row.input), row.label).toBeCloseTo(row.expectedDerivedPenalty, 6);
     }
   });
 
   it("adds measured reward, depth, freshness, switch, bootstrap, and venue penalties", () => {
     expect(derivePysSourceRiskPenalty({
-      rewardShare: 0.9,
+      rewardShare: 0.8,
       sourceDepthRatio: 0.0005,
-      sourceAgeSeconds: 7 * 60 * 60,
+      sourceOverdue: true,
       sourceSwitchCount30d: 2,
       observationCount30d: 3,
-      venueRiskTier: "high",
-    })).toBeCloseTo(2.5, 6);
+      venueRiskTier: "medium",
+    })).toBeCloseTo(2.45, 6);
   });
 });
 
 describe("PYS source-risk golden rows", () => {
   it("never improves PYS from source-risk penalty alone", () => {
-    for (const row of SOURCE_RISK_GOLDEN_ROWS) {
+    for (const row of scoringGoldenRows) {
       const apy30d = row.apy30d ?? 8;
       const safetyScore = row.safetyScore === undefined ? 80 : row.safetyScore;
       const neutral = computePYS({
@@ -145,7 +150,7 @@ describe("PYS source-risk golden rows", () => {
     expect(derivePysSourceRiskPenalty({
       rewardShare: 1,
       sourceDepthRatio: 0.0001,
-      sourceAgeSeconds: 24 * 60 * 60,
+      sourceOverdue: true,
       sourceSwitchCount30d: 10,
       observationCount30d: 1,
       venueRiskTier: "high",

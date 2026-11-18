@@ -10,7 +10,7 @@ import {
   YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
 } from "@shared/lib/yield-source-risk-registry";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
-import { resolveYieldSourceKeyRoute } from "./family-registry";
+import { requiresYieldProviderObservationClock, resolveYieldSourceKeyRoute } from "./family-registry";
 import type { EvaluatedYieldSource } from "./evaluation";
 
 export function resolveYieldSourceLabel(params: {
@@ -186,7 +186,9 @@ export function buildYieldSourceRisk(params: {
       sourceAgeSeconds == null
         ? (existing.sourceAgeSeconds ?? null)
         : Math.trunc(sourceAgeSeconds),
-    observationCount30d: params.source.observationCount30d ?? existing.observationCount30d ?? null,
+    observationCount30d: requiresYieldProviderObservationClock(params.source)
+      ? params.source.observationCount30d
+      : params.source.observationCount30d ?? existing.observationCount30d ?? null,
     sourceSwitchCount30d: params.isBest ? params.source.sourceSwitchCount30d : null,
     deploymentPlace: existing.deploymentPlace ?? inferDeploymentPlace(params.source),
     venueProtocol,
