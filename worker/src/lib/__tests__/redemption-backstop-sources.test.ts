@@ -4,6 +4,7 @@ import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import * as redemptionBackstops from "@shared/lib/redemption-backstops";
 import * as redemptionCapacity from "../redemption-backstop/capacity";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC } from "@shared/lib/redemption-fiat-reference";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import type { StablecoinData } from "@shared/types/supply";
@@ -134,6 +135,83 @@ describe("buildRedemptionBackstopEntry", () => {
     allInFeeBps: 1, settlementDelaySec: 0, blockNumber: 26_143_056, sourceTimestamp: now,
     sourceUrls: ["https://www.usdfr.com/"], diagnostics: {}, ...overrides,
   });
+  it.each([
+    ["paused", 0, undefined, 0, "impaired"],
+    ["paused", 10_000_000, undefined, 0, "impaired"],
+    ["open", 10_000_000, 0, 10_000_000, "resolved"],
+    ["open", 10_000_000, undefined, 10_000_000, "resolved"],
+  ] as const)("publishes InfiniFi %s inventory %s as executable capacity %s only with open gates", async (routeStatus, capacityUsd, settlementDelaySec, executableUsd, resolutionState) => {
+    const stablecoinId = "iusd-infinifi";
+    const snapshot = liveSnapshot(stablecoinId, {
+      freshnessMode: "verified", sourceTimestamp: now, redemption: {
+        capacityUsd, capacityKind: "live-queue", freshnessKind: "verified-source-timestamp", sourceTimestamp: now,
+        settlementDelaySec, queueDepthUsd: 0, routeStatus, routeStatusSource: "onchain",
+      },
+    }, { fetchedAt: now, source: "infinifi" });
+    const entry = await buildEntry(stablecoinId, getRedemptionBackstopConfig(stablecoinId)!, 20_000_000, null,
+      { reserveSnapshotMetadata: snapshot });
+    expect(entry).toMatchObject({
+      routeStatus, resolutionState, immediateCapacityUsd: executableUsd, immediateCapacityRatio: executableUsd / 20_000_000,
+      capacityProfile: { immediateUsd: executableUsd, scoringUsd: executableUsd },
+    });
+  });
+
+  it.each([
+    ["closed", "2026-11-14T12:00:00Z", 126_000, "documented-bound", "days", 35, "eventual", null],
+    ["reopened", "2026-11-15T23:00:00Z", 0, "live-direct-bounded", "atomic", 100, "immediate", 10_000],
+  ] as const)("publishes CHFm's %s-generation settlement model and score", async (_state, date, delay, capacityKind, model, score, horizon, immediateCapacityUsd) => {
+    const stablecoinId = "chfm-mento";
+    const clock = Date.parse(date) / 1_000;
+    const snapshot = liveSnapshot(stablecoinId, {
+      freshnessMode: "not-applicable", redemption: {
+        capacityUsd: 10_000, capacityKind, freshnessKind: "same-run-onchain", sourceTimestamp: clock,
+        settlementDelaySec: delay, routeStatus: "open", routeStatusSource: "onchain",
+      },
+    }, { fetchedAt: clock, source: "mento" });
+    const entry = await buildRedemptionBackstopEntry(mockD1Strict([]), stablecoinId,
+      getRedemptionBackstopConfig(stablecoinId)!, 100_000, null, clock,
+      { reserveSnapshotMetadata: snapshot, exitExecutionReviews: [] });
+    expect(entry).toMatchObject({
+      settlementModel: model, settlementScore: score, settlementDelaySec: delay, immediateCapacityUsd,
+      capacityProfile: { scoringHorizon: horizon, scoringUsd: 10_000 },
+    });
+  });
+
+  it.each([
+    { name: "Friday quote after closure", observed: "2026-11-13T20:59:00Z", assessed: "2026-11-13T21:10:00Z",
+      observedDelay: 0, expectedDelay: undefined, routeStatus: "unknown", immediateCapacityUsd: null },
+    { name: "Sunday inventory before reopening", observed: "2026-11-15T22:30:00Z", assessed: "2026-11-15T22:50:00Z",
+      observedDelay: 1800, expectedDelay: 600, routeStatus: "open", immediateCapacityUsd: null },
+    { name: "Sunday inventory after reopening", observed: "2026-11-15T22:30:00Z", assessed: "2026-11-15T23:00:00Z",
+      observedDelay: 1800, expectedDelay: undefined, routeStatus: "unknown", immediateCapacityUsd: null },
+    { name: "independent Friday pause after closure", observed: "2026-11-13T20:59:00Z", assessed: "2026-11-13T21:10:00Z",
+      observedDelay: 0, expectedDelay: 0, routeStatus: "paused", immediateCapacityUsd: 0 },
+    { name: "closure past the owner review deadline", observed: "2027-11-06T12:00:00Z", assessed: "2027-11-06T12:10:00Z",
+      observedDelay: 126_000, expectedDelay: undefined, routeStatus: "unknown", immediateCapacityUsd: null },
+  ] as const)("binds CHFm's retained $name to the assessment phase", async (row) => {
+    const stablecoinId = "chfm-mento";
+    const sourceTimestamp = Date.parse(row.observed) / 1_000;
+    const snapshot = liveSnapshot(stablecoinId, {
+      freshnessMode: "not-applicable", redemption: {
+        capacityUsd: row.routeStatus === "paused" ? 0 : 10_000,
+        capacityKind: row.observedDelay > 0 ? "documented-bound" : "live-direct-bounded",
+        freshnessKind: "same-run-onchain", sourceTimestamp, settlementDelaySec: row.observedDelay,
+        routeStatus: row.routeStatus === "paused" ? "paused" : "open", routeStatusSource: "onchain",
+      },
+    }, { fetchedAt: sourceTimestamp, source: "mento" });
+    const entry = await buildRedemptionBackstopEntry(mockD1Strict([]), stablecoinId,
+      getRedemptionBackstopConfig(stablecoinId)!, 100_000, null, Date.parse(row.assessed) / 1_000,
+      { reserveSnapshotMetadata: snapshot, exitExecutionReviews: [] });
+    expect(entry).toMatchObject({ routeStatus: row.routeStatus, immediateCapacityUsd: row.immediateCapacityUsd });
+    expect(entry.settlementDelaySec).toBe(row.expectedDelay);
+    if (row.routeStatus === "unknown") {
+      expect(entry).toMatchObject({ score: null, resolutionState: "missing-capacity", capacityRejectionReason: "redeemable-capacity-unobserved" });
+    }
+    if (row.expectedDelay === 600) {
+      expect(entry).toMatchObject({ sourceTimestamp, capacityProfile: { eventualUsd: 10_000, scoringHorizon: "eventual" } });
+    }
+  });
+
   it("persists a withheld stale execution price leg and exposes its exit coverage reason", async () => {
     const stablecoinId = "usdc-circle";
     const config = route();
@@ -190,13 +268,13 @@ describe("buildRedemptionBackstopEntry", () => {
       }
     } finally { sqlite.close(); }
   });
-  it("shares captured FX between local-fee scenarios and issuer output admission", async () => {
+  it("keeps legacy CHF fee conversion and issuer output admission on rate-only generations", async () => {
     const config = route({ routeFamily: "offchain-issuer", reviewedAt: "2023-11-01",
       capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
       costModel: { kind: "fee-bps", feeBps: 0, feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } });
     const stablecoinsCache = { kind: "ok" as const, updatedAt: now - 60, payload: {
       peggedAssets: [makeAsset({ id: "vchf-vnx", symbol: "VCHF", pegType: "peggedCHF",
-        price: 1.25, priceSource: "coingecko", priceObservedAt: now - 60 })],
+        price: 1.25, priceSource: "coingecko", priceObservedAt: now - 120 })],
       fxFallbackRates: { peggedCHF: 1.25 },
     } };
     const admitted = await buildEntry("vchf-vnx", config, 1_000_000, null, { stablecoinsCache });
@@ -217,6 +295,23 @@ describe("buildRedemptionBackstopEntry", () => {
       stablecoinsCache: { ...stablecoinsCache, updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 1 },
     });
     expect(stale.costScenarioScores).toBeUndefined();
+    const boundary = { pegKey: "peggedCHF", source: "openExchangeRates" as const, cadence: "intraday" as const,
+      usdPerUnit: 1.25, observedAtSec: now - REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC };
+    const selected = { kind: "fx" as const, generation: `stablecoins:${stablecoinsCache.updatedAt}`, observation: boundary };
+    for (const [fxReferenceObservations, selectedPegReferences, eligible] of [
+      [{ peggedCHF: boundary }, undefined, true],
+      [{ peggedCHF: boundary }, { peggedCHF: selected }, true],
+      [{ peggedCHF: boundary }, { peggedCHF: { ...selected, generation: "other" } }, false],
+      [{ peggedCHF: { ...boundary, observedAtSec: boundary.observedAtSec - 1 } }, undefined, false],
+      [{ peggedCHF: { ...boundary, source: "peer-median" } }, undefined, false],
+      [{}, undefined, false],
+    ] as const) {
+      const clocked = await buildEntry("vchf-vnx", config, 1_000_000, null, {
+        stablecoinsCache: { ...stablecoinsCache, payload: { ...stablecoinsCache.payload, fxReferenceObservations, selectedPegReferences } },
+      });
+      expect(clocked.costScenarioScores).toEqual(eligible ? admitted.costScenarioScores : undefined);
+      expect(clocked.capacityProfile?.exitRouteObservations?.[0].scoreEligible).toBe(eligible);
+    }
   });
 
   it("binds only selected live capacity or fee evidence, not unused static telemetry", async () => {
@@ -389,11 +484,13 @@ describe("buildRedemptionBackstopEntry", () => {
     const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 10_000_000, null, {
       reserveSnapshotMetadata: snapshot, redemptionLiveMetadata: metadata,
     });
-    expect(entry.immediateCapacityUsd).toBe(accepted ? 2_000_000 : null);
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.immediateCapacityRatio).toBeNull();
     expect(entry.feeBps).toBe(accepted ? 0 : null);
     expect(entry.costScore).toBe(accepted ? 100 : 60);
     expect(entry.resolutionState).toBe(accepted ? "resolved" : "missing-capacity");
     if (accepted) {
+      expect(entry.capacityProfile).toMatchObject({ scoringHorizon: "eventual", eventualUsd: 2_000_000 });
       expect(entry.routeStatus).toBe("open");
       expect(entry.routeStatusSource).toBe("onchain");
       expect(entry.liveHolderEligibility).toBe("any-holder");
@@ -1184,7 +1281,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.sourceUrls).toEqual(["https://example.com/redemption.json"]);
   });
 
-  it("derives reserve-sync ratio from supply when nested capacity omits ratio", async () => {
+  it("publishes delayed reserve-sync capacity with its measured daily limit, queue and clock", async () => {
     const sourceUrls = ["https://example.com/redemption.json", "https://example.com/redemption.json"];
     const retainedSourceUrls = [...sourceUrls];
     const entry = await buildEntry(
@@ -1221,8 +1318,11 @@ describe("buildRedemptionBackstopEntry", () => {
       },
     );
 
-    expect(entry.immediateCapacityUsd).toBe(50_000_000);
-    expect(entry.immediateCapacityRatio).toBe(0.5);
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.immediateCapacityRatio).toBeNull();
+    expect(entry.capacityProfile).toMatchObject({
+      scoringHorizon: "eventual", eventualUsd: 50_000_000, scoringUsd: 5_000_000,
+    });
     expect(entry.capacityKind).toBe("live-proxy-validated");
     expect(entry.freshnessKind).toBe("verified-source-timestamp");
     expect(entry.sourceTimestamp).toBe(now - 120);

@@ -476,6 +476,10 @@ function adaptMoneyCensuses(
   );
 
   const supplyTokens = censuses.reduce((sum, census) => sum + census.supplyTokens, 0);
+  const totalLiabilitiesUsd = totalDebtTokens * liabilityPrice;
+  const collateralizationRatio = totalDebtTokens > 0 && softLiquidatedMoneyTokens === 0
+    ? totalCollateralUsd / totalLiabilitiesUsd
+    : undefined;
 
   const details = {
     proofKind: "defi-money-llamma-onchain-census",
@@ -488,6 +492,7 @@ function adaptMoneyCensuses(
     })),
     controller: MONEY_CONTROLLER,
     softLiquidatedMoneyTokens,
+    ...(softLiquidatedMoneyTokens > 0 ? { coverageUnavailableReason: "soft-liquidation-debt-unmatched" } : {}),
     bandReadCount,
   };
 
@@ -497,13 +502,13 @@ function adaptMoneyCensuses(
     metadata: {
       ...notApplicableFreshnessMetadata(details),
       totalReserveUsd: totalCollateralUsd,
-      totalLiabilitiesUsd: totalDebtTokens,
+      totalLiabilitiesUsd,
       totalLiabilitiesTokens: totalDebtTokens,
       supplyTokens,
       marketCount,
-      ...(totalDebtTokens > 0
-        ? { collateralizationRatio: totalCollateralUsd / (totalDebtTokens * liabilityPrice) }
-        : {}),
+      ...(collateralizationRatio !== undefined
+        ? { collateralizationRatio }
+        : { ratioUnavailableReason: softLiquidatedMoneyTokens > 0 ? "not-comparable" : "zero-liability-denominator" }),
     },
   };
 }
@@ -562,9 +567,6 @@ export async function fetchMoneyReserves(
   const liabilityPrice = marketPrice ?? 1;
   const liabilityValuation: "market" | "par" = marketPrice == null ? "par" : "market";
 
-  const totalDebtTokens = censuses.reduce((sum, census) => sum + census.markets.reduce((acc, m) => acc + m.debtTokens, 0), 0);
-  const totalCollateralUsd = censuses.reduce((sum, census) => sum + census.markets.reduce((acc, m) => acc + m.collateralUsd, 0), 0);
-
   const result = adaptMoneyCensuses(censuses, warnings, liabilityValuation, liabilityPrice);
   const primaryBlock = chainBlocks.find((block) => block.chain === "arbitrum") ?? chainBlocks[0];
 
@@ -585,11 +587,12 @@ export async function fetchMoneyReserves(
       ),
     );
   }
-  if (totalDebtTokens > 0 && totalCollateralUsd / (totalDebtTokens * liabilityPrice) < 1) {
+  const collateralizationRatio = result.metadata?.collateralizationRatio;
+  if (collateralizationRatio != null && collateralizationRatio < 1) {
     finalWarnings.push(
       reserveDegradedWarning(
         "reserve-undercollateralized",
-        `${ADAPTER_KEY}: LLAMMA collateral covers ${((totalCollateralUsd / (totalDebtTokens * liabilityPrice)) * 100).toFixed(2)}% of ${
+        `${ADAPTER_KEY}: LLAMMA collateral covers ${(collateralizationRatio * 100).toFixed(2)}% of ${
           liabilityValuation === "par" ? "par-valued" : "market-valued"
         } MONEY debt`,
       ),
@@ -602,7 +605,6 @@ export async function fetchMoneyReserves(
     metadata: {
       ...result.metadata,
       ...(marketPrice != null ? { moneyPriceUsd: marketPrice } : {}),
-      totalLiabilitiesUsd: totalDebtTokens * liabilityPrice,
       supplyUsd: (result.metadata?.supplyTokens ?? 0) * liabilityPrice,
       ...(primaryBlock ? { observedBlock: { chain: primaryBlock.chain, number: primaryBlock.number, timestamp: primaryBlock.timestamp } } : {}),
       allChainBlocks: chainBlocks,

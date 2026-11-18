@@ -841,6 +841,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       });
       vi.spyOn(pegAnalytics, "derivePegAnalyticsSnapshot").mockResolvedValue({
         nowSec: input.clockSec, allEvents: [], eventsByCoin: new Map(), pegDataById: new Map(),
+        admittedPegById: new Map(), lastAffectedAtById: new Map(),
       });
       vi.spyOn(pegCache, "publishPegAnalyticsCache").mockResolvedValue(true);
       vi.spyOn(snapshot, "loadExactDexPublicationGeneration").mockResolvedValue({

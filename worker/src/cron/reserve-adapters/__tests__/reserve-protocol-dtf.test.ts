@@ -70,6 +70,7 @@ const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const COMET_USDC = "0xc3d688b66703497daa19211eedff47f25384cdc3";
 const COMET_USDT = "0x3afdc9bca9213a35503b077a6072f3d0d5ab0840";
 const ONE = 1_000_000_000_000_000_000n;
+const DTF_BLOCK_TIMESTAMP = 1776154391;
 
 function encodeAddressResult(address: string): `0x${string}` {
   return `0x${encodeAddress(address)}`;
@@ -171,7 +172,7 @@ function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions =
     }
   };
   activeNetwork = installAdapterNetwork({
-    block: { number: 12345, timestamp: 1776154391 },
+    block: { number: 12345, timestamp: DTF_BLOCK_TIMESTAMP },
     rpc: {
       [`${RTOKEN}:${MAIN_SELECTOR}`]: encodeAddressResult(MAIN),
       [`${MAIN}:${ASSET_REGISTRY_SELECTOR}`]: encodeAddressResult(ASSET_REGISTRY),
@@ -242,7 +243,7 @@ async function fetchReserveProtocolDtfReserves(
   const { result } = await runAdapter(
     "reserve-protocol-dtf",
     { ...coinArg, liveReservesConfig: config } as never,
-    { network: activeNetwork, signal: abortSignal, ...(ctx?.nowSec == null ? {} : { nowSec: ctx.nowSec }) },
+    { network: activeNetwork, signal: abortSignal, nowSec: ctx?.nowSec ?? DTF_BLOCK_TIMESTAMP },
   );
   return result;
 }
@@ -327,22 +328,29 @@ describe("reserve-protocol-dtf adapter", () => {
     });
   });
 
-  it("emits throttle-open redemption capacity capped by RToken total supply", async () => {
-    mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: 100n * ONE });
+  it.each([
+    [100n, 100, 1],
+    [80n, 100, 1.25],
+  ])("caps the throttle by %s shares and applies the dated basket value", async (totalShares, capacityUsd, usdPerShare) => {
+    mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: totalShares * ONE });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 12345, timestamp: 1776154391 });
     expect(activeNetwork.rpcCalls.filter((call) => call.method === "eth_call").every((call) => call.block === "0x3039")).toBe(true);
 
     expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 100,
+      capacityUsd,
       capacityRatioOfSupply: 1,
+      sourceTimestamp: 1776154391,
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
       routeStatus: "open",
       routeStatusSource: "onchain",
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
+    });
+    expect(result.metadata?.details?.redemptionCapacityValuation).toEqual({
+      basis: "reserve-protocol-basket-price-low", usdPerShare, observedAt: 1776154391,
     });
     expect(result.metadata?.redemption?.routeStatusReason).toContain("redemptionAvailable() throttle read");
   });
@@ -578,13 +586,14 @@ describe("reserve-protocol-dtf adapter", () => {
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
 
     expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 40,
+      capacityRatioOfSupply: 0.4,
       routeStatus: "degraded",
       routeStatusSource: "onchain",
     });
     expect(result.metadata?.redemption?.routeStatusReason).toContain(
       "basket status is 1 and fullyCollateralized() is false",
     );
+    expect(result.metadata?.redemption?.capacityUsd).toBeUndefined();
   });
 
   it.each([

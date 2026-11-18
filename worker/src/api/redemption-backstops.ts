@@ -5,13 +5,12 @@ import {
   buildRedemptionBackstopsSnapshot,
   RedemptionBackstopSnapshotUnavailableError,
 } from "../lib/redemption-backstops-store";
-import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 
 export const handleRedemptionBackstops = async (db: D1Database, stablecoinId?: string): Promise<Response> => {
-  let snapshot: RedemptionBackstopsResponse;
+  let result: Awaited<ReturnType<typeof buildRedemptionBackstopsSnapshot>>;
   try {
-    snapshot = await buildRedemptionBackstopsSnapshot(db, stablecoinId);
+    result = await buildRedemptionBackstopsSnapshot(db, stablecoinId);
   } catch (err) {
     if (err instanceof RedemptionBackstopSnapshotUnavailableError) {
       return stablecoinId
@@ -20,11 +19,15 @@ export const handleRedemptionBackstops = async (db: D1Database, stablecoinId?: s
     }
     throw err;
   }
+  const { phaseValidUntilSec, ...snapshot } = result;
   if (snapshot.updatedAt === 0) {
     return errorResponse(503, "Data not yet available");
   }
+  const ttl = Math.max(0, Math.min(300, (phaseValidUntilSec ?? Infinity) - Math.floor(Date.now() / 1000)));
+  const cacheControl = ttl === 300 ? CACHE_PROFILES.standard
+    : ttl === 0 ? "no-store" : `public, s-maxage=${ttl}, max-age=${Math.min(60, ttl)}, must-revalidate`;
   return jsonFreshResponse(snapshot, {
-    cacheControl: CACHE_PROFILES.standard,
+    cacheControl,
     updatedAt: snapshot.updatedAt,
     maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
   });

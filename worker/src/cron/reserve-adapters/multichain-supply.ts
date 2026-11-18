@@ -20,7 +20,7 @@ import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import { fetchErc20TotalSupply, fetchOnchainUint256, fetchTronErc20TotalSupply } from "./onchain";
+import { fetchErc20TotalSupply, fetchOnchainUint256, fetchTronErc20TotalSupply, fetchTronStateBoundErc20TotalSupply } from "./onchain";
 import { APTOS_PUBLIC_REST_URL } from "@shared/lib/chain-rpc-registry";
 import { fetchMoveFungibleAssetSupply, fetchSolanaMintSupply } from "./token-supply";
 import type { AdapterContext } from "./types";
@@ -246,22 +246,30 @@ async function readIncludedSupply(
   options: {
     signal: AbortSignal;
     nowSec: number;
+    requireStateClock?: true;
     ctx?: AdapterContext;
     tronCtx?: AdapterContext;
     readEvmToken: (contract: ContractDeployment) => Promise<ScopedEvmTokenRead>;
   },
 ): Promise<IncludedRead> {
-  const { signal, nowSec, ctx, tronCtx, readEvmToken } = options;
+  const { signal, nowSec, ctx, tronCtx, readEvmToken, requireStateClock } = options;
   const fail = (reason: string): IncludedRead => ({ ok: false, chain: entry.chain, reason });
   // Supply is scaled by the decimals the chain itself reports; a catalog
   // disagreement fails closed instead of mis-scaling the denominator.
-  const admit = (raw: bigint, onchainDecimals: number | null, observedAt: number): IncludedRead => {
+  const admit = (raw: bigint, onchainDecimals: number | null, stateObservedAt?: number): IncludedRead => {
     if (onchainDecimals != null && onchainDecimals !== contract.decimals) {
       return fail(`on-chain decimals ${onchainDecimals} differ from catalog decimals ${contract.decimals}`);
     }
+    if (requireStateClock && (stateObservedAt == null || !Number.isSafeInteger(stateObservedAt) ||
+      stateObservedAt <= 0 || stateObservedAt > Math.max(nowSec, Math.floor(Date.now() / 1000)))) {
+      return fail("state observation clock unavailable");
+    }
     return {
       ok: true,
-      contribution: { chain: entry.chain, tokenAddress: contract.address, raw, decimals: contract.decimals, observedAt },
+      contribution: {
+        chain: entry.chain, tokenAddress: contract.address, raw, decimals: contract.decimals,
+        observedAt: stateObservedAt ?? nowSec,
+      },
     };
   };
   const chainType = CHAIN_META[entry.chain]?.type;
@@ -276,10 +284,15 @@ async function readIncludedSupply(
       const read = await readEvmToken(contract);
       if (read.raw == null) return fail("totalSupply() read failed");
       if (read.decimals == null || read.decimals > 255n) return fail("decimals() read failed");
-      return admit(read.raw, Number(read.decimals), read.observedAt ?? nowSec);
+      return admit(read.raw, Number(read.decimals), read.observedAt);
     }
     case "tron-trc20": {
       if (chainType !== "tron") return fail(`reader tron-trc20 does not match chain type ${chainType ?? "unknown"}`);
+      if (requireStateClock) {
+        const state = await fetchTronStateBoundErc20TotalSupply(contract.address, signal, tronCtx ?? ctx);
+        return state == null ? fail("solidified totalSupply() and clock read failed")
+          : admit(state.raw, state.decimals, state.observedAt);
+      }
       const raw = await fetchTronErc20TotalSupply(contract.address, signal, tronCtx ?? ctx);
       if (raw == null) return fail("totalSupply() read failed");
       // The completion clock is the actual latest-state observation, not the
@@ -288,9 +301,9 @@ async function readIncludedSupply(
     }
     case "solana-spl-mint": {
       if (entry.chain !== "solana") return fail(`reader solana-spl-mint does not serve chain ${entry.chain}`);
-      const mint = await fetchSolanaMintSupply(contract.address, signal, ctx);
+      const mint = await fetchSolanaMintSupply(contract.address, signal, ctx, requireStateClock ? { requireStateClock } : undefined);
       if (!mint) return fail("SPL mint account read failed");
-      return admit(mint.rawSupply, mint.decimals, nowSec);
+      return admit(mint.rawSupply, mint.decimals, mint.observedAt);
     }
     case "aptos-fungible-asset": {
       if (entry.chain !== "aptos") return fail(`reader aptos-fungible-asset does not serve chain ${entry.chain}`);
@@ -298,7 +311,7 @@ async function readIncludedSupply(
       const restUrl = registryRpcUrls(ctx?.chainRpcs?.get("aptos"))[0] ?? APTOS_PUBLIC_REST_URL;
       const asset = await fetchMoveFungibleAssetSupply(contract.address, signal, restUrl, ctx, undefined, "aptos");
       if (!asset) return fail("fungible-asset ledger read failed");
-      return admit(asset.rawSupply, asset.decimals, asset.ledgerTimestampSec ?? nowSec);
+      return admit(asset.rawSupply, asset.decimals, asset.ledgerTimestampSec);
     }
   }
 }
@@ -317,6 +330,7 @@ export async function aggregateScopedLiabilitySupply(options: {
   adapterKey: string;
   signal: AbortSignal;
   nowSec: number;
+  requireStateClock?: true;
   ctx?: AdapterContext;
   tronCtx?: AdapterContext;
   readEvmToken: (contract: ContractDeployment) => Promise<ScopedEvmTokenRead>;
@@ -507,8 +521,8 @@ export function evaluateLiabilityCoverage(input: {
 
   const observedTimes = supply.contributions
     .map((contribution) => contribution.observedAt)
-    .filter((observedAt): observedAt is number => observedAt != null);
-  const supplyObservedAt = observedTimes.length > 0
+    .filter((observedAt): observedAt is number => observedAt != null && Number.isSafeInteger(observedAt) && observedAt > 0);
+  const supplyObservedAt = observedTimes.length > 0 && observedTimes.length === supply.contributions.length
     ? { min: Math.min(...observedTimes), max: Math.max(...observedTimes) }
     : undefined;
   const ratioSkewSec = supplyObservedAt

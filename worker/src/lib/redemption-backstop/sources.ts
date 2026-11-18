@@ -27,6 +27,7 @@ import {
   resolveReviewedRedemptionSettlement,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
+import { resolveMoreConservativeRedemptionSettlement } from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
@@ -48,15 +49,45 @@ import {
 import {
   buildRedemptionExitRouteObservation,
   deriveSupplyModelExitRouteObservation,
+  REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
 import { buildFpiControllerV9ExitRouteObservation } from "../fpi-controller-redemption-route";
 import { buildSfrxusdCrosschainV9ExitRouteObservation } from "../sfrxusd-crosschain-redemption-route";
 import { deriveCurrentPegObservationMap } from "../current-peg-observations";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import type { RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
+import type { StablecoinsCachePayload } from "../stablecoins-cache";
 
 type RedemptionSourceOptions = RedemptionBackstopBuildOptions & {
   onDirectObserverExecution?: (event: DirectObserverExecutionEvent) => void;
 };
+
+function redemptionFiatReferences(payload: StablecoinsCachePayload, updatedAt: number, now: number): RedemptionFiatReferenceContext {
+  // Fees are valued in the disclosed currency. They do not need a trading token in that currency.
+  if (payload.fxReferenceObservations !== undefined) {
+    const pegDataById: Record<string, RedemptionFiatReferenceContext["pegDataById"][string]> = {};
+    for (const [key, row] of Object.entries(payload.fxReferenceObservations)) {
+      const peg = getPegTaxonomyByType(key);
+      const publishedRate = payload.fxFallbackRates?.[key];
+      const selected = payload.selectedPegReferences?.[key];
+      if (payload.selectedPegReferences !== undefined && (selected?.kind !== "fx" ||
+          selected.generation !== `stablecoins:${updatedAt}` || selected.observation.source !== row.source ||
+          selected.observation.observedAtSec !== row.observedAtSec || selected.observation.usdPerUnit !== row.usdPerUnit)) continue;
+      if (peg?.pegClass !== "fiat_fx" || peg.canonicalPegType !== key || row.pegKey !== key ||
+          row.source === "peer-median" || row.source === "gold-api.com" ||
+          (row.publishedAtSec ?? row.observedAtSec) > updatedAt ||
+          (publishedRate !== undefined && publishedRate !== row.usdPerUnit)) continue;
+      pegDataById[key] = { pegCurrency: peg.currency, pegReference: {
+        valueUsd: row.usdPerUnit, source: "fx", contributorCount: 0, asOf: row.observedAtSec,
+      } };
+    }
+    return { clockSec: now, pegDataById };
+  }
+  const legacy = deriveCurrentPegObservationMap({ peggedAssets: payload.peggedAssets, fxFallbackRates: payload.fxFallbackRates, asOf: updatedAt });
+  return { clockSec: now, pegDataById: Object.fromEntries([...legacy].map(([id, observation]) => [id, {
+    ...observation, pegCurrency: WORKER_TRACKED_META_BY_ID.get(id)!.flags.pegCurrency,
+  }])) };
+}
 
 // Complete the disclosure join only after a snapshot has collected every
 // success/failure row. The local index captures states, not mutable row references.
@@ -93,12 +124,12 @@ export function applyOutputDependencyResolution(
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
+  settlementModel: RedemptionBackstopEntry["settlementModel"],
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
   liveMetadata?: RedemptionBackstopLiveMetadata,
   fiatReferences?: RedemptionFiatReferenceContext,
 ) {
-  const settlementModel = resolveReviewedRedemptionSettlement(config, now);
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
@@ -274,16 +305,18 @@ export async function buildRedemptionBackstopEntry(
       now - cache.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC &&
       (config.costModel.feeComponents || config.v9RouteCostTerms?.feeComponents ||
         (config.routeFamily === "offchain-issuer" && WORKER_TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency !== "USD"))) {
-    const currentPegObservations = deriveCurrentPegObservationMap({
-      peggedAssets: cache.payload.peggedAssets, fxFallbackRates: cache.payload.fxFallbackRates, asOf: cache.updatedAt,
-    });
-    fiatReferences = { clockSec: now, pegDataById: Object.fromEntries(
-      [...currentPegObservations].map(([id, observation]) => [id, { ...observation,
-        pegCurrency: WORKER_TRACKED_META_BY_ID.get(id)!.flags.pegCurrency }]),
-    ) };
+    fiatReferences = redemptionFiatReferences(cache.payload, cache.updatedAt, now);
   }
-  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata, fiatReferences);
-  const settlementModel = resolveReviewedRedemptionSettlement(config, now);
+  let settlementModel = resolveReviewedRedemptionSettlement(config, now);
+  const { settlementDelaySec } = capacity;
+  if (capacity.capacityProfile?.scoringHorizon === "eventual" && settlementDelaySec != null && settlementDelaySec > 0) {
+    const ceilings = REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC;
+    const observedModel = settlementDelaySec <= ceilings.immediate ? "immediate"
+      : settlementDelaySec <= ceilings["same-day"] ? "same-day"
+      : settlementDelaySec <= ceilings.days ? "days" : "queued";
+    settlementModel = resolveMoreConservativeRedemptionSettlement(settlementModel, observedModel);
+  }
+  const staticFields = resolveStaticFields(stablecoinId, config, settlementModel, reserveSnapshotMetadata, now, liveMetadata, fiatReferences);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,
@@ -324,7 +357,7 @@ export async function buildRedemptionBackstopEntry(
   let score = scored.score;
   let capsApplied = [...constrainedCapacityScoring.capsApplied, ...scored.capsApplied];
   const holderEligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
-  const hasStrongLiveDirectRoute = isStrongLiveDirectRoute({
+  const hasStrongLiveDirectRoute = capacity.immediateCapacityUsd != null && isStrongLiveDirectRoute({
     capacityConfidence: capacity.capacityConfidence,
     capacityKind: capacity.capacityKind,
     sourceMode: capacity.sourceMode,
@@ -625,8 +658,8 @@ export function buildFailedRedemptionBackstopEntry(
   config: RedemptionBackstopConfig,
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopEntry {
-  const staticFields = resolveStaticFields(stablecoinId, config);
   const settlementModel = resolveReviewedRedemptionSettlement(config, now);
+  const staticFields = resolveStaticFields(stablecoinId, config, settlementModel, null, now);
   // A failed row contains no admitted measurement, regardless of declared capabilities.
   const capacityConfidence = "heuristic" as const;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence);

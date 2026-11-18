@@ -587,6 +587,7 @@ export function buildSafetyScoreV9MechanismReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
   archetype: string,
+  recordAssuranceSource?: (source: "report" | "overlay") => void,
 ): V9MechanismRiskReview | null {
   if (!hasAdmittedSafetyScoreV9NativeFamily(meta, archetype, fixedInput.clockSec)) return null;
   const overlay = currentMechanismOverlay(meta.id, archetype, fixedInput.clockSec);
@@ -599,13 +600,26 @@ export function buildSafetyScoreV9MechanismReview(
     const appliesReportScope = scoringReportScope(fixedInput, meta) !== null;
     if (appliesReportScope || (technicalObservation && report?.assuranceMethod === "onchain-proof")) {
       if (expanded.archetype === "fiat-cash" || expanded.archetype === "commodity-claim") {
+        recordAssuranceSource?.("report");
         expanded.assuranceAndReconciliation = assuranceFact(fixedInput, meta);
       }
       if (expanded.archetype === "tbill" && appliesReportScope) {
         expanded.lossRecoveryDesign = boundedFact("loss-recovery-design", true);
       }
     }
+    if ((expanded.archetype === "fiat-cash" || expanded.archetype === "commodity-claim")
+      && !(appliesReportScope || (technicalObservation && report?.assuranceMethod === "onchain-proof"))) {
+      const profile = overlay.profileReview ? projectV9MechanismProfile(overlay.profileReview) : null;
+      recordAssuranceSource?.(profile?.components.assuranceAndReconciliation ?? overlay.components.assuranceAndReconciliation
+        ? "overlay" : "report");
+    } else if (expanded.archetype === "tbill" && !appliesReportScope) {
+      const profile = overlay.profileReview ? projectV9MechanismProfile(overlay.profileReview) : null;
+      recordAssuranceSource?.(profile?.components.lossRecoveryDesign ?? overlay.components.lossRecoveryDesign
+        ? "overlay" : "report");
+    }
     return expanded;
   }
-  return buildSimpleReview(fixedInput, meta, archetype);
+  const review = buildSimpleReview(fixedInput, meta, archetype);
+  if (review) recordAssuranceSource?.("report");
+  return review;
 }

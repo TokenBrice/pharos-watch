@@ -2,6 +2,10 @@ import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { getReferenceMarket, isFxMarketClosed } from "@shared/lib/reference-market-hours";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { admitDirectMetalBenchmark, getPegReferenceEvidence, hasCurrentPegAdmission, isSameReferenceSession, EUR_VAULT_PAYOUT_REFERENCE_PREFIX } from "./reference-evidence";
+import { PHYSICAL_TO_USD_EXIT_POLICY } from "@shared/lib/exit-route-scoring";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
@@ -15,10 +19,11 @@ import {
 import { isRedemptionSettlementFaster, resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-suspension";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { resolveRedemptionFiatReference, REDEMPTION_FIAT_REFERENCE_MAX_AGE_SEC } from "@shared/lib/redemption-fiat-reference";
 import executionModelReviews from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
-import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/exit-route";
+import { ExitExecutionModelReviewSchema, type ExitRouteObservation, type ExitRouteOutput } from "@shared/types/exit-route";
+import { exitExecutionEurVaultReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
 import { exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import {
@@ -106,18 +111,21 @@ function trackedStablecoinValuation(
   trackedAssetId: string,
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
-  // Existing captures retain an observed current deviation, but need not carry
-  // raw-price provenance. Keep that admitted summary path and its original
-  // review budget; the optional exact-price capture is additive, not a veto.
   const peg = fixedInput.pegDataById[trackedAssetId];
-  const summaryClock = peg?.priceObservedAt ?? peg?.priceUpdatedAt ?? observedAtSec;
+  // Older captures date the admitted summary at the route or retained update clock.
+  // An explicitly unavailable quote clock cannot renew that summary.
+  const summaryClock = peg?.priceObservedAt === undefined ? peg?.priceUpdatedAt ?? observedAtSec : peg.priceObservedAt;
+  const currency = peg?.pegCurrency ?? ACTIVE_META_BY_ID.get(trackedAssetId)?.flags.pegCurrency;
+  const evidence = getReferenceMarket(currency) ? getPegReferenceEvidence(fixedInput, trackedAssetId) : undefined;
+  const deviation = evidence ? evidence.admittedDeviationBps : peg?.currentDeviationBps;
   if (peg && !peg.currentPriceUnavailable && isObservedPrice(peg) &&
-      peg.currentDeviationBps != null && Number.isSafeInteger(summaryClock) &&
+      deviation != null && summaryClock != null && Number.isSafeInteger(summaryClock) &&
+      (!evidence || hasCurrentPegAdmission(currency!, evidence.referenceAdmission, peg.priceObservedAt, peg.pegReference?.source, fixedInput.clockSec)) &&
       summaryClock > 0 && summaryClock <= fixedInput.clockSec &&
       fixedInput.clockSec - summaryClock <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC) {
     const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
     const unitValueUsd = expectedUnitValueUsd === null ? null :
-      expectedUnitValueUsd * (1 + peg.currentDeviationBps / 10_000);
+      expectedUnitValueUsd * (1 + deviation / 10_000);
     if (unitValueUsd !== null && Number.isFinite(unitValueUsd) && unitValueUsd > 0) {
       return {
         basis: "price", unitValueUsd, expectedUnitValueUsd: expectedUnitValueUsd!, confidence: "medium",
@@ -169,11 +177,17 @@ function expectedTrackedStablecoinUnitValueUsd(
   const outputPrice = fixedInput.exitOutputPriceById?.[trackedAssetId];
   if (navPrice && !isObservedPrice({ priceSource: navPrice.sourceId })) return null;
   const peg = fixedInput.pegDataById[trackedAssetId];
+  const pegCurrency = peg?.pegCurrency ?? ACTIVE_META_BY_ID.get(trackedAssetId)?.flags.pegCurrency;
   const legacyUsdPeg =
     peg?.pegCurrency === undefined &&
     peg?.currentDeviationBps !== null &&
     peg?.currentDeviationBps !== undefined;
   const reference = peg?.pegReference;
+  const evidence = getReferenceMarket(pegCurrency) ? getPegReferenceEvidence(fixedInput, trackedAssetId) : undefined;
+  const scheduledUnitValueUsd = evidence && reference &&
+    hasCurrentPegAdmission(pegCurrency!, evidence.referenceAdmission,
+      peg?.priceObservedAt, reference.source, fixedInput.clockSec)
+    ? reference.valueUsd : null;
   const commodityUnitValueUsd =
     (peg?.pegCurrency === "GOLD" || peg?.pegCurrency === "SILVER") &&
     reference && Number.isSafeInteger(reference.asOf) && reference.asOf > 0 &&
@@ -182,9 +196,9 @@ function expectedTrackedStablecoinUnitValueUsd(
       ? reference.valueUsd : null;
   const expectedUnitValueUsd =
     navPrice?.priceUsd ??
-    (peg?.pegCurrency === "USD" || legacyUsdPeg ? 1 :
-      commodityUnitValueUsd ??
-      (peg?.pegCurrency ? resolveRedemptionFiatReference(peg.pegCurrency, fixedInput)?.valueUsd ?? null : null)) ??
+    (evidence ? scheduledUnitValueUsd :
+      peg?.pegCurrency === "USD" || legacyUsdPeg ? 1 :
+      commodityUnitValueUsd ?? (peg?.pegCurrency ? resolveRedemptionFiatReference(peg.pegCurrency, fixedInput)?.valueUsd : null)) ??
     (outputPrice?.admission === "guarded-nav" ? outputPrice.priceUsd : null);
   return expectedUnitValueUsd !== null &&
     Number.isFinite(expectedUnitValueUsd) &&
@@ -260,6 +274,21 @@ function outputIdentityValuation(
   return { ...underlying, sourceId: "safety-score-v9-extension-fixed-rate-receipt" };
 }
 
+function metalDeliveryReference(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string, metal: "XAU" | "XAG",
+) {
+  if (fixedInput.directMetalReferences !== undefined) {
+    return admitDirectMetalBenchmark(fixedInput.directMetalReferences, metal, fixedInput.clockSec);
+  }
+  const peg = fixedInput.pegDataById[assetId];
+  const reference = peg?.pegReference;
+  if (peg?.pegCurrency !== (metal === "XAU" ? "GOLD" : "SILVER") || !reference) return null;
+  return {
+    usdPerTroyOunce: reference.usdPerTroyOunce ?? NaN,
+    observedAtSec: reference.asOf, source: reference.source, generation: undefined,
+  };
+}
+
 function buildOutputReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
@@ -278,6 +307,30 @@ function buildOutputReview(
     const point = certificate.points.find((entry) => entry.requestedNotionalUsd === observation.requestedNotionalUsd &&
       entry.maxCostBps === observation.maxCostBps);
     if (!point || point.outputs.length === 0 || point.certification === "diagnostic") return null;
+    const leg = point.outputs[0]!;
+    if (certificate.modelId === "erc4626-instant" && observation.routeFamily === "protocol-redemption" &&
+        (observation.outputUnitValueUsd !== undefined || executionModelReviews.reviews.some((review) =>
+          review.identity.assetId === assetId &&
+          exitExecutionEurVaultReviewDigest(ExitExecutionModelReviewSchema.parse(review)) === certificate.reviewDigest))) {
+      if (point.outputs.length !== 1) return null;
+      const payout = { kind: "tracked-stablecoin" as const, assetKeys: [leg.assetKey], basketWeights: [] };
+      const expected = observation.outputExpectedUnitValueUsd;
+      const basisSource = observation.outputUnitValueSourceId;
+      const basisAt = observation.outputUnitValueObservedAt;
+      if (observation.outputUnitValueUsd !== leg.unitValueUsd ||
+          expected === undefined || !basisSource?.startsWith(EUR_VAULT_PAYOUT_REFERENCE_PREFIX) || basisAt === undefined ||
+          isFxMarketClosed(basisAt) || !isSameReferenceSession("EUR", basisAt, fixedInput.clockSec) ||
+          fixedInput.clockSec - basisAt > certificate.priceMaxAgeSec) return { ...payout, valuation: null };
+      return {
+        ...payout,
+        valuation: {
+          basis: "price", referenceAssetKey: leg.assetKey, unitValueUsd: leg.unitValueUsd, expectedUnitValueUsd: expected,
+          confidence: "medium", observedAtSec: Math.min(leg.observedAtSec, basisAt), sourceId: basisSource,
+          sourceGenerationId: domainDigest("safety-score-v10.eur-vault-payout.v1", { leg, expected, basisSource, basisAt }),
+          maxAgeSec: certificate.priceMaxAgeSec, url: null, contentSha256: null,
+        },
+      };
+    }
     const expectedValues = point.outputs.map((leg) => point.executableUsd === 0 && point.outputs.length === 1
       ? leg.expectedUnitValueUsd : exitUsdBoundary(exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd)));
     const expectedUsd = expectedValues.reduce((sum, value) => sum + value, 0);
@@ -302,32 +355,34 @@ function buildOutputReview(
   }
   if (observation.physicalToUsd) {
     const trace = observation.physicalToUsd;
-    if (trace.rejectionReason !== null) return null;
+    const terms = getRedemptionBackstopConfig(assetId)?.physicalToUsd;
+    const benchmark = terms && admitDirectMetalBenchmark(fixedInput.directMetalReferences, terms.metal, fixedInput.clockSec);
+    if (trace.rejectionReason !== null || (fixedInput.directMetalReferences !== undefined &&
+        (!benchmark || benchmark.observedAtSec !== trace.metalPriceObservedAtSec ||
+          fixedInput.clockSec - benchmark.observedAtSec > PHYSICAL_TO_USD_EXIT_POLICY.metalPriceMaxAgeSec))) return null;
     // All fees and spread belong to execution cost, not USD output retention.
     return {
       kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [],
       valuation: { basis: "price", referenceAssetKey: "fiat:USD",
         unitValueUsd: 1, expectedUnitValueUsd: 1, confidence: "medium",
         observedAtSec: trace.metalPriceObservedAtSec,
-        sourceId: "physical-to-usd-modelled-endpoint", sourceGenerationId,
+        sourceId: benchmark?.source ?? "physical-to-usd-modelled-endpoint", sourceGenerationId: benchmark?.generation ?? sourceGenerationId,
         maxAgeSec: trace.metalPriceMaxAgeSec,
-        url: getRedemptionBackstopConfig(assetId)?.physicalToUsd?.evidence[0]?.url ?? null,
+        url: terms?.evidence[0]?.url ?? null,
         contentSha256: null },
     };
   }
   if (output.kind === "physical-commodity-delivery") {
     const config = getRedemptionBackstopConfig(assetId);
     const terms = config?.physicalCommodityDelivery;
-    const peg = fixedInput.pegDataById[assetId];
-    const reference = peg?.pegReference;
-    const expectedCurrency = terms?.commodity === "XAU" ? "GOLD" : "SILVER";
+    const reference = terms && metalDeliveryReference(fixedInput, assetId, terms.commodity);
     const reviewedAtSec = config?.reviewedAt ? Date.parse(config.reviewedAt) / 1000 : NaN;
     const reviewAdmissionSec = config?.reviewedAt ? reviewAdmissionClockSec(config.reviewedAt) : NaN;
     if (!Number.isFinite(reviewedAtSec) || reviewAdmissionSec > fixedInput.clockSec ||
         fixedInput.clockSec - reviewedAtSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC || !config?.docs?.length) return null;
-    if (!terms || output.sameNotionalEligible !== false || peg?.pegCurrency !== expectedCurrency ||
-        !reference?.usdPerTroyOunce || reference.asOf > fixedInput.clockSec ||
-        fixedInput.clockSec - reference.asOf > 86_400) return null;
+    if (!terms || output.sameNotionalEligible !== false ||
+        !reference || reference.observedAtSec > fixedInput.clockSec ||
+        fixedInput.clockSec - reference.observedAtSec > PHYSICAL_TO_USD_EXIT_POLICY.metalPriceMaxAgeSec) return null;
     const value = valuePhysicalCommodityDelivery(terms, reference.usdPerTroyOunce, observation.requestedNotionalUsd);
     if (!value) return null;
     return {
@@ -342,10 +397,10 @@ function buildOutputReview(
         unitValueUsd: value.unitValueUsd,
         expectedUnitValueUsd: value.expectedUnitValueUsd,
         confidence: "medium",
-        observedAtSec: reference.asOf,
+        observedAtSec: reference.observedAtSec,
         sourceId: `commodity-usd-per-troy-ounce:${reference.source}`,
-        sourceGenerationId,
-        maxAgeSec: 86_400,
+        sourceGenerationId: reference.generation ?? sourceGenerationId,
+        maxAgeSec: PHYSICAL_TO_USD_EXIT_POLICY.metalPriceMaxAgeSec,
         url: config?.docs?.[0]?.url ?? null,
         contentSha256: null,
       },
@@ -1101,13 +1156,11 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
   const retained: RetainedRoute[] = [];
   const config = getRedemptionBackstopConfig(assetId);
   if (config?.physicalToUsd) {
-    const reference = fixedInput.pegDataById[assetId]?.pegReference;
-    const expectedCurrency = config.physicalToUsd.metal === "XAU" ? "GOLD" : "SILVER";
-    const metal = fixedInput.pegDataById[assetId]?.pegCurrency === expectedCurrency ? reference : null;
+    const metal = metalDeliveryReference(fixedInput, assetId, config.physicalToUsd.metal);
     const observation = buildPhysicalToUsdExitObservation({
       assetId, config, clockSec: fixedInput.clockSec,
       supplyUsd: getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
-      reference: { usdPerTroyOunce: metal?.usdPerTroyOunce ?? NaN, observedAtSec: metal?.asOf ?? 0 },
+      reference: metal ?? { usdPerTroyOunce: NaN, observedAtSec: 0 },
       // The separately reviewed physical channel is not the suspended legacy exchange.
       routeOpen: redemption?.routeStatus === "open" || (redemption?.routeStatus === "suspended" &&
         resolveReviewedRouteSuspension(config, redemptionRouteId(assetId, config.routeFamily), fixedInput.clockSec) !== undefined),

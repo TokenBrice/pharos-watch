@@ -496,11 +496,13 @@ export async function observeErc4626InstantExit(args: {
     }
     const inputUsd = exitRawUsd(amount, config.inputDecimals, inputReference.unitValueUsd);
     const outputUsd = exitRawUsd(received, config.outputDecimals, args.outputReference.unitValueUsd);
-    const expectedUsd = exitRawUsd(received, config.outputDecimals, args.outputReference.expectedUnitValueUsd);
     const haircutBps = Number((gross > received ? gross - received : 0n) * 1_000_000n / gross) / 100;
     const gasUsd = nativeReference ? exitRawUsd(gasRaw, nativeReference.decimals, nativeReference.unitValueUsd) : 0n;
     const cost = (outputValue: bigint) => Math.max(haircutBps, Number((((inputUsd > outputValue ? inputUsd - outputValue : 0n) + gasUsd) * 1_000_000n + inputUsd - 1n) / inputUsd) / 100);
-    const executionCostBps = cost(expectedUsd); const allInCostBps = cost(outputUsd);
+    const allInCostBps = cost(outputUsd);
+    const executionCostBps = externalShares
+      ? cost(exitRawUsd(received, config.outputDecimals, args.outputReference.expectedUnitValueUsd))
+      : allInCostBps;
     const aboveBudget = allInCostBps > request.maxCostBps || executionCostBps > request.maxCostBps;
     points.push({ requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, requestedRawInput: requested.toString(), executedRawInput: amount.toString(),
       executableUsd: Number(amount * 1_000_000_000n / requested) / 1_000_000_000 * request.requestedNotionalUsd,

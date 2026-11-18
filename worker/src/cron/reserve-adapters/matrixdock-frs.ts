@@ -212,12 +212,10 @@ export function adaptMatrixdockFrsState(
       : reserveInfoWarning("quiet-reserve-feed", `${ADAPTER_KEY}: ${detail}`));
   }
 
-  // Silver coverage of the token's one-troy-oz claim (ozPerToken drifts slightly
-  // below one ounce, so the ratio reads just under 1.0 without being material).
-  const collateralizationRatio = reserveOz / totalSupply;
+  const collateralizationRatio = reserveOz / (totalSupply * ozPerToken);
   const coverageWarnings = buildCoverageShortfallWarnings({
     code: "reserve-undercollateralized",
-    message: (pct) => `Matrixdock XAGm reserve covers ${pct}% of token supply in fine silver oz`,
+    message: (pct) => `Matrixdock XAGm reserve covers ${pct}% of current token entitlement in fine silver oz`,
     coverageRatio: collateralizationRatio,
   });
   warnings.push(...coverageWarnings);

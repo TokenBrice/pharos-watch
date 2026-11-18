@@ -463,6 +463,7 @@ describe("fetchInfiniFiReserves", () => {
         freshnessKind: "same-run-api",
         routeStatus: "open",
         routeStatusSource: "onchain",
+        settlementDelaySec: 0,
         queueDepthUsd: 0,
         sourceUrls: [
           ROUTE_URL,
@@ -508,6 +509,8 @@ describe("fetchInfiniFiReserves", () => {
       expect(result.metadata?.redemption).toMatchObject({
         routeStatus: "paused",
         routeStatusSource: "onchain",
+        capacityUsd: 0,
+        capacityRatioOfSupply: 0,
       });
     }
   });

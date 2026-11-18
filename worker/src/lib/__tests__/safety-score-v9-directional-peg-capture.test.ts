@@ -6,8 +6,11 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { DepegEvent } from "@shared/types/peg";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type * as SnapshotModule from "../report-cards-snapshot";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 
-const mocks = vi.hoisted(() => ({ inputs: vi.fn(), peg: vi.fn() }));
+const mocks = vi.hoisted(() => ({ inputs: vi.fn(), peg: vi.fn(), dexGeneration: vi.fn() }));
 vi.mock("../report-cards-snapshot-inputs", () => ({ loadReportCardsSnapshotInputs: mocks.inputs }));
 vi.mock("../peg-analytics", () => ({ derivePegAnalyticsSnapshot: mocks.peg }));
 vi.mock("../peg-analytics-cache", () => ({ publishPegAnalyticsCache: vi.fn(async () => true) }));
@@ -15,11 +18,11 @@ vi.mock("../report-card-evidence-journal-store", () => ({ loadReportCardEvidence
 vi.mock("../collateral-drift", () => ({ summarizeCollateralDriftFromLiveReserveMap: () => ({ fallbackCoins: [] }) }));
 vi.mock("../report-cards-snapshot", async (original) => ({
   ...(await original<typeof SnapshotModule>()),
-  loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
+  loadExactDexPublicationGeneration: mocks.dexGeneration,
 }));
 import { buildNativeSafetyScoreV9Capture } from "./safety-score-v9-capture.test-support";
 
-const CLOCK_SEC = 1790000000;
+const CLOCK_SEC = Date.UTC(2026, 10, 16, 2) / 1000;
 const ASSET_ID = "usdt-tether";
 const DAY = 86_400;
 const PREMIUM_WEIGHT = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight;
@@ -82,25 +85,26 @@ function pegRow(pegScore: number | null): PegSummaryCoin {
   };
 }
 
-function loadCapture(pegDataById: Map<string, PegSummaryCoin>, eventsByCoin: Map<string, DepegEvent[]>) {
+function loadCapture(pegDataById: Map<string, PegSummaryCoin>, eventsByCoin: Map<string, DepegEvent[]>, clockSec = CLOCK_SEC) {
+  mocks.dexGeneration.mockResolvedValue({ generationId: `dex-liquidity-${clockSec}`, updatedAt: clockSec });
   mocks.inputs.mockResolvedValue({
-    stablecoinsCached: { kind: "ok", updatedAt: CLOCK_SEC, payload: { peggedAssets: [] } },
+    stablecoinsCached: { kind: "ok", updatedAt: clockSec, payload: { peggedAssets: [] } },
     dexLiquiditySnapshot: {
-      latestUpdatedAt: CLOCK_SEC,
+      latestUpdatedAt: clockSec,
       map: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: "1.0" }])),
     },
     redemptionBackstopMap: {},
     redemptionSnapshotProvenance: { runId: undefined, latestUpdatedAt: undefined, methodologyVersion: undefined, runMetadata: {} },
     liveReserveMap: new Map(), liveReserveProvenanceMap: new Map(), liquidityStale: false, redemptionStale: true,
     inputFreshness: {
-      dexLiquidity: { updatedAt: CLOCK_SEC, ageSeconds: 0, stale: false },
+      dexLiquidity: { updatedAt: clockSec, ageSeconds: 0, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     v9PublicationInputHealth: {
       dex: { state: "current" }, redemption: { state: "unavailable" }, liveReserves: { state: "unavailable", coverageRatio: null },
     },
   });
-  mocks.peg.mockResolvedValue({ nowSec: CLOCK_SEC, pegDataById, eventsByCoin });
+  mocks.peg.mockResolvedValue({ nowSec: clockSec, pegDataById, eventsByCoin });
   return buildNativeSafetyScoreV9Capture(mockD1());
 }
 
@@ -117,6 +121,52 @@ function consistentPegData(captureEvents: DepegEvent[]) {
 beforeEach(() => vi.clearAllMocks());
 
 describe("Safety Score V9 directional peg capture", () => {
+  it.each([
+    { assetId: "mai-qidao", pegCurrency: "USD", pegType: "peggedUSD", peak: -1917, cap: 49 },
+    { assetId: "eurs-stasis", pegCurrency: "EUR", pegType: "peggedEUR", peak: -1200, cap: null },
+  ] as const)("carries only an established discount from capture to the cap for $assetId", async ({ assetId, pegCurrency, pegType, peak, cap }) => {
+    const openEvent = depegEvent({
+      id: cap === null ? 91050 : 90748,
+      stablecoinId: assetId, pegType, peakDeviationBps: peak, endedAt: null,
+      startedAt: cap === null ? Date.UTC(2026, 10, 14, 12) / 1000 : 1_785_190_593,
+      priceCoverage: cap === null ? null : { intervals: [], lastObservationKind: "blind",
+        lastTrustedObservationAt: null, gapStartedAt: 1_791_040_635 },
+    });
+    const score = computePegScore([openEvent], TRACKING_START_SEC, CLOCK_SEC, pegCurrency);
+    const row = { ...pegRow(score.pegScore), ...score, id: assetId, pegCurrency, pegType };
+    const { input } = await loadCapture(new Map([[assetId, row]]), new Map([[assetId, [openEvent]]]));
+    const captured = input.safetyScoreV9DirectionalPeg!;
+    expect(captured.activeDiscountPeakBpsById[assetId] ?? null).toBe(cap === null ? null : -peak);
+    const fixed = makeV9FixedInput({
+      assetId, clockSec: CLOCK_SEC, pegScore: score.pegScore, activeDepeg: score.activeDepeg,
+      activeDepegPeakBps: input.activeDepegPeakBpsById[assetId], safetyScoreV9DirectionalPeg: captured,
+    });
+    const extension = makeV9Extension({ assetId, registryFingerprint: fixed.registryFingerprint, clockSec: CLOCK_SEC });
+    const evaluated = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, extension), V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.assets[0]!.trace.caps.find((item) => item.source === "active-depeg")?.limit ?? null).toBe(cap);
+  });
+
+  it.each([true, false])("witnesses a same-second metals cap only with explicit admission (%s)", async (admitted) => {
+    const clockSec = Date.UTC(2026, 10, 13, 22) / 1000;
+    const assetId = "paxg-paxos";
+    const point = depegEvent({ id: 1, stablecoinId: assetId, pegType: "peggedGOLD", startedAt: clockSec,
+      endedAt: null, peakDeviationBps: -1500,
+      ...(admitted ? { admittedCoverage: [{ fromSec: clockSec, toSec: clockSec + 1 }] }
+        : { priceCoverage: { intervals: [[clockSec, clockSec]], lastTrustedObservationAt: clockSec, gapStartedAt: null } }),
+    });
+    const score = computePegScore([point], TRACKING_START_SEC, clockSec, "GOLD");
+    const row = { ...pegRow(score.pegScore), ...score, id: assetId, pegCurrency: "GOLD", pegType: "peggedGOLD" };
+    const { input } = await loadCapture(new Map([[assetId, row]]), new Map([[assetId, [point]]]), clockSec);
+    const peak = admitted ? 1500 : undefined;
+    expect(input.activeDepegPeakBpsById[assetId]).toBe(peak);
+    expect(input.safetyScoreV9DirectionalPeg?.activeDiscountPeakBpsById[assetId]).toBe(peak);
+    const fixed = makeV9FixedInput({ assetId, clockSec, pegScore: score.pegScore, activeDepeg: score.activeDepeg,
+      activeDepegPeakBps: input.activeDepegPeakBpsById[assetId], safetyScoreV9DirectionalPeg: input.safetyScoreV9DirectionalPeg });
+    const extension = makeV9Extension({ assetId, registryFingerprint: fixed.registryFingerprint, clockSec });
+    const evaluated = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, extension), V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.assets[0]!.trace.caps.find((item) => item.source === "active-depeg")?.limit).toBe(admitted ? 49 : undefined);
+  });
+
   it("splits the any-direction witness from the discount-only cap input", async () => {
     const captureEvents = events();
     const fixture = consistentPegData(captureEvents);

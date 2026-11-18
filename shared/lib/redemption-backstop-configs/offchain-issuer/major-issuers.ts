@@ -229,6 +229,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "eurc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary", "documented-variable"),
     v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
@@ -247,12 +248,12 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdc-circle": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    capacityModel: { kind: "supply-ratio", ratio: 0.07, confidence: "documented-bound", basis: "hot-buffer" },
+    settlementModel: "days",
     reviewedAt: "2026-05-17",
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary", "documented-variable"),
     v9RouteCostTerms: { feeBpsMax: 10 },
     docs: [
-      sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
+      sourceRef("Circle USD withdrawal FAQ", "https://help.circle.com/s/article/USD-withdrawals-FAQs?category=Transactions&language=en_US", ["settlement"]),
       sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", [
         "route",
         "capacity",
@@ -264,7 +265,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("Circle product fee schedule", "https://help.circle.com/support/en/circle-product-fee-schedule?id=kb_article_view&sysparm_article=KB0010626", ["fees"]),
     ],
     notes: [
-      "Tracked USDC metadata records a 7% cash-deposit reserve slice; Pharos uses that cash slice as the documented hot-buffer lower bound and does not promote the unvalidated 20% proposal.",
+      "Reserve cash is backing evidence, not a funded and available payout rail. Ordinary bank withdrawals follow Federal Reserve business days and wire credit can take another one to three business days.",
       "Sol unknown-resolver wave 2026-10-07 (EXIT_ROUTE_3): Circle's redemption structure effective March 15, 2026 caps the institutional daily gross-redemption charge at 5 bps, plus at most 5 bps marginal monthly net-redemption overage. The V9-only 10 bps issuer-fee ceiling covers the additive maximum without assuming fee credits, unused monthly allowances, or eligibility for a lower-fee tier.",
       "Circle and its banking partners do not charge an outgoing redemption-wire fee. Receiving-bank charges are third-party costs outside this issuer-fee ceiling, not asserted zero. The Standard tier's gross-redemption cap does not constrain the modeled Institutional route; no captured capacity or settlement term is increased by this cost review.",
       "Basic has no daily fee but marginal monthly overage; Standard's $2M/day free allowance is tier-specific, and Institutional's base fee is on gross redemption. EEA zero burn fees and optional credits are not a universal exemption. Near-instant processing does not establish final bank-receipt timing.",

@@ -1,6 +1,7 @@
 import type { DepegEvent } from "../types/peg";
-import { isPegScoreExcludedAuditVerdict } from "./depeg-audit";
-import { mergeDepegSeconds, mergeUnknownDepegSeconds, hasCurrentTrustedDepegObservation, worstDeviation } from "./peg-utils";
+import { activePegPeakBps, depegObservedIntervals, isScoredPegEvent, legacyPegEventStart, mergeDepegSeconds, mergeUnknownDepegSeconds, scheduledPegClosures, worstDeviation } from "./peg-utils";
+import { getReferenceMarket, isReferenceDeviationHeld, isReferenceMarketClosed } from "./reference-market-hours";
+import { getPegTaxonomyByType } from "./peg-taxonomy";
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
@@ -70,6 +71,10 @@ export interface PegScoreResult {
   activeDepeg: boolean;
   /** Most recent event startedAt, or null */
   lastEventAt: number | null;
+  /** End of the most recent admitted off-peg interval, for Safety's quiet-history rule. */
+  lastAffectedAtSec?: number | null;
+  /** Upper bound for scored incidents whose affected endpoint was unobserved. */
+  lastUncertainAffectedAtSec?: number | null;
   /** Tracking span in days */
   trackingSpanDays: number;
   /** Unknown coverage is neither off peg nor verified at peg. */
@@ -118,19 +123,18 @@ export function computeRecentPegStats(
   events: DepegEvent[],
   trackingStartSec: number | null,
   nowSec: number,
+  pegCurrency?: string,
 ): RecentPegStats | null {
   if (trackingStartSec == null || trackingStartSec >= nowSec) return null;
 
   const nominalStartSec = nowSec - RECENT_PEG_WINDOW_DAYS * DAY_SECONDS;
   const observedStartSec = Math.max(trackingStartSec, nominalStartSec);
   const observedSpanSec = Math.max(nowSec - observedStartSec, 1);
-  const recentEvents = events.filter((event) => {
-    if (isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict)) return false;
-    const eventEndSec = event.endedAt ?? nowSec;
-    return event.startedAt <= nowSec && eventEndSec > observedStartSec;
-  });
-  const depegSec = mergeDepegSeconds(recentEvents, observedStartSec, nowSec);
-  const unknownSec = mergeUnknownDepegSeconds(recentEvents, observedStartSec, nowSec);
+  const { coverageEvents, eligibleEvents, closures } = getPegIncidentCoverage(events, observedStartSec, nowSec, pegCurrency, "recent");
+  const coveredEvents = coverageEvents.filter(isScoredPegEvent);
+  const recentEvents = eligibleEvents.filter(isScoredPegEvent);
+  const depegSec = mergeDepegSeconds(recentEvents, observedStartSec, nowSec, closures);
+  const unknownSec = mergeUnknownDepegSeconds(coveredEvents, observedStartSec, nowSec, closures);
   const knownSpanSec = Math.max(0, observedSpanSec - unknownSec);
 
   return {
@@ -142,6 +146,42 @@ export function computeRecentPegStats(
     thresholdCrossingCount: recentEvents.reduce((sum, event) => sum + Math.max(1, event.constituentEventCount ?? 1), 0),
     worstDeviationBps: worstDeviation(recentEvents),
   };
+}
+
+function countsPegIncident(
+  event: DepegEvent, from: number, now: number, currency: string | undefined, closures: Array<[number, number]>, scope: "history" | "recent",
+): boolean {
+  const market = getReferenceMarket(currency);
+  const startBound = scope === "history" && event.endedAt === null ? event.startedAt : from;
+  if (event.admittedCoverage === undefined) {
+    // A recorded opening in an eligible session establishes the incident
+    // independently of whether duration tracking later went blind.
+    if (scope === "history" && market === null) return true;
+    if (event.startedAt >= startBound && !isReferenceDeviationHeld(currency, event.startedAt, event.peakDeviationBps)) return true;
+  }
+  return depegObservedIntervals(event, closures).some(([start, end]) => {
+    if (start === end) {
+      return start >= startBound && start <= now && !isReferenceMarketClosed(market, start);
+    }
+    const elapsedOverlap = start < end && start < now && end > startBound;
+    const admittedAtClock = event.admittedCoverage !== undefined && now >= startBound && start <= now && now < end;
+    return elapsedOverlap || admittedAtClock;
+  });
+}
+
+/** Shared census for scoring, exact provenance and active Safety cap witnesses. */
+export function getPegIncidentCoverage<T extends DepegEvent>(
+  events: T[], from: number, now: number, pegCurrency?: string, scope: "history" | "recent" = "history",
+) {
+  const currency = pegCurrency ?? getPegTaxonomyByType(events[0]?.pegType)?.currency;
+  const market = getReferenceMarket(currency);
+  const coverageEvents = events.filter((event) => event.startedAt <= now &&
+    (from >= now || (event.endedAt ?? now) > from));
+  const closureStart = scope === "recent" ? from : coverageEvents.reduce((start, event) =>
+    event.endedAt === null ? Math.min(start, event.startedAt) : start, from);
+  const closures = scheduledPegClosures(market, closureStart, now);
+  const eligibleEvents = coverageEvents.filter((event) => countsPegIncident(event, from, now, currency, closures, scope));
+  return { market, closures, coverageEvents, eligibleEvents };
 }
 
 function isPremiumDepegEvent(event: DepegEvent): boolean {
@@ -171,6 +211,7 @@ function computePegScoreCore(
   trackingStartSec: number | null,
   now: number,
   premiumWeight: number,
+  pegCurrency?: string,
 ): PegScoreCoreResult {
   // Determine tracking window start
   // Only compute earliestEvent when trackingStartSec is absent (all production callers supply it).
@@ -186,28 +227,25 @@ function computePegScoreCore(
   // A tracking anchor at or after the scoring clock proves no observed second:
   // do not clamp the non-positive span to a pseudocount of one second. The event
   // census still reports what was observed up to the clock.
-  const blindAnchor = startSec >= now;
   const spanSec = Math.max(now - startSec, 0);
   const spanDays = spanSec / DAY_SECONDS;
-  const coverageEvents = events.filter((event) => {
-    const eventEndSec = event.endedAt ?? now;
-    return event.startedAt <= now && (blindAnchor || eventEndSec > startSec);
-  });
-  const scoringEvents = coverageEvents.filter((event) => !isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict));
-  const excludedEventCount = coverageEvents.length - scoringEvents.length;
+  const { coverageEvents, eligibleEvents, market, closures } = getPegIncidentCoverage(events, startSec, now, pegCurrency);
+  const auditEvents = coverageEvents.filter(isScoredPegEvent);
+  const scoringEvents = eligibleEvents.filter(isScoredPegEvent);
+  const excludedEventCount = eligibleEvents.length - scoringEvents.length;
   const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
   const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
 
-  const unknownCoverageSeconds = mergeUnknownDepegSeconds(scoringEvents, startSec, now);
+  const unknownCoverageSeconds = mergeUnknownDepegSeconds(auditEvents, startSec, now, closures);
   const knownSpanSec = Math.max(0, spanSec - unknownCoverageSeconds);
   const insufficientData = knownSpanSec < 7 * DAY_SECONDS;
   // --- Time score (pegPct) ---
   // Discounts are below-peg peaks; premiums are above-peg peaks, by sign.
   // Below-peg time is merged first so overlaps are attributed to discounts.
   const belowPegEvents = scoringEvents.filter((e) => e.peakDeviationBps <= 0);
-  const totalDepegSec = mergeDepegSeconds(scoringEvents, startSec, now);
+  const totalDepegSec = mergeDepegSeconds(scoringEvents, startSec, now, closures);
   // Anything not provably a premium (including a non-finite peak) keeps full weight.
-  const belowPegSec = mergeDepegSeconds(scoringEvents.filter((e) => !isPremiumDepegEvent(e)), startSec, now);
+  const belowPegSec = mergeDepegSeconds(scoringEvents.filter((e) => !isPremiumDepegEvent(e)), startSec, now, closures);
   const abovePegSec = totalDepegSec - belowPegSec;
   // A premium second counts `premiumWeight` seconds in the Safety peg input.
   // Weight 1 keeps the merged total itself rather than a `below + (total - below)`
@@ -225,11 +263,19 @@ function computePegScoreCore(
   // minimum penalty proportional to their magnitude — a 2-hour 400 bps depeg
   // is not negligible just because it was brief.
   let totalPenalty = 0;
+  let lastAffectedAtSec: number | null = null;
+  let lastUncertainAffectedAtSec: number | null = null;
   for (const e of scoringEvents) {
     const rawBps = Math.abs(e.peakDeviationBps);
     const peakBps = Number.isFinite(rawBps) ? rawBps : 0;
-    const observedStartSec = Math.max(e.startedAt, startSec);
-    const durationDays = Math.min(mergeDepegSeconds([e], startSec, now) / DAY_SECONDS, 90);
+    const intervals = depegObservedIntervals(e, closures).filter(([start, end]) => start <= now && end >= startSec);
+    const onset = market !== null || e.admittedCoverage !== undefined ? intervals[0]?.[0] ?? legacyPegEventStart(e) : e.startedAt;
+    const observedStartSec = Math.max(onset ?? e.startedAt, startSec);
+    for (const [, end] of intervals) lastAffectedAtSec = Math.max(lastAffectedAtSec ?? 0, Math.min(end, now));
+    if (intervals.length === 0 && e.endedAt !== null) {
+      lastUncertainAffectedAtSec = Math.max(lastUncertainAffectedAtSec ?? 0, e.endedAt);
+    }
+    const durationDays = Math.min(mergeDepegSeconds([e], startSec, now, closures) / DAY_SECONDS, 90);
     const yearsAgo = (now - observedStartSec) / (365.25 * DAY_SECONDS);
     const recencyWeight = 1 / (1 + yearsAgo);
 
@@ -271,13 +317,14 @@ function computePegScoreCore(
   // A coin at -7800 bps shouldn't score 51 just because old events decayed.
   let activeDepegPenalty = 0;
   for (const e of scoringEvents) {
-    if (hasCurrentTrustedDepegObservation(e, now)) {
+    const trustedPeak = activePegPeakBps(e, now, market);
+    if (trustedPeak !== null) {
       // Scale: floor 5 below 250 bps, 2500+ bps = 50 penalty (hard cap).
       // Use worst active event when multiple concurrent depegs exist.
-      const rawAbsBps = Math.abs(e.peakDeviationBps);
+      const rawAbsBps = Math.abs(trustedPeak);
       const absBps = Number.isFinite(rawAbsBps) ? rawAbsBps : 0;
       // A premium's whole active penalty counts at `premiumWeight`: floor `5w`, cap `50w`.
-      const premiumFactor = isPremiumDepegEvent(e) ? premiumWeight : 1;
+      const premiumFactor = trustedPeak > 0 ? premiumWeight : 1;
       activeDepegPenalty = Math.max(
         activeDepegPenalty,
         Math.min(ACTIVE_DEPEG_CAP, Math.max(ACTIVE_DEPEG_FLOOR, absBps / ACTIVE_DEPEG_BPS_PER_POINT)) * premiumFactor,
@@ -302,7 +349,7 @@ function computePegScoreCore(
       pegPct,
       severityScore,
       spreadPenalty,
-      eventCount: coverageEvents.length,
+      eventCount: eligibleEvents.length,
       scoredEventCount: scoringEvents.length,
       excludedEventCount,
       lowConfidenceEventCount,
@@ -310,6 +357,8 @@ function computePegScoreCore(
       worstDeviationBps,
       activeDepeg: scoringEvents.some((e) => e.endedAt === null),
       lastEventAt: scoringEvents.length > 0 ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity) : null,
+      lastAffectedAtSec,
+      ...(lastUncertainAffectedAtSec === null ? {} : { lastUncertainAffectedAtSec }),
       trackingSpanDays: Math.floor(spanDays),
       unknownCoverageSeconds,
     },
@@ -329,11 +378,12 @@ export function computePremiumWeightedPegScore(
   trackingStartSec: number | null,
   nowSec: number,
   premiumWeight: number,
+  pegCurrency?: string,
 ): number | null {
   if (!Number.isFinite(premiumWeight) || premiumWeight < 0 || premiumWeight > 1) {
     throw new RangeError(`premiumWeight must be finite and within [0, 1]; received ${premiumWeight}`);
   }
-  return computePegScoreCore(events, trackingStartSec, nowSec, premiumWeight).premiumWeightedPegScore;
+  return computePegScoreCore(events, trackingStartSec, nowSec, premiumWeight, pegCurrency).premiumWeightedPegScore;
 }
 
 /**
@@ -348,6 +398,7 @@ export function computePegScore(
   events: DepegEvent[],
   trackingStartSec: number | null,
   nowSec?: number,
+  pegCurrency?: string,
 ): PegScoreResult {
-  return computePegScoreCore(events, trackingStartSec, nowSec ?? Math.floor(Date.now() / 1000), 1).result;
+  return computePegScoreCore(events, trackingStartSec, nowSec ?? Math.floor(Date.now() / 1000), 1, pegCurrency).result;
 }

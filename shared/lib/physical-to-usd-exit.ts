@@ -1,6 +1,8 @@
 import type { PhysicalToUsdRoute } from "./redemption-backstop-configs/schema";
 import { PHYSICAL_TO_USD_EXIT_POLICY } from "./exit-route-scoring";
 import type { PhysicalToUsdTrace } from "../types/exit-route";
+import { PHYSICAL_SETTLEMENT_CALENDARS } from "../data/business-calendars/physical";
+import { advanceReviewedBusinessDays } from "./business-calendars";
 
 type Policy = typeof PHYSICAL_TO_USD_EXIT_POLICY;
 type Branch = "modelled-metal-sale" | "best-effort-issuer-cash-out";
@@ -77,6 +79,17 @@ export function evaluatePhysicalToUsdExit(
     assumptions.push("fee-policy-assumed");
   }
   let maximumSettlementSec = 0;
+  const advanceSettlement = (days: number, calendar?: keyof typeof PHYSICAL_SETTLEMENT_CALENDARS) => {
+    const start = clockSec + maximumSettlementSec;
+    if (calendar === undefined) {
+      maximumSettlementSec += businessDaysToSeconds(days, start);
+      return true;
+    }
+    const end = advanceReviewedBusinessDays(PHYSICAL_SETTLEMENT_CALENDARS[calendar], start, days);
+    if (end === null) return false;
+    maximumSettlementSec = end - clockSec;
+    return true;
+  };
   for (const leg of selected.settlementLegs) {
     let maximum = leg.maximumBusinessDays;
     if (maximum === "unbounded") return rejected("physical-final-settlement-unbounded");
@@ -90,12 +103,12 @@ export function evaluatePhysicalToUsdExit(
       assumptions.push("settlement-maximum-policy-assumed");
     }
     if (!Number.isFinite(maximum) || maximum < 0) return rejected("physical-final-settlement-invalid");
-    maximumSettlementSec += businessDaysToSeconds(maximum, clockSec + maximumSettlementSec);
+    if (!advanceSettlement(maximum, leg.calendar)) return rejected("physical-settlement-calendar-unavailable");
   }
   if (branch === "modelled-metal-sale") {
     const saleMaximum = Math.max(policy.assumptions.minimumBusinessDays,
       Math.min(policy.assumptions.maximumBusinessDays, policy.assumptions.typicalTimeMultiplier * policy.modelledSaleTypicalBusinessDays));
-    maximumSettlementSec += businessDaysToSeconds(saleMaximum, clockSec + maximumSettlementSec);
+    if (!advanceSettlement(saleMaximum, terms.saleCalendar)) return rejected("physical-settlement-calendar-unavailable");
   }
   const unitUsd = terms.fineTroyOuncesPerToken * reference.usdPerTroyOunce;
   const minimum = selected.lot.minimumTokens;

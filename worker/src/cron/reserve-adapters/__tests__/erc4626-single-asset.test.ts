@@ -1478,7 +1478,7 @@ describe("ERC4626 asset-targeted redemption locks", () => {
       capacityKind: "documented-bound", capacityRatioOfSupply: 1, settlementDelaySec: 3600,
     });
   });
-  it("publishes non-par fxSP units as a ratio that the consumer values against USD supply", async () => {
+  it("projects the fxSP supply ratio to USD on the delayed settlement horizon", async () => {
     mockFxSave(3600n);
     const result = await runTrackedVault("fxsave-f-x-protocol");
     // 70M fxSP units are not $70M; withholding the unit amount keeps the
@@ -1492,8 +1492,12 @@ describe("ERC4626 asset-targeted redemption locks", () => {
         ...result.metadata, freshnessMode: "not-applicable",
       }, { fetchedAt: now - 60, source: "erc4626-single-asset", sourceModel: "single-bucket" }) },
     );
-    expect(capacity.immediateCapacityUsd).toBe(supplyUsd);
-    expect(capacity.immediateCapacityRatio).toBe(1);
+    expect(capacity).toMatchObject({
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      capacityProfile: { eventualUsd: supplyUsd, scoringHorizon: "eventual" },
+      scoringCapacityRatio: 1,
+    });
   });
   it("fails closed when the asset cooldown is unreadable", async () => {
     mockFxSave(null);

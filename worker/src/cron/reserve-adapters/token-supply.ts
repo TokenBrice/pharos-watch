@@ -26,8 +26,13 @@ export async function fetchMoveFungibleAssetSupply(
   return observeMoveFungibleAssetSupply(metadataAddress, signal, rpcUrl, createAdapterChainObservationContext(ctx), options, network);
 }
 
-export async function fetchSolanaMintSupply(mintAddress: string, signal: AbortSignal, ctx?: AdapterContext) {
-  return observeSolanaMintSupply(mintAddress, signal, createAdapterChainObservationContext(ctx));
+export async function fetchSolanaMintSupply(
+  mintAddress: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+  options?: Parameters<typeof observeSolanaMintSupply>[3],
+) {
+  return observeSolanaMintSupply(mintAddress, signal, createAdapterChainObservationContext(ctx), options);
 }
 
 export async function fetchSolanaTokenSupply(

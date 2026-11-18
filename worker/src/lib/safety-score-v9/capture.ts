@@ -1,7 +1,10 @@
+import { projectMentoMarketPhase } from "../redemption-backstop-capacity/mento-phase";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
-import { computePremiumWeightedPegScore } from "@shared/lib/peg-score";
+import { isScoredPegEvent } from "@shared/lib/peg-utils";
+import { computePremiumWeightedPegScore, getPegIncidentCoverage } from "@shared/lib/peg-score";
+import { getReferenceMarket } from "@shared/lib/reference-market-hours";
+import { parseDirectMetalReferences } from "./reference-evidence";
 import {
   computeReportCardsRegistryFingerprint,
   computeRedemptionPayloadFingerprint,
@@ -15,6 +18,9 @@ import { PROTOCOL_REDEEM_SOURCE } from "../authoritative-price-sources/helpers";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
 import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
+import { getCaches } from "../db-cache";
+import { getFxRatesMetaKey, hydrateFxRateState } from "../fx-rate-state";
+import { parseJson } from "../json-parse";
 import {
   loadReportCardsSnapshotInputs,
   type ReportCardsInputFreshness,
@@ -256,22 +262,41 @@ export function inheritPureWrapperPegObservations(
     // both fields must agree on one active parent.
     const parentId = meta.pegReferenceId;
     if (parentId === undefined || parentId === assetId || meta.variantOf !== parentId) continue;
-    if (row.currentDeviationBps !== null || row.currentPriceUnavailable !== true || row.pegScore === null) continue;
+    if (row.currentDeviationBps !== null || row.currentPriceUnavailable !== true || row.pegScore === null ||
+        row.priceObservedAt === null || row.admittedDeviationBps === null ||
+        (row.referenceAdmission && row.referenceAdmission.status !== "admitted")) continue;
     const parent = pegDataById.get(parentId);
-    if (!parent || parent.currentDeviationBps === null || parent.currentPriceUnavailable === true) continue;
+    if (!parent || parent.currentDeviationBps === null || parent.currentPriceUnavailable === true || parent.priceObservedAt === null) continue;
     if (parent.pegReference == null || row.pegType === "" || parent.pegType === "" ||
         row.pegType !== parent.pegType || row.pegCurrency !== parent.pegCurrency) continue;
-    const { currentPriceUnavailable: _unavailable, nominalPriceReference: _nominal, ...rest } = row;
+    const { currentPriceUnavailable: _unavailable, nominalPriceReference: _nominal, priceObservedAt: _childClock, ...rest } = row;
     rows.set(assetId, {
       ...rest,
       pegType: parent.pegType,
       currentDeviationBps: parent.currentDeviationBps,
       pegReference: parent.pegReference,
-      priceSource: PROTOCOL_REDEEM_SOURCE,
-      priceObservedAtMode: parent.priceObservedAtMode ?? "upstream",
+      priceSource: parent.priceObservedAt === undefined ? PROTOCOL_REDEEM_SOURCE : parent.priceSource,
+      ...(parent.priceObservedAt === undefined ? {} : { priceObservedAt: parent.priceObservedAt }),
+      priceObservedAtMode: parent.priceObservedAt === undefined ? parent.priceObservedAtMode ?? "upstream" : parent.priceObservedAtMode,
     });
   }
   return rows;
+}
+
+async function loadSafetyDirectMetalReferences(db: D1Database) {
+  const metaKey = getFxRatesMetaKey();
+  const rows = await getCaches(db, ["fx-rates", metaKey]);
+  const rates = rows.get("fx-rates");
+  const meta = rows.get(metaKey);
+  if (!meta) return undefined;
+  const decoded = parseJson(meta.value);
+  if (!decoded.ok || !decoded.value || typeof decoded.value !== "object" || Array.isArray(decoded.value)) {
+    return { updatedAt: meta.updatedAt, references: {} };
+  }
+  if (!("directMetalReferences" in decoded.value)) return undefined;
+  const references = hydrateFxRateState(rates ?? null, meta)?.metadataIdentity === "verified"
+    ? parseDirectMetalReferences(decoded.value.directMetalReferences) : undefined;
+  return { updatedAt: meta.updatedAt, references: references ?? {} };
 }
 
 /**
@@ -302,13 +327,15 @@ export async function loadNativeSafetyScoreV9CaptureSources(
 
   // Nav-inclusive so the published peg-analytics cache can serve peg-summary
   // (which needs nav tokens); the capture filters nav entries back out.
-  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
-    peggedAssets,
-    fxFallbackRates,
-    methodologyAsOf: stablecoinsCached.updatedAt,
-    includeNavTokens: true,
-  });
-  return { snapshot, peggedAssets, pegAnalytics };
+  const [pegAnalytics, directMetalReferenceGeneration] = await Promise.all([
+    derivePegAnalyticsSnapshot(db, {
+      peggedAssets, fxFallbackRates, fxReferenceObservations: stablecoinsCached.payload.fxReferenceObservations,
+      missingPriceObservedAtIds: stablecoinsCached.missingPriceObservedAtIds,
+      methodologyAsOf: stablecoinsCached.updatedAt, includeNavTokens: true,
+    }),
+    loadSafetyDirectMetalReferences(db).catch(() => null),
+  ]);
+  return { snapshot, peggedAssets, pegAnalytics, directMetalReferenceGeneration };
 }
 
 export async function buildNativeSafetyScoreV9Capture(
@@ -328,9 +355,14 @@ export async function buildNativeSafetyScoreV9Capture(
     inputFreshness,
     v9PublicationInputHealth,
   } = sources.snapshot;
-  const { peggedAssets, pegAnalytics } = sources;
+  const { peggedAssets, pegAnalytics, directMetalReferenceGeneration } = sources;
 
   const clockSec = pegAnalytics.nowSec;
+  // Only a legacy producer omits the field. Unreadable or future evidence proves no benchmark.
+  let directMetalReferences = directMetalReferenceGeneration?.references;
+  if (directMetalReferenceGeneration === null || (directMetalReferenceGeneration && directMetalReferenceGeneration.updatedAt > clockSec)) {
+    directMetalReferences = {};
+  }
   const registryFingerprint = computeReportCardsRegistryFingerprint();
   const capturedReserveProvenanceMap = captureLenderBookOutcomes(liveReserveProvenanceMap, clockSec);
   const lenderCollateralBacking = await captureLenderCollateralBacking(db, capturedReserveProvenanceMap, registryFingerprint, clockSec);
@@ -364,13 +396,12 @@ export async function buildNativeSafetyScoreV9Capture(
       message: "Safety Score v9 capture carried forward consumed reserve evidence within the redemption run budget",
       runId: redemptionSnapshotProvenance.runId ?? null, metadata: { carriedForward: consumedReserves.carriedForward } });
   }
-  const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(admittedRedemptionRows);
+  const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(
+    admittedRedemptionRows.map(([id, entry]) => [id, projectMentoMarketPhase(entry, clockSec)] as const),
+  );
 
   // The same rule `computePegScore` applies: an audit-excluded event is not
   // scored evidence, so it can neither cap nor witness an open depeg.
-  const openEventsAfterAudit = (stablecoinId: string) =>
-    (pegAnalytics.eventsByCoin?.get(stablecoinId) ?? [])
-      .filter((event) => event.endedAt === null && !isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict));
   // Max |peak| over open, audit-eligible events: direction-agnostic, and the
   // consistency witness for the peg summary's own `activeDepeg`.
   const activeDepegPeakBpsById = new Map<string, number>();
@@ -380,16 +411,22 @@ export async function buildNativeSafetyScoreV9Capture(
   // disagree with their own sign, and a premium must never cap. Every witness id
   // gets an entry (`null` = premiums only) so a missing entry stays detectable.
   const activeDiscountPeakBpsById: Record<string, number | null> = {};
-  for (const [stablecoinId] of pegAnalytics.eventsByCoin ?? new Map()) {
-    const openEvents = openEventsAfterAudit(stablecoinId);
+  const pegEvidenceById: NonNullable<NativeSafetyScoreV9Input["pegEvidenceById"]> = {};
+  for (const [stablecoinId, events] of pegAnalytics.eventsByCoin) {
+    const pegRow = pegAnalytics.pegDataById.get(stablecoinId);
+    const openCandidates = events.filter((event) =>
+      event.endedAt === null && isScoredPegEvent(event));
+    if (openCandidates.length === 0) continue;
+    const openEvents = getPegIncidentCoverage(openCandidates, pegRow?.historyCoverage?.startedAt ?? clockSec,
+      clockSec, pegRow?.pegCurrency ?? ACTIVE_META_BY_ID.get(stablecoinId)?.flags.pegCurrency).eligibleEvents;
     const activePeakBps = openEvents
       .reduce((max, event) => Math.max(max, Math.abs(event.peakDeviationBps)), 0);
     if (activePeakBps > 0) {
       activeDepegPeakBpsById.set(stablecoinId, activePeakBps);
-      const discountPeakBps = openEvents
-        .filter((event) => event.peakDeviationBps < 0)
-        .reduce((max, event) => Math.max(max, Math.abs(event.peakDeviationBps)), 0);
-      activeDiscountPeakBpsById[stablecoinId] = discountPeakBps > 0 ? discountPeakBps : null;
+      const discount = openEvents.filter((event) => event.peakDeviationBps < 0)
+        .sort((left, right) => left.peakDeviationBps - right.peakDeviationBps || left.id - right.id)[0];
+      activeDiscountPeakBpsById[stablecoinId] = discount ? -discount.peakDeviationBps : null;
+      if (discount) pegEvidenceById[stablecoinId] = { activeDiscountEventId: discount.id };
     }
   }
 
@@ -480,9 +517,41 @@ export async function buildNativeSafetyScoreV9Capture(
   // backing compiler reads it.
   const { fallbackCoins: liveToFallbackCoins } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
-  const pegDataById = Object.fromEntries(
-    inheritPureWrapperPegObservations(nonNavPegDataById, ACTIVE_META_BY_ID),
+  const referenceAdmissionEnabled = stablecoinsCached.payload.fxReferenceObservations !== undefined;
+  const ownPegRows = new Map(
+    [...nonNavPegDataById].map(([assetId, row]) => {
+      const packet = pegAnalytics.admittedPegById?.get(assetId);
+      const admission = packet?.admission ?? row.referenceAdmission;
+      const needsAdmission = getReferenceMarket(row.pegCurrency) !== null &&
+        (referenceAdmissionEnabled || admission !== undefined || row.admittedDeviationBps !== undefined);
+      const admittedDeviationBps = packet?.deviationBps ?? null;
+      const evidence = {
+        ...pegEvidenceById[assetId],
+        ...(pegAnalytics.lastAffectedAtById?.has(assetId) ? { lastAffectedAtSec: pegAnalytics.lastAffectedAtById.get(assetId) } : {}),
+        ...(pegAnalytics.lastUncertainAffectedAtById?.has(assetId) ? { lastUncertainAffectedAtSec: pegAnalytics.lastUncertainAffectedAtById.get(assetId) } : {}),
+        ...(needsAdmission ? { admittedDeviationBps } : {}),
+        ...(admission ? { referenceAdmission: admission } : {}),
+      };
+      if (Object.keys(evidence).length) pegEvidenceById[assetId] = evidence;
+      return [assetId, needsAdmission ? {
+        ...row, currentDeviationBps: admittedDeviationBps, admittedDeviationBps,
+        pegReference: packet?.reference ?? null,
+        pegReferenceUnavailable: admittedDeviationBps === null,
+      } : row];
+    }),
   );
+  const pegRows = inheritPureWrapperPegObservations(ownPegRows, ACTIVE_META_BY_ID);
+  for (const [assetId, row] of pegRows) {
+    if (row === ownPegRows.get(assetId)) continue;
+    const parentId = ACTIVE_META_BY_ID.get(assetId)?.pegReferenceId;
+    const parentEvidence = parentId === undefined ? undefined : pegEvidenceById[parentId];
+    if (parentEvidence?.referenceAdmission) pegEvidenceById[assetId] = {
+      ...pegEvidenceById[assetId],
+      referenceAdmission: parentEvidence.referenceAdmission,
+      admittedDeviationBps: parentEvidence.admittedDeviationBps,
+    };
+  }
+  const pegDataById = Object.fromEntries(pegRows);
   // The directional peg input: the premium-weighted score the summary cannot
   // carry, plus the discount-only peak the active-depeg caps may read. Both use
   // exactly the tracking start and clock the row's own computePegScore did —
@@ -496,14 +565,15 @@ export async function buildNativeSafetyScoreV9Capture(
     // A premium weight of 1 is the public score. If it does not reproduce the
     // captured row, this capture bound the wrong window or clock for that asset,
     // so the directional score below could not be trusted either.
-    const recomputedLegacyPegScore = computePremiumWeightedPegScore(events, trackingStartSec, clockSec, 1);
+    const pegCurrency = pegRow.pegCurrency;
+    const recomputedLegacyPegScore = computePremiumWeightedPegScore(events, trackingStartSec, clockSec, 1, pegCurrency);
     if (recomputedLegacyPegScore !== pegRow.pegScore) {
       throw new Error(
         `Directional peg input for ${stablecoinId} recomputes peg score ${recomputedLegacyPegScore} at tracking start ${trackingStartSec}; the captured peg row reports ${pegRow.pegScore}`,
       );
     }
     directionalPegScoreById[stablecoinId] = computePremiumWeightedPegScore(
-      events, trackingStartSec, clockSec, pegPremiumWeight,
+      events, trackingStartSec, clockSec, pegPremiumWeight, pegCurrency,
     );
   }
   const safetyScoreV9DirectionalPeg = {
@@ -538,6 +608,8 @@ export async function buildNativeSafetyScoreV9Capture(
       },
     },
     pegDataById,
+    ...(referenceAdmissionEnabled || Object.keys(pegEvidenceById).length ? { pegEvidenceById } : {}),
+    ...(directMetalReferences ? { directMetalReferences } : {}),
     navPriceById: buildNavPriceById(peggedAssets, clockSec),
     exitOutputPriceById: buildExitOutputPriceById(peggedAssets, clockSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),

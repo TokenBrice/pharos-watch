@@ -9,7 +9,7 @@ import {
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_POOL_EXCHANGE_ABI_PARAMETERS,
 } from "@shared/lib/mento-contracts";
-import { fetchMentoRedemptionMetadata, MentoFxMarketClosedError } from "../mento-redemption";
+import { fetchMentoRedemptionMetadata as fetchRedemptionForAsset, MentoFxMarketClosedError } from "../mento-redemption";
 import { fetchErc20TotalSupply, fetchOnchainMulticall3, fetchOnchainRateBps, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import type { AdapterContext } from "../types";
 import { pinnedBlockPlan } from "../evm-observation-plan";
@@ -30,6 +30,11 @@ vi.mock("../evm-observation-plan", async (original) => ({
   pinnedBlockPlan: vi.fn(),
 }));
 type RedemptionParams = NonNullable<LiveReserveAdapterParamsByKey["mento"]["redemption"]>;
+function fetchMentoRedemptionMetadata(
+  params: RedemptionParams, signal: AbortSignal, ctx: AdapterContext | undefined, stablecoinId = source.id,
+) {
+  return fetchRedemptionForAsset(stablecoinId, params, signal, ctx);
+}
 const config = source.liveReservesConfig.params.redemption as Extract<RedemptionParams, { kind: "fpmm-pools" }>;
 const liquity = gbpmSource.liveReservesConfig.params.redemption as Extract<RedemptionParams, { kind: "liquity-v2-cr" }>;
 const pools = source.liveReservesConfig.params.redemption.pools;
@@ -40,10 +45,11 @@ const limits = (decimals: number, bound = 500_000n * 10n ** 15n, flow = 0n) => e
   [{ type: "int120" }, { type: "int120" }, { type: "uint8" }, { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" }],
   [bound, bound * 2n, decimals, 1, 1, flow, flow],
 );
-const rate = (numerator = 10n ** 12n, denominator = 1n) => encodeAbiParameters(
-  [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "bool" }, { type: "uint16" }, { type: "uint256" }],
-  [numerator, denominator, 0n, 0n, false, 0, 0n],
+const diagnosticRate = (tradingMode = 0, open = false, numerator = 1n, denominator = 1n) => encodeAbiParameters(
+  [{ type: "uint256" }, { type: "uint256" }, { type: "uint8" }, { type: "bool" }, { type: "bool" }],
+  [numerator, denominator, tradingMode, false, open],
 );
+const diagnosticOracle = "0x0000000000000000000000000000000000001001";
 const observedBlock = { chain: "celo", number: 123, timestamp: 1789431241 };
 const fxWeekendBlock = { chain: "celo", number: 456, timestamp: Date.UTC(2026, 9, 31, 12) / 1_000 };
 const fxWeekendReopen = Date.UTC(2026, 10, 1, 23) / 1_000;
@@ -65,7 +71,9 @@ function setup(change: Partial<Record<string, `0x${string}` | null>> = {}, outpu
         index === 0 ? [1_000_000_000n, outputReserve, 1n] : [outputReserve, 1_000_000_000n, 1n],
       ),
       balance: uint(outputReserve), inputBalance: uint(1_000_000_000n), decimals: uint(6n), inputDecimals: uint(18n), lp: uint(1n), protocol: uint(1n),
-      inputLimits: limits(18), outputLimits: limits(6), unitQuote: uint(999800n * 10n ** 6n), rate: rate(), ...change,
+      inputLimits: limits(18), outputLimits: limits(6), unitQuote: uint(999800n * 10n ** 6n),
+      oracle: address(diagnosticOracle), feed: address(BROKER_FEED), inverted: uint(index === 0 ? 0n : 1n),
+      rate: diagnosticRate(), ...change,
     };
     return calls.map(({ label }) => ({ label, success: data[label] != null, returnData: data[label] ?? "0x" }));
   });
@@ -143,32 +151,49 @@ describe("USDm V3 output pools", () => {
       routeStatusReason: expect.stringContaining("2 of 2"),
     });
   });
-  function failUnitQuoteWithFxMarketClosed() {
-    const implementation = vi.mocked(fetchOnchainMulticall3).getMockImplementation()!;
-    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
-      const rows = await implementation(options);
-      return rows?.map((row) => row.label === "unitQuote"
-        ? { ...row, success: false, returnData: "0xa407143a" as const }
-        : row) ?? null;
-    });
-  }
   it("names a measured FX market closure without emitting reserve-based capacity", async () => {
     setup();
-    failUnitQuoteWithFxMarketClosed();
+    failUnitQuoteWith("0xa407143a");
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined))
       .rejects.toBeInstanceOf(MentoFxMarketClosedError);
     expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
-  it("defers a reviewed FX-market-closed pool to the scheduled reopen with its measured output inventory", async () => {
+  it.each([
+    ["an uncovered asset", "cusd-celo", fxWeekendBlock.timestamp],
+    ["an expired review", "chfm-mento", Date.UTC(2027, 10, 6, 12) / 1_000],
+  ])("withholds a scheduled bound for %s at the pinned block", async (_reason, stablecoinId, timestamp) => {
     setup();
-    failUnitQuoteWithFxMarketClosed();
+    failUnitQuoteWith("0xa407143a");
+    const ctx: AdapterContext = { requestCache: new Map(), observedBlock: { ...fxWeekendBlock, timestamp } };
+    await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, ctx, stablecoinId))
+      .rejects.toBeInstanceOf(MentoFxMarketClosedError);
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+  it.each([0, 1])("checks the same-block diagnostic and keeps trading mode %d effective on a weekend", async (mode) => {
+    setup({ rate: diagnosticRate(mode, false, 2n, 1n), inputLimits: limits(18, 600n * 10n ** 15n) });
+    failUnitQuoteWith("0xa407143a");
     const ctx: AdapterContext = { requestCache: new Map(), observedBlock: fxWeekendBlock };
-    const result = await fetchMentoRedemptionMetadata(config, new AbortController().signal, ctx);
+    const result = await fetchMentoRedemptionMetadata(config, new AbortController().signal, ctx, "chfm-mento");
     expect(result.redemption).toMatchObject({
-      capacityUsd: 1999.999998, routeStatus: "open",
-      settlementDelaySec: fxWeekendReopen - fxWeekendBlock.timestamp,
+      capacityUsd: mode === 0 ? 1999.999998 : 0, routeStatus: mode === 0 ? "open" : "paused",
+      capacityKind: mode === 0 ? "documented-bound" : "live-direct-bounded",
+      settlementDelaySec: mode === 0 ? fxWeekendReopen - fxWeekendBlock.timestamp : 0,
       blockNumber: fxWeekendBlock.number, sourceTimestamp: fxWeekendBlock.timestamp,
     });
+    const reads = vi.mocked(fetchOnchainMulticall3).mock.calls.map(([input]) => input);
+    expect(reads.every((input) => input.ctx?.observedBlock?.number === fxWeekendBlock.number)).toBe(true);
+    expect(reads.flatMap((input) => input.calls).filter((call) => call.label === "rate")).toEqual(
+      Array(2).fill({ label: "rate", contract: diagnosticOracle, data: `${toFunctionSelector("getRate(address)")}${BROKER_FEED.slice(2).toLowerCase().padStart(64, "0")}` }),
+    );
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
+  it.each([null, diagnosticRate(0, true), diagnosticRate(0, false, 0n)])("withholds a scheduled bound when the diagnostic is missing or contradictory (%s)", async (rate) => {
+    setup({ rate });
+    failUnitQuoteWith("0xa407143a");
+    const ctx: AdapterContext = { requestCache: new Map(), observedBlock: fxWeekendBlock };
+    await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, ctx, "chfm-mento")).rejects.toThrow();
   });
 
   it("rejects a zero input reserve even when its balance matches", async () => {

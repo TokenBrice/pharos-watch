@@ -5,45 +5,41 @@ import { adaptJupUsdData } from "../jupusd";
 import { runAdapter, runAdapterWithFakeTimers } from "./reserve-adapter.test-support";
 
 describe("adaptJupUsdData", () => {
-  it("groups published JupUSD holdings and emits whitelisted redemption capacity", () => {
+  it.each([
+    ["100000000000000", 1, false],
+    ["120000000000000", 100 / 120, true],
+  ] as const)("groups the reserve book without claiming payout capacity for supply %s", (totalSupply, ratio, shortfall) => {
     const result = adaptJupUsdData({
-      totalSupply: "75000000000000",
+      totalSupply,
       holdings: [
         { name: "USDC", amount: "1000000000000", decimals: 6, type: "program" },
-        { name: "USDC", amount: "500000000000", decimals: 6, type: "anchorage" },
-        { name: "USDtb", amount: "6000000000000", decimals: 6, type: "anchorage" },
+        { name: "USDC", amount: "9000000000000", decimals: 6, type: "anchorage" },
+        { name: "USDtb", amount: "90000000000000", decimals: 6, type: "anchorage" },
       ],
     }, {
-      sourceTimestamp: 1776261612,
       oracle: { ripcord: false },
     });
 
     expect(result.slices).toEqual([
-      { sourceKey: "jupusd:usdtb", name: "USDtb", pct: 80, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
-      { sourceKey: "jupusd:usdc", name: "USDC", pct: 20, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "jupusd:usdtb", name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+      { sourceKey: "jupusd:usdc", name: "USDC", pct: 10, risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
-      totalReserveUsd: 7_500_000,
-      supplyUsd: 75_000_000,
-      collateralizationRatio: 0.1,
+      totalReserveUsd: 100_000_000,
+      supplyUsd: Number(totalSupply) / 1_000_000,
+      collateralizationRatio: ratio,
       unknownExposurePct: 0,
-      freshnessMode: "verified",
-      sourceTimestamp: 1776261612,
       redemption: {
-        capacityUsd: 7_500_000,
-        capacityRatioOfSupply: 0.1,
-        capacityKind: "live-direct-bounded",
-        freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: 1776261612,
         routeStatus: "open",
         routeStatusSource: "protocol-api",
         holderEligibility: "whitelisted-primary",
       },
     });
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "reserve-undercollateralized",
-      effect: "degraded",
-    }));
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityKind");
+    expect(result.warnings?.some((warning) =>
+      warning.code === "reserve-undercollateralized" && warning.effect === "degraded") ?? false).toBe(shortfall);
   });
 
   it("marks route paused when the oracle reports ripcord mode", () => {
@@ -61,7 +57,7 @@ describe("adaptJupUsdData", () => {
   });
 
   it("attributes no live source when the oracle is configured but unread or absent", () => {
-    for (const options of [{ oracleConfigured: true, oracle: null }, {}]) {
+    for (const options of [{ oracleUrl: "https://api.jupusd.money/api/oracle", oracle: null }, {}]) {
       const result = adaptJupUsdData({
         totalSupply: "1000000",
         holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
@@ -306,20 +302,6 @@ describe("fetchJupUsdReserves", () => {
     expect(result.metadata).not.toHaveProperty("redemption");
   });
 
-  it("emits jupusd-snapshots-unavailable info warning when snapshots feed fails", async () => {
-    const { result } = await runAdapterWithFakeTimers(() => runAdapter("jupusd", makeCoin(), {
-      network: network({ snapshots: { status: 503, body: "snapshots unavailable" } }),
-      nowSec: 1_776_003_600,
-    }));
-
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: "jupusd-snapshots-unavailable",
-        effect: "info",
-      }),
-    ]));
-  });
-
   it("marks route unknown and degrades when the configured oracle probe fails", async () => {
     const { result } = await runAdapterWithFakeTimers(() => runAdapter("jupusd", makeCoin(), {
       network: network({ oracle: { status: 502, body: "oracle unavailable" } }),
@@ -375,11 +357,12 @@ describe("fetchJupUsdReserves", () => {
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus,
       routeStatusSource: "protocol-api",
+      sourceUrls: [oracleUrl],
     });
   });
 
-  it("takes the newest snapshot timestamp instead of trusting snapshots[0] ordering", async () => {
-    const { result } = await runAdapter("jupusd", makeCoin(), {
+  it("does not use independently fetched history to date the reserve book", async () => {
+    const { result, network: observed } = await runAdapter("jupusd", makeCoin(), {
       network: network({
         snapshots: {
           snapshots: [
@@ -392,8 +375,13 @@ describe("fetchJupUsdReserves", () => {
       nowSec: 1_776_103_600,
     });
 
-    expect(result.metadata?.sourceTimestamp).toBe(1776100000);
-    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: { freshnessSource: "jupusd-transparency-api", freshnessReason: expect.any(String) },
+    });
+    expect(result.metadata).not.toHaveProperty("sourceTimestamp");
+    expect(result.metadata?.redemption).not.toHaveProperty("sourceTimestamp");
+    expect(observed.requests).not.toContainEqual(expect.objectContaining({ url: snapshotsUrl }));
   });
 
   it("labels core transparency data fetch failures with the failing fetch", async () => {

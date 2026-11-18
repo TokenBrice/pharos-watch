@@ -608,6 +608,8 @@ export async function fetchInfiniFiReserves(
     probeInfiniFiRedeemRoute(signal, ctx),
   ]);
   const freshness = resolveInfiniFiFreshness(payload, rateHistory);
+  const route = routeProbe == null ? null : resolveInfiniFiRouteStatus(routeProbe);
+  const capacityUsd = route?.routeStatus === "paused" ? 0 : adapted.immediateRedeemableUsd;
   if (routeProbe == null) {
     warnings.push(reserveInfoWarning(
       "infinifi-redemption-route-unreadable",
@@ -634,24 +636,25 @@ export async function fetchInfiniFiReserves(
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
-      ...(routeProbe != null && adapted.immediateRedeemableUsd != null
+      ...(routeProbe != null && route != null && capacityUsd != null
         ? {
             ...buildRedemptionSnapshotMetadata({
               // The honest bound is the liquid farm total the BeforeRedeemHook
               // can unwind into the controller, not the controller's own idle
               // balance and not a queue measurement — so this stays a proxy the
               // same-run gate reads validate, never a live-direct capacity.
-              capacityUsd: adapted.immediateRedeemableUsd,
+              capacityUsd,
               ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-                ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
+                ? { capacityRatioOfSupply: capacityUsd / adapted.supplyUsd }
                 : {}),
               capacityKind: "live-queue",
               ...(freshness.freshnessMode === "verified"
                 ? { freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: freshness.sourceTimestamp }
                 : { freshnessKind: "same-run-api" as const }),
-              ...resolveInfiniFiRouteStatus(routeProbe),
+              ...route,
               routeStatusSource: "onchain",
               routeObserved: true,
+              ...(route.routeStatus === "open" ? { settlementDelaySec: 0 } : {}),
               queueDepthUsd: routeProbe.queuedUsd,
               sourceUrls: [url, INFINIFI_GATEWAY_DOC_URL, INFINIFI_REDEEM_CONTROLLER_DOC_URL],
             }),

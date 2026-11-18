@@ -28,7 +28,7 @@ function directionalPeg(overrides: Partial<DirectionalPeg> = {}): DirectionalPeg
 /** An open event at `peakBps`, with the summary (and cap witness) reporting it open. */
 function openEventInput(
   peakBps: number,
-  options: { directionalPeg: DirectionalPeg | null },
+  options: { directionalPeg: DirectionalPeg | null; pegScore?: number | null },
 ) {
   return makeV9FixedInput({
     clockSec: CLOCK_SEC,
@@ -38,7 +38,7 @@ function openEventInput(
     eventCount: 1,
     worstDeviationBps: peakBps,
     lastEventAt: CLOCK_SEC - THREE_DAYS,
-    pegScore: SUMMARY_PEG_SCORE,
+    pegScore: options.pegScore === undefined ? SUMMARY_PEG_SCORE : options.pegScore,
     ...(options.directionalPeg === null ? {} : { safetyScoreV9DirectionalPeg: options.directionalPeg }),
   });
 }
@@ -117,6 +117,19 @@ describe("Safety Score V9 directional peg fact", () => {
     );
   });
 
+  it("enforces the severe discount cap before seven observed days", () => {
+    const fixed = openEventInput(-4_556, {
+      pegScore: null,
+      directionalPeg: directionalPeg({
+        pegScoreById: { [ASSET_ID]: null },
+        activeDiscountPeakBpsById: { [ASSET_ID]: 4_556 },
+      }),
+    });
+    const { facts, evaluated } = compileAndEvaluate(fixed);
+    expect(facts.peg).toMatchObject({ pegScore: null, activeDepeg: true, activeDepegBps: 4_556 });
+    expect(evaluated.trace.caps).toContainEqual(expect.objectContaining({ source: "active-depeg", limit: 25 }));
+  });
+
   it("fails closed when a witness peak has no discount entry", () => {
     const context = factBuilderContext(openEventInput(1_619, { directionalPeg: directionalPeg() }));
     // Producer inconsistency the contract would reject; the builder must not read
@@ -170,11 +183,7 @@ describe("Safety Score V9 directional peg fact", () => {
     const peg = buildPeg(context);
     expect(peg.status.observationState).not.toBe("known");
     expect(peg).toMatchObject({
-      // The quiet-history window still reads the summary's inactive state.
-      pegScore: deriveSafetyScoreV9PegScore(
-        { pegScore: DIRECTIONAL_PEG_SCORE, activeDepeg: false, lastEventAt: null },
-        CLOCK_SEC,
-      ),
+      pegScore: DIRECTIONAL_PEG_SCORE,
       activeDepeg: true,
       activeDepegBps: 1_200,
     });

@@ -1,3 +1,6 @@
+import { mentoFpmmIds, mentoReview, nextMentoHour, projectMentoMarketPhase } from "./redemption-backstop-capacity/mento-phase";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
+import { resolveMentoFxMarketReopen } from "./stablecoin-publication-coverage";
 import { logWorkerEvent } from "./structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { assessConsumedRedemptionReserves, type ConsumedRedemptionReserveAssessment } from "./accepted-reserve-generation";
@@ -600,7 +603,21 @@ async function loadRedemptionBackstopCoinSnapshot(
   };
 }
 
+function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: number): number {
+  const rows = Object.values(coins).filter((entry) => mentoFpmmIds.has(entry.stablecoinId));
+  if (rows.length === 0) return Infinity;
+  const nextHour = nextMentoHour(now);
+  const reopening = resolveMentoFxMarketReopen(now);
+  const transition = reopening ?? (resolveMentoFxMarketReopen(nextHour) != null ? nextHour : Infinity);
+  const reviewDeadline = reopening != null && mentoReview && mentoReview.reviewDeadline > now
+    ? mentoReview.reviewDeadline : Infinity;
+  const evidenceExpiry = Math.min(...rows.flatMap((entry) => entry.sourceTimestamp == null || entry.resolutionState !== "resolved"
+    ? [] : [entry.sourceTimestamp + LIVE_RESERVE_FRESHNESS_SEC + 1]));
+  return Math.min(transition, reviewDeadline, evidenceExpiry);
+}
+
 export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoinId?: string): Promise<RedemptionBackstopsResponse & {
+  phaseValidUntilSec?: number;
   projection?: { stablecoinId: string; generationId: string | null; updatedAt: number | null; totalCount: number; unavailableReason: "row-not-published" | null };
 }> {
   let loaded: RedemptionBackstopLoadResult;
@@ -615,7 +632,12 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoi
     });
   }
 
+  const now = Math.floor(Date.now() / 1000);
   const coins = loaded.map;
+  for (const [id, entry] of Object.entries(coins)) {
+    coins[id] = projectMentoMarketPhase(entry, now);
+  }
+  const phaseValidUntilSec = redemptionBackstopPhaseValidUntil(coins, now);
   const updatedAt = loaded.latestUpdatedAt ?? 0;
   const snapshotMethodology = loaded.methodologyVersion
     ? {
@@ -626,6 +648,7 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database, stablecoi
 
   return {
     coins,
+    ...(Number.isFinite(phaseValidUntilSec) ? { phaseValidUntilSec } : {}),
     methodology: {
       ...buildMethodologyEnvelope({
         version: snapshotMethodology.version,

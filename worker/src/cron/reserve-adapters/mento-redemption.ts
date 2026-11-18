@@ -30,7 +30,7 @@ import {
   fetchOnchainUint256,
 } from "./helpers";
 import { throwIfAborted } from "../../lib/abort";
-import { resolveMentoFxMarketReopen } from "../../lib/stablecoin-publication-coverage";
+import { resolveMentoFxMarketReopen, resolveStablecoinScheduledPriceClosures } from "../../lib/stablecoin-publication-coverage";
 import { getCachedRequest } from "./request";
 
 // --- Redemption telemetry ---------------------------------------------------
@@ -257,10 +257,7 @@ const FPMM_TRADING_LIMITS_ABI = [
   { type: "int120" }, { type: "int120" }, { type: "uint8" },
   { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" },
 ] as const;
-const FPMM_REBALANCING_ABI = [
-  { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" },
-  { type: "bool" }, { type: "uint16" }, { type: "uint256" },
-] as const;
+const FPMM_DIAGNOSTIC_RATE_ABI = parseAbiParameters("uint256,uint256,uint8,bool,bool");
 
 function decodeFpmmReserves(raw: `0x${string}`) {
   if (!/^0x[0-9a-fA-F]{192}$/.test(raw)) throw new Error("malformed reserves");
@@ -272,9 +269,9 @@ function decodeFpmmTradingLimits(raw: `0x${string}`) {
   return decodeAbiParameters(FPMM_TRADING_LIMITS_ABI, raw);
 }
 
-function decodeFpmmRebalancing(raw: `0x${string}`) {
-  if (!/^0x[0-9a-fA-F]{448}$/.test(raw)) throw new Error("malformed rebalancing state");
-  return decodeAbiParameters(FPMM_REBALANCING_ABI, raw);
+function decodeFpmmDiagnosticRate(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{320}$/.test(raw)) throw new Error("malformed diagnostic rate");
+  return decodeAbiParameters(FPMM_DIAGNOSTIC_RATE_ABI, raw);
 }
 
 interface MentoPoolCallOptions {
@@ -541,6 +538,7 @@ export class MentoFxMarketClosedError extends Error {
 }
 
 async function fetchMentoFpmmPoolsRedemption(
+  stablecoinId: string,
   params: Extract<MentoRedemptionParams, { kind: "fpmm-pools" }>,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
@@ -563,6 +561,8 @@ async function fetchMentoFpmmPoolsRedemption(
     const output = pool.counterAsset.address.toLowerCase();
     const outputDecimals = pool.counterAsset.decimals;
     if (output === self) throw new Error("mento fpmm-pools: token identity mismatch");
+    const read = (calls: Parameters<typeof fetchOnchainMulticall3>[0]["calls"]) =>
+      fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
     const observation = await executeEvmObservationPlan({
       adapterKey: "mento fpmm-pools",
       fields: [
@@ -578,16 +578,17 @@ async function fetchMentoFpmmPoolsRedemption(
         customObservation({ label: "inputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(self)}`, decode: decodeFpmmTradingLimits }),
         customObservation({ label: "outputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(output)}`, decode: decodeFpmmTradingLimits }),
         uint256Observation({ label: "unitQuote", contract: pool.poolAddress, data: quoteData(10n ** BigInt(params.selfDecimals + 6)), optional: true }),
-        customObservation({ label: "rate", contract: pool.poolAddress, data: "0x93965ec9", decode: decodeFpmmRebalancing, optional: true }),
       ],
       read: async (calls) => {
-        const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
+        const rows = await read(calls);
         // getAmountOut's oracle check rejects routine weekend/holiday closure.
         // On the reviewed calendar that is a delayed route, not a zero; outside
         // it, preserve the named market-closed rejection.
         const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
         if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
-          scheduledReopenSec = resolveMentoFxMarketReopen(plan.observedBlock.timestamp);
+          const at = plan.observedBlock.timestamp;
+          const review = resolveStablecoinScheduledPriceClosures([stablecoinId], at).get(stablecoinId);
+          scheduledReopenSec = review?.lane === "mento-fpmm" ? resolveMentoFxMarketReopen(at) : null;
           if (scheduledReopenSec == null) throw new MentoFxMarketClosedError();
         }
         if (quoteFailure?.returnData.toLowerCase() === FPMM_TRADING_SUSPENDED_SELECTOR) {
@@ -596,7 +597,7 @@ async function fetchMentoFpmmPoolsRedemption(
         return rows;
       },
     });
-    const { token0, token1, reserves, balance, inputBalance, decimals, inputDecimals, unitQuote, rate, lp, protocol } = observation.values;
+    const { token0, token1, reserves, balance, inputBalance, decimals, inputDecimals, unitQuote, lp, protocol } = observation.values;
     if (!((token0 === self && token1 === output) || (token0 === output && token1 === self))
       || decimals !== BigInt(outputDecimals) || inputDecimals !== BigInt(params.selfDecimals)) {
       throw new Error("mento fpmm-pools: token identity mismatch");
@@ -623,16 +624,37 @@ async function fetchMentoFpmmPoolsRedemption(
     let amountIn: bigint;
     let amountOut: bigint;
     if (unitQuote == null) {
-      // The reviewed FX calendar closed the oracle quote. Use the pool's own
-      // stored rebalancing rate to re-check both trading-limit directions, keep
-      // the verified output inventory and defer settlement to the reopen.
       if (scheduledReopenSec == null) throw new Error("mento fpmm-pools: bounded quote failed");
-      if (rate == null) throw new MentoFxMarketClosedError();
-      const [numerator, denominator] = rate;
-      const feeAdjusted = 10_000n - fee;
-      if (numerator <= 0n || denominator <= 0n || feeAdjusted <= 0n) throw new MentoFxMarketClosedError();
-      amountIn = (inventoryBound * numerator * 10_000n + denominator * feeAdjusted - 1n)
-        / (denominator * feeAdjusted);
+      const { values: { oracle, feed, inverted } } = await executeEvmObservationPlan({
+        adapterKey: "mento fpmm-pools closure",
+        fields: [
+          addressObservation({ label: "oracle", contract: pool.poolAddress, data: brokerCall("function oracleAdapter() view returns(address)") }),
+          addressObservation({ label: "feed", contract: pool.poolAddress, data: brokerCall("function referenceRateFeedID() view returns(address)") }),
+          boolObservation({ label: "inverted", contract: pool.poolAddress, data: brokerCall("function invertRateFeed() view returns(bool)") }),
+        ],
+        read,
+      });
+      // The diagnostic rate can be dated during the closure. It only sizes
+      // the inventory check, while the independent breaker can still veto it.
+      const { values: { rate } } = await executeEvmObservationPlan({
+        adapterKey: "mento fpmm-pools closure",
+        fields: [customObservation({
+          label: "rate", contract: oracle, data: brokerCall("function getRate(address)", [feed]),
+          decode: decodeFpmmDiagnosticRate,
+        })],
+        read,
+      });
+      const [numerator, denominator, tradingMode, , fxMarketOpen] = rate;
+      if (tradingMode !== 0) {
+        suspendedPools += 1;
+        continue;
+      }
+      if (fxMarketOpen || numerator <= 0n || denominator <= 0n) throw new MentoFxMarketClosedError();
+      const [outputRate, inputRate] = (self === token0) !== inverted
+        ? [numerator, denominator] : [denominator, numerator];
+      const dividend = inventoryBound * inputRate * 10n ** inputDecimals * 10_000n;
+      const divisor = outputRate * 10n ** decimals * (10_000n - fee);
+      amountIn = (dividend + divisor - 1n) / divisor;
       amountOut = inventoryBound;
       settlementDelaySec = Math.max(settlementDelaySec, scheduledReopenSec - plan.observedBlock.timestamp);
     } else {
@@ -672,7 +694,8 @@ async function fetchMentoFpmmPoolsRedemption(
   const allPoolsSuspended = suspendedPools > 0 && suspendedPools === params.pools.length;
   return buildRedemptionSnapshotMetadata({
     capacityUsd: allPoolsSuspended ? 0 : capacityUsd,
-    capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+    capacityKind: settlementDelaySec > 0 ? "documented-bound" : "live-direct-bounded",
+    freshnessKind: "same-run-onchain",
     blockNumber: plan.observedBlock.number, sourceTimestamp: plan.observedBlock.timestamp,
     routeStatus: allPoolsSuspended ? "paused" : "open", routeStatusSource: "onchain",
     ...(suspendedPools > 0
@@ -688,6 +711,7 @@ async function fetchMentoFpmmPoolsRedemption(
 }
 
 export function fetchMentoRedemptionMetadata(
+  stablecoinId: string,
   redemption: MentoRedemptionParams,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
@@ -698,6 +722,6 @@ export function fetchMentoRedemptionMetadata(
     case "liquity-v2-cr":
       return fetchMentoLiquityV2CrRedemption(redemption, signal, ctx);
     case "fpmm-pools":
-      return fetchMentoFpmmPoolsRedemption(redemption, signal, ctx);
+      return fetchMentoFpmmPoolsRedemption(stablecoinId, redemption, signal, ctx);
   }
 }

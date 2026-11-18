@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { sha256Hex } from "@shared/lib/sha256";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { PegSummaryCoinSchema, type PegSummaryCoin } from "@shared/types/peg";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
@@ -23,29 +24,102 @@ import { inheritPureWrapperPegObservations } from "../safety-score-v9/capture";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 const RUN = 1790000000;
 
-function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadataValid = true) {
-  const entry = { ...makeRedemptionWriteRecord(), stablecoinId: "iusd-infinifi", updatedAt: RUN };
+function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadataValid = true, runAt = RUN) {
+  const entry = { ...makeRedemptionWriteRecord(), stablecoinId: "iusd-infinifi", updatedAt: runAt };
   const reserveInput = { generationId: "reserve:1790000000:test", contentSha256: "a".repeat(64), stablecoinId: entry.stablecoinId, attemptId: "success",
     configFingerprint: computeLiveReserveConfigFingerprint(ACTIVE_META_BY_ID.get(entry.stablecoinId)!.liveReservesConfig!),
-    freshness: assessReserveFetchFreshness({ fetchedAt, attemptId: "success", metadata: { freshnessMode: "not-applicable" } }, RUN, 172800) };
+    freshness: assessReserveFetchFreshness({ fetchedAt, attemptId: "success", metadata: { freshnessMode: "not-applicable" } }, runAt, 172800) };
   const runMetadata = metadataValid ? { reserveViewSchemaVersion: 2, reserveGenerationId: reserveInput.generationId, reserveContentSha256: reserveInput.contentSha256,
-    runClockSec: RUN, consumedReserveInputs: { [entry.stablecoinId]: reserveInput } } : {};
+    runClockSec: runAt, consumedReserveInputs: { [entry.stablecoinId]: reserveInput } } : {};
   mocks.inputs.mockResolvedValue({
-    stablecoinsCached: { kind: "ok", updatedAt: RUN, payload: { peggedAssets: [] } },
-    dexLiquiditySnapshot: { latestUpdatedAt: RUN, map: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: "1.0" }])) },
+    stablecoinsCached: { kind: "ok", updatedAt: runAt, payload: { peggedAssets: [] } },
+    dexLiquiditySnapshot: { latestUpdatedAt: runAt, map: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: "1.0" }])) },
     redemptionBackstopMap: { [entry.stablecoinId]: { ...entry, reserveInput } },
-    redemptionSnapshotProvenance: { runId: "redemption:actual", latestUpdatedAt: RUN, methodologyVersion: entry.methodologyVersion, runMetadata },
+    redemptionSnapshotProvenance: { runId: "redemption:actual", latestUpdatedAt: runAt, methodologyVersion: entry.methodologyVersion, runMetadata },
     liveReserveMap: new Map(), liveReserveProvenanceMap: new Map(), liquidityStale: false, redemptionStale: false,
-    inputFreshness: { dexLiquidity: { updatedAt: RUN, ageSeconds: 0, stale: false }, redemptionBackstops: { updatedAt: RUN, ageSeconds: 0, stale: false } },
-    v9PublicationInputHealth: { dex: { state: "current" }, redemption: { state: "current", generationId: "redemption:actual", updatedAtSec: RUN }, liveReserves: { state: "available", coverageRatio: 1 } },
+    inputFreshness: { dexLiquidity: { updatedAt: runAt, ageSeconds: 0, stale: false }, redemptionBackstops: { updatedAt: runAt, ageSeconds: 0, stale: false } },
+    v9PublicationInputHealth: { dex: { state: "current" }, redemption: { state: "current", generationId: "redemption:actual", updatedAtSec: runAt }, liveReserves: { state: "available", coverageRatio: 1 } },
   });
   mocks.peg.mockResolvedValue({ nowSec: scoringClock, pegDataById: new Map(), eventsByCoin: new Map() });
 }
 
 beforeEach(() => vi.clearAllMocks());
+it.each([
+  ["verified at the capture clock", '{"peggedGOLD":4000}', '{"peggedGOLD":4000}', 0, true],
+  ["verified one second after capture", '{"peggedGOLD":4000}', '{"peggedGOLD":4000}', 1, false],
+  ["digest mismatch", '{"peggedGOLD":4000}', "{}", 0, false],
+  ["empty rates with matching digest", "{}", "{}", 0, false],
+] as const)("checks independent bullion against the FX generation (%s)", async (_label, rates, digestInput, offset, admitted) => {
+  fixture(RUN);
+  const updatedAt = RUN + offset;
+  const gold = { observation: { pegKey: "peggedGOLD", source: "gold-api.com", cadence: "intraday",
+    usdPerUnit: 4_000, observedAtSec: RUN - 60 }, generation: "bullion:fixture", preCloseUsdPerUnit: 3_990 };
+  const db = mockD1([{ match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+    rows: [
+      { key: "fx-rates", value: rates, updated_at: updatedAt },
+      { key: "fx-rates-meta", value: JSON.stringify({ ratesSha256: sha256Hex(digestInput),
+        directMetalReferences: { peggedGOLD: gold } }), updated_at: updatedAt },
+    ],
+  }]);
+  const { input } = await buildNativeSafetyScoreV9Capture(db);
+  expect(input.directMetalReferences).toEqual(admitted ? { peggedGOLD: gold } : {});
+});
+
+it("keeps a missing bullion field distinct from a published empty map and an unreadable source", async () => {
+  fixture(RUN);
+  const rates = '{"peggedGOLD":4000}';
+  for (const directMetalReferences of [undefined, {}]) {
+    const db = mockD1([{ match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [
+      { key: "fx-rates", value: rates, updated_at: RUN },
+      { key: "fx-rates-meta", value: JSON.stringify({ ratesSha256: sha256Hex(rates), directMetalReferences }), updated_at: RUN },
+    ] }]);
+    const { input } = await buildNativeSafetyScoreV9Capture(db);
+    expect(input.directMetalReferences).toEqual(directMetalReferences);
+  }
+  const db = mockD1([{ match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [], throwError: "read failed" }]);
+  expect((await buildNativeSafetyScoreV9Capture(db)).input.directMetalReferences).toEqual({});
+});
+
+it.each([false, true])("preserves the EUR summary only on legacy FX generations (admission enabled: %s)", async (enabled) => {
+  fixture(RUN);
+  const sources = await mocks.inputs();
+  if (enabled) sources.stablecoinsCached.payload.fxReferenceObservations = {};
+  const id = "eurc-circle";
+  const eventClock = RUN - 60;
+  const row = pegRow({ id, pegCurrency: "EUR", pegType: "peggedEUR", pegScore: null, currentDeviationBps: -15,
+    currentPriceUnavailable: false, priceSource: "coingecko", priceObservedAtMode: "upstream",
+    pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: RUN } });
+  mocks.peg.mockResolvedValue({ nowSec: RUN, pegDataById: new Map([[id, row]]), eventsByCoin: new Map(),
+    admittedPegById: new Map(), lastAffectedAtById: new Map([[id, eventClock]]) });
+  const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+  expect(input.pegDataById[id]?.currentDeviationBps).toBe(enabled ? null : row.currentDeviationBps);
+  expect(input.pegDataById[id]?.pegReference).toEqual(enabled ? null : row.pegReference);
+  expect(input.pegEvidenceById?.[id]).toEqual({ lastAffectedAtSec: eventClock, ...(enabled ? { admittedDeviationBps: null } : {}) });
+});
+
 describe("V9 consumed reserve scoring-clock admission", () => {
   // 10.26: evidence fresh at the run's assessment is carried until the run's
   // own output budget (8h, covered below), so 61s past its fetch budget stays current.
+  it("rechecks Mento capacity at the Safety clock after a market reopening", async () => {
+    const id = "chfm-mento";
+    const reopened = Date.parse("2026-11-15T23:00:00Z") / 1000;
+    const observed = reopened - 60;
+    fixture(reopened, observed, true, observed);
+    const { loadExactDexPublicationGeneration } = await import("../report-cards-snapshot");
+    vi.mocked(loadExactDexPublicationGeneration).mockResolvedValueOnce({ generationId: `dex-liquidity-${observed}`, updatedAt: observed });
+    const loaded = await mocks.inputs();
+    // The producer assessed these reserves in the last minute of the closure.
+    const entry = { ...makeRedemptionWriteRecord(), stablecoinId: id, updatedAt: observed,
+      routeStatus: "open", routeStatusSource: "onchain", freshnessKind: "same-run-onchain",
+      sourceTimestamp: observed, settlementDelaySec: 60, capacityKind: "documented-bound",
+      resolutionState: "resolved", immediateCapacityUsd: null, immediateCapacityRatio: null };
+    loaded.redemptionBackstopMap[id] = entry;
+    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+    expect(input.redemptionBackstopMap[id]).toMatchObject({
+      score: null, routeStatus: "unknown", resolutionState: "missing-capacity", updatedAt: observed,
+    });
+    expect(input.redemptionBackstopMap["iusd-infinifi"]).toBeDefined();
+  });
   it.each([[59, "current"], [60, "current"], [61, "current"]] as const)("reassesses 47h59m evidence %s seconds later as %s", async (delta, state) => {
     fixture(RUN + delta);
     const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
@@ -261,8 +335,9 @@ function observedParent(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin
     symbol: "M",
     currentDeviationBps: -5,
     currentPriceUnavailable: undefined,
-    priceSource: undefined,
-    priceObservedAtMode: undefined,
+    priceSource: "coingecko",
+    priceObservedAt: 1_774_651_720,
+    priceObservedAtMode: "upstream",
     nominalPriceReference: undefined,
     pegReference: OBSERVED_REFERENCE,
     eventCount: 1,
@@ -275,12 +350,22 @@ function runInheritance(rows: PegSummaryCoin[], meta: Record<string, TestMeta> =
 }
 
 describe("Safety Score V9 capture — reviewed 1:1 wrapper peg observation inheritance", () => {
+  it("retains the legacy wrapper summary until an explicit clock or reference rejection withholds it", () => {
+    const legacyParent = observedParent({ priceObservedAt: undefined, priceObservedAtMode: undefined });
+    const child = runInheritance([pegRow(), legacyParent]).get(CHILD)!;
+    expect(child).toMatchObject({ currentDeviationBps: -5, priceSource: "protocol-redeem", priceObservedAtMode: "upstream" });
+    expect(child).not.toHaveProperty("priceObservedAt");
+    expect(runInheritance([pegRow(), observedParent({ priceObservedAt: null })]).get(CHILD)?.currentDeviationBps).toBeNull();
+    expect(runInheritance([pegRow({ priceObservedAt: null }), legacyParent]).get(CHILD)?.currentDeviationBps).toBeNull();
+    expect(runInheritance([pegRow({ admittedDeviationBps: null }), observedParent()]).get(CHILD)?.currentDeviationBps).toBeNull();
+  });
   it("publishes the parent's admitted observation for a nominal pure-wrapper row", () => {
     const result = runInheritance([pegRow(), observedParent()]);
     const child = result.get(CHILD)!;
     expect(child.currentDeviationBps).toBe(-5);
     expect(child.pegReference).toEqual(OBSERVED_REFERENCE);
-    expect(child.priceSource).toBe("protocol-redeem");
+    expect(child.priceSource).toBe("coingecko");
+    expect(child.priceObservedAt).toBe(1_774_651_720);
     expect(child.priceObservedAtMode).toBe("upstream");
     expect(child).not.toHaveProperty("currentPriceUnavailable");
     expect(child).not.toHaveProperty("nominalPriceReference");

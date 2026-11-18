@@ -99,7 +99,7 @@ function adaptDjedCardanoState(
   }
   const bankAda = decimalUnits(poolNftUtxo.lovelace, ADA_DECIMALS);
 
-  // ── DJED liabilities: minted stock minus unissued stock in the bank ──────
+  // ── DJED circulating units: minted stock minus unissued bank stock ──────
   const djedBankStock = sumUnitQuantity(state.bank.utxos, params.djedUnit);
   if (djedBankStock > state.djedMinted) {
     throw new Error(
@@ -112,7 +112,7 @@ function adaptDjedCardanoState(
     throw new Error(`${ADAPTER_KEY}: DJED circulating supply is not positive`);
   }
 
-  // ── Supply reconciliation (diagnostic; never replaces the on-chain liability) ──
+  // ── Supply reconciliation (diagnostic; never replaces the on-chain units) ──
   // Value the on-chain units with the matching list generation's price. The
   // cached circulating buckets are already USD, never token units.
   const listSupply = state.listSupply;
@@ -122,7 +122,7 @@ function adaptDjedCardanoState(
         listPriceUsd: listSupply.priceUsd,
         onchainCirculatingUsd: djedCirculating * listSupply.priceUsd,
         supplyDivergencePct: (Math.abs(djedCirculating * listSupply.priceUsd - listSupply.listCirculatingUsd) / listSupply.listCirculatingUsd) * 100,
-        supplyDerivation: `${ADAPTER_KEY}: on-chain liability = djedMinted − djedBankStock, valued at the matching cached list price; list buckets are USD`,
+        supplyDerivation: `${ADAPTER_KEY}: on-chain circulating supply = djedMinted − djedBankStock, valued at the matching cached list price; list buckets are USD`,
       }
     : null;
   if (supplyDivergence && supplyDivergence.supplyDivergencePct > 10) {
@@ -173,17 +173,7 @@ function adaptDjedCardanoState(
   }
   const djedPriceUsd = state.djedPriceUsd;
   const totalReserveUsd = reserveAda * state.adaPriceUsd;
-  const totalLiabilitiesUsd = djedCirculating * djedPriceUsd;
-  const collateralizationRatio = totalLiabilitiesUsd > 0 ? totalReserveUsd / totalLiabilitiesUsd : undefined;
-
-  if (collateralizationRatio != null && collateralizationRatio < 1) {
-    warnings.push(reserveDegradedWarning(
-      "reserve-undercollateralized",
-      `${ADAPTER_KEY}: the bank ADA reserve covers ${(collateralizationRatio * 100).toFixed(2)}% of circulating DJED at the live market price`,
-    ));
-  }
-
-  const shareholderEquityUsd = Math.max(0, totalReserveUsd - totalLiabilitiesUsd);
+  const supplyUsd = djedCirculating * djedPriceUsd;
 
   const slices = slicesFromValues([
     {
@@ -205,14 +195,13 @@ function adaptDjedCardanoState(
       }),
       totalReserveUsd,
       totalReserveQuantity: reserveAda,
-      totalLiabilitiesUsd,
       supplyTokens: djedCirculating,
-      supplyUsd: totalLiabilitiesUsd,
-      ...(collateralizationRatio !== undefined ? { collateralizationRatio } : {}),
-      ...(shareholderEquityUsd > 0 ? { shareholderEquityUsd } : {}),
+      supplyUsd,
+      ratioUnavailableReason: "not-comparable",
       details: {
         proofKind: DJED_PROOF_KIND,
         bankAddress: state.bank.address,
+        coverageUnavailableReason: "protocol-oracle-unavailable",
         reserveAda,
         bankUtxoAda: bankAda,
         adaPriceUsd: state.adaPriceUsd,

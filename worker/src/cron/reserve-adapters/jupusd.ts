@@ -9,16 +9,14 @@ import {
   buildCoverageShortfallWarnings,
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
-  catchAndWarn,
   decimalNumberFromBigInt,
   fetchJsonWithRetry,
-  freshnessMetadataFromTimestamp,
   normalizeSlices,
   parseBoundedDecimals,
-  parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveDegradedWarning,
   reserveFatalWarning,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 
 const ADAPTER_KEY = "jupusd";
@@ -33,12 +31,6 @@ interface JupUsdHolding {
 interface JupUsdDataPayload {
   holdings?: JupUsdHolding[];
   totalSupply?: string;
-}
-
-interface JupUsdSnapshotPayload {
-  snapshots?: Array<{
-    timestamp?: string | number;
-  }>;
 }
 
 const JupUsdOraclePayloadSchema = z.object({
@@ -69,14 +61,11 @@ interface JupUsdFetchBudget {
   totalTimeoutMs: number;
 }
 
-// Per-fetch budgets keep all three internal fetches inside the orchestrator's
+// Per-fetch budgets keep both internal fetches inside the orchestrator's
 // 20s per-attempt wall so a slow endpoint surfaces a labeled per-fetch error
-// instead of a bare "adapter-timeout". The snapshots history feed is the slow
-// one (~450KB payload) and only contributes the freshness timestamp, so it is
-// bounded and degrades to unverified freshness when it cannot answer in time.
+// instead of a bare "adapter-timeout".
 const JUPUSD_DATA_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 8_000, totalTimeoutMs: 16_000 };
 const JUPUSD_ORACLE_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 4_000, totalTimeoutMs: 8_000 };
-const JUPUSD_SNAPSHOTS_BUDGET: JupUsdFetchBudget = { perAttemptTimeoutMs: 10_000, totalTimeoutMs: 16_000 };
 
 async function fetchJupUsdJson<T>(
   label: string,
@@ -118,9 +107,8 @@ function resolveHoldingMeta(name: string): Pick<JupUsdHoldingValue, "risk" | "co
 export function adaptJupUsdData(
   payload: JupUsdDataPayload,
   options: {
-    sourceTimestamp?: number | null;
     oracle?: JupUsdOraclePayload | null;
-    oracleConfigured?: boolean;
+    oracleUrl?: string;
     extraWarnings?: readonly LiveReserveWarning[];
   } = {},
 ): AdapterResult {
@@ -172,15 +160,10 @@ export function adaptJupUsdData(
     throw new Error("jupusd transparency payload returned zero reserve holdings");
   }
 
-  const sourceTimestamp = options.sourceTimestamp ?? null;
-  const routeStatus = options.oracle?.ripcord === true
-    ? "paused"
-    : options.oracle?.ripcord === false
-      ? "open"
-      : options.oracleConfigured ? "unknown" : undefined;
-  const routeStatusReason = options.oracle?.ripcord
-    ? (options.oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
-    : options.oracleConfigured && !options.oracle
+  const { oracle, oracleUrl } = options;
+  const routeStatusReason = oracle?.ripcord
+    ? (oracle.ripcordDetails || "JupUSD oracle reports ripcord mode")
+    : oracleUrl && !oracle
       ? "JupUSD oracle route status could not be observed"
       : undefined;
   const totalSupply = parseAmount(payload.totalSupply, 6);
@@ -190,8 +173,6 @@ export function adaptJupUsdData(
   // True assets ÷ liability: never clamped, so genuine overcollateralization
   // shows and a shortfall degrades per the undercollateralization policy.
   const collateralizationRatio = totalReserveUsd / totalSupply;
-  const capacityUsd = Math.min(totalReserveUsd, totalSupply);
-  const ratio = capacityUsd / totalSupply;
   const unknownExposurePct = (unknownValue / totalReserveUsd) * 100;
   if (unknownValue > 0) {
     const message = `JupUSD reserve feed included unmapped holding(s): ${Array.from(unknownHoldingNames).sort().join(", ")}`;
@@ -228,16 +209,12 @@ export function adaptJupUsdData(
       supplyUsd: totalSupply,
       ...(unknownHoldingNames.size > 0 ? { unknownHoldingNames: Array.from(unknownHoldingNames).sort() } : {}),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd,
-        capacityRatioOfSupply: ratio,
-        capacityKind: "live-direct-bounded",
-        freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
-        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        ...(options.oracle != null && routeStatus
+        ...(oracle != null
           ? {
-              routeStatus,
+              routeStatus: oracle.ripcord ? "paused" as const : "open" as const,
               routeStatusSource: "protocol-api" as const,
               routeObserved: true as const,
+              ...(oracleUrl ? { sourceUrls: [oracleUrl] } : {}),
             }
           : {
               routeStatus: "unknown" as const,
@@ -245,16 +222,10 @@ export function adaptJupUsdData(
             }),
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "whitelisted-primary",
-        settlementDelaySec: 0,
-        sourceUrls: [
-          "https://api.jupusd.money/api/data",
-          "https://api.jupusd.money/openapi.json",
-        ],
       }),
-      ...freshnessMetadataFromTimestamp(
-        sourceTimestamp,
+      ...unverifiedFreshnessMetadata(
         "jupusd-transparency-api",
-        "JupUSD data payload does not expose a source timestamp",
+        "JupUSD holdings and supply have no verified source timestamp",
       ),
     },
   };
@@ -271,17 +242,14 @@ export async function fetchJupUsdReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
-  const params = readParams(config);
+  const { oracleUrl } = readParams(config);
   const extraWarnings: LiveReserveWarning[] = [];
-  // Fast fetches first: under the 2-op adapter I/O limiter the third fetch
-  // queues behind the first two, so the sub-second oracle probe must not wait
-  // behind the slow snapshots history feed.
-  const [payload, oracle, snapshots] = await Promise.all([
+  const [payload, oracle] = await Promise.all([
     fetchJupUsdJson<JupUsdDataPayload>("transparency data", input.url, signal, JUPUSD_DATA_BUDGET, ctx),
-    params.oracleUrl
+    oracleUrl
       ? fetchJupUsdJson<unknown>(
           "oracle",
-          params.oracleUrl,
+          oracleUrl,
           signal,
           JUPUSD_ORACLE_BUDGET,
           ctx,
@@ -294,29 +262,6 @@ export async function fetchJupUsdReserves(
           return null;
         })
       : Promise.resolve(null),
-    params.snapshotsUrl
-      ? catchAndWarn(
-          fetchJupUsdJson<JupUsdSnapshotPayload>("snapshots", params.snapshotsUrl, signal, JUPUSD_SNAPSHOTS_BUDGET, ctx),
-          "jupusd-snapshots-unavailable",
-          `JupUSD snapshots feed failed: ${params.snapshotsUrl}`,
-          extraWarnings,
-        )
-      : Promise.resolve(null),
   ]);
-  // The snapshots feed is ordered descending today, but the adapter must not
-  // trust that: an upstream flip to ascending would silently stamp an
-  // eight-month-old "verified" timestamp. Take the newest parseable timestamp
-  // explicitly instead of trusting snapshots[0].
-  const snapshotTimestamps = (snapshots?.snapshots ?? [])
-    .map((entry) => parseTimestampLikeToUnixSeconds(entry?.timestamp))
-    .filter((timestamp): timestamp is number => timestamp != null);
-  const latestTimestamp = snapshotTimestamps.length > 0
-    ? Math.max(...snapshotTimestamps)
-    : null;
-  return adaptJupUsdData(payload, {
-    sourceTimestamp: latestTimestamp,
-    oracleConfigured: params.oracleUrl != null,
-    oracle,
-    extraWarnings,
-  });
+  return adaptJupUsdData(payload, { oracleUrl, oracle, extraWarnings });
 }

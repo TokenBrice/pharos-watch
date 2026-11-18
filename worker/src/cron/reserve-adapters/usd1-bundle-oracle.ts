@@ -181,6 +181,7 @@ export async function fetchUsd1BundleOracleReserves(
     scope: params.liabilityScope,
     adapterKey: "usd1-bundle-oracle",
     signal,
+    requireStateClock: true,
     nowSec: ctx.nowSec ?? Math.floor(Date.now() / 1000),
     ctx,
     tronCtx: baseCtx,

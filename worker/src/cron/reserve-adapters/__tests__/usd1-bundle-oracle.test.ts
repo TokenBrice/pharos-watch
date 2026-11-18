@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { encodeAbiParameters } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, toFunctionSelector } from "viem/utils";
 import usd1MetaSource from "@shared/data/stablecoins/coins/usd1-world-liberty-financial.json";
 import type { IssuerNativeLiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { adaptUsd1BundleOracle } from "../usd1-bundle-oracle";
 import type { MultichainSupplyContribution, ScopedLiabilitySupply } from "../multichain-supply";
+import { tronBase58ToHex } from "../../../lib/tron-address";
 import {
   expectWarningEffect,
   resolveAdapterCoin,
@@ -36,7 +37,8 @@ const BRIDGE_TOKEN = "0x111111d2bf19e43c34263401e0cad979ed1cdb61";
 const TRON_TOKEN = usd1MetaSource.contracts.find((contract) => contract.chain === "tron")!.address;
 const SOLANA_MINT = "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB";
 const APTOS_METADATA = "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2";
-const TRON_GRID = "https://api.trongrid.io/wallet/triggerconstantcontract";
+const TRON_SOLIDITY = "https://api.trongrid.io/walletsolidity/triggerconstantcontract";
+const TRON_MULTICALL3 = "0x32a4f47a74a6810bd0bf861cabab99656a75de9e";
 const SOLANA_RPC_URLS = [
   "https://api.mainnet-beta.solana.com",
   "https://api.mainnet.solana.com",
@@ -175,6 +177,9 @@ type ChainOutcome = "ok" | "fail";
 function usd1Network(options: {
   readAt: number;
   ethereumSupply?: bigint | null;
+  tronClock?: number | null;
+  tronRevert?: boolean;
+  solanaClock?: number | null;
   solana?: ChainOutcome;
   aptos?: ChainOutcome;
   bundle?: string;
@@ -215,8 +220,39 @@ function usd1Network(options: {
       [`abcore:${BRIDGE_TOKEN}:totalSupply()`]: 18_577_754_321_283_103_067_398_222n,
     },
     json: {
-      [TRON_GRID]: { result: { result: true }, constant_result: [TRON_SUPPLY.toString(16).padStart(64, "0")] },
-      ...Object.fromEntries(SOLANA_RPC_URLS.map((url) => [url, solanaAccount])),
+      [TRON_SOLIDITY]: async (request: Request) => {
+        const body = await request.json() as { contract_address: string; function_selector: string; parameter: string };
+        const token = await tronBase58ToHex(TRON_TOKEN);
+        expect(body.contract_address).toBe(`41${TRON_MULTICALL3.slice(2)}`);
+        expect(body.function_selector).toBe("aggregate((address,bytes)[])");
+        const [calls] = decodeAbiParameters([{
+          type: "tuple[]", components: [{ name: "target", type: "address" }, { name: "callData", type: "bytes" }],
+        }], `0x${body.parameter}`);
+        expect(calls.map(({ target, callData }) => [target.toLowerCase(), callData])).toEqual([
+          [token, toFunctionSelector("totalSupply()")],
+          [token, toFunctionSelector("decimals()")],
+          [TRON_MULTICALL3, toFunctionSelector("getCurrentBlockTimestamp()")],
+        ]);
+        const uint256 = (value: bigint) => encodeAbiParameters([{ type: "uint256" }], [value]);
+        const returned = [uint256(TRON_SUPPLY), uint256(18n)];
+        if (options.tronClock !== null) returned.push(uint256(BigInt(options.tronClock ?? options.readAt)));
+        const raw = encodeAbiParameters(
+          [{ type: "uint256" }, { type: "bytes[]" }], [95_000_000n, returned],
+        );
+        return {
+          result: { result: true }, constant_result: [raw.slice(2)],
+          ...(options.tronRevert ? { transaction: { ret: [{ ret: "FAILED" }] } } : {}),
+        };
+      },
+      ...Object.fromEntries(SOLANA_RPC_URLS.map((url) => [url, async (request: Request) => {
+        const body = await request.json() as { method: string; params: unknown[] };
+        if (body.method === "getAccountInfo") {
+          expect(body.params).toEqual([SOLANA_MINT, { encoding: "jsonParsed", commitment: "finalized" }]);
+          return solanaAccount;
+        }
+        expect(body).toMatchObject({ method: "getBlockTime", params: [451_107_855] });
+        return { jsonrpc: "2.0", id: 1, result: options.solanaClock === null ? null : (options.solanaClock ?? options.readAt) };
+      }])),
       [APTOS_REST]: options.aptos === "fail"
         ? {}
         : { ledger_version: APTOS_LEDGER, ledger_timestamp: String(options.readAt * 1_000_000) },
@@ -249,6 +285,8 @@ describe("fetchUsd1BundleOracleReserves", () => {
     expect(result.metadata?.supplyContributions).toEqual(expect.arrayContaining([
       { chain: "aptos", tokenAddress: APTOS_METADATA, supplyRaw: "20017233381117", decimals: 6, observedAt: IN_BOUND_SUPPLY_READ_AT },
       { chain: "tempo", tokenAddress: TEMPO_TOKEN, supplyRaw: "1119862264", decimals: 6, observedAt: IN_BOUND_SUPPLY_READ_AT },
+      { chain: "solana", tokenAddress: SOLANA_MINT, supplyRaw: SOLANA_SUPPLY.toString(), decimals: 6, observedAt: IN_BOUND_SUPPLY_READ_AT },
+      { chain: "tron", tokenAddress: TRON_TOKEN, supplyRaw: TRON_SUPPLY.toString(), decimals: 18, observedAt: IN_BOUND_SUPPLY_READ_AT },
     ]));
     expect(result.warnings).toBeUndefined();
     expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd").map((call) => call.chain).sort())
@@ -288,6 +326,34 @@ describe("fetchUsd1BundleOracleReserves", () => {
     });
     expect((result.metadata?.supplyContributions as Array<{ chain: string }>).some((entry) => entry.chain === chain)).toBe(false);
     expectWarningEffect(result, "partial-supply-read-failure", "degraded");
+  });
+
+  it.each(["tron", "solana"] as const)("withholds the ratio when the %s state clock is unavailable or six hours out of bound", async (chain) => {
+    const staleClock = BUNDLE_TIMESTAMP - 6 * 3_600;
+    for (const clock of [null, staleClock]) {
+      const { result } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+        network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT, [`${chain}Clock`]: clock }),
+        nowSec: IN_BOUND_SUPPLY_READ_AT,
+      });
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      const contributions = result.metadata?.supplyContributions as Array<{ chain: string; observedAt: number }>;
+      if (clock === null) {
+        expect(result.metadata?.ratioUnavailableReason).toBe("included-supply-read-failed");
+        expect(contributions.find((entry) => entry.chain === chain)).toBeUndefined();
+      } else {
+        expect(result.metadata).toMatchObject({ ratioUnavailableReason: "reserve-supply-time-skew", ratioSkewSec: 6 * 3_600 });
+        expect(contributions.find((entry) => entry.chain === chain)?.observedAt).toBe(staleClock);
+      }
+    }
+  });
+
+  it("withholds the ratio when a Tron simulation reverts despite an RPC success flag", async () => {
+    const { result } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT, tronRevert: true }),
+      nowSec: IN_BOUND_SUPPLY_READ_AT,
+    });
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.ratioUnavailableReason).toBe("included-supply-read-failed");
   });
 
   it("fails the Tempo read closed when catalog decimals disagree with the chain", async () => {

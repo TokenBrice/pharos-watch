@@ -280,6 +280,22 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(child.status.observationState).toBe("known");
   });
 
+  it.each([[null, 1_200, CHILD_ID], [1_400, 1_200, PARENT_ID]])(
+    "uses the worse discount from the child and parent (%s / %s)", (parentPeak, childPeak, sourceId) => {
+      const template = directionalParentDepegPeg(twoAssetInput(), parentPeak === null ? 700 : -parentPeak, parentPeak);
+      const fixed = reseal(template, {
+        activeDepegPeakBpsById: { ...template.activeDepegPeakBpsById, [CHILD_ID]: childPeak },
+        safetyScoreV9DirectionalPeg: {
+          ...template.safetyScoreV9DirectionalPeg!,
+          activeDiscountPeakBpsById: { [CHILD_ID]: childPeak, [PARENT_ID]: parentPeak },
+        },
+      });
+      const child = compiledChild(fixed);
+      expect(child.peg).toMatchObject({ activeDepeg: true, activeDepegBps: Math.max(childPeak, parentPeak ?? 0) });
+      expect(child.peg.status.evidenceRefIds).toContain(`${CHILD_ID}:active-discount:${sourceId}`);
+    },
+  );
+
   it("leaves an asset without pegReferenceId on its own peg data", () => {
     const fixed = parentDepegPeg(twoAssetInput(), 700);
     const parent = compileSafetyScoreV9FactSetFromFixedInput(

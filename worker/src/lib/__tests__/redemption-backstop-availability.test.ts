@@ -15,6 +15,9 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { defineReviewedStablecoinRedeemConfig } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem/shared";
 import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
 import { liveSnapshot } from "./redemption-backstop-sources.test-support";
+import { admittedDeviationBps, evaluateReferenceAdmission } from "@shared/lib/reference-admission";
+import { asRawDeviationBps } from "@shared/types/reference-admission";
+import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 
 const REVIEW_DATE = "2026-04-22";
 const ACTIVE_DEPEG_AVAILABILITY_SQL = `SELECT stablecoin_id, direction, started_at
@@ -53,7 +56,72 @@ describe("buildRedemptionCurrentDepegObservationMap", () => {
       now,
     });
 
-    expect(result.get("usdc-circle")?.currentDeviationBps).toBe(-3000);
+    expect(result.get("usdc-circle")?.currentDeviationBps).toBeCloseTo(-3000, 10);
+  });
+
+  it("uses the published non-USD deviation until the producer supplies admission evidence", () => {
+    const id = "eurc-circle";
+    const currentPeg = { currentDeviationBps: -60, pegReference: null, pegReferenceUnavailable: false,
+      currentPriceUnavailable: false, primaryTrust: "authoritative" as const, dexPriceCheck: null };
+    const asset = { ...authoritativeAsset(now, id), pegType: "peggedEUR", currentPeg };
+    const read = (row: typeof asset) => buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [row], stablecoinsGenerationAt: now, now,
+    }).get(id);
+    expect(read(asset)?.currentDeviationBps).toBe(-60);
+    const withheld = { ...asset, currentPeg: { ...currentPeg, admittedDeviationBps: null } };
+    expect(read(withheld)).toBeUndefined();
+  });
+
+  it.each([
+    ["2026-11-16T16:00:00Z", -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS + 0.1, undefined],
+    ["2026-11-16T16:00:00Z", -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS, "degraded"],
+    ["2026-11-14T16:00:00Z", -REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS + 0.1, "unknown"],
+  ] as const)("applies the XAUT raw downside projection to both XAUT and XGLD at %s (%s bps)", async (date, bps, expected) => {
+    const id = "xaut-tether";
+    const assessed = Date.parse(date) / 1000;
+    const observed = assessed - 60;
+    const raw = asRawDeviationBps(bps);
+    const admission = evaluateReferenceAdmission({ kind: "fallback", decisionAtSec: assessed, quoteObservedAtSec: observed,
+      generation: `stablecoins:${observed}`, rawDeviationBps: raw, preCloseUsdPerUnit: 2_900, observation: {
+        pegKey: "peggedGOLD", usdPerUnit: 3_000, source: "gold-api.com", cadence: "intraday", observedAtSec: observed,
+      } });
+    const asset = { ...authoritativeAsset(observed, id), symbol: "XAUT", pegType: "peggedGOLD", price: 3_000 * (1 + bps / 10_000),
+      currentPeg: { currentDeviationBps: Math.round(bps), admittedDeviationBps: admittedDeviationBps(raw, admission),
+        referenceAdmission: admission, pegReference: { valueUsd: 3_000, source: "fallback" as const, contributorCount: 0, asOf: observed },
+        pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative" as const, dexPriceCheck: null } };
+    const readings = (row: typeof asset) => buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [row], stablecoinsGenerationAt: observed, now: assessed,
+    });
+    const admitted = readings(asset);
+    expect(admission.status).toBe(expected === "unknown" ? "held-closed-session" : "admitted");
+    expect(admitted.get(id)?.currentDeviationBps).toBe(expected === "unknown" ? undefined : bps);
+    expect(readings({ ...asset, priceObservedAt: observed - 1 }).has(id)).toBe(false);
+    const db = mockD1Strict([activeDepegQuery([{ stablecoin_id: id, direction: "below", started_at: observed }])]);
+    const availability = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, admitted);
+    expect(availability.get(id)?.routeStatus).toBe(expected);
+    expect(availability.get("xgld-unitas")?.routeStatus).toBe(expected);
+  });
+
+  it("keeps an open EURC incident uncertain when a Friday admission crosses the FX close", async () => {
+    const observed = Date.parse("2026-11-13T21:59:00Z") / 1000;
+    const admission = evaluateReferenceAdmission({ kind: "fx", decisionAtSec: observed, quoteObservedAtSec: observed,
+      rawDeviationBps: asRawDeviationBps(-300), preCloseUsdPerUnit: 1.09, observation: {
+        pegKey: "peggedEUR", usdPerUnit: 1.1, source: "openExchangeRates", cadence: "intraday", observedAtSec: observed,
+      } });
+    expect(admission.status).toBe("admitted");
+    const id = "eurc-circle";
+    const asset = { ...authoritativeAsset(observed, id), price: 1.067, pegType: "peggedEUR", currentPeg: {
+      currentDeviationBps: -300, admittedDeviationBps: -300, referenceAdmission: admission,
+      pegReference: { valueUsd: 1.1, source: "fx" as const, contributorCount: 0, asOf: observed },
+      pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative" as const, dexPriceCheck: null } };
+    const readings = (now: number) => buildRedemptionCurrentDepegObservationMap({ peggedAssets: [asset], stablecoinsGenerationAt: observed, now });
+    expect(readings(observed).get(id)?.currentDeviationBps).toBe(-300);
+    const legacy = buildRedemptionCurrentDepegObservationMap({ peggedAssets: [{ ...asset, currentPeg: undefined }],
+      fxFallbackRates: { peggedEUR: 1.1 }, stablecoinsGenerationAt: observed, now: observed });
+    expect(legacy.get(id)?.currentDeviationBps).toBe(-300);
+    const db = mockD1Strict([activeDepegQuery([{ stablecoin_id: id, direction: "below", started_at: observed }])]);
+    const availability = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, readings(observed + 120));
+    expect(availability.get(id)?.routeStatus).toBe("unknown");
   });
 
   it("excludes a frozen stablecoin from the current deviation map", () => {
@@ -110,6 +178,24 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(variant?.outputImpairedDependencyId).toBe("usds-sky");
     expect(variant?.outputImpairedShare).toBe(1);
     expect(variant?.routeStatusReason).toContain("Output asset impairment: parent USDS");
+  });
+
+  it("withholds direct and dependent redemption when a USD projection is explicitly unavailable", async () => {
+    const quoteAt = Date.parse("2026-11-14T15:00:00Z") / 1000;
+    const currentPeg = { pegReference: null, pegReferenceUnavailable: false, currentPriceUnavailable: false,
+      currentDeviationBps: -3100, primaryTrust: "authoritative", dexPriceCheck: null,
+      admittedDeviationBps: null } as const;
+    const current = buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [makeAsset({ id: "usds-sky", symbol: "USDS", price: 0.69, priceSource: "pyth",
+        priceConfidence: "single-source", agreeSources: ["pyth"], priceObservedAt: quoteAt, currentPeg })],
+      stablecoinsGenerationAt: quoteAt, now: quoteAt,
+    });
+    const db = mockD1Strict([activeDepegQuery([{ stablecoin_id: "usds-sky", direction: "below", started_at: quoteAt - 1 }])]);
+    const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, current);
+    expect(current.has("usds-sky")).toBe(false);
+    expect(result.get("usds-sky")).toMatchObject({ routeStatus: "unknown", routeStatusSource: "market-implied" });
+    expect(result.get("susds-sky")).toMatchObject({ routeStatus: "unknown", outputImpairedDependencyId: "usds-sky" });
+    expect(result.get("susds-sky")).not.toHaveProperty("activeDepegBps");
   });
 
   it("does not propagate a sub-severe parent depeg to wrappers", async () => {

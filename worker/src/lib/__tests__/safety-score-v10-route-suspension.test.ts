@@ -14,6 +14,7 @@ import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-sco
 import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { localControl, rebuildFixed } from "./safety-score-v9-fact-set.test-support";
@@ -325,12 +326,16 @@ describe("reviewed exact-channel suspension", () => {
   it("does not close a separately reviewed physical channel when only the exchange rail is suspended", () => {
     const id = "paxg-paxos";
     const row = makeSupplyFullRedemption({ stablecoinId: id, routeStatus: "open" });
-    const fixed = makeV9FixedInput({ assetId: id, clockSec: CLOCK, aggregateCirculating: { peggedUSD: 20_000_000 } });
+    const fixed: SafetyScoreV9CompilerInput = makeV9FixedInput({
+      assetId: id, clockSec: CLOCK, aggregateCirculating: { peggedUSD: 20_000_000 },
+    });
     fixed.redemptionBackstopMap = { [id]: row };
-    fixed.pegDataById[id] = {
-      pegCurrency: "GOLD",
-      pegReference: { valueUsd: 1_000, usdPerTroyOunce: 1_000, source: "median", contributorCount: 4, asOf: CLOCK },
-    } as ReportCardsFixedInput["pegDataById"][string];
+    fixed.directMetalReferences = {
+      peggedGOLD: {
+        observation: { pegKey: "peggedGOLD", source: "gold-api.com", cadence: "intraday", observedAtSec: CLOCK - 60, usdPerUnit: 1_000 },
+        generation: "fixture-metal", preCloseUsdPerUnit: 999,
+      },
+    };
     const physicalToUsd = structuredClone(getRedemptionBackstopConfig(id)!.physicalToUsd!);
     physicalToUsd.fees = { issuerFeeBps: 0, issuerFixedUsd: 0, deliveryUsdPerLot: 0,
       insuranceBps: 0, assayUsdPerLot: 0, taxBps: 0, conversionBps: 0 };

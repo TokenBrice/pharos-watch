@@ -4,6 +4,7 @@ import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { adaptCapVaultState } from "../../cron/reserve-adapters/cap-vault";
 import { makeCapAsset } from "../../cron/reserve-adapters/__tests__/cap-vault.test-support";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 
 const now = 1_780_000_000;
 const baseSnapshot = (metadata: Record<string, unknown>) => liveSnapshot("lusd-liquity", metadata, {
@@ -195,9 +196,54 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     );
     expect(result).toMatchObject({
       capacityKind: "documented-bound", capacityConfidence: "documented-bound",
-      settlementDelaySec: 86_400, immediateCapacityUsd: 1_000_000,
-      capacityProfile: { capacityProfileConfidence: "documented-bound" },
+      settlementDelaySec: 86_400, immediateCapacityUsd: null, immediateCapacityRatio: null,
+      capacityProfile: {
+        capacityProfileConfidence: "documented-bound",
+        scoringHorizon: "eventual", eventualUsd: 1_000_000, scoringUsd: 1_000_000,
+      },
     });
+  });
+
+  it("withholds a retained CHFm quote when a holiday closure lies between two open clocks", async () => {
+    const stablecoinId = "chfm-mento";
+    const observedAt = Date.parse("2025-12-31T21:59:00Z") / 1_000;
+    const assessment = Date.parse("2026-01-02T00:10:00Z") / 1_000;
+    const snapshot = liveSnapshot(stablecoinId, {
+      freshnessMode: "not-applicable", redemption: {
+        capacityUsd: 10_000, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+        sourceTimestamp: observedAt, settlementDelaySec: 0, routeStatus: "open", routeStatusSource: "onchain",
+      },
+    }, { fetchedAt: observedAt, source: "mento" });
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, stablecoinId, { kind: "reserve-sync-metadata" }, 100_000, assessment,
+      { reserveSnapshotMetadata: snapshot },
+    );
+    expect(result).toMatchObject({
+      resolutionState: "missing-capacity", immediateCapacityUsd: null,
+      capacityRejectionReason: "redeemable-capacity-unobserved",
+    });
+  });
+
+  it.each([
+    ["legacy", undefined, now, null, "redeemable-capacity-unobserved"],
+    ["valued", now, now, 112_000, undefined],
+    ["expired", now, now + LIVE_RESERVE_FRESHNESS_SEC + 1, null, "stale"],
+    ["expired valuation", now - LIVE_RESERVE_FRESHNESS_SEC - 1, now, null, "stale-source-timestamp"],
+  ] as const)("admits the %s USD3 throttle only with a current dollar valuation", async (_name, sourceTimestamp, clock, amount, reason) => {
+    const stablecoinId = "usd3-reserve-protocol";
+    const snapshot = liveSnapshot(stablecoinId, {
+      freshnessMode: "not-applicable", redemption: {
+        capacityUsd: sourceTimestamp === undefined ? 100_000 : 112_000,
+        capacityRatioOfSupply: 0.1, capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+        sourceTimestamp, routeStatus: "open", routeStatusSource: "onchain", settlementDelaySec: 0,
+      },
+    }, { fetchedAt: now, source: "reserve-protocol-dtf" });
+    const result = await resolveRedemptionCapacity(
+      {} as D1Database, stablecoinId, { kind: "reserve-sync-metadata" }, 1_120_000, clock,
+      { reserveSnapshotMetadata: snapshot },
+    );
+    expect(result.immediateCapacityUsd).toBe(amount);
+    expect(result.capacityRejectionReason).toBe(reason);
   });
 
   it.each([

@@ -23,6 +23,20 @@ const EXPECTED_MARKET_ORDER = [
 const USDT_ID = "usdt-tether";
 const PEG_PREMIUM_WEIGHT = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight;
 
+function observedUsdtDraft(): ReportCardsFixedInputDraft {
+  const draft = structuredClone(productionCapture.draft) as unknown as ReportCardsFixedInputDraft;
+  // This legacy capture predates the asset quote clock. The premium scenarios
+  // give the preserved USDT price a fresh observation to exercise eligibility.
+  const row = draft.pegDataById[USDT_ID]!;
+  draft.pegDataById[USDT_ID] = {
+    ...row,
+    priceSource: "coingecko",
+    priceObservedAt: draft.clockSec - 60,
+    priceObservedAtMode: "upstream",
+  };
+  return draft;
+}
+
 function evaluateCapture(fixedInput: ReturnType<typeof createReportCardsFixedInput>) {
   const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
     metaById: capturedAccessMetaById,
@@ -42,7 +56,7 @@ function evaluateCapture(fixedInput: ReturnType<typeof createReportCardsFixedInp
  * any-direction peak witnesses `activeDepeg`, and only a discount feeds the caps.
  */
 function directionalCapture(openEvent: { discountPeakBps: number | null }) {
-  const draft = structuredClone(productionCapture.draft) as unknown as ReportCardsFixedInputDraft;
+  const draft = observedUsdtDraft();
   const usdt = draft.pegDataById[USDT_ID]!;
   const anyDirectionPeakBps = openEvent.discountPeakBps ?? 1_619;
   return createReportCardsFixedInput({
@@ -79,9 +93,7 @@ function directionalCapture(openEvent: { discountPeakBps: number | null }) {
 // spUSDT re-curation instead of the retired single unkeyed row.
 describe("Safety Score v9 USDT premium production integration", () => {
   it("preserves the serial parent after a reserve non-link without inheriting USDT's asset premium", () => {
-    const fixedInput = createReportCardsFixedInput(
-      productionCapture.draft as unknown as ReportCardsFixedInputDraft,
-    );
+    const fixedInput = createReportCardsFixedInput(observedUsdtDraft());
     const extension =
       buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
         metaById: capturedAccessMetaById,

@@ -1,3 +1,4 @@
+import { projectMentoMarketPhase } from "../lib/redemption-backstop-capacity/mento-phase";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { ZodError } from "zod";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
@@ -228,6 +229,7 @@ export async function syncRedemptionBackstops(
   const currentDepegObservationsById = buildRedemptionCurrentDepegObservationMap({
     peggedAssets: stablecoinsCache.payload.peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates,
+    fxReferenceObservations: stablecoinsCache.payload.fxReferenceObservations,
     stablecoinsGenerationAt: stablecoinsCache.updatedAt,
     now,
   });
@@ -351,9 +353,12 @@ export async function syncRedemptionBackstops(
     return { snapshot: resolved, failed, failureReason, directObserverAttempted, directObserverConsumed };
   }, { signal });
   throwIfAborted(signal);
+  await reportProgress?.({ stage: "publishing-redemption-backstops", itemsDone: configuredIds.length, itemsTotal: configuredIds.length });
+  throwIfAborted(signal);
+  const publicationClock = Math.floor(Date.now() / 1000);
   const collectedSnapshots = results.map(({ snapshot }, index) => {
     if (!snapshot) throw new Error(`Missing redemption placeholder for ${configuredIds[index]}`);
-    return snapshot;
+    return projectMentoMarketPhase(snapshot, publicationClock, "stored");
   });
   let snapshots: RedemptionBackstopEntry[];
   for (;;) {
@@ -538,7 +543,6 @@ export async function syncRedemptionBackstops(
       : {}),
   };
 
-  await reportProgress?.({ stage: "publishing-redemption-backstops", itemsDone: configuredIds.length, itemsTotal: configuredIds.length });
   const writeResult = await upsertRedemptionBackstopSnapshots(db, snapshots, {
     expectedCount: configuredIds.length,
     metadata: runMetadata,

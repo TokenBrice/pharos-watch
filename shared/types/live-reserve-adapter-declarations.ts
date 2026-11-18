@@ -77,7 +77,7 @@ const CONFIG_PROTOCOL_V3 = configPolicy(["protocol-reserve"], [3]);
 const CONFIG_SINGLE_ASSET_V1 = configPolicy(["single-asset"], [1]);
 const CONFIG_SINGLE_ASSET_V2 = configPolicy(["single-asset"], [2]);
 const CONFIG_SINGLE_ASSET_V1_V2 = configPolicy(["single-asset"], [1, 2]);
-const CONFIG_SINGLE_ASSET_V3 = configPolicy(["single-asset"], [3]);
+const CONFIG_SINGLE_ASSET_V4 = configPolicy(["single-asset"], [4]);
 const CONFIG_ACCOUNTABLE = configPolicy(["collateral-mix", "protocol-reserve"], [1]);
 
 // Makina's on-chain `positionStaleThreshold` (10800 s on DUSD's Hub Caliber)
@@ -2590,7 +2590,8 @@ const ADAPTER_DECLARATIONS = {
       configValidation: CONFIG_ATTESTATION_V1_V2,
       validation: {
         // Circle publishes the reserve chart weekly, not on its monthly assurance cadence.
-        maxSourceAgeSec: WEEKLY_SOURCE_MAX_AGE_SEC,
+        // Allow one day for the weekly chart refresh.
+        maxSourceAgeSec: WEEKLY_SOURCE_MAX_AGE_SEC + 86_400,
         allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
       },
     },
@@ -3283,9 +3284,8 @@ const ADAPTER_DECLARATIONS = {
     },
   }),
   "usd1-bundle-oracle": declareAdapter(usd1BundleOracleParamsSchema, ONCHAIN_SINGLE_ASSET_NO_TELEMETRY_V1, {
-    // v3: required reviewed issuer-native `liabilityScope`; the ratio is
-    // published as `collateralizationRatio` only within the skew bound.
-    configValidation: CONFIG_SINGLE_ASSET_V3,
+    // v4 binds the ratio to original state clocks for every included liability.
+    configValidation: CONFIG_SINGLE_ASSET_V4,
     validation: {
       maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,

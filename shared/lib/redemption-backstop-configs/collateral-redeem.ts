@@ -107,7 +107,7 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = defineLiveCollateral
   ],
   notes: [
     "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption.",
-    "Live reserve sync now reads the coin's Mento V3 FPMM pool USDm balance each run and reports it as direct redemption capacity, replacing the prior documented-bound/eventual-only model.",
+    "Live reserve sync checks FPMM payout inventory, trading limits and a same-block quote. A scheduled FX closure can publish a delayed inventory bound after an independent breaker check. Immediate capacity requires a successful quote after reopening.",
     "The pool's swap fee is also read live: the verified FPMM implementation behind both pool proxies stores lpFee() and protocolFee() in basis points on a 10,000 denominator and charges their sum symmetrically in getAmountOut(), with setLPFee/setProtocolFee reverting FeeTooHigh above 200 bps combined. Both pools read 20 + 10 = 30 bps on 2026-08-12.",
     "Output declared 2026-07-19: Mento V3 CDP docs name USDm as the collateral asset of the FX-stable CDP/FPMM path, so the redemption pays USDm (tracked cusd-celo), mirroring the jpym-mento precedent; declaration was previously blocked on cusd-celo being untracked.",
   ],

@@ -71,6 +71,7 @@ interface Scenario {
   moneyPrice?: number;
   arbitrumDebt: [bigint, bigint];
   baseDebt: bigint;
+  baseSoftLiquidatedMoney: bigint;
   missingPriceFor?: string;
 }
 
@@ -160,7 +161,7 @@ function moneyNetwork(
   put("base", AMM3, LLAMMA_ABI, "max_band", [], intWord(5n));
   put("base", AMM3, LLAMMA_ABI, "active_band", [], intWord(5n));
   put("base", AMM3, LLAMMA_ABI, "bands_y", [5n], word(50n * 10n ** 18n));
-  put("base", AMM3, LLAMMA_ABI, "bands_x", [5n], word(2n * 10n ** 18n));
+  put("base", AMM3, LLAMMA_ABI, "bands_x", [5n], word(scenario.baseSoftLiquidatedMoney ?? 2n * 10n ** 18n));
 
   // Optimism: no markets.
   put("optimism", CONTROLLER, CONTROLLER_ABI, "get_market_count", [], word(0n));
@@ -246,7 +247,8 @@ describe("money-llamma adapter", () => {
       marketCount: 3,
       observedBlock: { chain: "arbitrum", number: expect.any(Number), timestamp: 1_757_000_000 },
     });
-    expect(output.metadata?.collateralizationRatio).toBeCloseTo(380_000 / 1_500, 5);
+    expect(output.metadata?.collateralizationRatio).toBeUndefined();
+    expect(output.metadata?.ratioUnavailableReason).toBe("not-comparable");
     expect(output.metadata?.details).toMatchObject({
       proofKind: "defi-money-llamma-onchain-census",
       liabilityValuation: "market",
@@ -257,7 +259,7 @@ describe("money-llamma adapter", () => {
   });
 
   it("publishes an off-par MONEY price as info and market-values the debt", async () => {
-    const output = await fetchFixture({ moneyPrice: 1.02 });
+    const output = await fetchFixture({ moneyPrice: 1.02, baseSoftLiquidatedMoney: 0n });
 
     expect(output.metadata?.moneyPriceUsd).toBe(1.02);
     expect(output.metadata?.totalLiabilitiesUsd).toBeCloseTo(1_500 * 1.02, 5);
@@ -269,7 +271,7 @@ describe("money-llamma adapter", () => {
     // The adapter reads its MONEY quote from the first chain leg; with no
     // usable quote the debt falls back to par while collateral stays
     // DefiLlama-priced.
-    const output = await fetchFixture({ missingPriceFor: "money:arbitrum" });
+    const output = await fetchFixture({ missingPriceFor: "money:arbitrum", baseSoftLiquidatedMoney: 0n });
 
     expect(output.metadata?.moneyPriceUsd).toBeUndefined();
     expect(output.metadata?.totalReserveUsd).toBe(380_000);
@@ -280,12 +282,24 @@ describe("money-llamma adapter", () => {
     expectWarnings(output, ["defillama-quote-missing", "liability-valued-at-par"]);
   });
 
-  it("degrades instead of erroring when collateral no longer covers debt (E4)", async () => {
-    const output = await fetchFixture({ baseDebt: 400_000n * 10n ** 18n });
+  it.each([0n, 2n])("checks the coverage shortfall only when %s MONEY was converted inside LLAMMA", async (convertedMoney) => {
+    const output = await fetchFixture({
+      baseDebt: 379_001n * 10n ** 18n,
+      baseSoftLiquidatedMoney: convertedMoney * 10n ** 18n,
+    });
 
-    expect(output.metadata?.totalLiabilitiesUsd).toBeCloseTo(400_000 + 1_000, 5);
-    expect(output.metadata?.collateralizationRatio).toBeLessThan(1);
-    expectWarnings(output, ["reserve-undercollateralized"]);
+    expect(output.metadata?.totalLiabilitiesUsd).toBe(380_001);
+    expect(output.metadata?.totalReserveUsd).toBe(380_000);
+    expect(output.metadata?.details?.softLiquidatedMoneyTokens).toBe(Number(convertedMoney));
+    if (convertedMoney === 0n) {
+      expect(output.metadata?.collateralizationRatio).toBeCloseTo(380_000 / 380_001, 8);
+      expectWarnings(output, ["reserve-undercollateralized"]);
+    } else {
+      expect(output.metadata?.collateralizationRatio).toBeUndefined();
+      expect(output.metadata?.ratioUnavailableReason).toBe("not-comparable");
+      expect(output.metadata?.details?.coverageUnavailableReason).toBe("soft-liquidation-debt-unmatched");
+      expectWarnings(output, []);
+    }
   });
 
   it("fails closed when a collateral token has no DefiLlama price", async () => {

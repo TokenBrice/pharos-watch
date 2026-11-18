@@ -194,6 +194,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
   const chainSupplyObservedAtSec = boundedObservedAt(fixedInput.updatedAt, clockSec);
   const pegGenerationDigest = domainDigest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
+    ...(fixedInput.pegEvidenceById ? { pegEvidenceById: fixedInput.pegEvidenceById } : {}),
+    ...(fixedInput.directMetalReferences ? { directMetalReferences: fixedInput.directMetalReferences } : {}),
     navPriceById: fixedInput.navPriceById ?? {},
     ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
@@ -336,7 +338,10 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "wrapperLocalReviews";
         const wrapperLocalReviews = getSafetyScoreV9WrapperLocalReviews(assetId);
         admissionPath = "mechanismRiskReview";
-        const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
+        const assurance: { source?: "report" | "overlay" } = {};
+        const mechanismRiskReview = buildSafetyScoreV9MechanismReview(
+          fixedInput, meta, archetype, (source) => { assurance.source = source; },
+        );
         admissionPath = "mechanismReviewGapDisposition";
         const mechanismReviewGapDisposition =
           getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
@@ -351,9 +356,14 @@ export function createSafetyScoreV9BaselineExtensionSource(
         const mechanismComponentEvidence = mechanismRiskReview && mechanismOverlayEvidence
           ? getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)
           : null;
+        const assuranceComponent = archetype === "tbill" ? "lossRecoveryDesign"
+          : archetype === "fiat-cash" || archetype === "commodity-claim" ? "assuranceAndReconciliation" : null;
+        const governingAssuranceKey = assuranceComponent
+          ? `mechanism-risk-review:governing-assurance:${assuranceComponent}` as const : null;
         if (mechanismRiskReview && mechanismOverlayEvidence && mechanismComponentEvidence) {
           reviewEvidence.add({
-            componentKeys: ["mechanism-risk-review"],
+            componentKeys: governingAssuranceKey && assurance.source === "overlay"
+              ? ["mechanism-risk-review", governingAssuranceKey] : ["mechanism-risk-review"],
             sourceId: "safety-score-v9.mechanism-review-overlay",
             reviewedAt: mechanismOverlayEvidence.reviewedAt,
             publishedBy: "unknown",
@@ -400,12 +410,6 @@ export function createSafetyScoreV9BaselineExtensionSource(
           });
         }
         const assuranceReport = meta.proofOfReserves?.latestReport;
-        const assuranceComponent =
-          archetype === "tbill"
-            ? "lossRecoveryDesign"
-            : archetype === "fiat-cash" || archetype === "commodity-claim"
-              ? "assuranceAndReconciliation"
-              : null;
         const assuranceFact = mechanismRiskReview?.archetype === "tbill"
           ? mechanismRiskReview.lossRecoveryDesign
           : mechanismRiskReview?.archetype === "fiat-cash" || mechanismRiskReview?.archetype === "commodity-claim"
@@ -425,9 +429,10 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reviewEvidence.add({
             // An admitted explicit component governs its own quality and clock.
             // Retain the separate report diagnostically, not as a second current source.
-            componentKeys: [hasGoverningComponentReview
-              ? "mechanism-risk-review-history"
-              : `mechanism-risk-review:${assuranceComponent}`],
+            componentKeys: [
+              hasGoverningComponentReview ? "mechanism-risk-review-history" : `mechanism-risk-review:${assuranceComponent}`,
+              ...(governingAssuranceKey && assurance.source === "report" ? [governingAssuranceKey] : []),
+            ],
             sourceId: "stablecoin.proof-of-reserves.latest-report",
             reviewedAt: assuranceReport.publishedAt,
             observedAt: assuranceReport.periodEnd,
