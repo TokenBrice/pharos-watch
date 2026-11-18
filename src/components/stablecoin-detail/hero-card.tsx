@@ -174,7 +174,7 @@ export function HeroIdentityHeader({
   hasSummary?: boolean;
 }) {
   const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
-  const verdictId = isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
+  const verdictId = model.state || isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
   const verdictLine = buildSafetyVerdictLine(reportCard);
   // Labelled actions: what a holder does next (alerts, compare, share), then
   // the quiet report-issue control. Resource links live in Key links.
@@ -211,12 +211,23 @@ export function HeroIdentityHeader({
               </div>
             </div>
           </StablecoinIdentityTransition>
-          <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
+          {/* From sm the variant chip shares the name's row; below it the chip
+              takes its own row, so the name never breaks letter by letter. */}
+          {variantParent && variantChipClass ? (
+            <div className="hidden min-w-0 sm:flex">
+              <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
+            </div>
+          ) : null}
           {/* Below xl the summary rail is absent, so the grade sits beside the name. */}
           <div className="ml-auto shrink-0 self-stretch xl:hidden">
             <SafetyGradeHero reportCard={reportCard} savedGrade={model.savedGrade} read={gradeRead} mobile />
           </div>
         </div>
+        {variantParent && variantChipClass ? (
+          <div className="sm:hidden">
+            <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
+          </div>
+        ) : null}
         {coin.oneLiner ? (
           <p
             className={cn(
@@ -340,7 +351,7 @@ export function HeroCard({ model, keyMetric = null }: HeroCardProps) {
 
   return (
     <Card className="pharos-card-shell gap-0 py-0">
-      <HeroChipRail coin={coin} verdict={verdict} />
+      <HeroChipRail coin={coin} verdict={verdict} state={model.state} />
       <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
       <HeroCardDesktopSection
         {...sectionBaseProps}

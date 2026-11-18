@@ -6,7 +6,7 @@ import type { ReactNode, Ref, RefObject } from "react";
 import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles, Unlink } from "lucide-react";
 import { AiSummary } from "@/components/ai-summary/ai-summary";
 import { BackToSource } from "@/components/back-to-source";
-import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
+import { NoticeStack, placeCoinNotices } from "@/components/coin-notice";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
@@ -14,7 +14,6 @@ import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
-import { HolderAlerts } from "@/components/stablecoin-detail/holder-alerts";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -36,6 +35,7 @@ import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-su
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
 import { formatLiveCardAsOf } from "@/lib/stablecoin-detail-hero-metrics";
 import { alignAnchorAfterHydration, revealAnchorId, revealDeferredSectionsThroughAnchor } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
@@ -128,11 +128,12 @@ function DetailIdentity({
     <>
       {/* The identity header's visible title is the page's only h1. */}
       <BackToSource className="mb-2" />
+      {/* Only the page-defining lanes warn above the identity; a supplemental
+          lane's notice sits under the lead slot (see DetailContent). */}
       <QueryFreshnessNotices
-        error={viewModel.supplyError}
-        hasData={viewModel.supplyHistory.length > 0}
+        error={null}
         onRetry={viewModel.handleRetryAll}
-        queries={viewModel.staleQueries}
+        queries={viewModel.staleQueries.filter((query) => !query.secondary)}
       />
       <HeroIdentityHeader
         heading={heading}
@@ -492,8 +493,15 @@ export function DetailContent({
   const backingHeadline = sharedModules.backingMetrics?.visual?.kind === "coverage-ratio"
     ? sharedModules.backingMetrics
     : null;
+  const frozen = viewModel.coin.status === "frozen";
   // A live (non-archived, fixed-peg) depeg puts the resolver outlook first.
-  const activeDepeg = viewModel.coin.status !== "frozen" && !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
+  const activeDepeg = !frozen && !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
+  // The coin's notices by place in the coin-state precedence; the live outlook supersedes non-danger
+  // depeg notices, and the reader's day clock retires spent deadlines (none before hydration).
+  const dayNowMs = useUtcDayNowMs();
+  const notices = placeCoinNotices(viewModel.coin.notices, { liveDepeg: activeDepeg, nowSec: dayNowMs === null ? null : dayNowMs / 1000 });
+  // While a current danger or paused notice is open the editorial note folds: it may not reflect it.
+  const openNotice = frozen ? null : notices.critical[0] ?? notices.paused[0] ?? null;
   const heroKeyMetric = backingHeadline
     ? {
         key: "backing-ratio",
@@ -502,6 +510,8 @@ export function DetailContent({
         value: backingHeadline.headline.value,
         subValue: backingHeadline.headline.basis,
         colorClass: "text-foreground",
+        // The xl rail's Backing KPI shows the same ratio beside the hero: once per fold.
+        railTwin: true,
       }
     : null;
   const hasVariantCard = variantRelationshipCard !== null;
@@ -542,38 +552,41 @@ export function DetailContent({
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
         <div className="min-w-0">
           <div ref={heroRef} className="space-y-4">
-            {/* A live depeg leads the dossier: the resolver's forecast sits above
-                the figures, inside the first fold at every width. Without a
-                published forecast the plain active-depeg alert takes its place. */}
-            {activeDepeg ? (
-              <ActiveDepegOutlook
-                stablecoinId={viewModel.id}
-                symbol={viewModel.coin.symbol}
-                fallback={<HolderAlerts activeDepeg symbol={viewModel.coin.symbol} />}
-              />
-            ) : null}
-            <HeroCard model={heroModel} keyMetric={heroKeyMetric} />
-            {/* A frozen coin leads with its obituary; its past danger notice
-                follows as a muted record so the story is not told in red first. */}
-            {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
+            {/* One lead slot above the figures, in the coin-state precedence
+                (`resolveCoinStates`): the lifecycle record, current danger
+                notices, the live depeg outlook, then paused operations. */}
+            {frozen && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
               <FrozenStateBanner
                 symbol={viewModel.coin.symbol}
                 frozenAt={viewModel.coin.frozenAt}
                 obituary={viewModel.coin.obituary}
               />
             ) : null}
-            <ExploitNoticeBanner
-              notices={viewModel.coin.notices}
-              tone={viewModel.coin.status === "frozen" ? "archive" : "alert"}
-            />
             <ListingStateBanner coin={viewModel.coin} />
-            {viewModel.coin.status === "frozen" ? null : (
-              <HolderAlerts notices={viewModel.coin.notices} symbol={viewModel.coin.symbol} />
-            )}
+            {/* A frozen coin's past danger notice follows its obituary as a muted record. */}
+            <NoticeStack notices={notices.critical} archive={frozen} />
+            {activeDepeg ? (
+              <ActiveDepegOutlook stablecoinId={viewModel.id} symbol={viewModel.coin.symbol} deviationBps={viewModel.deviationBps} />
+            ) : null}
+            {frozen ? null : <NoticeStack notices={notices.paused} />}
+            <HeroCard model={heroModel} keyMetric={heroKeyMetric} />
+            {/* Deadlines, standing caveats and info, then resolved history. A
+                frozen archive keeps its non-danger notices in its Risk-zone record. */}
+            {frozen ? null : <NoticeStack notices={notices.rest} />}
+          </div>
+          {/* A supplemental lane's public warning never outranks the lead slot. */}
+          <div className="mt-4 space-y-4 empty:hidden">
+            <QueryFreshnessNotices
+              error={viewModel.supplyError}
+              hasData={viewModel.supplyHistory.length > 0}
+              onRetry={viewModel.handleRetryAll}
+              queries={viewModel.staleQueries.filter((query) => query.secondary)}
+              secondary
+            />
           </div>
           {viewModel.summary ? (
             <div className="mt-4">
-              <AiSummary {...viewModel.summary} claimValues={claimValues} />
+              <AiSummary {...viewModel.summary} claimValues={claimValues} openNotice={openNotice} />
             </div>
           ) : null}
           {/* A direct child of the main column, so `position: sticky` holds

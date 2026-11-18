@@ -35,6 +35,21 @@ describe("detail verdict lane", () => {
     expect(date.parentElement!.querySelectorAll("a").length).toBeGreaterThan(0);
   });
 
+  it("tones the verdict by archetype and lets a coin state lead", () => {
+    const coin = makeStablecoinMeta({ id: "mai-qidao", name: "MAI", symbol: "MAI" });
+    const { container, rerender } = render(<HeroChipRail coin={coin} verdict={{ archetype: "distressed", label: "Distressed" }} />);
+    const lane = () => container.querySelector("[data-hero-verdict-lane]")!;
+    expect(lane().className).toContain("text-state-danger");
+    expect(lane().innerHTML).not.toContain("badge-check");
+    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "decentralized-benchmark", label: "Decentralized Benchmark" }} />);
+    expect(lane().innerHTML).toContain("badge-check");
+    const paused = { kind: "paused", notice: { type: "warning", title: "Mint and redemption paused" } } as const;
+    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "distressed", label: "Distressed" }} state={paused} />);
+    expect(lane().id).toBe("hero-verdict-mai-qidao");
+    expect(lane().querySelector("[data-coin-state='paused']")?.textContent).toContain("Paused");
+    expect(lane().textContent).not.toContain("Distressed");
+  });
+
   it("renders no lane and no chip for the internal institutional-default archetype", () => {
     const coin = makeStablecoinMeta({ id: "usdc-circle", name: "USD Coin", symbol: "USDC" });
     const { container } = render(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);

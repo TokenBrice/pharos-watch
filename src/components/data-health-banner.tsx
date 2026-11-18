@@ -15,6 +15,8 @@ interface DataHealthBannerProps {
   entries: DataHealthInfo[];
   showFreshTimestamp?: boolean;
   onRetry?: () => void;
+  /** A supplemental lane: its failure is a caution, never the page's red alarm. */
+  secondary?: boolean;
 }
 
 function formatAffectedLabels(labels: string[]): string {
@@ -30,6 +32,7 @@ export function DataHealthBanner({
   entries,
   showFreshTimestamp = false,
   onRetry,
+  secondary = false,
 }: DataHealthBannerProps) {
   const hydrated = useHydrated();
   const formatTimestamp = (timestamp: number) =>
@@ -94,7 +97,7 @@ export function DataHealthBanner({
       role="status"
       aria-live="polite"
       data-health-state={merged.state}
-      className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${DATA_HEALTH_COLORS[merged.state]}`}
+      className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${DATA_HEALTH_COLORS[secondary && merged.state === "error" ? "stale" : merged.state]}`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="font-medium">{title}</p>

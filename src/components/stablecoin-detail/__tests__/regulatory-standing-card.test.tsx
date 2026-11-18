@@ -140,7 +140,7 @@ describe("RegulatoryStandingCard", () => {
     expect(failed.querySelector("svg")).toBeNull();
     expect(unrecorded.querySelector("svg")).toBeNull();
     expect(new Set([published.textContent, failed.textContent, unrecorded.textContent]).size).toBe(3);
-    expect(hasToneClass(unrecorded.firstElementChild, SEVERITY_TONE_CLASS.watch.text)).toBe(false);
+    expect(hasToneClass(unrecorded.firstElementChild, SEVERITY_TONE_CLASS.caution.text)).toBe(false);
   });
 
   it("reads a named attestor's slow cadence as a watch gap, never as 'Not found'", () => {
@@ -164,7 +164,7 @@ describe("RegulatoryStandingCard", () => {
     expect(attested.querySelector("svg")).toBeNull();
     expect(notFound.textContent).toBeTruthy();
     expect(attested.textContent).not.toContain(notFound.textContent);
-    expect(hasToneClass(attested.firstElementChild, SEVERITY_TONE_CLASS.watch.text)).toBe(true);
+    expect(hasToneClass(attested.firstElementChild, SEVERITY_TONE_CLASS.caution.text)).toBe(true);
     // Who attests, and how often, rides with the value for hover and assistive tech.
     expect(attested.textContent).toContain("BDO Italia");
   });

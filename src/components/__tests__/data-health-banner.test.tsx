@@ -53,6 +53,11 @@ describe("DataHealthBanner", () => {
   it("warns when a dataset is missing with nothing retained", () => {
     expect(render({ hasData: false, dataUpdatedAt: 0, error: new Error("boom") })).toContain("Refresh failed");
     expect(render({ hasData: false, dataUpdatedAt: 0 })).toContain("Waiting for initial data");
+    // A supplemental lane's failure reads as a caution.
+    const failed = derive({ hasData: false, dataUpdatedAt: 0, error: new Error("boom") });
+    const secondary = renderToStaticMarkup(<DataHealthBanner entries={[failed]} secondary />);
+    expect(secondary).toContain("Refresh failed");
+    expect(secondary).not.toBe(renderToStaticMarkup(<DataHealthBanner entries={[failed]} />));
   });
 
   it("names only the publicly material datasets", () => {

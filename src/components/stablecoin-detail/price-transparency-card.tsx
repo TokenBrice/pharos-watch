@@ -430,7 +430,7 @@ export function PriceTransparencyCard({
     : sourceDepthCount >= SOURCE_DEPTH_TARGET
       ? SEVERITY_TONE_CLASS.ok
       : sourceDepthCount === SOURCE_DEPTH_TARGET - 1
-        ? SEVERITY_TONE_CLASS.watch
+        ? SEVERITY_TONE_CLASS.caution
         : SEVERITY_TONE_CLASS.neutral;
   const sourceDepthLabel = sourceProvenanceUnread
     ? "Source depth unavailable"

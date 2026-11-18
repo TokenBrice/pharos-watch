@@ -23,9 +23,12 @@ function isExcludedWhileUnsettled(query: StaleQuery): boolean {
 export function StaleDataBanner({
   queries,
   onRetry,
+  secondary,
 }: {
   queries: readonly StaleQuery[];
   onRetry?: () => void;
+  /** Supplemental lanes render their failure as a caution (see `DataHealthBanner`). */
+  secondary?: boolean;
 }) {
   const inputs = queries.filter((q) => !isExcludedWhileUnsettled(q)).map((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
@@ -43,5 +46,5 @@ export function StaleDataBanner({
   const nowMs = useFreshnessBoundary(inputs);
   const health = inputs.map(({ query: q, ...input }) => deriveDataHealth(input, nowMs ?? q.dataUpdatedAt));
 
-  return <DataHealthBanner entries={health} onRetry={queries.some((query) => query.error) ? onRetry : undefined} />;
+  return <DataHealthBanner entries={health} onRetry={queries.some((query) => query.error) ? onRetry : undefined} secondary={secondary} />;
 }
