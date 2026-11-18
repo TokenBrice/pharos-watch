@@ -1201,7 +1201,7 @@ describe("crawlCoin DexScreener hardening", () => {
           ["USDT", 0.999, 10_000, 20_000, 25_000, "tether"],
         ].map(([target, price, volume, down, up, targetCoinId]) => ({
           base: "USDC", target, market: { name: "Kinesis", identifier: "kinesis" },
-          converted_last: { usd: price }, converted_volume: { usd: volume },
+          last_traded_at: "2023-11-14T20:13:20Z", converted_last: { usd: price }, converted_volume: { usd: volume },
           cost_to_move_down_usd: down, cost_to_move_up_usd: up, target_coin_id: targetCoinId,
           is_anomaly: false, is_stale: false, trust_score: null,
         })),
@@ -1239,7 +1239,7 @@ describe("crawlCoin DexScreener hardening", () => {
         lockedLiqPct: null,
         rawJson: null,
         discoveredAt: expect.any(Number),
-        refreshedAt: expect.any(Number),
+        refreshedAt: 1_699_992_800,
       },
     ]);
     const tickerFetchOptions = vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[3] as
@@ -1259,6 +1259,7 @@ describe("crawlCoin DexScreener hardening", () => {
             base: "USD",
             target: "USD",
             market: { name: "Kinesis", identifier: "kinesis" },
+            last_traded_at: "2023-11-14T20:13:20Z",
             converted_last: { usd: 1 },
             converted_volume: { usd: 20_000 },
             cost_to_move_down_usd: 40_000,

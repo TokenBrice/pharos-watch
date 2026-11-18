@@ -5,6 +5,8 @@ import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexMarketMark } from "../../lib/dex-api-token-pricing";
+import { createDexMeasuredValuationAdmission, DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-execution/valuation-admission";
 import { isCurveCompositeAdapterProfileId, matchesCurveCompositeTarget } from "@shared/lib/curve-composite-policies";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import { applyDexMeasuredExecutionGate, buildDexMeasuredExecutionRetainedRoutePools, joinDexMeasuredExecutionEvidence, loadDexMeasuredExecutionJoinEvidence, releaseDexMeasuredExecutionProofFields, stripDexMeasuredExecutionInternalFields, type DexMeasuredExecutionJoinDiagnostics } from "../measured-execution/join";
@@ -14,6 +16,7 @@ import { buildDexMeasuredTargetFingerprintIndex, resolveDexMeasuredTargetForReta
 import { computeDurabilityScore, computeLiquidityScore, initLiquidityFallbackCounters } from "./pool-helpers";
 import {
   accumulateGlobalAggregate,
+  netGlobalCurveBaseLpOverlap,
   applyPoolVolumeEligibility,
   quarantineProtocolTvlOutliers,
   classifyCoverage,
@@ -164,6 +167,8 @@ export async function computeStablecoinScores(
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
   measuredTargetPublicationMode: MeasuredTargetPublicationMode = "active-and-shadow",
   registryEvaluatedAtSec = routeObservedAtSec,
+  closureValuationRejectedAssetIds: ReadonlySet<string> = new Set(),
+  closureValuationMarketMarks?: ReadonlyMap<string, DexMarketMark>,
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   scoredMetrics: Map<string, LiquidityMetrics>;
@@ -183,6 +188,18 @@ export async function computeStablecoinScores(
   const initiallyResolvedPools = new WeakSet<LiquidityMetrics["topPools"][number]>();
   const routeRemovalEvidence = new Map<string, DexRouteRemovalEvidence>();
   const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
+  const valuation = createDexMeasuredValuationAdmission(routeObservedAt, closureValuationRejectedAssetIds, closureValuationMarketMarks);
+  const valuationRejections = new Map<string, Map<string, string>>();
+  function rememberValuationRejection(target: DexMeasuredExecutionTarget): true {
+    const pools = valuationRejections.get(target.stablecoinId) ?? new Map();
+    pools.set(canonicalExitRouteScopedKey(target.chain, target.poolId), DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE);
+    valuationRejections.set(target.stablecoinId, pools);
+    return true;
+  }
+  const rejectsStagedTarget = (target: DexMeasuredExecutionTarget) =>
+    valuation.rejectsStagedTarget(target) && rememberValuationRejection(target);
+  const rejectsQuotedTarget = (target: DexMeasuredExecutionTarget, history?: Parameters<typeof valuation.rejectsQuotedTarget>[1]) =>
+    valuation.rejectsQuotedTarget(target, history) && rememberValuationRejection(target);
   // The stage pins registry admission and every coin/global volume summary to
   // the same read-consumption basis, independently of quote no-lookahead.
   const volumeClock: DexVolumeClock = {
@@ -262,7 +279,9 @@ export async function computeStablecoinScores(
       const existingPacketTargets = pool.extra?.measuredExecutionTargets;
       if (existingPacketTargets) {
         pool.extra = { ...(pool.extra ?? {}) };
+        const valuationRejected = existingPacketTargets.some(rejectsStagedTarget);
         if (
+          valuationRejected ||
           existingPacketTargets.length !== 2 ||
           existingPacketTargets.some((target) => target.poolId !== existingPacketTargets[0]!.poolId)
         ) {
@@ -270,6 +289,7 @@ export async function computeStablecoinScores(
           delete pool.extra.measuredExecutions;
           delete pool.extra.measuredExecutionProfiles;
           delete pool.extra.measuredExecutionDiagnostics;
+          if (valuationRejected) applyDexMeasuredExecutionGate(pool, "invalid-observation");
         } else {
           pool.extra.measuredExecutionTargets = existingPacketTargets.map((target) => ({
             ...target,
@@ -315,8 +335,9 @@ export async function computeStablecoinScores(
       if (!adapterProfileId) continue;
 
       pool.extra = { ...(pool.extra ?? {}) };
+      const valuationRejected = candidate != null && rejectsStagedTarget(candidate);
       if (
-        !candidate ||
+        valuationRejected || !candidate ||
         candidate.adapterProfileId !== adapterProfileId ||
         (isCurveCompositeAdapterProfileId(candidate.adapterProfileId)
           ? candidate.stablecoinId !== id || !matchesCurveCompositeTarget(candidate)
@@ -326,10 +347,12 @@ export async function computeStablecoinScores(
         delete pool.extra.measuredExecution;
         delete pool.extra.measuredExecutionProfile;
         delete pool.extra.measuredExecutionPhysicalPoolId;
-        applyDexMeasuredExecutionGate(pool, "target-unresolved");
-        pool.extra.measuredExecutionDiagnostic = { adapterProfileId };
+        applyDexMeasuredExecutionGate(pool, valuationRejected ? "invalid-observation" : "target-unresolved");
+        pool.extra.measuredExecutionDiagnostic = {
+          adapterProfileId, ...(valuationRejected ? { detail: DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } : {}),
+        };
         incrementReason(getMeasuredTargetFunnelGroup(targetFunnelGroups, adapterProfileId, pool.chain).dropReasons,
-          !candidate ? unresolvedReason : "invalid-descriptor");
+          valuationRejected ? DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE : !candidate ? unresolvedReason : "invalid-descriptor");
         continue;
       }
       pool.extra.measuredExecutionTarget = {
@@ -358,7 +381,7 @@ export async function computeStablecoinScores(
         (target) =>
           target.adapterProfileId === "uniswap-v3-quoter-v2" &&
           target.chain === "bsc" &&
-          !isDexMeasuredExecutionTargetScoreEligible(target),
+          !isDexMeasuredExecutionTargetScoreEligible(target) && !rejectsStagedTarget(target),
       )
       .map((target) => [target.targetId, target] as const),
   );
@@ -431,11 +454,13 @@ export async function computeStablecoinScores(
     poolsByStablecoin: preparedRetainedPools,
     evidence: joinEvidence,
     nowSec: routeObservedAt,
+    rejectsQuotedTarget,
   });
   const retainedMeasuredRoutePools = buildDexMeasuredExecutionRetainedRoutePools({
     poolsByStablecoin: preparedRetainedPools,
     evidence: joinEvidence,
     nowSec: routeObservedAt,
+    rejectsQuotedTarget,
   });
   for (const pools of preparedRetainedPools.values()) {
     releaseDexMeasuredExecutionProofFields(pools);
@@ -454,8 +479,16 @@ export async function computeStablecoinScores(
       [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
       retainedMeasuredRoutePools.get(id) ?? [],
     );
-    const removalEvidence: DexRouteRemovalEvidence = { omittedRouteIds: new Set(), poolReasons: new Map() };
+    const pinnedCurveStableSwapPools = new Set<string>();
+    const removalEvidence: DexRouteRemovalEvidence = {
+      omittedRouteIds: new Set(), poolReasons: new Map(),
+      closureValuationRejectedAssetIds: valuation.rejectedQuoteAssetIds,
+    };
     for (const pool of routeObservationPoolSelection.pools) {
+      const model = pool.extra?.ammExecutionModel;
+      if (model?.source === "curve" && model.invariant === "stableswap" && model.capture) {
+        pinnedCurveStableSwapPools.add(canonicalExitRouteScopedKey(pool.chain, pool.poolId));
+      }
       const gate = pool.extra?.executionCapabilityGate;
       if (gate?.family === "measured-execution" && (gate.reason === "target-unresolved" || gate.reason === "stale-observation")) {
         removalEvidence.poolReasons.set(canonicalExitRouteScopedKey(pool.chain, pool.extra?.measuredExecutionPhysicalPoolId ?? pool.poolId),
@@ -468,6 +501,16 @@ export async function computeStablecoinScores(
         removalEvidence.poolReasons.set(canonicalExitRouteScopedKey(pool.chain, pool.poolId), `invalid-model:${issues[0]}`);
       },
     });
+    const rejectedPools = valuationRejections.get(id);
+    if (rejectedPools?.size) {
+      baseRouteResult.coverage.unsupportedReasons[DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE] = rejectedPools.size;
+      for (const [key, reason] of rejectedPools) removalEvidence.poolReasons.set(key, reason);
+    }
+    for (const route of baseRouteResult.observations) {
+      if (route.evidenceKind !== "reserve-based-amm-simulation" || route.scope.kind !== "chain-contract" ||
+        !pinnedCurveStableSwapPools.has(canonicalExitRouteScopedKey(route.scope.chain, route.scope.contractOrPoolId))) continue;
+      for (const point of route.capacityCurve ?? []) delete point.executionCostBps;
+    }
     const routeObservationResult = applyDexRouteObservationBounds(id, baseRouteResult, routeSelectionDiagnostics);
     removalEvidence.omittedRouteIds = collectDexRoutePackingOmissions(baseRouteResult.observations, routeObservationResult.observations);
     routeRemovalEvidence.set(id, removalEvidence);
@@ -555,6 +598,7 @@ export async function computeStablecoinScores(
   // External protocol TVL remains a fraud-observation diagnostic, not a second
   // rewrite of the retained graph. Headline, breakdowns and volume coverage must
   // all describe the same deduped pools after named source admission.
+  globalTotalTvl -= netGlobalCurveBaseLpOverlap(seenPoolTvl, globalProtocolTvl, globalChainTvl);
   let globalProtocolOverCapUsd = 0;
   for (const [proto, tvl] of Object.entries(globalProtocolTvl)) {
     const cap = protocolTvlCaps.get(proto);

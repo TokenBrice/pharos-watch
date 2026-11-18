@@ -5,7 +5,16 @@
  * can import them without creating a runtime/type import cycle.
  */
 
-export interface DexPriceChallengerLoadRow {
+import type { DexPriceLineage } from "./price-lineage";
+
+/** Probe once per run so both pre-0311 databases and old Worker writes remain readable. */
+export async function hasChallengerPriceLineageColumn(db: D1Database): Promise<boolean> {
+  const column = await db.prepare("SELECT name FROM pragma_table_info('dex_price_challenger_payloads_v2') WHERE name = 'price_lineage_json'")
+    .first<{ name: string }>();
+  return column?.name === "price_lineage_json";
+}
+
+export interface DexPriceChallengerLoadRow extends DexPriceLineage {
   stablecoinId: string;
   poolId: string;
   chain: string;

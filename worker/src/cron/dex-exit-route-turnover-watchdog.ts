@@ -3,19 +3,24 @@ import { z } from "zod";
 import {
   DexExitEvidenceKindSchema,
   DexExitRouteObservationsSchema,
+  ExitRouteObservationCoverageSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   type DexExitEvidenceKind,
+  type DexExitRouteObservation,
 } from "@shared/types/exit-route";
 import { throwIfAborted } from "../lib/abort";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, prepareCacheUpsert, type CacheEntryWrite } from "../lib/db-cache";
+import { executeAtomicBatch } from "../lib/db";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { parseJson } from "../lib/json-parse";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { incrementReason, physicalOutputKey } from "./dex-liquidity/route-telemetry";
 
-export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
+const LEGACY_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
+export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v2";
 /**
  * One alert per alert episode. The episode flag is committed only after
  * transport accepts the durable pending payload.
@@ -146,47 +151,76 @@ interface TurnoverEvaluation {
   evidenceKindChanges: EvidenceKindChange[];
 }
 
-function parsePublishedRouteEvidence(row: PublishedRouteRow): RouteEvidence[] {
-  if (row.score_components_json === null) return [];
-  const parsed = parseJson(row.score_components_json);
-  if (!parsed.ok || parsed.value === null || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
-    throw new Error(`Invalid DEX score details for turnover watchdog (${row.stablecoin_id})`);
-  }
-  const rawObservations = (parsed.value as { exitRouteObservations?: unknown }).exitRouteObservations;
-  if (rawObservations == null) return [];
-  const observations = DexExitRouteObservationsSchema.safeParse(rawObservations);
-  if (!observations.success) {
-    throw new Error(`Invalid DEX exit-route observations for turnover watchdog (${row.stablecoin_id})`);
-  }
-  const seen = new Set<string>();
-  const routes = observations.data.map((observation) => {
-    if (seen.has(observation.routeId)) {
-      throw new Error(`Duplicate DEX exit-route id for turnover watchdog (${row.stablecoin_id})`);
-    }
-    seen.add(observation.routeId);
-    const evidenceKind = DexExitEvidenceKindSchema.safeParse(observation.evidenceKind);
-    if (!evidenceKind.success) {
-      throw new Error(`Invalid DEX exit-route evidence kind for turnover watchdog (${row.stablecoin_id})`);
-    }
-    return {
-      routeId: observation.routeId,
-      evidenceKind: evidenceKind.data,
-    };
-  });
-  return routes.sort((left, right) => left.routeId.localeCompare(right.routeId));
+function canonicalRouteKey(observation: DexExitRouteObservation): string | null {
+  if (observation.scope.kind === "chain-contract") return physicalOutputKey(observation);
+  if (observation.scope.kind !== "venue" || observation.output.kind !== "fiat") return null;
+  const market = observation.commonModeKeys.find((key) => key.startsWith("pool:"));
+  return market ? JSON.stringify([market, observation.output.currency?.toUpperCase()]) : null;
 }
 
-function buildRouteSnapshot(generationId: string, rows: readonly PublishedRouteRow[]): RouteSnapshot {
+function parsePublishedRouteEvidence(row: PublishedRouteRow): RouteEvidence[] | string {
+  if (row.score_components_json === null) return "missing-score-details";
+  const parsed = parseJson(row.score_components_json);
+  if (!parsed.ok || parsed.value === null || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+    return "invalid-score-details";
+  }
+  const details = parsed.value as {
+    exitRouteObservations?: unknown;
+    exitRouteObservationCoverage?: unknown;
+  };
+  const coverage = ExitRouteObservationCoverageSchema.safeParse(details.exitRouteObservationCoverage);
+  if (!coverage.success) return "missing-or-invalid-route-coverage";
+  if (coverage.data.status !== "populated") return `coverage-${coverage.data.status}`;
+  if (coverage.data.unsupportedReasons.routeObservationPayloadOverflow > 0) return "route-payload-overflow";
+  const observations = DexExitRouteObservationsSchema.safeParse(details.exitRouteObservations);
+  if (!observations.success || observations.data.length !== coverage.data.observationCount) {
+    return "invalid-route-observations";
+  }
+  if (observations.data.length === 0) {
+    return coverage.data.retainedPoolCount === 0 ? [] : "uncertified-empty-route-set";
+  }
+  const operationalGap = Object.entries(coverage.data.unsupportedReasons).find(([reason, count]) =>
+    count > 0 &&
+    (reason === "reference-market-closed-valuation-unavailable" ||
+      /^executionCapabilityGate:[^:]+:(?:transport-unavailable|target-unresolved|quote-failed|quote-missing|budget-deferred|generation-mismatch|stale-observation)$/.test(reason))
+  );
+  if (operationalGap) return operationalGap[0];
+
+  const seen = new Set<string>();
+  const routes = new Map<string, DexExitEvidenceKind>();
+  for (const observation of observations.data) {
+    if (seen.has(observation.routeId)) return "duplicate-route-id";
+    seen.add(observation.routeId);
+    const evidenceKind = DexExitEvidenceKindSchema.safeParse(observation.evidenceKind);
+    const key = canonicalRouteKey(observation);
+    if (!evidenceKind.success || key === null) return "unavailable-route-identity";
+    const previousKind = routes.get(key);
+    if (previousKind === undefined ||
+      DexExitEvidenceKindSchema.options.indexOf(evidenceKind.data) < DexExitEvidenceKindSchema.options.indexOf(previousKind)) {
+      routes.set(key, evidenceKind.data);
+    }
+  }
+  return [...routes].map(([routeId, evidenceKind]) => ({ routeId, evidenceKind }))
+    .sort((left, right) => left.routeId.localeCompare(right.routeId));
+}
+
+function buildRouteSnapshot(
+  generationId: string,
+  rows: readonly PublishedRouteRow[],
+  coverageGapReasons: Record<string, number>,
+): RouteSnapshot {
   const stablecoinIds = new Set<string>();
-  const coins = rows.map((row) => {
+  const coins = rows.flatMap((row) => {
     if (stablecoinIds.has(row.stablecoin_id)) {
       throw new Error(`Duplicate DEX stablecoin row for turnover watchdog (${row.stablecoin_id})`);
     }
     stablecoinIds.add(row.stablecoin_id);
-    return {
-      stablecoinId: row.stablecoin_id,
-      routes: parsePublishedRouteEvidence(row),
-    };
+    const routes = parsePublishedRouteEvidence(row);
+    if (typeof routes === "string") {
+      incrementReason(coverageGapReasons, routes);
+      return [];
+    }
+    return [{ stablecoinId: row.stablecoin_id, routes }];
   });
   coins.sort((left, right) => left.stablecoinId.localeCompare(right.stablecoinId));
   return {
@@ -202,6 +236,15 @@ function parsePreviousRouteSnapshot(value: string): RouteSnapshot | { invalidRea
   const snapshot = RouteSnapshotSchema.safeParse(parsed.value);
   if (!snapshot.success) return { invalidReason: "invalid-schema" };
   return snapshot.data;
+}
+
+function readRouteSnapshot(value: string | undefined): RouteSnapshot | null {
+  if (value === undefined) return null;
+  const snapshot = parsePreviousRouteSnapshot(value);
+  if ("invalidReason" in snapshot) {
+    throw new Error(`Invalid DEX exit-route turnover snapshot: ${snapshot.invalidReason}`);
+  }
+  return snapshot;
 }
 
 function routeMap(routes: readonly RouteEvidence[], stablecoinId: string): Map<string, DexExitEvidenceKind> {
@@ -319,39 +362,52 @@ export async function runDexExitRouteTurnoverWatchdog(
     )
     .first<PublishedGenerationRow>();
   throwIfAborted(signal);
-  const [previousCache, alertStateCache] = await Promise.all([
+  const [previousCache, legacyCache, alertStateCache] = await Promise.all([
     getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal),
+    getCache(db, LEGACY_SNAPSHOT_CACHE_KEY, signal),
     getCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, signal),
   ]);
   throwIfAborted(signal);
 
-  const previous = previousCache === null
-    ? null
-    : parsePreviousRouteSnapshot(previousCache.value);
-  if (previous !== null && "invalidReason" in previous) {
-    // Unread state cannot prove that no historical notification is pending.
-    throw new Error(`Invalid DEX exit-route turnover snapshot: ${previous.invalidReason}`);
-  }
-  const comparable = previous;
+  const comparable = readRouteSnapshot(previousCache?.value);
+  const legacy = readRouteSnapshot(legacyCache?.value);
   let alertState = parseAlertState(alertStateCache?.value);
   let alertSent = false;
   let alertDeliveryFailed = false;
   let alertDeliveryErrorClass: string | null = null;
-  // Legacy snapshots may retain an already acknowledged episode payload.
-  let pendingAlert = alertState.active ? undefined : comparable?.pendingAlert;
+  // Rollback can acknowledge and clear v1 without touching the v2 mirror.
+  const previousPending = legacy ? legacy.pendingAlert : comparable?.pendingAlert;
+  let pendingAlert = alertState.active ? undefined : previousPending;
   const finish = async (
     result: CronResult,
     snapshot: RouteSnapshot | null = comparable,
     alertingComparison: boolean | null = null,
   ): Promise<CronResult> => {
-    const persistSnapshot = async () => {
-      if (snapshot) {
-        const { pendingAlert: _previousPending, ...baseline } = snapshot;
-        await setCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
-          JSON.stringify(pendingAlert ? { ...baseline, pendingAlert } : baseline), signal);
+    const rollbackBaseline = legacy ?? (pendingAlert && { schemaVersion: 1 as const, generationId: pendingAlert.generationId, coins: [] });
+    let writeBaseline = snapshot !== comparable;
+    let savedPending = comparable?.pendingAlert;
+    let savedLegacyPending = legacy?.pendingAlert;
+    const persistDeliveryState = async (episode?: TurnoverAlertState) => {
+      const entries: CacheEntryWrite[] = [];
+      const writeSnapshot = (key: string, baseline: RouteSnapshot) => {
+        entries.push({ key, value: JSON.stringify({ ...baseline, pendingAlert }) });
+      };
+      const pendingJson = JSON.stringify(pendingAlert);
+      if (snapshot && (writeBaseline || JSON.stringify(savedPending) !== pendingJson)) {
+        writeSnapshot(DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, snapshot);
       }
+      if (rollbackBaseline && JSON.stringify(savedLegacyPending) !== pendingJson) {
+        writeSnapshot(LEGACY_SNAPSHOT_CACHE_KEY, rollbackBaseline);
+      }
+      if (episode) {
+        entries.push({ key: DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, value: JSON.stringify(episode) });
+      }
+      await executeAtomicBatch(db, entries.map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })), { signal });
+      writeBaseline = false;
+      savedPending = pendingAlert;
+      savedLegacyPending = pendingAlert;
     };
-    if (snapshot !== comparable || (comparable?.pendingAlert && !pendingAlert)) await persistSnapshot();
+    await persistDeliveryState();
     const recordReceipt = () => recordOperatorAlertReceipt(db, "turnover", {
       nowSec,
       operatorConfigured: options.operatorTelegramCreds != null,
@@ -370,16 +426,15 @@ export async function runDexExitRouteTurnoverWatchdog(
       alertDeliveryErrorClass = delivery.ok ? null : delivery.errorClass ?? "unknown";
       if (delivery.ok) {
         alertState = { active: true, generationId: pendingAlert.generationId, sentAtSec: nowSec };
-        await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
-        alertSent = true;
         pendingAlert = undefined;
-        await persistSnapshot();
+        await persistDeliveryState(alertState);
+        alertSent = true;
       }
       await recordReceipt();
     }
     if (alertingComparison === false && alertState.active) {
       alertState = { active: false, generationId: null, sentAtSec: null };
-      await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
+      await persistDeliveryState(alertState);
     }
     const metadata = JSON.parse(String(result.metadata));
     metadata.operatorAlert = {
@@ -389,7 +444,7 @@ export async function runDexExitRouteTurnoverWatchdog(
       // Provider class (auth, chat_not_found, formatting...) names why Telegram refused it.
       ...(alertDeliveryFailed ? { deliveryErrorClass: alertDeliveryErrorClass } : {}),
     };
-    metadata.pendingAlertCleared = comparable?.pendingAlert != null && pendingAlert == null;
+    metadata.pendingAlertCleared = previousPending != null && pendingAlert == null;
     if (alertDeliveryFailed) metadata.reason = "operator-alert-delivery-failed";
     return { ...result, status: alertDeliveryFailed ? "degraded" : result.status, metadata: JSON.stringify(metadata) };
   };
@@ -398,7 +453,9 @@ export async function runDexExitRouteTurnoverWatchdog(
       status: "skipped_neutral",
       itemCount: 0,
       metadata: { reason: "no-published-dex-generation" },
-    }));
+    }), comparable ?? (legacy && pendingAlert
+      ? { schemaVersion: 1, generationId: legacy.generationId, coins: [] }
+      : null));
   }
   const publishedRows = await db
     .prepare(
@@ -411,7 +468,10 @@ export async function runDexExitRouteTurnoverWatchdog(
     .bind(generation.generation_id)
     .all<PublishedRouteRow>();
   throwIfAborted(signal);
-  const current = buildRouteSnapshot(generation.generation_id, publishedRows.results ?? []);
+  const published = publishedRows.results ?? [];
+  const coverageGapReasons: Record<string, number> = {};
+  const current = buildRouteSnapshot(generation.generation_id, published, coverageGapReasons);
+  const coverageDiagnostics = { coverageGapCoinCount: published.length - current.coins.length, coverageGapReasons };
 
   // The sustain window counts published generations, not watchdog runs: a
   // rerun that still sees the last compared generation must not confirm or
@@ -429,7 +489,7 @@ export async function runDexExitRouteTurnoverWatchdog(
 
   let result: CronResult;
   let nextSnapshot: RouteSnapshot = current;
-  let alertingComparison = false;
+  let alertingComparison: boolean | null = null;
   if (comparable === null) {
     result = createCronResult({
       status: "ok",
@@ -438,7 +498,9 @@ export async function runDexExitRouteTurnoverWatchdog(
         currentGenerationId: current.generationId,
         previousGenerationId: null,
         baselineCreated: true,
-        recoveredFromInvalidBaseline: previous !== null,
+        recoveredFromInvalidBaseline: false,
+        rebasedLegacySnapshot: legacy !== null,
+        ...coverageDiagnostics,
         comparedCoinCount: 0,
         evidenceKindChangedRouteCount: 0,
         alertingCoinCount: 0,
@@ -489,8 +551,7 @@ export async function runDexExitRouteTurnoverWatchdog(
     // A candidate never survives its confirming comparison either way, so it
     // cannot linger.
     const heldCoinIds = new Set(heldCandidates.map((candidate) => candidate.stablecoinId));
-    // Unobserved baselines are retained: a coin absent from this generation
-    // keeps its last observed route set for when the roster returns it.
+    // Unobserved baselines are retained through missing rows or coverage gaps.
     const baselineByCoin = new Map<string, RouteEvidence[]>(
       comparable.coins.map((coin) => [coin.stablecoinId, coin.routes]),
     );
@@ -507,8 +568,8 @@ export async function runDexExitRouteTurnoverWatchdog(
       ...(heldCandidates.length > 0 ? { candidates: heldCandidates } : {}),
     };
     // Comparison advancement must not replace an undelivered historical event.
-    const carriedAlert = comparable.pendingAlert ?? null;
-    alertingComparison = alerting.length > 0;
+    const carriedAlert = previousPending ?? null;
+    alertingComparison = evaluations.length > 0 ? alerting.length > 0 : null;
     if (alertingComparison && !pendingAlert && !alertState.active) {
       pendingAlert = {
         generationId: current.generationId,
@@ -524,6 +585,7 @@ export async function runDexExitRouteTurnoverWatchdog(
       previousGenerationId: comparable.generationId,
       baselineCreated: false,
       comparedCoinCount: evaluations.length,
+      ...coverageDiagnostics,
       changedCoinCount,
       evidenceKindChangedRouteCount,
       alertingCoinCount: alerting.length,
@@ -533,7 +595,7 @@ export async function runDexExitRouteTurnoverWatchdog(
       clearedCandidates: clearedCandidates.slice(0, MAX_WORST_OFFENDERS),
       turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
       minChangedRouteCount: DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES,
-      highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
+      highestObservedTurnover: evaluations[0]?.jaccardDistance ?? null,
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
       carriedPendingAlert: carriedAlert,
       ...(alertingComparison ? { quality: { reason: "dex-route-turnover-threshold" } } : {}),

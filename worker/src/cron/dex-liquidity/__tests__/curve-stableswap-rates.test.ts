@@ -99,7 +99,7 @@ function poolEntry(overrides: Partial<PoolEntry["extra"]> = {}): PoolEntry {
     poolType: "curve-stableswap",
     source: "dl",
     extra: {
-      executionCapabilityGate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
+      executionCapabilityGate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
       curveStableswapRateInputExecutionCandidate: candidate,
       ...overrides,
     },
@@ -211,7 +211,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(model?.tokens[1]?.referencePriceUsd).toBeCloseTo(1.000155068994295, 12);
   });
 
-  it("keeps the rate-bearing gate when the pinned rate array is incomplete", async () => {
+  it("keeps the capability gate when the pinned rate array is incomplete", async () => {
     const state = dependencies({ rates: [10n ** 18n] });
     const pool = poolEntry();
     await run(pool, state);
@@ -221,7 +221,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "incomplete-exact-capture",
     });
   });
 
@@ -307,15 +307,23 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.1488 / 1.0775, 12);
   });
 
-  it("prices a dynamic off-peg pool at its off-balance maximum fee", async () => {
+  it("prices a dynamic off-peg pool with near-equal source marks at its pinned maximum fee", async () => {
     // Live StableSwap-NG pools publish multipliers of 2x-20x; the captured
     // model carries fee * multiplier so the exit capacity stays a lower bound.
     const state = dependencies({ offpegFeeMultiplier: 20_000_000_000n });
-    const pool = poolEntry();
+    const pool = poolEntry({
+      curveStableswapRateInputExecutionCandidate: {
+        ...candidate,
+        coins: candidate.coins.map((coin) => ({ ...coin, referencePriceUsd: 1 })),
+      },
+    });
     await run(pool, state);
 
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0002, 12);
+    expect(pool.extra?.ammExecutionModel?.tokens[0]?.referencePriceUsd).toBeCloseTo(
+      1 / (Number(PINNED_RATES[0]!) / 1e18), 12,
+    );
   });
 
   it("prices a multiplier at or below the fee denominator as the static fee", async () => {
@@ -327,7 +335,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0001, 12);
   });
 
-  it("keeps the rate-bearing gate when the bounded fee reaches the whole trade", async () => {
+  it("keeps the capability gate when the bounded fee reaches the whole trade", async () => {
     const state = dependencies({ fee: 9_000_000_000n, offpegFeeMultiplier: 20_000_000_000n });
     const pool = poolEntry();
     await run(pool, state);
@@ -336,11 +344,11 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "incomplete-exact-capture",
     });
   });
 
-  it("keeps the rate-bearing gate when coin order fails at the pinned block", async () => {
+  it("keeps the capability gate when coin order fails at the pinned block", async () => {
     const state = dependencies({ coinAddresses: [FRXUSD, SFRXUSD] });
     const pool = poolEntry();
     await run(pool, state);
@@ -350,11 +358,11 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "incomplete-exact-capture",
     });
   });
 
-  it("keeps the rate-bearing gate when a base-only capture fails", async () => {
+  it("reports unavailable transport rather than admitting a source model when the capture fails", async () => {
     const state = dependencies({ rates: [10n ** 18n, 10n ** 18n], multicallFails: true });
     const pool = poolEntry();
     await run(pool, state);
@@ -364,7 +372,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "transport-unavailable",
     });
   });
 
@@ -381,7 +389,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "stale-observation",
     });
   });
 
@@ -397,7 +405,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "incomplete-exact-capture",
     });
   });
 
@@ -410,7 +418,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
+      reason: "incomplete-exact-capture",
     });
   });
 });

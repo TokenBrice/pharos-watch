@@ -33,6 +33,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { type SolanaDexNativeGeneration } from "@shared/types/solana-dex-bank";
 import { buildNativeDexExecutionTarget } from "../inventory";
 import { publishNativeDexGeneration } from "../native-generation-store";
+import { createDexMeasuredValuationAdmission } from "../valuation-admission";
 import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
@@ -572,12 +573,25 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ measuredCount: 1, lastKnownGoodCount: 1, gatedCount: 0 });
   });
 
-  it("retains a mature last-known-good route when its pool rotates out of the current shortlist", () => {
-    const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 999], [100_000, 99_900]]);
+  it.each([false, true])("only retains a mature rotated-out route with admitted valuation (EURC closure: %s)", (closed) => {
+    const nowSec = closed ? Date.parse("2026-11-13T22:10:00Z") / 1000 : 2_000;
+    const base = makeV3Target();
+    const eurc = "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c" as const;
+    const measuredTarget = makeV3Target({
+      capturedAt: nowSec - 1_000,
+      ...(closed ? {
+        tokenOut: { ...base.tokenOut, address: eurc, symbol: "EURC", trackedAssetId: undefined },
+        poolTokenAddresses: [base.tokenIn.address, eurc],
+      } : {}),
+    });
+    const { profile } = makeV3LkgRoute([[1_000, 999], [100_000, 99_900]], measuredTarget, nowSec - 940);
+    const { rejectsQuotedTarget } = createDexMeasuredValuationAdmission(nowSec, new Set(), new Map(
+      closed ? [["eurc-circle", { priceUsd: 1, observedAtSec: nowSec - 60, source: "kraken" }]] : [],
+    ));
     const evidence = {
       quoteGenerationId: "quote-generation-latest",
       targetGenerationId: "target-generation-latest",
-      publishedAt: 2_000,
+      publishedAt: nowSec,
       byTargetId: new Map([
         [
           measuredTarget.targetId,
@@ -586,7 +600,8 @@ describe("measured execution join activation", () => {
             latestFailureReason: "quote-missing",
             observationHistory: makeObservationHistory(profile, {
               completeProducerCycleCount: 3,
-              observationWindowEndedAt: 2_000,
+              observationWindowStartedAt: nowSec - 1_000,
+              observationWindowEndedAt: nowSec,
             }),
           }),
         ],
@@ -596,9 +611,22 @@ describe("measured execution join activation", () => {
     const retained = buildDexMeasuredExecutionRetainedRoutePools({
       poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
       evidence,
-      nowSec: 2_000,
+      nowSec,
+      rejectsQuotedTarget,
     });
 
+    if (closed) {
+      expect(buildDexMeasuredExecutionRetainedRoutePools({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]), evidence, nowSec,
+      }).get(measuredTarget.stablecoinId)).toHaveLength(1);
+      expect(retained.size).toBe(0);
+      const pool = makeJoinPool(measuredTarget);
+      expect(joinDexMeasuredExecutionEvidence({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]), evidence, nowSec, rejectsQuotedTarget,
+      })).toMatchObject({ measuredCount: 0, gatedCount: 1 });
+      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toBe("reference-market-closed-valuation-unavailable");
+      return;
+    }
     expect(retained.get(measuredTarget.stablecoinId)).toEqual([
       expect.objectContaining({
         poolId: measuredTarget.poolId,

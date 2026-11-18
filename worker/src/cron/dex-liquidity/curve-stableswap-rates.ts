@@ -2,7 +2,7 @@ import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
 } from "@shared/types/exit-route-identity";
-import type { DexAmmExecutionModel } from "@shared/types/dex-execution";
+import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 import { toTokenUnits } from "@shared/lib/math";
 import { encodeFunctionData, parseAbi } from "viem/utils";
 
@@ -41,14 +41,8 @@ export const CURVE_STABLESWAP_FEE_BOUND = 0.001;
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
 export const CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC = 10 * 60;
 /**
- * Source-stage per-coin USD price spread above which a Curve pool must be read
- * on chain before it can be admitted. StableSwap math assumes pool units
- * exchange near 1:1; rate-bearing pools (sUSDe, sfrxUSD, stUSDS legs) run the
- * invariant on rate-scaled balances the pools endpoint does not expose, and
- * modeling them on raw balances overstated on-chain `get_dy` by 6-24% in live
- * probes. For StableSwap-NG the authoritative answer is `stored_rates()`: a
- * base-only array shows the pool is plain, so this bound remains a
- * source-stage proxy and a non-withholding diagnostic, not a refusal.
+ * Legacy source-model price spread gate. For StableSwap-NG this is only a
+ * diagnostic: pinned `stored_rates()` decides whether to scale the balances.
  */
 export const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
 
@@ -96,19 +90,20 @@ interface CurveRatePoolState {
 }
 
 
-function isRateBearingGate(pool: PoolEntry): boolean {
+function needsCurveNgCapture(pool: PoolEntry): boolean {
   const gate = pool.extra?.executionCapabilityGate;
-  return gate?.family === "curve-stableswap" && gate.reason === "rate-bearing-inputs";
+  return gate?.family === "curve-stableswap" && gate.reason === "incomplete-exact-capture";
 }
 
-function clearCandidate(reference: CandidateReference): void {
+function clearCandidate(reference: CandidateReference, reason?: DexExecutionCapabilityGate["reason"]): void {
   if (!reference.pool.extra) return;
   delete reference.pool.extra.curveStableswapRateInputExecutionCandidate;
   delete reference.pool.extra.curveStableswapPlainAdmissionDiagnostic;
+  if (reason) reference.pool.extra.executionCapabilityGate = { family: "curve-stableswap", reason };
 }
 
-function clearProbe(probe: CurveRateProbe): void {
-  for (const reference of probe.references) clearCandidate(reference);
+function clearProbe(probe: CurveRateProbe, reason?: DexExecutionCapabilityGate["reason"]): void {
+  for (const reference of probe.references) clearCandidate(reference, reason);
 }
 
 function sameCoinLayout(
@@ -316,13 +311,14 @@ async function enrichChain(input: {
   await runPinnedBlockCapture<{
     states: Map<CurveRateProbe, CurveRatePoolState | null>;
     capture: NonNullable<DexAmmExecutionModel["capture"]>;
-  }>({
+  }, DexExecutionCapabilityGate["reason"]>({
     chain: input.chain,
     rpcOptions,
     fetchBlockNumber: input.dependencies.fetchBlockNumber,
     fetchBlockHeader: input.dependencies.fetchBlockHeader,
     nowSec: input.nowSec,
     maxAgeSec: CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
+    freshnessFailureReason: "stale-observation",
     verifyDeployment: async () => ({ ok: true }),
     buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
@@ -335,7 +331,7 @@ async function enrichChain(input: {
           blockNumber,
           captureRpcOptions,
         );
-        if (!results) return { ok: false };
+        if (!results) return { ok: false, reason: "transport-unavailable" };
         const byLabel = mapEvmCaptureResults(results);
         for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
           const probe = probes[batchIndex]!;
@@ -378,9 +374,7 @@ async function enrichChain(input: {
           delete extra.executionCapabilityGate;
           extra.ammExecutionModel = built.model;
           extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-          // A base-only stored_rates() capture shows the NG pool is plain. The
-          // source-stage spread that produced the rate-bearing gate is then
-          // non-withholding evidence, recorded for cron metadata only.
+          // A high source spread on a verified plain pool is diagnostic only.
           const spreadRatio = built.plain
             ? sourcePriceSpreadRatio(reference.candidate)
             : null;
@@ -397,17 +391,19 @@ async function enrichChain(input: {
         }
       }
     },
-    onFailure: () => input.probes.forEach(clearProbe),
+    onFailure: (reason) => {
+      for (const probe of input.probes) clearProbe(probe, reason);
+    },
   });
 }
 
 /**
- * Replace eligible Curve StableSwap-NG rate-bearing gates only after reading
+ * Replace eligible Curve StableSwap-NG gates only after reading
  * balances, stored rates, amplification, fee state (priced at its off-balance
  * maximum), and coin order at one fresh, confirmed block. `stored_rates()`
  * decides the shape: a non-base rate scales the model, while a base-only array
  * shows a plain pool and admits the same exact model unscaled. Every failure
- * keeps the original rate-bearing gate; a source-stage price spread on an
+ * keeps a capability gate; a source-stage price spread on an
  * admitted plain pool remains a diagnostic.
  */
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
@@ -425,13 +421,13 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
       const candidate = pool.extra?.curveStableswapRateInputExecutionCandidate;
       if (!candidate) continue;
       const reference = { stablecoinId, pool, candidate };
-      if (isRateBearingGate(pool) && !hasScoreFacingMeasuredExecution(pool)) references.push(reference);
+      if (needsCurveNgCapture(pool) && !hasScoreFacingMeasuredExecution(pool)) references.push(reference);
       else clearCandidate(reference);
     }
   }
   if (references.length === 0) return;
   if (!input.chainRpcs || !input.sourceGenerationId) {
-    for (const reference of references) clearCandidate(reference);
+    for (const reference of references) clearCandidate(reference, "transport-unavailable");
     return;
   }
 
@@ -474,7 +470,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
       });
     } catch (error) {
       rethrowIfAborted(error, input.signal);
-      for (const probe of probes.values()) clearProbe(probe);
+      for (const probe of probes.values()) clearProbe(probe, "transport-unavailable");
     }
   }
 }

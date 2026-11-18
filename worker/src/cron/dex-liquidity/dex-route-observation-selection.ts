@@ -100,6 +100,20 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
   return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
 }
 
+export function publishedDexRouteCounts(observations: readonly ExitRouteObservation[]) {
+  const eligible = observations.filter((route) => route.scoreEligible);
+  const evidenceCounts: Record<string, number> = {};
+  for (const { evidenceKind } of observations) {
+    evidenceCounts[evidenceKind] = (evidenceCounts[evidenceKind] ?? 0) + 1;
+  }
+  return {
+    observationCount: observations.length,
+    scoreEligibleObservationCount: eligible.length,
+    scoreEligiblePoolCount: new Set(eligible.map(routeObservationPhysicalPoolKey)).size,
+    evidenceCounts,
+  };
+}
+
 // Concentration bounds on the published payload, scaled with
 // MAX_DEX_EXIT_ROUTE_OBSERVATIONS so widening the payload actually widens the
 // evidence basis. Measured on the live surface at the previous 10/6/3/3 setting,
@@ -164,10 +178,7 @@ interface DexRouteObservationPacking {
   maxProtocolConcentration: number;
 }
 
-export function selectDexRouteObservations(
-  observations: readonly ExitRouteObservation[],
-): DexRouteObservationPacking {
-  const ranked = [...observations].sort(observationRank);
+export function createDexRouteObservationPacking() {
   const selected: ExitRouteObservation[] = [];
   const selectedIds = new Set<string>();
   const selectedPhysicalPools = new Set<string>();
@@ -204,6 +215,14 @@ export function selectDexRouteObservations(
     return true;
   };
 
+  return { selected, selectedIds, selectedPhysicalPools, chainCounts, protocolCounts, add };
+}
+
+export function selectDexRouteObservations(
+  observations: readonly ExitRouteObservation[],
+): DexRouteObservationPacking {
+  const ranked = [...observations].sort(observationRank);
+  const { selected, selectedIds, selectedPhysicalPools, chainCounts, protocolCounts, add } = createDexRouteObservationPacking();
   const bestCapacity = ranked.find((observation) => observation.scoreEligible);
   if (bestCapacity) add(bestCapacity, true);
 
@@ -336,28 +355,14 @@ export function applyDexRouteObservationBounds(
     });
   }
 
-  const emittedScoreEligiblePoolKeys = new Set(
-    observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
-  );
-  const evidenceCounts =
-    droppedObservationCount === 0
-      ? result.coverage.evidenceCounts
-      : observations.reduce<Record<string, number>>((counts, observation) => {
-          counts[observation.evidenceKind] = (counts[observation.evidenceKind] ?? 0) + 1;
-          return counts;
-        }, {});
-
   return {
     observations,
     coverage: {
       ...result.coverage,
-      observationCount: observations.length,
-      scoreEligibleObservationCount: observations.filter((observation) => observation.scoreEligible).length,
-      scoreEligiblePoolCount: emittedScoreEligiblePoolKeys.size,
+      ...publishedDexRouteCounts(observations),
       unsupportedPoolCount:
         result.coverage.unsupportedPoolCount +
         selection.omittedScoreEligibleObservationPoolCount,
-      evidenceCounts,
       unsupportedReasons: {
         ...result.coverage.unsupportedReasons,
         ...(selection.omittedScoreEligibleObservationPoolCount > 0

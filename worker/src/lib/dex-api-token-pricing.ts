@@ -1,11 +1,55 @@
 import type { PriceValidationReferences } from "./price-validation";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPriceValidationContext, getFreshReferencePriceForContext, getReferencePriceForContext } from "./price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
+import { logWorkerEvent } from "./structured-log";
 import { resolveTrackedStablecoinId } from "../cron/dex-liquidity/token-resolution";
 import type { DexApiPool, DexApiPoolToken } from "./dex-api-types";
 
 const NATIVE_PLACEHOLDER_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+export interface DexMarketMark {
+  priceUsd: number;
+  observedAtSec: number;
+  observedAtMode?: "upstream";
+  source: string;
+}
+
+export type DexValuationPrices = ReadonlyMap<string, number> & {
+  readonly marketMarks?: ReadonlyMap<string, DexMarketMark>;
+  readonly closureValuationRejectedAssetIds?: Set<string>;
+};
+
+export function getAdmittedDexMarketMark(
+  prices: DexValuationPrices | undefined,
+  stablecoinId: string,
+  assessedAtSec: number,
+): DexMarketMark | null {
+  const mark = prices?.marketMarks?.get(stablecoinId);
+  if (
+    !mark || mark.priceUsd !== prices?.get(stablecoinId) ||
+    !Number.isFinite(mark.priceUsd) || mark.priceUsd <= 0 || !mark.source.trim() ||
+    !Number.isSafeInteger(assessedAtSec) ||
+    !Number.isSafeInteger(mark.observedAtSec) || mark.observedAtSec <= 0 ||
+    mark.observedAtSec > assessedAtSec || assessedAtSec - mark.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+  ) return null;
+  return mark;
+}
+
+export function getClosedReferenceDexValuation(
+  prices: DexValuationPrices | undefined,
+  stablecoinId: string,
+  assessedAtSec: number,
+) {
+  if (!prices?.marketMarks) return null;
+  const market = getReferenceMarket(buildPriceValidationContext({ stablecoinId }).pegCurrency);
+  const closureStart = getReferenceMarketClosureStart(market, assessedAtSec);
+  if (closureStart == null) return null;
+  const mark = getAdmittedDexMarketMark(prices, stablecoinId, assessedAtSec);
+  return { market, closureStart, mark: mark?.observedAtMode === "upstream" && mark.observedAtSec >= closureStart ? mark : null };
+}
 
 export function resolveStablecoinIdForDexApiToken(
   chain: string,
@@ -38,7 +82,7 @@ export function getTokenReferenceUsdPrice(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
-  trackedStablecoinPrices?: Map<string, number>,
+  trackedStablecoinPrices?: DexValuationPrices,
 ): number | null {
   return resolveTokenReferenceUsdPrice(
     token, chain, chainAddressToId, symbolToChainScopedIds, validationReferences, trackedStablecoinPrices,
@@ -52,8 +96,9 @@ export function getMeasuredTokenReferenceUsdPrice(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
-  trackedStablecoinPrices?: Map<string, number>,
+  trackedStablecoinPrices?: DexValuationPrices,
 ): number | null {
+  if (!Number.isSafeInteger(measuredReferenceAtSec) || measuredReferenceAtSec <= 0) return null;
   return resolveTokenReferenceUsdPrice(
     token, chain, chainAddressToId, symbolToChainScopedIds, validationReferences, trackedStablecoinPrices, measuredReferenceAtSec,
   );
@@ -65,7 +110,7 @@ function resolveTokenReferenceUsdPrice(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
-  trackedStablecoinPrices?: Map<string, number>,
+  trackedStablecoinPrices?: DexValuationPrices,
   measuredReferenceAtSec?: number,
 ): number | null {
   const resolved = resolveTrackedStablecoinId(
@@ -73,6 +118,31 @@ function resolveTokenReferenceUsdPrice(
     { chainAddressToId, symbolToChainScopedIds },
   );
   if (resolved.status === "matched" && resolved.stablecoinId) {
+    const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
+    if (measuredReferenceAtSec !== undefined) {
+      const closure = getClosedReferenceDexValuation(trackedStablecoinPrices, resolved.stablecoinId, measuredReferenceAtSec);
+      if (closure) {
+        if (closure.mark) return closure.mark.priceUsd;
+        trackedStablecoinPrices?.closureValuationRejectedAssetIds?.add(resolved.stablecoinId);
+        logWorkerEvent({
+          scope: "lib",
+          level: "info",
+          event: "dex_measured_valuation_unavailable",
+          job: "sync-dex-liquidity",
+          message: "Withheld measured DEX USD valuation during reference closure",
+          metadata: {
+            reason: "reference-market-closed-without-current-token-mark",
+            stablecoinId: resolved.stablecoinId,
+            chain,
+            market: closure.market,
+            assessedAtSec: measuredReferenceAtSec,
+            closureStartedAtSec: closure.closureStart,
+            maxObservationAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+          },
+        });
+        return null;
+      }
+    }
     const trackedPrice = trackedStablecoinPrices?.get(resolved.stablecoinId);
     if (trackedPrice != null && Number.isFinite(trackedPrice) && trackedPrice > 0) {
       return trackedPrice;
@@ -83,7 +153,6 @@ function resolveTokenReferenceUsdPrice(
     // NAV overrides). Missing NAV stays null — never a peg/reference print.
     if (TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
 
-    const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
     return measuredReferenceAtSec === undefined
       ? getReferencePriceForContext(context, validationReferences)
       : getFreshReferencePriceForContext(context, validationReferences, measuredReferenceAtSec);
@@ -99,13 +168,23 @@ function resolveTokenReferenceUsdPrice(
   return null;
 }
 
-function deriveTokenUsdPrice(
+function getPoolRatioMultiplier(pool: DexApiPool, tokenIndex: number): number | null {
+  if (pool.tokens.length !== 2 || pool.price == null || !Number.isFinite(pool.price) || pool.price <= 0) return null;
+  return tokenIndex === 0 ? pool.price : 1 / pool.price;
+}
+
+function getDirectDexTokenUsdPrice(token: DexApiPoolToken): number | null {
+  const price = token.priceUsd;
+  return token.priceUsdDependency == null && price != null && Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function deriveTokenInventoryUsdPrice(
   pool: DexApiPool,
   tokenIndex: number,
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
-  trackedStablecoinPrices?: Map<string, number>,
+  trackedStablecoinPrices?: DexValuationPrices,
 ): number | null {
   const token = pool.tokens[tokenIndex];
 
@@ -122,17 +201,13 @@ function deriveTokenUsdPrice(
     return dependencyPrice * multiplier;
   }
 
-  if (token.priceUsd != null && Number.isFinite(token.priceUsd) && token.priceUsd > 0) {
-    return token.priceUsd;
-  }
+  const directPrice = getDirectDexTokenUsdPrice(token);
+  if (directPrice != null) return directPrice;
 
-  if (pool.price == null || !Number.isFinite(pool.price) || pool.price <= 0) return null;
-  if (pool.tokens.length !== 2) return null;
-
-  const otherIdx = tokenIndex === 0 ? 1 : 0;
-  const otherToken = pool.tokens[otherIdx];
+  const multiplier = getPoolRatioMultiplier(pool, tokenIndex);
+  if (multiplier == null) return null;
   const otherUsdRef = getTokenReferenceUsdPrice(
-    otherToken,
+    pool.tokens[tokenIndex === 0 ? 1 : 0],
     pool.chain,
     chainAddressToId,
     symbolToChainScopedIds,
@@ -140,9 +215,49 @@ function deriveTokenUsdPrice(
     trackedStablecoinPrices,
   );
   if (otherUsdRef == null) return null;
+  return multiplier * otherUsdRef;
+}
 
-  if (tokenIndex === 0) return pool.price * otherUsdRef;
-  return (1 / pool.price) * otherUsdRef;
+export function deriveTokenUsdObservation(
+  pool: DexApiPool,
+  tokenIndex: number,
+  stablecoinId: string,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  trackedStablecoinPrices: DexValuationPrices | undefined,
+  assessedAtSec: number,
+): {
+  price: number;
+  observedAt: number | null;
+  counterpartyPrice?: DexMarketMark & { stablecoinId: string };
+} | null {
+  const token = pool.tokens[tokenIndex];
+  const directPrice = getDirectDexTokenUsdPrice(token);
+  if (directPrice != null) {
+    return {
+      price: directPrice,
+      observedAt: pool.priceObservedAt === undefined ? pool.readStartedAtSec ?? null : pool.priceObservedAt,
+    };
+  }
+
+  const ratioObservedAt = pool.ratioObservedAtSec;
+  if (ratioObservedAt == null || !Number.isSafeInteger(ratioObservedAt) || ratioObservedAt <= 0) return null;
+  if (ratioObservedAt > assessedAtSec || assessedAtSec - ratioObservedAt >= DEX_FRESHNESS_SEC) return null;
+  const multiplier = token.priceUsdDependency?.multiplier ?? getPoolRatioMultiplier(pool, tokenIndex);
+  if (multiplier == null || !Number.isFinite(multiplier) || multiplier <= 0) return null;
+  const otherId = token.priceUsdDependency?.stablecoinId ?? resolveStablecoinIdForDexApiToken(
+    pool.chain, pool.tokens[tokenIndex === 0 ? 1 : 0], chainAddressToId, symbolToChainScopedIds,
+  );
+  if (!otherId || otherId === stablecoinId) return null;
+  const mark = getAdmittedDexMarketMark(trackedStablecoinPrices, otherId, assessedAtSec);
+  if (!mark) return null;
+  const price = multiplier * mark.priceUsd;
+  if (!Number.isFinite(price) || price <= 0) return null;
+  return {
+    price,
+    observedAt: Math.min(ratioObservedAt, mark.observedAtSec),
+    counterpartyPrice: { ...mark, stablecoinId: otherId },
+  };
 }
 
 function derivePoolVolume24hUsd(
@@ -176,7 +291,7 @@ function derivePoolVolume24hUsd(
       continue;
     }
 
-    const derivedPrice = deriveTokenUsdPrice(
+    const derivedPrice = deriveTokenInventoryUsdPrice(
       pool,
       i,
       chainAddressToId,
@@ -199,4 +314,4 @@ function derivePoolVolume24hUsd(
   return candidates.reduce((sum, value) => sum + value, 0) / candidates.length;
 }
 
-export { deriveTokenUsdPrice, derivePoolVolume24hUsd };
+export { deriveTokenInventoryUsdPrice, derivePoolVolume24hUsd };

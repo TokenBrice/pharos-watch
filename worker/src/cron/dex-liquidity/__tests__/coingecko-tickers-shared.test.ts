@@ -72,13 +72,16 @@ describe("CoinGecko tickers shared helpers", () => {
     });
   });
 
-  it("retains the oldest upstream trade clock and bounded local-read fallback across an exchange", () => {
+  it("retains the oldest contributing trade and excludes undated or future prices and volume", () => {
     const summaries = buildCgTickerExchangeSummaries(aggregateCgTickersByExchange([
       makeTicker({ last_traded_at: "2023-11-14T20:13:20Z" }),
       makeTicker({ last_traded_at: "2023-11-14T21:13:20Z" }),
-      makeTicker({ last_traded_at: undefined }),
+      makeTicker({ last_traded_at: undefined, converted_last: { usd: 0.1 } }),
+      makeTicker({ last_traded_at: "2033-11-14T21:13:20Z", converted_last: { usd: 0.1 } }),
     ], 1_700_000_000));
-    expect(buildCgTickerPriceObservations("usdc-circle", summaries)[0]?.observedAt).toBe(1_699_992_800);
+    expect(buildCgTickerPriceObservations("usdc-circle", summaries)[0]).toMatchObject({
+      observedAt: 1_699_992_800, price: 1, observedVolumeUsd: 20_000,
+    });
   });
 
   it("builds price-only observations with plausibility gating", () => {

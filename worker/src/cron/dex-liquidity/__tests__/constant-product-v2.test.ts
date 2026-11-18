@@ -825,11 +825,13 @@ describe("constant-product V2 execution", () => {
     if (scenario === "old-generation") model.capture!.sourceGenerationId = "previous";
     if (scenario === "missing-capture") delete model.capture;
     if (scenario === "thin") result.pool.tvlUsd = 49_999;
+    result.pool.priceCounterparty = { stablecoinId: "usdc-circle", priceUsd: 1, source: "kraken", observedAtSec: 1_699_999_999 };
     const before = { ...result.pool };
     const observed = refreshUsdaV2Price(captureContext(result.metric));
     if (scenario === "observed") {
       expect(observed).toEqual({ status: "observed", priceUsd: 0.998, supportUsd: 3_992_000_000, observedAt: 1_699_999_880 });
       expect(result.pool).toMatchObject({ price: 0.998, priceSource: "direct_api", priceEvidenceTvlUsd: 3_992_000_000 });
+      expect(result.pool.priceCounterparty).toBeUndefined();
     } else {
       expect(observed.status).toBe("unavailable");
       expect(result.pool).toEqual(before);

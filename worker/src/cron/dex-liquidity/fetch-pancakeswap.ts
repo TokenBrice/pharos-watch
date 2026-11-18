@@ -2,7 +2,7 @@ import { chunkArray } from "@shared/lib/collections";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
@@ -90,7 +90,7 @@ function buildPoolsQuery(skip: number): string {
   }`;
 }
 
-function buildPoolHourDataQuery(poolIds: string[], oldestIncludedHourStart: number, currentHourStart: number): string {
+function buildPoolHourDataQuery(poolIds: string[], windowStartSec: number, windowEndSec: number): string {
   const ids = poolIds.map((id) => `"${id.toLowerCase()}"`).join(",");
   return `{
     poolHourDatas(
@@ -99,8 +99,8 @@ function buildPoolHourDataQuery(poolIds: string[], oldestIncludedHourStart: numb
       orderDirection: desc,
       where: {
         pool_in: [${ids}],
-        periodStartUnix_gt: ${oldestIncludedHourStart},
-        periodStartUnix_lte: ${currentHourStart}
+        periodStartUnix_gte: ${windowStartSec},
+        periodStartUnix_lt: ${windowEndSec}
       }
     ) {
       periodStartUnix
@@ -173,7 +173,7 @@ export async function fetchPancakeSwapPools(
     });
   }
 
-  const pools: DexApiPool[] = [];
+  const pools: Array<DexApiPool & { volumeWindowEndSec: number | null }> = [];
   const errors: string[] = [];
   const warnings: string[] = [];
   const degradedChains: string[] = [];
@@ -181,8 +181,8 @@ export async function fetchPancakeSwapPools(
   let pagesFetched = 0;
   let partialChains = 0;
   const pendingPaginationUpdates: PendingDexSourcePaginationUpdate[] = [];
-  const currentHourStart = Math.floor(Date.now() / 1000 / 3600) * 3600;
-  const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
+  const windowEndSec = Math.floor(Date.now() / 1000 / HOUR_SECONDS) * HOUR_SECONDS;
+  const windowStartSec = windowEndSec - DAY_SECONDS;
 
   for (const { chain, subgraphId } of Object.values(PANCAKESWAP_V3_SUBGRAPHS)) {
     throwIfAborted(signal);
@@ -227,7 +227,7 @@ export async function fetchPancakeSwapPools(
           try {
             const hourData = await fetchSubgraphJson<{ poolHourDatas?: PoolHourData[] }>(
               subgraphUrl,
-              buildPoolHourDataQuery(poolIdBatch, oldestIncludedHourStart, currentHourStart),
+              buildPoolHourDataQuery(poolIdBatch, windowStartSec, windowEndSec),
               signal,
             );
             if (!Array.isArray(hourData.poolHourDatas)) {
@@ -238,7 +238,11 @@ export async function fetchPancakeSwapPools(
             for (const row of hourData.poolHourDatas) {
               const poolId = row.pool.id.toLowerCase();
               const volume = parseFloat(row.volumeUSD);
-              if (!Number.isFinite(volume) || volume < 0) {
+              if (
+                !Number.isFinite(volume) || volume < 0 ||
+                row.periodStartUnix % HOUR_SECONDS !== 0 ||
+                row.periodStartUnix < windowStartSec || row.periodStartUnix >= windowEndSec
+              ) {
                 malformedPoolIds.add(poolId);
                 continue;
               }
@@ -282,6 +286,7 @@ export async function fetchPancakeSwapPools(
           const reserve1 = parseFloat(pool.totalValueLockedToken1);
           // DexApiPool.price is token1 per token0 — the ratio the subgraph publishes as token1Price.
           const token0PerToken1Price = parseFloat(pool.token1Price);
+          const volumeObserved = volumeObservedPoolIds.has(pool.id.toLowerCase());
 
           pools.push({
             source: "pancakeswap",
@@ -306,9 +311,8 @@ export async function fetchPancakeSwapPools(
                 : null,
             tvlUsd,
             // An answered query with no hour rows is a measured quiet day (0).
-            volume24hUsd: volumeObservedPoolIds.has(pool.id.toLowerCase())
-              ? volume24hByPool.get(pool.id.toLowerCase()) ?? 0
-              : null,
+            volume24hUsd: volumeObserved ? volume24hByPool.get(pool.id.toLowerCase()) ?? 0 : null,
+            volumeWindowEndSec: volumeObserved ? windowEndSec : null,
             feeRate: Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 1_000_000 : null,
             balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
           });

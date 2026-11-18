@@ -1,5 +1,6 @@
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { isReviewedYouvesPoolAddress } from "../dex-discovery/crawl-tezos-pools";
 import type { StagedPool } from "../dex-discovery/types";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
@@ -42,6 +43,9 @@ import {
 } from "./pool-identity";
 import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 import { resolveRegistryPools, type RegistryPoolView } from "./registry-resolver";
+import {
+  getHorizonValuationAt, getRegistryCurveOverlap, getRegistryPriceObservedAt, isCurveWriteback,
+} from "./registry-writeback-evidence";
 import { DEX_VOLUME_TRADE_VERIFIED_ZERO_SOURCES } from "./constants";
 import { isDeadPool } from "./scoring-helpers";
 import { buildChainAddressKey } from "./token-resolution";
@@ -102,15 +106,22 @@ function toBoolean(value: number | boolean | null): boolean | null {
 }
 
 function toStagedPool(row: StagedPoolRow): StagedPool {
+  const refreshedAt = coerceFiniteNumber(row.refreshed_at) ?? 0;
+  const horizonMarketClock = row.source === "horizon" ? getHorizonValuationAt(row.raw_json, refreshedAt) : null;
+  const poolId = canonicalExitRouteScopedKey(row.chain, row.pool_id);
+  const withholdTezosRatioPrice = row.source === "tezos" && (
+    row.pool_type === "tezos-flat-curve" ||
+    (poolId.startsWith("tezos:") && isReviewedYouvesPoolAddress(poolId.slice("tezos:".length)))
+  );
   return {
-    poolId: canonicalExitRouteScopedKey(row.chain, row.pool_id),
+    poolId,
     stablecoinId: row.stablecoin_id,
     source: row.source,
     chain: row.chain,
     protocol: row.protocol,
     dexId: row.dex_id,
     symbol: row.symbol,
-    tvlUsd: coerceFiniteNumber(row.tvl_usd),
+    tvlUsd: row.source === "horizon" && horizonMarketClock == null ? null : coerceFiniteNumber(row.tvl_usd),
     volume24h: coerceFiniteNumber(row.volume_24h),
     qualityMultiplier: coerceFiniteNumber(row.quality_multiplier),
     poolType: row.pool_type,
@@ -120,11 +131,14 @@ function toStagedPool(row: StagedPoolRow): StagedPool {
     baseToken: row.base_token,
     quoteToken: row.quote_token,
     quoteSymbol: row.quote_symbol,
-    priceUsd: coerceFiniteNumber(row.price_usd),
+    priceUsd: row.source === "direct_api" ||
+      (row.source === "horizon" && horizonMarketClock == null) || withholdTezosRatioPrice
+      ? null
+      : coerceFiniteNumber(row.price_usd),
     lockedLiqPct: coerceFiniteNumber(row.locked_liq_pct),
     rawJson: row.raw_json ?? null,
     discoveredAt: coerceFiniteNumber(row.discovered_at) ?? 0,
-    refreshedAt: coerceFiniteNumber(row.refreshed_at) ?? 0,
+    refreshedAt,
   };
 }
 
@@ -275,7 +289,7 @@ function buildRegistryVolumeReading(view: RegistryPoolView, deadPoolSignature: b
   return {
     volume24hUsd: view.volume?.volume24h ?? null,
     volume7dUsd: null,
-    observedAtSec: view.volume?.refreshedAt ?? null,
+    observedAtSec: view.volumeObservedAt,
     ...(deadPoolSignature ? { deadPoolSignature: true } : {}),
   };
 }
@@ -295,7 +309,6 @@ interface StagedPoolEntry {
   qualityMultiplier: number;
   identity: StagedPoolIdentity;
   confidence: number;
-  priceEligible: boolean;
 }
 
 interface StagedPoolIdentityCounts {
@@ -411,7 +424,6 @@ function buildStagedPoolEntry(stagedPool: StagedPool, nowSec: number): StagedPoo
     qualityMultiplier: profile.qualityMultiplier,
     identity,
     confidence: stagedPoolConfidence(ageHours),
-    priceEligible: ageHours <= STAGED_POOL_PRICE_MAX_AGE_HOURS,
   };
 }
 
@@ -670,11 +682,13 @@ export async function mergeStagedPools(
     const view = views[viewIndex];
     views[viewIndex] = undefined;
     if (!view) continue;
+    const legacyUndatedCurvePrice = view.price == null && view.value.priceUsd != null &&
+      isCurveWriteback(view.value) && getRegistryPriceObservedAt(view.value) == null;
     const stagedPool = {
       ...view.value,
       ...view.metadata,
       discoveredAt: view.discoveredAt,
-      priceUsd: view.price?.priceUsd ?? view.value.priceUsd,
+      priceUsd: view.price?.priceUsd ?? (legacyUndatedCurvePrice ? null : view.value.priceUsd),
     };
     // The resolver may pair a trusted value row with a price observed by a
     // different source (e.g. a remembered dl TVL row plus a fresh cg_onchain
@@ -684,7 +698,8 @@ export async function mergeStagedPools(
 
     const entry = buildStagedPoolEntry(stagedPool, registryEvaluatedAtSec);
     const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
-    let priceEligible = view.price != null;
+    const priceObservedAt = view.priceObservedAt;
+    let priceEligible = priceObservedAt != null;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
     // A fallback DEX id that only fronts another protocol still has to be
     // confirmed by that protocol's census (Beets → Balancer): its own reserve
@@ -760,7 +775,7 @@ export async function mergeStagedPools(
     }
 
     // DEC-19: the volume reading is the resolver's volume row as observed —
-    // never scaled by the TVL confidence decay. Its refresh clock decides at
+    // never scaled by the TVL confidence decay. Its observation clock decides at
     // scoring whether it is in-window (measured) or aged (stale, never counted).
     const signatureBeforeChainGate = hasDeadPoolSignature(view, trackedDeployments);
     const viewChain = canonicalExitRouteChain(stagedPool.chain);
@@ -796,7 +811,7 @@ export async function mergeStagedPools(
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({
         price: stagedPool.priceUsd,
-        observedAt: view.price!.refreshedAt,
+        observedAt: priceObservedAt,
         tvl: adjustedTvl,
         chain: stagedPool.chain,
         protocol: dexId,
@@ -888,12 +903,14 @@ export async function mergeStagedPools(
       });
     }
 
+    const curveOverlap = getRegistryCurveOverlap(view.value);
     const pool: GtNewPool = {
       address,
       chain: stagedPool.chain,
       dexId,
       name: stagedPool.symbol,
       tvlUsd: adjustedTvl,
+      ...(curveOverlap ? { curveBasePoolOverlap: { ...curveOverlap, lpLegTvlUsd: curveOverlap.lpLegTvlUsd * confidence } } : {}),
       volume24hUsd: registryReading.volume24hUsd,
       volumeObservedAtSec: registryReading.observedAtSec,
       ...(registryReading.deadPoolSignature ? { volumeDeadPoolSignature: true as const } : {}),
@@ -902,7 +919,7 @@ export async function mergeStagedPools(
       poolType,
       // Prices must stay day-fresh even when decayed inventory TVL is older.
       price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
-      priceObservedAt: priceEligible ? view.price!.refreshedAt : null,
+      priceObservedAt: priceEligible ? priceObservedAt : null,
       symbol: stagedPool.symbol,
       sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
         ? STAGED_SOURCE_FAMILY[stagedPool.source]

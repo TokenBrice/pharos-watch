@@ -158,6 +158,39 @@ describe("challenger publish", () => {
     );
   });
 
+  it("stores NULL and omits both lineage keys when a pool has no proven counterparty", async () => {
+    const { db, sqlite, generationId } = seedPublishedDexGeneration();
+    try {
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId));
+      expect(sqlite.prepare("SELECT price_lineage_json FROM dex_price_challenger_payloads_v2").get())
+        .toEqual({ price_lineage_json: null });
+      const [row] = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(COIN)!;
+      expect(row).not.toHaveProperty("pricePoolKeys");
+      expect(row).not.toHaveProperty("upstreamKeys");
+    } finally { sqlite.close(); }
+  });
+
+  it.each(["current", "pre-migration", "old writer", "invalid receipt", "empty envelope"] as const)(
+    "round-trips the price-forming pool and conversion venue through %s storage", async (mode) => {
+      const { db, sqlite, generationId } = seedPublishedDexGeneration();
+      try {
+        if (mode === "pre-migration") sqlite.exec("ALTER TABLE dex_price_challenger_payloads_v2 DROP COLUMN price_lineage_json");
+        const pool: PoolEntry = {
+          ...challengerPools(1)[0]!, poolId: "ethereum:0x1111111111111111111111111111111111111111",
+          source: "direct_api", priceCounterparty: { stablecoinId: "usdc-circle", priceUsd: 1,
+            source: "bitstamp", observedAtSec: SNAPSHOT - 60 },
+        };
+        await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, [pool]));
+        if (mode === "old writer") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = NULL");
+        if (mode === "invalid receipt") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = 'garbage'");
+        if (mode === "empty envelope") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = '{}'");
+        const loaded = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(COIN)?.[0];
+        expect(loaded?.upstreamKeys).toEqual(mode === "current" ? [pool.poolId, "venue:bitstamp"] :
+          mode === "invalid receipt" ? [] : undefined);
+      } finally { sqlite.close(); }
+    },
+  );
+
   it("stores the actual cross-source support and original quote clock, not retained inventory value", async () => {
     const { db, sqlite, generationId } = seedPublishedDexGeneration();
     const cross = [{ ...challengerPools(1)[0]!, tvlUsd: 1_000_000, priceEvidenceTvlUsd: 10_000, priceSource: "cg_onchain" as const }];

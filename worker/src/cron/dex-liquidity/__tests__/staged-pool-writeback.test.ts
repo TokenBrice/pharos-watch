@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, type StagedPool } from "../../dex-discovery/types";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { cleanupStaging, upsertStagedPools } from "../../dex-discovery/persistence";
+import { SLIPSTREAM_POOL_IDENTITY_REVIEW_VERSION, stagedPoolConfidence, type StagedPool } from "../../dex-discovery/types";
 import { computeLiquidityScore, initSourcePoolGraph } from "../pool-helpers";
 import { buildPoolFingerprint } from "../pool-normalization";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { buildStagedPoolWriteback } from "../staged-pool-writeback";
-import { summarizeRetainedPoolVolume } from "../scoring-helpers";
+import {
+  accumulateGlobalAggregate, netGlobalCurveBaseLpOverlap, summarizeRetainedPoolVolume, type GlobalPoolAggregateEntry,
+} from "../scoring-helpers";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import type { LiquidityMetrics, SourcePoolGraph, PoolEntry } from "../types";
 import { makeStagedPoolRow } from "./staging-merge.test-support";
@@ -21,7 +25,8 @@ const DIRECT_API_POOL = "0x00000000000000000000000000000000000000a5";
 const BACKFILLED_POOL = "base:0x00000000000000000000000000000000000000b2";
 const USDC_TOKEN = "0x00000000000000000000000000000000000000b1";
 const USDT_TOKEN = "0x00000000000000000000000000000000000000c2";
-afterEach(() => vi.restoreAllMocks());
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 
 function makePoolEntry(overrides: Partial<PoolEntry> = {}): PoolEntry {
   return {
@@ -128,6 +133,7 @@ describe("buildStagedPoolWriteback", () => {
   it("carries measured extras and a price only when the entry measured one", () => {
     const measured = makePoolEntry({
       price: 0.9998,
+      priceObservedAt: NOW - 60,
       extra: {
         feeTier: 5,
         balanceRatio: 0.98,
@@ -213,32 +219,115 @@ describe("buildStagedPoolWriteback", () => {
     ]);
   });
 
-  it("round-trips a written-back row into the next run's metrics", async () => {
-    vi.spyOn(Date, "now").mockReturnValue((NOW + 3_600) * 1000);
+  it.each([
+    { observedAt: NOW - 60, eligible: true, legacy: false },
+    { observedAt: NOW - 24 * 3600, eligible: false, legacy: false },
+    { observedAt: null, eligible: false, legacy: false },
+    { observedAt: null, eligible: false, legacy: true },
+  ])("keeps Curve TVL on replay without manufacturing a constituent clock ($observedAt, legacy=$legacy)", async ({
+    observedAt, eligible, legacy,
+  }) => {
+    const replayAt = NOW + 5 * 3600;
+    vi.spyOn(Date, "now").mockReturnValue(replayAt * 1000);
+    const { db } = fixtures.open();
+    const livePool = makePoolEntry({ price: 0.9998, priceObservedAt: observedAt, extra: { measurement: { priceMeasured: true } } });
     const writeback = buildStagedPoolWriteback(
-      new Map([["usdc-circle", makeMetrics("usdc-circle", [makePoolEntry({ price: 0.9998, extra: { measurement: { priceMeasured: true } } })])]]),
+      new Map([["usdc-circle", makeMetrics("usdc-circle", [livePool])]]),
       NOW,
     );
-
-    // Provider outage for the pool's lane: nothing is observed this run, so the
-    // written-back row is the only thing that can keep the pool alive.
+    expect(writeback.pools[0]!.priceUsd).toBe(observedAt == null ? null : livePool.price);
+    await upsertStagedPools(db, writeback.pools.map((row) => legacy ? { ...row, priceUsd: 10_000 } : row));
+    expect((await cleanupStaging(db, replayAt)).error).toBeNull();
     const outageMetrics = new Map<string, SourcePoolGraph>();
-    const merged = await mergeStagedPools(
-      createMockDb(writeback.pools.map(toStagedPoolRow)),
-      outageMetrics,
-      createKnownPoolIdentityIndex(),
-      NOW + 3_600,
-    new Map(),
-    );
-
+    const merged = await mergeStagedPools(db, outageMetrics, createKnownPoolIdentityIndex(), replayAt, new Map());
     expect(merged.mergedCount).toBe(1);
-    expect(outageMetrics.get("usdc-circle")?.pools[0]).toMatchObject({
-      poolId: `ethereum:${CURVE_POOL}`,
-      source: "dl",
-      tvlUsd: 1_000_000,
-      price: 0.9998,
-      extra: { measurement: { decayed: false } },
+    const pool = outageMetrics.get("usdc-circle")?.pools[0];
+    expect(pool).toMatchObject({ poolId: livePool.poolId, source: "dl", tvlUsd: livePool.tvlUsd });
+    expect(pool?.price).toBe(eligible ? livePool.price : undefined);
+    expect(merged.priceObservations.get("usdc-circle")?.[0]?.observedAt ?? null).toBe(eligible ? observedAt : null);
+  });
+
+  it.each([
+    { windowEnd: NOW, legacy: false, useAlternate: false },
+    { windowEnd: null, legacy: true, useAlternate: false },
+    { windowEnd: NOW - 25 * 3600, legacy: false, useAlternate: true },
+  ])("backfills a failed Pancake V3 hourly query only from a verified window ($windowEnd, legacy=$legacy)", async ({
+    windowEnd, legacy, useAlternate,
+  }) => {
+    const refreshedAt = NOW + 600;
+    const replayAt = refreshedAt + 5 * 3600;
+    const { db } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(replayAt * 1000);
+    const observed = makePoolEntry({
+      project: "pancakeswap", poolType: "pancakeswap-v3-5bp", source: "direct_api",
+      volumeReading: { volume24hUsd: 250_000, volume7dUsd: null, observedAtSec: windowEnd },
     });
+    const writeback = buildStagedPoolWriteback(new Map([["usdc-circle", makeMetrics("usdc-circle", [observed])]]), refreshedAt);
+    const [row] = writeback.pools;
+    expect(row!.volume24h).toBe(windowEnd == null ? null : 250_000);
+    const alternateAt = replayAt - 20 * 3600;
+    await upsertStagedPools(db, [
+      legacy ? { ...row!, volume24h: 250_000 } : row!,
+      ...(useAlternate ? [{ ...row!, source: "cg_onchain" as const, volume24h: 90_000, refreshedAt: alternateAt, rawJson: null }] : []),
+    ]);
+    expect((await cleanupStaging(db, replayAt)).error).toBeNull();
+    const unread = { ...observed, volumeUsd1d: null, volumeReading: { volume24hUsd: null, volume7dUsd: null, observedAtSec: null } };
+    const metrics = new Map([["usdc-circle", makeMetrics("usdc-circle", [unread])]]);
+    const replay = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), replayAt, new Map());
+    expect(replay.skippedByExactIdentityCount).toBe(1);
+    expect(metrics.get("usdc-circle")?.pools).toEqual([unread]);
+    expect(unread.tvlUsd).toBe(observed.tvlUsd);
+    expect(unread.volumeReading).toEqual({
+      volume24hUsd: useAlternate ? 90_000 : legacy ? null : 250_000,
+      volume7dUsd: null, observedAtSec: useAlternate ? alternateAt : windowEnd,
+    });
+  });
+
+  it("nets decayed registry metapool LP claims against a live Curve base pool", async () => {
+    const basePoolKey = "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
+    const meta = makePoolEntry({
+      poolId: "ethereum:0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
+      symbol: "LUSD/3CRV", tvlUsd: 12_900_000, curveBasePoolOverlap: { basePoolKey, lpLegTvlUsd: 8_600_000 },
+    });
+    const replayAt = NOW + 48 * 3600;
+    const { db } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(replayAt * 1000);
+    const stored = buildStagedPoolWriteback(new Map([["lusd-liquity", makeMetrics("lusd-liquity", [meta])]]), NOW).pools[0]!;
+    const rawEvidence = JSON.parse(stored.rawJson!);
+    await upsertStagedPools(db, [{ ...stored, rawJson: JSON.stringify({ ...rawEvidence, feedPayload: [1, 2, 3] }) }]);
+    expect(await cleanupStaging(db, replayAt)).toMatchObject({ rawJsonClearedRows: 1, error: null });
+
+    const base = makePoolEntry({ poolId: basePoolKey, tvlUsd: 20_000_000 });
+    const metrics = new Map([["usdc-circle", makeMetrics("usdc-circle", [base])]]);
+    const replay = await mergeStagedPools(db, metrics, createKnownPoolIdentityIndex(), replayAt, new Map());
+    expect(replay.mergedCount).toBe(1);
+    const retained = metrics.get("lusd-liquity")!.pools[0]!;
+    const confidence = stagedPoolConfidence(48);
+    const protocols: Record<string, number> = {};
+    const chains: Record<string, number> = {};
+    const seen = new Map<string, GlobalPoolAggregateEntry>();
+    const gross = accumulateGlobalAggregate([retained, base], protocols, chains, new Set(), seen);
+    const deducted = netGlobalCurveBaseLpOverlap(seen, protocols, chains);
+    expect(deducted).toBeCloseTo(8_600_000 * confidence, 6);
+    expect(protocols.curve).toBeCloseTo(gross.totalTvl - deducted, 6);
+    expect(chains.ethereum).toBeCloseTo(base.tvlUsd + 4_300_000 * confidence, 6);
+    expect(retained.tvlUsd).toBeCloseTo(meta.tvlUsd * confidence, 6);
+  });
+
+  it("keeps direct inventory without redating a live or legacy direct price", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+    const livePool = makePoolEntry({ source: "direct_api", price: 1, priceObservedAt: NOW - 60,
+      extra: { measurement: { tvlMeasured: true, priceMeasured: true } },
+    });
+    const metrics = new Map([["usdc-circle", makeMetrics("usdc-circle", [livePool])]]);
+    const [row] = buildStagedPoolWriteback(metrics, NOW).pools;
+    expect(row).toMatchObject({ priceUsd: null, tvlUsd: livePool.tvlUsd });
+    const outageMetrics = new Map<string, SourcePoolGraph>();
+    const legacyRow = { ...toStagedPoolRow(row!), price_usd: 1 };
+    const result = await mergeStagedPools(createMockDb([legacyRow]), outageMetrics, createKnownPoolIdentityIndex(), NOW, new Map());
+    expect(outageMetrics.get("usdc-circle")?.pools[0]?.tvlUsd).toBe(livePool.tvlUsd);
+    expect(outageMetrics.get("usdc-circle")?.pools[0]?.price).toBeUndefined();
+    expect(result.priceObservations.has("usdc-circle")).toBe(false);
   });
 
   it.each(["dl", "direct_api"] as const)(

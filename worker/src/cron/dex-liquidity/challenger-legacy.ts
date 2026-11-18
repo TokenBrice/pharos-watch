@@ -1,3 +1,4 @@
+import { readDexPriceLineage } from "./price-lineage";
 import { decodeJsonString } from "../../lib/cache-json";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
@@ -102,6 +103,7 @@ export async function loadLegacyDexPoolChallengers(
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
+          ...readDexPriceLineage(pool),
           poolId: typeof pool.poolId === "string" ? pool.poolId : "",
           chain: typeof pool.chain === "string" ? pool.chain : "unknown",
           protocol: typeof pool.protocol === "string" ? pool.protocol : "unknown",
@@ -141,6 +143,7 @@ export async function loadLegacyDexPoolChallengers(
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
+          ...readDexPriceLineage(pool),
           poolId: typeof pool.poolId === "string" ? pool.poolId : "",
           chain: typeof pool.chain === "string" ? pool.chain : "unknown",
           protocol: typeof pool.project === "string" ? pool.project : "unknown",
@@ -192,6 +195,7 @@ export async function loadLegacyDexPoolChallengers(
         ) continue;
         qualifying.push({
           stablecoinId: row.stablecoin_id,
+          ...readDexPriceLineage(source),
           poolId: `${row.stablecoin_id}:${source.protocol}:${source.chain}`,
           chain: source.chain,
           protocol: source.protocol,

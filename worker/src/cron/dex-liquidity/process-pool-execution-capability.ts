@@ -178,7 +178,6 @@ export interface CurveStableswapExecutionCapability {
 function buildCurveStableswapRateInputExecutionCandidate(
   curveData: CurvePoolEntry,
 ): CurveStableswapRateInputExecutionCandidate | null {
-  if (curveData.registryId.trim().toLowerCase() !== "factory-stable-ng") return null;
   const poolAddress = canonicalEvmAddress(curveData.poolAddress);
   const coins = curveData.executionCoins;
   if (!poolAddress || !coins || coins.length < 2 || coins.length > 8) {
@@ -234,6 +233,14 @@ export function buildCurveStableswapExecutionCapability(
       gate: { family: "curve-stableswap", reason: "metapool-unsupported" },
     };
   }
+  if (curveData.registryId.trim().toLowerCase() === "factory-stable-ng") {
+    const rateInputCandidate = buildCurveStableswapRateInputExecutionCandidate(curveData);
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
+      ...(rateInputCandidate ? { rateInputCandidate } : {}),
+    };
+  }
   if (!Number.isFinite(curveData.A) || curveData.A <= 0) {
     return {
       executionModel: null,
@@ -256,14 +263,10 @@ export function buildCurveStableswapExecutionCapability(
       gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
     };
   }
-  // Source-stage proxy only. StableSwap-NG candidates are adjudicated by the
-  // on-chain stored_rates() capture in curve-stableswap-rates.ts.
   if (maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) {
-    const rateInputCandidate = buildCurveStableswapRateInputExecutionCandidate(curveData);
     return {
       executionModel: null,
       gate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
-      ...(rateInputCandidate ? { rateInputCandidate } : {}),
     };
   }
   const tokens = coins.map((coin) => {
@@ -375,7 +378,7 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputReferencePriceUsd,
     capturedAt: input.capturedAt,
-  });
+  }, { tokenIn: input.stablecoinPriceById });
 }
 
 const CURVE_3POOL_REVIEWED_INPUT_IDS = new Set(["usdc-circle", "usdt-tether"]);
@@ -479,7 +482,7 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
       retainedTvlUsd: input.retainedTvlUsd,
       retainedPoolPriceUsd: referencePrices[inputIndex]!,
       capturedAt: input.capturedAt,
-    })];
+    }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById })];
   });
 }
 
@@ -577,7 +580,7 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputReferencePriceUsd!,
     capturedAt: input.capturedAt,
-  });
+  }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
 }
 
 /**

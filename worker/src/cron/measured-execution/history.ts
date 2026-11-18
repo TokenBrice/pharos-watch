@@ -9,9 +9,16 @@ import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-poi
 export interface DexMeasuredExecutionHistoryCycle {
   generationId: string;
   publishedAt: number;
+  targetCapturedAt?: number;
   status: "measured" | "failed";
   operationalFailure: boolean;
   profile: DexMeasuredExecutionProfile | null;
+}
+
+function quoteMarketMark(token: DexMeasuredExecutionProfile["tokenIn"]) {
+  const mark = token.marketMark;
+  return mark && mark.stablecoinId === token.trackedAssetId && mark.priceUsd === token.referencePriceUsd
+    ? mark : undefined;
 }
 
 function pointKey(point: DexMeasuredExecutionProfile["capacityCurve"][number]): string {
@@ -128,6 +135,13 @@ export function summarizeDexMeasuredExecutionHistory(input: {
   const result = DexMeasuredExecutionObservationHistorySchema.safeParse({
     completeProducerCycleCount: activeCycles.length,
     successfulObservationCount: successful.length,
+    valuationObservations: successful.map(({ generationId, targetCapturedAt, profile }) => ({
+      quoteGenerationId: generationId,
+      targetCapturedAt,
+      quotedAt: profile.quotedAt,
+      tokenIn: quoteMarketMark(profile.tokenIn),
+      tokenOut: quoteMarketMark(profile.tokenOut),
+    })),
     consecutiveSuccessCount,
     observationWindowStartedAt: Math.min(...activeCycles.map((cycle) => cycle.publishedAt)),
     observationWindowEndedAt: Math.max(...activeCycles.map((cycle) => cycle.publishedAt)),

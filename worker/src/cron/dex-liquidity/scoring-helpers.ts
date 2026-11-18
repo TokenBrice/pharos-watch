@@ -1,4 +1,6 @@
+import { getDexGroupLineage } from "./price-lineage";
 import { retainedPoolVolumeSanityRejection } from "./pool-volume-sanity";
+import type { CurveBasePoolOverlapEvidence } from "./process-pool-protocol-enrichment";
 import type {
   DexPoolVolumeReading,
   DexPriceObs,
@@ -394,7 +396,7 @@ export function quarantineProtocolTvlOutliers(
 }
 
 
-export interface GlobalPoolAggregateEntry {
+export interface GlobalPoolAggregateEntry extends CurveBasePoolOverlapEvidence {
   tvl: number;
   reading: DexPoolVolumeReading | undefined;
   proto: string;
@@ -402,7 +404,7 @@ export interface GlobalPoolAggregateEntry {
 }
 
 export function accumulateGlobalAggregate(
-  pools: LiquidityMetrics["topPools"],
+  pools: readonly (PoolEntry & CurveBasePoolOverlapEvidence)[],
   globalProtocolTvl: Record<string, number>,
   globalChainTvl: Record<string, number>,
   globalChains: Set<string>,
@@ -419,29 +421,59 @@ export function accumulateGlobalAggregate(
       : canonicalExitRouteScopedKey(chainKey, pool.poolId);
     const prev = seenPoolTvl.get(poolKey);
 
-    if (prev) {
-      // The highest-TVL occurrence owns the deduped pool, including its volume reading.
-      if (pool.tvlUsd > prev.tvl) {
-        totalTvl += pool.tvlUsd - prev.tvl;
-        globalProtocolTvl[prev.proto] = (globalProtocolTvl[prev.proto] ?? 0) - prev.tvl;
-        globalChainTvl[prev.chain] = (globalChainTvl[prev.chain] ?? 0) - prev.tvl;
-        globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
-        globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
-        globalChains.add(chainKey);
-        seenPoolTvl.set(poolKey, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
-      }
-      continue;
+    // The highest-TVL occurrence owns the deduped pool, including its volume reading and valuation basis.
+    if (prev != null && !(pool.tvlUsd > prev.tvl)) continue;
+    if (prev != null) {
+      totalTvl -= prev.tvl;
+      globalProtocolTvl[prev.proto] = (globalProtocolTvl[prev.proto] ?? 0) - prev.tvl;
+      globalChainTvl[prev.chain] = (globalChainTvl[prev.chain] ?? 0) - prev.tvl;
+    } else {
+      poolCount++;
     }
 
-    seenPoolTvl.set(poolKey, { tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey });
+    seenPoolTvl.set(poolKey, {
+      tvl: pool.tvlUsd, reading: pool.volumeReading, proto, chain: chainKey,
+      ...(pool.curveBasePoolOverlap ? { curveBasePoolOverlap: pool.curveBasePoolOverlap } : {}),
+    });
     totalTvl += pool.tvlUsd;
-    poolCount++;
     globalChains.add(chainKey);
     globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + pool.tvlUsd;
     globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + pool.tvlUsd;
   }
 
   return { totalTvl, poolCount };
+}
+
+export function netGlobalCurveBaseLpOverlap(
+  seenPoolTvl: ReadonlyMap<string, GlobalPoolAggregateEntry>,
+  globalProtocolTvl: Record<string, number>,
+  globalChainTvl: Record<string, number>,
+): number {
+  const claimedTvl = new Map<string, number>();
+  const claims: { pool: GlobalPoolAggregateEntry; basePoolKey: string; lpLegTvlUsd: number }[] = [];
+  for (const [poolKey, pool] of seenPoolTvl) {
+    const overlap = pool.curveBasePoolOverlap;
+    if (pool.proto !== "curve" || !overlap || overlap.basePoolKey === poolKey) continue;
+    const { basePoolKey, lpLegTvlUsd } = overlap;
+    const base = seenPoolTvl.get(basePoolKey);
+    if (
+      base?.proto !== "curve" || base.chain !== pool.chain ||
+      !Number.isFinite(lpLegTvlUsd) || lpLegTvlUsd <= 0 || lpLegTvlUsd > pool.tvl
+    ) continue;
+    claimedTvl.set(basePoolKey, (claimedTvl.get(basePoolKey) ?? 0) + lpLegTvlUsd);
+    claims.push({ pool, basePoolKey, lpLegTvlUsd });
+  }
+
+  let removedTvl = 0;
+  for (const { pool, basePoolKey, lpLegTvlUsd } of claims) {
+    const share = Math.min(1, seenPoolTvl.get(basePoolKey)!.tvl / claimedTvl.get(basePoolKey)!);
+    const overlapTvl = lpLegTvlUsd * share;
+    pool.tvl -= overlapTvl;
+    globalProtocolTvl[pool.proto] -= overlapTvl;
+    globalChainTvl[pool.chain] -= overlapTvl;
+    removedTvl += overlapTvl;
+  }
+  return removedTvl;
 }
 
 /**
@@ -590,8 +622,17 @@ export function collapseDuplicateObservations(
     duplicateGroups++;
     duplicateObservations += group.length - 1;
     const representative = [...group].sort((left, right) => right.tvl - left.tvl || left.protocol.localeCompare(right.protocol))[0]!;
+    const lineage = getDexGroupLineage(group);
+    const contributor = lineage?.aggregateContributors?.[0];
+    const sameFamilies = contributor && lineage?.aggregateContributors?.every((input) =>
+      input.providerFamily === contributor.providerFamily && input.venueFamily === contributor.venueFamily);
     passthrough.push({
       ...representative,
+      mergedLineage: lineage ? {
+        upstreamKeys: lineage.upstreamKeys,
+        providerFamily: sameFamilies ? contributor.providerFamily : null,
+        venueFamily: sameFamilies ? contributor.venueFamily : null,
+      } : null,
       price: median(group.map((observation) => observation.price)) ?? 0,
       tvl: Math.max(...group.map((observation) => observation.tvl)),
       observedAt: oldestPriceObservation(group),
@@ -603,7 +644,7 @@ export function collapseDuplicateObservations(
 
 export function aggregateProtocolSources(
   observations: DexPriceObs[],
-): Array<{ protocol: string; chain: string; price: number; tvl: number; observedAt?: number; aggregateObservedAt?: number; sourceFamily?: string }> {
+): Array<{ protocol: string; chain: string; price: number; tvl: number; observedAt?: number; aggregateObservedAt?: number; sourceFamily?: string; pricePoolKeys?: string[]; upstreamKeys?: string[] }> {
   const byProtocolFamily = new Map<string, DexPriceObs[]>();
   for (const observation of observations) {
     if (dexPriceEvidenceWeight(observation) <= 0 ||
@@ -622,6 +663,7 @@ export function aggregateProtocolSources(
     const price = evidenceWeightedMedian(protocolObs);
     if (price == null) return [];
     const observedAt = oldestPriceObservation(protocolObs);
+    const lineage = getDexGroupLineage(protocolObs);
 
     const chains = [...new Set(protocolObs.map((observation) => observation.chain))];
     return [{
@@ -631,6 +673,7 @@ export function aggregateProtocolSources(
       tvl: Math.round(totalTvl),
       ...(observedAt != null ? { observedAt } : {}),
       ...(sourceFamily != null ? { sourceFamily } : {}),
+      ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
     }];
   });
 
@@ -645,6 +688,7 @@ export function projectRetainedPoolPrice(pool: LiquidityMetrics["topPools"][numb
   return {
     price: pool.price,
     observedAt: pool.priceObservedAt ?? null,
+    ...(pool.priceCounterparty ? { counterpartyPrice: pool.priceCounterparty } : {}),
     tvl,
     chain: pool.chain,
     protocol: pool.project,

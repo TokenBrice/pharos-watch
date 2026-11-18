@@ -5,10 +5,12 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
+import { getDexGroupLineage, type DexPriceLineage } from "./price-lineage";
+import { hasChallengerPriceLineageColumn } from "./challenger-types";
 import { projectRetainedPoolPrice } from "./scoring-helpers";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 
-export interface DexPriceChallengerPoolRow {
+export interface DexPriceChallengerPoolRow extends DexPriceLineage {
   stablecoinId: string;
   poolId: string;
   chain: string;
@@ -25,37 +27,32 @@ const CHALLENGER_HARD_CAP = 50;
 /** Bound prepared challenger rows independently of the full active asset set. */
 export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
-const CHALLENGER_PAYLOAD_COLUMN_COUNT = 9;
-const CHALLENGER_VALUES_TOKEN = "__CHALLENGER_VALUES__";
-const DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL =
-  `INSERT INTO dex_price_challenger_payloads_v2
-    (publication_id, stablecoin_id, pool_id, chain, protocol, source_family, price_usd, tvl_usd, price_observed_at)
-   VALUES ${CHALLENGER_VALUES_TOKEN}
-   ON CONFLICT(publication_id, stablecoin_id, pool_id) DO NOTHING`;
-
 function prepareMultiRowStatements(
   db: D1Database,
   rows: readonly (readonly unknown[])[],
+  storeLineage: boolean,
 ): D1PreparedStatement[] {
+  const columnCount = storeLineage ? 10 : 9;
   if (rows.length === 0) return [];
-  if (rows.some((row) => row.length !== CHALLENGER_PAYLOAD_COLUMN_COUNT)) {
+  if (rows.some((row) => row.length !== columnCount)) {
     throw new Error(
-      `DEX challenger publication expected ${CHALLENGER_PAYLOAD_COLUMN_COUNT} binds per row`,
+      `DEX challenger publication expected ${columnCount} binds per row`,
     );
   }
 
   const rowsPerStatement = Math.floor(
-    CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
+    CHALLENGER_D1_MAX_BOUND_PARAMETERS / columnCount,
   );
   return chunkArray(rows, rowsPerStatement).map((rowChunk) => {
-    const placeholders = `(${new Array(CHALLENGER_PAYLOAD_COLUMN_COUNT).fill("?").join(", ")})`;
+    const placeholders = `(${new Array(columnCount).fill("?").join(", ")})`;
     const valuesSql = new Array(rowChunk.length).fill(placeholders).join(", ");
     return db
       .prepare(
-        DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL.replace(
-          CHALLENGER_VALUES_TOKEN,
-          valuesSql,
-        ),
+        `INSERT INTO dex_price_challenger_payloads_v2
+          (publication_id, stablecoin_id, pool_id, chain, protocol, source_family,
+           price_usd, tvl_usd, price_observed_at${storeLineage ? ", price_lineage_json" : ""})
+         VALUES ${valuesSql}
+         ON CONFLICT(publication_id, stablecoin_id, pool_id) DO NOTHING`,
       )
       .bind(...rowChunk.flat());
   });
@@ -72,6 +69,7 @@ export function selectDexPriceChallengerRowsFromPools(
     if (isBlockedDexId(pool.project)) return [];
     const price = projectRetainedPoolPrice(pool);
     if (!price || price.tvl < minPoolTvlUsd) return [];
+    const lineage = getDexGroupLineage([price]);
     return [{
       stablecoinId,
       poolId: pool.poolId,
@@ -81,6 +79,7 @@ export function selectDexPriceChallengerRowsFromPools(
       priceUsd: price.price,
       tvlUsd: price.tvl,
       priceObservedAt: price.observedAt ?? null,
+      ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
     }];
   }).sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId));
 
@@ -166,6 +165,7 @@ export async function publishDexPriceChallengerSnapshots(
 ): Promise<{ publishedStablecoins: number; skippedStablecoins: number }> {
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
   if (!input.generationId.trim()) throw new Error("DEX challenger publication requires a generation id");
+  const storeLineage = await hasChallengerPriceLineageColumn(db);
   const publicationAt = Math.floor(Date.now() / 1000);
   // Twice the platform wall ceiling protects every still-running invocation,
   // including its final in-flight D1 write; source snapshot age is unrelated.
@@ -192,13 +192,16 @@ export async function publishDexPriceChallengerSnapshots(
       pools.length = 0;
     }
     const statementCount = Math.ceil(rows.length / Math.floor(
-      CHALLENGER_D1_MAX_BOUND_PARAMETERS / CHALLENGER_PAYLOAD_COLUMN_COUNT,
+      CHALLENGER_D1_MAX_BOUND_PARAMETERS / (storeLineage ? 10 : 9),
     ));
     if (pending.length + statementCount > DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     for (const statement of prepareMultiRowStatements(db, rows.map((row) => [
       publicationId, row.stablecoinId, row.poolId, row.chain, row.protocol,
       row.sourceFamily, row.priceUsd, row.tvlUsd, row.priceObservedAt,
-    ]))) {
+      ...(storeLineage ? [row.upstreamKeys
+        ? JSON.stringify({ pricePoolKeys: row.pricePoolKeys, upstreamKeys: row.upstreamKeys })
+        : null] : []),
+    ]), storeLineage)) {
       pending.push(statement);
       if (pending.length >= DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     }

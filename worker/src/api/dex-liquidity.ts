@@ -14,10 +14,11 @@ import {
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   buildDexLiquidityWarning,
+  getDexTvlObservedAt,
   getDexLiquidityTrendTolerances,
   normalizeDexScoreDetails,
   normalizeTopPools,
-  selectTrendBaseline,
+  selectObservedTrendBaseline,
   buildDexDeploymentCoverage,
   type DexLiquidityCronRow,
   type DexDeploymentOutcomeRow,
@@ -30,7 +31,7 @@ import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/dex-liquidity";
-import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
 
 export const handleDexLiquidity = async (
   db: D1Database,
@@ -57,12 +58,14 @@ export const handleDexLiquidity = async (
       .all<DexLiquidityRow & { publication_generation_id: string | null; projection_total_count?: number }>(),
     tableProjection ? Promise.resolve({ results: [] as DexHistoryRow[] }) : db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version
+        `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json
          FROM dex_liquidity_history
-         WHERE snapshot_date >= ?${coinFilter}
+         WHERE snapshot_date >= (
+           SELECT MIN(updated_at) - 864000 FROM dex_liquidity WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+         )${coinFilter}
          ORDER BY snapshot_date DESC, stablecoin_id`,
       )
-      .bind(Math.floor(Date.now() / 1000) - 8 * 86_400, ...coinBindings)
+      .bind(...coinBindings)
       .all<DexHistoryRow>(),
     tableProjection ? Promise.resolve({ results: [] as DexPriceRow[] }) : db
       .prepare(
@@ -122,7 +125,7 @@ export const handleDexLiquidity = async (
   }
 
   // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first).
-  // The read is date-ordered so the 8-day window seeks idx_dex_hist_snapshot_date;
+  // The read is date-ordered so the bounded history window seeks idx_dex_hist_snapshot_date;
   // a coin-first ORDER BY walked the whole history index on every request.
   const histByCoin = new Map<string, DexHistoryRow[]>();
   for (const row of histResult.results ?? []) {
@@ -133,8 +136,6 @@ export const handleDexLiquidity = async (
 
   const nowSec = Math.floor(Date.now() / 1000);
   const deploymentCoverageById = buildDexDeploymentCoverage(deploymentResult.results ?? [], nowSec);
-  const oneDayAgo = nowSec - 86_400;
-  const sevenDaysAgo = nowSec - 7 * 86_400;
   const { day: trend24hToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
   // A missing coin still carries the census selected in the same SQL snapshot.
   const selectedRows = result.results ?? [];
@@ -183,8 +184,10 @@ export const handleDexLiquidity = async (
     const currentTvl = row.total_tvl_usd;
 
     const history = histByCoin.get(id) ?? [];
-    const baseline24h = selectTrendBaseline(history, oneDayAgo, trend24hToleranceSec, row.methodology_version);
-    const baseline7d = selectTrendBaseline(history, sevenDaysAgo, trend7dToleranceSec, row.methodology_version);
+    const volumeRecord = parseDexVolumeAvailabilityRecord(row.volume_availability_json);
+    const observedAt = getDexTvlObservedAt(volumeRecord, nowSec);
+    const baseline24h = selectObservedTrendBaseline(history, observedAt, 86_400, trend24hToleranceSec, row.methodology_version);
+    const baseline7d = selectObservedTrendBaseline(history, observedAt, 7 * 86_400, trend7dToleranceSec, row.methodology_version);
     const tvlChange24h = baseline24h
       ? ((currentTvl - baseline24h.total_tvl_usd) / baseline24h.total_tvl_usd) * 100
       : null;
@@ -193,12 +196,19 @@ export const handleDexLiquidity = async (
     // Prices are a separate publication; liquidity's clock cannot admit them.
     const priceRow = dexPriceById.get(id);
     const priceMaxAgeSec = STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
-    const priceAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
+    const pricePayload = safeJsonParse<unknown>(priceRow?.price_sources_json, null, `dex-liquidity:${id}:price_sources_json`);
+    const { aggregateObservedAt, aggregateClockReason } = getDexAggregateObservedAt(pricePayload, nowSec, "display");
+    const publicationAge = assessFreshnessTimestamp(nowSec, priceRow?.updated_at);
+    const priceAge = assessFreshnessTimestamp(nowSec, aggregateObservedAt);
     // Both writers stamp the orchestrator's syncStartSec; any drift is publication-mismatch.
     const priceUnavailableReason = !priceRow ? "missing-price"
+      : publicationAge.reason != null ? publicationAge.reason
+      : publicationAge.ageSeconds > priceMaxAgeSec ? "stale-price"
+      : priceRow.updated_at !== row.updated_at ? "publication-mismatch"
+      : aggregateClockReason === "aggregate-clock-invalid" ? "invalid-timestamp"
+      : aggregateClockReason === "aggregate-clock-future" ? "future-timestamp"
       : priceAge.reason != null ? priceAge.reason
-      : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price"
-      : priceRow.updated_at !== row.updated_at ? "publication-mismatch" : null;
+      : priceAge.ageSeconds > priceMaxAgeSec ? "stale-price" : null;
     const dexPrice = priceUnavailableReason == null ? priceRow : undefined;
     let evidence: NormalizedDexLiquidityEvidence | null = null;
     try {
@@ -226,7 +236,6 @@ export const handleDexLiquidity = async (
     // DEC-19 availability record (migration 0249). Legacy rows keep today's
     // numbers with unrecorded completeness; recorded non-complete windows
     // publish no measured total.
-    const volumeRecord = parseDexVolumeAvailabilityRecord(row.volume_availability_json);
     const volume24h = readStoredDexVolumeWindow(row.total_volume_24h_usd, volumeRecord, "24h");
     const volume7d = readStoredDexVolumeWindow(row.total_volume_7d_usd, volumeRecord, "7d", totalVolume7dMeasured);
 
@@ -275,11 +284,7 @@ export const handleDexLiquidity = async (
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: getDexPriceSourceEntries(safeJsonParse<unknown>(
-        dexPrice?.price_sources_json,
-        null,
-        `dex-liquidity:${id}:price_sources_json`,
-      )) as DexLiquidityData["priceSources"],
+      priceSources: (dexPrice ? getDexPriceSourceEntries(pricePayload) : null) as DexLiquidityData["priceSources"],
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,

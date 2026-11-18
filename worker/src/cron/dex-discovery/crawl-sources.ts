@@ -13,6 +13,7 @@ import {
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
 import { crawlHorizonPoolsStage } from "./crawl-horizon-pools";
+import type { DexValuationPrices } from "../../lib/dex-api-token-pricing";
 import { crawlSorobanPoolsStage } from "./crawl-soroban-pools";
 import { crawlTezosPoolsStage } from "./crawl-tezos-pools";
 import { crawlIconBalancedPoolsStage } from "./crawl-icon-balanced-pools";
@@ -84,6 +85,7 @@ export async function crawlCoin(
   references?: PriceValidationReferences,
   sharedDexScreenerRunState?: DexScreenerDiscoveryRunState,
   onProviderStage?: (provider: DexDiscoveryCrawlerLeafId | "cg-tickers") => Promise<void>,
+  loadMarketPrices?: () => Promise<DexValuationPrices | undefined>,
 ): Promise<CrawlResult> {
   const dexScreenerRunState = sharedDexScreenerRunState ?? createDexScreenerDiscoveryRunState();
   const finalizeOwnRun = async (result: CrawlResult): Promise<CrawlResult> => {
@@ -126,7 +128,10 @@ export async function crawlCoin(
       runState: dexScreenerRunState,
     }),
     curve: () => crawlCurvePoolsStage({ coinTargets, context }),
-    horizon: () => crawlHorizonPoolsStage({ coinTargets, context }),
+    horizon: async () => crawlHorizonPoolsStage({
+      coinTargets, context,
+      trackedStablecoinPrices: coinTargets.some((target) => target.chain === "stellar") ? await loadMarketPrices?.() : undefined,
+    }),
     aquarius: () => crawlSorobanPoolsStage({ coinTargets, context }),
     tezos: () => crawlTezosPoolsStage({ coinTargets, context }),
     "icon-balanced": () => crawlIconBalancedPoolsStage({ coinTargets, context }),

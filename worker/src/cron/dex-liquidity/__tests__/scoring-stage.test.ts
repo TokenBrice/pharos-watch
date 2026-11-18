@@ -383,7 +383,7 @@ describe("DEX liquidity scoring stage", () => {
       stablecoinId: "usdc-circle", candidate,
       chainAddressToId: new Map([[`ethereum:${usdc}`, "usdc-circle"], [`ethereum:${eurc}`, "eurc-circle"]]),
       stablecoinPriceById: new Map([["usdc-circle", 1]]),
-      retainedTvlUsd: 4_000_000, capturedAt: 1_000,
+      retainedTvlUsd: 4_000_000, capturedAt: Date.parse("2026-11-16T13:00:00Z") / 1000,
     };
     expect(buildUniV3MeasuredExecutionTarget(input)).toBeNull();
     input.stablecoinPriceById.set("eurc-circle", 1.08);
@@ -793,6 +793,28 @@ describe("DEX liquidity scoring stage", () => {
       expected_chunk_count: stored.chunkCount,
       written_chunk_count: stored.chunkCount,
     });
+  });
+
+  it.each([7, 8])("round-trips v9 closure valuation provenance and rejects an otherwise-ready v%s producer", async (legacy) => {
+    const harness = openDatabase();
+    const sourceSlotStartedAt = 20_000;
+    const stored = await persistAt(harness.db, sourceSlotStartedAt);
+    const pool = {
+      ...poolState(0), closureValuationRejectedAssetIds: ["cadc-cad-coin"],
+      closureValuationMarketMarks: [["eurc-circle", { priceUsd: 1.13, observedAtSec: 19_980, source: "kraken" }]] as NonNullable<PoolState["closureValuationMarketMarks"]>,
+    };
+    expect(decode(encode(sourceState(), pool)).poolState).toMatchObject({
+      closureValuationRejectedAssetIds: pool.closureValuationRejectedAssetIds,
+      closureValuationMarketMarks: pool.closureValuationMarketMarks,
+    });
+    await expect(loadAt(harness.db, sourceSlotStartedAt, 20_360)).resolves.toMatchObject({ generationId: stored.generationId });
+    expect(harness.sqlite.prepare(
+      `UPDATE dex_liquidity_scoring_stage_chunks
+          SET payload_json = replace(payload_json, '"schemaVersion":9', ?)
+        WHERE generation_id = ? AND chunk_index = 0 AND instr(payload_json, '"schemaVersion":9') > 0`,
+    ).run(`"schemaVersion":${legacy}`, stored.generationId).changes).toBe(1);
+    await expect(loadAt(harness.db, sourceSlotStartedAt, 20_360)).rejects
+      .toThrow(`Unsupported DEX liquidity scoring stage payload version ${legacy}`);
   });
 
   it("rejects missing chunks, unknown records and lanes, and non-finite values", async () => {

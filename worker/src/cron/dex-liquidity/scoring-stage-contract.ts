@@ -57,6 +57,8 @@ export interface DexLiquidityScoringSourceState {
 }
 
 export interface DexLiquidityPoolState {
+  closureValuationRejectedAssetIds?: string[];
+  closureValuationMarketMarks?: Array<[string, import("../../lib/dex-api-token-pricing").DexMarketMark]>;
   /** Quote-only acquisition diagnostics, persisted with the exact source generation. */
   priceRefresh?: PriceRefreshSummary;
   /** Wall clock captured after the registry SELECT; frozen for every consumer. */

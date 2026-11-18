@@ -1,5 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
+import { getCurveCompositePolicy } from "@shared/lib/curve-composite-policies";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { canonicalExitRouteAssetKey, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import {
   classifyCurveStableSwapQuality,
@@ -8,11 +10,44 @@ import {
 } from "./pool-helpers";
 import { resolveActiveCurveCryptoSwapCandidateByTvl } from "./process-pool-execution-capability";
 import { getReviewedQuoterV2SourcePoolPolicy } from "./pool-identity";
+import type { CurvePool } from "./types";
 import type {
   PoolProcessingContext,
   PoolProtocolEnrichment,
   ResolvedPoolIdentity,
 } from "./process-pool-types";
+
+export interface CurveBasePoolOverlapEvidence {
+  curveBasePoolOverlap?: { basePoolKey: string; lpLegTvlUsd: number };
+}
+
+export function resolveCurveBasePoolOverlap(
+  chain: string,
+  pool: Pick<CurvePool, "address" | "basePoolAddress" | "isMetaPool" | "usdTotal">,
+  coinBalances: readonly {
+    coin: Pick<CurvePool["coins"][number], "address" | "isBasePoolLpToken">;
+    decimals: number | null;
+    usdBalance: number | null;
+  }[],
+): CurveBasePoolOverlapEvidence["curveBasePoolOverlap"] {
+  if (pool.isMetaPool !== true) return undefined;
+  const policy = getCurveCompositePolicy(chain, pool.address);
+  if (
+    policy?.quoteFunction !== "get_dy_underlying" ||
+    canonicalEvmAddress(pool.basePoolAddress) !== policy.metapool.basePoolAddress ||
+    coinBalances.length !== policy.poolTokens.length ||
+    !coinBalances.every(({ coin, decimals }, index) =>
+      canonicalEvmAddress(coin.address) === policy.poolTokens[index]?.address &&
+      decimals === policy.poolTokens[index]?.decimals &&
+      (coin.isBasePoolLpToken === true) === (index === 1))
+  ) return undefined;
+  const lpLegTvlUsd = coinBalances[1]?.usdBalance;
+  if (
+    lpLegTvlUsd == null || !Number.isFinite(lpLegTvlUsd) || lpLegTvlUsd <= 0 ||
+    !Number.isFinite(pool.usdTotal) || lpLegTvlUsd > pool.usdTotal
+  ) return undefined;
+  return { basePoolKey: canonicalExitRouteScopedKey(chain, policy.metapool.basePoolAddress), lpLegTvlUsd };
+}
 
 export function enrichPoolProtocol(
   context: PoolProcessingContext,

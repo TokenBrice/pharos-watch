@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { relativeBps } from "@shared/lib/depeg-signals";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
@@ -18,6 +18,8 @@ import { computeDexPrices } from "../dex-price-publisher";
 import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
 import { makePool, makePricePoolMap } from "./scoring-test-builders";
 import { loadDexPrices } from "../../../lib/depeg-helpers";
+import { handleDexLiquidity } from "../../../api/dex-liquidity";
+import { summarizeRetainedPoolVolume } from "../scoring-helpers";
 
 const SOURCE_CLOCK = 1_791_403_833;
 const READ_CLOCK = SOURCE_CLOCK + 100;
@@ -83,6 +85,46 @@ async function score(db: D1Database, metrics: Map<string, SourcePoolGraph>, regi
 }
 
 describe("registry read-consumption clock", () => {
+  it("expires the API price at the original 24h bound, not the publication bound", async () => {
+    const h = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
+    openDatabases.push(h.sqlite);
+    const pool = makePool({ poolId: "base:old", project: "orca", price: 1, tvlUsd: 5e6,
+      priceObservedAt: READ_CLOCK - 86_100 });
+    await computeDexPrices({ db: h.db, retainedPoolsByStablecoin: new Map([["usdc-circle", [pool]]]),
+      nowSec: READ_CLOCK, generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
+    const date = vi.spyOn(Date, "now").mockReturnValue((READ_CLOCK + 300) * 1000);
+    const read = async () => (await (await handleDexLiquidity(h.db, "usdc-circle")).json() as {
+      coins: Record<string, { dexPriceUsd: number | null }>;
+    }).coins["usdc-circle"];
+    expect(await read()).toMatchObject({ dexPriceUsd: 1, dexPriceAgeSeconds: 86_400, dexPriceUnavailableReason: null });
+    date.mockReturnValue((READ_CLOCK + 301) * 1000);
+    expect(await read()).toMatchObject({ dexPriceUsd: null, dexPriceAgeSeconds: 86_401, dexPriceUnavailableReason: "stale-price" });
+  });
+
+  it("anchors the API trend to the served observation across UTC noon and ignores an unclocked bucket", async () => {
+    const day = Math.floor(READ_CLOCK / 86_400) * 86_400;
+    const clock = day + 600;
+    const h = seedPublishedDexGeneration({ nowSec: day + 500 });
+    openDatabases.push(h.sqlite);
+    const record = (at: number) => JSON.stringify(summarizeRetainedPoolVolume([], {
+      asOfSec: at, maxObservationAgeSec: DEX_VOLUME_OBSERVATION_MAX_AGE_SEC,
+    }).volumeAvailability);
+    h.sqlite.prepare(`UPDATE dex_liquidity SET total_tvl_usd = 80, coverage_class = 'primary',
+      coverage_confidence = 1, volume_availability_json = ? WHERE stablecoin_id = 'usdc-circle'`).run(record(clock));
+    const insert = h.sqlite.prepare(`INSERT INTO dex_liquidity_history
+      (stablecoin_id, snapshot_date, total_tvl_usd, coverage_class, coverage_confidence, volume_availability_json)
+      VALUES ('usdc-circle', ?, ?, 'primary', 1, ?)`);
+    insert.run(day - 86_400, 100, record(clock - 86_400));
+    insert.run(day, 80, null);
+    const date = vi.spyOn(Date, "now");
+    for (const offset of [43_140, 43_260]) {
+      date.mockReturnValue((day + offset) * 1000);
+      expect(await (await handleDexLiquidity(h.db, "usdc-circle")).json()).toMatchObject({
+        coins: { "usdc-circle": { tvlChange24h: -20, tvlChange7d: null } },
+      });
+    }
+  });
+
   it.each([
     [0.4, 21_600, false], [0.1, 120, false], [0.4, 60, true], [0.4, 21_600, true],
   ] as const)("dates subset %s / %s / %s", async (oldPrice, age, aggregateOnly) => {
@@ -98,9 +140,10 @@ describe("registry read-consumption clock", () => {
       nowSec: SOURCE_CLOCK, admissionNowSec: READ_CLOCK, generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const clock = READ_CLOCK - (aggregateOnly ? age : 60);
     const [row] = readPublicPriceRows(h.sqlite);
-    expect(JSON.parse(row.price_sources_json!)).toEqual(aggregateOnly ? { aggregateObservedAt: clock, sources: [] } : [
-      expect.objectContaining({ protocol: "curve", observedAt: clock, aggregateObservedAt: clock }),
-    ]);
+    expect(JSON.parse(row.price_sources_json!)).toMatchObject({
+      aggregateObservedAt: clock, aggregateContributors: [],
+      sources: aggregateOnly ? [] : [{ protocol: "curve", observedAt: clock, aggregateObservedAt: clock }],
+    });
     expect(diagnostics.contributorAdmissionByStablecoin).toEqual([{
       stablecoinId: "usdc-circle", totalContributorCount: pools.length,
       inBudgetContributorCount: Number(age < DEX_FRESHNESS_SEC) + (aggregateOnly ? 0 : 2),
@@ -130,7 +173,7 @@ describe("registry read-consumption clock", () => {
     const current = age != null && age >= 0 && age < DEX_FRESHNESS_SEC;
     expect(row).toMatchObject({ dex_price_usd: current ? 0.8 : 1, source_pool_count: current ? 2 : 1,
       source_total_tvl: 5_000_000 });
-    expect(JSON.parse(row.price_sources_json!)).toHaveLength(current ? 2 : 1);
+    expect(JSON.parse(row.price_sources_json!).sources).toHaveLength(current ? 2 : 1);
   });
 
   it("preserves a six-hour quote through stage storage and republication", async () => {
@@ -158,7 +201,7 @@ describe("registry read-consumption clock", () => {
       generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const [row] = readPublicPriceRows(h.sqlite);
     expect(row.updated_at).toBe(READ_CLOCK);
-    expect(JSON.parse(row.price_sources_json!)).toEqual([
+    expect(JSON.parse(row.price_sources_json!).sources).toEqual([
       expect.objectContaining({ observedAt: quoteClock, aggregateObservedAt: quoteClock, price: 0.998 }),
     ]);
     const admitted = await loadDexPrices(h.db, READ_CLOCK);
@@ -234,6 +277,52 @@ describe("registry read-consumption clock", () => {
     const scored = await score(h.db, loaded.poolState.metrics, loaded.poolState.registryEvaluatedAtSec);
     expect(scored.scores.get("usdc-circle")?.vol24h).toBe(25_000);
     expect(scored.globalAgg.totalVol24h).toBe(25_000);
+  });
+
+  it.each([
+    { receipt: "at-budget", reject: false },
+    { receipt: "expired", reject: true },
+    { receipt: "omitted", reject: false },
+    { receipt: "empty", reject: true },
+    { receipt: "other-asset", reject: true },
+  ])("rechecks staged EURC valuation at the scoring clock ($receipt)", async ({ receipt, reject }) => {
+    const crossesClose = receipt !== "at-budget" && receipt !== "expired";
+    const observedAtSec = Date.parse(crossesClose ? "2026-11-13T21:30:30Z" : "2026-11-13T22:01:00Z") / 1000;
+    const sourceAt = observedAtSec + DEPEG_PRIMARY_PRICE_MAX_AGE_SEC - 60;
+    const nowSec = observedAtSec + DEPEG_PRIMARY_PRICE_MAX_AGE_SEC + Number(receipt === "expired");
+    vi.spyOn(Date, "now").mockReturnValue(sourceAt * 1000);
+    const h = createLatestSchemaSqlite();
+    openDatabases.push(h.sqlite);
+    const base = makeV3Target();
+    const mark = { stablecoinId: "eurc-circle", priceUsd: 1.13, observedAtSec, observedAtMode: "upstream" as const, source: "kraken+coinbase" };
+    const target = makeV3Target({ capturedAt: sourceAt, tokenOut: {
+      ...base.tokenOut, symbol: "EURC", trackedAssetId: mark.stablecoinId, referencePriceUsd: mark.priceUsd, marketMark: mark,
+    } });
+    const metrics = new Map([["usdc-circle", { stablecoinId: "usdc-circle", symbol: "USDC", pools: [
+      makePool({ poolId: target.poolId, chain: target.chain, project: target.protocol, tvlUsd: target.retainedTvlUsd, extra: { measuredExecutionTarget: target } }),
+    ] }]]);
+    const stage = poolState(metrics, sourceAt);
+    if (receipt !== "omitted") {
+      const id = receipt === "other-asset" ? "zchf-frankencoin" : "eurc-circle";
+      stage.closureValuationMarketMarks = receipt === "empty" ? [] : [[id, mark]];
+    }
+    await persistDexLiquidityScoringStage(h.db, {
+      sourceSlotStartedAt: sourceAt, syncStartSec: sourceAt, sourceState: sourceState(),
+      poolState: stage,
+    });
+    const loaded = await loadDexLiquidityScoringStage(h.db, { nowSec, expectedSourceSlotStartedAt: sourceAt });
+    const marks = loaded.poolState.closureValuationMarketMarks;
+    expect(marks).toEqual(stage.closureValuationMarketMarks);
+    const scored = await computeStablecoinScores(h.db, loaded.poolState.metrics, new Map(), undefined, nowSec,
+      new Map(), undefined, new Map(), "active", sourceAt, new Set(), marks && new Map(marks));
+    if (reject) {
+      expect(scored.measuredTargetInventory.active).toEqual([]);
+      expect(scored.scores.get("usdc-circle")).toMatchObject({
+        exitRouteObservationCoverage: { unsupportedReasons: { "reference-market-closed-valuation-unavailable": 1 } },
+      });
+    } else {
+      expect(scored.measuredTargetInventory.active).toEqual([expect.objectContaining({ targetId: target.targetId })]);
+    }
   });
 
   it("selects quotes at the source clock", async () => {

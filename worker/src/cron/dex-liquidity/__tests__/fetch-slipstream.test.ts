@@ -267,7 +267,8 @@ describe("fetchSlipstreamPools", () => {
     expect(result.pools[0]!.tokens.map((token) => token.priceUsd)).toEqual([undefined, undefined]);
   });
 
-  it("derives Slipstream price evidence from the pool spot, not the tracked primary", async () => {
+  it.each([false, true])("admits the Slipstream spot only with verified ratio timing (%s)", async (dated) => {
+    vi.spyOn(Date, "now").mockReturnValue(100_000 * 1000);
     mockSugarPage(1n, 600_000n);
     const chainAddressToId = new Map([
       ["base:0x00000000000000000000000000000000000000bb", "cadc-cad-coin"],
@@ -276,30 +277,25 @@ describe("fetchSlipstreamPools", () => {
     // The pool still quotes 1 CADC = 1 USDC while CADC's trusted primary reads
     // 1.02; the pool-implied CADC price is therefore 1.00, not the 1.02
     // primary it used to republish as its own observation.
-    const trackedStablecoinPrices = new Map([["cadc-cad-coin", 1.02], ["usdc-circle", 1]]);
+    const trackedStablecoinPrices = Object.assign(new Map([["cadc-cad-coin", 1.02], ["usdc-circle", 1]]), {
+      marketMarks: new Map([["usdc-circle", { priceUsd: 1, observedAtSec: 99_940, source: "kraken+coinbase" }]]),
+    });
 
     const result = await fetchSlipstreamPools("aerodrome-slipstream", chainAddressToId, new Map(), trackedStablecoinPrices);
 
     expect(result.pools).toHaveLength(1);
-    const shapedPrices = convertToGtNewPools(
-      result.pools,
-      chainAddressToId,
-      new Map(),
-      undefined,
-      trackedStablecoinPrices,
-    ).get("cadc-cad-coin")?.map((entry) => entry.price) ?? [];
-    expect(shapedPrices).toHaveLength(1);
-    expect(shapedPrices[0]).toBeCloseTo(1, 6);
+    const pools = result.pools.map((pool) => ({
+      ...pool, readStartedAtSec: 100_000, ratioObservedAtSec: dated ? 99_970 : undefined,
+    }));
+    const references = { type: "fresh" as const, rates: { peggedCAD: 0.95 }, updatedAt: 99_990 };
+    const shaped = convertToGtNewPools(pools, chainAddressToId, new Map(), references, trackedStablecoinPrices);
+    expect(shaped.get("cadc-cad-coin")?.[0]).toMatchObject({
+      price: dated ? expect.closeTo(1) : 0, priceObservedAt: dated ? 99_940 : null,
+    });
 
-    const observationPrices = extractPriceObservations(
-      result.pools,
-      chainAddressToId,
-      new Map(),
-      undefined,
-      trackedStablecoinPrices,
-    ).get("cadc-cad-coin")?.map((observation) => observation.price) ?? [];
-    expect(observationPrices).toHaveLength(1);
-    expect(observationPrices[0]).toBeCloseTo(1, 6);
+    const observations = extractPriceObservations(pools, chainAddressToId, new Map(), references, trackedStablecoinPrices);
+    expect(observations.get("cadc-cad-coin")).toEqual(dated
+      ? [expect.objectContaining({ price: expect.closeTo(1), observedAt: 99_940 })] : undefined);
   });
 
   it("publishes the neutral bucket and no fee rate when pool_fee is out of range", async () => {
@@ -381,6 +377,7 @@ describe("fetchSlipstreamPools", () => {
       poolAddress: pool,
       poolType: "aerodrome-slipstream-1bp",
       tickSpacing: 1,
+      ratioObservedAtSec: 1_791_184_659,
       tvlUsd: 2_000_000,
       price: 1,
     });

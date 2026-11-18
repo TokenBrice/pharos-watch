@@ -2,21 +2,35 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
-import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { readDexPriceLineage } from "../price-lineage";
 import type { DexAmmExecutionToken } from "@shared/types/dex-execution";
 import type { StablecoinData } from "@shared/types/supply";
+import type { DexMarketMark, DexValuationPrices } from "../../../lib/dex-api-token-pricing";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
 } from "../../../lib/depeg-trust-policy";
 
 export interface TrackedStablecoinMaps {
-  stablecoinPriceById: Map<string, number>;
+  stablecoinPriceById: Map<string, number> & DexValuationPrices;
   primaryPriceById: Map<string, number>;
   stablecoinMcapById: Map<string, number>;
   stablecoinPriceProvenanceById: Map<string, Required<Pick<DexAmmExecutionToken, "referencePriceSourceId" | "referencePriceObservedAt">>>;
+}
+
+function isMarketMarkSource(asset: StablecoinData): boolean {
+  if (TRACKED_META_BY_ID.get(asset.id)?.flags.navToken || asset.priceObservedAtMode === "unknown") return false;
+  const sources = normalizePricingSourceKeys([asset.priceSource, ...(asset.agreeSources ?? [])]);
+  return sources.length > 0 && sources.every((source) => {
+    const entry = getPricingSourceRegistryEntry(source);
+    return entry != null && !entry.isRetired &&
+      (entry.trustTier === "hard_market" || entry.trustTier === "soft_aggregator") &&
+      !entry.depegSourceFamily.startsWith("dex:");
+  });
 }
 
 /** A navToken's guarded NAV reference for measured-execution input legs: the
@@ -49,7 +63,8 @@ export async function loadTrackedStablecoinMaps(
   db: D1Database,
   syncStartSec: number,
 ): Promise<TrackedStablecoinMaps> {
-  const stablecoinPriceById = new Map<string, number>();
+  const marketMarks = new Map<string, DexMarketMark>();
+  const stablecoinPriceById = Object.assign(new Map<string, number>(), { marketMarks });
   const primaryPriceById = new Map<string, number>();
   const stablecoinMcapById = new Map<string, number>();
   const stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"] = new Map();
@@ -57,7 +72,7 @@ export async function loadTrackedStablecoinMaps(
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
     let skippedWeakTrackedPrices = 0;
     for (const asset of stablecoinsCache.payload.peggedAssets) {
-      const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+      const observedAt = asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt;
       // A comparison anchor never values a quote token or supplies corroboration.
       if (isObservedPrice(asset) && asset.price != null && Number.isFinite(asset.price) && asset.price > 0 &&
         asset.priceSource && asset.priceSource !== "cached" &&
@@ -83,6 +98,11 @@ export async function loadTrackedStablecoinMaps(
             referencePriceSourceId: asset.priceSource,
             referencePriceObservedAt: observedAt!,
           });
+          if (observedAt === asset.priceObservedAt && isMarketMarkSource(asset)) {
+            marketMarks.set(asset.id, { priceUsd: asset.price, observedAtSec: observedAt!, source: asset.priceSource,
+              ...(asset.priceObservedAtMode === "upstream" ? { observedAtMode: asset.priceObservedAtMode } : {}),
+              ...readDexPriceLineage(asset) });
+          }
         }
       } else {
         skippedWeakTrackedPrices++;

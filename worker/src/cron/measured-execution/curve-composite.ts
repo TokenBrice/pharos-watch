@@ -148,7 +148,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  });
+  }, { tokenIn: input.stablecoinPriceById, tokenOut: input.stablecoinPriceById });
 }
 
 type QuoteFailure =

@@ -4,7 +4,8 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { SolanaDexBankCaptureSchema, type SolanaDexNativeGeneration } from "@shared/types/solana-dex-bank";
 import nativeFixture from "../../dex-liquidity/__tests__/fixtures/whirlpool-slot-449058549.json";
 import { decodeWhirlpool } from "../../dex-liquidity/solana/whirlpool-quote";
-import { buildNativeDexExecutionTarget } from "../inventory";
+import { createDexMeasuredValuationAdmission } from "../valuation-admission";
+import { buildMeasuredExecutionTargetValue, buildNativeDexExecutionTarget } from "../inventory";
 import { captureNativeDexPublisherFence, loadCurrentNativeDexGeneration, publishNativeDexGeneration, pruneNativeDexGenerations } from "../native-generation-store";
 import { loadNativeDexExecutionDiagnostic } from "../join";
 
@@ -122,6 +123,58 @@ describe("measured execution publication", () => {
 });
 
 describe("measured execution durable publication", () => {
+  it("matches a closed-session leg from inventory through published quote history before scoring", async () => {
+    const { db } = databases.open();
+    const at = Date.parse("2026-11-14T01:00:00Z") / 1000;
+    const mark = { source: "kraken", priceUsd: 1, observedAtSec: at - 60, observedAtMode: "upstream" as const };
+    const marketMarks = new Map([["eurc-circle", mark]]);
+    const prices = Object.assign(new Map([["eurc-circle", 1]]), { marketMarks });
+    const base = fixtureTarget("ethereum");
+    const target = buildMeasuredExecutionTargetValue({ ...base, capturedAt: at,
+      tokenOut: { ...base.tokenOut, trackedAssetId: "eurc-circle", symbol: "EURC" },
+    }, { tokenOut: prices });
+    await publishDexMeasuredTargetInventory({ db, targets: [target], capturedAt: at });
+    const inventory = (await loadLatestPublishedDexMeasuredTargets(db))!;
+    const [quotedTarget] = inventory.targets;
+    const identity = { targetGenerationId: inventory.generationId, quoteGenerationId: "closed-quote", quotedAt: at + 60 };
+    await publishDexMeasuredQuoteGeneration({ db, targetGeneration: inventory, generationId: identity.quoteGenerationId,
+      quotedAt: identity.quotedAt, outcomes: [{ target: quotedTarget!, status: "measured", profile: fixtureProfile(quotedTarget!, identity) }] });
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, at + 90);
+    const entry = evidence?.byTargetId.get(target.targetId);
+    expect(entry?.observationHistory?.valuationObservations).toEqual([{
+      quoteGenerationId: identity.quoteGenerationId, quotedAt: identity.quotedAt, targetCapturedAt: at,
+      tokenOut: { stablecoinId: "eurc-circle", ...mark },
+    }]);
+    const admission = createDexMeasuredValuationAdmission(at + 90, new Set(), marketMarks);
+    expect(admission.rejectsQuotedTarget(entry!.quotedTarget, entry!.observationHistory)).toBe(false);
+    const olderMark = { stablecoinId: "eurc-circle", ...mark, observedAtMode: undefined };
+    const olderTarget = { ...quotedTarget!, tokenOut: { ...quotedTarget!.tokenOut, marketMark: olderMark } };
+    expect(admission.rejectsQuotedTarget(olderTarget, entry!.observationHistory)).toBe(true);
+    const history = entry!.observationHistory!;
+    expect(admission.rejectsQuotedTarget(entry!.quotedTarget, {
+      ...history, valuationObservations: history.valuationObservations!.map((row) => ({ ...row, tokenOut: olderMark })),
+    })).toBe(true);
+    expect(admission.rejectsQuotedTarget(entry!.quotedTarget)).toBe(true);
+    const revised = createDexMeasuredValuationAdmission(at + 90, new Set(), new Map([["eurc-circle", { ...mark, observedAtSec: at }]]));
+    expect(revised.rejectsQuotedTarget(entry!.quotedTarget, entry!.observationHistory)).toBe(false);
+    const prior = { ...history.valuationObservations![0]!, quoteGenerationId: "prior", quotedAt: at - 900, targetCapturedAt: at - 3000,
+      tokenOut: { stablecoinId: "eurc-circle", ...mark, observedAtSec: at - 3060, priceUsd: 1.002 } };
+    const historyWith = (tokenOut: typeof prior.tokenOut) => ({
+      ...history, completeProducerCycleCount: 2, successfulObservationCount: 2, consecutiveSuccessCount: 2,
+      valuationObservations: [...history.valuationObservations!, { ...prior, tokenOut }],
+    });
+    expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith(prior.tokenOut))).toBe(false);
+    const quoteBeforeTarget = historyWith(prior.tokenOut);
+    quoteBeforeTarget.valuationObservations[1]!.quotedAt = prior.targetCapturedAt - 1;
+    expect(revised.rejectsQuotedTarget(entry!.quotedTarget, quoteBeforeTarget)).toBe(true);
+    for (const overrides of [
+      { source: "other" }, { stablecoinId: "other" }, { observedAtSec: at - 899 },
+      { observedAtSec: Date.parse("2026-11-13T21:59:59Z") / 1000 },
+    ]) {
+      expect(revised.rejectsQuotedTarget(entry!.quotedTarget, historyWith({ ...prior.tokenOut, ...overrides }))).toBe(true);
+    }
+  });
+
   it("records the supplemental producer on the shared active quote surface", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");

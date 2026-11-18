@@ -25,7 +25,7 @@ export interface CgTickerExchangeSummary {
   exchangeName: string;
   volumeUsd: number;
   priceUsd: number;
-  /** Registry refresh or conservative original ticker read time. */
+  /** Oldest contributing ticker observation. */
   observedAt?: number | null;
 }
 
@@ -62,7 +62,9 @@ export function aggregateCgTickersByExchange(
     const exchangeId = ticker.market.identifier;
     const existing = byExchange.get(exchangeId);
     const upstream = ticker.last_traded_at ? Date.parse(ticker.last_traded_at) / 1000 : NaN;
-    const observedAt = Number.isFinite(upstream) && upstream >= 0 ? Math.floor(upstream) : readObservedAt;
+    const observedAt = Number.isFinite(upstream) && upstream > 0 ? Math.floor(upstream) : undefined;
+    // Live discovery supplies its read clock. It can reject future trades but cannot date an undated one.
+    if (readObservedAt != null && (observedAt == null || observedAt > readObservedAt)) continue;
 
     if (existing) {
       existing.volumeUsd += ticker.converted_volume.usd;

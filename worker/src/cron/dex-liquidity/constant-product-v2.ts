@@ -65,6 +65,7 @@ export function refreshUsdaV2Price(input: {
     return { status: "unavailable", reason: "insufficient-support" } as const;
   }
   const observedAt = Math.min(capture.blockTimestamp, quote!.referencePriceObservedAt!);
+  delete pool.priceCounterparty;
   Object.assign(pool, { price: priceUsd, priceObservedAt: observedAt, priceSource: "direct_api", priceEvidenceTvlUsd: supportUsd });
   return { status: "observed", priceUsd, supportUsd, observedAt } as const;
 }

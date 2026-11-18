@@ -5,6 +5,7 @@ import {
 } from "../dex-discovery/types";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../../lib/dex-cron-constants";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { getRegistryPriceObservedAt, getRegistryVolumeObservedAt } from "./registry-writeback-evidence";
 
 export interface RegistryPoolView {
   stablecoinId: string;
@@ -14,6 +15,7 @@ export interface RegistryPoolView {
     | "feeTier" | "isStable" | "baseToken" | "quoteToken" | "quoteSymbol">;
   value: StagedPool;
   price: StagedPool | null;
+  priceObservedAt: number | null;
   /**
    * Row supplying the pool's 24h volume reading (DEC-19): the most trusted row
    * with a usable reading inside the staged fresh window (24h), else the most
@@ -23,6 +25,7 @@ export interface RegistryPoolView {
    * whole before any field is resolved.
    */
   volume: StagedPool | null;
+  volumeObservedAt: number | null;
   discoveredAt: number;
   lastSeenAt: number;
   sources: string[];
@@ -53,12 +56,14 @@ function compareFreshness(a: StagedPool, b: StagedPool): number {
   return b.refreshedAt - a.refreshedAt || compareText(a.source, b.source);
 }
 
-function compareTrust(a: StagedPool, b: StagedPool): number {
+function sourceTier(source: StagedPool["source"]): number {
   // Unknown persisted sources retain the merge's legacy fallback handling,
   // but can never outrank a reviewed source.
-  const tier = (source: StagedPool["source"]) =>
-    Object.prototype.hasOwnProperty.call(SOURCE_TIER, source) ? SOURCE_TIER[source] : Infinity;
-  return (tier(a.source) - tier(b.source)) || compareFreshness(a, b);
+  return Object.prototype.hasOwnProperty.call(SOURCE_TIER, source) ? SOURCE_TIER[source] : Infinity;
+}
+
+function compareTrust(a: StagedPool, b: StagedPool): number {
+  return (sourceTier(a.source) - sourceTier(b.source)) || compareFreshness(a, b);
 }
 
 export function resolveRegistryPools(rows: StagedPool[], nowSec: number): RegistryPoolView[] {
@@ -77,13 +82,28 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
     const freshValue = group.find((row) =>
       nowSec - row.refreshedAt <= STAGED_POOL_FRESH_HOURS * 3600 && row.tvlUsd != null);
     const value = freshValue ?? group.reduce((best, row) => compareFreshness(row, best) < 0 ? row : best);
-    const price = group.find((row) => row.priceUsd != null && row.priceUsd > 0
-      && nowSec - row.refreshedAt <= STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) ?? null;
-    const volumeRows = group.filter((row) =>
-      row.volume24h != null && Number.isFinite(row.volume24h) && row.volume24h >= 0);
-    const volume = volumeRows.find((row) => nowSec - row.refreshedAt <= STAGED_POOL_FRESH_HOURS * 3600)
-      ?? volumeRows.find((row) => nowSec - row.refreshedAt <= DEX_VOLUME_OBSERVATION_MAX_AGE_SEC)
-      ?? volumeRows.reduce<StagedPool | null>((best, row) => best == null || compareFreshness(row, best) < 0 ? row : best, null);
+    let price: StagedPool | null = null;
+    let priceObservedAt: number | null = null;
+    for (const row of group) {
+      if (row.priceUsd == null || !Number.isFinite(row.priceUsd) || row.priceUsd <= 0) continue;
+      const observedAt = getRegistryPriceObservedAt(row);
+      if (observedAt == null || nowSec - observedAt > STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600) continue;
+      price = row;
+      priceObservedAt = observedAt;
+      break;
+    }
+    const volumeRows = group.flatMap((row) => {
+      if (row.volume24h == null || !Number.isFinite(row.volume24h) || row.volume24h < 0) return [];
+      const observedAt = getRegistryVolumeObservedAt(row);
+      return observedAt == null ? [] : [{ row, observedAt }];
+    });
+    const compareVolumeFreshness = (a: typeof volumeRows[number], b: typeof volumeRows[number]) =>
+      b.observedAt - a.observedAt || compareText(a.row.source, b.row.source);
+    volumeRows.sort((a, b) => (sourceTier(a.row.source) - sourceTier(b.row.source)) || compareVolumeFreshness(a, b));
+    const volume = volumeRows.find(({ observedAt }) => nowSec - observedAt <= STAGED_POOL_FRESH_HOURS * 3600)
+      ?? volumeRows.find(({ observedAt }) => nowSec - observedAt <= DEX_VOLUME_OBSERVATION_MAX_AGE_SEC)
+      ?? volumeRows.reduce<typeof volumeRows[number] | null>((best, reading) =>
+        best == null || compareVolumeFreshness(reading, best) < 0 ? reading : best, null);
     const metadataRows = group.filter((row) =>
       nowSec - row.refreshedAt <= STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600);
     const field = <K extends keyof RegistryPoolView["metadata"]>(key: K): StagedPool[K] =>
@@ -110,7 +130,9 @@ export function resolveRegistryPools(rows: StagedPool[], nowSec: number): Regist
       },
       value,
       price,
-      volume,
+      priceObservedAt,
+      volume: volume?.row ?? null,
+      volumeObservedAt: volume?.observedAt ?? null,
       discoveredAt: group.reduce((earliest, row) => Math.min(earliest, row.discoveredAt), Infinity),
       lastSeenAt: group.reduce((latest, row) => Math.max(latest, row.refreshedAt), -Infinity),
       sources: [...new Set(group.map((row) => row.source))].sort(compareText),

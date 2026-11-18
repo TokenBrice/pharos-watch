@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
-import type { DexExitEvidenceKind } from "@shared/types/exit-route";
+import type { DexExitEvidenceKind, ExitRouteObservationCoverage } from "@shared/types/exit-route";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { OPERATOR_ALERT_RECEIPT_KEYS } from "../../../lib/status/operator-alert-health";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -22,15 +22,21 @@ const PREVIOUS = "dex-liquidity-previous";
 const RECOVERY = "dex-liquidity-recovery";
 const SUSTAINED = "dex-liquidity-sustained";
 const AFTER = "dex-liquidity-after";
+const LEGACY_SNAPSHOT_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
+const OUTPUT_ASSET_KEY = "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 
-function observation(routeId: string, evidenceKind: DexExitEvidenceKind = "reserve-based-amm-simulation") {
+function canonicalRouteId(poolId: string) {
+  return JSON.stringify([`ethereum:${poolId}`, [OUTPUT_ASSET_KEY]]);
+}
+
+function observation(routeId: string, evidenceKind: DexExitEvidenceKind = "reserve-based-amm-simulation", poolId = routeId) {
   return {
     routeId,
     routeFamily: "dex-amm",
     scope: {
       kind: "chain-contract",
       chain: "Ethereum",
-      contractOrPoolId: routeId,
+      contractOrPoolId: poolId,
       protocol: "test-dex",
     },
     requestedNotionalUsd: 25_000_000,
@@ -41,6 +47,7 @@ function observation(routeId: string, evidenceKind: DexExitEvidenceKind = "reser
     output: {
       kind: "tracked-stablecoin",
       trackedAssetIds: ["usdc-circle"],
+      assetKeys: [OUTPUT_ASSET_KEY],
     },
     evidenceKind,
     confidence: "high",
@@ -53,12 +60,25 @@ function observation(routeId: string, evidenceKind: DexExitEvidenceKind = "reser
 
 function publishedRow(
   stablecoinId: string,
-  routes: Array<{ routeId: string; evidenceKind?: DexExitEvidenceKind }>,
+  routes: Array<{ routeId: string; evidenceKind?: DexExitEvidenceKind; poolId?: string }>,
+  coverageStatus: ExitRouteObservationCoverage["status"] = "populated",
+  coverageOverrides: Partial<ExitRouteObservationCoverage> = {},
 ) {
   return {
     stablecoin_id: stablecoinId,
     score_components_json: JSON.stringify({
-      exitRouteObservations: routes.map((route) => observation(route.routeId, route.evidenceKind)),
+      exitRouteObservations: routes.map((route) => observation(route.routeId, route.evidenceKind, route.poolId)),
+      exitRouteObservationCoverage: {
+        status: coverageStatus,
+        capabilityMatrixVersion: "test",
+        retainedPoolCount: routes.length,
+        observationCount: routes.length,
+        scoreEligibleObservationCount: routes.length,
+        unsupportedPoolCount: 0,
+        evidenceCounts: {},
+        unsupportedReasons: {},
+        ...coverageOverrides,
+      },
     }),
   };
 }
@@ -98,7 +118,7 @@ function previousSnapshot(
     coins: coins.map((coin) => ({
       stablecoinId: coin.stablecoinId,
       routes: coin.routes.map((route) => ({
-        routeId: route.routeId,
+        routeId: canonicalRouteId(route.routeId),
         evidenceKind: route.evidenceKind ?? "reserve-based-amm-simulation",
       })),
     })),
@@ -112,7 +132,7 @@ function watchdogDb(
   currentRows: Record<string, unknown>[],
   previousValue: string | null,
   generationId: string = CURRENT,
-  options: { alertStateValue?: string | null } = {},
+  options: { alertStateValue?: string | null; legacyValue?: string } = {},
 ) {
   return mockD1([
     {
@@ -130,6 +150,12 @@ function watchdogDb(
       matchBinds: [SNAPSHOT_KEY],
       rows: [],
       first: previousValue === null ? null : { value: previousValue, updated_at: 1_000 },
+    },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [LEGACY_SNAPSHOT_KEY],
+      rows: [],
+      first: options.legacyValue === undefined ? null : { value: options.legacyValue, updated_at: 1_000 },
     },
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -169,6 +195,33 @@ function lossDb(previousValue = previousSnapshot([
 ]), generationId = CURRENT) {
   return watchdogDb([publishedRow("coin-a", routes("route-a"))], previousValue, generationId);
 }
+
+function sqliteWatchdogReplay() {
+  const { db, sqlite } = createLatestSchemaSqlite();
+  onTestFinished(() => { sqlite.close(); vi.restoreAllMocks(); });
+  const read = (key: string) => JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)?.value ?? "null"));
+  const write = (key: string, value: unknown) =>
+    sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, 1)").run(key, JSON.stringify(value));
+  const publish = (id: string, remaining: string[]) => {
+    sqlite.exec("UPDATE dex_liquidity_publication_generations SET state = 'staged'");
+    sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+      (generation_id, started_at, state, expected_row_count, created_at, published_at)
+      VALUES (?, 1, 'published', 1, 1, 1)`).run(id);
+    sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
+      (generation_id, stablecoin_id, symbol, updated_at, score_components_json)
+      VALUES (?, 'coin-a', 'A', 1, ?)`).run(id, publishedRow("coin-a", routes(...remaining)).score_components_json);
+  };
+  const run = (configured = true) => runDexExitRouteTurnoverWatchdog(db, undefined, {
+    operatorTelegramCreds: configured ? { botToken: "bot-token", chatId: "ops-chat" } : null,
+  });
+  const legacyPendingOnRollback = () => read(ALERT_STATE_KEY)?.active ? undefined : read(LEGACY_SNAPSHOT_KEY)?.pendingAlert;
+  return { sqlite, read, write, publish, run, legacyPendingOnRollback };
+}
+
+const legacyBaseline = {
+  schemaVersion: 1, generationId: PREVIOUS,
+  coins: [{ stablecoinId: "coin-a", routes: [{ routeId: "old-source-id", evidenceKind: "reserve-based-amm-simulation" }] }],
+};
 
 describe("DEX exit-route turnover watchdog", () => {
   beforeEach(() => {
@@ -217,7 +270,7 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(metadata.candidateCoinCount).toBe(0);
   });
 
-  it("treats a legacy snapshot payload without candidates as no candidate and opens one instead of alerting", async () => {
+  it("opens a candidate instead of alerting when the snapshot has none", async () => {
     const db = watchdogDb(
       [publishedRow("coin-a", routes("route-a", "route-b", "route-e", "route-f"))],
       previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b", "route-c", "route-d") }]),
@@ -240,7 +293,7 @@ describe("DEX exit-route turnover watchdog", () => {
       removedRouteCount: 2,
     });
     expect(write.coins[0].routes.map((route: { routeId: string }) => route.routeId))
-      .toEqual(["route-a", "route-b", "route-c", "route-d"]);
+      .toEqual(["route-a", "route-b", "route-c", "route-d"].map(canonicalRouteId));
     expect(write.candidates).toHaveLength(1);
     expect(write.pendingAlert).toBeUndefined();
   });
@@ -271,7 +324,7 @@ describe("DEX exit-route turnover watchdog", () => {
       }),
     ]);
     expect(write.coins[0].routes.map((route: { routeId: string }) => route.routeId))
-      .toEqual(["route-a", "route-b", "route-e", "route-f"]);
+      .toEqual(["route-a", "route-b", "route-e", "route-f"].map(canonicalRouteId));
     expect(write.candidates).toBeUndefined();
     expect(write.pendingAlert.worstOffenders[0]).toMatchObject({ stablecoinId: "coin-a" });
   });
@@ -292,8 +345,94 @@ describe("DEX exit-route turnover watchdog", () => {
       previousGenerationId: null,
       alertingCoinCount: 0,
     });
-    expect(String(write?.binds[1])).toContain('"routeId":"route-a"');
+    expect(JSON.parse(String(write?.binds[1])).coins[0].routes[0].routeId).toBe(canonicalRouteId("route-a"));
     expect(String(write?.binds[1])).not.toContain("requestedNotionalUsd");
+  });
+
+  it("re-baselines legacy route IDs without discarding an undelivered historical alert", async () => {
+    const pendingAlert = { generationId: PREVIOUS, threshold: 0.5, worstOffenders: [{ stablecoinId: "coin-a", jaccardDistance: 1 }] };
+    const legacyValue = JSON.stringify({
+      schemaVersion: 1, generationId: PREVIOUS, pendingAlert,
+      coins: [{ stablecoinId: "coin-a", routes: [{ routeId: "old-source-id", evidenceKind: "reserve-based-amm-simulation" }] }],
+    });
+    const db = watchdogDb([publishedRow("coin-a", routes("route-a"))], null, CURRENT, { legacyValue });
+    const result = await runDexExitRouteTurnoverWatchdog(db);
+    expect(metadataOf(result)).toMatchObject({ rebasedLegacySnapshot: true, comparedCoinCount: 0, candidateCoinCount: 0 });
+    expect(snapshotOf(db)).toMatchObject({
+      coins: [{ stablecoinId: "coin-a", routes: [{ routeId: canonicalRouteId("route-a") }] }],
+      pendingAlert,
+    });
+  });
+
+  it("treats two provider replacements as the same physical pool and output", async () => {
+    const previous = previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b", "route-c") }]);
+    const current = publishedRow("coin-a", [
+      { routeId: "provider-two-a", poolId: "Ethereum:ROUTE-A", evidenceKind: "measured-executable-depth" },
+      { routeId: "provider-two-b", poolId: "route-b" },
+      { routeId: "route-c" },
+    ]);
+    const db = watchdogDb([current], previous);
+    const first = await runDexExitRouteTurnoverWatchdog(db);
+    expect(metadataOf(first)).toMatchObject({
+      comparedCoinCount: 1, candidateCoinCount: 0, highestObservedTurnover: 0, evidenceKindChangedRouteCount: 1,
+    });
+    const second = await runDexExitRouteTurnoverWatchdog(watchdogDb([current], lastSnapshotWrite(db), SUSTAINED));
+    expect(metadataOf(second)).toMatchObject({ alertingCoinCount: 0 });
+  });
+
+  it.each(["unknown", "unsupported"] as const)("retains the baseline without confirming loss through %s coverage", async (status) => {
+    const baseline = previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a") }]);
+    const candidateDb = watchdogDb([publishedRow("coin-a", [])], baseline, CURRENT);
+    expect(metadataOf(await runDexExitRouteTurnoverWatchdog(candidateDb)).candidateCoinCount).toBe(1);
+    let previous = lastSnapshotWrite(candidateDb);
+    for (const generation of [SUSTAINED, AFTER]) {
+      const gapDb = watchdogDb([publishedRow("coin-a", [], status)], previous, generation);
+      const gap = await runDexExitRouteTurnoverWatchdog(gapDb);
+      expect(metadataOf(gap)).toMatchObject({
+        comparedCoinCount: 0, candidateCoinCount: 0, alertingCoinCount: 0,
+        coverageGapCoinCount: 1, coverageGapReasons: { [`coverage-${status}`]: 1 },
+      });
+      expect(snapshotOf(gapDb).coins).toEqual(JSON.parse(baseline).coins);
+      previous = lastSnapshotWrite(gapDb);
+    }
+    const recoveryDb = watchdogDb([publishedRow("coin-a", [])], previous, RECOVERY);
+    expect(metadataOf(await runDexExitRouteTurnoverWatchdog(recoveryDb))).toMatchObject({
+      comparedCoinCount: 1, candidateCoinCount: 1, alertingCoinCount: 0,
+    });
+  });
+
+  it.each([
+    "executionCapabilityGate:measured-execution:quote-failed",
+    "executionCapabilityGate:measured-execution:target-unresolved",
+    "executionCapabilityGate:measured-execution:quote-missing",
+    "executionCapabilityGate:measured-execution:budget-deferred",
+    "executionCapabilityGate:measured-execution:generation-mismatch",
+    "executionCapabilityGate:measured-execution:stale-observation",
+    "executionCapabilityGate:curve-stableswap:transport-unavailable",
+  ])("does not count two partial outages as sustained turnover (%s)", async (reason) => {
+    const baseline = previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b", "route-c") }]);
+    const partial = publishedRow("coin-a", routes("route-a"), "populated", {
+      retainedPoolCount: 3, unsupportedPoolCount: 2, unsupportedReasons: { [reason]: 2 },
+    });
+    let previous: string | null = baseline;
+    for (const generation of [CURRENT, SUSTAINED]) {
+      const db = watchdogDb([partial], previous, generation);
+      expect(metadataOf(await runDexExitRouteTurnoverWatchdog(db))).toMatchObject({
+        comparedCoinCount: 0, candidateCoinCount: 0, alertingCoinCount: 0,
+        coverageGapCoinCount: 1, coverageGapReasons: { [reason]: 1 },
+      });
+      expect(snapshotOf(db).coins).toEqual(JSON.parse(baseline).coins);
+      expect(snapshotOf(db).pendingAlert).toBeUndefined();
+      previous = lastSnapshotWrite(db);
+    }
+
+    const certifiedEmpty = publishedRow("coin-a", [], "populated", {
+      unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+    });
+    const nextDb = watchdogDb([certifiedEmpty], previous, AFTER);
+    expect(metadataOf(await runDexExitRouteTurnoverWatchdog(nextDb))).toMatchObject({
+      comparedCoinCount: 1, candidateCoinCount: 1, alertingCoinCount: 0,
+    });
   });
 
   it("never alerts on a one-generation lane blip that vanishes and returns", async () => {
@@ -424,24 +563,10 @@ describe("DEX exit-route turnover watchdog", () => {
   });
 
   it.each([false, true])("replays original failed delivery through newer, duplicate, absent and recovered observations (recover=%s)", async (recover) => {
-    const { db, sqlite } = createLatestSchemaSqlite();
-    onTestFinished(() => { sqlite.close(); vi.restoreAllMocks(); });
+    const { sqlite, read, publish, run } = sqliteWatchdogReplay();
     const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
-    const read = (key: string) => JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)?.value));
     const snapshot = () => read(SNAPSHOT_KEY);
     const receipt = () => read(OPERATOR_ALERT_RECEIPT_KEYS.turnover);
-    const publish = (id: string, remaining: string[]) => {
-      sqlite.exec("UPDATE dex_liquidity_publication_generations SET state = 'staged'");
-      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
-        (generation_id, started_at, state, expected_row_count, created_at, published_at)
-        VALUES (?, 1, 'published', 1, 1, 1)`).run(id);
-      sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
-        (generation_id, stablecoin_id, symbol, updated_at, score_components_json)
-        VALUES (?, 'coin-a', 'A', 1, ?)`).run(id, publishedRow("coin-a", routes(...remaining)).score_components_json);
-    };
-    const run = (configured = true) => runDexExitRouteTurnoverWatchdog(db, undefined, {
-      operatorTelegramCreds: configured ? { botToken: "bot-token", chatId: "ops-chat" } : null,
-    });
     for (const [id, remaining] of [
       [PREVIOUS, ["a", "b", "c", "d"]], [CURRENT, ["a"]],
     ] as const) {
@@ -452,6 +577,7 @@ describe("DEX exit-route turnover watchdog", () => {
     publish(SUSTAINED, ["a"]);
     sendToChatMock.mockImplementation(async () => {
       expect(snapshot().pendingAlert.generationId).toBe(SUSTAINED);
+      expect(read(LEGACY_SNAPSHOT_KEY).pendingAlert).toEqual(snapshot().pendingAlert);
       expect(receipt().pendingSince).toBe(1_800_000_000);
       return { ok: false };
     });
@@ -464,7 +590,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const original = snapshot().pendingAlert;
     const pendingReceipt = receipt();
     const update = sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?");
-    for (const key of [SNAPSHOT_KEY, ALERT_STATE_KEY]) {
+    for (const key of [SNAPSHOT_KEY, LEGACY_SNAPSHOT_KEY, ALERT_STATE_KEY]) {
       const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
       sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, 1)").run(key, "{");
       await expect(run()).rejects.toThrow("Invalid DEX exit-route turnover");
@@ -512,6 +638,48 @@ describe("DEX exit-route turnover watchdog", () => {
     publish("quiet", recover ? ["a", "b", "c", "d"] : []);
     await run();
     expect(sendToChatMock).toHaveBeenCalledTimes(calls);
+  });
+
+  it("clears a delivered v1 alert before episode reset so rollback cannot resend it", async () => {
+    const { sqlite, read, write, publish, run, legacyPendingOnRollback } = sqliteWatchdogReplay();
+    const pendingAlert = { generationId: PREVIOUS, threshold: 0.5, worstOffenders: [{ stablecoinId: "coin-a", jaccardDistance: 1 }] };
+    write(LEGACY_SNAPSHOT_KEY, { ...legacyBaseline, pendingAlert });
+    sqlite.exec(`CREATE TRIGGER reject_turnover_reset_with_pending BEFORE UPDATE ON cache
+      WHEN NEW.key = '${ALERT_STATE_KEY}' AND json_extract(NEW.value, '$.active') = 0
+        AND EXISTS (SELECT 1 FROM cache WHERE key IN ('${SNAPSHOT_KEY}', '${LEGACY_SNAPSHOT_KEY}')
+          AND json_type(value, '$.pendingAlert') IS NOT NULL)
+      BEGIN SELECT RAISE(ABORT, 'turnover reset with pending alert'); END`);
+
+    publish(CURRENT, ["a"]);
+    await run();
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(read(ALERT_STATE_KEY).active).toBe(true);
+    expect(read(LEGACY_SNAPSHOT_KEY)).toEqual(legacyBaseline);
+    expect(read(SNAPSHOT_KEY).pendingAlert).toBeUndefined();
+    publish(RECOVERY, ["a"]);
+    await run();
+    expect(read(ALERT_STATE_KEY).active).toBe(false);
+    expect(legacyPendingOnRollback()).toBeUndefined();
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes an undelivered v2 alert readable on rollback and honors acknowledgement by v1", async () => {
+    const { read, write, publish, run, legacyPendingOnRollback } = sqliteWatchdogReplay();
+    write(LEGACY_SNAPSHOT_KEY, legacyBaseline);
+    for (const [id, remaining] of [[PREVIOUS, ["a", "b", "c"]], [CURRENT, ["a"]], [SUSTAINED, ["a"]]] as const) {
+      publish(id, [...remaining]);
+      await run(false);
+    }
+    const pending = read(SNAPSHOT_KEY).pendingAlert;
+    expect(pending.generationId).toBe(SUSTAINED);
+    expect(legacyPendingOnRollback()).toEqual(pending);
+    expect(read(LEGACY_SNAPSHOT_KEY)).toEqual({ ...legacyBaseline, pendingAlert: pending });
+
+    write(LEGACY_SNAPSHOT_KEY, legacyBaseline);
+    write(ALERT_STATE_KEY, { active: false, generationId: null, sentAtSec: null });
+    await run();
+    expect(read(SNAPSHOT_KEY).pendingAlert).toBeUndefined();
+    expect(sendToChatMock).not.toHaveBeenCalled();
   });
 
   it("does not alert on single-route flaps of tiny route sets, even a lone route briefly vanishing", async () => {
@@ -579,8 +747,8 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(firstWrite.coins).toEqual(expect.arrayContaining([
       expect.objectContaining({
         stablecoinId: "coin-a",
-        routes: ["route-a", "route-b", "route-c"].map((routeId) =>
-          expect.objectContaining({ routeId })),
+        routes: ["route-a", "route-b", "route-c"].map((poolId) =>
+          expect.objectContaining({ routeId: canonicalRouteId(poolId) })),
       }),
     ]));
 
@@ -681,9 +849,9 @@ describe("DEX exit-route turnover watchdog", () => {
     const firstWrite = snapshotOf(firstDb);
     expect(firstWrite.coins.find((coin: { stablecoinId: string }) => coin.stablecoinId === "coin-x").routes)
       .toEqual([
-        { routeId: "route-x1", evidenceKind: "reserve-based-amm-simulation" },
-        { routeId: "route-x2", evidenceKind: "reserve-based-amm-simulation" },
-        { routeId: "route-x3", evidenceKind: "reserve-based-amm-simulation" },
+        { routeId: canonicalRouteId("route-x1"), evidenceKind: "reserve-based-amm-simulation" },
+        { routeId: canonicalRouteId("route-x2"), evidenceKind: "reserve-based-amm-simulation" },
+        { routeId: canonicalRouteId("route-x3"), evidenceKind: "reserve-based-amm-simulation" },
       ]);
 
     const secondDb = watchdogDb(rosterRows, lastSnapshotWrite(firstDb), RECOVERY);

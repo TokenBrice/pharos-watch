@@ -147,6 +147,6 @@ describe("captureClSourcePools", () => {
       balances: captured.balances,
     }], chainAddressToId, new Map(), undefined, trackedStablecoinPrices).get("usdc-circle")?.map((entry) => entry.price) ?? [];
     expect(shapedPrices).toHaveLength(1);
-    expect(shapedPrices[0]).toBeCloseTo(1, 6);
+    expect(shapedPrices[0]).toBe(0);
   });
 });

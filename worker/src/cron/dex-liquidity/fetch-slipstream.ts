@@ -117,6 +117,7 @@ async function recoverSlipstreamPoolsFromStaging(input: {
       poolType: classifyClPoolType(input.protocol, pool.candidate.feeBps),
       tokens: pool.tokens,
       price: pool.price,
+      ratioObservedAtSec: capture.blockTimestamp,
       tvlUsd: pool.tvlUsd,
       // On-chain state carries no trailing volume: no observation, not zero.
       volume24hUsd: null,

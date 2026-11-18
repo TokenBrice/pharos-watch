@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -22,8 +22,14 @@ import { POOL_CHALLENGE_MIN_TVL } from "../../lib/price-depeg-voting-policy";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
+import { createDexRouteObservationPacking, publishedDexRouteCounts } from "./dex-route-observation-selection";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { normalizeProtocol } from "./pool-helpers";
+import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
+import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
+import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-execution/valuation-admission";
 import { buildStoredChallengerPoolsJson } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -45,6 +51,7 @@ const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
 const DEX_ROUTE_SET_HOLD_MAX_AGE_SEC = 60 * 60;
 const DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD = 100_000;
 const DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO = 0.5;
+const DEX_ROUTE_ADMISSION_POLICY_VERSION = 1;
 /** Bound in-memory row payloads while amortizing D1 statements and round trips. */
 export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 15;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
@@ -184,6 +191,20 @@ interface HeldDexRouteSet {
   candidateBestCapacityUsd: number;
 }
 
+interface DexRouteClosureValuation {
+  stablecoinId: string;
+  rejectedAssetIds: ReadonlySet<string>;
+  poolReasons?: ReadonlyMap<string, string>;
+  omittedRouteIds?: ReadonlySet<string>;
+}
+
+function affectedClosureStarts(route: ExitRouteObservation, valuation: DexRouteClosureValuation, nowSec: number, poolReason?: string): number[] {
+  return [valuation.stablecoinId, ...(route.output.trackedAssetIds ?? [])]
+    .filter((id) => poolReason === DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE || valuation.rejectedAssetIds.has(id))
+    .map((id) => getReferenceMarketClosureStart(getReferenceMarket(TRACKED_META_BY_ID.get(id)?.flags.pegCurrency), nowSec))
+    .filter((clock): clock is number => clock !== null);
+}
+
 function stressCapacityUsd(observation: ExitRouteObservation): number {
   return observation.capacityCurve?.find(
     (point) =>
@@ -195,6 +216,7 @@ function stressCapacityUsd(observation: ExitRouteObservation): number {
 function parseCurrentDexRouteSet(raw: string | null): {
   observations: ExitRouteObservation[];
   coverage: ExitRouteObservationCoverage;
+  currentAdmissionPolicy: boolean;
 } | null {
   if (raw === null) return null;
   const parsed = tryParseJson(raw, "dex liquidity previous route set");
@@ -204,7 +226,10 @@ function parseCurrentDexRouteSet(raw: string | null): {
   const parsedRouteSet = parsed as {
     exitRouteObservations?: unknown;
     exitRouteObservationCoverage?: unknown;
+    exitRouteAdmissionPolicyVersion?: unknown;
   };
+  if (parsedRouteSet.exitRouteAdmissionPolicyVersion !== undefined &&
+    parsedRouteSet.exitRouteAdmissionPolicyVersion !== DEX_ROUTE_ADMISSION_POLICY_VERSION) return null;
   const observations = ExitRouteObservationSchema.array().safeParse(
     parsedRouteSet.exitRouteObservations,
   );
@@ -212,7 +237,11 @@ function parseCurrentDexRouteSet(raw: string | null): {
     parsedRouteSet.exitRouteObservationCoverage,
   );
   return observations.success && coverage.success
-    ? { observations: observations.data, coverage: coverage.data }
+    ? {
+        observations: observations.data,
+        coverage: coverage.data,
+        currentAdmissionPolicy: parsedRouteSet.exitRouteAdmissionPolicyVersion === DEX_ROUTE_ADMISSION_POLICY_VERSION,
+      }
     : null;
 }
 
@@ -222,6 +251,7 @@ export function selectStillFreshDexRouteSetHold(
   previousRaw: string | null,
   nowSec: number,
   onDecision?: (reason: string) => void,
+  valuation?: DexRouteClosureValuation,
 ): HeldDexRouteSet | null {
   const candidateP4 = candidate as P4aFullScoreResult;
   const candidateObservations = candidateP4.exitRouteObservations ?? [];
@@ -230,12 +260,60 @@ export function selectStillFreshDexRouteSetHold(
     onDecision?.(previousRaw === null ? "empty-previous" : "invalid-previous");
     return null;
   }
+  if (previous.observations.length === 0) {
+    onDecision?.("empty-previous");
+    return null;
+  }
+  const candidateIds = new Set(candidateObservations.map((route) => route.routeId));
+  const previousBestCapacityUsd = Math.max(0, ...previous.observations.map(stressCapacityUsd));
+  const candidateBestCapacityUsd = Math.max(0, ...candidateObservations.map(stressCapacityUsd));
+  if (valuation && (valuation.rejectedAssetIds.size > 0 || valuation.poolReasons?.size)) {
+    const { selected: observations, add } = createDexRouteObservationPacking();
+    for (const route of candidateObservations) add(route, true);
+    let hasClosureAffectedRoute = false;
+    const budget = getDexMeasuredExecutionFreshnessMaxSec();
+    for (const route of previous.observations) {
+      if (route.evidenceKind !== "measured-executable-depth") continue;
+      const poolReason = route.scope.kind === "chain-contract" ? valuation.poolReasons?.get(
+        canonicalExitRouteScopedKey(route.scope.chain, route.scope.contractOrPoolId),
+      ) : undefined;
+      const closures = affectedClosureStarts(route, valuation, nowSec, poolReason);
+      if (closures.length === 0) continue;
+      hasClosureAffectedRoute = true;
+      if (candidateIds.has(route.routeId) || valuation.omittedRouteIds?.has(route.routeId)) continue;
+      if (poolReason && poolReason !== DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE) continue;
+      if (closures.some((start) => route.observedAt > start || start - route.observedAt > budget)) continue;
+      const end = route.observationHistory?.observationWindowEndedAt;
+      if (end !== undefined && (end > nowSec || nowSec - end > budget)) continue;
+      add(route);
+    }
+    if (hasClosureAffectedRoute) {
+      const currentCoverage = candidateP4.exitRouteObservationCoverage;
+      if (observations.length === candidateObservations.length || !currentCoverage) {
+        onDecision?.("no-closure-carry");
+        return null;
+      }
+      const coverage: ExitRouteObservationCoverage = {
+        ...currentCoverage, status: "populated", ...publishedDexRouteCounts(observations),
+        // Only the current census establishes which of its physical pools supplied a quote.
+        scoreEligiblePoolCount: currentCoverage.scoreEligiblePoolCount,
+      };
+      onDecision?.("held");
+      return { observations, coverage, previousBestCapacityUsd, candidateBestCapacityUsd };
+    }
+  }
   if (candidateObservations.length === 0) {
     onDecision?.("empty-candidate");
     return null;
   }
-  if (previous.observations.length === 0) {
-    onDecision?.("empty-previous");
+  if (!previous.currentAdmissionPolicy && previous.observations.some((route) =>
+    route.evidenceKind === "reserve-based-amm-simulation" && route.scope.kind === "chain-contract" &&
+    normalizeProtocol(route.scope.protocol) === "curve")) {
+    onDecision?.("incompatible-curve-route-policy");
+    return null;
+  }
+  if (!previous.currentAdmissionPolicy && previous.observations.some((route) => route.evidenceKind === "measured-executable-depth")) {
+    onDecision?.("incompatible-measured-route-policy");
     return null;
   }
   const previousRouteIds = new Set(
@@ -245,20 +323,13 @@ export function selectStillFreshDexRouteSetHold(
     (observation) => !previousRouteIds.has(observation.routeId),
   ) || previous.observations.some(
     (observation) =>
-      !candidateObservations.some(
-        (candidateObservation) =>
-          candidateObservation.routeId === observation.routeId,
-      ),
+      !candidateIds.has(observation.routeId),
   );
   if (!routeSetChanged) {
     onDecision?.("ids-unchanged");
     return null;
   }
 
-  const previousBestCapacityUsd = Math.max(
-    0,
-    ...previous.observations.map(stressCapacityUsd),
-  );
   const previousBestObservation = previous.observations.find(
     (observation) =>
       stressCapacityUsd(observation) === previousBestCapacityUsd,
@@ -266,27 +337,22 @@ export function selectStillFreshDexRouteSetHold(
   if (
     previousBestObservation === undefined ||
     previousBestObservation.observedAt > nowSec ||
-    nowSec - previousBestObservation.observedAt >
-      DEX_ROUTE_SET_HOLD_MAX_AGE_SEC
+    nowSec - previousBestObservation.observedAt > DEX_ROUTE_SET_HOLD_MAX_AGE_SEC
   ) {
     onDecision?.(previousBestObservation?.observedAt != null && previousBestObservation.observedAt > nowSec ? "prior-future" : "prior-too-old");
     return null;
   }
-  const candidateBestCapacityUsd = Math.max(
-    0,
-    ...candidateObservations.map(stressCapacityUsd),
-  );
   if (
     previousBestCapacityUsd < DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD ||
-    candidateBestCapacityUsd >
-      previousBestCapacityUsd * DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO
+    candidateBestCapacityUsd > previousBestCapacityUsd * DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO
   ) {
     onDecision?.(previousBestCapacityUsd < DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD ? "capacity-below-floor" : "not-collapsed");
     return null;
   }
   onDecision?.("held");
   return {
-    ...previous,
+    observations: previous.observations,
+    coverage: previous.coverage,
     previousBestCapacityUsd,
     candidateBestCapacityUsd,
   };
@@ -305,13 +371,18 @@ export function buildDexScoreDetailsJson(
   census: DexDeploymentCensusDetailParams | null = null,
 ): string {
   const p4aResult = scoreResult as P4aFullScoreResult;
-  const coverage = census?.classification.coverage ?? p4aResult.exitRouteObservationCoverage;
+  const coverage = p4aResult.exitRouteObservations?.length
+    ? p4aResult.exitRouteObservationCoverage
+    : census?.classification.coverage ?? p4aResult.exitRouteObservationCoverage;
   return JSON.stringify({
     ...scoreResult.components,
     ...(scoreResult.liquidityScoreUnavailableReason != null
       ? { liquidityScoreUnavailableReason: scoreResult.liquidityScoreUnavailableReason }
       : {}),
-    ...(p4aResult.exitRouteObservations != null ? { exitRouteObservations: p4aResult.exitRouteObservations } : {}),
+    ...(p4aResult.exitRouteObservations != null ? {
+      exitRouteObservations: p4aResult.exitRouteObservations,
+      exitRouteAdmissionPolicyVersion: DEX_ROUTE_ADMISSION_POLICY_VERSION,
+    } : {}),
     ...(coverage != null ? { exitRouteObservationCoverage: coverage } : {}),
     ...(census != null ? { dexDeploymentCensus: buildDexDeploymentCensusDetail(census) } : {}),
   });
@@ -879,6 +950,8 @@ export async function persistScores(
       if (!ACTIVE_IDS.has(id)) continue;
       const sr = scoreResults.get(id);
       if (!sr) continue;
+      const removal = routeRemovalEvidence?.get(id);
+      const rejectedAssetIds = removal?.closureValuationRejectedAssetIds;
       const heldRouteSet = selectStillFreshDexRouteSetHold(
         sr,
         currentRouteSets.get(id) ?? null,
@@ -894,6 +967,9 @@ export async function persistScores(
             incrementReason(exitRouteContinuity.refusedReasons, reason);
           }
         },
+        rejectedAssetIds ? {
+          stablecoinId: id, rejectedAssetIds, poolReasons: removal?.poolReasons, omittedRouteIds: removal?.omittedRouteIds,
+        } : undefined,
       );
       const persistedScoreResult: FullScoreResult =
         heldRouteSet === null
@@ -929,7 +1005,7 @@ export async function persistScores(
           level: "warn",
           event: "dex_route_set_churn_held",
           job: "sync-dex-liquidity",
-          message: "Preserved the last still-fresh asset route set after an unconfirmed capacity collapse",
+          message: "Carried prior DEX route observations into the published asset route set",
           metadata: {
             stablecoinId: id,
             previousBestCapacityUsd: heldRouteSet.previousBestCapacityUsd,

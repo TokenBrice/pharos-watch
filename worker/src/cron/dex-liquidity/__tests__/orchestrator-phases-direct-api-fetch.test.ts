@@ -133,7 +133,7 @@ describe("runDirectApiFetchPhase", () => {
     vi.restoreAllMocks();
   });
 
-  it("captures each provider's live read clock without renewing an explicitly dated quote", async () => {
+  it("keeps provider read clocks separate from quote observation clocks", async () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     const pool: DexApiPool = {
       source: "balancer", chain: "ethereum", poolAddress: "0xpool", poolType: "balancer-stable",
@@ -150,8 +150,8 @@ describe("runDirectApiFetchPhase", () => {
         { ...pool, poolAddress: "0xundated", priceObservedAt: undefined },
       ], { ok: true, degraded: false, errors: [] })),
     ], defaultLookups);
-    expect(phase.results.map((entry) => entry.result.pools.map((quote) => quote.priceObservedAt))).toEqual([
-      [1_700_000_000], [1_699_978_400, 1_700_000_100],
+    expect(phase.results.map((entry) => entry.result.pools.map((quote) => [quote.readStartedAtSec, quote.priceObservedAt]))).toEqual([
+      [[1_700_000_000, undefined]], [[1_700_000_100, 1_699_978_400], [1_700_000_100, undefined]],
     ]);
   });
 

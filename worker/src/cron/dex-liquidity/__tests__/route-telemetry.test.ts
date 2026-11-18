@@ -90,7 +90,7 @@ describe("route turnover attribution", () => {
 describe("continuity decision reasons", () => {
   it.each(["empty-candidate", "empty-previous", "invalid-previous", "prior-too-old", "prior-future", "capacity-below-floor", "not-collapsed", "ids-unchanged", "held"])("records %s without changing the hold policy", (reason) => {
     const f = makeDexRouteHoldFixture();
-    let raw: string | null = f.previousRaw;
+    let raw: string | null = JSON.stringify({ ...JSON.parse(f.previousRaw), exitRouteAdmissionPolicyVersion: 1 });
     if (reason === "empty-candidate") f.candidate.exitRouteObservations = [];
     if (reason === "empty-previous") raw = null;
     if (reason === "invalid-previous") raw = "{}";
@@ -98,7 +98,7 @@ describe("continuity decision reasons", () => {
     if (reason === "prior-too-old" || reason === "prior-future") f.previousObservation.observedAt = f.nowSec + (reason === "prior-future" ? 1 : -3_601);
     if (reason === "capacity-below-floor") f.previousObservation = f.observation("old", 99_999, f.nowSec);
     if (reason === "not-collapsed") f.candidate.exitRouteObservations = [f.observation("new", 24_000_000, f.nowSec)];
-    if (["prior-too-old", "prior-future", "capacity-below-floor"].includes(reason)) raw = JSON.stringify({ exitRouteObservations: [f.previousObservation], exitRouteObservationCoverage: f.coverage });
+    if (["prior-too-old", "prior-future", "capacity-below-floor"].includes(reason)) raw = JSON.stringify({ exitRouteAdmissionPolicyVersion: 1, exitRouteObservations: [f.previousObservation], exitRouteObservationCoverage: f.coverage });
     const reasons: string[] = [];
     const held = selectStillFreshDexRouteSetHold(f.candidate, raw, f.nowSec, (decision) => reasons.push(decision));
     expect(reasons).toEqual([reason]);

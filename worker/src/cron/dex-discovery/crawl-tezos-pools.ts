@@ -6,7 +6,6 @@ import {
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { trackedSideBalanceRatio } from "../../lib/dex-cron-constants";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "../dex-liquidity/constants";
 import { buildStageSignal, toStagedPool, type CrawlStageContext } from "./staged-pool";
@@ -26,7 +25,7 @@ const TEZOS_TOKEN_BALANCE_PAGE_LIMIT = 10_000;
 /** A single account.in query keeps this stage well below URL and request budgets. */
 const TEZOS_MAX_ACCOUNT_FILTER_ADDRESSES = 150;
 
-/** Known official Youves pools; discovery still requires that TzKT reports a live uUSD balance. */
+/** Reviewed Youves flat-curve pools; discovery still requires a live uUSD balance. */
 const KNOWN_YOUVES_POOL_ADDRESSES: Record<string, true> = {
   KT1JeWiS8j1kic4PHx7aTnEr9p4xVtJNzk5b: true,
   KT1AVbWyM8E7DptyBCu4B5J5B7Nswkq7Skc6: true,
@@ -158,9 +157,10 @@ function isContractAddress(address: string): boolean {
 }
 
 
-function isPoolLikeAccount(address: string): boolean {
+export function isReviewedYouvesPoolAddress(address: string): boolean {
   return KNOWN_YOUVES_POOL_ADDRESSES[address] === true;
 }
+
 function isUsdStableToken(row: ParsedTokenBalance): boolean {
   return knownMetadataForToken(row.tokenAddress, row.tokenId) !== null;
 }
@@ -195,37 +195,13 @@ function amountFromRaw(raw: string, decimals: number | null): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
-function classifyPoolAlias(alias: string | undefined): {
-  protocol: string;
-  dexId: string;
-  poolType: string;
-} {
-  const normalized = alias?.toLowerCase() ?? "";
-  if (normalized.includes("flatyouves") || normalized.includes("flat")) {
-    return { protocol: "youves-flat", dexId: "flatyouves", poolType: "tezos-flat-curve" };
-  }
-  if (normalized.includes("quipu")) {
-    return { protocol: "quipuswap", dexId: "quipuswap", poolType: "tezos-stable-swap" };
-  }
-  if (normalized.includes("plenty")) {
-    return { protocol: "plenty", dexId: "plenty", poolType: "tezos-stable-swap" };
-  }
-  if (normalized.includes("spicy")) {
-    return { protocol: "spicyswap", dexId: "spicyswap", poolType: "tezos-stable-swap" };
-  }
-  if (normalized.includes("vortex")) {
-    return { protocol: "vortex", dexId: "vortex", poolType: "tezos-constant-product" };
-  }
-  return { protocol: "tezos-amm", dexId: "tezos-amm", poolType: "tezos-stable-swap" };
-}
-
 function evaluatePool(
   group: ReserveGroup,
   target: ContractDeployment,
   context: CrawlStageContext,
 ): PoolEvaluation {
   const alias = group.account.alias;
-  if (!isPoolLikeAccount(group.account.address)) return { pool: null, unpriced: false };
+  if (!isReviewedYouvesPoolAddress(group.account.address)) return { pool: null, unpriced: false };
 
   const tracked = group.rows.find(
     (row) => row.tokenAddress === target.address && row.tokenId === TEZOS_UUSD_TOKEN_ID,
@@ -239,30 +215,14 @@ function evaluatePool(
   const quoteAmount = amountFromRaw(quote.balance, quote.decimals);
   if (trackedAmount == null || quoteAmount == null) return { pool: null, unpriced: true };
 
-  const marketPriceUsd = quoteAmount / trackedAmount;
   const tvlUsd = 2 * Math.min(trackedAmount, quoteAmount);
-  if (
-    !Number.isFinite(marketPriceUsd) ||
-    marketPriceUsd <= 0 ||
-    !Number.isFinite(tvlUsd) ||
-    tvlUsd <= 0
-  ) {
-    return { pool: null, unpriced: true };
-  }
-
-  // A reserve imbalance can put a market price outside the peg sanity band
-  // while the contract is still an observable pool. Keep its census row with a
-  // null price and degrade the provider rather than dropping a real venue.
-  const priceUsd = isPlausibleDexObservationPrice(context.stablecoinId, marketPriceUsd, context.references)
-    ? marketPriceUsd
-    : null;
+  if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return { pool: null, unpriced: true };
 
   // The pool is known but below the repository's retained-pool floor. This is
   // intentionally not degraded: both TzKT pages completed and the result is a
   // verified-empty census at the scoring threshold.
   if (tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) return { pool: null, unpriced: false };
 
-  const family = classifyPoolAlias(alias);
   const poolId = canonicalExitRouteScopedKey(target.chain, group.account.address);
   const symbol = `uUSD / ${quote.symbol ?? "USD"}`;
   const rawJson = JSON.stringify({
@@ -276,24 +236,24 @@ function evaluatePool(
     poolId,
     source: TEZOS_POOL_SOURCE,
     chain: target.chain,
-    protocol: family.protocol,
-    dexId: family.dexId,
+    protocol: "youves-flat",
+    dexId: "flatyouves",
     symbol,
     tvlUsd,
     volume24h: null,
     qualityMultiplier: null,
-    poolType: family.poolType,
+    poolType: "tezos-flat-curve",
     feeTier: null,
     balanceRatio,
     isStable: true,
     baseToken: target.address,
     quoteToken: quote.tokenAddress,
     quoteSymbol: quote.symbol,
-    priceUsd,
+    priceUsd: null,
     lockedLiqPct: null,
     rawJson,
   });
-  return { pool, unpriced: priceUsd == null };
+  return { pool, unpriced: false };
 }
 
 function buildHolderUrl(target: ContractDeployment): string {
@@ -396,7 +356,7 @@ export async function crawlTezosPoolsStage(input: {
   // beyond the URL-safe cap; truncation remains degraded rather than empty.
   const orderedAddresses = [
     ...Object.keys(KNOWN_YOUVES_POOL_ADDRESSES).filter((address) => uniqueContracts.has(address)),
-    ...[...uniqueContracts.keys()].filter((address) => !KNOWN_YOUVES_POOL_ADDRESSES[address]),
+    ...[...uniqueContracts.keys()].filter((address) => !isReviewedYouvesPoolAddress(address)),
   ];
   const reserveAddresses = orderedAddresses.slice(0, TEZOS_MAX_ACCOUNT_FILTER_ADDRESSES);
   const accountFilterTruncated = reserveAddresses.length < orderedAddresses.length;
@@ -451,8 +411,8 @@ export async function crawlTezosPoolsStage(input: {
   let unpricedPoolCount = 0;
   let unclassifiedContractCount = 0;
   for (const address of uniqueContracts.keys()) {
-    if (!isPoolLikeAccount(address)) unclassifiedContractCount++;
-    if (!groups.has(address) && isPoolLikeAccount(address)) unpricedPoolCount++;
+    if (!isReviewedYouvesPoolAddress(address)) unclassifiedContractCount++;
+    else if (!groups.has(address)) unpricedPoolCount++;
   }
   for (const group of groups.values()) {
     const evaluation = evaluatePool(group, target, input.context);

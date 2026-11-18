@@ -157,6 +157,13 @@ const DEPEG_USDT_POOLS: readonly PricePoolSpec[] = [
   { stablecoinId: "usdt-tether", poolId: "solana:raydium-1", project: "raydium", chain: "Solana", tvlUsd: 1_000_000, price: 1, source: "gecko_terminal" },
 ];
 
+function unprovenPriceEnvelope(sources: Array<Record<string, unknown>>): string {
+  return JSON.stringify({
+    aggregateObservedAt: sources[0]?.aggregateObservedAt ?? null,
+    sources, aggregateContributors: [],
+  });
+}
+
 export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
   {
     label: "atomically publishes an empty or weighted-median DEX price generation",
@@ -179,7 +186,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
           source_total_tvl: 1_000_000,
           deviation_from_primary_bps: -99,
           primary_price_at_calc: 1.01,
-          price_sources_json: JSON.stringify([
+          price_sources_json: unprovenPriceEnvelope([
             { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 750_000, sourceFamily: "dl" },
             { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000, sourceFamily: "direct_api" },
           ]),
@@ -265,7 +272,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 82_806,
         deviation_from_primary_bps: 0,
         primary_price_at_calc: 0.00074113379,
-        price_sources_json: JSON.stringify([{
+        price_sources_json: unprovenPriceEnvelope([{
           protocol: "pancakeswap",
           chain: "BSC",
           price: 0.00074113379,
@@ -309,7 +316,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 280_000,
         deviation_from_primary_bps: 0,
         primary_price_at_calc: 1,
-        price_sources_json: JSON.stringify([
+        price_sources_json: unprovenPriceEnvelope([
           { protocol: "raydium", chain: "Solana", price: 1.18, tvl: 180_000, sourceFamily: "dexscreener" },
           { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" },
         ]),
@@ -359,7 +366,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 1_200_000,
         deviation_from_primary_bps: 0,
         primary_price_at_calc: 0.3,
-        price_sources_json: JSON.stringify([
+        price_sources_json: unprovenPriceEnvelope([
           { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
           { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
         ]),
@@ -390,7 +397,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: DEX_PRICE_OBSERVATION_MIN_TVL_USD,
         deviation_from_primary_bps: -100,
         primary_price_at_calc: 1,
-        price_sources_json: JSON.stringify([{
+        price_sources_json: unprovenPriceEnvelope([{
           protocol: "curve",
           chain: "Ethereum",
           price: 0.99,
@@ -427,7 +434,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 100_000,
         deviation_from_primary_bps: -1,
         primary_price_at_calc: 1,
-        price_sources_json: JSON.stringify([{
+        price_sources_json: unprovenPriceEnvelope([{
           protocol: "curve",
           chain: "Ethereum",
           price: 0.9999,
@@ -455,7 +462,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 692_239,
         deviation_from_primary_bps: 186,
         primary_price_at_calc: 0.1129,
-        price_sources_json: JSON.stringify([
+        price_sources_json: unprovenPriceEnvelope([
           { protocol: "uniswap", chain: "Ethereum", price: 0.115, tvl: 627_528, sourceFamily: "gecko_terminal" },
           { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
         ]),
@@ -480,7 +487,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         source_total_tvl: 64_711,
         deviation_from_primary_bps: 204,
         primary_price_at_calc: 0.1129,
-        price_sources_json: JSON.stringify([{
+        price_sources_json: unprovenPriceEnvelope([{
           protocol: "curve",
           chain: "Ethereum",
           price: 0.1152,

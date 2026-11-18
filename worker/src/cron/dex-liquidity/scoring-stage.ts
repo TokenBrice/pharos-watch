@@ -29,7 +29,7 @@ const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 // named quarantine rather than retained clamped values.
 // v7: source entries contain only identity and pools; aggregates are computed
 // by scoring, never staged as dormant placeholders. Older payloads fail closed.
-const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 7;
+const DEX_LIQUIDITY_SCORING_STAGE_PAYLOAD_VERSION = 9;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -487,6 +487,20 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
         throw new Error("DEX liquidity scoring stage contains an invalid header");
       }
       assertTimestamp("registryEvaluatedAtSec", record.pool.registryEvaluatedAtSec);
+      const rejectedAssets = record.pool.closureValuationRejectedAssetIds;
+      if (rejectedAssets !== undefined && (!Array.isArray(rejectedAssets) ||
+        rejectedAssets.some((id) => typeof id !== "string" || id.length === 0))) {
+        throw new Error("DEX liquidity scoring stage contains invalid closure valuation rejections");
+      }
+      const marks = record.pool.closureValuationMarketMarks;
+      if (marks !== undefined && (!Array.isArray(marks) || marks.some((entry) => !Array.isArray(entry) ||
+        entry.length !== 2 || typeof entry[0] !== "string" || entry[0].length === 0 ||
+        !isRecord(entry[1]) || !Number.isFinite(entry[1].priceUsd) || entry[1].priceUsd <= 0 ||
+        !Number.isSafeInteger(entry[1].observedAtSec) || entry[1].observedAtSec <= 0 ||
+        typeof entry[1].source !== "string" || !entry[1].source.trim()) ||
+        new Set(marks.map(([id]) => id)).size !== marks.length)) {
+        throw new Error("DEX liquidity scoring stage contains invalid closure valuation market marks");
+      }
       decoder.sourceHeader = record.source;
       decoder.poolHeader = record.pool;
       return;

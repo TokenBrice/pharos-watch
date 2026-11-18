@@ -4,6 +4,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
+import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import {
   CURVE_NATIVE_DISCOVERY_CHAINS,
   type DexDeploymentOutcome,
@@ -65,9 +66,36 @@ const STAGING_BATCH_SIZE = 50;
 const STAGING_DELETE_TTL_SEC = (STAGED_POOL_CONFIDENCE_HORIZON_HOURS + 24) * 60 * 60;
 const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
-// Retain only an already valid producer-owned admission marker, never provider payloads.
-const STAGING_IDENTITY_ENVELOPE_SQL = `CASE WHEN json_valid(raw_json) THEN
+const CURVE_PRICE_CLOCK_SQL = `json_type(raw_json, '$.curvePriceObservedAtSec') = 'integer'
+  AND json_extract(raw_json, '$.curvePriceObservedAtSec') BETWEEN 1 AND refreshed_at`;
+const CURVE_OVERLAP_SQL = `json_type(raw_json, '$.curveBasePoolOverlap.basePoolKey') = 'text'
+  AND length(json_extract(raw_json, '$.curveBasePoolOverlap.basePoolKey')) <= 64
+  AND json_type(raw_json, '$.curveBasePoolOverlap.lpLegTvlUsd') IN ('integer', 'real')
+  AND json_extract(raw_json, '$.curveBasePoolOverlap.lpLegTvlUsd') > 0
+  AND json_extract(raw_json, '$.curveBasePoolOverlap.lpLegTvlUsd') <= tvl_usd`;
+// Keep bounded producer evidence needed for replay, never raw provider payloads.
+const STAGING_EVIDENCE_ENVELOPE_SQL = `CASE WHEN json_valid(raw_json) THEN
   CASE
+    WHEN source = 'dl' AND (protocol = 'curve' OR dex_id = 'curve')
+      AND ( (${CURVE_PRICE_CLOCK_SQL}) OR (${CURVE_OVERLAP_SQL}) )
+      THEN json_patch(
+        CASE WHEN ${CURVE_PRICE_CLOCK_SQL}
+          THEN json_object('curvePriceObservedAtSec', json_extract(raw_json, '$.curvePriceObservedAtSec')) ELSE '{}' END,
+        CASE WHEN ${CURVE_OVERLAP_SQL}
+          THEN json_object('curveBasePoolOverlap', json_object(
+            'basePoolKey', json_extract(raw_json, '$.curveBasePoolOverlap.basePoolKey'),
+            'lpLegTvlUsd', json_extract(raw_json, '$.curveBasePoolOverlap.lpLegTvlUsd'))) ELSE '{}' END)
+    WHEN source = 'direct_api' AND pool_type GLOB 'pancakeswap-v3*'
+      AND json_type(raw_json, '$.pancakeV3VolumeWindowEndSec') = 'integer'
+      AND json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec') BETWEEN 1 AND refreshed_at
+      AND json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec') % ${HOUR_SECONDS} = 0
+      THEN json_object('pancakeV3VolumeWindowEndSec', json_extract(raw_json, '$.pancakeV3VolumeWindowEndSec'))
+    WHEN source = 'horizon' AND json_extract(raw_json, '$.valuation.kind') = 'market'
+      AND json_type(raw_json, '$.valuation.observedAtSec') = 'integer'
+      AND json_extract(raw_json, '$.valuation.observedAtSec') BETWEEN 1 AND refreshed_at
+      THEN json_object('valuation', json_object('kind', 'market',
+        'observedAtSec', json_extract(raw_json, '$.valuation.observedAtSec'),
+        'counterparty', json_extract(raw_json, '$.valuation.counterparty')))
     WHEN (SELECT COUNT(*) FROM json_each(raw_json) WHERE key = 'identityReviewVersion') <> 1 THEN NULL
     WHEN source = 'tezos' AND json_extract(raw_json, '$.identityReviewVersion') = '${TEZOS_POOL_IDENTITY_REVIEW_VERSION}'
       THEN json_object('identityReviewVersion', '${TEZOS_POOL_IDENTITY_REVIEW_VERSION}')
@@ -396,14 +424,14 @@ export async function cleanupStaging(
         runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
       },
       rawJson: {
-        // SAFETY: STAGING_IDENTITY_ENVELOPE_SQL is a module-level constant SQL expression.
+        // SAFETY: STAGING_EVIDENCE_ENVELOPE_SQL is a module-level constant SQL expression.
         sql: `UPDATE dex_pool_registry
-              SET raw_json = ${STAGING_IDENTITY_ENVELOPE_SQL}
+              SET raw_json = ${STAGING_EVIDENCE_ENVELOPE_SQL}
             WHERE rowid IN (
               SELECT rowid
                 FROM dex_pool_registry
                WHERE raw_json IS NOT NULL
-                 AND raw_json IS NOT (${STAGING_IDENTITY_ENVELOPE_SQL})
+                 AND raw_json IS NOT (${STAGING_EVIDENCE_ENVELOPE_SQL})
                  AND refreshed_at < ?
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
@@ -416,7 +444,7 @@ export async function cleanupStaging(
     probes: {
       oldest: {
         sql: `SELECT MIN(refreshed_at) AS oldest_remaining_at,
-                  MIN(CASE WHEN raw_json IS NOT (${STAGING_IDENTITY_ENVELOPE_SQL}) THEN refreshed_at END) AS oldest_raw_json_remaining_at
+                  MIN(CASE WHEN raw_json IS NOT (${STAGING_EVIDENCE_ENVELOPE_SQL}) THEN refreshed_at END) AS oldest_raw_json_remaining_at
              FROM dex_pool_registry`,
       },
     },
