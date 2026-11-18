@@ -19,6 +19,7 @@ import type {  RedemptionBackstopEntry,
 } from "@shared/types/redemption";
 import {
   RedemptionBackstopEntrySchema,
+  RedemptionBackstopSnapshotEntrySchema,
   RedemptionBackstopDetailsSchema,
   RedemptionConfidenceDetailsSchema,
   RedemptionCostScenarioScoresSchema,
@@ -361,7 +362,7 @@ function toEntry(row: RedemptionBackstopRow, runId: string, rejectionReasons: st
     return null;
   }
   if (mentoFpmmIds.has(row.stablecoin_id) && details.mentoPhaseEntry !== undefined) {
-    const phase = RedemptionBackstopEntrySchema.safeParse(details.mentoPhaseEntry);
+    const phase = RedemptionBackstopSnapshotEntrySchema.safeParse(details.mentoPhaseEntry);
     if (phase.success && phase.data.stablecoinId === row.stablecoin_id &&
         phase.data.updatedAt === row.updated_at && phase.data.methodologyVersion === row.methodology_version) {
       return phase.data;
@@ -615,7 +616,8 @@ function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: nu
   const reviewDeadline = reopening != null && mentoReview && mentoReview.reviewDeadline > now
     ? mentoReview.reviewDeadline : Infinity;
   const evidenceExpiry = Math.min(...rows.flatMap((entry) =>
-    entry.sourceTimestamp != null && (entry.resolutionState === "resolved" || entry.routeStatus === "paused")
+    entry.sourceTimestamp != null && (entry.resolutionState === "resolved" || entry.routeStatus === "paused" ||
+      (entry.routeStatusSource === "market-implied" && entry.settlementDelaySec != null))
       ? [entry.sourceTimestamp + LIVE_RESERVE_FRESHNESS_SEC + 1] : []));
   return Math.min(transition, reviewDeadline, evidenceExpiry);
 }

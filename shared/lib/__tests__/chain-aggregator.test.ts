@@ -745,6 +745,19 @@ describe("aggregateChains", () => {
     });
   });
 
+  it("keeps the fixed USD reference when the published quote is unavailable", () => {
+    const supplyUsd = 100_000_000;
+    const { chains: [chain] } = aggregateChains(makeInput({ peggedAssets: [{
+      id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", price: null,
+      currentPeg: { currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true, currentPriceUnavailable: true },
+      chainCirculating: { ethereum: { current: supplyUsd } },
+    }] }));
+    expect(chain.pegStabilityCoverage).toMatchObject({
+      noUsablePriceSupplyUsd: supplyUsd, noPegReferenceSupplyUsd: 0, observedSupplyUsd: 0, observedScore: null,
+    });
+    expect(chain.healthFactors.pegStability).toBeNull();
+  });
+
   it("assigns tier 1 chain environment to ethereum", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;

@@ -877,6 +877,21 @@ describe("market and risk collectors", () => {
     expect(value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", peakBps: activeRows.usdc.peak_deviation_bps });
     expect(value.topDepegs[0]).not.toHaveProperty("priceObservedAt");
   });
+  it("ranks a fresh fixed-USD composite on its current deviation", async () => {
+    const ctx = ctxFor(depegTable([activeRows.usdt]));
+    const quoteAt = ctx.nowSec - 45;
+    const asset = ctx.stablecoinAssetById.get("usdt-tether")!;
+    Object.assign(asset, { price: 0.98, priceSource: "kraken+pyth+redstone", priceConfidence: "high",
+      priceSelectedSource: "pyth", priceObservedAtMode: "local_fetch", priceObservedAt: quoteAt });
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0]).toMatchObject({
+      severityBasis: "current", currentBps: -200, peakBps: -500, priceObservedAt: quoteAt,
+    });
+    asset.priceObservedAt = ctx.nowSec - 3600;
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0].severityBasis).toBe("peak-fallback");
+    asset.priceObservedAt = quoteAt;
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(1, { admittedDeviationBps: null })]]);
+    expect((await collectActiveDepegs(ctx)).value.topDepegs[0].severityBasis).toBe("peak-fallback");
+  });
   function scheduledObservation(valueUsd: number, bps: number | null, observedAt: number, kind: "fx" | "fallback" = "fallback",
     decisionAtSec = observedAt) {
     const referenceAt = bps == null ? observedAt - 43 * 3_600 : observedAt;
@@ -1114,6 +1129,24 @@ describe("market and risk collectors", () => {
     const result = await collectNativeSupplyMovers(ctx);
     expect(result.value).toStrictEqual({ biggestSupplyChange: null, supplyChanges7d: [] });
     expect(result.degradedReasons).toEqual(["supply-movers-unavailable"]);
+  });
+  it("uses the paired pre-midnight valuation for weekly supply and daily velocity", async () => {
+    const today = ctxFor([]).todayTs;
+    const rows = [[0, 110e9], [1, 101e9], [7, 100e9]].map(([days, quantity]) => {
+      const date = today - days * 86_400;
+      const at = date + (days === 0 ? -15 : 10);
+      return { stablecoin_id: "usdt-tether", snapshot_date: date, circulating_native: quantity,
+        valuation_price_usd: 1, valuation_observed_at_sec: at,
+        supply_provenance: JSON.stringify({ supplySource: "coingecko-fallback", supplyObservedAt: at, supplyChainGuard: null }) };
+    });
+    const ctx = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]);
+    ctx.coreAggregateStablecoinAssets = ctx.coreAggregateStablecoinAssets.filter(({ id }) => id === "usdt-tether");
+    const { value } = await collectNativeSupplyMovers(ctx);
+    expect(value.biggestSupplyChange).toMatchObject({ id: "usdt-tether", changeUsd: 10e9,
+      quantityEvidence: { valuationObservedAt: today - 15 } });
+    expect(value.supplyVelocity).toMatchObject([{ change1d: 9e9, change7d: 10e9, signal: "accelerating" }]);
+    rows[0].valuation_observed_at_sec = today - 3600;
+    expect((await collectNativeSupplyMovers(ctx)).value.biggestSupplyChange).toBeNull();
   });
   it("covers velocity and silent collector failures", async () => {
     const now = ctxFor([]).todayTs;

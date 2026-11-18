@@ -14,6 +14,20 @@ const DAY = 86400;
 const sec = (iso: string) => Date.parse(iso) / 1000;
 
 describe("scheduled reference coverage", () => {
+  it("counts 30 hours of legacy severe weekend observations while excluding blind closure time", () => {
+    const start = sec("2026-11-21T00:00:00Z");
+    const now = start + 30 * 3600;
+    const from = now - 90 * DAY;
+    const event = makeEvent({
+      pegType: "peggedEUR", startedAt: start - 900, endedAt: null, peakDeviationBps: -3000,
+      priceCoverage: { intervals: [[start, now]], lastTrustedObservationAt: now, gapStartedAt: null, lastObservationKind: "trusted-off-peg" },
+    });
+    const quiet = computeRecentPegStats([], from, now, "EUR")!;
+    const result = computeRecentPegStats([event], from, now, "EUR")!;
+    expect(result.observedDays).toBeCloseTo(quiet.observedDays + 1.25);
+    expect(result.pegPct).toBeCloseTo(100 * (1 - 1.25 / (quiet.observedDays + 1.25)), 5);
+  });
+
   it("penalizes a fresh severe weekend observation with a legacy ledger omission", () => {
     const now = sec("2026-11-14T12:00:00Z");
     const startedAt = now - 900;

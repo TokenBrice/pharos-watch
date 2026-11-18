@@ -301,6 +301,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       published.referenceAdmission != null && published.referenceAdmission.status !== "admitted" &&
       dexAdmission?.status === "admitted" && observation.pegReference?.asOf === dexAdmission.referenceObservedAtSec &&
       observation.pegReference.source === dexAdmission.kind;
+    const keepFixedUsdDexComparison = published.currentPriceUnavailable && !published.pegReferenceUnavailable &&
+      observation.currentPriceUnavailable && TRACKED_META_BY_ID.get(asset.id)?.flags.pegCurrency === "USD";
     const publishedRefusal = published.referenceAdmission?.status !== "admitted" ? published.referenceAdmission : undefined;
     currentObservations.set(asset.id, {
       ...observation,
@@ -310,7 +312,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       referenceAdmission: observation.referenceAdmission?.status === "admitted" ? publishedRefusal : observation.referenceAdmission,
       pegReference: keepDexComparison ? observation.pegReference : null,
       pegReferenceUnavailable: published.pegReferenceUnavailable,
-      dexPriceCheck: keepDexComparison ? observation.dexPriceCheck : null,
+      dexPriceCheck: keepDexComparison || keepFixedUsdDexComparison ? observation.dexPriceCheck : null,
       ...(published.currentPriceUnavailable && { currentPriceUnavailable: true, primaryTrust: "unusable" }),
     });
   }

@@ -193,6 +193,16 @@ export function getLegacyReferenceClosureStart(market: ReferenceMarket, nowSec: 
   return start;
 }
 
+export function isLegacyReferenceDeviationHeld(
+  pegCurrency: string | null | undefined,
+  nowSec: number,
+  deviationBps: number,
+): boolean {
+  const market = getReferenceMarket(pegCurrency);
+  return market !== null && !(Math.abs(deviationBps) >= DEPEG_SEVERITY_BPS.severe)
+    && getLegacyReferenceClosureStart(market, nowSec) !== null;
+}
+
 /**
  * The closure rule replayed over a stored event, for history built before the rule existed: a
  * sub-severe event that opened while its reference market was shut would not have opened then.

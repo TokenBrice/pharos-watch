@@ -385,6 +385,12 @@ export const RedemptionBackstopEntrySchema = RedemptionBackstopEntryBaseSchema.s
 });
 export type RedemptionBackstopEntry = z.infer<typeof RedemptionBackstopEntrySchema>;
 
+// The dated pool status can differ from the public payout-availability status.
+export const RedemptionBackstopSnapshotEntrySchema = RedemptionBackstopEntrySchema.safeExtend({
+  mentoPoolStatus: RedemptionRouteStatusSchema.extract(["open", "paused"]).optional(),
+});
+export type RedemptionBackstopSnapshotEntry = z.infer<typeof RedemptionBackstopSnapshotEntrySchema>;
+
 // Persisted details are partial, including explicit historical envelopes; score
 // coherence is enforced once the complete entry is assembled.
 export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntryBaseSchema.pick({

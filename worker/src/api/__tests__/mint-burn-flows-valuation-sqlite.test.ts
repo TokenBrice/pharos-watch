@@ -23,7 +23,8 @@ import { mintBurnConfigKey } from "../../lib/mint-burn-contract-identity";
 import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
-import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
+import { drainMintBurnMaterializationDebt, rebuildMintBurnMaterializationHours } from "../../lib/mint-burn-pipeline/materialization-debt";
+import { healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { finalizeMintBurnFlowResponse } from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_RECEIPT_CLASSIFICATION_VERSION } from "../../lib/mint-burn-published-gauge";
 // Frozen at origin/main 49da34e78 so shallow CI clones and later releases retain this oracle.
@@ -155,6 +156,29 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     await certify("recovered");
     expect(await latestHour()).toMatchObject({ hourTs: hour, netFlowUsd: 200_000 });
     expect(await count()).toBe(1);
+  });
+  it("keeps a verified USDz mint counted when its missing price is repaired", async () => {
+    const { db, sqlite } = fixtures.open();
+    const id = "usdz-anzen";
+    const hour = Math.floor(NOW / HOUR) * HOUR - HOUR;
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === id)!;
+    const mint = { ...event("mint", hour + 60, null, id), amount: 12_000_000, block_number: config.startBlock + 1 };
+    await insertMintBurnRows(db, [mint]);
+    await recalcAffectedHours(db, collectAffectedHours([mint]), { materializationRevision: "verified" });
+    await commitMintBurnMaterializedCoverage(db, {
+      configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+      fromBlock: config.startBlock, toBlock: mint.block_number, fromTimestamp: hour, toTimestamp: hour + HOUR,
+      finalizedBlock: mint.block_number, acceptedAt: NOW, materializedStablecoinId: id,
+      materialization: { revision: "verified", hours: [hour] },
+    }, []);
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+      VALUES (?, ?, 50_000_000, 1, ?)`).run(id, Math.floor(hour / 86400) * 86400, mint.timestamp);
+    const repair = await healNullPrices(db, NOW);
+    expect(repair.healed).toBe(1);
+    await rebuildMintBurnMaterializationHours(db, repair.affectedHours);
+    const counted = await handleMintBurnEvents(db, new URL(`https://x/api/mint-burn-events?stablecoin=${id}&scope=counted`));
+    expect(await counted.json()).toMatchObject({ total: 1, events: [{ amountUsd: 12_000_000 }] });
+    expect(await (await flowResponse(db, `?stablecoin=${id}`)).json()).toMatchObject({ mintCount: 1, mintVolumeUsd: 12_000_000 });
   });
   it.each([["per-coin", 720, 0], ["aggregate", 720, 0], ["aggregate", 168, 1], ["per-coin", 24, 1]] as const)(
     "bounds %s cache writes at hours=%s", async (scope, hours, expectedWrites) => {

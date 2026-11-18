@@ -31,7 +31,13 @@ export function depegObservedIntervals(event: DepegEvent, closures: Array<[numbe
   if (event.admittedCoverage !== undefined) {
     return event.admittedCoverage.map(({ fromSec, toSec }) => [fromSec, toSec]);
   }
-  if (event.priceCoverage != null) return subtractIntervals(event.priceCoverage.intervals, closures);
+  if (event.priceCoverage != null) {
+    // The legacy detector recorded trusted off-peg observations through a severe closure move.
+    const peak = Math.abs(event.peakDeviationBps);
+    return Number.isFinite(peak) && peak >= DEPEG_SEVERITY_BPS.severe
+      ? event.priceCoverage.intervals
+      : subtractIntervals(event.priceCoverage.intervals, closures);
+  }
   if (event.endedAt == null) return [];
   const start = legacyPegEventStart(event);
   return start === null ? [] : subtractIntervals([[start, event.endedAt]], closures);

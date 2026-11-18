@@ -1,5 +1,5 @@
 import { HOUR_SECONDS } from "@shared/lib/time-constants";
-import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry, RedemptionBackstopSnapshotEntry } from "@shared/types/redemption";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserve-policy";
 import {
   resolveMentoFxMarketReopen,
@@ -51,22 +51,29 @@ export function resolveMentoFpmmDelay(
 }
 
 export function projectMentoMarketPhase(
-  entry: RedemptionBackstopEntry,
+  entry: RedemptionBackstopSnapshotEntry,
   now: number,
   delayClock: "current" | "stored" = "current",
-): RedemptionBackstopEntry {
+): RedemptionBackstopSnapshotEntry {
   if (!mentoFpmmIds.has(entry.stablecoinId)) return entry;
-  const delay = resolveMentoFpmmDelay(entry.stablecoinId, entry, entry.updatedAt, now, entry.immediateCapacityUsd);
+  const { mentoPoolStatus, ...publicEntry } = entry;
+  const poolEvidence = mentoPoolStatus && entry.routeStatusSource === "market-implied"
+    ? { ...entry, routeStatus: mentoPoolStatus, routeStatusSource: "onchain" as const }
+    : entry;
+  const delay = resolveMentoFpmmDelay(entry.stablecoinId, poolEvidence, entry.updatedAt, now, entry.immediateCapacityUsd);
   if (delay != null) {
     // Immutable rows date the countdown to updatedAt. Readers project the remaining delay.
-    return delayClock === "stored" || delay === entry.settlementDelaySec ? entry : { ...entry, settlementDelaySec: delay };
+    if (delayClock === "stored") return entry;
+    if (mentoPoolStatus == null && delay === entry.settlementDelaySec) return entry;
+    return { ...publicEntry, settlementDelaySec: delay };
   }
 
-  return withholdMentoMarketPhase(entry);
+  return withholdMentoMarketPhase(publicEntry);
 }
 
 export function withholdMentoMarketPhase(entry: RedemptionBackstopEntry): RedemptionBackstopEntry {
-  if (entry.resolutionState !== "resolved" && !entry.capacityProfile && entry.routeStatus === "unknown") return entry;
+  if (entry.resolutionState !== "resolved" && !entry.capacityProfile && entry.routeStatus === "unknown" &&
+      entry.immediateCapacityUsd === null && entry.immediateCapacityRatio === null && entry.settlementDelaySec == null) return entry;
   return {
     ...entry,
     score: null,
@@ -83,10 +90,12 @@ export function withholdMentoMarketPhase(entry: RedemptionBackstopEntry): Redemp
     confidenceDetails: undefined,
     settlementDelaySec: undefined,
     capacityRejectionReason: "redeemable-capacity-unobserved",
-    resolutionState: "missing-capacity",
-    routeStatus: "unknown",
-    routeStatusSource: "static-config",
-    routeStatusReason: "Mento FPMM capacity requires an observation from the current market phase",
-    routeStatusReviewedAt: undefined,
+    ...(entry.routeStatusSource === "market-implied" ? {} : {
+      resolutionState: "missing-capacity",
+      routeStatus: "unknown",
+      routeStatusSource: "static-config",
+      routeStatusReason: "Mento FPMM capacity requires an observation from the current market phase",
+      routeStatusReviewedAt: undefined,
+    }),
   };
 }

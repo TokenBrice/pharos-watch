@@ -127,6 +127,7 @@ function pegStabilityCandidate(asset: ChainAggregatorAsset, supplyUsd: number, l
     return { price, pegRef, supplyUsd };
   }
   const usdPeg = pegType === "peggedUSD" && (meta == null || meta.flags.pegCurrency === "USD");
+  if (usdPeg && price == null && peg?.referenceAdmission === undefined) return { price, pegRef: 1, supplyUsd };
   const projection = readDeviationProjection(peg, usdPeg, asset.priceObservedAt);
   // Legacy chain scores weight the unrounded price/reference ratio.
   const unavailable = peg?.pegReferenceUnavailable || projection === null ||

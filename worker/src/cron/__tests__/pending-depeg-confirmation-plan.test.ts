@@ -12,7 +12,10 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 import { buildPendingClosureHoldStatements, hasCurrentPendingClosureVerdict, buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import { evaluatePromotionDecision } from "../pending-depeg-confirmation-decision";
-import { buildConfirmationPlan, SELECT_PENDING_CONFIRMATION_SQL, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
+import {
+  buildConfirmationPlan, SELECT_PENDING_CONFIRMATION_SQL,
+  type ConfirmationEvidenceInput, type ConfirmationPlanInput, type ConfirmationPlanReady,
+} from "../pending-depeg-confirmation";
 import { collectConfirmationEvidence } from "../pending-depeg-confirmation-evidence";
 
 import { attachDetectionReferenceContext, deriveDetectionPegRates } from "../depeg-detection/reference-policy";
@@ -121,8 +124,38 @@ function makeInput(db: D1Database, spec: Omit<Spec, "label">): ConfirmationPlanI
       stablecoinId: value.stablecoin_id, geckoId: spec.meta?.geckoId ?? "brz", pegCurrency: spec.meta?.flags.pegCurrency ?? "BRL",
       price: spec.nativePrice, updatedAt: now - 60, derivation: tradedPair,
     }, openSet: spec.open ? new Set([value.stablecoin_id]) : new Set(), now };
-
 }
+
+function collectPlanEvidence(
+  db: D1Database,
+  plan: ConfirmationPlanReady,
+  now: number,
+  overrides: Partial<ConfirmationEvidenceInput>,
+) {
+  return collectConfirmationEvidence({
+    ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
+    cexAllowed: false, cexPrices: null, coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+    ...overrides,
+  });
+}
+
+const curvePool = (stablecoinId: string, price: number, observedAt: number) =>
+  new Map([[stablecoinId, [{ price, observedAt, tvlUsd: 8e6, protocol: "curve", sourceFamily: "curve", chain: "ethereum" }]]]);
+const emptyFx = (now: number) => ({ ...referenceState({}, now - 60), observations: {} });
+
+async function planWithFx(
+  input: ConfirmationPlanInput,
+  fxState: Parameters<typeof deriveDetectionPegRates>[5],
+  rates?: Record<string, number>,
+) {
+  const { db, asset, meta, now } = input;
+  const selection = await deriveDetectionPegRates(db, asset ? [asset] : [], new Map([[meta!.id, meta!]]),
+    new Set(), rates, fxState, now);
+  return buildConfirmationPlan({ ...input, pegRates: selection.rates, pegRateSources: selection.sources, pegRateCounts: selection.counts });
+}
+
+const readSelectedPending = (sqlite: DatabaseSync) =>
+  sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
 
 afterEach(() => { for (const sqlite of openDbs.splice(0)) sqlite.close(); });
 
@@ -144,11 +177,8 @@ describe("buildConfirmationPlan", () => {
     attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
     const plan = buildConfirmationPlan(input);
     if (plan.kind !== "ready") throw new Error("Expected a valid primary entitlement");
-    const status = async (observedAt: number) => (await collectConfirmationEvidence({
-      ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), cexAllowed: false, cexPrices: null,
-      coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
-      poolChallengers: new Map([[id, [{ price: unit * 0.97, tvlUsd: 8e6, protocol: "curve",
-        sourceFamily: "curve", chain: "ethereum", observedAt }]]]),
+    const status = async (observedAt: number) => (await collectPlanEvidence(db, plan, now, {
+      poolChallengers: curvePool(id, unit * 0.97, observedAt),
     })).poolStatus;
     expect(await status(now - 240)).toBe("insufficient");
     expect(await status(now - 30)).toBe("confirm");
@@ -161,13 +191,38 @@ describe("buildConfirmationPlan", () => {
       row: { stablecoin_id: eurMeta.id, peg_type: "peggedEUR", peg_reference: 1.1, first_price: 1.078, last_price: 1.078 },
       asset: { pegType: "peggedEUR", price: 1.078, priceSource: "coingecko", circulating: { peggedEUR: 100e6 } },
     });
-    const resolve = async (fxState: Parameters<typeof deriveDetectionPegRates>[5]) => {
-      const rates = await deriveDetectionPegRates(db, [input.asset!], new Map([[eurMeta.id, eurMeta]]), new Set(), undefined, fxState, now);
-      return buildConfirmationPlan({ ...input, pegRates: rates.rates, pegRateSources: rates.sources, pegRateCounts: rates.counts });
-    };
-    expect(await resolve(null)).toMatchObject({ kind: "ready", pegReference: 1.1 });
-    expect(await resolve({ ...referenceState({}, now - 60), observations: {} }))
+    expect(await planWithFx(input, null)).toMatchObject({ kind: "ready", pegReference: 1.1 });
+    expect(await planWithFx(input, emptyFx(now)))
       .toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
+  });
+
+  it("promotes a pending EURC move from a clocked Curve quote when the primary disappears", async () => {
+    const { sqlite, db } = fixture();
+    const now = Date.UTC(2026, 10, 18, 12, 15) / 1_000;
+    const meta = { ...eurMeta, id: "eurc-circle" };
+    for (const seenAt of [now - 1800, now - 900]) {
+      await buildUpsertPendingDepegStmt(db, { stablecoinId: meta.id, symbol: "EURC", pegType: "peggedEUR",
+        price: 1.078, pegReference: 1.1, bps: -200, direction: "below", reason: "low-confidence",
+        seenAt, quoteObservedAt: seenAt - 30, sourceKeys: ["coingecko"] }).run();
+    }
+    const pending = sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
+    const input = makeInput(db, { kind: "ready", meta, now, row: pending, rates: { peggedEUR: 1.1 }, rateSources: { peggedEUR: "fx" } });
+    const fx = referenceState(input.pegRates, now - 60);
+    attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), fx, fx.repricingByPeg);
+    const plan = buildConfirmationPlan(input);
+    if (plan.kind !== "ready") throw new Error(`Expected secondary evaluation, got ${plan.kind}`);
+    const collect = (pool: { observedAt: number; upstreamKeys?: string[] }) => collectConfirmationEvidence({
+      ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), cexAllowed: false, cexPrices: null,
+      coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
+      poolChallengers: new Map([[meta.id, [{ price: 1.078, tvlUsd: 8e6, protocol: "curve",
+        sourceFamily: "direct_api", chain: "ethereum", ...pool }]]]),
+    });
+    expect((await collect({ observedAt: now - 1800 })).poolStatus).toBe("insufficient");
+    expect((await collect({ observedAt: now - 25, upstreamKeys: ["venue:coingecko"] })).poolStatus).toBe("insufficient");
+    const evidence = await collect({ observedAt: now - 25 });
+    await db.batch(evaluatePromotionDecision({ db, plan, evidence, now }));
+    expect(sqlite.prepare("SELECT peak_deviation_bps, peak_price, peg_reference FROM depeg_events").all())
+      .toEqual([{ peak_deviation_bps: -200, peak_price: 1.078, peg_reference: 1.1 }]);
   });
 
   it.each([
@@ -180,21 +235,12 @@ describe("buildConfirmationPlan", () => {
     const pending = row({ stablecoin_id: meta.id, peg_type: peg, peg_reference: ref, first_seen_at: now - 1000,
       last_seen_at: now - 100, first_price: price, last_price: price });
     seed(sqlite, pending);
-    const resolve = async (rates: Record<string, number>, fxState: Parameters<typeof deriveDetectionPegRates>[5] = null) => {
-      const selection = await deriveDetectionPegRates(db, [], new Map([[meta.id, meta]]), new Set(), rates, fxState, now);
-      return buildConfirmationPlan({ ...makeInput(db, { kind: "ready", row: pending, now, meta }),
-        pegRates: selection.rates, pegRateSources: selection.sources, pegRateCounts: selection.counts });
-    };
-    if (refresh) expect(await resolve({ [peg]: 1.2 })).toMatchObject({ kind: "wait" });
-    expect(await resolve({}, { ...referenceState({}, now - 60), observations: {} })).toMatchObject({ kind: "wait" });
-    const plan = await resolve(refresh ? { [peg]: ref } : {});
+    const input = makeInput(db, { kind: "ready", row: pending, now, meta });
+    if (refresh) expect(await planWithFx(input, null, { [peg]: 1.2 })).toMatchObject({ kind: "wait" });
+    expect(await planWithFx(input, emptyFx(now), {})).toMatchObject({ kind: "wait" });
+    const plan = await planWithFx(input, null, refresh ? { [peg]: ref } : {});
     if (plan.kind !== "ready") throw new Error("Expected secondary confirmation against the legacy benchmark");
-    const evidence = await collectConfirmationEvidence({
-      ...plan, db, now, dexPriceRows: new Map(), dexPriceSources: new Map(), cexAllowed: false, cexPrices: null,
-      coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
-      poolChallengers: new Map([[meta.id, [{ price, tvlUsd: 8e6, protocol: "curve",
-        sourceFamily: "curve", chain: "ethereum", observedAt: now - 30 }]]]),
-    });
+    const evidence = await collectPlanEvidence(db, plan, now, { poolChallengers: curvePool(meta.id, price, now - 30) });
     await db.batch(evaluatePromotionDecision({ db, plan, evidence, now }));
     expect(sqlite.prepare("SELECT peak_deviation_bps, peg_reference FROM depeg_events").all())
       .toEqual([{ peak_deviation_bps: -200, peg_reference: ref }]);
@@ -209,14 +255,10 @@ describe("buildConfirmationPlan", () => {
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first + 60, sourceKeys: ["kraken"] }).run();
     sqlite.prepare("UPDATE depeg_pending SET last_seen_at = ?, updated_at = ?").run(first + 900, first + 900);
     const read = async () => {
-      const row = sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
+      const row = readSelectedPending(sqlite);
       const plan = buildConfirmationPlan(makeInput(db, { kind: "ready", row }));
       if (plan.kind !== "ready") throw new Error("Expected a confirmable pending episode");
-      const evidence = await collectConfirmationEvidence({
-        ...plan, db, now: NOW_SEC, dexPriceRows: new Map(), dexPriceSources: new Map(), poolChallengers: new Map(),
-        cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]),
-        coingeckoAllowed: false, coingeckoApiKey: undefined, signal: undefined,
-      });
+      const evidence = await collectPlanEvidence(db, plan, NOW_SEC, { cexAllowed: true, cexPrices: new Map([["USDT", 0.98]]) });
       return { keys: [...(plan.pendingSourceKeys ?? [])], confirming: evidence.confirmingSources };
     };
     expect(await read()).toEqual({ keys: ["binance"], confirming: [] });
@@ -245,7 +287,7 @@ describe("buildConfirmationPlan", () => {
       price: pegRef * 0.98, bps: -200, reason: "low-confidence" };
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: first, quoteObservedAt: quote }).run();
     await buildUpsertPendingDepegStmt(db, { ...args, seenAt: now, quoteObservedAt: first + 45 }).run();
-    const row = sqlite.prepare(SELECT_PENDING_CONFIRMATION_SQL).get() as unknown as PendingDepegRow;
+    const row = readSelectedPending(sqlite);
     const input = makeInput(db, { kind: "ready", row, now, meta, rates: { [peg]: pegRef }, rateSources: { [peg]: "fallback" },
       asset: { pegType: peg, price: args.price } });
     attachDetectionReferenceContext(input.pegRates, [], new Map(), new Set(), null);
@@ -272,12 +314,11 @@ describe("buildConfirmationPlan", () => {
     expect(evaluatePromotionDecision({ db, plan, evidence: plan.evidence, now })).toEqual([]);
     expect(buildConfirmationPlan({ ...input, asset: { ...input.asset!, price: 1.09 } }))
       .toMatchObject({ kind: "wait", reason: "reference-market-closed" });
-    if (mode === "legacy") expect(buildConfirmationPlan({ ...input, asset: undefined }))
-      .toEqual({ kind: "wait", reason: "reference-market-closed", legacyClosure: true });
-    else expect(buildConfirmationPlan({ ...input, asset: undefined }))
-      .toEqual({ kind: "wait", reason: "peg-reference-unavailable" });
-    const monday = Date.UTC(2026, 10, 16, 12) / 1000;
-    expect(buildConfirmationPlan({ ...input, asset: undefined, now: monday }).kind).toBe("mutate");
+    const withoutAsset = { ...input, asset: undefined };
+    expect(buildConfirmationPlan(withoutAsset)).toEqual(mode === "legacy"
+      ? { kind: "wait", reason: "reference-market-closed", legacyClosure: true }
+      : { kind: "wait", reason: "peg-reference-unavailable" });
+    expect(buildConfirmationPlan({ ...withoutAsset, now: Date.UTC(2026, 10, 16, 12) / 1000 }).kind).toBe("mutate");
   });
 
   it("ages a lagged quote from the run that found it and requires a later quote for persistence", async () => {
@@ -437,25 +478,26 @@ describe("buildConfirmationPlan", () => {
     const input = makeInput(db, PLAN_CASES.find((spec) => spec.row?.id === 15)!);
     seed(sqlite, input.row);
     expect(buildConfirmationPlan(input)).toEqual({ kind: "wait", reason: "reference-market-closed" });
-    const readHold = () => sqlite.prepare("SELECT reference_market_held_at FROM depeg_pending WHERE id = ?").get(input.row.id);
-    await db.batch(buildPendingClosureHoldStatements(db, input.row, input.now));
-    expect(readHold()).toEqual({ reference_market_held_at: input.now });
     const readRow = () => sqlite.prepare("SELECT * FROM depeg_pending WHERE id = ?").get(input.row.id) as unknown as PendingDepegRow;
+    const updateHold = sqlite.prepare("UPDATE depeg_pending SET reference_market_held_at = ? WHERE id = ?");
+    const recordHold = (row: PendingDepegRow, at: number | null) => db.batch(buildPendingClosureHoldStatements(db, row, at));
+    await recordHold(input.row, input.now);
+    expect(readRow().reference_market_held_at).toBe(input.now);
     expect(hasCurrentPendingClosureVerdict(readRow())).toBe(true);
-    sqlite.prepare("UPDATE depeg_pending SET reference_market_held_at = ? WHERE id = ?").run(input.now + 60, input.row.id);
+    updateHold.run(input.now + 60, input.row.id);
     expect(hasCurrentPendingClosureVerdict(readRow())).toBe(false);
-    sqlite.prepare("UPDATE depeg_pending SET reference_market_held_at = NULL WHERE id = ?").run(input.row.id);
-    await db.batch(buildPendingClosureHoldStatements(db, readRow(), null));
+    updateHold.run(null, input.row.id);
+    await recordHold(readRow(), null);
     expect(JSON.parse(readRow().peer_basis_json!)).not.toHaveProperty("closureRevision");
-    await db.batch(buildPendingClosureHoldStatements(db, readRow(), input.now));
+    await recordHold(readRow(), input.now);
     sqlite.prepare("UPDATE depeg_pending SET peak_price = ? WHERE id = ?").run(0.7, input.row.id);
     expect(hasCurrentPendingClosureVerdict(readRow())).toBe(false);
     await buildUpsertPendingDepegStmt(db, {
       stablecoinId: input.row.stablecoin_id, symbol: input.row.symbol, pegType: input.row.peg_type,
       direction: "below", bps: -3_000, seenAt: input.now + 60, price: 0.7, pegReference: 1, reason: "large-cap",
     }).run();
-    await db.batch(buildPendingClosureHoldStatements(db, input.row, input.now));
-    expect(readHold()).toEqual({ reference_market_held_at: null });
+    await recordHold(input.row, input.now);
+    expect(readRow().reference_market_held_at).toBeNull();
   });
 
   it.each(PLAN_CASES)("$label", async (spec) => {

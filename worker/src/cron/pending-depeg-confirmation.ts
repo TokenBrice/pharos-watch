@@ -404,12 +404,13 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const suppliedNativePegQuote = silverEntitlementRequired ? undefined : inputNativePegQuote;
   const incompatibleParity = suppliedAsset != null && hasIncompatibleParityPrice(suppliedAsset);
   const asset = incompatibleParity ? { ...suppliedAsset, price: null, priceObservedAt: null } : suppliedAsset;
-  const pegType = normalizePegType(asset?.pegType);
+  const pegType = registryPeg;
+  const market = getReferenceMarket(registryMeta?.flags.pegCurrency);
   const native = isNativeQuoteForPending(row, suppliedNativePegQuote) ? getTradedNativeEvidence(suppliedNativePegQuote, now) : null;
   const nativePegQuote = isNativeQuoteForPending(row, suppliedNativePegQuote)
     ? getClockedTradedNativeQuote(suppliedNativePegQuote, now) : undefined;
   const refreshedPegReferenceIsAuthoritative =
-    asset && meta
+    meta && (asset || (market && !silverEntitlementRequired))
       ? isAuthoritativeDepegPegReference({
         pegCurrency: meta.flags.pegCurrency,
         pegType,
@@ -418,9 +419,9 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       })
       : false;
   const refreshedPegRef =
-    asset && meta && refreshedPegReferenceIsAuthoritative
-      ? getPegReference(pegType, pegRates, meta.commodityOunces, { assetId: asset.id,
-        commodityEntitlement: asset.commodityEntitlement, quoteObservedAtSec: sourceObservationClock(asset) }) ?? Number.NaN
+    meta && refreshedPegReferenceIsAuthoritative
+      ? getPegReference(pegType, pegRates, meta.commodityOunces, { assetId: row.stablecoin_id,
+        commodityEntitlement: asset?.commodityEntitlement, quoteObservedAtSec: sourceObservationClock(asset) }) ?? Number.NaN
       : Number.NaN;
   const pendingReceipt = readPendingObservationReceipt(row.peer_basis_json);
   const onset = pendingReceipt?.onset;
@@ -438,7 +439,6 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     ? independenceKey(onset.venue) : "";
   const isPeerRelative = onset?.basis === "peer-relative" || parsePendingReason(pendingState.reason).has("peer-relative");
   const outcomeState = pendingState;
-  const market = getReferenceMarket(registryMeta?.flags.pegCurrency);
   const legacyOnset = onsetMatches && onset.basis === "benchmark" && onset.referenceAdmission == null;
   const legacyClosureMismatch = market != null && legacyOnset &&
     getLegacyReferenceClosureStart(market, pendingState.firstSeenAt) !== getLegacyReferenceClosureStart(market, seenState.firstSeenAt);
@@ -476,12 +476,18 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     !onset?.referenceAdmission && !latest?.referenceAdmission && Number.isFinite(row.peg_reference) && row.peg_reference > 0
     ? { discoveredAt: seenState.firstSeenAt, pegReference: row.peg_reference } : undefined;
   const reference = meta ? assessDetectionReference({ asset, meta, pegRates, pegRateSources, now, signal: currentMove,
+    quoteObservedAt: asset?.price == null ? null : undefined,
     legacyPending, referenceContext: input.referenceContext }) : null;
   const usableNative = native && (reference == null || native.quote.updatedAt >= reference.boundary) ? native : null;
   const independentNative = usableNative && isIndependentVenue(asset, usableNative.venue) &&
     (!isNativeOrigin || onsetNativeVenue !== "") ? usableNative : null;
   const benchmark = benchmarkAdmission(reference, currentMove, independentNative, defaultThreshold);
   const directAdmitted = benchmark != null && !incompatibleParity && (!silverEntitlementRequired || (!!suppliedAsset && !!meta));
+  // An open-session reference can be paired with a secondary quote's own clock.
+  const pairSecondaryQuote = suppliedAsset?.price == null && !silverEntitlementRequired && !isNativeOrigin &&
+    !isPeerRelative && Number.isFinite(refreshedPegRef) && reference?.closed === false &&
+    reference.verdict.reason === "quote-clock-unavailable" &&
+    now - pendingState.lastSeenAt <= DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC;
   const clockedNative = getClockedTradedNativeQuote(nativePegQuote, now, reference?.boundary);
   const nativeVenue = independenceKey(clockedNative?.derivation?.lineage.venue);
   const repeatedNativeSignal = clockedNative ? deriveDepegSignal(clockedNative.price, 1) : null;
@@ -503,7 +509,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const preserveUntilReopen = reference?.closed === true && seenState.firstSeenAt < reference.boundary &&
     pendingState.lastSeenAt >= reference.boundary - DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC &&
     Math.abs(pendingState.peakSeenBps) >= DEPEG_SEVERITY_BPS.severe;
-  if (!peerMove && !directAdmitted && !nativeBasis) {
+  if (!peerMove && !directAdmitted && !nativeBasis && !pairSecondaryQuote) {
     if (reference?.legacyClosureHeld) return { kind: "wait", reason: "reference-market-closed", legacyClosure: true };
     if (reference?.closureHeld && currentMove != null && reference.band != null && currentMove.absRawBps < reference.band &&
       (preserveUntilReopen || (Math.abs(pendingState.peakSeenBps) < reference.band && !isExtremeMovePending(pendingState.reason)))) {
@@ -546,7 +552,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
 
   const primaryEvidence = asset && independentPrimaryTrustInput(asset);
   const primaryTrust = primaryEvidence ? classifyPrimaryDepegTrust(primaryEvidence, now) : "unusable";
-  const currentNativeQuote = clockedNative && (clockedNative.updatedAt >= pendingState.lastSeenAt ||
+  const currentNativeQuote = !pairSecondaryQuote && clockedNative && (clockedNative.updatedAt >= pendingState.lastSeenAt ||
     !isOpposingConfirmationStatus(classifyDirectionalSignal(repeatedNativeSignal, defaultThreshold, pendingState.direction, recoveryThreshold))) && (isNativeOrigin || isIndependentVenue(asset, clockedNative.derivation?.lineage.venue))
     ? clockedNative : undefined;
   const rawNativeSignal = currentNativeQuote ? deriveDepegSignal(currentNativeQuote.price, 1) : null;
@@ -681,7 +687,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const temporalSameDirectionConfirmed =
     lastSeenRunAt - seenState.firstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC &&
     latestClock - pendingState.firstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC &&
-    now - latestClock <= DEPEG_PENDING_MIN_AGE_SEC &&
+    now - latestClock <= (pairSecondaryQuote ? DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC : DEPEG_PENDING_MIN_AGE_SEC) &&
     (latestClock !== pendingState.lastSeenAt || Math.abs(pendingState.lastSeenBps) >= threshold) &&
     (!independentBasis || primarySameDirectionDepegged || distinctNative != null);
 
@@ -757,6 +763,8 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     pendingSourceKeys: pendingSourceKeys.size > 0 ? pendingSourceKeys : undefined,
     allowsUsdObservation: (reference && meta) || silverEntitlementRequired ? (price, observedAt, quoteMaxAgeSec) => {
       if (peerMove || !hasSecondaryQuoteUnit(observedAt)) return false;
+      if (pairSecondaryQuote && (observedAt == null || observedAt < pendingState.lastSeenAt ||
+        now - observedAt > DEPEG_PENDING_MIN_AGE_SEC)) return false;
       if (!reference || !meta) return true;
       const signal = deriveDepegSignal(price, pegReference);
       const read = assessDetectionReference({ asset, meta, pegRates, pegRateSources, now,

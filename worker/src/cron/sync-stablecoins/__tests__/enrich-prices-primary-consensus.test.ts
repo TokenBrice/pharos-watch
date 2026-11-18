@@ -10,7 +10,6 @@ import type { DexApiPool } from "../../../lib/dex-api-types";
 import { loadDexPrices } from "../../../lib/depeg-helpers";
 import { buildPriceValidationContext } from "../../../lib/price-validation";
 import { validatePrimaryPriceCandidate } from "../../../lib/price-publish-policy";
-import type { PrimaryPriceWithFiatPremiumEvidence } from "../pricing";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
 import { applyListAggregatorDowngrade } from "../enrich-prices-primary-hardening";
 import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
@@ -20,6 +19,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   createEmptyPrimaryConsensusQuoteMaps,
+  type PrimaryConsensusQuoteMaps,
   type PrimaryDexPriceSources,
   type PrimaryDexRows,
 } from "../enrich-prices-primary-provider-collection";
@@ -34,6 +34,35 @@ function createStats(): PriceValidationStats {
     low: 0,
   };
 }
+
+type ConsensusOptions = Pick<Parameters<typeof buildPrimaryConsensusResults>[0],
+  "references" | "dexRows" | "dexPriceSources" | "nowSec">;
+
+function consensusFor(asset: PeggedAsset, quoteMaps: PrimaryConsensusQuoteMaps, options: Partial<ConsensusOptions> = {}) {
+  const results = new Map<string, PrimaryPriceResult>();
+  buildPrimaryConsensusResults({
+    candidates: [asset], quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec: 1_800_000_000,
+    resolveDlListQuote: () => undefined, results, stats: createStats(), ...options,
+  });
+  return results.get(asset.id);
+}
+
+const usg = { id: "usg-tangent", name: "USG", symbol: "USG", pegType: "peggedUSD" };
+const usgNow = 1_800_000_000;
+const usgPool = "ethereum:0xf000000000000000000000000000000000000001";
+const usgSecondPool = "ethereum:0xf000000000000000000000000000000000000002";
+function usgCurveQuotes() {
+  const maps = createEmptyPrimaryConsensusQuoteMaps();
+  maps.curvePrices.set(usg.id, 0.98);
+  maps.curveObservedAtByCoinId.set(usg.id, usgNow);
+  maps.curvePricePoolKeysByCoinId.set(usg.id, ["ethereum:0x97ba10115da528c113462ede9c20d7adc806d93f"]);
+  return maps;
+}
+
+const usgObservation: DexPriceObs = {
+  protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "direct_api", identityConfidence: "exact",
+  observedAt: usgNow, price: 0.98, tvl: 1e6, poolKey: usgPool,
+};
 
 describe("buildPrimaryConsensusResults", () => {
   it.each(["independent", "shared pool", "shared conversion", "shared conversion pool"] as const)(
@@ -73,22 +102,19 @@ describe("buildPrimaryConsensusResults", () => {
           }))),
         });
         const loaded = await loadDexPrices(db, nowSec);
-        const results = new Map<string, PrimaryPriceWithFiatPremiumEvidence>();
-        buildPrimaryConsensusResults({ candidates: [{ id, name: "BRZ", symbol: "BRZ", pegType: "peggedREAL" }],
-          references: refs, quoteMaps: createEmptyPrimaryConsensusQuoteMaps(), dexRows: loaded.dexPriceRows,
-          dexPriceSources: loaded.dexPriceSources, nowSec, resolveDlListQuote: () => undefined, results, stats: createStats(),
-        });
+        const result = consensusFor({ id, name: "BRZ", symbol: "BRZ", pegType: "peggedREAL" },
+          createEmptyPrimaryConsensusQuoteMaps(), { references: refs, dexRows: loaded.dexPriceRows,
+            dexPriceSources: loaded.dexPriceSources, nowSec });
         if (mode !== "independent") {
           expect(loaded.dexPriceRows.has(id)).toBe(false);
-          expect(results.has(id)).toBe(false);
+          expect(result).toBeUndefined();
           return;
         }
-        const result = results.get(id)!;
-        expect(result.fiatPremiumEvidence).toEqual({
+        expect(result!.fiatPremiumEvidence).toEqual({
           "fluid-dex": { priceUsd: price, observedAtSec: at, upstreamKeys: [`ethereum:${address(4)}`, "venue:bitstamp"] },
           "balancer-dex": { priceUsd: price, observedAtSec: at + 10, upstreamKeys: [`ethereum:${address(5)}`, "venue:coinbase"] },
         });
-        expect(validatePrimaryPriceCandidate({ ...result, candidatePrices: result.allPrices, validationReferences: refs,
+        expect(validatePrimaryPriceCandidate({ ...result!, candidatePrices: result!.allPrices, validationReferences: refs,
           validationContext: buildPriceValidationContext({ stablecoinId: id, pegType: "peggedREAL" }),
         })).toMatchObject({ accepted: true, reason: "corroborated_fiat_premium" });
       } finally {
@@ -98,51 +124,33 @@ describe("buildPrimaryConsensusResults", () => {
   );
 
   it("counts a shared Bitstamp conversion once across distinct USG pools", () => {
-    const id = "usg-tangent", nowSec = 1_800_000_000;
-    const curve = "ethereum:0x97ba10115da528c113462ede9c20d7adc806d93f";
-    const second = "ethereum:0xf000000000000000000000000000000000000001";
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-    quoteMaps.curvePrices.set(id, 0.98);
-    quoteMaps.curveObservedAtByCoinId.set(id, nowSec);
-    quoteMaps.curvePricePoolKeysByCoinId.set(id, [curve]);
-    for (const conversion of ["bitstamp", "coinbase"]) {
-      const results = new Map<string, PrimaryPriceResult>();
-      buildPrimaryConsensusResults({ candidates: [{ id, name: "USG", symbol: "USG", pegType: "peggedUSD" }],
-        quoteMaps, dexRows: new Map(), dexPriceSources: new Map([[id, [{ protocol: "uniswap-v3",
-          chain: "ethereum", price: 0.98, tvl: 1e6, observedAt: nowSec, updatedAt: nowSec,
-          pricePoolKeys: [second], upstreamKeys: [second, `venue:${conversion}`] }]]]), nowSec,
-        resolveDlListQuote: () => undefined, results, stats: createStats() });
-      const result = results.get(id)!;
+    for (const [conversion, trust] of [["bitstamp", "confirm_required"], ["coinbase", "authoritative"]]) {
+      const result = consensusFor(usg, usgCurveQuotes(), {
+        dexPriceSources: new Map([[usg.id, [{ protocol: usgObservation.protocol, chain: "ethereum",
+          price: 0.98, tvl: 1e6, observedAt: usgNow, updatedAt: usgNow,
+          pricePoolKeys: [usgPool], upstreamKeys: [usgPool, `venue:${conversion}`] }]]]),
+      })!;
       expect(classifyPrimaryDepegTrust({ price: result.price, priceSource: result.source, priceConfidence: result.confidence,
-        priceObservedAt: result.observedAt, priceObservedAtMode: result.observedAtMode, agreeSources: result.agreeSources }, nowSec))
-        .toBe(conversion === "bitstamp" ? "confirm_required" : "authoritative");
+        priceObservedAt: result.observedAt, priceObservedAtMode: result.observedAtMode, agreeSources: result.agreeSources }, usgNow))
+        .toBe(trust);
     }
   });
 
   it("keeps mixed conversion evidence out of the independent USG vote", async () => {
-    const nowSec = 1_800_000_000, id = "usg-tangent";
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-    quoteMaps.curvePrices.set(id, 0.98);
-    quoteMaps.curveObservedAtByCoinId.set(id, nowSec);
-    quoteMaps.curvePricePoolKeysByCoinId.set(id, ["ethereum:0x97ba10115da528c113462ede9c20d7adc806d93f"]);
-    const tracked: DexPriceObs = { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "direct_api",
-      identityConfidence: "exact", observedAt: nowSec, price: 0.98, tvl: 1e6,
-      poolKey: "ethereum:0xf000000000000000000000000000000000000001",
+    const { id } = usg;
+    const nowSec = usgNow;
+    const tracked: DexPriceObs = { ...usgObservation,
       counterpartyPrice: { stablecoinId: "usdc-circle", source: "bitstamp", priceUsd: 0.98, observedAtSec: nowSec } };
-    const untracked = { ...tracked, counterpartyPrice: undefined, price: 0.999, tvl: 1e4,
-      poolKey: "ethereum:0xf000000000000000000000000000000000000002" };
+    const untracked: DexPriceObs = { ...usgObservation, price: 0.999, tvl: 1e4, poolKey: usgSecondPool };
     const bitstampOnly = createEmptyPrimaryConsensusQuoteMaps();
     bitstampOnly.bitstampPrices.set("USG", 0.98);
     bitstampOnly.bitstampObservedAtBySymbol.set("USG", nowSec);
     for (const rows of [[tracked, untracked], [tracked, { ...untracked, poolKey: tracked.poolKey, price: tracked.price }]]) {
       const protocol = aggregateProtocolSources(collapseDuplicateObservations(rows).collapsed)[0]!;
       expect(protocol).toMatchObject({ price: 0.98, upstreamKeys: [], pricePoolKeys: [] });
-      for (const [maps, hardSource] of [[quoteMaps, "curve-onchain"], [bitstampOnly, "bitstamp"]] as const) {
-        const results = new Map<string, PrimaryPriceResult>();
-        buildPrimaryConsensusResults({ candidates: [{ id, name: "USG", symbol: "USG", pegType: "peggedUSD" }],
-          quoteMaps: maps, dexRows: new Map(), dexPriceSources: new Map([[id, [{ ...protocol, updatedAt: nowSec }]]]), nowSec,
-          resolveDlListQuote: () => undefined, results, stats: createStats() });
-        expect(results.get(id)).toMatchObject({ price: 0.98, agreeSources: [hardSource], confidence: "single-source" });
+      for (const [maps, hardSource] of [[usgCurveQuotes(), "curve-onchain"], [bitstampOnly, "bitstamp"]] as const) {
+        const result = consensusFor(usg, maps, { dexPriceSources: new Map([[id, [{ ...protocol, updatedAt: nowSec }]]]) });
+        expect(result).toMatchObject({ price: 0.98, agreeSources: [hardSource], confidence: "single-source" });
       }
     }
     const { db, sqlite, generationId } = seedPublishedDexGeneration({ nowSec });
@@ -166,12 +174,8 @@ describe("buildPrimaryConsensusResults", () => {
   });
 
   it("keeps a lone incomplete conversion receipt through protocol aggregation and duplicate collapse", () => {
-    const nowSec = 1_800_000_000;
-    const pool: DexPriceObs = {
-      protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "direct_api", identityConfidence: "exact",
-      observedAt: nowSec, price: 0.98, tvl: 1e6, poolKey: "ethereum:0xf000000000000000000000000000000000000001",
-    };
-    const mark = { stablecoinId: "usdc-circle", priceUsd: 0.98, observedAtSec: nowSec };
+    const pool = usgObservation;
+    const mark = { stablecoinId: "usdc-circle", priceUsd: 0.98, observedAtSec: usgNow };
     for (const counterpartyPrice of [
       { ...mark, source: "bitstamp+coingecko" }, { ...mark, source: "bitstamp", upstreamKeys: [], pricePoolKeys: [] },
     ]) {
@@ -185,13 +189,13 @@ describe("buildPrimaryConsensusResults", () => {
   });
 
   it("withholds rollback voting clocks for a known Curve overlap while admitting the independent protocol", async () => {
-    const nowSec = 1_800_000_000, at = nowSec - 12, id = "usg-tangent";
+    const nowSec = usgNow, at = nowSec - 12, id = usg.id;
     const pool = {
       stablecoinId: id, chain: "ethereum", source: "direct_api" as const, tvlUsd: 1e6, priceObservedAt: at, price: 0.98,
       priceCounterparty: { stablecoinId: "usdc-circle", source: "bitstamp", priceUsd: 0.98, observedAtSec: at },
-      project: "uniswap-v3", poolId: "ethereum:0xf000000000000000000000000000000000000001",
+      project: "uniswap-v3", poolId: usgPool,
     };
-    const sibling = { ...pool, project: "balancer", poolId: "ethereum:0xf000000000000000000000000000000000000002",
+    const sibling = { ...pool, project: "balancer", poolId: usgSecondPool,
       priceCounterparty: { ...pool.priceCounterparty, source: "kraken" } };
     const stale = { ...sibling, project: "fluid", poolId: "ethereum:0xf000000000000000000000000000000000000003",
       tvlUsd: 2e6, priceObservedAt: nowSec - 36 * 60 };
@@ -205,8 +209,9 @@ describe("buildPrimaryConsensusResults", () => {
       const displayClock = stale.priceObservedAt;
       expect(wire).toMatchObject({ aggregateObservedAt: null, displayAggregateObservedAt: displayClock });
       expect(wire.sources).toEqual([]);
-      expect(wire.lineageSources).toEqual([expect.objectContaining({ protocol: "balancer", aggregateObservedAt: displayClock })]);
-      expect((await loadDexPrices(db, nowSec)).dexPriceSources.get(id)?.map(({ protocol }) => protocol)).toEqual(["balancer"]);
+      expect(wire.lineageSources).toEqual(["balancer", "uniswap-v3"].map((protocol) =>
+        expect.objectContaining({ protocol, aggregateObservedAt: displayClock })));
+      expect((await loadDexPrices(db, nowSec)).dexPriceSources.get(id)?.map(({ protocol }) => protocol)).toEqual(["balancer", "uniswap-v3"]);
       expect(wire.displaySources).toEqual([
         expect.objectContaining({ protocol: "fluid", aggregateObservedAt: null, displayAggregateObservedAt: displayClock }),
         expect.objectContaining({ protocol: "balancer", observedAt: at, aggregateObservedAt: displayClock }),
@@ -219,41 +224,65 @@ describe("buildPrimaryConsensusResults", () => {
     } finally { sqlite.close(); }
   });
 
+  it("admits the Aero USDT quote only alongside disjoint upstream prices", async () => {
+    const id = "usdt-tether", nowSec = 1_800_000_000, at = nowSec - 12;
+    const poolId = "ink:0xa7b947ffe3b14e71be2c60e316ea315a24ccc73c";
+    for (const [venue, price, confidence, agreeSources] of [
+      ["bitstamp", 0.9601, "high", ["kraken", "aero-dex"]],
+      ["kraken", 1, "single-source", ["coingecko", "defillama-list"]],
+    ] as const) {
+      const { db, sqlite, generationId } = seedPublishedDexGeneration({ nowSec });
+      try {
+        await computeDexPrices({ db, generationId, nowSec, primaryPrices: new Map([[id, 1]]),
+          retainedPoolsByStablecoin: makePricePoolMap([{ stablecoinId: id, poolId, chain: "ink", project: "aero",
+            source: "direct_api", tvlUsd: 182_384, price: 0.9602, priceObservedAt: at,
+            priceCounterparty: { stablecoinId: "usdc-circle", source: `binance+${venue}`, priceUsd: 1, observedAtSec: at },
+          }]),
+        });
+        const wire = JSON.parse(readPublicPriceRows(sqlite)[0]!.price_sources_json!);
+        const { dexPriceRows, dexPriceSources } = await loadDexPrices(db, nowSec);
+        const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+        quoteMaps.krakenPrices.set("USDT", 0.96);
+        quoteMaps.krakenObservedAt = at;
+        quoteMaps.cgQuotes.set("tether", { price: 1, observedAt: at, observedAtMode: "upstream" });
+        const results = new Map<string, PrimaryPriceResult>(), stats = createStats();
+        buildPrimaryConsensusResults({ candidates: [{ id, name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD" }],
+          quoteMaps, dexRows: dexPriceRows, dexPriceSources, nowSec, results, stats,
+          resolveDlListQuote: () => ({ price: 1, observedAt: at, observedAtMode: "upstream" }),
+        });
+        applyListAggregatorDowngrade(results, stats);
+        expect(results.get(id)).toMatchObject({ price, confidence, agreeSources });
+        expect(wire).toMatchObject({ aggregateObservedAt: null, sources: [], lineageSources: [
+          { protocol: "aero", upstreamKeys: [poolId, "venue:binance", `venue:${venue}`] },
+        ] });
+      } finally { sqlite.close(); }
+    }
+  });
+
   it("withholds an undated CoinGecko price from primary consensus", () => {
     const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
     quoteMaps.cgQuotes.set("freedom-dollar", { price: 0.842295, observedAt: null, observedAtMode: null });
-    const results = new Map<string, PrimaryPriceResult>();
-    buildPrimaryConsensusResults({
-      candidates: [{ id: "fusd-freedom-dollar", name: "Freedom Dollar", symbol: "FUSD", geckoId: "freedom-dollar" }],
-      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec: 1_800_000_000,
-      resolveDlListQuote: () => undefined, results, stats: createStats(),
-    });
-    expect(results.size).toBe(0);
+    expect(consensusFor({ id: "fusd-freedom-dollar", name: "Freedom Dollar", symbol: "FUSD", geckoId: "freedom-dollar" },
+      quoteMaps)).toBeUndefined();
   });
 
   it("uses a dated Bitstamp quote without borrowing its clock for a Kraken trade", () => {
     const nowSec = 1_800_000_000;
-    const id = "usdt-tether";
+    const asset = { id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD" };
     const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
     quoteMaps.bitstampPrices.set("USDT", 0.991);
     quoteMaps.bitstampObservedAtBySymbol.set("USDT", nowSec - 12);
     quoteMaps.krakenPrices.set("USDT", 0.987);
     quoteMaps.krakenObservedAt = nowSec;
     quoteMaps.krakenQuoteBasisBySymbol.set("USDT", "last-trade");
-    const results = new Map<string, PrimaryPriceResult>();
-    const runConsensus = () => buildPrimaryConsensusResults({
-      candidates: [{ id, name: "Tether", symbol: "USDT", pegType: "peggedUSD" }],
-      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
-      resolveDlListQuote: () => undefined, results, stats: createStats(),
-    });
-    runConsensus();
-    expect(results.get(id)).toMatchObject({ price: 0.991, agreeSources: ["bitstamp"], confidence: "single-source",
+    const undated = consensusFor(asset, quoteMaps);
+    expect(undated).toMatchObject({ price: 0.991, agreeSources: ["bitstamp"], confidence: "single-source",
       observedAt: nowSec - 12, allPrices: { bitstamp: 0.991 }, diagnosticPrices: { kraken: 0.987 } });
-    expect(results.get(id)?.allPrices).not.toHaveProperty("kraken");
+    expect(undated?.allPrices).not.toHaveProperty("kraken");
     quoteMaps.krakenObservedAtBySymbol.set("USDT", nowSec - 20);
-    runConsensus();
-    expect(results.get(id)).toMatchObject({ price: 0.989, confidence: "high", observedAt: nowSec - 20 });
-    expect(new Set(results.get(id)?.agreeSources)).toEqual(new Set(["bitstamp", "kraken"]));
+    const dated = consensusFor(asset, quoteMaps);
+    expect(dated).toMatchObject({ price: 0.989, confidence: "high", observedAt: nowSec - 20 });
+    expect(new Set(dated?.agreeSources)).toEqual(new Set(["bitstamp", "kraken"]));
   });
 
   it.each([["audx-aussie-dollar-token", "AUDX"], ["qcad-stablecorp", "QCAD"]])(
@@ -264,13 +293,7 @@ describe("buildPrimaryConsensusResults", () => {
       quoteMaps.krakenObservedAt = nowSec - 5;
       quoteMaps.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
       quoteMaps.cgQuotes.set(id, { price: 1.021, observedAt: nowSec, observedAtMode: "upstream" });
-      const results = new Map<string, PrimaryPriceResult>();
-      buildPrimaryConsensusResults({
-        candidates: [{ id, name: symbol, symbol, geckoId: id, pegType: "peggedUSD" }], quoteMaps,
-        dexRows: new Map(), dexPriceSources: new Map(), nowSec, resolveDlListQuote: () => undefined,
-        results, stats: createStats(),
-      });
-      expect(results.get(id)).toMatchObject({
+      expect(consensusFor({ id, name: symbol, symbol, geckoId: id, pegType: "peggedUSD" }, quoteMaps)).toMatchObject({
         source: "kraken", observedAt: nowSec - 5, observedAtMode: "local_fetch", priceQuoteBasis: "bid-ask-midpoint",
         price: 1.02, confidence: "single-source", agreeSources: ["kraken"],
         candidateSources: ["kraken", "coingecko"], diagnosticPrices: { coingecko: 1.021 }, allPrices: { kraken: 1.02 },
@@ -287,17 +310,12 @@ describe("buildPrimaryConsensusResults", () => {
     quoteMaps.krakenObservedAt = nowSec;
     quoteMaps.krakenQuoteBasisBySymbol.set("QCAD", "last-trade");
     quoteMaps.cgQuotes.set(geckoId, { price: 0.72, observedAt: nowSec - 10, observedAtMode: "upstream" });
-    const results = new Map<string, PrimaryPriceResult>();
-    buildPrimaryConsensusResults({
-      candidates: [{ id, name: "QCAD", symbol: "QCAD", geckoId, pegType: "peggedCAD" }],
-      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
-      resolveDlListQuote: () => undefined, results, stats: createStats(),
-    });
-    expect(results.get(id)).toMatchObject({
+    const result = consensusFor({ id, name: "QCAD", symbol: "QCAD", geckoId, pegType: "peggedCAD" }, quoteMaps);
+    expect(result).toMatchObject({
       price: 0.72, source: "coingecko", observedAt: nowSec - 10, observedAtMode: "upstream",
       agreeSources: ["coingecko"], allPrices: { coingecko: 0.72 }, diagnosticPrices: { kraken: 0.695 },
     });
-    expect(results.get(id)?.allPrices).not.toHaveProperty("kraken");
+    expect(result?.allPrices).not.toHaveProperty("kraken");
   });
 
   it("admits a five-day issuer NAV round and expires it one second after the configured budget", () => {
@@ -313,17 +331,10 @@ describe("buildPrimaryConsensusResults", () => {
       config_fingerprint: fingerprint, state_config_fingerprint: fingerprint,
       last_attempt_id: "success", pending_attempt_id: null,
     }, meta, fetchedAt)!;
-    const build = (nowSec: number) => {
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-      quoteMaps.navPrices.set(id, quote);
-      const results = new Map<string, PrimaryPriceResult>();
-      buildPrimaryConsensusResults({
-        candidates: [{ id, name: meta.name, symbol: meta.symbol, pegType: "peggedUSD", navToken: true }],
-        quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
-        resolveDlListQuote: () => undefined, results, stats: createStats(),
-      });
-      return results.get(id);
-    };
+    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    quoteMaps.navPrices.set(id, quote);
+    const asset = { id, name: meta.name, symbol: meta.symbol, pegType: "peggedUSD", navToken: true };
+    const build = (nowSec: number) => consensusFor(asset, quoteMaps, { nowSec });
     expect(build(observedAt + quote.maxAgeSec! + 1)).toBeUndefined();
     expect(build(fetchedAt)).toMatchObject({ source: "chainlink-nav", price: 1.23, observedAt, observedAtMode: "upstream" });
   });

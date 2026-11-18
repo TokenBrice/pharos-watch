@@ -121,7 +121,11 @@ function historicalEventMarks(
   const coinId = canonicalizePsiStablecoinId(event.stablecoin_id);
   const meta = TRACKED_META_BY_ID.get(coinId) ?? PSI_ELIGIBLE_META_BY_ID.get(coinId);
   const currency = getPegTaxonomyByType(event.peg_type)?.currency ?? meta?.flags.pegCurrency;
-  if (currency == null || (event.quote_mode !== "usd" && (event.quote_mode != null || currency !== "USD"))) return () => null;
+  if (currency == null) return () => null;
+  // Live bullion rows use 1 for native parity and a token-specific USD reference for USD quotes.
+  const liveBullionUsd = event.source === "live" && (currency === "GOLD" || currency === "SILVER") &&
+    Number.isFinite(event.peg_reference) && event.peg_reference > 0 && event.peg_reference !== 1;
+  if (event.quote_mode != null ? event.quote_mode !== "usd" : currency !== "USD" && !liveBullionUsd) return () => null;
   const market = getReferenceMarket(currency);
   if (lastSlot == null && currency === "USD" && event.started_at < day &&
       interval.fromSec === day && interval.toSec === day + DAY_SECONDS) {

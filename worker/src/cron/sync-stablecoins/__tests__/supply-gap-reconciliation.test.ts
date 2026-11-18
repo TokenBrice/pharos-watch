@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
@@ -682,7 +682,10 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.supplyChangeBaselines?.day?.circulatingNative).toBe(1000);
   });
 
-  it("retains an admitted weekly close across a five-minute USD carry until D1 rejects it", async ({ onTestFinished }) => {
+  it.each([
+    ["usdc-circle", "peggedUSD", 91e6, 1],
+    ["eurc-circle", "peggedEUR", 99e6, 1.125],
+  ] as const)("retains %s's admitted weekly close across a five-minute carry until D1 rejects it", async (id, pegType, cap, valuation) => {
     const { db, sqlite } = fixtures.open();
     const now = Date.parse("2026-11-18T14:00:00Z") / 1000;
     const stockAt = now - 300;
@@ -691,14 +694,16 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(stockAt * 1000);
     onTestFinished(() => { clock.mockRestore(); });
     const asset: PeggedAsset = {
-      id: "usdc-circle", name: "USDC", symbol: "USDC", pegType: "peggedUSD", price: 1,
+      id, name: id, symbol: id, pegType, price: valuation,
       supplySource: "coingecko-fallback", supplyObservedAt: stockAt,
-      circulating: { peggedUSD: 110_000_000 }, circulatingPrevWeek: { peggedUSD: 91_000_000 },
+      circulating: { [pegType]: 110e6 }, circulatingPrevWeek: { [pegType]: cap },
+      circulatingNative: 110e6 / valuation, valuationPriceUsd: valuation, valuationObservedAtSec: stockAt,
     };
     const provenance = { supplySource: asset.supplySource, supplyObservedAt: weekAt, supplyChainGuard: null };
     sqlite.prepare(`INSERT INTO supply_history
-      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
-      .run(asset.id, date, 91_000_000, 91_000_000, JSON.stringify(provenance));
+      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance,
+       valuation_price_usd, valuation_observed_at_sec) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, date, cap, cap / valuation, JSON.stringify(provenance), valuation, weekAt);
     await fillMissingSupplyHistory(db, [asset]);
     const payload = normalizeStablecoinsPayload({ peggedAssets: [asset] }, stockAt);
     sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES('stablecoins', ?, ?)").run(JSON.stringify(payload), stockAt);
@@ -708,13 +713,13 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     await fillMissingSupplyHistory(db, [carry]);
     const [wire] = normalizeStablecoinsPayload({ peggedAssets: [carry] }, now).peggedAssets;
     expect(wire).toMatchObject({ supplyObservedAt: stockAt, supplyRestored: true,
-      circulatingPrevWeek: { peggedUSD: 91_000_000 }, supplyChangeBaselines: payload.peggedAssets[0].supplyChangeBaselines });
-    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(19_000_000);
+      circulatingPrevWeek: { [pegType]: cap }, supplyChangeBaselines: payload.peggedAssets[0].supplyChangeBaselines });
+    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(110e6 - cap);
 
     const update = sqlite.prepare("UPDATE supply_history SET supply_provenance = ? WHERE stablecoin_id = ? AND snapshot_date = ?");
     update.run(JSON.stringify({ ...provenance, nativeQuantityUnavailable: true }), asset.id, date);
     await fillMissingSupplyHistory(db, [carry]);
-    expect(carry.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: 91_000_000, circulatingNative: null });
+    expect(carry.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: cap, circulatingNative: null });
     update.run("malformed", asset.id, date);
     await fillMissingSupplyHistory(db, [carry]);
     expect(carry.supplyChangeBaselines?.week).toBeNull();

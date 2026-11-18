@@ -165,6 +165,9 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  const readSummary = async (db: D1Database) =>
+    PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+
   it.each([
     ["2026-11-20T21:15:00Z", 1.067, 0, null],
     ["2026-11-22T22:15:00Z", 1.067, 0, null],
@@ -175,8 +178,7 @@ describe("handlePegSummary", () => {
     const now = Date.parse(at) / 1000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const eurc = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price, priceObservedAt: now });
-    const response = await handlePegSummary(makePegSummaryDb([eurc], { peggedEUR: 1.1 }, [], { updatedAt: now }));
-    const body = PegSummaryResponseSchema.parse(await readJsonResponse(response, 200));
+    const body = await readSummary(makePegSummaryDb([eurc], { peggedEUR: 1.1 }, [], { updatedAt: now }));
     expect(body.summary).toMatchObject({ totalTracked, medianDeviationBps });
     expect(body.summary?.worstCurrent?.bps ?? null).toBe(medianDeviationBps == null ? null : -medianDeviationBps);
   });
@@ -190,7 +192,7 @@ describe("handlePegSummary", () => {
       primaryTrust: "unusable",
       dexPriceCheck: null,
     } });
-    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(makePegSummaryDb([asset])), 200));
+    const body = await readSummary(makePegSummaryDb([asset]));
     expect(body.coins.find((coin) => coin.id === asset.id)).toMatchObject({
       currentDeviationBps: null, currentPriceUnavailable: priceRefused,
       price: priceRefused ? null : 0.98, priceObservedAt: priceRefused ? null : OPEN_FX_QUOTE_AT,
@@ -222,7 +224,7 @@ describe("handlePegSummary", () => {
         .run(asset.id, asset.symbol, 1.1, -435, 4, 10_000_000, now,
           JSON.stringify({ aggregateObservedAt: dexAfterReopen ? now : reopen - 1, sources: [] }));
 
-      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+      const body = await readSummary(db);
       const coin = body.coins.find(({ id }) => id === asset.id);
       expect(coin).toMatchObject({ currentDeviationBps: null, admittedDeviationBps: null,
         pegReferenceUnavailable: true, referenceAdmission: { reason: "quote-before-reopen" } });
@@ -254,15 +256,14 @@ describe("handlePegSummary", () => {
       const snapshotDate = Math.floor(now / 86400) * 86400;
       const provenance = { supplySource: "coingecko-fallback", supplyObservedAt: now - 300, supplyChainGuard: null,
         nativeQuantityUnavailable: true };
-      insert.run("usdt-tether", snapshotDate, JSON.stringify({ ...provenance, marketQuote: { price: 1, observedAt: now - 300 } }));
-      insert.run("usdc-circle", snapshotDate, JSON.stringify({ ...provenance, marketQuote: { price: 0, observedAt: now - 300 } }));
-      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
-      expect(body.coins.find(({ id }) => id === "usdt-tether")).toMatchObject({
-        currentPriceUnavailable: true, pegScore: 100, pegPct: 100,
-      });
-      expect(body.coins.find(({ id }) => id === "usdc-circle")).toMatchObject({
-        currentPriceUnavailable: true, pegScore: null, pegPct: null,
-      });
+      const rows = [["usdt-tether", 1, 100], ["usdc-circle", 0, null]] as const;
+      for (const [id, price] of rows) {
+        insert.run(id, snapshotDate, JSON.stringify({ ...provenance, marketQuote: { price, observedAt: now - 300 } }));
+      }
+      const body = await readSummary(db);
+      for (const [id, , pegScore] of rows) {
+        expect(body.coins.find((coin) => coin.id === id)).toMatchObject({ currentPriceUnavailable: true, pegScore, pegPct: pegScore });
+      }
     } finally {
       sqlite.close();
     }
@@ -283,10 +284,9 @@ describe("handlePegSummary", () => {
         priceObservedAt: OPEN_FX_QUOTE_AT, currentPeg: refused }),
       makeAsset({ id: "usdc-circle", price: 1, priceObservedAt: OPEN_FX_QUOTE_AT }),
     ];
-    const response = await handlePegSummary(makePegSummaryDb(assets, { peggedSILVER: 30 }, [], {
+    const body = await readSummary(makePegSummaryDb(assets, { peggedSILVER: 30 }, [], {
       updatedAt: OPEN_FX_QUOTE_AT, fxReferenceObservations,
     }));
-    const body = PegSummaryResponseSchema.parse(await readJsonResponse(response, 200));
     for (const { id, price } of assets.slice(0, 2)) {
       expect(body.coins.find((coin) => coin.id === id)).toMatchObject({
         price, currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true,
@@ -387,9 +387,7 @@ describe("handlePegSummary", () => {
         repricing: { sessionOpenedAtSec: Date.parse("2027-03-28T21:00:00Z") / 1000, preCloseUsdPerUnit: 0.2 } } as const;
     const fxFallbackRates = { peggedREAL: usdPerUnit };
     const fxReferenceObservations = mode === "legacy" ? undefined : mode === "empty" ? {} : { [pegKey]: evidence };
-    const body = PegSummaryResponseSchema.parse(await readJsonResponse(
-      await handlePegSummary(makePegSummaryDb([asset], fxFallbackRates, [], { fxReferenceObservations, updatedAt })), 200,
-    ));
+    const body = await readSummary(makePegSummaryDb([asset], fxFallbackRates, [], { fxReferenceObservations, updatedAt }));
     const coin = body.coins.find(({ id }) => id === asset.id);
     expect(coin?.currentDeviationBps).toBe(reason && admitted == null ? null : raw);
     if (reason) {
@@ -414,9 +412,9 @@ describe("handlePegSummary", () => {
         parityQuoteUnit: "accrued-token", price: 1.181399598224652, priceObservedAt: OPEN_FX_QUOTE_AT }),
       makeAsset({ id: "usdc-circle", pegType: "peggedUSD", price: 1, priceObservedAt: OPEN_FX_QUOTE_AT }),
     ];
-    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(
+    const body = await readSummary(
       makePegSummaryDb(assets, { peggedXOF: 1 / 600 }, [], { updatedAt: OPEN_FX_QUOTE_AT, fxReferenceObservations: {} }),
-    ), 200));
+    );
     for (const asset of assets.slice(0, 2)) {
       expect(body.coins.find(({ id }) => id === asset.id)).toMatchObject({
         price: asset.price, priceObservedAt: OPEN_FX_QUOTE_AT, currentPriceUnavailable: false,
@@ -738,6 +736,20 @@ describe("handlePegSummary", () => {
       agrees: true,
       sourcePools: 4,
       sourceTvl: 10_000_000,
+    });
+  });
+
+  it("keeps a fresh fixed-USD DEX check when the publication marks the primary unavailable", async () => {
+    const at = nowSec - 60;
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: null, currentPeg: {
+      currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: false,
+      currentPriceUnavailable: true, primaryTrust: "unusable", dexPriceCheck: null,
+    } });
+    const db = makePegSummaryDbWithDexPrice([asset], at, 10_000_000, at, 0.96, -400);
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+    expect(body.coins.find((coin) => coin.id === asset.id)).toMatchObject({
+      price: null, currentDeviationBps: null, currentPriceUnavailable: true,
+      dexPriceCheck: { observedAtSec: at, dexPrice: 0.96, dexDeviationBps: -400, agrees: false, sourcePools: 4, sourceTvl: 10_000_000 },
     });
   });
 

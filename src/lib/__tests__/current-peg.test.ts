@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { formatComparisonPrice, isCurrentDeviationHeld, readPublishedDeviation, resolveCurrentDeviation, resolveCurrentDeviationBps, resolveDisplayPegReference } from "@/lib/current-peg";
-import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
+import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/boundary-contract-vectors.test-support";
 import { attentionScore } from "@/lib/depeg-sort";
 import { bucketByDeviationBps } from "@/lib/home-alt-aggregates";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
@@ -33,6 +33,19 @@ describe("isCurrentDeviationHeld", () => {
       currentPriceUnavailable: false, primaryTrust: "unusable", dexPriceCheck: null,
     };
     expect(resolveCurrentDeviationBps(row, null, "GOLD")).toBeNull();
+  });
+
+  it("holds legacy EUR deviations at both UTC weekend edges", () => {
+    for (const time of ["2026-11-20T21:15:00Z", "2026-11-22T22:15:00Z"]) {
+      const coin = makePegSummaryCoin({ pegCurrency: "EUR", price: 1.067,
+        priceObservedAt: Date.parse(time) / 1000, currentDeviationBps: -300,
+        pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: SUNDAY },
+      });
+      expect(resolveCurrentDeviation(undefined, coin, "EUR")).toEqual({
+        deviationBps: null, referenceNote: "Reference market closed",
+      });
+      expect(bucketByDeviationBps([coin]).moderate).toBe(0);
+    }
   });
 
   it.each([2499.6, -2499.6, 2500.4, -2500.4])("uses the same quote pair before rounding %s bps at closure", (bps) => {
@@ -121,15 +134,18 @@ it.each([
   expect(formatComparisonPrice(row, "EUR")).toBe("$1.1220");
 });
 
+const reopenedQuote = { id: "eurc-circle", price: 1.122, priceObservedAt: FX_REOPEN_QUOTE_AT, priceSource: "coingecko" } as const;
+const reopenedSummary = makePegSummaryCoin({ id: reopenedQuote.id, price: reopenedQuote.price, priceObservedAt: FX_REOPEN_QUOTE_AT });
+
 it.each([
   ["matched", 1.122, FX_REOPEN_QUOTE_AT, 1.1],
   ["different clock", 1.122, FX_REOPEN_QUOTE_AT - 60, null],
   ["different price", 1.10, FX_REOPEN_QUOTE_AT, null],
 ] as const)("requires the same quote before borrowing a modern reference (%s)", (_label, price, priceObservedAt, expected) => {
   vi.spyOn(Date, "now").mockReturnValue(FX_REOPEN_QUOTE_AT * 1000);
-  const row = makeStablecoin({ id: "eurc-circle", price, priceObservedAt, priceSource: "coingecko" });
+  const row = makeStablecoin({ ...reopenedQuote, price, priceObservedAt });
   const legacy = {
-    ...makePegSummaryCoin({ id: row.id, price: 1.122, priceObservedAt: FX_REOPEN_QUOTE_AT }),
+    ...reopenedSummary,
     ...makeFxCurrentPeg("admitted", 200),
   };
   expect(resolveDisplayPegReference(row, legacy, "EUR")).toBe(expected);
@@ -144,9 +160,9 @@ it.each([
 ] as const)("withholds a legacy row's deviation and conversion when modern summary is stale (%s)", (_label, priceObservedAt, referenceNote) => {
   vi.spyOn(Date, "now").mockReturnValue(FX_REOPEN_QUOTE_AT * 1000);
   const { referenceAdmission: _admission, admittedDeviationBps: _admitted, ...currentPeg } = makeFxCurrentPeg("admitted", 200);
-  const row = makeStablecoin({ id: "eurc-circle", price: 1.122, priceObservedAt, priceSource: "coingecko", currentPeg });
+  const row = makeStablecoin({ ...reopenedQuote, priceObservedAt, currentPeg });
   const summary = {
-    ...makePegSummaryCoin({ id: row.id, price: row.price, priceObservedAt: FX_REOPEN_QUOTE_AT }),
+    ...reopenedSummary,
     ...makeFxCurrentPeg("stale-reference", null),
   };
   expect(resolveCurrentDeviation(row, summary, "EUR")).toEqual({ deviationBps: null, referenceNote });

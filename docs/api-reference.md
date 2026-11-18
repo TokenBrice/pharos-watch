@@ -1254,7 +1254,7 @@ A verified carried legacy FX peg can use `currentDeviationBps` in a mixed genera
 
 For legacy FX publications, an explicit per-asset `currentPeg.pegReferenceUnavailable` withholds the peg reference and deviation from peg summary and excludes that asset from the assessed cohort. The observed quote can still be available.
 
-An explicit `currentPeg.currentPriceUnavailable` clears the price, observation clock and deviation and excludes the asset from the assessed census. A refused clocked primary comparison can still carry a separately admitted DEX comparison with its dated reference. The legacy census uses the fixed UTC closure calendar and the unrounded deviation for the severe-move exception. A valid market quote in daily supply provenance counts as a recent observation during a live quote outage.
+An explicit `currentPeg.currentPriceUnavailable` clears the price, observation clock and deviation and excludes the asset from the assessed census. A fixed-USD asset can still carry a fresh DEX comparison against $1 when only the primary price is unavailable. A refused clocked primary comparison can still carry a separately admitted DEX comparison with its dated reference. The legacy census uses the fixed UTC closure calendar and the unrounded deviation for the severe-move exception. A valid market quote in daily supply provenance counts as a recent observation during a live quote outage.
 
 ### DEX liquidity
 

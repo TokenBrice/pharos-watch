@@ -21,7 +21,7 @@ import { classifyDepegLifecycle } from "../../lib/depeg-lifecycle";
 import { admittedDepegRecoveryAt } from "../../lib/tape-projectors/depeg";
 import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../../lib/depeg-event-projection";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
-import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
+import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, SUPPLY_SNAPSHOT_MAX_AGE_SEC, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
 import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
@@ -55,9 +55,11 @@ import {
 } from "./collectors-shared";
 import { sortDigestLifecycleFlags, type DigestLifecycleFlag, type DigestLifecycleIncident } from "./lifecycle-review";
 
-function digestQuoteObservedAt(asset: StablecoinData | undefined, legacy: boolean): number | null {
+function digestQuoteObservedAt(asset: StablecoinData | undefined, legacy: boolean, fixedUsd: boolean): number | null {
   if (!asset || asset.priceSource === "cached") return null;
   if (asset.priceObservedAtMode === "upstream") return asset.priceObservedAt ?? null;
+  if (fixedUsd && asset.priceObservedAtMode === "local_fetch" && asset.priceConfidence === "high" &&
+    normalizePricingSourceKeys(asset.priceSource).length > 1) return asset.priceObservedAt ?? null;
   if (!legacy || asset.priceObservedAtMode !== undefined) return null;
   // Old producers used priceUpdatedAt for both fetch and upstream clocks. Only a
   // selected feed with a source clock can recover a dated observation.
@@ -168,7 +170,15 @@ export async function collectActiveDepegs(
       const admission = ReferenceAdmissionSchema.safeParse(observation?.referenceAdmission).data;
       const legacy = !hasPublishedDeviation(observation);
       const pegCurrency = WORKER_TRACKED_META_BY_ID.get(row.stablecoin_id)?.flags.pegCurrency;
-      const usdObservedAt = digestQuoteObservedAt(asset, legacy || pegCurrency === "USD");
+      const observationReference = observation?.pegReference?.valueUsd;
+      const currentReference =
+        observation?.pegReferenceUnavailable === false &&
+        observationReference != null && Number.isFinite(observationReference) && observationReference > 0
+          ? observationReference
+          : null;
+      const fixedUsd = observation?.referenceAdmission == null && currentReference === 1 &&
+        (pegCurrency === "USD" || (pegCurrency == null && normalizePegType(row.peg_type ?? undefined) === "peggedUSD"));
+      const usdObservedAt = digestQuoteObservedAt(asset, legacy || pegCurrency === "USD", fixedUsd);
       const livePrice = nativeEvent ? nativeObservation?.value ?? null :
         ctx.stablecoinsCacheIsFresh &&
         usdObservedAt != null && Number.isSafeInteger(usdObservedAt) && usdObservedAt > 0 && usdObservedAt <= ctx.nowSec &&
@@ -183,15 +193,7 @@ export async function collectActiveDepegs(
         typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
           ? row.peg_reference
           : null;
-      const observationReference = observation?.pegReference?.valueUsd;
-      const currentReference =
-        observation?.pegReferenceUnavailable === false &&
-        observationReference != null && Number.isFinite(observationReference) && observationReference > 0
-          ? observationReference
-          : null;
       const liveReference = nativeEvent ? latchedReference : currentReference;
-      const fixedUsd = observation?.referenceAdmission == null && currentReference === 1 &&
-        (pegCurrency === "USD" || (pegCurrency == null && normalizePegType(row.peg_type ?? undefined) === "peggedUSD"));
       const hasUsableQuote = livePrice != null && liveReference != null && (nativeEvent || !observation?.currentPriceUnavailable);
       const projection = projectCurrentPegDeviation(observation, fixedUsd, usdObservedAt);
       const signal = hasUsableQuote && (nativeEvent || legacy) ? deriveDepegSignal(livePrice, liveReference) : null;
@@ -444,7 +446,8 @@ export async function collectNativeSupplyMovers(ctx: CollectorContext): Promise<
       const priceAt = today?.valuation_observed_at_sec;
       if (current === null || weekCheckpoint === null ||
           (price != null && (!Number.isFinite(price) || price <= 0)) ||
-          (priceAt != null && (!Number.isSafeInteger(priceAt) || priceAt < ctx.todayTs || priceAt > ctx.nowSec))) continue;
+          (priceAt != null && (!Number.isSafeInteger(priceAt) || priceAt < ctx.todayTs - SUPPLY_SNAPSHOT_MAX_AGE_SEC ||
+            priceAt > ctx.nowSec))) continue;
       const quantityEvidence = current && weekCheckpoint && price != null && priceAt != null ? {
         basis: "native-quantity" as const, current, weekAgo: weekCheckpoint,
         valuationPriceUsd: price, valuationObservedAt: priceAt,

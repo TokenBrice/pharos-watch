@@ -250,7 +250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-utils.ts",
-      "sha256": "0c0ab12e97e53eb23200205bbdb1692d30a3ad6f98bd4cd200babcad8b34e195"
+      "sha256": "a291c7669fdc53a1ef42f5fdc697199ff89613eeab837d689da4e9c729708c42"
     },
     {
       "path": "shared/lib/physical-commodity-delivery.ts",
@@ -418,7 +418,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/reference-market-hours.ts",
-      "sha256": "5a9500fb0d0b634df0211db5106e2a5bfd5e1b8945346706ba0da66befb10c7b"
+      "sha256": "9040615f7eb94ad2855f4bf3d2e342a25dca0594ec54509cb95f0ff41af5f88f"
     },
     {
       "path": "shared/lib/report-card-core.ts",
@@ -870,7 +870,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/redemption.ts",
-      "sha256": "97e2976f194cb5587616341b3e928c0823fc76d42e6612c412bb6f53219430a1"
+      "sha256": "54748654b1f9007990423313a1f4c779b74f42db34a83131713d8cca61aedc89"
     },
     {
       "path": "shared/types/reference-admission.ts",
@@ -1355,7 +1355,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-18-block-26441773-shock-coverage.json.gz"
     }
   ],
-  "digest": "50fedda9b569f80d2ada3697d4cdf0d597c0b9109035a071b19e8b97e3d1ae0c"
+  "digest": "e96cfd2d48ac5fbfa9987029b67c717548eb1f13d5f000d5a651e393e9c9a728"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

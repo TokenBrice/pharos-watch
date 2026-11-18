@@ -1,7 +1,7 @@
 import { hasPublishedDeviation, readDeviationProjection, relativeBps } from "@shared/lib/depeg-signals";
 export { hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { isLegacyReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
 import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
@@ -63,7 +63,7 @@ export function isCurrentDeviationHeld(
     && observedAtSec != null
     && Number.isFinite(observedAtSec)
     && observedAtSec > 0
-    && isReferenceDeviationHeld(pegCurrency, observedAtSec, deviationBps);
+    && isLegacyReferenceDeviationHeld(pegCurrency, observedAtSec, deviationBps);
 }
 
 interface PublishedReferenceRead extends PriceClockRow {
@@ -186,7 +186,7 @@ export function resolveDisplayPegReference(
   }
   const observedAtSec = resolvePriceObservedAtSec(row) ?? resolvePriceObservedAtSec(current);
   const { deviationBps, referenceNote } = readPublishedDeviation(pegCurrency, current);
-  return referenceNote || (observedAtSec != null && isReferenceDeviationHeld(pegCurrency, observedAtSec, deviationBps ?? NaN))
+  return referenceNote || (observedAtSec != null && isLegacyReferenceDeviationHeld(pegCurrency, observedAtSec, deviationBps ?? NaN))
     ? null : reference;
 }
 

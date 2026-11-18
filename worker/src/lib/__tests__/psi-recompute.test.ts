@@ -236,6 +236,34 @@ describe("buildStabilityInputForDay", () => {
     expect(buildStabilityInputForDay(day, day + DAY, [event], supply).openDepegsWithoutPrice).toBe(1);
   });
 
+  it("replays a live bullion USD quote without a quote-mode row when dated benchmark evidence exists", () => {
+    const day = Date.UTC(2026, 9, 30) / 1000;
+    const startedAt = day + 14 * 3600;
+    const event: PsiDepegEventRow = {
+      stablecoin_id: "xaut-tether", started_at: startedAt, ended_at: null, source: "live",
+      peg_type: "peggedGOLD", peg_reference: 3_905.57, start_price: 3_968.1082, peak_deviation_bps: 160,
+    };
+    const supply = buildSupplySnapshotMap([
+      { stablecoin_id: event.stablecoin_id, snapshot_date: day, circulating_usd: 1e9 },
+    ]);
+    const session = getReferenceSessionState("metal", startedAt);
+    const source = "gold-api.com" as const;
+    const observation = { pegKey: "peggedGOLD" as const, usdPerUnit: event.peg_reference,
+      observedAtSec: startedAt - 60, source, cadence: "intraday" as const,
+      ...(session.open ? { repricing: { source, sessionOpenedAtSec: session.sessionOpenedAtSec,
+        preCloseUsdPerUnit: 3_900 } } : {}) };
+    const replay = (row: PsiDepegEventRow, withReference = true) => buildStabilityInputForDay(
+      day, day + DAY, [row], supply, undefined,
+      withReference ? { referenceAt: () => ({ ...observation, kind: "fallback", observation }) } : undefined,
+      [startedAt + 60],
+    );
+    const explicit = replay({ ...event, quote_mode: "usd" });
+    expect(explicit.depegs[0]?.bps).toBeCloseTo(160.13);
+    expect(replay(event).depegs).toEqual(explicit.depegs);
+    expect(replay(event, false).openDepegsWithoutPrice).toBe(1);
+    expect(replay({ ...event, quote_mode: "foreign" }).openDepegsWithoutPrice).toBe(1);
+  });
+
   it("includes resolved depegs that are still active on the target day", () => {
     const day = Date.UTC(2026, 7, 6) / 1000;
     const result = buildPsiStabilityInput(day, psiSupplyPair({ stablecoinId: "usdc-circle", day, currentMcap: 500_000, priorMcap: 500_000, currentPrice: 1.018 }), [psiDepegRow({ stablecoinId: "usdc-circle", day, startedOffsetSec: -DAY, endedOffsetSec: DAY + 60, peakDeviationBps: 180 })]);

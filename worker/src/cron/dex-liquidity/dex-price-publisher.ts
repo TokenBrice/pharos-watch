@@ -33,18 +33,22 @@ function projectAggregateClock(clock: number | null, lineage: DexPriceLineage | 
 function projectProtocolSources(
   sources: ReturnType<typeof aggregateProtocolSources>, clock: number | null, primaryKeys: ReadonlySet<string>, nowSec: number,
 ) {
-  const admissible = sources.filter((source) => admitsRollbackDexVote(source.upstreamKeys, primaryKeys));
-  const current = new Set(admissible.filter((source) => source.tvl >= DEX_PROTOCOL_SOURCE_MIN_TVL_USD &&
+  const admissible = new Set(sources.filter((source) => admitsRollbackDexVote(source.upstreamKeys, primaryKeys)));
+  const current = new Set(sources.filter((source) => source.tvl >= DEX_PROTOCOL_SOURCE_MIN_TVL_USD &&
     isFreshDexPoolObservation(source.observedAt, nowSec) &&
     validatePricingSourceFreshness({ source: `${source.protocol}-dex`, observedAt: source.observedAt, nowSec }).accepted));
-  const currentKeys = new Set([...current].flatMap((source) => source.upstreamKeys ?? []));
+  const currentKeys = new Set([...admissible].flatMap((source) => current.has(source) ? source.upstreamKeys ?? [] : []));
   // A stale, unregistered, or thin protocol cannot link otherwise independent current sources.
-  const candidates = admissible.filter((source) => current.has(source) || admitsRollbackDexVote(source.upstreamKeys, currentKeys));
+  const candidates = [...admissible].filter((source) => current.has(source) || admitsRollbackDexVote(source.upstreamKeys, currentKeys));
   const selected = new Set(selectIndependentChallengerPools(candidates, (source) => current.has(source) ? source.observedAt! : 0));
   const displaySources = sources.map((source) => clock == null ? source : { ...source, ...(selected.has(source)
     ? { aggregateObservedAt: clock }
     : { aggregateObservedAt: null, displayAggregateObservedAt: clock }) });
-  return { displaySources, votingSources: displaySources.filter((_, index) => selected.has(sources[index]!)) };
+  // Keep complete current receipts for readers that can check which upstreams supplied the primary quote.
+  const lineageSources = sources.filter((source) => source.upstreamKeys?.length &&
+    (selected.has(source) || (current.has(source) && !admissible.has(source))))
+    .map((source) => clock == null ? source : { ...source, aggregateObservedAt: clock });
+  return { displaySources, votingSources: displaySources.filter((_, index) => selected.has(sources[index]!)), lineageSources };
 }
 
 // The completeness fence compares the generation's row counts against the
@@ -325,11 +329,10 @@ export async function computeDexPrices({
     const meta = TRACKED_META_BY_ID.get(id);
     const primaryKeys = configuredPrimaryUpstreamKeys(id);
     // The old fallback reads protocol prices even when their voting clock is withheld.
-    const { displaySources, votingSources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
+    const { displaySources, votingSources, lineageSources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
     const hasDisplayOnlySources = votingSources.length !== displaySources.length;
     // Main also treats protocol sources as individual fallback challengers.
     const sources = votingSources.filter((source) => source.upstreamKeys === undefined);
-    const lineageSources = votingSources.filter((source) => source.upstreamKeys !== undefined);
     const priceSources = {
       ...(hasDisplayOnlySources && aggregateObservedAt != null
         ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt }

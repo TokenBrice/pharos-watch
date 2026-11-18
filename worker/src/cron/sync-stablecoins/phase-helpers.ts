@@ -343,7 +343,7 @@ export async function fillMissingSupplyHistory(
         }
       }
       asset.supplyChangeBaselines = baselines;
-    } else if (asset.pegType !== "peggedUSD") {
+    } else if (!asset.supplyRestored && asset.pegType !== "peggedUSD") {
       asset.supplyChangeBaselines = {};
     } else if (!asset.supplyRestored) {
       delete asset.supplyChangeBaselines;
@@ -373,12 +373,13 @@ export async function fillMissingSupplyHistory(
     for (let date = firstDay; date <= lastDay; date += DAY_SECONDS) runDates.add(date);
   }
   const dates = new Set(runDates);
-  const restoredUsdIds = new Set<string>();
+  const restoredHistoryIds = new Set<string>();
   for (const asset of assets) {
     const clock = asset.supplyObservedAt;
-    if (!asset.supplyRestored || asset.pegType !== "peggedUSD" || chartPackets.has(asset) ||
+    if (!asset.supplyRestored || chartPackets.has(asset) ||
+      (asset.pegType !== "peggedUSD" && asset.supplyChangeBaselines === undefined) ||
       clock == null || !isSupplyObservationWithinRestoreCeiling(clock, now)) continue;
-    restoredUsdIds.add(asset.id);
+    restoredHistoryIds.add(asset.id);
     for (const [, days] of SUPPLY_WINDOWS) {
       const targetDate = bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS);
       // An older carry can target a close outside the run-relative window.
@@ -403,17 +404,22 @@ export async function fillMissingSupplyHistory(
   };
   const historyById = new Map<string, { assessedDates: Set<number>; closes: Close[]; legacyUsd: Map<number, number> }>();
   for (const row of historyRows.results ?? []) {
-    if (!runDates.has(row.snapshot_date) && !restoredUsdIds.has(row.stablecoin_id)) continue;
+    if (!runDates.has(row.snapshot_date) && !restoredHistoryIds.has(row.stablecoin_id)) continue;
     const { provenance, invalid } = parseSupplyObservationProvenance(row.supply_provenance);
     const observedAt = provenance?.supplyObservedAt;
     const asset = assetsById.get(row.stablecoin_id);
-    const unassessed = observedAt == null && !invalid && !provenance?.nativeQuantityUnavailable &&
+    const coverage = classifySupplyCoverage(provenance);
+    const legacyUsdEligible = asset?.pegType === "peggedUSD" && asset.supplySource === "defillama" &&
+      !asset.supplyGapFill && !asset.frozen && !asset.supplyRestored && Number.isFinite(row.circulating_usd) &&
+      row.circulating_usd >= 0 && !isEarlierSupplyPerimeter(asset.id, row.snapshot_date) &&
+      !isAmbiguousSupplyPerimeterDay(asset.id, row.snapshot_date);
+    // A directly reported USD cap can survive an explicit refusal to infer token units.
+    const unassessed = observedAt == null && !invalid && coverage !== "partial" &&
+      (!provenance?.nativeQuantityUnavailable ||
+        (legacyUsdEligible && provenance.supplySource === "defillama" && coverage === "complete")) &&
       row.circulating_native == null && row.valuation_price_usd == null &&
-      row.valuation_observed_at_sec == null && classifySupplyCoverage(provenance) !== "partial";
-    if (unassessed && (asset?.pegType !== "peggedUSD" || asset.supplySource !== "defillama" ||
-      asset.supplyGapFill || asset.frozen || asset.supplyRestored || !Number.isFinite(row.circulating_usd) ||
-      row.circulating_usd < 0 || isEarlierSupplyPerimeter(asset.id, row.snapshot_date) ||
-      isAmbiguousSupplyPerimeterDay(asset.id, row.snapshot_date))) continue;
+      row.valuation_observed_at_sec == null;
+    if (unassessed && !legacyUsdEligible) continue;
     const history = historyById.get(row.stablecoin_id) ?? {
       assessedDates: new Set<number>(), closes: [] as Close[], legacyUsd: new Map<number, number>(),
     };
@@ -425,7 +431,7 @@ export async function fillMissingSupplyHistory(
     history.assessedDates.add(row.snapshot_date);
     if (observedAt != null) history.assessedDates.add(bucketUnixSecondsToUtcDay(observedAt));
     const source = provenance?.supplySource ?? null;
-    if (observedAt == null || observedAt <= 0 || observedAt > now || classifySupplyCoverage(provenance) !== "complete" ||
+    if (observedAt == null || observedAt <= 0 || observedAt > now || coverage !== "complete" ||
       (isKinesisWrapperSupplyId(row.stablecoin_id) &&
         isKinesisWrapperSupplyCutoverActive(row.stablecoin_id, perimeterAt) !== (source === "onchain-total-supply")) ||
       !Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
@@ -451,22 +457,25 @@ export async function fillMissingSupplyHistory(
     }
     const history = historyById.get(asset.id);
     if (asset.supplyRestored) {
-      if (asset.pegType !== "peggedUSD") continue;
+      const requiresDatedClose = asset.pegType !== "peggedUSD";
+      if (requiresDatedClose && asset.supplyChangeBaselines === undefined) continue;
       const baselines = { ...asset.supplyChangeBaselines };
       const rejectedAll = asset.supplyChangeBaselines != null && Object.keys(baselines).length === 0;
-      const comparable = clock != null && clock > 0 && clock <= now && restoredUsdIds.has(asset.id) && !asset.frozen &&
+      const comparable = clock != null && clock > 0 && clock <= now && restoredHistoryIds.has(asset.id) && !asset.frozen &&
+        (!requiresDatedClose || asset.supplySource === "defillama" ||
+          hasDatedUsdValuation(asset.supplySource, clock, asset.valuationPriceUsd, asset.valuationObservedAtSec, now)) &&
         getCirculatingRawOrNull(asset) != null && classifySupplyCoverage(buildSupplyObservationProvenance(asset)) === "complete";
       const currentPerimeter = isEarlierSupplyPerimeter(asset.id, clock ?? now);
       for (const [window, days, field, readLegacy] of SUPPLY_WINDOWS) {
         const targetDate = clock == null ? null : bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS);
         const assessed = targetDate != null && history?.assessedDates.has(targetDate);
         const point = baselines[window];
-        if (point === undefined && !assessed && !rejectedAll) continue;
+        if (point === undefined && !assessed && !rejectedAll && !requiresDatedClose) continue;
         // Revalidate the carried close against its original stock. A carry cannot adopt a replacement.
         if (point && comparable && targetDate === bucketUnixSecondsToUtcDay(point.observedAt) &&
           !isAmbiguousSupplyPerimeterDay(asset.id, targetDate) &&
           isEarlierSupplyPerimeter(asset.id, point.observedAt) === currentPerimeter && point.circulatingUsd === readLegacy(asset)) {
-          if (!assessed) continue;
+          if (!assessed && !requiresDatedClose) continue;
           const close = history?.closes.find(candidate =>
             candidate.source === asset.supplySource && candidate.observedAt === point.observedAt &&
             candidate.circulatingUsd === point.circulatingUsd &&

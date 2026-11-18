@@ -33,8 +33,9 @@ import { resolveReviewedRouteSuspension } from "@shared/lib/redemption-route-sus
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { StablecoinData } from "@shared/types/supply";
-import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { RedemptionBackstopEntry, RedemptionBackstopSnapshotEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata, type ReserveSnapshotMetadataRecord } from "../live-reserves/store";
+import { mentoFpmmIds } from "../redemption-backstop-capacity/mento-phase";
 import {
   resolveCapacityBasis,
   resolveRedemptionCapacity,
@@ -496,7 +497,7 @@ export async function buildRedemptionBackstopEntry(
       : []),
   ]);
 
-  const entry: RedemptionBackstopEntry = {
+  const entry: RedemptionBackstopSnapshotEntry = {
     stablecoinId,
     ...(!observerModel && options.reserveInput && (
       (!routeSuspension && capacity.consumedReserveCapacity)
@@ -526,6 +527,11 @@ export async function buildRedemptionBackstopEntry(
     resolutionState,
     routeStatus,
     routeStatusSource,
+    ...(mentoFpmmIds.has(stablecoinId) && routeStatusSource === "market-implied" &&
+      options.routeAvailability?.outputImpairedDependencyId != null && capacity.consumedReserveCapacity &&
+      capacity.routeStatusSource === "onchain" && capacity.settlementDelaySec != null &&
+      (capacity.routeStatus === "open" || capacity.routeStatus === "paused")
+      ? { mentoPoolStatus: capacity.routeStatus } : {}),
     ...(routeStatusReason ? { routeStatusReason } : {}),
     ...(routeStatusReviewedAt ? { routeStatusReviewedAt } : {}),
     holderEligibility,

@@ -55,6 +55,8 @@ export async function invalidateBlacklistDerivedCaches(
       if (value && (JSON.parse(value) as { ownsFence: number }).ownsFence === 1) {
         ownRepairFence.generation = value;
         ownRepairFence.summaryValue = null;
+        ownRepairFence.rollbackValue = null;
+        ownRepairFence.rollbackUpdatedAt = null;
       }
     }
     return { attempted: keys.length, deleted: keys.length, failed: 0 };

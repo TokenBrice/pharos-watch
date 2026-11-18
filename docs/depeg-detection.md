@@ -345,6 +345,8 @@ Confirmation uses the detector’s monitoring registry, including historical UST
 
 The 15-minute wait and dynamic expiry start at the detection run that first saw the continuous episode. When a quote has an upstream clock, its original time also governs ordering and persistence. A repeated quote cannot advance the episode. Pending first, latest and peak deviations are stored in whole basis points. Original price/reference pairs resolve peaks that round to the same value.
 
+If the primary disappears in an open session, confirmation can pair an eligible independent USD secondary quote with the selected reference at the secondary quote's own observation time. The pending episode must still meet the temporal requirement.
+
 Age checks:
 
 - If age < 15 minutes: skip (wait for next cycle)
@@ -626,8 +628,10 @@ Detection contributes eligible episodes, observed price intervals and audit prov
   trusted off-peg observation, no explicit gap and age ≤1200 seconds. Historical
   observed peaks still contribute severity/spread when current coverage is unavailable.
   A fresh legacy observation during a reference-market closure qualifies at the
-  severe band of 2,500 bps in either direction. An explicit admitted-coverage
-  ledger takes precedence, including an empty ledger.
+  severe band of 2,500 bps in either direction. Recorded legacy off-peg intervals
+  for severe moves contribute to both off-peg and observed time through the
+  closure. Blind spans stay excluded. An explicit admitted-coverage ledger
+  takes precedence, including an empty ledger.
 - Since v6.49 `/api/peg-summary` publishes `pegScore`, `pegPct` and `recent90d`
   as null on a row with `currentPriceUnavailable: true` (no price row, a rejected
   price, or a nominal-only reference such as `protocol-par`), which names the reason,
