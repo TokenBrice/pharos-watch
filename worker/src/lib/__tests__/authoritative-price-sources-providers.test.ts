@@ -556,8 +556,8 @@ describe("idleCdoTrancheProvider", () => {
     expect(context.vaultRateWrites?.get(ID)).toBeUndefined();
   });
 
-  it("rescues a missing price after an RPC failure with explicitly degraded cached-rate provenance", async () => {
-    evmCall.mockRejectedValue(new Error("RPC unavailable"));
+  it.each(["0x12", "reject"])("rescues a missing price after a failed (%s) read with degraded cached-rate provenance", async (read) => {
+    if (read === "reject") evmCall.mockRejectedValue(new Error("RPC unavailable")); else evmCall.mockResolvedValue(read);
     const context = contextWithParent();
     context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - CACHED_VAULT_RATE_MAX_AGE_SEC }]]);
 
@@ -598,9 +598,10 @@ describe("idleCdoTrancheProvider", () => {
   it.each([0n, 499_999n, 10_000_001n])("rejects a zero or untrusted virtual price (%s) without publishing a fresh rate", async (raw) => {
     evmCall.mockResolvedValue(`0x${encodeUint256(raw)}`);
     const context = contextWithParent();
+    context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - 300 }]]);
 
     await expect(idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context)).resolves.toBeNull();
-    expect(context.vaultRateWrites?.get(ID)).toBeUndefined();
+    expect(context.vaultRateWrites?.get(ID)).toEqual({ rate: 0, observedAt: NOW });
   });
 
   it("returns unavailable for an unknown tranche or missing parent", async () => {

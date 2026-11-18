@@ -117,6 +117,8 @@ export async function fetchBoundedVaultQuote(
   }
 
   const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
+  // An undecodable word is a failed read, not a measured zero.
+  if (outputAmount == null && options?.throwOnNullQuote) throw new Error(`[authoritative-price-sources] ${config.id}: ${label}() returned an undecodable word`);
   if (outputAmount == null || outputAmount <= 0n) {
     logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${config.id}: ${label}() returned zero or invalid output`);
     return null;
@@ -747,9 +749,16 @@ export async function resolveVaultAssetsPerShareWithCache(
     context.vaultRateWrites?.set(asset.id, { rate: liveRate, observedAt: nowSec });
     return { rate: liveRate, cachedObservedAt: null };
   }
+  // A completed read that rejected its rate (zero or outside the vault bounds)
+  // contradicts the last-good rate: tombstone it (reads skip rate 0) so no later
+  // stage or run rescues with it (R2). An exploited vault keeps no pre-exploit price.
+  if (liveError == null && !context.vaultRateCacheOnly) {
+    context.vaultRateWrites?.set(asset.id, { rate: 0, observedAt: nowSec });
+    return null;
+  }
 
   if (!hasPublishableCurrentPrice(asset)) {
-    const cached = context.vaultRateCache?.get(asset.id);
+    const cached = context.vaultRateWrites?.get(asset.id) ?? context.vaultRateCache?.get(asset.id);
     if (isTrustedCachedVaultRate(cached, nowSec)) {
       return { rate: cached.rate, cachedObservedAt: cached.observedAt };
     }

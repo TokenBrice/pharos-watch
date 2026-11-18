@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.54`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.55`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -189,6 +189,8 @@ Ethereum Frankencoin Savings is an exact external `lending-opportunity` for ZCHF
 **Variant ownership:** The [variant registry](https://github.com/TokenBrice/pharos-watch/blob/main/worker/src/lib/yield-config/yield-config-variants.ts) owns wrapper identities, labels and types. `YIELD_VARIANT_MAP` applies only when the yield-bearing wrapper is not tracked separately; tracked wrappers own their native sources and history. AZND is frozen with no runtime loAZND variant. Falcon sUSDf and Gnosis sDAI own their sources separately from USDf and Ethereum sDAI. Saturn sUSDat owns its ERC-4626 source, not the USDat parent; its NAV includes credit valuation and income rather than a guaranteed cash savings rate.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
+
+**Restricted rewards:** DL's `apy` is `apyBase + apyReward`, including campaigns a general depositor cannot claim. A pool listed in `YIELD_POOL_RESTRICTED_REWARD_IDS` (same file as `YIELD_POOL_MAP`, each entry citing its campaign) is converted at DL intake (`filterValidDlPools`) to a base-only payload, `apy: apyBase` with `apyReward: null`, so every lane that reads the pool publishes the base. The intake APY envelope bounds that base, not the gated total. A listed pool without a finite `apyBase` is rejected at intake, like an envelope breach, instead of publishing the gated total. The first entry is steakUSDG on Robinhood Chain, whose reward leg is a Merkl whitelist campaign for Robinhood users. Rows already in `yield_history` keep their recorded totals, so the 30-day mean converges over the following 30 days.
 
 ### Tier 2.5: Protocol-Native Yield APIs
 

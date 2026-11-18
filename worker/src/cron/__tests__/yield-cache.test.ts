@@ -15,6 +15,7 @@ import {
 } from "../yield-sync/cache";
 import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
+import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 
 describe("parseRiskFreeRateCache", () => {
   const nowSec = 1710500000;
@@ -24,12 +25,7 @@ describe("parseRiskFreeRateCache", () => {
       buildRiskFreeRateCachePayload({ rate: 4.25, source: "fred", recordDate: "2026-03-14", fetchedAt: nowSec - 3600 }),
     );
     const result = parseRiskFreeRateCache(payload, nowSec - 7200, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(4.25);
-    expect(result!.source).toBe("fred");
-    expect(result!.ageSeconds).toBe(3600);
-    expect(result!.lastMarketRate).toBe(4.25);
-    expect(result!.lastMarketSource).toBe("fred");
+    expect(result).toMatchObject({ rate: 4.25, source: "fred", ageSeconds: 3600, lastMarketRate: 4.25, lastMarketSource: "fred" });
   });
 
   it("does not turn a future fetchedAt into age zero", () => {
@@ -39,26 +35,17 @@ describe("parseRiskFreeRateCache", () => {
     expect(parseRiskFreeRateCache(payload, nowSec, nowSec)?.ageSeconds).toBe(-86400);
   });
 
-  it("returns null for malformed JSON", () => {
+  it("returns null for malformed JSON or an empty string", () => {
     expect(parseRiskFreeRateCache("{bad json", nowSec, nowSec)).toBeNull();
+    expect(parseRiskFreeRateCache("", nowSec, nowSec)).toBeNull();
   });
 
   it("falls back to legacy scalar format", () => {
-    const result = parseRiskFreeRateCache("3.75", nowSec - 86400, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(3.75);
-    expect(result!.source).toBe("legacy-scalar");
+    expect(parseRiskFreeRateCache("3.75", nowSec - 86400, nowSec)).toMatchObject({ rate: 3.75, source: "legacy-scalar" });
   });
 
   it("accepts negative rates for non-USD benchmark support", () => {
-    const result = parseRiskFreeRateCache("-1.5", nowSec, nowSec, { key: "CHF" });
-    expect(result).not.toBeNull();
-    expect(result!.rate).toBe(-1.5);
-    expect(result!.key).toBe("CHF");
-  });
-
-  it("returns null for empty string", () => {
-    expect(parseRiskFreeRateCache("", nowSec, nowSec)).toBeNull();
+    expect(parseRiskFreeRateCache("-1.5", nowSec, nowSec, { key: "CHF" })).toMatchObject({ rate: -1.5, key: "CHF" });
   });
 });
 
@@ -122,27 +109,19 @@ describe("parseRiskFreeRatesCache", () => {
 
 describe("parseDlStablecoinPoolsCache", () => {
   const nowSec = 1710500000;
+  const steak = YIELD_POOL_MAP["steakusdg-steakhouse"]!;
 
   it("parses structured payload with data array", () => {
     const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
     const raw = buildDlStablecoinPoolsCache(pools, nowSec - 1800);
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 1800, nowSec);
-    expect(result).not.toBeNull();
-    expect(result!.pools).toHaveLength(1);
-    expect(result!.meta.ageSeconds).toBe(1800);
+    expect(result?.pools).toHaveLength(1);
+    expect(result?.meta.ageSeconds).toBe(1800);
   });
 
-  it("rejects legacy array format", () => {
-    const pools = [makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })];
-    const raw = JSON.stringify(pools);
-    expect(parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec)).toBeNull();
-  });
-
-  it("returns null for malformed JSON", () => {
+  it("returns null for legacy arrays and malformed or non-object JSON", () => {
+    expect(parseDlStablecoinPoolsCache(JSON.stringify([makeDlYieldPool({ pool: "abc", project: "sdai", tvlUsd: 1e8 })]), nowSec - 3600, nowSec)).toBeNull();
     expect(parseDlStablecoinPoolsCache("{bad", nowSec, nowSec)).toBeNull();
-  });
-
-  it("returns null for non-array non-object JSON", () => {
     expect(parseDlStablecoinPoolsCache('"just a string"', nowSec, nowSec)).toBeNull();
   });
 
@@ -150,25 +129,24 @@ describe("parseDlStablecoinPoolsCache", () => {
     const raw = JSON.stringify({
       updatedAt: nowSec - 3600,
       source: "sync-dex-liquidity",
-      poolCount: 2,
+      poolCount: 5,
       data: [
         makeDlYieldPool({ pool: "bad-apy", project: "sdai", tvlUsd: 1e8, apy: Number.NaN }),
-        makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
+        makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8, apyBase: 4, apyReward: 1 }),
+        makeDlYieldPool({ pool: steak, apy: 403.8, apyBase: 3.8, apyReward: 400 }),
+        makeDlYieldPool({ pool: steak, apy: 7, apyBase: 400 }),
+        makeDlYieldPool({ pool: steak, apy: 7, apyBase: null }),
       ],
     });
 
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
 
-    expect(result?.pools.map((pool) => pool.pool)).toEqual(["valid"]);
-    expect(result?.meta.poolCount).toBe(1);
+    expect(result?.pools.map(({ pool, apy, apyBase, apyReward }) => [pool, apy, apyBase, apyReward])).toEqual([["valid", 5, 4, 1], [steak, 3.8, 3.8, null]]);
+    expect(result?.meta.poolCount).toBe(2);
   });
 
   it("rejects structured DL cache payloads with future updatedAt", () => {
-    const raw = buildDlStablecoinPoolsCache([
-      makeDlYieldPool({ pool: "valid", project: "sdai", tvlUsd: 1e8 }),
-    ], nowSec + 1);
-
-    expect(parseDlStablecoinPoolsCache(raw, nowSec, nowSec)).toBeNull();
+    expect(parseDlStablecoinPoolsCache(buildDlStablecoinPoolsCache([makeDlYieldPool()], nowSec + 1), nowSec, nowSec)).toBeNull();
   });
 });
 

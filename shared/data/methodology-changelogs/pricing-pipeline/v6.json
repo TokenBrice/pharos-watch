@@ -1,5 +1,22 @@
 [
   {
+    "version": "6.84",
+    "title": "A rejected live vault rate no longer falls back to the cached rate",
+    "date": "2026-11-18",
+    "effectiveAt": 1795017600,
+    "summary": "Vault NAV routes consult the 24-hour cached assets-per-share rate only after a failed or skipped live read. A read that completes with a zero or out-of-bounds rate is rejected evidence: the NAV override is unavailable that run and the cached rate is invalidated, instead of pricing the vault at the older rate.",
+    "impact": [
+      "Applies to every ERC-4626 `convertToAssets`, Aave `previewRedeem` and Idle CDO `virtualPrice` route, including pre-intake supply valuation. An RPC error or timeout, an undecodable response word, or an open grouped circuit still reaches the `protocol-redeem-cached-rate` lane.",
+      "A rejected read writes a zero-rate tombstone, which cache reads skip. A later stage of the same sync, or a later run, cannot rescue the vault with the pre-rejection rate; the next accepted live read replaces the tombstone. An independent market quote or eligible price replay can still price the asset.",
+      "A rejected read records no grouped-circuit outcome; previously a cached rescue after it counted as a live failure during supply valuation.",
+      "Trigger: after the 2026-11-18 sBOLD exploit, `convertToAssets` returned 0 while the cached 1.096 rate kept pricing about 4.4e19 inflated shares near $1.09. The resulting market cap of about $4.8e19 swamped aggregates such as FreezeWatch. sBOLD's supply is now also held as `economic-float-unreconciled`.",
+      "Live-rate writes, the 24-hour cache budget, vault sanity bounds, parent trust and depeg authority are unchanged.",
+      "Activation is provisionally 2026-11-18 16:00 UTC (1795017600); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.83",
     "title": "Velodrome Slipstream direct-API observations retired",
     "date": "2026-11-15",

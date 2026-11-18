@@ -180,7 +180,9 @@ export function YieldIntelligenceMethodologySection() {
                       are configured as relevant yield sources, allowing exact-pool curated overrides for assets such as
                       XAUT and Frankencoin Savings for ZCHF, and TVL-weighting exact pool groups when one tracked asset maps
                       to chain-isolated wrapper vaults. Supplied contradictory addresses fail closed, missing native pins
-                      cannot borrow a generic venue&apos;s APY, and ambiguous same-chain receipts require curated pool identity
+                      cannot borrow a generic venue&apos;s APY, and ambiguous same-chain receipts require curated pool identity.
+                      A curated pool whose reward is an eligibility-gated campaign that a general depositor cannot claim
+                      publishes its base APY only
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated

@@ -95,7 +95,6 @@ vi.mock("@shared/lib/stablecoins/registry", () =>
   ])),
 );
 
-// Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
@@ -142,7 +141,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
 });
 
 vi.mock("../../lib/yield-config/yield-config-variants", () => ({ YIELD_VARIANT_MAP: {} }));
-vi.mock("../../lib/yield-config/yield-config-pools", () => ({ YIELD_POOL_MAP: {} }));
+vi.mock("../../lib/yield-config/yield-config-pools", () => ({ YIELD_POOL_MAP: {}, YIELD_POOL_RESTRICTED_REWARD_IDS: new Set() }));
 vi.mock("../../lib/yield-config/yield-config-weighted-pools", () => ({ YIELD_WEIGHTED_POOL_GROUPS: {} }));
 vi.mock("../../lib/yield-config/yield-config-explicit-pools", () => ({ EXPLICIT_YIELD_SOURCE_POOL_MAP: {} }));
 vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOriginal) => ({

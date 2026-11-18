@@ -1,5 +1,21 @@
 [
   {
+    "version": "8.55",
+    "title": "Eligibility-Gated DeFiLlama Rewards Publish Base APY",
+    "date": "2026-11-18",
+    "effectiveAt": 1795046400,
+    "summary": "A pinned DeFiLlama pool whose reward leg is a campaign a general depositor cannot claim now publishes its base APY only. DeFiLlama's total APY folds such campaigns into the pool rate, so the total overstated what an ordinary depositor earns.",
+    "impact": [
+      "Pools listed in `YIELD_POOL_RESTRICTED_REWARD_IDS` (beside `YIELD_POOL_MAP`, each entry citing its campaign) are converted at DeFiLlama intake to `apy: apyBase` with `apyReward: null`, so every lane that reads them publishes the base. The base-only payload resolves `rewardShare` to 0 through the existing rule, so the gated reward neither inflates APY nor counts as reward share. The DeFiLlama intake APY envelope bounds that published base, not the gated total.",
+      "A listed pool without a finite `apyBase` is rejected at intake like an envelope breach, so no lane publishes the gated total that run; a NAV token's price-derived fallback may still resolve its return.",
+      "First entry: steakUSDG on Robinhood Chain (`32f586b4-5358-5aa2-88ee-c842139e7023`), whose reward leg is the Merkl whitelist campaign \"[Robinhood Users Only] Supply to Steakhouse USDG V2 vault on Morpho\". The steakUSDG row and its USDG linked-variant projection drop from about 7.0% to the vault's base rate of about 3.8%, which matches Morpho's net APY with no rewards.",
+      "Stored `yield_history` rows keep their recorded totals, so the affected 30-day APY converges to the base rate over the following 30 days. PYS weights, benchmarks, source-risk formulas and every other pool are unchanged.",
+      "Planned activation is provisionally 2026-11-19 00:00 UTC (1795046400), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.54",
     "title": "Layer 3 Skips Lending-Venue Pools",
     "date": "2026-11-02",
