@@ -6,7 +6,7 @@ import { SOCIAL_SCORECARD_DAILY_QUOTA } from "@shared/lib/pages-storage";
 import { sha256Hex } from "@shared/lib/sha256";
 import { SOCIAL_SCORECARD_OBJECT_PREFIX, type SocialPreviewBucket } from "@shared/lib/social-preview-storage";
 import {
-  SOCIAL_SCORECARD_METADATA_HEADER,
+  SOCIAL_SCORECARD_METADATA_HEADER, SOCIAL_SCORECARD_REASON_HEADER,
   encodeSocialScorecardMetadata, openSocialScorecard, sealSocialScorecard,
 } from "@shared/lib/social-scorecard";
 import {
@@ -193,6 +193,17 @@ describe("retained dated scorecard Pages routes", () => {
     expect(html).toContain("8 rated of 10 stablecoins; 1 not rated; 1 unavailable");
     expect(html).toContain('href="https://pharos.watch/safety-scores/"');
     expect(html).not.toContain("published grade");
+  });
+
+  it("answers a not-rated coin definitively and never seals a grade it lacks", async () => {
+    const { create, metadata, image, bucket, quotaRows } = setup();
+    const upstream = (response: Response) => ({ SITE_API: { fetch: vi.fn(async () => response) } });
+    const refused = await create(upstream(new Response("Dated scorecard unavailable", { status: 404, headers: { [SOCIAL_SCORECARD_REASON_HEADER]: "not-rated" } })));
+    expect([refused.status, refused.headers.get(SOCIAL_SCORECARD_REASON_HEADER), refused.headers.has("Retry-After")]).toEqual([404, "not-rated", false]);
+    metadata.subject = { kind: "stablecoin", id: "usdc-circle", name: "USD Coin", symbol: "USDC", score: null, grade: "NR", ratingStatus: "not-rated" };
+    expect((await create(upstream(new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } })))).status).toBe(503);
+    expect(bucket.put).not.toHaveBeenCalled();
+    expect(quotaRows()).toEqual([]);
   });
 
   it("uses only the canonical public OG lane, including over a service binding", async () => {
