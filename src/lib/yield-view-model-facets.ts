@@ -88,7 +88,7 @@ export function isYieldBlockingCoinState(state: CoinState): boolean {
  * tracked variant its selected source deposits into (`linked-variant:<venueId>:…`),
  * carrying that venue's symbol (`venue`). Highest precedence first, one state per kind.
  */
-export function resolveYieldRowCoinStates(
+function resolveYieldRowCoinStates(
   row: Pick<YieldWorkbenchRanking, "id" | "provenance">,
   statesById: ReadonlyMap<string, readonly CoinState[]> | null | undefined,
 ): readonly CoinState[] {

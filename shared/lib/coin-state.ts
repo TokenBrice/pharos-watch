@@ -42,7 +42,7 @@ export type CoinStateNotice = Pick<CoinNotice, "type" | "title" | "kind" | "dead
 /** A deadline state shows from this many days before the date… */
 export const DEADLINE_HORIZON_DAYS = 30;
 /** …until this many days after it. */
-export const DEADLINE_GRACE_DAYS = 30;
+const DEADLINE_GRACE_DAYS = 30;
 
 const DAY_SEC = 86_400;
 
