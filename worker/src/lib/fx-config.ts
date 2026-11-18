@@ -26,6 +26,8 @@ export const PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS = [
 
 export const PRIMARY_FX_CURRENCIES = PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([, currency]) => currency);
 
+export const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
+
 export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = Object.fromEntries(
   PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegType, currency]) => [currency, pegType]),
 );

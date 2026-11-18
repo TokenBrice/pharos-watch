@@ -1,34 +1,58 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { formatIsoDate } from "@shared/lib/format";
+import { evaluateReferenceAdmission, OXR_POLL_INTERVAL_SEC, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { FxReferenceObservationSchema, type FxReferenceObservation, type FxReferenceObservationMap } from "@shared/types/fx-reference";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { fetchRealtimeFxRates, type RealtimeFxObservation } from "../lib/fx-realtime";
+import { fetchRealtimeFxRates, getRealtimeFxTimestampRejection, type RealtimeFxObservation } from "../lib/fx-realtime";
 import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote, type ChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, getCacheUpdatedAt, setCache } from "../lib/db-cache";
 import type { MetalPegKey, MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, getFxSourceStatus, isAdmissibleFxSourceDate, isFreshFxObservation, persistFxRateState } from "../lib/fx-rate-state";
+import { assessEcbRelease, getEcbFixingClocks, getFxSourceStatus, isAdmissibleFxSourceDate, isFreshFxObservation, persistFxRateState } from "../lib/fx-rate-state";
+import { fxSourceSampleKey, recordFxSourceSample, type FxBaseline, type FxMedianContributorsByPeg, type FxReferenceSourceSamples } from "../lib/fx-observations";
 import { logCronEvent, type CronEventInput, type CronResult } from "../lib/cron-logger";
 import {
-  applyRealtimeOverlaySourceMetadata,
   canCarryForwardFxRates,
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
-import { invertUnitsPerUsd, MAX_FX_RATE_DELTA_PCT } from "../lib/fx-config";
+import { invertUnitsPerUsd, MAX_FX_RATE_DELTA_PCT, OXR_LAST_SUCCESS_KEY } from "../lib/fx-config";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
 const CHAINLINK_REFERENCE_MAX_DIVERGENCE = 0.05;
 const REALTIME_OVERLAY_MAX_DIVERGENCE = 0.05;
+// Two independently published indicative midpoint blends must agree on the new regime.
+const FX_REGIME_CORROBORATION_MAX_DIVERGENCE = 0.02;
 const CHAINLINK_METAL_PEG_KEYS = new Set<string>(["peggedGOLD", "peggedSILVER"]);
 const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
-const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
-// TODO(cleanup): Remove this constant and the fallback read at ~L735 after 2026-09-15.
-// Once every live isolate has written OXR_LAST_ATTEMPT_KEY at least once, this legacy key
-// is permanently dead. Also delete the 'fx-oxr-last-fetch' row from the cache table via migration.
-const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
-// Open Exchange Rates free-tier hourly quota: skip fetches within this window of the last attempt.
-const OXR_RATE_LIMIT_MINUTES = 55;
+
+function referenceWins(
+  candidateAt: number | null | undefined, candidateCadence: FxSourceCadence | undefined,
+  incumbentAt: number, incumbentCadence: FxSourceCadence | undefined,
+): boolean {
+  return candidateAt != null && (candidateAt > incumbentAt
+    || (candidateAt === incumbentAt && (candidateCadence === "intraday" || incumbentCadence !== "intraday")));
+}
+
+function keepDatedIncumbent(
+  candidateAt: number | null | undefined, candidateCadence: FxSourceCadence | undefined, candidateFresh: boolean,
+  incumbentAt: number, incumbentCadence: FxSourceCadence | undefined, incumbentFresh: boolean,
+): boolean {
+  if (candidateFresh !== incumbentFresh) return incumbentFresh;
+  return !referenceWins(candidateAt, candidateCadence, incumbentAt, incumbentCadence);
+}
+
+function observationDate(observation: FxReferenceObservation): string | null {
+  return observation.cadence === "intraday" ? null : formatIsoDate(observation.observedAtSec);
+}
+
+function isObservationFreshAt(observation: FxReferenceObservation, atSec: number): boolean {
+  return observation.observedAtSec <= atSec && isFreshFxObservation(observation.observedAtSec, "live", atSec, {
+    pegKey: observation.pegKey, cadence: observation.cadence, sourceDate: observationDate(observation),
+  });
+}
 
 function isChainlinkMetalPegKey(pegKey: string): pegKey is MetalPegKey {
   return CHAINLINK_METAL_PEG_KEYS.has(pegKey);
@@ -71,8 +95,8 @@ export interface ExchangeRateApiPayload {
 export type RunBestEffort = (label: string, fn: () => Promise<void>) => Promise<void>;
 type FxCronEvent = Omit<CronEventInput, "job">;
 
-export type OpenExchangeRatesSourceStatus = "ok" | "partial" | "rate-limited" | "unavailable";
-export type ChainlinkSourceStatus = "ok" | "partial" | "unavailable";
+export type OpenExchangeRatesSourceStatus = "ok" | "partial" | "rate-limited" | "unavailable" | "skipped";
+export type ChainlinkSourceStatus = "ok" | "partial" | "out-of-budget" | "unavailable";
 
 async function withFxOverlayCircuit<TStatus>(
   db: D1Database,
@@ -123,7 +147,7 @@ export async function persistFxSyncResult(
   const cacheResult = await persistFxRateState(db, state.usableRates, meta, syncStartSec);
   const canonicalCache = cacheResult.written ? null : await getCache(db, "fx-rates");
   const lastWriteAdvanced = cacheResult.written || (!!canonicalCache && canonicalCache.updatedAt > syncStartSec);
-  await state.flushCronEvents(db);
+  await state.flushCronEvents(db, cacheResult.written);
   await logCronEvent(db, {
     job: "sync-fx-rates",
     eventType: cacheResult.written ? "fx-rates-cache-published" : "fx-rates-cache-write-skipped",
@@ -171,6 +195,8 @@ interface ApplyInverseRateMappingsInput {
   sourceUpdatedAt: number | null;
   sourceDate: string | null;
   cadence: FxSourceCadence;
+  source: FxReferenceObservation["source"];
+  publishedAtSec?: number;
   getPerUsd(currency: string): number | undefined;
 }
 
@@ -179,6 +205,7 @@ interface ApplyPerUsdPayloadInput<TPayload> {
   mappings: SecondaryFxMappings;
   includeMissingPrevious?: boolean;
   cadence: FxSourceCadence;
+  source: FxReferenceObservation["source"];
   resolveSourceMeta(payload: TPayload): {
     sourceUpdatedAt: number | null;
     sourceDate: string | null;
@@ -189,15 +216,9 @@ interface ApplyPerUsdPayloadInput<TPayload> {
 function resolveDatedSourceUpdatedAt(
   dateText: string | null | undefined,
   syncStartSec: number,
-  publishedHourUtc?: number,
 ): number | null {
   if (!isAdmissibleFxSourceDate(dateText, syncStartSec)) return null;
-  const timeSuffix = publishedHourUtc == null
-    ? "T23:59:59Z"
-    : `T${String(publishedHourUtc).padStart(2, "0")}:00:00Z`;
-  const parsed = Date.parse(`${dateText}${timeSuffix}`);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.min(syncStartSec, Math.floor(parsed / 1000));
+  return Date.parse(`${dateText}T00:00:00Z`) / 1000;
 }
 
 export class FxSyncRunState {
@@ -212,6 +233,16 @@ export class FxSyncRunState {
   readonly sourceModeByPeg: Record<string, FxRateSourceMode> = {};
   readonly sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
   readonly sourceDateByPeg: Record<string, string | null> = {};
+  private readonly observations: FxReferenceObservationMap = {};
+  private readonly legacyDetectionPegs = new Set<string>();
+  private readonly referenceMedianContributorsByPeg: FxMedianContributorsByPeg = {};
+  private readonly correctedLegacyFixings: FxReferenceObservationMap = {};
+  private readonly dailyObservations: FxReferenceObservationMap;
+  private readonly baselines: Record<string, FxBaseline>;
+  private readonly referenceSourceSamples: FxReferenceSourceSamples;
+  private readonly pendingRegimePegs = new Set<string>();
+  private readonly regimeCandidates: FxReferenceObservationMap = {};
+  private readonly previousRegimeByPeg: NonNullable<FxRatesMeta["previousRegimeByPeg"]>;
   private readonly provisionalRealtimeOverlayPegs = new Set<string>();
 
   usableRates: Record<string, number> = {};
@@ -229,17 +260,40 @@ export class FxSyncRunState {
     this.expectedPegKeys = [...params.expectedPegKeys];
     this.validateRate = params.validateRate;
     this.sources = { ...params.initialSources };
+    const verified = params.prevState?.metadataIdentity === "verified" ? params.prevState : null;
+    this.referenceSourceSamples = { ...verified?.referenceSourceSamples };
+    this.previousRegimeByPeg = { ...params.prevState?.previousRegimeByPeg };
+    this.dailyObservations = { ...verified?.dailyObservations };
+    this.baselines = { ...params.prevState?.lastAcceptedBaselines };
+    for (const [pegKey, usdPerUnit] of Object.entries(this.prevRates)) {
+      this.baselines[pegKey] ??= { usdPerUnit, observedAtSec: params.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null };
+    }
+    for (const observation of Object.values(verified?.observations ?? {})) {
+      if (observation.cadence !== "intraday") this.rememberDaily(observation);
+    }
   }
 
   private recordCronEvent(event: FxCronEvent): void {
     this.cronEvents.push(event);
   }
 
-  async flushCronEvents(db: D1Database): Promise<void> {
+  async flushCronEvents(db: D1Database, published = false): Promise<void> {
     const events = this.cronEvents.splice(0);
     for (const event of events) {
-      await logCronEvent(db, { job: "sync-fx-rates", ...event });
+      const publicationEvent = event.eventType === "fx-regime-shift-confirmed" || event.eventType === "fx-reference-regression";
+      if (publicationEvent && !published) continue;
+      await logCronEvent(db, { job: "sync-fx-rates", ...event,
+        ...(publicationEvent ? { metadata: { ...event.metadata, publishedGeneration: this.syncStartSec } } : {}),
+      });
     }
+  }
+
+  private previousUsesLegacyDetection(pegKey: string): boolean {
+    const prior = this.prevState;
+    if (!prior || !(pegKey in prior.rates) ||
+      (prior.metadataIdentity !== "verified" && prior.metadataIdentity !== "legacy-timestamp")) return false;
+    return prior.legacyDetectionPegs?.includes(pegKey) === true ||
+      (prior.observations === undefined && prior.legacyRepricingByPeg === undefined && !prior.sources?.[pegKey]);
   }
 
   markLive(
@@ -247,14 +301,54 @@ export class FxSyncRunState {
     updatedAt: number | null,
     cadence: FxSourceCadence = "intraday",
     sourceDate: string | null = null,
+    source?: FxReferenceObservation["source"],
+    publishedAtSec?: number,
   ): void {
     this.sourceUpdatedAtByPeg[pegKey] = updatedAt;
     this.sourceModeByPeg[pegKey] = "live";
     this.sourceCadenceByPeg[pegKey] = cadence;
     this.sourceDateByPeg[pegKey] = sourceDate;
+    this.legacyDetectionPegs.delete(pegKey);
+    delete this.observations[pegKey];
+    delete this.referenceMedianContributorsByPeg[pegKey];
+    if (source && updatedAt != null) {
+      const observation = { pegKey, usdPerUnit: this.usableRates[pegKey], source, cadence, observedAtSec: updatedAt, publishedAtSec };
+      const parsed = FxReferenceObservationSchema.safeParse(observation);
+      if (parsed.success && updatedAt <= this.syncStartSec) {
+        this.observations[pegKey] = parsed.data;
+        recordFxSourceSample(this.referenceSourceSamples, parsed.data, isObservationFreshAt);
+        const evidence = this.referenceSourceSamples[fxSourceSampleKey(parsed.data)]?.evidence;
+        const previous = this.prevState?.observations?.[pegKey];
+        // A main-format cache has no prior OXR sample. Keep compatibility for its first snapshot and rereads.
+        if (source === "openExchangeRates" && this.previousUsesLegacyDetection(pegKey) &&
+          evidence?.firstInSessionObservedAtSec === updatedAt && evidence.preCloseUsdPerUnit === null &&
+          (!previous || (previous.source === source && previous.observedAtSec === updatedAt))) {
+          this.legacyDetectionPegs.add(pegKey);
+        }
+      }
+    }
+  }
+
+  private selectObservation(observation: FxReferenceObservation): void {
+    const { pegKey, usdPerUnit, observedAtSec, cadence, source, publishedAtSec } = observation;
+    this.usableRates[pegKey] = usdPerUnit;
+    this.markLive(pegKey, observedAtSec, cadence, observationDate(observation), source, publishedAtSec);
+  }
+
+  private rememberDaily(observation: FxReferenceObservation): void {
+    const key = fxSourceSampleKey(observation);
+    const prior = this.dailyObservations[key];
+    if (!prior || observation.observedAtSec >= prior.observedAtSec) {
+      this.dailyObservations[key] = observation;
+    }
   }
 
   inheritPrevious(pegKey: string): void {
+    const corrected = this.correctedLegacyFixings[pegKey];
+    if (corrected) {
+      this.selectObservation(corrected);
+      return;
+    }
     inheritFxSourceMetadata(
       this.prevState,
       pegKey,
@@ -263,6 +357,190 @@ export class FxSyncRunState {
       this.sourceCadenceByPeg,
       this.sourceDateByPeg,
     );
+    const verified = this.prevState?.metadataIdentity === "verified" ? this.prevState : null;
+    const previous = verified?.observations?.[pegKey];
+    if (this.previousUsesLegacyDetection(pegKey) && this.prevRates[pegKey] === this.usableRates[pegKey]) this.legacyDetectionPegs.add(pegKey);
+    else this.legacyDetectionPegs.delete(pegKey);
+    if (previous) this.observations[pegKey] = previous;
+    else delete this.observations[pegKey];
+    const contributors = verified?.referenceMedianContributorsByPeg?.[pegKey];
+    if (contributors) this.referenceMedianContributorsByPeg[pegKey] = contributors;
+    else delete this.referenceMedianContributorsByPeg[pegKey];
+  }
+
+  private previousReferenceClock(pegKey: string): number | null {
+    return this.correctedLegacyFixings[pegKey]?.observedAtSec ?? this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
+  }
+
+  private previousIsFresh(pegKey: string): boolean {
+    const corrected = this.correctedLegacyFixings[pegKey];
+    if (corrected) return isObservationFreshAt(corrected, this.syncStartSec);
+    const prev = this.prevState;
+    const observedAt = this.previousReferenceClock(pegKey);
+    return observedAt != null && observedAt <= this.syncStartSec && isFreshFxObservation(
+      observedAt, prev?.sourceModeByPeg[pegKey], this.syncStartSec,
+      { pegKey, cadence: prev?.sourceCadenceByPeg[pegKey], sourceDate: prev?.sourceDateByPeg[pegKey] },
+    );
+  }
+
+  private currentIsFresh(pegKey: string): boolean {
+    const observedAt = this.sourceUpdatedAtByPeg[pegKey];
+    return observedAt != null && observedAt <= this.syncStartSec && isFreshFxObservation(
+      observedAt, this.sourceModeByPeg[pegKey], this.syncStartSec,
+      { pegKey, cadence: this.sourceCadenceByPeg[pegKey], sourceDate: this.sourceDateByPeg[pegKey] },
+    );
+  }
+
+  private canCorroborate(pegKey: string, rate: number, observedAtSec: number): boolean {
+    const baseline = this.baselines[pegKey];
+    return baseline != null && (baseline.observedAtSec == null || observedAtSec > baseline.observedAtSec)
+      && !this.previousIsFresh(pegKey) && this.validateRate(pegKey, rate, undefined);
+  }
+
+  hasRegimeCandidates(): boolean {
+    return Object.keys(this.regimeCandidates).length > 0;
+  }
+
+  confirmRegimeChanges(payload: ExchangeRateApiPayload | null, mappings: SecondaryFxMappings): void {
+    const timestamp = payload?.time_last_update_unix;
+    const confirmedAt = timestamp != null && Number.isSafeInteger(timestamp) && timestamp > 0 && timestamp <= this.syncStartSec
+      ? timestamp : null;
+    const sourceDate = confirmedAt == null ? null : new Date(confirmedAt * 1000).toISOString().slice(0, 10);
+    for (const [currency, pegKey] of mappings) {
+      const candidate = this.regimeCandidates[pegKey];
+      if (!candidate) continue;
+      const previous = this.baselines[pegKey];
+      const perUsd = payload?.rates[currency.toUpperCase()];
+      if (confirmedAt == null || (previous.observedAtSec != null && confirmedAt <= previous.observedAtSec)
+        || !isFreshFxObservation(confirmedAt, "live", this.syncStartSec, { pegKey, cadence: "calendar-daily", sourceDate })
+        || perUsd == null || !Number.isFinite(perUsd) || perUsd <= 0) continue;
+      const rate = invertUnitsPerUsd(perUsd);
+      if (!this.validateRate(pegKey, rate, undefined)
+        || Math.abs(rate - candidate.usdPerUnit) / candidate.usdPerUnit > FX_REGIME_CORROBORATION_MAX_DIVERGENCE) continue;
+
+      const confirmation: FxReferenceObservation = {
+        pegKey, usdPerUnit: rate, observedAtSec: confirmedAt, source: "exchangeRateApi", cadence: "calendar-daily",
+      };
+      const replacement = confirmedAt > candidate.observedAtSec ? confirmation : candidate;
+      this.rememberDaily(confirmation);
+      recordFxSourceSample(this.referenceSourceSamples, candidate, isObservationFreshAt);
+      recordFxSourceSample(this.referenceSourceSamples, confirmation, isObservationFreshAt);
+      this.selectObservation(replacement);
+      this.baselines[pegKey] = replacement;
+      this.previousRegimeByPeg[pegKey] = { previous, replacement };
+      this.pendingRegimePegs.delete(pegKey);
+      this.recordCronEvent({
+        eventType: "fx-regime-shift-confirmed",
+        severity: "warning",
+        message: "Replaced an expired FX baseline after two current fiat providers agreed.",
+        metadata: { pegKey, previous, candidate, confirmation, generation: this.syncStartSec },
+      });
+    }
+    for (const candidate of Object.values(this.regimeCandidates)) {
+      if (!this.pendingRegimePegs.has(candidate.pegKey)) continue;
+      this.recordCronEvent({
+        eventType: "fx-regime-shift-unconfirmed",
+        severity: "warning",
+        message: "An expired FX baseline may have shifted and independent corroboration is unavailable.",
+        metadata: { pegKey: candidate.pegKey, observedAtSec: candidate.observedAtSec, generation: this.syncStartSec },
+      });
+    }
+  }
+
+  private correctLegacyFixing(candidate: FxReferenceObservation): void {
+    if (candidate.source !== "frankfurter") return;
+    const { pegKey, usdPerUnit, observedAtSec } = candidate;
+    const fixingDate = observationDate(candidate);
+    const legacyAt = this.prevState?.sourceUpdatedAtByPeg[pegKey];
+    if (!(this.prevState?.sourceCadenceByPeg[pegKey] === "business-daily"
+      && fixingDate != null && this.prevState.sourceDateByPeg[pegKey] === fixingDate
+      && !this.prevState.observations?.[pegKey] && this.prevRates[pegKey] === usdPerUnit)) return;
+    // The legacy writer used 16:00 UTC, capped at its own generation clock.
+    const legacyFixingAt = Math.min(Date.parse(`${fixingDate}T16:00:00Z`) / 1000, this.prevState.usableSyncAt);
+    if (legacyAt !== legacyFixingAt || legacyAt < observedAtSec) return;
+    const baseline = this.baselines[pegKey];
+    if (baseline?.usdPerUnit === usdPerUnit && baseline.observedAtSec === this.previousReferenceClock(pegKey)) {
+      this.baselines[pegKey] = { usdPerUnit, observedAtSec };
+    }
+    this.correctedLegacyFixings[pegKey] = candidate;
+    if (this.usableRates[pegKey] === usdPerUnit && !this.observations[pegKey]
+      && this.sourceUpdatedAtByPeg[pegKey] === this.prevState.sourceUpdatedAtByPeg[pegKey]
+      && this.sourceCadenceByPeg[pegKey] === "business-daily"
+      && this.sourceDateByPeg[pegKey] === observationDate(candidate)) {
+      this.selectObservation(candidate);
+    }
+  }
+
+  private preferIncumbent(
+    pegKey: string, observedAt: number | null, cadence: FxSourceCadence, candidateFresh: boolean,
+  ): boolean {
+    const prevRate = this.prevRates[pegKey];
+    const prevAt = this.previousReferenceClock(pegKey);
+    const prevCadence = this.prevState?.sourceCadenceByPeg[pegKey];
+    const selectedAt = this.sourceUpdatedAtByPeg[pegKey];
+    const selectedCadence = this.sourceCadenceByPeg[pegKey];
+    const selectedFresh = this.currentIsFresh(pegKey);
+    const previousFresh = this.previousIsFresh(pegKey);
+    if (prevAt != null && prevAt <= this.syncStartSec && prevRate > 0
+      && keepDatedIncumbent(observedAt, cadence, candidateFresh, prevAt, prevCadence, previousFresh)) {
+      if (selectedAt == null || keepDatedIncumbent(selectedAt, selectedCadence, selectedFresh, prevAt, prevCadence, previousFresh)) {
+        this.usableRates[pegKey] = prevRate;
+        this.inheritPrevious(pegKey);
+      }
+      return true;
+    }
+    return selectedAt != null && selectedAt <= this.syncStartSec
+      && keepDatedIncumbent(observedAt, cadence, candidateFresh, selectedAt, selectedCadence, selectedFresh);
+  }
+
+  enforcePublicationOrder(): void {
+    const expiredIntradayPegs: string[] = [];
+    for (const pegKey of Object.keys(this.prevRates)) {
+      const previousAt = this.previousReferenceClock(pegKey);
+      const selectedAt = this.sourceUpdatedAtByPeg[pegKey];
+      const previousCadence = this.prevState?.sourceCadenceByPeg[pegKey];
+      const selected = this.observations[pegKey];
+      const expired = previousCadence === "intraday" && previousAt != null
+        && this.syncStartSec - previousAt > REFERENCE_INTRADAY_BUDGET_SEC;
+      if (expired && previousAt != null && (this.prevState?.usableSyncAt ?? 0) - previousAt <= REFERENCE_INTRADAY_BUDGET_SEC) {
+        expiredIntradayPegs.push(pegKey);
+      }
+      const previousFresh = this.previousIsFresh(pegKey);
+      if (previousAt != null && previousAt <= this.syncStartSec
+        && (previousFresh || pegKey in this.usableRates)
+        && keepDatedIncumbent(selectedAt, this.sourceCadenceByPeg[pegKey], this.currentIsFresh(pegKey),
+          previousAt, previousCadence, previousFresh)) {
+        if (previousFresh && selectedAt != null && selectedAt < previousAt && pegKey in this.usableRates) {
+          this.recordCronEvent({
+            eventType: "fx-reference-regression",
+            severity: "error",
+            message: "Blocked a publication that regressed an in-budget FX reference.",
+            metadata: { pegKey, previousAt, selectedAt, generation: this.syncStartSec },
+          });
+        }
+        this.usableRates[pegKey] = this.prevRates[pegKey];
+        this.inheritPrevious(pegKey);
+      } else if (expired && selected?.source === "openExchangeRates" && selected.cadence === "intraday" && selectedAt === previousAt) {
+        this.clearRate(pegKey);
+      }
+    }
+    for (const daily of Object.values(this.dailyObservations)) {
+      const { pegKey, observedAtSec, cadence, usdPerUnit } = daily;
+      const selectedAt = this.sourceUpdatedAtByPeg[pegKey];
+      if (!isObservationFreshAt(daily, this.syncStartSec)
+        || (selectedAt != null && this.currentIsFresh(pegKey)
+          && !referenceWins(observedAtSec, cadence, selectedAt, this.sourceCadenceByPeg[pegKey]))
+        || !this.validateRate(pegKey, usdPerUnit, this.baselines[pegKey]?.usdPerUnit)) continue;
+      this.selectObservation(daily);
+    }
+    if (expiredIntradayPegs.length > 0) {
+      this.recordCronEvent({
+        eventType: "fx-intraday-expired",
+        severity: "info",
+        message: "Previous intraday FX observations exceeded the consumption budget.",
+        metadata: { pegKeys: expiredIntradayPegs, budgetSec: REFERENCE_INTRADAY_BUDGET_SEC, generation: this.syncStartSec },
+      });
+    }
   }
 
   canCarryForwardPreviousRates(): boolean {
@@ -292,9 +570,12 @@ export class FxSyncRunState {
   }
 
   private seedCachedFallbackFromPrevious(): void {
-    this.usableRates = { ...this.prevRates };
-    Object.keys(this.usableRates).forEach((pegKey) => this.inheritPrevious(pegKey));
-    this.ecbDate = this.prevState?.ecbDate ?? null;
+    for (const [pegKey, rate] of Object.entries(this.prevRates)) {
+      if (pegKey in this.usableRates) continue;
+      this.usableRates[pegKey] = rate;
+      this.inheritPrevious(pegKey);
+    }
+    this.ecbDate ??= this.prevState?.ecbDate ?? null;
   }
 
   private applyInverseRateMappings(input: ApplyInverseRateMappingsInput): void {
@@ -304,37 +585,46 @@ export class FxSyncRunState {
       sourceUpdatedAt,
       sourceDate,
       cadence,
+      source,
+      publishedAtSec,
       getPerUsd,
     } = input;
+    const candidateFresh = sourceUpdatedAt != null && sourceUpdatedAt <= this.syncStartSec && isFreshFxObservation(
+      sourceUpdatedAt, "live", this.syncStartSec, { cadence, sourceDate },
+    );
     const skippedOlderPegKeys: string[] = [];
 
     for (const [currency, pegKey] of mappings) {
       const prevRate = this.prevRates[pegKey];
-      const incumbentUpdatedAt = this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
-      if (
-        sourceUpdatedAt != null &&
-        incumbentUpdatedAt != null &&
-        incumbentUpdatedAt > 0 &&
-        sourceUpdatedAt < incumbentUpdatedAt &&
-        typeof prevRate === "number" &&
-        Number.isFinite(prevRate) &&
-        prevRate > 0
-      ) {
-        // A source payload older than the incumbent observation never replaces
-        // the fresher per-peg generation (ADR-33); keep its value and clock.
-        this.usableRates[pegKey] = prevRate;
-        this.inheritPrevious(pegKey);
-        skippedOlderPegKeys.push(pegKey);
-        continue;
-      }
-
       const perUsd = getPerUsd(currency);
       if (typeof perUsd === "number" && Number.isFinite(perUsd) && perUsd > 0) {
         const rate = invertUnitsPerUsd(perUsd);
-        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
+        const valid = this.validateRate(pegKey, rate, this.baselines[pegKey]?.usdPerUnit);
+        const observation = candidateFresh && sourceUpdatedAt != null
+          ? { pegKey, usdPerUnit: rate, observedAtSec: sourceUpdatedAt, cadence, source, publishedAtSec } : undefined;
+        if (valid && observation) {
+          this.correctLegacyFixing(observation);
+          recordFxSourceSample(this.referenceSourceSamples, observation, isObservationFreshAt);
+          if (cadence !== "intraday") this.rememberDaily(observation);
+        }
+        if (valid && this.preferIncumbent(pegKey, sourceUpdatedAt, cadence, candidateFresh)) {
+          if (sourceUpdatedAt != null && sourceUpdatedAt < (this.sourceUpdatedAtByPeg[pegKey] ?? 0)) {
+            skippedOlderPegKeys.push(pegKey);
+          }
+          continue;
+        }
+        if (valid) {
           this.usableRates[pegKey] = rate;
-          this.markLive(pegKey, sourceUpdatedAt, cadence, sourceDate);
+          this.markLive(pegKey, sourceUpdatedAt, cadence, sourceDate, source, publishedAtSec);
         } else {
+          if (observation && this.canCorroborate(pegKey, rate, observation.observedAtSec)) {
+            this.pendingRegimePegs.add(pegKey);
+            this.recordCronEvent({
+              eventType: "fx-regime-shift-unconfirmed", severity: "warning",
+              message: "A stale FX baseline may have shifted; independent fiat corroboration is required.",
+              metadata: { pegKey, source, sourceUpdatedAt, rate, previous: this.baselines[pegKey] },
+            });
+          }
           // A rejected live value may only be recovered from a cadence-valid
           // original observation; a stale incumbent is not live coverage (ADR-29).
           this.ensureCachedRate(pegKey, currency, { requireCadenceValid: true });
@@ -345,7 +635,7 @@ export class FxSyncRunState {
       }
     }
 
-    if (skippedOlderPegKeys.length > 0) {
+    if (skippedOlderPegKeys.length > 0 && cadence === "calendar-daily") {
       this.recordCronEvent({
         eventType: "older-fx-observation-skipped",
         severity: "info",
@@ -361,6 +651,7 @@ export class FxSyncRunState {
       mappings,
       includeMissingPrevious,
       cadence,
+      source,
       resolveSourceMeta,
       getPerUsd,
     } = input;
@@ -372,6 +663,7 @@ export class FxSyncRunState {
       sourceUpdatedAt,
       sourceDate,
       cadence,
+      source,
       getPerUsd: (currency) => getPerUsd(payload, currency),
     });
   }
@@ -387,6 +679,7 @@ export class FxSyncRunState {
       mappings,
       includeMissingPrevious: options.includeMissingPrevious,
       cadence: "calendar-daily",
+      source: "fawazahmed0",
       resolveSourceMeta: ({ payload }) => {
         const sourceDate = typeof payload.date === "string" && payload.date.length > 0
           ? payload.date
@@ -407,14 +700,14 @@ export class FxSyncRunState {
   ): void {
     const timestamp = payload.time_last_update_unix;
     if (timestamp != null && (
-      !Number.isFinite(timestamp) || timestamp <= 0
-      || timestamp - this.syncStartSec > FX_SOURCE_MAX_FUTURE_SKEW_SEC
+      !Number.isSafeInteger(timestamp) || timestamp <= 0 || timestamp > this.syncStartSec
     )) return;
     this.applyPerUsdPayload({
       payload,
       mappings,
       includeMissingPrevious: options.includeMissingPrevious,
       cadence: "calendar-daily",
+      source: "exchangeRateApi",
       resolveSourceMeta: () => {
         const sourceUpdatedAt = timestamp == null ? null : Math.floor(timestamp);
         return {
@@ -497,33 +790,27 @@ export class FxSyncRunState {
     sourceDate: string,
     currencyToPeg: Record<string, string>,
   ): void {
-    this.usableRates = {};
-    const ecbUpdatedAt = resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec, 16);
-    if (ecbUpdatedAt == null) return;
+    const clocks = getEcbFixingClocks(sourceDate, this.syncStartSec);
+    if (clocks == null) return;
     this.ecbDate = sourceDate;
 
-    const ecbDateObj = new Date(`${sourceDate}T16:00:00Z`);
-    const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
-    if (ecbAgeSec > DAY_SECONDS) {
+    const release = assessEcbRelease(Date.parse(`${sourceDate}T00:00:00Z`) / 1000, this.syncStartSec);
+    if (release.missedPublishes > 0) {
       this.recordCronEvent({
         eventType: "ecb-rates-stale",
         severity: "warning",
-        message: "ECB rates are stale; non-USD pegs are using last published rates.",
-        metadata: { sourceDate, ageHours: Math.round(ecbAgeSec / 3600) },
+        message: "ECB rates are behind the expected TARGET release.",
+        metadata: { sourceDate, ...release },
       });
     }
 
-    for (const [currency, pegKey] of Object.entries(currencyToPeg)) {
-      const unitsPerUsd = rates[currency];
-      if (typeof unitsPerUsd === "number" && Number.isFinite(unitsPerUsd) && unitsPerUsd > 0) {
-        const rate = invertUnitsPerUsd(unitsPerUsd);
-        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
-          this.usableRates[pegKey] = rate;
-          this.markLive(pegKey, ecbUpdatedAt, "business-daily", sourceDate);
-          continue;
-        }
-      }
-      this.ensureCachedRate(pegKey, currency, { requireCadenceValid: true });
+    const mappings = Object.entries(currencyToPeg);
+    this.applyInverseRateMappings({
+      mappings, sourceUpdatedAt: clocks.observedAtSec, publishedAtSec: clocks.publishedAtSec,
+      sourceDate, cadence: "business-daily", source: "frankfurter", getPerUsd: (currency) => rates[currency],
+    });
+    for (const [currency, pegKey] of mappings) {
+      if (!(pegKey in this.usableRates)) this.ensureCachedRate(pegKey, currency, { requireCadenceValid: true });
     }
   }
 
@@ -534,61 +821,49 @@ export class FxSyncRunState {
    */
   applyRealtimeOverlayRates(observation: RealtimeFxObservation): number {
     let applied = 0;
-    const applyRealtimeRate = (pegKey: string, realtimeRate: number) => {
-      this.usableRates[pegKey] = realtimeRate;
-      applyRealtimeOverlaySourceMetadata(
-        pegKey,
-        observation.observedAt,
-        this.syncStartSec,
-        this.sourceUpdatedAtByPeg,
-        this.sourceModeByPeg,
-        this.sourceCadenceByPeg,
-        this.sourceDateByPeg,
-      );
-      applied++;
-    };
-
+    if (getRealtimeFxTimestampRejection(observation.observedAt, this.syncStartSec)) return applied;
+    const fxSession = getReferenceSessionState("fx", this.syncStartSec);
     for (const [pegKey, realtimeRate] of observation.rates) {
+      const keepIncumbent = this.preferIncumbent(pegKey, observation.observedAt, "intraday", true);
+      const baseline = this.baselines[pegKey];
       const currentRate = this.usableRates[pegKey];
-      if (currentRate != null) {
-        const delta = Math.abs(realtimeRate - currentRate) / currentRate;
-        if (delta <= REALTIME_OVERLAY_MAX_DIVERGENCE) {
-          if (this.validateRate(pegKey, realtimeRate, this.prevRates[pegKey])) {
-            applyRealtimeRate(pegKey, realtimeRate);
-          }
-        } else {
+      if (currentRate == null && !baseline) {
+        if (this.validateRate(pegKey, realtimeRate, undefined)) {
+          this.provisionalRealtimeOverlayPegs.add(pegKey);
           this.recordCronEvent({
-            eventType: "realtime-rate-diverged",
+            eventType: "realtime-rate-provisional",
             severity: "warning",
-            message: "Realtime FX rate diverged from current reference.",
-            metadata: {
-              pegKey,
-              currentRate,
-              realtimeRate,
-              deltaPct: Number((delta * 100).toFixed(1)),
-            },
+            message: "Realtime FX rate lacked current or previous reference.",
+            metadata: { pegKey, realtimeRate },
           });
         }
-      } else {
-        const prevRate = this.prevRates[pegKey];
-        const hasPreviousRate =
-          typeof prevRate === "number" && Number.isFinite(prevRate) && prevRate > 0;
-        if (!hasPreviousRate) {
-          if (this.validateRate(pegKey, realtimeRate, undefined)) {
-            this.provisionalRealtimeOverlayPegs.add(pegKey);
-            this.recordCronEvent({
-              eventType: "realtime-rate-provisional",
-              severity: "warning",
-              message: "Realtime FX rate lacked current or previous reference.",
-              metadata: { pegKey, realtimeRate },
-            });
-          }
-          continue;
-        }
+        continue;
+      }
 
-        if (this.validateRate(pegKey, realtimeRate, prevRate)) {
-          applyRealtimeRate(pegKey, realtimeRate);
+      const anchor = currentRate ?? (!this.previousIsFresh(pegKey) ? baseline?.usdPerUnit : undefined);
+      const delta = anchor == null ? 0 : Math.abs(realtimeRate - anchor) / anchor;
+      const diverged = delta > REALTIME_OVERLAY_MAX_DIVERGENCE;
+      const candidate: FxReferenceObservation = {
+        pegKey, usdPerUnit: realtimeRate, source: "openExchangeRates", cadence: "intraday",
+        observedAtSec: observation.observedAt,
+      };
+      if (!diverged && this.validateRate(pegKey, realtimeRate, baseline?.usdPerUnit)) {
+        if (keepIncumbent) recordFxSourceSample(this.referenceSourceSamples, candidate, isObservationFreshAt);
+        else {
+          this.selectObservation(candidate);
+          applied++;
         }
+      } else if (!keepIncumbent && fxSession.open && observation.observedAt >= fxSession.sessionOpenedAtSec
+        && !(diverged && this.currentIsFresh(pegKey)) && this.canCorroborate(pegKey, realtimeRate, observation.observedAt)) {
+        this.regimeCandidates[pegKey] = candidate;
+        this.pendingRegimePegs.add(pegKey);
+      } else if (diverged) {
+        this.recordCronEvent({
+          eventType: "realtime-rate-diverged",
+          severity: "warning",
+          message: "Realtime FX rate diverged from current reference.",
+          metadata: { pegKey, currentRate: anchor, realtimeRate, deltaPct: Number((delta * 100).toFixed(1)) },
+        });
       }
     }
 
@@ -599,6 +874,11 @@ export class FxSyncRunState {
     let accepted = 0;
 
     for (const [pegKey, quote] of quotes) {
+      if (quote.updatedAt > this.syncStartSec) continue;
+      const normalized = Number(quote.price.toFixed(6));
+      const candidate: FxReferenceObservation = {
+        pegKey, usdPerUnit: normalized, observedAtSec: quote.updatedAt, source: "chainlink", cadence: "intraday",
+      };
       const existingUpdatedAt = this.sourceUpdatedAtByPeg[pegKey] ?? null;
       const quoteOlderThanCurrent =
         existingUpdatedAt != null &&
@@ -618,16 +898,7 @@ export class FxSyncRunState {
         : true;
       const existing = this.usableRates[pegKey];
       const hasExisting = existing != null && existing > 0;
-
-      if (quoteOlderThanCurrent && !metalPegKey) {
-        this.recordCronEvent({
-          eventType: "chainlink-older-quote-skipped",
-          severity: "info",
-          message: "Skipping older Chainlink quote.",
-          metadata: { pegKey, chainlinkUpdatedAt: quote.updatedAt, existingUpdatedAt },
-        });
-        continue;
-      }
+      const divergenceReference = hasExisting ? existing : metalPegKey ? undefined : this.baselines[pegKey]?.usdPerUnit;
 
       if (quoteOlderThanCurrent && metalPegKey) {
         // A metal clock never moves backwards: an older round may confirm a
@@ -647,7 +918,10 @@ export class FxSyncRunState {
                 deltaPct: Number((delta * 100).toFixed(1)),
               },
             });
-          } else {
+          } else if (this.validateRate(pegKey, normalized, undefined)) {
+            if (isObservationFreshAt(candidate, this.syncStartSec)) {
+              recordFxSourceSample(this.referenceSourceSamples, candidate, isObservationFreshAt);
+            }
             this.recordCronEvent({
               eventType: "chainlink-older-metal-quote-validated",
               severity: "info",
@@ -673,8 +947,8 @@ export class FxSyncRunState {
         continue;
       }
 
-      if (hasExisting && incumbentIsFresh) {
-        const delta = Math.abs(quote.price - existing) / existing;
+      if (divergenceReference != null && incumbentIsFresh) {
+        const delta = Math.abs(quote.price - divergenceReference) / divergenceReference;
         if (delta > CHAINLINK_REFERENCE_MAX_DIVERGENCE) {
           this.recordCronEvent({
             eventType: "chainlink-rate-diverged",
@@ -682,7 +956,7 @@ export class FxSyncRunState {
             message: "Chainlink quote diverged from current reference.",
             metadata: {
               pegKey,
-              currentRate: existing,
+              currentRate: divergenceReference,
               chainlinkRate: quote.price,
               deltaPct: Number((delta * 100).toFixed(1)),
             },
@@ -711,21 +985,22 @@ export class FxSyncRunState {
         }
       }
 
-      const normalized = Number(quote.price.toFixed(6));
-      const prevRateForValidation = hasExisting && !incumbentIsFresh
-        ? undefined
-        : this.prevRates[pegKey];
+      const prevRateForValidation = metalPegKey
+        ? (hasExisting && !incumbentIsFresh ? undefined : this.prevRates[pegKey])
+        : this.baselines[pegKey]?.usdPerUnit;
       if (this.validateRate(pegKey, normalized, prevRateForValidation)) {
-        this.usableRates[pegKey] = normalized;
-        applyRealtimeOverlaySourceMetadata(
-          pegKey,
-          quote.updatedAt,
-          this.syncStartSec,
-          this.sourceUpdatedAtByPeg,
-          this.sourceModeByPeg,
-          this.sourceCadenceByPeg,
-          this.sourceDateByPeg,
-        );
+        const fresh = isObservationFreshAt(candidate, this.syncStartSec);
+        if (quoteOlderThanCurrent || this.preferIncumbent(pegKey, quote.updatedAt, "intraday", fresh)) {
+          if (fresh) recordFxSourceSample(this.referenceSourceSamples, candidate, isObservationFreshAt);
+          this.recordCronEvent({
+            eventType: "chainlink-older-quote-skipped",
+            severity: "info",
+            message: "Kept the incumbent FX reference over a Chainlink quote.",
+            metadata: { pegKey, chainlinkUpdatedAt: quote.updatedAt, existingUpdatedAt },
+          });
+          continue;
+        }
+        this.selectObservation(candidate);
         accepted++;
       } else if (!(pegKey in this.usableRates) && this.prevRates[pegKey]) {
         // A rejected quote never displaces an incumbent from this run; only a
@@ -743,7 +1018,7 @@ export class FxSyncRunState {
     label: string,
     options: { requireCadenceValid?: boolean } = {},
   ): boolean {
-    if (typeof this.prevRates[pegKey] !== "number" || this.prevRates[pegKey] <= 0) {
+    if (pegKey in this.usableRates || typeof this.prevRates[pegKey] !== "number" || this.prevRates[pegKey] <= 0) {
       return false;
     }
     if (options.requireCadenceValid && getFxSourceStatus(
@@ -785,24 +1060,46 @@ export class FxSyncRunState {
       return true;
     }
 
+    this.clearRate(pegKey);
+    return this.ensureCachedRate(pegKey, label, { requireCadenceValid: true });
+  }
+
+  private clearRate(pegKey: string): void {
     delete this.usableRates[pegKey];
     delete this.sourceUpdatedAtByPeg[pegKey];
     delete this.sourceModeByPeg[pegKey];
     delete this.sourceCadenceByPeg[pegKey];
     delete this.sourceDateByPeg[pegKey];
-    return this.ensureCachedRate(pegKey, label, { requireCadenceValid: true });
+    this.legacyDetectionPegs.delete(pegKey);
+    delete this.observations[pegKey];
+    delete this.referenceMedianContributorsByPeg[pegKey];
   }
 
   applyResolvedMetals(metals: MetalsResolution): void {
     for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
       const resolved = metals.resolvedByPeg[pegKey];
       if (!resolved) continue;
+      const { updatedAt } = resolved;
+      if (updatedAt != null && updatedAt > this.syncStartSec) continue;
+      const source = resolved.source === "commodity-peer-median" ? "peer-median" : resolved.source;
+      const isFresh = updatedAt != null && this.syncStartSec - updatedAt <= REFERENCE_INTRADAY_BUDGET_SEC;
+      if (this.preferIncumbent(pegKey, updatedAt, "intraday", isFresh)) {
+        if (source !== "cached" && updatedAt != null) {
+          recordFxSourceSample(this.referenceSourceSamples, {
+            pegKey, usdPerUnit: resolved.rate, observedAtSec: updatedAt, source, cadence: "intraday",
+          }, isObservationFreshAt);
+        }
+        continue;
+      }
 
       this.usableRates[pegKey] = resolved.rate;
-      if (resolved.source === "cached") {
+      if (source === "cached") {
         this.inheritPrevious(pegKey);
       } else {
-        this.markLive(pegKey, resolved.updatedAt);
+        this.markLive(pegKey, updatedAt, "intraday", null, source);
+        if (this.observations[pegKey]?.source === "peer-median" && resolved.contributors) {
+          this.referenceMedianContributorsByPeg[pegKey] = resolved.contributors;
+        }
       }
     }
   }
@@ -843,6 +1140,32 @@ export class FxSyncRunState {
   }
 
   buildPersistedMeta(): FxRatesMeta {
+    const directMetalReferences: NonNullable<FxRatesMeta["directMetalReferences"]> = {};
+    for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
+      for (const source of ["gold-api.com", "chainlink"] as const) {
+        const sample = this.referenceSourceSamples[`${pegKey}:${source}`];
+        if (!sample || sample.observation.observedAtSec <= (directMetalReferences[pegKey]?.observation.observedAtSec ?? 0)) continue;
+        const { observation, evidence } = sample;
+        const verdict = evaluateReferenceAdmission({
+          kind: "fallback", observation, ...evidence, decisionAtSec: this.syncStartSec,
+          quoteObservedAtSec: observation.observedAtSec, rawDeviationBps: null,
+        });
+        if (verdict.reason === "live-reference" && evidence.sessionOpenedAtSec === verdict.sessionOpenedAtSec) {
+          directMetalReferences[pegKey] = {
+            observation, generation: `fx:${this.syncStartSec}`,
+            firstInSessionObservedAtSec: evidence.firstInSessionObservedAtSec, preCloseUsdPerUnit: evidence.preCloseUsdPerUnit,
+          };
+        }
+      }
+    }
+    const lastAcceptedBaselines = { ...this.baselines };
+    for (const [pegKey, usdPerUnit] of Object.entries(this.usableRates)) {
+      const baseline = lastAcceptedBaselines[pegKey];
+      const observedAtSec = this.sourceUpdatedAtByPeg[pegKey] ?? null;
+      if (!baseline || (observedAtSec != null && observedAtSec >= (baseline.observedAtSec ?? 0))) {
+        lastAcceptedBaselines[pegKey] = { usdPerUnit, observedAtSec };
+      }
+    }
     return {
       usableSyncAt: this.syncStartSec,
       mode: this.mode,
@@ -850,6 +1173,16 @@ export class FxSyncRunState {
       sourceModeByPeg: this.sourceModeByPeg,
       sourceCadenceByPeg: this.sourceCadenceByPeg,
       sourceDateByPeg: this.sourceDateByPeg,
+      // A wholly carried main-format generation still has no evidence. An explicit empty map means evidence was withheld.
+      observations: this.legacyDetectionPegs.size > 0 && Object.keys(this.observations).length === 0 &&
+        Object.keys(this.usableRates).every((peg) => this.legacyDetectionPegs.has(peg)) ? undefined : this.observations,
+      ...(this.legacyDetectionPegs.size ? { legacyDetectionPegs: [...this.legacyDetectionPegs] } : {}),
+      directMetalReferences,
+      referenceMedianContributorsByPeg: this.referenceMedianContributorsByPeg,
+      dailyObservations: this.dailyObservations,
+      lastAcceptedBaselines,
+      referenceSourceSamples: this.referenceSourceSamples,
+      previousRegimeByPeg: this.previousRegimeByPeg,
       sources: this.sources,
       ecbDate: this.ecbDate,
       previousCacheUpdatedAt: this.prevState?.usableSyncAt ?? null,
@@ -875,6 +1208,7 @@ export class FxSyncRunState {
         ? provisionalRealtimeOverlayPegs
         : undefined,
       validationIssues: this.validationIssues,
+      pendingRegimePegs: this.pendingRegimePegs.size > 0 ? [...this.pendingRegimePegs] : undefined,
       secondaryCoverage: secondaryPegKeys.filter((pegKey) => pegKey in this.usableRates).length,
       ecbDate: this.ecbDate ?? undefined,
       consecutiveFallbackRuns: meta.consecutiveFallbackRuns,
@@ -893,28 +1227,42 @@ export async function runOpenExchangeRatesOverlay(
   if (!openExchangeRatesKey) {
     return "unavailable";
   }
-
-  const [lastAttempt, legacyLastFetch] = await Promise.all([
-    db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
-    db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),
-  ]);
-  const lastFetchTime = lastAttempt ? parseInt(lastAttempt.value, 10)
-    : legacyLastFetch ? parseInt(legacyLastFetch.value, 10)
-      : 0;
-  const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
-
-  if (elapsedMinutes < OXR_RATE_LIMIT_MINUTES) {
+  if (!getReferenceSessionState("fx", state.syncStartSec).open) return "skipped";
+  const attemptedAt = state.syncStartSec;
+  const hourStart = Math.floor(attemptedAt / OXR_POLL_INTERVAL_SEC) * OXR_POLL_INTERVAL_SEC;
+  const reservationFailed = async (operation: "read" | "write" | "release", error: unknown): Promise<"unavailable"> => {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     await logCronEvent(db, {
       job: "sync-fx-rates",
-      eventType: "openexchange-rates-rate-limited",
-      severity: "info",
-      message: `Skipping Open Exchange Rates fetch because the ${OXR_RATE_LIMIT_MINUTES}-minute rate limit window is still active.`,
-      metadata: { elapsedMinutes: Math.round(elapsedMinutes), rateLimitMinutes: OXR_RATE_LIMIT_MINUTES },
+      eventType: "openexchange-rates-reservation-failed",
+      severity: "warning",
+      message: "Open Exchange Rates hour reservation storage operation failed.",
+      metadata: { operation, hourStart, error: toErrorMessage(error) },
     });
-    return "rate-limited";
+    return "unavailable";
+  };
+  try {
+    const lastAttemptAt = await getCacheUpdatedAt(db, OXR_LAST_ATTEMPT_KEY);
+    if (lastAttemptAt != null && lastAttemptAt >= hourStart) return "skipped";
+  } catch (error) {
+    return reservationFailed("read", error);
   }
 
-  return withFxOverlayCircuit(db, {
+  // Keep the epoch prefix readable by the pre-lane rollback code.
+  const reservationOwner = `${attemptedAt}:${crypto.randomUUID()}`;
+  try {
+    const attempt = await db.prepare(`
+      INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+      WHERE cache.updated_at < ?
+    `).bind(OXR_LAST_ATTEMPT_KEY, reservationOwner, attemptedAt, hourStart).run();
+    if (!attempt.meta.changes) return "skipped";
+  } catch (error) {
+    return reservationFailed("write", error);
+  }
+
+  let requestStarted = false;
+  const overlay = withFxOverlayCircuit(db, {
     source: CIRCUIT_SOURCE.FX_REALTIME,
     circuitOpenEvent: {
       eventType: "openexchange-rates-circuit-open",
@@ -930,12 +1278,21 @@ export async function runOpenExchangeRatesOverlay(
     signal,
     runBestEffort,
     run: async () => {
-      const attemptedAt = Math.floor(Date.now() / 1000);
+      signal?.throwIfAborted();
+      requestStarted = true;
       const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal, attemptedAt);
-      if (realtimeFetch.completed) {
-        await runBestEffort("fx-oxr-last-fetch-write", async () => {
-          await setCache(db, OXR_LAST_ATTEMPT_KEY, String(attemptedAt));
+      if (realtimeFetch.statusCode === 429 || realtimeFetch.statusCode === 403) {
+        await logCronEvent(db, {
+          job: "sync-fx-rates",
+          eventType: "openexchange-rates-quota-limited",
+          severity: "error",
+          message: "Open Exchange Rates restricted API access. Check the quota and other users of the key.",
+          metadata: { statusCode: realtimeFetch.statusCode, attemptedAt },
         });
+        await runBestEffort("recordOutcome:fx-realtime-rate-limit", async () => {
+          await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
+        });
+        return "rate-limited";
       }
 
       if (realtimeFetch.rejection) {
@@ -975,6 +1332,15 @@ export async function runOpenExchangeRatesOverlay(
         : "unavailable";
     },
   });
+  return overlay.finally(async () => {
+    if (requestStarted) return;
+    try {
+      await db.prepare("DELETE FROM cache WHERE key = ? AND value = ? AND updated_at = ?")
+        .bind(OXR_LAST_ATTEMPT_KEY, reservationOwner, attemptedAt).run();
+    } catch (error) {
+      await reservationFailed("release", error);
+    }
+  });
 }
 
 async function applyChainlinkOverlaySnapshot(
@@ -984,12 +1350,23 @@ async function applyChainlinkOverlaySnapshot(
   runBestEffort: RunBestEffort,
 ): Promise<ChainlinkSourceStatus> {
   const accepted = state.applyChainlinkQuotes(snapshot.quotes);
+  const outcomes = Object.values(snapshot.perFeedOutcomes);
+  const hasReadableRound = outcomes.some((outcome) => outcome !== "failure");
+  if (Object.keys(snapshot.outOfBudgetRounds).length > 0) {
+    await logCronEvent(db, {
+      job: "sync-fx-rates",
+      eventType: "chainlink-reference-out-of-budget",
+      severity: "info",
+      message: "Readable Chainlink rounds exceeded their pricing age limits.",
+      metadata: { rounds: snapshot.outOfBudgetRounds, generation: state.syncStartSec },
+    });
+  }
   await runBestEffort("recordOutcome:chainlink-feeds", async () => {
-    await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
+    await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, hasReadableRound);
   });
-  return snapshot.quotes.size > 0
-    ? (accepted === snapshot.quotes.size ? "ok" : "partial")
-    : "unavailable";
+  if (!hasReadableRound) return "unavailable";
+  if (outcomes.every((outcome) => outcome === "out-of-budget")) return "out-of-budget";
+  return accepted === snapshot.summary.configuredFeeds ? "ok" : "partial";
 }
 
 /**

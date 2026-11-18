@@ -93,6 +93,7 @@ describe("syncFxRates", () => {
     expect(cachedRates.peggedAED).toBe(1 / 3.6725);
     expect(cachedRates.peggedRUB).toBeUndefined();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:hardcoded-rate-used")).toBeUndefined();
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:ecb-rates-stale")).toBeUndefined();
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
@@ -107,7 +108,7 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBeGreaterThan(0);
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
     expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
-    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-13");
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
     expect(cachedMeta.sourceCadenceByPeg.peggedCZK).toBe("business-daily");
     expect(cachedMeta.sourceCadenceByPeg.peggedPLN).toBe("business-daily");
@@ -204,8 +205,23 @@ describe("syncFxRates", () => {
       silver: { body: { error: "blocked" }, status: 503 },
     }));
 
-    const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 90;
-    const db = makeFxRatesDb({ stablecoins: makeCommodityStablecoinsCacheRow(stablecoinsUpdatedAt) });
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsUpdatedAt = now - 90;
+    const stablecoins = JSON.parse(makeCommodityStablecoinsCacheRow(stablecoinsUpdatedAt).value) as {
+      peggedAssets: { id: string; pegType: string; price: number; priceObservedAt: number }[];
+    };
+    for (const asset of stablecoins.peggedAssets) {
+      if (asset.pegType === "peggedSILVER") asset.priceObservedAt = now - 7200;
+    }
+    stablecoins.peggedAssets.push({
+      ...stablecoins.peggedAssets[0], id: "future-gold", price: 2890, priceObservedAt: now + 1,
+    });
+    const previous = { peggedGOLD: 2900 };
+    const db = makeFxRatesDb({
+      stablecoins: makeCacheRow(stablecoins, stablecoinsUpdatedAt),
+      previousRates: makeCacheRow(previous, now - 60),
+      previousMeta: makeCacheRow(makeFxRatesMeta(previous, { usableSyncAt: now - 60, updatedAt: now - 3600 }), now - 60),
+    });
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -230,11 +246,18 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeUndefined();
     expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
     expect(cachedMeta.sourceDateByPeg.peggedGOLD).toBeNull();
+    const state = hydrateFxRateState(
+      { value: String(write?.binds[1]), updatedAt: now },
+      { value: String(metaWrite?.binds[1]), updatedAt: now },
+    );
+    expect(state?.referenceMedianContributorsByPeg?.peggedGOLD?.map(({ assetId, observedAtSec }) => [assetId, observedAtSec]))
+      .toEqual(["xaut-tether", "paxg-paxos", "kau-kinesis"].map((id) => [id, stablecoinsUpdatedAt - 30]));
+    expect(state?.referenceMedianContributorsByPeg?.peggedSILVER).toBeUndefined();
   });
 
   it("rejects gold-api.com metal spots that diverge from the commodity peer median", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    mockFetch(fxMirrors({ gold: { body: { price: 3100 } } }));
+    mockFetch(fxMirrors({ gold: { body: { price: 3100, updatedAt: new Date(Date.now() - 60_000).toISOString() } } }));
 
     const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 120;
     const db = makeFxRatesDb({ stablecoins: makeCommodityStablecoinsCacheRow(stablecoinsUpdatedAt) });
@@ -480,7 +503,7 @@ describe("syncFxRates", () => {
     const previousRates = makeCompleteFxRates();
     const nowSec = Math.floor(Date.now() / 1000);
     const partialUsd: Record<string, number> = {
-      eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
+      eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.1, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
       aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90,
       uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, myr: 4.5, krw: 1380, hkd: 7.81,
       inr: 85.5, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4,
@@ -499,7 +522,7 @@ describe("syncFxRates", () => {
       previousRates: makeCacheRow(previousRates, nowSec - 60),
       previousMeta: makeCacheRow(makeFxRatesMeta(previousRates, {
         usableSyncAt: nowSec - 60,
-        updatedAt: nowSec - 60,
+        updatedAt: nowSec - 48 * 3600,
       }), nowSec - 60),
     });
 
@@ -511,7 +534,10 @@ describe("syncFxRates", () => {
     expect(metadata.sources.fawazahmed0).toBe("partial");
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
-    expect(cachedRates).toMatchObject(previousRates);
+    expect(cachedRates).toMatchObject({ ...previousRates, peggedREAL: 1 / 5.1 });
+    const meta = JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1]));
+    expect(meta.observations.peggedREAL.source).toBe("fawazahmed0");
+    expect(meta.sourceUpdatedAtByPeg.peggedEUR).toBe(nowSec - 48 * 3600);
     expect(cachedRates.peggedEUR).toBe(previousRates.peggedEUR);
   });
 
@@ -895,13 +921,13 @@ describe("syncFxRates", () => {
     expect(buildFxCacheStatus(state!, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
   });
 
-  it("overlays fresh Chainlink reference feeds when they agree with current references", async () => {
+  it.each([0, 7 * 3600])("reports a partial Chainlink batch with one readable round aged %ss", async (age) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const { routes, chainRpcs } = makeChainlinkFxFeed({
       chain: "base",
       feedAddress: "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F",
       answer: 108_101_000n,
-      updatedAt: nowSec,
+      updatedAt: nowSec - age,
     });
     mockFetch(routes, { requireMatch: true });
 
@@ -909,10 +935,20 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(metadata.sources.chainlink).toBe("ok");
+    expect(metadata.sources.chainlink).toBe("partial");
+    expect(JSON.parse(String(findCacheWrite(db, `circuit:${CIRCUIT_SOURCE.CHAINLINK_FEEDS}`)?.binds[1])))
+      .toMatchObject({ consecutiveFailures: 0 });
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    if (age > 0) {
+      expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925);
+      const diagnostic = findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-reference-out-of-budget");
+      expect(JSON.parse(String(diagnostic?.binds[1])).metadata).toEqual({
+        generation: nowSec, rounds: { peggedEUR: { updatedAt: nowSec - age, staleAfterSec: 6 * 3600 } },
+      });
+      return;
+    }
     expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
@@ -920,8 +956,108 @@ describe("syncFxRates", () => {
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
     };
-    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
-    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("intraday");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBeNull();
+  });
+
+  it.each([
+    ["2025-06-15T12:00:00Z", "2025-06-15"],
+    ["2025-06-16T11:00:00Z", "2025-06-16"],
+  ])("falls back for an impossible ECB fixing at %s", async (clock, date) => {
+    vi.setSystemTime(new Date(clock));
+    const rates = makeCompleteFxRates();
+    const usd = Object.fromEntries([
+      ...Object.entries(PRIMARY_CURRENCY_TO_PEG), ...Object.entries(SECONDARY_FX_CURRENCY_TO_PEG),
+    ].map(([currency, peg]) => [currency.toLowerCase(), 1 / rates[peg]]));
+    mockFetch(fxMirrors({
+      frankfurter: { body: { ...frankfurterBody(), date } },
+      secondary: { body: secondaryBody(usd, { date }) },
+    }));
+    const db = makeFxRatesDb();
+    const result = await syncFxRates(db);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      sources: { frankfurter: "invalid-payload" },
+      fallbackMode: "secondary-live-fallback",
+      validationIssues: "invalid-ecb-fixing-clock",
+    });
+    expect(JSON.parse(String(findCacheWrite(db, `circuit:${CIRCUIT_SOURCE.FX_FRANKFURTER}`)?.binds[1])))
+      .toMatchObject({ consecutiveFailures: 1 });
+  });
+
+  it("reserves one OXR request per open hour and records a quota response", async () => {
+    const { db, sqlite } = fixtures.open();
+    const fetchSpy = mockFetch(fxMirrors({
+      openExchange: { status: 429, body: { message: "quota" } },
+    }));
+    for (const [clock, calls] of [
+      ["2025-06-15T12:00:00Z", 0], ["2025-06-16T08:00:00Z", 1],
+      ["2025-06-16T08:30:00Z", 1], ["2025-06-16T09:00:00Z", 2],
+    ] as const) {
+      vi.setSystemTime(new Date(clock));
+      await syncFxRates(db, undefined, "oxr-key");
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"))).toHaveLength(calls);
+    }
+    const read = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
+    const quota = read.get("cron:event:sync-fx-rates:openexchange-rates-quota-limited");
+    expect(JSON.parse(String(quota?.value)).metadata).toMatchObject({ statusCode: 429 });
+    expect(read.get("fx-oxr-last-success")).toBeUndefined();
+  });
+
+  it.each([false, true])("polls on the first eligible OXR recovery run with a transient storage failure=%s", async (failReservation) => {
+    const { db, sqlite } = fixtures.open();
+    const recoveredAt = Date.parse("2025-06-16T11:00:00Z");
+    const fetchSpy = mockFetch([...fxMirrors({ openExchange: "omit" }), {
+      match: "openexchangerates.org",
+      respond: () => Date.now() < recoveredAt
+        ? Response.json({ error: "provider failure" }, { status: 500 })
+        : Response.json({ timestamp: recoveredAt / 1000, rates: { EUR: 0.925 } }),
+    }]);
+    const readCircuit = () => JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+      .get(`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`)?.value));
+    for (const [time, calls, circuit] of [
+      ["08:00", 1, "closed"], ["09:00", 2, "closed"], ["10:00", 3, "open"],
+      ["10:30", 3, "open"], ["11:00", failReservation ? 3 : 4, failReservation ? "open" : "closed"],
+      ["11:30", 4, "closed"],
+    ] as const) {
+      vi.setSystemTime(new Date(`2025-06-16T${time}:00Z`));
+      if (failReservation && time === "11:00") {
+        sqlite.exec(`
+          CREATE TEMP TRIGGER fail_oxr_reservation BEFORE INSERT ON cache
+          WHEN NEW.key = 'fx-oxr-last-attempt'
+          BEGIN SELECT RAISE(ABORT, 'test reservation failure'); END;
+        `);
+      }
+      if (failReservation && time === "11:30") sqlite.exec("DROP TRIGGER fail_oxr_reservation");
+      await syncFxRates(db, undefined, "oxr-key");
+      expect(fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"))).toHaveLength(calls);
+      expect(readCircuit().state).toBe(circuit);
+    }
+    expect(readCircuit().lastSuccessAt).toBe(recoveredAt / 1000 + (failReservation ? 1800 : 0));
+  });
+
+  it("leaves the last successful OXR source clock intact after a future snapshot", async () => {
+    const { db, sqlite } = fixtures.open();
+    const first = Date.parse("2025-06-16T08:00:00Z");
+    const second = Date.parse("2025-06-16T09:00:00Z");
+    mockFetch([...fxMirrors({ openExchange: "omit" }), {
+      match: "openexchangerates.org",
+      respond: () => Response.json({
+        timestamp: Math.floor(Date.now() / 1000) + (Date.now() === second ? 1 : 0),
+        rates: { EUR: Date.now() === second ? 0.92 : 0.925 },
+      }),
+    }]);
+    vi.setSystemTime(first);
+    await syncFxRates(db, undefined, "oxr-key");
+    vi.setSystemTime(second);
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    const read = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
+    expect(JSON.parse(result.metadata!).sources.openExchangeRates).toBe("unavailable");
+    expect(read.get("fx-oxr-last-success")?.value).toBe(String(first / 1000));
+    const meta = JSON.parse(String(read.get("fx-rates-meta")?.value));
+    expect(meta.sourceLastSuccessAtBySource.openExchangeRates).toBe(first / 1000);
+    expect(meta.observations.peggedEUR).toMatchObject({ observedAtSec: first / 1000, usdPerUnit: 1 / 0.925 });
+    expect(JSON.parse(String(read.get("cron:event:sync-fx-rates:openexchange-rates-observation-rejected")?.value)).metadata)
+      .toMatchObject({ reason: "timestamp-future", upstreamTimestamp: second / 1000 + 1 });
   });
 
   it("uses an older validated Chainlink timestamp when the metal source has no provenance", async () => {
@@ -939,7 +1075,7 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };
-    expect(metadata.sources?.chainlink).toBe("ok");
+    expect(metadata.sources?.chainlink).toBe("partial");
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
@@ -954,6 +1090,29 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
 
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-older-metal-quote-validated")).toBeUndefined();
+  });
+
+  it("selects the dated Chainlink gold round when the spot clock is one second ahead", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "arbitrum", feedAddress: "0x1F954Dc24a49708C26E0C1777f16750B5C6d5a2c",
+      answer: 291_000_000_000n, updatedAt: nowSec - 15,
+    });
+    mockFetch([{
+      match: "gold-api.com/price/XAU",
+      body: { price: 2900, updatedAt: new Date((nowSec + 1) * 1000).toISOString() },
+    }, ...routes], { requireMatch: true });
+    const db = makeFxRatesDb();
+    await syncFxRates(db, undefined, undefined, chainRpcs);
+    const state = hydrateFxRateState(
+      { value: String(findCacheWrite(db, "fx-rates")?.binds[1]), updatedAt: nowSec },
+      { value: String(findCacheWrite(db, "fx-rates-meta")?.binds[1]), updatedAt: nowSec },
+    );
+    expect(state?.rates.peggedGOLD).toBe(2910);
+    expect(state?.observations?.peggedGOLD).toMatchObject({
+      source: "chainlink", cadence: "intraday", observedAtSec: nowSec - 15, usdPerUnit: 2910,
+    });
+    expect(getFxReferenceTypeFromState(state, "peggedGOLD", 21600, nowSec)).toBe("fresh");
   });
 
   it("checks older Chainlink metal quotes for divergence before skipping them", async () => {
@@ -1037,6 +1196,7 @@ describe("syncFxRates", () => {
   });
 
   it("promotes cached fallback back to live when OXR restores fresh full-set FX coverage", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     const fullPrevRates = makeCompleteFxRates();
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
     const oxrObservedAt = Math.floor(Date.now() / 1000) - 600;
@@ -1095,6 +1255,7 @@ describe("syncFxRates", () => {
   });
 
   it("preserves refreshed per-peg source metadata during cached fallback when recovery is only partial", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     const fullPrevRates = makeCompleteFxRates({}, [
       "peggedMYR", "peggedKRW", "peggedHKD", "peggedINR", "peggedVND",
       "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN",
@@ -1145,15 +1306,15 @@ describe("syncFxRates", () => {
     expect(cachedRates.peggedRUB).toBeUndefined();
   });
 
-  it("keeps syncing when the OXR telemetry write fails", async () => {
-    mockFetch(fxMirrors({ secondary: { body: secondaryBody({}, { date: null }) } }));
+  it.each(["read", "write"])("records an OXR reservation %s error as a local storage outcome", async (operation) => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
+    const fetchSpy = mockFetch(fxMirrors({ secondary: { body: secondaryBody({}, { date: null }) } }));
 
-    const nowSec = Math.floor(Date.now() / 1000);
     const db = makeFxRatesDb({
       extraTables: [
         {
-          match: "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-          matchBinds: ["fx-oxr-last-attempt", String(nowSec), nowSec],
+          match: operation === "read" ? "SELECT updated_at FROM cache WHERE key = ?" : "WHERE cache.updated_at < ?",
+          matchBinds: operation === "read" ? ["fx-oxr-last-attempt"] : undefined,
           rows: [],
           throwError: new Error("telemetry write failed"),
         },
@@ -1165,9 +1326,14 @@ describe("syncFxRates", () => {
     expect(result.itemCount).toBeGreaterThan(0);
     expect(findCacheWrite(db, "fx-rates")).toBeDefined();
     expect(findCacheWrite(db, "fx-rates-meta")).toBeDefined();
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("openexchangerates.org"))).toBe(false);
+    const diagnostic = findCacheWrite(db, "cron:event:sync-fx-rates:openexchange-rates-reservation-failed");
+    expect(JSON.parse(String(diagnostic?.binds[1])).metadata).toMatchObject({ operation });
+    expect(findCacheWrite(db, `circuit:${CIRCUIT_SOURCE.FX_REALTIME}`)).toBeUndefined();
   });
 
   it("records the OXR cooldown after a completed response with zero usable rates", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     mockFetch(fxMirrors({
       secondary: { body: secondaryBody({}, { date: null }) },
       openExchange: { body: { timestamp: Math.floor(Date.now() / 1000) - 600, rates: { EUR: 0.01, GBP: 0.01 } } },
@@ -1185,6 +1351,7 @@ describe("syncFxRates", () => {
   });
 
   it("rejects a stale OXR snapshot instead of republishing it as a fresh overlay", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);
     mockFetch(fxMirrors({
       secondary: { body: secondaryBody({}, { date: null }) },
@@ -1209,48 +1376,36 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
   });
 
-  it("skips the OXR fetch when the fx-realtime circuit breaker is open", async () => {
+  it("releases the hour reservation when the OXR breaker declines the request", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);
-    mockFetch(fxMirrors({
-      secondary: { body: secondaryBody({}, { date: null }) },
-      openExchange: { body: { error: "should not be called" }, status: 500 },
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`, JSON.stringify({
+        state: "open", consecutiveFailures: 3, lastFailureAt: nowSec - 60, lastSuccessAt: null, openedAt: nowSec - 60,
+      }), nowSec - 60);
+    const fetchSpy = mockFetch(fxMirrors({
+      openExchange: { body: { timestamp: nowSec, rates: { EUR: 0.925 } } },
     }));
+    const oxrCalls = () => fetchSpy.mock.calls.filter(([url]) => String(url).includes("openexchangerates.org"));
+    const read = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?");
 
-    const db = makeFxRatesDb({
-      cacheRows: {
-        [`circuit:${CIRCUIT_SOURCE.FX_REALTIME}`]: {
-          value: JSON.stringify({
-            state: "open",
-            consecutiveFailures: 3,
-            lastFailureAt: nowSec - 60,
-            lastSuccessAt: null,
-            openedAt: nowSec - 60,
-          }),
-          updatedAt: nowSec - 60,
-        },
-      },
-      extraTables: [
-        { match: "circuit", rows: [] },
-      ],
-    });
+    const denied = await syncFxRates(db, undefined, "oxr-key");
+    expect(JSON.parse(denied.metadata!).sources.openExchangeRates).toBe("unavailable");
+    expect(oxrCalls()).toHaveLength(0);
+    expect(read.get("fx-oxr-last-attempt")).toBeUndefined();
+    expect(read.get("fx-oxr-last-success")).toBeUndefined();
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const result = await syncFxRates(db, undefined, "oxr-key");
-    expect(result.itemCount).toBeGreaterThan(0);
-
-    const oxrCalls = fetchSpy.mock.calls.filter(([url]) =>
-      typeof url === "string" && url.includes("openexchangerates.org"),
-    );
-    expect(oxrCalls).toHaveLength(0);
-
-    expect(findCacheWrite(db, "fx-oxr-last-attempt")).toBeUndefined();
-    expect(findCacheWrite(db, "fx-oxr-last-success")).toBeUndefined();
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { openExchangeRates?: string } };
-    expect(metadata.sources?.openExchangeRates).toBe("unavailable");
+    vi.setSystemTime((nowSec + 1800) * 1000);
+    await syncFxRates(db, undefined, "oxr-key");
+    expect(oxrCalls()).toHaveLength(1);
+    const reservation = read.get("fx-oxr-last-attempt");
+    expect(reservation?.updated_at).toBe(nowSec + 1800);
+    expect(Number.parseInt(String(reservation?.value), 10)).toBe(nowSec + 1800);
   });
 
   it("records a breaker failure when OXR returns 200 with zero usable rates", async () => {
+    vi.setSystemTime(new Date("2025-06-16T08:00:00Z"));
     mockFetch(fxMirrors({
       secondary: { body: secondaryBody({}, { date: null }) },
       openExchange: { body: { timestamp: Math.floor(Date.now() / 1000) - 600, rates: { EUR: 0.01, GBP: 0.01 } } },
@@ -1596,9 +1751,11 @@ describe("syncFxRates", () => {
     });
   });
 
-  it("rejects ExchangeRate-API's future raw epoch", async () => {
-    mockFetch([{ match: "open.er-api.com", body: {
-      result: "success", time_last_update_unix: Date.now() / 1000 + 301, rates: { EUR: 0.92 },
+  it.each([60, 301])("rejects a source epoch %s seconds after the generation even if the fetch finishes later", async (ahead) => {
+    const generation = Date.now() / 1000;
+    mockFetch([{ match: "open.er-api.com", respond: () => {
+      vi.setSystemTime((generation + ahead) * 1000);
+      return Response.json({ result: "success", time_last_update_unix: generation + ahead, rates: { EUR: 0.92 } });
     } }]);
     expect(await loadExchangeRateApiPayload()).toBeNull();
   });

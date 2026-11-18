@@ -1,6 +1,10 @@
+import { z } from "zod";
 import type { CacheStatus } from "@shared/types/status";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
+import { REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
+import { isTargetFixingDay } from "@shared/lib/reference-market-hours";
+import { FxReferenceObservationSchema, FxReferenceSourceSchema, FxSourceCadenceSchema, type FxReferenceEvidenceMap, type FxReferenceObservation, type FxReferenceObservationMap } from "@shared/types/fx-reference";
 import { formatIsoDate } from "@shared/lib/format";
 import { sha256Hex } from "@shared/lib/sha256";
 import { getCaches, type CacheWriteResult } from "./db-cache";
@@ -9,17 +13,17 @@ import { logWorkerEvent } from "./structured-log";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
-import { easterSundayUtcDaySec, startOfUtcDaySec } from "@shared/lib/time-buckets";
-import { IsolateLocalState } from "./isolate-local-state";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { EXPECTED_FX_PEG_KEYS } from "./fx-config";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
+import { fxSourceSampleKey, parseFxBaselines, parseFxMedianContributors, parseFxRegimeChanges, parseFxSourceSamples, type FxBaseline, type FxMedianContributorsByPeg, type FxRegimeChanges, type FxReferenceSessionEvidence, type FxReferenceSourceSamples } from "./fx-observations";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
-const FX_INTRADAY_SOURCE_DEGRADED_AGE_SEC = 6 * 3600;
 const FX_INTRADAY_SOURCE_STALE_AGE_SEC = 24 * 3600;
 const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
-const FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC = 16;
+const ECB_PUBLICATION_OFFSET_SEC = 16 * HOUR_SECONDS;
+const berlinHour = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" });
 /** A persisted per-peg source time further ahead of the reader clock than this is not admissible provenance. */
 export const FX_SOURCE_MAX_FUTURE_SKEW_SEC = 5 * 60;
 const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
@@ -60,13 +64,31 @@ export type FxPegAdmissionIssue =
   | "source-date-invalid"
   | "source-date-future";
 
+const legacyRepricingSchema = z.object({
+  source: FxReferenceSourceSchema,
+  preCloseUsdPerUnit: z.number().finite().positive().nullish(),
+  firstInSessionObservedAtSec: z.number().int().positive().nullish(),
+});
+export type LegacyFxRepricingByPeg = Record<string, z.output<typeof legacyRepricingSchema>>;
+
 export interface FxRatesMeta {
+  directMetalReferences?: Partial<Record<"peggedGOLD" | "peggedSILVER",
+    { observation: FxReferenceObservation; generation: string } &
+    Pick<FxReferenceSessionEvidence, "firstInSessionObservedAtSec" | "preCloseUsdPerUnit">>>;
   usableSyncAt: number;
   mode: FxRateSyncMode;
   sourceUpdatedAtByPeg: Record<string, number | null>;
   sourceModeByPeg: Record<string, FxRateSourceMode>;
   sourceCadenceByPeg?: Record<string, FxSourceCadence>;
   sourceDateByPeg?: Record<string, string | null>;
+  observations?: FxReferenceObservationMap;
+  legacyDetectionPegs?: string[];
+  legacyRepricingByPeg?: LegacyFxRepricingByPeg;
+  referenceMedianContributorsByPeg?: FxMedianContributorsByPeg;
+  dailyObservations?: FxReferenceObservationMap;
+  lastAcceptedBaselines?: Record<string, FxBaseline>;
+  referenceSourceSamples?: FxReferenceSourceSamples;
+  previousRegimeByPeg?: FxRegimeChanges;
   sources?: Record<string, string>;
   sourceLastSuccessAtBySource?: Record<string, number>;
   ecbDate?: string | null;
@@ -75,6 +97,7 @@ export interface FxRatesMeta {
 }
 
 export interface FxRateState {
+  selectedReferenceEvidence?: FxReferenceEvidenceMap;
   rates: Record<string, number>;
   usableSyncAt: number;
   usableAgeSec: number;
@@ -83,6 +106,15 @@ export interface FxRateState {
   sourceModeByPeg: Record<string, FxRateSourceMode>;
   sourceCadenceByPeg: Record<string, FxSourceCadence>;
   sourceDateByPeg: Record<string, string | null>;
+  observations?: FxReferenceObservationMap;
+  legacyDetectionPegs?: string[];
+  legacyRepricingByPeg?: LegacyFxRepricingByPeg;
+  referenceMedianContributorsByPeg?: FxMedianContributorsByPeg;
+  dailyObservations?: FxReferenceObservationMap;
+  lastAcceptedBaselines?: Record<string, FxBaseline>;
+  referenceSourceSamples?: FxReferenceSourceSamples;
+  previousRegimeByPeg?: FxRegimeChanges;
+  referenceSessionEvidenceByPeg?: Record<string, FxReferenceSessionEvidence>;
   sources?: Record<string, string>;
   sourceLastSuccessAtBySource: Record<string, number>;
   ecbDate?: string | null;
@@ -117,9 +149,7 @@ function sanitizeSourceModeByPeg(input: unknown): Record<string, FxRateSourceMod
 }
 
 function sanitizeSourceCadenceByPeg(input: unknown): Record<string, FxSourceCadence> {
-  return sanitizeRecordValues(input, (value) => (
-    value === "intraday" || value === "calendar-daily" || value === "business-daily" ? value : undefined
-  ));
+  return sanitizeRecordValues(input, (value) => FxSourceCadenceSchema.safeParse(value).data);
 }
 
 function sanitizeSourceDateByPeg(input: unknown): Record<string, string | null> {
@@ -192,6 +222,12 @@ function parseFxMeta(
         typeof record.usableSyncAt === "number" && Number.isFinite(record.usableSyncAt) && record.usableSyncAt > 0
           ? Math.floor(record.usableSyncAt)
           : ratesCache.updatedAt;
+      const rawObservations = record.observations;
+      const observations = rawObservations === undefined ? undefined : sanitizeRecordValues(rawObservations, (value, pegKey) => {
+        const row = FxReferenceObservationSchema.safeParse(value);
+        return row.success && row.data.pegKey === pegKey ? row.data : undefined;
+      });
+      const hasObservations = observations !== undefined && Object.keys(observations).length > 0;
       const mode: FxRateSyncMode = record.mode === "cached-fallback" ? "cached-fallback" : "live";
       return {
         ok: true,
@@ -204,6 +240,22 @@ function parseFxMeta(
             sourceModeByPeg: sanitizeSourceModeByPeg(record.sourceModeByPeg),
             sourceCadenceByPeg: sanitizeSourceCadenceByPeg(record.sourceCadenceByPeg),
             sourceDateByPeg: sanitizeSourceDateByPeg(record.sourceDateByPeg),
+            legacyRepricingByPeg: record.observations === undefined && record.repricingByPeg !== undefined
+              ? sanitizeRecordValues(record.repricingByPeg, (value) => legacyRepricingSchema.safeParse(value).data) : undefined,
+            observations,
+            legacyDetectionPegs: Array.isArray(record.legacyDetectionPegs)
+              ? record.legacyDetectionPegs.filter((peg): peg is string => typeof peg === "string" &&
+                (observations === undefined || (hasObservations &&
+                  (!Object.prototype.hasOwnProperty.call(rawObservations, peg) || !!observations[peg])))) : undefined,
+            dailyObservations: sanitizeRecordValues(record.dailyObservations, (value, pegKey) => {
+              const row = FxReferenceObservationSchema.safeParse(value);
+              return row.success && fxSourceSampleKey(row.data) === pegKey && row.data.cadence !== "intraday"
+                && (row.data.publishedAtSec ?? row.data.observedAtSec) <= usableSyncAt ? row.data : undefined;
+            }),
+            lastAcceptedBaselines: parseFxBaselines(record.lastAcceptedBaselines),
+            referenceMedianContributorsByPeg: parseFxMedianContributors(record.referenceMedianContributorsByPeg),
+            referenceSourceSamples: parseFxSourceSamples(record.referenceSourceSamples),
+            previousRegimeByPeg: parseFxRegimeChanges(record.previousRegimeByPeg),
             sources: sanitizeSources(record.sources),
             sourceLastSuccessAtBySource: sanitizeSourceLastSuccess(record.sourceLastSuccessAtBySource ?? record.sourceLastSuccessAt),
             ecbDate: typeof record.ecbDate === "string" && record.ecbDate.length > 0 ? record.ecbDate : null,
@@ -266,45 +318,25 @@ export function isAdmissibleFxSourceDate(dateText: string | null | undefined, no
   return dayStartSec != null && dayStartSec <= startOfUtcDaySec(new Date(nowSec * 1000));
 }
 
-function isWeekendDay(dayStartSec: number): boolean {
-  const day = new Date(dayStartSec * 1000).getUTCDay();
-  return day === 0 || day === 6;
+function berlinMidnightSec(dayStartSec: number): number {
+  const noon = 12;
+  const localHour = Number(berlinHour.format((dayStartSec + noon * HOUR_SECONDS) * 1000));
+  return dayStartSec + (noon - localHour) * HOUR_SECONDS;
 }
 
-const _fxCalendar = new IsolateLocalState(() => ({
-  targetClosingDaysByYear: new Map<number, Set<string>>(),
-}));
-
-function getTargetClosingDays(year: number): Set<string> {
-  const byYear = _fxCalendar.state.targetClosingDaysByYear;
-  const cached = byYear.get(year);
-  if (cached) return cached;
-
-  const easterSundaySec = easterSundayUtcDaySec(year);
-  const closingDays = new Set<string>([
-    `${year}-01-01`,
-    `${year}-05-01`,
-    `${year}-12-25`,
-    `${year}-12-26`,
-    formatUtcDate(easterSundaySec - (2 * DAY_SECONDS)),
-    formatUtcDate(easterSundaySec + DAY_SECONDS),
-  ]);
-  byYear.set(year, closingDays);
-  return closingDays;
-}
-
-function isTargetClosingDay(dayStartSec: number): boolean {
-  const day = new Date(dayStartSec * 1000);
-  return getTargetClosingDays(day.getUTCFullYear()).has(formatUtcDate(dayStartSec));
-}
-
-function isBusinessDailyPublishDay(dayStartSec: number): boolean {
-  return !isWeekendDay(dayStartSec) && !isTargetClosingDay(dayStartSec);
+export function getEcbFixingClocks(date: string, nowSec: number): { observedAtSec: number; publishedAtSec?: number } | null {
+  const day = parseIsoDayStartSec(date);
+  if (day == null || !isTargetFixingDay(day)) return null;
+  const midnight = berlinMidnightSec(day);
+  const observedAtSec = midnight + 14 * HOUR_SECONDS + 10 * 60;
+  if (observedAtSec > nowSec) return null;
+  const publishedAtSec = midnight + ECB_PUBLICATION_OFFSET_SEC;
+  return { observedAtSec, publishedAtSec: publishedAtSec <= nowSec ? publishedAtSec : undefined };
 }
 
 function previousBusinessDailyPublishDaySec(dayStartSec: number): number {
   let current = dayStartSec - DAY_SECONDS;
-  while (!isBusinessDailyPublishDay(current)) {
+  while (!isTargetFixingDay(current)) {
     current -= DAY_SECONDS;
   }
   return current;
@@ -314,7 +346,7 @@ function countBusinessDailyPublishesBehind(sourceDaySec: number, expectedDaySec:
   if (sourceDaySec >= expectedDaySec) return 0;
   let missed = 0;
   for (let cursor = sourceDaySec + DAY_SECONDS; cursor <= expectedDaySec; cursor += DAY_SECONDS) {
-    if (isBusinessDailyPublishDay(cursor)) {
+    if (isTargetFixingDay(cursor)) {
       missed++;
     }
   }
@@ -323,13 +355,14 @@ function countBusinessDailyPublishesBehind(sourceDaySec: number, expectedDaySec:
 
 function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
   const dayStartSec = startOfUtcDaySec(new Date(nowSec * 1000));
-  if (!isBusinessDailyPublishDay(dayStartSec)) {
-    return previousBusinessDailyPublishDaySec(dayStartSec);
-  }
-  const hourUtc = new Date(nowSec * 1000).getUTCHours();
-  return hourUtc >= FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC
+  return isTargetFixingDay(dayStartSec) && nowSec >= berlinMidnightSec(dayStartSec) + ECB_PUBLICATION_OFFSET_SEC
     ? dayStartSec
     : previousBusinessDailyPublishDaySec(dayStartSec);
+}
+
+export function assessEcbRelease(sourceDaySec: number, nowSec: number): { expectedDate: string; missedPublishes: number } {
+  const expected = resolveBusinessDailyExpectedDaySec(nowSec);
+  return { expectedDate: formatUtcDate(expected), missedPublishes: countBusinessDailyPublishesBehind(sourceDaySec, expected) };
 }
 
 function resolveCalendarDailyExpectedDaySec(nowSec: number): number {
@@ -373,8 +406,7 @@ function evaluateFxSourceFreshness(
   }
 
   if (normalizedCadence === "business-daily" && sourceDaySec != null) {
-    const expectedDaySec = resolveBusinessDailyExpectedDaySec(nowSec);
-    const missedPublishes = countBusinessDailyPublishesBehind(sourceDaySec, expectedDaySec);
+    const { expectedDate, missedPublishes } = assessEcbRelease(sourceDaySec, nowSec);
     if (missedPublishes === 0) {
       return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
     }
@@ -384,7 +416,7 @@ function evaluateFxSourceFreshness(
       cadence: normalizedCadence,
       warning:
         `${pegKey} business-daily reference is ${missedPublishes} publish` +
-        `${missedPublishes === 1 ? "" : "es"} behind (latest ${formatUtcDate(sourceDaySec)}, expected ${formatUtcDate(expectedDaySec)})`,
+        `${missedPublishes === 1 ? "" : "es"} behind (latest ${formatUtcDate(sourceDaySec)}, expected ${expectedDate})`,
     };
   }
 
@@ -415,7 +447,7 @@ function evaluateFxSourceFreshness(
       warning: `${pegKey} intraday reference is ${Math.round(ageSec / 3600)}h old`,
     };
   }
-  if (ageSec > FX_INTRADAY_SOURCE_DEGRADED_AGE_SEC) {
+  if (ageSec > REFERENCE_INTRADAY_BUDGET_SEC) {
     return {
       status: "degraded",
       ageSec,
@@ -590,10 +622,50 @@ export function hydrateFxRateState(
   if (Object.keys(rates).length === 0) return null;
 
   const { meta, identity } = resolveFxMetadata(ratesCache, metaCache, rates);
+  const observations: FxReferenceObservationMap = {};
+  const selectedReferenceEvidence: FxReferenceEvidenceMap = {};
+  const referenceSourceSamples = meta.referenceSourceSamples ?? {};
+  const referenceSessionEvidenceByPeg: Record<string, FxReferenceSessionEvidence> = {};
+  const referenceMedianContributorsByPeg: FxMedianContributorsByPeg = {};
+  for (const [pegKey, row] of Object.entries(meta.observations ?? {})) {
+    if (row.usdPerUnit !== rates[pegKey] || row.observedAtSec !== meta.sourceUpdatedAtByPeg[pegKey]
+      || row.cadence !== meta.sourceCadenceByPeg?.[pegKey]
+      || (row.publishedAtSec ?? row.observedAtSec) > meta.usableSyncAt) continue;
+    observations[pegKey] = row;
+    const contributors = meta.referenceMedianContributorsByPeg?.[pegKey];
+    if (row.source === "peer-median" && contributors
+      && contributors.some(({ observedAtSec }) => observedAtSec === row.observedAtSec)
+      && contributors.every(({ observedAtSec }) => observedAtSec != null
+        && observedAtSec >= row.observedAtSec && observedAtSec <= meta.usableSyncAt)) {
+      referenceMedianContributorsByPeg[pegKey] = contributors;
+    }
+    const sample = referenceSourceSamples[fxSourceSampleKey(row)];
+    if (sample?.observation.observedAtSec === row.observedAtSec && sample.observation.usdPerUnit === row.usdPerUnit) {
+      referenceSessionEvidenceByPeg[pegKey] = sample.evidence;
+    }
+    if (identity === "verified" && meta.usableSyncAt === ratesCache.updatedAt) {
+      const evidence = referenceSessionEvidenceByPeg[pegKey];
+      selectedReferenceEvidence[pegKey] = {
+        ...row,
+        ...(row.source === "peer-median" ? { contributors: referenceMedianContributorsByPeg[pegKey] ?? [] }
+          : evidence ? { repricing: { source: row.source, ...evidence } } : {}),
+      };
+    }
+  }
 
+  const legacy = (identity === "verified" || identity === "legacy-timestamp") && meta.usableSyncAt === ratesCache.updatedAt && meta.observations === undefined;
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     rates,
+    ...(legacy ? { legacyRepricingByPeg: meta.legacyRepricingByPeg } : { observations, selectedReferenceEvidence }),
+    legacyDetectionPegs: identity === "verified" && meta.usableSyncAt === ratesCache.updatedAt
+      ? meta.legacyDetectionPegs?.filter((peg) => !meta.observations?.[peg] || observations[peg]) : undefined,
+    referenceMedianContributorsByPeg,
+    dailyObservations: meta.dailyObservations,
+    lastAcceptedBaselines: meta.lastAcceptedBaselines,
+    referenceSourceSamples,
+    previousRegimeByPeg: meta.previousRegimeByPeg,
+    referenceSessionEvidenceByPeg,
     usableSyncAt: meta.usableSyncAt,
     usableAgeSec: Math.max(0, nowSec - meta.usableSyncAt),
     mode: meta.mode,

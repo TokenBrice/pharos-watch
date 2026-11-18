@@ -238,10 +238,17 @@ describe("fetchBinancePricesForRun", () => {
 });
 
 describe("fetchCoinbasePrices", () => {
+  const tradeTime = "2026-11-01T17:11:27.444Z";
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse(tradeTime) + 1_000);
+  });
+  afterEach(() => vi.useRealTimers());
+
   it("returns ok outcome with prices for listed stablecoin products", async () => {
     mockFetch([
-      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
-      { match: "/products/USDS-USD/ticker", body: { price: "1.0000" } },
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998", time: tradeTime } },
+      { match: "/products/USDS-USD/ticker", body: { price: "1.0000", time: tradeTime } },
       { match: () => true, body: {}, status: 404 },
     ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT", "USDS", "XYZFAKE"]);
@@ -272,22 +279,25 @@ describe("fetchCoinbasePrices", () => {
           bid: "0.9997",
           ask: "0.9999",
           price: "0.9998",
-          time: "2026-04-17T15:05:04.183Z",
+          time: tradeTime,
         },
       },
       { match: () => true, body: {}, status: 404 },
     ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
-    const expectedSec = Math.floor(Date.parse("2026-04-17T15:05:04.183Z") / 1000);
+    const expectedSec = Math.floor(Date.parse(tradeTime) / 1000);
     expect(outcome.value.observedAtBySymbol.get("USDT")).toBe(expectedSec);
+    expect(outcome.value.clockBySymbol.get("USDT")).toBe("trade");
   });
-  // Captured thin-book quotes: midpoint must beat the last trade; USDC is valued at USD par.
   it.each([
     ["AUDD", "0.7075", "0.7036", "0.7036", "2026-09-26T22:28:40.333586513Z", 0.70555],
     ["XSGD", "0.7831", "0.7821", "0.783", "2026-10-30T21:18:48.841299403Z", 0.7826],
   ] as const)("prices the %s-USDC FX-stablecoin product from its bid/ask midpoint", async (symbol, ask, bid, price, time, expected) => {
-    mockFetch([
+    const bookAt = Date.parse(time) + 600_000;
+    vi.setSystemTime(bookAt + 1_000);
+    const fetchSpy = mockFetch([
+      { match: `/products/${symbol}-USDC/book`, body: { asks: [[ask, "100", 1]], bids: [[bid, "100", 1]], time: new Date(bookAt).toISOString() } },
       { match: `/products/${symbol}-USDC/ticker`, body: { ask, bid, price, time } },
       { match: () => true, body: {}, status: 404 },
     ], { requireMatch: true });
@@ -295,7 +305,19 @@ describe("fetchCoinbasePrices", () => {
     expect(COINBASE_KNOWN_SYMBOLS).toContain(symbol);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get(symbol)).toBeCloseTo(expected, 6);
-    expect(outcome.value.observedAtBySymbol.get(symbol)).toBe(Math.floor(Date.parse(time) / 1000));
+    expect(outcome.value.observedAtBySymbol.get(symbol)).toBe(Math.floor(bookAt / 1000));
+    expect(outcome.value.quoteAssetBySymbol.get(symbol)).toBe("USDC");
+    expect(outcome.value.clockBySymbol.get(symbol)).toBe("book");
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it.each([null, tradeTime])("does not date an eligible midpoint with the trade clock when book time is %s", async (time) => {
+    vi.setSystemTime(Date.parse(tradeTime) + 601_000);
+    mockFetch([
+      { match: "/book", body: { bids: [["0.9997", "100", 1]], asks: [["0.9999", "100", 1]], time } },
+      { match: "/ticker", body: { bid: "0.9997", ask: "0.9999", price: "0.9998", time: tradeTime } },
+    ]);
+    expect((await fetchCoinbasePrices(["USDT"])).kind).toBe("no-data");
   });
 
   it("rejects a wide product book without falling back to its last trade", async () => {
@@ -339,7 +361,7 @@ describe("fetchCoinbasePrices", () => {
 
   it("returns ok outcome when some products fail and others succeed", async () => {
     mockFetch([
-      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998", time: tradeTime } },
       { match: () => true, outcomes: [new Error("network down")] },
     ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT", "DAI"]);
@@ -350,9 +372,10 @@ describe("fetchCoinbasePrices", () => {
 
   it("records every failed Coinbase product in diagnostics for a partial fan-out", async () => {
     mockFetch([
-      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998", time: tradeTime } },
       { match: "/products/PAXG-USD/ticker", body: {}, status: 404 },
       { match: "/products/AUDD-USDC/ticker", body: {}, status: 404 },
+      { match: "/book", body: {}, status: 404 },
     ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT", "PAXG", "AUDD"]);
 
@@ -405,7 +428,7 @@ describe("fetchCoinbasePrices", () => {
       started.resolve();
       await gate.promise;
       inFlight--;
-      return new Response(JSON.stringify({ price: "1.0000", time: "2026-06-11T12:00:00.000Z" }), {
+      return new Response(JSON.stringify({ bids: [["1.0000", "100", 1]], asks: [["1.0000", "100", 1]], time: tradeTime }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -451,6 +474,9 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
     expect(outcome.value.prices.get("TGBP")).toBeCloseTo(1.35365, 5);
     expect(outcome.value.prices.get("MXNB")).toBeCloseTo(0.0566, 8);
+    expect(outcome.value.quoteBasisBySymbol?.get("MXNB")).toBe("bid-ask-midpoint");
+    expect(outcome.value.quoteBasisBySymbol?.get("USDC")).toBe("last-trade");
+    expect(outcome.value.observedAtBySymbol.has("USDC")).toBe(false);
     expect(outcome.value.prices.has("BTC")).toBe(false);
   });
 
@@ -716,7 +742,7 @@ describe("fetchBitstampPrices", () => {
 
 describe("provider HTTP failures", () => {
   it.each([
-    ["Coinbase", () => fetchCoinbasePrices(["USDT"]), 404, 1],
+    ["Coinbase", () => fetchCoinbasePrices(["USDT"]), 404, 2],
     ["Kraken", () => fetchKrakenPrices(["USDT"]), 503, 2],
     ["Bitstamp", () => fetchBitstampPrices(), 500, 2],
   ] as const)("%s cancels failed responses and returns upstream-error", async (_venue, read, status, attempts) => {

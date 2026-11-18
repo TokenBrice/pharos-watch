@@ -45,12 +45,13 @@ export interface ChainlinkReferenceQuoteSummary {
   fetchErrors: number;
 }
 
-export type ChainlinkFeedOutcome = "success" | "failure";
+export type ChainlinkFeedOutcome = "success" | "out-of-budget" | "failure";
 
 export interface ChainlinkReferenceQuoteSnapshot {
   quotes: Map<string, ChainlinkReferenceQuote>;
   summary: ChainlinkReferenceQuoteSummary;
   perFeedOutcomes: Record<string, ChainlinkFeedOutcome>;
+  outOfBudgetRounds: Record<string, { updatedAt: number; staleAfterSec: number }>;
   failingRuns: Record<string, number>;
 }
 
@@ -195,6 +196,7 @@ type SummaryCounterKey = Exclude<keyof ChainlinkReferenceQuoteSummary, "configur
 interface SingleFeedResult {
   counter: SummaryCounterKey | null;
   quote: ChainlinkReferenceQuote | null;
+  outOfBudgetAt?: number;
 }
 
 async function fetchSingleFeedQuote(
@@ -229,12 +231,13 @@ async function fetchSingleFeedQuote(
       return { counter: "invalidAnswers", quote: null };
     }
     const { answer, updatedAt } = round;
-    if ((nowSec - updatedAt) > feed.staleAfterSec) {
-      return { counter: "staleQuotes", quote: null };
-    }
+    if (updatedAt > nowSec) return { counter: "invalidAnswers", quote: null };
     const price = Number(answer) / (10 ** decimals);
     if (!Number.isFinite(price) || price <= 0) {
       return { counter: "invalidPrices", quote: null };
+    }
+    if (nowSec - updatedAt > feed.staleAfterSec) {
+      return { counter: "staleQuotes", quote: null, outOfBudgetAt: updatedAt };
     }
     return {
       counter: null,
@@ -274,6 +277,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
     fetchErrors: 0,
   };
   const perFeedOutcomes: Record<string, ChainlinkFeedOutcome> = {};
+  const outOfBudgetRounds: ChainlinkReferenceQuoteSnapshot["outOfBudgetRounds"] = {};
 
   throwIfAborted(signal);
   const results = await mapWithConcurrency(
@@ -283,14 +287,17 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   );
 
   CHAINLINK_REFERENCE_FEEDS.forEach((feed, index) => {
-    const { counter, quote } = results[index];
+    const { counter, quote, outOfBudgetAt } = results[index];
     if (counter) {
       summary[counter]++;
     }
     if (quote) {
       quotes.set(feed.pegKey, quote);
     }
-    perFeedOutcomes[feed.pegKey] = quote ? "success" : "failure";
+    if (outOfBudgetAt != null) {
+      outOfBudgetRounds[feed.pegKey] = { updatedAt: outOfBudgetAt, staleAfterSec: feed.staleAfterSec };
+    }
+    perFeedOutcomes[feed.pegKey] = quote ? "success" : counter === "staleQuotes" ? "out-of-budget" : "failure";
   });
 
   summary.usableQuotes = quotes.size;
@@ -299,7 +306,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   for (const feed of CHAINLINK_REFERENCE_FEEDS) {
     const outcome = perFeedOutcomes[feed.pegKey];
     const priorCount = previousFailingRuns?.[feed.pegKey] ?? 0;
-    const nextCount = outcome === "success" ? 0 : priorCount + 1;
+    const nextCount = outcome === "failure" ? priorCount + 1 : 0;
     failingRuns[feed.pegKey] = nextCount;
     if (nextCount > FAILING_RUNS_WARN_THRESHOLD) {
       logWorkerEventArgs("lib", "warn",
@@ -309,7 +316,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   }
 
   if (summary.usableQuotes === 0) {
-    logWorkerEventArgs("lib", "warn",
+    logWorkerEventArgs("lib", summary.staleQuotes === summary.configuredFeeds ? "info" : "warn",
       `[chainlink-feeds] No usable quotes: configured=${summary.configuredFeeds}, ` +
       `decimalsUnavailable=${summary.decimalsUnavailable}, roundDataUnavailable=${summary.roundDataUnavailable}, ` +
       `stale=${summary.staleQuotes}, invalidDecimals=${summary.invalidDecimals}, ` +
@@ -318,5 +325,5 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
     );
   }
 
-  return { quotes, summary, perFeedOutcomes, failingRuns };
+  return { quotes, summary, perFeedOutcomes, outOfBudgetRounds, failingRuns };
 }

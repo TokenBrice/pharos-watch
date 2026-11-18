@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { validatePayloadWithSchema } from "../lib/api-schema";
 import { USER_AGENT } from "../lib/constants";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
-import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, isAdmissibleFxSourceDate } from "../lib/fx-rate-state";
+import { isAdmissibleFxSourceDate } from "../lib/fx-rate-state";
 import type {
   ExchangeRateApiPayload,
   SecondaryCurrencyCandidate,
@@ -35,10 +35,7 @@ const SecondaryCurrencyResponseSchema = z.object({
 
 const ExchangeRateApiResponseSchema = z.object({
   result: z.string().optional(),
-  time_last_update_unix: z.number().int().positive().refine(
-    (timestamp) => timestamp - Math.floor(Date.now() / 1000) <= FX_SOURCE_MAX_FUTURE_SKEW_SEC,
-    "Source timestamp exceeds allowed future skew",
-  ).optional(),
+  time_last_update_unix: z.number().int().positive().optional(),
   time_last_update_utc: z.string().optional(),
   rates: z.record(z.string(), z.number()),
 });
@@ -213,7 +210,10 @@ export async function loadSecondaryCurrencyCandidate(
     : null;
 }
 
-export async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<ExchangeRateApiPayload | null> {
+export async function loadExchangeRateApiPayload(
+  signal?: AbortSignal,
+  syncStartSec = Math.floor(Date.now() / 1000),
+): Promise<ExchangeRateApiPayload | null> {
   const result = await fetchJsonWithRetry(TERTIARY_FX_URL, {
     headers: { "User-Agent": USER_AGENT },
     signal,
@@ -229,6 +229,11 @@ export async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<
   );
   if (!validation.ok) {
     logWorkerEventArgs("handler", "warn", `[sync-fx-rates] ExchangeRate-API payload invalid: ${validation.issues}`);
+    return null;
+  }
+  const updatedAt = validation.data.time_last_update_unix;
+  if (updatedAt != null && updatedAt > syncStartSec) {
+    logWorkerEventArgs("handler", "warn", "[sync-fx-rates] ExchangeRate-API snapshot timestamp follows the generation clock");
     return null;
   }
   if (validation.data.result && validation.data.result !== "success") {

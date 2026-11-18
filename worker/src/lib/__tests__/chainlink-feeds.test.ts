@@ -128,11 +128,16 @@ describe("fetchChainlinkReferenceQuoteSnapshot", () => {
       return null;
     });
 
-    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000, undefined, undefined, {
+      peggedEUR: 3, peggedGBP: 3,
+    });
     expect(snapshot.quotes.size).toBe(0);
     expect(snapshot.summary.usableQuotes).toBe(0);
     expect(snapshot.summary.staleQuotes).toBe(1);
     expect(snapshot.summary.roundDataUnavailable).toBeGreaterThanOrEqual(1);
+    expect(snapshot.perFeedOutcomes).toMatchObject({ peggedEUR: "out-of-budget", peggedGBP: "failure" });
+    expect(snapshot.outOfBudgetRounds).toEqual({ peggedEUR: { updatedAt: 1_763_800_000, staleAfterSec: 21_600 } });
+    expect(snapshot.failingRuns).toMatchObject({ peggedEUR: 0, peggedGBP: 4 });
   });
 
   it("counts malformed decimals words as unavailable", async () => {

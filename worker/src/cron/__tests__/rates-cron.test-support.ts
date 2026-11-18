@@ -39,7 +39,7 @@ export const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
 });
 
 export function frankfurterBody(extraRates: Record<string, number> = {}) {
-  return { base: "USD", date: "2025-06-15", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
+  return { base: "USD", date: "2025-06-13", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
 }
 
 export function secondaryBody(
@@ -158,6 +158,13 @@ const CHAINLINK_FX_CHAINS = {
     type: "evm",
     endpoints: [registryRpcEndpoint("https://rpc.ethereum.test")],
     explorerUrl: "https://etherscan.io",
+  },
+  arbitrum: {
+    chainId: "arbitrum",
+    chainName: "Arbitrum",
+    type: "evm",
+    endpoints: [registryRpcEndpoint("https://rpc.arbitrum.test")],
+    explorerUrl: "https://arbiscan.io",
   },
 } satisfies Record<string, ChainRpcConfig>;
 
@@ -589,6 +596,12 @@ export function makeFxRatesDb({
     ...(stablecoins ? [cacheReadTable("stablecoins", stablecoins)] : []),
     ...(cadence ? [cacheReadTable("sync-fx-rates:cadence", cadence)] : []),
     ...Object.entries(cacheRows).map(([key, row]) => cacheReadTable(key, row)),
+    {
+      match: "SELECT updated_at FROM cache WHERE key = ?",
+      matchBinds: ["fx-oxr-last-attempt"],
+      rows: [],
+      first: cacheRows["fx-oxr-last-attempt"] ? { updated_at: cacheRows["fx-oxr-last-attempt"].updatedAt } : null,
+    },
   ];
   const hasCircuitTable = extraTables.some((table) => table.match.includes("circuit"));
   return mockD1([

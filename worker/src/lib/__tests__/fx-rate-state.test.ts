@@ -7,6 +7,7 @@ import { setCacheIfNewer } from "../db-cache";
 import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
 import {
   buildFxCacheStatus,
+  getEcbFixingClocks,
   getFxReferenceTypeFromState,
   getFxSourceStatus,
   hydrateFxRateState,
@@ -31,6 +32,16 @@ describe("fx-rate-state cadence-aware freshness", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([
+    ["2026-11-13", "13:10", "15:00"],
+    ["2026-06-12", "12:10", "14:00"],
+  ])("stamps the %s fixing at the local concertation and separate publication", (day, observed, published) => {
+    const sec = (clock: string) => Date.parse(`${day}T${clock}:00Z`) / 1000;
+    expect(getEcbFixingClocks(day, sec("10:00"))).toBeNull();
+    expect(getEcbFixingClocks(day, sec(observed))).toEqual({ observedAtSec: sec(observed), publishedAtSec: undefined });
+    expect(getEcbFixingClocks(day, sec(published))).toEqual({ observedAtSec: sec(observed), publishedAtSec: sec(published) });
   });
 
 

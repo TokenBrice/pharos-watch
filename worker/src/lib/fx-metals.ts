@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { derivePegRates } from "@shared/lib/peg-rates";
+import { derivePegRates, normalizePegType } from "@shared/lib/peg-rates";
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "@shared/lib/peg-reference-trust";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-schema";
@@ -10,6 +10,7 @@ import { isFreshFxObservation } from "./fx-rate-state";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "./stablecoins-cache";
 import { z } from "zod";
 import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
+import type { FxMedianContributor } from "./fx-observations";
 
 export type MetalPegKey = "peggedGOLD" | "peggedSILVER";
 
@@ -18,13 +19,14 @@ type MetalResolutionSource = "gold-api.com" | "commodity-peer-median" | "cached"
 interface CommodityPeerMedianReference {
   rates: Partial<Record<MetalPegKey, number>>;
   counts: Partial<Record<MetalPegKey, number>>;
-  updatedAt: number | null;
+  contributorsByPeg: Partial<Record<MetalPegKey, FxMedianContributor[]>>;
 }
 
 interface ResolvedMetalRate {
   rate: number;
   source: MetalResolutionSource;
   updatedAt: number | null;
+  contributors?: FxMedianContributor[];
 }
 
 interface MetalSourceSummary {
@@ -48,52 +50,44 @@ function relativeDivergence(candidate: number, reference: number): number {
   return Math.abs(candidate - reference) / reference;
 }
 
-function deriveCommodityPeerMedianRates(
-  peggedAssets: Parameters<typeof derivePegRates>[0],
-): Pick<CommodityPeerMedianReference, "rates" | "counts"> {
-  const { rates, counts } = derivePegRates(peggedAssets, TRACKED_META_BY_ID);
-  const commodityRates: Partial<Record<MetalPegKey, number>> = {};
-  const commodityCounts: Partial<Record<MetalPegKey, number>> = {};
-
-  for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
-    const rate = rates[pegKey];
-    if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) {
-      commodityRates[pegKey] = Number(rate.toFixed(6));
-      commodityCounts[pegKey] = counts[pegKey] ?? 0;
-    }
-  }
-
-  return { rates: commodityRates, counts: commodityCounts };
-}
-
 export async function loadCommodityPeerMedianReference(
   db: D1Database,
   syncStartSec: number,
 ): Promise<CommodityPeerMedianReference> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
-    return { rates: {}, counts: {}, updatedAt: null };
+    return { rates: {}, counts: {}, contributorsByPeg: {} };
   }
 
-  const observedTimes: number[] = [];
+  const quoteClocks = new Map<string, number>();
   const peers = stablecoinsCacheResult.payload.peggedAssets.filter((asset) => {
-    // Use the same contributor rules as the median, including supply and exclusions.
-    if (Object.keys(deriveCommodityPeerMedianRates([asset]).rates).length === 0) return false;
+    const pegKey = normalizePegType(asset.pegType);
+    if (pegKey !== "peggedGOLD" && pegKey !== "peggedSILVER") return false;
     const freshness = validateCompositePricingSourceFreshness({
       source: asset.priceSource ?? "",
       observedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt,
       observedAtMode: asset.priceObservedAtMode,
       nowSec: syncStartSec,
       requireObservedAt: true,
+      maxFutureSkewSec: 0,
     });
     if (!freshness.accepted || freshness.observedAt == null) return false;
-    observedTimes.push(freshness.observedAt);
+    quoteClocks.set(asset.id, freshness.observedAt);
     return true;
   });
-  return {
-    ...deriveCommodityPeerMedianRates(peers),
-    updatedAt: observedTimes.length > 0 ? Math.min(...observedTimes) : null,
-  };
+  const selected = derivePegRates(peers, TRACKED_META_BY_ID);
+  const result: CommodityPeerMedianReference = { rates: {}, counts: {}, contributorsByPeg: {} };
+  for (const peg of ["peggedGOLD", "peggedSILVER"] as const) {
+    const members = selected.contributors?.[peg];
+    if (!members?.length) continue;
+    const contributors = members.flatMap((member) =>
+      member.assetId ? [{ ...member, assetId: member.assetId, observedAtSec: member.observedAtSec ?? quoteClocks.get(member.assetId) ?? null }] : []);
+    if (contributors.length !== members.length) continue;
+    result.rates[peg] = selected.rates[peg];
+    result.counts[peg] = contributors.length;
+    result.contributorsByPeg[peg] = contributors;
+  }
+  return result;
 }
 
 function summarizeMetalSources(
@@ -142,14 +136,19 @@ export async function resolveMetalReferenceRates(
 ): Promise<MetalsResolution> {
   const resolvedByPeg: Partial<Record<MetalPegKey, ResolvedMetalRate>> = {};
 
-  const resolveProviderUpdatedAt = (candidate: z.infer<typeof MetalPriceSchema> | undefined): number | null => {
-    const updatedAt = candidate?.updatedAt ? Math.floor(Date.parse(candidate.updatedAt) / 1000) : NaN;
-    return Number.isFinite(updatedAt) && updatedAt > 0 && updatedAt <= syncStartSec + 60 ? updatedAt : null;
-  };
-
   const isFreshProviderDated = (pegKey: MetalPegKey, updatedAt: number | null): boolean =>
     updatedAt != null &&
     isFreshFxObservation(updatedAt, "live", syncStartSec, { pegKey, cadence: "intraday" });
+
+  const getPeerClock = (pegKey: MetalPegKey): number | null => {
+    const contributors = commodityPeerMedian.contributorsByPeg[pegKey];
+    if (!contributors?.length || contributors.length !== commodityPeerMedian.counts[pegKey] ||
+        new Set(contributors.map(({ assetId }) => assetId)).size !== contributors.length) return null;
+    const clocks = contributors.flatMap(({ observedAtSec }) =>
+      observedAtSec != null && Number.isSafeInteger(observedAtSec) && observedAtSec > 0 && observedAtSec <= syncStartSec
+        ? [observedAtSec] : []);
+    return clocks.length === contributors.length ? Math.min(...clocks) : null;
+  };
 
   const hasFreshCorroboration = (pegKey: MetalPegKey, candidateRate: number): boolean => {
     const chainlinkRate = freshChainlinkRates[pegKey];
@@ -166,7 +165,7 @@ export async function resolveMetalReferenceRates(
     return typeof medianRate === "number" &&
       medianRate > 0 &&
       medianCount >= MIN_PEER_MEDIAN_CONTRIBUTORS &&
-      isFreshProviderDated(pegKey, commodityPeerMedian.updatedAt) &&
+      isFreshProviderDated(pegKey, getPeerClock(pegKey)) &&
       relativeDivergence(candidateRate, medianRate) <= METAL_CROSS_CHECK_MAX_DIVERGENCE;
   };
 
@@ -182,7 +181,8 @@ export async function resolveMetalReferenceRates(
     return {
       rate,
       source: "commodity-peer-median",
-      updatedAt: commodityPeerMedian.updatedAt,
+      updatedAt: getPeerClock(pegKey),
+      contributors: commodityPeerMedian.contributorsByPeg[pegKey],
     };
   };
 
@@ -201,13 +201,14 @@ export async function resolveMetalReferenceRates(
   const resolveMetal = (pegKey: MetalPegKey, candidate: z.infer<typeof MetalPriceSchema> | undefined): ResolvedMetalRate | null => {
     const candidateRate = candidate?.price;
     const peerMedian = resolvePeerMedian(pegKey);
-    if (typeof candidateRate !== "number" || !(candidateRate > 0)) {
+    const providerTimeMs = candidate?.updatedAt == null ? NaN : Date.parse(candidate.updatedAt);
+    if (typeof candidateRate !== "number" || !(candidateRate > 0) || providerTimeMs > syncStartSec * 1000) {
       return peerMedian ?? resolveCached(pegKey);
     }
 
     const incumbentRate = prevRates[pegKey];
     const hasIncumbent = typeof incumbentRate === "number" && Number.isFinite(incumbentRate) && incumbentRate > 0;
-    const candidateUpdatedAt = resolveProviderUpdatedAt(candidate);
+    const candidateUpdatedAt = Number.isFinite(providerTimeMs) && providerTimeMs >= 1000 ? Math.floor(providerTimeMs / 1000) : null;
     const candidateIsProviderDated = candidateUpdatedAt != null;
     // An undated quote is not provider-dated evidence: it may never use the
     // stale-incumbent exemption (docs: a fresh, bounded, provider-dated quote).
@@ -228,7 +229,10 @@ export async function resolveMetalReferenceRates(
       }
     }
 
-    if (peerMedian) {
+    const spotInBudget = isFreshProviderDated(pegKey, candidateUpdatedAt);
+    if (peerMedian && !spotInBudget && peerMedian.updatedAt != null &&
+        (candidateUpdatedAt == null || peerMedian.updatedAt >= candidateUpdatedAt)) return peerMedian;
+    if (peerMedian && isFreshProviderDated(pegKey, peerMedian.updatedAt)) {
       const divergence = relativeDivergence(candidateRate, peerMedian.rate);
       if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {
         logWorkerEventArgs("lib", "warn",
