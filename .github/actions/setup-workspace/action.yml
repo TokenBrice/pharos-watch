@@ -241,11 +241,35 @@ runs:
 
     - if: ${{ inputs.install-playwright-firefox == 'true' }}
       shell: bash
-      # A healthy install takes under a minute; bound each attempt so a stalled
-      # apt mirror retries once instead of consuming the caller's job budget (#1702).
       run: |
+        sudo tee /etc/apt/apt.conf.d/99pharos-ci > /dev/null <<'APT_CONFIG'
+        Acquire::http::Timeout "20";
+        Acquire::https::Timeout "20";
+        Acquire::Retries "2";
+        DPkg::Lock::Timeout "60";
+        APT_CONFIG
+
         for attempt in 1 2; do
-          if timeout 6m npx --no-install playwright install --with-deps firefox; then exit 0; fi
+          if timeout --kill-after=10s 6m npx --no-install playwright install --with-deps firefox; then
+            exit 0
+          else
+            status=$?
+          fi
           echo "::warning::Playwright Firefox install attempt ${attempt} failed or exceeded 6 minutes"
+
+          if [[ "$status" == 124 || "$status" == 137 ]]; then
+            # timeout signals its process group, but sudo's package tools can outlive it.
+            sudo pkill -KILL -u root -x 'apt-get|dpkg|dpkg-deb' || [[ "$?" == 1 ]]
+          fi
+          if [[ "$attempt" == 2 ]]; then exit 1; fi
+
+          deadline=$((SECONDS + 60))
+          while sudo fuser -s /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock; do
+            if (( SECONDS >= deadline )); then
+              echo "::error::Timed out waiting for dpkg locks before retrying Firefox install"
+              exit 1
+            fi
+            sleep 2
+          done
+          sudo timeout --kill-after=10s 60s dpkg --configure -a
         done
-        exit 1
