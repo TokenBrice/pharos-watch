@@ -6,7 +6,7 @@ import { SOCIAL_SCORECARD_DAILY_QUOTA } from "@shared/lib/pages-storage";
 import { sha256Hex } from "@shared/lib/sha256";
 import { SOCIAL_SCORECARD_OBJECT_PREFIX, type SocialPreviewBucket } from "@shared/lib/social-preview-storage";
 import {
-  SOCIAL_SCORECARD_METADATA_HEADER,
+  SOCIAL_SCORECARD_METADATA_HEADER, SOCIAL_SCORECARD_REASON_HEADER,
   encodeSocialScorecardMetadata, openSocialScorecard, sealSocialScorecard,
 } from "@shared/lib/social-scorecard";
 import {
@@ -152,16 +152,18 @@ describe("retained dated scorecard Pages routes", () => {
     expect(publicRead.status).toBe(200);
   });
 
-  it("reuses existing records and conditionally resolves concurrent creation without overwriting", async () => {
-    const { post, bucket, writes, store } = setup();
+  it("reuses existing records without quota and conditionally resolves concurrent creation without overwriting", async () => {
+    const { post, bucket, writes, store, quotaRows } = setup();
     const responses = await Promise.all([post(), post()]);
     expect(responses.map((response) => response.status)).toEqual([201, 201]);
     expect(await responses[0].json()).toEqual(await responses[1].json());
     expect(store.size).toBe(1);
     expect(writes).toHaveLength(1);
     const attempts = bucket.put.mock.calls.length;
+    const charged = quotaRows();
     expect((await post()).status).toBe(201);
     expect(bucket.put).toHaveBeenCalledTimes(attempts);
+    expect(quotaRows()).toEqual(charged);
   });
 
   it("never replaces a corrupt existing object or trusts an unverified conditional winner", async () => {
@@ -191,6 +193,17 @@ describe("retained dated scorecard Pages routes", () => {
     expect(html).toContain("8 rated of 10 stablecoins; 1 not rated; 1 unavailable");
     expect(html).toContain('href="https://pharos.watch/safety-scores/"');
     expect(html).not.toContain("published grade");
+  });
+
+  it("answers a not-rated coin definitively and never seals a grade it lacks", async () => {
+    const { create, metadata, image, bucket, quotaRows } = setup();
+    const upstream = (response: Response) => ({ SITE_API: { fetch: vi.fn(async () => response) } });
+    const refused = await create(upstream(new Response("Dated scorecard unavailable", { status: 404, headers: { [SOCIAL_SCORECARD_REASON_HEADER]: "not-rated" } })));
+    expect([refused.status, refused.headers.get(SOCIAL_SCORECARD_REASON_HEADER), refused.headers.has("Retry-After")]).toEqual([404, "not-rated", false]);
+    metadata.subject = { kind: "stablecoin", id: "usdc-circle", name: "USD Coin", symbol: "USDC", score: null, grade: "NR", ratingStatus: "not-rated" };
+    expect((await create(upstream(new Response(image, { headers: { "Content-Type": "image/png", [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) } })))).status).toBe(503);
+    expect(bucket.put).not.toHaveBeenCalled();
+    expect(quotaRows()).toEqual([]);
   });
 
   it("uses only the canonical public OG lane, including over a service binding", async () => {
@@ -331,19 +344,29 @@ describe("retained dated scorecard Pages routes", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("enforces durable 20/IP UTC-day attempt limits and does not consume global capacity for refused IPs", async () => {
-    const { post, fetchMock, quotaRows } = setup();
+  it("enforces durable 20/IP UTC-day creation limits, never on re-shares, and does not consume global capacity for refused IPs", async () => {
+    const { post, fetchMock, quotaRows, metadata } = setup();
     const ip = "192.0.2.254";
     const hash = await hashClientIp(`social-scorecard:${ip}`, ipSecret);
-    for (let i = 0; i < 20; i++) expect((await post(undefined, { "CF-Connecting-IP": ip })).status).toBe(201);
+    const edition = (offset: number) => { metadata.asOfSec = now - 120 - offset; };
+    for (let i = 0; i < 20; i++) {
+      edition(i);
+      expect((await post(undefined, { "CF-Connecting-IP": ip })).status).toBe(201);
+    }
+    edition(20);
     const rejected = await post(undefined, { "CF-Connecting-IP": ip });
     expect(rejected.status).toBe(429);
     expect(Number(rejected.headers.get("Retry-After"))).toBe(Math.ceil((Date.parse(`${quotaDate}T00:00:00Z`) + 86_400_000 - now * 1000) / 1000));
-    expect(quotaRows()).toEqual([
+    const charged = [
       { quota_date: quotaDate, quota_key: hash, count: 20 },
       { quota_date: quotaDate, quota_key: "global", count: 20 },
-    ].sort((a, b) => a.quota_key.localeCompare(b.quota_key)));
-    expect(fetchMock).toHaveBeenCalledTimes(20);
+    ].sort((a, b) => a.quota_key.localeCompare(b.quota_key));
+    expect(quotaRows()).toEqual(charged);
+    // Dedupe precedes reservation: an exhausted IP can still re-share a sealed edition.
+    edition(7);
+    expect((await post(undefined, { "CF-Connecting-IP": ip })).status).toBe(201);
+    expect(quotaRows()).toEqual(charged);
+    expect(fetchMock).toHaveBeenCalledTimes(22);
   });
 
   it("atomically bounds concurrent global attempts without creating refused client rows", async () => {
@@ -353,7 +376,7 @@ describe("retained dated scorecard Pages routes", () => {
     expect(responses.map((response) => response.status).sort()).toEqual([201, 429]);
     expect(quotaRows().filter((row) => row.quota_key !== "global").map((row) => row.count)).toEqual([1]);
     expect(quotaRows().find((row) => row.quota_key === "global")?.count).toBe(2_000);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("refunds the first reservation when an IP refuses, using the original UTC day across midnight", async () => {
@@ -371,7 +394,7 @@ describe("retained dated scorecard Pages routes", () => {
     expect(quotaRows().find((row) => row.quota_key === "global")?.count).toBe(0);
     expect(quotaRows().find((row) => row.quota_key === hash)?.count).toBe(20);
     expect(quotaRows().every((row) => row.quota_date === quotaDate)).toBe(true);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("prunes expired counters in bounded indexed batches and starts a fresh UTC-day bucket", async () => {
@@ -382,6 +405,7 @@ describe("retained dated scorecard Pages routes", () => {
     seedQuota("keep", 1, retained);
     expect((await post()).status).toBe(201);
     expect(quotaRows().filter((row) => row.quota_date === expired)).toHaveLength(44);
+    metadata.asOfSec -= 1;
     expect((await post()).status).toBe(201);
     expect(quotaRows().some((row) => row.quota_date === expired)).toBe(false);
     expect(quotaRows().some((row) => row.quota_date === retained)).toBe(true);
@@ -399,12 +423,12 @@ describe("retained dated scorecard Pages routes", () => {
     });
     expect((await post()).status).toBe(503);
     expect(quotaRows()).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
     setQuotaRunHandler(null);
     expect((await post()).status).toBe(201);
   });
 
-  it.each(["upstream", "metadata", "identity", "pixels", "stale", "observation", "future", "revision"])("counts accepted attempts on %s capture faults without retaining a partial edition", async (fault) => {
+  it.each(["upstream", "metadata", "identity", "pixels", "stale", "observation", "future", "revision"])("reserves nothing on %s capture faults and retains no partial edition", async (fault) => {
     const { post, metadata, image, bucket, quotaRows } = setup();
     if (fault === "identity") metadata.subject.id = "usdt-tether";
     if (fault === "pixels") image[32] ^= 1;
@@ -416,7 +440,7 @@ describe("retained dated scorecard Pages routes", () => {
     mockFetch([{ match: API_PATHS.ogScorecard("usdc-circle"), respond: () => new Response(image, { status: fault === "upstream" ? 503 : 200, headers: { "Content-Type": "image/png", ...(fault === "metadata" ? {} : { [SOCIAL_SCORECARD_METADATA_HEADER]: encodeSocialScorecardMetadata(metadata) }) } }) }], { requireMatch: true });
     expect((await post()).status).toBe(503);
     expect(bucket.put).not.toHaveBeenCalled();
-    expect(quotaRows().map((row) => row.count)).toEqual([1, 1]);
+    expect(quotaRows()).toEqual([]);
   });
 
   it("reads old renderer editions but never substitutes live data for missing or corrupt retained identities", async () => {
@@ -440,6 +464,7 @@ describe("retained dated scorecard Pages routes", () => {
     expect((await get("a".repeat(64))).status).toBe(503);
     bucket.put.mockRejectedValueOnce(new Error("R2 unavailable"));
     expect((await post()).status).toBe(503);
-    expect(quotaRows().find((row) => row.quota_key === "global")?.count).toBe(2);
+    // Only the write outage follows a reservation; the dedupe read failed before one.
+    expect(quotaRows().find((row) => row.quota_key === "global")?.count).toBe(1);
   });
 });

@@ -239,40 +239,30 @@ describe("Pages artifact input profile", () => {
   it.each([
     { preexisting: true, gateFails: false }, { preexisting: true, gateFails: true },
     { preexisting: false, gateFails: false }, { preexisting: false, gateFails: true },
-  ])("restores the entire owned preview directory with its map/signature ($preexisting, $gateFails)", async ({ preexisting, gateFails }) => {
+  ])("restores the preview map but never copies the rendered preview directory ($preexisting, $gateFails)", async ({ preexisting, gateFails }) => {
     const root = makeRoot();
     dataFixture(root);
     const map = "src/generated/social-preview-images.json";
-    const signature = "scripts/maintenance/state/social-preview-images.json";
-    write(root, "public/og/unowned.png", "unrelated asset");
     if (preexisting) {
       write(root, "public/og/v2/original.png", "original bytes");
       write(root, map, "original map");
-      write(root, signature, "original signature");
     }
     const previewArtifact = GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "social-preview-images");
-    expect(previewArtifact?.outputPaths).toContain("public/og/v2");
+    expect(previewArtifact?.outputPaths).toEqual([map]);
     spawn.mockImplementation((_program: string, args: string[]) => {
       if (args.includes("generated:post-refresh")) {
-        write(root, "public/og/v2/original.png", "replayed bytes");
-        write(root, "public/og/v2/unpublished.png", "new replay-only image");
+        // Input-addressed: a replay only adds files; an existing name is never rewritten.
+        write(root, "public/og/v2/replayed.png", "replay-only image");
         write(root, map, "replayed map");
-        write(root, signature, "replayed signature");
       }
       return { status: gateFails && args.includes("check:pages-release") ? 1 : 0, signal: null };
     });
     const result = runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
     if (gateFails) await expect(result).rejects.toThrow(/pages-release-artifact-gates/);
     else await expect(result).resolves.toMatchObject({ dataStatus: "degraded-data" });
-    if (preexisting) {
-      expect(readdirSync(join(root, "public/og/v2"))).toEqual(["original.png"]);
-      expect(readFileSync(join(root, "public/og/v2/original.png"), "utf8")).toBe("original bytes");
-      expect(readFileSync(join(root, map), "utf8")).toBe("original map");
-      expect(readFileSync(join(root, signature), "utf8")).toBe("original signature");
-    } else {
-      for (const path of ["public/og/v2", map, signature]) expect(existsSync(join(root, path))).toBe(false);
-    }
-    expect(readFileSync(join(root, "public/og/unowned.png"), "utf8")).toBe("unrelated asset");
+    expect(readdirSync(join(root, "public/og/v2")).sort()).toEqual(preexisting ? ["original.png", "replayed.png"] : ["replayed.png"]);
+    if (preexisting) expect(readFileSync(join(root, map), "utf8")).toBe("original map");
+    else expect(existsSync(join(root, map))).toBe(false);
   });
 
   it("considers only unexpired identity-matched main artifacts, newest first", () => {

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
 import sharp from "sharp";
@@ -53,32 +53,23 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       return [name, resolve(root, "worker", path)];
     })),
   }));
+  const logo = readFileSync(resolve(root, "public/logos/2-usdc.svg"), "utf8");
   writeFileSync(entry, `
-    import { createElement } from "react";
-    import { CardFrame } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/shared.tsx"))};
-    import { RouteCard } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/route-card.tsx"))};
     const row = ${JSON.stringify(row)};
     const db = { prepare() { return { bind() { return { first: async () => row }; } }; } };
+    // A render's one outbound request, the coin's registered logo, answered locally.
+    const logoRequests = [];
+    globalThis.fetch = async (input) => {
+      logoRequests.push(String(input));
+      return new Response(${JSON.stringify(logo)}, { headers: { "Content-Type": "image/svg+xml" } });
+    };
     export default {
       async fetch(request) {
-        if (new URL(request.url).pathname.startsWith("/scorecard/")) {
-          // Exercise the same cold request-time loading boundary as production OG.
-          const { handleScorecardOg } = await import(${JSON.stringify(resolve(root, "worker/src/api/og-scorecard.tsx"))});
-          return handleScorecardOg(db, new URL(request.url).pathname.split("/").pop());
-        }
-        // Load only the renderer leaf inside a request, after startup.
-        const { renderPng } = await import(${JSON.stringify(resolve(root, "worker/src/lib/og-render.ts"))});
-        const element = new URL(request.url).pathname === "/route"
-          ? createElement(RouteCard, {
-              cardKey: "flows", variant: "live",
-              data: { hero: "≥ $200.0M", context: "Runtime smoke", support: ["Printed $1", "Shredded $1"], stamp: "As of 12 Oct 2026, 14:05 UTC" },
-            })
-          : createElement(CardFrame, {
-              title: "Pharos", lastUpdated: "Runtime smoke",
-              children: createElement("div", null, "Stablecoin analytics"),
-            });
-        const image = await renderPng(element);
-        return new Response(image, { headers: { "Content-Type": "image/png" } });
+        const path = new URL(request.url).pathname;
+        if (path === "/logo-requests") return Response.json(logoRequests);
+        // Exercise the same cold request-time loading boundary as production OG.
+        const { handleScorecardOg } = await import(${JSON.stringify(resolve(root, "worker/src/api/og-scorecard.tsx"))});
+        return handleScorecardOg(db, path.split("/").pop());
       },
     };
   `);
@@ -86,22 +77,21 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       config, local: true, persist: false, logLevel: "error", port: 0,
       experimental: { disableExperimentalWarning: true, disableDevRegistry: true },
     });
-    // Cold initialization, isolate reuse, route layout and both retained-card
-    // layouts: an SVG-only mock cannot catch Satori's multi-child div failures.
-    for (const path of ["/", "/", "/route", "/scorecard/usdc-circle", "/scorecard/safety-scores"]) {
+    // Cold initialization, then isolate reuse, across both retained-card layouts:
+    // an SVG-only mock cannot catch Satori's multi-child div failures.
+    for (const path of ["/scorecard/usdc-circle", "/scorecard/safety-scores", "/scorecard/usdc-circle"]) {
       const response = await worker.fetch(path);
       expect(response.status, response.status === 200 ? path : await response.text()).toBe(200);
       expect(response.headers.get("Content-Type")).toBe("image/png");
       const bytes = Buffer.from(await response.arrayBuffer());
-      if (path.startsWith("/scorecard/")) {
-        const captured = decodeSocialScorecardMetadata(response.headers.get(SOCIAL_SCORECARD_METADATA_HEADER));
-        expect(captured.imageSha256).toBe(sha256HexFromBytes(bytes));
-        expect(captured.subject).toMatchObject(path.endsWith("usdc-circle") ? { grade: "A", score: 82 } : { ratedCount: 1, totalCount: 1 });
-      }
+      const captured = decodeSocialScorecardMetadata(response.headers.get(SOCIAL_SCORECARD_METADATA_HEADER));
+      expect(captured.imageSha256).toBe(sha256HexFromBytes(bytes));
+      expect(captured.subject).toMatchObject(path.endsWith("usdc-circle") ? { grade: "A", score: 82 } : { ratedCount: 1, totalCount: 1 });
       const image = sharp(bytes);
       expect(await image.metadata()).toMatchObject({ format: "png", width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT });
       await image.raw().toBuffer();
     }
+    expect(await (await worker.fetch("/logo-requests")).json()).toEqual(Array(2).fill("https://pharos.watch/logos/2-usdc.svg"));
   } finally {
     try {
       await worker?.stop();

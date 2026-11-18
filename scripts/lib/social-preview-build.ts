@@ -1,317 +1,202 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { availableParallelism } from "node:os";
+import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
 import sharp from "sharp";
-import {
-  SOCIAL_PREVIEW_HEIGHT,
-  SOCIAL_PREVIEW_REVISION,
-  SOCIAL_PREVIEW_WIDTH,
-  socialPreviewAlt,
-  socialPreviewDescription,
-  type SocialPreviewImage,
-  type SocialPreviewSpec,
-} from "../../shared/lib/social-preview";
+import { SOCIAL_PREVIEW_HEIGHT, SOCIAL_PREVIEW_WIDTH, type SocialPreviewImage } from "../../shared/lib/social-preview";
+import { assertSocialPreviewPng } from "../../shared/lib/social-preview-asset";
+import { DARK } from "../../shared/lib/social-card/tokens";
+import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
 import { getRouteCapabilities } from "../../src/lib/route-capabilities";
 import { atomicWriteFileSync } from "./atomic-artifact-write.mts";
-import { contentSha256, readPngSourceFingerprint } from "./og-image-checks.mts";
-import { buildOgStaticRenderInputs, buildOgStaticSourceFingerprint, runOgStaticBuild, type OgStaticFont } from "./og-static-runner.mts";
-import { OG_RESVG_RUNTIME_SOURCE_PATHS } from "./og-resvg-render.mts";
-import { collectModuleSpecifiers, resolveModulePattern, resolveModuleSpecifier } from "./pr-import-graph.mts";
-import { buildSocialPreviewCatalog } from "./social-preview-catalog";
-import { buildSocialPreviewSvg, SOCIAL_PREVIEW_BACKGROUND, type SocialPreviewLogo } from "./social-preview-render";
+import { renderSvgPngWithResvg } from "./og-resvg-render.mts";
+import { buildSocialCardCatalog } from "./social-card-catalog";
+import { identitiesOf, loadSocialCardAssets, renderSocialCardSvg, SOCIAL_CARD_RENDER_SOURCES, validateSocialCardSpec } from "./social-card-render";
 
-export const SOCIAL_PREVIEW_GENERATOR = "scripts/maintenance/build-og-evergreen.ts";
 export const SOCIAL_PREVIEW_MAP_PATH = "src/generated/social-preview-images.json";
-export const SOCIAL_PREVIEW_SIGNATURE_PATH = "scripts/maintenance/state/social-preview-images.json";
-const HASH = /^[a-f0-9]{64}$/;
-const ASSET_URL = /^\/og\/v2\/[a-z0-9-]+-[a-f0-9]{64}\.png$/;
-const PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+/** The rasterizer joins every drawn identity, as do the satori and resvg package versions. */
+const RASTER_SOURCE = "scripts/lib/og-resvg-render.mts";
+const WARN_BYTES = 300_000;
+const MAX_BYTES = 500_000;
 
-type SourceSha256 = `sha256:${string}`;
-
-interface RetainedImage {
-  kind: "rendered" | "authored";
-  pngSha256: string;
-  sourceFingerprint: string;
-}
-interface PreviewBuildCard {
-  kind: RetainedImage["kind"];
+/** One canonical destination: a drawn card or an authored PNG kept as-is. */
+export type SocialPreviewEntry = {
   path: string;
-  url: string;
-  sourceFingerprint: string;
-  semanticHash: string;
-}
-interface PreviewManifest {
-  generatedBy: typeof SOCIAL_PREVIEW_GENERATOR;
-  revision: typeof SOCIAL_PREVIEW_REVISION;
-  toolchainFingerprint: string;
-  sources: Record<string, SourceSha256>;
-  cards: PreviewBuildCard[];
-  retained: Record<string, RetainedImage>;
+  /** og:title / og:description / og:image:alt: never drawn, never part of the identity. */
+  copy: { title: string; description: string; alt: string };
+} & ({
+  /** Every drawn field and nothing else: equal drawings share one URL. */
+  drawn: unknown;
+  /** Repo-relative files whose bytes shape the pixels: template modules, brand mark, fonts, logos. */
+  inputs: readonly string[];
+  /** Cheap budget, glyph, fit and logo validation; never rasterizes. */
+  validate(): void;
+  /** Only rendering calls this. */
+  svg(): Promise<string>;
+} | {
+  /** Repo-relative authored PNG under public/. */
+  authored: string;
+});
+
+export interface SocialPreviewEntries {
+  entries: readonly SocialPreviewEntry[];
+  /** resvg rasterization inputs shared by every drawn card. */
+  fonts: readonly string[];
+  background: string;
 }
 
 /** Static leaves are discovered, not copied into another hand-maintained route inventory. */
-export function discoverSocialPreviewPages(repoRoot: string): { paths: string[]; files: string[] } {
-  const paths: string[] = [];
-  const files: string[] = [];
+export function discoverSocialPreviewPages(repoRoot: string): string[] {
+  const paths = new Set<string>();
   function visit(directory: string, segments: string[]): void {
     const route = `/${segments.filter((segment) => !segment.startsWith("(")).join("/")}/`.replace(/^\/\//, "/");
     if (getRouteCapabilities(route).chrome !== "public") return;
     for (const entry of readdirSync(resolve(repoRoot, directory), { withFileTypes: true })) {
       if (entry.isDirectory() && !entry.name.startsWith("@") && !entry.name.startsWith("_")) {
         visit(`${directory}/${entry.name}`, [...segments, entry.name]);
-      } else if (entry.isFile() && entry.name === "page.tsx") {
-        files.push(`${directory}/${entry.name}`);
-        if (segments.every((segment) => !segment.startsWith("["))) paths.push(route);
+      } else if (entry.isFile() && entry.name === "page.tsx" && segments.every((segment) => !segment.startsWith("["))) {
+        paths.add(route);
       }
     }
   }
   visit("src/app", []);
-  return { paths: [...new Set(paths)].sort(), files: files.sort() };
+  return [...paths].sort();
 }
 
-function fonts(repoRoot: string): OgStaticFont[] {
-  return [
-    { key: "display", family: "Geist", file: resolve(repoRoot, "src/assets/fonts/originals/Geist-Bold.ttf"), weight: 700 },
-    { key: "editorial", family: "Newsreader", file: resolve(repoRoot, "src/assets/fonts/originals/Newsreader-Variable.ttf"), weight: "200 800" },
-    { key: "body", family: "Geist", file: resolve(repoRoot, "src/assets/fonts/originals/Geist-Regular.ttf"), weight: 400 },
-    { key: "mono", family: "Geist Mono", file: resolve(repoRoot, "src/assets/fonts/originals/GeistMono-Regular.ttf"), weight: 400 },
-  ];
-}
-
-/** Runtime import closure plus the exact files read outside imports (shards, brand, fonts, covers, page membership). */
-function sourceManifest(repoRoot: string, exactFiles: readonly string[]): Record<string, SourceSha256> {
-  const pending = [SOCIAL_PREVIEW_GENERATOR];
-  const files = new Set(exactFiles);
-  const visited = new Set<string>();
-  while (pending.length) {
-    const file = pending.pop()!;
-    if (visited.has(file)) continue;
-    visited.add(file);
-    files.add(file);
-    if (!/\.[cm]?[jt]sx?$/.test(file)) continue;
-    const parsed = collectModuleSpecifiers(readFileSync(resolve(repoRoot, file), "utf8"));
-    if (parsed.unterminated) throw new Error(`Cannot close social preview source inputs: ${file}: ${parsed.unterminated}`);
-    for (const specifier of parsed.specifiers) {
-      const target = resolveModuleSpecifier(specifier, file, { cwd: repoRoot });
-      if (target.kind === "unresolved") throw new Error(`Cannot close social preview source inputs: ${target.reason}`);
-      if (target.kind === "file") pending.push(target.file);
-    }
-    for (const pattern of parsed.patterns) {
-      const expanded = resolveModulePattern(pattern, file, { cwd: repoRoot });
-      if (expanded.unresolved) throw new Error(`Cannot close social preview source inputs: ${expanded.unresolved}`);
-      pending.push(...expanded.files);
-    }
-  }
-  return Object.fromEntries([...files].sort().map((file): [string, SourceSha256] => [file, `sha256:${contentSha256(readFileSync(resolve(repoRoot, file)))}`]));
-}
-
-function assertPngDimensions(bytes: Buffer, label: string): void {
-  if (bytes.length < 33 || !bytes.subarray(0, 8).equals(PNG_MAGIC) || bytes.toString("ascii", 12, 16) !== "IHDR"
-    || bytes.readUInt32BE(16) !== SOCIAL_PREVIEW_WIDTH || bytes.readUInt32BE(20) !== SOCIAL_PREVIEW_HEIGHT) {
-    throw new Error(`Social preview must be a ${SOCIAL_PREVIEW_WIDTH}×${SOCIAL_PREVIEW_HEIGHT} PNG: ${label}`);
-  }
-}
-
-/** Existing hash URLs are verified or rejected, never repaired by overwriting/rebaselining their bytes. */
-export function verifyImmutableSocialPreview(bytes: Buffer, expected: { sourceFingerprint: string; pngSha256?: string; kind?: RetainedImage["kind"] }, label: string): RetainedImage {
-  assertPngDimensions(bytes, label);
-  const kind = expected.kind ?? "rendered";
-  const pngSha256 = contentSha256(bytes);
-  const actualSource = kind === "authored" ? pngSha256 : readPngSourceFingerprint(bytes);
-  if (!HASH.test(expected.sourceFingerprint) || actualSource !== expected.sourceFingerprint) {
-    throw new Error(`Immutable social preview source mismatch: ${label}. Restore its original bytes; changed source needs a new URL.`);
-  }
-  if (expected.pngSha256 !== undefined && pngSha256 !== expected.pngSha256) {
-    throw new Error(`Immutable social preview bytes changed: ${label}. Restore the retained artifact; generation cannot rebaseline it.`);
-  }
-  return { kind, pngSha256, sourceFingerprint: expected.sourceFingerprint };
-}
-
-function readRetainedManifest(path: string): Record<string, RetainedImage> {
-  if (!existsSync(path)) return {};
-  const manifest: unknown = JSON.parse(readFileSync(path, "utf8"));
-  if (!manifest || typeof manifest !== "object" || !("generatedBy" in manifest) || manifest.generatedBy !== SOCIAL_PREVIEW_GENERATOR
-    || !("revision" in manifest) || manifest.revision !== SOCIAL_PREVIEW_REVISION || !("retained" in manifest)
-    || !manifest.retained || typeof manifest.retained !== "object" || Array.isArray(manifest.retained)) {
-    throw new Error("Invalid retained social preview manifest; restore it rather than discarding immutable history.");
-  }
-  const retained: Record<string, RetainedImage> = {};
-  for (const [url, value] of Object.entries(manifest.retained)) {
-    if (!ASSET_URL.test(url) || !value || typeof value !== "object" || !("pngSha256" in value) || typeof value.pngSha256 !== "string"
-      || !HASH.test(value.pngSha256) || !("sourceFingerprint" in value) || typeof value.sourceFingerprint !== "string" || !HASH.test(value.sourceFingerprint)
-      || !("kind" in value) || (value.kind !== "rendered" && value.kind !== "authored")) {
-      throw new Error(`Invalid retained social preview record: ${url}`);
-    }
-    retained[url] = { kind: value.kind, pngSha256: value.pngSha256, sourceFingerprint: value.sourceFingerprint };
-  }
-  return retained;
-}
-
-function assetUrl(hash: string): string {
-  return `/og/v2/image-${hash}.png`;
-}
-
-export function socialPreviewAssetUrl(spec: SocialPreviewSpec, sourceFingerprint: string, toolchainFingerprint: string): { url: string; semanticHash: string } {
-  const semanticHash = contentSha256(JSON.stringify({ revision: SOCIAL_PREVIEW_REVISION, spec, sourceFingerprint, toolchainFingerprint }));
-  return { url: assetUrl(semanticHash), semanticHash };
-}
-
-function serialize(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
-function publishJson(path: string, content: string, check: boolean): boolean {
-  if (existsSync(path) && readFileSync(path, "utf8") === content) return false;
-  if (check) throw new Error(`Social preview artifact is stale: ${path}. Run npm run build:og-evergreen.`);
-  mkdirSync(resolve(path, ".."), { recursive: true });
-  atomicWriteFileSync(path, content);
-  return true;
-}
-
-export function publishImmutablePng(publicDir: string, url: string, bytes: Buffer, expected: RetainedImage): RetainedImage {
-  verifyImmutableSocialPreview(bytes, expected, url);
-  const destination = resolve(publicDir, url.slice(1));
-  mkdirSync(resolve(destination, ".."), { recursive: true });
-  try {
-    writeFileSync(destination, bytes, { flag: "wx" });
-  } catch (error) {
-    if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") throw error;
-  }
-  return verifyImmutableSocialPreview(readFileSync(destination), expected, url);
-}
-
-/** Admit local resources once; resvg cannot decode every browser-supported raster format. */
-export async function readSocialPreviewLogo(repoRoot: string, path: string): Promise<SocialPreviewLogo> {
-  const match = /^\/logos\/[a-z0-9-]+\.(png|jpe?g|webp|svg)$/i.exec(path);
-  if (!match) throw new Error(`Social preview logo must be a registered local image: ${path}`);
-  const bytes = readFileSync(resolve(repoRoot, `public${path}`));
-  const isSvg = match[1].toLowerCase() === "svg";
-  if (isSvg) {
-    const svg = bytes.toString("utf8");
-    const references = [...svg.matchAll(/\b(?:xlink:)?href\s*=\s*["']([^"']+)["']/gi), ...svg.matchAll(/url\(\s*["']?([^"')\s]+)/gi)];
-    if (/<(?:script|foreignObject)\b|@import/i.test(svg) || references.some((reference) => !reference[1].startsWith("#") && !reference[1].startsWith("data:image/"))) {
-      throw new Error(`Social preview logo has an external or executable resource: ${path}`);
-    }
-  }
-  let encoded = bytes;
-  if (!isSvg) {
-    try {
-      encoded = await sharp(bytes).rotate().png().toBuffer();
-    } catch (cause) {
-      throw new Error(`Social preview logo could not be decoded: ${path}`, { cause });
-    }
-  }
+/**
+ * Adapter boundary: the catalog and renderer plug in here and nowhere else.
+ * Identity, rasterization, storage and the route map never inspect a spec.
+ */
+export async function loadSocialPreviewEntries(repoRoot: string): Promise<SocialPreviewEntries> {
+  const catalog = buildSocialCardCatalog(discoverSocialPreviewPages(repoRoot));
+  const assets = await loadSocialCardAssets(repoRoot, catalog.cards);
   return {
-    dataUri: `data:${isSvg ? "image/svg+xml" : "image/png"};base64,${encoded.toString("base64")}`,
-    sourceSha256: contentSha256(bytes),
+    // Satori outlines every glyph, so resvg rasterizes without fonts; the font files join identity via the render sources.
+    fonts: [],
+    background: DARK.ground,
+    entries: [
+      ...catalog.cards.map((card): SocialPreviewEntry => {
+        const { path, copy, ...drawn } = card;
+        return {
+          path,
+          copy,
+          drawn,
+          inputs: [...SOCIAL_CARD_RENDER_SOURCES, ...identitiesOf(card).flatMap((identity) => identity.logoPath ? [`public${identity.logoPath}`] : [])],
+          validate: () => validateSocialCardSpec(card, assets),
+          svg: () => renderSocialCardSvg(card, assets),
+        };
+      }),
+      ...catalog.authored.map(({ path, sourcePath, copy }): SocialPreviewEntry => ({ path, copy, authored: `public${sourcePath}` })),
+    ],
   };
 }
 
-export async function buildSocialPreviewImages({ repoRoot, check }: { repoRoot: string; check: boolean }): Promise<{ routes: number; rendered: number }> {
-  const pages = discoverSocialPreviewPages(repoRoot);
-  const catalog = buildSocialPreviewCatalog(pages.paths);
-  const brandPath = "public/pharos-mark-on-dark.svg";
-  const brand = readFileSync(resolve(repoRoot, brandPath), "utf8");
-  const logoPaths = new Set(catalog.specs.flatMap(({ visual }) => visual.kind === "identity"
-    ? visual.logoPath ? [visual.logoPath] : []
-    : visual.kind === "contrast" ? [visual.left.logoPath, visual.right.logoPath].filter((path): path is string => path !== undefined) : []));
-  const logoAssets = new Map<string, SocialPreviewLogo>();
-  for (const path of logoPaths) {
-    logoAssets.set(path, await readSocialPreviewLogo(repoRoot, path));
-  }
-  const renderFonts = fonts(repoRoot);
-  const renderInputs = buildOgStaticRenderInputs({ fonts: renderFonts, background: SOCIAL_PREVIEW_BACKGROUND, width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, renderer: "resvg" });
-  const toolchainFingerprint = renderInputs.runtimeFingerprint;
-  const cards = catalog.specs.map((spec) => {
-    const svg = buildSocialPreviewSvg(spec, brand, logoAssets);
-    const sourceFingerprint = buildOgStaticSourceFingerprint(svg, renderInputs);
-    const identity = socialPreviewAssetUrl(spec, sourceFingerprint, toolchainFingerprint);
-    return { ...identity, kind: "rendered" as const, path: spec.path, sourceFingerprint, svg, spec, file: identity.url.slice("/og/v2/".length) };
+/** One slice of a sharded render: the same CLI, the same catalog, only every N-th missing image. */
+function renderShard(repoRoot: string, index: number, count: number): Promise<void> {
+  return new Promise((resolveShard, reject) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "scripts/maintenance/build-og-evergreen.ts", "--shard", `${index}/${count}`], { cwd: repoRoot, stdio: ["ignore", "ignore", "inherit"] });
+    child.on("error", reject);
+    child.on("exit", (code) => (code === 0 ? resolveShard() : reject(new Error(`Social preview render shard ${index}/${count} exited with ${code}`))));
   });
-  const authored = catalog.preserved.map((entry) => {
-    if (!entry.url.startsWith("/") || entry.url.startsWith("//") || entry.url.split("/").includes("..") || !entry.url.endsWith(".png")) throw new Error(`Invalid authored social preview path: ${entry.url}`);
-    const sourceFile = `public${entry.url}`;
-    const bytes = readFileSync(resolve(repoRoot, sourceFile));
-    assertPngDimensions(bytes, entry.url);
-    const pngSha256 = contentSha256(bytes);
-    return { ...entry, sourceFile, bytes, kind: "authored" as const, url: assetUrl(pngSha256), semanticHash: pngSha256, sourceFingerprint: pngSha256, pngSha256 };
-  });
-  const allCards = [...cards, ...authored];
-  if (new Set(allCards.map((card) => card.url)).size !== allCards.length) throw new Error("Social preview asset identity collision");
+}
 
-  const publicDir = resolve(repoRoot, "public");
-  const assetDir = resolve(publicDir, "og/v2");
-  const signaturePath = resolve(repoRoot, SOCIAL_PREVIEW_SIGNATURE_PATH);
-  const retained = readRetainedManifest(signaturePath);
-  for (const [url, record] of Object.entries(retained)) {
-    const path = resolve(publicDir, url.slice(1));
-    if (!existsSync(path)) throw new Error(`Retained social preview is missing: ${url}. Restore its original bytes.`);
-    verifyImmutableSocialPreview(readFileSync(path), record, url);
-  }
-  const currentUrls = new Set(allCards.map((card) => card.url));
-  if (existsSync(assetDir)) {
-    for (const file of readdirSync(assetDir)) {
-      const url = `/og/v2/${file}`;
-      if (!statSync(join(assetDir, file)).isFile() || (!retained[url] && !currentUrls.has(url))) {
-        throw new Error(`Unregistered immutable social preview: ${url}. Restore its retained manifest; assets are never pruned.`);
-      }
-    }
-  }
-  const missing = cards.filter((card) => !existsSync(resolve(publicDir, card.url.slice(1))));
-  for (const card of allCards) {
-    const path = resolve(publicDir, card.url.slice(1));
-    if (existsSync(path)) retained[card.url] = verifyImmutableSocialPreview(readFileSync(path), { kind: card.kind, sourceFingerprint: card.sourceFingerprint, pngSha256: retained[card.url]?.pngSha256 }, card.url);
-  }
-  const missingAuthored = authored.filter((card) => !existsSync(resolve(publicDir, card.url.slice(1))));
-  if (check && (missing.length || missingAuthored.length)) {
-    throw new Error(`Social previews are missing: ${(missing[0] ?? missingAuthored[0]).url}. Run npm run build:og-evergreen.`);
-  }
+function sha256(contents: string | Uint8Array): string {
+  return createHash("sha256").update(contents).digest("hex");
+}
 
-  const exactFiles = [
-    ...pages.files, ...authored.map((card) => card.sourceFile), brandPath, "package.json", "package-lock.json", "tsconfig.json", "tsconfig.base.json", ...OG_RESVG_RUNTIME_SOURCE_PATHS,
-    ...[...logoPaths].map((path) => `public${path}`),
-    ...renderFonts.map((font) => font.file.slice(repoRoot.length + 1)),
-    ...readdirSync(resolve(repoRoot, "data/depeg-events")).filter((file) => /^(?:index|\d{4})\.json$/.test(file)).map((file) => `data/depeg-events/${file}`),
-  ];
-  const sources = sourceManifest(repoRoot, exactFiles);
+/** Every preview PNG: exactly 1200×630, well formed, and inside the WhatsApp-safe size budget. */
+function admitPng(bytes: Uint8Array, label: string): void {
+  assertSocialPreviewPng(bytes);
+  const kilobytes = Math.round(bytes.byteLength / 1000);
+  if (bytes.byteLength > MAX_BYTES) throw new Error(`Social preview exceeds ${MAX_BYTES / 1000} KB: ${label} (${kilobytes} KB)`);
+  if (bytes.byteLength > WARN_BYTES) console.warn(`Social preview exceeds ${WARN_BYTES / 1000} KB: ${label} (${kilobytes} KB)`);
+}
 
-  if (missing.length) {
-    mkdirSync(resolve(repoRoot, "agents"), { recursive: true });
-    const temporary = mkdtempSync(resolve(repoRoot, "agents/social-preview-"));
-    try {
-      const renderedDir = resolve(temporary, "rendered");
-      await runOgStaticBuild({
-        check: false, family: "Evergreen social previews", fonts: renderFonts, generatedBy: SOCIAL_PREVIEW_GENERATOR,
-        publicDir: renderedDir, refreshCommand: "npm run build:og-evergreen", roster: missing,
-        signaturePath: resolve(temporary, "render-signatures.json"), stagingDir: resolve(temporary, "staging"),
-        width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, background: SOCIAL_PREVIEW_BACKGROUND, renderer: "resvg",
-      });
-      for (const card of missing) {
-        const bytes = readFileSync(resolve(renderedDir, card.file));
-        retained[card.url] = publishImmutablePng(publicDir, card.url, bytes, { kind: card.kind, sourceFingerprint: card.sourceFingerprint, pngSha256: contentSha256(bytes) });
-      }
-    } finally {
-      rmSync(temporary, { recursive: true, force: true });
-    }
-  }
-  for (const card of missingAuthored) retained[card.url] = publishImmutablePng(publicDir, card.url, card.bytes, card);
+/** Authored covers are palette re-encoded on admission; their URL hashes the admitted bytes. */
+async function admitAuthoredPng(repoRoot: string, file: string): Promise<Buffer> {
+  if (!/^public\/[\w/-]+\.png$/.test(file)) throw new Error(`Invalid authored social preview path: ${file}`);
+  const bytes = await sharp(readFileSync(resolve(repoRoot, file))).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
+  admitPng(bytes, file);
+  return bytes;
+}
 
-  const imageFields = { width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, type: "image/png" } as const;
-  const map: Record<string, SocialPreviewImage> = Object.fromEntries([
-    ...cards.map((card): [string, SocialPreviewImage] => [card.path, {
-      title: card.spec.subject, description: socialPreviewDescription(card.spec),
-      url: card.url, alt: socialPreviewAlt(card.spec), ...imageFields,
-    }]),
-    ...authored.map((entry): [string, SocialPreviewImage] => [entry.path, {
-      title: entry.title, description: entry.description, url: entry.url, alt: entry.alt, ...imageFields,
-    }]),
-  ].sort(([left], [right]) => left.localeCompare(right)));
-  const manifest: PreviewManifest = {
-    generatedBy: SOCIAL_PREVIEW_GENERATOR, revision: SOCIAL_PREVIEW_REVISION, sources, toolchainFingerprint,
-    cards: allCards.map(({ kind, path, url, sourceFingerprint, semanticHash }) => ({ kind, path, url, sourceFingerprint, semanticHash })),
-    retained: Object.fromEntries(Object.entries(retained).sort(([left], [right]) => left.localeCompare(right))),
+/**
+ * `check` validates in memory and reads no ignored output; `map` (bootstrap)
+ * also writes the route map; `render` also rasterizes every current image that
+ * public/og/v2 lacks. A URL hashes its inputs, so an existing file is that image.
+ */
+export async function buildSocialPreviewImages({ repoRoot, mode, load = loadSocialPreviewEntries, shard }: {
+  repoRoot: string; mode: "check" | "map" | "render"; load?: (repoRoot: string) => Promise<SocialPreviewEntries>;
+  /** Render only the K-th of N slices of the missing images and write no map: a child of a sharded render. */
+  shard?: { index: number; count: number };
+}): Promise<{ routes: number; images: number; rendered: number }> {
+  const { entries, fonts, background } = await load(repoRoot);
+  const digests = new Map<string, string>();
+  const hashFile = (file: string): string => {
+    let digest = digests.get(file);
+    if (digest === undefined) digests.set(file, digest = sha256(readFileSync(resolve(repoRoot, file))));
+    return digest;
   };
-  // Images precede the manifest; the route map is promoted last, never advertising an unretained asset.
-  publishJson(signaturePath, serialize(manifest), check);
-  publishJson(resolve(repoRoot, SOCIAL_PREVIEW_MAP_PATH), serialize(map), check);
-  return { routes: Object.keys(map).length, rendered: missing.length };
+  const require = createRequire(import.meta.url);
+  const packages = {
+    satori: (require("satori/package.json") as { version: string }).version,
+    "@cf-wasm/resvg": (require("@cf-wasm/resvg/package.json") as { version: string }).version,
+  };
+  const images = new Map<string, { svg(): Promise<string> } | { bytes: Buffer }>();
+  const map: Record<string, SocialPreviewImage> = {};
+  for (const entry of entries) {
+    let url: string;
+    if ("authored" in entry) {
+      const bytes = await admitAuthoredPng(repoRoot, entry.authored);
+      url = `/og/v2/image-${sha256(bytes)}.png`;
+      images.set(url, { bytes });
+    } else {
+      const files = [...new Set([RASTER_SOURCE, ...fonts, ...entry.inputs].map(hashFile))].sort();
+      url = `/og/v2/image-${sha256(stableJsonStringifyV1({ drawn: entry.drawn, files, packages }))}.png`;
+      // Each drawing is validated once (budgets, glyphs, fit, logos) without rendering.
+      if (!images.has(url)) {
+        entry.validate();
+        images.set(url, { svg: entry.svg });
+      }
+    }
+    map[entry.path] = { ...entry.copy, url, width: SOCIAL_PREVIEW_WIDTH, height: SOCIAL_PREVIEW_HEIGHT, type: "image/png" };
+  }
+
+  let rendered = 0;
+  if (mode === "render") {
+    const fontBuffers = fonts.map((file) => readFileSync(resolve(repoRoot, file)));
+    mkdirSync(resolve(repoRoot, "public/og/v2"), { recursive: true });
+    // Slices follow the URL's content hash, so they stay stable whatever a sibling already wrote.
+    const missing = [...images].filter(([url]) => !existsSync(resolve(repoRoot, `public${url}`))
+      && (!shard || Number.parseInt(url.slice(-12, -4), 16) % shard.count === shard.index));
+    // resvg dominates (~60 ms per card), so large default batches fan out to child
+    // processes of the same CLI; each URL is its own file, so slices never collide.
+    const children = shard || load !== loadSocialPreviewEntries ? 1 : Math.min(8, Math.max(1, availableParallelism() - 1), Math.ceil(missing.length / 64));
+    if (children > 1) {
+      await Promise.all(Array.from({ length: children }, (_, index) => renderShard(repoRoot, index, children)));
+      rendered = missing.filter(([url]) => existsSync(resolve(repoRoot, `public${url}`))).length;
+      if (rendered !== missing.length) throw new Error(`Sharded render left ${missing.length - rendered} social previews unrendered`);
+    } else {
+      for (const [url, image] of missing) {
+        const bytes = "bytes" in image
+          ? image.bytes
+          : await renderSvgPngWithResvg({ svg: await image.svg(), fontBuffers, background, width: SOCIAL_PREVIEW_WIDTH });
+        admitPng(bytes, url);
+        atomicWriteFileSync(resolve(repoRoot, `public${url}`), bytes);
+        rendered++;
+      }
+    }
+  }
+  if (mode !== "check" && !shard) {
+    // A render writes the map after its images; bootstrap's map names images the Pages build renders.
+    const content = `${JSON.stringify(Object.fromEntries(Object.entries(map).sort(([left], [right]) => left.localeCompare(right))), null, 2)}\n`;
+    const destination = resolve(repoRoot, SOCIAL_PREVIEW_MAP_PATH);
+    if (!existsSync(destination) || readFileSync(destination, "utf8") !== content) {
+      mkdirSync(resolve(destination, ".."), { recursive: true });
+      atomicWriteFileSync(destination, content);
+    }
+  }
+  return { routes: Object.keys(map).length, images: images.size, rendered };
 }

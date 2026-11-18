@@ -69,6 +69,10 @@ describe("generated artifact lifecycle", () => {
     const previews = registry.find((a) => a.id === "social-preview-images")!;
     expect(previews.outputPaths).toContain("src/generated/social-preview-images.json");
     expect(previews.requiredBrowsers).toEqual([]);
+    // Bootstrap writes only the map; the post-refresh Pages build renders the PNGs.
+    const command = (options: Record<string, unknown>) => phases(options).flatMap((p) => p.artifacts).find((a) => a.id === previews.id)?.command;
+    expect(command({ bootstrap: true })).toMatch(/build-og-evergreen\.ts --map-only$/);
+    expect(command({ buildLifecycles: ["post-refresh"] })).toMatch(/build-og-evergreen\.ts$/);
   });
 });
 
@@ -78,7 +82,7 @@ describe("check-mode artifact selection", () => {
       catalog, "postman", "openapi", "world-map", "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects", "stablecoin-client-registry", "stablecoin-worker-full-catalog",
       projection, "depeg-event-search-data",
-      "case-study-client-index", "llms-txt", "changelog-registry",
+      "case-study-client-index", "llms-txt", "changelog-registry", "social-preview-images",
     ];
     expect(registry.filter((a) => a.ciDriftCheck === false).map((a) => a.id).sort())
       .toEqual([...projections, manifest].sort());

@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createR2MeasurementsClient } from "../lib/r2-measurements-client";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import sharp from "sharp";
-import { R2ObjectExistsError, SignedR2ObjectClient, type R2ObjectClient, type R2PutOptions } from "../lib/r2-object-client";
+import { R2ObjectExistsError, SignedR2ObjectClient, type R2PutOptions } from "../lib/r2-object-client";
 import { publishSocialPreviews, runSocialPreviewPublisherCli } from "../maintenance/publish-social-previews";
-import { SOCIAL_PREVIEW_GENERATOR, SOCIAL_PREVIEW_MAP_PATH, SOCIAL_PREVIEW_SIGNATURE_PATH } from "../lib/social-preview-build";
-import { SOCIAL_PREVIEW_REVISION } from "../../shared/lib/social-preview";
+import { SOCIAL_PREVIEW_MAP_PATH } from "../lib/social-preview-build";
 import { SOCIAL_PREVIEW_BUCKET_NAME } from "../../shared/lib/social-preview-storage";
 import { createTempRepoTracker } from "./helpers/test-state";
 
@@ -115,6 +114,26 @@ describe("shared R2 object transport", () => {
     expect(headers.get("authorization")).toContain("SignedHeaders=cache-control;content-type;host;if-none-match;x-amz-content-sha256;x-amz-date;x-amz-meta-png-sha256");
     expect((await client.head("evergreen/v2/card.png"))?.customMetadata).toEqual({ "png-sha256": "original-hash" });
   });
+
+  it("lists a prefix across continuation pages with signed canonical queries", async () => {
+    const page = (keys: string[], token?: string) => new Response(`<ListBucketResult>${keys.map((key) => `<Contents><Key>${key}</Key></Contents>`).join("")}<IsTruncated>${token !== undefined}</IsTruncated>${token === undefined ? "" : `<NextContinuationToken>${token}</NextContinuationToken>`}</ListBucketResult>`);
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(page(["evergreen/v2/a.png"], "a+b/c="))
+      .mockResolvedValueOnce(page(["evergreen/v2/b&amp;c.png"]))
+      .mockResolvedValueOnce(new Response("denied", { status: 403 }));
+    const client = new SignedR2ObjectClient({
+      ...credentials, fetch: fetchMock, bucket: SOCIAL_PREVIEW_BUCKET_NAME,
+      accessKeyEnv: "R2_SOCIAL_PREVIEWS_ACCESS_KEY_ID", secretKeyEnv: "R2_SOCIAL_PREVIEWS_SECRET_ACCESS_KEY",
+    });
+    await expect(client.list("evergreen/v2/")).resolves.toEqual(["evergreen/v2/a.png", "evergreen/v2/b&c.png"]);
+    const [[first, firstInit], [second, secondInit]] = fetchMock.mock.calls;
+    expect(first).toBe("https://account-123.r2.cloudflarestorage.com/pharos-social-previews?list-type=2&prefix=evergreen%2Fv2%2F");
+    expect(second).toBe("https://account-123.r2.cloudflarestorage.com/pharos-social-previews?continuation-token=a%2Bb%2Fc%3D&list-type=2&prefix=evergreen%2Fv2%2F");
+    // Independently calculated with Python hashlib/hmac from the literal canonical requests.
+    expect(new Headers(firstInit?.headers).get("authorization")).toContain("Signature=bbd01e504270fd78a9f5c1965f51d9731844c77b8e34ab50ec6573a2d9534f39");
+    expect(new Headers(secondInit?.headers).get("authorization")).toContain("Signature=06dfd24c8c13589c79abe2e10505180332ca29ecfa3d3dbbf1d7db24cdbb41dc");
+    await expect(client.list("evergreen/v2/")).rejects.toThrow(/LIST.*403/);
+  });
 });
 
 function productionBinding(layout: "legacy" | "unified", name = "SOCIAL_PREVIEWS", bucket = SOCIAL_PREVIEW_BUCKET_NAME) {
@@ -126,24 +145,15 @@ function productionBinding(layout: "legacy" | "unified", name = "SOCIAL_PREVIEWS
 async function publicationFixture(assets = 1) {
   const repoRoot = makeRoot();
   const bytes = await sharp({ create: { width: 1200, height: 630, channels: 4, background: "#15283b" } }).png().toBuffer();
-  const hash = createHash("sha256").update(bytes).digest("hex");
-  const url = `/og/v2/original-${hash}.png`;
-  const record = { kind: "authored", sourceFingerprint: hash, pngSha256: hash };
-  const urls = Array.from({ length: assets }, (_, index) => index === 0 ? url : `/og/v2/retained-${index}-${hash}.png`);
+  const urls = Array.from({ length: assets }, (_, index) => `/og/v2/image-${createHash("sha256").update(`${index}`).digest("hex")}.png`);
+  const url = urls[0];
   const write = (path: string, value: string | Uint8Array) => {
     mkdirSync(dirname(join(repoRoot, path)), { recursive: true });
     writeFileSync(join(repoRoot, path), value);
   };
-  write(SOCIAL_PREVIEW_MAP_PATH, JSON.stringify({ "/": { url } }));
-  write(SOCIAL_PREVIEW_SIGNATURE_PATH, JSON.stringify({
-    generatedBy: SOCIAL_PREVIEW_GENERATOR, revision: SOCIAL_PREVIEW_REVISION,
-    cards: [{ path: "/", url, semanticHash: hash, kind: record.kind, sourceFingerprint: hash }],
-    retained: Object.fromEntries(urls.map((url) => [url, record])),
-  }));
-  for (const assetUrl of urls) {
-    write(`public${assetUrl}`, bytes);
-    write(`out${assetUrl}`, bytes);
-  }
+  // Routes sharing a drawing share one image.
+  write(SOCIAL_PREVIEW_MAP_PATH, JSON.stringify({ "/shared/": { url }, ...Object.fromEntries(urls.map((url, index) => [`/${index}/`, { url }])) }));
+  for (const assetUrl of urls) write(`out${assetUrl}`, bytes);
   const accountStatePath = "scripts/ci/cloudflare-account-state-manifest.json";
   const accountState = JSON.parse(readFileSync(join(process.cwd(), accountStatePath), "utf8"));
   write(accountStatePath, JSON.stringify(accountState));
@@ -168,20 +178,16 @@ async function publicationFixture(assets = 1) {
       : Response.json({ success: true, result: { rules: [] } }));
   });
   const stored = new Map<string, { bytes: Buffer; options: R2PutOptions }>();
-  const client: R2ObjectClient = {
+  const client = {
+    list: vi.fn(async (prefix: string) => {
+      events.push("list");
+      return [...stored.keys()].filter((key) => key.startsWith(prefix));
+    }),
     put: vi.fn(async (key: string, body: Uint8Array, options: R2PutOptions = {}) => {
       events.push("put");
       if (options.ifNoneMatch !== "*") throw new Error("unconditional write refused");
       if (stored.has(key)) throw new R2ObjectExistsError(key);
       stored.set(key, { bytes: Buffer.from(body), options });
-    }),
-    get: vi.fn(async (key: string) => stored.get(key)?.bytes ?? null),
-    head: vi.fn(async (key: string) => {
-      const value = stored.get(key);
-      return value ? {
-        etag: '"opaque-r2-etag"', contentType: value.options.contentType ?? null,
-        contentLength: value.bytes.byteLength, customMetadata: value.options.customMetadata ?? {},
-      } : null;
     }),
   };
   const publish = (options: Parameters<typeof publishSocialPreviews>[0] = {}) =>
@@ -228,22 +234,23 @@ describe("permanent social preview publication", () => {
     }
   });
 
-  it("conditionally creates original bytes, verifies readback and accepts identical existing identities", async () => {
-    const { accountState, accountStatePath, write, publish, stored, bytes, events, fetchImpl, env, client } = await publicationFixture();
+  it("lists once, then creates only missing current images with create-only writes", async () => {
+    const { accountState, accountStatePath, write, publish, stored, bytes, url, events, fetchImpl, env, client } = await publicationFixture();
     accountState.pages.project = "manifest-selected-project";
     write(accountStatePath, JSON.stringify(accountState));
     await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 1, existing: 0, dryRun: false });
     await expect(publish({ execute: true })).resolves.toEqual({ assets: 1, created: 0, existing: 1, dryRun: false });
-    expect(stored.size).toBe(1);
-    expect([...stored.values()][0].bytes).toEqual(bytes);
-    expect(events.slice(0, 3)).toEqual(["project", "lifecycle", "put"]);
+    expect(events).toEqual(["project", "lifecycle", "list", "put", "project", "lifecycle", "list"]);
+    expect(client.list).toHaveBeenCalledWith("evergreen/v2/");
+    expect(stored.get(`evergreen/v2/${url.slice(7)}`)).toEqual({ bytes, options: {
+      ifNoneMatch: "*", contentType: "image/png", cacheControl: "public, max-age=31536000, immutable",
+      customMetadata: { "png-sha256": createHash("sha256").update(bytes).digest("hex") },
+    } });
     for (const [request, init] of fetchImpl.mock.calls) {
       expect(new URL(String(request)).origin).toBe("https://api.cloudflare.com");
       expect(init?.method).toBe("GET");
       expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${env.CLOUDFLARE_API_TOKEN}`);
     }
-    expect(client.get).toHaveBeenCalledTimes(2);
-    expect(client.head).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -312,34 +319,29 @@ describe("permanent social preview publication", () => {
     await rejectConfiguration("lifecycle", Response.json({ success: true, result }), /lifecycle|object deletion/);
   });
 
-  it.each(["bytes", "metadata", "missing-readback"])("rejects permanent collisions/readback failures without overwriting (%s)", async (corruption) => {
-    const { publish, stored, client, bytes } = await publicationFixture();
-    await publish({ execute: true });
-    const value = [...stored.values()][0];
-    if (corruption === "bytes") value.bytes = Buffer.from("changed original bytes");
-    else if (corruption === "metadata") value.options.customMetadata!["png-sha256"] = "c".repeat(64);
-    else vi.mocked(client.get).mockResolvedValueOnce(null);
-    await expect(publish({ execute: true })).rejects.toThrow(/collision|readback/);
-    expect(stored.size).toBe(1);
-    expect(client.put).toHaveBeenLastCalledWith(expect.any(String), bytes, expect.objectContaining({ ifNoneMatch: "*" }));
+  it("accepts a racing create of the same identity but fails on any other create error", async () => {
+    const { publish, client } = await publicationFixture();
+    client.put.mockRejectedValueOnce(new R2ObjectExistsError("evergreen/v2/raced.png"));
+    await expect(publish({ execute: true })).resolves.toMatchObject({ created: 0, existing: 1 });
+    client.put.mockRejectedValueOnce(new Error("R2 PUT returned HTTP 500"));
+    await expect(publish({ execute: true })).rejects.toThrow("HTTP 500");
   });
 
-  it("bounds publication to four workers and drains active readbacks before rejecting", async () => {
+  it("bounds publication to four workers and drains in-flight creates before rejecting", async () => {
     const { publish, client } = await publicationFixture(8);
     const fail = Promise.withResolvers<void>(), drain = Promise.withResolvers<void>();
-    let reads = 0, active = 0, peak = 0, settled = false;
-    const get = vi.mocked(client.get).getMockImplementation()!;
-    vi.mocked(client.get).mockImplementation(async (key) => {
-      const first = reads++ === 0;
+    let puts = 0, active = 0, peak = 0, settled = false;
+    client.put.mockImplementation(async () => {
+      const first = puts++ === 0;
       peak = Math.max(peak, ++active);
       await (first ? fail.promise : drain.promise);
       active--;
-      return first ? null : get(key);
+      if (first) throw new Error("R2 PUT returned HTTP 500");
     });
     const publication = publish({ execute: true }).finally(() => { settled = true; });
-    const rejection = expect(publication).rejects.toThrow(/collision|readback/);
+    const rejection = expect(publication).rejects.toThrow("HTTP 500");
     try {
-      await vi.waitFor(() => expect(reads).toBeGreaterThanOrEqual(4));
+      await vi.waitFor(() => expect(puts).toBe(4));
       expect(peak).toBe(4);
       fail.resolve();
       await vi.waitFor(() => expect(active).toBe(3));
@@ -349,17 +351,18 @@ describe("permanent social preview publication", () => {
       drain.resolve();
     }
     await rejection;
-    expect(peak).toBe(4);
+    expect(puts).toBe(4);
     expect(active).toBe(0);
   });
 
-  it("rejects mismatched export bytes and unregistered PNGs before any remote write", async () => {
-    const { write, url, bytes, publish, client } = await publicationFixture();
-    write(`out${url}`, "different export bytes");
-    await expect(publish({ execute: true })).rejects.toThrow(/differs from original/);
-    write(`out${url}`, bytes);
-    write("out/og/v2/orphan.png", bytes);
-    await expect(publish({ execute: true })).rejects.toThrow(/Unregistered/);
-    expect(client.put).not.toHaveBeenCalled();
+  it("rejects a current image missing from or malformed in the export before any remote call", async () => {
+    const { write, url, repoRoot, rejectBeforeS3, fetchImpl } = await publicationFixture();
+    write(`out${url}`, "<html>not a png</html>");
+    await rejectBeforeS3("Invalid social preview PNG");
+    rmSync(join(repoRoot, `out${url}`));
+    await rejectBeforeS3(/ENOENT/);
+    write(SOCIAL_PREVIEW_MAP_PATH, JSON.stringify({ "/": { url: "/og-card.png" } }));
+    await rejectBeforeS3("Invalid social preview route map URL");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

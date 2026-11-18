@@ -9,8 +9,26 @@ How the self-hosted webfonts under `src/assets/fonts/` are produced and staged. 
 | Geist, Geist Mono | TTFs in `src/assets/fonts/originals/` | `npm run subset:fonts` — TTF→woff2 conversion, all glyphs retained, hinting removed |
 | Newsreader (roman + italic variable) | TTFs in `src/assets/fonts/originals/` | `npm run subset:fonts` — subsetted against `data/fonts/glyphs-allowlist.txt`, `wght 200..800` preserved |
 | Bricolage Grotesque, JetBrains Mono | committed woff2, no tracked original | none — there is no regeneration path; replace the woff2 by hand |
+| Social-card instances (static TTF) | the four faces above | `npm run subset:fonts -- --social-card` — see [Social-card instances](#social-card-instances) |
 
-Runtime loaders are `src/lib/fonts/digest.ts` and `src/lib/fonts/redesign.ts`; `src/lib/fonts/geist.ts` exposes legacy variable names only. `worker/assets/fonts/` keeps its own TTF copies because the OG renderer (Satori) needs raw TTF — it is not an output of this pipeline.
+Runtime loaders are `src/lib/fonts/digest.ts` and `src/lib/fonts/redesign.ts`; `src/lib/fonts/geist.ts` exposes legacy variable names only. The Worker bundles no Geist: its only fonts are the social-card instances in `worker/assets/fonts/social-card/`, an output of this pipeline.
+
+## Social-card instances
+
+Social previews and the dated scorecard (`shared/lib/social-card/`, [OG Images](../og-images.md)) draw with the site's own faces. Satori and resvg cannot read woff2 and render a variable font at its default instance whatever `font-weight` asks for, so `worker/assets/fonts/social-card/` holds static TTF instances that the Node renderer (`scripts/lib/social-card-render.ts`) reads. The Worker's dated scorecard (`worker/src/lib/og-fonts.ts`) bundles the same bytes for the four faces it draws: Bricolage 800 and 600, JetBrains Mono 500 and 700 (about 118 KB); it has no serif.
+
+| File | Source | Instance |
+| --- | --- | --- |
+| `BricolageGrotesque-800.ttf`, `-600.ttf`, `-400.ttf` | `src/assets/fonts/BricolageGrotesque-Variable.woff2` (the 96pt optical cut) | `wght` 800 / 600 / 400 |
+| `JetBrainsMono-500.ttf`, `-700.ttf` | `src/assets/fonts/JetBrainsMono-Variable.woff2` | `wght` 500 / 700; `calt` removed so code ligatures never fuse tickers such as `USD0++` |
+| `Newsreader-72pt-500.ttf` | `originals/Newsreader-Variable.ttf` | `wght` 500, `opsz` 72 |
+| `Newsreader-72pt-Italic-400.ttf` | `originals/Newsreader-Italic-Variable.ttf` | `wght` 400, `opsz` 72 |
+
+Each instance is subset to the drawable range — ASCII, Latin-1, `– ‘ ’ “ ” …` and `€` — with hinting removed and every other layout feature kept. The range must stay equal to the renderer's glyph check (`drawable()` in `shared/lib/social-card/tokens.ts`), which rejects any character outside it before Satori could substitute a fallback glyph; Bricolage has no `¤` or soft hyphen, so the check excludes both.
+
+`--social-card` needs `python3` with fontTools and brotli (for the woff2 sources). It pins the instance, the subset and the name records and keeps the source timestamps, so a rerun on unchanged sources is byte-identical; diffing a rerun is the drift check, since `--check` does not open these files. Their bytes are part of every rendered card's identity, so regenerate them only with a source change and commit them together.
+
+All three families are under the SIL Open Font License 1.1. Their upstream `OFL.txt` files and the fonts' name tables declare no Reserved Font Name (checked 2026-11-17), so the instances keep the upstream family names with an instance suffix ("Bricolage Grotesque 96pt", "JetBrains Mono", "Newsreader 72pt"). Newsreader's name table also carries a trademark notice (name ID 7), which is kept. If a future upstream release declares a Reserved Font Name, rename the instance families before regenerating.
 
 ## Regenerating (`npm run subset:fonts`)
 

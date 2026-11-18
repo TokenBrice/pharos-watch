@@ -42,7 +42,7 @@ The marker census starts with the core non-USD registry, using registry names, s
 
 ## Share Card
 
-Canonical metadata and the ordinary Share menu use the generated immutable evergreen `/og/v2/` preview, not a live total or peg-share image ([OG images](./og-images.md#1-route-cards)). `/api/og/page/alt-pegs` remains a compatibility numerical endpoint (`worker/src/api/og-page/alt-pegs.ts`) using `buildNonUsdMarketSnapshot` over the published cache with explicit partial coverage and figure-free failure states; it and legacy `og-alt-pegs.png` are not this page's canonical image selection.
+Canonical metadata and the ordinary Share menu use the generated immutable evergreen `/og/v2/` preview, not a live total or peg-share image ([OG images](./og-images.md#1-route-cards)). The retired `/api/og/page/alt-pegs` card now answers a permanent redirect to that image ([OG images](./og-images.md#8-dynamic-worker-cards-apiog)); legacy `og-alt-pegs.png` remains an inert compatibility asset, not this page's selection.
 
 ## Crawlability And Discoverability
 

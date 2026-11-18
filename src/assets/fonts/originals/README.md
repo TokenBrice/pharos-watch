@@ -16,5 +16,5 @@ Do not delete. Regenerate woff2 with `npm run subset:fonts`.
 | `Newsreader-Variable.ttf` | https://github.com/productiontype/Newsreader (SIL Open Font License) |
 | `Newsreader-Italic-Variable.ttf` | https://github.com/productiontype/Newsreader (SIL Open Font License) |
 
-`worker/assets/fonts/` keeps its own TTF copies for the OG renderer (Satori
-needs raw TTF). Do not touch those.
+The Worker's OG renderer reads only the social-card instances in
+`worker/assets/fonts/social-card/` (see `docs/process/font-assets.md`).

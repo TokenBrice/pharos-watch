@@ -21,6 +21,13 @@ import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import {
+  getListingStatusCategory,
+  hasRedundantName,
+  hasVolatileAmount,
+  normalizeWhitespace,
+  trimTextAtWordBoundary,
+} from "@shared/lib/metadata-copy";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildArticleJsonLd } from "@/lib/json-ld";
@@ -61,13 +68,7 @@ const METHODOLOGY_MARKDOWN_PATHS: ReadonlySet<string> = new Set<string>([
   ...METHODOLOGY_ARCHIVE_PATHS,
 ]);
 
-export function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function trimTrailingPunctuation(text: string): string {
-  return text.replace(/[.!?]+$/, "");
-}
+export { hasRedundantName, hasVolatileAmount, normalizeWhitespace, trimTextAtWordBoundary };
 
 function canonicalPathname(canonical: string): string | null {
   try {
@@ -109,18 +110,6 @@ function getMarkdownAlternateForCanonical(canonical: string): string | null {
   if (!assetPath) return null;
 
   return hasGeneratedMarkdownAsset(pathname) ? assetPath : null;
-}
-
-export function trimTextAtWordBoundary(text: string, maxLength: number, ellipsis = "…"): string {
-  const normalized = normalizeWhitespace(text);
-  if (normalized.length <= maxLength) return normalized;
-
-  const targetLength = Math.max(1, maxLength - ellipsis.length);
-  const truncated = normalized.slice(0, targetLength);
-  const lastSpace = truncated.lastIndexOf(" ");
-  const safeCutoff = lastSpace > Math.floor(targetLength * 0.6) ? lastSpace : targetLength;
-
-  return `${trimTrailingPunctuation(truncated.slice(0, safeCutoff))}${ellipsis}`;
 }
 
 export type DescriptionPart = string | readonly (string | null | undefined)[] | null | undefined;
@@ -228,14 +217,6 @@ function buildStablecoinTitle(
 ): string {
   const candidates = options.filter((option): option is string => Boolean(option));
   return candidates.find((option) => option.length <= maxCoreLength) ?? candidates[candidates.length - 1] ?? "";
-}
-
-/**
- * Coins like pmUSD carry the same string as both name and symbol; the
- * `${symbol} (${name})` template would render a redundant "pmUSD (pmUSD)".
- */
-export function hasRedundantName(coin: StablecoinMeta): boolean {
-  return coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase();
 }
 
 /** Title qualifier: the curated issuer `brand`, else the name unless it only repeats the symbol. */
@@ -346,23 +327,6 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   return isStablecoinTitleTreatment(coin.id) ? buildActiveTreatmentTitle(coin) : buildActiveControlTitle(coin);
 }
 
-/**
- * Amounts that drift after a snippet is cached: supply, AUM or TVL figures,
- * magnitudes such as "$1.2B" or "5M USDC", and approximations like
- * "~HK$527k". Deliberately broad; a fixed "$1" peg or "1:1" is not matched.
- */
-const VOLATILE_AMOUNT_PATTERNS: readonly RegExp[] = [
-  /~\s?[A-Z]{0,3}[$€£¥]?\d/,
-  /(?:[A-Z]{0,3}\$|[€£¥])\s?\d[\d,.]*\s?(?:[kKmMbBtT]|bn|mn|thousand|million|billion|trillion)\b/,
-  /\b\d[\d,.]*\s?(?:[MB]|bn|mn|million|billion|trillion)\b/,
-  /\b(?:AUM|TVL)\b/,
-  /\b(?:circulating|in circulation|market cap)\b/i,
-];
-
-export function hasVolatileAmount(text: string): boolean {
-  return VOLATILE_AMOUNT_PATTERNS.some((pattern) => pattern.test(text));
-}
-
 /** The curated `oneLiner`, unless it is missing or carries an amount that would go stale in the snippet cache. */
 function getMetadataOneLiner(coin: StablecoinMeta): string | null {
   const oneLiner = coin.oneLiner ? normalizeWhitespace(stripTermMarkup(coin.oneLiner)) : "";
@@ -409,15 +373,6 @@ export function getLatestDatedMilestoneDate(coin: Pick<StablecoinMeta, "mileston
       /^\d{4}-\d{2}-\d{2}$/.test(milestone.date) && (!latest || milestone.date > latest) ? milestone.date : latest,
     null,
   );
-}
-
-/** Plain-language category for a quarantine or delisting; the raw review reason stays on the page. */
-function getListingStatusCategory(coin: StablecoinMeta): string {
-  if (coin.status === "quarantined") return "price or supply data under review";
-  const reason = coin.listingStatusReview?.reason ?? "";
-  if (/\bout of scope\b|\bscope delisting\b/i.test(reason)) return "outside the listing scope";
-  if (/wind-down|buyback|redemption ended|shut down|terminat/i.test(reason)) return "issuer wind-down";
-  return "removed from the active listing";
 }
 
 function buildStablecoinDetailDescription(coin: StablecoinMeta): string {

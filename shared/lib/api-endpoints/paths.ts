@@ -1,5 +1,4 @@
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS, type SupplyHistoryWindow } from "../api-query-history";
-import type { OgPageSlug } from "../og-route-cards";
 
 const DEX_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays;
 const YIELD_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.defaultDays;
@@ -163,12 +162,6 @@ export const API_PATHS = {
   chainsDetail: (chainId: string) => buildQueryPath("/api/chains", { chain: chainId }),
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
-  ogStablecoin: (stablecoinId: string) => `/api/og/stablecoin/${encodeURIComponent(stablecoinId)}`,
-  ogChain: (chainId: string) => `/api/og/chain/${chainId}`,
-  ogDepeg: () => "/api/og/depeg",
-  ogSafetyScores: () => "/api/og/safety-scores",
-  ogStabilityIndex: () => "/api/og/stability-index",
-  ogPage: (slug: OgPageSlug) => `/api/og/page/${slug}`,
   ogScorecard: (stablecoinId: string) => `/api/og/v2/scorecard/${encodeURIComponent(stablecoinId)}`,
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {

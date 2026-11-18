@@ -7,7 +7,7 @@ what shipped, what's next, and why.
 
 ## Architecture
 
-[`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed and post metadata. Sitemap dates for post pages derive from the body and the shared renderer only, so a registry-only edit (title, description, cover) does not restamp the sitemap (`scripts/maintenance/generate-sitemap-dates.ts`). Publication dates are authored metadata, not Git modification times or claims of human review.
+[`BLOG_POSTS` and `BlogPost`](../../src/data/blog/index.ts) own metadata; bodies live in `src/data/blog/posts/<slug>.md`. The registry drives the hub, feed and post metadata; post pages share as Open Graph `article`s whose `article:published_time` is `datePublished` at 00:00 UTC. Sitemap dates for post pages derive from the body and the shared renderer only, so a registry-only edit (title, description, cover) does not restamp the sitemap (`scripts/maintenance/generate-sitemap-dates.ts`). Publication dates are authored metadata, not Git modification times or claims of human review.
 
 Post headers credit Pharos and link to `/about/#editorial-ai-policy`. Article bodies use the Georgia editorial register; page chrome stays sans and obeys the One Beam Rule in [DESIGN.md](../../DESIGN.md).
 
@@ -28,7 +28,8 @@ The hub's native cover images declare 1200×630 intrinsic dimensions, lazy loadi
    - **Cover image (optional):** drop the file in `public/blog/` and set
      `coverImage: "/blog/<slug>-cover.png"` + `coverAlt`. Author it **1200×630**
      — it renders atop the post and the hub card in a `1200/630` frame and
-     doubles as the post's social/OG artwork through an immutable hashed copy.
+     doubles as the post's social/OG artwork through an immutable hashed copy,
+     palette re-encoded on admission (generation fails above 500 KB).
      Without a cover, generation produces a post-specific evergreen card. Review the cover file and alt text before publishing.
 3. **Test** the feed and sitemap inventory:
    ```bash

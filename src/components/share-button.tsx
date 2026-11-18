@@ -25,6 +25,8 @@ interface ShareButtonProps {
   label?: string;
   compactAtDesktop?: boolean;
   stablecoinId?: string;
+  /** False when the subject has no published grade to date, such as a not-rated coin. */
+  datedScorecard?: boolean;
 }
 
 async function fetchOgBlob(signal: AbortSignal): Promise<Blob> {
@@ -70,7 +72,7 @@ async function createDatedScorecard(stablecoinId: string, signal: AbortSignal): 
   throw new RequestFailure("http", "/_site-data/scorecard", "Site session required", { status: 401 });
 }
 
-export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = false }: ShareButtonProps) {
+export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = false, datedScorecard = true }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [datedShare, setDatedShare] = useState<SocialScorecardCreated | null>(null);
   const [manualCopyUrl, setManualCopyUrl] = useState<string | null>(null);
@@ -234,7 +236,7 @@ export function ShareButton({ stablecoinId, label = "Share", compactAtDesktop = 
           <Link />
           Copy link
         </DropdownMenuItem>
-        {stablecoinId && (
+        {stablecoinId && datedScorecard && (
           <DropdownMenuItem onSelect={shareDatedScorecard}>
             <Share2 />
             Share dated scorecard

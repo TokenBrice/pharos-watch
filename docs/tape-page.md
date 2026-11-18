@@ -6,7 +6,7 @@ Public `/timeline/` is the cross-class event feed. Internal tape names remain (`
 
 `src/app/timeline/page.tsx` owns shell/metadata, client/controller modules feed state, and `src/components/tape/` controls/cards. `src/lib/tape-digest.ts`, `tape-collapse.ts` and `tape-derive.ts` own grouping/public labels. `GET /api/events` is the dataset, via browser same-origin `/_site-data/events`.
 
-The route metadata is canonical `/timeline/`, noindex/follow and omitted from sitemap/public route inventory. It still requires a destination-specific generated evergreen `/og/v2/` preview: public noindex does not mean homepage-image fallback. The numerical `/api/og/page/timeline` and static `og-timeline.png` remain legacy compatibility URLs, not current metadata selections ([OG Images](./og-images.md#1-route-cards)). Navigation and per-class links remain; indexable trackers, coin pages and homepage provide search entrypoints.
+The route metadata is canonical `/timeline/`, noindex/follow and omitted from sitemap/public route inventory. It still requires a destination-specific generated evergreen `/og/v2/` preview: public noindex does not mean homepage-image fallback. The retired `/api/og/page/timeline` (now a permanent redirect to that image) and static `og-timeline.png` remain legacy compatibility URLs, not current metadata selections ([OG Images](./og-images.md#1-route-cards)). Navigation and per-class links remain; indexable trackers, coin pages and homepage provide search entrypoints.
 
 ## Visual Identity
 

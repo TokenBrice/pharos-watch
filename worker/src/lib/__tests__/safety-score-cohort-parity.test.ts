@@ -13,7 +13,6 @@ import type { ReportCardsV9CurrentResponse, V9PublicationHealth } from "@shared/
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { handleDependencyGraph } from "../../api/dependency-graph";
-import { loadDependencyMapOgPage } from "../../api/og-page/dependency-map";
 import { loadDdrContext } from "../../cron/depeg-resolver/context";
 import { activeRow } from "../../cron/depeg-resolver/__tests__/depeg-resolver.test-support";
 import { collectSafetyScores } from "../../cron/daily-digest/collectors-risk";
@@ -142,7 +141,7 @@ async function assertReaderParity(stored: string, label: string) {
     const history = await snapshotSafetyGradeHistory(db);
     return {
       graph: { status: graph.status, headers: [...graph.headers], body: await graph.text() },
-      og: await loadDependencyMapOgPage(db, now), collected,
+      collected,
       ddr: await loadDdrContext(db, assets.map((asset, index) => activeRow({
         id: index + 1, stablecoin_id: asset.id, symbol: asset.symbol, started_at: Math.max(0, now - 3_600),
       })), now),

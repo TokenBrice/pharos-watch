@@ -173,6 +173,18 @@ describe("critical CSS worker pool", () => {
     expect(readFileSync(path.join(outDir, "_next/static/css/app.css"), "utf8")).toBe(stylesheet);
   }, 20_000);
 
+  it("moves head share metadata, in order, ahead of the inlined style", async () => {
+    const outDir = fixture();
+    const file = path.join(outDir, "depeg/index.html");
+    const share = '<title>T</title><meta name="description" content="D"><link rel="canonical" href="/d/"><meta property="og:image" content="/i.png"><meta name="twitter:card" content="c"><meta property="article:published_time" content="t">';
+    writeFileSync(file, `<html><head><meta charset="utf-8"><link rel="stylesheet" href="/_next/static/css/app.css"><meta name="robots" content="index">${share}</head><body class="coin"><svg><title>Chart</title></svg></body></html>`);
+    await optimizeCriticalCssPages(outDir, [file], 1);
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain(`<head><meta charset="utf-8">${share}<style>`);
+    expect(after).toMatch(/<\/style><link\b[^>]*data-pharos-critical-css="async">/);
+    expect(after).toContain('<meta name="robots" content="index"></head><body class="coin"><svg><title>Chart</title></svg>');
+  });
+
   it("preserves functional-selector spacing, responsive rules, properties and cascade order", async () => {
     const outDir = fixture();
     const css = [

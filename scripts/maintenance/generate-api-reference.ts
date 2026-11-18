@@ -275,13 +275,13 @@ function renderSupplementalRoute(definition: EndpointDefinition): string {
 function renderOgRoute(): string {
   return [
     "### `GET /api/og/*`", "",
-    "PNG image APIs, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage. Legacy and `/api/og/v2/*` Worker paths remain available for explicitly dated numerical images ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).", "",
-    "Displayed observations are admitted against their own source clocks and budgets; expiry during rendering fails closed, and cache lifetime cannot outlive the earliest displayed source. Safety imagery rechecks the exact accepted publication identity and health after rendering. Chain cards label observed subtotals and withhold incomplete shares; Safety overviews account separately for unavailable members. `/api/og/page/:slug` may return its figure-free timeless card with `X-Og-Reason` when live evidence is unavailable.", "",
+    "Image routes, omitted from OpenAPI. Canonical page discovery uses destination-specific, grade-free `/og/v2/<identity>.png` assets; a missing public preview mapping fails generation rather than substituting the homepage.", "",
+    "The retired numerical families (`stablecoin/:id`, `chain/:id`, `page/:slug`, `depeg`, `safety-scores` and `stability-index`, with or without the `v2/` prefix) answer `301` to the absolute evergreen image of their former destination from a table frozen at retirement; an unknown id redirects to the home image ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)).", "",
     "`/api/og/v2/scorecard/:id` returns an admitted PNG and `X-Pharos-Scorecard` evidence for the Pages dated-sharing creator. `POST /_site-data/scorecard` admits the browser session under the configured Pages rollout policy and seals the resulting metadata and pixels in permanent R2 storage; retained public Pages HTML and PNG are not latest-rating aliases.", "",
     "- **Path:** `/api/og/*` and `/api/og/v2/*`",
-    "- **Parameters:** Route-specific path segments select the supported image family.",
-    "- **Success response schema:** PNG image bytes; not represented by a JSON component schema.",
-    "- **Policy:** API-key authentication exempt; unavailable on the site-data lane; source-bounded response caching.",
+    "- **Parameters:** Route-specific path segments select the retired family and id, or the scorecard subject.",
+    "- **Success response schema:** a bodyless `301` redirect, or scorecard PNG image bytes; not represented by a JSON component schema.",
+    "- **Policy:** API-key authentication exempt; unavailable on the site-data lane; one-year redirect caching, source-bounded scorecard caching.",
   ].join("\n");
 }
 export function renderGeneratedBlock(spec: OpenApiSpec): string {

@@ -152,6 +152,12 @@ describe("ShareButton", () => {
     expect(screen.getByRole("link", { name: "Download dated PNG" }).getAttribute("href")).toBe(imageUrl);
   });
 
+  it("offers no dated scorecard for a coin without a published grade", () => {
+    render(<ShareButton stablecoinId="usdc-circle" datedScorecard={false} />);
+    expect(screen.queryByRole("button", { name: "Share dated scorecard" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeTruthy();
+  });
+
   it("leaves session acquisition disabled when the browser rollout flag is off", async () => {
     vi.stubEnv("NEXT_PUBLIC_PHAROS_SITE_SESSION_CHECK", "false");
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "test-site-key");
