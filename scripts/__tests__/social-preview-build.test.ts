@@ -83,8 +83,8 @@ describe("evergreen destination previews", () => {
     const card: SocialCardDossier = {
       template: "dossier", path: "/stablecoin/format-proof/", label: "Stablecoin dossier",
       copy: { title: "Format proof", description: "Format proof.", alt: "Format proof." },
-      identity: { symbol: "USDS", name: "Sky Dollar", logoPath: "/logos/209-usds.webp" },
-      headline: "USDS", subline: "Sky Dollar", hook: "A WebP logo stays visible", chips: [], lifecycle: "active",
+      identity: { symbol: "BLD", name: "Agoric", logoPath: "/chains/agoric.webp" },
+      headline: "BLD", subline: "Agoric", hook: "A WebP logo stays visible", chips: [], lifecycle: "active",
     };
     const assets = await loadSocialCardAssets(process.cwd(), [card]);
     const bytes = await renderSvgPngWithResvg({ svg: await renderSocialCardSvg(card, assets), fontBuffers: [], background: DARK.ground, width: 1200 });

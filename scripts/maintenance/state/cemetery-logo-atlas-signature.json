@@ -4,7 +4,7 @@
   "cellSize": 48,
   "gutter": 2,
   "webp": {
-    "quality": 63,
+    "quality": 62,
     "alphaQuality": 80,
     "effort": 6
   },
@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "fdf211a5e6b5d9e0939e5549929e124d2b665c051ba5f75c252d6d2839146902",
+  "inputSha256": "729465548c3b1b433b71a390d0a23af11833ab278f62568462371a9af4fd5ef6",
   "image": {
-    "sha256": "e1164d1c4734a61b35c5264b25d40f74a6bf3081e57028a03860fad94a9e68b4",
-    "bytes": 149022,
+    "sha256": "28180363c4848d9c8ee4dd0f1196d3289533ec97393bc42f8ca7ba71fb643e47",
+    "bytes": 148484,
     "width": 798,
     "height": 798
   },
@@ -37,8 +37,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/327-aznd.png",
-      "sha256": "8094c90384312508abc229e7496705b2a9ad8bbad1d8596a4889c6c0187de715",
+      "logo": "/logos/aznd-mu-digital.png",
+      "sha256": "a40d7fa09ae98f0c38baf9eee35ca290989e39f86c66ee444289af9c1983d0ff",
       "kernel": "lanczos3"
     },
     {
@@ -157,8 +157,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/euro3-3a-dao.webp",
-      "sha256": "4d0235fd7831a4e2757f599ba34dcef6c99990116f9f6c961306f9a66716ecc9",
+      "logo": "/logos/euro3-3a-dao.png",
+      "sha256": "532ab9c5ed5b15d614847b95d4f369c52cdb50ded2673f8b0fba9da11429d087",
       "kernel": "lanczos3"
     },
     {
@@ -222,8 +222,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/122-gyen.png",
-      "sha256": "f8bd35941429c38b343913af3cca18403da37120074dca3f21439af6aea72d3f",
+      "logo": "/logos/gyen-gyen.png",
+      "sha256": "dbb349b46f4f19deb9a3947225a4f0f1893760ecd6bd2b0b4eaaef7826bc0084",
       "kernel": "lanczos3"
     },
     {
@@ -252,8 +252,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/135-ist.png",
-      "sha256": "e9ee8cc2b68542c22246a3144f7c9a25086ed9a40664f6a2eb5f9096b1db64f2",
+      "logo": "/logos/ist-agoric.png",
+      "sha256": "502e073111432eb25835367b7d71f5e9f9b5880928cce937dc5cf79538e5b2f3",
       "kernel": "lanczos3"
     },
     {
@@ -277,8 +277,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/10-mim.png",
-      "sha256": "6b62705a0f4ae64a2866d59ffcfdfe84ac7f97500aef1c341124b176570f516d",
+      "logo": "/logos/mim-abracadabra.png",
+      "sha256": "e94332ad829b7a6ecdb1d80f605c0de143fcb7f13fba0222c55f6468fdfe56b5",
       "kernel": "nearest"
     },
     {
@@ -292,8 +292,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/297-msusd.png",
-      "sha256": "fd5e8b9b9ee0e9763ab763e86ba715abe92a63abeeeba93ada6c26041dc14457",
+      "logo": "/logos/msusd-main-street.png",
+      "sha256": "e7d35b9a13d484dbe4e9ec8b13790a9dbdec1e13d4cf141a27ef6be21d516c07",
       "kernel": "lanczos3"
     },
     {
@@ -367,8 +367,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/silk-shade-protocol.webp",
-      "sha256": "d12070249d9d545c164cfb846c124c2ca8e056f818b64973e622a6af5de45435",
+      "logo": "/logos/silk-shade-protocol.png",
+      "sha256": "03370708861e93488e1b6a3c861c23665d117a3f0500f004af05f0e6f0164ae5",
       "kernel": "lanczos3"
     },
     {
@@ -422,8 +422,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/321-usdh.png",
-      "sha256": "ea578a77d52a4f0a92eaa0c9703ed40364fa8657c3f5671e89c5005409248963",
+      "logo": "/logos/usdh-native-markets.png",
+      "sha256": "789ec598b7a51dc3a312f94e1420d88e69d01572ebce56b29d5cf71ee3184fbf",
       "kernel": "lanczos3"
     },
     {
@@ -547,8 +547,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/197-usr.png",
-      "sha256": "e063e4a33ce3a7b03886e3bbf7d31995d3144b38fd7a77613f6e8e53fa660ceb",
+      "logo": "/logos/usr-resolv.png",
+      "sha256": "1551336fe7e61a1f6f3d299977e056b48eec6200324eb681d65437df73c38519",
       "kernel": "lanczos3"
     },
     {
@@ -622,8 +622,8 @@
       "kernel": "lanczos3"
     },
     {
-      "logo": "/logos/225-zeusd.webp",
-      "sha256": "2613de9ca5ce145c4e0852cd5c8aabc988d135bdf1e677f6c1d66207bb695b2f",
+      "logo": "/logos/zeusd-zoth.png",
+      "sha256": "63d137b296b661fdd26c0aeb03b22e2f6663475359d9c11b570a25a528455a23",
       "kernel": "lanczos3"
     },
     {
@@ -652,7 +652,7 @@
     },
     {
       "id": "aznd-mu-digital",
-      "logo": "/logos/327-aznd.png"
+      "logo": "/logos/aznd-mu-digital.png"
     },
     {
       "id": "bac-basis-cash-2021-01",
@@ -756,7 +756,7 @@
     },
     {
       "id": "euro3-3a-dao",
-      "logo": "/logos/euro3-3a-dao.webp"
+      "logo": "/logos/euro3-3a-dao.png"
     },
     {
       "id": "euroe-membrane",
@@ -808,7 +808,7 @@
     },
     {
       "id": "gyen-gyen",
-      "logo": "/logos/122-gyen.png"
+      "logo": "/logos/gyen-gyen.png"
     },
     {
       "id": "home-homecoin",
@@ -832,7 +832,7 @@
     },
     {
       "id": "ist-agoric",
-      "logo": "/logos/135-ist.png"
+      "logo": "/logos/ist-agoric.png"
     },
     {
       "id": "jpyc-jpyc-v1",
@@ -852,7 +852,7 @@
     },
     {
       "id": "mim-abracadabra",
-      "logo": "/logos/10-mim.png"
+      "logo": "/logos/mim-abracadabra.png"
     },
     {
       "id": "mkusd-prisma-mkusd-2024-11",
@@ -864,7 +864,7 @@
     },
     {
       "id": "msusd-main-street",
-      "logo": "/logos/297-msusd.png"
+      "logo": "/logos/msusd-main-street.png"
     },
     {
       "id": "msy-main-street",
@@ -928,7 +928,7 @@
     },
     {
       "id": "silk-shade-protocol",
-      "logo": "/logos/silk-shade-protocol.webp"
+      "logo": "/logos/silk-shade-protocol.png"
     },
     {
       "id": "star-preon-star-2024-06",
@@ -976,7 +976,7 @@
     },
     {
       "id": "usdh-native-markets",
-      "logo": "/logos/321-usdh.png"
+      "logo": "/logos/usdh-native-markets.png"
     },
     {
       "id": "usdi-interest-protocol-2023-06",
@@ -1080,7 +1080,7 @@
     },
     {
       "id": "usr-resolv",
-      "logo": "/logos/197-usr.png"
+      "logo": "/logos/usr-resolv.png"
     },
     {
       "id": "ust-terrausd-2022-05",
@@ -1140,7 +1140,7 @@
     },
     {
       "id": "zeusd-zoth",
-      "logo": "/logos/225-zeusd.webp"
+      "logo": "/logos/zeusd-zoth.png"
     },
     {
       "id": "zkusd-goal3",

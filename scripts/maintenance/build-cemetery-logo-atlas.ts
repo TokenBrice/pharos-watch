@@ -78,10 +78,12 @@ export const ATLAS_CELL_GUTTER = 2;
  * The 2026-10-31 freeze batch took the atlas to 153.7 KB at q70, so q66 held
  * the 125-row atlas at 148.7 KB. The 2026-11-02 freeze batch needs q64 to
  * keep the 127-row atlas under the 150 KB budget. FXD takes q64 to 150.6 KB;
- * q63 keeps the expanded atlas within that unchanged budget.
+ * q63 keeps the expanded atlas within that unchanged budget. The 2026-11-18
+ * logo-resolution pass gives ten frozen rows sharper sources, which take q63
+ * to 150.2 KB; q62 keeps them within the same budget.
  */
 export const ATLAS_WEBP_OPTIONS = {
-  quality: 63,
+  quality: 62,
   alphaQuality: 80,
   effort: 6,
 } as const;
@@ -96,7 +98,7 @@ export const ATLAS_IMAGE_PUBLIC_PATH = "/logos/atlas/cemetery-atlas.webp";
  * being smoothed by lanczos3. Keyed by resolved logo URL; a stale entry
  * fails the build so the list cannot silently drift.
  */
-export const PIXEL_ART_LOGO_URLS: readonly string[] = ["/logos/10-mim.png"];
+export const PIXEL_ART_LOGO_URLS: readonly string[] = ["/logos/mim-abracadabra.png"];
 
 function atlasParams(image = ATLAS_IMAGE_PUBLIC_PATH, cellSize = ATLAS_CELL_SIZE, gutter = ATLAS_CELL_GUTTER): SceneAtlasParams {
   return { generatedBy: GENERATED_BY, generatorVersion: ATLAS_GENERATOR_VERSION, cellSize, gutter, webp: ATLAS_WEBP_OPTIONS, byteBudget: ATLAS_BYTE_BUDGET, image };

@@ -519,10 +519,6 @@
     "32": "/logos/compact/205-ausd.webp",
     "100": "/logos/compact/205-ausd-100.webp"
   },
-  "/logos/209-usds.webp": {
-    "32": "/logos/compact/209-usds.webp",
-    "100": "/logos/compact/209-usds-100.webp"
-  },
   "/logos/213-m.png": {
     "32": "/logos/compact/213-m.webp",
     "100": "/logos/compact/213-m-100.webp"
@@ -655,10 +651,6 @@
     "32": "/logos/compact/353-aid.webp",
     "100": "/logos/compact/353-aid-100.webp"
   },
-  "/logos/354-apxusd.webp": {
-    "32": "/logos/compact/354-apxusd.webp",
-    "100": "/logos/compact/354-apxusd-100.webp"
-  },
   "/logos/5-dai.png": {
     "32": "/logos/compact/5-dai.webp",
     "100": "/logos/compact/5-dai-100.webp"
@@ -687,6 +679,10 @@
     "32": "/logos/compact/98-euroe.webp",
     "100": "/logos/compact/98-euroe-100.webp"
   },
+  "/logos/a7a5-old-vector.png": {
+    "32": "/logos/compact/a7a5-old-vector.webp",
+    "100": "/logos/compact/a7a5-old-vector-100.webp"
+  },
   "/logos/aa-falconx-mev-capital.png": {
     "32": "/logos/compact/aa-falconx-mev-capital.webp",
     "100": "/logos/compact/aa-falconx-mev-capital-100.webp"
@@ -703,13 +699,25 @@
     "32": "/logos/compact/aedz-zand.webp",
     "100": "/logos/compact/aedz-zand-100.webp"
   },
+  "/logos/apxusd-apyx.png": {
+    "32": "/logos/compact/apxusd-apyx.webp",
+    "100": "/logos/compact/apxusd-apyx-100.webp"
+  },
   "/logos/arc-anq.png": {
     "32": "/logos/compact/arc-anq.webp",
     "100": "/logos/compact/arc-anq-100.webp"
   },
-  "/logos/audf-forte.webp": {
+  "/logos/audd-novatti.png": {
+    "32": "/logos/compact/audd-novatti.webp",
+    "100": "/logos/compact/audd-novatti-100.webp"
+  },
+  "/logos/audf-forte.png": {
     "32": "/logos/compact/audf-forte.webp",
     "100": "/logos/compact/audf-forte-100.webp"
+  },
+  "/logos/audm-macropod.png": {
+    "32": "/logos/compact/audm-macropod.webp",
+    "100": "/logos/compact/audm-macropod-100.webp"
   },
   "/logos/audm-mento.png": {
     "32": "/logos/compact/audm-mento.webp",
@@ -723,6 +731,14 @@
     "32": "/logos/compact/ausdt-tether-alloy.webp",
     "100": "/logos/compact/ausdt-tether-alloy-100.webp"
   },
+  "/logos/axcnh-anchorx.png": {
+    "32": "/logos/compact/axcnh-anchorx.webp",
+    "100": "/logos/compact/axcnh-anchorx-100.webp"
+  },
+  "/logos/aznd-mu-digital.png": {
+    "32": "/logos/compact/aznd-mu-digital.webp",
+    "100": "/logos/compact/aznd-mu-digital-100.webp"
+  },
   "/logos/bc3m-backed.png": {
     "32": "/logos/compact/bc3m-backed.webp",
     "100": "/logos/compact/bc3m-backed-100.webp"
@@ -734,6 +750,10 @@
   "/logos/benji-franklin-templeton.png": {
     "32": "/logos/compact/benji-franklin-templeton.webp",
     "100": "/logos/compact/benji-franklin-templeton-100.webp"
+  },
+  "/logos/bfusd-binance.png": {
+    "32": "/logos/compact/bfusd-binance.webp",
+    "100": "/logos/compact/bfusd-binance-100.webp"
   },
   "/logos/bib01-backed.png": {
     "32": "/logos/compact/bib01-backed.webp",
@@ -755,7 +775,7 @@
     "32": "/logos/compact/brl-itau.webp",
     "100": "/logos/compact/brl-itau-100.webp"
   },
-  "/logos/brl1-brl1.webp": {
+  "/logos/brl1-brl1.png": {
     "32": "/logos/compact/brl1-brl1.webp",
     "100": "/logos/compact/brl1-brl1-100.webp"
   },
@@ -775,13 +795,29 @@
     "32": "/logos/compact/brsrv-blackrock.webp",
     "100": "/logos/compact/brsrv-blackrock-100.webp"
   },
+  "/logos/brz-transfero.png": {
+    "32": "/logos/compact/brz-transfero.webp",
+    "100": "/logos/compact/brz-transfero-100.webp"
+  },
+  "/logos/btcusd-btcfi.png": {
+    "32": "/logos/compact/btcusd-btcfi.webp",
+    "100": "/logos/compact/btcusd-btcfi-100.webp"
+  },
   "/logos/buck-buck-assets.png": {
     "32": "/logos/compact/buck-buck-assets.webp",
     "100": "/logos/compact/buck-buck-assets-100.webp"
   },
+  "/logos/buck-bucket-protocol.png": {
+    "32": "/logos/compact/buck-bucket-protocol.webp",
+    "100": "/logos/compact/buck-bucket-protocol-100.webp"
+  },
   "/logos/busd0-usual.png": {
     "32": "/logos/compact/busd0-usual.webp",
     "100": "/logos/compact/busd0-usual-100.webp"
+  },
+  "/logos/cadc-cad-coin.png": {
+    "32": "/logos/compact/cadc-cad-coin.webp",
+    "100": "/logos/compact/cadc-cad-coin-100.webp"
   },
   "/logos/cadd-cad-digital.png": {
     "32": "/logos/compact/cadd-cad-digital.webp",
@@ -790,6 +826,10 @@
   "/logos/cadm-mento.png": {
     "32": "/logos/compact/cadm-mento.webp",
     "100": "/logos/compact/cadm-mento-100.webp"
+  },
+  "/logos/cash-phantom.png": {
+    "32": "/logos/compact/cash-phantom.webp",
+    "100": "/logos/compact/cash-phantom-100.webp"
   },
   "/logos/cdp-enosys.png": {
     "32": "/logos/compact/cdp-enosys.webp",
@@ -839,10 +879,6 @@
     "32": "/logos/compact/cg-jaaa.webp",
     "100": "/logos/compact/cg-jaaa-100.webp"
   },
-  "/logos/cg-mapollo.png": {
-    "32": "/logos/compact/cg-mapollo.webp",
-    "100": "/logos/compact/cg-mapollo-100.webp"
-  },
   "/logos/cg-mf-one.png": {
     "32": "/logos/compact/cg-mf-one.webp",
     "100": "/logos/compact/cg-mf-one-100.webp"
@@ -850,10 +886,6 @@
   "/logos/cg-mglobal.png": {
     "32": "/logos/compact/cg-mglobal.webp",
     "100": "/logos/compact/cg-mglobal-100.webp"
-  },
-  "/logos/cg-mhyper.png": {
-    "32": "/logos/compact/cg-mhyper.webp",
-    "100": "/logos/compact/cg-mhyper-100.webp"
   },
   "/logos/cg-mmev.png": {
     "32": "/logos/compact/cg-mmev.webp",
@@ -967,6 +999,14 @@
     "32": "/logos/compact/cg-yousd.webp",
     "100": "/logos/compact/cg-yousd-100.webp"
   },
+  "/logos/cgo-comtech.png": {
+    "32": "/logos/compact/cgo-comtech.webp",
+    "100": "/logos/compact/cgo-comtech-100.webp"
+  },
+  "/logos/cgusd-cygnus-finance.png": {
+    "32": "/logos/compact/cgusd-cygnus-finance.webp",
+    "100": "/logos/compact/cgusd-cygnus-finance-100.webp"
+  },
   "/logos/chfau-allunity.png": {
     "32": "/logos/compact/chfau-allunity.webp",
     "100": "/logos/compact/chfau-allunity-100.webp"
@@ -979,7 +1019,7 @@
     "32": "/logos/compact/chfsafo-spiko.webp",
     "100": "/logos/compact/chfsafo-spiko-100.webp"
   },
-  "/logos/cjpy-yamato.webp": {
+  "/logos/cjpy-yamato.png": {
     "32": "/logos/compact/cjpy-yamato.webp",
     "100": "/logos/compact/cjpy-yamato-100.webp"
   },
@@ -1007,6 +1047,14 @@
     "32": "/logos/compact/ddsc-aedc.webp",
     "100": "/logos/compact/ddsc-aedc-100.webp"
   },
+  "/logos/deuro-deuro.png": {
+    "32": "/logos/compact/deuro-deuro.webp",
+    "100": "/logos/compact/deuro-deuro-100.webp"
+  },
+  "/logos/djed-coti.png": {
+    "32": "/logos/compact/djed-coti.webp",
+    "100": "/logos/compact/djed-coti-100.webp"
+  },
   "/logos/dusd-alto.png": {
     "32": "/logos/compact/dusd-alto.webp",
     "100": "/logos/compact/dusd-alto-100.webp"
@@ -1022,6 +1070,10 @@
   "/logos/dusd-fluid.png": {
     "32": "/logos/compact/dusd-fluid.webp",
     "100": "/logos/compact/dusd-fluid-100.webp"
+  },
+  "/logos/dusd-standx.png": {
+    "32": "/logos/compact/dusd-standx.webp",
+    "100": "/logos/compact/dusd-standx-100.webp"
   },
   "/logos/earnusd-lido.png": {
     "32": "/logos/compact/earnusd-lido.webp",
@@ -1043,11 +1095,23 @@
     "32": "/logos/compact/eur0-usual.webp",
     "100": "/logos/compact/eur0-usual-100.webp"
   },
+  "/logos/eurcv-societe-generale-forge.png": {
+    "32": "/logos/compact/eurcv-societe-generale-forge.webp",
+    "100": "/logos/compact/eurcv-societe-generale-forge-100.webp"
+  },
   "/logos/eurdt-stabillon.png": {
     "32": "/logos/compact/eurdt-stabillon.webp",
     "100": "/logos/compact/eurdt-stabillon-100.webp"
   },
-  "/logos/euro3-3a-dao.webp": {
+  "/logos/eure-monerium.png": {
+    "32": "/logos/compact/eure-monerium.webp",
+    "100": "/logos/compact/eure-monerium-100.webp"
+  },
+  "/logos/euri-banking-circle.png": {
+    "32": "/logos/compact/euri-banking-circle.webp",
+    "100": "/logos/compact/euri-banking-circle-100.webp"
+  },
+  "/logos/euro3-3a-dao.png": {
     "32": "/logos/compact/euro3-3a-dao.webp",
     "100": "/logos/compact/euro3-3a-dao-100.webp"
   },
@@ -1055,9 +1119,21 @@
     "32": "/logos/compact/eurod-oddo-bhf.webp",
     "100": "/logos/compact/eurod-oddo-bhf-100.webp"
   },
+  "/logos/europ-schuman.png": {
+    "32": "/logos/compact/europ-schuman.webp",
+    "100": "/logos/compact/europ-schuman-100.webp"
+  },
   "/logos/eurot-token-teknoloji.png": {
     "32": "/logos/compact/eurot-token-teknoloji.webp",
     "100": "/logos/compact/eurot-token-teknoloji-100.webp"
+  },
+  "/logos/eurq-quantoz.png": {
+    "32": "/logos/compact/eurq-quantoz.webp",
+    "100": "/logos/compact/eurq-quantoz-100.webp"
+  },
+  "/logos/eurs-stasis.png": {
+    "32": "/logos/compact/eurs-stasis.webp",
+    "100": "/logos/compact/eurs-stasis-100.webp"
   },
   "/logos/eurw-newrails.jpg": {
     "32": "/logos/compact/eurw-newrails.webp",
@@ -1074,6 +1150,18 @@
   "/logos/eutbl-spiko.png": {
     "32": "/logos/compact/eutbl-spiko.webp",
     "100": "/logos/compact/eutbl-spiko-100.webp"
+  },
+  "/logos/fdusd-first-digital.png": {
+    "32": "/logos/compact/fdusd-first-digital.webp",
+    "100": "/logos/compact/fdusd-first-digital-100.webp"
+  },
+  "/logos/feusd-felix.png": {
+    "32": "/logos/compact/feusd-felix.webp",
+    "100": "/logos/compact/feusd-felix-100.webp"
+  },
+  "/logos/fidd-fidelity.png": {
+    "32": "/logos/compact/fidd-fidelity.webp",
+    "100": "/logos/compact/fidd-fidelity-100.webp"
   },
   "/logos/filqa-fidelity-international.png": {
     "32": "/logos/compact/filqa-fidelity-international.webp",
@@ -1111,6 +1199,10 @@
     "32": "/logos/compact/gbpa-agant.webp",
     "100": "/logos/compact/gbpa-agant-100.webp"
   },
+  "/logos/gbpe-monerium.png": {
+    "32": "/logos/compact/gbpe-monerium.webp",
+    "100": "/logos/compact/gbpe-monerium-100.webp"
+  },
   "/logos/gbpm-mento.png": {
     "32": "/logos/compact/gbpm-mento.webp",
     "100": "/logos/compact/gbpm-mento-100.webp"
@@ -1123,9 +1215,21 @@
     "32": "/logos/compact/gldon-ondo.webp",
     "100": "/logos/compact/gldon-ondo-100.webp"
   },
+  "/logos/gldy-streamex.png": {
+    "32": "/logos/compact/gldy-streamex.webp",
+    "100": "/logos/compact/gldy-streamex-100.webp"
+  },
   "/logos/gold-paxg.png": {
     "32": "/logos/compact/gold-paxg.webp",
     "100": "/logos/compact/gold-paxg-100.webp"
+  },
+  "/logos/gramg-token-teknoloji.png": {
+    "32": "/logos/compact/gramg-token-teknoloji.webp",
+    "100": "/logos/compact/gramg-token-teknoloji-100.webp"
+  },
+  "/logos/grams-token-teknoloji.png": {
+    "32": "/logos/compact/grams-token-teknoloji.webp",
+    "100": "/logos/compact/grams-token-teknoloji-100.webp"
   },
   "/logos/gtusdc-gauntlet.png": {
     "32": "/logos/compact/gtusdc-gauntlet.webp",
@@ -1139,6 +1243,14 @@
     "32": "/logos/compact/gtusdtp-gauntlet.webp",
     "100": "/logos/compact/gtusdtp-gauntlet-100.webp"
   },
+  "/logos/gusd-gate.png": {
+    "32": "/logos/compact/gusd-gate.webp",
+    "100": "/logos/compact/gusd-gate-100.webp"
+  },
+  "/logos/gusd-gemini.png": {
+    "32": "/logos/compact/gusd-gemini.webp",
+    "100": "/logos/compact/gusd-gemini-100.webp"
+  },
   "/logos/gusdcq-galaxy.png": {
     "32": "/logos/compact/gusdcq-galaxy.webp",
     "100": "/logos/compact/gusdcq-galaxy-100.webp"
@@ -1147,9 +1259,17 @@
     "32": "/logos/compact/gusdtq-galaxy.webp",
     "100": "/logos/compact/gusdtq-galaxy-100.webp"
   },
+  "/logos/gyen-gyen.png": {
+    "32": "/logos/compact/gyen-gyen.webp",
+    "100": "/logos/compact/gyen-gyen-100.webp"
+  },
   "/logos/hbd-hive.jpg": {
     "32": "/logos/compact/hbd-hive.webp",
     "100": "/logos/compact/hbd-hive-100.webp"
+  },
+  "/logos/hchf-hedera-swiss-franc.png": {
+    "32": "/logos/compact/hchf-hedera-swiss-franc.webp",
+    "100": "/logos/compact/hchf-hedera-swiss-franc-100.webp"
   },
   "/logos/hkdr-rd-technologies.png": {
     "32": "/logos/compact/hkdr-rd-technologies.webp",
@@ -1159,13 +1279,25 @@
     "32": "/logos/compact/hlusd-hela.webp",
     "100": "/logos/compact/hlusd-hela-100.webp"
   },
+  "/logos/hollar-hydrated.png": {
+    "32": "/logos/compact/hollar-hydrated.webp",
+    "100": "/logos/compact/hollar-hydrated-100.webp"
+  },
   "/logos/home-homecoin.png": {
     "32": "/logos/compact/home-homecoin.webp",
     "100": "/logos/compact/home-homecoin-100.webp"
   },
+  "/logos/hyperusdca-hyperithm.png": {
+    "32": "/logos/compact/hyperusdca-hyperithm.webp",
+    "100": "/logos/compact/hyperusdca-hyperithm-100.webp"
+  },
   "/logos/iauon-ondo.png": {
     "32": "/logos/compact/iauon-ondo.webp",
     "100": "/logos/compact/iauon-ondo-100.webp"
+  },
+  "/logos/idrt-rupiah-token.png": {
+    "32": "/logos/compact/idrt-rupiah-token.webp",
+    "100": "/logos/compact/idrt-rupiah-token-100.webp"
   },
   "/logos/idrx-idrx.png": {
     "32": "/logos/compact/idrx-idrx.webp",
@@ -1174,6 +1306,14 @@
   "/logos/inalpha-nest.png": {
     "32": "/logos/compact/inalpha-nest.webp",
     "100": "/logos/compact/inalpha-nest-100.webp"
+  },
+  "/logos/isc-international-stable-currency.png": {
+    "32": "/logos/compact/isc-international-stable-currency.webp",
+    "100": "/logos/compact/isc-international-stable-currency-100.webp"
+  },
+  "/logos/ist-agoric.png": {
+    "32": "/logos/compact/ist-agoric.webp",
+    "100": "/logos/compact/ist-agoric-100.webp"
   },
   "/logos/itry-brix.png": {
     "32": "/logos/compact/itry-brix.webp",
@@ -1219,6 +1359,14 @@
     "32": "/logos/compact/jusd-jusd-stable-token.webp",
     "100": "/logos/compact/jusd-jusd-stable-token-100.webp"
   },
+  "/logos/kag-kinesis.png": {
+    "32": "/logos/compact/kag-kinesis.webp",
+    "100": "/logos/compact/kag-kinesis-100.webp"
+  },
+  "/logos/kau-kinesis.png": {
+    "32": "/logos/compact/kau-kinesis.webp",
+    "100": "/logos/compact/kau-kinesis-100.webp"
+  },
   "/logos/kesm-mento.png": {
     "32": "/logos/compact/kesm-mento.webp",
     "100": "/logos/compact/kesm-mento-100.webp"
@@ -1251,9 +1399,17 @@
     "32": "/logos/compact/kusd-kerne.webp",
     "100": "/logos/compact/kusd-kerne-100.webp"
   },
+  "/logos/lisusd-lista.png": {
+    "32": "/logos/compact/lisusd-lista.webp",
+    "100": "/logos/compact/lisusd-lista-100.webp"
+  },
   "/logos/luausd-lumi-finance.png": {
     "32": "/logos/compact/luausd-lumi-finance.webp",
     "100": "/logos/compact/luausd-lumi-finance-100.webp"
+  },
+  "/logos/lusd-liquity.png": {
+    "32": "/logos/compact/lusd-liquity.webp",
+    "100": "/logos/compact/lusd-liquity-100.webp"
   },
   "/logos/lvusd-leverup.png": {
     "32": "/logos/compact/lvusd-leverup.webp",
@@ -1267,6 +1423,22 @@
     "32": "/logos/compact/mantrausd-mantra.webp",
     "100": "/logos/compact/mantrausd-mantra-100.webp"
   },
+  "/logos/mapollo-midas.png": {
+    "32": "/logos/compact/mapollo-midas.webp",
+    "100": "/logos/compact/mapollo-midas-100.webp"
+  },
+  "/logos/meusd-mezo.png": {
+    "32": "/logos/compact/meusd-mezo.webp",
+    "100": "/logos/compact/meusd-mezo-100.webp"
+  },
+  "/logos/mhyper-midas.png": {
+    "32": "/logos/compact/mhyper-midas.webp",
+    "100": "/logos/compact/mhyper-midas-100.webp"
+  },
+  "/logos/mim-abracadabra.png": {
+    "32": "/logos/compact/mim-abracadabra.webp",
+    "100": "/logos/compact/mim-abracadabra-100.webp"
+  },
   "/logos/money-defi-money.png": {
     "32": "/logos/compact/money-defi-money.webp",
     "100": "/logos/compact/money-defi-money-100.webp"
@@ -1275,9 +1447,21 @@
     "32": "/logos/compact/moveusd-cfx.webp",
     "100": "/logos/compact/moveusd-cfx-100.webp"
   },
+  "/logos/mre7yield-midas.png": {
+    "32": "/logos/compact/mre7yield-midas.webp",
+    "100": "/logos/compact/mre7yield-midas-100.webp"
+  },
+  "/logos/msusd-metronome.png": {
+    "32": "/logos/compact/msusd-metronome.webp",
+    "100": "/logos/compact/msusd-metronome-100.webp"
+  },
   "/logos/msy-main-street.png": {
     "32": "/logos/compact/msy-main-street.webp",
     "100": "/logos/compact/msy-main-street-100.webp"
+  },
+  "/logos/musd-metamask.png": {
+    "32": "/logos/compact/musd-metamask.webp",
+    "100": "/logos/compact/musd-metamask-100.webp"
   },
   "/logos/mxnb-juno.png": {
     "32": "/logos/compact/mxnb-juno.webp",
@@ -1295,6 +1479,10 @@
     "32": "/logos/compact/nbasis-nest.webp",
     "100": "/logos/compact/nbasis-nest-100.webp"
   },
+  "/logos/nect-beraborrow.png": {
+    "32": "/logos/compact/nect-beraborrow.webp",
+    "100": "/logos/compact/nect-beraborrow-100.webp"
+  },
   "/logos/net-cloudflare.png": {
     "32": "/logos/compact/net-cloudflare.webp",
     "100": "/logos/compact/net-cloudflare-100.webp"
@@ -1306,6 +1494,14 @@
   "/logos/ntbill-nest.png": {
     "32": "/logos/compact/ntbill-nest.webp",
     "100": "/logos/compact/ntbill-nest-100.webp"
+  },
+  "/logos/nusd-neutrl.png": {
+    "32": "/logos/compact/nusd-neutrl.webp",
+    "100": "/logos/compact/nusd-neutrl-100.webp"
+  },
+  "/logos/nusd-nexus.png": {
+    "32": "/logos/compact/nusd-nexus.webp",
+    "100": "/logos/compact/nusd-nexus-100.webp"
   },
   "/logos/nwisdom-nest.png": {
     "32": "/logos/compact/nwisdom-nest.webp",
@@ -1327,13 +1523,29 @@
     "32": "/logos/compact/ousd-open-standard.webp",
     "100": "/logos/compact/ousd-open-standard-100.webp"
   },
+  "/logos/pathusd-bridge.png": {
+    "32": "/logos/compact/pathusd-bridge.webp",
+    "100": "/logos/compact/pathusd-bridge-100.webp"
+  },
+  "/logos/pgold-pleasing.png": {
+    "32": "/logos/compact/pgold-pleasing.webp",
+    "100": "/logos/compact/pgold-pleasing-100.webp"
+  },
   "/logos/phpc-coins-ph.png": {
     "32": "/logos/compact/phpc-coins-ph.webp",
     "100": "/logos/compact/phpc-coins-ph-100.webp"
   },
+  "/logos/pht-pht.png": {
+    "32": "/logos/compact/pht-pht.webp",
+    "100": "/logos/compact/pht-pht-100.webp"
+  },
   "/logos/plndt-stabillon.png": {
     "32": "/logos/compact/plndt-stabillon.webp",
     "100": "/logos/compact/plndt-stabillon-100.webp"
+  },
+  "/logos/pmusd-precious-metals.png": {
+    "32": "/logos/compact/pmusd-precious-metals.webp",
+    "100": "/logos/compact/pmusd-precious-metals-100.webp"
   },
   "/logos/pusd-polymarket.png": {
     "32": "/logos/compact/pusd-polymarket.webp",
@@ -1375,6 +1587,14 @@
     "32": "/logos/compact/said-gaib.webp",
     "100": "/logos/compact/said-gaib-100.webp"
   },
+  "/logos/satusd-river.png": {
+    "32": "/logos/compact/satusd-river.webp",
+    "100": "/logos/compact/satusd-river-100.webp"
+  },
+  "/logos/sbc-brale.png": {
+    "32": "/logos/compact/sbc-brale.webp",
+    "100": "/logos/compact/sbc-brale-100.webp"
+  },
   "/logos/sbold-k3-capital.png": {
     "32": "/logos/compact/sbold-k3-capital.webp",
     "100": "/logos/compact/sbold-k3-capital-100.webp"
@@ -1382,6 +1602,10 @@
   "/logos/scrvusd-curve.png": {
     "32": "/logos/compact/scrvusd-curve.webp",
     "100": "/logos/compact/scrvusd-curve-100.webp"
+  },
+  "/logos/scusd-rings.png": {
+    "32": "/logos/compact/scusd-rings.webp",
+    "100": "/logos/compact/scusd-rings-100.webp"
   },
   "/logos/sdai-gnosis.png": {
     "32": "/logos/compact/sdai-gnosis.webp",
@@ -1411,7 +1635,7 @@
     "32": "/logos/compact/sgho-aave.webp",
     "100": "/logos/compact/sgho-aave-100.webp"
   },
-  "/logos/silk-shade-protocol.webp": {
+  "/logos/silk-shade-protocol.png": {
     "32": "/logos/compact/silk-shade-protocol.webp",
     "100": "/logos/compact/silk-shade-protocol-100.webp"
   },
@@ -1503,6 +1727,14 @@
     "32": "/logos/compact/syusd-aegis.webp",
     "100": "/logos/compact/syusd-aegis-100.webp"
   },
+  "/logos/tbill-openeden.png": {
+    "32": "/logos/compact/tbill-openeden.webp",
+    "100": "/logos/compact/tbill-openeden-100.webp"
+  },
+  "/logos/tgbp-tokenised.png": {
+    "32": "/logos/compact/tgbp-tokenised.webp",
+    "100": "/logos/compact/tgbp-tokenised-100.webp"
+  },
   "/logos/tgld-tenbin.png": {
     "32": "/logos/compact/tgld-tenbin.webp",
     "100": "/logos/compact/tgld-tenbin-100.webp"
@@ -1523,9 +1755,25 @@
     "32": "/logos/compact/trusd-tori.webp",
     "100": "/logos/compact/trusd-tori-100.webp"
   },
+  "/logos/tryb-bilira.png": {
+    "32": "/logos/compact/tryb-bilira.webp",
+    "100": "/logos/compact/tryb-bilira-100.webp"
+  },
+  "/logos/tusd-trueusd.png": {
+    "32": "/logos/compact/tusd-trueusd.webp",
+    "100": "/logos/compact/tusd-trueusd-100.webp"
+  },
+  "/logos/u-united-stables.png": {
+    "32": "/logos/compact/u-united-stables.webp",
+    "100": "/logos/compact/u-united-stables-100.webp"
+  },
   "/logos/umint-ubs.png": {
     "32": "/logos/compact/umint-ubs.webp",
     "100": "/logos/compact/umint-ubs-100.webp"
+  },
+  "/logos/usat-tether.png": {
+    "32": "/logos/compact/usat-tether.webp",
+    "100": "/logos/compact/usat-tether-100.webp"
   },
   "/logos/usbd-bima.png": {
     "32": "/logos/compact/usbd-bima.webp",
@@ -1547,9 +1795,17 @@
     "32": "/logos/compact/usda-alpha-partner.webp",
     "100": "/logos/compact/usda-alpha-partner-100.webp"
   },
+  "/logos/usda-anzens.png": {
+    "32": "/logos/compact/usda-anzens.webp",
+    "100": "/logos/compact/usda-anzens-100.webp"
+  },
   "/logos/usdat-saturn.png": {
     "32": "/logos/compact/usdat-saturn.webp",
     "100": "/logos/compact/usdat-saturn-100.webp"
+  },
+  "/logos/usdcv-societe-generale-forge.png": {
+    "32": "/logos/compact/usdcv-societe-generale-forge.webp",
+    "100": "/logos/compact/usdcv-societe-generale-forge-100.webp"
   },
   "/logos/usdcx-movement.png": {
     "32": "/logos/compact/usdcx-movement.webp",
@@ -1567,9 +1823,17 @@
     "32": "/logos/compact/usdfr-forest-road.webp",
     "100": "/logos/compact/usdfr-forest-road-100.webp"
   },
+  "/logos/usdglo-glo.png": {
+    "32": "/logos/compact/usdglo-glo.webp",
+    "100": "/logos/compact/usdglo-glo-100.webp"
+  },
   "/logos/usdh-hermetica.png": {
     "32": "/logos/compact/usdh-hermetica.webp",
     "100": "/logos/compact/usdh-hermetica-100.webp"
+  },
+  "/logos/usdh-native-markets.png": {
+    "32": "/logos/compact/usdh-native-markets.webp",
+    "100": "/logos/compact/usdh-native-markets-100.webp"
   },
   "/logos/usdk-kast.png": {
     "32": "/logos/compact/usdk-kast.webp",
@@ -1583,6 +1847,14 @@
     "32": "/logos/compact/usdkg-gold-dollar.webp",
     "100": "/logos/compact/usdkg-gold-dollar-100.webp"
   },
+  "/logos/usdm-mega.png": {
+    "32": "/logos/compact/usdm-mega.webp",
+    "100": "/logos/compact/usdm-mega-100.webp"
+  },
+  "/logos/usdm-moneta.png": {
+    "32": "/logos/compact/usdm-moneta.webp",
+    "100": "/logos/compact/usdm-moneta-100.webp"
+  },
   "/logos/usdm-monetrix.png": {
     "32": "/logos/compact/usdm-monetrix.webp",
     "100": "/logos/compact/usdm-monetrix-100.webp"
@@ -1591,6 +1863,10 @@
     "32": "/logos/compact/usdon-ondo.webp",
     "100": "/logos/compact/usdon-ondo-100.webp"
   },
+  "/logos/usdp-paxos.png": {
+    "32": "/logos/compact/usdp-paxos.webp",
+    "100": "/logos/compact/usdp-paxos-100.webp"
+  },
   "/logos/usdplus-streamflow.png": {
     "32": "/logos/compact/usdplus-streamflow.webp",
     "100": "/logos/compact/usdplus-streamflow-100.webp"
@@ -1598,6 +1874,10 @@
   "/logos/usdpt-western-union.png": {
     "32": "/logos/compact/usdpt-western-union.webp",
     "100": "/logos/compact/usdpt-western-union-100.webp"
+  },
+  "/logos/usdq-quantoz.png": {
+    "32": "/logos/compact/usdq-quantoz.webp",
+    "100": "/logos/compact/usdq-quantoz-100.webp"
   },
   "/logos/usdq-quill.png": {
     "32": "/logos/compact/usdq-quill.webp",
@@ -1611,7 +1891,7 @@
     "32": "/logos/compact/usdrf-realfi.webp",
     "100": "/logos/compact/usdrf-realfi-100.webp"
   },
-  "/logos/usdrif-rif.webp": {
+  "/logos/usdrif-rif.png": {
     "32": "/logos/compact/usdrif-rif.webp",
     "100": "/logos/compact/usdrif-rif-100.webp"
   },
@@ -1631,6 +1911,10 @@
     "32": "/logos/compact/usdsui-sui.webp",
     "100": "/logos/compact/usdsui-sui-100.webp"
   },
+  "/logos/usdu-unitas.png": {
+    "32": "/logos/compact/usdu-unitas.webp",
+    "100": "/logos/compact/usdu-unitas-100.webp"
+  },
   "/logos/usdu-universal.png": {
     "32": "/logos/compact/usdu-universal.webp",
     "100": "/logos/compact/usdu-universal-100.webp"
@@ -1647,9 +1931,33 @@
     "32": "/logos/compact/usdx-axis.webp",
     "100": "/logos/compact/usdx-axis-100.webp"
   },
+  "/logos/usdx-hex-trust.png": {
+    "32": "/logos/compact/usdx-hex-trust.webp",
+    "100": "/logos/compact/usdx-hex-trust-100.webp"
+  },
   "/logos/usdx-kava.png": {
     "32": "/logos/compact/usdx-kava.webp",
     "100": "/logos/compact/usdx-kava-100.webp"
+  },
+  "/logos/usdxl-last.png": {
+    "32": "/logos/compact/usdxl-last.webp",
+    "100": "/logos/compact/usdxl-last-100.webp"
+  },
+  "/logos/usdy-ondo-finance.png": {
+    "32": "/logos/compact/usdy-ondo-finance.webp",
+    "100": "/logos/compact/usdy-ondo-finance-100.webp"
+  },
+  "/logos/usdz-anzen.png": {
+    "32": "/logos/compact/usdz-anzen.webp",
+    "100": "/logos/compact/usdz-anzen-100.webp"
+  },
+  "/logos/usp-pikudao.png": {
+    "32": "/logos/compact/usp-pikudao.webp",
+    "100": "/logos/compact/usp-pikudao-100.webp"
+  },
+  "/logos/usr-resolv.png": {
+    "32": "/logos/compact/usr-resolv.webp",
+    "100": "/logos/compact/usr-resolv-100.webp"
   },
   "/logos/ussd-sonic-labs.jpg": {
     "32": "/logos/compact/ussd-sonic-labs.webp",
@@ -1663,6 +1971,10 @@
     "32": "/logos/compact/usx-dforce.webp",
     "100": "/logos/compact/usx-dforce-100.webp"
   },
+  "/logos/usx-solstice.png": {
+    "32": "/logos/compact/usx-solstice.webp",
+    "100": "/logos/compact/usx-solstice-100.webp"
+  },
   "/logos/uusd-anything-labs.png": {
     "32": "/logos/compact/uusd-anything-labs.webp",
     "100": "/logos/compact/uusd-anything-labs-100.webp"
@@ -1671,13 +1983,25 @@
     "32": "/logos/compact/vbill-vaneck.webp",
     "100": "/logos/compact/vbill-vaneck-100.webp"
   },
+  "/logos/vchf-vnx.png": {
+    "32": "/logos/compact/vchf-vnx.webp",
+    "100": "/logos/compact/vchf-vnx-100.webp"
+  },
   "/logos/vcred-vcred.jpg": {
     "32": "/logos/compact/vcred-vcred.webp",
     "100": "/logos/compact/vcred-vcred-100.webp"
   },
+  "/logos/vgbp-vnx.png": {
+    "32": "/logos/compact/vgbp-vnx.webp",
+    "100": "/logos/compact/vgbp-vnx-100.webp"
+  },
   "/logos/vndc-jade-labs.png": {
     "32": "/logos/compact/vndc-jade-labs.webp",
     "100": "/logos/compact/vndc-jade-labs-100.webp"
+  },
+  "/logos/vnxau-vnx.png": {
+    "32": "/logos/compact/vnxau-vnx.webp",
+    "100": "/logos/compact/vnxau-vnx-100.webp"
   },
   "/logos/vusd-virtue.png": {
     "32": "/logos/compact/vusd-virtue.webp",
@@ -1703,6 +2027,10 @@
     "32": "/logos/compact/wemix-dollar-wemix.webp",
     "100": "/logos/compact/wemix-dollar-wemix-100.webp"
   },
+  "/logos/witry-brix.png": {
+    "32": "/logos/compact/witry-brix.webp",
+    "100": "/logos/compact/witry-brix-100.webp"
+  },
   "/logos/wm-m0.jpg": {
     "32": "/logos/compact/wm-m0.webp",
     "100": "/logos/compact/wm-m0-100.webp"
@@ -1718,6 +2046,14 @@
   "/logos/wtgxx-wisdomtree.png": {
     "32": "/logos/compact/wtgxx-wisdomtree.webp",
     "100": "/logos/compact/wtgxx-wisdomtree-100.webp"
+  },
+  "/logos/xagm-matrixdock.png": {
+    "32": "/logos/compact/xagm-matrixdock.webp",
+    "100": "/logos/compact/xagm-matrixdock-100.webp"
+  },
+  "/logos/xaum-matrixdock.png": {
+    "32": "/logos/compact/xaum-matrixdock.webp",
+    "100": "/logos/compact/xaum-matrixdock-100.webp"
   },
   "/logos/xaut-tether.png": {
     "32": "/logos/compact/xaut-tether.webp",
@@ -1743,13 +2079,25 @@
     "32": "/logos/compact/xo-exodus.webp",
     "100": "/logos/compact/xo-exodus-100.webp"
   },
+  "/logos/xsgd-straitsx.png": {
+    "32": "/logos/compact/xsgd-straitsx.webp",
+    "100": "/logos/compact/xsgd-straitsx-100.webp"
+  },
   "/logos/xtusd-xt.png": {
     "32": "/logos/compact/xtusd-xt.webp",
     "100": "/logos/compact/xtusd-xt-100.webp"
   },
+  "/logos/xusd-straitsx.png": {
+    "32": "/logos/compact/xusd-straitsx.webp",
+    "100": "/logos/compact/xusd-straitsx-100.webp"
+  },
   "/logos/ybold-yearn.png": {
     "32": "/logos/compact/ybold-yearn.webp",
     "100": "/logos/compact/ybold-yearn-100.webp"
+  },
+  "/logos/ylds-figure.png": {
+    "32": "/logos/compact/ylds-figure.webp",
+    "100": "/logos/compact/ylds-figure-100.webp"
   },
   "/logos/yusd-yieldfi.png": {
     "32": "/logos/compact/yusd-yieldfi.webp",
@@ -1762,6 +2110,10 @@
   "/logos/zarm-mento.png": {
     "32": "/logos/compact/zarm-mento.webp",
     "100": "/logos/compact/zarm-mento-100.webp"
+  },
+  "/logos/zarp-zarp.png": {
+    "32": "/logos/compact/zarp-zarp.webp",
+    "100": "/logos/compact/zarp-zarp-100.webp"
   },
   "/logos/zarsc-supercoin.png": {
     "32": "/logos/compact/zarsc-supercoin.webp",
