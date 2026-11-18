@@ -46,6 +46,10 @@ describe("social card renderer", () => {
     // Within budget but wider than the column at the floor size: one unbreakable 40-character word.
     expect(() => validateSocialCardSpec({ ...hub, headline: "W".repeat(40) } as SocialCardSpec, assets)).toThrow(SocialCardError);
     expect(() => validateSocialCardSpec({ ...hub, headline: "W".repeat(40) } as SocialCardSpec, assets)).toThrow(/headline: .* exceeds 4 line\(s\)/);
+    // A pillar bar never clamps; the registry's longest ticker fits down instead of failing.
+    expect(() => buildSocialScorecardElement({ ...scorecard, pillars: [{ name: "Exit", score: 100.5, grade: "A+" }] }, assets)).toThrow("pillars[0].score: 100.5 is outside 0-100");
+    const longest = { symbol: "skyMoneyUsdsFlagship", name: "sky.money USDS Flagship" };
+    for (const pillars of [scorecard.pillars, []]) expect(JSON.stringify(buildSocialScorecardElement({ ...scorecard, identity: longest, pillars }, assets))).toContain('"skyMoneyUsdsFlagship"');
   });
 
   it("draws a dashed monogram for an identity without a registered logo", () => {
@@ -59,6 +63,8 @@ describe("social card renderer", () => {
     const element = JSON.stringify(buildSocialScorecardElement(scorecard, assets));
     expect(element).toContain(`4px solid ${GRADE_ON_DARK_HEX.A}`);
     expect(element).toContain(`"background":"${GRADE_ON_DARK_HEX.C}"`);
+    // An observed zero is an empty track, not a stub of fill.
+    expect(JSON.stringify(buildSocialScorecardElement({ ...scorecard, pillars: [{ name: "Exit", score: 0, grade: "F" }] }, assets))).not.toContain(`"background":"${GRADE_ON_DARK_HEX.F}"`);
     expect(element).toContain("As of 17 Nov 2026");
     expect(element).not.toMatch(/not live|v\d+\.\d+/i);
     const legend = JSON.stringify(buildSocialCardElement({ ...hub, subject: { kind: "grade-shield" } } as SocialCardSpec, assets));
