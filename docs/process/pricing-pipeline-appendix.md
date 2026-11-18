@@ -151,7 +151,9 @@ upstream provenance instead of treating it as depeg-authoritative protocol redem
 Vault NAV routes (ERC-4626 `convertToAssets`, Aave `previewRedeem`, Idle CDO `virtualPrice`) also persist their
 last-good assets-per-share rate to the durable `authoritative_vault_rates` table on every successful live read. When the
 live rate read fails and the asset has no publishable current price, the route publishes
-`cached rate × fresh trusted parent price` as `protocol-redeem-cached-rate` with `priceConfidence = "low"`. The cached
+`cached rate × fresh trusted parent price` as `protocol-redeem-cached-rate` with `priceConfidence = "low"`. A read that
+completes with a zero, invalid or out-of-bounds rate is rejected evidence, not a failure, and never consults the cached
+rate (v6.84). The cached
 lane requires the same trusted parent as the live route, rejects rates older than 24 hours or outside the vault sanity
 bounds, never replaces a publishable incumbent price, and is registered non-replay-safe and non-depeg-authoritative so a
 stale rate cannot feed depeg state or replay continuity. The grouped `protocol-redeem` circuit gates live RPC only:

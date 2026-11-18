@@ -598,6 +598,7 @@ describe("idleCdoTrancheProvider", () => {
   it.each([0n, 499_999n, 10_000_001n])("rejects a zero or untrusted virtual price (%s) without publishing a fresh rate", async (raw) => {
     evmCall.mockResolvedValue(`0x${encodeUint256(raw)}`);
     const context = contextWithParent();
+    context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - 300 }]]);
 
     await expect(idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context)).resolves.toBeNull();
     expect(context.vaultRateWrites?.get(ID)).toBeUndefined();

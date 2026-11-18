@@ -747,6 +747,10 @@ export async function resolveVaultAssetsPerShareWithCache(
     context.vaultRateWrites?.set(asset.id, { rate: liveRate, observedAt: nowSec });
     return { rate: liveRate, cachedObservedAt: null };
   }
+  // A completed read that rejected its rate (zero, invalid or outside the vault
+  // bounds) contradicts the last-good rate; only a failed or skipped read may
+  // consult it (R2). An exploited vault must not keep its pre-exploit price.
+  if (liveError == null && !context.vaultRateCacheOnly) return null;
 
   if (!hasPublishableCurrentPrice(asset)) {
     const cached = context.vaultRateCache?.get(asset.id);
