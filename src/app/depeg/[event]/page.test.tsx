@@ -6,7 +6,7 @@ import { render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-const { EVENTS, EVENTS_BY_SLUG } = vi.hoisted(() => {
+const { EVENTS, EVENTS_BY_SLUG, RECOVERED_EVENT } = vi.hoisted(() => {
   const base = {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
@@ -24,6 +24,10 @@ const { EVENTS, EVENTS_BY_SLUG } = vi.hoisted(() => {
     pendingReason: null,
     closeReason: null,
   };
+  const recovered = {
+    ...base, id: 4, slug: "recovered-event", provenance: null, closeReason: "recovered-primary" as const,
+    endedAt: base.startedAt + 1800, analyticRecoveryAt: base.startedAt + 900,
+  };
   const events = [
     { ...base, id: 1, slug: "disputed-event", provenance: { auditVerdict: "disputed" as const, confidenceTier: "high" } },
     { ...base, id: 2, slug: "confirmed-event", provenance: { auditVerdict: "confirmed" as const }, admittedCoverage: [
@@ -31,8 +35,9 @@ const { EVENTS, EVENTS_BY_SLUG } = vi.hoisted(() => {
       { fromSec: base.startedAt + 2_400, toSec: base.endedAt },
     ] },
     { ...base, id: 3, slug: "ongoing-event", endedAt: null, recoveryPrice: null, provenance: null },
+    recovered,
   ];
-  return { EVENTS: events, EVENTS_BY_SLUG: new Map(events.map((event) => [event.slug, event])) };
+  return { EVENTS: events, EVENTS_BY_SLUG: new Map(events.map((event) => [event.slug, event])), RECOVERED_EVENT: recovered };
 });
 
 const resolver = vi.hoisted(() => ({ data: undefined as unknown }));
@@ -63,7 +68,7 @@ vi.mock("@/lib/page-metadata", async (importOriginal) => {
   return {
     ...actual,
     getPageSocialPreview: (canonical: string) =>
-      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed|ongoing)-event\/$/.test(canonical) ? "/depeg/" : canonical),
+      actual.getPageSocialPreview(/\/depeg\/(?:disputed|confirmed|ongoing|recovered)-event\/$/.test(canonical) ? "/depeg/" : canonical),
   };
 });
 
@@ -73,8 +78,11 @@ vi.mock("next/font/local", () => ({
 
 vi.mock("@/components/related-incidents-rail", () => ({ RelatedIncidentsRail: () => null }));
 vi.mock("@/components/preferred-source-prompt", () => ({ PreferredSourcePrompt: () => null }));
+vi.mock("@/hooks/use-prefetch-stablecoin", () => ({ usePrefetchStablecoin: () => vi.fn() }));
 
 import DepegEventPage, { generateMetadata } from "./page";
+import { DepegFeed } from "@/components/depeg/depeg-feed";
+import { installMatchMediaMock } from "@/test-utils/frontend";
 import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { buildDepegEventDescription, buildDepegEventSynopsis } from "@/lib/depeg-event-display";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -141,6 +149,21 @@ describe("depeg event page metadata and briefing", () => {
     expect(html).toContain("Recorded detector start");
     expect(html).toContain("First admissible observation");
     expect(html).toContain("Recorded duration");
+  });
+
+  it("uses the admitted recovery time for the permanent record and recent feed", async () => {
+    await renderPage(RECOVERED_EVENT.slug);
+    expect(screen.getByText("Duration").nextElementSibling?.textContent).toBe("15 min");
+
+    installMatchMediaMock(true);
+    const { container } = render(<DepegFeed events={[
+      RECOVERED_EVENT,
+      { ...RECOVERED_EVENT, id: 5, symbol: "LEGACY", analyticRecoveryAt: undefined },
+      { ...RECOVERED_EVENT, id: 6, symbol: "UNVERIFIED", analyticRecoveryAt: null },
+    ]} />);
+    expect(within(container).getByRole("link", { name: /USDC.*15m/ })).toBeTruthy();
+    expect(within(container).getByRole("link", { name: /LEGACY.*30m/ })).toBeTruthy();
+    expect(within(container).getByRole("link", { name: /UNVERIFIED.*Recorded duration 30m/ })).toBeTruthy();
   });
 
   it.each(["kag-2026-06-14", "eurr-2026-05-24"])("qualifies the legacy detector start for %s", async (event) => {

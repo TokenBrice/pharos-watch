@@ -1005,20 +1005,23 @@ export function buildYieldSupplementalFamilyCache(
   candidates: ResolvedYieldCandidate[],
   updatedAt = Math.floor(Date.now() / 1000),
 ): string {
-  let rollbackUpdatedAt = updatedAt;
-  const data = candidates.map((candidate) => {
+  const safeClocks = candidates.map(({ yield: source }) => {
+    if (source.sourceFetchedAt == null || source.sourceObservedAt == null) return updatedAt;
+    const family = resolveYieldSourceKeyRoute(source.sourceKey)?.family;
+    if (family == null) return updatedAt;
+    const validUntil = source.sourceObservedAt + getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000;
+    if (validUntil < Math.max(updatedAt, source.sourceFetchedAt)) return null;
+    return Math.min(updatedAt, validUntil - getSupplementalFamilyStaleThresholdSec(family));
+  });
+  // Main can still sample rejected rows. Use the longest safe family lifetime,
+  // and withhold rows that would expire before that shared clock.
+  const rollbackUpdatedAt = safeClocks.reduce<number | null>((latest, clock) =>
+    clock == null ? latest : Math.max(latest ?? clock, clock), null) ?? updatedAt;
+  const data = candidates.map((candidate, index) => {
     const source = candidate.yield;
     if (source.sourceFetchedAt == null) return candidate;
-    const family = resolveYieldSourceKeyRoute(source.sourceKey)?.family;
-    let unavailableForRollback = false;
-    if (source.sourceObservedAt != null && family != null) {
-      const validUntil = source.sourceObservedAt + getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000;
-      unavailableForRollback = validUntil < Math.max(updatedAt, source.sourceFetchedAt);
-      if (!unavailableForRollback) {
-        // The legacy worker can still sample rejected rows. Expire its family before any projected quote goes stale.
-        rollbackUpdatedAt = Math.min(rollbackUpdatedAt, validUntil - getSupplementalFamilyStaleThresholdSec(family));
-      }
-    }
+    const safeClock = safeClocks[index];
+    const unavailableForRollback = safeClock == null || safeClock < rollbackUpdatedAt;
     return {
       ...candidate,
       yield: {

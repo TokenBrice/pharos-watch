@@ -177,6 +177,28 @@ describe("parseYieldSupplementalSourcesCache", () => {
     }
   });
 
+  it("keeps the independent USDC vault on rollback when the USDT vault expires", () => {
+    const maxAge = getSupplementalFamilyStaleThresholdSec("yearnKong");
+    const [usdc, usdt] = [
+      { symbol: "USDC", currentApy: 4, sourceObservedAt: null },
+      { symbol: "USDT", currentApy: 5, sourceObservedAt: nowSec - maxAge + 1 },
+    ].map(({ symbol, ...quote }) => ({
+      symbol,
+      yield: resolvedYield({
+        ...quote, dataSource: "protocol-api", sourceKey: `protocol-api:yearn:ethereum:${symbol.toLowerCase()}`,
+        sourceFetchedAt: nowSec,
+      }),
+    }));
+    const raw = buildYieldSupplementalFamilyCache([usdc, usdt], nowSec);
+    expect(JSON.parse(raw)).toMatchObject({ updatedAt: nowSec, data: [
+      { symbol: "USDC", yield: { currentApy: 4 } },
+      { symbol: "USDT", yield: { currentApy: null, currentApyV2: 5 } },
+    ] });
+    expect(parseYieldSupplementalSourcesCache(raw, nowSec, nowSec + 2)).toMatchObject({
+      candidates: [usdc, usdt], ageSeconds: 2, rejectedCount: 0,
+    });
+  });
+
   it("rejects legacy array format", () => {
     const raw = JSON.stringify([{
       symbol: "sDAI",

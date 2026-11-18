@@ -595,6 +595,11 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       `);
       continue;
     }
+    if (target === "supply_history") {
+      db.exec(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+        VALUES ('usdt-tether', 172800, 100000000, 1.05, 172860);`);
+      continue;
+    }
     if (target === "mint_burn_events") {
       db.exec(`
         INSERT INTO mint_burn_events (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
@@ -613,6 +618,11 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
     if (target === "mint_burn_hourly") {
       db.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
         VALUES ('meusd-mezo', 'ethereum', 3600, 1, 12000000, 12000000);`);
+      continue;
+    }
+    if (target === "mint_burn_publication_policy") {
+      db.exec(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+        VALUES (1, '["operator-disabled"]', '["operator-paused"]', 1);`);
       continue;
     }
     if (target === "cron_runs") {

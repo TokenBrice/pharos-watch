@@ -18,8 +18,7 @@ import { prepareCacheUpsert } from "../../lib/db-cache";
 import { executeAtomicBatch } from "../../lib/db";
 import { getLatestSuccessfulReserveSnapshotMetadata } from "../../lib/live-reserves/store";
 import { recordFxAdmissionCoverage } from "../../lib/fx-admission-coverage";
-import { REALTIME_FX_CURRENCY_TO_PEG } from "../../lib/fx-config";
-import { getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
+import { getFxReferenceTypeFromState, hasVerifiedLegacyRate } from "../../lib/fx-rate-state";
 import { prepareStablecoinsGenerationCompanion } from "../../lib/stablecoins-cache";
 import { savePriceCache, type PriceCacheWriteEntry } from "../../lib/price-cache";
 import type { PeggedAsset } from "./enrich-prices";
@@ -143,10 +142,10 @@ async function readXagmEntitlement(db: D1Database, now: number, quoteObservedAtS
     ? entitlement : undefined;
 }
 
-function selectedPegReferences(pegRates: PegRatesResult, generation: string): Record<string, SelectedPegReference> {
+function selectedPegReferences(pegRates: PegRatesResult, generation: string, legacyFxPegs: ReadonlySet<string>): Record<string, SelectedPegReference> {
   const selected: Record<string, SelectedPegReference> = Object.create(null);
   for (const [pegKey, kind] of Object.entries(pegRates.sources)) {
-    if (normalizePegType(pegKey) !== pegKey || pegKey === "peggedUSD") continue;
+    if (normalizePegType(pegKey) !== pegKey || pegKey === "peggedUSD" || legacyFxPegs.has(pegKey)) continue;
     if (kind === "median") {
       const contributors = pegRates.contributors?.[pegKey];
       if (contributors?.length) selected[pegKey] = {
@@ -266,15 +265,16 @@ export async function validateAndWriteStablecoinsCache(
   // One optional cohort read: unavailable DEX evidence never becomes an agreement verdict.
   const fxReferenceObservations = admission.payload.fxReferenceObservations;
   const fxState = input.detectionFxState ?? null;
-  const legacyFxPegs = new Set(Object.values(REALTIME_FX_CURRENCY_TO_PEG).filter((peg) =>
-    fxState?.metadataIdentity === "verified" && fxState.legacyDetectionPegs?.includes(peg) &&
-    !fxState.observations?.[peg] && !input.fxReferenceObservations?.[peg] &&
+  const legacyFxPegs = fxState?.legacyDetectionPegs?.filter((peg) =>
+    hasVerifiedLegacyRate(fxState, peg) && !input.fxReferenceObservations?.[peg] &&
     fxFallbackRates?.[peg] === fxState.rates[peg] &&
-    getFxReferenceTypeFromState(fxState, peg, REFERENCE_INTRADAY_BUDGET_SEC, now) === "fresh"));
+    getFxReferenceTypeFromState(fxState, peg, REFERENCE_INTRADAY_BUDGET_SEC, now) === "fresh") ?? [];
+  const legacyFxPegSet = new Set(legacyFxPegs);
   const generation = `stablecoins:${syncStartSec}`;
-  const pegRates = derivePegRates(admission.payload.peggedAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates, fxReferenceObservations, now);
+  const pegRates = derivePegRates(admission.payload.peggedAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates,
+    fxReferenceObservations, now, legacyFxPegs);
   if (fxReferenceObservations !== undefined) {
-    admission.payload.selectedPegReferences = selectedPegReferences(pegRates, generation);
+    admission.payload.selectedPegReferences = selectedPegReferences(pegRates, generation, legacyFxPegSet);
   }
   const coverageGeneration = crypto.randomUUID();
   admission.payload.fxAdmissionCoverageGeneration = coverageGeneration;
@@ -285,7 +285,7 @@ export async function validateAndWriteStablecoinsCache(
     return [];
   });
   const observations = deriveCurrentPegObservationMap({
-    peggedAssets: admission.payload.peggedAssets, pegRates, fxReferenceObservations, legacyFxPegs, generation, asOf: syncStartSec, now,
+    peggedAssets: admission.payload.peggedAssets, pegRates, fxReferenceObservations, legacyFxPegs: legacyFxPegSet, generation, asOf: syncStartSec, now,
     dexPrices: selectCurrentPegDexPrices(dexRows, now),
   });
   for (const asset of admission.payload.peggedAssets) {
@@ -348,14 +348,16 @@ export async function validateAndWriteStablecoinsCache(
       // Keep legacy display clock aliases out of the internal coverage measurement.
       coverageAssets = coverageAssets.map((row, i) => ({ ...row, priceObservedAt: assets[i].priceObservedAt ?? null }));
       if (input.fxReferenceObservations !== undefined) {
-        const internal = deriveCurrentPegObservationMap({ peggedAssets: coverageAssets, fxFallbackRates,
-          fxReferenceObservations: input.fxReferenceObservations, legacyFxPegs, generation, asOf: syncStartSec, now });
+        const internalPegRates = derivePegRates(coverageAssets, WORKER_TRACKED_META_BY_ID, fxFallbackRates,
+          input.fxReferenceObservations, now, legacyFxPegs);
+        const internal = deriveCurrentPegObservationMap({ peggedAssets: coverageAssets, pegRates: internalPegRates,
+          fxReferenceObservations: input.fxReferenceObservations, legacyFxPegs: legacyFxPegSet, generation, asOf: syncStartSec, now });
         for (const row of coverageAssets) row.currentPeg = internal.get(row.id);
       }
     }
     const legacy = {
       state: fxState, decisionAt: now, contributors: pegRates.contributors,
-      pegs: input.fxReferenceObservations === undefined ? undefined : legacyFxPegs,
+      pegs: input.fxReferenceObservations === undefined ? undefined : legacyFxPegSet,
     };
     await recordFxAdmissionCoverage(db, coverageAssets, syncStartSec,
       previous?.updated_at ?? null, coverageGeneration, previous?.generation ?? null, legacy).catch((error: unknown) => {

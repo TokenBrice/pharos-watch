@@ -96,7 +96,10 @@ export function parseSupplyData(
     }
     const buckets = point.totalCirculating ?? point.circulating;
     const native = admitSupplyBuckets(buckets);
-    if (native.status !== "observed") continue;
+    if (native.status !== "observed") {
+      if (native.status === "invalid" && !map.has(ts)) map.set(ts, null);
+      continue;
+    }
     // Without a conversion reference only explicitly USD buckets are usable.
     const rate = getNativeUsdRate?.(ts) ??
       (Object.keys(buckets!).every((key) => key === "peggedUSD") ? 1 : null);

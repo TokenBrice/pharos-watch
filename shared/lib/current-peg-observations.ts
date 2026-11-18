@@ -28,6 +28,31 @@ export function hasFxReferenceEvidence(observations: unknown): boolean {
   return isRecord(observations);
 }
 
+// A published marker is scoped to one asset, peg and accepted publication.
+export function getPublishedLegacyPegReference(
+  asset: Pick<StablecoinData, "pegType" | "currentPeg"> | undefined,
+  publication: { fxReferenceObservations?: unknown; fxFallbackRates?: Record<string, number> },
+  asOf: number,
+): NonNullable<CurrentPeg["pegReference"]> | undefined {
+  const pegType = normalizePegType(asset?.pegType);
+  const observation = asset?.currentPeg;
+  const reference = observation?.pegReference;
+  const evidence = publication.fxReferenceObservations;
+  if (!pegType || !isRecord(evidence) || Object.prototype.hasOwnProperty.call(evidence, pegType) ||
+      observation?.legacyFxReference !== true || observation.pegReferenceUnavailable || observation.currentPriceUnavailable ||
+      observation.referenceAdmission !== undefined || observation.admittedDeviationBps !== undefined ||
+      !reference || reference.asOf !== asOf || !Number.isFinite(reference.valueUsd) || reference.valueUsd <= 0) return;
+  const fallback = publication.fxFallbackRates?.[pegType];
+  if (fallback == null || !Number.isFinite(fallback) || fallback <= 0) return;
+  if (pegType === "peggedGOLD" || pegType === "peggedSILVER") {
+    const unit = reference.usdPerTroyOunce;
+    if (unit != null && Number.isFinite(unit) && unit > 0 &&
+        (reference.source === "median" || (reference.source === "fallback" && unit === fallback))) return reference;
+  } else if (pegType !== "peggedUSD" && reference.source === "fx" && reference.valueUsd === fallback) {
+    return reference;
+  }
+}
+
 function evaluateSelectedReference(
   evidence: Pick<ReferenceAdmissionInput, "quoteObservedAtSec" | "decisionAtSec" | "rawDeviationBps" | "generation" | "purpose">,
   pegType: string | undefined,
@@ -70,8 +95,19 @@ export function deriveCurrentPegObservationMap(options: {
   const referenceRates = options.pegRates ?? derivePegRates(
     options.peggedAssets, WORKER_TRACKED_META_BY_ID, options.fxFallbackRates, options.fxReferenceObservations, decisionAtSec,
   );
-  const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = referenceRates;
   const evidence = options.fxReferenceObservations;
+  const publishedLegacyById = new Map<string, NonNullable<CurrentPeg["pegReference"]>>();
+  let hasLegacyBullion = false;
+  if (options.legacyFxPegs === undefined && hasFxReferenceEvidence(evidence)) {
+    for (const asset of options.peggedAssets) {
+      const reference = getPublishedLegacyPegReference(asset, options, options.asOf);
+      if (!reference) continue;
+      publishedLegacyById.set(asset.id, reference);
+      if (reference.usdPerTroyOunce !== undefined) hasLegacyBullion = true;
+    }
+  }
+  const legacyBullionRates = hasLegacyBullion
+    ? derivePegRates(options.peggedAssets, WORKER_TRACKED_META_BY_ID, options.fxFallbackRates) : undefined;
   const result = new Map<string, CurrentPegObservation>();
 
   for (const meta of WORKER_ACTIVE_STABLECOINS) {
@@ -86,6 +122,19 @@ export function deriveCurrentPegObservationMap(options: {
     const unit = {
       assetId: meta.id, commodityEntitlement: asset?.commodityEntitlement, quoteObservedAtSec: observedAsset?.priceObservedAt,
     };
+    const publishedLegacy = publishedLegacyById.get(meta.id);
+    const candidate = publishedLegacy?.usdPerTroyOunce !== undefined ? legacyBullionRates ?? referenceRates : referenceRates;
+    const legacyFxReference = isRecord(evidence) && !!referencePegType &&
+      !Object.prototype.hasOwnProperty.call(evidence, referencePegType) && (
+        options.legacyFxPegs?.has(referencePegType) ?? (
+          publishedLegacy !== undefined &&
+          publishedLegacy.source === candidate.sources[referencePegType] &&
+          publishedLegacy.valueUsd === getPegReference(referencePegType, candidate.rates, meta.commodityOunces, unit) &&
+          (publishedLegacy.usdPerTroyOunce === undefined || publishedLegacy.usdPerTroyOunce === candidate.rates[referencePegType])
+        )
+      );
+    const selectedRates = legacyFxReference ? candidate : referenceRates;
+    const { rates: pegRates, sources: pegRateSources, counts: pegRateCounts } = selectedRates;
     const pegRef = getPegReference(referencePegType, pegRates, meta.commodityOunces, unit);
     const source = referencePegType ? pegRateSources[referencePegType] : undefined;
     const contributorCount = referencePegType ? pegRateCounts[referencePegType] ?? 0 : 0;
@@ -98,22 +147,13 @@ export function deriveCurrentPegObservationMap(options: {
     const pegReferenceUnavailable = !navToken && !!observedAsset && (!authoritative || !parityQuote);
     const signal = parityQuote && authoritative ? deriveDepegSignal(observedAsset.price, pegRef) : null;
     const rawSignal = signal && Number.isFinite(signal.rawBps) ? signal : null;
-    const published = asset?.currentPeg;
-    const legacyFxReference = isRecord(evidence) && !!referencePegType && source === "fx" && pegRef != null &&
-      !Object.prototype.hasOwnProperty.call(evidence, referencePegType) &&
-      (options.legacyFxPegs?.has(referencePegType) ?? (
-        published?.legacyFxReference === true && !published.pegReferenceUnavailable &&
-        published.referenceAdmission === undefined && published.admittedDeviationBps === undefined &&
-        published.pegReference?.source === "fx" && published.pegReference.valueUsd === pegRef &&
-        published.pegReference.asOf === options.asOf
-      ));
     const admissionEnabled = hasFxReferenceEvidence(evidence) && !legacyFxReference;
     const rawDeviationBps = admissionEnabled && rawSignal ? asRawDeviationBps(rawSignal.rawBps) : null;
     const fixedUsd = !navToken && pegCurrency === "USD";
     const referenceAdmission = !admissionEnabled || fixedUsd ? undefined : evaluateSelectedReference({
       quoteObservedAtSec: !navToken && observedAsset?.priceObservedAtMode === "upstream" ? observedAsset.priceObservedAt : null,
       decisionAtSec, rawDeviationBps, generation: options.generation, purpose: "current",
-    }, unresolvedMedian || (observedAsset && (!parityQuote || pegRef == null)) ? undefined : referencePegType, pegCurrency, referenceRates);
+    }, unresolvedMedian || (observedAsset && (!parityQuote || pegRef == null)) ? undefined : referencePegType, pegCurrency, selectedRates);
     const withheld = referenceAdmission != null && referenceAdmission.status !== "admitted";
     const currentSignal = withheld ? null : rawSignal;
     const currentDeviationBps = currentSignal?.bps ?? null;
@@ -139,7 +179,7 @@ export function deriveCurrentPegObservationMap(options: {
       const dexAdmission = admissionEnabled && !fixedUsd && !navToken ? evaluateSelectedReference({
         quoteObservedAtSec: dexRow.observedAtSec ?? null, decisionAtSec, generation: options.generation, purpose: "current",
         rawDeviationBps: dexRawSignal ? asRawDeviationBps(dexRawSignal.rawBps) : null,
-      }, dexReference != null && !unresolvedMedian ? dexPegType ?? undefined : undefined, pegCurrency, referenceRates) : undefined;
+      }, dexReference != null && !unresolvedMedian ? dexPegType ?? undefined : undefined, pegCurrency, selectedRates) : undefined;
       const dexBps = navToken
         ? primaryTrust !== "unusable" && asset?.price != null
           ? deriveDepegSignal(dexRow.dex_price_usd, asset.price)?.bps ?? null : null

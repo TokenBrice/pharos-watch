@@ -442,6 +442,31 @@ describe("handleBackfillDepegs replay windows", () => {
     }
   });
 
+  it("previews and inserts a proved closed PAXG episode alongside an unproved open episode", async () => {
+    const { db, sqlite } = fixtures.open();
+    const times = ["2026-11-06T21:55Z", "2026-11-07T14:00Z", "2026-11-07T14:30Z", "2026-11-09T12:00Z",
+      "2026-11-13T21:55Z", "2026-11-14T14:00Z", "2026-11-14T14:30Z"].map((time) => Date.parse(time) / 1000);
+    const prices = [4000, 2800, 2800, 4000, 4000, 2800, 2800].map((price, i) => ({ timestamp: times[i]!, price }));
+    mockFetch([{ match: "/stablecoin/", body: { gecko_id: "pax-gold",
+      tokens: times.map((timestamp) => ({ date: String(timestamp), totalCirculatingUSD: { peggedGOLD: 2e9 } })),
+    } }]);
+    const run = async (dryRun: boolean) => {
+      vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValueOnce({ prices, diagnostics: makeReplayDiagnostics(prices.length) });
+      vi.mocked(fetchHistoricalCommodityPeers).mockResolvedValueOnce({ GOLD: ["a", "b", "c"].map((sourceId) => ({
+        assetId: `peer-${sourceId}`, sourceId, commodityOunces: 1, prices: times.map((timestamp) => ({ timestamp, price: 4000 })),
+      })) });
+      const url = makeApiUrl("/api/backfill-depegs?stablecoin=paxg-paxos" + (dryRun ? "&dry-run=true" : ""));
+      return readJsonResponse(await handleBackfillDepegsTrusted({ db, url, coingeckoApiKey: "cg-test-key" }), 200);
+    };
+    expect(await run(true)).toMatchObject({ recomputedBackfillEvents: 1, previews: [{
+      addedBackfillEventsSample: [{ startedAt: times[1], endedAt: times[3], peakDeviationBps: -3000 }],
+    }] });
+    expect(await run(false)).toMatchObject({ eventsCreated: 1 });
+    expect(sqlite.prepare("SELECT started_at, ended_at, peak_deviation_bps FROM depeg_events").all())
+      .toEqual([{ started_at: times[1], ended_at: times[3], peak_deviation_bps: -3000 }]);
+    expect(await run(false)).toMatchObject({ eventsCreated: 0, skipReasons: { "paxg-paxos": "insufficient-boundary-evidence" } });
+  });
+
   it("preserves a PAXG incident when hourly quotes straddle the maintenance closure", async () => {
     const at = (clock: string) => Date.parse(`2026-11-17T${clock}Z`) / 1000;
     const prices = ["21:30", "21:45", "23:15"].map((clock) => ({ timestamp: at(clock), price: 4000 }));

@@ -8,6 +8,31 @@ const DAY_SECONDS = 24 * 60 * 60;
 const NOW_SEC = 1_779_210_000;
 
 describe("yield v8.16 coverage paths", () => {
+  it("derives FILQA yield from two clocked market quotes with unavailable native supply", async () => {
+    const latestQuote = NOW_SEC - 60;
+    const anchorQuote = latestQuote - 14 * DAY_SECONDS;
+    const id = "filqa-fidelity-international";
+    vi.useFakeTimers().setSystemTime(NOW_SEC * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
+         VALUES (?, ?, 1e8, ?)`,
+      );
+      for (const [price, observedAt] of [[1, anchorQuote], [1.05 ** (14 / 365.25), latestQuote]]) {
+        insert.run(id, startOfUtcDaySec(new Date(observedAt * 1000)), JSON.stringify({
+          nativeQuantityUnavailable: true, marketQuote: { price, observedAt },
+        }));
+      }
+      const result = await getPriceDerivedApy(db, id);
+      expect(result).toMatchObject({ sourceObservedAt: latestQuote, comparisonAnchorObservedAt: anchorQuote });
+      expect(result?.apy).toBeCloseTo(5);
+    } finally {
+      sqlite.close();
+      vi.useRealTimers();
+    }
+  });
+
   it.each([
     { bucketDays: 7, quoteDays: 6, expectedApy: null },
     { bucketDays: 6, quoteDays: 8, expectedApy: 5 },

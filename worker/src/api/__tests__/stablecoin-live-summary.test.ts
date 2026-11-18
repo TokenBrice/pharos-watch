@@ -211,6 +211,20 @@ describe("site-only stablecoin live summary", () => {
     expect([summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{}, {}]);
   });
 
+  it("distinguishes a refused window from an omitted window or a failed assessment", () => {
+    const detail: StablecoinDetailResponse = {
+      currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
+      tokens: [
+        { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
+        { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
+      ],
+    };
+    expect(projectStablecoinLiveSummary({ ...detail, supplyChangeBaselines: { week: null } }, "eurc-circle"))
+      .toMatchObject({ circulatingPrevWeek: {}, circulatingPrevMonth: { peggedEUR: 85_000_000 } });
+    expect(projectStablecoinLiveSummary({ ...detail, supplyChangeBaselines: {} }, "eurc-circle"))
+      .toMatchObject({ circulatingPrevWeek: {}, circulatingPrevMonth: {} });
+  });
+
   it("preserves settled failed-refresh warnings even for a recently produced generation", async () => {
     vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
       "Cache-Control": "no-store", "X-Data-Freshness": "stale", Warning: '110 - "Detail refresh failed"',

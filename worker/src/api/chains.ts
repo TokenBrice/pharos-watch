@@ -164,7 +164,8 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
 
   const activeSource = await loadActiveSafetyScoreIndex(db);
   const safetyScores: Record<string, number> = {};
-  const reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
+  const now = Math.floor(Date.now() / 1000);
+  const reportCards = buildV9ExpectedDependencyMeta(activeSource, now);
   const safetyScoreIdentity =
     activeSource.kind === "error" ? null : activeSource.snapshot.safetyScoreIdentity;
   if (activeSource.kind !== "error" && reportCards.status === "fresh") {
@@ -178,6 +179,7 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     ...stablecoinsResult.payload,
     peggedAssets: hasFxEvidence ? peggedAssets : activePeggedAssets,
     asOf: stablecoinsResult.updatedAt,
+    now,
   });
   const response = aggregateChains({
     peggedAssets: activePeggedAssets.map((asset) => {

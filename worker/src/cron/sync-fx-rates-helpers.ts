@@ -10,7 +10,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, getCacheUpdatedAt, setCache } from "../lib/db-cache";
 import type { MetalPegKey, MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { assessEcbRelease, getEcbFixingClocks, getFxSourceStatus, isAdmissibleFxSourceDate, isFreshFxObservation, persistFxRateState } from "../lib/fx-rate-state";
+import { assessEcbRelease, getEcbFixingClocks, getFxSourceStatus, hasVerifiedLegacyRate, isAdmissibleFxSourceDate, isFreshFxObservation, persistFxRateState } from "../lib/fx-rate-state";
 import { fxSourceSampleKey, recordFxSourceSample, type FxBaseline, type FxMedianContributorsByPeg, type FxReferenceSourceSamples } from "../lib/fx-observations";
 import { logCronEvent, type CronEventInput, type CronResult } from "../lib/cron-logger";
 import {
@@ -235,6 +235,7 @@ export class FxSyncRunState {
   readonly sourceDateByPeg: Record<string, string | null> = {};
   private readonly observations: FxReferenceObservationMap = {};
   private readonly legacyDetectionPegs = new Set<string>();
+  private readonly offeredPegKeys = new Set<string>();
   private readonly referenceMedianContributorsByPeg: FxMedianContributorsByPeg = {};
   private readonly correctedLegacyFixings: FxReferenceObservationMap = {};
   private readonly dailyObservations: FxReferenceObservationMap;
@@ -372,23 +373,31 @@ export class FxSyncRunState {
     return this.correctedLegacyFixings[pegKey]?.observedAtSec ?? this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
   }
 
+  private previousSourceStatus(pegKey: string) {
+    const prev = this.prevState;
+    return getFxSourceStatus(prev?.sourceUpdatedAtByPeg[pegKey] ?? null, prev?.sourceModeByPeg[pegKey], this.syncStartSec, {
+      pegKey, cadence: prev?.sourceCadenceByPeg[pegKey], sourceDate: prev?.sourceDateByPeg[pegKey],
+      legacy: prev?.observations === undefined || hasVerifiedLegacyRate(prev, pegKey),
+    });
+  }
+
   private previousIsFresh(pegKey: string): boolean {
     const corrected = this.correctedLegacyFixings[pegKey];
     if (corrected) return isObservationFreshAt(corrected, this.syncStartSec);
-    const prev = this.prevState;
     const observedAt = this.previousReferenceClock(pegKey);
-    return observedAt != null && observedAt <= this.syncStartSec && isFreshFxObservation(
-      observedAt, prev?.sourceModeByPeg[pegKey], this.syncStartSec,
-      { pegKey, cadence: prev?.sourceCadenceByPeg[pegKey], sourceDate: prev?.sourceDateByPeg[pegKey] },
-    );
+    return observedAt != null && observedAt <= this.syncStartSec && this.previousSourceStatus(pegKey) === "fresh";
+  }
+
+  private currentSourceStatus(pegKey: string) {
+    return getFxSourceStatus(this.sourceUpdatedAtByPeg[pegKey] ?? null, this.sourceModeByPeg[pegKey], this.syncStartSec, {
+      pegKey, cadence: this.sourceCadenceByPeg[pegKey], sourceDate: this.sourceDateByPeg[pegKey],
+      legacy: this.legacyDetectionPegs.has(pegKey) && !this.observations[pegKey],
+    });
   }
 
   private currentIsFresh(pegKey: string): boolean {
     const observedAt = this.sourceUpdatedAtByPeg[pegKey];
-    return observedAt != null && observedAt <= this.syncStartSec && isFreshFxObservation(
-      observedAt, this.sourceModeByPeg[pegKey], this.syncStartSec,
-      { pegKey, cadence: this.sourceCadenceByPeg[pegKey], sourceDate: this.sourceDateByPeg[pegKey] },
-    );
+    return observedAt != null && observedAt <= this.syncStartSec && this.currentSourceStatus(pegKey) === "fresh";
   }
 
   private canCorroborate(pegKey: string, rate: number, observedAtSec: number): boolean {
@@ -597,6 +606,7 @@ export class FxSyncRunState {
     for (const [currency, pegKey] of mappings) {
       const prevRate = this.prevRates[pegKey];
       const perUsd = getPerUsd(currency);
+      if (perUsd !== undefined) this.offeredPegKeys.add(pegKey);
       if (typeof perUsd === "number" && Number.isFinite(perUsd) && perUsd > 0) {
         const rate = invertUnitsPerUsd(perUsd);
         const valid = this.validateRate(pegKey, rate, this.baselines[pegKey]?.usdPerUnit);
@@ -821,6 +831,7 @@ export class FxSyncRunState {
    */
   applyRealtimeOverlayRates(observation: RealtimeFxObservation): number {
     let applied = 0;
+    for (const pegKey of observation.rates.keys()) this.offeredPegKeys.add(pegKey);
     if (getRealtimeFxTimestampRejection(observation.observedAt, this.syncStartSec)) return applied;
     const fxSession = getReferenceSessionState("fx", this.syncStartSec);
     for (const [pegKey, realtimeRate] of observation.rates) {
@@ -874,6 +885,7 @@ export class FxSyncRunState {
     let accepted = 0;
 
     for (const [pegKey, quote] of quotes) {
+      this.offeredPegKeys.add(pegKey);
       if (quote.updatedAt > this.syncStartSec) continue;
       const normalized = Number(quote.price.toFixed(6));
       const candidate: FxReferenceObservation = {
@@ -1021,16 +1033,7 @@ export class FxSyncRunState {
     if (pegKey in this.usableRates || typeof this.prevRates[pegKey] !== "number" || this.prevRates[pegKey] <= 0) {
       return false;
     }
-    if (options.requireCadenceValid && getFxSourceStatus(
-      this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null,
-      this.prevState?.sourceModeByPeg[pegKey],
-      this.syncStartSec,
-      {
-        pegKey,
-        cadence: this.prevState?.sourceCadenceByPeg[pegKey],
-        sourceDate: this.prevState?.sourceDateByPeg[pegKey] ?? null,
-      },
-    ) !== "fresh") {
+    if (options.requireCadenceValid && this.previousSourceStatus(pegKey) !== "fresh") {
       return false;
     }
 
@@ -1047,16 +1050,7 @@ export class FxSyncRunState {
 
   ensureCadenceValidRate(pegKey: string, label: string): boolean {
     const currentRate = this.usableRates[pegKey];
-    if (typeof currentRate === "number" && currentRate > 0 && getFxSourceStatus(
-      this.sourceUpdatedAtByPeg[pegKey] ?? null,
-      this.sourceModeByPeg[pegKey],
-      this.syncStartSec,
-      {
-        pegKey,
-        cadence: this.sourceCadenceByPeg[pegKey],
-        sourceDate: this.sourceDateByPeg[pegKey] ?? null,
-      },
-    ) === "fresh") {
+    if (typeof currentRate === "number" && currentRate > 0 && this.currentSourceStatus(pegKey) === "fresh") {
       return true;
     }
 
@@ -1079,6 +1073,7 @@ export class FxSyncRunState {
     for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
       const resolved = metals.resolvedByPeg[pegKey];
       if (!resolved) continue;
+      if (resolved.source !== "cached") this.offeredPegKeys.add(pegKey);
       const { updatedAt } = resolved;
       if (updatedAt != null && updatedAt > this.syncStartSec) continue;
       const source = resolved.source === "commodity-peer-median" ? "peer-median" : resolved.source;
@@ -1140,6 +1135,16 @@ export class FxSyncRunState {
   }
 
   buildPersistedMeta(): FxRatesMeta {
+    const prior = this.prevState?.metadataIdentity === "verified" ? this.prevState : null;
+    const omittedCloseCarryPegs = new Set<string>();
+    // Preserve eligibility through consecutive omissions. Any offered replacement ends the omission.
+    for (const { observation } of Object.values(this.referenceSourceSamples)) {
+      const { pegKey, source } = observation;
+      if (source !== "peer-median" && !(pegKey in this.usableRates) && !this.offeredPegKeys.has(pegKey) &&
+        (prior?.selectedReferenceEvidence?.[pegKey] || prior?.omittedCloseCarryPegs?.includes(pegKey))) {
+        omittedCloseCarryPegs.add(pegKey);
+      }
+    }
     const directMetalReferences: NonNullable<FxRatesMeta["directMetalReferences"]> = {};
     for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
       for (const source of ["gold-api.com", "chainlink"] as const) {
@@ -1177,6 +1182,7 @@ export class FxSyncRunState {
       observations: this.legacyDetectionPegs.size > 0 && Object.keys(this.observations).length === 0 &&
         Object.keys(this.usableRates).every((peg) => this.legacyDetectionPegs.has(peg)) ? undefined : this.observations,
       ...(this.legacyDetectionPegs.size ? { legacyDetectionPegs: [...this.legacyDetectionPegs] } : {}),
+      ...(omittedCloseCarryPegs.size ? { omittedCloseCarryPegs: [...omittedCloseCarryPegs] } : {}),
       directMetalReferences,
       referenceMedianContributorsByPeg: this.referenceMedianContributorsByPeg,
       dailyObservations: this.dailyObservations,

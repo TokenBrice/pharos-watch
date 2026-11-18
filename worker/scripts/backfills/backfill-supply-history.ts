@@ -14,6 +14,7 @@ import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { isDedicatedSingleTokenGoldProtocolSlug } from "@shared/lib/commodity-protocols";
 import { toTokenUnits } from "@shared/lib/math";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
+import type { SupplyObservationProvenance } from "@shared/types/supply";
 import { isKinesisWrapperSupplyId, onchainSupplyProbeFamily } from "@shared/lib/onchain-supply-probe";
 import { D1_BATCH_SIZE, DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../src/lib/constants";
 import { chunkArray } from "@shared/lib/collections";
@@ -71,17 +72,25 @@ function pushSupplyUpsert(
   price: number | null,
   quoteObservedAt: number | null,
   { mode, dryRun }: SupplyWriteOptions,
-  quantity?: { native: number | null; valuationPrice: number | null; valuationAt: number | null; supplySource: string; stockObservedAt: number | undefined },
+  quantity?: { native: number | null; nativeQuantityUnavailable?: boolean; valuationPrice: number | null; valuationAt: number | null; supplySource: string; stockObservedAt: number | undefined },
 ): void {
   const now = Math.floor(Date.now() / 1000);
   const priceObservedAt = quoteObservedAt != null && Number.isSafeInteger(quoteObservedAt) &&
     quoteObservedAt > 0 && quoteObservedAt <= now ? quoteObservedAt : null;
   const stockObservedAt = quantity?.stockObservedAt;
-  const provenance = quantity?.native != null && stockObservedAt != null &&
-    isDailyStockObservation(stablecoinId, snapshotDate, stockObservedAt, now)
-    ? JSON.stringify({ supplySource: quantity.supplySource, supplyObservedAt: stockObservedAt, supplyChainGuard: null }) : null;
+  const supplyObservedAt = stockObservedAt != null && isDailyStockObservation(stablecoinId, snapshotDate, stockObservedAt, now)
+    ? stockObservedAt : null;
+  const nativeQuantityUnavailable = quantity?.nativeQuantityUnavailable === true;
+  const evidence: SupplyObservationProvenance | null = quantity &&
+    (nativeQuantityUnavailable || (quantity.native != null && supplyObservedAt != null))
+    ? { supplySource: quantity.supplySource, supplyObservedAt, supplyChainGuard: null } : null;
+  if (evidence && nativeQuantityUnavailable) {
+    evidence.nativeQuantityUnavailable = true;
+    if (price != null) evidence.marketQuote = { price, observedAt: priceObservedAt };
+  }
+  const provenance = evidence == null ? null : JSON.stringify(evidence);
   if (mode === "price-clock-only") {
-    if (price == null || priceObservedAt == null) return;
+    if (nativeQuantityUnavailable || price == null || priceObservedAt == null) return;
     // A re-fetched quote and the retained valuation must identify the same price and instant.
     const match = `stablecoin_id = ? AND snapshot_date = ? AND price_observed_at IS NULL
       AND price = ? AND valuation_price_usd = ? AND valuation_observed_at_sec = ?`;
@@ -123,8 +132,9 @@ function pushSupplyUpsert(
       `${verb} INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price,
         circulating_native, valuation_price_usd, valuation_observed_at_sec, supply_provenance, price_observed_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)${conflict}`,
-    ).bind(stablecoinId, snapshotDate, circulating, price, quantity?.native ?? null, quantity?.valuationPrice ?? null,
-      quantity?.valuationAt ?? null, provenance, priceObservedAt));
+    ).bind(stablecoinId, snapshotDate, circulating, nativeQuantityUnavailable ? null : price,
+      quantity?.native ?? null, quantity?.valuationPrice ?? null, quantity?.valuationAt ?? null,
+      provenance, nativeQuantityUnavailable ? null : priceObservedAt));
     return;
   }
   statements.push(
@@ -1129,6 +1139,7 @@ async function executeBackfillSupplyHistory(
       const dailyQuote = quote && bucketUnixSecondsToUtcDay(quote.timestamp) === snapshotDate ? quote : null;
       pushSupplyUpsert(stmts, db, meta.id, snapshotDate, marketCapUsd, dailyQuote?.price ?? null, dailyQuote?.timestamp ?? null, { mode, dryRun }, {
         native,
+        nativeQuantityUnavailable: buckets.status === "invalid",
         valuationPrice: valuation?.price ?? null,
         valuationAt: valuation?.timestamp ?? null,
         supplySource: "defillama", stockObservedAt: entry.date,

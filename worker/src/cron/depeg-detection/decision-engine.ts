@@ -2,7 +2,7 @@ import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATIO
 import type { DepegPrimaryTrust } from "@shared/types/price";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { directUsdVenueKeys, readDexPriceLineage } from "../dex-liquidity/price-lineage";
+import { directUsdVenueKeys, readDexPriceLineage, selectIndependentChallengerPools } from "../dex-liquidity/price-lineage";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { getPrimaryPriceAgeSec, getPrimaryTrustSources } from "@shared/lib/depeg-primary-trust";
 import { depegObservedIntervals, isCurrentPegReferenceHold, mergeDepegIntervals, scheduledPegClosures } from "@shared/lib/peg-utils";
@@ -225,6 +225,12 @@ function buildPendingCommand(
   nativeVenue?: string,
   referenceAdmission?: PendingDepegCommandPayload["referenceAdmission"],
 ): DepegPersistenceCommand {
+  const lineage = readDexPriceLineage(asset);
+  const sourceKeys = isNativeOriginPending(reason) ? [] : [...new Set([
+    ...(primaryVenueKeys(asset) ?? []),
+    ...(lineage.upstreamKeys ?? lineage.pricePoolKeys ?? [])
+      .map((key) => key.startsWith("venue:") ? independenceKey(key.slice(6), asset.id) : key),
+  ])].sort();
   const payload: PendingDepegCommandPayload = {
     stablecoinId: asset.id,
     symbol: asset.symbol,
@@ -239,7 +245,7 @@ function buildPendingCommand(
     reason,
     ...(peerBasis ? { peerBasis } : {}),
     ...(nativeVenue ? { nativeVenue } : {}),
-    ...(!isNativeOriginPending(reason) && { sourceFamilies: [...(primaryVenueKeys(asset) ?? [])].sort() }),
+    ...(sourceKeys.length > 0 && { sourceKeys }),
     ...(referenceAdmission ? { referenceAdmission } : {}),
   };
   return { type: "upsert-pending", payload };
@@ -314,9 +320,12 @@ function deriveDexEvidence(params: {
     isFreshDexPoolObservation(source.observedAt, now));
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(freshRecoverySources, pegRef, recoveryThreshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection = existingDirection;
-  const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
+  const challengerPools = selectIndependentChallengerPools((input.challengerPools ?? []).filter((pool) =>
+    (pool.upstreamKeys === undefined && pool.pricePoolKeys === undefined) ||
+    (isFreshDexPoolObservation(pool.observedAt, now) && isIndependentDexObservation(input.asset, pool))));
+  const dexRecoveryChallenged = hasRecoveryChallenge(challengerPools, pegRef, threshold, recoveryVetoDirection);
   const poolChallengerEvidence = derivePoolChallengerEvidence({
-    challengers: input.challengerPools,
+    challengers: challengerPools,
     pegRef,
     threshold,
     depegDirection: recoveryVetoDirection,
@@ -573,8 +582,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const clockedNative = observedNative && (existingNative || independentNative || isIndependentVenue(asset, observedNative.derivation?.lineage.venue))
     ? observedNative : undefined;
   const rawNativeSignal = clockedNative ? deriveDepegSignal(clockedNative.price, 1) : null;
+  const silverEntitlementRequired = asset.id === "xagm-matrixdock";
   const isUsdObservationAdmitted = (value: number, observedAt: number | null | undefined, quoteMaxAgeSec: number) => {
-    if (asset.id === "xagm-matrixdock" && observedAt !== asset.commodityEntitlement?.quoteObservedAtSec) return false;
+    if (silverEntitlementRequired && observedAt !== asset.commodityEntitlement?.quoteObservedAtSec) return false;
     if (!reference) return true;
     const signal = deriveDepegSignal(value, pegRef);
     const verdict = assessDetectionReference({ ...input, meta, signal, quoteObservedAt: observedAt ?? null,
@@ -585,7 +595,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   // against a held reference cannot veto or extend their lifecycle.
   const dexInput = peerMove || !directAdmitted || independentNative
     ? { ...input, dexRow: undefined, protocolSources: undefined, challengerPools: undefined }
-    : reference ? {
+    : (reference || silverEntitlementRequired) ? {
       ...input,
       dexRow: input.dexRow && isUsdObservationAdmitted(input.dexRow.dex_price_usd, input.dexRow.aggregateObservedAt, DEX_FRESHNESS_SEC) ? input.dexRow : undefined,
       protocolSources: input.protocolSources?.filter((row) => isUsdObservationAdmitted(row.price, row.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC)),
@@ -1247,7 +1257,10 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     // A raw native silver quote is oz/token and needs its own dated entitlement, too.
     input = { ...input, meta, nativePegQuote: undefined };
   }
-  if (hasIncompatibleParityPrice(input.asset)) {
+  // Polling a display-only trade again does not establish a new market observation.
+  const undatedTrade = input.asset.priceQuoteBasis === "last-trade" &&
+    input.asset.priceObservedAtMode === "unknown" && input.asset.priceObservedAt === null;
+  if (hasIncompatibleParityPrice(input.asset) || undatedTrade) {
     input = { ...input, asset: { ...input.asset, price: null, priceObservedAt: null } };
   }
   const derived = deriveDecisionContext(input);

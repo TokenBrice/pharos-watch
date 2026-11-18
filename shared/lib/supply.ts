@@ -118,13 +118,16 @@ export function projectUsdMarketCapBaselineBuckets(
   const baselines = asset.supplyChangeBaselines;
   const baseline = baselines?.[window];
   if (baseline === null || (baselines && Object.keys(baselines).length === 0)) return {};
-  if (baseline === undefined || getCirculatingRawOrNull({ circulating: legacy }) === baseline.circulatingUsd) return legacy;
+  if (baseline === undefined) return legacy;
+  const bucketTotal = sumPegBucketsOrNull(legacy);
+  const close = baseline.circulatingUsd;
+  if (bucketTotal !== null && Math.abs(bucketTotal - close) <= Number.EPSILON * bucketTotal) return legacy;
 
   // Old Workers sum every bucket. Keep a measured total when D1 cannot apportion it across pegs.
   const keys = Object.keys(asset.circulating ?? {});
   const [peg] = keys;
   return peg && keys.length === 1 && Object.keys(legacy).every((key) => key === peg)
-    ? { [peg]: baseline.circulatingUsd } : { unattributed: baseline.circulatingUsd };
+    ? { [peg]: close } : { unattributed: close };
 }
 
 /** An empty map records an unsuccessful comparison. Older and partial maps can use legacy buckets. */

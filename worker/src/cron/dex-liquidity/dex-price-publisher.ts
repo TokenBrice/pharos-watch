@@ -325,14 +325,18 @@ export async function computeDexPrices({
     const meta = TRACKED_META_BY_ID.get(id);
     const primaryKeys = configuredPrimaryUpstreamKeys(id);
     // The old fallback reads protocol prices even when their voting clock is withheld.
-    const { displaySources, votingSources: sources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
-    const hasDisplayOnlySources = sources.length !== displaySources.length;
+    const { displaySources, votingSources } = projectProtocolSources(protocolSources, aggregateObservedAt, primaryKeys, admittedAtSec);
+    const hasDisplayOnlySources = votingSources.length !== displaySources.length;
+    // Main also treats protocol sources as individual fallback challengers.
+    const sources = votingSources.filter((source) => source.upstreamKeys === undefined);
+    const lineageSources = votingSources.filter((source) => source.upstreamKeys !== undefined);
     const priceSources = {
       ...(hasDisplayOnlySources && aggregateObservedAt != null
         ? { aggregateObservedAt: null, displayAggregateObservedAt: aggregateObservedAt }
         : projectAggregateClock(aggregateObservedAt, lineage, primaryKeys)),
       sources,
-      ...(hasDisplayOnlySources && { displaySources }),
+      ...(lineageSources.length > 0 && { lineageSources }),
+      ...(sources.length !== displaySources.length && { displaySources }),
       ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
       aggregateContributors: countedLineage?.aggregateContributors ?? [],
     };

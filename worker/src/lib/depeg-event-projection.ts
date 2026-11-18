@@ -8,7 +8,7 @@ import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disp
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import { admittedDepegRecoveryAt } from "./tape-projectors/depeg";
 import { readPendingObservationReceipt, type DepegObservationReceipt } from "./depeg-pending";
-import { isNativeOriginPending, isPairedDepegPeak, readDepegAdmittedCoverage, type DepegRow, rowToDepegEvent } from "./depeg-helpers";
+import { isNativeOriginPending, isPairedDepegPeak, readDepegAdmittedCoverage, readDepegPeakQuote, type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -364,6 +364,24 @@ function rowQuoteMode(row: DepegRow): string | null {
   }
 }
 
+export type DepegPeakBasisRow = Parameters<typeof readDepegPeakQuote>[0] &
+  Pick<DepegRow, "started_at" | "ended_at" | "peer_basis_json" | "pending_reason">;
+
+export function readPublicDepegPeakBasis(
+  row: DepegPeakBasisRow,
+  storedPeak = readPendingObservationReceipt(row.peer_basis_json)?.peak,
+  { peakPegReference, peakQuoteDomain } = readDepegPeakQuote(row),
+): Pick<DepegEvent, "peakBasis" | "peakPeerMedianUsd"> {
+  if (peakQuoteDomain === "native-peg") return {};
+  const peakReceipt = storedPeak && storedPeak.observedAt >= row.started_at
+    && (row.ended_at == null || storedPeak.observedAt <= row.ended_at)
+    && storedPeak.price === row.peak_price && storedPeak.pegReference === peakPegReference
+    && isPairedDepegPeak(storedPeak.price, storedPeak.pegReference, storedPeak.bps) ? storedPeak : null;
+  if (peakReceipt?.basis === "peer-relative") return { peakBasis: "peer-relative", peakPeerMedianUsd: peakReceipt.pegReference };
+  if (!peakReceipt && row.pending_reason?.split("+").includes("peer-relative")) return { peakBasis: "peer-relative" };
+  return {};
+}
+
 export function rowToPublicDepegEvent(
   row: DepegRow & { reviewed_dispute?: number },
   projections: Map<number, ActiveIncidentProjection>,
@@ -396,16 +414,9 @@ export function rowToPublicDepegEvent(
   } : row);
   const reviewedDispute = projection?.reviewedDispute || row.reviewed_dispute === 1
     || (event.disposition === "repaired" && event.admittedCoverage?.length === 0);
-  const storedPeak = receipt?.peak;
-  const peakReceipt = storedPeak && storedPeak.observedAt >= row.started_at
-    && (row.ended_at == null || storedPeak.observedAt <= row.ended_at)
-    && storedPeak.price === event.peakPrice && storedPeak.pegReference === event.peakPegReference
-    && isPairedDepegPeak(storedPeak.price, storedPeak.pegReference, storedPeak.bps) ? storedPeak : null;
-  const peerPeak = event.peakQuoteDomain !== "native-peg" && (peakReceipt?.basis === "peer-relative"
-    || (!peakReceipt && row.pending_reason?.split("+").includes("peer-relative")));
-  const peerMedian = peakReceipt?.basis === "peer-relative" ? event.peakPegReference : undefined;
+  const peakBasis = readPublicDepegPeakBasis(row, receipt?.peak ?? null, event);
   // A peer median cannot convert an observed USD price to fiat.
-  if (peerPeak) delete event.peakPegReference;
+  if (peakBasis.peakBasis === "peer-relative") delete event.peakPegReference;
   return {
     ...event,
     ...((projection && sameQuoteDomain ? projection.peerOpening : peerOpening) ? { onsetBasis: "peer-relative" } : {}),
@@ -414,7 +425,7 @@ export function rowToPublicDepegEvent(
       ? { analyticRecoveryAt: reviewedDispute ? null : admittedDepegRecoveryAt(row) } : {}),
     ...(projection?.admittedCoverage !== undefined ? { admittedCoverage: projection.admittedCoverage } : {}),
     ...(reviewedDispute ? { provenance: { ...event.provenance, pegScoreEligible: false }, admittedCoverage: [] } : {}),
-    ...(peerPeak ? { peakBasis: "peer-relative", ...(peerMedian == null ? {} : { peakPeerMedianUsd: peerMedian }) } : {}),
+    ...peakBasis,
     ...(row.stablecoin_id === "brz-transfero" && (BRZ_UNVERIFIED_PEAK_EVENT_IDS as readonly number[]).includes(row.id)
       ? { peakReview: "unverified" } : {}),
     constituentEventCount: projection?.constituentEventCount ?? 1,

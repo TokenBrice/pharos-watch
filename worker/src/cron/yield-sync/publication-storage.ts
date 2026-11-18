@@ -2,6 +2,7 @@ import { hasYieldBenchmarkUnitMismatch } from "@shared/lib/yield-benchmark-fresh
 import { isRecord } from "@shared/lib/type-guards";
 import { OPTIONAL_YIELD_SOURCES } from "@shared/lib/yield-source-cadence";
 import { YIELD_RANKINGS_VERSION_KEY } from "../../lib/yield-rankings-coin-cache";
+import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import {
   getCache,
   type CacheWriteResult,
@@ -141,8 +142,22 @@ export async function publishYieldRowsAtomically(
     const rankings = publishedRankings.filter((row) => !hasYieldBenchmarkUnitMismatch(row)).map((row) => {
       if (!isRecord(row.provenance)) return row;
       const { ondo } = OPTIONAL_YIELD_SOURCES;
-      if (row.id === ondo.stablecoinId && row.provenance.sourceKey === ondo.sourceKey) {
-        return { ...row, provenance: { ...row.provenance, sourceKey: ondo.legacySourceKey } };
+      if (row.id === ondo.stablecoinId && row.dataSource === "protocol-api" && row.provenance.sourceKey === ondo.sourceKey) {
+        const { sourceObservedAt, comparisonAnchorObservedAt, comparisonAnchorAgeSeconds: _anchorAge, ...provenance } = row.provenance;
+        if (typeof sourceObservedAt !== "number" || !Number.isSafeInteger(sourceObservedAt) ||
+            typeof comparisonAnchorObservedAt !== "number" || !Number.isSafeInteger(comparisonAnchorObservedAt) ||
+            comparisonAnchorObservedAt <= 0 || comparisonAnchorObservedAt >= sourceObservedAt ||
+            sourceObservedAt > input.startSec) return row;
+        const quoteExpiresAt = sourceObservedAt + getRankingStaleThresholdMs(row.dataSource, ondo.sourceKey) / 1000;
+        const anchorAgeAtQuoteExpiryMs = (quoteExpiresAt - comparisonAnchorObservedAt) * 1000;
+        // Main applies its default anchor budget to the wrapper key. Strip the
+        // anchor only when the verified expiry is covered by the quote clock.
+        if (quoteExpiresAt >= input.startSec &&
+            anchorAgeAtQuoteExpiryMs > getComparisonAnchorStaleThresholdMs(row.dataSource) &&
+            anchorAgeAtQuoteExpiryMs <= getComparisonAnchorStaleThresholdMs(row.dataSource, ondo.sourceKey)) {
+          return { ...row, provenance: { ...provenance, sourceObservedAt } };
+        }
+        return row;
       }
       if (row.dataSource !== "rate-derived" || !("sourceFetchedAt" in row.provenance)) return row;
       const { sourceFetchedAt, ...provenance } = row.provenance;

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { formatComparisonPrice, isCurrentDeviationHeld, readPublishedDeviation, resolveCurrentDeviation, resolveCurrentDeviationBps, resolveDisplayPegReference } from "@/lib/current-peg";
 import { FX_REOPEN_QUOTE_AT, makeFxCurrentPeg } from "@shared/test-utils/reference-admission.test-support";
@@ -10,6 +10,8 @@ import type { ReferenceAdmission } from "@shared/types/reference-admission";
 const SUNDAY = 1_794_758_400; // 2026-11-15 16:00 UTC: FX and metals shut
 const MONDAY = 1_794_844_800; // 2026-11-16 16:00 UTC: reopened
 const EASTER_MONDAY = Date.UTC(2027, 2, 29, 16) / 1000;
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("isCurrentDeviationHeld", () => {
   it.each([
@@ -58,6 +60,7 @@ describe("resolveCurrentDeviationBps", () => {
     ["different quote clock", "live", { priceObservedAt: EASTER_MONDAY - 1 }, null],
     ["different asset", "live", { id: "brlv-crown" }, null],
   ] as const)("handles %s across list and summary versions", (_label, mode, overrides, expected) => {
+    vi.spyOn(Date, "now").mockReturnValue(EASTER_MONDAY * 1000);
     const quote = { id: "brz-transfero", price: 0.204, pegType: "peggedREAL", priceSource: "coingecko", priceObservedAt: EASTER_MONDAY };
     const row = makeStablecoin({ ...quote, currentPeg: {
       currentDeviationBps: 200, pegReference: null, pegReferenceUnavailable: false,
@@ -123,6 +126,7 @@ it.each([
   ["different clock", 1.122, FX_REOPEN_QUOTE_AT - 60, null],
   ["different price", 1.10, FX_REOPEN_QUOTE_AT, null],
 ] as const)("requires the same quote before borrowing a modern reference (%s)", (_label, price, priceObservedAt, expected) => {
+  vi.spyOn(Date, "now").mockReturnValue(FX_REOPEN_QUOTE_AT * 1000);
   const row = makeStablecoin({ id: "eurc-circle", price, priceObservedAt, priceSource: "coingecko" });
   const legacy = {
     ...makePegSummaryCoin({ id: row.id, price: 1.122, priceObservedAt: FX_REOPEN_QUOTE_AT }),
@@ -138,6 +142,7 @@ it.each([
   ["same quote", FX_REOPEN_QUOTE_AT, "Reference not yet updated"],
   ["mismatched clock", FX_REOPEN_QUOTE_AT - 3600, null],
 ] as const)("withholds a legacy row's deviation and conversion when modern summary is stale (%s)", (_label, priceObservedAt, referenceNote) => {
+  vi.spyOn(Date, "now").mockReturnValue(FX_REOPEN_QUOTE_AT * 1000);
   const { referenceAdmission: _admission, admittedDeviationBps: _admitted, ...currentPeg } = makeFxCurrentPeg("admitted", 200);
   const row = makeStablecoin({ id: "eurc-circle", price: 1.122, priceObservedAt, priceSource: "coingecko", currentPeg });
   const summary = {
@@ -150,4 +155,34 @@ it.each([
   const own = { ...row, currentPeg: makeFxCurrentPeg("admitted", 125, priceObservedAt) };
   expect(resolveCurrentDeviation(own, summary, "EUR")).toEqual({ deviationBps: 125, referenceNote: null });
   expect(resolveDisplayPegReference(own, summary, "EUR")).toBe(1.1);
+});
+
+it("expires clocked list comparisons and honors a newer refusal for the same quote", () => {
+  const now = Date.parse("2026-11-18T16:00:00Z") / 1000;
+  const quoteAt = now - 21_600;
+  const refAt = now - 18_000;
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+  const evidence = {
+    kind: "fx", source: "openExchangeRates", cadence: "intraday", quoteObservedAtSec: quoteAt,
+    referenceObservedAtSec: refAt, decisionAtSec: now - 1, budgetSec: 21_600,
+    sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000, generation: "stablecoins:test", policyVersion: 1,
+  } as const;
+  const row = makeStablecoin({
+    id: "eurc-circle", pegType: "peggedEUR", price: 1.078, priceSource: "coingecko", priceObservedAt: quoteAt,
+    currentPeg: { ...makeFxCurrentPeg("admitted", -200, quoteAt), currentDeviationBps: -200,
+      pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: refAt },
+      referenceAdmission: { ...evidence, status: "admitted", reason: "live-reference" } },
+  });
+  const refusal = makePegSummaryCoin({
+    id: row.id, price: row.price, priceObservedAt: quoteAt, pegCurrency: "EUR", currentDeviationBps: null,
+    admittedDeviationBps: null, pegReferenceUnavailable: true,
+    referenceAdmission: { ...evidence, decisionAtSec: now, status: "stale-reference", reason: "reference-not-repriced" },
+  });
+  expect(resolveCurrentDeviationBps(row, null, "EUR")).toBe(-200);
+  expect(resolveDisplayPegReference(row, null, "EUR")).toBe(1.1);
+  expect(resolveCurrentDeviationBps(row, { ...refusal, price: 1.079 }, "EUR")).toBe(-200);
+  expect(resolveCurrentDeviationBps(row, refusal, "EUR")).toBeNull();
+  clock.mockReturnValue((now + 1) * 1000);
+  expect(resolveCurrentDeviationBps(row, null, "EUR")).toBeNull();
+  expect(resolveDisplayPegReference(row, null, "EUR")).toBeNull();
 });

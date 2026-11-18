@@ -3,6 +3,7 @@ import type { StablecoinData } from "@shared/types/supply";
 import type { DigestInputData } from "@shared/types/digest";
 import { ReferenceAdmissionSchema } from "@shared/types/reference-admission";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { projectCurrentPegDeviation } from "@shared/lib/current-peg-projection";
@@ -18,6 +19,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { hasUsableCurrentPrice } from "../../lib/current-peg-observations";
 import { classifyDepegLifecycle } from "../../lib/depeg-lifecycle";
 import { admittedDepegRecoveryAt } from "../../lib/tape-projectors/depeg";
+import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../../lib/depeg-event-projection";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { hasComparableSupplyPerimeter, hasNativeSupplyEvidence, isMissingNativeSupplyColumn, readNativeSupplyCheckpoint, type NativeSupplyHistoryRow } from "../../lib/dews/native-quantity";
 import { compareFiniteDesc } from "@shared/lib/sort";
@@ -378,7 +380,10 @@ export async function collectBlacklistActivity(
 }
 
 function supplyMoverCheckpoint(row: NativeSupplyHistoryRow | undefined, through: number) {
-  return row && hasNativeSupplyEvidence(row) ? readNativeSupplyCheckpoint(row, through) : undefined;
+  if (!row) return undefined;
+  const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
+  if (provenance?.nativeQuantityUnavailable) return null;
+  return hasNativeSupplyEvidence(row) ? readNativeSupplyCheckpoint(row, through) : undefined;
 }
 
 function legacyUsdDelta(current: number | null | undefined, previous: number | null | undefined) {
@@ -506,11 +511,11 @@ export async function collectResolvedDepegs(
         `SELECT e.id, e.symbol, e.direction, e.peak_deviation_bps, e.started_at, e.ended_at,
                 e.stablecoin_id, e.peg_type, e.close_reason, e.recovery_price, e.recovery_peg_reference,
                 e.price_coverage_json, e.last_trusted_price_at, e.price_coverage_gap_started_at,
-                e.admitted_coverage_json, e.disposition, p.audit_verdict
+                e.admitted_coverage_json, e.disposition
          FROM depeg_events e
-         LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
          WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?
            AND e.stablecoin_id IN (SELECT value FROM json_each(?))
+           AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL} AND NOT ${reviewedDepegDisputeSql("e")}
          ORDER BY ABS(e.peak_deviation_bps) DESC`,
       )
       .bind(cutoff24h, JSON.stringify(eligibleIds))
@@ -518,7 +523,6 @@ export async function collectResolvedDepegs(
         symbol: string;
         direction: "above" | "below";
         peak_deviation_bps: number;
-        audit_verdict: string | null;
       }>();
     if (resolvedRows.success !== true || !Array.isArray(resolvedRows.results)) {
       throw new Error(resolvedRows.error ?? "Resolved depeg read failed");
@@ -531,8 +535,6 @@ export async function collectResolvedDepegs(
       return recoveryAt != null && recoveryAt >= cutoff24h && recoveryAt <= ctx.nowSec
         ? [{ ...row, recoveryAt }] : [];
     });
-    // Reviewed disputes stay in the evidence rows but are not public event counts.
-    const countedRecoveredRows = recoveredRows.filter((row) => !isDisputedAuditVerdict(row.audit_verdict));
     const recovered = recoveredRows.flatMap((row) => {
         const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
         if (mcapUsd == null) {
@@ -559,7 +561,7 @@ export async function collectResolvedDepegs(
 
     return collectorResult(
       {
-        resolvedDepegCount: countedRecoveredRows.length,
+        resolvedDepegCount: recoveredRows.length,
         resolvedDepegSignalKeys: recoveredRows.map((row) => depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "resolved")),
         resolvedDepegs: candidates.length > 0 ? candidates : undefined,
       },

@@ -217,6 +217,30 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
 });
 
 describe("collectConfirmationEvidence pool challenger status classification", () => {
+  it("withholds pools, protocol votes and aggregates that overlap retained pending sources", async () => {
+    const poolKey = `ethereum:0x${"1".repeat(40)}`;
+    const time = NOW_SEC - 30;
+    const samples = [
+      { protocol: "curve", sourceFamily: "curve", upstreamKeys: [poolKey, "venue:bitstamp"] },
+      { protocol: "uniswap", sourceFamily: "uniswap", upstreamKeys: ["venue:binance"] },
+    ].map((source) => ({ ...source, chain: "ethereum", price: 0.92, tvl: 2e6, tvlUsd: 2e6, updatedAt: time, observedAt: time }));
+    const dexPriceRows = dexRows(time, 0.92);
+    Object.assign(dexPriceRows.get(COIN_ID)!, { upstreamKeys: [poolKey, "venue:bitstamp", "venue:binance"] });
+    for (const asset of [undefined, makeAsset({ id: COIN_ID, price: 1, priceSource: "coingecko" })]) {
+      const args = { asset, dexPriceRows, dexPriceSources: new Map([[COIN_ID, samples]]),
+        poolChallengers: new Map([[COIN_ID, samples]]) };
+      const blocked = await collect(noOffchain({ ...args, pendingSourceKeys: new Set([poolKey, "binance"]) }));
+      expect(blocked.confirmingSources).toEqual([]);
+      expect(blocked.unavailableSources).toContain("dex:independence-unverified");
+      const protocolOverlap = await collect(noOffchain({
+        ...args, pendingSourceKeys: new Set([poolKey, "binance"]), dexPriceRows: dexRows(time, 0.92),
+      }));
+      expect(protocolOverlap.dexStatus).toBe("insufficient");
+      const disjoint = await collect(noOffchain({ ...args, pendingSourceKeys: new Set(["pyth"]) }));
+      expect(disjoint).toMatchObject({ dexStatus: "confirm", poolStatus: "confirm" });
+    }
+  });
+
   it("withholds a pool funded by the same named venue as a USD primary without ancestry", async () => {
     const asset = makeAsset({ id: COIN_ID, symbol: "USDT", price: 0.98, priceSource: "kraken",
       agreeSources: ["kraken"], priceConfidence: "single-source", priceObservedAtMode: "local_fetch" });
@@ -261,9 +285,10 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
         asset: makeAsset({ id: coin, symbol: "USG", pegType: "peggedUSD", price: 0.98, priceSource: "pyth" }),
         poolChallengers: new Map([[coin, indices.map((index) => samples[index]!)]]),
       }));
-      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, indices.map((index) => retained[index]!), 100_000)!);
+      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, indices.map((index) => retained[index]!), 100_000, NOW_SEC)!);
       expect(evidence.poolStatus).toBe(expected.length === 1 ? "insufficient" : "confirm");
-      expect(stored.map((pool: { poolId: string }) => pool.poolId).sort()).toEqual(expected.map((index) => poolKeys[index]));
+      expect(stored.map((pool: { poolId: string }) => pool.poolId).sort()).toEqual([...indices].sort().map((index) => poolKeys[index]));
+      expect(stored.every((pool: { priceUsd?: number }) => pool.priceUsd === undefined)).toBe(true);
     }
   });
 

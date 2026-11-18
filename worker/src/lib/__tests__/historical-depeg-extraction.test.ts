@@ -32,6 +32,24 @@ describe("extractDepegEvents peak corroboration", () => {
     expect(run(valid, rejected)).toHaveLength(1);
   });
 
+  it("blocks supply carry at a rejected native checkpoint while preserving valid same-time readings", () => {
+    const quotes = points([1, 1.02, 1.03, 1]);
+    const date = "950";
+    const history = [{ date: "900", totalCirculatingUSD: { peggedUSD: 1_200_000 } }];
+    const run = (...rows: Parameters<typeof parseSupplyData>[0]) => {
+      const supply = parseSupplyData([...history, ...rows]);
+      return { checkpoint: supply.find(({ ts }) => ts === Number(date)),
+        events: extractDepegEvents(quotes, () => 1, "peggedUSD", supply) };
+    };
+    const valid = { date, totalCirculatingUSD: { peggedUSD: 1_200_000 } };
+    for (const rejected of [{ date, totalCirculating: { peggedUSD: -1 } }, { date, circulating: { peggedUSD: -1 } }]) {
+      expect(run(rejected)).toEqual({ checkpoint: { ts: 950, supply: null }, events: [] });
+      expect(run(rejected, valid).events).toMatchObject([{ peakDeviationBps: 300 }]);
+      expect(run(valid, rejected).events).toMatchObject([{ peakDeviationBps: 300 }]);
+    }
+    expect(run({ date, totalCirculating: { peggedUSD: 0 } })).toEqual({ checkpoint: { ts: 950, supply: 0 }, events: [] });
+  });
+
   it("does not let an older large market cap cross a newer commodity supply boundary", () => {
     const at = Date.parse("2026-11-18T12:00:00Z") / 1000;
     const boundary = at - 86400;

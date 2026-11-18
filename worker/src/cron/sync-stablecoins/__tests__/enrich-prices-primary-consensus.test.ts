@@ -204,7 +204,9 @@ describe("buildPrimaryConsensusResults", () => {
       const wire = JSON.parse(rows.find((row) => row.stablecoin_id === id)!.price_sources_json!);
       const displayClock = stale.priceObservedAt;
       expect(wire).toMatchObject({ aggregateObservedAt: null, displayAggregateObservedAt: displayClock });
-      expect(wire.sources).toEqual([expect.objectContaining({ protocol: "balancer", aggregateObservedAt: displayClock })]);
+      expect(wire.sources).toEqual([]);
+      expect(wire.lineageSources).toEqual([expect.objectContaining({ protocol: "balancer", aggregateObservedAt: displayClock })]);
+      expect((await loadDexPrices(db, nowSec)).dexPriceSources.get(id)?.map(({ protocol }) => protocol)).toEqual(["balancer"]);
       expect(wire.displaySources).toEqual([
         expect.objectContaining({ protocol: "fluid", aggregateObservedAt: null, displayAggregateObservedAt: displayClock }),
         expect.objectContaining({ protocol: "balancer", observedAt: at, aggregateObservedAt: displayClock }),
@@ -260,7 +262,7 @@ describe("buildPrimaryConsensusResults", () => {
       const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
       quoteMaps.krakenPrices.set(symbol, 1.02);
       quoteMaps.krakenObservedAt = nowSec - 5;
-      quoteMaps.krakenQuoteBasisBySymbol.set(symbol, "last-trade");
+      quoteMaps.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
       quoteMaps.cgQuotes.set(id, { price: 1.021, observedAt: nowSec, observedAtMode: "upstream" });
       const results = new Map<string, PrimaryPriceResult>();
       buildPrimaryConsensusResults({
@@ -269,11 +271,34 @@ describe("buildPrimaryConsensusResults", () => {
         results, stats: createStats(),
       });
       expect(results.get(id)).toMatchObject({
-        source: "kraken", observedAt: null, observedAtMode: "unknown", priceQuoteBasis: "last-trade", price: 1.02, confidence: "single-source", agreeSources: ["kraken"],
+        source: "kraken", observedAt: nowSec - 5, observedAtMode: "local_fetch", priceQuoteBasis: "bid-ask-midpoint",
+        price: 1.02, confidence: "single-source", agreeSources: ["kraken"],
         candidateSources: ["kraken", "coingecko"], diagnosticPrices: { coingecko: 1.021 }, allPrices: { kraken: 1.02 },
       });
     },
   );
+
+  it("selects the dated QCAD mirror when Kraken supplies an undated trade", () => {
+    const nowSec = 1_800_000_000;
+    const id = "qcad-stablecorp";
+    const geckoId = "stablecorp-qcad";
+    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    quoteMaps.krakenPrices.set("QCAD", 0.695);
+    quoteMaps.krakenObservedAt = nowSec;
+    quoteMaps.krakenQuoteBasisBySymbol.set("QCAD", "last-trade");
+    quoteMaps.cgQuotes.set(geckoId, { price: 0.72, observedAt: nowSec - 10, observedAtMode: "upstream" });
+    const results = new Map<string, PrimaryPriceResult>();
+    buildPrimaryConsensusResults({
+      candidates: [{ id, name: "QCAD", symbol: "QCAD", geckoId, pegType: "peggedCAD" }],
+      quoteMaps, dexRows: new Map(), dexPriceSources: new Map(), nowSec,
+      resolveDlListQuote: () => undefined, results, stats: createStats(),
+    });
+    expect(results.get(id)).toMatchObject({
+      price: 0.72, source: "coingecko", observedAt: nowSec - 10, observedAtMode: "upstream",
+      agreeSources: ["coingecko"], allPrices: { coingecko: 0.72 }, diagnosticPrices: { kraken: 0.695 },
+    });
+    expect(results.get(id)?.allPrices).not.toHaveProperty("kraken");
+  });
 
   it("admits a five-day issuer NAV round and expires it one second after the configured budget", () => {
     const id = "mre7yield-midas";

@@ -25,7 +25,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { z } from "zod";
 import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
-import { readDepegEventIndex, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
+import { hasReviewedDepegEvent, readDepegEventIndex, readDepegEventSnapshot, resolveRetainedDepegEventPage } from "@/lib/depeg-event-snapshot";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -110,11 +110,11 @@ interface DepegEventOutputPaths {
 }
 
 export function findMissingStaticDepegArchiveSlugs(
-  previous: readonly DepegEventEntry[],
-  current: readonly DepegEventEntry[],
+  previousPages: readonly DepegEventEntry[],
+  currentPages: readonly DepegEventEntry[],
 ): string[] {
-  const currentSlugs = new Set(selectStaticDepegEventPages(current).map((event) => event.slug));
-  return selectStaticDepegEventPages(previous)
+  const currentSlugs = new Set(currentPages.map((event) => event.slug));
+  return previousPages
     .map((event) => event.slug)
     .filter((slug) => !currentSlugs.has(slug));
 }
@@ -122,20 +122,21 @@ export function findMissingStaticDepegArchiveSlugs(
 /**
  * Keep a published page when the live event is reclassified below the static-page
  * threshold, or verified public incident lineage identifies its present replacement.
- * Keep the older published row at its reserved URL, not a redirect to a potentially
- * sub-threshold representative. Unexplained disappearances still reach the guard.
+ * Keep the latest reviewed row at its reserved URL. Unexplained disappearances
+ * still reach the guard.
  */
 export function preserveStaticDepegArchiveEntries(
-  previous: readonly DepegEventEntry[],
+  previousPages: readonly DepegEventEntry[],
   current: readonly DepegEventEntry[],
   lineage: readonly DepegArchiveLineage[number][] = [],
 ): DepegEventEntry[] {
-  const mergedBySlug = new Map(current.map((entry) => [entry.slug, entry] as const));
+  const pagesBySlug = new Map(selectStaticDepegEventPages(current).map((entry) => [entry.slug, entry] as const));
+  const currentBySlug = new Map(current.map((entry) => [entry.slug, entry] as const));
   const representativesById = new Map(current.map((entry) => [entry.id, entry] as const));
   const replacementById = new Map(lineage.map((row) => [row.eventId, row] as const));
 
-  for (const previousEntry of selectStaticDepegEventPages(previous)) {
-    const currentEntry = mergedBySlug.get(previousEntry.slug);
+  for (const previousEntry of previousPages) {
+    const currentEntry = currentBySlug.get(previousEntry.slug);
     if (currentEntry == null) {
       const incident = replacementById.get(previousEntry.id);
       const representative = incident?.live.currentEventId == null
@@ -168,13 +169,16 @@ export function preserveStaticDepegArchiveEntries(
         })}`);
         continue;
       }
-    } else if (hasDedicatedDepegEventPage(currentEntry)) continue;
-    mergedBySlug.set(previousEntry.slug, previousEntry);
+    } else if (hasDedicatedDepegEventPage(currentEntry) && !hasReviewedDepegEvent(previousEntry)) {
+      pagesBySlug.set(previousEntry.slug, currentEntry);
+      continue;
+    }
+    pagesBySlug.set(previousEntry.slug, resolveRetainedDepegEventPage(previousEntry, currentEntry));
   }
 
-  return [...mergedBySlug.values()].sort((a, b) => {
+  return [...pagesBySlug.values()].sort((a, b) => {
     if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
-    return b.id - a.id;
+    return a.slug.localeCompare(b.slug);
   });
 }
 
@@ -214,7 +218,7 @@ function resolveOutputPaths(explicit: string | null): DepegEventOutputPaths {
 
 function buildDepegEventIndex(entries: readonly DepegEventEntry[], ledger: readonly DepegEventEntry[]) {
   const fetched = new Set(ledger);
-  return selectStaticDepegEventPages(entries).map((event) => ({
+  return entries.map((event) => ({
     ...(fetched.has(event) ? {} : { retainedPage: event }),
     slug: event.slug,
     stablecoinId: event.stablecoinId,
@@ -317,10 +321,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
   });
   const outputPaths = resolveOutputPaths(options.output);
   const previousBySlug = new Map(readDepegEventSnapshot({ missing: "empty" }, outputPaths.dataDir).map((row) => [row.slug, row]));
-  for (const { retainedPage } of readDepegEventIndex({ missing: "empty" }, outputPaths.indexFile)) {
-    if (retainedPage) previousBySlug.set(retainedPage.slug, retainedPage);
+  const previousPagesBySlug = new Map(selectStaticDepegEventPages([...previousBySlug.values()]).map((row) => [row.slug, row]));
+  for (const { slug, retainedPage } of readDepegEventIndex({ missing: "empty" }, outputPaths.indexFile)) {
+    const current = previousBySlug.get(slug);
+    const page = retainedPage ? resolveRetainedDepegEventPage(retainedPage, current) : current;
+    if (page) {
+      previousPagesBySlug.set(slug, page);
+      previousBySlug.set(slug, page);
+    }
   }
   const previousEntries = [...previousBySlug.values()];
+  const previousPages = [...previousPagesBySlug.values()];
   const headers = new Headers(await apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
@@ -434,7 +445,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       if (!stored.success) throw new SnapshotIntegrityError(`Invalid stored depeg snapshot: ${stored.error.message}`);
       const computedEntries = stored.data;
       let lineage: DepegArchiveLineage = [];
-      const missingPublishedEntries = selectStaticDepegEventPages(previousEntries).filter((entry) => !seen.has(entry.id));
+      const missingPublishedEntries = previousPages.filter((entry) => !seen.has(entry.id));
       const hasConsolidatedRepresentative = unique.some((event) => (event.constituentEventCount ?? 1) > 1);
       if (missingPublishedEntries.length > 0 && !hasConsolidatedRepresentative) {
         console.warn("[sync-depeg-events] Incident lineage lookup skipped: no multi-constituent API rows");
@@ -463,7 +474,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         lineage = parsed.data.rows;
         console.log(`[sync-depeg-events] Incident lineage: ${lineage.length} resolver rows admitted`);
       }
-      const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries, lineage);
+      const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousPages, computedEntries, lineage);
 
       // Guard against API returning an empty list (e.g. token expiry, partial
       // outage, or a misconfigured API base). Wiping the seed event would purge
@@ -484,7 +495,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       }
 
       assertStaticDepegArchivePreserved(
-        previousEntries,
+        previousPages,
         archivePreservedEntries,
         options.allowArchiveShrink,
       );

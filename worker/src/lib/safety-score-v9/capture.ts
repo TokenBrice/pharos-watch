@@ -522,13 +522,16 @@ export async function buildNativeSafetyScoreV9Capture(
     [...nonNavPegDataById].map(([assetId, row]) => {
       const packet = pegAnalytics.admittedPegById?.get(assetId);
       const admission = packet?.admission ?? row.referenceAdmission;
-      const needsAdmission = getReferenceMarket(row.pegCurrency) !== null &&
+      const legacyFxReference = pegAnalytics.legacyFxReferenceIds?.has(assetId) === true && admission === undefined &&
+        row.admittedDeviationBps === undefined;
+      const needsAdmission = !legacyFxReference && getReferenceMarket(row.pegCurrency) !== null &&
         (referenceAdmissionEnabled || admission !== undefined || row.admittedDeviationBps !== undefined);
       const admittedDeviationBps = packet?.deviationBps ?? null;
       const evidence = {
         ...pegEvidenceById[assetId],
         ...(pegAnalytics.lastAffectedAtById?.has(assetId) ? { lastAffectedAtSec: pegAnalytics.lastAffectedAtById.get(assetId) } : {}),
         ...(pegAnalytics.lastUncertainAffectedAtById?.has(assetId) ? { lastUncertainAffectedAtSec: pegAnalytics.lastUncertainAffectedAtById.get(assetId) } : {}),
+        ...(legacyFxReference ? { legacyFxReference: true as const } : {}),
         ...(needsAdmission ? { admittedDeviationBps } : {}),
         ...(admission ? { referenceAdmission: admission } : {}),
       };

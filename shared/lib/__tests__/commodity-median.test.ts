@@ -59,6 +59,18 @@ describe("buildCommodityPeerMedianSeries", () => {
     expect(median?.contributors).toContain(xagm.assetId);
   });
 
+  it("counts only fresh in-closure bullion quotes in the historical median and its clock", () => {
+    const at = Date.parse("2026-11-13T22:05:00Z") / 1000;
+    const peers = [3900, 4000, 4100, 2000].map((price, i) => ({
+      assetId: `peer-${i}`, sourceId: `source-${i}`, commodityOunces: 1,
+      prices: [{ price, timestamp: i === 3 ? at - 600 : at }],
+    }));
+    const median = findCommodityPeerMedian(peers, "paxg-paxos", at, 7200);
+    expect(median).toMatchObject({ usdPerUnit: 4000, observedAtSec: at, contributors: ["peer-0", "peer-1", "peer-2"] });
+    expect(findCommodityPeerMedian(peers.slice(1), "paxg-paxos", at, 7200)).toBeNull();
+    expect(findCommodityPeerMedian(peers, "paxg-paxos", at + 7201, 7200)).toBeNull();
+  });
+
   it("skips excluded or empty source series", () => {
     const result = buildCommodityPeerMedianSeries([
       {

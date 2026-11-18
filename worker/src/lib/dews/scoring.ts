@@ -1,3 +1,4 @@
+import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { getMintBurnPressureUnavailableReason } from "../mint-burn-scoring";
 import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
@@ -6,7 +7,7 @@ import { getPegReference, isParityPrice, normalizePegType } from "@shared/lib/pe
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
-import { getReferenceMarket, getReferenceMarketClosureStart, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { getReferenceMarket, getReferenceMarketClosureStart, getLegacyReferenceClosureStart } from "@shared/lib/reference-market-hours";
 import { getPegTaxonomyByType, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { evaluateReferenceAdmission, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { asRawDeviationBps } from "@shared/types/reference-admission";
@@ -179,7 +180,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     );
 
     const market = getReferenceMarket(getPegTaxonomyByType(pegType ?? undefined)?.currency);
-    const scheduled = market != null && nowSec != null && sourceState.references !== undefined;
+    const scheduled = market != null && nowSec != null && sourceState.references !== undefined &&
+      sourceState.legacyFxReferenceIds?.has(meta.id) !== true;
     const selected = pegType == null ? undefined : sourceState.references?.get(pegType);
     const hasPegReference = scheduled ? selected != null : pegType != null
       && (pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType));
@@ -210,10 +212,10 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const pegRef = pegRefFor(primaryOunces ?? dexOunces) ?? 0;
     const closureStart = scheduled ? getReferenceMarketClosureStart(market, nowSec) : null;
     const legacyMarketHeld = !scheduled && market != null && nowSec != null && pegRef > 0
-      && isReferenceDeviationHeld(meta.flags.pegCurrency, nowSec, Math.max(
+      && getLegacyReferenceClosureStart(market, nowSec) !== null && Math.max(
         deriveDepegSignal(price ?? NaN, pegRef)?.absRawBps ?? 0,
         deriveDepegSignal(dexPriceUsd ?? NaN, pegRef)?.absRawBps ?? 0,
-      ));
+      ) < DEPEG_SEVERITY_BPS.severe;
     const reference = pegReferenceTrusted ? selected : undefined;
     const evaluateLeg = (leg: number | null, quoteObservedAtSec: number | null, ounces: number | null) => {
       const legPegRef = pegRefFor(ounces);

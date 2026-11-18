@@ -1091,6 +1091,30 @@ describe("market and risk collectors", () => {
       ({ ...coin, circulatingPrevWeek: {} }));
     expect((await collectNativeSupplyMovers(noHistory)).degradedReasons).toEqual(["supply-movers-unavailable"]);
   });
+  it("withholds supply movers and velocity when today's native quantity is explicitly unavailable", async () => {
+    const today = ctxFor([]).todayTs;
+    const rows = [[0, 110e6], [1, 101e6], [7, 100e6]].map(([days, usd]) => {
+      const date = today - days * 86_400;
+      return {
+        stablecoin_id: "usdt-tether", snapshot_date: date, circulating_usd: usd,
+        circulating_native: days === 0 ? null : 100e6,
+        valuation_price_usd: days === 0 ? null : usd / 100e6,
+        valuation_observed_at_sec: days === 0 ? null : date,
+        supply_provenance: JSON.stringify({
+          supplySource: "defillama", supplyObservedAt: date, supplyChainGuard: null,
+          ...(days === 0 ? { nativeQuantityUnavailable: true, marketQuote: { price: 1.1, observedAt: date } } : {}),
+        }),
+      };
+    });
+    const ctx = ctxFor([{ match: "FROM supply_history WHERE stablecoin_id IN", rows }]);
+    ctx.coreAggregateStablecoinAssets = [makeAsset({
+      id: "usdt-tether", symbol: "USDT", price: 1.1,
+      circulating: { peggedUSD: 110e6 }, circulatingPrevWeek: { peggedUSD: 100e6 },
+    })];
+    const result = await collectNativeSupplyMovers(ctx);
+    expect(result.value).toStrictEqual({ biggestSupplyChange: null, supplyChanges7d: [] });
+    expect(result.degradedReasons).toEqual(["supply-movers-unavailable"]);
+  });
   it("covers velocity and silent collector failures", async () => {
     const now = ctxFor([]).todayTs;
     const rows = [[0, 101.4e9], [1, 101.35e9], [7, 100e9]].map(([days, quantity]) => ({

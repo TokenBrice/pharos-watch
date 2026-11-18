@@ -70,7 +70,8 @@ export type DepegDetectionResult =
   | { status: "held"; reason: DepegHoldReason; census: DepegObservationCensus | null };
 
 type PriceLineage = Pick<DexPriceRow, "pricePoolKeys" | "upstreamKeys">;
-export type DepegPricingAsset = PegAssetBase & PriceLineage & Pick<StablecoinData, "commodityEntitlement" | "parityQuoteUnit">;
+export type DepegPricingAsset = PegAssetBase & PriceLineage &
+  Pick<StablecoinData, "commodityEntitlement" | "parityQuoteUnit" | "priceQuoteBasis">;
 
 export interface DexPoolChallenger extends PriceLineage {
   price: number;

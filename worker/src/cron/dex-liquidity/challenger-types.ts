@@ -7,6 +7,10 @@
 
 import type { DexPriceLineage } from "./price-lineage";
 
+// The legacy REAL NOT NULL cell can hold text. Main admits only finite numeric
+// prices, so it cannot reuse a quote whose independence requires the receipt.
+export const CHALLENGER_LINEAGE_PRICE = "lineage-required";
+
 /** Probe once per run so both pre-0311 databases and old Worker writes remain readable. */
 export async function hasChallengerPriceLineageColumn(db: D1Database): Promise<boolean> {
   const column = await db.prepare("SELECT name FROM pragma_table_info('dex_price_challenger_payloads_v2') WHERE name = 'price_lineage_json'")

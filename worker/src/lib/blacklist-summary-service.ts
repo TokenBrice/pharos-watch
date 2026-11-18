@@ -566,15 +566,14 @@ async function writeBlacklistSummarySnapshot(
         SELECT ?, ?, ? WHERE (SELECT value FROM cache WHERE key = ?) IS ?
         AND (SELECT value FROM cache WHERE key = ?) IS ?
         AND (SELECT updated_at FROM cache WHERE key = ?) IS ?
-        ${claim ? `AND (SELECT value FROM cache WHERE key = ?) IS ?
-          AND EXISTS (SELECT 1 FROM cache WHERE key = ? AND value = ? AND updated_at > unixepoch() - ?)` : ""}
+        AND (SELECT value FROM cache WHERE key = ?) IS ?
+        ${claim ? `AND EXISTS (SELECT 1 FROM cache WHERE key = ? AND value = ? AND updated_at > unixepoch() - ?)` : ""}
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
           WHERE cache.updated_at <= excluded.updated_at`,
     ).bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt,
       BLACKLIST_DERIVED_GENERATION_KEY, fence.generation, BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, fence.rollbackValue,
-      BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, fence.rollbackUpdatedAt,
-      ...(claim ? [BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, fence.summaryValue,
-        claim.key, claim.serializedClaim, BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC] : [])),
+      BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, fence.rollbackUpdatedAt, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, fence.summaryValue,
+      ...(claim ? [claim.key, claim.serializedClaim, BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC] : [])),
     // Only the winning snapshot can retire the v5 row it rebuilt after reading.
     db.prepare("DELETE FROM cache WHERE key = ? AND changes() = 1").bind(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY),
   ]), 3, undefined, { waitOutResourceWindow: true });

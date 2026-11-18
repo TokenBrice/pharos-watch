@@ -1325,6 +1325,7 @@ async function persistDexLiquidityScoreState(
     ctx.db,
     {
       snapshotAt: ctx.syncStartSec,
+      admissionNowSec: Math.floor(Date.now() / 1000),
       generationId: publicationGenerationId,
       retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
       minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,

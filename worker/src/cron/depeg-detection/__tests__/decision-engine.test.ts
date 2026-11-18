@@ -100,6 +100,18 @@ function assertNativeOpening({ circulating, nativePrice, expectedBps, expectedRe
 }
 
 describe("decideDepegAsset", () => {
+  it("does not build persistence from repeated polls of the same explicitly undated Kraken trade", () => {
+    const asset = makeAsset({ price: 0.987, priceSource: "kraken", agreeSources: ["kraken"],
+      priceObservedAt: null, priceUpdatedAt: null, priceObservedAtMode: "unknown" });
+    for (const now of [usdInput.now, usdInput.now + 900]) {
+      const decision = decideDepegAsset({ ...usdInput, now, asset: { ...asset, priceQuoteBasis: "last-trade" } });
+      expect(decision.observation).toEqual({ kind: "unavailable", reason: "primary-unusable" });
+      expect(decision.commands).toEqual([]);
+    }
+    expect(decideDepegAsset({ ...usdInput, asset }).commands)
+      .toMatchObject([{ type: "upsert-pending", payload: { price: 0.987, bps: -130 } }]);
+  });
+
   it("keeps legacy fiat detection closed until Sunday 23:00 UTC", () => {
     const pegRates = { peggedEUR: 1.10 };
     const fx = referenceState(pegRates, Date.UTC(2026, 10, 20, 18, 30) / 1000, false);
@@ -343,6 +355,41 @@ describe("decideDepegAsset", () => {
     } else {
       expect(peer).toBeUndefined();
       expect(decision.observation).toEqual({ kind: "unavailable", reason: "invalid-reference" });
+    }
+  });
+
+  it("requires quote-matched XAGm DEX evidence for legacy FX detection and peaks", () => {
+    const now = Date.UTC(2026, 10, 18, 0, 3) / 1_000;
+    const quoteAt = now - 30;
+    const ozPerToken = 0.998380822;
+    const pegReference = 30 * ozPerToken;
+    const pegRates = { peggedSILVER: 30 };
+    const fx = referenceState(pegRates, now - 1_000, false);
+    fx.sources = { "gold-api.com": "ok" };
+    const meta = { ...goldMeta, id: "xagm-matrixdock", symbol: "XAGm", commodityOunces: 1,
+      flags: { ...goldMeta.flags, pegCurrency: "SILVER" as const } };
+    const asset = {
+      ...makeAsset({ id: meta.id, symbol: meta.symbol, pegType: "peggedSILVER", price: pegReference * 0.95,
+        priceSource: "coingecko", priceObservedAt: quoteAt, priceUpdatedAt: quoteAt, priceObservedAtMode: "upstream" }),
+      commodityEntitlement: { source: "matrixdock-frs" as const, generation: "ethereum:1250", ozPerToken,
+        quoteObservedAtSec: quoteAt, observedAtSec: quoteAt - 60 },
+    };
+    const referenceContext = attachDetectionReferenceContext(pegRates, [asset], new Map([[asset.id, meta]]), new Set(), fx);
+    const input = { now, meta, asset, pegRates, pegRateSources: { peggedSILVER: "fallback" as const }, pegRateCounts: {}, referenceContext };
+    const existing = makeExistingEvent({ stablecoin_id: asset.id, symbol: asset.symbol, peg_type: "peggedSILVER", direction: "below",
+      started_at: now - 3_600, last_trusted_price_at: now - 300, peak_deviation_bps: -200,
+      start_price: pegReference * 0.98, peak_price: pegReference * 0.98, peg_reference: pegReference });
+    for (const poolAt of [now - 240, quoteAt]) {
+      const evidence = (price: number) => ({
+        dexRow: makeDexRow(price, { stablecoin_id: asset.id, source_total_tvl: 8_000_000, updated_at: now - 10, aggregateObservedAt: poolAt }),
+        protocolSources: ["curve", "uniswap"].map((protocol) => ({ protocol, sourceFamily: protocol, chain: "ethereum",
+          price, tvl: 4_000_000, observedAt: poolAt, updatedAt: now - 10, aggregateObservedAt: poolAt })),
+      });
+      const opening = decideDepegAsset({ ...input, ...evidence(pegReference) });
+      const ongoing = decideDepegAsset({ ...input, existing, ...evidence(pegReference * 0.95) });
+      const matched = poolAt === quoteAt;
+      expect(opening.commands).toMatchObject(matched ? [] : [{ type: "upsert-pending", payload: { bps: -500, pegReference } }]);
+      expect(ongoing.commands).toMatchObject(matched ? [{ type: "update-peak", peakDeviationBps: -500 }] : []);
     }
   });
 

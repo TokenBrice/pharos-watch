@@ -6,8 +6,8 @@
     "effectiveAt": 1795040700,
     "summary": "Public FX evidence ships off by default. On a clocked publication PSI uses the event's admitted quote and reference, preserving a prior admitted contribution during a hold when comparable event history exists. DEWS stress breadth excludes only coins with a depeg contribution at the sample time.",
     "impact": [
-      "Historical calculation uses date-effective core membership, exact seven-day pairs with no explicitly partial endpoint, and admitted event intervals. Legacy weekend replay uses measured opening severity. Missing active-event evidence can preserve the published day.",
-      "Compatibility scoring accepts fresh legacy native quotes while the reference market is open. Independent-market credit requires traded-pair lineage.",
+      "Historical calculation uses date-effective core membership, exact seven-day pairs with no explicitly partial endpoint, and admitted event intervals. Severe legacy closure openings can use dated benchmark evidence. A dated market quote remains available when its native quantity is unavailable.",
+      "Compatibility scoring accepts fresh legacy native quotes while the reference market is open or the measured deviation reaches the severe closure threshold. Independent-market credit requires traded-pair lineage. Scheduled sampling excludes reviewed events and events with explicit coverage that omits the sample.",
       "Reviewed event repairs change only affected contributions and their rolling averages. Live weekly trend compares USD caps seven UTC dates apart. Older publications retain their prior-week USD buckets. Token-count movement is recorded separately."
     ],
     "commits": [],

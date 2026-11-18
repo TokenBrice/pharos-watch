@@ -18,7 +18,7 @@ import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
-import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { classifySupplyAmountCoverage, classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { hasNativeSupplyEvidence, readNativeSupplyCheckpoint } from "../../lib/dews/native-quantity";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -83,6 +83,8 @@ export interface DdrMintBurnHourlyRow {
 export interface DdrSupplySnapshot {
   date: number;
   usd: number | null;
+  /** A known coverage gap withholds changes even when the USD total is complete. */
+  comparisonPartial?: true;
   /** Omitted for USD-only history; null when reported native evidence failed admission. */
   native?: number | null;
   nativeObservedAt?: number | null;
@@ -521,10 +523,12 @@ export async function loadDdrContext(
   for (const s of supplyResult.rows) {
     const list = supplyByCoin.get(s.stablecoin_id) ?? [];
     const { provenance } = parseSupplyObservationProvenance(s.supply_provenance);
-    const partial = classifySupplyCoverage(provenance) === "partial";
+    const amountPartial = classifySupplyAmountCoverage(provenance) === "partial";
     // Retain the date so an older whole-coin observation cannot replace a rejected endpoint.
-    const snapshot: DdrSupplySnapshot = { date: s.snapshot_date, usd: partial ? null : s.circulating_usd };
-    if (!partial && hasNativeSupplyEvidence(s)) {
+    const snapshot: DdrSupplySnapshot = { date: s.snapshot_date, usd: amountPartial ? null : s.circulating_usd };
+    if (classifySupplyCoverage(provenance) === "partial") {
+      snapshot.comparisonPartial = true;
+    } else if (hasNativeSupplyEvidence(s)) {
       const checkpoint = readNativeSupplyCheckpoint(s, nowSec);
       snapshot.native = checkpoint?.quantity ?? null;
       snapshot.nativeObservedAt = checkpoint?.observedAt ?? null;

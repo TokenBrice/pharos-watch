@@ -16,9 +16,23 @@ vi.mock("@/components/digest/digest-nameplate-live", () => ({
 }));
 
 import DigestArchivePage from "./page";
+import { DIGEST_CORRECTIONS } from "@/lib/digest-registry";
 import digests from "../../../data/digests.json";
 
 describe("DigestArchivePage", () => {
+  it("uses the published correction in the archive's structured description", () => {
+    const html = renderToStaticMarkup(<DigestArchivePage />);
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const collection = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+      .flatMap((script) => JSON.parse(script.textContent ?? "[]"))
+      .find((entry) => entry["@type"] === "ItemList");
+    expect(collection.itemListElement).toEqual(expect.arrayContaining([
+      expect.objectContaining({ item: expect.objectContaining({
+        url: "https://pharos.watch/digest/2026-03-01/",
+        description: DIGEST_CORRECTIONS.get("2026-03-01")!.excerpt,
+      }) }),
+    ]));
+  });
   it("keeps every daily and weekly digest in the static monthly archive index", () => {
     const html = renderToStaticMarkup(<DigestArchivePage />);
     const document = new DOMParser().parseFromString(html, "text/html");

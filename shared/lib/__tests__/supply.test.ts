@@ -30,6 +30,16 @@ describe("dated USD supply valuations", () => {
       .toEqual({ peggedUSD: 60, peggedEUR: 40 });
     expect(projectUsdMarketCapBaselineBuckets(asset, "week", { peggedUSD: 70, peggedEUR: 40 })).toEqual({ unattributed: 100 });
   });
+
+  it("keeps observed peg allocations within floating-point precision of the close", () => {
+    const buckets = { peggedEUR: 60_000_000.01, peggedUSD: 40_000_000.03 };
+    const close = 100_000_000.04;
+    const day = { observedAt: stockAt, circulatingUsd: close, circulatingNative: null };
+    const asset = { circulating: buckets, supplyChangeBaselines: { day } };
+    expect(projectUsdMarketCapBaselineBuckets(asset, "day", buckets)).toEqual(buckets);
+    expect(projectUsdMarketCapBaselineBuckets(asset, "day", { ...buckets, peggedUSD: 40_000_000.02 }))
+      .toEqual({ unattributed: close });
+  });
 });
 
 describe("sumPegBucketsOrNull", () => {

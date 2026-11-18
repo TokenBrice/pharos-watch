@@ -85,7 +85,7 @@ export const PRICING_PIPELINE_SECTION_CONTENT = defineMethodologySectionContent(
 });
 
 export const PSI_REFERENCE_ADMISSION_DESCRIPTION =
-  "PSI scores confirmed peer-relative events on their own lower-confidence basis. For other non-USD events, the public FX evidence switch ships off. PSI keeps the existing reference-market closure rules until the publication carries FX observations. With the switch on, PSI uses an admitted quote and reference or a validated trade in the peg unit. When a comparison is held, PSI can carry the last admitted contribution for that event. Missing comparable evidence can leave a contribution unpriced.";
+  "PSI scores confirmed peer-relative events on their own lower-confidence basis. For other non-USD events, the public FX evidence switch ships off. During a closure, a fresh same-unit legacy quote can score a severe move. With the switch on, PSI uses an admitted quote and reference or a validated trade in the peg unit. When a comparison is held, PSI can carry the last admitted contribution for that event. Reviewed exclusions and gaps in recorded event coverage leave DEWS stress eligible.";
 
 export const STABILITY_INDEX_SECTION_CONTENT = defineMethodologySectionContent({
   id: METHODOLOGY_METRIC_SECTION_IDS.stability,

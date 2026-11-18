@@ -116,6 +116,32 @@ describe("sync-depeg-events", () => {
     expect(buildDepegEventTitle(corrected, false)).toContain("0.10% Below Peg (Disputed)");
   });
 
+  it("keeps the reviewed peak at its reserved URL through consolidation", async () => {
+    const dataDir = makeRoot();
+    const args = ["--api-url", "https://api.example.test", "--output", join(dataDir, "index.json")];
+    const original = event({ id: 91041, stablecoinId: "eurs-stasis", symbol: "EURS", pegType: "peggedEUR", peakDeviationBps: -775 });
+    const revised = event({ ...original, peakDeviationBps: -210, peakPrice: 0.979,
+      provenance: { auditVerdict: "repaired", pegScoreEligible: true } });
+    const representative = event({ ...revised, id: 91042, constituentEventCount: 2 });
+    let row = original;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => new URL(url).pathname.endsWith("/depeg-resolver")
+      ? Response.json({ rows: [{
+        eventId: original.id, stablecoinId: original.stablecoinId, direction: "below", incidentKey: "ddr2:eurs",
+        live: { currentEventId: representative.id, eventState: "active" },
+      }] })
+      : Response.json({ events: [row], total: 1 })));
+    await runDepegSync(args);
+    const [published] = readDepegEventPageEntries(dataDir);
+    expect(published.peakDeviationBps).toBe(-775);
+
+    row = revised;
+    await runDepegSync(args);
+    row = representative;
+    await runDepegSync(args);
+    expect(readDepegEventSnapshot({ missing: "throw" }, dataDir)).toMatchObject([{ id: representative.id }]);
+    expect(readDepegEventPageEntries(dataDir)).toMatchObject([{ ...revised, slug: published.slug }]);
+  });
+
   it("assigns deterministic slugs for same-coin same-day events", () => {
     const entries = assignSlugs([event({ id: 2, direction: "above" }), event({ id: 1, direction: "below" })]);
 
@@ -263,14 +289,14 @@ describe("sync-depeg-events", () => {
 
     expect(
       findMissingStaticDepegArchiveSlugs(
-        [published, subthreshold],
-        [subthreshold, replacement],
+        [published],
+        preserveStaticDepegArchiveEntries([published], [subthreshold, replacement]),
       ),
     ).toEqual([published.slug]);
     expect(() =>
       assertStaticDepegArchivePreserved(
-        [published, subthreshold],
-        [subthreshold, replacement],
+        [published],
+        preserveStaticDepegArchiveEntries([published], [subthreshold, replacement]),
       ),
     ).toThrow("Depeg static archive lost 1 published slug(s): usdc-2026-05-15");
   });
@@ -279,7 +305,7 @@ describe("sync-depeg-events", () => {
     const subthreshold: DepegEventEntry = { ...event({ peakDeviationBps: -300 }), slug: "usdc-2026-05-15" };
     const published: DepegEventEntry = { ...event({ peakDeviationBps: -800 }), slug: "usdc-2026-05-15" };
 
-    expect(() => assertStaticDepegArchivePreserved([subthreshold], [])).not.toThrow();
+    expect(preserveStaticDepegArchiveEntries([], [subthreshold])).toEqual([]);
     expect(() => assertStaticDepegArchivePreserved([published], [], true)).not.toThrow();
   });
 

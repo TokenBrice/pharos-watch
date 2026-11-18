@@ -28,11 +28,29 @@ export interface HistoricalSupplyQuantityRow {
   price_observed_at: number | null;
 }
 
-// Assessed-unavailable rows keep the market quote separate from the legacy conversion price.
+// An independent quote takes precedence over the legacy conversion price and its clock.
+const SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL =
+  "CASE WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.price') END";
 export const SUPPLY_HISTORY_MARKET_PRICE_SQL =
-  "COALESCE(price, CASE WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.price') END)";
+  `COALESCE(${SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL}, price)`;
 export const SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL =
-  "CASE WHEN price IS NOT NULL THEN price_observed_at WHEN json_valid(supply_provenance) THEN json_extract(supply_provenance, '$.marketQuote.observedAt') END";
+  `CASE WHEN (${SUPPLY_HISTORY_INDEPENDENT_QUOTE_PRICE_SQL}) IS NOT NULL
+    THEN json_extract(supply_provenance, '$.marketQuote.observedAt') WHEN price IS NOT NULL THEN price_observed_at END`;
+
+const SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL =
+  `(circulating_native IS NOT NULL OR CASE WHEN json_valid(supply_provenance)
+    THEN json_type(supply_provenance, '$.nativeQuantityUnavailable') = 'true' END)`;
+
+// The cron supplies the legacy observation clock. Historical backfill preserves the legacy clock as stored.
+export const SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL = `UPDATE supply_history SET
+  price = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL} THEN NULL ELSE ?1 END,
+  price_observed_at = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL} THEN NULL
+    WHEN ?3 THEN ?2 ELSE price_observed_at END,
+  supply_provenance = CASE WHEN ${SUPPLY_HISTORY_SEPARATE_MARKET_QUOTE_SQL}
+    THEN json_set(supply_provenance, '$.marketQuote', json_object('price', ?1, 'observedAt', ?2))
+    ELSE supply_provenance END
+  WHERE stablecoin_id = ?4 AND snapshot_date = ?5 AND ${SUPPLY_HISTORY_MARKET_PRICE_SQL} IS NULL
+    AND (circulating_native IS NULL OR json_valid(supply_provenance))`;
 
 /** A pre-0306 USD cap can recover its units only at its own observed stock and price clock. */
 export function historicalSupplyQuantity(

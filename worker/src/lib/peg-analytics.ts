@@ -28,7 +28,7 @@ import {
   rowToPublicDepegEvent,
 } from "./depeg-event-projection";
 import { getFirstSeenDates } from "./supply-history-db";
-import { deriveCurrentPegObservationMap } from "./current-peg-observations";
+import { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "./current-peg-observations";
 import { parseJson } from "./json-parse";
 
 export interface DerivePegAnalyticsOptions {
@@ -45,6 +45,7 @@ export interface PegAnalyticsSnapshot {
   allEvents: DepegEvent[];
   eventsByCoin: Map<string, DepegEvent[]>;
   pegDataById: Map<string, PegSummaryCoin>;
+  legacyFxReferenceIds?: ReadonlySet<string>;
   admittedPegById: Map<string, { admission: ReferenceAdmission; deviationBps: number | null; reference: PegSummaryCoin["pegReference"] }>;
   lastAffectedAtById: Map<string, number | null>;
   lastUncertainAffectedAtById?: Map<string, number>;
@@ -103,10 +104,6 @@ function resolveTrackingAnchor(
       status: auditedCoverageStart != null ? "verified" : "assumed",
     },
   };
-}
-
-function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
-  return isObservedPrice(asset) && typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
 }
 
 function buildPriceFirstSeenObservations(
@@ -188,6 +185,7 @@ export async function derivePegAnalyticsSnapshot(
   const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
+  const legacyFxReferenceIds = new Set<string>();
   const admittedPegById: PegAnalyticsSnapshot["admittedPegById"] = new Map();
   const lastAffectedAtById = new Map<string, number | null>();
   const lastUncertainAffectedAtById = new Map<string, number>();
@@ -233,6 +231,7 @@ export async function derivePegAnalyticsSnapshot(
 
     const clocked = options.fxReferenceObservations !== undefined;
     const capturedPeg = asset?.currentPeg;
+    if (observation?.legacyFxReference === true) legacyFxReferenceIds.add(meta.id);
     const needsAdmission = observation?.legacyFxReference !== true && getReferenceMarket(meta.flags.pegCurrency) !== null &&
       (clocked || capturedPeg?.referenceAdmission !== undefined || capturedPeg?.admittedDeviationBps !== undefined);
     const packet = needsAdmission && !clocked && capturedPeg ? capturedPeg : currentPegObservation;
@@ -291,6 +290,7 @@ export async function derivePegAnalyticsSnapshot(
     eventsByCoin,
     pegDataById,
     admittedPegById,
+    legacyFxReferenceIds,
     lastAffectedAtById,
     lastUncertainAffectedAtById,
   };

@@ -67,7 +67,7 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 Archive sync commands admit incoming API payloads and their final stored projections through the shared schemas before archive checks or writes. Supported legacy optional fields retain their existing defaults/absence, and digest `pre-policy` provenance stays unstored. Malformed JSON, schema/chronology failures and invalid pagination are `SnapshotIntegrityError` failures, not fetch outages: `--allow-existing-on-fetch-failure` cannot suppress them or update capture metadata.
 
-`sync-depeg-events.ts` starts an unverified traversal if the first page reports a missing manifest. Once a page supplies proof, every continuation must match it. New captures mark the yearly shards as `fetched-ledger`. The static index holds historical records needed for retained URLs.
+`sync-depeg-events.ts` starts an unverified traversal if the first page reports a missing manifest. Once a page supplies proof, every continuation must match it. New captures mark the yearly shards as `fetched-ledger`. The static index records permanent URL membership and holds the last reviewed row needed for a retained URL after verified consolidation.
 
 The script permits retained-data fallback only before publication starts. Shard, index, capture and cleanup failures are fatal once publication starts. Direct runs can leave partial output on failure; the release refresh wrapper stages the ledger and promotes it only after a successful producer exit.
 

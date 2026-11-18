@@ -132,6 +132,26 @@ describe("applyPoolChallenge", () => {
     }
   });
 
+  it("uses the selected primary receipt to exclude a pool, independent of configured routes", () => {
+    const coin = "usg-tangent";
+    const offered = ["bitstamp", "kraken"].map((venue, index) => {
+      const poolKey = `ethereum:0x${String(index + 1).repeat(40)}`;
+      return {
+        price: 0.92, tvlUsd: 1_000_000, protocol: ["uniswap-v3", "balancer"][index]!, chain: "ethereum",
+        pricePoolKeys: [poolKey], upstreamKeys: [poolKey, `venue:${venue}`],
+      };
+    });
+    for (const result of [
+      makePriceConsensusResult(),
+      makePriceConsensusResult({ upstreamKeys: offered[0]!.upstreamKeys, pricePoolKeys: offered[0]!.pricePoolKeys }),
+    ]) {
+      const { results, pegTypes, stats } = makePoolChallengeInputs({ assetId: coin, result });
+      const expected = result.upstreamKeys ? 1 : 0.92;
+      applyPoolChallenge(results, new Map([[coin, offered]]), pegTypes, stats);
+      expect(results.get(coin)?.price).toBe(expected);
+    }
+  });
+
   it("uses bounded price evidence rather than unrelated retained TVL for conflicting protocol medians", () => {
     const pool = (poolId: string, project: string, price: number, tvlUsd: number, priceEvidenceTvlUsd?: number): PoolEntry => ({
       poolId, project, price, tvlUsd, priceEvidenceTvlUsd,

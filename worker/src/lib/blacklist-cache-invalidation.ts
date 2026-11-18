@@ -52,7 +52,10 @@ export async function invalidateBlacklistDerivedCaches(
     ]), 3, undefined, { waitOutResourceWindow: true });
     if (ownRepairFence) {
       const value = results[1].results[0]?.value;
-      if (value && (JSON.parse(value) as { ownsFence: number }).ownsFence === 1) ownRepairFence.generation = value;
+      if (value && (JSON.parse(value) as { ownsFence: number }).ownsFence === 1) {
+        ownRepairFence.generation = value;
+        ownRepairFence.summaryValue = null;
+      }
     }
     return { attempted: keys.length, deleted: keys.length, failed: 0 };
   } catch (error) {

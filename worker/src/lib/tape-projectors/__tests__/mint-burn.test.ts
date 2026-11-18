@@ -22,6 +22,8 @@ import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-contract-identity";
 import { commitMintBurnMaterializedCoverage, mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
 import { collectAffectedHours, recalcAffectedHours } from "../../mint-burn-pipeline/persistence";
+import { aggregateFlowCacheKey, finalizeMintBurnFlowResponse } from "../../mint-burn-flows-service";
+import { readMintBurnDisabledKeys, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
 
 type Row = Record<string, unknown>;
 
@@ -69,14 +71,19 @@ function insertFlow(sqlite: DatabaseSync, overrides: Row) {
     VALUES (${entries.map(() => "?").join(", ")})`).run(...entries.map(([, value]) => value as SQLInputValue));
 }
 
+const migrations = new URL("../../../../migrations/", import.meta.url);
+const rollbackProtection = "0315_mint_burn_rollback_protection.sql";
+
+function applyPreRollbackProtectionMigrations(sqlite: DatabaseSync) {
+  for (const name of readdirSync(migrations).filter((name) => name.endsWith(".sql") && name < rollbackProtection).sort()) {
+    sqlite.exec(readFileSync(new URL(name, migrations), "utf8"));
+  }
+}
+
 describe("mint_burn projector", () => {
   it("retires a prior $12M MUSD spoke claim and blocks legacy writers from counting new spoke rows", async () => {
-    const migrations = new URL("../../../../migrations/", import.meta.url);
-    const rollbackProtection = "0315_mint_burn_rollback_protection.sql";
     using sqlite = new DatabaseSync(":memory:");
-    for (const name of readdirSync(migrations).filter((name) => name.endsWith(".sql") && name < rollbackProtection).sort()) {
-      sqlite.exec(readFileSync(new URL(name, migrations), "utf8"));
-    }
+    applyPreRollbackProtectionMigrations(sqlite);
     const db = createSqliteD1(sqlite);
     const spoke = { stablecoin_id: "meusd-mezo", symbol: "MUSD", amount: 12_000_000, amount_usd: 12_000_000 };
     insertFlow(sqlite, { ...spoke, id: "old-spoke" });
@@ -104,6 +111,48 @@ describe("mint_burn projector", () => {
       .toEqual({ suppression_reason: "flow-claim-retracted" });
     expect((await queryTapeEvents(db, { filters: { coinIds: ["meusd-mezo"] }, limit: 10, cursor: null, includeTotal: true })).total)
       .toBe(0);
+  });
+
+  it("fences an in-flight $12M MUSD cache write through migration and legacy policy sync", async () => {
+    using sqlite = new DatabaseSync(":memory:");
+    applyPreRollbackProtectionMigrations(sqlite);
+    const db = createSqliteD1(sqlite);
+    const spoke = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "meusd-mezo" && config.chain.chainId === "ethereum")!;
+    const spokeKey = mintBurnConfigKey(spoke);
+    const cacheKey = aggregateFlowCacheKey(24);
+    const policy = () => String(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get()?.disabled_keys);
+    const oldPolicy = '["operator-disabled"]';
+    sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)").run(oldPolicy, SEC);
+    sqlite.exec(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, net_flow_usd)
+      VALUES ('meusd-mezo', 'ethereum', 1699999200, 1, 12000000, 12000000)`);
+    const stale = sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get()!;
+    expect(stale).toEqual({ mint_count: 1, mint_volume_usd: 12_000_000 });
+
+    sqlite.exec(`BEGIN; ${readFileSync(new URL(rollbackProtection, migrations), "utf8")} COMMIT;`);
+    // The rollback Worker's upsert supplies only the env-derived keys.
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at`)
+      .run(oldPolicy, SEC + 1);
+    expect(JSON.parse(policy())).toEqual(expect.arrayContaining(["operator-disabled", spokeKey]));
+    expect(await readMintBurnDisabledKeys(db)).toEqual(new Set(["operator-disabled"]));
+    const response = await finalizeMintBurnFlowResponse(db, cacheKey, SEC,
+      { coins: [stale] }, { timestamp: SEC, status: "ok" }, oldPolicy);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ reason: "mint-burn-publication-scope-changed" });
+    const readCache = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(cacheKey);
+    expect(readCache()).toBeUndefined();
+
+    const corrected = sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get()!;
+    expect(corrected).toEqual({ mint_count: 0, mint_volume_usd: 0 });
+    expect((await finalizeMintBurnFlowResponse(db, cacheKey, SEC + 1,
+      { coins: [corrected] }, { timestamp: SEC + 1, status: "ok" }, policy())).status).toBe(200);
+    const current = readCache();
+    expect(current).toBeDefined();
+    await syncMintBurnPublicationPolicy(db, ["operator-disabled"], SEC + 2);
+    expect(readCache()).toEqual(current);
+    await syncMintBurnPublicationPolicy(db, ["operator-disabled", spokeKey], SEC + 3);
+    expect(await readMintBurnDisabledKeys(db)).toEqual(new Set(["operator-disabled", spokeKey]));
+    expect(readCache()).toBeUndefined();
   });
 
   it.each(["pending", "accepted", "invalidated"])("withholds unaccepted range-proof Tape claims (%s)", (lifecycle) => {

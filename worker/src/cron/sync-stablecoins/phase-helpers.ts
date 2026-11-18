@@ -343,16 +343,18 @@ export async function fillMissingSupplyHistory(
         }
       }
       asset.supplyChangeBaselines = baselines;
-    } else if (asset.pegType === "peggedUSD") {
+    } else if (asset.pegType !== "peggedUSD") {
+      asset.supplyChangeBaselines = {};
+    } else if (!asset.supplyRestored) {
       delete asset.supplyChangeBaselines;
-      if (chart && asset.supplySource === "defillama" && !asset.supplyRestored) {
+      if (chart && asset.supplySource === "defillama") {
         const rejected: SupplyChangeBaselines = {};
         for (const [window] of SUPPLY_WINDOWS) {
           if (chart[window] === null || Object.keys(chart).length === 0) rejected[window] = null;
         }
         if (Object.keys(rejected).length) asset.supplyChangeBaselines = rejected;
       }
-    } else asset.supplyChangeBaselines = {};
+    }
     // An assessed stock with no admissible count must survive JSON as explicitly unavailable.
     if (current != null && !asset.supplyRestored && !asset.frozen) {
       if (asset.id === "xaut-tether" && asset.supplySource !== "onchain-circulating-supply") asset.circulatingNative = null;
@@ -422,15 +424,16 @@ export async function fillMissingSupplyHistory(
     }
     history.assessedDates.add(row.snapshot_date);
     if (observedAt != null) history.assessedDates.add(bucketUnixSecondsToUtcDay(observedAt));
-    if (observedAt == null || observedAt <= 0 || observedAt > now ||
-      !hasDatedUsdValuation(provenance?.supplySource, observedAt, row.valuation_price_usd, row.valuation_observed_at_sec, now) ||
-      classifySupplyCoverage(provenance) !== "complete" ||
+    const source = provenance?.supplySource ?? null;
+    if (observedAt == null || observedAt <= 0 || observedAt > now || classifySupplyCoverage(provenance) !== "complete" ||
       (isKinesisWrapperSupplyId(row.stablecoin_id) &&
-        isKinesisWrapperSupplyCutoverActive(row.stablecoin_id, perimeterAt) !== (provenance?.supplySource === "onchain-total-supply")) ||
+        isKinesisWrapperSupplyCutoverActive(row.stablecoin_id, perimeterAt) !== (source === "onchain-total-supply")) ||
       !Number.isFinite(row.circulating_usd) || row.circulating_usd < 0) continue;
-    const native = row.stablecoin_id === "xaut-tether" && provenance?.supplySource !== "onchain-circulating-supply"
+    const datedValuation = hasDatedUsdValuation(source, observedAt, row.valuation_price_usd, row.valuation_observed_at_sec, now);
+    if (!datedValuation && source !== "defillama") continue;
+    const native = !datedValuation || (row.stablecoin_id === "xaut-tether" && source !== "onchain-circulating-supply")
       ? null : historicalSupplyQuantity(row.stablecoin_id, asset?.pegType, row, provenance, now);
-    history.closes.push({ snapshotDate: row.snapshot_date, observedAt, source: provenance?.supplySource ?? null, circulatingUsd: row.circulating_usd,
+    history.closes.push({ snapshotDate: row.snapshot_date, observedAt, source, circulatingUsd: row.circulating_usd,
       circulatingNative: native });
   }
 
@@ -439,25 +442,50 @@ export async function fillMissingSupplyHistory(
     throwIfAborted(signal);
     if (chartPackets.has(asset)) continue;
     const clock = asset.supplyObservedAt;
-    if (clock != null && asset.valuationObservedAtSec !== undefined &&
-      !hasDatedUsdValuation(asset.supplySource, clock, asset.valuationPriceUsd, asset.valuationObservedAtSec, now)) {
+    const undatedValuation = clock != null && asset.valuationObservedAtSec !== undefined &&
+      !hasDatedUsdValuation(asset.supplySource, clock, asset.valuationPriceUsd, asset.valuationObservedAtSec, now);
+    // The DefiLlama cap has its own observation clock. An optional quote only values its token count.
+    if (undatedValuation && asset.supplySource !== "defillama") {
       asset.supplyChangeBaselines = { day: null, week: null, month: null };
       continue;
     }
     const history = historyById.get(asset.id);
-    if (!history) continue;
     if (asset.supplyRestored) {
-      if (asset.pegType !== "peggedUSD" || clock == null || !Number.isSafeInteger(clock)) continue;
-      const rejected: SupplyChangeBaselines = {};
-      // A carry can withhold an assessed window without adopting a new close.
-      for (const [window, days, field] of SUPPLY_WINDOWS) {
-        if (!history.assessedDates.has(bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS))) continue;
-        rejected[window] = null;
+      if (asset.pegType !== "peggedUSD") continue;
+      const baselines = { ...asset.supplyChangeBaselines };
+      const rejectedAll = asset.supplyChangeBaselines != null && Object.keys(baselines).length === 0;
+      const comparable = clock != null && clock > 0 && clock <= now && restoredUsdIds.has(asset.id) && !asset.frozen &&
+        getCirculatingRawOrNull(asset) != null && classifySupplyCoverage(buildSupplyObservationProvenance(asset)) === "complete";
+      const currentPerimeter = isEarlierSupplyPerimeter(asset.id, clock ?? now);
+      for (const [window, days, field, readLegacy] of SUPPLY_WINDOWS) {
+        const targetDate = clock == null ? null : bucketUnixSecondsToUtcDay(clock - days * DAY_SECONDS);
+        const assessed = targetDate != null && history?.assessedDates.has(targetDate);
+        const point = baselines[window];
+        if (point === undefined && !assessed && !rejectedAll) continue;
+        // Revalidate the carried close against its original stock. A carry cannot adopt a replacement.
+        if (point && comparable && targetDate === bucketUnixSecondsToUtcDay(point.observedAt) &&
+          !isAmbiguousSupplyPerimeterDay(asset.id, targetDate) &&
+          isEarlierSupplyPerimeter(asset.id, point.observedAt) === currentPerimeter && point.circulatingUsd === readLegacy(asset)) {
+          if (!assessed) continue;
+          const close = history?.closes.find(candidate =>
+            candidate.source === asset.supplySource && candidate.observedAt === point.observedAt &&
+            candidate.circulatingUsd === point.circulatingUsd &&
+            !isAmbiguousSupplyPerimeterDay(asset.id, candidate.snapshotDate) &&
+            isEarlierSupplyPerimeter(asset.id, candidate.snapshotDate) === currentPerimeter);
+          if (close) {
+            if (point.circulatingNative != null && point.circulatingNative !== close.circulatingNative) {
+              baselines[window] = { ...point, circulatingNative: null };
+            }
+            continue;
+          }
+        }
+        baselines[window] = null;
         asset[field] = {};
       }
-      if (Object.keys(rejected).length) asset.supplyChangeBaselines = rejected;
+      if (Object.keys(baselines).length) asset.supplyChangeBaselines = baselines;
       continue;
     }
+    if (!history) continue;
     const baselines: SupplyChangeBaselines = { ...asset.supplyChangeBaselines };
     const currentUsd = getCirculatingRawOrNull(asset);
     const undatedUsdList = clock == null && asset.pegType === "peggedUSD" && asset.supplySource === "defillama";
@@ -515,7 +543,7 @@ export async function fillMissingSupplyHistory(
       const prior = nearest?.circulatingNative;
       const current = asset.circulatingNative;
       const price = asset.valuationPriceUsd;
-      if (mayFillLegacy && keys.length === 1 && readLegacy(asset) == null && prior != null &&
+      if (!undatedValuation && mayFillLegacy && keys.length === 1 && readLegacy(asset) == null && prior != null &&
         current != null && current > 0 && price != null && Number.isFinite(prior * price) &&
         Math.abs(prior - current) / current <= MAX_LEGACY_BASELINE_RELATIVE_CHANGE) {
         // Existing buckets express balance history at the current valuation.

@@ -12,6 +12,8 @@ import {
   dexPoolIndependentGroupKey,
   dexProtocolGroupKey,
   isNativeOriginPending,
+  readDexPriceLineage,
+  type DexPriceLineage,
 } from "../lib/depeg-helpers";
 import {
   chooseIndependentOffchainDepegConfirmer,
@@ -229,7 +231,7 @@ export async function collectConfirmationEvidence(
     threshold,
     recoveryThreshold,
     allowsUsdObservation,
-    pendingSourceFamilies,
+    pendingSourceKeys,
     nativeSignal,
     nativePegQuote: suppliedNativePegQuote,
     nativeQuoteImplausibility: plannedNativeQuoteImplausibility,
@@ -265,8 +267,18 @@ export async function collectConfirmationEvidence(
 
   const geckoId = meta?.geckoId;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  const overlapsPendingVenue = (venue: string | undefined) =>
+    pendingSourceKeys?.has(independenceKey(venue, row.stablecoin_id)) ?? false;
   const isIndependentConfirmer = (venue: string | undefined) =>
-    isIndependentVenue(asset, venue) && !pendingSourceFamilies?.includes(independenceKey(venue, row.stablecoin_id));
+    isIndependentVenue(asset, venue) && !overlapsPendingVenue(venue);
+  const isIndependentDexConfirmer = (sample: DexPriceLineage & { protocol?: string; sourceFamily?: string }) => {
+    if (!isIndependentDexObservation(asset, sample)) return false;
+    if (!pendingSourceKeys) return true;
+    const lineage = readDexPriceLineage(sample);
+    return !overlapsPendingVenue(sample.protocol) && !overlapsPendingVenue(sample.sourceFamily) &&
+      !(lineage.upstreamKeys ?? lineage.pricePoolKeys)?.some((key) =>
+        key.startsWith("venue:") ? overlapsPendingVenue(key.slice(6)) : pendingSourceKeys.has(key));
+  };
   const tradedNative = isNativeQuoteForPending(row, suppliedNativePegQuote)
     ? getClockedTradedNativeQuote(suppliedNativePegQuote, now) : undefined;
   const nativePegQuote = tradedNative && isIndependentVenue(asset, tradedNative.derivation?.lineage.venue)
@@ -359,7 +371,7 @@ export async function collectConfirmationEvidence(
     addSource(evidence.unavailableSources, "dex:usd-native-origin");
   } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
     const aggregateRejectionReason = getDexAggregateRejectionReason(dexRow, now, "depeg") ??
-      (!isIndependentDexObservation(asset, dexRow) ? "independence-unverified" : null) ??
+      (!isIndependentDexConfirmer(dexRow) ? "independence-unverified" : null) ??
       (allowsUsdObservation && !allowsUsdObservation(dexRow.dex_price_usd, dexRow.aggregateObservedAt, DEX_FRESHNESS_SEC)
         ? "reference-observation-unadmitted" : null);
     const affirmative = aggregateRejectionReason == null;
@@ -367,7 +379,7 @@ export async function collectConfirmationEvidence(
     const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
     const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction, recoveryThreshold);
     const protocolSources = dexPriceSources.get(row.stablecoin_id)?.filter((source) =>
-      isIndependentDexObservation(asset, source) &&
+      isIndependentDexConfirmer(source) &&
       (!allowsUsdObservation || (isFreshDexPoolObservation(source.observedAt, now) &&
         allowsUsdObservation(source.price, source.observedAt, DEX_PROTOCOL_SOURCE_FRESHNESS_SEC))));
     const confirmGroups = collectDexProtocolCorroborations(
@@ -492,7 +504,7 @@ export async function collectConfirmationEvidence(
     addSource(evidence.unavailableSources, "pool:usd-native-origin");
   } else if (pools?.length) {
     const eligiblePools = pools.filter((pool) => {
-      if (!knownPoolVenue(pool) || !isIndependentDexObservation(asset, pool)) {
+      if (!knownPoolVenue(pool) || !isIndependentDexConfirmer(pool)) {
         addSource(evidence.unavailableSources, "pool:independence-unverified");
         return false;
       }

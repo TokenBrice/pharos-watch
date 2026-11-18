@@ -40,6 +40,22 @@ function publish(input: ValidateAndCacheInput, blocked = () => ({ metadata: "blo
 
 describe("validateAndWriteStablecoinsCache", () => {
   const syncStartSec = 1_777_000_000;
+  it("publishes an independent mark alongside an explicitly unavailable native quantity", async () => {
+    const { db } = fixtures.open();
+    vi.spyOn(Date, "now").mockReturnValue(syncStartSec * 1000);
+    const asset = makePeggedAsset({
+      id: "usdt-tether", pegMechanism: "fiat-backed", price: 1, priceSource: "coingecko",
+      priceObservedAt: syncStartSec, priceObservedAtMode: "upstream",
+      circulating: { peggedUSD: 100_000_000 }, circulatingNative: null,
+      chainCirculating: {}, chains: [],
+    });
+    expect(await publish({ db, syncStartSec, validationContext: "main", assets: [asset] })).toMatchObject({ written: true });
+    const response = await overlayCanonicalDetail(db, asset.id, Response.json({ price: 10, priceSource: "defillama" }));
+    expect(projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(await response.json()), asset.id)).toMatchObject({
+      price: 1, circulating: { peggedUSD: 100_000_000 }, nativeSupply: { current: null },
+    });
+  });
+
   it("measures two open hours across winning publications while public FX evidence is off", async () => {
     const { db } = fixtures.open();
     const start = Date.parse("2026-11-17T12:00:00Z") / 1000;
@@ -125,6 +141,38 @@ describe("validateAndWriteStablecoinsCache", () => {
       expect(conditions.find((row) => row.id === "reference-admission-outage:EUR"))
         .toMatchObject({ active: false, unknown: false, label: "EUR without an admitted reference for 0 open-session minutes" });
     }
+  });
+
+  it("keeps the verified legacy gold median in the list and peg summary when only GBP is clocked", async () => {
+    const { db } = fixtures.open();
+    const at = Date.parse("2026-11-18T15:00:00Z") / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(at * 1000);
+    await persistFxRateState(db, { peggedGOLD: 4_100, peggedGBP: 1.27 }, {
+      usableSyncAt: at, mode: "live", consecutiveFallbackRuns: 0, legacyDetectionPegs: ["peggedGOLD"],
+      sourceUpdatedAtByPeg: { peggedGOLD: at - 600, peggedGBP: at - 300 },
+      sourceModeByPeg: { peggedGOLD: "live", peggedGBP: "live" },
+      observations: { peggedGBP: { pegKey: "peggedGBP", usdPerUnit: 1.27,
+        observedAtSec: at - 300, source: "openExchangeRates", cadence: "intraday" } },
+    }, at);
+    const assets = ["paxg-paxos", "xaut-tether", "kau-kinesis"].map((id, index) => {
+      const meta = WORKER_TRACKED_META_BY_ID.get(id)!;
+      return makePeggedAsset({ id, symbol: meta.symbol, pegType: "peggedGOLD", pegMechanism: "rwa-backed",
+        price: 4165.60 * (meta.commodityOunces ?? 1) * (index === 1 ? 0.9997 : 1),
+        priceSource: "coingecko", priceObservedAt: at - 120, priceObservedAtMode: index === 2 ? "local_fetch" : "upstream",
+        circulating: { peggedGOLD: 1e8 }, chainCirculating: {}, chains: [] });
+    });
+    expect(await publish({ db, ...await loadFreshFxRates(db), assets, validationContext: "main",
+      syncStartSec: at, publishFxReferenceEvidence: true })).toMatchObject({ written: true });
+    const served = StablecoinListResponseSchema.parse(JSON.parse((await readCompanion(db)).body));
+    expect(served.peggedAssets[0].currentPeg).toMatchObject({ legacyFxReference: true, currentDeviationBps: 0,
+      pegReference: { source: "median", valueUsd: 4165.60, asOf: at } });
+    expect(await (await handlePegSummary(db)).json()).toMatchObject({
+      summary: { totalTracked: 3 },
+      coins: expect.arrayContaining([
+        expect.objectContaining({ id: "paxg-paxos", currentDeviationBps: 0, pegReference: expect.objectContaining({ valueUsd: 4165.60 }) }),
+        expect.objectContaining({ id: "xaut-tether", currentDeviationBps: -3 }),
+      ]),
+    });
   });
 
   it("admits a legacy EUR peer median only while its original contributor clocks support the comparison", async () => {

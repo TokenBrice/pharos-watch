@@ -2,6 +2,7 @@ import { hasPublishedDeviation, readDeviationProjection, relativeBps } from "@sh
 export { hasPublishedDeviation } from "@shared/lib/depeg-signals";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
+import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
 import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatNativePrice, pegCurrencySymbol } from "@shared/lib/peg-format";
 import type { PegSummaryCoin } from "@shared/types/peg";
@@ -99,12 +100,20 @@ export function readUnroundedPublishedDeviation(
   pegCurrency: string | null | undefined,
   current: PublishedReferenceRead | null | undefined,
   legacyClock?: PriceClockRow | null,
+  nowSec?: number,
 ): CurrentDeviationRead {
   const admission = current?.referenceAdmission;
   const projection = readDeviationProjection(current, pegCurrency === "USD", current?.priceObservedAt);
   if (projection !== undefined) {
     if (admission && admission.quoteObservedAtSec !== current?.priceObservedAt) {
       return { deviationBps: null, referenceNote: null };
+    }
+    if (nowSec != null && admission?.status === "admitted" && pegCurrency && pegCurrency !== "USD") {
+      const reason = currentAdmissionUnavailableReason(admission, pegCurrency, current?.priceObservedAt, nowSec);
+      if (reason) {
+        return { deviationBps: null, referenceNote: reason === "reference-market-closed"
+          ? "Reference market closed" : "Reference not yet updated" };
+      }
     }
     return {
       deviationBps: projection,
@@ -129,14 +138,22 @@ export function readPublishedDeviation(
   pegCurrency: string | null | undefined,
   current: PublishedReferenceRead | null | undefined,
   legacyClock?: PriceClockRow | null,
+  nowSec?: number,
 ): CurrentDeviationRead {
-  const read = readUnroundedPublishedDeviation(pegCurrency, current, legacyClock);
+  const read = readUnroundedPublishedDeviation(pegCurrency, current, legacyClock, nowSec);
   return read.deviationBps == null || !hasPublishedDeviation(current) ? read : { ...read, deviationBps: Math.round(read.deviationBps) };
 }
 
 export function resolveQuoteReference(row: CurrentPriceRow | undefined, summary: PegSummaryCoin | null | undefined) {
+  const published = row?.currentPeg?.referenceAdmission;
+  const refreshed = summary?.referenceAdmission;
+  if (row && summary && published?.status === "admitted" && refreshed && refreshed.status !== "admitted" &&
+      refreshed.decisionAtSec > published.decisionAtSec && canBorrowPublishedReference(row, summary)) {
+    return summary;
+  }
   // During cutover the list can carry a legacy block even when peg-summary has a verdict.
-  if (row && !hasPublishedDeviation(row.currentPeg) && summary && hasPublishedDeviation(summary)) {
+  if (row && !row.currentPeg?.currentPriceUnavailable && !row.currentPeg?.pegReferenceUnavailable &&
+      !hasPublishedDeviation(row.currentPeg) && summary && hasPublishedDeviation(summary)) {
     return canBorrowPublishedReference(row, summary) ? summary : null;
   }
   return resolveCurrentPeg(row, summary);
@@ -148,7 +165,8 @@ export function resolveCurrentDeviation(
   legacy: PegSummaryCoin | null | undefined,
   pegCurrency: string | null | undefined,
 ): CurrentDeviationRead {
-  const read = readPublishedDeviation(pegCurrency, resolveQuoteReference(row, legacy), legacy);
+  const nowSec = row ? Math.floor(Date.now() / 1000) : undefined;
+  const read = readPublishedDeviation(pegCurrency, resolveQuoteReference(row, legacy), legacy, nowSec);
   return row && !hasObservedDisplayPrice(row) ? { ...read, deviationBps: null } : read;
 }
 
@@ -163,7 +181,8 @@ export function resolveDisplayPegReference(
   if (reference == null || !Number.isFinite(reference) || reference <= 0) return null;
   if (hasPublishedDeviation(current)) {
     if (current.referenceAdmission && current.referenceAdmission.referenceObservedAtSec !== current.pegReference?.asOf) return null;
-    return readPublishedDeviation(pegCurrency, current).deviationBps == null ? null : reference;
+    const nowSec = row ? Math.floor(Date.now() / 1000) : undefined;
+    return readPublishedDeviation(pegCurrency, current, undefined, nowSec).deviationBps == null ? null : reference;
   }
   const observedAtSec = resolvePriceObservedAtSec(row) ?? resolvePriceObservedAtSec(current);
   const { deviationBps, referenceNote } = readPublishedDeviation(pegCurrency, current);

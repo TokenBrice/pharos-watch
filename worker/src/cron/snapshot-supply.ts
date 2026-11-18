@@ -6,7 +6,11 @@ import {
   executeAtomicBatch,
   prepareMultiRowInsertStatements,
 } from "../lib/db";
-import { SUPPLY_SNAPSHOT_UPSERT_PREFIX } from "../lib/supply-history-db";
+import {
+  SUPPLY_HISTORY_MARKET_PRICE_SQL,
+  SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL,
+  SUPPLY_SNAPSHOT_UPSERT_PREFIX,
+} from "../lib/supply-history-db";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { prepareCacheUpsert } from "../lib/db-cache";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
@@ -14,7 +18,7 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isKinesisWrapperSupplyId } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
-import { buildSupplyObservationProvenance } from "@shared/lib/supply-provenance";
+import { buildSupplyObservationProvenance, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { isDailyStockObservation, SUPPLY_SNAPSHOT_MAX_AGE_SEC } from "../lib/dews/native-quantity";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
@@ -71,17 +75,20 @@ async function repairSameDayMissingPrices(
   signal?: AbortSignal,
 ): Promise<number> {
   const missing = await db.prepare(
-    "SELECT stablecoin_id FROM supply_history WHERE snapshot_date = ? AND price IS NULL",
+    `SELECT stablecoin_id FROM supply_history WHERE snapshot_date = ? AND ${SUPPLY_HISTORY_MARKET_PRICE_SQL} IS NULL`,
   ).bind(snapshotDate).all<{ stablecoin_id: string }>();
   throwIfAborted(signal);
 
   const missingIds = new Set((missing.results ?? []).map((row) => row.stablecoin_id));
-  // Rows carry a price only when it is an actual observation (see deriveCoverage).
-  const repairs = snapshotRows
-    .filter(([stablecoinId, , , price]) => missingIds.has(stablecoinId) && price != null)
-    .map(([stablecoinId, , , price, priceObservedAt]) => db.prepare(
-      "UPDATE supply_history SET price = ?, price_observed_at = ? WHERE stablecoin_id = ? AND snapshot_date = ? AND price IS NULL",
-    ).bind(price, priceObservedAt, stablecoinId, snapshotDate));
+  const repairs: D1PreparedStatement[] = [];
+  for (const [stablecoinId, , , price, priceObservedAt, provenance] of snapshotRows) {
+    if (!missingIds.has(stablecoinId)) continue;
+    const quote = parseSupplyObservationProvenance(provenance).provenance?.marketQuote;
+    const marketPrice = quote?.price ?? price;
+    if (marketPrice == null) continue;
+    repairs.push(db.prepare(SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL)
+      .bind(marketPrice, quote ? quote.observedAt : priceObservedAt, 1, stablecoinId, snapshotDate));
+  }
 
   return batchExecute(db, repairs, { signal });
 }
@@ -171,13 +178,16 @@ export async function snapshotSupply(
           isDailyStockObservation(asset.id, snapshotDate, supplyObservedAt, assessedAt) && assessedAt - supplyObservedAt <= SUPPLY_SNAPSHOT_MAX_AGE_SEC;
         const native = quantityEligible ? asset.circulatingNative ?? null : null;
         const nativeQuantityUnavailable = asset.circulatingNative !== undefined && native == null;
-        if (provenance && nativeQuantityUnavailable) {
-          provenance.nativeQuantityUnavailable = true;
+        // Legacy readers use one column for both the market price and USD-to-native conversion.
+        const separateMarketQuote = native != null && price != null && circulatingUsd / price !== native;
+        if (provenance && (nativeQuantityUnavailable || separateMarketQuote)) {
+          if (nativeQuantityUnavailable) provenance.nativeQuantityUnavailable = true;
           if (price != null) provenance.marketQuote = { price, observedAt: priceObservedAt };
         }
         snapshotRows.push([
           asset.id, snapshotDate, circulatingUsd,
-          nativeQuantityUnavailable ? null : price, nativeQuantityUnavailable ? null : priceObservedAt,
+          nativeQuantityUnavailable || separateMarketQuote ? null : price,
+          nativeQuantityUnavailable || separateMarketQuote ? null : priceObservedAt,
           provenance == null ? null : JSON.stringify(provenance),
           native,
           quantityEligible ? asset.valuationPriceUsd ?? null : null,

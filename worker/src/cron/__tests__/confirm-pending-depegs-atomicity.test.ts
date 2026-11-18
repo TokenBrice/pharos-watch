@@ -10,6 +10,8 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
+import { buildOutcomeAndDeleteStmts } from "../pending-depeg-confirmation";
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: Array.from({ length: 51 }, (_, index) => ({
@@ -158,5 +160,45 @@ describe("confirmPendingDepegs atomic candidate transitions", () => {
       { stablecoin_id: "atomic-confirm-1" },
       { stablecoin_id: "atomic-confirm-2" },
     ]);
+  });
+
+  it("keeps a clocked closure pending on incompatible rollback", async () => {
+    const { db, sqlite } = sqliteFixtures.open();
+    const firstSeenAt = Date.parse("2026-11-21T12:00:00Z") / 1000;
+    const fridayClose = 0.000625;
+    const price = 0.0004375;
+    await buildUpsertPendingDepegStmt(db, {
+      stablecoinId: "cngn-compliant-naira", symbol: "cNGN", pegType: "peggedNGN", direction: "below",
+      seenAt: firstSeenAt, quoteObservedAt: firstSeenAt - 30, bps: -3000, price, pegReference: fridayClose,
+      reason: "confirmation-window+low-confidence",
+      referenceAdmission: {
+        status: "admitted", reason: "severe-deviation", kind: "fx", source: "fawazahmed0",
+        cadence: "calendar-daily", quoteObservedAtSec: firstSeenAt - 30, decisionAtSec: firstSeenAt,
+        referenceObservedAtSec: Date.parse("2026-11-20T00:00:00Z") / 1000,
+        budgetSec: 86400, sessionOpenedAtSec: null, generation: "friday-close", policyVersion: 1,
+      },
+    }).run();
+    const row = (await db.prepare("SELECT * FROM depeg_pending").first<PendingDepegRow>())!;
+    const state = normalizePendingDepegRow(row);
+    const outcome = buildOutcomeAndDeleteStmts(db, row, state, "promoted", firstSeenAt + 960,
+      { confirmingSources: ["pool:curve:curve"] }, "confirmed-by:temporal:15m+pool:curve:curve");
+    const insertEvent = (reference: number) => db.prepare(
+      `INSERT INTO depeg_events (
+        stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price,
+        peg_reference, source, confirmation_sources, pending_reason
+      ) VALUES (?, 'cNGN', 'peggedNGN', 'below', -3000, ?, ?, ?, ?, 'live', 'temporal:15m+pool:curve:curve', ?)`,
+    ).bind(row.stablecoin_id, firstSeenAt, price, price, reference, state.reason);
+    const readEvents = () => sqlite.prepare("SELECT peak_deviation_bps, peak_price, peg_reference FROM depeg_events").all();
+    const readOutcomes = () => sqlite.prepare("SELECT pending_id FROM depeg_pending_outcomes").all();
+    await expect(db.batch([insertEvent(0.0006), ...outcome]))
+      .rejects.toThrow("incompatible closure pending promotion");
+    expect(readEvents()).toEqual([]);
+    expect(readOutcomes()).toEqual([]);
+    expect(await db.prepare("SELECT * FROM depeg_pending").first()).toEqual(row);
+
+    await db.batch([insertEvent(fridayClose), ...outcome]);
+    expect(await db.prepare("SELECT * FROM depeg_pending").first()).toBeNull();
+    expect(readOutcomes()).toEqual([{ pending_id: row.id }]);
+    expect(readEvents()).toEqual([{ peak_deviation_bps: -3000, peak_price: price, peg_reference: fridayClose }]);
   });
 });

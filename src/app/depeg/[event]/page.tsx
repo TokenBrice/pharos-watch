@@ -134,12 +134,14 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
   const showAdmissibleObservation = qualified || firstAdmissible != null;
   const startPrice = formatEventPrice(event.startPrice, event, "start");
   const peakPrice = formatEventPrice(event.peakPrice, event, "peak");
-  const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
+  const { closure, label: closureLabel, isRecovery, end } = getDepegEventClosurePresentation(event);
   const recoveryPrice = isRecovery
     ? formatEventPrice(event.recoveryPrice, event, "recovery")
     : null;
-  const durationSec = event.endedAt != null ? event.endedAt - event.startedAt : null;
   const affectedSec = event.admittedCoverage?.reduce((seconds, interval) => seconds + interval.toSec - interval.fromSec, 0);
+  const showRecordedDuration = qualified || affectedSec !== undefined || (!isRecovery && event.analyticRecoveryAt === null);
+  const durationEnd = showRecordedDuration ? event.endedAt : end;
+  const durationSec = durationEnd != null ? durationEnd - event.startedAt : null;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
       <div>
@@ -167,7 +169,7 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">{isRecovery ? "Recovered" : closure === "open" ? "Ended" : hasUnverifiedAnalyticRecovery(event) ? "Recorded detector close" : "Tracking closed"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {event.endedAt != null ? formatEventTimestamp((isRecovery ? event.analyticRecoveryAt : null) ?? event.endedAt, includeTime) : "Ongoing"}
+          {end != null ? formatEventTimestamp(end, includeTime) : "Ongoing"}
         </dd>
       </div>
       <div>
@@ -175,7 +177,7 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
         <dd className="font-medium text-foreground">{closureLabel}</dd>
       </div>
       <div>
-        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{qualified || affectedSec !== undefined ? "Recorded duration" : "Duration"}</dt>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{showRecordedDuration ? "Recorded duration" : "Duration"}</dt>
         <dd className="pharos-numeric font-medium text-foreground">
           {durationSec != null ? formatApproxDurationSeconds(durationSec, { style: "long" }) : "—"}
         </dd>

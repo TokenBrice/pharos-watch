@@ -24,14 +24,13 @@ import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import { createDexRouteObservationPacking, publishedDexRouteCounts } from "./dex-route-observation-selection";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
-import { projectRetainedPoolPrice, summarizeRetainedPoolVolume } from "./scoring-helpers";
-import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, selectIndependentChallengerPools } from "./price-lineage";
+import { summarizeRetainedPoolVolume } from "./scoring-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { getReferenceMarket, getReferenceMarketClosureStart } from "@shared/lib/reference-market-hours";
 import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-execution/valuation-admission";
-import { buildStoredChallengerPoolsJson } from "./challenger-publish";
+import { buildStoredChallengerPoolsJson, projectPoolChallenger } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -60,24 +59,25 @@ const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
    coverage_class, coverage_confidence, source_mix_json, methodology_version,
    exit_route_summary_json, volume_availability_json)`;
 
-export function buildStoredTopPoolsJson(stablecoinId: string, topPools: LiquidityMetrics["topPools"]): string {
-  const primaryKeys = configuredPrimaryUpstreamKeys(stablecoinId);
-  const candidates = topPools.flatMap((pool) => {
-    if (!pool.priceCounterparty) return [];
-    const observation = projectRetainedPoolPrice(pool);
-    const lineage = observation && getDexGroupLineage([observation]);
-    return observation && lineage && admitsRollbackDexVote(lineage.upstreamKeys, primaryKeys)
-      ? [{ pool, tvl: observation.tvl, observedAt: observation.observedAt,
-        upstreamKeys: lineage.upstreamKeys, pricePoolKeys: lineage.pricePoolKeys }]
-      : [];
-  });
-  const eligible = new Map(selectIndependentChallengerPools(candidates).map(({ pool, upstreamKeys, pricePoolKeys }) =>
-    [pool, { upstreamKeys, pricePoolKeys }]));
+export function buildStoredTopPoolsJson(
+  stablecoinId: string,
+  topPools: LiquidityMetrics["topPools"],
+  nowSec = Math.floor(Date.now() / 1000),
+): string {
   return JSON.stringify(topPools.map((entry) => {
     const { volumeReading: _volumeReading, price, ...pool } = entry;
-    const lineage = eligible.get(entry);
-    // Main's legacy challenger loader reads the top-pool price field directly.
-    return pool.priceCounterparty && !lineage ? { ...pool, displayPrice: price } : { ...pool, price, ...lineage };
+    const challenger = projectPoolChallenger(stablecoinId, entry, POOL_CHALLENGE_MIN_TVL, nowSec);
+    if (challenger && !challenger.upstreamKeys && challenger.tvlUsd === pool.tvlUsd) return { ...pool, price };
+    // Main weights the top-pool price by total inventory, regardless of its receipt.
+    return {
+      ...pool,
+      displayPrice: price,
+      ...(challenger && {
+        challengerTvlUsd: challenger.tvlUsd,
+        upstreamKeys: challenger.upstreamKeys,
+        pricePoolKeys: challenger.pricePoolKeys,
+      }),
+    };
   }));
 }
 
@@ -812,6 +812,7 @@ export async function persistScores(
   let orphanRowsDeleted = 0;
   let orphanCleanupFailed = false;
   const generationId = buildDexLiquidityPublicationGenerationId(nowSec);
+  const challengerNowSec = Math.max(nowSec, Math.floor(Date.now() / 1000));
   const expectedRowCount = ACTIVE_STABLECOINS.length + 1;
   const inactiveMetricIdsSkipped = [...metrics.keys()].filter((id) => !ACTIVE_IDS.has(id)).sort();
   let activeMetricsCount = 0;
@@ -1049,8 +1050,8 @@ export async function persistScores(
         JSON.stringify(m.protocolTvl),
         JSON.stringify(m.chainTvl),
         // `volumeReading` is producer-internal raw evidence (aged readings included); never published.
-        buildStoredTopPoolsJson(id, m.topPools),
-        retainedPools == null ? null : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL),
+        buildStoredTopPoolsJson(id, m.topPools, challengerNowSec),
+        retainedPools == null ? null : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL, challengerNowSec),
         sr.score,
         sr.hhi,
         sr.avgStress,

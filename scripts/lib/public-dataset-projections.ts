@@ -191,7 +191,9 @@ function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoin
       const priceSource = typeof coin.priceSource === "string" ? coin.priceSource : null;
       const mode = PriceObservedAtModeSchema.nullish().safeParse(coin.priceObservedAtMode);
       const priceObservedAtMode = mode.success ? mode.data ?? null : "unsupported";
-      const positivePrice = coin.price !== null && Number.isFinite(coin.price) && coin.price > 0;
+      const priceRefused = isRecord(coin.currentPeg) && coin.currentPeg.currentPriceUnavailable === true;
+      const positivePrice = !priceRefused &&
+        coin.price !== null && Number.isFinite(coin.price) && coin.price > 0;
       const observed = !frozen && positivePrice && isObservedPrice({ priceSource, priceObservedAtMode });
       const nominalReference = NominalPriceReferenceSchema.safeParse(coin.nominalPriceReference).data;
       const nominalFallback = positivePrice && priceObservedAtMode !== "unsupported"

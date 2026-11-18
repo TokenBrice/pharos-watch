@@ -95,7 +95,7 @@ describe("parseSupplyData", () => {
     ], () => 2)).toEqual([{ ts: 100, supply: 200 }]);
   });
 
-  it("keeps rejected USD checkpoints unavailable and preserves explicit observed zero", () => {
+  it("keeps rejected USD and native checkpoints unavailable and preserves explicit observed zero", () => {
     expect(parseSupplyData([
       { date: "100" },
       { date: "200", circulating: {} },
@@ -104,7 +104,10 @@ describe("parseSupplyData", () => {
       { date: "500", totalCirculatingUSD: { peggedUSD: Number.POSITIVE_INFINITY } },
       { date: "600", circulating: { peggedUSD: 0 } },
       { date: "700", totalCirculatingUSD: { peggedJPY: 0 }, circulating: { peggedJPY: 200_000_000 } },
-    ])).toEqual([{ ts: 500, supply: null }, { ts: 600, supply: 0 }, { ts: 700, supply: 0 }]);
+    ])).toEqual([
+      { ts: 300, supply: null }, { ts: 400, supply: null }, { ts: 500, supply: null },
+      { ts: 600, supply: 0 }, { ts: 700, supply: 0 },
+    ]);
   });
 
   it.each([

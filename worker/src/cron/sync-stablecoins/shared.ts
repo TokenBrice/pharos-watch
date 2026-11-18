@@ -439,8 +439,8 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset | n
   if (observedAt == null) return null;
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
-  // The dated gap-fill chart also owns the missing chain's historical remainder.
-  if (!restored.supplyGapFill) delete restored.supplyChangeBaselines;
+  // Carry the USD assessment with its stock clock. Gap-fill charts also own the chain remainder.
+  if (restored.pegType !== "peggedUSD" && !restored.supplyGapFill) delete restored.supplyChangeBaselines;
   // Routine restores stay unmarked; the outage fallback tags its own carries.
   delete restored.supplyRestoreMode;
   restored.supplyObservedAt = observedAt;
@@ -603,6 +603,7 @@ export function restorePreferredNativeSupply(
       circulatingNative: restored.circulatingNative,
       valuationPriceUsd: restored.valuationPriceUsd,
       valuationObservedAtSec: restored.valuationObservedAtSec,
+      supplyChangeBaselines: restored.supplyChangeBaselines,
       supplyChainGuard: restored.supplyChainGuard,
       supplyRestored: true,
       supplyUnavailableReason: undefined,

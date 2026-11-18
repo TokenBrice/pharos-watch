@@ -59,6 +59,7 @@ import type {
 } from "../../lib/chain-registry";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
+import { SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL, SUPPLY_HISTORY_MARKET_PRICE_SQL } from "../../lib/supply-history-db";
 import {
   fetchOnChainRates,
 } from "./sources-rpc";
@@ -96,42 +97,45 @@ export async function getPriceDerivedApy(
   // bucket only to bound the indexed read, leaving room for day-boundary skew.
   const earliestBucketAt = earliestAnchorAt - 2 * DAY_SECONDS;
 
-  const recentRow = await runWithOverloadRetry(() => db
-    .prepare(
-      `SELECT /* pharos:yield-sync:price-latest */ price, price_observed_at
-       FROM supply_history
-       WHERE stablecoin_id = ?
-         AND snapshot_date >= ?
-         AND price > 0 AND price <= ?
+  let withProvenance = true;
+  const loadQuote = (kind: "latest" | "anchor", from: number, to: number) => {
+    const order = kind === "latest" ? "DESC" : "ASC";
+    const read = () => db.prepare(
+      `SELECT /* pharos:yield-sync:price-${kind} */ price, price_observed_at
+       FROM (
+         SELECT snapshot_date,
+           ${withProvenance ? SUPPLY_HISTORY_MARKET_PRICE_SQL : "price"} AS price,
+           ${withProvenance ? SUPPLY_HISTORY_MARKET_PRICE_CLOCK_SQL : "price_observed_at"} AS price_observed_at
+         FROM supply_history WHERE stablecoin_id = ? AND snapshot_date >= ?
+       )
+       WHERE price > 0 AND price <= ?
          AND typeof(price_observed_at) = 'integer'
          AND price_observed_at BETWEEN ? AND ?
-       ORDER BY price_observed_at DESC, snapshot_date DESC
+       ORDER BY price_observed_at ${order}, snapshot_date ${order}
        LIMIT 1`,
-    )
-    .bind(stablecoinId, earliestBucketAt, Number.MAX_VALUE, earliestAnchorAt + minLookbackSec, now)
-    .first<{ price: number; price_observed_at: number | null }>(),
-    3, signal, { waitOutResourceWindow: true });
+    ).bind(stablecoinId, earliestBucketAt, Number.MAX_VALUE, from, to)
+      .first<{ price: number; price_observed_at: number | null }>();
+    return runWithOverloadRetry(async () => {
+      try {
+        return await read();
+      } catch (error) {
+        if (!withProvenance || !(error instanceof Error) || !/no such column: supply_provenance\b/i.test(error.message)) {
+          throw error;
+        }
+        withProvenance = false;
+        return read();
+      }
+    }, 3, signal, { waitOutResourceWindow: true });
+  };
+
+  const recentRow = await loadQuote("latest", earliestAnchorAt + minLookbackSec, now);
 
   const isObservationClock = (value: number | null): value is number =>
     typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= now;
   if (!recentRow || !Number.isFinite(recentRow.price) || recentRow.price <= 0
     || !isObservationClock(recentRow.price_observed_at)) return null;
   const recentObservedAt = recentRow.price_observed_at;
-  const anchoredRow = await runWithOverloadRetry(() => db
-    .prepare(
-      `SELECT /* pharos:yield-sync:price-anchor */ price, price_observed_at
-       FROM supply_history
-       WHERE stablecoin_id = ?
-         AND snapshot_date >= ?
-         AND price > 0 AND price <= ?
-         AND typeof(price_observed_at) = 'integer'
-         AND price_observed_at BETWEEN ? AND ?
-       ORDER BY price_observed_at ASC, snapshot_date ASC
-       LIMIT 1`,
-    )
-    .bind(stablecoinId, earliestBucketAt, Number.MAX_VALUE, earliestAnchorAt, recentObservedAt - minLookbackSec)
-    .first<{ price: number; price_observed_at: number | null }>(),
-    3, signal, { waitOutResourceWindow: true });
+  const anchoredRow = await loadQuote("anchor", earliestAnchorAt, recentObservedAt - minLookbackSec);
 
   if (!anchoredRow || !Number.isFinite(anchoredRow.price) || anchoredRow.price <= 0
     || !isObservationClock(anchoredRow.price_observed_at)

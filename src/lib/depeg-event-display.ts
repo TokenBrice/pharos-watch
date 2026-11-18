@@ -193,18 +193,18 @@ export function getDepegEventClosurePresentation(event: EventClosureInput) {
   const closure = hasUnverifiedAnalyticRecovery(event) ? "unknown_closed" : classifyDepegClosure(event);
   const isRecovery = isDepegRecovery(closure);
   const label = DEPEG_CLOSURE_LABELS[closure];
-  return { closure, isRecovery, label };
+  const end = isRecovery ? event.analyticRecoveryAt ?? event.endedAt : event.endedAt;
+  return { closure, isRecovery, label, end };
 }
 
 function buildDepegEventOutcome(event: DepegEventDisplayInput, includeEndTime: boolean): string {
-  const { closure, isRecovery, label } = getDepegEventClosurePresentation(event);
-  if (closure === "open" || event.endedAt == null) return "The event remains ongoing.";
-  const end = isRecovery ? event.analyticRecoveryAt ?? event.endedAt : event.endedAt;
+  const { isRecovery, label, end } = getDepegEventClosurePresentation(event);
+  if (end == null) return "The event remains ongoing.";
   const duration = formatApproxDurationSeconds(end - event.startedAt, { style: "long" });
   const endTime = includeEndTime ? ` at ${formatEventUtcTime(end)}` : "";
   const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice, event, "recovery") : null;
   if (hasUnverifiedAnalyticRecovery(event)) {
-    return `Detector close recorded on ${formatEventTimestamp(event.endedAt, includeEndTime)}. Recovery is unverified.`;
+    return `Detector close recorded on ${formatEventTimestamp(end, includeEndTime)}. Recovery is unverified.`;
   }
   if (getDepegEventOnset(event).qualified) {
     return `${isRecovery ? "Recovered" : label} on ${formatEventTimestamp(end, includeEndTime)}${recoveryPrice ? ` at ${recoveryPrice}` : ""}.`;

@@ -360,10 +360,49 @@ describe("DDR supply history provenance", () => {
     const loaded = await loadDdrContext(db, [activeRow({ started_at: onset })], NOW_SEC);
     if (loaded.kind !== "ok") throw new Error(loaded.reason);
     const snapshots = loaded.context.supplyByCoin.get("usdc-circle") ?? [];
-    expect(snapshots).toContainEqual({ date: baseline, usd: null });
+    expect(snapshots).toContainEqual({ date: baseline, usd: null, comparisonPartial: true });
     expect(buildSupplyContext(snapshots, onset, NOW_SEC, [], false)).toMatchObject({
       covered: false, change7dPct: null, mintSurge: null, mintSurgeCoverage: "unavailable",
     });
+  });
+
+  it("uses SOFIUSD's complete stock for measured exit collapse while withholding change across a small chain gap", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    const id = "sofid-sofi";
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.peggedAssets[0].id', ?) WHERE key = 'stablecoins'").run(id);
+    const day = 86_400;
+    const today = Math.floor(NOW_SEC / day) * day;
+    const onset = today - 10 * day;
+    const insert = sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, 1000000000, ?)`);
+    for (const date of [today - 30 * day, onset - 7 * day, onset]) insert.run(id, date, null);
+    insert.run(id, today, JSON.stringify({
+      supplySource: "defillama", supplyObservedAt: today,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable",
+        chains: [{
+          chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 10_000_000, baselineObservedAt: today - day,
+          baselineSource: "state", resolution: "unavailable",
+        }],
+      },
+    }));
+
+    const loaded = await loadDdrContext(db, [activeRow({ stablecoin_id: id, symbol: "SOFIUSD", started_at: onset })], NOW_SEC);
+    if (loaded.kind !== "ok") throw new Error(loaded.reason);
+    loaded.context.safetyContext = { status: "v9-identified", reason: null, identity: null };
+    loaded.context.v9ExitByCoin.set(id, {
+      reasonCodes: [], pillarScore: 50, stressRequest: { requestedNotionalUsd: 1_000_000 },
+      primaryRoute: { key: "primary", score: 50, capacity: {
+        requestedNotionalUsd: 1_000_000, executableUsd: 500_000, completionRatio: 0.5,
+      } },
+    });
+    const [row] = resolveDdrIncidents(loaded.context, NOW_SEC);
+    expect(row.inputs?.circulatingUsd).toBe(1_000_000_000);
+    expect(row.relatedContext).toMatchObject({ supplyChange7dPct: 0, supplyChange30dPct: null });
+    expect(row.resolution.tier).toBe("at_risk");
+    expect(row.resolution.factors).toContainEqual(expect.objectContaining({ code: "K5_exit_collapse" }));
   });
 
   it.each([900, null])("withholds a same-day replacement when the quantity observation offset is %j", async (replacementOffset) => {

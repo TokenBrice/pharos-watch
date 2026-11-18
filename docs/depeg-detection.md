@@ -64,13 +64,15 @@ The pending-confirmation canary accepts a closure hold only when the receipt mat
 
 A severe candidate still observed just before the close can confirm during the closure. If the independent evidence is missing, expiry resumes at reopening. A missing current comparison leaves the candidate visible to the coverage canary.
 
-During a Worker version transition, provider-status-only FX metadata and a missing FX state use the legacy numeric reference path. A carried rate retains its legacy provenance across mixed publications. Legacy detection uses the fixed UTC weekend closure from Friday 21:00 to Sunday 23:00. Legacy ECB fixings use the 16:00 UTC freshness cutoff. Clocked ECB fixings use the Berlin release clock. The first OXR snapshot replacing a legacy rate, and rereads of that snapshot, can use the legacy path when repricing is the only missing check. The next distinct observation uses the new admission rules. An explicitly empty observations map withholds the comparison, as does rejected evidence for the peg. Detection allows up to three hours between an OXR reference and a quote, covering its accepted snapshot age and one hourly poll.
+During a Worker version transition, provider-status-only FX metadata and a missing FX state use the legacy numeric reference path. A carried rate retains its legacy provenance across mixed publications. Incumbent selection and cached-rate carry use the fixing cutoff for that peg even when a sibling peg refreshes. Legacy detection uses the fixed UTC weekend closure from Friday 21:00 to Sunday 23:00. Legacy ECB fixings use the 16:00 UTC freshness cutoff. Clocked ECB fixings use the Berlin release clock. The first OXR snapshot replacing a legacy rate, and rereads of that snapshot, can use the legacy path when repricing is the only missing check. The next distinct observation uses the new admission rules. An explicitly empty observations map withholds the comparison, as does rejected evidence for the peg. Detection allows up to three hours between an OXR reference and a quote, covering its accepted snapshot age and one hourly poll.
 
 With source-clocked evidence, at least three eligible same-metal assets can supply the gold or silver median. During a closure, only upstream market quotes from within the closure and freshness budget enter that median. When the FX producer has a qualifying median, at least three distinct local assets must have quotes strictly newer than its oldest constituent to replace it. Only those newer quotes supply the replacement value and receipts. Otherwise the producer supplies both. Below quorum, the detector evaluates an available direct closing observation under the same severity and independent-cohort rules.
 
 Detection keeps the legacy bullion median when that metal's carried rate has a verified legacy marker and lacks its own source observation. For fiat medians in a source-clocked generation, detection and current peg display use the same eligible set for the median, contributor count, and oldest clock. Each contributor is a distinct asset with an upstream quote within the session and freshness budget.
 
-If a newer FX fixing or bullion median fails the closure checks, detection can use an eligible direct sample retained in the verified FX state. The comparison uses that sample's USD value and original source clock.
+If a newer FX fixing or bullion median fails the closure checks, detection can use an eligible direct sample retained in the verified FX state. An omitted peg can also use its retained close when the current verified FX generation carries that peg's eligibility. A rejected replacement does not grant eligibility. The comparison uses the retained sample's USD value and original source clock.
+
+If a legacy pending loses its primary quote in the same open legacy session, an independent secondary quote can confirm it against a matching usable legacy reference or the stored benchmark when the refresh supplies no reference evidence. Modern refusal still withholds confirmation. The D1 promotion guard aborts an incompatible legacy write of a clocked closure pending and preserves the pending for a compatible writer.
 
 With only a dated daily FX fixing, current peg display remains stale. Detection may use the fixing in an open session when both clocks meet the admission and repricing gates and the absolute move exceeds the applicable fixing-age band. Smaller moves remain `stale-reference`. Frankfurter age counts TARGET business days, and the dated secondary feed counts weekdays. The third age column applies from three days onward.
 
@@ -228,6 +230,8 @@ The `dex_prices.updated_at` run-start clock is retained for row-age telemetry an
 
 A DEX challenger with verified venue lineage that overlaps the named primary venue cannot corroborate that primary. This also applies to USD primaries whose ancestry array was omitted.
 
+For XAGm, aggregate DEX prices, protocol quotes and pool challengers need a silver entitlement matched to their own observation time, including when detection uses a legacy FX rate.
+
 The stablecoin detail page can show live deviation below the event-creation floor with an explicit coverage-limited label. An existing row closes as `coverage-lost-supply` with `recovery_price = NULL` only on observed sub-floor supply, including zero. Unavailable supply opens no new row and leaves the existing lifecycle and peak unchanged, but records blind price coverage rather than extending trusted intervals.
 
 ### Per-Asset Processing
@@ -254,6 +258,8 @@ Primary-price trust gates:
 - `authoritative`: fresh observed `single-source` with exactly one policy-admitted authoritative source, or `high` with at least two authoritative sources or one upstream-capable authoritative source (`classifyPrimaryDepegTrust()` in `worker/src/lib/depeg-trust-policy.ts`)
 - `confirm_required`: cached, fallback, low-confidence, stale, or otherwise source-policy-ineligible primary prices
 - `unusable`: invalid/missing/non-finite price, or a non-observed price (`priceObservedAtMode: "nominal_reference"`, an unsupported mode, or any `protocol-par` source component). Since pricing v6.38 the nominal par routes publish par this way whenever no trusted market quote is admitted, so par can neither open, confirm nor recover an event; an open row stays open (tracked coins are never orphan-closed) until observed price evidence decides it, while a trusted market discount on those assets is evaluated like any other primary price
+
+Stage 1 treats a last trade with an explicitly unknown market clock as unavailable primary evidence. Successive polls of a standalone Kraken display price supply zero qualifying observations for pending persistence.
 
 Before those gates are applied, `priceSource` and `agreeSources` are normalized through the pricing-source registry. Composite labels are expanded into their component source keys, unknown sources do not become pool-challenge eligible by accident, and each known key resolves to its registered `depegSourceFamily`. CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators are therefore not counted as independent hard corroboration just because their labels differ; promoted DEX protocol lanes and hard market/oracle/protocol sources keep provider- or protocol-specific families.
 
@@ -362,7 +368,7 @@ Age checks:
 
 - Fetches the active configured Binance market batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
-- Confirmation checks Binance's family against the current primary and the families retained from every qualifying observation in the pending episode. CoinGecko confirmation also checks its family against the retained observations. Older pending rows can lack these receipts.
+- Binance and CoinGecko confirmation exclude source families used by the current primary or retained in the pending episode. Receipts bind source identity to each observation, so a legacy refresh that advances the latest quote still leaves a matching onset usable for this check. Rows without matching receipts use the legacy confirmation rules.
 - If an admitted observation ties the stored peak at the exact same price and in the same quote domain, its paired reference can complete a legacy peak. A different price cannot backfill that pair.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
@@ -372,6 +378,7 @@ Age checks:
 - Read from `dex_prices` table (same data as Stage 1)
 - Both original aggregate and publication ages must be strictly below the 75-minute hourly-producer window, with aggregate source TVL >= $1M
 - Aggregate DEX confirmation now also requires at least `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` independent protocol groups from fresh per-source `price_sources_json`; one protocol cannot promote, recover, or decisively contradict a pending row by itself
+- Aggregate, protocol and individual pool votes exclude known pool or venue identities shared with the current primary or retained pending observations.
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Persisted confirmation keys use `dex:<protocol>`.
 
@@ -400,7 +407,7 @@ Age checks:
 
 **Primary-still-depegged safeguard:** the REJECT rows above assume the refreshed authoritative primary price no longer shows the pending direction. When it still does (`primarySameDirectionDepegged`), a single opposing secondary source cannot reject the row -- rejection then requires at least two independent hard-opposing sources (reason `two-hard-opposing-sources:...`); otherwise one opposing source suffices (reason `secondary-evidence-opposes`).
 
-The event can start at the episode’s first quote clock when that clock follows the last live event’s end and falls inside the session that admitted it. Otherwise the event starts at discovery, including on a legacy reopening with a quote from the closure. Quote clocks still determine temporal ordering. Promotion records the active direction, the paired onset price and reference, confirmation sources beginning with `temporal:15m`, and the worst trusted same-direction price and reference pair. The event, outcome and pending deletion commit atomically.
+The event can start at the episode’s first quote clock when that clock follows the previous live episode’s end and falls inside the session that admitted the pending. Live recoveries also establish this boundary for events originally opened by backfill. The onset receipt selects the calendar used at admission. A legacy reopening with a quote from the closure starts the event at discovery. Quote clocks still determine temporal ordering. Promotion records the active direction, the paired onset price and reference, confirmation sources beginning with `temporal:15m`, and the worst trusted same-direction price and reference pair. The event, outcome and pending deletion commit atomically.
 
 Native-currency confirmers on USD-origin candidates normalize their price by multiplying the native quote (reference 1) by the candidate's admitted USD peg reference before peak selection; native-origin candidates retain native prices and reference 1. Pool peak candidates are exposed and consumed only when the pool confirmation policy accepts them, so rejected minority pools cannot deepen a primary-led promotion or supply uncredited event peaks.
 

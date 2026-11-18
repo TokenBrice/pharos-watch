@@ -165,6 +165,109 @@ function makeCachedPegCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryC
 }
 
 describe("handlePegSummary", () => {
+  it.each([
+    ["2026-11-20T21:15:00Z", 1.067, 0, null],
+    ["2026-11-22T22:15:00Z", 1.067, 0, null],
+    ["2026-11-22T23:01:00Z", 1.067, 1, 300],
+    ["2026-11-20T21:15:00Z", 1.1 * (1 - 2499.6 / 10000), 0, null],
+    ["2026-11-20T21:15:00Z", 0.77, 1, 3000],
+  ] as const)("uses legacy census hours at %s for a $%s quote", async (at, price, totalTracked, medianDeviationBps) => {
+    const now = Date.parse(at) / 1000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const eurc = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price, priceObservedAt: now });
+    const response = await handlePegSummary(makePegSummaryDb([eurc], { peggedEUR: 1.1 }, [], { updatedAt: now }));
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(response, 200));
+    expect(body.summary).toMatchObject({ totalTracked, medianDeviationBps });
+    expect(body.summary?.worstCurrent?.bps ?? null).toBe(medianDeviationBps == null ? null : -medianDeviationBps);
+  });
+
+  it.each([true, false])("honors a published %s price refusal independently of a reference-only refusal", async (priceRefused) => {
+    const asset = makeAsset({ price: 0.98, priceObservedAt: OPEN_FX_QUOTE_AT, currentPeg: {
+      currentDeviationBps: null,
+      pegReference: priceRefused ? { valueUsd: 1, source: "fallback", contributorCount: 0, asOf: OPEN_FX_QUOTE_AT } : null,
+      pegReferenceUnavailable: !priceRefused,
+      currentPriceUnavailable: priceRefused,
+      primaryTrust: "unusable",
+      dexPriceCheck: null,
+    } });
+    const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(makePegSummaryDb([asset])), 200));
+    expect(body.coins.find((coin) => coin.id === asset.id)).toMatchObject({
+      currentDeviationBps: null, currentPriceUnavailable: priceRefused,
+      price: priceRefused ? null : 0.98, priceObservedAt: priceRefused ? null : OPEN_FX_QUOTE_AT,
+    });
+    expect(body.summary).toMatchObject({ totalTracked: 0, medianDeviationBps: null });
+  });
+
+  it.each([true, false])("keeps only a separately admitted DEX comparison when the primary is held (fresh DEX: %s)", async (dexAfterReopen) => {
+    const reopen = Date.parse("2026-11-15T22:00:00Z") / 1000;
+    const now = reopen + 300;
+    const refAt = now - 10;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const asset = makeAsset({ id: "eurc-circle", pegType: "peggedEUR", price: 1.15, priceObservedAt: reopen - 1,
+      circulating: { peggedEUR: 100_000_000 } });
+    const options = {
+      peggedAssets: [asset], asOf: now,
+      fxReferenceObservations: { peggedEUR: { pegKey: "peggedEUR", source: "openExchangeRates", cadence: "intraday",
+        observedAtSec: refAt, usdPerUnit: 1.1, repricing: { sessionOpenedAtSec: reopen, preCloseUsdPerUnit: 1.09 } } },
+      fxFallbackRates: { peggedEUR: 1.1 },
+    };
+    const currentPeg = currentPegObservations.deriveCurrentPegObservationMap(options).get(asset.id);
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)").run(JSON.stringify({
+        ...options, peggedAssets: [{ ...asset, currentPeg }],
+      }), now);
+      sqlite.prepare(`INSERT INTO dex_prices (stablecoin_id, symbol, dex_price_usd, deviation_from_primary_bps,
+        source_pool_count, source_total_tvl, updated_at, price_sources_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(asset.id, asset.symbol, 1.1, -435, 4, 10_000_000, now,
+          JSON.stringify({ aggregateObservedAt: dexAfterReopen ? now : reopen - 1, sources: [] }));
+
+      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+      const coin = body.coins.find(({ id }) => id === asset.id);
+      expect(coin).toMatchObject({ currentDeviationBps: null, admittedDeviationBps: null,
+        pegReferenceUnavailable: true, referenceAdmission: { reason: "quote-before-reopen" } });
+      if (dexAfterReopen) {
+        expect(coin).toMatchObject({
+          pegReference: { valueUsd: 1.1, asOf: refAt },
+          dexPriceCheck: { dexPrice: 1.1, dexDeviationBps: 0, agrees: false,
+            referenceAdmission: { status: "admitted", referenceObservedAtSec: refAt } },
+        });
+      } else {
+        expect(coin?.pegReference).toBeNull();
+        expect(coin?.dexPriceCheck).toBeUndefined();
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps a historical score during a live quote outage when the daily quote is stored in provenance", async () => {
+    const now = OPEN_FX_QUOTE_AT;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const assets = ["usdt-tether", "usdc-circle"].map((id) => makeAsset({ id, price: null }));
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
+        .run(JSON.stringify({ peggedAssets: assets }), now);
+      const insert = sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance)
+        VALUES (?, ?, 100000000, ?)`);
+      const snapshotDate = Math.floor(now / 86400) * 86400;
+      const provenance = { supplySource: "coingecko-fallback", supplyObservedAt: now - 300, supplyChainGuard: null,
+        nativeQuantityUnavailable: true };
+      insert.run("usdt-tether", snapshotDate, JSON.stringify({ ...provenance, marketQuote: { price: 1, observedAt: now - 300 } }));
+      insert.run("usdc-circle", snapshotDate, JSON.stringify({ ...provenance, marketQuote: { price: 0, observedAt: now - 300 } }));
+      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+      expect(body.coins.find(({ id }) => id === "usdt-tether")).toMatchObject({
+        currentPriceUnavailable: true, pegScore: 100, pegPct: 100,
+      });
+      expect(body.coins.find(({ id }) => id === "usdc-circle")).toMatchObject({
+        currentPriceUnavailable: true, pegScore: null, pegPct: null,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it.each([undefined, {}])("keeps published unit refusals out of the census with FX map %j", async (fxReferenceObservations) => {
     vi.useFakeTimers();
     vi.setSystemTime(OPEN_FX_QUOTE_AT * 1000);
@@ -206,7 +309,7 @@ describe("handlePegSummary", () => {
       }] },
       { match: "dex_prices", rows: [] },
       // Priced on today's snapshot: one missed cycle is not a sustained absence.
-      { match: "pharos:peg-summary:recently-priced-ids", rows: [{ stablecoin_id: "usdt-tether" }] },
+      { match: "pharos:peg-summary:recently-priced-ids", rows: [{ stablecoin_id: "usdt-tether", price: 1 }] },
     ]);
     const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
     expect(body.coins).toHaveLength(1);

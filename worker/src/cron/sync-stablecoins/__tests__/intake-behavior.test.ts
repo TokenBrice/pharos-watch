@@ -411,6 +411,28 @@ describe("stablecoin intake admission", () => {
     });
   });
 
+  it("compares dated DefiLlama caps with undated optional token valuations", async () => {
+    const now = 1_777_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const stockAt = now - 60;
+    const weekAt = stockAt - 7 * DAY_SECONDS;
+    const asset = makePeggedAsset({ id: "usdt-tether", pegType: "peggedUSD", supplySource: "defillama",
+      supplyObservedAt: stockAt, circulating: { peggedUSD: 100_000_000 }, circulatingPrevWeek: { peggedUSD: 98_000_000 },
+      circulatingNative: 100_000_000 / 0.999, valuationPriceUsd: 0.999, valuationObservedAtSec: null });
+    sqlite.prepare(`INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, circulating_native,
+      valuation_price_usd, supply_provenance) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(asset.id, bucketUnixSecondsToUtcDay(weekAt), 98_000_000, 98_000_000 / 0.999, 0.999, JSON.stringify({
+        supplySource: asset.supplySource, supplyObservedAt: weekAt, supplyChainGuard: null,
+      }));
+
+    await fillMissingSupplyHistory(db, [asset]);
+    const [wire] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
+    expect(wire.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: 98_000_000, circulatingNative: null });
+    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(2_000_000);
+    expect(wire.circulatingPrevWeek).toEqual({ peggedUSD: 98_000_000 });
+  });
+
   it("withholds a weekly ZSD dollar comparison when the current valuation is undated", async () => {
     const now = 1_777_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);

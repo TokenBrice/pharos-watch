@@ -268,7 +268,9 @@ Retained bodies without the additive field show “maturing unavailable,” not 
 
 Event pages distinguish the recorded detector timestamp from first admitted evidence and use each observation's own quote domain and reference. Peer-relative starts and peaks retain their USD prices and identify the lower-confidence comparison against the peer median. Explicitly unknown recovery appears as an unverified detector close. A legacy USD peak or recovery stays in USD when conversion evidence is unavailable. Reviewed restorations preserve the original IDs and durable links.
 
-Related incident links show “Peak unverified” in place of the magnitude for events with an unverified peak.
+Related incident links show “Peak unverified” in place of the magnitude for events with an unverified peak. They carry the archive's “Disputed” label when the target has a disputed or false-positive audit verdict.
+
+The permanent record and recent feed use the admitted recovery time for a verified duration and the detector close for legacy durations. Where the evidence calls for showing the detector interval separately, it is labelled “Recorded duration”.
 
 - `DepegFeed` shows a responsive slice of loaded resolved detections, with a
   local **Load more** control that reveals more loaded rows without fetching another
@@ -297,8 +299,10 @@ plus pinned authored pre-epoch incidents such as USDC 2023. The archive is grow-
 reclassification or consolidation verified by `/api/depeg-resolver` incident identity
 and its current representative in the fetched event ledger (same coin/direction,
 multiple constituents). The historical row keeps its reserved URL even when the
-representative is sub-threshold. When the current ledger row has the same event ID
-and an audit verdict backed by evidence, the page displays its reviewed values and verdict.
+representative is sub-threshold. The index keeps the reserved URL even when a review
+lowers the page's peak below the admission threshold. A same-ID ledger row with an
+audit verdict backed by evidence updates the page. A later verified consolidation
+retains those reviewed values and verdict at the reserved URL.
 Unexplained missing IDs still fail the shrink guard without the reviewed
 `--allow-archive-shrink` override. Rejection logs name the slug, event/representative
 IDs, incident state and failed lineage checks; lookup logs identify the resolved

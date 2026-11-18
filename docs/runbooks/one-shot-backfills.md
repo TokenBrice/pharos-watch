@@ -104,7 +104,9 @@ Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history fi
 
 Historical replay opens at the entry threshold and closes on a quote inside the recovery band. A USD move of 80 bps between those thresholds keeps an open episode active. An insert-only replay of a closed USD episode accepts recognized daily observations up to 26 hours apart. Replacing stored episodes requires consecutive observations no more than two hours apart through both boundaries.
 
-During a commodity market closure, severe moves admitted by a dated peer median can corroborate one another within the normal gap limit. For a closed episode with no stored rows to replace, replay can use the first corroborated severe print as the onset. Sub-severe spot-derived moves stay held, and closure time is excluded from admitted duration. An explicitly rejected USD supply checkpoint blocks older supply from carrying through that timestamp unless a valid observation exists at the same timestamp.
+During a commodity market closure, only fresh peer quotes from that closure count toward the median and its observation clock. Severe moves admitted by that median can corroborate one another within the normal gap limit. For a closed episode with no stored rows to replace, replay can use the first corroborated severe print as the onset. Sub-severe spot-derived moves stay held, and closure time is excluded from admitted duration. An explicitly rejected USD or native-only supply checkpoint blocks older supply from carrying through that timestamp unless a valid observation exists at the same timestamp.
+
+Insert-only replay admits each episode on its own boundary evidence. An open or unproved episode can be withheld while another, proved closed episode is inserted. Replacement preserves the whole window when any stored row or proposed replacement lacks boundary evidence.
 
 `dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows. FX cache normalization and fetched rates stay in memory during preview. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
 
@@ -132,7 +134,7 @@ Backfills per-coin supply history snapshots. An observed market quote supplies b
 
 DefiLlama detail history reads native balances from `totalCirculating`, using `circulating` when the canonical buckets are absent or empty. Explicit USD and observed zero can be stored without a quote. Valuing a positive native count requires the latest screened USD price at or before the balance observation and less than 24 hours old. A prior-day quote can supply the valuation, while a daily market price requires a quote on that UTC day.
 
-The backfill derives the daily USD close from native balances only when the upstream USD bucket record is absent. An explicitly rejected USD record is skipped, including in overwrite mode.
+The backfill derives the daily USD close from native balances only when the upstream USD bucket record is absent. An explicitly rejected USD record is skipped, including in overwrite mode. An observed USD close with an explicitly rejected native balance retains the USD cap and records native quantity as unavailable. The independently observed daily quote and its clock travel in supply provenance to keep the legacy conversion price empty.
 
 By default the job inserts only missing `(stablecoin, day)` rows: an existing row — in particular the cron-owned `snapshot-supply` row carrying `price_observed_at`/`supply_provenance` — is left untouched and counted in the response's `rowsSkippedExisting`. Pass `overwrite=true` to replace existing rows instead; without it an observed zero does not replace a prior positive row.
 
@@ -175,7 +177,7 @@ The replay supply window includes the full 21-day lookback needed by target/prio
 
 ## backfill-cg-prices
 
-Backfills market prices for the PSI-eligible universe, including off-catalog historical assets such as `ust-terra`. It fills NULL `supply_history.price` gaps and inserts missing daily supply rows only when upstream market-cap history exists and CoinGecko is that coin's admitted supply provider (not `detailProvider: "defillama"`); for DefiLlama-authority coins it fills prices only, leaving supply to `backfill-supply-history`. Isolated daily price excursions outside 2x their neighbouring-week median are withheld from price filling as well.
+Backfills market prices for the PSI-eligible universe, including off-catalog historical assets such as `ust-terra`. It fills missing market quotes and counts committed writes. For protected quantities it fills the quote and observation clock in provenance. It inserts missing daily supply rows only when upstream market-cap history exists and CoinGecko is that coin's admitted supply provider (not `detailProvider: "defillama"`); for DefiLlama-authority coins it fills prices only, leaving supply to `backfill-supply-history`. Isolated daily price excursions outside 2x their neighbouring-week median are withheld from price filling as well.
 
 **Query parameters**
 

@@ -614,8 +614,9 @@ function redemptionBackstopPhaseValidUntil(coins: RedemptionBackstopMap, now: nu
   const transition = reopening ?? (resolveMentoFxMarketReopen(nextHour) != null ? nextHour : Infinity);
   const reviewDeadline = reopening != null && mentoReview && mentoReview.reviewDeadline > now
     ? mentoReview.reviewDeadline : Infinity;
-  const evidenceExpiry = Math.min(...rows.flatMap((entry) => entry.sourceTimestamp == null || entry.resolutionState !== "resolved"
-    ? [] : [entry.sourceTimestamp + LIVE_RESERVE_FRESHNESS_SEC + 1]));
+  const evidenceExpiry = Math.min(...rows.flatMap((entry) =>
+    entry.sourceTimestamp != null && (entry.resolutionState === "resolved" || entry.routeStatus === "paused")
+      ? [entry.sourceTimestamp + LIVE_RESERVE_FRESHNESS_SEC + 1] : []));
   return Math.min(transition, reviewDeadline, evidenceExpiry);
 }
 

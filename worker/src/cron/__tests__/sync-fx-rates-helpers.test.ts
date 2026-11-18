@@ -329,6 +329,23 @@ const oxrArs = (state: FxSyncRunState, observedAt: number, ars: number) =>
   state.applyRealtimeOverlayRates({ observedAt, rates: new Map([["peggedARS", 1 / ars]]) });
 
 describe("FX references across publications", () => {
+  it("carries a legacy ECB fixing through a sibling refresh until 16:00 UTC", () => {
+    const legacy = publicationAt("2026-11-17T17:00:00Z");
+    legacy.usableRates.peggedEUR = 1.1;
+    legacy.markLive("peggedEUR", unix("2026-11-17T16:00:00Z"), "business-daily", "2026-11-17");
+    let prior: FxRateState = { ...published(legacy), observations: undefined, selectedReferenceEvidence: undefined };
+    for (const [clock, expected] of [
+      ["2026-11-18T14:59:00Z", 1.1],
+      ["2026-11-18T15:01:00Z", 1.1],
+      ["2026-11-18T16:01:00Z", undefined],
+    ] as const) {
+      const run = publicationAt(clock, prior);
+      run.applyFrankfurterRates({ GBP: 0.8 }, "2026-11-18", { GBP: "peggedGBP", EUR: "peggedEUR" });
+      prior = published(run);
+      expect(prior.rates.peggedEUR).toBe(expected);
+    }
+  });
+
   it("retains the legacy status of a secondary FX rate only until its first clocked provider publication", () => {
     const legacy = buildPrevState({ peggedARS: 1 / 800 });
     const first = publicationAt("2026-11-17T15:30:00Z", legacy);

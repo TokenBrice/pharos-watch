@@ -5,6 +5,7 @@ import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
+import { CHALLENGER_LINEAGE_PRICE } from "./challenger-types";
 import type {
   DexPriceChallengerLoadRow,
   DexPriceChallengerLoadDiagnostics,
@@ -20,16 +21,24 @@ export type {
 type LegacyDexPoolChallengerLoadResult = Awaited<ReturnType<typeof loadLegacyDexPoolChallengers>>;
 
 function isChallengerObservationFresh(row: DexPriceChallengerLoadRow, nowSec: number): boolean {
-  return row.priceObservedAt == null || isFreshDexPoolObservation(row.priceObservedAt, nowSec);
+  return (row.priceObservedAt == null && row.upstreamKeys === undefined) ||
+    isFreshDexPoolObservation(row.priceObservedAt, nowSec);
 }
 
-function readStoredChallengerLineage(json: string | null | undefined): DexPriceLineage {
+function readStoredChallengerLineage(json: string | null | undefined): DexPriceLineage & { priceUsd?: number } {
   if (json == null) return {};
   try {
     const receipt: unknown = JSON.parse(json);
     if (isRecord(receipt)) {
       if (Object.keys(receipt).length === 0) return {};
-      if ("pricePoolKeys" in receipt && "upstreamKeys" in receipt) return readDexPriceLineage(receipt);
+      if ("pricePoolKeys" in receipt && "upstreamKeys" in receipt) {
+        const lineage = readDexPriceLineage(receipt);
+        return {
+          ...lineage,
+          ...(lineage.upstreamKeys?.length && lineage.pricePoolKeys?.length &&
+            typeof receipt.priceUsd === "number" && { priceUsd: receipt.priceUsd }),
+        };
+      }
     }
   } catch { /* Malformed receipts cannot establish independence. */ }
   return { pricePoolKeys: [], upstreamKeys: [] };
@@ -135,7 +144,7 @@ export async function loadPublishedDexPoolChallengers(
     chain: string;
     protocol: string;
     source_family: string;
-    price_usd: number;
+    price_usd: number | typeof CHALLENGER_LINEAGE_PRICE;
     tvl_usd: number;
     price_observed_at: number | null;
     price_lineage_json?: string | null;
@@ -152,20 +161,24 @@ export async function loadPublishedDexPoolChallengers(
     if (row.pool_id == null) continue;
     const key = `${row.stablecoin_id}:${row.snapshot_at}`;
     const existing = rowsByCoinAndSnapshot.get(key) ?? [];
+    const { priceUsd: lineagePrice, ...lineage } = readStoredChallengerLineage(row.price_lineage_json);
+    const priceUsd = row.price_usd === CHALLENGER_LINEAGE_PRICE ? lineagePrice : row.price_usd;
+    // Preserve authoritative membership even when the only receipt is unusable.
+    rowsByCoinAndSnapshot.set(key, existing);
+    if (typeof priceUsd !== "number") continue;
     existing.push({
-      ...readStoredChallengerLineage(row.price_lineage_json),
+      ...lineage,
       stablecoinId: row.stablecoin_id,
       poolId: row.pool_id,
       chain: row.chain,
       protocol: row.protocol,
       sourceFamily: row.source_family,
-      priceUsd: row.price_usd,
+      priceUsd,
       tvlUsd: row.tvl_usd,
       snapshotAt: row.snapshot_at,
       publishedAt: row.published_at,
       ...(row.storage_version === 2 ? { priceObservedAt: row.price_observed_at } : {}),
     });
-    rowsByCoinAndSnapshot.set(key, existing);
   }
 
   const expiredObservationSnapshots = new Map<string, number>();
@@ -195,7 +208,7 @@ export async function loadPublishedDexPoolChallengers(
       continue;
     }
 
-    if (rows.length > 0) {
+    if (rowsByCoinAndSnapshot.has(key)) {
       challengersByStablecoin.set(
         snapshot.stablecoin_id,
         freshRows

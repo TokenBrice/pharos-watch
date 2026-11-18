@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { formatCurrency } from "@shared/lib/format";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import type { DigestEditorialCandidate, DigestInputData, DigestNextTrigger } from "@shared/types/digest";
@@ -21,6 +22,8 @@ function input(at: number, current = true): DigestInputData {
 const trigger: DigestNextTrigger = { id: "trigger:depeg:usdt-tether", stablecoinId: "usdt-tether", symbol: "USDT", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 150, thresholdLabel: "150 bps", label: "Widening", rationale: "Stress", detail: "Widening" };
 
 describe("canonical comparable digest evidence", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(fixtures.closeAll);
   it.each([[true, false], [false, true], [false, false], [true, true]])("compares current=%s to current=%s without borrowing the peak", (before, after) => {
     const previous = { ...input(113600, before), nextTriggers: [trigger] };
     const current = input(200000, after);
@@ -93,7 +96,7 @@ describe("canonical comparable digest evidence", () => {
     expect(buildForwardLookOutcomes(input(200000), previous, ctx.evidence)[0].status).toBe("unavailable");
   });
 
-  it("excludes reviewed disputes from active and resolved event counts while keeping the evidence rows", async () => {
+  it("excludes reviewed disputes from the active count while keeping the active evidence rows", async () => {
     const verdicts = ["disputed", "false_positive", "confirmed", null] as const;
     const activeRows = verdicts.map((audit_verdict, index) => ({
       stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
@@ -106,19 +109,44 @@ describe("canonical comparable digest evidence", () => {
     const active = await collectActiveDepegs(activeCtx);
     expect(active.value.activeDepegCount).toBe(2);
     expect(activeCtx.evidence.activeDepegs).toHaveLength(4);
+  });
 
-    const now = Math.floor(Date.now() / 1000);
-    const resolvedRows = verdicts.map((audit_verdict, index) => ({
-      stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
-      started_at: now - 3600, ended_at: now - 60, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
-    }));
-    const resolvedCtx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: resolvedRows }]));
-    resolvedCtx.evidence = {};
-    resolvedCtx.trackedStablecoinIds = new Set(resolvedRows.map((row) => row.stablecoin_id));
-    resolvedCtx.mcapById = new Map(resolvedRows.map((row) => [row.stablecoin_id, 1e9]));
-    const resolved = await collectResolvedDepegs(resolvedCtx);
-    expect(resolved.value.resolvedDepegCount).toBe(2);
-    expect(resolvedCtx.evidence.recoveredDepegs).toHaveLength(4);
+  it("admits only public recoveries into the count, signal keys and evidence", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = 1_795_017_600, start = now - 4 * HOUR_SECONDS, end = now - 600, restart = now - 300;
+    const insert = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price,
+       peg_reference, recovery_price, recovery_peg_reference, close_reason, last_trusted_price_at, price_coverage_json)
+      VALUES (?, ?, ?, ?, 'below', -310, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const coverage = JSON.stringify({ intervals: [[start, end]], atParIntervals: [[end - 300, end]] });
+    insert.run(101, "eurc-circle", "EURC", "peggedEUR", start, end, 1.0659, 1.1, 1.1, 1.1, "recovered-dex", end, coverage);
+    insert.run(102, "usdt-tether", "USDT", "peggedUSD", start, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
+    insert.run(103, "usdt-tether", "USDT", "peggedUSD", restart, null, 0.969, 1, null, null, null, null, null);
+    for (const [id, verdict] of [[104, "disputed"], [105, "false_positive"]] as const) {
+      insert.run(id, "usdc-circle", "USDC", "peggedUSD", start + id, end, 0.969, 1, 1, 1, "recovered-primary", null, null);
+      sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, audit_verdict, created_at, updated_at)
+        VALUES (?, 'live', ?, ?, ?)`).run(id, verdict, end, end);
+    }
+    sqlite.prepare("UPDATE depeg_events SET disposition = 'repaired', admitted_coverage_json = '[]' WHERE id = 101").run();
+    const key = `ddr2:${"a".repeat(32)}`;
+    sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links (incident_key, event_id, relation, linked_at)
+      VALUES (?, 102, 'observed', ?), (?, 103, 'observed', ?)`).run(key, start, key, restart);
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents (incident_key, stablecoin_id, peg_currency, direction, first_event_id,
+      current_event_id, first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'usdt-tether', 'USD', 'below', 102, 103, ?, ?, 300, ?, ?, ?)`).run(key, start, restart, "b".repeat(64), start, restart);
+    const ids = ["eurc-circle", "usdt-tether", "usdc-circle"];
+    const ctx = makeCollectorCtx(db);
+    Object.assign(ctx, { nowSec: now, trackedStablecoinIds: new Set(ids), mcapById: new Map(ids.map(id => [id, 1e8])), evidence: {} });
+    expect((await collectResolvedDepegs(ctx)).value).toEqual({
+      resolvedDepegCount: 0, resolvedDepegSignalKeys: [], resolvedDepegs: undefined,
+    });
+    expect(ctx.evidence?.recoveredDepegs).toEqual([]);
+
+    sqlite.prepare("UPDATE depeg_events SET disposition = NULL, admitted_coverage_json = NULL WHERE id = 101").run();
+    const { value } = await collectResolvedDepegs(ctx);
+    expect(value.resolvedDepegCount).toBe(1);
+    expect(value.resolvedDepegSignalKeys).toEqual([`eurc-circle:${start}:resolved`]);
+    expect(value.resolvedDepegs).toMatchObject([{ symbol: "EURC", durationHours: 4 }]);
   });
 
   it("uses admitted recovery time for daily counts, signal keys and duration", async () => {

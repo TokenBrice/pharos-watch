@@ -3,10 +3,11 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { isFreshDexPoolObservation } from "../../lib/depeg-trust-policy";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
-import { admitsRollbackDexVote, configuredPrimaryUpstreamKeys, getDexGroupLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
-import { hasChallengerPriceLineageColumn } from "./challenger-types";
+import { getDexGroupLineage, selectIndependentChallengerPools, type DexPriceLineage } from "./price-lineage";
+import { CHALLENGER_LINEAGE_PRICE, hasChallengerPriceLineageColumn } from "./challenger-types";
 import { projectRetainedPoolPrice } from "./scoring-helpers";
 import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 
@@ -60,29 +61,40 @@ function prepareMultiRowStatements(
 
 
 
+export function projectPoolChallenger(
+  stablecoinId: string,
+  pool: PoolEntry,
+  minPoolTvlUsd: number,
+  nowSec: number,
+): DexPriceChallengerPoolRow | null {
+  if (isBlockedDexId(pool.project)) return null;
+  const price = projectRetainedPoolPrice(pool);
+  if (!price || price.tvl < minPoolTvlUsd ||
+      (price.observedAt != null && !isFreshDexPoolObservation(price.observedAt, nowSec))) return null;
+  const lineage = getDexGroupLineage([price]);
+  if (lineage?.upstreamKeys.length === 0) return null;
+  return {
+    stablecoinId,
+    poolId: pool.poolId,
+    chain: price.chain,
+    protocol: price.protocol,
+    sourceFamily: price.sourceFamily!,
+    priceUsd: price.price,
+    tvlUsd: price.tvl,
+    priceObservedAt: price.observedAt ?? null,
+    ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
+  };
+}
+
 export function selectDexPriceChallengerRowsFromPools(
   stablecoinId: string,
   pools: PoolEntry[],
   minPoolTvlUsd: number,
+  nowSec = Math.floor(Date.now() / 1000),
 ): DexPriceChallengerPoolRow[] {
-  const primaryKeys = configuredPrimaryUpstreamKeys(stablecoinId);
-  const qualifying = pools.flatMap((pool): DexPriceChallengerPoolRow[] => {
-    if (isBlockedDexId(pool.project)) return [];
-    const price = projectRetainedPoolPrice(pool);
-    if (!price || price.tvl < minPoolTvlUsd) return [];
-    const lineage = getDexGroupLineage([price]);
-    if (!admitsRollbackDexVote(lineage?.upstreamKeys, primaryKeys)) return [];
-    return [{
-      stablecoinId,
-      poolId: pool.poolId,
-      chain: price.chain,
-      protocol: price.protocol,
-      sourceFamily: price.sourceFamily!,
-      priceUsd: price.price,
-      tvlUsd: price.tvl,
-      priceObservedAt: price.observedAt ?? null,
-      ...(lineage && { pricePoolKeys: lineage.pricePoolKeys, upstreamKeys: lineage.upstreamKeys }),
-    }];
+  const qualifying = pools.flatMap((pool) => {
+    const row = projectPoolChallenger(stablecoinId, pool, minPoolTvlUsd, nowSec);
+    return row ? [row] : [];
   }).sort((a, b) => b.tvlUsd - a.tvlUsd || a.poolId.localeCompare(b.poolId));
 
   if (qualifying.length === 0) return [];
@@ -93,8 +105,8 @@ export function selectDexPriceChallengerRowsFromPools(
     const prev = byPoolId.get(pool.poolId);
     if (!prev || pool.tvlUsd > prev.tvlUsd) byPoolId.set(pool.poolId, pool);
   }
-  // Rollback readers only see independent rows, even when the wire omits lineage.
-  const dedupedQualifying = selectIndependentChallengerPools([...byPoolId.values()]);
+  const uniquePools = [...byPoolId.values()];
+  const dedupedQualifying = selectIndependentChallengerPools(uniquePools);
 
   const totalQualifyingTvl = dedupedQualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
 
@@ -134,6 +146,12 @@ export function selectDexPriceChallengerRowsFromPools(
     retainedTvl += pool.tvlUsd;
   }
 
+  // Pack independent representatives first. The reader may exclude a representative
+  // for primary overlap or expiry, so keep alternate receipts within the same cap.
+  for (const pool of uniquePools) {
+    if (selectedPools.length >= CHALLENGER_HARD_CAP) break;
+    if (pool.upstreamKeys && !selectedPoolIds.has(pool.poolId)) selectedPools.push(pool);
+  }
   return selectedPools;
 }
 
@@ -146,17 +164,20 @@ export function buildStoredChallengerPoolsJson(
   stablecoinId: string,
   pools: PoolEntry[],
   minPoolTvlUsd: number,
+  nowSec = Math.floor(Date.now() / 1000),
 ): string | null {
-  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd);
+  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd, nowSec);
   return rows.length === 0
     ? null
-    : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, ...row }) => row));
+    : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, priceUsd, ...row }) =>
+      row.upstreamKeys ? { ...row, lineagePriceUsd: priceUsd } : { ...row, priceUsd }));
 }
 
 export async function publishDexPriceChallengerSnapshots(
   db: D1Database,
   input: {
     snapshotAt: number;
+    admissionNowSec?: number;
     generationId: string;
     retainedPoolsByStablecoin: Map<string, PoolEntry[]>;
     minPoolTvlUsd: number;
@@ -187,7 +208,8 @@ export async function publishDexPriceChallengerSnapshots(
   for (const meta of ACTIVE_STABLECOINS) {
     throwIfAborted(signal);
     const pools = input.retainedPoolsByStablecoin.get(meta.id) ?? [];
-    const rows = selectDexPriceChallengerRowsFromPools(meta.id, pools, input.minPoolTvlUsd);
+    const rows = selectDexPriceChallengerRowsFromPools(meta.id, pools, input.minPoolTvlUsd, input.admissionNowSec ?? snapshotAt)
+      .filter((row) => storeLineage || row.upstreamKeys === undefined);
     if (input.consumeRetainedPools) {
       input.retainedPoolsByStablecoin.delete(meta.id);
       pools.length = 0;
@@ -198,9 +220,9 @@ export async function publishDexPriceChallengerSnapshots(
     if (pending.length + statementCount > DEX_PRICE_CHALLENGER_BATCH_SIZE) await flush();
     for (const statement of prepareMultiRowStatements(db, rows.map((row) => [
       publicationId, row.stablecoinId, row.poolId, row.chain, row.protocol,
-      row.sourceFamily, row.priceUsd, row.tvlUsd, row.priceObservedAt,
+      row.sourceFamily, row.upstreamKeys ? CHALLENGER_LINEAGE_PRICE : row.priceUsd, row.tvlUsd, row.priceObservedAt,
       ...(storeLineage ? [row.upstreamKeys
-        ? JSON.stringify({ pricePoolKeys: row.pricePoolKeys, upstreamKeys: row.upstreamKeys })
+        ? JSON.stringify({ pricePoolKeys: row.pricePoolKeys, upstreamKeys: row.upstreamKeys, priceUsd: row.priceUsd })
         : null] : []),
     ]), storeLineage)) {
       pending.push(statement);

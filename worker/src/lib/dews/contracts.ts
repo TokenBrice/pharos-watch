@@ -179,6 +179,7 @@ export interface LatestPsiHydration {
 
 export interface DewsSourceState {
   references?: ReadonlyMap<string, DewsReferenceEvidence>;
+  legacyFxReferenceIds?: ReadonlySet<string>;
   /** Null records a failed history read, while a missing entry means no native checkpoints. */
   nativeHistory?: ReadonlyMap<string, { day?: number | null; week?: number | null }> | null;
   dexLiquidity: DexLiquidityHydration;

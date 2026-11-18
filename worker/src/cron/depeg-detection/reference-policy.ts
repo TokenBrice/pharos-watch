@@ -1,10 +1,11 @@
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
-import { COMMODITY_MEDIAN_EXCLUDES, derivePegRates, isParityPrice, normalizePegType, type PegRatesResult, type PegRateSource } from "@shared/lib/peg-rates";
+import { COMMODITY_MEDIAN_EXCLUDES, derivePegRates, getPegReference, isParityPrice, normalizePegType, type PegRatesResult, type PegRateSource } from "@shared/lib/peg-rates";
 import { computePeerRelativeDeviation, type PeerRelativeQuote } from "@shared/lib/peer-relative-deviation";
 import { getPegTaxonomyByType, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceSessionState, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
+import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceSessionState, isReferenceMarketClosed, type ReferenceMarket } from "@shared/lib/reference-market-hours";
 import { admittedDeviationBps, evaluateReferenceAdmission, getClosureBenchmarkBandBps, REFERENCE_INTRADAY_BUDGET_SEC, type ReferenceAdmissionInput } from "@shared/lib/reference-admission";
+import { HOUR_SECONDS } from "@shared/lib/time-constants";
 import { classifyDirectionalSignal, deriveDepegSignal, signalCrossesThreshold, type DepegSignal } from "@shared/lib/depeg-signals";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { REVIEWED_COINGECKO_KRAKEN_MIRRORS } from "@shared/lib/pricing-provider-config";
@@ -17,13 +18,14 @@ import type { PegAssetBase } from "@shared/types/price";
 import type { StablecoinMeta } from "@shared/types/stablecoin-meta-schemas";
 import { getDepegRecoveryThresholdBps } from "../../lib/depeg-threshold-policy";
 import { COINGECKO_NATIVE_IMPLIED_SOURCE } from "../../lib/native-peg-implied-prices";
-import { loadFxRateState, type FxRateState, type LegacyFxRepricingByPeg } from "../../lib/fx-rate-state";
+import { hasVerifiedLegacyRate, loadFxRateState, type FxRateState, type LegacyFxRepricingByPeg } from "../../lib/fx-rate-state";
 import type { NativePegQuote } from "../../lib/native-peg-quotes";
 import { classifyNativeQuoteImplausibility } from "../../lib/native-quote-plausibility";
 import { dexPoolIndependentGroupKey, dexProtocolGroupKey, readDexPriceLineage } from "../../lib/depeg-helpers";
 import { isFreshDexPoolObservation, resolveDepegSourceFamily } from "../../lib/depeg-trust-policy";
 import { divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/price-depeg-voting-policy";
 import { median } from "@shared/lib/stats";
+import { selectIndependentChallengerPools } from "../dex-liquidity/price-lineage";
 import type { DepegPricingAsset, DexPoolChallenger } from "./types";
 
 type ReferenceGroup = { peers: PeerRelativeQuote[]; contributors: ReferenceContributor[]; prices: number[] };
@@ -132,11 +134,6 @@ export function independenceKey(source: string | undefined, assetId?: string): s
   return name;
 }
 
-function hasVerifiedLegacyRate(fxState: FxRateState | null | undefined, pegKey: string): boolean {
-  return fxState?.metadataIdentity === "verified" && fxState.rates[pegKey] > 0 &&
-    fxState.legacyDetectionPegs?.includes(pegKey) === true && !fxState.observations?.[pegKey];
-}
-
 function restoreDirectClosureReferences(
   derived: ReturnType<typeof derivePegRates>, fxState: FxRateState, now: number,
 ): void {
@@ -149,7 +146,7 @@ function restoreDirectClosureReferences(
   for (const { observation } of samples) {
     const { pegKey, source, observedAtSec, publishedAtSec, usdPerUnit } = observation;
     if (source === "peer-median" || (publishedAtSec ?? observedAtSec) > fxState.usableSyncAt ||
-      !fxState.selectedReferenceEvidence?.[pegKey]) continue;
+      (!fxState.selectedReferenceEvidence?.[pegKey] && !fxState.omittedCloseCarryPegs?.includes(pegKey))) continue;
     const peg = getPegTaxonomyByType(pegKey);
     const market = getReferenceMarket(peg?.currency);
     if (!market || !isReferenceMarketClosed(market, now)) continue;
@@ -269,6 +266,16 @@ export function attachDetectionReferenceContext(
   return context;
 }
 
+function isSameOpenLegacySession(market: ReferenceMarket, discoveredAt: number, now: number): boolean {
+  if (discoveredAt > now) return false;
+  // Legacy boundaries align to UTC hours, and every Saturday interrupts the session.
+  const discoveryHour = Math.floor(discoveredAt / HOUR_SECONDS) * HOUR_SECONDS;
+  for (let hour = Math.floor(now / HOUR_SECONDS) * HOUR_SECONDS; hour >= discoveryHour; hour -= HOUR_SECONDS) {
+    if (getLegacyReferenceClosureStart(market, hour) != null) return false;
+  }
+  return true;
+}
+
 export function assessDetectionReference(input: {
   asset?: PegAssetBase;
   meta: StablecoinMeta;
@@ -278,7 +285,7 @@ export function assessDetectionReference(input: {
   signal: DepegSignal | null;
   quoteObservedAt?: number | null;
   quoteMaxAgeSec?: number;
-  legacyPendingDiscoveredAt?: number;
+  legacyPending?: { discoveredAt: number; pegReference: number };
   cohort?: { reference: number; contributors: PeerRelativeQuote[] } | null;
   referenceContext?: DetectionReferenceContext;
 }) {
@@ -302,11 +309,10 @@ export function assessDetectionReference(input: {
   // A median made solely from the pending asset cannot replace its denominator.
   const subjectOnlyMedian = kind === "median" && asset != null &&
     contributors.length === 1 && contributors[0]?.assetId === asset.id;
-  if (legacyWriter && session.open && input.legacyPendingDiscoveredAt != null &&
-      input.legacyPendingDiscoveredAt >= session.sessionOpenedAtSec && pegKey &&
+  const missingLegacyReference = legacyWriter && pegKey &&
       (subjectOnlyMedian || (kind === undefined && !Object.prototype.hasOwnProperty.call(pegRates, pegKey))) &&
       !Object.prototype.hasOwnProperty.call(fxState?.rates ?? {}, pegKey) && fxState?.selectedReferenceEvidence === undefined &&
-      run?.selected?.observations?.[pegKey] === undefined) return null;
+      run?.selected?.observations?.[pegKey] === undefined;
   let legacyReference = (legacyWriter || legacyBullionMedian) && (!kind || kind === "median");
   let firstProviderSample = false;
   let referenceInput: ReferenceAdmissionInput;
@@ -341,6 +347,11 @@ export function assessDetectionReference(input: {
         preCloseUsdPerUnit: anchor?.preCloseUsdPerUnit, firstInSessionObservedAtSec: anchor?.firstInSessionObservedAtSec }
       : { ...args, kind: "none" };
   }
+  const { legacyPending } = input;
+  if (legacyPending && (missingLegacyReference ||
+      (asset?.price == null && legacyReference && (kind === "fx" || kind === "fallback") &&
+        referenceInput.kind === "none" && getPegReference(pegKey, pegRates, meta.commodityOunces) === legacyPending.pegReference)) &&
+      isSameOpenLegacySession(market, legacyPending.discoveredAt, now)) return null;
   const verdict: ReferenceAdmission = evaluateReferenceAdmission(referenceInput);
   legacyReference ||= firstProviderSample && verdict.reason === "reference-not-repriced";
   if (!session.open && kind === "median" && verdict.status === "admitted") legacyReference = false;
@@ -482,12 +493,15 @@ export function findIndependentPool(
   if (excludedVenue) used.add(excludedVenue);
   const agreeing = new Map<string, DexPoolChallenger>();
   const opposing = new Set<string>();
-  for (const pool of pools ?? []) {
+  const eligible = (pools ?? []).filter((pool) => {
     const venue = knownPoolVenue(pool);
     const family = dexProtocolGroupKey(pool);
-    if (!venue || used.has(venue) || used.has(independenceKey(family)) ||
-      !isIndependentDexObservation(asset, pool, excludedVenue) || !isFreshDexPoolObservation(pool.observedAt, now) ||
-      pool.observedAt < boundary) continue;
+    return venue && !used.has(venue) && !used.has(independenceKey(family)) &&
+      isIndependentDexObservation(asset, pool, excludedVenue) && isFreshDexPoolObservation(pool.observedAt, now) &&
+      pool.observedAt >= boundary;
+  });
+  for (const pool of selectIndependentChallengerPools(eligible)) {
+    const venue = knownPoolVenue(pool);
     const sample = deriveDepegSignal(pool.price, reference);
     const status = classifyDirectionalSignal(sample, threshold, signal.direction, recoveryThreshold ?? threshold / 2);
     const supports = recoveryThreshold != null ? status === "recover" : status === "confirm";

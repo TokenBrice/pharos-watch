@@ -1,4 +1,5 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { formatUsdPriceAdaptive } from "@shared/lib/format";
 import { DAY_SECONDS, SECONDS_PER_MINUTE } from "@shared/lib/time-constants";
 import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -7,9 +8,10 @@ import { buildSocialDepegBriefingElement } from "@shared/lib/social-card/templat
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { renderPng, socialCardMeasurer } from "../lib/og-render";
 import { admittedDepegRecoveryAt } from "../lib/tape-projectors/depeg";
-import { effectiveStartedAtSql, EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../lib/depeg-event-projection";
+import {
+  effectiveStartedAtSql, EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL, readPublicDepegPeakBasis, type DepegPeakBasisRow,
+} from "../lib/depeg-event-projection";
 import { reviewedDepegDisputeSql } from "@shared/data/depegs/reviewed-depeg-disposition-sql";
-import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
 import { deriveDepegSignal, readDeviationProjection } from "@shared/lib/depeg-signals";
 import { getReferenceMarket, isReferenceDeviationHeld, isReferenceMarketClosed } from "@shared/lib/reference-market-hours";
@@ -37,22 +39,22 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
   const [stablecoins, openEvents, closedEvents, newTodayResult] = await Promise.all([
     loadStablecoinsCache(db, { contract: "published" }),
     db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
-                       e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode, p.audit_verdict,
+                       e.peg_type, e.source, e.started_at, e.ended_at, e.start_price, p.quote_mode,
+                       e.peak_price, e.peak_peg_reference, e.peak_quote_domain, e.peer_basis_json, e.pending_reason,
                        nq.value AS current_native_quote
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
                 WHERE e.ended_at IS NULL AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}
                   AND NOT ${reviewedDepegDisputeSql("e")}`)
-      .all<NativeEventPriceEvidence & {
+      .all<NativeEventPriceEvidence & DepegPeakBasisRow & {
         stablecoin_id: string; symbol: string; direction: "above" | "below";
-        peak_deviation_bps: number; current_native_quote: string | null;
-        audit_verdict: string | null;
+        current_native_quote: string | null;
       }>(),
-    db.prepare(`SELECT e.*, p.audit_verdict
-                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+    db.prepare(`SELECT e.*
+                FROM depeg_events e
                 WHERE e.ended_at IS NOT NULL AND e.ended_at > ?
                   AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL} AND NOT ${reviewedDepegDisputeSql("e")}`)
-      .bind(oneDayAgo).all<Parameters<typeof admittedDepegRecoveryAt>[0] & { audit_verdict: string | null }>(),
+      .bind(oneDayAgo).all<Parameters<typeof admittedDepegRecoveryAt>[0]>(),
     db.prepare(`SELECT COUNT(*) as count
                 FROM depeg_events e
                 WHERE e.started_at > ? AND e.started_at <= ? AND ${effectiveStartedAtSql("e")} > ?
@@ -70,7 +72,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
   let legacyObservations: Map<string, CurrentPegObservation> | undefined;
   let expiresAt = Math.min(now + SECONDS_PER_MINUTE, marketFreshUntil ?? Infinity);
   const eligibleEvents = openEvents.results.filter((row) =>
-    ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id) && !isDisputedAuditVerdict(row.audit_verdict));
+    ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id));
   const openEventById = new Map<string, (typeof eligibleEvents)[number]>();
   for (const row of eligibleEvents) {
     const existing = openEventById.get(row.stablecoin_id);
@@ -107,7 +109,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
     const admission = current?.referenceAdmission;
     const currentUnavailable = current?.currentPriceUnavailable || current?.pegReferenceUnavailable;
     const projectedBps = readDeviationProjection(current, pegCurrency === "USD", quoteAt);
-    const usesPublishedDeviation = !nativeEvent && (currentUnavailable || projectedBps !== undefined
+    const usesPublishedDeviation = !nativeEvent && (currentUnavailable || current?.currentDeviationBps === null || projectedBps !== undefined
       || (pegCurrency !== "USD" && stablecoins.kind === "ok" && stablecoins.payload.fxReferenceObservations !== undefined &&
         current?.legacyFxReference !== true));
     let legacySignal = null;
@@ -138,6 +140,7 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
       ...(deviationHeld ? { deviationHeld } : {}),
       deviationStale: admission?.status === "stale-reference" || expiredAdmission === "reference-over-budget" || expiredAdmission === "quote-before-reopen",
       peakBps: row.direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps),
+      ...readPublicDepegPeakBasis(row),
     };
   }).sort((a, b) => {
     if (a.deviationBps == null) return b.deviationBps == null ? Math.abs(b.peakBps) - Math.abs(a.peakBps) : 1;
@@ -145,15 +148,16 @@ async function renderDepegBriefing(db: D1Database): Promise<Response> {
     return Math.abs(b.deviationBps) - Math.abs(a.deviationBps);
   }).slice(0, 3);
   const recoveredToday = closedEvents.results.filter((row) => {
-    if (isDisputedAuditVerdict(row.audit_verdict)) return false;
     const recoveryAt = admittedDepegRecoveryAt(row, { inferLegacyClose: true });
     return recoveryAt != null && recoveryAt > oneDayAgo && recoveryAt <= now;
   }).length;
-  const rows = activeDepegs.map(({ symbol, deviationBps, deviationHeld, deviationStale, peakBps }) => ({
+  const rows = activeDepegs.map(({ symbol, deviationBps, deviationHeld, deviationStale, peakBps, peakBasis, peakPeerMedianUsd }) => ({
     symbol,
     current: deviationBps != null ? `${deviationBps > 0 ? "+" : ""}${deviationBps} bps`
       : deviationHeld ? "Reference market closed" : deviationStale ? "Reference not yet updated" : "Current unavailable",
-    peak: `Peak ${peakBps} bps`,
+    peak: `Peak ${peakBps} bps${peakBasis ? " vs peer median" : ""}`,
+    ...(peakBasis ? { peakNote: peakPeerMedianUsd == null ? "Lower confidence"
+      : `Peer median $${formatUsdPriceAdaptive(peakPeerMedianUsd)} · Lower confidence` } : {}),
   }));
   const measure = await socialCardMeasurer();
   const image = await renderPng(buildSocialDepegBriefingElement({

@@ -1,6 +1,8 @@
 import { hasComparablePegQuote } from "@shared/lib/current-peg-projection";
 import { deriveCurrentPegObservationMap } from "@shared/lib/current-peg-observations";
 import { hasPublishedDeviation } from "@shared/lib/depeg-signals";
+import { currentAdmissionUnavailableReason } from "@shared/lib/reference-admission";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { StablecoinData } from "@shared/types/supply";
 export { deriveCurrentPegObservationMap, hasUsableCurrentPrice } from "@shared/lib/current-peg-observations";
 export type { CurrentPegObservation } from "@shared/lib/current-peg-observations";
@@ -15,6 +17,12 @@ export function createCurrentPegReader(options: Parameters<typeof deriveCurrentP
     if (peg && (hasPublishedDeviation(peg) || options.fxReferenceObservations === undefined)) {
       if (!hasComparablePegQuote(asset)) {
         return { ...peg, currentDeviationBps: null, pegReference: null, pegReferenceUnavailable: true };
+      }
+      const admission = peg.referenceAdmission;
+      const currency = WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.pegCurrency;
+      if (options.now != null && admission?.status === "admitted" && currency && currency !== "USD" &&
+          currentAdmissionUnavailableReason(admission, currency, asset.priceObservedAt, options.now)) {
+        return { ...peg, currentDeviationBps: null, admittedDeviationBps: null, pegReferenceUnavailable: true };
       }
       return peg;
     }

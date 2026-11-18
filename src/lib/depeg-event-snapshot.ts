@@ -110,16 +110,23 @@ export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw"
   });
 }
 
+export function hasReviewedDepegEvent(event: DepegEventEntry): boolean {
+  const verdict = event.provenance?.auditVerdict;
+  return verdict != null && verdict !== "no_data";
+}
+
+export function resolveRetainedDepegEventPage(retained: DepegEventEntry, current: DepegEventEntry | undefined): DepegEventEntry {
+  if (current && current.id === retained.id && hasReviewedDepegEvent(current)) return current;
+  return retained;
+}
+
 /** Resolve the permanent route index against the current ledger, newest first. */
 export function readDepegEventPageEntries(dataDir = DEPEG_EVENT_DATA_DIR): DepegEventEntry[] {
   const index = readDepegEventIndex({ missing: "throw" }, join(dataDir, "index.json"));
   const bySlug = new Map(readDepegEventSnapshot({ missing: "throw" }, dataDir).map((event) => [event.slug, event] as const));
   const pages = index.map(({ slug, retainedPage }) => {
     const current = bySlug.get(slug);
-    const verdict = current?.provenance?.auditVerdict;
-    // A reviewed row can supersede the historical claim at its reserved URL.
-    const reviewed = current?.id === retainedPage?.id && verdict != null && verdict !== "no_data";
-    const event = reviewed ? current : retainedPage ?? current;
+    const event = retainedPage ? resolveRetainedDepegEventPage(retainedPage, current) : current;
     if (!event) {
       throw new Error(
         `Depeg event index entry ${slug} has no matching event in the yearly shards under ${dataDir}.`,

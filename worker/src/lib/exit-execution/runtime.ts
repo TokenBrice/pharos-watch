@@ -1,3 +1,4 @@
+import { getPublishedLegacyPegReference } from "@shared/lib/current-peg-observations";
 import type { ExitExecutionCanonicalAttempt, ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRouteFailure, ExitRouteObservation } from "@shared/types/exit-route";
 import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
@@ -87,7 +88,8 @@ export async function observeReviewedExitExecutionRoutes(args: {
           let expectedUnitValueUsd = output.pegType === "peggedUSD" ? 1 : null;
           let fxObservedAtSec: number | null = null;
           const peg = output.currentPeg;
-          if (output.pegType === "peggedEUR" && isVault && !externalShares && referenceAdmissionActive) {
+          const legacyPayoutReference = getPublishedLegacyPegReference(output, cache.payload, cache.updatedAt);
+          if (output.pegType === "peggedEUR" && isVault && !externalShares && referenceAdmissionActive && !legacyPayoutReference) {
             // The certificate leg is market-to-market. The optional route
             // evidence fields carry an independent reference for retention.
             expectedUnitValueUsd = output.price;
@@ -110,6 +112,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
             if (fxRateState === undefined) fxRateState = args.db ? await loadFxRateState(args.db) : null;
             const sourceTime = fxRateState?.sourceUpdatedAtByPeg.peggedEUR;
             if (getFxReferenceTypeFromState(fxRateState ?? null, "peggedEUR", policy.priceMaxAgeSec, args.clockSec) === "fresh" &&
+                (!legacyPayoutReference || fxRateState?.rates.peggedEUR === legacyPayoutReference.valueUsd) &&
                 sourceTime != null && sourceTime <= args.clockSec && args.clockSec - sourceTime <= policy.priceMaxAgeSec) {
               expectedUnitValueUsd = fxRateState!.rates.peggedEUR!;
               fxObservedAtSec = sourceTime;

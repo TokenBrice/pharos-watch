@@ -4,7 +4,7 @@ import {
   type DepegEventEntry,
   type DepegEventSearchEntry,
 } from "@shared/types/peg";
-import { hasUnverifiedDepegPeak, selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
+import { hasUnverifiedDepegPeak } from "../../src/lib/depeg-event-config";
 import { readDepegEventPageEntries } from "../../src/lib/depeg-event-snapshot";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
@@ -18,14 +18,7 @@ const CHECK_MODE = process.argv.includes("--check");
 // generated search entry and does not apply a second depeg-event result cap.
 const SEARCH_EVENT_LIMIT = 10;
 
-function sortStaticPages(events: readonly DepegEventEntry[]): DepegEventEntry[] {
-  return [...selectStaticDepegEventPages(events)]
-    .sort((a, b) => {
-      if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
-      return a.slug.localeCompare(b.slug);
-    });
-}
-
+/** Client rows carry the reviewed verdict so a disputed event can be qualified. */
 function toClientEntry(event: DepegEventEntry): DepegEventSearchEntry {
   return {
     slug: event.slug,
@@ -35,23 +28,16 @@ function toClientEntry(event: DepegEventEntry): DepegEventSearchEntry {
     direction: event.direction,
     peakDeviationBps: event.peakDeviationBps,
     startedAt: event.startedAt,
-  };
-}
-
-/** Palette rows carry the reviewed audit verdict so a disputed event is never a plain recent depeg. */
-function toSearchEntry(event: DepegEventEntry): DepegEventSearchEntry {
-  return {
-    ...toClientEntry(event),
     ...(event.provenance?.auditVerdict ? { auditVerdict: event.provenance.auditVerdict } : {}),
   };
 }
 
-const staticPageEvents = sortStaticPages(readDepegEventPageEntries());
+const staticPageEvents = readDepegEventPageEntries();
 const relatedEntries = staticPageEvents.map((event): DepegEventSearchEntry => ({
   ...toClientEntry(event),
   ...(hasUnverifiedDepegPeak(event) ? { peakReview: "unverified" } : {}),
 }));
-const searchEntries = staticPageEvents.slice(0, SEARCH_EVENT_LIMIT).map(toSearchEntry);
+const searchEntries = staticPageEvents.slice(0, SEARCH_EVENT_LIMIT).map(toClientEntry);
 
 const clientIndexTypes = "readonly DepegEventSearchEntry[]";
 

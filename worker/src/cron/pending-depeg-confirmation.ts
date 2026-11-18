@@ -10,7 +10,7 @@ import {
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
-import { getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { getLegacyReferenceClosureStart, getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
 import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { assessDetectionReference, assessIndependentPeerMove, benchmarkAdmission, canPersistPeerEvents, getClockedTradedNativeQuote, getTradedNativeEvidence, hasIncompatibleParityPrice, independentPrimaryTrustInput, observationPegMeta, independenceKey, isIndependentVenue, sourceObservationClock } from "./depeg-detection/reference-policy";
 import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
@@ -54,7 +54,9 @@ const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
 
 export const SELECT_PENDING_CONFIRMATION_SQL = `SELECT pending.*, (
   SELECT MAX(event.ended_at) FROM depeg_events event
-  WHERE event.stablecoin_id = pending.stablecoin_id AND event.source = 'live'
+  WHERE event.stablecoin_id = pending.stablecoin_id
+    AND (event.source = 'live' OR (event.source = 'backfill'
+      AND event.close_reason IN ('recovered-primary', 'recovered-dex', 'recovered-native')))
 ) AS last_live_event_end_at FROM depeg_pending pending`;
 
 export type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
@@ -155,7 +157,7 @@ export interface ConfirmationPlanReady {
   independentConfirmation?: { source: string; peerReceipt?: string; nativeReceipt?: DepegObservationReceipt };
   independentBasis?: boolean;
   eventStartedAt?: number;
-  pendingSourceFamilies?: string[];
+  pendingSourceKeys?: ReadonlySet<string>;
   allowsUsdObservation?: (price: number, observedAt: number | null | undefined, maxAgeSec?: number) => boolean;
   nativeSignal: DepegSignal | null;
   nativePegQuote: NativePegQuote | undefined;
@@ -423,11 +425,13 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const pendingReceipt = readPendingObservationReceipt(row.peer_basis_json);
   const onset = pendingReceipt?.onset;
   const latest = pendingReceipt?.latest;
+  const onsetMatches = onset?.seenAt === seenState.firstSeenAt && onset.price === seenState.firstPrice;
+  const latestMatches = latest?.seenAt === seenState.lastSeenAt && latest.price === seenState.lastPrice;
   // Persistence and expiry start at discovery. Evidence ordering still uses the original quote clocks.
   const pendingState = {
     ...seenState,
-    firstSeenAt: onset?.seenAt === seenState.firstSeenAt && onset.price === seenState.firstPrice ? onset.observedAt : seenState.firstSeenAt,
-    lastSeenAt: latest?.seenAt === seenState.lastSeenAt && latest.price === seenState.lastPrice ? latest.observedAt : seenState.lastSeenAt,
+    firstSeenAt: onsetMatches ? onset.observedAt : seenState.firstSeenAt,
+    lastSeenAt: latestMatches ? latest.observedAt : seenState.lastSeenAt,
   };
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   const onsetNativeVenue = isNativeOrigin && onset?.basis === "native-peg" && onset.observedAt === pendingState.firstSeenAt
@@ -435,11 +439,15 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const isPeerRelative = onset?.basis === "peer-relative" || parsePendingReason(pendingState.reason).has("peer-relative");
   const outcomeState = pendingState;
   const market = getReferenceMarket(registryMeta?.flags.pegCurrency);
-  const onsetSession = market == null ? null : getReferenceSessionState(market, seenState.firstSeenAt);
+  const legacyOnset = onsetMatches && onset.basis === "benchmark" && onset.referenceAdmission == null;
+  const legacyClosureMismatch = market != null && legacyOnset &&
+    getLegacyReferenceClosureStart(market, pendingState.firstSeenAt) !== getLegacyReferenceClosureStart(market, seenState.firstSeenAt);
+  const onsetSession = market == null || legacyOnset ? null : getReferenceSessionState(market, seenState.firstSeenAt);
   const onsetBoundary = onsetSession?.open ? onsetSession.sessionOpenedAtSec : onsetSession?.closureStartSec;
   const eventStartedAt =
     pendingState.firstSeenAt > seenState.firstSeenAt ||
     (row.last_live_event_end_at != null && pendingState.firstSeenAt <= row.last_live_event_end_at) ||
+    legacyClosureMismatch ||
     (onsetBoundary != null && pendingState.firstSeenAt < onsetBoundary)
       ? seenState.firstSeenAt : pendingState.firstSeenAt;
 
@@ -464,11 +472,11 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   const defaultThreshold = getDepegThresholdBps(pegType ?? row.peg_type);
   const recoveryThreshold = getDepegRecoveryThresholdBps(pegType ?? row.peg_type);
   const currentMove = asset?.price == null ? null : deriveDepegSignal(asset.price, refreshedPegRef);
-  const legacyPendingDiscoveredAt = !isNativeOrigin && !isPeerRelative && !silverEntitlementRequired &&
+  const legacyPending = !isNativeOrigin && !isPeerRelative && !silverEntitlementRequired &&
     !onset?.referenceAdmission && !latest?.referenceAdmission && Number.isFinite(row.peg_reference) && row.peg_reference > 0
-    ? seenState.firstSeenAt : undefined;
+    ? { discoveredAt: seenState.firstSeenAt, pegReference: row.peg_reference } : undefined;
   const reference = meta ? assessDetectionReference({ asset, meta, pegRates, pegRateSources, now, signal: currentMove,
-    legacyPendingDiscoveredAt, referenceContext: input.referenceContext }) : null;
+    legacyPending, referenceContext: input.referenceContext }) : null;
   const usableNative = native && (reference == null || native.quote.updatedAt >= reference.boundary) ? native : null;
   const independentNative = usableNative && isIndependentVenue(asset, usableNative.venue) &&
     (!isNativeOrigin || onsetNativeVenue !== "") ? usableNative : null;
@@ -718,6 +726,21 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     return { kind: "wait", reason: "too-young" };
   }
 
+  const onsetSourceMatch = onset != null && (onset.seenAt ?? onset.observedAt) === seenState.firstSeenAt &&
+    onset.price === seenState.firstPrice && onset.bps === seenState.firstSeenBps;
+  const latestSourceMatch = latestMatches && latest.bps === seenState.lastSeenBps;
+  // Older receipts had a single union. It identifies the onset by itself only
+  // when the two receipt observations are the same.
+  const legacyOnsetKeys = onsetSourceMatch && latest != null && latest.seenAt === onset.seenAt &&
+    latest.observedAt === onset.observedAt && latest.price === onset.price && latest.bps === onset.bps
+    ? pendingReceipt?.sourceFamilies : undefined;
+  const pendingSourceKeys = new Set([
+    ...(onsetSourceMatch ? onset.sourceKeys ?? legacyOnsetKeys ?? [] : []),
+    ...(latestSourceMatch ? latest.sourceKeys ?? [] : []),
+    ...(latestSourceMatch && (onset == null || onsetSourceMatch)
+      ? pendingReceipt?.sourceKeys ?? pendingReceipt?.sourceFamilies ?? [] : []),
+  ]);
+
   return {
     kind: "ready",
     row,
@@ -731,9 +754,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     independentConfirmation,
     independentBasis,
     eventStartedAt,
-    pendingSourceFamilies: latest?.seenAt === seenState.lastSeenAt && latest.price === seenState.lastPrice &&
-      (onset == null || (onset.seenAt ?? onset.observedAt) === seenState.firstSeenAt)
-      ? pendingReceipt?.sourceFamilies ?? undefined : undefined,
+    pendingSourceKeys: pendingSourceKeys.size > 0 ? pendingSourceKeys : undefined,
     allowsUsdObservation: (reference && meta) || silverEntitlementRequired ? (price, observedAt, quoteMaxAgeSec) => {
       if (peerMove || !hasSecondaryQuoteUnit(observedAt)) return false;
       if (!reference || !meta) return true;

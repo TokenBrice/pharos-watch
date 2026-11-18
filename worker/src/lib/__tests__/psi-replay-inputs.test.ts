@@ -13,6 +13,7 @@ import {
 } from "../psi-replay-inputs";
 import { buildStabilityInputForDay } from "../psi-recompute";
 import { replayHistoricalPsiForDay } from "../psi-replay";
+import { buildHistoricalReferenceLookup } from "../backfill-fx";
 
 const DAY = 1_772_668_800;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -74,6 +75,32 @@ describe("PSI replay input loaders", () => {
     expect(archives.dewsByDay.size).toBe(0);
   });
 
+  it.each([null, 1.01])("replays a dated market quote with legacy conversion price %s and unavailable native quantity", async (legacyPrice) => {
+    const { sqlite, db } = fixtures.open();
+    const id = "usdt-tether";
+    const observedAt = DAY + 680;
+    seedPsiPairedHistory(sqlite, DAY, id, 100e6);
+    seedPsiPairedHistory(sqlite, DAY, "dai-makerdao", 1e9);
+    sqlite.prepare(`UPDATE supply_history SET price = ?, price_observed_at = ?, supply_provenance = ?
+      WHERE stablecoin_id = ? AND snapshot_date = ?`).run(legacyPrice, legacyPrice == null ? null : observedAt, JSON.stringify({
+      supplySource: "coingecko-fallback", supplyObservedAt: observedAt, supplyChainGuard: null,
+      nativeQuantityUnavailable: true, marketQuote: { price: 0.98, observedAt },
+    }), id, DAY);
+    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: "peggedUSD", source: "live",
+      started_at: DAY - 2 * DAY_SECONDS, ended_at: null, peg_reference: 1, start_price: 0.95, peak_deviation_bps: -1000 }));
+    const archives = await loadHistoricalPsiArchives(db, DAY, DAY);
+    expect(archives.supplyByCoin.get(id)?.find(({ date }) => date === DAY)).toEqual({
+      date: DAY, mcap: 100e6, coverage: "complete", price: 0.98, priceObservedAt: observedAt,
+    });
+    const input = { ...archives, day: DAY, now: DAY + DAY_SECONDS - 1, methodologyVersion: "3.70",
+      depegEvents: await loadPsiEligibleDepegEvents(db) };
+    const replay = replayHistoricalPsiForDay({ ...input, sampleSlots: [observedAt + 40] });
+    expect(replay.input.depegs).toMatchObject([{ bps: -200 }]);
+    expect(replay.result?.score).toBe(97.6);
+    expect(replayHistoricalPsiForDay({ ...input, sampleSlots: [observedAt - 1] }).unavailableReason)
+      .toBe("open-depeg-inputs-unavailable");
+  });
+
   it("pairs proven native quantities independently of dated capitalization in historical replay", async () => {
     const { sqlite, db } = fixtures.open();
     const id = "usdt-tether";
@@ -112,7 +139,11 @@ describe("PSI replay input loaders", () => {
     expect((await replay()).result?.score).toBe(95);
     const update = sqlite.prepare("UPDATE supply_history SET supply_provenance = ? WHERE stablecoin_id = ? AND snapshot_date = ?");
     for (const endpoint of [day, prior]) {
-      if (endpoint === prior) sqlite.exec("ALTER TABLE supply_history DROP COLUMN circulating_native");
+      if (endpoint === prior) sqlite.exec(`
+        DROP TRIGGER trg_supply_history_guard_legacy_snapshot;
+        DROP TRIGGER trg_supply_history_guard_measured_conversion;
+        ALTER TABLE supply_history DROP COLUMN circulating_native;
+      `);
       update.run(JSON.stringify({ supplySource: "defillama", supplyObservedAt: endpoint + 60, supplyChainGuard: {
         reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, quarantinedSince: prior - DAY_SECONDS,
         chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0, baselineUsd: 600e6,
@@ -250,6 +281,36 @@ describe("PSI replay input loaders", () => {
       });
       expect(replay.result?.score).toBe(score);
     }
+  });
+
+  it("admits dated bullion comparisons for severe legacy openings without an interval ledger", async () => {
+    const { sqlite, db } = fixtures.open();
+    const day = Date.UTC(2026, 10, 14) / 1000;
+    const start = day + 22 * 3600 + 900;
+    const id = "paxg-paxos";
+    seedPsiPairedHistory(sqlite, day, id, 1e9);
+    seedPsiEvent(sqlite, makeDepegRow({ id: 1, stablecoin_id: id, peg_type: "peggedGOLD", peg_reference: 4000,
+      source: "live", started_at: start, ended_at: start + 3 * 3600 }));
+    sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, created_at, updated_at)
+      VALUES (1, 'historical-replay', 'usd', ?, ?)`).run(start, start);
+    const references = buildHistoricalReferenceLookup({
+      commodityPeers: { GOLD: ["xaut-tether", "kau-kinesis", "xaum-matrixdock", "gldt-gold-dao"].map((assetId) => ({
+        assetId, sourceId: `coingecko:${assetId}`, commodityOunces: 1,
+        prices: [{ timestamp: start - 60, price: 4000 }],
+      })) },
+    });
+    const archives = await loadHistoricalPsiArchives(db, day, day);
+    const update = sqlite.prepare("UPDATE depeg_events SET direction = ?, start_price = ?, peak_deviation_bps = ? WHERE id = 1");
+    const replay = async () => replayHistoricalPsiForDay({
+      ...archives, references, day, now: day + DAY_SECONDS, methodologyVersion: "3.70",
+      depegEvents: await loadPsiEligibleDepegEvents(db), sampleSlots: [start + 1800],
+    });
+    for (const [bps, score] of [[-1000, 100], [3000, 29], [-3000, 29]]) {
+      update.run(bps < 0 ? "below" : "above", 4000 * (1 + bps / 10000), bps);
+      expect((await replay()).result?.score).toBe(score);
+    }
+    sqlite.exec("UPDATE depeg_events SET admitted_coverage_json = '[]' WHERE id = 1");
+    expect((await replay()).result?.score).toBe(100);
   });
 
   it("honors empty reviewed coverage and the admitted peer basis at a Saturday sample", async () => {

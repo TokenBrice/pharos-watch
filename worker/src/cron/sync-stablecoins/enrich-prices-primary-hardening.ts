@@ -22,6 +22,8 @@ import { aggregateProtocolPrices, computeWeightedMedianPrice, type AggregatedPro
 import { midDivergenceBps } from "../../lib/price-divergence";
 import { haveDisjointPriceInputs } from "../../lib/price-consensus";
 import { hasIndependentSevereCandidateCorroboration } from "../../lib/price-publish-policy";
+import { isIndependentDexObservation } from "../depeg-detection/reference-policy";
+import type { PegAssetBase } from "@shared/types/price";
 import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "./enrich-prices-shared";
 
@@ -33,14 +35,15 @@ type ChallengerPool = DexPriceLineage & {
   observedAt?: number;
 };
 
-function eligiblePoolChallenges(pools: ChallengerPool[]): ChallengerPool[] {
+function eligiblePoolChallenges(pools: ChallengerPool[], primary: PegAssetBase): ChallengerPool[] {
   if (pools.every((pool) => pool.upstreamKeys === undefined && pool.pricePoolKeys === undefined)) return pools;
 
-  const datedPools = pools.filter((pool) => {
+  const independent = pools.filter((pool) => {
     const lineage = readDexPriceLineage(pool);
-    return !!lineage.upstreamKeys?.length && !!lineage.pricePoolKeys?.length;
+    return !!lineage.upstreamKeys?.length && !!lineage.pricePoolKeys?.length &&
+      isIndependentDexObservation(primary, pool);
   });
-  return selectIndependentChallengerPools(datedPools);
+  return selectIndependentChallengerPools(independent);
 }
 
 /**
@@ -124,7 +127,13 @@ export function applyPoolChallenge(
 
     const offeredPools = poolChallengers.get(assetId);
     if (!offeredPools?.length) continue;
-    const pools = eligiblePoolChallenges(offeredPools);
+    const primary = {
+      id: assetId, symbol: assetId, pegType: assetPegTypes.get(assetId),
+      priceSource: result.selectedSource ?? result.source, agreeSources: challengeSources,
+      ...(result.pricePoolKeys !== undefined && { pricePoolKeys: result.pricePoolKeys }),
+      ...(result.upstreamKeys !== undefined && { upstreamKeys: result.upstreamKeys }),
+    };
+    const pools = eligiblePoolChallenges(offeredPools, primary);
     const protocolGroups = aggregateProtocolPrices(
       pools.map((pool) => ({
         protocol: pool.protocol,

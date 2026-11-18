@@ -235,14 +235,15 @@ describe("publishYieldCoordinatorResults", () => {
     };
   }
 
-  it("publishes USDY's legacy source key for rollback while keeping wrapper rankings and history", async () => {
+  it("keeps USDY's wrapper identity while projecting a verified long-horizon anchor for rollback", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const { ondo } = OPTIONAL_YIELD_SOURCES;
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const anchorAge = 30 * DAY_SECONDS;
     const source = makeEvaluatedSource({
       id: ondo.stablecoinId, symbol: "USDY", sourceKey: ondo.sourceKey,
       dataSource: "protocol-api", yieldType: "nav-appreciation", currentApy: 5, apy30d: 5,
-      sourceObservedAt: startSec, comparisonAnchorObservedAt: startSec - 30 * DAY_SECONDS,
+      sourceObservedAt: startSec, comparisonAnchorObservedAt: startSec - anchorAge,
     });
     const benchmark = makeBenchmarkMeta();
     const artifacts = buildPreviewYieldRankingsArtifacts({
@@ -255,13 +256,17 @@ describe("publishYieldCoordinatorResults", () => {
         evaluatedSources: artifacts.acceptedSources })).ok).toBe(true);
       const legacy = sqlite.prepare("SELECT value FROM cache WHERE key = 'yield-rankings'").get();
       const canonical = await readYieldRankingsCache(db);
-      for (const [value, sourceKey] of [[String(legacy?.value), ondo.legacySourceKey], [canonical!.value, ondo.sourceKey]]) {
-        const [row] = JSON.parse(value).rankings;
+      const [legacyRow] = JSON.parse(String(legacy?.value)).rankings;
+      const [canonicalRow] = JSON.parse(canonical!.value).rankings;
+      for (const row of [legacyRow, canonicalRow]) {
         expect(row).toMatchObject({
           currentApy: 5, pharosYieldScore: 28,
-          provenance: { sourceKey, sourceAgeSeconds: 0, comparisonAnchorAgeSeconds: 30 * DAY_SECONDS },
+          provenance: { sourceKey: ondo.sourceKey, sourceObservedAt: startSec, sourceAgeSeconds: 0 },
         });
       }
+      expect(legacyRow.provenance.comparisonAnchorAgeSeconds).toBeUndefined();
+      expect(legacyRow.provenance.comparisonAnchorObservedAt).toBeUndefined();
+      expect(canonicalRow.provenance.comparisonAnchorAgeSeconds).toBe(anchorAge);
       expect(sqlite.prepare("SELECT source_key, apy FROM yield_history").all()).toEqual([{ source_key: ondo.sourceKey, apy: 5 }]);
     } finally {
       sqlite.close();

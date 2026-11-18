@@ -502,6 +502,16 @@ export function isPairedDepegPeak(price: number | null | undefined, reference: n
   return signal != null && (signal.bps === bps || Math.abs(signal.rawBps - bps) <= 1e-8);
 }
 
+export function readDepegPeakQuote(
+  row: Pick<DepegRow, "peak_price" | "peak_peg_reference" | "peak_quote_domain" | "peak_deviation_bps">,
+): Pick<DepegEvent, "peakPegReference" | "peakQuoteDomain"> {
+  const peakPegReference = row.peak_peg_reference;
+  const peakQuoteDomain = DepegEventQuoteDomainSchema.safeParse(row.peak_quote_domain).data;
+  return (peakQuoteDomain === "usd" || (peakQuoteDomain === "native-peg" && peakPegReference === 1)) &&
+    isPairedDepegPeak(row.peak_price, peakPegReference, row.peak_deviation_bps)
+    ? { peakPegReference, peakQuoteDomain } : {};
+}
+
 type DepegCoverageRow = Pick<DepegRow, "id" | "admitted_coverage_json" | "disposition"> & Partial<Pick<DepegRow, "started_at" | "ended_at">>;
 
 /** Undefined allows legacy coverage. Null identifies unreadable evidence. */
@@ -579,10 +589,6 @@ export function rowToDepegEvent(row: DepegRow): PegScoreEvent {
       replayVersion: row.provenance_replay_version ?? null,
     };
   }
-  const peakReference = row.peak_peg_reference;
-  const peakDomain = DepegEventQuoteDomainSchema.safeParse(row.peak_quote_domain).data;
-  const pairedPeak = (peakDomain === "usd" || (peakDomain === "native-peg" && peakReference === 1)) &&
-    isPairedDepegPeak(row.peak_price, peakReference, row.peak_deviation_bps);
   const admittedCoverage = readDepegAdmittedCoverage(row);
   const disposition = DepegEventDispositionSchema.safeParse(row.disposition);
   const recoveryRef = row.recovery_peg_reference;
@@ -598,7 +604,7 @@ export function rowToDepegEvent(row: DepegRow): PegScoreEvent {
     endedAt: row.ended_at,
     startPrice: row.start_price,
     peakPrice: row.peak_price,
-    ...(pairedPeak ? { peakPegReference: peakReference, peakQuoteDomain: peakDomain } : {}),
+    ...readDepegPeakQuote(row),
     ...(row.recovery_price != null && Number.isFinite(row.recovery_price) && row.recovery_price > 0 &&
       typeof recoveryRef === "number" && Number.isFinite(recoveryRef) && recoveryRef > 0
       ? { recoveryPegReference: recoveryRef } : {}),

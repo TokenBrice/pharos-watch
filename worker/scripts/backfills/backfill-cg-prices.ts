@@ -4,6 +4,7 @@ import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shar
 import { cgUrl, cgHeaders } from "../../src/lib/coingecko";
 import { USER_AGENT } from "../../src/lib/constants";
 import { batchExecute } from "../../src/lib/db";
+import { SUPPLY_HISTORY_MARKET_PRICE_SQL, SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL } from "../../src/lib/supply-history-db";
 import { fetchJsonWithRetry } from "../../src/lib/fetch-retry";
 import { jsonResponse } from "../../src/lib/api-response";
 import { RATE_LIMITS } from "../../src/lib/rate-limit";
@@ -104,11 +105,11 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
         continue;
       }
 
-      // Build maps: date -> price, date -> market_cap (normalized to UTC midnight)
-      const priceByDate = new Map<number, number>();
+      // Keep the observation clock separate from the normalized UTC day.
+      const priceByDate = new Map<number, PricePoint>();
       for (const point of mergedPrices) {
         const snapshotDate = bucketUnixSecondsToUtcDay(point.timestamp);
-        priceByDate.set(snapshotDate, point.price);
+        priceByDate.set(snapshotDate, point);
       }
 
       const mcapByDate = new Map<number, number>();
@@ -119,18 +120,11 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
       }
 
       const existing = await db
-        .prepare("SELECT snapshot_date, price, circulating_usd FROM supply_history WHERE stablecoin_id = ?")
+        .prepare(`SELECT snapshot_date, ${SUPPLY_HISTORY_MARKET_PRICE_SQL} AS price FROM supply_history WHERE stablecoin_id = ?`)
         .bind(meta.id)
-        .all<{ snapshot_date: number; price: number | null; circulating_usd: number }>();
+        .all<{ snapshot_date: number; price: number | null }>();
 
-      const existingRows = existing.results ?? [];
-      const existingDates = new Map<number, { price: number | null; circulatingUsd: number }>();
-      for (const row of existingRows) {
-        existingDates.set(row.snapshot_date, {
-          price: row.price,
-          circulatingUsd: row.circulating_usd,
-        });
-      }
+      const existingDates = new Map((existing.results ?? []).map((row) => [row.snapshot_date, row.price]));
 
       // A CoinGecko market cap is only the coin's supply when CoinGecko is
       // that coin's admitted supply provider. For a DefiLlama-authority coin
@@ -139,24 +133,17 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
       // DefiLlama detail history owned by backfill-supply-history.
       const cgIsSupplyAuthority = meta.detailProvider !== "defillama";
 
-      const stmts: D1PreparedStatement[] = [];
-      let pricesFilled = 0;
-      let rowsInserted = 0;
+      const priceRepairs: D1PreparedStatement[] = [];
+      const supplyInserts: D1PreparedStatement[] = [];
       let supplyRowsSkipped = 0;
 
-      for (const [date, price] of priceByDate) {
-        const existingRow = existingDates.get(date);
+      for (const [date, { price, timestamp }] of priceByDate) {
+        const existingPrice = existingDates.get(date);
 
-        if (existingRow) {
-          if (existingRow.price === null) {
-            stmts.push(
-              db
-                .prepare(
-                  "UPDATE supply_history SET price = ? WHERE stablecoin_id = ? AND snapshot_date = ? AND price IS NULL",
-                )
-                .bind(price, meta.id, date),
-            );
-            pricesFilled++;
+        if (existingPrice !== undefined) {
+          if (existingPrice === null) {
+            priceRepairs.push(db.prepare(SUPPLY_HISTORY_REPAIR_MARKET_QUOTE_SQL)
+              .bind(price, timestamp > 0 ? timestamp : null, 0, meta.id, date));
           }
           // Existing row with price -> skip (preserve DL data)
         } else {
@@ -165,21 +152,19 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
           if (mcap && mcap > 0 && !cgIsSupplyAuthority) {
             supplyRowsSkipped++;
           } else if (mcap && mcap > 0) {
-            stmts.push(
+            supplyInserts.push(
               db
                 .prepare(
                   "INSERT OR IGNORE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
                 )
                 .bind(meta.id, date, mcap, price),
             );
-            rowsInserted++;
           }
         }
       }
 
-      if (stmts.length > 0) {
-        await batchExecute(db, stmts);
-      }
+      const pricesFilled = await batchExecute(db, priceRepairs);
+      const rowsInserted = await batchExecute(db, supplyInserts);
 
       totalPricesFilled += pricesFilled;
       totalRowsInserted += rowsInserted;

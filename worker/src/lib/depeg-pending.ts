@@ -62,7 +62,7 @@ export interface PendingDepegUpsertParams {
   reason: PendingDepegReason;
   peerBasis?: string;
   nativeVenue?: string;
-  sourceFamilies?: string[];
+  sourceKeys?: string[];
   referenceAdmission?: ReferenceAdmission;
 }
 
@@ -74,6 +74,7 @@ const observationReceiptSchema = z.object({
   pegReference: z.number().finite().positive(),
   bps: z.number().finite(),
   venue: z.string().optional(),
+  sourceKeys: z.array(z.string().min(1)).optional(),
   referenceAdmission: ReferenceAdmissionSchema.optional(),
   corroboration: z.unknown().optional(),
 });
@@ -83,6 +84,7 @@ const pendingReceiptSchema = z.object({
   onset: observationReceiptSchema.nullish(),
   latest: observationReceiptSchema.nullish(),
   peak: observationReceiptSchema.nullish(),
+  sourceKeys: z.array(z.string().min(1)).nullish(),
   sourceFamilies: z.array(z.string().min(1)).nullish(),
 });
 
@@ -273,7 +275,8 @@ export function buildUpsertPendingDepegStmt(
   const observation = {
     basis: isNativeOriginPending(params.reason) ? "native-peg" : params.peerBasis ? "peer-relative" : "benchmark",
     observedAt: params.quoteObservedAt ?? params.seenAt,
-    ...(params.quoteObservedAt != null || params.sourceFamilies?.length ? { seenAt: params.seenAt } : {}),
+    ...(params.quoteObservedAt != null || params.sourceKeys?.length ? { seenAt: params.seenAt } : {}),
+    ...(params.sourceKeys?.length ? { sourceKeys: params.sourceKeys } : {}),
     pegReference: params.pegReference,
     price: params.price,
     bps,
@@ -309,18 +312,28 @@ export function buildUpsertPendingDepegStmt(
        updated_at = excluded.updated_at,
        reference_market_held_at = NULL,
        peer_basis_json = CASE WHEN ${preservesEpisode} THEN json_object(
-         'onset', CASE WHEN json_valid(depeg_pending.peer_basis_json) THEN json_extract(depeg_pending.peer_basis_json, '$.onset') END,
+         'onset', CASE WHEN json_valid(depeg_pending.peer_basis_json) THEN
+           CASE WHEN json_type(depeg_pending.peer_basis_json, '$.sourceFamilies') = 'array'
+             AND json_type(depeg_pending.peer_basis_json, '$.onset') = 'object'
+             AND json_extract(depeg_pending.peer_basis_json, '$.onset') = json_extract(depeg_pending.peer_basis_json, '$.latest')
+             THEN json_set(json_extract(depeg_pending.peer_basis_json, '$.onset'), '$.sourceKeys',
+               json_extract(depeg_pending.peer_basis_json, '$.sourceFamilies'))
+             ELSE json_extract(depeg_pending.peer_basis_json, '$.onset') END END,
          'latest', json_extract(excluded.peer_basis_json, '$.latest'),
-         'sourceFamilies', (
+         'sourceKeys', (
            SELECT json_group_array(value) FROM (
-             SELECT value FROM json_each(excluded.peer_basis_json, '$.sourceFamilies')
-             UNION
-             SELECT value FROM json_each(CASE WHEN json_valid(depeg_pending.peer_basis_json) THEN
+             SELECT value FROM json_each(excluded.peer_basis_json, '$.sourceKeys')
+             UNION SELECT value FROM json_each(CASE WHEN json_valid(depeg_pending.peer_basis_json) THEN
                CASE WHEN json_extract(depeg_pending.peer_basis_json, '$.latest.seenAt') = depeg_pending.last_seen_at
                  AND json_extract(depeg_pending.peer_basis_json, '$.latest.price') = depeg_pending.last_price
-                 AND json_type(depeg_pending.peer_basis_json, '$.sourceFamilies') = 'array'
-                 THEN depeg_pending.peer_basis_json END
-             END, '$.sourceFamilies') WHERE type = 'text' AND value <> ''
+                 AND json_extract(depeg_pending.peer_basis_json, '$.latest.bps') = depeg_pending.last_seen_bps
+                 THEN CASE
+                   WHEN json_type(depeg_pending.peer_basis_json, '$.sourceKeys') = 'array'
+                     THEN json_extract(depeg_pending.peer_basis_json, '$.sourceKeys')
+                   WHEN json_type(depeg_pending.peer_basis_json, '$.sourceFamilies') = 'array'
+                     THEN json_extract(depeg_pending.peer_basis_json, '$.sourceFamilies')
+                 END END
+             END) WHERE type = 'text' AND value <> ''
            )
          ),
          'peak', CASE WHEN ${strongerPeak}
@@ -401,7 +414,7 @@ export function buildUpsertPendingDepegStmt(
     params.reason,
     params.seenAt,
     params.pegReference,
-    JSON.stringify({ onset: observation, latest: observation, peak: observation, sourceFamilies: params.sourceFamilies }),
+    JSON.stringify({ onset: observation, latest: observation, peak: observation, sourceKeys: params.sourceKeys }),
   );
 }
 

@@ -1,5 +1,6 @@
 import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
 import { bucketTimestampToUtcDay, findAsOfSnapshot, type TimestampedRatePoint } from "./rate-series";
+import { getReferenceMarketClosureStart } from "./reference-market-hours";
 import { median } from "./stats";
 import type { StablecoinData } from "../types/supply";
 
@@ -43,11 +44,13 @@ export function findCommodityPeerMedian(
   const peers = new Map<string, { rate: number; timestamp: number; assetId: string }>();
   const seenAssets = new Set<string>();
   const subjectSource = sources.find((source) => source.assetId === subjectId)?.sourceId;
+  const closureStart = getReferenceMarketClosureStart("metal", atSec);
   for (const source of sources) {
     if (!source.sourceId.trim() || source.assetId === subjectId || source.sourceId === subjectSource || peers.has(source.sourceId)
       || seenAssets.has(source.assetId) || (source.assetId !== "xagm-matrixdock" && source.commodityOunces == null)) continue;
     const point = findAsOfSnapshot(source.prices, atSec, (entry) => entry.timestamp, maxAgeSec);
-    if (!point || !Number.isSafeInteger(point.timestamp) || point.timestamp <= 0) continue;
+    if (!point || !Number.isSafeInteger(point.timestamp) || point.timestamp <= 0
+      || (closureStart != null && point.timestamp < closureStart)) continue;
     const ounces = getCommodityOuncesAtQuote(source.commodityOunces, {
       assetId: source.assetId, commodityEntitlement: point.commodityEntitlement, quoteObservedAtSec: point.timestamp,
     });

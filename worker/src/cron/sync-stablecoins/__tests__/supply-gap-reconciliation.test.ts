@@ -5,7 +5,7 @@ import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as StructuredLog from "../../../lib/structured-log";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getUsdMarketCapBaselineOrNull } from "@shared/lib/supply";
 import * as supplyPerimeter from "@shared/lib/supply-perimeter-changes";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
@@ -51,7 +51,7 @@ import {
 } from "../supply-gap-reconciliation";
 import { fetchCuratedAggregateOnChainMcap } from "../supplemental-assets/onchain-supply";
 import { fillMissingSupplyHistory } from "../phase-helpers";
-import { normalizeStablecoinsPayload, restoreMissingTrackedAssets } from "../shared";
+import { loadPreviousStablecoinsById, normalizeStablecoinsPayload, restoreMissingTrackedAssets } from "../shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); });
@@ -680,6 +680,45 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(await fillMissingSupplyHistory(db, [asset])).toBe(1);
     expect(asset.circulatingPrevDay).toEqual({ peggedUSD: 980 });
     expect(asset.supplyChangeBaselines?.day?.circulatingNative).toBe(1000);
+  });
+
+  it("retains an admitted weekly close across a five-minute USD carry until D1 rejects it", async ({ onTestFinished }) => {
+    const { db, sqlite } = fixtures.open();
+    const now = Date.parse("2026-11-18T14:00:00Z") / 1000;
+    const stockAt = now - 300;
+    const weekAt = stockAt - 7 * DAY_MS / 1000;
+    const date = Math.floor(weekAt / (DAY_MS / 1000)) * (DAY_MS / 1000);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(stockAt * 1000);
+    onTestFinished(() => { clock.mockRestore(); });
+    const asset: PeggedAsset = {
+      id: "usdc-circle", name: "USDC", symbol: "USDC", pegType: "peggedUSD", price: 1,
+      supplySource: "coingecko-fallback", supplyObservedAt: stockAt,
+      circulating: { peggedUSD: 110_000_000 }, circulatingPrevWeek: { peggedUSD: 91_000_000 },
+    };
+    const provenance = { supplySource: asset.supplySource, supplyObservedAt: weekAt, supplyChainGuard: null };
+    sqlite.prepare(`INSERT INTO supply_history
+      (stablecoin_id, snapshot_date, circulating_usd, circulating_native, supply_provenance) VALUES (?, ?, ?, ?, ?)`)
+      .run(asset.id, date, 91_000_000, 91_000_000, JSON.stringify(provenance));
+    await fillMissingSupplyHistory(db, [asset]);
+    const payload = normalizeStablecoinsPayload({ peggedAssets: [asset] }, stockAt);
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES('stablecoins', ?, ?)").run(JSON.stringify(payload), stockAt);
+    clock.mockReturnValue(now * 1000);
+    const { previousAssetsById } = await loadPreviousStablecoinsById(db);
+    const carry = restoreMissingTrackedAssets([], previousAssetsById, now).assets.find(row => row.id === asset.id)!;
+    await fillMissingSupplyHistory(db, [carry]);
+    const [wire] = normalizeStablecoinsPayload({ peggedAssets: [carry] }, now).peggedAssets;
+    expect(wire).toMatchObject({ supplyObservedAt: stockAt, supplyRestored: true,
+      circulatingPrevWeek: { peggedUSD: 91_000_000 }, supplyChangeBaselines: payload.peggedAssets[0].supplyChangeBaselines });
+    expect(getCirculatingRawOrNull(wire)! - getUsdMarketCapBaselineOrNull(wire, "week")!).toBe(19_000_000);
+
+    const update = sqlite.prepare("UPDATE supply_history SET supply_provenance = ? WHERE stablecoin_id = ? AND snapshot_date = ?");
+    update.run(JSON.stringify({ ...provenance, nativeQuantityUnavailable: true }), asset.id, date);
+    await fillMissingSupplyHistory(db, [carry]);
+    expect(carry.supplyChangeBaselines?.week).toEqual({ observedAt: weekAt, circulatingUsd: 91_000_000, circulatingNative: null });
+    update.run("malformed", asset.id, date);
+    await fillMissingSupplyHistory(db, [carry]);
+    expect(carry.supplyChangeBaselines?.week).toBeNull();
+    expect(carry.circulatingPrevWeek).toEqual({});
   });
 
   it("clears only the rejected week on a carried USD stock and its legacy wire", async () => {

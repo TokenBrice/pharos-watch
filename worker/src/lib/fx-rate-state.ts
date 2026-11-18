@@ -83,6 +83,7 @@ export interface FxRatesMeta {
   sourceDateByPeg?: Record<string, string | null>;
   observations?: FxReferenceObservationMap;
   legacyDetectionPegs?: string[];
+  omittedCloseCarryPegs?: string[];
   legacyRepricingByPeg?: LegacyFxRepricingByPeg;
   referenceMedianContributorsByPeg?: FxMedianContributorsByPeg;
   dailyObservations?: FxReferenceObservationMap;
@@ -108,6 +109,7 @@ export interface FxRateState {
   sourceDateByPeg: Record<string, string | null>;
   observations?: FxReferenceObservationMap;
   legacyDetectionPegs?: string[];
+  omittedCloseCarryPegs?: string[];
   legacyRepricingByPeg?: LegacyFxRepricingByPeg;
   referenceMedianContributorsByPeg?: FxMedianContributorsByPeg;
   dailyObservations?: FxReferenceObservationMap;
@@ -247,6 +249,7 @@ function parseFxMeta(
               ? record.legacyDetectionPegs.filter((peg): peg is string => typeof peg === "string" &&
                 (observations === undefined || (hasObservations &&
                   (!Object.prototype.hasOwnProperty.call(rawObservations, peg) || !!observations[peg])))) : undefined,
+            omittedCloseCarryPegs: z.array(z.string()).safeParse(record.omittedCloseCarryPegs).data,
             dailyObservations: sanitizeRecordValues(record.dailyObservations, (value, pegKey) => {
               const row = FxReferenceObservationSchema.safeParse(value);
               return row.success && fxSourceSampleKey(row.data) === pegKey && row.data.cadence !== "intraday"
@@ -468,6 +471,7 @@ export function getFxSourceStatus(
     pegKey?: string;
     cadence?: FxSourceCadence;
     sourceDate?: string | null;
+    legacy?: boolean;
   },
 ): FxSourceStatus {
   return evaluateFxSourceFreshness(
@@ -477,6 +481,7 @@ export function getFxSourceStatus(
     opts?.cadence,
     opts?.sourceDate,
     nowSec,
+    opts?.legacy,
   ).status;
 }
 
@@ -496,6 +501,11 @@ export function isFreshFxObservation(
   },
 ): boolean {
   return getFxSourceStatus(updatedAt, mode, nowSec, opts) === "fresh";
+}
+
+export function hasVerifiedLegacyRate(fxState: FxRateState | null | undefined, pegKey: string): boolean {
+  return fxState?.metadataIdentity === "verified" && Number.isFinite(fxState.rates[pegKey]) && fxState.rates[pegKey] > 0 &&
+    fxState.legacyDetectionPegs?.includes(pegKey) === true && !fxState.observations?.[pegKey];
 }
 
 export interface FxPegAdmission {
@@ -545,8 +555,7 @@ function assessFxPegAdmission(state: FxRateState, pegKey: string, nowSec: number
     state.sourceCadenceByPeg[pegKey],
     state.sourceDateByPeg[pegKey],
     nowSec,
-    state.observations === undefined ||
-      (state.observations[pegKey] === undefined && state.legacyDetectionPegs?.includes(pegKey) === true),
+    state.observations === undefined || hasVerifiedLegacyRate(state, pegKey),
   );
   if (freshness.status !== "none") return { ...freshness, issue: null, updatedAt };
   return {
@@ -658,12 +667,19 @@ export function hydrateFxRateState(
   }
 
   const legacy = (identity === "verified" || identity === "legacy-timestamp") && meta.usableSyncAt === ratesCache.updatedAt && meta.observations === undefined;
+  const omittedCloseCarryPegs = identity === "verified" && meta.usableSyncAt === ratesCache.updatedAt
+    ? meta.omittedCloseCarryPegs?.filter((peg) => !(peg in rates) &&
+      Object.values(referenceSourceSamples).some(({ observation }) =>
+        observation.pegKey === peg && observation.source !== "peer-median" &&
+        (observation.publishedAtSec ?? observation.observedAtSec) <= meta.usableSyncAt))
+    : undefined;
   const nowSec = Math.floor(Date.now() / 1000);
   return {
     rates,
     ...(legacy ? { legacyRepricingByPeg: meta.legacyRepricingByPeg } : { observations, selectedReferenceEvidence }),
     legacyDetectionPegs: identity === "verified" && meta.usableSyncAt === ratesCache.updatedAt
       ? meta.legacyDetectionPegs?.filter((peg) => !meta.observations?.[peg] || observations[peg]) : undefined,
+    ...(omittedCloseCarryPegs?.length ? { omittedCloseCarryPegs } : {}),
     referenceMedianContributorsByPeg,
     dailyObservations: meta.dailyObservations,
     lastAcceptedBaselines: meta.lastAcceptedBaselines,

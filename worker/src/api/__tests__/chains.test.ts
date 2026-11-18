@@ -131,6 +131,39 @@ describe("handleChains", () => {
     const response = await handleChains(mockD1([cache]));
     expect(await response.json()).toMatchObject({ chains: [{ pegStabilityCoverage: { observedScore: 100 } }] });
   });
+  it("expires a clocked comparison from an otherwise usable list generation", async () => {
+    const now = Date.parse("2026-11-18T16:00:00Z") / 1000;
+    const quoteAt = now - 21_600;
+    const refAt = now - 18_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    try {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+      const eurc = asset("eurc-circle", { Ethereum: { current: 100_000_000 } }, {
+        pegType: "peggedEUR", price: 1.078, priceObservedAt: quoteAt, circulating: { peggedEUR: 100_000_000 },
+        currentPeg: {
+          currentDeviationBps: -200, admittedDeviationBps: -200,
+          pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: refAt },
+          pegReferenceUnavailable: false, currentPriceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+          referenceAdmission: {
+            status: "admitted", reason: "live-reference", kind: "fx", source: "openExchangeRates", cadence: "intraday",
+            quoteObservedAtSec: quoteAt, referenceObservedAtSec: refAt, decisionAtSec: now, budgetSec: 21_600,
+            sessionOpenedAtSec: Date.parse("2026-11-15T22:00:00Z") / 1000, generation: "stablecoins:test", policyVersion: 1,
+          },
+        },
+      });
+      const cache = stablecoinsCache([eurc], 0);
+      const read = async () => (await handleChains(mockD1([cache]))).json();
+      expect(await read()).toMatchObject({
+        chains: [{ healthFactors: { pegStability: 60 }, pegStabilityCoverage: { coverage: 1 } }],
+      });
+      clock.mockReturnValue((now + 1) * 1000);
+      expect(await read()).toMatchObject({
+        chains: [{ healthFactors: { pegStability: null }, pegStabilityCoverage: { coverage: 0 } }],
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it.each([false, true])("excludes ineligible assets from the legacy chain reference cohort (published block: %s)", async (published) => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const eur = { pegType: "peggedEUR", circulating: { peggedEUR: 100_000_000 } };

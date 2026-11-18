@@ -28,6 +28,7 @@ const publicationInput = (generationId: string, pools = challengerPools(1), snap
   snapshotAt,
   retainedPoolsByStablecoin: new Map([[coin, pools]]),
   minPoolTvlUsd: 20_000,
+  admissionNowSec: snapshotAt,
 });
 
 async function loadedPools(db: D1Database, coin = COIN) {
@@ -57,12 +58,12 @@ describe("challenger publish", () => {
       ...challengerPools(1)[0]!, tvlUsd: 1_000_000, priceEvidenceTvlUsd: 10_000,
       priceSource: "cg_onchain" as const,
     };
-    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource], 20_000)).toEqual([]);
-    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource], 5_000)).toEqual([
+    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource], 20_000, SNAPSHOT)).toEqual([]);
+    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource], 5_000, SNAPSHOT)).toEqual([
       expect.objectContaining({ sourceFamily: "cg_onchain", tvlUsd: 10_000, priceObservedAt: SNAPSHOT - 60 }),
     ]);
     const sameSource = { ...crossSource, tvlUsd: 30_000, priceEvidenceTvlUsd: undefined, priceSource: undefined };
-    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource, sameSource], 5_000)).toEqual([
+    expect(selectDexPriceChallengerRowsFromPools(COIN, [crossSource, sameSource], 5_000, SNAPSHOT)).toEqual([
       expect.objectContaining({ sourceFamily: "dl", tvlUsd: 30_000 }),
     ]);
   });
@@ -160,7 +161,7 @@ describe("challenger publish", () => {
     );
   });
 
-  it("packs one challenger per proven upstream in both wire formats", async () => {
+  it("packs independent representatives first and retains alternate receipts in both wire formats", async () => {
     const { db, sqlite, generationId } = seedPublishedDexGeneration();
     const coin = "usg-tangent";
     const [first, duplicate, independent, legacy] = challengerPools(4).map((pool, index): PoolEntry => ({
@@ -176,17 +177,17 @@ describe("challenger publish", () => {
     first!.priceObservedAt = SNAPSHOT - 30;
     duplicate!.tvlUsd = 1_000_000;
     const pools = [duplicate!, independent!, first!, legacy!];
-    const expected = [first!.poolId, independent!.poolId, legacy!.poolId].sort();
+    const expected = pools.map(({ poolId }) => poolId).sort();
     try {
-      expect(selectDexPriceChallengerRowsFromPools(coin, [duplicate!, first!], 20_000).map((row) => row.poolId))
-        .toEqual([first!.poolId]);
+      expect(selectDexPriceChallengerRowsFromPools(coin, [duplicate!, first!], 20_000, SNAPSHOT).map((row) => row.poolId))
+        .toEqual([first!.poolId, duplicate!.poolId]);
       await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools, SNAPSHOT, coin));
       expect((await loadedPools(db, coin))?.sort()).toEqual(expected);
-      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, pools, 20_000)!);
+      const stored = JSON.parse(buildStoredChallengerPoolsJson(coin, pools, 20_000, SNAPSHOT)!);
       expect(stored.map((row: { poolId: string }) => row.poolId).sort()).toEqual(expected);
-      const topPools = buildStoredTopPoolsJson(coin, pools);
+      const topPools = buildStoredTopPoolsJson(coin, pools, SNAPSHOT);
       expect(JSON.parse(topPools).filter((row: { price?: number }) => row.price !== undefined)
-        .map((row: { poolId: string }) => row.poolId).sort()).toEqual(expected);
+        .map((row: { poolId: string }) => row.poolId)).toEqual([legacy!.poolId]);
       expect(normalizeTopPools(topPools).map((row) => row.price)).toEqual([0.92, 0.92, 0.92, 0.92]);
     } finally { sqlite.close(); }
   });
@@ -203,7 +204,7 @@ describe("challenger publish", () => {
     } finally { sqlite.close(); }
   });
 
-  it("keeps incomplete and primary-overlapping $6M quotes out of both challenger storage paths", async () => {
+  it("exposes a complete $6M receipt only to lineage-aware readers and excludes incomplete evidence", async () => {
     const { db, sqlite, generationId } = seedPublishedDexGeneration();
     const pools = ["bitstamp+coingecko", "bitstamp+kraken"].map((source, index): PoolEntry => ({
       ...challengerPools(1)[0]!, chain: "ethereum", poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
@@ -212,14 +213,61 @@ describe("challenger publish", () => {
     }));
     try {
       await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools));
-      expect(await loadedPools(db)).toEqual([]);
-      const topPools = buildStoredTopPoolsJson(COIN, pools);
+      expect(await loadedPools(db)).toEqual([pools[1]!.poolId]);
+      expect(sqlite.prepare("SELECT typeof(price_usd) AS price_type FROM dex_price_challenger_payloads_v2").all())
+        .toEqual([expect.objectContaining({ price_type: "text" })]);
+      const topPools = buildStoredTopPoolsJson(COIN, pools, SNAPSHOT);
       expect(normalizeTopPools(topPools).map(({ price }) => price)).toEqual([0.98, 0.98]);
       expect(JSON.parse(topPools).map((pool: { price?: number }) => pool.price)).toEqual([undefined, undefined]);
+      const challengerJson = buildStoredChallengerPoolsJson(COIN, pools, 20_000, SNAPSHOT)!;
+      expect(JSON.parse(challengerJson)).toEqual([expect.objectContaining({ lineagePriceUsd: 0.98 })]);
+      expect(JSON.parse(challengerJson)[0]).not.toHaveProperty("priceUsd");
       sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = ? WHERE stablecoin_id = ?")
-        .run(topPools, buildStoredChallengerPoolsJson(COIN, pools, 20_000), COIN);
+        .run(topPools, challengerJson, COIN);
       sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
-      expect(await loadedPools(db)).toBeUndefined();
+      expect(await loadedPools(db)).toEqual([pools[1]!.poolId]);
+    } finally { sqlite.close(); }
+  });
+
+  it("admits independent quotes before packing when an expired conversion overlaps both", async () => {
+    const { db, sqlite, generationId } = seedPublishedDexGeneration();
+    const pools = ["kraken", "binance", "kraken+binance"].map((source, index): PoolEntry => {
+      const at = SNAPSHOT - (index === 2 ? 90 * 60 : 12);
+      return {
+        ...challengerPools(1)[0]!, chain: "ethereum", poolId: `ethereum:0x${String(index + 1).repeat(40)}`,
+        project: ["uniswap-v3", "balancer", "curve"][index]!, source: "direct_api",
+        price: 0.92, tvlUsd: 1_000_000, priceObservedAt: at,
+        priceCounterparty: { stablecoinId: "usdc-circle", source, priceUsd: 0.92, observedAtSec: at },
+      };
+    });
+    try {
+      const expected = pools.slice(0, 2).map(({ poolId }) => poolId);
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, pools));
+      expect(await loadedPools(db)).toEqual(expected);
+      const topPools = buildStoredTopPoolsJson(COIN, pools, SNAPSHOT);
+      sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = NULL WHERE stablecoin_id = ?")
+        .run(topPools, COIN);
+      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+      expect(await loadedPools(db)).toEqual(expected);
+      expect(normalizeTopPools(topPools).map(({ price }) => price)).toEqual([0.92, 0.92, 0.92]);
+    } finally { sqlite.close(); }
+  });
+
+  it("uses bounded quote support under an incomplete head while retaining displayed inventory", async () => {
+    const { db, sqlite, generationId } = seedPublishedDexGeneration();
+    const pool = { ...challengerPools(1)[0]!, tvlUsd: 6_000_000, price: 0.92 };
+    try {
+      await publishDexPriceChallengerSnapshots(db, publicationInput(generationId, []));
+      sqlite.prepare("UPDATE dex_price_challenger_heads_v2 SET source_coverage_complete = 0 WHERE stablecoin_id = ?").run(COIN);
+      for (const support of [60_000, 200_000]) {
+        const topPools = buildStoredTopPoolsJson(COIN, [{ ...pool, priceEvidenceTvlUsd: support }], SNAPSHOT);
+        sqlite.prepare("UPDATE dex_liquidity SET top_pools_json = ?, challenger_pools_json = NULL WHERE stablecoin_id = ?")
+          .run(topPools, COIN);
+        expect(JSON.parse(topPools)[0]).not.toHaveProperty("price");
+        expect(normalizeTopPools(topPools)[0]).toMatchObject({ price: 0.92, tvlUsd: 6_000_000 });
+        const actual = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, 1_000, SNAPSHOT + 100);
+        expect(actual.get(COIN)?.map(({ tvlUsd }) => tvlUsd)).toEqual(support < POOL_CHALLENGE_MIN_TVL ? undefined : [support]);
+      }
     } finally { sqlite.close(); }
   });
 
@@ -238,12 +286,12 @@ describe("challenger publish", () => {
           ...publicationInput(generationId),
           retainedPoolsByStablecoin: new Map([[independentCoin, [pool]]]),
         });
-        if (mode === "old writer") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = NULL");
+        if (mode === "old writer") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = NULL, price_usd = 1");
         if (mode === "invalid receipt") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = 'garbage'");
         if (mode === "empty envelope") sqlite.exec("UPDATE dex_price_challenger_payloads_v2 SET price_lineage_json = '{}'");
         const loaded = (await loadDexPoolChallengers(db, 20_000, 1_000, SNAPSHOT + 100)).get(independentCoin)?.[0];
-        expect(loaded?.upstreamKeys).toEqual(mode === "current" ? [pool.poolId, "venue:bitstamp"] :
-          mode === "invalid receipt" ? [] : undefined);
+        expect(loaded?.upstreamKeys).toEqual(mode === "current" ? [pool.poolId, "venue:bitstamp"] : undefined);
+        expect(loaded?.price).toEqual(mode === "current" || mode === "old writer" ? 1 : undefined);
       } finally { sqlite.close(); }
     },
   );
@@ -930,7 +978,7 @@ describe("challenger load", () => {
       53_000_000,
       11,
       JSON.stringify(metrics.topPools.map(({ volumeReading: _volumeReading, ...entry }) => entry)),
-      buildStoredChallengerPoolsJson("coin-a", retainedPools, POOL_CHALLENGE_MIN_TVL),
+      buildStoredChallengerPoolsJson("coin-a", retainedPools, POOL_CHALLENGE_MIN_TVL, nowSec),
       nowSec - 60,
     );
     sqlite.prepare(

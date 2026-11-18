@@ -1,3 +1,4 @@
+import { getPublishedLegacyPegReference } from "@shared/lib/current-peg-observations";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -124,6 +125,8 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
       return reference ? [[key, reference] as const] : [];
     }));
   const eligibleAssets = assets.filter((asset) => PSI_ELIGIBLE_META_BY_ID.has(asset.id));
+  const legacyFxReferenceIds = references && new Set(eligibleAssets.filter((asset) =>
+    getPublishedLegacyPegReference(asset, stablecoinsCache.payload, stablecoinsCache.updatedAt)).map((asset) => asset.id));
   const assetById = new Map(eligibleAssets.map((asset) => [asset.id, asset]));
   await options.onStablecoinsLoaded?.(eligibleAssets.length);
   throwIfAborted(options.signal);
@@ -159,6 +162,6 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
     pegRates,
     pegRateSources,
     pegRateContributorCounts,
-    sourceState: { ...sourceState, references, nativeHistory: nativeHistory ?? null },
+    sourceState: { ...sourceState, references, legacyFxReferenceIds, nativeHistory: nativeHistory ?? null },
   };
 }

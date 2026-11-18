@@ -334,6 +334,24 @@ describe("generate-public-datasets", () => {
     ]);
   });
 
+  it("withholds the ranking price and clock only when the snapshot refuses the market quote", () => {
+    const base = makeEnvelope();
+    const priceObservedAt = base.generatedAt - 15;
+    const market = { ...base.stablecoins[0], price: 0.98, priceSource: "coingecko",
+      priceObservedAt, priceObservedAtMode: "upstream" };
+    const currentPeg = { currentDeviationBps: null, pegReference: null, primaryTrust: "unusable", dexPriceCheck: null };
+    const envelope = PublicSnapshotEnvelopeSchema.parse({ ...base, stablecoins: [
+      { ...market, id: "usdt-tether", currentPeg: { ...currentPeg, currentPriceUnavailable: true, pegReferenceUnavailable: false } },
+      { ...market, id: "usdc-circle", currentPeg: { ...currentPeg, currentPriceUnavailable: false, pegReferenceUnavailable: true } },
+    ] });
+    if (!isProjectionEnvelope(envelope)) throw new Error("expected a projection envelope");
+    const { json } = render(specFor("top-stablecoins", envelope));
+    expect(json.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "usdt-tether", price: null, priceObservedAt: null }),
+      expect.objectContaining({ id: "usdc-circle", price: 0.98, priceObservedAt }),
+    ]));
+  });
+
   it.each([
     { label: "string 6.57", versions: { pricingPipeline: "6.57" }, recorded: true },
     { label: "string 6.55", versions: { pricingPipeline: "6.55" }, recorded: true },

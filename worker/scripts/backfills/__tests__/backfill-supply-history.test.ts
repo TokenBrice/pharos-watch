@@ -9,6 +9,7 @@ import { registerStablecoinParameterContract } from "../../../src/test-helpers/_
 import type { ChainRpcConfig } from "../../../src/lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../../src/lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../../../src/lib/backfill-fx";
+import { handleSupplyHistory } from "../../../src/api/supply-history";
 import { ethereumSupplyRpc, supplyRpcResponse } from "./backfill-supply-history.test-support";
 
 function mockD1(
@@ -395,6 +396,25 @@ describe("handleBackfillSupplyHistory", () => {
       expect(await readJsonResponse(await backfill(db, url), 200)).toMatchObject({ rowsInserted: 0, skippedDays: 1 });
       expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
         .get("usdt-tether", day)).toEqual({ circulating_usd: 100_000_000, price: 1 });
+    }
+  });
+
+  it("stores a rejected native balance with its USD cap and a separate market quote", async () => {
+    const { db, sqlite } = fixtures.open();
+    const at = 1_700_000_000;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tokens: [
+      { date: at + 60, totalCirculatingUSD: { peggedUSD: 100_000_000 }, totalCirculating: { peggedUSD: -1 } },
+    ] }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether";
+    for (const query of ["", "&overwrite=true"]) {
+      expect(await readJsonResponse(await backfill(db, path + query), 200)).toMatchObject({ rowsInserted: 1 });
+      expect(sqlite.prepare("SELECT price, price_observed_at, circulating_native FROM supply_history").get())
+        .toEqual({ price: null, price_observed_at: null, circulating_native: null });
+      const historyUrl = new URL("https://test.invalid/api/supply-history?stablecoin=usdt-tether&range=all");
+      expect(await readJsonResponse(await handleSupplyHistory(db, historyUrl, null), 200)).toMatchObject([{
+        circulatingUsd: 100_000_000, circulatingNative: null, price: 1.001,
+        supplyProvenance: { nativeQuantityUnavailable: true, marketQuote: { price: 1.001, observedAt: at } },
+      }]);
     }
   });
 

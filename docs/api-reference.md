@@ -14,6 +14,8 @@ The dated depeg dataset selects event starts over exactly 90 UTC dates with an e
 
 Top Stablecoins projects malformed or unsupported price observation modes as `unsupported` with a null observed price. Legacy rows may omit the mode. A nominal fallback requires a finite, positive price.
 
+An explicit market-price refusal in the snapshot clears the exported price and observation clock. A reference-only refusal preserves the observed market quote.
+
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
@@ -1206,7 +1208,7 @@ Optional `circulatingNative` is a token count. Optional `valuationPriceUsd` is t
 
 Optional `fxReferenceObservations` and `selectedPegReferences` are objects keyed by peg type. Each FX observation records the USD per unit, source, cadence and observation time. Each selected reference identifies its kind and generation and carries either a dated provider observation or the median's USD value and contributors. A present empty map records that no entries were admitted. Legacy publications can omit the maps.
 
-In a mixed generation, `currentPeg.legacyFxReference: true` identifies a peg whose verified carried FX rate passed legacy freshness checks for that publication. XAGm uses `pegType: "entitlement-priced"` on the list to withhold static-ounce comparisons on rollback. Its `price` remains in USD per token and `commodityEntitlement` is present when the issuer's receipt matches the quote.
+In a mixed generation, `currentPeg.legacyFxReference: true` identifies a comparison backed by a verified carried rate that passed legacy freshness checks for that peg. For bullion it accompanies the selected legacy median or fallback, and peg-summary checks it against the same publication’s denominator. XAGm uses `pegType: "entitlement-priced"` on the list to withhold static-ounce comparisons on rollback. Its `price` remains in USD per token and `commodityEntitlement` is present when the issuer's receipt matches the quote.
 
 Read the [peg-summary admission verdict](#peg-summary-admission) for the same quoted observation when available. The legacy list `currentPeg` projection can omit admission fields. A peg-summary verdict from a different quote does not replace the list observation's value or clock. Native market lineage, where recorded on a native quote, uses optional `derivation` with `kind` (`traded-pair`, `conversion`, `unknown`) and `lineage` with optional members `venue`, `pair`, `fxSource` and `fxObservedAtSec`. Omitted derivation is equivalent to unknown for independent voting. See [pricing lineage](./pricing-pipeline.md#primary-consensus).
 
@@ -1251,6 +1253,8 @@ Current comparisons with an admission verdict require a token quote no more than
 A verified carried legacy FX peg can use `currentDeviationBps` in a mixed generation. That row uses its legacy census rules and omits the clocked admission fields.
 
 For legacy FX publications, an explicit per-asset `currentPeg.pegReferenceUnavailable` withholds the peg reference and deviation from peg summary and excludes that asset from the assessed cohort. The observed quote can still be available.
+
+An explicit `currentPeg.currentPriceUnavailable` clears the price, observation clock and deviation and excludes the asset from the assessed census. A refused clocked primary comparison can still carry a separately admitted DEX comparison with its dated reference. The legacy census uses the fixed UTC closure calendar and the unrounded deviation for the severe-move exception. A valid market quote in daily supply provenance counts as a recent observation during a live quote outage.
 
 ### DEX liquidity
 

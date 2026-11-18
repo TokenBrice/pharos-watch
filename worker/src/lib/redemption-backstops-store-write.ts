@@ -126,8 +126,9 @@ export function validateRedemptionBackstopSnapshot(record: RedemptionBackstopSna
 function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unknown[] {
   const validated = RedemptionBackstopEntrySchema.parse(record);
   // Rollback readers see only the unavailable projection. The dated entry stays in this immutable run row.
+  const measuredPause = record.routeStatus === "paused" && record.immediateCapacityUsd === 0;
   const mentoPhaseEntry = mentoFpmmIds.has(record.stablecoinId) &&
-    record.resolutionState === "resolved" && record.routeStatus === "open" ? validated : undefined;
+    ((record.resolutionState === "resolved" && record.routeStatus === "open") || measuredPause) ? validated : undefined;
   if (mentoPhaseEntry) record = withholdMentoMarketPhase(mentoPhaseEntry);
   return [
     record.stablecoinId,

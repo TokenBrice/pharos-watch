@@ -88,18 +88,23 @@ export function buildPsiHistoricalSupplySnapshotMap(
     const { provenance } = parseSupplyObservationProvenance(row.supply_provenance);
     const coverage = classifySupplyCoverage(provenance);
     const observedAt = provenance?.supplyObservedAt;
-    const nativeQuantity = native != null && Number.isFinite(native) && native >= 0 &&
+    const nativeQuantity = !provenance?.nativeQuantityUnavailable && native != null && Number.isFinite(native) && native >= 0 &&
       observedAt != null && observedAt > 0 && observedAt < row.snapshot_date + DAY_SECONDS &&
       coverage === "complete" && isComparableNativeSupplySource(row.stablecoin_id, provenance?.supplySource)
       ? { value: native, observedAt } : undefined;
+    const marketQuote = provenance?.marketQuote;
+    const datedQuote = marketQuote?.observedAt != null && marketQuote.observedAt < row.snapshot_date + DAY_SECONDS
+      ? marketQuote : undefined;
+    const price = datedQuote?.price ?? row.price;
+    const priceObservedAt = datedQuote?.observedAt ?? row.price_observed_at;
     const list = supplyByCoin.get(row.stablecoin_id) ?? [];
     list.push({
       date: row.snapshot_date,
       mcap: row.circulating_usd,
       ...(coverage === "unknown" ? {} : { coverage }),
-      ...(typeof row.price === "number" && Number.isFinite(row.price) && row.price > 0 ? { price: row.price } : {}),
-      ...(row.price_observed_at != null && Number.isSafeInteger(row.price_observed_at) && row.price_observed_at > 0
-        ? { priceObservedAt: row.price_observed_at } : {}),
+      ...(typeof price === "number" && Number.isFinite(price) && price > 0 ? { price } : {}),
+      ...(priceObservedAt != null && Number.isSafeInteger(priceObservedAt) && priceObservedAt > 0
+        ? { priceObservedAt } : {}),
       ...(nativeQuantity ? { nativeQuantity } : {}),
     });
     supplyByCoin.set(row.stablecoin_id, list);

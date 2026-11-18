@@ -129,10 +129,12 @@ describe("dated depeg briefing", () => {
     expect(drawn()).toContain("1 recovered in 24h");
   });
 
-  it.each(["currentPriceUnavailable", "pegReferenceUnavailable"] as const)("honors a published %s flag before legacy reconstruction", async (flag) => {
+  it.each(["currentPriceUnavailable", "pegReferenceUnavailable", "currentDeviationBps"] as const)("honors unavailability from published %s", async (field) => {
     const now = Math.floor(Date.now() / 1000);
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98, priceObservedAt: now - 60, currentPeg: {
-      currentDeviationBps: null, currentPriceUnavailable: false, pegReferenceUnavailable: false, [flag]: true,
+      currentDeviationBps: field === "currentDeviationBps" ? null : -200,
+      currentPriceUnavailable: field === "currentPriceUnavailable",
+      pegReferenceUnavailable: field === "pegReferenceUnavailable",
       pegReference: null, primaryTrust: "unusable", dexPriceCheck: null,
     } });
     const db = makeDepegDb([
@@ -144,6 +146,31 @@ describe("dated depeg briefing", () => {
     expect(drawn()).toContain("Current unavailable");
     expect(drawn()).toContain("Peak -500 bps");
     expect(drawn()).not.toContain("-200 bps");
+  });
+
+  it("labels a validated peer peak separately from the current benchmark deviation", async () => {
+    const { db, sqlite } = nativeQuoteFixtures.open();
+    const now = FX_REOPEN_QUOTE_AT;
+    vi.setSystemTime(now * 1000);
+    const start = now - 60;
+    const asset = makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.026, priceObservedAt: now });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
+      .run(JSON.stringify({ peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.026 } }), now);
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price,
+       peg_reference, peak_peg_reference, peak_quote_domain, peer_basis_json, source)
+      VALUES (1, 'eurc-circle', 'EURC', 'peggedEUR', 'below', -500, ?, 1.026, 1.026, 1.08, 1.08, 'usd', ?, 'live')`)
+      .run(start, JSON.stringify({ peak: { basis: "peer-relative", observedAt: start, price: 1.026, pegReference: 1.08, bps: -500 } }));
+    expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+    expect(drawn()).toContain('"0 bps"');
+    expect(drawn()).toContain('"Peak -500 bps vs peer median"');
+    expect(drawn()).toContain('Peer median $1.0800 · Lower confidence');
+
+    sqlite.prepare("UPDATE depeg_events SET peak_peg_reference = 1.07 WHERE id = 1").run();
+    vi.mocked(ogRenderer.renderPng).mockClear();
+    expect((await handleOg(db, API_PATHS.ogDepegBriefing()))?.status).toBe(200);
+    expect(drawn()).toContain('"Peak -500 bps"');
+    expect(drawn()).not.toContain("peer median");
   });
 
   it.each([

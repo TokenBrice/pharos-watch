@@ -206,17 +206,22 @@ export async function executeBackfillForCoin(opts: {
     const replaceIds = new Set(existingRows.existingBackfillRows.map(({ id }) => id));
     const retained = existingRows.allRows.filter(({ id }) => !replaceIds.has(id));
     const candidates = replay.events == null ? null : skipCoveredBackfillEpisodes(meta, replay.events, retained);
+    const replacing = replaceIds.size > 0;
     // Inserting a closed episode may use its source cadence. Replacing history requires hourly proof.
-    const onsetMaxGap = replaceIds.size === 0 ? replay.maxObservationGapSec : HOURLY_REPLAY_MAX_GAP_SEC;
-    const unsafeReplacement = existingRows.existingBackfillRows.some((row) => !hasEvidenceThrough(row))
-      || candidates?.some((event) => {
-        const onset = observationIndexes.get(event.startedAt) ?? -1;
-        const observedSevereOnset = replaceIds.size === 0 && assessed[onset]?.severeClosure === true;
-        return event.endedAt == null || (!observedSevereOnset && !adjacent(onset - 1, onset, onsetMaxGap))
-          || assessed[onset - 1]?.state === event.direction;
-      });
-    const degradedReason = replay.degradedReason ?? (unsafeReplacement ? "insufficient-boundary-evidence" : null);
-    const events = unsafeReplacement ? null : candidates;
+    const onsetMaxGap = replacing ? HOURLY_REPLAY_MAX_GAP_SEC : replay.maxObservationGapSec;
+    const hasCandidateBoundary = (event: BackfillEvent): boolean => {
+      const onset = observationIndexes.get(event.startedAt) ?? -1;
+      const observedSevereOnset = !replacing && assessed[onset]?.severeClosure === true;
+      return event.endedAt != null && (observedSevereOnset || adjacent(onset - 1, onset, onsetMaxGap))
+        && assessed[onset - 1]?.state !== event.direction;
+    };
+    const admitted = replacing ? candidates : candidates?.filter(hasCandidateBoundary) ?? null;
+    const insufficientBoundaryEvidence = replacing
+      ? existingRows.existingBackfillRows.some((row) => !hasEvidenceThrough(row))
+        || candidates?.some((event) => !hasCandidateBoundary(event))
+      : admitted?.length === 0 && (candidates?.length ?? 0) > 0;
+    const degradedReason = replay.degradedReason ?? (insufficientBoundaryEvidence ? "insufficient-boundary-evidence" : null);
+    const events = insufficientBoundaryEvidence ? null : admitted;
 
     if (dryRun) {
       const preview = buildBackfillReplayPreview({

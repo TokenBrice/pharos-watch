@@ -22,6 +22,8 @@ import { referenceState, tradedPair } from "./reference-fixtures";
 import { resolveDirectRecovery, resolvePeakUpdateCommand } from "../native-quote-policy";
 import { persistDepegCommands } from "../persistence";
 import { deriveDetectionPegRates } from "../reference-policy";
+import { FxSyncRunState } from "../../sync-fx-rates-helpers";
+import { isValidFxRate } from "../../../lib/fx-config";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const NOW = 1_780_358_400;
@@ -88,6 +90,44 @@ describe("hydrateDepegDetection", () => {
         expect(decision.commands).toMatchObject(Math.abs(bps) === 3000
           ? [{ type: "upsert-pending", payload: { bps, pegReference: close.usdPerUnit,
             referenceAdmission: { referenceObservedAtSec: close.observedAtSec, generation: String(now - 60) } } }]
+          : []);
+      }
+    }
+  });
+
+  it("carries a verified EUR close across omissions until a rejected replacement", async () => {
+    const { db } = fixtures.open();
+    const peg = "peggedEUR";
+    const friday = Date.UTC(2026, 10, 20, 21, 50) / 1_000;
+    const saturday = Date.UTC(2026, 10, 21, 12, 2) / 1_000;
+    const pairs = { GBP: "peggedGBP", EUR: peg };
+    const start = (syncStartSec: number, prevState: Awaited<ReturnType<typeof loadFxRateState>>) =>
+      new FxSyncRunState({ prevState, syncStartSec, expectedPegKeys: Object.values(pairs), initialSources: {}, validateRate: isValidFxRate });
+    const eurQuote = (updatedAt: number) => new Map([[peg, { pegKey: peg, price: 1.1, updatedAt, chainId: "base", proxyAddress: "0xfeed" }]]);
+    const close = start(friday, null);
+    close.applyChainlinkQuotes(eurQuote(friday));
+    await persistFxRateState(db, close.usableRates, close.buildPersistedMeta(), friday);
+    const id = "eurc-circle";
+    const meta = PSI_ELIGIBLE_META_BY_ID.get(id)!;
+    for (const [index, step] of ["omit", "omit", "reject", "omit", "heartbeat"].entries()) {
+      const now = saturday + index * 60;
+      vi.mocked(Date.now).mockReturnValue(now * 1000);
+      const refresh = start(now, await loadFxRateState(db));
+      refresh.applyFrankfurterRates(step === "reject" ? { GBP: 0.8, EUR: 0.01 } : { GBP: 0.8 }, "2026-11-20", pairs);
+      if (step === "heartbeat") refresh.applyChainlinkQuotes(eurQuote(now - 60));
+      refresh.enforcePublicationOrder();
+      await persistFxRateState(db, refresh.usableRates, refresh.buildPersistedMeta(), now);
+      const { fxFallbackRates, detectionFxState } = await loadFreshFxRates(db);
+      if (step !== "heartbeat") expect(detectionFxState?.rates[peg]).toBeUndefined();
+      for (const bps of [-3000, 3000, -300]) {
+        const asset = makeAsset({ id, pegType: peg, price: 1.1 * (1 + bps / 10_000), priceSource: "coingecko",
+          priceConfidence: "single-source", priceObservedAtMode: "upstream", priceObservedAt: now - 30,
+          priceUpdatedAt: now - 30, circulating: { [peg]: 60_000_000 } });
+        const selection = await deriveDetectionPegRates(db, [asset], PSI_ELIGIBLE_META_BY_ID, new Set(), fxFallbackRates, detectionFxState, now);
+        const { commands } = decideDepegAsset({ now, asset, meta, pegRates: selection.rates,
+          pegRateSources: selection.sources, pegRateCounts: selection.counts, referenceContext: selection.referenceContext });
+        expect(commands).toMatchObject(Math.abs(bps) === 3000 && (index < 2 || step === "heartbeat")
+          ? [{ type: "upsert-pending", payload: { bps, pegReference: 1.1, referenceAdmission: { referenceObservedAtSec: friday } } }]
           : []);
       }
     }

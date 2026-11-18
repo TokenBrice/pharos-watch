@@ -19,7 +19,7 @@ import { getCommodityOuncesAtQuote } from "@shared/lib/commodity-median";
 import { evaluateReferenceAdmission, admittedDeviationBps } from "@shared/lib/reference-admission";
 import { asRawDeviationBps } from "@shared/types/reference-admission";
 import { hasPeerDeviationReceipt, readBenchmarkOnset, readPeerDeviationMarks } from "./depeg-observation-marks";
-import { getReferenceMarket, getReferenceSessionState } from "@shared/lib/reference-market-hours";
+import { getReferenceMarket, getReferenceSessionState, isReferenceDeviationHeld } from "@shared/lib/reference-market-hours";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 import type { DepegAdmittedCoverage } from "@shared/types/peg";
@@ -176,8 +176,12 @@ function historicalEventMarks(
     } : observation && observation.pegKey === pegKey && observation.source === reference.source &&
         observation.usdPerUnit === reference.usdPerUnit && observation.observedAtSec === reference.observedAtSec
       ? { kind: reference.kind, observation, ...repricing } : { kind: "none" as const };
-    if (reference.contributors?.some((id) => canonicalizePsiStablecoinId(id) === coinId) ||
-        (session && !session.open && !event.admittedCoverage)) return [];
+    if (reference.contributors?.some((id) => canonicalizePsiStablecoinId(id) === coinId)) return [];
+    if (session && !session.open && !event.admittedCoverage) {
+      const opening = event.start_price == null ? null : deriveDepegSignal(event.start_price, event.peg_reference);
+      if (start !== event.started_at || session.closureStartSec == null || start < session.closureStartSec ||
+          isReferenceDeviationHeld(currency, start, opening?.absRawBps ?? NaN)) return [];
+    }
     const admission = evaluateReferenceAdmission({ ...selection,
       quoteObservedAtSec: quote.at, decisionAtSec: quote.at, rawDeviationBps: raw,
     });

@@ -394,7 +394,7 @@ export function buildPrimarySourceCandidates(
   };
   const cgSource = baseSources.find((source) => source.source === "coingecko");
   if (cgSource && REVIEWED_COINGECKO_KRAKEN_MIRRORS.has(asset.id) &&
-      baseSources.some((source) => source.source === "kraken")) {
+      baseSources.some((source) => source.source === "kraken" && source.nonVotingReason == null)) {
     cgSource.nonVotingReason = "venue-mirror";
   }
   sources.push(...baseSources);

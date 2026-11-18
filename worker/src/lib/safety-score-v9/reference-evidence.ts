@@ -31,9 +31,10 @@ export function getPegReferenceEvidence(
   if (carriesReferenceEvidence(entry)) return entry;
   const peg = fixedInput.pegDataById[assetId];
   if (carriesReferenceEvidence(peg)) return peg;
+  if (entry?.legacyFxReference === true) return undefined;
   if (sidecar !== undefined) {
     const entries = Object.values(sidecar);
-    if (entries.length === 0 || entries.some(carriesReferenceEvidence)) return {};
+    if (entries.length === 0 || entries.some((row) => row.legacyFxReference === true || carriesReferenceEvidence(row))) return {};
   }
   // The same packet can be carried inline by the peg producer on rollback.
   for (const id in fixedInput.pegDataById) {

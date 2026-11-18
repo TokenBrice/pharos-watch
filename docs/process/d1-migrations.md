@@ -4,7 +4,7 @@ Policy for every new `worker/migrations/` file; `worker/migrations/MANIFEST.md` 
 
 ## Additive migrations
 
-The first three migrations in the reference and quantity rollout introduce the fields below. Before either Worker activates, apply all pending migrations through 0316. The [release procedure](../deployment-process.md#reference-and-supply-rollout) records the migration floor and deployment order.
+The first three migrations in the reference and quantity rollout introduce the fields below. Before either Worker activates, apply all pending migrations through 0318. The [release procedure](../deployment-process.md#reference-and-supply-rollout) records the migration floor and deployment order.
 
 | Migration | Additive change | Retained compatibility |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ The first three migrations in the reference and quantity rollout introduce the f
 
 The schema changes populate no historical evidence. Run any quantity backfill, depeg repair or legacy receipt resolution through its reviewed write path after schema application.
 
-The rollout also applies [`0315_mint_burn_rollback_protection.sql`](../../worker/migrations/0315_mint_burn_rollback_protection.sql) and [`0316_supply_history_guard_native_unavailable.sql`](../../worker/migrations/0316_supply_history_guard_native_unavailable.sql). Migration 0315 rewrites reviewed mint/burn rows and guards the legacy classification columns. Migration 0316 installs a trigger without rewriting history. The trigger keeps a legacy same-day price repair from restoring an implied quantity on an explicitly unavailable daily snapshot. Both guards stay installed on Worker rollback.
+The rollout also applies [`0315_mint_burn_rollback_protection.sql`](../../worker/migrations/0315_mint_burn_rollback_protection.sql), [`0316_supply_history_guard_native_unavailable.sql`](../../worker/migrations/0316_supply_history_guard_native_unavailable.sql), [`0317_depeg_pending_closure_rollback_guard.sql`](../../worker/migrations/0317_depeg_pending_closure_rollback_guard.sql), and [`0318_supply_history_guard_legacy_snapshot.sql`](../../worker/migrations/0318_supply_history_guard_legacy_snapshot.sql). Migration 0315 rewrites reviewed mint/burn rows and guards legacy classification and publication policy. Migration 0316 keeps a legacy price repair from restoring an implied quantity on an explicitly unavailable daily snapshot. Migration 0317 preserves clocked closure pendings if legacy confirmation would change the recorded benchmark or publish an inconsistent peak. Migration 0318 protects a legacy first close when its stock matches an assessment in the live cache and guards measured quantities against incompatible legacy repairs. Migrations 0316 through 0318 add triggers without rewriting history. The guards stay installed on Worker rollback.
 
 1. Select the next unused sequence from the manifest. Never rename or reuse a deployed filename.
 2. Add `-- rollout-safety: backward-compatible` to the migration.

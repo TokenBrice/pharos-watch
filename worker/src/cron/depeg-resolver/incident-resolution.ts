@@ -52,7 +52,7 @@ function supplyChange(
   const latest = supplyAt(snapshots, endAt);
   const baseline = supplyAt(snapshots, baselineAt);
   const missing = { pct: null, covered: false };
-  if (!latest || !baseline) return missing;
+  if (!latest || !baseline || latest.comparisonPartial || baseline.comparisonPartial) return missing;
   const native = latest.native !== undefined || baseline.native !== undefined;
   if (native && latest.date <= baseline.date) return missing;
   const end = native ? nativeQuantityAt(latest, endAt) : latest.usd;

@@ -79,6 +79,29 @@ describe("blacklist summary freeze aggregates", () => {
     expect(readLegacy()).toBeUndefined();
   });
 
+  it("rejects a paused cron write after a same-second request rebuild retires v5", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.function("unixepoch", () => now);
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, explorer_tx_url, explorer_address_url)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', ?, '0xabc', ?, ?, ?, 125, '', '')`);
+    insert.run("freeze", "blacklist", "tx-freeze", 1, now - 150);
+    const gate = pauseSummaryWrite(db);
+    const delayed = materializeBlacklistSummarySnapshot(db, now, now);
+    await gate.paused;
+    insert.run("release", "unblacklist", "tx-release", 2, now - 20);
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY, "release-summary", now);
+    const read = async () => (await handleBlacklistSummary(db)).json() as Promise<BlacklistSummaryResponse>;
+    const rebuilt = await read();
+    gate.resume();
+    expect(rebuilt).toMatchObject({ totalEvents: 2, stats: { activeAddressCount: 0, activeFrozenTotal: 0 } });
+    expect(sqlite.prepare("SELECT 1 FROM cache WHERE key = ?").get(BLACKLIST_SUMMARY_ROLLBACK_CACHE_KEY)).toBeUndefined();
+    expect(await delayed).toEqual({ written: false, reason: "superseded" });
+    expect(await read()).toEqual(rebuilt);
+  });
+
   it.each([
     ["ethereum", 125], ["ethereum", 0], ["tron", 125], ["tron", 0],
   ] as const)("retains last-success %s amount %s through a failed ledger refresh", async (chainId, amount) => {
@@ -463,7 +486,8 @@ describe("blacklist summary freeze aggregates", () => {
     vi.useFakeTimers();
     const { sqlite, db } = sqliteFixtures.open();
     const other = createSqliteD1(sqlite);
-    const fence = { generation: null as string | null, summaryValue: null, rollbackValue: null, rollbackUpdatedAt: null };
+    const fence = { generation: null as string | null, summaryValue: "prior-summary", rollbackValue: null, rollbackUpdatedAt: null };
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, 0)").run(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, fence.summaryValue);
     const current = () => sqlite.prepare("SELECT value FROM cache WHERE key = 'blacklist:derived-generation'").get()?.value;
     const batch = db.batch.bind(db);
     let escaped: unknown;
@@ -484,6 +508,7 @@ describe("blacklist summary freeze aggregates", () => {
     expect((await pending).failed).toBe(0);
     expect(current()).not.toBe(escaped);
     expect(fence.generation).toBe(foreign ? null : current());
+    expect(fence.summaryValue).toBe(foreign ? "prior-summary" : null);
     request!.gate.resume();
     expect((await request!.pending).status).toBe(503);
     await invalidateBlacklistDerivedCaches(db, fence);

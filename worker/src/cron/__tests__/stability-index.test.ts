@@ -353,6 +353,42 @@ describe("computeAndStoreStabilityIndex", () => {
     },
   );
 
+  it.each([false, true])("admits a fresh legacy cNGN quote at the severe closure boundary with clocked GBP %s", async (clockedGbp) => {
+    const now = Date.UTC(2026, 10, 14, 14) / 1000;
+    vi.setSystemTime(now * 1000);
+    const db = makeDb({ depegRows: [depegRow(CNGN_ID, now - 77 * 86400)] });
+    db.sqlite.exec("UPDATE depeg_events SET peg_type = 'peggedNGN', start_price = 0.95");
+    const cngn = makeStabilityAsset({ id: CNGN_ID, symbol: "cNGN", pegType: "peggedNGN", price: 0.0007,
+      circulating: { peggedNGN: 1e7 }, circulatingPrevWeek: { peggedNGN: 1e7 } });
+    const cache = cacheOk([cngn], now);
+    if (clockedGbp) {
+      cache.payload.fxFallbackRates = { peggedNGN: 0.001 };
+      cache.payload.fxReferenceObservations = { peggedGBP: { pegKey: "peggedGBP", usdPerUnit: 1.27,
+        observedAtSec: now, source: "openExchangeRates", cadence: "intraday" } };
+      cngn.currentPeg = { legacyFxReference: true, currentDeviationBps: -3000, currentPriceUnavailable: false,
+        pegReferenceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+        pegReference: { valueUsd: 0.001, source: "fx", contributorCount: 0, asOf: now } };
+    }
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(cache);
+    for (const [value, derivation, expectedBps] of [
+      [0.70, undefined, -3000],
+      [0.75, undefined, -2500],
+      [0.90, undefined, null],
+      [0.70, { kind: "conversion" }, null],
+    ] as const) {
+      db.sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        `${NATIVE_EVENT_QUOTE_CACHE_PREFIX}1`,
+        JSON.stringify({ value, observedAt: now - 60, source: "coingecko", derivation }),
+        now - 60,
+      );
+      expect((await computeAndStoreStabilityIndex(db)).status).toBe("ok");
+      expect(readInsertedInputSnapshot(db).contributors.map(({ bps }) => bps)).toEqual(expectedBps == null ? [] : [expectedBps]);
+      if (expectedBps === -3000) {
+        expect(db.sqlite.prepare("SELECT score FROM stability_index_samples").get()).toMatchObject({ score: 84.1 });
+      }
+    }
+  });
+
   it.each([
     { price: 0, age: 60, currency: "NGN" },
     { price: 0.98, age: 86400, currency: "NGN" },
@@ -556,6 +592,38 @@ describe("computeAndStoreStabilityIndex", () => {
     }
   });
 
+  it("retains DEWS stress when a priced open event is disputed or lacks coverage at the sample", async () => {
+    const now = Date.UTC(2026, 10, 18, 14) / 1000;
+    vi.setSystemTime(now * 1000);
+    const id = "eurc-circle";
+    const startedAt = now - 4 * 3600;
+    const db = makeDb({
+      depegRows: [depegRow(id, startedAt)],
+      dewsRows: [{ stablecoin_id: id, score: 90, band: "DANGER", computed_at: now }],
+    });
+    const cache = cacheOk([makeStabilityAsset({ id, pegType: "peggedEUR", price: 1.078,
+      circulating: { peggedEUR: 5e9 }, circulatingPrevWeek: { peggedEUR: 5e9 } })], now);
+    cache.payload.fxFallbackRates = { peggedEUR: 1.1 };
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(cache);
+    const update = db.sqlite.prepare("UPDATE depeg_events SET peg_type = 'peggedEUR', peg_reference = 1.1, admitted_coverage_json = ?");
+    for (const [ledger, disputed] of [
+      [[], false],
+      [[{ fromSec: startedAt, toSec: now - 3 * 3600 }], false],
+      [[{ fromSec: startedAt, toSec: now + 1 }], true],
+    ] as const) {
+      update.run(JSON.stringify(ledger));
+      if (disputed) {
+        db.sqlite.prepare(`INSERT INTO depeg_event_provenance (event_id, source_kind, quote_mode, public_json, created_at, updated_at)
+          VALUES (1, 'live', 'usd', '{"auditVerdict":"disputed"}', ?, ?)`).run(now, now);
+      }
+      expect((await computeAndStoreStabilityIndex(db)).status).toBe("ok");
+      const snapshot = readInsertedInputSnapshot(db);
+      expect(snapshot.contributors).toEqual([]);
+      expect(snapshot.dewsStressBreadth).toBeCloseTo(3.3541, 4);
+      expect(db.sqlite.prepare("SELECT score FROM stability_index_samples").get()).toMatchObject({ score: 96.6 });
+    }
+  });
+
   it("fails closed when the active depeg query is unavailable", async () => {
     const db = makeDb({ depegQueryFails: true });
 
@@ -675,6 +743,32 @@ describe("computeAndStoreStabilityIndex", () => {
       ]);
       if (now > failedOpenAt) expect(Object.values(snapshot.referenceAdmissions)[0]?.status).toBe("admitted");
     }
+  });
+
+  it("scores a verified legacy EUR event in a GBP-clocked generation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const id = "eurc-circle";
+    const db = makeDb({ depegRows: [depegRow(id, now - 86400)], dewsRows: [
+      { stablecoin_id: id, score: 1, band: "CALM", computed_at: now },
+    ] });
+    db.sqlite.prepare("UPDATE depeg_events SET peg_type = 'peggedEUR', peg_reference = 1.1, direction = 'above'").run();
+    const eurc = makeStabilityAsset({ id, pegType: "peggedEUR", price: 1.122, priceSource: "coingecko",
+      circulating: { peggedEUR: 1e8 }, circulatingPrevWeek: { peggedEUR: 1e8 } });
+    const cache = cacheOk([eurc], now);
+    cache.payload.fxFallbackRates = { peggedEUR: 1.1 };
+    cache.payload.fxReferenceObservations = { peggedGBP: { pegKey: "peggedGBP", usdPerUnit: 1.27,
+      observedAtSec: now, source: "openExchangeRates", cadence: "intraday" } };
+
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(cache);
+    expect(metadataOf(await computeAndStoreStabilityIndex(db)).reason).toBe("selected-reference-unavailable");
+    expect(persistedSampleCount(db)).toBe(0);
+
+    eurc.currentPeg = { legacyFxReference: true, currentDeviationBps: 200, currentPriceUnavailable: false,
+      pegReferenceUnavailable: false, primaryTrust: "authoritative", dexPriceCheck: null,
+      pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: now } };
+    expect((await computeAndStoreStabilityIndex(db)).status).toBe("ok");
+    expect(readInsertedInputSnapshot(db).contributors).toEqual([expect.objectContaining({ id, bps: 200 })]);
+    expect(db.sqlite.prepare("SELECT score FROM stability_index_samples").get()).toMatchObject({ score: 82.6 });
   });
 
   it("scores the peer-relative opening on its persisted basis while benchmark admission is unavailable", async () => {

@@ -4,7 +4,8 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeRedemptionWriteRecord } from "../../lib/__tests__/redemption-backstops-store.test-support";
-import { upsertRedemptionBackstopSnapshots } from "../../lib/redemption-backstops-store";
+import { loadRedemptionBackstopLiveSignalRows, upsertRedemptionBackstopSnapshots } from "../../lib/redemption-backstops-store";
+import { LIVE_RESERVE_FRESHNESS_SEC } from "../../lib/live-reserve-policy";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 import type * as RedemptionBackstopsStoreModule from "../../lib/redemption-backstops-store";
 
@@ -62,6 +63,41 @@ describe("handleRedemptionBackstops", () => {
     expect(await read(reopen, reopen, 0)).toMatchObject({
       row: { immediateCapacityUsd: 10_000_000, resolutionState: "resolved" },
     });
+  });
+
+  it("expires a measured Mento pause in both HTTP caches and keeps the legacy row unavailable", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const id = "chfm-mento";
+    const now = Date.parse("2026-11-20T20:59:00Z") / 1000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    try {
+      await upsertRedemptionBackstopSnapshots(db, [makeRedemptionWriteRecord({
+        stablecoinId: id, updatedAt: now, score: null, resolutionState: "impaired",
+        routeStatus: "paused", routeStatusSource: "onchain", freshnessKind: "same-run-onchain",
+        sourceTimestamp: now - LIVE_RESERVE_FRESHNESS_SEC + 30,
+        immediateCapacityUsd: 0, immediateCapacityRatio: 0, settlementDelaySec: 0,
+      })], { runId: "measured-pause" });
+
+      for (const projection of [undefined, id]) {
+        const response = await handleRedemptionBackstops(db, projection);
+        expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=31, max-age=31, must-revalidate");
+        expect(RedemptionBackstopsResponseSchema.parse(await readJsonResponse(response, 200)).coins[id])
+          .toMatchObject({ routeStatus: "paused", immediateCapacityUsd: 0, immediateCapacityRatio: 0 });
+      }
+      expect((await loadRedemptionBackstopLiveSignalRows(db, [id]))[0]?.immediate_capacity_ratio).toBe(0);
+      vi.setSystemTime((now + 31) * 1000);
+      const expired = await handleRedemptionBackstops(db, id);
+      expect(RedemptionBackstopsResponseSchema.parse(await readJsonResponse(expired, 200)).coins[id])
+        .toMatchObject({ routeStatus: "unknown", immediateCapacityUsd: null, immediateCapacityRatio: null });
+      expect((await loadRedemptionBackstopLiveSignalRows(db, [id]))[0]?.immediate_capacity_ratio).toBeNull();
+      expect(sqlite.prepare(`SELECT immediate_capacity_usd, immediate_capacity_ratio,
+        json_extract(details_json, '$.routeStatus') AS route_status
+        FROM redemption_backstop_run_rows WHERE snapshot_run_id = 'measured-pause'`).get())
+        .toMatchObject({ route_status: "unknown", immediate_capacity_usd: null, immediate_capacity_ratio: null });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns 503 when the run manifest cannot be read", async () => {

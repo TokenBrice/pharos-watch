@@ -11,7 +11,7 @@ import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { digestMonthKey, formatDigestMonthLabel } from "@/lib/digest";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { DIGEST_ENTRIES, LATEST_DAILY_DIGEST } from "@/lib/digest-registry";
+import { DIGEST_CORRECTIONS, DIGEST_ENTRIES, LATEST_DAILY_DIGEST } from "@/lib/digest-registry";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Daily Digest Archive: Stablecoin Recaps",
@@ -50,7 +50,7 @@ export default function DigestArchivePage() {
                   "@id": `${SITE_URL}/digest/${entry.date}/`,
                   name: entry.title,
                   url: `${SITE_URL}/digest/${entry.date}/`,
-                  description: entry.text,
+                  description: DIGEST_CORRECTIONS.get(entry.date)?.excerpt ?? entry.text,
                 },
               })),
             }),
